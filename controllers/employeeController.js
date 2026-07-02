@@ -26,12 +26,20 @@ export const addEmployee = async (req, res) => {
 export const getAllEmployee = async (req, res) => {
     const campusId = req.query.campusId ? Number(req.query.campusId) : undefined;
     const instituteId = req.query.instituteId ? Number(req.query.instituteId) : undefined;
+    const employeeId = req.query.employeeId ? Number(req.query.employeeId) : undefined;
+    const tenant = getTenantStore();
     try {
-        const result = await employee.getAllEmployee(campusId, instituteId);
+        const result = await employee.getAllEmployee(campusId, instituteId, {
+            userId: req.user.userId,
+            role: tenant.defaultRole,
+            employeeId,
+        });
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting all employee:", error);
-        res.status(500).send("Internal Server Error");
+        const message = error?.message || 'Internal Server Error';
+        const statusCode = /not found|scope/i.test(message) ? 400 : 500;
+        res.status(statusCode).send(message);
     }
 };
 
@@ -205,22 +213,22 @@ export async function getSubjectEvalution(req, res) {
 export const getTodayClassSchedule = async (req, res) => {
     try {
         const { employeeId, date, sessionId, groupPeriods } = req.query;
+        const acedmicYearId = getTenantStore().academicYearId;
 
         if (!employeeId) {
             return res.status(400).send("employeeId is required");
         }
 
-        const currentDate = date ? new Date(date) : new Date();
-        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const dayString = days[currentDate.getDay()];
+        if (!acedmicYearId) {
+            return res.status(400).send("academicYearId not found in user session");
+        }
 
         const formattedDate = formatQueryDate(date);
 
         const result = await employee.getTodayClassSchedule(
-            employeeId,
+            Number(employeeId),
             formattedDate,
-            dayString,
-            sessionId,
+            sessionId != null && sessionId !== '' ? Number(sessionId) : undefined,
             groupPeriods === 'true'
         );
 
@@ -228,7 +236,8 @@ export const getTodayClassSchedule = async (req, res) => {
 
     } catch (error) {
         console.error("Error in getTodayClassSchedule:", error);
-        res.status(500).send({ message: "Internal Server Error", success: false });
+        const statusCode = /scope/i.test(error.message) ? 400 : 500;
+        res.status(statusCode).send({ message: error.message, success: false });
     }
 };
 

@@ -114,35 +114,27 @@ export const addSpecialization = async (req, res) => {
 
 export const addSubject = async (req, res) => {
     try {
-        const { courseId, acedmicYearId } = req.body;
         const createdBy = req.user.userId;
-        const data = req.body
-        if (!(courseId && getTenantStore().universityId && acedmicYearId && getTenantStore().instituteId)) {
-            return res.status(400).send('universityId ,instituteId, course Id and acedmicYearId is required')
-        }
-        const result = await mainServices.addSubject(data, createdBy);
+        const result = await mainServices.addSubject(req.body, createdBy);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add SUbject:", error);
         const message = error?.message || 'Internal Server Error';
-        const statusCode = /required|not found|inactive|scope/i.test(message) ? 400 : 500;
+        const statusCode = /required|not found|inactive|scope|Invalid/i.test(message) ? 400 : 500;
         return res.status(statusCode).send(message);
     }
 };
 
 export const updateSubject = async (req, res) => {
     try {
-        const updateBy = req.user.userId;
-        const { subjectId } = req.body;
         const data = req.body;
-        if (!(subjectId)) {
-            return res.status(400).send('subjectId is required')
-        }
-        const result = await mainServices.updateSubject(data, updateBy);
+        const result = await mainServices.updateSubject(data);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in update SUbject:", error);
-        return res.status(500).send("Internal Server Error");
+        const message = error?.message || 'Internal Server Error';
+        const statusCode = /required|not found|inactive|Invalid/i.test(message) ? 400 : 500;
+        return res.status(statusCode).send(message);
     }
 };
 

@@ -22,11 +22,18 @@ export async function addBulkElectiveSubject(electiveSubjectData, options = {}) 
     }
 }
 
-export async function getElectiveSubjectDetails(filter = {}) {
+export async function getElectiveSubjectDetails() {
     try {
         return await scoped(model.electiveSubjectModel).findAll({
-            where: { ...filter },
             attributes: { exclude: excludeMeta },
+            include: [
+                {
+                    model: model.courseModel,
+                    as: 'course',
+                    attributes: ['courseId', 'courseName'],
+                    required: false,
+                },
+            ],
         });
     } catch (error) {
         console.error('Error fetching electiveSubject details:', error);
@@ -39,6 +46,14 @@ export async function getSingleElectiveSubjectDetails(electiveSubjectId) {
         return await scoped(model.electiveSubjectModel).findOne({
             attributes: { exclude: excludeMeta },
             where: { electiveSubjectId },
+            include: [
+                {
+                    model: model.courseModel,
+                    as: 'course',
+                    attributes: ['courseId', 'courseName'],
+                    required: false,
+                },
+            ],
         });
     } catch (error) {
         console.error('Error fetching electiveSubject details:', error);

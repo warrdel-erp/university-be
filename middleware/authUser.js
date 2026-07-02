@@ -35,16 +35,16 @@ export default async function useAuth(req, res, next) {    const authHeader = re
         // Fetch user roles and permissions
         const userRoleAndPermissions = await getUserRoleAndPermissionsByUserId(req.user.userId);
 
-        let role = "";
-        let userPermissions = "";
-        if (userRoleAndPermissions && userRoleAndPermissions.length !== 0) {
-            const { userRole, permissions } = userRoleAndPermissions[0];
-            role = userRole.role; // User's role
-            userPermissions = permissions.map(permission => permission.permission); // User's permissions
-        } else {
-            role = "Admin"
-            userPermissions = "all"
+        if (!userRoleAndPermissions?.length) {
+            return res.status(403).json({
+                message: "User role not assigned",
+            });
         }
+
+        const { userRole, permissions } = userRoleAndPermissions[0];
+
+        const role = userRole.role;
+        const userPermissions = permissions.map(permission => permission.permission);
 
         const accessRoute = req.originalUrl.split('?')[0].replace(/\/$/, '');
         const permissionType = req.method === 'GET' ? 'R/O' : 'R/W';
@@ -57,11 +57,6 @@ export default async function useAuth(req, res, next) {    const authHeader = re
         const allowedRolesForRoute = `${accessRoute}-${permissionType}`;
 
         // console.log(`Allowed Roles and Permissions: ${allowedRolesForRoute}`);
-
-        //  required role for this route
-        if (!role) {
-            return res.status(403).json({ message: "Access denied: Insufficient role" });
-        }
 
         // For non-GET methods
         if (req.method !== 'GET') {
@@ -81,6 +76,7 @@ export default async function useAuth(req, res, next) {    const authHeader = re
         const store = await buildRequestContextStore({
             userId: req.user.userId,
             defaultInstituteId: activeInstituteId,
+            universityId: req.user.universityId,
             defaultRole: req.user.defaultRole,
             defaultAcademicYearId: req.user.defaultAcademicYearId,
             bypass: req.bypassScope,

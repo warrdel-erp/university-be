@@ -12,16 +12,31 @@ const studentAttendanceReportSchema = z.object({
     employeeId: z.string().regex(/^\d+$/, "employeeId must be a number").transform(val => parseInt(val)),
 });
 
+const optionalPositiveId = z.preprocess(
+    (val) => (val === '' || val == null ? undefined : val),
+    z.coerce.number().int().positive().optional(),
+);
+
+const scheduleQuerySchema = z.object({
+    employeeId: z.coerce.number().int().positive(),
+    date: z.string().optional(),
+    sessionId: optionalPositiveId,
+    groupPeriods: z.enum(['true', 'false']).optional(),
+    acedmicYearId: optionalPositiveId,
+    academicYearId: optionalPositiveId,
+    instituteId: optionalPositiveId,
+    universityId: optionalPositiveId,
+}).passthrough();
+
 router.get('/uniqueClassSectionSubjects', userAuth, getUniqueClassSectionSubjects);
 
-router.get('/schedule', userAuth, getTodayClassSchedule);
+router.get('/schedule', userAuth, validate({ query: scheduleQuerySchema }), getTodayClassSchedule);
 
 router.get('/classDates', userAuth, validate({ query: studentAttendanceReportSchema }), getEmployeeClassDates);
 
 router.get('/classCounts', userAuth, getClassCounts);
 
 router.get('/pastSchedule', userAuth, getPastClassSchedules);
-
 router.get('/upcomingSchedule', userAuth, getUpcomingClassSchedules);
 
 router.get('/courses', userAuth, getTeacherCourses);

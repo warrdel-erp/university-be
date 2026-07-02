@@ -56,6 +56,19 @@ const dateField = z.string().trim().min(1, "date is required");
 const emptyToUndefined = (val) =>
   val === "" || val === null || val === undefined ? undefined : val;
 
+const optionalPositiveId = z.preprocess(
+  emptyToUndefined,
+  positiveIntegerId.optional(),
+);
+
+const classSectionStudentsQuerySchema = z.object({
+  timeTableMappingId: positiveIntegerId,
+  date: dateField,
+  academicYearId: optionalPositiveId,
+  acedmicYearId: optionalPositiveId,
+  groupPeriods: z.union([z.boolean(), z.string()]).optional(),
+}).passthrough();
+
 const optionalString = z.preprocess(
   emptyToUndefined,
   z.string().trim().optional(),
@@ -429,7 +442,12 @@ router.get("/:studentId/studentSubject", userAuth, getStudentSubject);
 router.get("/:studentId/feeDetails", userAuth, getFeeDetailsByStudentId);
 router.get("/issuedBook", userAuth, getBooksIssuedToStudent);
 router.get("/studentTimetable", userAuth, getStudentTimeTable);
-router.get("/classSectionStudents", userAuth, getStudentsByClassSection);
+router.get(
+  "/classSectionStudents",
+  userAuth,
+  validate({ query: classSectionStudentsQuerySchema }),
+  getStudentsByClassSection,
+);
 router.get(
   "/getallanswerSheetQrs",
   userAuth,

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { validate } from '../utility/validation.js';
+import { SUBJECT_TYPES, SUBJECT_CATEGORIES } from '../constant.js';
 import { getAllCollegesAndCourses, addCampus, addInstitute, addAffiliatedUniversity, addCourse, addSpecialization, addSubject, addClass, getClass, addClassSubjectMapper, getClassSubjectMapper, addSemester, getSemester, createClass, subjectExcel, updateCourse, changeCourseStatus, getClassSpecific, getClassRecord, updateSubject, getMonthlyIncome } from '../controllers/mainController.js';
 import userAuth from '../middleware/authUser.js'
 
@@ -42,6 +43,44 @@ const changeCourseStatusSchema = z.object({
     isActive: z.boolean({ required_error: 'isActive is required' }),
 });
 
+const subjectTypeEnum = z.enum(SUBJECT_TYPES, {
+    invalid_type_error: `subjectType must be one of: ${SUBJECT_TYPES.join(', ')}`,
+});
+
+const subjectCategoryEnum = z.enum(SUBJECT_CATEGORIES, {
+    invalid_type_error: `subjectCategory must be one of: ${SUBJECT_CATEGORIES.join(', ')}`,
+});
+
+const addSubjectSchema = z.object({
+    courseId: positiveIntegerId,
+    specializationId: positiveIntegerId.optional(),
+    subjectCode: z.string().min(1, 'subjectCode is required'),
+    subjectName: z.string().min(1, 'subjectName is required'),
+    subjectType: subjectTypeEnum,
+    subjectCategory: subjectCategoryEnum,
+    shortName: z.string().optional(),
+    description: z.string().optional(),
+    isActive: z.boolean().optional(),
+    term: z.coerce.number().int().positive().optional(),
+});
+
+const updateSubjectSchema = z.object({
+    subjectId: positiveIntegerId,
+    courseId: positiveIntegerId.optional(),
+    subjectCode: z.string().min(1).optional(),
+    subjectName: z.string().min(1).optional(),
+    shortName: z.string().nullable().optional(),
+    description: z.string().nullable().optional(),
+    subjectType: subjectTypeEnum.optional(),
+    subjectCategory: subjectCategoryEnum.optional(),
+    isActive: z.boolean().optional(),
+    specializationId: positiveIntegerId.nullable().optional(),
+    term: z.coerce.number().int().positive().nullable().optional(),
+}).refine(
+    (body) => Object.keys(body).some((key) => key !== 'subjectId'),
+    { message: 'At least one field to update is required' },
+);
+
 const classRecordQuerySchema = z.object({
     courseId: z.coerce.number({ required_error: 'courseId is required' }).int().positive(),
     classSectionsId: z.coerce.number().int().positive().optional(),
@@ -69,9 +108,9 @@ router.patch('/course/status', userAuth, validate({ body: changeCourseStatusSche
 
 router.post('/specialization', userAuth, addSpecialization);
 
-router.post('/subject', userAuth, addSubject);
+router.post('/subject', userAuth, validate({ body: addSubjectSchema }), addSubject);
 
-router.patch('/subject/update', userAuth, updateSubject);
+router.patch('/subject/update', userAuth, validate({ body: updateSubjectSchema }), updateSubject);
 
 router.post('/class', userAuth, addClass);
 

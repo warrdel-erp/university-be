@@ -1344,509 +1344,6 @@
       ]
     },
     {
-      "name": "course",
-      "description": "Course read APIs under `/course` and **course management** under `/main/course`.\n\n**Auth:** Bearer `{{token}}`. Institute scope from token / `X-Institute-Id`.\n\n| Method | Path | Notes |\n|--------|------|-------|\n| POST | `/main/course` | Create one or more courses |\n| PATCH | `/main/course` | Update `courseName`, `courseCode`, `departmentId` only |\n| PATCH | `/main/course/status` | Activate or deactivate — same endpoint, set `isActive` |\n| DELETE | `/course/:courseId` | Delete course if not session-mapped; cascades setup data |\n| GET | `/course` | List courses |\n\n**Delete rules:** blocked only when `courseId` exists in `session_course_mapping` (any session). Removes specializations, subjects, semesters, and other setup linked to the course.\n\n**Inactive course rules:** cannot add new subjects or map to new sessions.",
-      "variable": [
-        {
-          "key": "course_level_id",
-          "value": "1",
-          "type": "string",
-          "description": "employee_code_master_type id for course level"
-        },
-        {
-          "key": "department_id",
-          "value": "1",
-          "type": "string",
-          "description": "department.departmentId — optional on create/update"
-        }
-      ],
-      "item": [
-        {
-          "name": "create course (POST)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "const json = pm.response.json();",
-                  "const created = Array.isArray(json) ? json[0] : json;",
-                  "const courseId = created?.courseId ?? created?.dataValues?.courseId;",
-                  "if (courseId) {",
-                  "  pm.collectionVariables.set('course_id', String(courseId));",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "X-Institute-Id",
-                "value": "{{institute_id}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"course_levelId\": {{course_level_id}},\n  \"affiliatedUniversityId\": {{affiliated_university_id}},\n  \"departmentId\": {{department_id}},\n  \"term\": \"semester\",\n  \"courses\": [\n    {\n      \"courseName\": \"B.Tech CSE\",\n      \"courseCode\": \"BTCSE-{{$timestamp}}\",\n      \"courseDuration\": 4,\n      \"capacity\": \"60\"\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/main/course",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "main",
-                "course"
-              ]
-            },
-            "description": "**POST /main/course** — create one or more courses.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `course_levelId` | yes | Course level master type id |\n| `courses[]` | yes | At least one course |\n| `courses[].courseName` | yes | |\n| `courses[].courseCode` | yes | |\n| `departmentId` | no | Root default for all courses in batch |\n| `courses[].departmentId` | no | Overrides root; can be set later via PATCH |\n| `affiliatedUniversityId` | no | Defaults to institute's affiliated university |\n| `term` | no | `semester` (default), `trimester`, `quarterly`, `yearly` |\n| `courses[].courseDuration` | no | Years — used to compute `totalTerms` |\n| `courses[].capacity` | no | |\n\nSets `{{course_id}}` from first created course."
-          },
-          "response": []
-        },
-        {
-          "name": "update course (PATCH)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('status 200', () => pm.response.to.have.status(200));"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "X-Institute-Id",
-                "value": "{{institute_id}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"courseId\": {{course_id}},\n  \"courseName\": \"B.Tech Computer Science\",\n  \"courseCode\": \"BTCS-UPD-{{$timestamp}}\",\n  \"departmentId\": {{department_id}}\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/main/course",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "main",
-                "course"
-              ]
-            },
-            "description": "**PATCH /main/course** — update course details.\n\nOnly these fields can be changed: `courseName`, `courseCode`, `departmentId`.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `courseId` | yes | |\n| `courseName` | no | At least one updatable field required |\n| `courseCode` | no | |\n| `departmentId` | no | Send `null` to clear department link |"
-          },
-          "response": []
-        },
-        {
-          "name": "activate course (PATCH status)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "const json = pm.response.json();",
-                  "pm.test('course is active', () => pm.expect(json.isActive).to.eql(true));"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "X-Institute-Id",
-                "value": "{{institute_id}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"courseId\": {{course_id}},\n  \"isActive\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/main/course/status",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "main",
-                "course",
-                "status"
-              ]
-            },
-            "description": "**PATCH /main/course/status** — activate a course.\n\nSame endpoint for activate and deactivate; set `isActive` to `true` or `false`.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `courseId` | yes | |\n| `isActive` | yes | `true` = active, `false` = inactive |\n\n**When inactive:** new subjects and new session mappings are blocked."
-          },
-          "response": []
-        },
-        {
-          "name": "deactivate course (PATCH status)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "const json = pm.response.json();",
-                  "pm.test('course is inactive', () => pm.expect(json.isActive).to.eql(false));"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "X-Institute-Id",
-                "value": "{{institute_id}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"courseId\": {{course_id}},\n  \"isActive\": false\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/main/course/status",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "main",
-                "course",
-                "status"
-              ]
-            },
-            "description": "**PATCH /main/course/status** — deactivate a course.\n\nSame endpoint as activate; set `\"isActive\": false`.\n\nInactive courses cannot receive new subjects or be mapped to new sessions."
-          },
-          "response": []
-        },
-        {
-          "name": "delete course (DELETE)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "const json = pm.response.json();",
-                  "pm.test('delete success', () => pm.expect(json.status).to.eql('success'));"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "X-Institute-Id",
-                "value": "{{institute_id}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/course/{{course_id}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "course",
-                "{{course_id}}"
-              ]
-            },
-            "description": "**DELETE /course/:courseId** — permanently delete a course.\n\n**Allowed only when:** course `courseId` has **no row** in `session_course_mapping` (checked across the full table).\n\n**Also removes** setup data created after course creation:\n- Specializations\n- Subjects (+ class-subject mappers, teacher mappings)\n- Semesters\n- Grade courses, POs, exam setup terms, syllabus, timetable structures, etc.\n\n**400** if session-mapped.\n**404** if course not found."
-          },
-          "response": []
-        },
-        {
-          "name": "get",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/course?campusId=11",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "course"
-              ],
-              "query": [
-                {
-                  "key": "instituteId",
-                  "value": "12",
-                  "type": "text",
-                  "disabled": true
-                },
-                {
-                  "key": "campusId",
-                  "value": "11"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "get terms",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/course/:courseId/terms",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "course",
-                ":courseId",
-                "terms"
-              ],
-              "variable": [
-                {
-                  "key": "courseId",
-                  "value": "34"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "get with Subjects",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/course/withSubjects?instituteId=12&acedmicYearId=59",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "course",
-                "withSubjects"
-              ],
-              "query": [
-                {
-                  "key": "instituteId",
-                  "value": "12"
-                },
-                {
-                  "key": "acedmicYearId",
-                  "value": "59"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "course sessions",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/course/:id/sessions",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "course",
-                ":id",
-                "sessions"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "34"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "class Sections Grouped",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [
-              {
-                "key": "X-Academic-Year-Id",
-                "value": "{{acedmicYear_id}}",
-                "description": "Optional; use target year for promotion dropdown"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/course/semesterWithClassSections?courseId={{course_id}}&sessionId={{promotion_target_session_id}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "course",
-                "semesterWithClassSections"
-              ],
-              "query": [
-                {
-                  "key": "courseId",
-                  "value": "{{course_id}}"
-                },
-                {
-                  "key": "sessionId",
-                  "value": "{{promotion_target_session_id}}"
-                }
-              ]
-            },
-            "description": "**GET /course/semesterWithClassSections** — class sections grouped by term (Sem 1, Sem 2, …). Used for **student promotion** dropdown and timetable setup.\n\nAlso under **Students → promotion — class sections dropdown**."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
       "name": "subject",
       "item": [
         {
@@ -4031,216 +3528,431 @@
       ]
     },
     {
-      "name": "holiday",
-      "description": "Institute holidays under `/holiday`.\n\n**Auth:** Bearer `{{token}}`.\n\n**Tenant scope:** All CRUD via `scoped(holidayModel)` — institute + academic year from auth context. Query/body `acedmicYearId` / `instituteId` optional (frontend compat, **ignored**).\n\n**Validation:** Zod on all routes. **400** → `{ status: \"error\", message, errors[] }`.",
+      "name": "scoped-tenant-v2",
+      "description": "APIs updated for scoped tenant behavior (utility/scoped.js).\n\nLogin context: defaultInstituteId, defaultAcademicYearId, defaultRole from PUT /user/saveUserDefaults. Optional x-institute-id header overrides institute.\n\nLegacy query/body tenant IDs are accepted but not used in logic.",
       "item": [
         {
-          "name": "create",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
+          "name": "holiday",
+          "description": "Institute holidays under /holiday.\n\n**Auth:** Bearer {{token}} — any role.\n\n**GET /** returns all holidays for current institute + academic year (flat array). No role filter.\n\n**Tenant scope (utility/scoped.js):** Active login context from PUT /user/saveUserDefaults + optional x-institute-id header. Query/body acedmicYearId, instituteId, universityId are optional (FE compat) and ignored in business logic.\n\n**Validation:** Zod on all routes.",
+          "item": [
+            {
+              "name": "create",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Republic Day\",\n  \"date\": \"2026-01-26\",\n  \"event\": \"National holiday\",\n  \"remark\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/holiday",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "holiday"
+                  ]
+                },
+                "description": "**POST /holiday**\n\nOptional: name, date, event, remark. Tenant IDs injected on create via scoped()."
+              },
+              "response": []
             },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Republic Day\",\n  \"date\": \"2026-01-26\",\n  \"event\": \"National holiday\",\n  \"remark\": \"\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+            {
+              "name": "list (all)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/holiday?acedmicYearId={{acedmicYear_id}}&instituteId={{institute_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "holiday"
+                  ],
+                  "query": [
+                    {
+                      "key": "acedmicYearId",
+                      "value": "{{acedmicYear_id}}",
+                      "description": "Optional — ignored; uses login academic year"
+                    },
+                    {
+                      "key": "instituteId",
+                      "value": "{{institute_id}}",
+                      "description": "Optional — ignored; uses login institute"
+                    },
+                    {
+                      "key": "name",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "event",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "date",
+                      "value": "",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "**GET /holiday**\n\nReturns all holidays for active institute + academic year. Any role.\n\n**200:** flat JSON array ordered by date DESC.\n\nOptional filters: name, event, date (still scoped)."
+              },
+              "response": []
             },
-            "url": {
-              "raw": "{{baseurl}}/holiday",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "holiday"
-              ]
+            {
+              "name": "single",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/holiday/single?holidayId=1",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "holiday",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "holidayId",
+                      "value": "1",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**GET /holiday/single?holidayId=** — scoped by institute + academic year."
+              },
+              "response": []
             },
-            "description": "**POST /holiday**\n\nOptional body: `name`, `date`, `event`, `remark`. Tenant fields injected on create."
-          },
-          "response": []
+            {
+              "name": "update",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"holidayId\": 1,\n  \"name\": \"Updated holiday name\",\n  \"remark\": \"Optional\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/holiday",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "holiday"
+                  ]
+                },
+                "description": "**PATCH /holiday** — required holidayId; optional name, date, event, remark."
+              },
+              "response": []
+            },
+            {
+              "name": "delete",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/holiday?holidayId=1",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "holiday"
+                  ],
+                  "query": [
+                    {
+                      "key": "holidayId",
+                      "value": "1",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**DELETE /holiday?holidayId=** — soft-delete, scoped tenant."
+              },
+              "response": []
+            }
+          ]
         },
         {
-          "name": "list",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/holiday?page=1&limit=10",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "holiday"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
+          "name": "notice",
+          "description": "Notices under /notice.\n\n**Auth:** Bearer {{token}}.\n\n**Tenant scope (utility/scoped.js):** Active login context from PUT /user/saveUserDefaults + optional x-institute-id header. Query/body acedmicYearId, instituteId, universityId are optional (FE compat) and ignored in business logic.\n\n**GET /studentNotice** (Plan B): institute + university from login; no academic year filter. Role-based message_to filter.\n\n**GET /employee**: full scoped (institute + university + academic year).",
+          "item": [
+            {
+              "name": "create",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
                 },
-                {
-                  "key": "limit",
-                  "value": "10"
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Exam schedule\",\n  \"notice\": \"Mid-term exams begin next week.\",\n  \"noticeDate\": \"2026-06-27\",\n  \"publishDate\": \"2026-06-27\",\n  \"messageTo\": [\n    \"ADMIN\",\n    \"TEACHER\",\n    \"STUDENT\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
-                {
-                  "key": "name",
-                  "value": "",
-                  "disabled": true
+                "url": {
+                  "raw": "{{baseurl}}/notice",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "notice"
+                  ]
                 },
-                {
-                  "key": "event",
-                  "value": "",
-                  "disabled": true
+                "description": "**POST /notice**\n\nRequired: title, messageTo (string or array). Optional: notice, noticeDate, publishDate. Tenant fields stripped from body and injected via scoped()."
+              },
+              "response": []
+            },
+            {
+              "name": "studentNotice (teacher / student)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
                 },
-                {
-                  "key": "date",
-                  "value": "",
-                  "disabled": true
-                }
-              ]
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/notice/studentNotice?acedmicYearId={{acedmicYear_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "notice",
+                    "studentNotice"
+                  ],
+                  "query": [
+                    {
+                      "key": "acedmicYearId",
+                      "value": "{{acedmicYear_id}}",
+                      "description": "Optional — ignored"
+                    },
+                    {
+                      "key": "instituteId",
+                      "value": "{{institute_id}}",
+                      "disabled": true
+                    },
+                    {
+                      "key": "universityId",
+                      "value": "",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "**GET /notice/studentNotice**\n\n**Scope:** institute + university (all academic years).\n\n| defaultRole | message_to match |\n|-------------|------------------|\n| TEACHER | ADMIN, TEACHER, or STUDENT |\n| Other | STUDENT or Student |\n\n**200:** flat notice array, noticeId DESC."
+              },
+              "response": []
             },
-            "description": "**GET /holiday**\n\nPaginated holidays for current institute + academic year.\n\n**200:** `{ holidays, total, page, limit }`."
-          },
-          "response": []
-        },
-        {
-          "name": "single",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
+            {
+              "name": "employee notices",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/notice/employee?acedmicYearId={{acedmicYear_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "notice",
+                    "employee"
+                  ],
+                  "query": [
+                    {
+                      "key": "acedmicYearId",
+                      "value": "{{acedmicYear_id}}",
+                      "description": "Optional — ignored"
+                    }
+                  ]
+                },
+                "description": "**GET /notice/employee**\n\n**200:** { noticeCreated, noticeAll }\n\n- noticeCreated — notices created by logged-in user (scoped institute + university + academic year)\n- noticeAll — notices where message_to contains caller defaultRole (e.g. TEACHER)"
+              },
+              "response": []
             },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/holiday/single?holidayId=1",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "holiday",
-                "single"
-              ],
-              "query": [
-                {
-                  "key": "holidayId",
-                  "value": "1",
-                  "description": "Required"
-                }
-              ]
+            {
+              "name": "update",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"noticeId\": 1,\n  \"title\": \"Updated title\",\n  \"messageTo\": [\n    \"TEACHER\",\n    \"STUDENT\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/notice",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "notice"
+                  ]
+                },
+                "description": "**PATCH /notice** — required noticeId; optional fields. Tenant IDs stripped on update."
+              },
+              "response": []
             },
-            "description": "**GET /holiday/single?holidayId=**"
-          },
-          "response": []
-        },
-        {
-          "name": "update",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"holidayId\": 1,\n  \"name\": \"Updated holiday name\",\n  \"remark\": \"Optional\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/holiday",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "holiday"
-              ]
-            },
-            "description": "**PATCH /holiday**\n\n**Required body:** `holidayId`. Optional: `name`, `date`, `event`, `remark`."
-          },
-          "response": []
-        },
-        {
-          "name": "delete",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/holiday?holidayId=1",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "holiday"
-              ],
-              "query": [
-                {
-                  "key": "holidayId",
-                  "value": "1",
-                  "description": "Required"
-                }
-              ]
-            },
-            "description": "**DELETE /holiday?holidayId=**\n\nSoft-delete. Scoped — only holidays in current tenant."
-          },
-          "response": []
+            {
+              "name": "delete",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/notice?noticeId=1",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "notice"
+                  ],
+                  "query": [
+                    {
+                      "key": "noticeId",
+                      "value": "1",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**DELETE /notice?noticeId=** — soft-delete, scoped tenant."
+              },
+              "response": []
+            }
+          ]
         }
       ]
     },
@@ -15038,6 +14750,632 @@
           ]
         }
       ]
+    },
+    {
+      "name": "course",
+      "description": "Course & subject setup under `/main/course`, `/main/subject`, and read APIs under `/course`, `/subject`.\n\n**Auth:** Bearer `{{token}}`. Institute + academic year from login (`utility/scoped.js`). Optional `X-Institute-Id` header.\n\n| Method | Path | Notes |\n|--------|------|-------|\n| POST | `/main/course` | Create one or more courses |\n| PATCH | `/main/course` | Update `courseName`, `courseCode`, `departmentId` |\n| PATCH | `/main/course/status` | Set `isActive` true/false |\n| POST | `/main/subject` | Create subject (scoped tenant on `subjectModel`) |\n| PATCH | `/main/subject/update` | Update subject fields |\n| DELETE | `/course/:courseId` | Delete if not session-mapped |\n| GET | `/course`, `/subject` | List / read helpers |\n\n**Subject create:** `subjectType` + `subjectCategory` required (Zod). Tenant IDs not accepted in body.\n\n**Inactive course:** cannot add subjects or new session mappings.",
+      "variable": [
+        {
+          "key": "course_level_id",
+          "value": "1",
+          "type": "string",
+          "description": "employee_code_master_type id for course level"
+        },
+        {
+          "key": "department_id",
+          "value": "1",
+          "type": "string",
+          "description": "department.departmentId — optional on create/update"
+        }
+      ],
+      "item": [
+        {
+          "name": "create course (POST)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "const created = Array.isArray(json) ? json[0] : json;",
+                  "const courseId = created?.courseId ?? created?.dataValues?.courseId;",
+                  "if (courseId) {",
+                  "  pm.collectionVariables.set('course_id', String(courseId));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"course_levelId\": {{course_level_id}},\n  \"affiliatedUniversityId\": {{affiliated_university_id}},\n  \"departmentId\": {{department_id}},\n  \"term\": \"semester\",\n  \"courses\": [\n    {\n      \"courseName\": \"B.Tech CSE\",\n      \"courseCode\": \"BTCSE-{{$timestamp}}\",\n      \"courseDuration\": 4,\n      \"capacity\": \"60\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/main/course",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "course"
+              ]
+            },
+            "description": "**POST /main/course** — create one or more courses.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `course_levelId` | yes | Course level master type id |\n| `courses[]` | yes | At least one course |\n| `courses[].courseName` | yes | |\n| `courses[].courseCode` | yes | |\n| `departmentId` | no | Root default for all courses in batch |\n| `courses[].departmentId` | no | Overrides root; can be set later via PATCH |\n| `affiliatedUniversityId` | no | Defaults to institute's affiliated university |\n| `term` | no | `semester` (default), `trimester`, `quarterly`, `yearly` |\n| `courses[].courseDuration` | no | Years — used to compute `totalTerms` |\n| `courses[].capacity` | no | |\n\nSets `{{course_id}}` from first created course."
+          },
+          "response": []
+        },
+        {
+          "name": "create subject (POST)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200 or 201', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "const json = pm.response.json();",
+                  "const row = json?.data ?? json?.subject ?? json;",
+                  "const subjectId = row?.subjectId ?? row?.dataValues?.subjectId;",
+                  "if (subjectId) {",
+                  "  pm.collectionVariables.set('subject_id', String(subjectId));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": {{course_id}},\n  \"subjectCode\": \"SUB-{{$timestamp}}\",\n  \"subjectName\": \"subject-1\",\n  \"subjectType\": \"Core\",\n  \"subjectCategory\": \"Theory\",\n  \"shortName\": \"S1\",\n  \"description\": \"Optional description\",\n  \"isActive\": true,\n  \"term\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/main/subject",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "subject"
+              ]
+            },
+            "description": "**POST /main/subject** — create a subject for a course.\n\n**Tenant scope:** `universityId`, `instituteId`, `acedmicYearId` injected via `scoped(subjectModel)` from login — do not send in body.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `courseId` | yes | Program/course PK |\n| `subjectCode` | yes | Unique code |\n| `subjectName` | yes | |\n| `subjectType` | yes | One of: Core, Elective, Open Elective, Department Elective, Foundation, Skill Enhancement, Ability Enhancement, Value Added, Internship, Dissertation, Audit |\n| `subjectCategory` | yes | One of: Theory, Practical, Lab, Project, Seminar, Workshop |\n| `shortName` | no | |\n| `description` | no | |\n| `isActive` | no | Default `true` |\n| `specializationId` | no | |\n| `term` | no | Term/semester number |\n\nCourse must be **active**. Sets `{{subject_id}}` on success."
+          },
+          "response": []
+        },
+        {
+          "name": "update subject (PATCH)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjectId\": {{subject_id}},\n  \"subjectName\": \"Updated Subject Name\",\n  \"subjectCode\": \"SUB-UPD-{{$timestamp}}\",\n  \"shortName\": \"US\",\n  \"description\": \"Updated description\",\n  \"subjectType\": \"Elective\",\n  \"subjectCategory\": \"Practical\",\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/main/subject/update",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "subject",
+                "update"
+              ]
+            },
+            "description": "**PATCH /main/subject/update** — update subject fields.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `subjectId` | yes | |\n| `courseId` | no | If changed, target course must be active |\n| `subjectCode` | no | |\n| `subjectName` | no | |\n| `shortName` | no | Send `null` to clear |\n| `description` | no | Send `null` to clear |\n| `subjectType` | no | Core, Elective, Open Elective, Department Elective, Foundation, Skill Enhancement, Ability Enhancement, Value Added, Internship, Dissertation, Audit |\n| `subjectCategory` | no | Theory, Practical, Lab, Project, Seminar, Workshop |\n| `isActive` | no | |\n| `specializationId` | no | Send `null` to clear |\n| `term` | no | Send `null` to clear |\n\nAt least one field besides `subjectId` is required. Scoped update — tenant IDs from login only."
+          },
+          "response": []
+        },
+        {
+          "name": "update course (PATCH)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": {{course_id}},\n  \"courseName\": \"B.Tech Computer Science\",\n  \"courseCode\": \"BTCS-UPD-{{$timestamp}}\",\n  \"departmentId\": {{department_id}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/main/course",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "course"
+              ]
+            },
+            "description": "**PATCH /main/course** — update course details.\n\nOnly these fields can be changed: `courseName`, `courseCode`, `departmentId`.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `courseId` | yes | |\n| `courseName` | no | At least one updatable field required |\n| `courseCode` | no | |\n| `departmentId` | no | Send `null` to clear department link |"
+          },
+          "response": []
+        },
+        {
+          "name": "activate course (PATCH status)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('course is active', () => pm.expect(json.isActive).to.eql(true));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": {{course_id}},\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/main/course/status",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "course",
+                "status"
+              ]
+            },
+            "description": "**PATCH /main/course/status** — activate a course.\n\nSame endpoint for activate and deactivate; set `isActive` to `true` or `false`.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `courseId` | yes | |\n| `isActive` | yes | `true` = active, `false` = inactive |\n\n**When inactive:** new subjects and new session mappings are blocked."
+          },
+          "response": []
+        },
+        {
+          "name": "deactivate course (PATCH status)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('course is inactive', () => pm.expect(json.isActive).to.eql(false));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": {{course_id}},\n  \"isActive\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/main/course/status",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "course",
+                "status"
+              ]
+            },
+            "description": "**PATCH /main/course/status** — deactivate a course.\n\nSame endpoint as activate; set `\"isActive\": false`.\n\nInactive courses cannot receive new subjects or be mapped to new sessions."
+          },
+          "response": []
+        },
+        {
+          "name": "delete course (DELETE)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('delete success', () => pm.expect(json.status).to.eql('success'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/course/{{course_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course",
+                "{{course_id}}"
+              ]
+            },
+            "description": "**DELETE /course/:courseId** — permanently delete a course.\n\n**Allowed only when:** course `courseId` has **no row** in `session_course_mapping` (checked across the full table).\n\n**Also removes** setup data created after course creation:\n- Specializations\n- Subjects (+ class-subject mappers, teacher mappings)\n- Semesters\n- Grade courses, POs, exam setup terms, syllabus, timetable structures, etc.\n\n**400** if session-mapped.\n**404** if course not found."
+          },
+          "response": []
+        },
+        {
+          "name": "get",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/course?campusId=11",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course"
+              ],
+              "query": [
+                {
+                  "key": "instituteId",
+                  "value": "12",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "campusId",
+                  "value": "11"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get terms",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/course/:courseId/terms",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course",
+                ":courseId",
+                "terms"
+              ],
+              "variable": [
+                {
+                  "key": "courseId",
+                  "value": "34"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get with Subjects",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/course/withSubjects?instituteId=12&acedmicYearId=59",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course",
+                "withSubjects"
+              ],
+              "query": [
+                {
+                  "key": "instituteId",
+                  "value": "12"
+                },
+                {
+                  "key": "acedmicYearId",
+                  "value": "59"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "course sessions",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/course/:id/sessions",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course",
+                ":id",
+                "sessions"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "34"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "class Sections Grouped",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Academic-Year-Id",
+                "value": "{{acedmicYear_id}}",
+                "description": "Optional; use target year for promotion dropdown"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/course/semesterWithClassSections?courseId={{course_id}}&sessionId={{promotion_target_session_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course",
+                "semesterWithClassSections"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "{{course_id}}"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{promotion_target_session_id}}"
+                }
+              ]
+            },
+            "description": "**GET /course/semesterWithClassSections** — class sections grouped by term (Sem 1, Sem 2, …). Used for **student promotion** dropdown and timetable setup.\n\nAlso under **Students → promotion — class sections dropdown**."
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "variable": [
@@ -15188,7 +15526,7 @@
       "key": "subject_id",
       "value": "47",
       "type": "string",
-      "description": "subject.subjectId — syllabus units and create payload"
+      "description": "subject.subjectId — set from POST /main/subject; used in syllabus and subject PATCH"
     },
     {
       "key": "syllabus_id",

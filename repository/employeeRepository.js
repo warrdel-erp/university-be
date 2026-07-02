@@ -14,6 +14,32 @@ async function assertScopedEmployee(employeeId, options = {}) {
     });
 }
 
+export async function resolveEmployeeIdForAuth({ userId, employeeId } = {}) {
+    if (employeeId != null && employeeId !== '') {
+        const row = await scoped(model.employeeModel).findOne({
+            where: { employeeId: Number(employeeId) },
+            attributes: ['employeeId', 'userId'],
+        });
+        if (!row) {
+            return null;
+        }
+        if (userId != null && Number(row.userId) !== Number(userId)) {
+            return null;
+        }
+        return row.employeeId;
+    }
+
+    if (userId != null && userId !== '') {
+        const row = await scoped(model.employeeModel).findOne({
+            where: { userId: Number(userId) },
+            attributes: ['employeeId'],
+        });
+        return row?.employeeId ?? null;
+    }
+
+    return null;
+}
+
 export async function addEmployee(data, transaction) {
     try {
         const result = await scoped(model.employeeModel).create(data, { transaction });
@@ -42,9 +68,11 @@ export async function updateEmployee(employeeId, data, transaction) {
     }
 };
 
-export async function getAllEmployee(campusId, instituteId) {
+export async function getAllEmployee(campusId, instituteId, options = {}) {
     try {
+        const { employeeId } = options;
         const whereClause = {
+            ...(employeeId && { employeeId }),
             ...(campusId && { campusId }),
             ...(instituteId && { instituteId }),
         };

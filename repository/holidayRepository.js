@@ -18,6 +18,19 @@ export async function addHoliday(holidayData) {
     }
 }
 
+export async function getAllHolidays(filter = {}) {
+    try {
+        return await scoped(model.holidayModel).findAll({
+            where: { ...filter },
+            attributes: { exclude: excludeMeta },
+            order: [['date', 'DESC']],
+        });
+    } catch (error) {
+        console.error('Error fetching Holiday details:', error);
+        throw error;
+    }
+}
+
 export async function getHolidayDetails(page, limit, filter = {}) {
     try {
         const pageNumber = parseInt(page, 10) || 1;

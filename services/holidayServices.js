@@ -8,6 +8,10 @@ export async function addHoliday(holidayData, createdBy, updatedBy) {
     return Holiday;
 };
 
+export async function getAllHolidays(filter) {
+    return await holidayCreationService.getAllHolidays(filter);
+}
+
 export async function getHolidayDetails(page, limit, filter) {
     return await holidayCreationService.getHolidayDetails(page, limit, filter);
 }

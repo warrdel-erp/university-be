@@ -207,6 +207,29 @@ export const governanceBodyCategories = [
 
 export const governanceBodyStatuses = ["Active", "Inactive", "Dissolved"];
 
+export const SUBJECT_TYPES = [
+  "Core",
+  "Elective",
+  "Open Elective",
+  "Department Elective",
+  "Foundation",
+  "Skill Enhancement",
+  "Ability Enhancement",
+  "Value Added",
+  "Internship",
+  "Dissertation",
+  "Audit",
+];
+
+export const SUBJECT_CATEGORIES = [
+  "Theory",
+  "Practical",
+  "Lab",
+  "Project",
+  "Seminar",
+  "Workshop",
+];
+
 export const questionStatus = ["Pending", "Approved", "Rejected"];
 
 export const questionTypes = {

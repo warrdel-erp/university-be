@@ -5,6 +5,17 @@ import { ATTENDANCE_PRESENT_STATUSES } from '../constant.js';
 
 const presentStatusSqlList = ATTENDANCE_PRESENT_STATUSES.map((s) => `'${s}'`).join(', ');
 
+/** DATE-only compare — avoids Sequelize UTC shift on YYYY-MM-DD strings. */
+function routineActiveOnDateWhere(currentDate) {
+  return {
+    is_publish: true,
+    [Op.and]: [
+      Sequelize.where(Sequelize.fn('DATE', Sequelize.col('starting_date')), { [Op.lte]: currentDate }),
+      Sequelize.where(Sequelize.fn('DATE', Sequelize.col('ending_date')), { [Op.gte]: currentDate }),
+    ],
+  };
+}
+
 async function assertScopedRoutine(timeTableRoutineId, options = {}) {
   const { transaction, attributes = ['timeTableRoutineId'] } = options;
   return scoped(model.timeTableRoutineModel).findOne({
@@ -1523,88 +1534,53 @@ export async function getClassSectionWithCourseRepository(classSectionsId) {
 }
 
 
-export async function getTodayClassScheduleForEmployee(
-  employeeId,
-  currentDate,
-  dayString,
-  sessionId
-) {
+export async function getTodayClassScheduleForEmployee(employeeId, currentDate, sessionId) {
   try {
     const result = await model.classScheduleModel.findAll({
       raw: true,
       nest: true,
       where: {
-        [Op.or]: [
-          { employeeId },
-        ],
-        day: dayString,
+        employeeId: Number(employeeId),
       },
       attributes: [
         'timeTableMappingId',
         'timeTableType',
         'day',
         'period',
-        [
-          Sequelize.literal(`(
-            SELECT COUNT(*) 
-            FROM attendance AS a 
-            WHERE a.time_table_mapping_id = class_schedule_item.time_table_mapping_id 
-              AND a.date BETWEEN '${currentDate} 00:00:00' AND '${currentDate} 23:59:59' 
-              AND a.attendance_status IN (${presentStatusSqlList})
-          )`),
-          'attendance'
-        ]
+        'isAttendence',
+        'isSameTeacher',
       ],
       include: [
         {
           model: model.timeTableRoutineModel,
           as: "timeTablecreate",
           required: true,
-          attributes: ['timeTableRoutineId'],
+          attributes: ['timeTableRoutineId', 'startingDate', 'endingDate'],
           where: {
-            is_publish: true,
-            startingDate: {
-              [Op.lte]: currentDate
-            },
-            endingDate: {
-              [Op.gte]: currentDate
-            },
+            ...routineActiveOnDateWhere(currentDate),
             ...buildScope(model.timeTableRoutineModel),
           },
           include: [
             {
               model: model.courseModel,
               as: "timeTableCourse",
-              attributes: ['courseName']
+              attributes: ['courseId', 'courseName'],
             },
             {
               model: model.classSectionModel,
               as: "timeTableClassSection",
-              required: sessionId ? true : false,
+              required: Boolean(sessionId),
               where: {
-                ...(sessionId && { sessionId })
+                ...(sessionId && { sessionId }),
               },
-              attributes: [
-                'class',
-                'section',
-                'classSectionsId',
-                [
-                  Sequelize.literal(`(
-                    SELECT COUNT(*)
-                    FROM students AS s
-                    WHERE s.class_sections_id = \`timeTablecreate->timeTableClassSection\`.\`class_sections_id\`
-                    AND s.deleted_at IS NULL
-                  )`),
-                  'totalStudents'
-                ]
-              ]
-            }
-          ]
+              attributes: ['class', 'section', 'classSectionsId'],
+            },
+          ],
         },
         {
           model: model.timeTableStructurePeriodsModel,
           as: "timeTablecreation",
-          attributes: ['periodName', 'startTime', 'endTime']
+          attributes: ['periodName', 'startTime', 'endTime'],
         },
         {
           model: model.teacherSubjectMappingModel,
@@ -1615,25 +1591,25 @@ export async function getTodayClassScheduleForEmployee(
               model: model.subjectModel,
               as: "employeeSubject",
               attributes: ['subjectId', 'subjectName'],
-            }
-          ]
+            },
+          ],
         },
         {
           model: model.subjectModel,
           as: "timeTableSubject",
-          attributes: ['subjectId', 'subjectName']
+          attributes: ['subjectId', 'subjectName'],
         },
         {
           model: model.electiveSubjectModel,
           as: "timeTableElective",
-          attributes: ['electiveSubjectId', 'electiveSubjectName']
+          attributes: ['electiveSubjectId', 'electiveSubjectName'],
         },
         {
           model: model.classRoomModel,
           as: "classRoom",
-          attributes: ['roomNumber']
-        }
-      ]
+          attributes: ['roomNumber'],
+        },
+      ],
     });
     return result;
   } catch (error) {
@@ -1652,7 +1628,7 @@ export async function getPastClassSchedulesForEmployee(
       raw: true,
       nest: true,
       where: {
-        employeeId,
+        employeeId: Number(employeeId),
       },
       attributes: [
         'timeTableMappingId',
@@ -1754,7 +1730,7 @@ export async function getUpcomingClassSchedulesForEmployee(
       raw: true,
       nest: true,
       where: {
-        employeeId,
+        employeeId: Number(employeeId),
       },
       attributes: [
         'timeTableMappingId',
@@ -1839,7 +1815,7 @@ export async function getUniqueClassSectionSubjectsForEmployee(employeeId, acedm
   try {
     const schedules = await model.classScheduleModel.findAll({
       where: {
-        employeeId,
+        employeeId: Number(employeeId),
       },
       include: [
         {

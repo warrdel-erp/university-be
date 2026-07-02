@@ -8,6 +8,7 @@ import {
 } from "../repository/faculityLoadRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 import { getHolidayStartEndDate } from "../repository/holidayRepository.js";
+import { decimalAdd, toMoneyNumber } from "../utility/decimalMoney.js";
 
 // export async function addtimeTableCreate(data, createdBy, updatedBy) {
 //     const transaction = await sequelize.transaction();
@@ -196,7 +197,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
     }
 
     const { startTime, endTime } = periodInfo;
-    const periodLength = periodInfo.timeTableName?.periodLength ?? 0;
+    const periodLength = toMoneyNumber(periodInfo.timeTableName?.periodLength ?? 0);
 
     // if (teacherSubjectMappingId) {
     //   teacherSubjectData = await getTeacherDetailsByTeacherSubjectId(teacherSubjectMappingId);
@@ -242,7 +243,8 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
 
     const facultyLoad = await getSingleFaculityLoadDetails(data.employeeId);
 
-    const currentLoad = Number(facultyLoad?.[0]?.currentLoad || 0) + Number(periodLength || 0);
+    const existingLoad = toMoneyNumber(facultyLoad?.[0]?.currentLoad);
+    const currentLoad = decimalAdd(existingLoad, periodLength);
 
     await updateFaculityLoadByEmployeeId(data.employeeId, { currentLoad }, transaction);
 
@@ -423,7 +425,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
       throw new Error(`No timetable found for ID ${baseRow.timeTableCreationId}`);
     }
 
-    const periodLength = Number(ttCreationData[0].dataValues.periodLength) || 0;
+    const periodLength = toMoneyNumber(ttCreationData[0].dataValues.periodLength);
 
     const periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(baseRow.timeTableCreationId);
     if (!periodInfo) {
@@ -511,8 +513,10 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           throw new Error(`Faculty load not found for employee ${item.employeeId}`);
         }
 
-        const currentLoad = Number(facLoad[0].dataValues.currentLoad || 0);
-        const newLoad = currentLoad + periodLength;
+        const existingLoad = toMoneyNumber(
+          facLoad[0].dataValues?.currentLoad ?? facLoad[0].currentLoad,
+        );
+        const newLoad = decimalAdd(existingLoad, periodLength);
 
         await updateFaculityLoadByEmployeeId(item.employeeId, { currentLoad: newLoad }, transaction);
 
