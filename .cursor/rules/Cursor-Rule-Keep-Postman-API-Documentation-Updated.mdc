@@ -1,0 +1,375 @@
+---
+globs: docs\postman\univ-v2.postman_collection.json
+alwaysApply: false
+---
+
+Whenever an API is created, modified, or removed, the corresponding Postman collection and documentation must be updated immediately. The documentation should be detailed enough that a frontend developer can integrate the API without reading the backend code.
+
+---
+
+## General Rules
+
+* Every API must have exactly one Postman request.
+* Update the existing request instead of creating duplicates.
+* Every API change must be reflected in Postman before considering the task complete.
+* Keep request and response examples synchronized with the implementation.
+* Use meaningful request names and organize requests inside the correct folders.
+
+---
+
+# Every API Documentation Must Include
+
+## 1. API Name
+
+Use a clear, descriptive name.
+
+Example:
+
+```
+Create Student
+Promote Student
+Get Class Sections
+Update Subject Mapping
+```
+
+---
+
+## 2. HTTP Method
+
+Specify the method.
+
+```
+GET
+POST
+PUT
+PATCH
+DELETE
+```
+
+---
+
+## 3. Endpoint
+
+Example
+
+```
+POST /api/student/add
+GET /api/class-section/list
+```
+
+---
+
+## 4. Description
+
+Explain:
+
+* What the API does
+* When it should be used
+* Any important business rules
+* Any dependencies
+
+Example
+
+```
+Creates a new student and assigns the student to the selected class section.
+SemesterId is no longer required.
+```
+
+---
+
+## 5. Authentication
+
+Clearly specify.
+
+Example
+
+```
+Bearer Token Required
+```
+
+or
+
+```
+Public API
+```
+
+---
+
+## 6. Headers
+
+Document every required header.
+
+Example
+
+```
+Authorization
+Content-Type
+Accept
+CampusId
+InstituteId
+```
+
+---
+
+## 7. Path Parameters
+
+Document every parameter.
+
+Example
+
+| Name      | Type    | Required | Description |
+| --------- | ------- | -------- | ----------- |
+| studentId | Integer | Yes      | Student ID  |
+
+---
+
+## 8. Query Parameters
+
+Example
+
+| Name   | Type   | Required | Default | Description |
+| ------ | ------ | -------- | ------- | ----------- |
+| page   | Number | No       | 1       | Page Number |
+| search | String | No       | ""      | Search text |
+
+---
+
+## 9. Request Body
+
+Provide a complete JSON example.
+
+Include:
+
+* Required fields
+* Optional fields
+* Nullable fields
+* Default values (if applicable)
+
+Example
+
+```json
+{
+  "courseId": 1,
+  "classSectionId": 5,
+  "term": 2,
+  "termType": "SEMESTER",
+  "semesterId": null,
+  "remarks": "",
+  "transportId": null
+}
+```
+
+---
+
+## 10. Field Documentation
+
+For every request field specify:
+
+* Name
+* Type
+* Required
+* Nullable
+* Default Value
+* Description
+
+Example
+
+| Field    | Type    | Required | Nullable | Description     |
+| -------- | ------- | -------- | -------- | --------------- |
+| courseId | Integer | Yes      | No       | Course ID       |
+| remarks  | String  | No       | Yes      | Student remarks |
+
+---
+
+## 11. Enum Documentation
+
+Whenever a field accepts limited values, document all possible options.
+
+Example
+
+### termType
+
+```
+SEMESTER
+YEARLY
+QUARTERLY
+MONTHLY
+```
+
+Example
+
+### attendanceStatus
+
+```
+MARKED
+PENDING
+ABSENT
+PRESENT
+LEAVE
+HOLIDAY
+```
+
+Never document enums as free text. Always list every supported value.
+
+---
+
+## 12. Conditional Fields
+
+Document fields that depend on other fields.
+
+Example
+
+```
+specializationId
+
+Required only when course has specialization enabled.
+```
+
+Example
+
+```
+transportId
+
+Required only when transport is enabled.
+```
+
+---
+
+## 13. Removed Fields
+
+Whenever a field is deprecated or removed, explicitly document it.
+
+Example
+
+```
+semesterId
+
+Removed.
+
+No longer required after the Term implementation.
+```
+
+---
+
+## 14. Response Example
+
+Provide a real response.
+
+Success
+
+```json
+{
+    "success": true,
+    "message": "Student created successfully.",
+    "data": {}
+}
+```
+
+Validation Error
+
+```json
+{
+    "success": false,
+    "message": "Course not found."
+}
+```
+
+---
+
+## 15. Error Codes
+
+Document every expected error.
+
+Example
+
+| Status | Reason                |
+| ------ | --------------------- |
+| 400    | Validation Error      |
+| 401    | Unauthorized          |
+| 403    | Forbidden             |
+| 404    | Resource Not Found    |
+| 409    | Duplicate Record      |
+| 500    | Internal Server Error |
+
+---
+
+## 16. Business Rules
+
+Document important logic.
+
+Example
+
+* SemesterId is no longer used.
+* Promotion is based on Term.
+* Academic Year changes automatically after completing the last term.
+* Subject Mapping ignores deleted teachers.
+
+---
+
+## 17. Sample Flow
+
+If the API is part of a workflow, document the sequence.
+
+Example
+
+```
+Create Course
+↓
+
+Create Class Section
+↓
+
+Add Student
+↓
+
+Promote Student
+↓
+
+Generate Attendance
+```
+
+---
+
+## 18. Changelog
+
+Whenever an API changes, add a note.
+
+Example
+
+```
+v2
+
+• Removed semesterId.
+• Added term.
+• Added termType.
+• Updated promotion logic.
+```
+
+---
+
+# Documentation Quality Checklist
+
+Before marking an API as complete, verify that:
+
+* Endpoint is correct.
+* HTTP method is correct.
+* Authentication is documented.
+* Headers are documented.
+* Path parameters are documented.
+* Query parameters are documented.
+* Request body is complete.
+* Required fields are identified.
+* Optional fields are identified.
+* Nullable fields are identified.
+* Default values are documented.
+* Every enum lists all supported values.
+* Conditional fields are documented.
+* Removed fields are noted.
+* Success response is included.
+* Error responses are included.
+* Business rules are documented.
+* Sample workflow is included where applicable.
+* Changelog reflects the latest updates.
+* Examples match the current backend implementation exactly.
+
+Frontend developers should be able to integrate any API using the Postman documentation alone, without reading backend code.
