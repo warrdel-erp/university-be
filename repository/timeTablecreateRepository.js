@@ -92,7 +92,7 @@ export async function getTimeTableCreateDetails({ courseId, sessionId } = {}) {
             {
               model: model.courseModel,
               as: 'courseSection',
-              attributes: ['termType'],
+              attributes: ['courseName', 'termType'],
               required: false,
             },
           ],
@@ -153,6 +153,7 @@ export async function getTimeTableCreateDetails({ courseId, sessionId } = {}) {
     for (const row of rows) {
       const plain = row.get({ plain: true });
       const course = plain.classSection.courseSection;
+      plain.courseName = course ? course.courseName : null;
       plain.termType = course ? course.termType : null;
       result.push(plain);
     }
