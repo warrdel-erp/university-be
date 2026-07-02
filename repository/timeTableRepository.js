@@ -188,7 +188,7 @@ export async function getTimeTableStructures({ courseId, sessionId } = {}) {
             ...(sessionId && { sessionId: Number(sessionId) }),
         };
 
-        return await scoped(model.timeTableStructureModel).findAll({
+        const rows = await scoped(model.timeTableStructureModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             where,
             include: [
@@ -206,11 +206,20 @@ export async function getTimeTableStructures({ courseId, sessionId } = {}) {
                 {
                     model: model.courseModel,
                     as: "timeTableStructureCourse",
-                    attributes: ["courseId", "courseName", "courseCode"],
+                    attributes: ["courseId", "courseName", "courseCode", "termType"],
                     required: false,
                 },
             ],
         });
+
+        const result = [];
+        for (const row of rows) {
+            const plain = row.get({ plain: true });
+            const course = plain.timeTableStructureCourse;
+            plain.termType = course ? course.termType : null;
+            result.push(plain);
+        }
+        return result;
     } catch (error) {
         console.error('Error in getting time table:', error);
         throw error;

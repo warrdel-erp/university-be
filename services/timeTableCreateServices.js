@@ -268,11 +268,10 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
 
 export async function gettimeTableCreateDetails(query = {}) {
     try {
-    const result = await timeTableCreateRepository.getTimeTableCreateDetails({
+    return await timeTableCreateRepository.getTimeTableCreateDetails({
       courseId: query.courseId,
       sessionId: query.sessionId,
     });
-    return result;
   } catch (error) {
     console.error("Error in gettimeTableCreateDetails:", error.message);
     throw new Error(error.message);

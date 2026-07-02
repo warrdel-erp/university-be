@@ -54,13 +54,9 @@ export const getSingleStudentDetail = async (req, res) => {
 
 export const importStudentData = async (req, res) => {
     try {
-        const { campusId, instituteId, affiliatedUniversityId, sessionId } = req.body;
         const createdBy = req.user.userId;
-        const data = { ...req.body, createdBy };
-
-        if (!(campusId && instituteId && affiliatedUniversityId && sessionId)) {
-            return res.status(400).send('campusId, instituteId, affiliatedUniversityId, and sessionId are required');
-        }
+        const universityId = req.body.universityId ?? req.user.universityId;
+        const data = { ...req.body, createdBy, universityId };
 
         const excelFile = req.files?.student;
         if (!excelFile) {
@@ -77,10 +73,11 @@ export const importStudentData = async (req, res) => {
             return res.status(400).send('Error processing the Excel data');
         }
 
-        res.status(200).send({ message: 'Data imported successfully' });
+        res.status(200).send({ message: 'Data imported successfully', ...result });
     } catch (error) {
         console.error(error);
-        res.status(500).send({ error: error.message || 'An unexpected error occurred' });
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).send({ error: error.message || 'An unexpected error occurred' });
     }
 };
 

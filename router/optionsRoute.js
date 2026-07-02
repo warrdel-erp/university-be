@@ -23,13 +23,15 @@ const courseTermsQuerySchema = z.object({
     courseId: positiveIntegerId,
 });
 
+const courseProgramQuerySchema = z.object({
+    courseId: positiveIntegerId,
+});
+
 const classSectionsQuerySchema = z.object({
     courseId: positiveIntegerId,
-    term: z.coerce
-        .number({ required_error: 'term is required', invalid_type_error: 'term must be a number' })
-        .int({ message: 'term must be an integer' })
-        .positive({ message: 'term must be positive' }),
+    term: optionalPositiveIntegerId,
     sessionId: optionalPositiveIntegerId,
+    year: optionalPositiveIntegerId,
 });
 
 const specializationsQuerySchema = z.object({
@@ -64,6 +66,13 @@ router.get(
     userAuth,
     validate({ query: courseTermsQuerySchema }),
     optionsController.getTermOptions,
+);
+
+router.get(
+    '/courseProgram',
+    userAuth,
+    validate({ query: courseProgramQuerySchema }),
+    optionsController.getCourseProgramOptions,
 );
 
 router.get(

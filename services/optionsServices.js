@@ -1,6 +1,7 @@
 import * as optionsRepository from '../repository/optionsRepository.js';
 import * as model from '../models/index.js';
 import { scoped } from '../utility/scoped.js';
+import { resolveTotalTerms, termsPerYear } from '../utility/courseTerms.js';
 
 export async function getAffiliatedUniversityOptions() {
     return await optionsRepository.getAffiliatedUniversityOptions();
@@ -25,8 +26,25 @@ export async function getTermOptions(courseId) {
     return options;
 }
 
-export async function getClassSectionOptions(courseId, term, sessionId) {
-    return await optionsRepository.getClassSectionOptions(courseId, term, sessionId);
+export async function getCourseProgramOptions(courseId) {
+    const course = await optionsRepository.getCourseProgramData(courseId);
+    if (!course) {
+        throw new Error('Course not found');
+    }
+
+    const plain = course.get({ plain: true });
+    const duration = Number(plain.courseDuration) || 0;
+
+    return {
+        duration,
+        totalYear: duration,
+        termsInYear: termsPerYear(plain),
+        totalTerms: resolveTotalTerms(plain),
+    };
+}
+
+export async function getClassSectionOptions(courseId, term, sessionId, year) {
+    return await optionsRepository.getClassSectionOptions(courseId, term, sessionId, year);
 }
 
 export async function getSpecializationOptions(courseId) {
