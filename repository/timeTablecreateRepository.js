@@ -66,7 +66,7 @@ export async function getTimeTableCreateDetails({ courseId, sessionId } = {}) {
       sectionWhere.sessionId = Number(sessionId);
     }
 
-    return scoped(model.classSectionTermModel).findAll({
+    const rows = await scoped(model.classSectionTermModel).findAll({
       attributes: ['classSectionTermId', 'term', 'classSectionsId'],
       include: [
         {
@@ -88,6 +88,12 @@ export async function getTimeTableCreateDetails({ courseId, sessionId } = {}) {
               model: model.sessionModel,
               as: 'classSession',
               attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+            },
+            {
+              model: model.courseModel,
+              as: 'courseSection',
+              attributes: ['termType'],
+              required: false,
             },
           ],
         },
@@ -112,7 +118,7 @@ export async function getTimeTableCreateDetails({ courseId, sessionId } = {}) {
             {
               model: model.courseModel,
               as: 'timeTableCourse',
-              attributes: ['courseName'],
+              attributes: ['courseName', 'termType'],
             },
             {
               model: model.campusModel,
@@ -142,6 +148,15 @@ export async function getTimeTableCreateDetails({ courseId, sessionId } = {}) {
         [{ model: model.classSectionModel, as: 'classSection' }, 'section', 'ASC'],
       ],
     });
+
+    const result = [];
+    for (const row of rows) {
+      const plain = row.get({ plain: true });
+      const course = plain.classSection.courseSection;
+      plain.termType = course ? course.termType : null;
+      result.push(plain);
+    }
+    return result;
   } catch (error) {
     console.error('Error in getting time table create:', error);
     throw error;

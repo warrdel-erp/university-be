@@ -32,16 +32,14 @@ export async function getCourseProgramOptions(courseId) {
         throw new Error('Course not found');
     }
 
-    const plain = course.get ? course.get({ plain: true }) : course;
+    const plain = course.get({ plain: true });
     const duration = Number(plain.courseDuration) || 0;
-    const termsInYear = termsPerYear(plain);
-    const totalTerms = resolveTotalTerms(plain);
 
     return {
         duration,
         totalYear: duration,
-        termsInYear,
-        totalTerms,
+        termsInYear: termsPerYear(plain),
+        totalTerms: resolveTotalTerms(plain),
     };
 }
 

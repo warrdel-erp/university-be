@@ -333,15 +333,8 @@ export async function updateSubject(data) {
 
 export async function addClassSections(data, createdBy) {
     try {
-        if (!data) throw new Error('Data is required');
-        if (!createdBy) throw new Error('CreatedBy is required');
-
         const { courseId, sessionId, section, year } = data;
-
-        if (!courseId) throw new Error('CourseId is required');
-        if (!sessionId) throw new Error('SessionId is required');
-        if (!section) throw new Error('section is required');
-        if (year == null || year === '') throw new Error('year is required');
+        const yearNum = Number(year);
 
         const course = await getCourseByCourseId(Number(courseId));
         if (!course) throw new Error('Course not found');
@@ -352,7 +345,6 @@ export async function addClassSections(data, createdBy) {
         }
 
         const courseDuration = Number(course.courseDuration) || 1;
-        const yearNum = Number(year);
         if (yearNum < 1 || yearNum > courseDuration) {
             throw new Error(
                 `year must be between 1 and ${courseDuration} for course ${courseId}`,
@@ -375,10 +367,7 @@ export async function addClassSections(data, createdBy) {
                 { transaction },
             );
 
-            const sectionPlain = sectionRow.get
-                ? sectionRow.get({ plain: true })
-                : sectionRow;
-            const sectionId = sectionPlain.sectionId;
+            const sectionId = sectionRow.get({ plain: true }).sectionId;
 
             const classSectionRow = await mainRepository.createClassSections({
                 courseId: Number(courseId),
@@ -390,9 +379,8 @@ export async function addClassSections(data, createdBy) {
                 createdBy,
             }, { transaction });
 
-            const classSectionsId =
-                classSectionRow.classSectionsId ??
-                classSectionRow.dataValues?.classSectionsId;
+            const classSectionPlain = classSectionRow.get({ plain: true });
+            const classSectionsId = classSectionPlain.classSectionsId;
 
             const terms = [];
             for (const termNum of termNumbers) {
@@ -407,19 +395,12 @@ export async function addClassSections(data, createdBy) {
                     { transaction },
                 );
 
-                const termPlain = classSectionTermRow.get
-                    ? classSectionTermRow.get({ plain: true })
-                    : classSectionTermRow;
-
+                const termPlain = classSectionTermRow.get({ plain: true });
                 terms.push({
                     classSectionTermId: termPlain.classSectionTermId,
                     term: termPlain.term,
                 });
             }
-
-            const classSectionPlain = classSectionRow.get
-                ? classSectionRow.get({ plain: true })
-                : classSectionRow;
 
             await transaction.commit();
             return {
