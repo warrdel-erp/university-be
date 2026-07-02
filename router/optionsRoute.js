@@ -23,6 +23,10 @@ const courseTermsQuerySchema = z.object({
     courseId: positiveIntegerId,
 });
 
+const courseProgramQuerySchema = z.object({
+    courseId: positiveIntegerId,
+});
+
 const classSectionsQuerySchema = z.object({
     courseId: positiveIntegerId,
     term: optionalPositiveIntegerId,
@@ -62,6 +66,13 @@ router.get(
     userAuth,
     validate({ query: courseTermsQuerySchema }),
     optionsController.getTermOptions,
+);
+
+router.get(
+    '/courseProgram',
+    userAuth,
+    validate({ query: courseProgramQuerySchema }),
+    optionsController.getCourseProgramOptions,
 );
 
 router.get(

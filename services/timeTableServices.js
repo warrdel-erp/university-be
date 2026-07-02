@@ -91,7 +91,14 @@ export async function getAllTimeTableName(courseId, sessionId) {
 }
 
 export async function getTimeTableDetails(courseId) {
-    return await timeTableRepository.getTimeTableStructures({ courseId });
+    const rows = await timeTableRepository.getTimeTableStructures({ courseId });
+    const result = [];
+    for (const row of rows) {
+        const plain = typeof row.get === 'function' ? row.get({ plain: true }) : row;
+        plain.termType = plain.timeTableStructureCourse?.termType ?? null;
+        result.push(plain);
+    }
+    return result;
 }
 
 export async function getSingleTimeTableDetails(courseId, sessionId) {

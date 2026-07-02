@@ -206,7 +206,7 @@ export async function getTimeTableStructures({ courseId, sessionId } = {}) {
                 {
                     model: model.courseModel,
                     as: "timeTableStructureCourse",
-                    attributes: ["courseId", "courseName", "courseCode"],
+                    attributes: ["courseId", "courseName", "courseCode", "termType"],
                     required: false,
                 },
             ],
