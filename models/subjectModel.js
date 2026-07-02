@@ -6,6 +6,7 @@ import specialization from "./specializationModel.js";
 import users from "./userModel.js";
 import acedmicYear from "./acedmicYearModel.js";
 import instituteModel from "./instituteModel.js";
+import { SUBJECT_TYPES, SUBJECT_CATEGORIES } from "../constant.js";
 
 const subjectModel = sequelize.define(
     'subject',
@@ -83,8 +84,12 @@ const subjectModel = sequelize.define(
         subjectType: {
             type: DataTypes.STRING,
             allowNull: false,
+            enum: SUBJECT_TYPES,
             field: 'subject_type'
         },
+
+          
+         
         shortName: {
             type: DataTypes.STRING,
             allowNull: true,
@@ -98,6 +103,7 @@ const subjectModel = sequelize.define(
         subjectCategory: {
             type: DataTypes.STRING,
             allowNull: true,
+            enum: SUBJECT_CATEGORIES,
             field: 'subject_category'
         },
         isActive: {
