@@ -206,6 +206,20 @@ const studentUpdateBodyFields = {
   ...studentSharedOptionalFields,
 };
 
+const importStudentBodySchema = z.object({
+  campusId: positiveIntegerId,
+  instituteId: positiveIntegerId,
+  sessionId: positiveIntegerId,
+  courseLevelId: positiveIntegerId,
+  courseId: positiveIntegerId,
+  classSectionTermId: positiveIntegerId,
+  academicYearId: optionalPositiveIntegerId,
+  acedmicYearId: optionalPositiveIntegerId,
+  affiliatedUniversityId: nullableAffiliatedUniversityId.optional(),
+  universityId: optionalPositiveIntegerId,
+  roleId: z.union([z.literal(ROLES.STUDENT), positiveIntegerId]).optional(),
+});
+
 const addStudentWithFeePlanProfileBodySchema = z.object({
   feePlanProfileId: requiredFeePlanProfileId,
   universityId: positiveIntegerId,
@@ -320,6 +334,45 @@ const mapStudentBody = (req, res, next) => {
   }
 };
 
+const mapStudentImportBody = (req, res, next) => {
+  try {
+    const body = { ...req.body };
+
+    if (body.acedmicYearId != null && body.academicYearId == null) {
+      body.academicYearId = body.acedmicYearId;
+    }
+    delete body.acedmicYearId;
+
+    const hasLegacySemester =
+      body.semesterId != null && body.semesterId !== "";
+    const hasLegacySection =
+      body.classSectionsId != null && body.classSectionsId !== "";
+
+    if (
+      (hasLegacySemester || hasLegacySection) &&
+      (body.classSectionTermId == null || body.classSectionTermId === "")
+    ) {
+      return ErrorResponse(
+        res,
+        400,
+        "classSectionTermId is required; semesterId and classSectionsId are no longer supported",
+      );
+    }
+
+    delete body.semesterId;
+    delete body.classSectionsId;
+
+    if (body.affiliatedUniversityId === "") {
+      body.affiliatedUniversityId = null;
+    }
+
+    req.body = body;
+    next();
+  } catch (error) {
+    return ErrorResponse(res, 400, error.message || "Invalid import payload");
+  }
+};
+
 router.get(
   "/all",
   userAuth,
@@ -332,7 +385,6 @@ router.get(
   validate({ query: studentIdQuerySchema }),
   getSingleStudentDetail
 );
-router.post("/import", userAuth, importStudentData);
 
 router.patch(
   "/:studentId",
@@ -491,5 +543,14 @@ router.post(
   mapStudentBody,
   addStudentWithFeePlanProfile
 );
+
+router.post(
+  "/import",
+  userAuth,
+  mapStudentImportBody,
+  validate({ body: importStudentBodySchema }),
+  importStudentData,
+);
+
 
 export default router;

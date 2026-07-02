@@ -62,6 +62,7 @@ function buildStudentRowPayload(info) {
     bloodGroup,
     academicYearId,
     term,
+    semesterId,
     classSectionsId,
     classSectionId,
     ...studentRow
@@ -581,12 +582,29 @@ export async function getSingleStudentDetail(studentId) {
 //   }
 // };
 
-export async function importStudentData(excelData, data) {
-  try {
-    const transaction = await sequelize.transaction();
+async function resolveImportRoleId(roleId) {
+  if (
+    roleId == null ||
+    roleId === "" ||
+    roleId === "STUDENT" ||
+    roleId === "Student" ||
+    roleId === "student"
+  ) {
+    return resolveStudentRoleId();
+  }
+  const num = Number(roleId);
+  if (Number.isInteger(num) && num > 0) {
+    return num;
+  }
+  return resolveStudentRoleId();
+}
 
+export async function importStudentData(excelData, data) {
+  const transaction = await sequelize.transaction();
+  try {
     const studentMapping = [];
     const results = [];
+    const importRoleId = await resolveImportRoleId(data.roleId);
 
     // Step 1: Fetch all employee code master data
     const codeAndType = await getEmployeeCodesTypesForStudentImport();
@@ -677,13 +695,17 @@ export async function importStudentData(excelData, data) {
       }
       convertedData.classSectionTermId = placement.classSectionTermId;
 
+      const studentPayload = buildStudentRowPayload({
+        ...convertedData,
+        classSectionTermId: placement.classSectionTermId,
+        universityId: convertedData.universityId ?? data.universityId,
+      });
+
       const result = await studentRepository.addStudent(
-        convertedData,
+        studentPayload,
         transaction,
       );
-      // student register
       const role = "Student";
-      const roleId = convertedData.roleId || 1;
       const {
         studentId,
         email,
@@ -700,7 +722,7 @@ export async function importStudentData(excelData, data) {
         scholarNumber,
         universityId,
         role,
-        roleId,
+        roleId: importRoleId,
       };
       const userId = await studentRegister(registerStudentData, transaction);
 
@@ -767,6 +789,9 @@ export async function importStudentData(excelData, data) {
       })),
     };
   } catch (error) {
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
     console.error("Error in importing student data:", error);
     throw error;
   }
