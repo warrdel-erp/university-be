@@ -33,10 +33,22 @@ export const getTermOptions = async (req, res) => {
     }
 };
 
+export const getCourseProgramOptions = async (req, res) => {
+    try {
+        const { courseId } = req.query;
+        const result = await optionsServices.getCourseProgramOptions(courseId);
+        return SuccessResponse(res, 200, "Course program details fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getCourseProgramOptions:", error);
+        const status = error.message?.includes('not found') ? 400 : 500;
+        return ErrorResponse(res, status, error.message || 'Internal Server Error');
+    }
+};
+
 export const getClassSectionOptions = async (req, res) => {
     try {
-        const { courseId, term, sessionId } = req.query;
-        const result = await optionsServices.getClassSectionOptions(courseId, term, sessionId);
+        const { courseId, term, sessionId, year } = req.query;
+        const result = await optionsServices.getClassSectionOptions(courseId, term, sessionId, year);
         return SuccessResponse(res, 200, "Class section options fetched successfully", result);
     } catch (error) {
         console.error("Error in getClassSectionOptions:", error);
