@@ -256,6 +256,38 @@ export async function addClassSections(data) {
     }
 }
 
+export async function findOrCreateSection(
+    { sectionName, createdBy, updatedBy },
+    options = {},
+) {
+    try {
+        const trimmed = String(sectionName).trim();
+        if (!trimmed) {
+            throw new Error('section is required');
+        }
+
+        const existing = await scoped(model.sectionModel).findOne({
+            where: { sectionName: trimmed },
+            transaction: options.transaction,
+        });
+        if (existing) {
+            return existing;
+        }
+
+        return scoped(model.sectionModel).create(
+            {
+                sectionName: trimmed,
+                createdBy,
+                updatedBy: updatedBy ?? createdBy,
+            },
+            { transaction: options.transaction },
+        );
+    } catch (error) {
+        console.error('Error in findOrCreateSection:', error);
+        throw error;
+    }
+}
+
 export async function createClassSections(data, options = {}) {
     try {
         if (data.year == null) {
