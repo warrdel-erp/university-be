@@ -14585,7 +14585,7 @@
     },
     {
       "name": "main",
-      "description": "Class section term setup under `/main/*` (`mainRoute.js`).\n\n**Auth:** Bearer `{{token}}`. Institute + academic year from login. Optional `X-Institute-Id` header.\n\n**Placement key:** `classSectionTermId` from `class_section_term` — not `classSectionsId`.\n\n| Method | Path | Notes |\n|--------|------|-------|\n| POST | `/main/classSections` | Create sections; response includes `terms[].classSectionTermId` |\n| GET | `/main/classSections` | List class sections |\n| GET | `/main/classSectionSpecific` | Sections for course + session |\n| POST | `/main/sectionSubjectMapper` | Map subjects to institute scope |\n| GET | `/main/sectionSubjectMapper` | List mapper rows (optional `term`) |\n| GET | `/main/classSectionRecord` | Students + teachers for `classSectionTermId` |\n\n**Flow:** POST classSections → save `{{classSectionTermId}}` → GET classSectionRecord.",
+      "description": "Class section term setup under `/main/*` (`mainRoute.js`).\n\n**Auth:** Bearer `{{token}}`. Institute + academic year from login. Optional `X-Institute-Id` header.\n\n**Placement key:** `classSectionTermId` from `class_section_term` — not `classSectionsId`.\n\n| Method | Path | Notes |\n|--------|------|-------|\n| POST | `/main/classSections` | Create section master + class section + term rows; response includes `terms[].classSectionTermId` |\n| GET | `/main/classSections` | List class sections |\n| GET | `/main/classSectionSpecific` | Sections for course + session |\n| POST | `/main/sectionSubjectMapper` | Map subjects to institute scope |\n| GET | `/main/sectionSubjectMapper` | List mapper rows (optional `term`) |\n| GET | `/main/classSectionRecord` | Students + teachers for `classSectionTermId` |\n\n**Flow:** POST classSections → save `{{classSectionTermId}}` → GET classSectionRecord.",
       "item": [
         {
           "name": "POST classSections",
@@ -14596,13 +14596,15 @@
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
                   "const json = pm.response.json();",
-                  "const sections = json?.sections ?? [];",
-                  "const firstTerm = sections[0]?.terms?.[0];",
+                  "const firstTerm = json?.terms?.[0];",
                   "if (firstTerm?.classSectionTermId) {",
                   "  pm.collectionVariables.set('classSectionTermId', String(firstTerm.classSectionTermId));",
                   "}",
-                  "if (sections[0]?.classSectionsId) {",
-                  "  pm.collectionVariables.set('classSectionsId', String(sections[0].classSectionsId));",
+                  "if (json?.classSectionsId) {",
+                  "  pm.collectionVariables.set('classSectionsId', String(json.classSectionsId));",
+                  "}",
+                  "if (json?.sectionId) {",
+                  "  pm.collectionVariables.set('sectionId', String(json.sectionId));",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -14633,7 +14635,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"courseId\": {{course_id}},\n  \"sessionId\": {{sessionId}},\n  \"sections\": [\n    {\n      \"sectionId\": {{sectionId}},\n      \"section\": \"A1\",\n      \"year\": 1\n    }\n  ]\n}",
+              "raw": "{\n  \"courseId\": {{course_id}},\n  \"sessionId\": {{sessionId}},\n  \"section\": \"A\",\n  \"year\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -14650,7 +14652,7 @@
                 "classSections"
               ]
             },
-            "description": "**POST /main/classSections** — create class sections for a course session.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `courseId` | yes | |\n| `sessionId` | yes | |\n| `sections[]` | yes | At least one |\n| `sections[].sectionId` | yes | Section master PK |\n| `sections[].section` | yes | Display name e.g. `A1` |\n| `sections[].year` | yes | Program year (1..courseDuration) |\n\nBackend creates `class_section_term` rows per program term. Response `sections[].terms[]` includes **`classSectionTermId`** — saved to `{{classSectionTermId}}`."
+            "description": "**POST /main/classSections** — create section master + class section + term rows for a course session.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `courseId` | yes | Course PK |\n| `sessionId` | yes | Session PK |\n| `section` | yes | Section name e.g. `A` — creates/finds row in `section` table |\n| `year` | yes | Program year (1..courseDuration) |\n\n**Not accepted:** `sections[]`, `sectionId` — backend resolves/creates `sectionId` from `section` name.\n\n**Backend flow:** `section` → `class_sections` → `class_section_term` (one row per program term for that year).\n\n**Response (flat):** `classSectionsId`, `sectionId`, `section`, `year`, `terms[]` with **`classSectionTermId`** — test script saves `{{classSectionTermId}}` and `{{classSectionsId}}`."
           },
           "response": []
         },
