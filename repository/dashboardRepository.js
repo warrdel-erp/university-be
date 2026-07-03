@@ -5,13 +5,16 @@ import { buildScope, scoped } from '../utility/scoped.js';
 import { dayNameFromQueryDate, parseLocalDateOnly } from '../utility/helper.js';
 import { decimalSubtract, toMoneyNumber } from '../utility/decimalMoney.js';
 
+// Month labels for fee collection graph when grouped by year.
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+// Day offsets used to compute weekly and monthly growth baselines.
 const GROWTH_PERIODS = {
   weekly: 7,
   monthly: 30,
 };
 
+// Published routines whose start/end date range includes the selected day.
 function routineActiveOnDateWhere(currentDate) {
   return {
     is_publish: true,
@@ -22,12 +25,14 @@ function routineActiveOnDateWhere(currentDate) {
   };
 }
 
+// Returns a new date shifted back by the given number of days.
 function subtractDays(date, days) {
   const result = new Date(date);
   result.setDate(result.getDate() - days);
   return result;
 }
 
+// Percent change from baseline count to current count, one decimal place.
 function calculateGrowthPercent(currentCount, previousCount) {
   if (previousCount === 0) {
     if (currentCount > 0) {
@@ -38,6 +43,7 @@ function calculateGrowthPercent(currentCount, previousCount) {
   return Math.round(((currentCount - previousCount) / previousCount) * 1000) / 10;
 }
 
+// Sequelize where clause for records on or before a cutoff date.
 function buildDateCutoffWhere(dateExpression, cutoffDate) {
   if (typeof dateExpression === 'function') {
     return where(dateExpression(), { [Op.lte]: cutoffDate });
@@ -45,6 +51,7 @@ function buildDateCutoffWhere(dateExpression, cutoffDate) {
   return { [dateExpression]: { [Op.lte]: cutoffDate } };
 }
 
+// Total count plus weekly/monthly growth from a historical baseline.
 export async function getCountWithGrowth(modelRef, dateField, options = {}) {
   const { where: extraWhere = {}, include } = options;
 
@@ -74,6 +81,7 @@ export async function getCountWithGrowth(modelRef, dateField, options = {}) {
   };
 }
 
+// Restricts employees to users with TEACHER role.
 const teacherUserInclude = [
   {
     model: model.userModel,
@@ -92,30 +100,37 @@ const teacherUserInclude = [
   },
 ];
 
+// Enrollment date falls back to created_at when admission_date is null.
 const studentEnrollmentDate = () => fn('COALESCE', col('students.admission_date'), col('students.created_at'));
 
+// Student KPI count and growth for the dashboard card.
 export async function getStudentOverviewStats() {
   return getCountWithGrowth(model.studentModel, studentEnrollmentDate);
 }
 
+// Teacher KPI count and growth for the dashboard card.
 export async function getTeacherOverviewStats() {
   return getCountWithGrowth(model.employeeModel, 'createdAt', { include: teacherUserInclude });
 }
 
+// Staff KPI count and growth for the dashboard card.
 export async function getStaffOverviewStats() {
   return getCountWithGrowth(model.staffModel, 'createdAt');
 }
 
+// College department count from scoped sub_account rows.
 export async function getDepartmentCount() {
   const count = await scoped(model.subAccountModel).count();
   return { count };
 }
 
+// Converts HH:mm time string to minutes from midnight.
 function timeToMinutes(timeValue) {
   const parts = String(timeValue).split(':').map(Number);
   return parts[0] * 60 + parts[1];
 }
 
+// True when current clock time is within period start and end.
 function isPeriodInProgress(now, startTime, endTime) {
   if (!startTime || !endTime) {
     return false;
@@ -124,6 +139,7 @@ function isPeriodInProgress(now, startTime, endTime) {
   return nowMinutes >= timeToMinutes(startTime) && nowMinutes < timeToMinutes(endTime);
 }
 
+// Normalizes period start time to HH:mm for API response.
 function formatClassStartTime(startTime) {
   if (!startTime) {
     return '';
@@ -134,6 +150,7 @@ function formatClassStartTime(startTime) {
   return `${hour}:${minute}`;
 }
 
+// Subject label from normal, elective, or teacher-subject mapping.
 function resolveSubjectName(schedule) {
   if (schedule.timeTableSubject?.subjectName) {
     return schedule.timeTableSubject.subjectName;
@@ -147,6 +164,7 @@ function resolveSubjectName(schedule) {
   return '';
 }
 
+// Upcoming, In Progress, or Completed from selected date and clock time.
 function getClassTimelineStatus(startTime, endTime, now, currentDate) {
   if (!startTime || !endTime) {
     return 'Upcoming';
@@ -172,6 +190,7 @@ function getClassTimelineStatus(startTime, endTime, now, currentDate) {
   return 'Completed';
 }
 
+// Strips internal sort field from class list item.
 function toClassResponseItem(classItem) {
   return {
     time: classItem.time,
@@ -182,6 +201,7 @@ function toClassResponseItem(classItem) {
   };
 }
 
+// Splits timetable slots into upcoming and today class lists.
 function prepareTodaysClassList(schedules, now, currentDate) {
   const upcomingClasses = [];
   const todaysClasses = [];
@@ -221,6 +241,7 @@ function prepareTodaysClassList(schedules, now, currentDate) {
   return { upcomingClasses: upcoming, todaysClasses: today };
 }
 
+// Total and in-progress class counts from fetched schedules.
 function buildClassesTodayStats(schedules, now) {
   let inProgressCount = 0;
   for (const schedule of schedules) {
@@ -236,6 +257,7 @@ function buildClassesTodayStats(schedules, now) {
   };
 }
 
+// Published non-break timetable slots for one date with subject, teacher, and room.
 async function fetchTimetableSchedulesForDate(currentDate) {
   const dayName = dayNameFromQueryDate(currentDate);
 
@@ -303,6 +325,7 @@ async function fetchTimetableSchedulesForDate(currentDate) {
   });
 }
 
+// Single timetable fetch returning classesToday stats and class timeline.
 export async function getTimetableDayData(currentDate) {
   const now = new Date();
   const schedules = await fetchTimetableSchedulesForDate(currentDate);
@@ -330,13 +353,16 @@ function getDateFilterConditions(dateColumn, { year, month, week }) {
   return conditions;
 }
 
+// Only generated invoices count toward fee totals.
 const GENERATED_INVOICE_WHERE = { status: 'generated' };
 
+// Unpaid or partially paid generated invoices for pending amount.
 const PENDING_INVOICE_WHERE = {
   status: 'generated',
   paymentStatus: { [Op.in]: ['unpaid', 'partial'] },
 };
 
+// Invoice filter for fee collection graph query.
 function getGraphInvoiceWhereClause(dateFilters) {
   return {
     [Op.and]: [
@@ -371,6 +397,7 @@ function getGraphConfiguration(dateColumn, dateFilters) {
   };
 }
 
+// Maps grouped SQL rows to collectionGraph label/amount pairs.
 function prepareGraphData(graphRecords, getBucketLabel) {
   const collectionGraph = [];
   for (const record of graphRecords) {
@@ -382,6 +409,7 @@ function prepareGraphData(graphRecords, getBucketLabel) {
   return collectionGraph;
 }
 
+// Fee cards and collection graph for the dashboard.
 export async function getFeeCollectionOverviewStats({ year, month, week } = {}) {
   const dateFilters = { year, month, week };
   const invoiceDateColumn = col('student_fee_invoice.create_date');
@@ -433,6 +461,7 @@ export async function getFeeCollectionOverviewStats({ year, month, week } = {}) 
   };
 }
 
+// Adds percentage share per course to student analytics output.
 function prepareDepartmentDistribution(departmentRecords) {
   let totalStudents = 0;
   for (const record of departmentRecords) {
@@ -456,6 +485,7 @@ function prepareDepartmentDistribution(departmentRecords) {
   return { totalStudents, departmentDistribution };
 }
 
+// Student count per course for the distribution chart.
 export async function getStudentAttendanceOverviewStats() {
   const [courses, studentCountRows] = await Promise.all([
     scoped(model.courseModel).findAll({
@@ -497,6 +527,7 @@ export async function getStudentAttendanceOverviewStats() {
   return prepareDepartmentDistribution(courseRecords);
 }
 
+// JSON_CONTAINS filter for notice audience messageTo array.
 function messageToContains(target) {
   return literal(`JSON_CONTAINS(message_to, '"${target}"')`);
 }
@@ -524,6 +555,7 @@ function getNoticeAudienceWhereClause(role) {
   };
 }
 
+// Display date prefers noticeDate over publishDate.
 function getNoticeEffectiveDate(notice) {
   if (notice.noticeDate) {
     return notice.noticeDate;
@@ -531,6 +563,7 @@ function getNoticeEffectiveDate(notice) {
   return notice.publishDate;
 }
 
+// Sequelize row to plain notice object with parsed messageTo.
 function toNoticeResponseItem(notice) {
   const plain = notice.get({ plain: true });
   if (typeof plain.messageTo === 'string') {
@@ -539,6 +572,7 @@ function toNoticeResponseItem(notice) {
   return plain;
 }
 
+// Today and upcoming notices capped by limit for the notice board.
 export async function getDashboardNotices(role, limit = 10, currentDate) {
   const audienceWhere = getNoticeAudienceWhereClause(role);
 
@@ -579,6 +613,7 @@ export async function getDashboardNotices(role, limit = 10, currentDate) {
   };
 }
 
+// Institute jobs on the selected date as dashboard events.
 export async function getDashboardEvents(currentDate) {
   const now = new Date();
 
