@@ -2,6 +2,43 @@ import { Op, fn, col } from "sequelize";
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 
+function examScheduleDetailInclude() {
+  return {
+    model: model.examScheduleModel,
+    as: "examSchedule",
+    attributes: ["examScheduleId", "examDate", "examTime", "duration", "term", "sessionId", "type"],
+    required: false,
+    include: [
+      {
+        model: model.subjectModel,
+        as: "subjectSchedule",
+        attributes: ["subjectId", "subjectName", "subjectCode"],
+        required: false,
+      },
+      {
+        model: model.examSetupTypeTermModel,
+        as: "examSetupTypeTerm",
+        attributes: ["examSetupTypeTermId", "term", "courseId"],
+        required: false,
+        include: [
+          {
+            model: model.examSetupTypeModel,
+            as: "examSetupType",
+            attributes: ["examSetupTypeId", "examType", "examName"],
+            required: false,
+          },
+          {
+            model: model.courseModel,
+            as: "course",
+            attributes: ["courseId", "courseName", "courseCode", "termType"],
+            required: false,
+          },
+        ],
+      },
+    ],
+  };
+}
+
 export async function countUnusedByInstitute(transaction) {
   return scoped(model.answerSheetQrModel).count({
     where: {
@@ -27,34 +64,7 @@ export async function getAnswerSheetQrById(id, transaction) {
         attributes: ["studentId", "firstName", "middleName", "lastName", "enrollNumber", "scholarNumber"],
         required: false,
       },
-      {
-        model: model.examScheduleModel,
-        as: "examSchedule",
-        attributes: ["examScheduleId", "examDate", "examTime", "duration", "semesterId", "sessionId", "type"],
-        required: false,
-        include: [
-          {
-            model: model.subjectModel,
-            as: "subjectSchedule",
-            attributes: ["subjectId", "subjectName", "subjectCode"],
-            required: false,
-          },
-          {
-            model: model.examSetupTypeTermModel,
-            as: "examSetupTypeTerm",
-            attributes: ["examSetupTypeTermId", "term", "courseId"],
-            required: false,
-            include: [
-              {
-                model: model.examSetupTypeModel,
-                as: "examSetupType",
-                attributes: ["examSetupTypeId", "examType", "examName"],
-                required: false,
-              },
-            ],
-          },
-        ],
-      },
+      examScheduleDetailInclude(),
       {
         model: model.userModel,
         as: "assignedTeacher",
@@ -117,34 +127,7 @@ export async function getAnswerSheetQrsByRequestId(
         attributes: ["studentId", "firstName", "middleName", "lastName", "enrollNumber", "scholarNumber"],
         required: false,
       },
-      {
-        model: model.examScheduleModel,
-        as: "examSchedule",
-        attributes: ["examScheduleId", "examDate", "examTime", "duration", "semesterId", "sessionId", "type"],
-        required: false,
-        include: [
-          {
-            model: model.subjectModel,
-            as: "subjectSchedule",
-            attributes: ["subjectId", "subjectName", "subjectCode"],
-            required: false,
-          },
-          {
-            model: model.examSetupTypeTermModel,
-            as: "examSetupTypeTerm",
-            attributes: ["examSetupTypeTermId", "term", "courseId"],
-            required: false,
-            include: [
-              {
-                model: model.examSetupTypeModel,
-                as: "examSetupType",
-                attributes: ["examSetupTypeId", "examType", "examName"],
-                required: false,
-              },
-            ],
-          },
-        ],
-      },
+      examScheduleDetailInclude(),
       {
         model: model.userModel,
         as: "assignedTeacher",
@@ -301,34 +284,7 @@ export async function getScriptsAssignedToTeacher(
         attributes: ["studentId", "firstName", "middleName", "lastName", "enrollNumber", "scholarNumber"],
         required: false,
       },
-      {
-        model: model.examScheduleModel,
-        as: "examSchedule",
-        attributes: ["examScheduleId", "examDate", "examTime", "duration", "semesterId", "sessionId", "type"],
-        required: false,
-        include: [
-          {
-            model: model.subjectModel,
-            as: "subjectSchedule",
-            attributes: ["subjectId", "subjectName", "subjectCode"],
-            required: false,
-          },
-          {
-            model: model.examSetupTypeTermModel,
-            as: "examSetupTypeTerm",
-            attributes: ["examSetupTypeTermId", "term", "courseId"],
-            required: false,
-            include: [
-              {
-                model: model.examSetupTypeModel,
-                as: "examSetupType",
-                attributes: ["examSetupTypeId", "examType", "examName"],
-                required: false,
-              },
-            ],
-          },
-        ],
-      },
+      examScheduleDetailInclude(),
       {
         model: model.userModel,
         as: "assignedTeacher",

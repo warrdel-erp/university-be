@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import sequelize from "../database/sequelizeConfig.js";
+import { buildTermName } from "../utility/courseTerms.js";
 import * as studentHallTicketRepository from "../repository/studentHallTicketRepository.js";
 
 async function buildGenerationReadiness({ examSetupTypeTermId, sessionId, transaction }) {
@@ -52,6 +53,7 @@ export async function generateHallTicketsByExamSession({ examSetupTypeTermId, se
             sessionId,
             readiness.examSetupTypeTerm.courseId,
             readiness.examSetupTypeTerm.term,
+            readiness.examSetupTypeTerm.academicYearId,
             transaction,
         );
 
@@ -88,12 +90,23 @@ export async function generateHallTicketsForUser(payload) {
     });
 }
 
-function schedulesToSubjectList(scheduleRows, mappedScheduleIds = []) {
+function resolveScheduleTerm(plain, defaultTerm) {
+    if (plain.term != null) return Number(plain.term);
+    if (plain.subjectSchedule?.term != null) return Number(plain.subjectSchedule.term);
+    if (defaultTerm != null) return Number(defaultTerm);
+    return null;
+}
+
+function schedulesToSubjectList(scheduleRows, mappedScheduleIds = [], { course, defaultTerm } = {}) {
     const mappedSet = new Set(mappedScheduleIds || []);
+    const coursePlain = course?.get ? course.get({ plain: true }) : course;
+    const termType = coursePlain?.termType;
+
     return (scheduleRows || []).map((row) => {
         const plain = row.get({ plain: true });
         const sub = plain.subjectSchedule;
-        const sem = plain.semesterexam;
+        const term = resolveScheduleTerm(plain, defaultTerm);
+        const termName = term != null ? buildTermName(termType, term) : null;
         const isMapped = plain.examScheduleId != null && mappedSet.has(plain.examScheduleId);
         return {
             examScheduleId: plain.examScheduleId,
@@ -101,14 +114,16 @@ function schedulesToSubjectList(scheduleRows, mappedScheduleIds = []) {
             subjectId: sub?.subjectId ?? plain.subjectId ?? null,
             subjectName: sub?.subjectName ?? null,
             subjectCode: sub?.subjectCode ?? null,
-            semesterId: sem?.semesterId ?? plain.semesterId ?? null,
-            semesterName: sem?.name ?? null,
+            term,
+            termName,
+            semesterId: null,
+            semesterName: termName,
             examDate: plain.examDate ?? null,
             examTime: plain.examTime ?? null,
             duration: plain.duration ?? null,
             scheduleKind: plain.type ?? null,
             subject: sub ?? null,
-            semester: sem ?? null,
+            semester: term != null ? { term, name: termName } : null,
         };
     });
 }
@@ -118,7 +133,15 @@ function flattenHallTicketDetail(ticket, scheduleRows, mappedScheduleIds = []) {
     const sess = ticket.session;
     const est = ticket.examSetupTypeTerm;
     const examType = est?.examSetupType;
-    const subjects = schedulesToSubjectList(scheduleRows, mappedScheduleIds);
+    const course = est?.course;
+    const examTerm = est?.term ?? null;
+    const subjects = schedulesToSubjectList(scheduleRows, mappedScheduleIds, {
+        course,
+        defaultTerm: examTerm,
+    });
+    const termName = examTerm != null
+        ? buildTermName(course?.termType, examTerm)
+        : null;
 
     return {
         id: ticket.id,
@@ -139,7 +162,8 @@ function flattenHallTicketDetail(ticket, scheduleRows, mappedScheduleIds = []) {
         examSetupTypeId: examType?.examSetupTypeId ?? est?.examSetupTypeId ?? null,
         examType: examType?.examType ?? null,
         examName: examType?.examName ?? null,
-        term: est?.term ?? null,
+        term: examTerm,
+        termName,
         courseId: est?.courseId ?? null,
         subjects,
     };

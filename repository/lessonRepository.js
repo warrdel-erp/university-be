@@ -1,7 +1,8 @@
 import * as model from "../models/index.js";
 import { Op } from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
-import { classSectionTermsInclude, resolveProgramTerm } from "../utility/classSectionIncludes.js";
+import { classSectionTermsInclude } from "../utility/classSectionIncludes.js";
+import { buildTermName } from "../utility/courseTerms.js";
 
 export async function addLesson(data) {
   try {
@@ -495,34 +496,21 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
     const classSectionWhere = {
       ...buildScope(model.classSectionModel),
       ...(hasSessionId && { sessionId: parsedSessionId }),
-    };
-    const subjectTermInclude = {
-      model: model.classSubjectMapperModel,
-      as: 'subjects',
-      required: false,
-      attributes: ['classSubjectMapperId'],
-      where: buildScope(model.classSubjectMapperModel),
-      include: [{
-        model: model.semesterModel,
-        as: 'semestermapping',
-        required: false,
-        attributes: ['name'],
-        where: buildScope(model.semesterModel),
-      }],
+      ...(courseId && { courseId: Number(courseId) }),
     };
     const subjectCourseInclude = {
       model: model.courseModel,
       as: 'courseInfo',
       required: false,
-      attributes: ['termType'],
+      attributes: ['termType', 'courseId'],
       where: buildScope(model.courseModel),
       include: [{
         model: model.classSectionModel,
         as: 'courseSection',
         required: false,
-        attributes: ['year', 'section', 'sessionId'],
+        attributes: ['classSectionsId', 'year', 'section', 'sessionId'],
         where: classSectionWhere,
-        include: [classSectionTermsInclude({ term, required: term != null })],
+        include: [classSectionTermsInclude()],
       }],
     };
     const toEmployeeSubject = (employeeSubject) => {
@@ -530,23 +518,54 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
         return employeeSubject;
       }
 
-      const { subjects, courseInfo, term, ...subjectData } = employeeSubject;
+      const { courseInfo, term: subjectTerm, ...subjectData } = employeeSubject;
       const sections = [].concat(courseInfo?.courseSection ?? []);
-      const matchedSection = sections.find((section) => {
+
+      let matchedSection = null;
+      let matchedTermRow = null;
+
+      for (const section of sections) {
         if (hasSessionId && Number(section.sessionId) !== parsedSessionId) {
-          return false;
+          continue;
         }
-        if (term != null && resolveProgramTerm(section) != null) {
-          return Number(resolveProgramTerm(section)) === Number(term);
+
+        const termRows = section.classSectionTerms || [];
+        if (subjectTerm == null) {
+          matchedSection = section;
+          if (termRows.length) {
+            matchedTermRow = termRows[0];
+          }
+          break;
         }
-        return term != null && section.year != null && String(section.year) === String(term);
-      });
 
-      const termName = matchedSection?.year != null && courseInfo?.termType
-        ? `${courseInfo.termType} ${matchedSection.year}`
-        : subjects?.[0]?.semestermapping?.name ?? null;
+        for (const termRow of termRows) {
+          if (Number(termRow.term) === Number(subjectTerm)) {
+            matchedSection = section;
+            matchedTermRow = termRow;
+            break;
+          }
+        }
+        if (matchedSection) {
+          break;
+        }
+      }
 
-      return { ...subjectData, term, termName };
+      let termName = null;
+      if (matchedTermRow && courseInfo?.termType) {
+        termName = buildTermName(courseInfo.termType, matchedTermRow.term);
+      } else if (matchedSection?.year != null && courseInfo?.termType) {
+        termName = `${courseInfo.termType} ${matchedSection.year}`;
+      }
+
+      return {
+        ...subjectData,
+        term: subjectTerm,
+        termName,
+        classSectionTermId: matchedTermRow?.classSectionTermId ?? null,
+        classSectionsId: matchedSection?.classSectionsId ?? null,
+        year: matchedSection?.year ?? null,
+        section: matchedSection?.section ?? null,
+      };
     };
 
     const topicAttributes = {
@@ -618,7 +637,7 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
               subjectId: parsedSubjectId,
               ...(courseId && { courseId: Number(courseId) }),
             },
-            include: [subjectTermInclude, subjectCourseInclude],
+            include: [subjectCourseInclude],
           },
           ...lessonInclude,
         ],
@@ -690,7 +709,6 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
           attributes: subjectAttributes,
           where: subjectWhere,
           include: [
-            subjectTermInclude,
             subjectCourseInclude,
             {
               model: model.lessonModel,

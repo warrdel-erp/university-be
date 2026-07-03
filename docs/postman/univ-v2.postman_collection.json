@@ -5065,7 +5065,7 @@
                 }
               ]
             },
-            "description": "**GET /lesson/employee**\n\nTeacher `teacher_subject_mapping` rows with nested subject, lessons, topics, and semester.\n\n**Query:** `employeeId` (typical), optional `courseId`, `sessionId`, `subjectSearch`.\n\n**Scoped:** `scoped(teacherSubjectMapping)` + `buildScope(subjectModel)` / `buildScope(lessonModel)`. No `acedmicYearId` in query.\n\n**Response shape:** `employeeSubject` is the **subject** row; lessons at `employeeSubject.lessonSubject[]` (not `employeeSubject.subjects`)."
+            "description": "**GET /lesson/employee**\n\nTeacher `teacher_subject_mapping` rows with nested subject, lessons, topics, and semester.\n\n**Query:** `employeeId` (typical), optional `courseId`, `sessionId`, `subjectSearch`, `subjectId`.\n\n**Scoped:** `scoped(teacherSubjectMapping)` + `buildScope(subjectModel)` / `buildScope(lessonModel)`. Academic year from auth context.\n\n**Response:** `employeeSubject` is the subject row with placement resolved from `class_sections` + `class_section_term`:\n- `term`, `termName` (from subject.term + course.termType)\n- `classSectionTermId`, `classSectionsId`, `year`, `section`\n- Lessons at `employeeSubject.lessonSubject[]`"
           },
           "response": []
         }
