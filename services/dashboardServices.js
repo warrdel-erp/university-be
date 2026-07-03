@@ -1,15 +1,29 @@
 import * as dashboardRepository from '../repository/dashboardRepository.js';
-import { formatQueryDate, resolveOverviewDateFromMonthYear } from '../utility/helper.js';
+import { formatQueryDate } from '../utility/helper.js';
 
-export async function getDashboardOverview({ year, month } = {}) {
-  const currentDate = resolveOverviewDateFromMonthYear({ year, month });
+export async function getDashboard({ date, limit = 10, role, year, month, week } = {}) {
+  const currentDate = formatQueryDate(date);
 
-  const [students, teachers, staff, departments, classesToday] = await Promise.all([
+  const [
+    students,
+    teachers,
+    staff,
+    departments,
+    fees,
+    studentAnalytics,
+    timetableDay,
+    notices,
+    events,
+  ] = await Promise.all([
     dashboardRepository.getStudentOverviewStats(),
     dashboardRepository.getTeacherOverviewStats(),
     dashboardRepository.getStaffOverviewStats(),
     dashboardRepository.getDepartmentCount(),
-    dashboardRepository.getClassesTodayStats(currentDate),
+    dashboardRepository.getFeeCollectionOverviewStats({ year, month, week }),
+    dashboardRepository.getStudentAttendanceOverviewStats(),
+    dashboardRepository.getTimetableDayData(currentDate),
+    dashboardRepository.getDashboardNotices(role, limit, currentDate),
+    dashboardRepository.getDashboardEvents(currentDate),
   ]);
 
   return {
@@ -17,24 +31,11 @@ export async function getDashboardOverview({ year, month } = {}) {
     teachers,
     staff,
     departments,
-    classesToday,
+    fees,
+    studentAnalytics,
+    classesToday: timetableDay.stats,
+    classes: timetableDay.classes,
+    notices,
+    events,
   };
-}
-
-export async function getFeeOverview({ year, month, week } = {}) {
-  return dashboardRepository.getFeeCollectionOverviewStats({ year, month, week });
-}
-
-export async function getStudentAttendanceOverview() {
-  return dashboardRepository.getStudentAttendanceOverviewStats();
-}
-
-export async function getTodaysClasses(dateInput) {
-  const currentDate = formatQueryDate(dateInput);
-  return dashboardRepository.getTodaysClasses(currentDate);
-}
-
-export async function getDashboardNotices(role, limit, dateInput) {
-  const currentDate = formatQueryDate(dateInput);
-  return dashboardRepository.getDashboardNotices(role, limit, currentDate);
 }

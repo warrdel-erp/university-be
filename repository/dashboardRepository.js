@@ -221,33 +221,7 @@ function prepareTodaysClassList(schedules, now, currentDate) {
   return { upcomingClasses: upcoming, todaysClasses: today };
 }
 
-export async function getClassesTodayStats(currentDate) {
-  const dayName = dayNameFromQueryDate(currentDate);
-  const now = new Date();
-
-  const schedules = await scoped(model.classScheduleModel).findAll({
-    attributes: ['timeTableMappingId'],
-    where: { day: dayName },
-    include: [
-      {
-        model: model.timeTableRoutineModel,
-        as: 'timeTablecreate',
-        required: true,
-        attributes: [],
-        where: routineActiveOnDateWhere(currentDate),
-      },
-      {
-        model: model.timeTableStructurePeriodsModel,
-        as: 'timeTablecreation',
-        required: true,
-        attributes: ['startTime', 'endTime'],
-        where: { isBreak: false },
-      },
-    ],
-    raw: true,
-    nest: true,
-  });
-
+function buildClassesTodayStats(schedules, now) {
   let inProgressCount = 0;
   for (const schedule of schedules) {
     const period = schedule.timeTablecreation;
@@ -259,6 +233,83 @@ export async function getClassesTodayStats(currentDate) {
   return {
     total: schedules.length,
     inProgress: inProgressCount,
+  };
+}
+
+async function fetchTimetableSchedulesForDate(currentDate) {
+  const dayName = dayNameFromQueryDate(currentDate);
+
+  return scoped(model.classScheduleModel).findAll({
+    raw: true,
+    nest: true,
+    where: { day: dayName },
+    attributes: ['timeTableMappingId', 'period', 'timeTableType'],
+    include: [
+      {
+        model: model.timeTableRoutineModel,
+        as: 'timeTablecreate',
+        required: true,
+        attributes: [],
+        where: {
+          ...routineActiveOnDateWhere(currentDate),
+          ...buildScope(model.timeTableRoutineModel),
+        },
+      },
+      {
+        model: model.timeTableStructurePeriodsModel,
+        as: 'timeTablecreation',
+        required: true,
+        attributes: ['startTime', 'endTime'],
+        where: { isBreak: false },
+      },
+      {
+        model: model.employeeModel,
+        as: 'employeeDetails',
+        required: false,
+        attributes: ['employeeName'],
+      },
+      {
+        model: model.teacherSubjectMappingModel,
+        as: 'timeTableTeacherSubject',
+        required: false,
+        attributes: ['teacherSubjectMappingId'],
+        include: [
+          {
+            model: model.subjectModel,
+            as: 'employeeSubject',
+            attributes: ['subjectName'],
+          },
+        ],
+      },
+      {
+        model: model.subjectModel,
+        as: 'timeTableSubject',
+        required: false,
+        attributes: ['subjectName'],
+      },
+      {
+        model: model.electiveSubjectModel,
+        as: 'timeTableElective',
+        required: false,
+        attributes: ['electiveSubjectName'],
+      },
+      {
+        model: model.classRoomModel,
+        as: 'classRoom',
+        required: false,
+        attributes: ['roomNumber'],
+      },
+    ],
+  });
+}
+
+export async function getTimetableDayData(currentDate) {
+  const now = new Date();
+  const schedules = await fetchTimetableSchedulesForDate(currentDate);
+
+  return {
+    stats: buildClassesTodayStats(schedules, now),
+    classes: prepareTodaysClassList(schedules, now, currentDate),
   };
 }
 
@@ -446,76 +497,6 @@ export async function getStudentAttendanceOverviewStats() {
   return prepareDepartmentDistribution(courseRecords);
 }
 
-export async function getTodaysClasses(currentDate) {
-  const dayName = dayNameFromQueryDate(currentDate);
-  const now = new Date();
-
-  const schedules = await scoped(model.classScheduleModel).findAll({
-    raw: true,
-    nest: true,
-    where: { day: dayName },
-    attributes: ['timeTableMappingId', 'period', 'timeTableType'],
-    include: [
-      {
-        model: model.timeTableRoutineModel,
-        as: 'timeTablecreate',
-        required: true,
-        attributes: [],
-        where: {
-          ...routineActiveOnDateWhere(currentDate),
-          ...buildScope(model.timeTableRoutineModel),
-        },
-      },
-      {
-        model: model.timeTableStructurePeriodsModel,
-        as: 'timeTablecreation',
-        required: true,
-        attributes: ['startTime', 'endTime'],
-        where: { isBreak: false },
-      },
-      {
-        model: model.employeeModel,
-        as: 'employeeDetails',
-        required: false,
-        attributes: ['employeeName'],
-      },
-      {
-        model: model.teacherSubjectMappingModel,
-        as: 'timeTableTeacherSubject',
-        required: false,
-        attributes: ['teacherSubjectMappingId'],
-        include: [
-          {
-            model: model.subjectModel,
-            as: 'employeeSubject',
-            attributes: ['subjectName'],
-          },
-        ],
-      },
-      {
-        model: model.subjectModel,
-        as: 'timeTableSubject',
-        required: false,
-        attributes: ['subjectName'],
-      },
-      {
-        model: model.electiveSubjectModel,
-        as: 'timeTableElective',
-        required: false,
-        attributes: ['electiveSubjectName'],
-      },
-      {
-        model: model.classRoomModel,
-        as: 'classRoom',
-        required: false,
-        attributes: ['roomNumber'],
-      },
-    ],
-  });
-
-  return prepareTodaysClassList(schedules, now, currentDate);
-}
-
 function messageToContains(target) {
   return literal(`JSON_CONTAINS(message_to, '"${target}"')`);
 }
@@ -596,4 +577,26 @@ export async function getDashboardNotices(role, limit = 10, currentDate) {
     todaysNotices: todaysNotices.slice(0, limit),
     upcomingNotices: upcoming.slice(0, limit),
   };
+}
+
+export async function getDashboardEvents(currentDate) {
+  const now = new Date();
+
+  const jobs = await scoped(model.jobModel).findAll({
+    where: { jobDate: currentDate },
+    attributes: ['jobTitle', 'startTime', 'endTime', 'location'],
+    order: [['startTime', 'ASC']],
+  });
+
+  const events = [];
+  for (const job of jobs) {
+    events.push({
+      time: formatClassStartTime(job.startTime),
+      title: job.jobTitle,
+      location: job.location ?? '',
+      status: getClassTimelineStatus(job.startTime, job.endTime, now, currentDate),
+    });
+  }
+
+  return events;
 }

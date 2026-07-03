@@ -14730,10 +14730,10 @@
     },
     {
       "name": "dashboard",
-      "description": "## dashboard\n\nCore admin dashboard APIs under `/dashboard` (`dashboardRoute.js`).\n\n**Prerequisite:** `PUT /user/saveUserDefaults` with `defaultInstituteId` and `defaultAcademicYearId` before scoped routes.\n\n**Auth:** Bearer `{{token}}` — tenant scope (university, institute, academic year) from login context.\n\n| Method | Path | Sprint / widget |\n|--------|------|------------------|\n| GET | `/dashboard/overview` | KPI cards (students, teachers, staff, departments, classes today) |\n| GET | `/dashboard/fee-overview` | Fee collection cards + graph |\n| GET | `/dashboard/student-analytics` | Student department distribution |\n| GET | `/dashboard/todays-classes` | Today's class timeline |\n| GET | `/dashboard/notices` | Notice board — recent notices |\n\n**Sample flow (dashboard page load):**\n```\nGET /dashboard/overview\n↓\nGET /dashboard/fee-overview\n↓\nGET /dashboard/student-analytics\n↓\nGET /dashboard/todays-classes\n↓\nGET /dashboard/notices\n```\n\n**Changelog (v1):** Initial dashboard sprint APIs.",
+      "description": "## dashboard\n\nAdmin dashboard API under `/dashboard` (`dashboardRoute.js`).\n\n**Prerequisite:** `PUT /user/saveUserDefaults` with `defaultInstituteId` and `defaultAcademicYearId` before scoped routes.\n\n**Auth:** Bearer `{{token}}` — tenant scope (university, institute, academic year) from login context.\n\n| Method | Path | Notes |\n|--------|------|-------|\n| GET | `/dashboard` | Full dashboard — KPIs, fees, analytics, classes, notices, events |\n\n**Sample flow:**\n```\nGET /dashboard?date=2026-07-03&limit=10&year=2026&month=7\n```",
       "item": [
         {
-          "name": "overview",
+          "name": "Get Dashboard",
           "request": {
             "auth": {
               "type": "bearer",
@@ -14748,180 +14748,42 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/dashboard/overview?year=2026&month=",
+              "raw": "{{baseurl}}/dashboard?date=2026-07-03&limit=10&year=2026&month=7",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
-                "dashboard",
-                "overview"
+                "dashboard"
               ],
               "query": [
                 {
-                  "key": "year",
-                  "value": "2026",
-                  "description": "Optional. Calendar year for classesToday. Defaults to current year."
+                  "key": "date",
+                  "value": "2026-07-03",
+                  "description": "Optional. YYYY-MM-DD; defaults to today. Used by classesToday, classes, notices, events."
                 },
                 {
-                  "key": "month",
-                  "value": "",
-                  "description": "Optional. Month 1–12 for classesToday. Defaults to current month."
-                }
-              ]
-            },
-            "description": "## Get Dashboard Overview\n\n**HTTP method:** `GET`\n\n**Endpoint:** `GET /dashboard/overview`\n\n**Authentication:** Bearer Token Required (`Authorization: Bearer {{token}}`)\n\n### Description\n\nReturns summary KPI cards for the core dashboard: student, teacher, and staff counts with weekly/monthly growth, college department count (`sub_account`), and today's class totals.\n\nUse on initial dashboard load. Optional `year` and `month` affect only `classesToday` (not growth counts).\n\n### Headers\n\n| Header | Required | Description |\n|--------|----------|-------------|\n| Authorization | Yes | Bearer `{{token}}` |\n\n### Query Parameters\n\n| Name | Type | Required | Default | Description |\n|------|------|----------|---------|-------------|\n| year | Number | No | Current year | Calendar year used to resolve the date for `classesToday` |\n| month | Number | No | Current month | Month `1`–`12` used with `year` for `classesToday` |\n\n### Request Body\n\nNone.\n\n### Success Response (200)\n\n```json\n{\n  \"success\": true,\n  \"message\": \"Dashboard overview fetched successfully\",\n  \"data\": {\n    \"students\": {\n      \"count\": 2540,\n      \"weeklyGrowth\": 2.1,\n      \"monthlyGrowth\": 5.4\n    },\n    \"teachers\": {\n      \"count\": 180,\n      \"weeklyGrowth\": 0.5,\n      \"monthlyGrowth\": 1.8\n    },\n    \"staff\": {\n      \"count\": 92,\n      \"weeklyGrowth\": 0.8,\n      \"monthlyGrowth\": 1.3\n    },\n    \"departments\": {\n      \"count\": 12\n    },\n    \"classesToday\": {\n      \"total\": 84,\n      \"inProgress\": 12\n    }\n  }\n}\n```\n\n### Response `data` fields\n\n| Field | Type | Description |\n|-------|------|-------------|\n| students.count | Number | Total students (scoped) |\n| students.weeklyGrowth | Number | % change vs 7 days ago |\n| students.monthlyGrowth | Number | % change vs 30 days ago |\n| teachers.* | Object | Same shape; employees with TEACHER role |\n| staff.* | Object | Same shape; rows in `staff` table |\n| departments.count | Number | College department count from `sub_account` (scoped by university + institute) |\n| classesToday.total | Number | Published timetable slots for resolved date |\n| classesToday.inProgress | Number | Slots where current time is within period |\n\n### Business Rules\n\n* Growth uses `COALESCE(admission_date, created_at)` for students and `created_at` for teachers/staff.\n* `classesToday` resolves a date from `year`/`month` using today's day-of-month (clamped to month end), then uses that weekday with published routines active on that date.\n* Departments count rows in `sub_account` (college departments), not the `department` table.\n* Scoped by university, institute, and academic year from auth context.\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | Invalid year/month, missing tenant scope (e.g. academicYearId) |\n| 401 | Unauthorized |\n| 500 | Internal Server Error |"
-          },
-          "response": []
-        },
-        {
-          "name": "fee overview",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/dashboard/fee-overview?year=2026",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "dashboard",
-                "fee-overview"
-              ],
-              "query": [
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Optional. 1–50. Max notices per list. Default 10."
+                },
                 {
                   "key": "year",
                   "value": "2026",
-                  "description": "Calendar year. Defaults to current year."
+                  "description": "Optional. Calendar year for fees.collectionGraph. Defaults to current year."
                 },
                 {
                   "key": "month",
-                  "value": "",
-                  "description": "Optional. 1–12. Narrows invoice/payment filter to month."
+                  "value": "7",
+                  "description": "Optional. 1–12. Narrows fee graph to month."
                 },
                 {
                   "key": "week",
                   "value": "",
-                  "description": "Optional. 1–53 ISO week. Takes priority over month."
+                  "description": "Optional. 1–53 ISO week. Overrides month for fee graph."
                 }
               ]
             },
-            "description": "## Get Fee Collection Overview\n\n**HTTP method:** `GET`\n\n**Endpoint:** `GET /dashboard/fee-overview`\n\n**Authentication:** Bearer Token Required\n\n### Description\n\nFee collection dashboard cards and monthly graph. **Collected** comes from incoming `student_fee_payment` items linked to `STUDENT_FEE_INVOICE`. **Pending** comes from generated `student_fee_invoice` totals minus `paid_amount` in the same period.\n\n### Query Parameters\n\n| Name | Type | Required | Default | Description |\n|------|------|----------|---------|-------------|\n| year | Number | No | Current year | Calendar year filter |\n| month | Number | No | — | Month `1`–`12` |\n| week | Number | No | — | ISO week `1`–`53`; overrides month when set |\n\n### Success Response (200)\n\n```json\n{\n  \"success\": true,\n  \"message\": \"Fee collection overview fetched successfully\",\n  \"data\": {\n    \"collectedAmount\": 18400000,\n    \"pendingAmount\": 2100000,\n    \"collectionEfficiency\": 89.8,\n    \"collectionGraph\": [\n      { \"label\": \"Jan\", \"amount\": 10000 },\n      { \"label\": \"Feb\", \"amount\": 15000 }\n    ]\n  }\n}\n```\n\n### Response `data` fields\n\n| Field | Type | Description |\n|-------|------|-------------|\n| collectedAmount | Number | Sum of payment_item amounts (INCOMING) in period |\n| pendingAmount | Number | Sum(invoice.total) − Sum(invoice.paid_amount) for generated invoices |\n| collectionEfficiency | Number | `(collectedAmount / (collectedAmount + pendingAmount)) × 100`, 1 decimal |\n| collectionGraph | Array | Payment totals grouped by period |\n| collectionGraph[].label | String | `Jan`–`Dec` (year), day number (month), or `Mon`–`Sun` (week) |\n| collectionGraph[].amount | Number | Collected amount for bucket |\n\n### Business Rules\n\n* Only invoices with `status = generated` count toward pending.\n* Invoice dates filter on `create_date`; payment dates filter on `payment.created_at`.\n* Graph uses payment `created_at` buckets.\n* No academic-year filter — uses calendar year/month/week params only.\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | Validation error (invalid year/month/week) or scope error |\n| 401 | Unauthorized |\n| 500 | Internal Server Error |"
-          },
-          "response": []
-        },
-        {
-          "name": "student analytics",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/dashboard/student-analytics",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "dashboard",
-                "student-analytics"
-              ]
-            },
-            "description": "## Get Student Analytics (Course Distribution)\n\n**HTTP method:** `GET`\n\n**Endpoint:** `GET /dashboard/student-analytics`\n\n**Authentication:** Bearer Token Required\n\n### Description\n\nStudent analytics widget: total students and distribution by **course** (`course` table — program + branch via `course_name`). Used for the dashboard donut/bar chart.\n\nAll institute courses are returned; courses with no enrolled students show `studentCount: 0`.\n\n### Query Parameters\n\nNone.\n\n### Success Response (200)\n\n```json\n{\n  \"success\": true,\n  \"message\": \"Student attendance overview fetched successfully\",\n  \"data\": {\n    \"totalStudents\": 455,\n    \"departmentDistribution\": [\n      {\n        \"departmentName\": \"Bachelors in Architecture\",\n        \"studentCount\": 400,\n        \"percentage\": 88\n      },\n      {\n        \"departmentName\": \"Bachelors in Design\",\n        \"studentCount\": 55,\n        \"percentage\": 12\n      },\n      {\n        \"departmentName\": \"Bachelors in Planning\",\n        \"studentCount\": 0,\n        \"percentage\": 0\n      }\n    ]\n  }\n}\n```\n\n### Response `data` fields\n\n| Field | Type | Description |\n|-------|------|-------------|\n| totalStudents | Number | Sum of enrolled students across listed courses |\n| departmentDistribution | Array | One row per course (`course_name`) |\n| departmentDistribution[].departmentName | String | Course name (program + branch) |\n| departmentDistribution[].studentCount | Number | Students on that course; `0` when none |\n| departmentDistribution[].percentage | Number | Share of `totalStudents`, rounded |\n\n### Business Rules\n\n* Courses from scoped `course` table (university + institute); not `department` or `sub_account`.\n* Student counts from `students.course_id`.\n* Sorted by `studentCount` descending, then course name.\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | Missing tenant scope |\n| 401 | Unauthorized |\n| 500 | Internal Server Error |"
-          },
-          "response": []
-        },
-        {
-          "name": "todays classes",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/dashboard/todays-classes?date=2026-07-03",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "dashboard",
-                "todays-classes"
-              ],
-              "query": [
-                {
-                  "key": "date",
-                  "value": "2026-07-03",
-                  "description": "Optional. YYYY-MM-DD; defaults to today."
-                }
-              ]
-            },
-            "description": "## Get Today's Classes\n\n**HTTP method:** `GET`\n\n**Endpoint:** `GET /dashboard/todays-classes`\n\n**Authentication:** Bearer Token Required\n\n### Description\n\nToday's class timeline for the dashboard widget. Returns published timetable slots for the selected date, split into upcoming and in-progress/completed classes. No holiday cancellation logic.\n\n### Query Parameters\n\n| Name | Type | Required | Default | Description |\n|------|------|----------|---------|-------------|\n| date | String | No | Today | `YYYY-MM-DD` |\n\n### Success Response (200)\n\n```json\n{\n  \"success\": true,\n  \"message\": \"Today's classes fetched successfully\",\n  \"data\": {\n    \"upcomingClasses\": [\n      {\n        \"time\": \"11:00\",\n        \"subject\": \"Building Materials & Construction\",\n        \"teacher\": \"Prof. Rajat Verma\",\n        \"room\": \"C-101\",\n        \"status\": \"Upcoming\"\n      }\n    ],\n    \"todaysClasses\": [\n      {\n        \"time\": \"09:00\",\n        \"subject\": \"Architectural Design Studio - III\",\n        \"teacher\": \"Ar. Neha Sharma\",\n        \"room\": \"B-204\",\n        \"status\": \"In Progress\"\n      },\n      {\n        \"time\": \"08:00\",\n        \"subject\": \"History of Architecture\",\n        \"teacher\": \"Prof. Mehta\",\n        \"room\": \"A-101\",\n        \"status\": \"Completed\"\n      }\n    ]\n  }\n}\n```\n\n### Response `data` fields\n\n| Field | Type | Description |\n|-------|------|-------------|\n| upcomingClasses | Array | Classes not yet started on the selected date |\n| todaysClasses | Array | Classes in progress or completed on the selected date |\n\n### Class item fields\n\n| Field | Type | Description |\n|-------|------|-------------|\n| time | String | Period start `HH:mm` (24h) |\n| subject | String | Subject or elective name |\n| teacher | String | `employee.employee_name` |\n| room | String | `class_room.room_number` |\n| status | String | `Upcoming`, `In Progress`, or `Completed` |\n\n### status rules\n\n| Status | Rule |\n|--------|------|\n| Upcoming | Selected date is in the future, or current time is before period start |\n| In Progress | Selected date is today and current time is within period start–end |\n| Completed | Selected date is in the past, or current time is after period end |\n\n### Business Rules\n\n* Only non-break periods from published routines active on `date`.\n* Subject resolved from normal subject, elective, or teacher-subject mapping.\n* Each list sorted by start time ascending.\n* Scoped via timetable routine (university, institute, academic year).\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | Invalid `date` format or scope error |\n| 401 | Unauthorized |\n| 500 | Internal Server Error |"
-          },
-          "response": []
-        },
-        {
-          "name": "notices",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/dashboard/notices?limit=10&date=2026-07-03",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "dashboard",
-                "notices"
-              ],
-              "query": [
-                {
-                  "key": "limit",
-                  "value": "10",
-                  "description": "Optional. 1–50. Default 10."
-                },
-                {
-                  "key": "date",
-                  "value": "2026-07-03",
-                  "description": "Optional. YYYY-MM-DD reference date; defaults to today."
-                }
-              ]
-            },
-            "description": "## Get Dashboard Notices\n\n**HTTP method:** `GET`\n\n**Endpoint:** `GET /dashboard/notices`\n\n**Authentication:** Bearer Token Required\n\n### Description\n\nToday's and upcoming notices for the dashboard notice board. Past notices are excluded. Audience filtering matches `/notice` module rules based on the logged-in user's `defaultRole`.\n\nEffective date = `noticeDate`, or `publishDate` when `noticeDate` is empty.\n\n### Query Parameters\n\n| Name | Type | Required | Default | Description |\n|------|------|----------|---------|-------------|\n| limit | Number | No | 10 | Max notices to fetch before split (`1`–`50`) |\n| date | String | No | Today | `YYYY-MM-DD` reference date for today vs upcoming |\n\n### Success Response (200)\n\n```json\n{\n  \"success\": true,\n  \"message\": \"Dashboard notices fetched successfully\",\n  \"data\": {\n    \"todaysNotices\": [\n      {\n        \"noticeId\": 8,\n        \"title\": \"Orientation Session\",\n        \"notice\": \"Mandatory orientation for new students.\",\n        \"noticeDate\": \"2026-07-03\",\n        \"publishDate\": \"2026-07-01\",\n        \"messageTo\": [\"STUDENT\", \"TEACHER\"],\n        \"role\": \"Admin\"\n      }\n    ],\n    \"upcomingNotices\": [\n      {\n        \"noticeId\": 9,\n        \"title\": \"Mid-term Exam Schedule\",\n        \"notice\": \"Exams begin next Monday.\",\n        \"noticeDate\": \"2026-07-10\",\n        \"publishDate\": \"2026-07-03\",\n        \"messageTo\": [\"STUDENT\"],\n        \"role\": \"Head\"\n      }\n    ]\n  }\n}\n```\n\n### Response `data` fields\n\n| Field | Type | Description |\n|-------|------|-------------|\n| todaysNotices | Array | Notices whose effective date equals `date` |\n| upcomingNotices | Array | Notices whose effective date is after `date` |\n\n### Notice item fields\n\n| Field | Type | Description |\n|-------|------|-------------|\n| noticeId | Number | Primary key |\n| title | String | Notice title |\n| notice | String | Body text |\n| noticeDate | String | Event/display date |\n| publishDate | String | Publish date |\n| messageTo | Array | Audience list |\n| role | String | Creator role |\n\n### messageTo audience rules\n\n| Logged-in role | Notices returned |\n|----------------|------------------|\n| ADMIN | All matching notices in tenant scope |\n| TEACHER | `messageTo` contains ADMIN, TEACHER, or STUDENT |\n| STUDENT | `messageTo` contains STUDENT or `Student` |\n\n### Business Rules\n\n* Only notices with effective date `>= date` are considered; past notices are excluded.\n* Ordered by effective date ascending, then `noticeId` descending.\n* Scoped by university, institute, and academic year.\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | Invalid `limit`/`date` or scope error |\n| 401 | Unauthorized |\n| 500 | Internal Server Error |"
+            "description": "## Get Dashboard\n\n**HTTP method:** `GET`\n\n**Endpoint:** `GET /dashboard`\n\n**Authentication:** Bearer Token Required (`Authorization: Bearer {{token}}`)\n\n### Description\n\nReturns the complete admin dashboard in one response: student/teacher/staff KPI cards with growth, department count, fee collection overview, student course distribution, today's class stats and timeline, notice board, and institute events (jobs) for the selected date.\n\nAll sections are fetched concurrently server-side.\n\n### Headers\n\n| Header | Required | Description |\n|--------|----------|-------------|\n| Authorization | Yes | Bearer `{{token}}` |\n\n### Query Parameters\n\n| Name | Type | Required | Default | Description |\n|------|------|----------|---------|-------------|\n| date | String | No | Today | `YYYY-MM-DD` — reference date for `classesToday`, `classes`, `notices`, and `events` |\n| limit | Number | No | 10 | Max notices to fetch before split (`1`–`50`) |\n| year | Number | No | Current year | Calendar year for `fees.collectionGraph` only |\n| month | Number | No | — | Month `1`–`12` for fee graph |\n| week | Number | No | — | ISO week `1`–`53` for fee graph; overrides `month` when set |\n\n### Request Body\n\nNone.\n\n### Success Response (200)\n\n```json\n{\n  \"success\": true,\n  \"message\": \"Dashboard fetched successfully\",\n  \"data\": {\n    \"students\": {\n      \"count\": 2540,\n      \"weeklyGrowth\": 2.1,\n      \"monthlyGrowth\": 5.4\n    },\n    \"teachers\": {\n      \"count\": 180,\n      \"weeklyGrowth\": 0.5,\n      \"monthlyGrowth\": 1.8\n    },\n    \"staff\": {\n      \"count\": 92,\n      \"weeklyGrowth\": 0.8,\n      \"monthlyGrowth\": 1.3\n    },\n    \"departments\": {\n      \"count\": 12\n    },\n    \"fees\": {\n      \"collectedAmount\": 18400000,\n      \"pendingAmount\": 2100000,\n      \"collectionEfficiency\": 89.8,\n      \"collectionGraph\": [\n        { \"label\": \"Jan\", \"amount\": 10000 },\n        { \"label\": \"Feb\", \"amount\": 15000 }\n      ]\n    },\n    \"studentAnalytics\": {\n      \"totalStudents\": 455,\n      \"departmentDistribution\": [\n        {\n          \"departmentName\": \"Bachelors in Architecture\",\n          \"studentCount\": 400,\n          \"percentage\": 88\n        },\n        {\n          \"departmentName\": \"Bachelors in Design\",\n          \"studentCount\": 55,\n          \"percentage\": 12\n        }\n      ]\n    },\n    \"classesToday\": {\n      \"total\": 84,\n      \"inProgress\": 12\n    },\n    \"classes\": {\n      \"upcomingClasses\": [\n        {\n          \"time\": \"11:00\",\n          \"subject\": \"Building Materials & Construction\",\n          \"teacher\": \"Prof. Rajat Verma\",\n          \"room\": \"C-101\",\n          \"status\": \"Upcoming\"\n        }\n      ],\n      \"todaysClasses\": [\n        {\n          \"time\": \"09:00\",\n          \"subject\": \"Architectural Design Studio - III\",\n          \"teacher\": \"Ar. Neha Sharma\",\n          \"room\": \"B-204\",\n          \"status\": \"In Progress\"\n        }\n      ]\n    },\n    \"notices\": {\n      \"todaysNotices\": [\n        {\n          \"noticeId\": 8,\n          \"title\": \"Orientation Session\",\n          \"notice\": \"Mandatory orientation for new students.\",\n          \"noticeDate\": \"2026-07-03\",\n          \"publishDate\": \"2026-07-01\",\n          \"messageTo\": [\"STUDENT\", \"TEACHER\"],\n          \"role\": \"Admin\"\n        }\n      ],\n      \"upcomingNotices\": [\n        {\n          \"noticeId\": 9,\n          \"title\": \"Mid-term Exam Schedule\",\n          \"notice\": \"Exams begin next Monday.\",\n          \"noticeDate\": \"2026-07-10\",\n          \"publishDate\": \"2026-07-03\",\n          \"messageTo\": [\"STUDENT\"],\n          \"role\": \"Head\"\n        }\n      ]\n    },\n    \"events\": [\n      {\n        \"time\": \"15:30\",\n        \"title\": \"Workshop: Sustainable Architecture\",\n        \"location\": \"Seminar Hall\",\n        \"status\": \"Upcoming\"\n      }\n    ]\n  }\n}\n```\n\n### Response `data` — top-level keys\n\n| Key | Type | Description |\n|-----|------|-------------|\n| students | Object | Student KPI card — `count`, `weeklyGrowth`, `monthlyGrowth` |\n| teachers | Object | Teacher KPI card (employees with TEACHER role) |\n| staff | Object | Staff KPI card (rows in `staff` table) |\n| departments | Object | `count` — college departments from `sub_account` |\n| fees | Object | Fee collection cards + `collectionGraph` |\n| studentAnalytics | Object | Total students + course distribution chart data |\n| classesToday | Object | `total`, `inProgress` for `date` |\n| classes | Object | `upcomingClasses`, `todaysClasses` timelines |\n| notices | Object | `todaysNotices`, `upcomingNotices` |\n| events | Array | Institute jobs (`jobs` table) on `date`, sorted by start time |\n\n### `students` / `teachers` / `staff`\n\n| Field | Type | Description |\n|-------|------|-------------|\n| count | Number | Total count (scoped) |\n| weeklyGrowth | Number | % change vs 7 days ago |\n| monthlyGrowth | Number | % change vs 30 days ago |\n\nGrowth uses `COALESCE(admission_date, created_at)` for students and `created_at` for teachers/staff.\n\n### `fees`\n\n| Field | Type | Description |\n|-------|------|-------------|\n| collectedAmount | Number | Sum of payment_item amounts (INCOMING) in period |\n| pendingAmount | Number | Sum(invoice.total) − Sum(invoice.paid_amount) for generated invoices |\n| collectionEfficiency | Number | `(collectedAmount / (collectedAmount + pendingAmount)) × 100`, 1 decimal |\n| collectionGraph | Array | Payment totals grouped by period |\n| collectionGraph[].label | String | `Jan`–`Dec` (year), day number (month), or `Mon`–`Sun` (week) |\n| collectionGraph[].amount | Number | Collected amount for bucket |\n\nOnly invoices with `status = generated` count toward pending. Graph uses `year` / `month` / `week` query params only (no academic-year filter).\n\n### `studentAnalytics`\n\n| Field | Type | Description |\n|-------|------|-------------|\n| totalStudents | Number | Sum of enrolled students across listed courses |\n| departmentDistribution | Array | One row per course (`course_name`) |\n| departmentDistribution[].departmentName | String | Course name (program + branch) |\n| departmentDistribution[].studentCount | Number | Students on that course |\n| departmentDistribution[].percentage | Number | Share of `totalStudents`, rounded |\n\n### `classes` — class item fields\n\n| Field | Type | Description |\n|-------|------|-------------|\n| time | String | Period start `HH:mm` (24h) |\n| subject | String | Subject or elective name |\n| teacher | String | `employee.employee_name` |\n| room | String | `class_room.room_number` |\n| status | String | `Upcoming`, `In Progress`, or `Completed` |\n\n### Class / event `status` values\n\n| Status | Rule |\n|--------|------|\n| Upcoming | Selected date is in the future, or current time is before period start |\n| In Progress | Selected date is today and current time is within start–end |\n| Completed | Selected date is in the past, or current time is after period end |\n\n### `events` item fields\n\n| Field | Type | Description |\n|-------|------|-------------|\n| time | String | Job start time `HH:mm` |\n| title | String | `jobTitle` |\n| location | String | Job location |\n| status | String | `Upcoming`, `In Progress`, or `Completed` (same rules as classes) |\n\n### `notices` — audience rules\n\n| Logged-in role | Notices returned |\n|----------------|------------------|\n| ADMIN | All matching notices in tenant scope |\n| TEACHER | `messageTo` contains ADMIN, TEACHER, or STUDENT |\n| STUDENT | `messageTo` contains STUDENT or `Student` |\n\nEffective date = `noticeDate`, or `publishDate` when `noticeDate` is empty. Only notices with effective date `>= date` are returned. `role` for filtering comes from `req.user.defaultRole` (not a query param).\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | Invalid query params or missing tenant scope |\n| 401 | Unauthorized |\n| 500 | Internal Server Error |"
           },
           "response": []
         }
