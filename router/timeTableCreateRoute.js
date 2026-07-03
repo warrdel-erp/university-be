@@ -107,6 +107,7 @@ const mappingBodySchema = z.object({
     classSectionTermIds: z.array(positiveIntegerId).min(1).optional(),
     slots: z.array(mappingSlotSchema).min(1).optional(),
     combinedGroupId: z.string().uuid().optional(),
+    
     sourceTimeTableMappingId: optionalPositiveId,
     copyTarget: z.enum(['nextPeriod', 'nextDay']).optional(),
 });

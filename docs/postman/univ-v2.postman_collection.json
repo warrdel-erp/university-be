@@ -4524,6 +4524,42 @@
             "description": "**GET /classSections** — flat list of class sections for course + session (+ optional acedmicYearId). Alternative to termsWithClassSections for promotion UI."
           },
           "response": []
+        },
+        {
+          "name": "delete class section term",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/classSections/term?classSectionTermId={{classSectionTermId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "classSections",
+                "term"
+              ],
+              "query": [
+                {
+                  "key": "classSectionTermId",
+                  "value": "{{classSectionTermId}}",
+                  "description": "Required — class_section_term PK"
+                }
+              ]
+            },
+            "description": "## Delete Class Section Term\n\n**HTTP method:** `DELETE`\n\n**Endpoint:** `DELETE /classSections/term?classSectionTermId=`\n\n**Authentication:** Bearer token required.\n\n### Description\n\nDeletes one `class_section_term` row. Runs guard checks before delete:\n\n1. **Teacher employee mapping** — blocks if teachers are mapped to the parent class section (`teacher_section_mapping`) or if timetable cells with `employeeId` exist for routines on this `classSectionTermId`. Remove mappings first.\n2. **Students** — blocks if any student is assigned via `students.class_section_term_id` or `class_student_mapper.class_section_term_id`.\n\n### Query parameters\n\n| Name | Type | Required | Description |\n|------|------|----------|-------------|\n| `classSectionTermId` | Integer | Yes | `class_section_term.class_section_term_id` |\n\n### Success response (200)\n\n```json\n{\n  \"success\": true,\n  \"message\": \"Class section term deleted successfully.\",\n  \"classSectionTermId\": 197\n}\n```\n\n### Error responses\n\n```json\n{\n  \"success\": false,\n  \"message\": \"Teacher employee mapping exists for this class section term. Please remove teacher section mapping (DELETE/PATCH /teacher/teacherSection) and timetable teacher mappings (DELETE /timeTableCreate/mapping) before deleting.\"\n}\n```\n\n| Status | Reason |\n|--------|--------|\n| 400 | Teacher mapping still present |\n| 400 | Students assigned to this term |\n| 400 | Zod validation (missing/invalid `classSectionTermId`) |\n| 404 | `classSectionTermId` not found |\n| 401 | Unauthorized |\n\n### Business rules\n\n- Delete is blocked when teachers or students are still linked.\n- Does not delete the parent `class_sections` row — only the term placement row.\n- Hard delete (`class_section_term` is not paranoid).\n\n### Prerequisite cleanup\n\n```\nRemove teacher section mapping → /teacher/teacherSection\nRemove timetable teacher cells → DELETE /timeTableCreate/mapping\nReassign/remove students from term\n↓\nDELETE /classSections/term?classSectionTermId=\n```"
+          },
+          "response": []
         }
       ]
     },
