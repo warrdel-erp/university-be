@@ -15271,7 +15271,7 @@
                 }
               ]
             },
-            "description": "**GET /employee/uniqueClassSectionSubjects** — `combinations[]`: `classSectionTermId`, `year`, `term`, `section`, subject, `totalClasses`."
+            "description": "**GET /employee/uniqueClassSectionSubjects**\n\n**Query:** `employeeId` (required). Academic year from auth context.\n\n**Response:**\n- `employeeDetails`: `employeeId`, `employeeName`, `employeeCode`, `department`, `employmentType`, `pickColor`, `employeePhoto`, `userId`, `campusId`\n- `combinations[]`: `classSectionTermId`, `year`, `term`, `section`, `courseId`, `courseName`, `subjectId`, `subjectName`, `totalClasses`"
           },
           "response": []
         },

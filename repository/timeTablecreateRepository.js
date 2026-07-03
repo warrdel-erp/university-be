@@ -2120,7 +2120,17 @@ export async function getUniqueClassSectionSubjectsForEmployee(employeeId, acade
         {
           model: model.employeeModel,
           as: "employeeDetails",
-          attributes: ['employeeId', 'employeeName']
+          attributes: [
+            'employeeId',
+            'employeeName',
+            'employeeCode',
+            'department',
+            'employmentType',
+            'pickColor',
+            'employeePhoto',
+            'userId',
+            'campusId',
+          ],
         }
       ]
     });

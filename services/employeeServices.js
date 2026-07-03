@@ -1648,12 +1648,22 @@ function processScheduleCombinations(schedules) {
 }
 
 function getEmployeeDetails(schedules) {
-  return schedules.length > 0 && schedules[0].employeeDetails
-    ? {
-      employeeId: schedules[0].employeeDetails.employeeId,
-      employeeName: schedules[0].employeeDetails.employeeName
-    }
-    : null;
+  if (!schedules.length || !schedules[0].employeeDetails) {
+    return null;
+  }
+
+  const employee = schedules[0].employeeDetails.get
+    ? schedules[0].employeeDetails.get({ plain: true })
+    : schedules[0].employeeDetails;
+
+  return {
+    employeeId: employee.employeeId,
+    employeeName: employee.employeeName,
+    employmentType: employee.employmentType,
+    department: employee.department,
+    totalClasses: schedules.reduce((acc, schedule) => acc + schedule.totalClasses, 0),
+    totalUniqueSubjects: schedules.length
+  };
 }
 
 export async function getUniqueClassSectionSubjects(employeeId, academicYearId) {
