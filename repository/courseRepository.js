@@ -13,7 +13,7 @@ function omitAcademicYearScope(scopeWhere = {}) {
 export async function getCourseByCourseId(courseId) {
   try {
     return await scoped(model.courseModel).findOne({
-      attributes: ['courseId', 'universityId', 'courseDuration', 'isActive', 'termType', 'totalTerms'],
+      attributes: ['courseId', 'universityId', 'instituteId', 'courseDuration', 'isActive', 'termType', 'totalTerms'],
       where: { courseId },
     });
   } catch (error) {
@@ -159,11 +159,7 @@ export async function getClassByName(className, Section) {
     const matchedClassSectionsIds = [];
 
     for (const classSection of results) {
-      const section = await scoped(model.sectionModel).findOne({
-        where: { sectionId: classSection.sectionId },
-      });
-
-      if (section && section.sectionName === Section) {
+      if (classSection.section === Section) {
         matchedClassSectionsIds.push({
           classSectionsId: classSection.classSectionsId,
         });
@@ -365,7 +361,7 @@ export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
     return await scoped(model.classSectionModel).findAll({
       where: { courseId, sessionId },
       include: [classSectionTermsInclude()],
-      attributes: ['classSectionsId', 'section', 'year', 'sectionId'],
+      attributes: ['classSectionsId', 'section', 'year'],
     });
   } catch (error) {
     console.error('Error in Course Repository (getClassSectionsByCourseAndSession):', error);

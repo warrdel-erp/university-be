@@ -60,14 +60,14 @@ export const deleteEmployeeDetail = async (req, res) => {
     const employeeId = req.params.id;
     try {
         if (!employeeId) {
-            res.status(400).send("employee Id is required");
-        } else {
-            const result = await employee.deleteEmployeeDetail(employeeId);
-            res.status(200).send(result);
+            return res.status(400).send("employee Id is required");
         }
+        const result = await employee.deleteEmployeeDetail(employeeId);
+        res.status(200).send(result);
     } catch (error) {
         console.error(`Error in deleting employeeId Id ${employeeId}:`, error);
-        res.status(500).send("Internal Server Error");
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).send(error.message || "Internal Server Error");
     }
 };
 

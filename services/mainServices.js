@@ -335,6 +335,7 @@ export async function addClassSections(data, createdBy) {
     try {
         const { courseId, sessionId, section, year } = data;
         const yearNum = Number(year);
+        const sectionName = String(section).trim();
 
         const course = await getCourseByCourseId(Number(courseId));
         if (!course) throw new Error('Course not found');
@@ -358,26 +359,28 @@ export async function addClassSections(data, createdBy) {
 
         const transaction = await sequelize.transaction();
         try {
-            const sectionRow = await mainRepository.findOrCreateSection(
+            let classSectionRow = await mainRepository.findClassSectionForYear(
                 {
-                    sectionName: section,
-                    createdBy,
-                    updatedBy: createdBy,
+                    courseId: Number(courseId),
+                    sessionId: Number(sessionId),
+                    section: sectionName,
+                    year: yearNum,
                 },
                 { transaction },
             );
 
-            const sectionId = sectionRow.get({ plain: true }).sectionId;
+            const classSectionCreated = !classSectionRow;
 
-            const classSectionRow = await mainRepository.createClassSections({
-                courseId: Number(courseId),
-                sessionId: Number(sessionId),
-                year: yearNum,
-                sectionId: Number(sectionId),
-                section: String(section).trim(),
-                instituteId: course.instituteId,
-                createdBy,
-            }, { transaction });
+            if (!classSectionRow) {
+                classSectionRow = await mainRepository.createClassSectionRow({
+                    courseId: Number(courseId),
+                    sessionId: Number(sessionId),
+                    year: yearNum,
+                    section: sectionName,
+                    instituteId: course.instituteId,
+                    createdBy,
+                }, { transaction });
+            }
 
             const classSectionPlain = classSectionRow.get({ plain: true });
             const classSectionsId = classSectionPlain.classSectionsId;
@@ -405,9 +408,9 @@ export async function addClassSections(data, createdBy) {
             await transaction.commit();
             return {
                 ...classSectionPlain,
-                sectionId,
                 year: yearNum,
                 terms,
+                classSectionCreated,
             };
         } catch (error) {
             await transaction.rollback();

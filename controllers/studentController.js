@@ -37,7 +37,7 @@ export const getAllStudents = async (req, res) => {
 
 // 3. get single student details
 export const getSingleStudentDetail = async (req, res) => {
-    const { studentId } = req.query;
+    const studentId = req.params.studentId ?? req.query.studentId;
     try {
         const result = await studentService.getSingleStudentDetail(studentId);
         if (!result) {

@@ -535,6 +535,12 @@ router.get(
   validate({ query: getAllAnswerSheetsQuerySchema }),
   getAllAnswerSheets
 );
+router.get(
+  "/:studentId",
+  userAuth,
+  validate({ params: updateStudentDetailsParamsSchema }),
+  getSingleStudentDetail,
+);
 
 router.post(
   "/",
