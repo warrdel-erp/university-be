@@ -272,9 +272,16 @@ export async function getMapping(academicYearId) {
               },
               include: [
                 {
-                  model: model.classSectionModel,
-                  as: "timeTableClassSection",
-                  attributes: ["section", "year", "class_sections_id"],
+                  model: model.classSectionTermModel,
+                  as: "timeTableClassSectionTerm",
+                  attributes: ["classSectionTermId", "term", "classSectionsId"],
+                  include: [
+                    {
+                      model: model.classSectionModel,
+                      as: "classSection",
+                      attributes: ["section", "year", "classSectionsId"],
+                    },
+                  ],
                 },
               ],
             },

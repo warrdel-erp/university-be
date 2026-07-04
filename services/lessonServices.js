@@ -106,7 +106,7 @@ export async function getMapping(academicYearId) {
       }
 
       const ttCreate = ttMapping.timeTablecreate || {};
-      const classSection = ttCreate.timeTableClassSection || {};
+      const classSection = ttCreate.timeTableClassSectionTerm?.classSection || {};
       const subject = item.mappingTopic?.lessonTopic?.lessonSubject || {};
       const lessonRow = item.mappingTopic?.lessonTopic || {};
       const topic = item.mappingTopic || {};
