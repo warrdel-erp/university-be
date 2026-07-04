@@ -2585,7 +2585,7 @@
                     "clone"
                   ]
                 },
-                "description": "**POST /timeTableCreate/clone**\n\nCopies a routine and all its mapping cells to a new date range.\n\n**Required body:** `previousRoutineId`, `startingDate`, `endingDate` (`endingDate` >= `startingDate`)."
+                "description": "**POST /timeTableCreate/clone**\n\nCopies a routine and all its mapping cells to a new date range.\n\n### Body (Zod)\n| Field | Required | Type | Notes |\n|-------|----------|------|-------|\n| `previousRoutineId` | yes | int | Source routine PK (`timeTableRoutineId`) |\n| `startingDate` | yes | string | `YYYY-MM-DD` |\n| `endingDate` | yes | string | `YYYY-MM-DD`; must be >= `startingDate` |\n\nNo optional fields on this route.\n\nPreserves `classSectionTermId`, course, campus, and all period mappings from the source routine. New routine is created unpublished (`isPublish: false`). Overlap is checked for the same `classSectionTermId`.\n\n**400** if source routine not found or dates overlap an existing routine for that term."
               },
               "response": []
             },
@@ -2597,15 +2597,21 @@
                   "script": {
                     "exec": [
                       "if (pm.response.code === 200) {",
-                      "  const arr = pm.response.json();",
-                      "  if (!Array.isArray(arr) || !arr.length) return;",
-                      "  const termRow = arr.find((row) => row.classSectionTermId) || arr[0];",
-                      "  if (termRow.classSectionTermId) {",
-                      "    pm.collectionVariables.set('classSectionTermId', String(termRow.classSectionTermId));",
-                      "  }",
-                      "  const routines = termRow.timeTableRoutines || [];",
-                      "  if (routines[0] && routines[0].timeTableRoutineId) {",
-                      "    pm.collectionVariables.set('timetable_routineId', String(routines[0].timeTableRoutineId));",
+                      "  const body = pm.response.json();",
+                      "  const years = body.years || [];",
+                      "  for (const yearRow of years) {",
+                      "    for (const termRow of yearRow.terms || []) {",
+                      "      for (const section of termRow.sections || []) {",
+                      "        if (section.classSectionTermId) {",
+                      "          pm.collectionVariables.set('classSectionTermId', String(section.classSectionTermId));",
+                      "          const routines = section.timeTableRoutines || [];",
+                      "          if (routines[0] && routines[0].timeTableRoutineId) {",
+                      "            pm.collectionVariables.set('timetable_routineId', String(routines[0].timeTableRoutineId));",
+                      "          }",
+                      "          return;",
+                      "        }",
+                      "      }",
+                      "    }",
                       "  }",
                       "}"
                     ],
@@ -2647,7 +2653,7 @@
                     }
                   ]
                 },
-                "description": "**GET /timeTableCreate/**\n\nLists **class_section_term** rows (scoped via section) with nested `classSection` and `timeTableRoutines[]`.\n\nOne array item per program term. Terms without a routine have `timeTableRoutines: []`.\n\n**Optional query:** `courseId`, `sessionId`."
+                "description": "**GET /timeTableCreate/**\n\nLists class sections nested **year → term → section** with `timeTableRoutines[]` on each section.\n\n**Optional query:** `courseId`, `sessionId`.\n\nWhen `courseId` is sent, all program years and terms are returned (empty `sections: []` where no placement exists).\n\n**Response root:** `courseId`, `sessionId`, `courseName`, `termType`, `years[]` → `terms[]` → `sections[]`."
               },
               "response": []
             },
@@ -2813,7 +2819,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"timeTableRoutineId\": {{timetable_routineId}},\n  \"timeTableCreationId\": {{timetable_creationId}},\n  \"timeTableNameId\": {{timetable_timeTableNameId}},\n  \"employeeId\": {{timetable_employeeId}},\n  \"subjectId\": 304,\n  \"teacherSubjectMappingId\": 1,\n  \"day\": \"Monday\",\n  \"period\": 1,\n  \"classRoomSectionId\": 1,\n  \"timeTableType\": \"normal\"\n}",
+                  "raw": "{\n  \"timeTableRoutineId\": {{timetable_routineId}},\n  \"timeTableCreationId\": {{timetable_creationId}},\n  \"timeTableNameId\": {{timetable_timeTableNameId}},\n  \"employeeId\": {{timetable_employeeId}},\n  \"subjectId\": 304,\n  \"electiveSubjectId\": 305,\n  \"teacherSubjectMappingId\": 1,\n  \"day\": \"Monday\",\n  \"period\": 1,\n  \"classRoomSectionId\": 1,\n  \"timeTableType\": \"normal\",\n  \"isSameTeacher\": true,\n  \"teacherType\": \"primary\",\n  \"isAttendence\": true,\n  \"isOverridingSyblingElectives\": false,\n  \"classSectionTermId\": {{classSectionTermId}}\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2830,7 +2836,110 @@
                     "mapping"
                   ]
                 },
-                "description": "**POST /timeTableCreate/mapping**\n\nCreates one timetable **cell** (`class_schedule_item`).\n\n**Required:** `timeTableRoutineId`, `timeTableCreationId`, `timeTableNameId`, `day`, `period`.\n\n**Typical:** `employeeId`, `subjectId`, `classRoomSectionId`, `timeTableType`.\n\nChecks teacher/room conflicts and updates faculty load. **400** on conflict."
+                "description": "## Create Timetable Mapping Cell\n\n**HTTP method:** `POST` · **Endpoint:** `POST /timeTableCreate/mapping` · **Auth:** Bearer `{{token}}`\n\nCreates a **new** timetable cell. For **copying** an existing cell, use the sibling request **\"add mapping (copy cell)\"** in this folder (minimum payload: `sourceTimeTableMappingId` + `copyTarget`).\n\n### Request body (create single cell)\n\nSee raw body on this request. **Required:** `timeTableRoutineId`, `timeTableCreationId`, `period` (and typically `day`).\n\n### Field documentation (create mode)\n\n| Field | Type | Required | Nullable | Description |\n|-------|------|----------|----------|-------------|\n| `timeTableRoutineId` | Integer | Yes | No | Routine PK |\n| `timeTableCreationId` | Integer | Yes | No | Period row PK from structure |\n| `day` | String | Yes* | No | e.g. `Monday` (*required in practice) |\n| `period` | Integer | Yes | No | Period number |\n| `timeTableNameId` | Integer | No | Yes | Structure PK |\n| `employeeId` | Integer | No | Yes | Teacher PK |\n| `subjectId` | Integer | No | Yes | Subject PK |\n| `electiveSubjectId` | Integer | No | Yes | Elective subject PK |\n| `teacherSubjectMappingId` | Integer | No | Yes | Teacher–subject mapping PK |\n| `classRoomSectionId` | Integer | No | Yes | Classroom PK |\n| `timeTableType` | Enum | No | Yes | `normal` \\| `elective` |\n| `isSameTeacher` | Boolean | No | Yes | |\n| `teacherType` | String | No | Yes | |\n| `isAttendence` | Boolean | No | Yes | |\n| `isOverridingSyblingElectives` | Boolean | No | Yes | |\n| `classSectionTermId` | Integer | No | Yes | Defaults from routine |\n\n### Copy mode (separate request)\n\n| Field | Type | Required | Description |\n|-------|------|----------|-------------|\n| `sourceTimeTableMappingId` | Integer | Yes | Source cell PK |\n| `copyTarget` | Enum | Yes | See below |\n\n### Enum: `copyTarget` (copy mode only)\n\n```\nnextPeriod   → same day, next teachable period\nnextDay      → same period, next working day (skips weekOff)\n```\n\nFull copy-mode docs, override fields, responses, and errors are on **add mapping (copy cell)**.\n\n### Other modes\n\n- **Multi-slot:** `timeTableRoutineId` + `day` + `slots[]` — see **add mapping (multi-slot / combined)**.\n\n### Success response (200) — single cell\n\n```json\n{\n  \"timeTableMappingId\": 64,\n  \"timeTableRoutineId\": 12,\n  \"classSectionTermId\": 197,\n  \"timeTableCreationId\": 1,\n  \"period\": 1,\n  \"combinedGroupId\": null,\n  \"copiedFromTimeTableMappingId\": null\n}\n```\n\n### Errors (400)\n\nValidation, teacher/room conflict, duplicate cell, or routine already started. Copy-specific errors documented on **add mapping (copy cell)**."
+              },
+              "response": []
+            },
+            {
+              "name": "add mapping (copy cell)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "  const data = pm.response.json();",
+                      "  const row = data.mappings ? data.mappings[0] : data;",
+                      "  if (row && row.timeTableMappingId) {",
+                      "    pm.collectionVariables.set('timetable_mappingId', String(row.timeTableMappingId));",
+                      "  }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"sourceTimeTableMappingId\": {{timetable_mappingId}},\n  \"copyTarget\": \"nextPeriod\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/timeTableCreate/mapping",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTableCreate",
+                    "mapping"
+                  ]
+                },
+                "description": "## Copy Timetable Mapping Cell\n\n**HTTP method:** `POST`\n\n**Endpoint:** `POST /timeTableCreate/mapping`\n\n**Authentication:** Bearer token required (`Authorization: Bearer {{token}}`). Tenant scope (`universityId`, `instituteId`, academic year) is applied from auth context.\n\n### Description\n\nDuplicates an existing timetable grid cell (`class_schedule_item`) into the **next period** or **next working day**, copying teacher, subject, room, and type from the source row. Target `day`, `period`, and `timeTableCreationId` are computed by the backend — the frontend only chooses **where** to copy via `copyTarget`.\n\nUse after a routine exists and at least one cell is already created. Routine must **not** have started yet (`startingDate` must be today or in the future).\n\n### Headers\n\n| Header | Required | Value |\n|--------|----------|-------|\n| `Authorization` | Yes | `Bearer {{token}}` |\n| `Content-Type` | Yes | `application/json` |\n\n### Request body — minimum (recommended)\n\n```json\n{\n  \"sourceTimeTableMappingId\": 64,\n  \"copyTarget\": \"nextPeriod\"\n}\n```\n\nAlternate valid value for `copyTarget`:\n\n```json\n{\n  \"sourceTimeTableMappingId\": 64,\n  \"copyTarget\": \"nextDay\"\n}\n```\n\n### Request body — with optional overrides\n\nSend override fields **only** when you need to change a value copied from the source cell.\n\n```json\n{\n  \"sourceTimeTableMappingId\": 64,\n  \"copyTarget\": \"nextDay\",\n  \"employeeId\": 40,\n  \"subjectId\": 304,\n  \"electiveSubjectId\": 305,\n  \"teacherSubjectMappingId\": 1,\n  \"classRoomSectionId\": 1,\n  \"timeTableType\": \"normal\",\n  \"isSameTeacher\": true,\n  \"teacherType\": \"primary\",\n  \"isAttendence\": true,\n  \"isOverridingSyblingElectives\": false,\n  \"timeTableRoutineId\": 12,\n  \"classSectionTermId\": 197\n}\n```\n\n### Field documentation (copy mode)\n\n| Field | Type | Required | Nullable | Sent by FE? | Description |\n|-------|------|----------|----------|-------------|-------------|\n| `sourceTimeTableMappingId` | Integer | **Yes** | No | **Yes** | PK of the existing cell to copy (`time_table_mapping_id`). |\n| `copyTarget` | Enum (string) | **Yes** | No | **Yes** | Where to place the copy. See **copyTarget enum** below. |\n| `timeTableRoutineId` | Integer | No | Yes | Optional override | Routine PK. Default: taken from source cell. |\n| `timeTableCreationId` | Integer | No | Yes | **Do not send** | Computed by backend from source + `copyTarget`. |\n| `timeTableNameId` | Integer | No | Yes | **Do not send** | Taken from source cell. |\n| `day` | String | No | Yes | **Do not send** | Computed by backend (`nextDay` changes day; `nextPeriod` keeps source day). |\n| `period` | Integer | No | Yes | **Do not send** | Computed by backend (`nextPeriod` increments; `nextDay` keeps source period). |\n| `employeeId` | Integer | No | Yes | Optional override | Teacher PK. Default: copied from source. |\n| `subjectId` | Integer | No | Yes | Optional override | Subject PK. Default: copied from source. |\n| `electiveSubjectId` | Integer | No | Yes | Optional override | Elective subject PK. Default: copied from source. |\n| `teacherSubjectMappingId` | Integer | No | Yes | Optional override | Teacher–subject mapping PK. Default: copied from source. |\n| `classRoomSectionId` | Integer | No | Yes | Optional override | Classroom PK. Default: copied from source. |\n| `timeTableType` | Enum (string) | No | Yes | Optional override | Default: copied from source. |\n| `isSameTeacher` | Boolean | No | Yes | Optional override | Default: copied from source. |\n| `teacherType` | String | No | Yes | Optional override | Default: copied from source. |\n| `isAttendence` | Boolean | No | Yes | Optional override | Default: copied from source. |\n| `isOverridingSyblingElectives` | Boolean | No | Yes | Optional override | Default: copied from source. |\n| `classSectionTermId` | Integer | No | Yes | Optional override | Program term placement PK. Default: resolved from routine when omitted. |\n| `classSectionTermIds` | Integer[] | No | Yes | Not for copy | Used for combined create mode, not copy flow. |\n| `slots` | Object[] | No | Yes | Not for copy | Used for multi-slot create mode, not copy flow. |\n| `combinedGroupId` | UUID string | No | Yes | Not for copy | Used for combined create mode. |\n\n### Enum: `copyTarget` (required)\n\nFrontend **must** send exactly one of these string values:\n\n| Value | Meaning | Target cell |\n|-------|---------|-------------|\n| `nextPeriod` | Copy to the next teachable period on the **same day** | Same `day` as source; next non-break period in the timetable structure; `period` and `timeTableCreationId` updated accordingly. |\n| `nextDay` | Copy to the **next working day** at the **same period** | Same `period` and `timeTableCreationId` as source; `day` moves forward, skipping days listed in the structure `weekOff`. |\n\n**UI guidance:** expose `copyTarget` as a explicit choice (e.g. radio / dropdown) with labels such as “Next period” (`nextPeriod`) and “Next day” (`nextDay`). Do not hard-code only `nextPeriod`.\n\n### Enum: `timeTableType` (optional override only)\n\n```\nnormal\nelective\n```\n\n### Fields auto-filled by backend (do not send on copy)\n\n`timeTableCreationId`, `timeTableNameId`, `day`, `period`, and teacher/subject/room fields are read from `sourceTimeTableMappingId` unless you send an override listed above.\n\n### Success response (200)\n\nSingle cell created (typical copy):\n\n```json\n{\n  \"timeTableMappingId\": 85,\n  \"timeTableRoutineId\": 12,\n  \"classSectionTermId\": 197,\n  \"timeTableCreationId\": 3,\n  \"period\": 2,\n  \"combinedGroupId\": null,\n  \"copiedFromTimeTableMappingId\": 64\n}\n```\n\n`copiedFromTimeTableMappingId` is returned for UI traceability only; it is **not** persisted in the database.\n\n### Error responses (400)\n\n```json\n{\n  \"success\": false,\n  \"message\": \"copyTarget is required when sourceTimeTableMappingId is sent (nextPeriod | nextDay)\"\n}\n```\n\n| Status | Message (examples) | Reason |\n|--------|----------------------|--------|\n| 400 | `copyTarget is required when sourceTimeTableMappingId is sent (nextPeriod \\| nextDay)` | `sourceTimeTableMappingId` sent without `copyTarget`. |\n| 400 | `Source mapping {id} not found` | Invalid `sourceTimeTableMappingId`. |\n| 400 | `copyTarget must be nextPeriod or nextDay` | Invalid `copyTarget` value. |\n| 400 | `No next period available for this timetable structure` | `nextPeriod` but no further teachable period exists. |\n| 400 | `No next working day available in this timetable structure` | `nextDay` but all following days are week-off. |\n| 400 | `Target cell already has a mapping on {day} period {period}` | Destination slot is occupied. |\n| 400 | `Cannot add or update mapping for a routine after its starting date.` | Routine already started. |\n| 400 | `Teacher Conflict: ...` / `Room Conflict: ...` | Copied teacher or room clashes with another cell. |\n| 401 | Unauthorized | Missing or invalid token. |\n\n### Business rules\n\n1. Copy mode is selected when `sourceTimeTableMappingId` is present in the body.\n2. `copyTarget` is **mandatory** in copy mode and must be `nextPeriod` or `nextDay`.\n3. Source cell must belong to a routine in the current tenant scope.\n4. Target slot must be empty.\n5. Optional body fields **override** values copied from the source; omit them for a straight duplicate.\n\n### Sample flow\n\n```\nPOST /timeTable (structure)\n↓\nPOST /timeTableCreate/ (routine)\n↓\nPOST /timeTableCreate/mapping (create first cell)\n↓\nPOST /timeTableCreate/mapping (copy cell — this API)\n  • sourceTimeTableMappingId = cell from previous step\n  • copyTarget = nextPeriod OR nextDay\n↓\nPATCH /timeTableCreate/publish\n```\n\n### Changelog\n\n**v2 (2026-07)**\n\n- Added copy mode via `sourceTimeTableMappingId` + `copyTarget`.\n- `copyTarget` enum: `nextPeriod`, `nextDay`.\n- Minimum copy payload is 2 fields; all other fields are optional overrides.\n- Response includes `copiedFromTimeTableMappingId` (response-only, not stored)."
+              },
+              "response": []
+            },
+            {
+              "name": "add mapping (multi-slot / combined)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"timeTableRoutineId\": {{timetable_routineId}},\n  \"timeTableNameId\": {{timetable_timeTableNameId}},\n  \"employeeId\": {{timetable_employeeId}},\n  \"subjectId\": 304,\n  \"electiveSubjectId\": 305,\n  \"teacherSubjectMappingId\": 1,\n  \"day\": \"Monday\",\n  \"classRoomSectionId\": 1,\n  \"timeTableType\": \"normal\",\n  \"isSameTeacher\": true,\n  \"teacherType\": \"primary\",\n  \"isAttendence\": true,\n  \"isOverridingSyblingElectives\": false,\n  \"classSectionTermIds\": [{{classSectionTermId}}],\n  \"combinedGroupId\": \"00000000-0000-4000-8000-000000000001\",\n  \"slots\": [\n    {\n      \"timeTableCreationId\": {{timetable_creationId}},\n      \"period\": 1\n    },\n    {\n      \"timeTableCreationId\": 2,\n      \"period\": 2\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/timeTableCreate/mapping",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTableCreate",
+                    "mapping"
+                  ]
+                },
+                "description": "**POST /timeTableCreate/mapping** — multi-slot / combined mode\n\n**Required:** `timeTableRoutineId`, `day`, `slots[]` (`timeTableCreationId` + `period` per item).\n\n**Optional:** `classSectionTermIds[]` (combined sections), `combinedGroupId` (uuid — omit to auto-generate), plus teacher/subject/room fields from the single-cell example."
               },
               "response": []
             },
@@ -4415,6 +4524,42 @@
             "description": "**GET /classSections** — flat list of class sections for course + session (+ optional acedmicYearId). Alternative to termsWithClassSections for promotion UI."
           },
           "response": []
+        },
+        {
+          "name": "delete class section term",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/classSections/term?classSectionTermId={{classSectionTermId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "classSections",
+                "term"
+              ],
+              "query": [
+                {
+                  "key": "classSectionTermId",
+                  "value": "{{classSectionTermId}}",
+                  "description": "Required — class_section_term PK"
+                }
+              ]
+            },
+            "description": "## Delete Class Section Term\n\n**HTTP method:** `DELETE`\n\n**Endpoint:** `DELETE /classSections/term?classSectionTermId=`\n\n**Authentication:** Bearer token required.\n\n### Description\n\nDeletes one `class_section_term` row. Runs guard checks before delete:\n\n1. **Teacher employee mapping** — blocks if teachers are mapped to the parent class section (`teacher_section_mapping`) or if timetable cells with `employeeId` exist for routines on this `classSectionTermId`. Remove mappings first.\n2. **Students** — blocks if any student is assigned via `students.class_section_term_id` or `class_student_mapper.class_section_term_id`.\n\n### Query parameters\n\n| Name | Type | Required | Description |\n|------|------|----------|-------------|\n| `classSectionTermId` | Integer | Yes | `class_section_term.class_section_term_id` |\n\n### Success response (200)\n\n```json\n{\n  \"success\": true,\n  \"message\": \"Class section term deleted successfully.\",\n  \"classSectionTermId\": 197\n}\n```\n\n### Error responses\n\n```json\n{\n  \"success\": false,\n  \"message\": \"Teacher employee mapping exists for this class section term. Please remove teacher section mapping (DELETE/PATCH /teacher/teacherSection) and timetable teacher mappings (DELETE /timeTableCreate/mapping) before deleting.\"\n}\n```\n\n| Status | Reason |\n|--------|--------|\n| 400 | Teacher mapping still present |\n| 400 | Students assigned to this term |\n| 400 | Zod validation (missing/invalid `classSectionTermId`) |\n| 404 | `classSectionTermId` not found |\n| 401 | Unauthorized |\n\n### Business rules\n\n- Delete is blocked when teachers or students are still linked.\n- Does not delete the parent `class_sections` row — only the term placement row.\n- Hard delete (`class_section_term` is not paranoid).\n\n### Prerequisite cleanup\n\n```\nRemove teacher section mapping → /teacher/teacherSection\nRemove timetable teacher cells → DELETE /timeTableCreate/mapping\nReassign/remove students from term\n↓\nDELETE /classSections/term?classSectionTermId=\n```"
+          },
+          "response": []
         }
       ]
     },
@@ -4920,7 +5065,7 @@
                 }
               ]
             },
-            "description": "**GET /lesson/employee**\n\nTeacher `teacher_subject_mapping` rows with nested subject, lessons, topics, and semester.\n\n**Query:** `employeeId` (typical), optional `courseId`, `sessionId`, `subjectSearch`.\n\n**Scoped:** `scoped(teacherSubjectMapping)` + `buildScope(subjectModel)` / `buildScope(lessonModel)`. No `acedmicYearId` in query.\n\n**Response shape:** `employeeSubject` is the **subject** row; lessons at `employeeSubject.lessonSubject[]` (not `employeeSubject.subjects`)."
+            "description": "**GET /lesson/employee**\n\nTeacher `teacher_subject_mapping` rows with nested subject, lessons, topics, and semester.\n\n**Query:** `employeeId` (typical), optional `courseId`, `sessionId`, `subjectSearch`, `subjectId`.\n\n**Scoped:** `scoped(teacherSubjectMapping)` + `buildScope(subjectModel)` / `buildScope(lessonModel)`. Academic year from auth context.\n\n**Response:** `employeeSubject` is the subject row with placement resolved from `class_sections` + `class_section_term`:\n- `term`, `termName` (from subject.term + course.termType)\n- `classSectionTermId`, `classSectionsId`, `year`, `section`\n- Lessons at `employeeSubject.lessonSubject[]`"
           },
           "response": []
         }
@@ -7313,6 +7458,329 @@
                   "type": "text"
                 }
               ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "internal assessment",
+      "description": "## internal assessment\n\nInternal assessment APIs under /internalAssessment.\n\n**Authentication:** Bearer Token Required (Authorization: Bearer {{token}})\n\n**Tenant scope:** University, institute, and academic year are taken from the logged-in user's saved defaults. Call PUT /user/saveUserDefaults before using scoped routes.\n\n**Placement rule:** This module uses program `term`. Do not send deprecated semester, class, or section identifiers.\n\n| Method | Path | Purpose |\n|--------|------|---------|\n| POST | /internalAssessment | Create internal assessment |\n| GET | /internalAssessment | List assessments, optionally by examSetupTypeId |\n| GET | /internalAssessment/single | Get one assessment by examAssessmentId |\n| PATCH | /internalAssessment | Bulk update assessments |\n| DELETE | /internalAssessment | Delete one assessment by examAssessmentId |\n| GET | /internalAssessment/evaluation | Get evaluation sheet for subject and employee |\n| POST | /internalAssessment/evaluation | Save student evaluation marks |\n| PATCH | /internalAssessment/evaluation | Update one student evaluation row |\n\n### Changelog\n\nv2\n\n- Added Zod validation for all routes.\n- Removed semester/class/section inputs from the contract.\n- Assessment placement is term-based only.",
+      "item": [
+        {
+          "name": "Create Internal Assessment",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/internalAssessment",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "internalAssessment"
+              ]
+            },
+            "description": "## Create Internal Assessment\n\n**HTTP method:** POST\n\n**Endpoint:** POST /internalAssessment\n\n**Authentication:** Bearer Token Required (Authorization: Bearer {{token}})\n\n**Tenant scope:** University, institute, and academic year are taken from the logged-in user's saved defaults. Call PUT /user/saveUserDefaults before using scoped routes.\n\n**Placement rule:** This module uses program `term`. Do not send deprecated semester, class, or section identifiers.\n\n### Request Body\n\n| Field | Type | Required | Nullable | Description |\n|-------|------|----------|----------|-------------|\n| subjectId | Number | Yes | No | Subject ID. |\n| term | Number | Yes | No | Program term number. |\n| examSetupTypeId | Number | Yes | No | Exam setup type ID. Must belong to current tenant scope. |\n| type | String | Yes | No | Assessment type label, for example Assignment or Homework. |\n| totalMarks | Number | Yes | No | Maximum marks for this assessment. |\n| weightage | Number | No | Yes | Weightage percentage used for division calculation. |\n| publishDate | String | Yes | No | Publish/homework date. |\n| dueDate | String | Yes | No | Due/submission date. |\n| description | String | Yes | No | Assessment description. |\n| employeeId | Number | No | Yes | Teacher/evaluator employee ID. |\n\n### Success Response (201)\n\n```json\n{\n  \"message\": \"Internal Assessment created\",\n  \"assessment\": {\n    \"examAssessmentId\": 101,\n    \"subjectId\": 12,\n    \"term\": 3,\n    \"examSetupTypeId\": 5,\n    \"type\": \"Assignment\",\n    \"totalMarks\": 100,\n    \"weightage\": 20,\n    \"publishDate\": \"2026-07-04\",\n    \"dueDate\": \"2026-07-15\",\n    \"description\": \"Internal assessment for Unit 1.\",\n    \"employeeId\": 27\n  }\n}\n```\n\n### Removed Fields\n\n| Field | Status | Replacement |\n|-------|--------|-------------|\n| semesterId | Removed | term |\n| semester_id | Removed | term |\n| classId / class_id | Removed | Not used by this API |\n| sectionId / section_id | Removed | Not used by this API |\n| classSectionsId / class_sections_id | Removed | Not used by this API |\n\n### Validation Error (400)\n\n```json\n{\n  \"status\": \"error\",\n  \"message\": \"id must be greater than 0\",\n  \"errors\": [\n    { \"path\": \"examAssessmentId\", \"message\": \"id must be greater than 0\" }\n  ]\n}\n```\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | Validation error or required fields missing |\n| 401 | Unauthorized |\n| 500 | Internal server error |",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjectId\": 12,\n  \"term\": 3,\n  \"examSetupTypeId\": 5,\n  \"type\": \"Assignment\",\n  \"totalMarks\": 100,\n  \"weightage\": 20,\n  \"publishDate\": \"2026-07-04\",\n  \"dueDate\": \"2026-07-15\",\n  \"description\": \"Internal assessment for Unit 1.\",\n  \"employeeId\": 27\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Internal Assessments",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/internalAssessment?examSetupTypeId=5",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "internalAssessment"
+              ],
+              "query": [
+                {
+                  "key": "examSetupTypeId",
+                  "value": "5",
+                  "description": "Optional positive integer. Filters assessments by exam setup type."
+                }
+              ]
+            },
+            "description": "## Get Internal Assessments\n\n**HTTP method:** GET\n\n**Endpoint:** GET /internalAssessment\n\n**Authentication:** Bearer Token Required (Authorization: Bearer {{token}})\n\n**Tenant scope:** University, institute, and academic year are taken from the logged-in user's saved defaults. Call PUT /user/saveUserDefaults before using scoped routes.\n\n**Placement rule:** This module uses program `term`. Do not send deprecated semester, class, or section identifiers.\n\n### Query Parameters\n\n| Name | Type | Required | Default | Description |\n|------|------|----------|---------|-------------|\n| examSetupTypeId | Number | No | - | Filters assessments by exam setup type. |\n\n### Success Response (200)\n\n```json\n[\n  {\n    \"examAssessmentId\": 101,\n    \"subjectId\": 12,\n    \"term\": 3,\n    \"examSetupTypeId\": 5,\n    \"type\": \"Assignment\",\n    \"totalMarks\": 100,\n    \"weightage\": 20,\n    \"division\": 16,\n    \"publishDate\": \"2026-07-04T00:00:00.000Z\",\n    \"dueDate\": \"2026-07-15T00:00:00.000Z\",\n    \"description\": \"Internal assessment for Unit 1.\",\n    \"file\": null\n  }\n]\n```\n\n### Removed Fields\n\n| Field | Status | Replacement |\n|-------|--------|-------------|\n| semesterId | Removed | term |\n| semester_id | Removed | term |\n| classId / class_id | Removed | Not used by this API |\n| sectionId / section_id | Removed | Not used by this API |\n| classSectionsId / class_sections_id | Removed | Not used by this API |\n\n### Validation Error (400)\n\n```json\n{\n  \"status\": \"error\",\n  \"message\": \"id must be greater than 0\",\n  \"errors\": [\n    { \"path\": \"examAssessmentId\", \"message\": \"id must be greater than 0\" }\n  ]\n}\n```\n\n### Business Rules\n\n- division is calculated from the first syllabus marks and assessment weightage.\n- If examSetupTypeId is invalid for the tenant, the service returns an empty list.\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | Validation error |\n| 401 | Unauthorized |\n| 500 | Internal server error |"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Internal Assessment",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/internalAssessment/single?examAssessmentId=101",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "internalAssessment",
+                "single"
+              ],
+              "query": [
+                {
+                  "key": "examAssessmentId",
+                  "value": "101",
+                  "description": "Required positive integer."
+                }
+              ]
+            },
+            "description": "## Get Single Internal Assessment\n\n**HTTP method:** GET\n\n**Endpoint:** GET /internalAssessment/single\n\n**Authentication:** Bearer Token Required (Authorization: Bearer {{token}})\n\n**Tenant scope:** University, institute, and academic year are taken from the logged-in user's saved defaults. Call PUT /user/saveUserDefaults before using scoped routes.\n\n**Placement rule:** This module uses program `term`. Do not send deprecated semester, class, or section identifiers.\n\n### Query Parameters\n\n| Name | Type | Required | Default | Description |\n|------|------|----------|---------|-------------|\n| examAssessmentId | Number | Yes | - | Internal assessment ID. |\n\n### Success Response (200)\n\n```json\n{\n  \"examAssessmentId\": 101,\n  \"subject\": { \"subjectId\": 12, \"name\": \"Design Studio\", \"code\": \"DS-301\" },\n  \"term\": 3,\n  \"termName\": \"Semester 3\",\n  \"examSetupType\": { \"examSetupTypeId\": 5, \"examType\": \"Internal\", \"examName\": \"Internal Assessment 1\" },\n  \"totalMarks\": 100,\n  \"weightage\": 20,\n  \"division\": 16,\n  \"publishDate\": \"2026-07-04T00:00:00.000Z\",\n  \"dueDate\": \"2026-07-15T00:00:00.000Z\",\n  \"description\": \"Internal assessment for Unit 1.\",\n  \"file\": null,\n  \"syllabus\": [],\n  \"firstSyllabus\": null,\n  \"examStructure\": null\n}\n```\n\n### Removed Fields\n\n| Field | Status | Replacement |\n|-------|--------|-------------|\n| semesterId | Removed | term |\n| semester_id | Removed | term |\n| classId / class_id | Removed | Not used by this API |\n| sectionId / section_id | Removed | Not used by this API |\n| classSectionsId / class_sections_id | Removed | Not used by this API |\n\n### Validation Error (400)\n\n```json\n{\n  \"status\": \"error\",\n  \"message\": \"id must be greater than 0\",\n  \"errors\": [\n    { \"path\": \"examAssessmentId\", \"message\": \"id must be greater than 0\" }\n  ]\n}\n```\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | examAssessmentId missing or invalid |\n| 401 | Unauthorized |\n| 404 | Assessment not found |\n| 500 | Internal server error |"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Internal Assessments",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/internalAssessment",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "internalAssessment"
+              ]
+            },
+            "description": "## Update Internal Assessments\n\n**HTTP method:** PATCH\n\n**Endpoint:** PATCH /internalAssessment\n\n**Authentication:** Bearer Token Required (Authorization: Bearer {{token}})\n\n**Tenant scope:** University, institute, and academic year are taken from the logged-in user's saved defaults. Call PUT /user/saveUserDefaults before using scoped routes.\n\n**Placement rule:** This module uses program `term`. Do not send deprecated semester, class, or section identifiers.\n\n### Request Body\n\nNon-empty array. Each row must include `examAssessmentId`. Other fields are optional.\n\n| Field | Type | Required | Nullable | Description |\n|-------|------|----------|----------|-------------|\n| examAssessmentId | Number | Yes | No | Internal assessment ID to update. |\n| subjectId | Number | No | No | New subject ID. |\n| term | Number | No | No | New program term number. |\n| examSetupTypeId | Number | No | No | New exam setup type ID. |\n| type | String | No | No | Assessment type label. |\n| totalMarks | Number | No | No | Maximum marks. |\n| weightage | Number | No | Yes | Weightage percentage. |\n| publishDate | String | No | No | Publish date. |\n| dueDate | String | No | No | Due date. |\n| description | String | No | No | Description. |\n| employeeId | Number | No | Yes | Teacher/evaluator employee ID. |\n\n### Success Response (200)\n\n```json\n{\n  \"message\": \"Internal assessments updated successfully.\",\n  \"data\": [\n    { \"examAssessmentId\": 101, \"updated\": true }\n  ]\n}\n```\n\n### Removed Fields\n\n| Field | Status | Replacement |\n|-------|--------|-------------|\n| semesterId | Removed | term |\n| semester_id | Removed | term |\n| classId / class_id | Removed | Not used by this API |\n| sectionId / section_id | Removed | Not used by this API |\n| classSectionsId / class_sections_id | Removed | Not used by this API |\n\n### Validation Error (400)\n\n```json\n{\n  \"status\": \"error\",\n  \"message\": \"id must be greater than 0\",\n  \"errors\": [\n    { \"path\": \"examAssessmentId\", \"message\": \"id must be greater than 0\" }\n  ]\n}\n```\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | Request body is empty, not an array, or contains invalid fields |\n| 401 | Unauthorized |\n| 500 | Internal server error |",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"examAssessmentId\": 101,\n    \"term\": 3,\n    \"totalMarks\": 100,\n    \"weightage\": 25,\n    \"description\": \"Updated internal assessment for Unit 1.\"\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Internal Assessment",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/internalAssessment?examAssessmentId=101",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "internalAssessment"
+              ],
+              "query": [
+                {
+                  "key": "examAssessmentId",
+                  "value": "101",
+                  "description": "Required positive integer."
+                }
+              ]
+            },
+            "description": "## Delete Internal Assessment\n\n**HTTP method:** DELETE\n\n**Endpoint:** DELETE /internalAssessment\n\n**Authentication:** Bearer Token Required (Authorization: Bearer {{token}})\n\n**Tenant scope:** University, institute, and academic year are taken from the logged-in user's saved defaults. Call PUT /user/saveUserDefaults before using scoped routes.\n\n**Placement rule:** This module uses program `term`. Do not send deprecated semester, class, or section identifiers.\n\n### Query Parameters\n\n| Name | Type | Required | Default | Description |\n|------|------|----------|---------|-------------|\n| examAssessmentId | Number | Yes | - | Internal assessment ID to delete. |\n\n### Success Response (200)\n\n```json\n{ \"message\": \"Deleted\" }\n```\n\n### Removed Fields\n\n| Field | Status | Replacement |\n|-------|--------|-------------|\n| semesterId | Removed | term |\n| semester_id | Removed | term |\n| classId / class_id | Removed | Not used by this API |\n| sectionId / section_id | Removed | Not used by this API |\n| classSectionsId / class_sections_id | Removed | Not used by this API |\n\n### Validation Error (400)\n\n```json\n{\n  \"status\": \"error\",\n  \"message\": \"id must be greater than 0\",\n  \"errors\": [\n    { \"path\": \"examAssessmentId\", \"message\": \"id must be greater than 0\" }\n  ]\n}\n```\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | examAssessmentId missing or invalid |\n| 401 | Unauthorized |\n| 404 | Assessment not found |\n| 500 | Internal server error |"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Internal Assessment Evaluation",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/internalAssessment/evaluation?subjectId=12&employeeId=27",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "internalAssessment",
+                "evaluation"
+              ],
+              "query": [
+                {
+                  "key": "subjectId",
+                  "value": "12",
+                  "description": "Required positive integer."
+                },
+                {
+                  "key": "employeeId",
+                  "value": "27",
+                  "description": "Required positive integer."
+                }
+              ]
+            },
+            "description": "## Get Internal Assessment Evaluation\n\n**HTTP method:** GET\n\n**Endpoint:** GET /internalAssessment/evaluation\n\n**Authentication:** Bearer Token Required (Authorization: Bearer {{token}})\n\n**Tenant scope:** University, institute, and academic year are taken from the logged-in user's saved defaults. Call PUT /user/saveUserDefaults before using scoped routes.\n\n**Placement rule:** This module uses program `term`. Do not send deprecated semester, class, or section identifiers.\n\n### Query Parameters\n\n| Name | Type | Required | Default | Description |\n|------|------|----------|---------|-------------|\n| subjectId | Number | Yes | - | Subject ID. |\n| employeeId | Number | Yes | - | Employee/evaluator ID. |\n\n### Success Response (200)\n\n```json\n{\n  \"assessment\": {\n    \"assessmentType\": \"Assignment\",\n    \"subject\": \"Design Studio\",\n    \"term\": \"Semester 3\",\n    \"marks\": 100,\n    \"attachedFile\": null,\n    \"description\": \"Internal assessment for Unit 1.\",\n    \"homeworkDate\": \"2026-07-04T00:00:00.000Z\",\n    \"submissionDate\": \"2026-07-15T00:00:00.000Z\",\n    \"evaluationDate\": \"2026-07-15T00:00:00.000Z\",\n    \"createdBy\": \"Prof. Sharma\",\n    \"evaluatedBy\": \"Prof. Sharma\"\n  },\n  \"students\": [\n    {\n      \"studentId\": 201,\n      \"scholarNumber\": \"SCH-001\",\n      \"name\": \"Aarav Mehta\",\n      \"marks\": 84,\n      \"conversion\": 16.8,\n      \"status\": \"checked\",\n      \"comments\": \"Good work\",\n      \"file\": \"--\"\n    }\n  ]\n}\n```\n\n### Removed Fields\n\n| Field | Status | Replacement |\n|-------|--------|-------------|\n| semesterId | Removed | term |\n| semester_id | Removed | term |\n| classId / class_id | Removed | Not used by this API |\n| sectionId / section_id | Removed | Not used by this API |\n| classSectionsId / class_sections_id | Removed | Not used by this API |\n\n### Validation Error (400)\n\n```json\n{\n  \"status\": \"error\",\n  \"message\": \"id must be greater than 0\",\n  \"errors\": [\n    { \"path\": \"examAssessmentId\", \"message\": \"id must be greater than 0\" }\n  ]\n}\n```\n\n### Business Rules\n\n- Students are resolved by the assessment term and subject course, not by semester/class/section IDs.\n- Existing student evaluation rows are attached when available; missing rows show pending status.\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | subjectId or employeeId missing/invalid |\n| 401 | Unauthorized |\n| 404 | No data found |\n| 500 | Internal server error |"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Assessment Evaluation",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/internalAssessment/evaluation",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "internalAssessment",
+                "evaluation"
+              ]
+            },
+            "description": "## Create Assessment Evaluation\n\n**HTTP method:** POST\n\n**Endpoint:** POST /internalAssessment/evaluation\n\n**Authentication:** Bearer Token Required (Authorization: Bearer {{token}})\n\n**Tenant scope:** University, institute, and academic year are taken from the logged-in user's saved defaults. Call PUT /user/saveUserDefaults before using scoped routes.\n\n**Placement rule:** This module uses program `term`. Do not send deprecated semester, class, or section identifiers.\n\n### Request Body\n\n| Field | Type | Required | Nullable | Description |\n|-------|------|----------|----------|-------------|\n| subjectId | Number | Yes | No | Subject ID. |\n| employeeId | Number | Yes | No | Evaluator employee ID. |\n| examAssessmentId | Number | Yes | No | Internal assessment ID. |\n| students | Array | Yes | No | Non-empty list of student marks. |\n| students[].studentId | Number | Yes | No | Student ID. |\n| students[].status | String | No | No | Evaluation status; defaults to pending in service when omitted. |\n| students[].marks | Number | Yes | No | Marks scored. |\n| students[].comments | String | No | Yes | Evaluation comments. |\n| students[].file | Any | No | Yes | Optional file metadata/value. |\n\n### Success Response (201)\n\n```json\n{\n  \"message\": \"Evaluation saved successfully\",\n  \"data\": [\n    { \"assessmentEvalutionId\": 1, \"studentId\": 201, \"marks\": 84, \"status\": \"checked\" },\n    { \"assessmentEvalutionId\": 2, \"studentId\": 202, \"marks\": 72, \"status\": \"pending\" }\n  ]\n}\n```\n\n### Removed Fields\n\n| Field | Status | Replacement |\n|-------|--------|-------------|\n| semesterId | Removed | term |\n| semester_id | Removed | term |\n| classId / class_id | Removed | Not used by this API |\n| sectionId / section_id | Removed | Not used by this API |\n| classSectionsId / class_sections_id | Removed | Not used by this API |\n\n### Validation Error (400)\n\n```json\n{\n  \"status\": \"error\",\n  \"message\": \"id must be greater than 0\",\n  \"errors\": [\n    { \"path\": \"examAssessmentId\", \"message\": \"id must be greater than 0\" }\n  ]\n}\n```\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | Missing IDs or empty students array |\n| 401 | Unauthorized |\n| 500 | Internal server error |",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjectId\": 12,\n  \"employeeId\": 27,\n  \"examAssessmentId\": 101,\n  \"students\": [\n    {\n      \"studentId\": 201,\n      \"status\": \"checked\",\n      \"marks\": 84,\n      \"comments\": \"Good work\",\n      \"file\": null\n    },\n    {\n      \"studentId\": 202,\n      \"status\": \"pending\",\n      \"marks\": 72,\n      \"comments\": \"\",\n      \"file\": null\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Assessment Evaluation",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/internalAssessment/evaluation",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "internalAssessment",
+                "evaluation"
+              ]
+            },
+            "description": "## Update Assessment Evaluation\n\n**HTTP method:** PATCH\n\n**Endpoint:** PATCH /internalAssessment/evaluation\n\n**Authentication:** Bearer Token Required (Authorization: Bearer {{token}})\n\n**Tenant scope:** University, institute, and academic year are taken from the logged-in user's saved defaults. Call PUT /user/saveUserDefaults before using scoped routes.\n\n**Placement rule:** This module uses program `term`. Do not send deprecated semester, class, or section identifiers.\n\n### Request Body\n\n| Field | Type | Required | Nullable | Description |\n|-------|------|----------|----------|-------------|\n| assessmentEvalutionId | Number | Yes | No | Assessment evaluation row ID. Note spelling follows existing database/API field name. |\n| subjectId | Number | No | No | Subject ID. |\n| employeeId | Number | No | No | Employee/evaluator ID. |\n| examAssessmentId | Number | No | No | Internal assessment ID. |\n| studentId | Number | No | No | Student ID. |\n| status | String | No | No | Evaluation status. |\n| marks | Number | No | No | Marks scored. |\n| comments | String | No | Yes | Comments. |\n| file | Any | No | Yes | Optional file metadata/value. |\n\n### Success Response (200)\n\n```json\n{\n  \"message\": \"Assessment Evaluation updated successfully\",\n  \"data\": [1]\n}\n```\n\n### Removed Fields\n\n| Field | Status | Replacement |\n|-------|--------|-------------|\n| semesterId | Removed | term |\n| semester_id | Removed | term |\n| classId / class_id | Removed | Not used by this API |\n| sectionId / section_id | Removed | Not used by this API |\n| classSectionsId / class_sections_id | Removed | Not used by this API |\n\n### Validation Error (400)\n\n```json\n{\n  \"status\": \"error\",\n  \"message\": \"id must be greater than 0\",\n  \"errors\": [\n    { \"path\": \"examAssessmentId\", \"message\": \"id must be greater than 0\" }\n  ]\n}\n```\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | assessmentEvalutionId missing or invalid body field |\n| 401 | Unauthorized |\n| 500 | Internal server error |",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assessmentEvalutionId\": 1,\n  \"marks\": 90,\n  \"status\": \"checked\",\n  \"comments\": \"Updated marks after review\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           },
           "response": []
@@ -15126,7 +15594,7 @@
                 }
               ]
             },
-            "description": "**GET /employee/uniqueClassSectionSubjects** — `combinations[]`: `classSectionTermId`, `year`, `term`, `section`, subject, `totalClasses`."
+            "description": "**GET /employee/uniqueClassSectionSubjects**\n\n**Query:** `employeeId` (required). Academic year from auth context.\n\n**Response:**\n- `employeeDetails`: `employeeId`, `employeeName`, `employeeCode`, `department`, `employmentType`, `pickColor`, `employeePhoto`, `userId`, `campusId`\n- `combinations[]`: `classSectionTermId`, `year`, `term`, `section`, `courseId`, `courseName`, `subjectId`, `subjectName`, `totalClasses`"
           },
           "response": []
         },
@@ -16245,6 +16713,36 @@
     {
       "key": "targetClassSectionTermId",
       "value": ""
+    },
+    {
+      "key": "internalAssessment_examAssessmentId",
+      "value": "101",
+      "type": "string"
+    },
+    {
+      "key": "internalAssessment_examSetupTypeId",
+      "value": "5",
+      "type": "string"
+    },
+    {
+      "key": "internalAssessment_subjectId",
+      "value": "12",
+      "type": "string"
+    },
+    {
+      "key": "internalAssessment_employeeId",
+      "value": "27",
+      "type": "string"
+    },
+    {
+      "key": "internalAssessment_studentId",
+      "value": "201",
+      "type": "string"
+    },
+    {
+      "key": "internalAssessment_evaluationId",
+      "value": "1",
+      "type": "string"
     }
   ]
 }

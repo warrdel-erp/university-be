@@ -82,7 +82,6 @@ import transportRouteModel from "./transportRouteModel.js";
 import vehicleModel from "./vehicleModel.js";
 import assignVehicleModel from "./assignVehicleModel.js";
 import acedmicYearModel from "./acedmicYearModel.js";
-import sectionModel from "./sectionModel.js";
 import holidayModel from "./holidayModel.js";
 import electiveSubjectModel from "./electiveSubjectModel.js";
 import buildingModel from "./buildingModel.js";
@@ -234,9 +233,6 @@ classSectionTermModel.belongsTo(userModel, { foreignKey: "createdBy", as: "creat
 
 classSectionModel.belongsTo(acedmicYearModel, { foreignKey: "acedmic_year_id", as: "acedmicYearSection" });
 acedmicYearModel.hasMany(classSectionModel, { foreignKey: "acedmic_year_id", as: "acedmicYearSection" });
-
-classSectionModel.belongsTo(sectionModel, { foreignKey: "section_id", as: "sectionDetail" });
-sectionModel.hasMany(classSectionModel, { foreignKey: "section_id", as: "sectionDetail" });
 
 courseModel.belongsTo(affiliatedIniversityModel, { foreignKey: "affiliated_university_id", as: "affiliated" });
 affiliatedIniversityModel.hasMany(courseModel, { foreignKey: "affiliated_university_id", as: "affiliated" });
@@ -1741,7 +1737,6 @@ export {
   vehicleModel,
   assignVehicleModel,
   acedmicYearModel,
-  sectionModel,
   holidayModel,
   electiveSubjectModel,
   buildingModel,

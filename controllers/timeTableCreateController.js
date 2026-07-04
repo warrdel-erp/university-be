@@ -16,21 +16,23 @@ export const addtimeTableCreate = async (req, res) => {
 };
 
 export const cloneTimeTableRoutine = async (req, res) => {
-    const { previousRoutineId, startingDate, endingDate } = req.body;
-    const createdBy = req.user.userId;
-    const updatedBy = req.user.userId;
     try {
+        const { previousRoutineId, startingDate, endingDate } = req.body;
+        const createdBy = req.user.userId;
+        const updatedBy = req.user.userId;
         const result = await timeTableCreateServices.cloneTimeTableRoutine(
             previousRoutineId,
             startingDate,
             endingDate,
             createdBy,
-            updatedBy
+            updatedBy,
         );
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in cloning time table routine:", error);
-        res.status(500).send({ success: false, message: error.message || "Internal Server Error" });
+        const message = error.message || 'Internal Server Error';
+        const statusCode = /required|not found|overlap/i.test(message) ? 400 : 500;
+        res.status(statusCode).send(message);
     }
 };
 

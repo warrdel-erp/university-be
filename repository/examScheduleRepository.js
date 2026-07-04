@@ -222,6 +222,7 @@ function classTermInclude(term, academicYearId) {
         term,
         termRequired: true,
         sectionRequired: true,
+        includeSectionTerms: false,
         sectionAttributes: [],
         termAttributes: [],
         sectionWhere: {

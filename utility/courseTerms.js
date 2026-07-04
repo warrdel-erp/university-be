@@ -1,13 +1,24 @@
 /**
  * Program term helpers derived from course metadata (replaces semester table reads).
  */
+import {
+  decimalAdd,
+  decimalDivide,
+  decimalGreaterThan,
+  decimalMax,
+  decimalMin,
+  decimalMultiply,
+  decimalSubtract,
+  toMoneyNumber,
+} from './decimalMoney.js';
+
 export function normalizeTermType(termType) {
   const raw = String(termType ?? '').trim();
   return raw || 'Semester';
 }
 
 export function buildTermName(termType, term) {
-  return `${normalizeTermType(termType)} ${Number(term)}`;
+  return `${normalizeTermType(termType)} ${toMoneyNumber(term)}`;
 }
 
 export function buildCourseTermOptions(course) {
@@ -38,7 +49,7 @@ export function monthsPerTermFromTermType(termType) {
 
 /** Terms created per program year: yearly=1, semester=2, trimester=3, quarterly=4. */
 export function termsPerYearFromTermType(termType) {
-  return Math.max(1, Math.floor(12 / monthsPerTermFromTermType(termType)));
+  return decimalMax(1, Math.floor(decimalDivide(12, monthsPerTermFromTermType(termType))));
 }
 
 export function termsPerYear(course) {
@@ -47,21 +58,21 @@ export function termsPerYear(course) {
     return termsPerYearFromTermType(termType);
   }
 
-  const totalTerms = Number(course?.totalTerms) || 0;
-  const courseDuration = Number(course?.courseDuration) || 1;
+  const totalTerms = toMoneyNumber(course?.totalTerms);
+  const courseDuration = toMoneyNumber(course?.courseDuration) || 1;
   if (!totalTerms || !courseDuration) return 1;
-  return Math.max(1, Math.ceil(totalTerms / courseDuration));
+  return decimalMax(1, Math.ceil(decimalDivide(totalTerms, courseDuration)));
 }
 
 export function resolveTotalTerms(course) {
-  const stored = Number(course?.totalTerms) || 0;
-  if (stored > 0) {
+  const stored = toMoneyNumber(course?.totalTerms);
+  if (decimalGreaterThan(stored, 0)) {
     return stored;
   }
 
-  const courseDuration = Number(course?.courseDuration) || 0;
-  if (courseDuration > 0) {
-    return termsPerYear(course) * courseDuration;
+  const courseDuration = toMoneyNumber(course?.courseDuration);
+  if (decimalGreaterThan(courseDuration, 0)) {
+    return decimalMultiply(termsPerYear(course), courseDuration);
   }
 
   return 0;
@@ -69,20 +80,20 @@ export function resolveTotalTerms(course) {
 
 export function yearFromTerm(term, course) {
   const perYear = termsPerYear(course);
-  return Math.ceil(Number(term) / perYear);
+  return Math.ceil(decimalDivide(toMoneyNumber(term), perYear));
 }
 
 /** Program term numbers that belong to a given program year (1-based). */
 export function termsForYear(year, course) {
   const perYear = termsPerYear(course);
   const totalTerms = resolveTotalTerms(course);
-  const yearNum = Number(year);
+  const yearNum = toMoneyNumber(year);
   if (!yearNum || yearNum < 1 || !totalTerms) {
     return [];
   }
 
-  const startTerm = (yearNum - 1) * perYear + 1;
-  const endTerm = Math.min(yearNum * perYear, totalTerms);
+  const startTerm = decimalAdd(decimalMultiply(decimalSubtract(yearNum, 1), perYear), 1);
+  const endTerm = decimalMin(decimalMultiply(yearNum, perYear), totalTerms);
   const result = [];
   for (let term = startTerm; term <= endTerm; term++) {
     result.push(term);

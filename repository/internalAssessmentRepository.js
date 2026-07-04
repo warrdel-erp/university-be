@@ -125,13 +125,8 @@ export async function updateInternalAssessment(examAssessmentId, data) {
         if (!existing) {
             return [0];
         }
-        const payload = { ...data };
-        if (payload.term == null && payload.semesterId != null) {
-            payload.term = Number(payload.semesterId);
-        }
-        delete payload.semesterId;
         return await model.internalAssessmentModel.update(
-            payload,
+            data,
             { where: { examAssessmentId } },
         );
     } catch (error) {

@@ -34,6 +34,8 @@ export function studentClassSectionTermWithSectionInclude({
     termRequired = false,
     termAttributes,
     sectionAttributes,
+    /** When false, only studentClassSectionTerm → classSection (placement via class_section_term). */
+    includeSectionTerms = true,
 } = {}) {
     const termWhere = {};
     if (classSectionTermId != null) {
@@ -58,7 +60,9 @@ export function studentClassSectionTermWithSectionInclude({
                 exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'],
             },
             required: sectionRequired,
-            include: [classSectionTermsInclude({ term })],
+            ...(includeSectionTerms && {
+                include: [classSectionTermsInclude({ term })],
+            }),
         }],
     };
 
@@ -188,7 +192,6 @@ export function formatClassSectionTermPlacement(sectionPlain, termRow) {
     const row = {
         classSectionTermId: termRow.classSectionTermId,
         classSectionsId: sectionPlain.classSectionsId,
-        sectionId: sectionPlain.sectionId,
         section: sectionPlain.section,
         year: sectionPlain.year,
     };

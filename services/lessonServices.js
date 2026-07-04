@@ -83,11 +83,17 @@ export async function getMapping(academicYearId) {
     const originalData = await lesson.getMapping(academicYearId);
 
     const grouped = {};
+    const plainData = [];
 
-    originalData.forEach(item => {
+    for (const row of originalData) {
+      const item = row.get ? row.get({ plain: true }) : row;
+      plainData.push(item);
+
       const ttMapping = item.timeTableMapping;
 
-      if (!ttMapping) return;
+      if (!ttMapping) {
+        continue;
+      }
 
       const empDetails = ttMapping.employeeDetails;
       const teacherMapping = ttMapping.timeTableTeacherSubject?.teacherEmployeeData;
@@ -106,7 +112,7 @@ export async function getMapping(academicYearId) {
       }
 
       const ttCreate = ttMapping.timeTablecreate || {};
-      const classSection = ttCreate.timeTableClassSection || {};
+      const classSection = ttCreate.timeTableClassSectionTerm?.classSection || ttCreate.timeTableClassSection || {};
       const subject = item.mappingTopic?.lessonTopic?.lessonSubject || {};
       const lessonRow = item.mappingTopic?.lessonTopic || {};
       const topic = item.mappingTopic || {};
@@ -137,10 +143,10 @@ export async function getMapping(academicYearId) {
           subTopics
         }
       });
-    });
+    }
 
     return {
-      original: originalData,
+      original: plainData,
       filtered: Object.values(grouped)
     };
   } catch (error) {

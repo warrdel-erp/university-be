@@ -87,36 +87,54 @@ const mappingSlotSchema = z.object({
     period: z.coerce.number().int().positive('period must be greater than 0'),
 });
 
-const addTimeTableMappingSchema = z
-    .object({
-        timeTableRoutineId: positiveIntegerId,
-        timeTableCreationId: optionalPositiveId,
-        timeTableNameId: optionalPositiveId,
-        employeeId: optionalPositiveId,
-        subjectId: optionalPositiveId,
-        electiveSubjectId: optionalPositiveId,
-        teacherSubjectMappingId: optionalPositiveId,
-        day: z.string().optional(),
-        period: z.coerce.number().int().optional(),
-        classRoomSectionId: optionalPositiveId,
-        timeTableType: z.enum(['normal', 'elective']).optional(),
-        isSameTeacher: z.boolean().optional(),
-        teacherType: z.string().optional(),
-        isAttendence: z.boolean().optional(),
-        isOverridingSyblingElectives: z.boolean().optional(),
-        classSectionTermId: optionalPositiveId,
-        classSectionTermIds: z.array(positiveIntegerId).min(1).optional(),
-        slots: z.array(mappingSlotSchema).min(1).optional(),
-        combinedGroupId: z.string().uuid().optional(),
-    })
-    .refine(
-        (body) => (Array.isArray(body.slots) && body.slots.length > 0)
-            || (body.timeTableCreationId != null && body.period != null),
-        {
-            message: 'Provide slots[] or both timeTableCreationId and period',
-            path: ['slots'],
-        },
-    );
+const mappingBodySchema = z.object({
+    timeTableRoutineId: optionalPositiveId,
+    timeTableCreationId: optionalPositiveId,
+    timeTableNameId: optionalPositiveId,
+    employeeId: optionalPositiveId,
+    subjectId: optionalPositiveId,
+    electiveSubjectId: optionalPositiveId,
+    teacherSubjectMappingId: optionalPositiveId,
+    day: z.string().optional(),
+    period: z.coerce.number().int().optional(),
+    classRoomSectionId: optionalPositiveId,
+    timeTableType: z.enum(['normal', 'elective']).optional(),
+    isSameTeacher: z.boolean().optional(),
+    teacherType: z.string().optional(),
+    isAttendence: z.boolean().optional(),
+    isOverridingSyblingElectives: z.boolean().optional(),
+    classSectionTermId: optionalPositiveId,
+    classSectionTermIds: z.array(positiveIntegerId).min(1).optional(),
+    slots: z.array(mappingSlotSchema).min(1).optional(),
+    combinedGroupId: z.string().uuid().optional(),
+    
+    sourceTimeTableMappingId: optionalPositiveId,
+    copyTarget: z.enum(['nextPeriod', 'nextDay']).optional(),
+});
+
+const addTimeTableMappingSchema = mappingBodySchema.superRefine((body, ctx) => {
+    const isCopy = body.sourceTimeTableMappingId != null;
+    const hasSlots = Array.isArray(body.slots) && body.slots.length > 0;
+    const hasCell = body.timeTableRoutineId != null
+        && body.timeTableCreationId != null
+        && body.period != null;
+
+    if (isCopy && body.copyTarget == null) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'copyTarget is required when sourceTimeTableMappingId is sent (nextPeriod | nextDay)',
+            path: ['copyTarget'],
+        });
+    }
+
+    if (!isCopy && !hasSlots && !hasCell) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Send sourceTimeTableMappingId+copyTarget, slots[], or timeTableRoutineId with timeTableCreationId and period',
+            path: ['timeTableRoutineId'],
+        });
+    }
+});
 
 const getTimeTableMappingBodySchema = z.object({
     timeTableRoutineId: positiveIntegerId,
@@ -178,7 +196,9 @@ router.get('/', userAuth, validate({ query: getTimeTableCreateListQuerySchema })
 router.get('/single', userAuth, validate({ query: getSingleQuerySchema }), getSingletimeTableCreateDetails);
 router.get('/create', userAuth, validate({ query: getTimeTableByCourseAndSectionQuerySchema }), getTimeTableByCourseAndSection);
 router.patch('/create', userAuth, validate({ body: changeTimeTableCreateSchema }), changeTimeTableCreate);
+
 router.post('/mapping', userAuth, validate({ body: addTimeTableMappingSchema }), addtimeTableMapping);
+
 router.get('/mapping', userAuth, validate({ body: getTimeTableMappingBodySchema }), getTimeTableMappingDetail);
 router.get('/single/mapping', userAuth, validate({ query: getSingleQuerySchema }), getSingletimeTableMappingDetail);
 router.patch('/mapping', userAuth, validate({ body: updateTimeTableMappingSchema }), updatetimeTableCreate);
