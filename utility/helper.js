@@ -107,6 +107,18 @@ export function getDatesForDayInRange(startDate, endDate, targetDay) {
   return dates;
 }
 
+/** YYYY-MM-DD for dashboard overview from optional calendar year/month (day = today, clamped to month end). */
+export function resolveOverviewDateFromMonthYear({ year, month } = {}) {
+  const now = new Date();
+  const selectedYear = year ?? now.getFullYear();
+  const selectedMonth = month ?? now.getMonth() + 1;
+  const lastDayOfMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+  const day = Math.min(now.getDate(), lastDayOfMonth);
+  const monthPart = String(selectedMonth).padStart(2, "0");
+  const dayPart = String(day).padStart(2, "0");
+  return `${selectedYear}-${monthPart}-${dayPart}`;
+}
+
 /** YYYY-MM-DD in server local timezone; avoids UTC shift from toISOString(). */
 export function formatQueryDate(dateInput) {
   if (typeof dateInput === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
