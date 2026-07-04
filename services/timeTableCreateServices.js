@@ -209,7 +209,38 @@ function routineScopeWhere(classSectionTermId) {
   return { classSectionTermId: Number(classSectionTermId) };
 }
 
-async function resolveCopyPayload(data, options) {
+function buildCopyPayload(sourceRow, target, request) {
+  const src = sourceRow.get ? sourceRow.get({ plain: true }) : sourceRow;
+  const payload = applyCopyOverrides({
+    timeTableRoutineId: src.timeTableRoutineId,
+    timeTableNameId: src.timeTableNameId,
+    timeTableCreationId: target.timeTableCreationId,
+    day: target.day,
+    period: target.period,
+    employeeId: src.employeeId,
+    subjectId: src.subjectId,
+    electiveSubjectId: src.electiveSubjectId,
+    teacherSubjectMappingId: src.teacherSubjectMappingId,
+    classRoomSectionId: src.classRoomSectionId,
+    isSameTeacher: src.isSameTeacher,
+    teacherType: src.teacherType,
+    isAttendence: src.isAttendence,
+    isOverridingSyblingElectives: src.isOverridingSyblingElectives,
+    timeTableType: src.timeTableType,
+    copiedFromTimeTableMappingId: src.timeTableMappingId,
+  }, request);
+
+  payload.timeTableRoutineId = src.timeTableRoutineId;
+  payload.timeTableNameId = src.timeTableNameId;
+  payload.timeTableCreationId = target.timeTableCreationId;
+  payload.day = target.day;
+  payload.period = target.period;
+  payload.copiedFromTimeTableMappingId = src.timeTableMappingId;
+
+  return payload;
+}
+
+async function resolveCopyPayloads(data, options) {
   const sourceId = Number(data.sourceTimeTableMappingId);
   const source = await timeTableCreateRepository.getMappingCopySourceRepository(sourceId, options);
   if (!source) {
@@ -255,24 +286,19 @@ async function resolveCopyPayload(data, options) {
     throw new Error(`Target cell already has a mapping on ${day} period ${period}`);
   }
 
-  return applyCopyOverrides({
-    timeTableRoutineId: src.timeTableRoutineId,
-    timeTableNameId: src.timeTableNameId,
-    timeTableCreationId,
-    day,
-    period,
-    employeeId: src.employeeId,
-    subjectId: src.subjectId,
-    electiveSubjectId: src.electiveSubjectId,
-    teacherSubjectMappingId: src.teacherSubjectMappingId,
-    classRoomSectionId: src.classRoomSectionId,
-    isSameTeacher: src.isSameTeacher,
-    teacherType: src.teacherType,
-    isAttendence: src.isAttendence,
-    isOverridingSyblingElectives: src.isOverridingSyblingElectives,
-    timeTableType: src.timeTableType,
-    copiedFromTimeTableMappingId: src.timeTableMappingId,
-  }, data);
+  const sourceCellMappings = await timeTableCreateRepository.getSourceCellMappingsRepository(
+    sourceId,
+    options,
+  );
+  const sourceRows = sourceCellMappings.length ? sourceCellMappings : [source];
+  const target = { day, period, timeTableCreationId };
+  const payloads = [];
+
+  for (const sourceRow of sourceRows) {
+    payloads.push(buildCopyPayload(sourceRow, target, data));
+  }
+
+  return payloads;
 }
 
 async function assertNoSlotConflicts({
@@ -321,6 +347,22 @@ async function assertNoSlotConflicts({
       );
     }
   }
+}
+
+async function addFacultyLoadForEmployee(employeeId, periodLength, transaction) {
+  if (!employeeId || periodLength <= 0) {
+    return;
+  }
+
+  const facultyLoad = await getSingleFaculityLoadDetails(employeeId);
+  const existingLoad = toMoneyNumber(
+    facultyLoad?.[0]?.dataValues?.currentLoad ?? facultyLoad?.[0]?.currentLoad,
+  );
+  await updateFaculityLoadByEmployeeId(
+    employeeId,
+    { currentLoad: decimalAdd(existingLoad, periodLength) },
+    transaction,
+  );
 }
 
 async function resolveCombinedRoutineTargets(anchorRoutine, classSectionTermIds, transaction) {
@@ -409,10 +451,6 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
       throw new Error('classSectionTermId is required');
     }
 
-    if (!placement.courseId) {
-      placement.courseId = structure.courseId;
-    }
-
     if (placement.classSectionTermId) {
       const termRow = await findClassSectionTermById(placement.classSectionTermId, { transaction });
       if (!termRow) {
@@ -421,18 +459,13 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
       const plain = termRow.get ? termRow.get({ plain: true }) : termRow;
       const section = plain.classSection;
       if (section) {
-        if (structure.courseId && Number(section.courseId) !== Number(structure.courseId)) {
-          throw new Error('classSectionTermId does not match timetable structure course');
-        }
         if (structure.sessionId && Number(section.sessionId) !== Number(structure.sessionId)) {
           throw new Error('classSectionTermId does not match timetable structure session');
         }
         if (!placement.classSectionsId) {
           placement.classSectionsId = section.classSectionsId;
         }
-        if (!placement.courseId) {
-          placement.courseId = section.courseId;
-        }
+        placement.courseId = section.courseId;
       }
     } else if (!placement.courseId && placement.classSectionsId) {
       const section = await timeTableCreateRepository.getClassSectionWithCourseRepository(
@@ -441,6 +474,10 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
       if (section?.courseId) {
         placement.courseId = section.courseId;
       }
+    }
+
+    if (!placement.courseId) {
+      placement.courseId = structure.courseId;
     }
 
     delete placement.term;
@@ -605,9 +642,85 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
   const transaction = await sequelize.transaction();
 
   try {
-    const payload = data.sourceTimeTableMappingId != null
-      ? await resolveCopyPayload(data, { transaction })
-      : data;
+    if (data.sourceTimeTableMappingId != null) {
+      const copyPayloads = await resolveCopyPayloads(data, { transaction });
+      if (!copyPayloads.length) {
+        throw new Error(`Source mapping ${data.sourceTimeTableMappingId} not found`);
+      }
+
+      const firstPayload = copyPayloads[0];
+      const routine = await timeTableCreateRepository.getRoutineByIdRepository(
+        firstPayload.timeTableRoutineId,
+        { transaction },
+      );
+      if (!routine) {
+        throw new Error('Invalid timeTableRoutineId');
+      }
+
+      assertRoutineNotStarted(routine.startingDate);
+
+      const periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(
+        firstPayload.timeTableCreationId,
+      );
+      if (!periodInfo) {
+        throw new Error(`Invalid timeTableCreationId: ${firstPayload.timeTableCreationId}`);
+      }
+
+      const periodLength = toMoneyNumber(periodInfo.timeTableName?.periodLength ?? 0);
+      const conflictOptions = {
+        allowedClassSectionTermIds: [Number(routine.classSectionTermId)],
+        excludeCombinedGroupId: null,
+      };
+
+      for (const payload of copyPayloads) {
+        await assertNoSlotConflicts({
+          employeeId: payload.employeeId,
+          classRoomSectionId: payload.classRoomSectionId,
+          day: payload.day,
+          periodInfo,
+          startingDate: routine.startingDate,
+          endingDate: routine.endingDate,
+          conflictOptions,
+        });
+      }
+
+      const createdMappings = [];
+      for (const payload of copyPayloads) {
+        const rowData = stripMappingRow({
+          ...payload,
+          createdBy,
+          updatedBy,
+        });
+
+        if (rowData.timeTableType === 'elective') {
+          rowData.isSameTeacher = false;
+        }
+
+        const result = await timeTableCreateRepository.addtimeTableMapping(rowData, transaction);
+        createdMappings.push({
+          timeTableMappingId: result.timeTableMappingId,
+          timeTableRoutineId: rowData.timeTableRoutineId,
+          classSectionTermId: routine.classSectionTermId,
+          timeTableCreationId: rowData.timeTableCreationId,
+          period: rowData.period,
+          day: rowData.day,
+          copiedFromTimeTableMappingId: payload.copiedFromTimeTableMappingId,
+        });
+      }
+
+      for (const payload of copyPayloads) {
+        await addFacultyLoadForEmployee(payload.employeeId, periodLength, transaction);
+      }
+
+      await transaction.commit();
+      return {
+        isCopy: true,
+        copiedFromTimeTableMappingId: Number(data.sourceTimeTableMappingId),
+        mappings: createdMappings,
+      };
+    }
+
+    const payload = data;
 
     const {
       timeTableRoutineId,
@@ -699,15 +812,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
       }
     }
 
-    if (employeeId && totalPeriodLength > 0) {
-      const facultyLoad = await getSingleFaculityLoadDetails(employeeId);
-      const existingLoad = toMoneyNumber(facultyLoad?.[0]?.currentLoad);
-      await updateFaculityLoadByEmployeeId(
-        employeeId,
-        { currentLoad: decimalAdd(existingLoad, totalPeriodLength) },
-        transaction,
-      );
-    }
+    await addFacultyLoadForEmployee(employeeId, totalPeriodLength, transaction);
 
     await transaction.commit();
 
