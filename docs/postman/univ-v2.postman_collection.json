@@ -7465,6 +7465,329 @@
       ]
     },
     {
+      "name": "internal assessment",
+      "description": "## internal assessment\n\nInternal assessment APIs under /internalAssessment.\n\n**Authentication:** Bearer Token Required (Authorization: Bearer {{token}})\n\n**Tenant scope:** University, institute, and academic year are taken from the logged-in user's saved defaults. Call PUT /user/saveUserDefaults before using scoped routes.\n\n**Placement rule:** This module uses program `term`. Do not send deprecated semester, class, or section identifiers.\n\n| Method | Path | Purpose |\n|--------|------|---------|\n| POST | /internalAssessment | Create internal assessment |\n| GET | /internalAssessment | List assessments, optionally by examSetupTypeId |\n| GET | /internalAssessment/single | Get one assessment by examAssessmentId |\n| PATCH | /internalAssessment | Bulk update assessments |\n| DELETE | /internalAssessment | Delete one assessment by examAssessmentId |\n| GET | /internalAssessment/evaluation | Get evaluation sheet for subject and employee |\n| POST | /internalAssessment/evaluation | Save student evaluation marks |\n| PATCH | /internalAssessment/evaluation | Update one student evaluation row |\n\n### Changelog\n\nv2\n\n- Added Zod validation for all routes.\n- Removed semester/class/section inputs from the contract.\n- Assessment placement is term-based only.",
+      "item": [
+        {
+          "name": "Create Internal Assessment",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/internalAssessment",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "internalAssessment"
+              ]
+            },
+            "description": "## Create Internal Assessment\n\n**HTTP method:** POST\n\n**Endpoint:** POST /internalAssessment\n\n**Authentication:** Bearer Token Required (Authorization: Bearer {{token}})\n\n**Tenant scope:** University, institute, and academic year are taken from the logged-in user's saved defaults. Call PUT /user/saveUserDefaults before using scoped routes.\n\n**Placement rule:** This module uses program `term`. Do not send deprecated semester, class, or section identifiers.\n\n### Request Body\n\n| Field | Type | Required | Nullable | Description |\n|-------|------|----------|----------|-------------|\n| subjectId | Number | Yes | No | Subject ID. |\n| term | Number | Yes | No | Program term number. |\n| examSetupTypeId | Number | Yes | No | Exam setup type ID. Must belong to current tenant scope. |\n| type | String | Yes | No | Assessment type label, for example Assignment or Homework. |\n| totalMarks | Number | Yes | No | Maximum marks for this assessment. |\n| weightage | Number | No | Yes | Weightage percentage used for division calculation. |\n| publishDate | String | Yes | No | Publish/homework date. |\n| dueDate | String | Yes | No | Due/submission date. |\n| description | String | Yes | No | Assessment description. |\n| employeeId | Number | No | Yes | Teacher/evaluator employee ID. |\n\n### Success Response (201)\n\n```json\n{\n  \"message\": \"Internal Assessment created\",\n  \"assessment\": {\n    \"examAssessmentId\": 101,\n    \"subjectId\": 12,\n    \"term\": 3,\n    \"examSetupTypeId\": 5,\n    \"type\": \"Assignment\",\n    \"totalMarks\": 100,\n    \"weightage\": 20,\n    \"publishDate\": \"2026-07-04\",\n    \"dueDate\": \"2026-07-15\",\n    \"description\": \"Internal assessment for Unit 1.\",\n    \"employeeId\": 27\n  }\n}\n```\n\n### Removed Fields\n\n| Field | Status | Replacement |\n|-------|--------|-------------|\n| semesterId | Removed | term |\n| semester_id | Removed | term |\n| classId / class_id | Removed | Not used by this API |\n| sectionId / section_id | Removed | Not used by this API |\n| classSectionsId / class_sections_id | Removed | Not used by this API |\n\n### Validation Error (400)\n\n```json\n{\n  \"status\": \"error\",\n  \"message\": \"id must be greater than 0\",\n  \"errors\": [\n    { \"path\": \"examAssessmentId\", \"message\": \"id must be greater than 0\" }\n  ]\n}\n```\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | Validation error or required fields missing |\n| 401 | Unauthorized |\n| 500 | Internal server error |",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjectId\": 12,\n  \"term\": 3,\n  \"examSetupTypeId\": 5,\n  \"type\": \"Assignment\",\n  \"totalMarks\": 100,\n  \"weightage\": 20,\n  \"publishDate\": \"2026-07-04\",\n  \"dueDate\": \"2026-07-15\",\n  \"description\": \"Internal assessment for Unit 1.\",\n  \"employeeId\": 27\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Internal Assessments",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/internalAssessment?examSetupTypeId=5",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "internalAssessment"
+              ],
+              "query": [
+                {
+                  "key": "examSetupTypeId",
+                  "value": "5",
+                  "description": "Optional positive integer. Filters assessments by exam setup type."
+                }
+              ]
+            },
+            "description": "## Get Internal Assessments\n\n**HTTP method:** GET\n\n**Endpoint:** GET /internalAssessment\n\n**Authentication:** Bearer Token Required (Authorization: Bearer {{token}})\n\n**Tenant scope:** University, institute, and academic year are taken from the logged-in user's saved defaults. Call PUT /user/saveUserDefaults before using scoped routes.\n\n**Placement rule:** This module uses program `term`. Do not send deprecated semester, class, or section identifiers.\n\n### Query Parameters\n\n| Name | Type | Required | Default | Description |\n|------|------|----------|---------|-------------|\n| examSetupTypeId | Number | No | - | Filters assessments by exam setup type. |\n\n### Success Response (200)\n\n```json\n[\n  {\n    \"examAssessmentId\": 101,\n    \"subjectId\": 12,\n    \"term\": 3,\n    \"examSetupTypeId\": 5,\n    \"type\": \"Assignment\",\n    \"totalMarks\": 100,\n    \"weightage\": 20,\n    \"division\": 16,\n    \"publishDate\": \"2026-07-04T00:00:00.000Z\",\n    \"dueDate\": \"2026-07-15T00:00:00.000Z\",\n    \"description\": \"Internal assessment for Unit 1.\",\n    \"file\": null\n  }\n]\n```\n\n### Removed Fields\n\n| Field | Status | Replacement |\n|-------|--------|-------------|\n| semesterId | Removed | term |\n| semester_id | Removed | term |\n| classId / class_id | Removed | Not used by this API |\n| sectionId / section_id | Removed | Not used by this API |\n| classSectionsId / class_sections_id | Removed | Not used by this API |\n\n### Validation Error (400)\n\n```json\n{\n  \"status\": \"error\",\n  \"message\": \"id must be greater than 0\",\n  \"errors\": [\n    { \"path\": \"examAssessmentId\", \"message\": \"id must be greater than 0\" }\n  ]\n}\n```\n\n### Business Rules\n\n- division is calculated from the first syllabus marks and assessment weightage.\n- If examSetupTypeId is invalid for the tenant, the service returns an empty list.\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | Validation error |\n| 401 | Unauthorized |\n| 500 | Internal server error |"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Internal Assessment",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/internalAssessment/single?examAssessmentId=101",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "internalAssessment",
+                "single"
+              ],
+              "query": [
+                {
+                  "key": "examAssessmentId",
+                  "value": "101",
+                  "description": "Required positive integer."
+                }
+              ]
+            },
+            "description": "## Get Single Internal Assessment\n\n**HTTP method:** GET\n\n**Endpoint:** GET /internalAssessment/single\n\n**Authentication:** Bearer Token Required (Authorization: Bearer {{token}})\n\n**Tenant scope:** University, institute, and academic year are taken from the logged-in user's saved defaults. Call PUT /user/saveUserDefaults before using scoped routes.\n\n**Placement rule:** This module uses program `term`. Do not send deprecated semester, class, or section identifiers.\n\n### Query Parameters\n\n| Name | Type | Required | Default | Description |\n|------|------|----------|---------|-------------|\n| examAssessmentId | Number | Yes | - | Internal assessment ID. |\n\n### Success Response (200)\n\n```json\n{\n  \"examAssessmentId\": 101,\n  \"subject\": { \"subjectId\": 12, \"name\": \"Design Studio\", \"code\": \"DS-301\" },\n  \"term\": 3,\n  \"termName\": \"Semester 3\",\n  \"examSetupType\": { \"examSetupTypeId\": 5, \"examType\": \"Internal\", \"examName\": \"Internal Assessment 1\" },\n  \"totalMarks\": 100,\n  \"weightage\": 20,\n  \"division\": 16,\n  \"publishDate\": \"2026-07-04T00:00:00.000Z\",\n  \"dueDate\": \"2026-07-15T00:00:00.000Z\",\n  \"description\": \"Internal assessment for Unit 1.\",\n  \"file\": null,\n  \"syllabus\": [],\n  \"firstSyllabus\": null,\n  \"examStructure\": null\n}\n```\n\n### Removed Fields\n\n| Field | Status | Replacement |\n|-------|--------|-------------|\n| semesterId | Removed | term |\n| semester_id | Removed | term |\n| classId / class_id | Removed | Not used by this API |\n| sectionId / section_id | Removed | Not used by this API |\n| classSectionsId / class_sections_id | Removed | Not used by this API |\n\n### Validation Error (400)\n\n```json\n{\n  \"status\": \"error\",\n  \"message\": \"id must be greater than 0\",\n  \"errors\": [\n    { \"path\": \"examAssessmentId\", \"message\": \"id must be greater than 0\" }\n  ]\n}\n```\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | examAssessmentId missing or invalid |\n| 401 | Unauthorized |\n| 404 | Assessment not found |\n| 500 | Internal server error |"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Internal Assessments",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/internalAssessment",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "internalAssessment"
+              ]
+            },
+            "description": "## Update Internal Assessments\n\n**HTTP method:** PATCH\n\n**Endpoint:** PATCH /internalAssessment\n\n**Authentication:** Bearer Token Required (Authorization: Bearer {{token}})\n\n**Tenant scope:** University, institute, and academic year are taken from the logged-in user's saved defaults. Call PUT /user/saveUserDefaults before using scoped routes.\n\n**Placement rule:** This module uses program `term`. Do not send deprecated semester, class, or section identifiers.\n\n### Request Body\n\nNon-empty array. Each row must include `examAssessmentId`. Other fields are optional.\n\n| Field | Type | Required | Nullable | Description |\n|-------|------|----------|----------|-------------|\n| examAssessmentId | Number | Yes | No | Internal assessment ID to update. |\n| subjectId | Number | No | No | New subject ID. |\n| term | Number | No | No | New program term number. |\n| examSetupTypeId | Number | No | No | New exam setup type ID. |\n| type | String | No | No | Assessment type label. |\n| totalMarks | Number | No | No | Maximum marks. |\n| weightage | Number | No | Yes | Weightage percentage. |\n| publishDate | String | No | No | Publish date. |\n| dueDate | String | No | No | Due date. |\n| description | String | No | No | Description. |\n| employeeId | Number | No | Yes | Teacher/evaluator employee ID. |\n\n### Success Response (200)\n\n```json\n{\n  \"message\": \"Internal assessments updated successfully.\",\n  \"data\": [\n    { \"examAssessmentId\": 101, \"updated\": true }\n  ]\n}\n```\n\n### Removed Fields\n\n| Field | Status | Replacement |\n|-------|--------|-------------|\n| semesterId | Removed | term |\n| semester_id | Removed | term |\n| classId / class_id | Removed | Not used by this API |\n| sectionId / section_id | Removed | Not used by this API |\n| classSectionsId / class_sections_id | Removed | Not used by this API |\n\n### Validation Error (400)\n\n```json\n{\n  \"status\": \"error\",\n  \"message\": \"id must be greater than 0\",\n  \"errors\": [\n    { \"path\": \"examAssessmentId\", \"message\": \"id must be greater than 0\" }\n  ]\n}\n```\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | Request body is empty, not an array, or contains invalid fields |\n| 401 | Unauthorized |\n| 500 | Internal server error |",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"examAssessmentId\": 101,\n    \"term\": 3,\n    \"totalMarks\": 100,\n    \"weightage\": 25,\n    \"description\": \"Updated internal assessment for Unit 1.\"\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Internal Assessment",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/internalAssessment?examAssessmentId=101",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "internalAssessment"
+              ],
+              "query": [
+                {
+                  "key": "examAssessmentId",
+                  "value": "101",
+                  "description": "Required positive integer."
+                }
+              ]
+            },
+            "description": "## Delete Internal Assessment\n\n**HTTP method:** DELETE\n\n**Endpoint:** DELETE /internalAssessment\n\n**Authentication:** Bearer Token Required (Authorization: Bearer {{token}})\n\n**Tenant scope:** University, institute, and academic year are taken from the logged-in user's saved defaults. Call PUT /user/saveUserDefaults before using scoped routes.\n\n**Placement rule:** This module uses program `term`. Do not send deprecated semester, class, or section identifiers.\n\n### Query Parameters\n\n| Name | Type | Required | Default | Description |\n|------|------|----------|---------|-------------|\n| examAssessmentId | Number | Yes | - | Internal assessment ID to delete. |\n\n### Success Response (200)\n\n```json\n{ \"message\": \"Deleted\" }\n```\n\n### Removed Fields\n\n| Field | Status | Replacement |\n|-------|--------|-------------|\n| semesterId | Removed | term |\n| semester_id | Removed | term |\n| classId / class_id | Removed | Not used by this API |\n| sectionId / section_id | Removed | Not used by this API |\n| classSectionsId / class_sections_id | Removed | Not used by this API |\n\n### Validation Error (400)\n\n```json\n{\n  \"status\": \"error\",\n  \"message\": \"id must be greater than 0\",\n  \"errors\": [\n    { \"path\": \"examAssessmentId\", \"message\": \"id must be greater than 0\" }\n  ]\n}\n```\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | examAssessmentId missing or invalid |\n| 401 | Unauthorized |\n| 404 | Assessment not found |\n| 500 | Internal server error |"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Internal Assessment Evaluation",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/internalAssessment/evaluation?subjectId=12&employeeId=27",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "internalAssessment",
+                "evaluation"
+              ],
+              "query": [
+                {
+                  "key": "subjectId",
+                  "value": "12",
+                  "description": "Required positive integer."
+                },
+                {
+                  "key": "employeeId",
+                  "value": "27",
+                  "description": "Required positive integer."
+                }
+              ]
+            },
+            "description": "## Get Internal Assessment Evaluation\n\n**HTTP method:** GET\n\n**Endpoint:** GET /internalAssessment/evaluation\n\n**Authentication:** Bearer Token Required (Authorization: Bearer {{token}})\n\n**Tenant scope:** University, institute, and academic year are taken from the logged-in user's saved defaults. Call PUT /user/saveUserDefaults before using scoped routes.\n\n**Placement rule:** This module uses program `term`. Do not send deprecated semester, class, or section identifiers.\n\n### Query Parameters\n\n| Name | Type | Required | Default | Description |\n|------|------|----------|---------|-------------|\n| subjectId | Number | Yes | - | Subject ID. |\n| employeeId | Number | Yes | - | Employee/evaluator ID. |\n\n### Success Response (200)\n\n```json\n{\n  \"assessment\": {\n    \"assessmentType\": \"Assignment\",\n    \"subject\": \"Design Studio\",\n    \"term\": \"Semester 3\",\n    \"marks\": 100,\n    \"attachedFile\": null,\n    \"description\": \"Internal assessment for Unit 1.\",\n    \"homeworkDate\": \"2026-07-04T00:00:00.000Z\",\n    \"submissionDate\": \"2026-07-15T00:00:00.000Z\",\n    \"evaluationDate\": \"2026-07-15T00:00:00.000Z\",\n    \"createdBy\": \"Prof. Sharma\",\n    \"evaluatedBy\": \"Prof. Sharma\"\n  },\n  \"students\": [\n    {\n      \"studentId\": 201,\n      \"scholarNumber\": \"SCH-001\",\n      \"name\": \"Aarav Mehta\",\n      \"marks\": 84,\n      \"conversion\": 16.8,\n      \"status\": \"checked\",\n      \"comments\": \"Good work\",\n      \"file\": \"--\"\n    }\n  ]\n}\n```\n\n### Removed Fields\n\n| Field | Status | Replacement |\n|-------|--------|-------------|\n| semesterId | Removed | term |\n| semester_id | Removed | term |\n| classId / class_id | Removed | Not used by this API |\n| sectionId / section_id | Removed | Not used by this API |\n| classSectionsId / class_sections_id | Removed | Not used by this API |\n\n### Validation Error (400)\n\n```json\n{\n  \"status\": \"error\",\n  \"message\": \"id must be greater than 0\",\n  \"errors\": [\n    { \"path\": \"examAssessmentId\", \"message\": \"id must be greater than 0\" }\n  ]\n}\n```\n\n### Business Rules\n\n- Students are resolved by the assessment term and subject course, not by semester/class/section IDs.\n- Existing student evaluation rows are attached when available; missing rows show pending status.\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | subjectId or employeeId missing/invalid |\n| 401 | Unauthorized |\n| 404 | No data found |\n| 500 | Internal server error |"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Assessment Evaluation",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/internalAssessment/evaluation",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "internalAssessment",
+                "evaluation"
+              ]
+            },
+            "description": "## Create Assessment Evaluation\n\n**HTTP method:** POST\n\n**Endpoint:** POST /internalAssessment/evaluation\n\n**Authentication:** Bearer Token Required (Authorization: Bearer {{token}})\n\n**Tenant scope:** University, institute, and academic year are taken from the logged-in user's saved defaults. Call PUT /user/saveUserDefaults before using scoped routes.\n\n**Placement rule:** This module uses program `term`. Do not send deprecated semester, class, or section identifiers.\n\n### Request Body\n\n| Field | Type | Required | Nullable | Description |\n|-------|------|----------|----------|-------------|\n| subjectId | Number | Yes | No | Subject ID. |\n| employeeId | Number | Yes | No | Evaluator employee ID. |\n| examAssessmentId | Number | Yes | No | Internal assessment ID. |\n| students | Array | Yes | No | Non-empty list of student marks. |\n| students[].studentId | Number | Yes | No | Student ID. |\n| students[].status | String | No | No | Evaluation status; defaults to pending in service when omitted. |\n| students[].marks | Number | Yes | No | Marks scored. |\n| students[].comments | String | No | Yes | Evaluation comments. |\n| students[].file | Any | No | Yes | Optional file metadata/value. |\n\n### Success Response (201)\n\n```json\n{\n  \"message\": \"Evaluation saved successfully\",\n  \"data\": [\n    { \"assessmentEvalutionId\": 1, \"studentId\": 201, \"marks\": 84, \"status\": \"checked\" },\n    { \"assessmentEvalutionId\": 2, \"studentId\": 202, \"marks\": 72, \"status\": \"pending\" }\n  ]\n}\n```\n\n### Removed Fields\n\n| Field | Status | Replacement |\n|-------|--------|-------------|\n| semesterId | Removed | term |\n| semester_id | Removed | term |\n| classId / class_id | Removed | Not used by this API |\n| sectionId / section_id | Removed | Not used by this API |\n| classSectionsId / class_sections_id | Removed | Not used by this API |\n\n### Validation Error (400)\n\n```json\n{\n  \"status\": \"error\",\n  \"message\": \"id must be greater than 0\",\n  \"errors\": [\n    { \"path\": \"examAssessmentId\", \"message\": \"id must be greater than 0\" }\n  ]\n}\n```\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | Missing IDs or empty students array |\n| 401 | Unauthorized |\n| 500 | Internal server error |",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjectId\": 12,\n  \"employeeId\": 27,\n  \"examAssessmentId\": 101,\n  \"students\": [\n    {\n      \"studentId\": 201,\n      \"status\": \"checked\",\n      \"marks\": 84,\n      \"comments\": \"Good work\",\n      \"file\": null\n    },\n    {\n      \"studentId\": 202,\n      \"status\": \"pending\",\n      \"marks\": 72,\n      \"comments\": \"\",\n      \"file\": null\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Assessment Evaluation",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/internalAssessment/evaluation",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "internalAssessment",
+                "evaluation"
+              ]
+            },
+            "description": "## Update Assessment Evaluation\n\n**HTTP method:** PATCH\n\n**Endpoint:** PATCH /internalAssessment/evaluation\n\n**Authentication:** Bearer Token Required (Authorization: Bearer {{token}})\n\n**Tenant scope:** University, institute, and academic year are taken from the logged-in user's saved defaults. Call PUT /user/saveUserDefaults before using scoped routes.\n\n**Placement rule:** This module uses program `term`. Do not send deprecated semester, class, or section identifiers.\n\n### Request Body\n\n| Field | Type | Required | Nullable | Description |\n|-------|------|----------|----------|-------------|\n| assessmentEvalutionId | Number | Yes | No | Assessment evaluation row ID. Note spelling follows existing database/API field name. |\n| subjectId | Number | No | No | Subject ID. |\n| employeeId | Number | No | No | Employee/evaluator ID. |\n| examAssessmentId | Number | No | No | Internal assessment ID. |\n| studentId | Number | No | No | Student ID. |\n| status | String | No | No | Evaluation status. |\n| marks | Number | No | No | Marks scored. |\n| comments | String | No | Yes | Comments. |\n| file | Any | No | Yes | Optional file metadata/value. |\n\n### Success Response (200)\n\n```json\n{\n  \"message\": \"Assessment Evaluation updated successfully\",\n  \"data\": [1]\n}\n```\n\n### Removed Fields\n\n| Field | Status | Replacement |\n|-------|--------|-------------|\n| semesterId | Removed | term |\n| semester_id | Removed | term |\n| classId / class_id | Removed | Not used by this API |\n| sectionId / section_id | Removed | Not used by this API |\n| classSectionsId / class_sections_id | Removed | Not used by this API |\n\n### Validation Error (400)\n\n```json\n{\n  \"status\": \"error\",\n  \"message\": \"id must be greater than 0\",\n  \"errors\": [\n    { \"path\": \"examAssessmentId\", \"message\": \"id must be greater than 0\" }\n  ]\n}\n```\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | assessmentEvalutionId missing or invalid body field |\n| 401 | Unauthorized |\n| 500 | Internal server error |",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assessmentEvalutionId\": 1,\n  \"marks\": 90,\n  \"status\": \"checked\",\n  \"comments\": \"Updated marks after review\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "subject weightage",
       "item": [
         {
@@ -16390,6 +16713,36 @@
     {
       "key": "targetClassSectionTermId",
       "value": ""
+    },
+    {
+      "key": "internalAssessment_examAssessmentId",
+      "value": "101",
+      "type": "string"
+    },
+    {
+      "key": "internalAssessment_examSetupTypeId",
+      "value": "5",
+      "type": "string"
+    },
+    {
+      "key": "internalAssessment_subjectId",
+      "value": "12",
+      "type": "string"
+    },
+    {
+      "key": "internalAssessment_employeeId",
+      "value": "27",
+      "type": "string"
+    },
+    {
+      "key": "internalAssessment_studentId",
+      "value": "201",
+      "type": "string"
+    },
+    {
+      "key": "internalAssessment_evaluationId",
+      "value": "1",
+      "type": "string"
     }
   ]
 }
