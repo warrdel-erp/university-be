@@ -593,6 +593,38 @@ export async function getMappingCopySourceRepository(timeTableMappingId, options
   }
 }
 
+export async function getSourceCellMappingsRepository(timeTableMappingId, options = {}) {
+  try {
+    const source = await getMappingCopySourceRepository(timeTableMappingId, options);
+    if (!source) {
+      return [];
+    }
+
+    const src = source.get ? source.get({ plain: true }) : source;
+    return await model.classScheduleModel.findAll({
+      where: {
+        timeTableRoutineId: Number(src.timeTableRoutineId),
+        timeTableCreationId: Number(src.timeTableCreationId),
+        day: src.day,
+        period: Number(src.period),
+      },
+      attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+      transaction: options.transaction,
+      include: [{
+        model: model.timeTableRoutineModel,
+        as: 'timeTablecreate',
+        required: true,
+        where: buildScope(model.timeTableRoutineModel),
+        attributes: ['timeTableRoutineId'],
+      }],
+      order: [['timeTableMappingId', 'ASC']],
+    });
+  } catch (error) {
+    console.error('Error in getSourceCellMappingsRepository:', error);
+    throw error;
+  }
+}
+
 export async function getStructurePeriodsRepository(timeTableNameId, options = {}) {
   try {
     return scoped(model.timeTableStructurePeriodsModel).findAll({
