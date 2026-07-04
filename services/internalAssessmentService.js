@@ -76,6 +76,10 @@ function formatInternalAssessmentDetail(item) {
   };
 }
 
+function formatInternalAssessmentBasic(item) {
+  return item.get ? item.get({ plain: true }) : item;
+}
+
 export async function getAllInternalAssessment(examSetupTypeId) {
   const assessments =
     await InternalAssessmentRepository.getAllInternalAssessment(
@@ -84,7 +88,7 @@ export async function getAllInternalAssessment(examSetupTypeId) {
 
   const formattedAssessments = [];
   for (const item of assessments) {
-    formattedAssessments.push(formatInternalAssessmentDetail(item));
+    formattedAssessments.push(formatInternalAssessmentBasic(item));
   }
 
   return formattedAssessments;
@@ -98,7 +102,7 @@ export async function getInternalAssessmentById(examAssessmentId) {
 
   if (!data) return null;
 
-  return formatInternalAssessmentDetail(data);
+  return formatInternalAssessmentBasic(data);
 }
 
 export async function updateInternalAssessment(dataArray) {

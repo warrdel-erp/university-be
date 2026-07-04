@@ -105,6 +105,23 @@ const assessmentIncludes = [
   assessmentExamTypeInclude,
 ];
 
+const assessmentScopeIncludes = [
+  {
+    model: model.subjectModel,
+    as: "assessmentSubject",
+    attributes: [],
+    where: buildScope(model.subjectModel),
+    required: true,
+  },
+  {
+    model: model.examSetupTypeModel,
+    as: "assessmentExamType",
+    attributes: [],
+    where: buildScope(model.examSetupTypeModel),
+    required: true,
+  },
+];
+
 async function findStudentsForAssessmentTerm({
   term,
   courseId,
@@ -195,7 +212,7 @@ export async function getAllInternalAssessment(examSetupTypeId) {
       "file",
     ],
     where,
-    include: assessmentIncludes,
+    include: assessmentScopeIncludes,
     order: [["createdAt", "DESC"]],
   });
 }
@@ -221,7 +238,7 @@ export async function getInternalAssessmentById(examAssessmentId) {
       "file",
     ],
     where: { examAssessmentId },
-    include: assessmentIncludes,
+    include: assessmentScopeIncludes,
   });
 }
 
