@@ -507,12 +507,12 @@ export async function getTeacherSubject(employeeId, filters = {}) {
             return [];
         }
 
-        const academicYearId = filters.academicYearId != null ? Number(filters.academicYearId) : undefined;
-        const sessionId = filters.sessionId != null ? Number(filters.sessionId) : undefined;
+        const { academicYearId, sessionId, term } = filters;
         const subjectIds = await resolveSubjectIdsForTeacherFilters({ academicYearId, sessionId });
 
         const subjectWhere = {
             ...(academicYearId != null && { academicYearId }),
+            ...(term != null && { term }),
             ...buildScope(model.subjectModel),
         };
 
@@ -540,7 +540,10 @@ export async function getTeacherSubject(employeeId, filters = {}) {
                             model: model.internalAssessmentModel,
                             as: 'subjectAssessments',
                             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
-                            where: { employeeId },
+                            where: {
+                                employeeId,
+                                ...(term != null && { term }),
+                            },
                             required: false,
                             include: [
                                 {

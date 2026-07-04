@@ -13,7 +13,7 @@ const positiveIntegerId = z.coerce
   .positive('id must be greater than 0');
 
 const deleteClassSectionTermQuerySchema = z.object({
-  classSectionTermId: positiveIntegerId,
+  classSectionId: positiveIntegerId,
 });
 
 router.get('/', userAuth, getClassSectionsByFilter);

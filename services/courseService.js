@@ -1,6 +1,4 @@
 import * as courseRepository from "../repository/courseRepository.js";
-import { groupClassSectionsByTerm } from "../utility/classSectionIncludes.js";
-import { buildTermName, resolveTotalTerms } from "../utility/courseTerms.js";
 
 export const listCourses = async (options = {}) => {
   return courseRepository.getAllCourses(options);
@@ -26,55 +24,63 @@ export const getCourseWithSessions = async (courseId) => {
 
 export const getTermsWithClassSections = async (courseId, sessionId) => {
   try {
-    const course = await courseRepository.getCourseByCourseId(courseId);
+    const [course, session, classSections] = await Promise.all([
+      courseRepository.getCourseByCourseId(courseId),
+      courseRepository.getSessionSummaryById(sessionId),
+      courseRepository.getClassSectionsByCourseAndSession(courseId, sessionId),
+    ]);
 
     if (!course) {
       const error = new Error("Course not found");
       error.statusCode = 404;
       throw error;
     }
-
-    const coursePlain = course.get ? course.get({ plain: true }) : course;
-    const { termType } = coursePlain;
-    const totalTerms = resolveTotalTerms(coursePlain);
-
-    const classSections =
-      await courseRepository.getClassSectionsByCourseAndSession(
-        courseId,
-        sessionId,
-      );
-
-    const sectionPlains = [];
-    for (const cs of classSections) {
-      sectionPlains.push(cs.get ? cs.get({ plain: true }) : cs);
+    if (!session) {
+      const error = new Error("Session not found");
+      error.statusCode = 404;
+      throw error;
     }
 
-    const byTerm = groupClassSectionsByTerm(sectionPlains, coursePlain);
-    const grouped = [];
+    const coursePlain = course.get ? course.get({ plain: true }) : course;
+    const classSectionsByYear = new Map();
 
-    for (let i = 1; i <= totalTerms; i++) {
-      const placements = byTerm[i] ?? [];
-      const sections = [];
+    for (const classSection of classSections) {
+      const sectionPlain = classSection.get ? classSection.get({ plain: true }) : classSection;
+      const year = sectionPlain.year;
 
-      for (const placement of placements) {
-        if (placement.section == null || placement.classSectionsId == null) {
-          continue;
-        }
-        sections.push({
-          name: placement.section,
-          id: placement.classSectionsId,
-          classSectionTermId: placement.classSectionTermId ?? null,
-        });
+      if (!classSectionsByYear.has(year)) {
+        classSectionsByYear.set(year, []);
       }
 
-      grouped.push({
-        termName: buildTermName(termType, i),
-        term: i,
+      classSectionsByYear.get(year).push({
+        classSectionsId: sectionPlain.classSectionsId,
+        section: sectionPlain.section,
+      });
+    }
+
+    const years = [];
+    for (const [year, sections] of classSectionsByYear) {
+      years.push({
+        year,
         classSections: sections,
       });
     }
 
-    return grouped;
+    return {
+      course: {
+        courseId: coursePlain.courseId,
+        courseName: coursePlain.courseName,
+        courseCode: coursePlain.courseCode,
+        termType: coursePlain.termType,
+        totalTerms: coursePlain.totalTerms,
+        duration: coursePlain.courseDuration,
+      },
+      session: {
+        sessionId: session.sessionId,
+        sessionName: session.sessionName,
+      },
+      years,
+    };
   } catch (error) {
     console.error(
       "Error in Course Service (getTermsWithClassSections):",

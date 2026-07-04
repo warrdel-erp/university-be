@@ -1,44 +1,42 @@
 import * as classSectionTermRepository from '../repository/classSectionTermRepository.js';
 
-export async function deleteClassSectionTerm(classSectionTermId) {
-  const termRow = await classSectionTermRepository.findClassSectionTermById(classSectionTermId);
-  if (!termRow) {
-    throw new Error('classSectionTermId not found');
+export async function deleteClassSectionTerm(classSectionId) {
+  const termRows = await classSectionTermRepository.findClassSectionTermsByClassSectionId(classSectionId);
+  if (!termRows.length) {
+    throw new Error('classSectionId not found');
   }
 
-  const plain = termRow.get({ plain: true });
-  const classSectionsId = plain.classSectionsId ?? Number(classSectionTermId);
-  if (!classSectionsId) {
-    throw new Error('classSectionsId could not be resolved for this class section term');
+  const classSectionTermIds = [];
+  for (const termRow of termRows) {
+    classSectionTermIds.push(termRow.classSectionTermId);
   }
 
-  const teacherMappingCount = await classSectionTermRepository.countTeacherMappingsForClassSectionTerm(
-    classSectionTermId,
-    classSectionsId,
+  const teacherMappingCount = await classSectionTermRepository.countTeacherMappingsForClassSectionTerms(
+    classSectionId,
+    classSectionTermIds,
   );
   if (teacherMappingCount > 0) {
     throw new Error(
-      'Teacher employee mapping exists for this class section term. Please remove teacher section mapping (DELETE/PATCH /teacher/teacherSection) and timetable teacher mappings (DELETE /timeTableCreate/mapping) before deleting.',
+      'Teacher employee mapping exists for this class section. Please remove teacher section mapping (DELETE/PATCH /teacher/teacherSection) and timetable teacher mappings (DELETE /timeTableCreate/mapping) before deleting.',
     );
   }
 
-  const studentCount = await classSectionTermRepository.countStudentsForClassSectionTerm(
-    classSectionTermId,
-  );
+  const studentCount = await classSectionTermRepository.countStudentsForClassSectionTerms(classSectionTermIds);
   if (studentCount > 0) {
     throw new Error(
-      'Cannot delete this class section term because students are assigned to it. Remove or reassign students first.',
+      'Cannot delete this class section because students are assigned to one or more terms. Remove or reassign students first.',
     );
   }
 
-  const deleted = await classSectionTermRepository.deleteClassSectionTermById(classSectionTermId);
+  const deleted = await classSectionTermRepository.deleteClassSectionTermsByClassSectionId(classSectionId);
   if (!deleted) {
-    throw new Error('classSectionTermId not found');
+    throw new Error('classSectionId not found');
   }
 
   return {
     success: true,
-    message: 'Class section term deleted successfully.',
-    classSectionTermId: Number(classSectionTermId),
+    message: 'Class section terms deleted successfully.',
+    classSectionId: Number(classSectionId),
+    deletedCount: deleted,
   };
 }

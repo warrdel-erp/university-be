@@ -4526,7 +4526,7 @@
           "response": []
         },
         {
-          "name": "delete class section term",
+          "name": "Delete Class Section Terms",
           "request": {
             "auth": {
               "type": "bearer",
@@ -4541,7 +4541,7 @@
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/classSections/term?classSectionTermId={{classSectionTermId}}",
+              "raw": "{{baseurl}}/classSections/term?classSectionId={{classSectionsId}}",
               "host": [
                 "{{baseurl}}"
               ],
@@ -4551,13 +4551,13 @@
               ],
               "query": [
                 {
-                  "key": "classSectionTermId",
-                  "value": "{{classSectionTermId}}",
-                  "description": "Required — class_section_term PK"
+                  "key": "classSectionId",
+                  "value": "{{classSectionsId}}",
+                  "description": "Required. Deletes all class_section_term rows for this class section."
                 }
               ]
             },
-            "description": "## Delete Class Section Term\n\n**HTTP method:** `DELETE`\n\n**Endpoint:** `DELETE /classSections/term?classSectionTermId=`\n\n**Authentication:** Bearer token required.\n\n### Description\n\nDeletes one `class_section_term` row. Runs guard checks before delete:\n\n1. **Teacher employee mapping** — blocks if teachers are mapped to the parent class section (`teacher_section_mapping`) or if timetable cells with `employeeId` exist for routines on this `classSectionTermId`. Remove mappings first.\n2. **Students** — blocks if any student is assigned via `students.class_section_term_id` or `class_student_mapper.class_section_term_id`.\n\n### Query parameters\n\n| Name | Type | Required | Description |\n|------|------|----------|-------------|\n| `classSectionTermId` | Integer | Yes | `class_section_term.class_section_term_id` |\n\n### Success response (200)\n\n```json\n{\n  \"success\": true,\n  \"message\": \"Class section term deleted successfully.\",\n  \"classSectionTermId\": 197\n}\n```\n\n### Error responses\n\n```json\n{\n  \"success\": false,\n  \"message\": \"Teacher employee mapping exists for this class section term. Please remove teacher section mapping (DELETE/PATCH /teacher/teacherSection) and timetable teacher mappings (DELETE /timeTableCreate/mapping) before deleting.\"\n}\n```\n\n| Status | Reason |\n|--------|--------|\n| 400 | Teacher mapping still present |\n| 400 | Students assigned to this term |\n| 400 | Zod validation (missing/invalid `classSectionTermId`) |\n| 404 | `classSectionTermId` not found |\n| 401 | Unauthorized |\n\n### Business rules\n\n- Delete is blocked when teachers or students are still linked.\n- Does not delete the parent `class_sections` row — only the term placement row.\n- Hard delete (`class_section_term` is not paranoid).\n\n### Prerequisite cleanup\n\n```\nRemove teacher section mapping → /teacher/teacherSection\nRemove timetable teacher cells → DELETE /timeTableCreate/mapping\nReassign/remove students from term\n↓\nDELETE /classSections/term?classSectionTermId=\n```"
+            "description": "## Delete Class Section Terms\n\n**HTTP method:** DELETE\n\n**Endpoint:** DELETE /classSections/term?classSectionId=\n\n**Authentication:** Bearer token required.\n\n### Description\n\nDeletes all class_section_term rows for one class section. Send only classSectionId. The API resolves every term entry for that class section and deletes them together.\n\n### Query Parameters\n\n| Name | Type | Required | Description |\n|------|------|----------|-------------|\n| classSectionId | Integer | Yes | class_sections.class_sections_id. All class_section_term rows for this class section are deleted. |\n\n### Business Rules\n\n* Deletes all term rows for the class section, not one classSectionTermId.\n* Blocks deletion if teacher section mapping exists for the class section.\n* Blocks deletion if timetable cells with employeeId exist for any routine under those class section terms.\n* Blocks deletion if students are assigned to any term for the class section through students.class_section_term_id or class_student_mapper.class_section_term_id.\n\n### Removed Fields\n\n| Field | Status | Replacement |\n|-------|--------|-------------|\n| classSectionTermId | Removed | classSectionId |\n\n### Success Response (200)\n\n```json\n{\n  \"success\": true,\n  \"message\": \"Class section terms deleted successfully\",\n  \"data\": {\n    \"success\": true,\n    \"message\": \"Class section terms deleted successfully.\",\n    \"classSectionId\": 101,\n    \"deletedCount\": 6\n  }\n}\n```\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | Validation error, teacher mapping exists, timetable teacher mapping exists, or students are assigned |\n| 401 | Unauthorized |\n| 404 | classSectionId not found |\n| 500 | Internal Server Error |\n\n### Changelog\n\nv2\n\n- Query changed from classSectionTermId to classSectionId.\n- Delete operation now removes all class_section_term entries for the class section."
           },
           "response": []
         }
@@ -15005,7 +15005,7 @@
           "response": []
         },
         {
-          "name": "class Sections Grouped",
+          "name": "Get Course Class Sections By Year",
           "request": {
             "auth": {
               "type": "bearer",
@@ -15037,15 +15037,17 @@
               "query": [
                 {
                   "key": "courseId",
-                  "value": "{{course_id}}"
+                  "value": "{{course_id}}",
+                  "description": "Required. Course ID."
                 },
                 {
                   "key": "sessionId",
-                  "value": "{{promotion_target_session_id}}"
+                  "value": "{{promotion_target_session_id}}",
+                  "description": "Required. Session ID."
                 }
               ]
             },
-            "description": "**GET /course/termsWithClassSections** — class sections grouped by term (Sem 1, Sem 2, …). Used for **student promotion** dropdown and timetable setup.\n\nAlso under **Students → promotion — class sections dropdown**."
+            "description": "## Get Course Class Sections By Year\n\n**HTTP method:** GET\n\n**Endpoint:** GET /course/termsWithClassSections\n\n**Authentication:** Bearer Token Required (Authorization: Bearer {{token}})\n\n### Description\n\nReturns compact course/session details with class sections grouped by year.\n\nUse this API when the frontend needs to show sections for a selected course and session. The response is no longer grouped by term and no longer returns classSectionTermId.\n\n### Query Parameters\n\n| Name | Type | Required | Default | Description |\n|------|------|----------|---------|-------------|\n| courseId | Number | Yes | - | Course ID. |\n| sessionId | Number | Yes | - | Session ID. |\n\n### Success Response (200)\n\n```json\n{\n  \"status\": \"success\",\n  \"data\": {\n    \"course\": {\n      \"courseId\": 45,\n      \"courseName\": \"Bachelor of Architecture\",\n      \"courseCode\": \"BARCH\",\n      \"termType\": \"Sem\",\n      \"totalTerms\": 6,\n      \"duration\": 3\n    },\n    \"session\": {\n      \"sessionId\": 23,\n      \"sessionName\": \"CST Test Session\"\n    },\n    \"years\": [\n      {\n        \"year\": 1,\n        \"classSections\": [\n          {\n            \"classSectionsId\": 101,\n            \"section\": \"A\"\n          }\n        ]\n      },\n      {\n        \"year\": 2,\n        \"classSections\": [\n          {\n            \"classSectionsId\": 102,\n            \"section\": \"B\"\n          }\n        ]\n      }\n    ]\n  }\n}\n```\n\n### Response Fields\n\n| Field | Type | Description |\n|-------|------|-------------|\n| course.courseId | Number | Course ID. |\n| course.courseName | String | Course name. |\n| course.courseCode | String | Course code. |\n| course.termType | String | Term type label, for example Sem. |\n| course.totalTerms | Number | Total program terms. |\n| course.duration | Number | Course duration value from course setup. |\n| session.sessionId | Number | Session ID. |\n| session.sessionName | String | Session name. |\n| years[].year | Number | Course year. |\n| years[].classSections[].classSectionsId | Number | Class section ID. |\n| years[].classSections[].section | String | Section name. |\n\n### Removed Fields\n\n| Field | Status | Replacement |\n|-------|--------|-------------|\n| termName | Removed | Use course.termType / course.totalTerms for summary display. |\n| term | Removed from grouping | Response groups by years[].year. |\n| classSectionTermId | Removed | Use classSectionsId for this basic section list. |\n| id / name | Removed | Use classSectionsId / section. |\n\n### Business Rules\n\n* Course and session are scoped by authenticated tenant context.\n* Class sections are grouped by class_sections.year.\n* Only minimal IDs are returned: courseId and classSectionsId.\n* No raw term placement IDs are returned in this response.\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | courseId or sessionId validation failed |\n| 401 | Unauthorized |\n| 404 | Course or session not found |\n| 500 | Internal Server Error |\n\n### Changelog\n\nv2\n\n- Response changed from term-grouped array to course/session summary object.\n- Removed termName, term grouping, classSectionTermId, id, and name fields.\n- Added courseName, courseCode, termType, totalTerms, duration, sessionName, and year grouping."
           },
           "response": []
         }
@@ -15611,6 +15613,52 @@
           "response": []
         },
         {
+          "name": "subject",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/employee/subject?employeeId={{employeeId}}&term=3",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "employee",
+                "subject"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "{{employeeId}}",
+                  "description": "Required. Teacher employee ID."
+                },
+                {
+                  "key": "sessionId",
+                  "value": "",
+                  "description": "Optional. Filters subjects to courses in this session."
+                },
+                {
+                  "key": "term",
+                  "value": "3",
+                  "description": "Optional. Filters returned subjects and nested assessments by program term."
+                }
+              ]
+            },
+            "description": "## Get Teacher Subjects\n\n**HTTP method:** GET\n\n**Endpoint:** GET /employee/subject\n\n**Authentication:** Bearer Token Required (Authorization: Bearer {{token}})\n\n### Description\n\nReturns subject mappings for a teacher from teacher_subject_mapping with nested subject, course, and internal assessment data.\n\nUse this API when loading a teacher's subjects. The optional term filter limits the result to subjects for a specific program term.\n\n### Query Parameters\n\n| Name | Type | Required | Default | Description |\n|------|------|----------|---------|-------------|\n| employeeId | Number | Yes | - | Teacher employee ID. |\n| sessionId | Number | No | - | Filters subjects to courses available in the selected session. |\n| term | Number | No | - | Filters subjects by subject.term and nested internal assessments by internal_assessment.term. |\n\n### Success Response (200)\n\n```json\n[\n  {\n    \"teacherSubjectMappingId\": 201,\n    \"employeeId\": 99,\n    \"subjectId\": 304,\n    \"employeeSubject\": {\n      \"subjectId\": 304,\n      \"subjectName\": \"Architectural Design Studio\",\n      \"subjectCode\": \"ADS-301\",\n      \"subjectType\": \"Theory\",\n      \"subjectCategory\": \"Core\",\n      \"term\": 3,\n      \"courseInfo\": {\n        \"courseId\": 34,\n        \"courseName\": \"Bachelor of Architecture\",\n        \"courseCode\": \"BARCH\"\n      },\n      \"subjectAssessments\": [\n        {\n          \"examAssessmentId\": 101,\n          \"subjectId\": 304,\n          \"employeeId\": 99,\n          \"term\": 3,\n          \"examSetupTypeId\": 5,\n          \"type\": \"Assignment\",\n          \"totalMarks\": 100,\n          \"weightage\": 20,\n          \"publishDate\": \"2026-07-04T00:00:00.000Z\",\n          \"dueDate\": \"2026-07-15T00:00:00.000Z\",\n          \"description\": \"Unit 1 assessment\",\n          \"file\": null,\n          \"assessmentExamType\": {\n            \"examSetupTypeId\": 5,\n            \"examType\": \"Internal\",\n            \"examName\": \"Internal Assessment 1\",\n            \"examStructure\": null\n          }\n        }\n      ]\n    }\n  }\n]\n```\n\n### Business Rules\n\n* Academic year comes from auth context, not from the query string.\n* If sessionId is provided, subjects are limited to courses mapped to that session.\n* If term is provided, subjects must match subject.term and nested assessments must match internal_assessment.term.\n* If term is omitted, existing behavior is unchanged and all teacher subjects for the scoped academic year/session are returned.\n\n### Removed / Not Used Fields\n\n| Field | Status | Replacement |\n|-------|--------|-------------|\n| semesterId | Not used | term |\n| classId / sectionId | Not used | Use timetable/class-section-term APIs when placement is needed |\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | employeeId, sessionId, or term validation failed |\n| 401 | Unauthorized |\n| 500 | Internal Server Error |"
+          },
+          "response": []
+        },
+        {
           "name": "unique ClassSection Subjects",
           "event": [
             {
@@ -16047,7 +16095,7 @@
           ]
         },
         {
-          "name": "promotion — class sections dropdown",
+          "name": "Get Course Class Sections By Year",
           "event": [
             {
               "listen": "test",
@@ -16101,16 +16149,16 @@
                 {
                   "key": "courseId",
                   "value": "{{course_id}}",
-                  "description": "Student's courseId"
+                  "description": "Required. Course ID."
                 },
                 {
                   "key": "sessionId",
                   "value": "{{promotion_target_session_id}}",
-                  "description": "Target year session (Morning 2026, not 2025)"
+                  "description": "Required. Session ID."
                 }
               ]
             },
-            "description": "**GET /course/termsWithClassSections** — legacy promotion dropdown (session-based).\n\nPrefer **GET /student/promotion/available-section** for term + academic-year aware promotion targets."
+            "description": "## Get Course Class Sections By Year\n\n**HTTP method:** GET\n\n**Endpoint:** GET /course/termsWithClassSections\n\n**Authentication:** Bearer Token Required (Authorization: Bearer {{token}})\n\n### Description\n\nReturns compact course/session details with class sections grouped by year.\n\nUse this API when the frontend needs to show sections for a selected course and session. The response is no longer grouped by term and no longer returns classSectionTermId.\n\n### Query Parameters\n\n| Name | Type | Required | Default | Description |\n|------|------|----------|---------|-------------|\n| courseId | Number | Yes | - | Course ID. |\n| sessionId | Number | Yes | - | Session ID. |\n\n### Success Response (200)\n\n```json\n{\n  \"status\": \"success\",\n  \"data\": {\n    \"course\": {\n      \"courseId\": 45,\n      \"courseName\": \"Bachelor of Architecture\",\n      \"courseCode\": \"BARCH\",\n      \"termType\": \"Sem\",\n      \"totalTerms\": 6,\n      \"duration\": 3\n    },\n    \"session\": {\n      \"sessionId\": 23,\n      \"sessionName\": \"CST Test Session\"\n    },\n    \"years\": [\n      {\n        \"year\": 1,\n        \"classSections\": [\n          {\n            \"classSectionsId\": 101,\n            \"section\": \"A\"\n          }\n        ]\n      },\n      {\n        \"year\": 2,\n        \"classSections\": [\n          {\n            \"classSectionsId\": 102,\n            \"section\": \"B\"\n          }\n        ]\n      }\n    ]\n  }\n}\n```\n\n### Response Fields\n\n| Field | Type | Description |\n|-------|------|-------------|\n| course.courseId | Number | Course ID. |\n| course.courseName | String | Course name. |\n| course.courseCode | String | Course code. |\n| course.termType | String | Term type label, for example Sem. |\n| course.totalTerms | Number | Total program terms. |\n| course.duration | Number | Course duration value from course setup. |\n| session.sessionId | Number | Session ID. |\n| session.sessionName | String | Session name. |\n| years[].year | Number | Course year. |\n| years[].classSections[].classSectionsId | Number | Class section ID. |\n| years[].classSections[].section | String | Section name. |\n\n### Removed Fields\n\n| Field | Status | Replacement |\n|-------|--------|-------------|\n| termName | Removed | Use course.termType / course.totalTerms for summary display. |\n| term | Removed from grouping | Response groups by years[].year. |\n| classSectionTermId | Removed | Use classSectionsId for this basic section list. |\n| id / name | Removed | Use classSectionsId / section. |\n\n### Business Rules\n\n* Course and session are scoped by authenticated tenant context.\n* Class sections are grouped by class_sections.year.\n* Only minimal IDs are returned: courseId and classSectionsId.\n* No raw term placement IDs are returned in this response.\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | courseId or sessionId validation failed |\n| 401 | Unauthorized |\n| 404 | Course or session not found |\n| 500 | Internal Server Error |\n\n### Changelog\n\nv2\n\n- Response changed from term-grouped array to course/session summary object.\n- Removed termName, term grouping, classSectionTermId, id, and name fields.\n- Added courseName, courseCode, termType, totalTerms, duration, sessionName, and year grouping."
           },
           "response": []
         },
@@ -16803,6 +16851,11 @@
     {
       "key": "internalAssessment_evaluationId",
       "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "employee_subject_term",
+      "value": "3",
       "type": "string"
     }
   ]
