@@ -13,7 +13,7 @@ function omitAcademicYearScope(scopeWhere = {}) {
 export async function getCourseByCourseId(courseId) {
   try {
     return await scoped(model.courseModel).findOne({
-      attributes: ['courseId', 'universityId', 'instituteId', 'courseDuration', 'isActive', 'termType', 'totalTerms'],
+      attributes: ['courseId', 'courseName', 'courseCode', 'universityId', 'instituteId', 'courseDuration', 'isActive', 'termType', 'totalTerms'],
       where: { courseId },
     });
   } catch (error) {
@@ -362,9 +362,23 @@ export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
       where: { courseId, sessionId },
       include: [classSectionTermsInclude()],
       attributes: ['classSectionsId', 'section', 'year'],
+      order: [['year', 'ASC'], ['section', 'ASC']],
     });
   } catch (error) {
     console.error('Error in Course Repository (getClassSectionsByCourseAndSession):', error);
+    throw error;
+  }
+}
+
+export async function getSessionSummaryById(sessionId) {
+  try {
+    return await scoped(model.sessionModel).findOne({
+      where: { sessionId },
+      attributes: ['sessionId', 'sessionName'],
+      raw: true,
+    });
+  } catch (error) {
+    console.error('Error in Course Repository (getSessionSummaryById):', error);
     throw error;
   }
 }

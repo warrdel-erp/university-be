@@ -169,15 +169,12 @@ export const getTeacherTimeTable = async (req, res) => {
 
 export const getTeacherSubject = async (req, res) => {
     try {
-        const { employeeId, sessionId } = req.query;
+        const { employeeId, sessionId, term } = req.query;
         const academicYearId = getAcademicYearId();
 
-        if (!employeeId) {
-            return res.status(400).send("employeeId is required");
-        }
-
         const result = await employee.getTeacherSubject(employeeId, {
-            sessionId: sessionId != null && sessionId !== '' ? Number(sessionId) : undefined,
+            sessionId,
+            term,
             academicYearId: academicYearId != null && academicYearId !== '' ? Number(academicYearId) : undefined,
         });
 
