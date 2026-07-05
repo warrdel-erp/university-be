@@ -11,7 +11,10 @@ import {
   addElectiveSubject,
   getSectionStudentMapping,
   promoteStudent,
+  promotionPassed,
+  promotionFailed,
   getPromotionAvailableSection,
+  getPromotionAvailableSectionRepeat,
   getPromotionStudentList,
   getStudentPromotionHistory,
   getFeePlanInitiate,
@@ -417,6 +420,39 @@ const promoteStudentBodySchema = z.union([
   ),
 ]);
 
+const promotionPassedBodySchema = z.union([
+  z.object({
+    studentId: positiveIntegerId,
+  }),
+  z.array(
+    z.object({
+      studentId: positiveIntegerId,
+    }),
+  ),
+]);
+
+const promotionFailedBodySchema = z.union([
+  z.object({
+    studentId: positiveIntegerId,
+    classSectionTermId: positiveIntegerId,
+  }),
+  z.array(
+    z.object({
+      studentId: positiveIntegerId,
+      classSectionTermId: positiveIntegerId,
+    }),
+  ),
+]);
+
+const promotionAvailableRepeatClassSectionQuerySchema = z.object({
+  courseId: z.coerce.number({ required_error: "courseId is required" }).int().positive(),
+  term: z.coerce.number({ required_error: "term is required" }).int().positive(),
+  classSectionTermId: z.coerce
+    .number({ required_error: "classSectionTermId is required" })
+    .int()
+    .positive(),
+});
+
 const sectionStudentMappingQuerySchema = z.object({
   classSectionTermId: z.coerce.number().int().nonnegative().optional(),
   term: z.coerce.number().int().positive().optional(),
@@ -500,11 +536,32 @@ router.post(
   promoteStudent,
 );
 
+router.post(
+  "/promotion/passed",
+  userAuth,
+  validate({ body: promotionPassedBodySchema }),
+  promotionPassed,
+);
+
+router.post(
+  "/promotion/failed",
+  userAuth,
+  validate({ body: promotionFailedBodySchema }),
+  promotionFailed,
+);
+
 router.get(
   "/promotion/available-section",
   userAuth,
   validate({ query: promotionAvailableClassSectionQuerySchema }),
   getPromotionAvailableSection,
+);
+
+router.get(
+  "/promotion/availableSectionRepeat",
+  userAuth,
+  validate({ query: promotionAvailableRepeatClassSectionQuerySchema }),
+  getPromotionAvailableSectionRepeat,
 );
 
 router.get(

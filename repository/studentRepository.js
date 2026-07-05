@@ -455,6 +455,7 @@ const promotionStudentAttributes = [
     'classSectionTermId',
     'sessionId',
     'admisssionDate',
+    'studentStatus',
 ];
 
 export async function getPromotionStudentByStudentId(studentId) {
@@ -1243,6 +1244,26 @@ export async function addElectiveSubject(data) {
         throw error;
     }
 };
+
+export async function updateStudentStatus(studentId, studentStatus, transaction) {
+    try {
+        const existing = await assertScopedStudent(studentId, { transaction });
+        if (!existing) {
+            return [0];
+        }
+
+        return scoped(model.studentModel).update(
+            { studentStatus },
+            {
+                where: { studentId },
+                transaction,
+            },
+        );
+    } catch (error) {
+        console.error(`Error updating student status ${studentId}:`, error);
+        throw error;
+    }
+}
 
 export async function promoteStudent(studentId, data, transaction) {
     try {

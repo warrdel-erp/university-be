@@ -56,3 +56,27 @@ export async function bulkCreateHistory(dataList, transaction) {
     }
     return model.studentClassSectionsHistoryModel.bulkCreate(dataList, { transaction });
 }
+
+export async function updateHistoryStatusByStudentAndTermId(
+    { studentId, classSectionTermId, status },
+    transaction,
+) {
+    const student = await assertStudentInScope(studentId, transaction);
+    if (!student) {
+        throw new Error("Student not found");
+    }
+
+    const [updatedCount] = await model.studentClassSectionsHistoryModel.update(
+        { status },
+        {
+            where: {
+                studentId,
+                classSectionTermId,
+                status: "current",
+            },
+            transaction,
+        },
+    );
+
+    return updatedCount;
+}

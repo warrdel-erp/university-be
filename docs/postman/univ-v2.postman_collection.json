@@ -15739,7 +15739,7 @@
     },
     {
       "name": "Students",
-      "description": "Student APIs — **classSectionTermId** placement key.\n\nPromotion: GET student → GET promotion/available-section (`classSectionTermId`) → POST promoteStudent.\nMapping: GET/POST /student/sectionStudentMapping with `classSectionTermId`.",
+      "description": "Student APIs — **classSectionTermId** placement key.\n\n**Promotion flow:**\n1. GET /student?studentId= — load `classSectionTermId`, `course_id`, `promotion_current_term`\n2. User selects outcome:\n   - **Passed (not final)** → GET /student/promotion/available-section → POST /student/promoteStudent\n   - **Passed (final term)** → GET /student/promotion/available-section (`finalTerm: true`) → POST /student/promotion/passed\n   - **Failed** → GET /student/promotion/available-section-repeat → POST /student/promotion/failed\n3. GET /student/promotion/history (audit)\n\nMapping: GET/POST /student/sectionStudentMapping with `classSectionTermId`.",
       "item": [
         {
           "name": "GET sectionStudentMapping",
@@ -16126,6 +16126,11 @@
                   "const body = pm.response.json();",
                   "const data = body.data || body;",
                   "if (data.academicYearId) pm.collectionVariables.set('promotion_target_academicYear_id', String(data.academicYearId));",
+                  "if (data.finalTerm === true) {",
+                  "  pm.collectionVariables.set('promotion_final_term', 'true');",
+                  "} else {",
+                  "  pm.collectionVariables.set('promotion_final_term', 'false');",
+                  "}",
                   "if (Array.isArray(data.classSections) && data.classSections[0]) {",
                   "  const row = data.classSections[0];",
                   "  if (row.classSectionTermId) pm.collectionVariables.set('targetClassSectionTermId', String(row.classSectionTermId));",
@@ -16175,9 +16180,100 @@
                 }
               ]
             },
-            "description": "**GET /student/promotion/available-section** — `courseId`, `term`, `classSectionTermId`. Response `classSections[]` includes target `classSectionTermId`."
+            "description": "**GET /student/promotion/available-section**\n\n**Authentication:** Bearer Token Required\n\n### Query Parameters\n\n| Name | Type | Required | Description |\n|------|------|----------|-------------|\n| courseId | Number | Yes | Student's program course ID |\n| term | Number | Yes | Student's current program term |\n| classSectionTermId | Number | Yes | Student's current placement key |\n\n### Success — next term promotion\n\nWhen the student is not on the final term, response includes target sections:\n\n```json\n{\n  \"success\": true,\n  \"message\": \"Promotion class sections fetched successfully\",\n  \"data\": {\n    \"finalTerm\": false,\n    \"currentTerm\": 5,\n    \"promotedTerm\": 6,\n    \"academicYearId\": 59,\n    \"crossYear\": true,\n    \"classSections\": [\n      {\n        \"classSectionsId\": 882,\n        \"name\": \"A\",\n        \"term\": 6,\n        \"classSectionTermId\": 208,\n        \"sessionId\": 25,\n        \"academicYearId\": 60\n      }\n    ]\n  }\n}\n```\n\n`classSections[]` uses the same flat shape as **GET /student/promotion/available-section-repeat** (`name`, `classSectionTermId`, `sessionId`, `academicYearId` on each row).\n\nUse `classSections[].classSectionTermId` with **POST /student/promoteStudent**. When `crossYear: true`, the target section is in the next academic year (`academicYearId` / `sessionId` on each row).\n\n### Success — final term (program complete)\n\nWhen the student is on the last program term:\n\n```json\n{\n  \"success\": true,\n  \"message\": \"Final term reached\",\n  \"data\": {\n    \"finalTerm\": true,\n    \"currentTerm\": 6,\n    \"promotedTerm\": null,\n    \"academicYearId\": 60,\n    \"crossYear\": false,\n    \"classSections\": []\n  }\n}\n```\n\nDo **not** call POST /student/promoteStudent. Call **POST /student/promotion/passed** with `{ \"studentId\": <id> }` instead.\n\n### Business Rules\n\n* `term` must be the student's current term or the next promotion term.\n* `finalTerm: true` when `currentTerm >= course.totalTerms`.\n* Empty `classSections` on final term is expected.\n\n### Changelog\n\nv2\n\n* Added `finalTerm` flag and final-term empty `classSections` response.\n* Documented branch to POST /student/promotion/passed when `finalTerm: true`.\n* `classSections[]` returned as flat rows (`name`, `classSectionTermId`, etc.) — same shape as available-section-repeat."
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK — next term",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Promotion class sections fetched successfully\",\n  \"data\": {\n    \"finalTerm\": false,\n    \"currentTerm\": 5,\n    \"promotedTerm\": 6,\n    \"academicYearId\": 59,\n    \"crossYear\": true,\n    \"classSections\": [\n      {\n        \"classSectionsId\": 882,\n        \"name\": \"A\",\n        \"term\": 6,\n        \"classSectionTermId\": 208,\n        \"sessionId\": 25,\n        \"academicYearId\": 60,\n        \"specializationId\": null\n      }\n    ]\n  }\n}"
+            },
+            {
+              "name": "200 OK — final term",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Final term reached\",\n  \"data\": {\n    \"finalTerm\": true,\n    \"currentTerm\": 6,\n    \"promotedTerm\": null,\n    \"academicYearId\": 60,\n    \"crossYear\": false,\n    \"classSections\": []\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "promotion — available repeat sections (failed)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "const data = body.data || body;",
+                  "if (data.academicYearId) pm.collectionVariables.set('repeat_target_academicYear_id', String(data.academicYearId));",
+                  "if (Array.isArray(data.classSections) && data.classSections[0]) {",
+                  "  const row = data.classSections[0];",
+                  "  if (row.classSectionTermId) pm.collectionVariables.set('repeatTargetClassSectionTermId', String(row.classSectionTermId));",
+                  "  if (row.sessionId) pm.collectionVariables.set('repeat_target_session_id', String(row.sessionId));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/student/promotion/available-section-repeat?courseId={{course_id}}&term={{promotion_current_term}}&classSectionTermId={{classSectionTermId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "promotion",
+                "available-section-repeat"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "{{course_id}}"
+                },
+                {
+                  "key": "term",
+                  "value": "{{promotion_current_term}}",
+                  "description": "Student's current program term (unchanged on repeat)"
+                },
+                {
+                  "key": "classSectionTermId",
+                  "value": "{{classSectionTermId}}",
+                  "description": "Student's current classSectionTermId"
+                }
+              ]
+            },
+            "description": "**GET /student/promotion/available-section-repeat**\n\n**Authentication:** Bearer Token Required\n\nLists target class sections when a student **fails** a term: same program term, **next academic year**.\n\nUse before **POST /student/promotion/failed**.\n\n### Query Parameters\n\n| Name | Type | Required | Description |\n|------|------|----------|-------------|\n| courseId | Number | Yes | Student's program course ID |\n| term | Number | Yes | Student's current program term |\n| classSectionTermId | Number | Yes | Student's current placement key |\n\n### Success Response (200)\n\n```json\n{\n  \"success\": true,\n  \"message\": \"Repeat class sections fetched successfully\",\n  \"data\": {\n    \"repeatTerm\": 4,\n    \"currentTerm\": 4,\n    \"academicYearId\": 60,\n    \"previousAcademicYearId\": 59,\n    \"crossYear\": true,\n    \"classSections\": [\n      {\n        \"classSectionsId\": 900,\n        \"name\": \"A\",\n        \"term\": 4,\n        \"classSectionTermId\": 220,\n        \"sessionId\": 25,\n        \"academicYearId\": 60\n      }\n    ]\n  }\n}\n```\n\nUse `classSections[].classSectionTermId` with **POST /student/promotion/failed**.\n\n### Business Rules\n\n* `term` must equal the student's current term.\n* Repeat is allowed only on the **last term of the academic year** (`currentTerm % termsPerYear === 0`).\n* Target sections are in the **next** academic year after the student's current placement.\n* Empty `classSections` returns **404** (no section configured for that term in the next year).\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | Missing/invalid params; term mismatch; not last term of academic year |\n| 404 | classSectionTermId, course, or next-year sections not found |\n| 500 | Internal server error |\n\n### Sample Flow\n\n```\nGET /student?studentId=\n↓\nGET /student/promotion/available-section-repeat\n↓\nPOST /student/promotion/failed\n↓\nGET /student/promotion/history\n```\n\n### Changelog\n\nv1\n\n* New endpoint for failed-term repeat (same term, next academic year)."
+          },
+          "response": [
+            {
+              "name": "200 OK — repeat sections",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Repeat class sections fetched successfully\",\n  \"data\": {\n    \"repeatTerm\": 4,\n    \"currentTerm\": 4,\n    \"academicYearId\": 60,\n    \"previousAcademicYearId\": 59,\n    \"crossYear\": true,\n    \"classSections\": [\n      {\n        \"classSectionsId\": 900,\n        \"name\": \"A\",\n        \"term\": 4,\n        \"classSectionTermId\": 220,\n        \"sessionId\": 25,\n        \"academicYearId\": 60,\n        \"specializationId\": null\n      }\n    ]\n  }\n}"
+            }
+          ]
         },
         {
           "name": "promotion — all students history",
@@ -16229,7 +16325,7 @@
                 }
               ]
             },
-            "description": "**GET /student/promotion/history?programCourseId=**\n\nPaginated list of all students in a course with promotion history.\n\nEach row includes: `studentName`, `termType`, `admissionAcedmicYearTitle`, `passedClassSections[]`, `promotedTo`, `promotionTermHistory[]` with `yearTitle` (e.g. 2026-2027)."
+            "description": "**GET /student/promotion/history?programCourseId=**\n\n**Authentication:** Bearer Token Required\n\nPaginated list of all students in a course with promotion history.\n\n### Query Parameters\n\n| Name | Type | Required | Description |\n|------|------|----------|-------------|\n| programCourseId | Number | Yes | Program course ID |\n| page | Number | No | Default `1` |\n| limit | Number | No | Default `20`, max `100` |\n| studentSearch | String | No | Search by name / scholar / enroll number |\n| promotionTerm | Number | No | Filter by current program term |\n\n### Response — each student in `data.students[]`\n\n| Field | Description |\n|-------|-------------|\n| studentName | Full name |\n| studentStatus | `active`, `alumni`, etc. |\n| termType | From course (e.g. SEMESTER) |\n| currentPromotionTerm | Active: current term; **alumni: final passed term** |\n| passedClassSections[] | Terms with `promotionStatus: passed` (includes final term when alumni) |\n| failedClassSections[] | Terms with `promotionStatus: failed` (repeat same term, next AY) |\n| promotedTo | Current placement; **`null` when alumni** |\n| promotionTermHistory[] | Full timeline: `passed`, `failed`, `current` |\n\n### promotionStatus enum\n\n```\npassed\nfailed\ncurrent\n```\n\n### Alumni (final term passed)\n\nAfter **POST /student/promotion/passed**, the student has `studentStatus: alumni`. History shows the final term as `passed` only — no `current` row. `promotedTo` is `null`.\n\n### Failed repeat\n\nAfter **POST /student/promotion/failed**, the failed term appears in `failedClassSections[]` and `promotionTermHistory[]` with `promotionStatus: failed`. The new placement appears as `current`.\n\n### Changelog\n\nv2\n\n* Wired formatted response with `promotionTermHistory`, `passedClassSections`, `failedClassSections`.\n* Alumni students show final term as `passed`; `promotedTo` is null.\n* Failed repeat terms included in history."
           },
           "response": []
         },
@@ -16243,7 +16339,9 @@
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
                   "const body = pm.response.json();",
                   "const data = body.data || body;",
-                  "pm.test('promotionTermHistory is array', () => Array.isArray(data.promotionTermHistory));"
+                  "pm.test('promotionTermHistory is array', () => Array.isArray(data.promotionTermHistory));",
+                  "if (data.failedClassSections) pm.test('failedClassSections is array', () => Array.isArray(data.failedClassSections));",
+                  "if (data.studentStatus === 'alumni') pm.test('alumni has no promotedTo', () => pm.expect(data.promotedTo).to.eql(null));"
                 ],
                 "type": "text/javascript"
               }
@@ -16279,7 +16377,7 @@
                 }
               ]
             },
-            "description": "**GET /student/promotion/history?studentId=**\n\nSingle student promotion profile.\n\nIncludes `termType`, `admissionAcedmicYearTitle`, `passedClassSections[]` (passed term + section + yearTitle), `promotedTo` (current term + yearTitle), and full `promotionTermHistory`."
+            "description": "**GET /student/promotion/history?studentId=**\n\n**Authentication:** Bearer Token Required\n\nSingle student promotion profile.\n\nIncludes `studentStatus`, `termType`, `admissionAcedmicYearTitle`, `passedClassSections[]`, `failedClassSections[]`, `promotedTo` (null when alumni), and full `promotionTermHistory[]` with `promotionStatus` of `passed`, `failed`, or `current`.\n\n### Alumni example\n\nAfter final-term pass, `studentStatus` is `alumni`, final term is in `passedClassSections` and `promotionTermHistory` with `promotionStatus: passed`, and `promotedTo` is `null`.\n\n### Failed example\n\nAfter repeat promotion, failed term appears with `promotionStatus: failed` in both `failedClassSections` and `promotionTermHistory`."
           },
           "response": [
             {
@@ -16288,7 +16386,15 @@
               "code": 200,
               "_postman_previewlanguage": "json",
               "header": [],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Student promotion history fetched successfully\",\n  \"data\": {\n    \"studentId\": 101,\n    \"studentName\": \"John Doe\",\n    \"scholarNumber\": \"SCH-001\",\n    \"currentPromotionTerm\": 2,\n    \"currentClassSectionId\": 195,\n    \"currentClassSectionName\": \"A\",\n    \"admissionAcedmicYearId\": 59,\n    \"admissionAcedmicYearTitle\": \"2024-25\",\n    \"promotionTermHistory\": [\n      {\n        \"promotionHistoryId\": 12,\n        \"promotionTerm\": 1,\n        \"promotionStatus\": \"passed\",\n        \"classSectionId\": 180,\n        \"classSectionName\": \"A\",\n        \"acedmicYearId\": 59,\n        \"acedmicYearTitle\": \"2024-25\"\n      },\n      {\n        \"promotionHistoryId\": null,\n        \"promotionTerm\": 2,\n        \"promotionStatus\": \"current\",\n        \"classSectionId\": 195,\n        \"classSectionName\": \"A\",\n        \"acedmicYearId\": 59,\n        \"acedmicYearTitle\": \"2024-25\"\n      }\n    ]\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"Student promotion history fetched successfully\",\n  \"data\": {\n    \"studentId\": 101,\n    \"studentName\": \"John Doe\",\n    \"scholarNumber\": \"SCH-001\",\n    \"studentStatus\": \"active\",\n    \"termType\": \"SEMESTER\",\n    \"currentPromotionTerm\": 4,\n    \"currentClassSectionId\": 900,\n    \"currentClassSectionName\": \"A\",\n    \"classSectionTermId\": 220,\n    \"admissionAcedmicYearId\": 59,\n    \"admissionAcedmicYearTitle\": \"2024-25\",\n    \"passedClassSections\": [\n      {\n        \"promotionHistoryId\": 12,\n        \"promotionTerm\": 1,\n        \"promotionStatus\": \"passed\",\n        \"classSectionTermId\": 101,\n        \"classSectionId\": 180,\n        \"classSectionName\": \"A\",\n        \"acedmicYearId\": 59,\n        \"acedmicYearTitle\": \"2024-25\"\n      },\n      {\n        \"promotionHistoryId\": 14,\n        \"promotionTerm\": 2,\n        \"promotionStatus\": \"passed\",\n        \"classSectionTermId\": 128,\n        \"classSectionId\": 195,\n        \"classSectionName\": \"A\",\n        \"acedmicYearId\": 59,\n        \"acedmicYearTitle\": \"2024-25\"\n      }\n    ],\n    \"failedClassSections\": [\n      {\n        \"promotionHistoryId\": 18,\n        \"promotionTerm\": 4,\n        \"promotionStatus\": \"failed\",\n        \"classSectionTermId\": 128,\n        \"classSectionId\": 195,\n        \"classSectionName\": \"A\",\n        \"acedmicYearId\": 59,\n        \"acedmicYearTitle\": \"2025-26\"\n      }\n    ],\n    \"promotedTo\": {\n      \"promotionTerm\": 4,\n      \"classSectionTermId\": 220,\n      \"classSectionId\": 900,\n      \"classSectionName\": \"A\",\n      \"acedmicYearId\": 60,\n      \"acedmicYearTitle\": \"2026-27\"\n    },\n    \"promotionTermHistory\": [\n      {\n        \"promotionHistoryId\": 12,\n        \"promotionTerm\": 1,\n        \"promotionStatus\": \"passed\",\n        \"classSectionTermId\": 101,\n        \"classSectionId\": 180,\n        \"classSectionName\": \"A\",\n        \"acedmicYearId\": 59,\n        \"acedmicYearTitle\": \"2024-25\"\n      },\n      {\n        \"promotionHistoryId\": 14,\n        \"promotionTerm\": 2,\n        \"promotionStatus\": \"passed\",\n        \"classSectionTermId\": 128,\n        \"classSectionId\": 195,\n        \"classSectionName\": \"A\",\n        \"acedmicYearId\": 59,\n        \"acedmicYearTitle\": \"2024-25\"\n      },\n      {\n        \"promotionHistoryId\": 18,\n        \"promotionTerm\": 4,\n        \"promotionStatus\": \"failed\",\n        \"classSectionTermId\": 128,\n        \"classSectionId\": 195,\n        \"classSectionName\": \"A\",\n        \"acedmicYearId\": 59,\n        \"acedmicYearTitle\": \"2025-26\"\n      },\n      {\n        \"promotionHistoryId\": 20,\n        \"promotionTerm\": 4,\n        \"promotionStatus\": \"current\",\n        \"classSectionTermId\": 220,\n        \"classSectionId\": 900,\n        \"classSectionName\": \"A\",\n        \"acedmicYearId\": 60,\n        \"acedmicYearTitle\": \"2026-27\"\n      }\n    ]\n  }\n}"
+            },
+            {
+              "name": "200 OK — alumni",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Student promotion history fetched successfully\",\n  \"data\": {\n    \"studentId\": 102,\n    \"studentName\": \"Jane Smith\",\n    \"scholarNumber\": \"SCH-002\",\n    \"studentStatus\": \"alumni\",\n    \"termType\": \"SEMESTER\",\n    \"currentPromotionTerm\": 6,\n    \"currentClassSectionId\": 882,\n    \"currentClassSectionName\": \"A\",\n    \"classSectionTermId\": 208,\n    \"admissionAcedmicYearId\": 59,\n    \"admissionAcedmicYearTitle\": \"2024-25\",\n    \"passedClassSections\": [\n      {\n        \"promotionHistoryId\": 30,\n        \"promotionTerm\": 6,\n        \"promotionStatus\": \"passed\",\n        \"classSectionTermId\": 208,\n        \"classSectionId\": 882,\n        \"classSectionName\": \"A\",\n        \"acedmicYearId\": 60,\n        \"acedmicYearTitle\": \"2026-27\"\n      }\n    ],\n    \"failedClassSections\": [],\n    \"promotedTo\": null,\n    \"promotionTermHistory\": [\n      {\n        \"promotionHistoryId\": 30,\n        \"promotionTerm\": 6,\n        \"promotionStatus\": \"passed\",\n        \"classSectionTermId\": 208,\n        \"classSectionId\": 882,\n        \"classSectionName\": \"A\",\n        \"acedmicYearId\": 60,\n        \"acedmicYearTitle\": \"2026-27\"\n      }\n    ]\n  }\n}"
             }
           ]
         },
@@ -16350,7 +16456,7 @@
                 "promoteStudent"
               ]
             },
-            "description": "**POST /student/promoteStudent** — `studentId`, `classSectionTermId` (target)."
+            "description": "**POST /student/promoteStudent**\n\n**Authentication:** Bearer Token Required\n\n**Headers:** `Content-Type: application/json`, optional `X-Academic-Year-Id` for target year context on cross-year promotion.\n\nUse only when GET /student/promotion/available-section returns `finalTerm: false`. Do not use on the final program term — use POST /student/promotion/passed instead.\n\n### Request Body\n\n| Field | Type | Required | Description |\n|-------|------|----------|-------------|\n| studentId | Number | Yes | Student to promote |\n| classSectionTermId | Number | Yes | Target term placement from `available-section` response |\n\n```json\n{\n  \"studentId\": 101,\n  \"classSectionTermId\": 208\n}\n```\n\n### Success Response (200)\n\nUpdates student placement, marks previous term history as `passed`, creates new `current` history row. When promotion crosses an academic year boundary, `promotion.crossYear` is `true`.\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | Missing fields; student on final term; invalid target term |\n| 404 | Student or target not found |\n| 500 | Transaction / DB error |\n\n### Changelog\n\nv2\n\n* Cross-year promotion documented via `crossYear` in response.\n* Final-term students must use POST /student/promotion/passed."
           },
           "response": [
             {
@@ -16406,7 +16512,233 @@
                 "promoteStudent"
               ]
             },
-            "description": "**POST /student/promoteStudent** — `studentId`, `classSectionTermId` (target)."
+            "description": "**POST /student/promoteStudent** (bulk)\n\n**Authentication:** Bearer Token Required\n\nSame rules as single promote. Use when `finalTerm: false`. Each item requires `studentId` and `classSectionTermId`.\n\n```json\n[\n  { \"studentId\": 101, \"classSectionTermId\": 208 },\n  { \"studentId\": 102, \"classSectionTermId\": 208 }\n]\n```\n\nReturns an array of per-student promotion results."
+          },
+          "response": []
+        },
+        {
+          "name": "promotion — mark failed (repeat same term)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "const data = body.data || body;",
+                  "pm.test('studentStatus active', () => pm.expect(data.studentStatus).to.eql('active'));",
+                  "pm.test('promotionHistoryStatus failed', () => pm.expect(data.promotionHistoryStatus).to.eql('failed'));",
+                  "if (data.repeat && data.repeat.current && data.repeat.current.classSectionTermId) {",
+                  "  pm.collectionVariables.set('classSectionTermId', String(data.repeat.current.classSectionTermId));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": {{studentId}},\n  \"classSectionTermId\": {{repeatTargetClassSectionTermId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/student/promotion/failed",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "promotion",
+                "failed"
+              ]
+            },
+            "description": "**POST /student/promotion/failed**\n\n**Authentication:** Bearer Token Required\n\n**Headers:** `Content-Type: application/json`\n\nMoves a student who **failed** a term to the **same program term** in the **next academic year**. Use after **GET /student/promotion/available-section-repeat**.\n\nDoes **not** change `studentStatus` (remains `active`). Marks previous placement history as `failed` and creates a new `current` history row.\n\n### Request Body\n\n| Field | Type | Required | Description |\n|-------|------|----------|-------------|\n| studentId | Number | Yes | Student to mark as failed |\n| classSectionTermId | Number | Yes | Target term placement from `available-section-repeat` response |\n\n```json\n{\n  \"studentId\": 101,\n  \"classSectionTermId\": 220\n}\n```\n\n### Success Response (200)\n\n```json\n{\n  \"success\": true,\n  \"message\": \"Student marked as failed and retained in same term for next academic year\",\n  \"data\": {\n    \"studentId\": 101,\n    \"studentStatus\": \"active\",\n    \"term\": 4,\n    \"promotionHistoryStatus\": \"failed\",\n    \"repeat\": {\n      \"previous\": {\n        \"academicYearId\": 59,\n        \"classSectionTermId\": 128,\n        \"classSectionsId\": 195,\n        \"sessionId\": 6\n      },\n      \"current\": {\n        \"academicYearId\": 60,\n        \"classSectionTermId\": 220,\n        \"classSectionsId\": 900,\n        \"sessionId\": 25\n      },\n      \"crossYear\": true\n    }\n  }\n}\n```\n\n### Business Rules\n\n* Target `term` must equal the student's current term (not next term).\n* Target `academicYearId` must be the next academic year after current placement.\n* Repeat allowed only on last term of academic year (`currentTerm % termsPerYear === 0`).\n* Rejects students with `studentStatus: alumni`.\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | Missing fields; invalid target term/year; eligibility rule failed |\n| 404 | Student or target section not found |\n| 409 | Student is already alumni |\n| 500 | Transaction / DB error |\n\n### Sample Flow\n\n```\nGET /student?studentId=\n↓\nGET /student/promotion/available-section-repeat\n↓\nPOST /student/promotion/failed\n↓\nGET /student/promotion/history\n```\n\n### Changelog\n\nv1\n\n* New endpoint for failed-term repeat promotion."
+          },
+          "response": [
+            {
+              "name": "200 OK — failed repeat",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Student marked as failed and retained in same term for next academic year\",\n  \"data\": {\n    \"studentId\": 101,\n    \"studentStatus\": \"active\",\n    \"term\": 4,\n    \"promotionHistoryStatus\": \"failed\",\n    \"repeat\": {\n      \"previous\": {\n        \"academicYearId\": 59,\n        \"classSectionTermId\": 128,\n        \"classSectionsId\": 195,\n        \"sessionId\": 6\n      },\n      \"current\": {\n        \"academicYearId\": 60,\n        \"classSectionTermId\": 220,\n        \"classSectionsId\": 900,\n        \"sessionId\": 25\n      },\n      \"crossYear\": true\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "promotion — mark failed (bulk)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"studentId\": {{studentId}},\n    \"classSectionTermId\": {{repeatTargetClassSectionTermId}}\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/student/promotion/failed",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "promotion",
+                "failed"
+              ]
+            },
+            "description": "**POST /student/promotion/failed** (bulk)\n\n**Authentication:** Bearer Token Required\n\nSame rules as single failed promotion. Each item requires `studentId` and `classSectionTermId` from **GET /student/promotion/available-section-repeat**.\n\n```json\n[\n  { \"studentId\": 101, \"classSectionTermId\": 220 },\n  { \"studentId\": 102, \"classSectionTermId\": 220 }\n]\n```\n\nReturns an array of per-student results."
+          },
+          "response": []
+        },
+        {
+          "name": "promotion — mark passed (final term)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "const data = body.data || body;",
+                  "pm.test('studentStatus alumni', () => pm.expect(data.studentStatus).to.eql('alumni'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": {{studentId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/student/promotion/passed",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "promotion",
+                "passed"
+              ]
+            },
+            "description": "**POST /student/promotion/passed**\n\n**Authentication:** Bearer Token Required\n\n**Headers:** `Content-Type: application/json`\n\nMarks a final-term student as program-complete. Use when GET /student/promotion/available-section returns `finalTerm: true`. Does **not** change `classSectionTermId`, `sessionId`, or `class_student_mapper`.\n\n### Request Body\n\n| Field | Type | Required | Description |\n|-------|------|----------|-------------|\n| studentId | Number | Yes | Student on the final program term |\n\n```json\n{\n  \"studentId\": 101\n}\n```\n\nNo `classSectionTermId` — student stays on final term placement.\n\n### studentStatus enum (relevant values)\n\n```\nactive\ndeactive\ntransferred\ngraduated\nalumni\nCancel Student\nLeft Student\nLong Absent\nNon Attendant\n```\n\nThis API sets `studentStatus` to **`alumni`**.\n\n### Success Response (200)\n\n```json\n{\n  \"success\": true,\n  \"message\": \"Student marked as passed and alumni\",\n  \"data\": {\n    \"studentId\": 101,\n    \"studentStatus\": \"alumni\",\n    \"finalTerm\": 6,\n    \"classSectionTermId\": 128,\n    \"promotionHistoryStatus\": \"passed\"\n  }\n}\n```\n\nUpdates the current `student_class_sections_history` row from `current` to `passed`. No new `current` history row is created.\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | Missing studentId; student not on final term; history row not found |\n| 404 | Student not found |\n| 409 | Student is already alumni |\n| 500 | Transaction / DB error |\n\n### Sample Flow\n\n```\nGET /student?studentId=\n↓\nGET /student/promotion/available-section (finalTerm: true)\n↓\nPOST /student/promotion/passed\n↓\nGET /student/promotion/history\n```\n\n### Changelog\n\nv1\n\n* New endpoint for final-term program completion.\n* Sets `studentStatus: alumni` and history status `passed`."
+          },
+          "response": [
+            {
+              "name": "200 OK — passed and alumni",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Student marked as passed and alumni\",\n  \"data\": {\n    \"studentId\": 101,\n    \"studentStatus\": \"alumni\",\n    \"finalTerm\": 6,\n    \"classSectionTermId\": 128,\n    \"promotionHistoryStatus\": \"passed\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "promotion — mark passed (bulk)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  { \"studentId\": {{studentId}} },\n  { \"studentId\": 102 }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/student/promotion/passed",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "promotion",
+                "passed"
+              ]
+            },
+            "description": "**POST /student/promotion/passed** (bulk)\n\n**Authentication:** Bearer Token Required\n\nSame rules as single passed. Each item requires only `studentId`. Use when `finalTerm: true`.\n\n```json\n[\n  { \"studentId\": 101 },\n  { \"studentId\": 102 }\n]\n```\n\nReturns an array of `{ success, message, data }` per student."
           },
           "response": []
         }
@@ -16526,6 +16858,30 @@
       "value": "1",
       "type": "string",
       "description": "Current class term number (from class.term) for promotion dropdown"
+    },
+    {
+      "key": "promotion_final_term",
+      "value": "false",
+      "type": "string",
+      "description": "Set from GET /student/promotion/available-section — true when student is on final program term"
+    },
+    {
+      "key": "repeatTargetClassSectionTermId",
+      "value": "220",
+      "type": "string",
+      "description": "Target classSectionTermId from GET /student/promotion/available-section-repeat — for POST /student/promotion/failed"
+    },
+    {
+      "key": "repeat_target_academicYear_id",
+      "value": "60",
+      "type": "string",
+      "description": "Next academic year ID from GET /student/promotion/available-section-repeat"
+    },
+    {
+      "key": "repeat_target_session_id",
+      "value": "25",
+      "type": "string",
+      "description": "Target sessionId from repeat section lookup"
     },
     {
       "key": "classSections_id",
