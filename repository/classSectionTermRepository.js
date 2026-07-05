@@ -48,8 +48,21 @@ export async function findClassSectionTermById(classSectionTermId, options = {})
   });
 }
 
+export async function findClassSectionInTenantScope(classSectionId, options = {}) {
+  return scoped(model.classSectionModel).findOne({
+    where: { classSectionsId: Number(classSectionId) },
+    attributes: ['classSectionsId'],
+    transaction: options.transaction,
+  });
+}
+
 export async function findClassSectionTermsByClassSectionId(classSectionId, options = {}) {
-  return scoped(model.classSectionTermModel).findAll({
+  const section = await findClassSectionInTenantScope(classSectionId, options);
+  if (!section) {
+    return null;
+  }
+
+  return model.classSectionTermModel.findAll({
     where: { classSectionsId: Number(classSectionId) },
     attributes: ['classSectionTermId', 'classSectionsId', 'term'],
     transaction: options.transaction,
@@ -175,8 +188,40 @@ export async function deleteClassSectionTermById(classSectionTermId, options = {
   });
 }
 
+export async function countTimetableRoutinesForClassSectionTerms(classSectionTermIds, options = {}) {
+  const ids = [];
+  for (const classSectionTermId of classSectionTermIds) {
+    ids.push(Number(classSectionTermId));
+  }
+  if (!ids.length) {
+    return 0;
+  }
+
+  return scoped(model.timeTableRoutineModel).count({
+    where: { classSectionTermId: { [Op.in]: ids } },
+    transaction: options.transaction,
+  });
+}
+
 export async function deleteClassSectionTermsByClassSectionId(classSectionId, options = {}) {
-  return scoped(model.classSectionTermModel).destroy({
+  const section = await findClassSectionInTenantScope(classSectionId, options);
+  if (!section) {
+    return null;
+  }
+
+  return model.classSectionTermModel.destroy({
+    where: { classSectionsId: Number(classSectionId) },
+    transaction: options.transaction,
+  });
+}
+
+export async function deleteClassSectionById(classSectionId, options = {}) {
+  const section = await findClassSectionInTenantScope(classSectionId, options);
+  if (!section) {
+    return null;
+  }
+
+  return scoped(model.classSectionModel).destroy({
     where: { classSectionsId: Number(classSectionId) },
     transaction: options.transaction,
   });
