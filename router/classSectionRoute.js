@@ -13,7 +13,10 @@ const positiveIntegerId = z.coerce
   .positive('id must be greater than 0');
 
 const deleteClassSectionTermQuerySchema = z.object({
-  classSectionId: positiveIntegerId,
+  classSectionId: z.coerce
+    .number()
+    .int('Class section id must be a whole number.')
+    .positive('Class section id must be greater than 0.'),
 });
 
 const renameClassSectionSchema = z.object({

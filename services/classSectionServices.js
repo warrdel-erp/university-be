@@ -64,7 +64,7 @@ export async function deleteClassSectionTerm(classSectionId) {
       options,
     );
     if (termRows === null) {
-      throw new Error('classSectionId not found');
+      throw new Error('Class section not found.');
     }
 
     const classSectionTermIds = [];
@@ -79,9 +79,7 @@ export async function deleteClassSectionTerm(classSectionId) {
         options,
       );
       if (teacherMappingCount > 0) {
-        throw new Error(
-          'Teacher employee mapping exists for this class section. Please remove teacher section mapping (DELETE/PATCH /teacher/teacherSection) and timetable teacher mappings (DELETE /timeTableCreate/mapping) before deleting.',
-        );
+        throw new Error('Remove teacher mapping before deleting this section.');
       }
 
       const studentCount = await classSectionTermRepository.countStudentsForClassSectionTerms(
@@ -89,9 +87,7 @@ export async function deleteClassSectionTerm(classSectionId) {
         options,
       );
       if (studentCount > 0) {
-        throw new Error(
-          'Cannot delete this class section because students are assigned to one or more terms. Remove or reassign students first.',
-        );
+        throw new Error('Remove or reassign students before deleting this section.');
       }
 
       const routineCount = await classSectionTermRepository.countTimetableRoutinesForClassSectionTerms(
@@ -99,9 +95,7 @@ export async function deleteClassSectionTerm(classSectionId) {
         options,
       );
       if (routineCount > 0) {
-        throw new Error(
-          'Cannot delete this class section because timetable routines exist for one or more terms. Remove those routines before deleting.',
-        );
+        throw new Error('Remove timetable routines before deleting this section.');
       }
     }
 
@@ -112,7 +106,7 @@ export async function deleteClassSectionTerm(classSectionId) {
         options,
       );
       if (deletedTermCount === null) {
-        throw new Error('classSectionId not found');
+        throw new Error('Class section not found.');
       }
     }
 
@@ -121,7 +115,7 @@ export async function deleteClassSectionTerm(classSectionId) {
       options,
     );
     if (!classSectionDeleted) {
-      throw new Error('classSectionId not found');
+      throw new Error('Class section not found.');
     }
 
     return {
