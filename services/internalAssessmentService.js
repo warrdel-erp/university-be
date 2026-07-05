@@ -4,100 +4,52 @@ import { buildTermName } from "../utility/courseTerms.js";
 
 export async function addInternalAssessment(data, files) {
   if (files) {
-    const uploadPromises = Object.keys(files).map(async (key) => {
+    const uploadPromises = [];
+    for (const key of Object.keys(files)) {
       const file = files[key];
-      const s3Response = await uploadFile(file);
-      const url = s3Response.Location;
-      data.file = url;
-    });
+      uploadPromises.push(
+        (async () => {
+          const s3Response = await uploadFile(file);
+          const url = s3Response.Location;
+          data.file = url;
+        })(),
+      );
+    }
 
     await Promise.all(uploadPromises);
   }
   return await InternalAssessmentRepository.addInternalAssessment(data);
 }
 
-export async function getAllInternalAssessment(examSetupTypeId) {
-  const assessments =
-    await InternalAssessmentRepository.getAllInternalAssessment(
-      examSetupTypeId,
-    );
+function formatInternalAssessmentDetail(item) {
+  const ia = item.get({ plain: true });
 
-  return assessments.map((item) => {
-    const ia = item.dataValues ? item.dataValues : item;
-
-    const examType = ia.assessmentExamType || {};
-    const syllabusList = Array.isArray(examType.syllabusDetailsExam)
-      ? examType.syllabusDetailsExam
-      : [];
-
-    // Always take FIRST entry of array
-    const firstSyllabus = syllabusList.length > 0 ? syllabusList[0] : null;
-
-    const marks =
-      firstSyllabus && firstSyllabus.marks ? Number(firstSyllabus.marks) : 0;
-
-    const weightage = ia.weightage ? Number(ia.weightage) : 0;
-
-    const division = Number(((weightage * marks) / 100).toFixed(2));
-
-    return {
-      examAssessmentId: ia.examAssessmentId,
-      subjectId: ia.subjectId,
-      term: ia.term,
-      examSetupTypeId: ia.examSetupTypeId,
-      type: ia.type,
-
-      totalMarks: ia.totalMarks,
-      weightage: ia.weightage,
-      division,
-
-      publishDate: ia.publishDate,
-      dueDate: ia.dueDate,
-      description: ia.description,
-      file: ia.file || null,
-    };
-  });
-}
-
-export async function getInternalAssessmentById(examAssessmentId) {
-  const data =
-    await InternalAssessmentRepository.getInternalAssessmentById(
-      examAssessmentId,
-    );
-
-  if (!data) return null;
-
-  const ia = data.dataValues;
-
-  const subject = ia.assessmentSubject || {};
-  const examType = ia.assessmentExamType || {};
-
-  const syllabusList = Array.isArray(examType.syllabusDetailsExam)
-    ? examType.syllabusDetailsExam
-    : [];
+  const subject = ia.assessmentSubject;
+  const examType = ia.assessmentExamType;
+  const syllabusList = examType.syllabusDetailsExam;
 
   const firstSyllabus = syllabusList.length > 0 ? syllabusList[0] : null;
 
-  const marks =
-    firstSyllabus && firstSyllabus.marks ? Number(firstSyllabus.marks) : 0;
-
   const weightage = ia.weightage ? Number(ia.weightage) : 0;
+  const totalMarks = ia.totalMarks ? Number(ia.totalMarks) : 0;
 
-  const division = Number(((weightage * marks) / 100).toFixed(2));
+  const division = Number(((weightage * totalMarks) / 100).toFixed(2));
 
-  // FINAL UI RESPONSE
   return {
     examAssessmentId: ia.examAssessmentId,
+    subjectId: ia.subjectId,
+    employeeId: ia.employeeId,
+    type: ia.type,
 
     subject: {
       subjectId: ia.subjectId,
-      name: subject.subjectName || null,
-      code: subject.subjectCode || null,
+      name: subject.subjectName,
+      code: subject.subjectCode,
     },
 
     term: ia.term,
     termName:
-      ia.term != null && subject.courseInfo?.termType
+      ia.term != null
         ? buildTermName(subject.courseInfo.termType, ia.term)
         : null,
 
@@ -106,6 +58,7 @@ export async function getInternalAssessmentById(examAssessmentId) {
       examType: examType.examType,
       examName: examType.examName,
     },
+    examSetupTypeId: ia.examSetupTypeId,
 
     totalMarks: ia.totalMarks,
     weightage: ia.weightage,
@@ -118,9 +71,38 @@ export async function getInternalAssessmentById(examAssessmentId) {
     file: ia.file,
 
     syllabus: syllabusList,
-    firstSyllabus: firstSyllabus,
+    firstSyllabus,
     examStructure: examType.examStructure || null,
   };
+}
+
+function formatInternalAssessmentBasic(item) {
+  return item.get ? item.get({ plain: true }) : item;
+}
+
+export async function getAllInternalAssessment(examSetupTypeId) {
+  const assessments =
+    await InternalAssessmentRepository.getAllInternalAssessment(
+      examSetupTypeId,
+    );
+
+  const formattedAssessments = [];
+  for (const item of assessments) {
+    formattedAssessments.push(formatInternalAssessmentBasic(item));
+  }
+
+  return formattedAssessments;
+}
+
+export async function getInternalAssessmentById(examAssessmentId) {
+  const data =
+    await InternalAssessmentRepository.getInternalAssessmentById(
+      examAssessmentId,
+    );
+
+  if (!data) return null;
+
+  return formatInternalAssessmentBasic(data);
 }
 
 export async function updateInternalAssessment(dataArray) {
@@ -166,77 +148,78 @@ export async function evaluationInternalAssessment(subjectId, employeeId) {
 
   if (!data) return null;
 
-  const ia = data?.dataValues ?? data;
+  const ia = data.get({ plain: true });
 
-  // const totalMarks = ia.totalMarks ?? 0;
-
-  const syllabusList = ia.assessmentExamType?.syllabusDetailsExam ?? [];
+  const syllabusList = ia.assessmentExamType.syllabusDetailsExam;
   const firstSyllabus = syllabusList.length ? syllabusList[0] : null;
-  const syllabusMarks = firstSyllabus?.marks ? Number(firstSyllabus.marks) : 0;
+  const syllabusMarks = firstSyllabus ? Number(firstSyllabus.marks) : 0;
 
   const weightage = ia.weightage ? Number(ia.weightage) : 0;
   const totalMarks = ia.totalMarks ? Number(ia.totalMarks) : 0;
 
   const division = Number(((weightage * syllabusMarks) / 100).toFixed(2));
 
-  const termStudents = ia.termStudents ?? [];
+  const termStudents = ia.termStudents;
 
-  const students = termStudents.map((student) => {
+  const students = [];
+  for (const student of termStudents) {
     const results = Array.isArray(student.studentresult)
       ? student.studentresult
       : [];
 
-    let sr = results.find((r) => {
-      const rId = Number(r.examAssessmentId ?? r.exam_assessment_id ?? 0);
-      return rId === Number(ia.examAssessmentId ?? ia.exam_assessment_id ?? 0);
-    });
+    let sr = null;
+    for (const result of results) {
+      const rId = Number(result.examAssessmentId);
+      if (rId === Number(ia.examAssessmentId)) {
+        sr = result;
+        break;
+      }
+    }
 
     if (!sr && results.length > 0) sr = results[0];
 
-    const studentMarks =
-      sr && sr.marks !== undefined && sr.marks !== null
-        ? Number(sr.marks)
-        : "--";
+    const hasStudentMarks = sr && sr.marks !== undefined && sr.marks !== null;
+    const studentMarks = hasStudentMarks ? Number(sr.marks) : "--";
 
     const conversion =
-      totalMarks > 0
+      hasStudentMarks && totalMarks > 0
         ? Number(((division * studentMarks) / totalMarks).toFixed(2))
         : "--";
 
-    return {
+    students.push({
       studentId: student.studentId,
       scholarNumber: student.scholarNumber,
-      name: `${student.firstName ?? ""} ${student.middleName ?? ""} ${student.lastName ?? ""}`
+      name: `${student.firstName || ""} ${student.middleName || ""} ${student.lastName || ""}`
         .replace(/\s+/g, " ")
         .trim(),
       marks: studentMarks,
       conversion,
-      status: sr?.status ?? "pending",
-      comments: sr?.comments ?? "--",
-      file: sr?.file ?? "--",
-    };
-  });
+      status: sr ? sr.status : "pending",
+      comments: sr ? sr.comments : "--",
+      file: sr ? sr.file : "--",
+    });
+  }
 
   /** ================= Final formatted output ================= */
   return {
     assessment: {
-      assessmentType: ia.type ?? null,
+      assessmentType: ia.type,
 
-      subject: ia.assessmentSubject?.subjectName ?? null,
+      subject: ia.assessmentSubject.subjectName,
       term:
-        ia.term != null && ia.assessmentSubject?.courseInfo?.termType
+        ia.term != null
           ? buildTermName(ia.assessmentSubject.courseInfo.termType, ia.term)
           : null,
       marks: totalMarks,
-      attachedFile: ia.file ?? null,
-      description: ia.description ?? null,
+      attachedFile: ia.file,
+      description: ia.description,
 
-      homeworkDate: ia.publishDate ?? null,
-      submissionDate: ia.dueDate ?? null,
-      evaluationDate: ia.dueDate ?? null,
+      homeworkDate: ia.publishDate,
+      submissionDate: ia.dueDate,
+      evaluationDate: ia.dueDate,
 
-      createdBy: ia.employees?.employeeName ?? null,
-      evaluatedBy: ia.employees?.employeeName ?? null,
+      createdBy: ia.employees.employeeName,
+      evaluatedBy: ia.employees.employeeName,
     },
 
     students,
@@ -247,18 +230,31 @@ export async function createAssessmentEvaluation(body, createdBy, updatedBy) {
   try {
     const { subjectId, employeeId, examAssessmentId, students } = body;
 
-    const dataToInsert = students.map((student) => ({
-      subjectId: Number(subjectId),
-      employeeId: Number(employeeId),
-      examAssessmentId: Number(examAssessmentId),
-      studentId: Number(student.studentId),
-      status: student.status || "pending",
-      marks: Number(student.marks),
-      comments: student.comments || "",
-      file: student.file || null,
-      createdBy: Number(createdBy),
-      updatedBy: Number(updatedBy),
-    }));
+    const seenStudentIds = new Set();
+    const dataToInsert = [];
+
+    for (const student of students) {
+      const studentId = Number(student.studentId);
+      if (seenStudentIds.has(studentId)) {
+        const error = new Error(`Duplicate studentId ${studentId} in request`);
+        error.statusCode = 400;
+        throw error;
+      }
+
+      seenStudentIds.add(studentId);
+      dataToInsert.push({
+        subjectId: Number(subjectId),
+        employeeId: Number(employeeId),
+        examAssessmentId: Number(examAssessmentId),
+        studentId,
+        status: student.status || "pending",
+        marks: Number(student.marks),
+        comments: student.comments || "",
+        file: student.file || null,
+        createdBy: Number(createdBy),
+        updatedBy: Number(updatedBy),
+      });
+    }
 
     return await InternalAssessmentRepository.bulkInsertEvaluation(
       dataToInsert,

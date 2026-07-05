@@ -635,3 +635,184 @@ export async function getDashboardEvents(currentDate) {
 
   return events;
 }
+
+export async function getTeacherDashboardEmployee(employeeId) {
+  return scoped(model.employeeModel).findOne({
+    where: { employeeId: Number(employeeId) },
+    attributes: ['employeeId'],
+  });
+}
+
+export async function getTeacherDashboardSubjectMappings(employeeId) {
+  return scoped(model.teacherSubjectMappingModel).findAll({
+    where: { employeeId: Number(employeeId) },
+    attributes: ['subjectId'],
+    include: [
+      {
+        model: model.subjectModel,
+        as: 'employeeSubject',
+        required: true,
+        where: buildScope(model.subjectModel),
+        attributes: ['subjectId', 'courseId'],
+      },
+    ],
+  });
+}
+
+export async function getTeacherDashboardSectionMappings(employeeId) {
+  return scoped(model.teacherSectionMappingModel).findAll({
+    where: { employeeId: Number(employeeId) },
+    attributes: ['classSectionsId'],
+    include: [
+      {
+        model: model.classSectionModel,
+        as: 'employeeSection',
+        required: true,
+        where: buildScope(model.classSectionModel),
+        attributes: ['courseId'],
+        include: [
+          {
+            model: model.classSectionTermModel,
+            as: 'classSectionTerms',
+            required: false,
+            attributes: ['classSectionTermId'],
+          },
+        ],
+      },
+    ],
+  });
+}
+
+export async function getTeacherDashboardScheduleMappings(employeeId) {
+  return scoped(model.classScheduleModel).findAll({
+    where: {
+      [Op.or]: [
+        { employeeId: Number(employeeId) },
+        Sequelize.where(Sequelize.col('timeTableTeacherSubject.employee_id'), Number(employeeId)),
+      ],
+    },
+    attributes: ['subjectId'],
+    include: [
+      {
+        model: model.timeTableRoutineModel,
+        as: 'timeTablecreate',
+        required: true,
+        where: buildScope(model.timeTableRoutineModel),
+        attributes: ['courseId', 'classSectionTermId'],
+      },
+      {
+        model: model.subjectModel,
+        as: 'timeTableSubject',
+        required: false,
+        where: buildScope(model.subjectModel),
+        attributes: ['subjectId', 'courseId'],
+      },
+      {
+        model: model.teacherSubjectMappingModel,
+        as: 'timeTableTeacherSubject',
+        required: false,
+        attributes: ['employeeId', 'subjectId'],
+        include: [
+          {
+            model: model.subjectModel,
+            as: 'employeeSubject',
+            required: false,
+            where: buildScope(model.subjectModel),
+            attributes: ['subjectId', 'courseId'],
+          },
+        ],
+      },
+    ],
+  });
+}
+
+export async function countTeacherDashboardStudents(classSectionTermIds, courseIds) {
+  if (classSectionTermIds.length > 0) {
+    const directStudents = await scoped(model.studentModel).findAll({
+      where: { classSectionTermId: { [Op.in]: classSectionTermIds } },
+      attributes: ['studentId'],
+    });
+    const mappedStudents = await scoped(model.classStudentMapperModel).findAll({
+      where: { classSectionTermId: { [Op.in]: classSectionTermIds } },
+      attributes: ['studentId'],
+      include: [
+        {
+          model: model.studentModel,
+          as: 'studentMapped',
+          required: true,
+          where: buildScope(model.studentModel),
+          attributes: [],
+        },
+      ],
+    });
+
+    const studentIds = new Set();
+    for (const student of directStudents) {
+      studentIds.add(Number(student.studentId));
+    }
+    for (const mapper of mappedStudents) {
+      studentIds.add(Number(mapper.studentId));
+    }
+    return studentIds.size;
+  }
+
+  if (courseIds.length > 0) {
+    return scoped(model.studentModel).count({
+      where: { courseId: { [Op.in]: courseIds } },
+    });
+  }
+
+  return 0;
+}
+
+export async function getTeacherDashboardExamAssignments(employeeId) {
+  return scoped(model.teacherExamAssignmentModel).count({
+    where: { employeeId: Number(employeeId) },
+    include: [
+      {
+        model: model.examScheduleModel,
+        as: 'examSchedule',
+        required: true,
+        where: buildScope(model.examScheduleModel),
+        attributes: [],
+      },
+    ],
+  });
+}
+
+export async function getTeacherDashboardUpcomingClasses(employeeId, currentDate) {
+  return scoped(model.classScheduleModel).count({
+    where: {
+      [Op.or]: [
+        { employeeId: Number(employeeId) },
+        Sequelize.where(Sequelize.col('timeTableTeacherSubject.employee_id'), Number(employeeId)),
+      ],
+    },
+    include: [
+      {
+        model: model.timeTableRoutineModel,
+        as: 'timeTablecreate',
+        required: true,
+        where: {
+          isPublish: true,
+          endingDate: { [Op.gte]: currentDate },
+          ...buildScope(model.timeTableRoutineModel),
+        },
+        attributes: [],
+      },
+      {
+        model: model.timeTableStructurePeriodsModel,
+        as: 'timeTablecreation',
+        required: true,
+        where: { isBreak: false },
+        attributes: [],
+      },
+      {
+        model: model.teacherSubjectMappingModel,
+        as: 'timeTableTeacherSubject',
+        required: false,
+        attributes: [],
+      },
+    ],
+  });
+}
