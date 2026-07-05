@@ -2653,7 +2653,7 @@
                     }
                   ]
                 },
-                "description": "**GET /timeTableCreate/**\n\nLists class sections nested **year → term → section** with `timeTableRoutines[]` on each section.\n\n**Optional query:** `courseId`, `sessionId`.\n\nWhen `courseId` is sent, all program years and terms are returned (empty `sections: []` where no placement exists).\n\n**Response root:** `courseId`, `sessionId`, `courseName`, `termType`, `years[]` → `terms[]` → `sections[]`."
+                "description": "**GET /timeTableCreate/**\n\nLists class sections nested **year → classSection → semester** with `timeTableRoutines[]` on each semester.\n\n**Optional query:** `courseId`, `sessionId`.\n\nWhen `courseId` is sent, all program years are returned. Each year lists its class sections; each section lists all semesters (terms) for that year — empty `timeTableRoutines: []` where no placement exists.\n\n**Response root:** `courseId`, `sessionId`, `courseName`, `termType`, `years[]` → `classSections[]` → `semesters[]`.\n\n**Example:**\n```json\n{\n  \"courseId\": 53,\n  \"sessionId\": 27,\n  \"courseName\": \"B.Arch\",\n  \"termType\": \"Sem\",\n  \"years\": [\n    {\n      \"year\": 1,\n      \"classSections\": [\n        {\n          \"classSectionsId\": 101,\n          \"section\": \"A\",\n          \"year\": 1,\n          \"semesters\": [\n            {\n              \"term\": 1,\n              \"termName\": \"Semester 1\",\n              \"classSectionTermId\": 1001,\n              \"classSectionsId\": 101,\n              \"timeTableRoutines\": []\n            }\n          ]\n        }\n      ]\n    }\n  ]\n}\n```"
               },
               "response": []
             },

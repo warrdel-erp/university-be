@@ -137,18 +137,26 @@ function shapeTimeTableCreateList(rows, course) {
 
     const year = Number(section.year);
     const term = Number(plain.term);
+    const sectionId = Number(plain.classSectionsId);
+
     if (!byYear[year]) byYear[year] = {};
-    if (!byYear[year][term]) byYear[year][term] = [];
-    byYear[year][term].push({
-      classSectionTermId: plain.classSectionTermId,
-      classSectionsId: plain.classSectionsId,
-      section: section.section,
-      year,
+    if (!byYear[year][sectionId]) {
+      byYear[year][sectionId] = {
+        classSectionsId: sectionId,
+        section: section.section,
+        year,
+        classSession: section.classSession,
+        termsByNum: {},
+      };
+    }
+
+    byYear[year][sectionId].termsByNum[term] = {
       term,
-      termType: cs?.termType ?? meta.termType,
-      classSession: section.classSession,
+      termName: coursePlain ? buildTermName(coursePlain.termType, term) : `Term ${term}`,
+      classSectionTermId: plain.classSectionTermId,
+      classSectionsId: sectionId,
       timeTableRoutines: plain.timeTableRoutines || [],
-    });
+    };
   }
 
   const duration = Number(coursePlain?.courseDuration) || 0;
@@ -162,21 +170,44 @@ function shapeTimeTableCreateList(rows, course) {
 
   const years = [];
   for (const yearNum of yearNumbers) {
-    const termNumbers = coursePlain
-      ? termsForYear(yearNum, coursePlain)
-      : Object.keys(byYear[yearNum] || {}).map(Number).sort((a, b) => a - b);
+    const yearBucket = byYear[yearNum] || {};
+    const sectionIds = Object.keys(yearBucket).map(Number);
+    sectionIds.sort((a, b) => a - b);
 
-    const terms = [];
-    for (const termNum of termNumbers) {
-      const sections = byYear[yearNum]?.[termNum] ? [...byYear[yearNum][termNum]] : [];
-      sections.sort((a, b) => String(a.section).localeCompare(String(b.section)));
-      terms.push({
-        term: termNum,
-        termName: coursePlain ? buildTermName(coursePlain.termType, termNum) : `Term ${termNum}`,
-        sections,
+    const classSections = [];
+    for (const sectionId of sectionIds) {
+      const sectionEntry = yearBucket[sectionId];
+      const termNumbers = coursePlain
+        ? termsForYear(yearNum, coursePlain)
+        : Object.keys(sectionEntry.termsByNum).map(Number).sort((a, b) => a - b);
+
+      const semesters = [];
+      for (const termNum of termNumbers) {
+        const existing = sectionEntry.termsByNum[termNum];
+        if (existing) {
+          semesters.push(existing);
+        } else {
+          semesters.push({
+            term: termNum,
+            termName: coursePlain ? buildTermName(coursePlain.termType, termNum) : `Term ${termNum}`,
+            classSectionTermId: null,
+            classSectionsId: sectionId,
+            timeTableRoutines: [],
+          });
+        }
+      }
+
+      classSections.push({
+        classSectionsId: sectionEntry.classSectionsId,
+        section: sectionEntry.section,
+        year: sectionEntry.year,
+        classSession: sectionEntry.classSession,
+        semesters,
       });
     }
-    years.push({ year: yearNum, terms });
+
+    classSections.sort((a, b) => String(a.section).localeCompare(String(b.section)));
+    years.push({ year: yearNum, classSections });
   }
 
   return { ...meta, years };

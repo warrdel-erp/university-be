@@ -78,7 +78,7 @@ export async function findClassSectionTermsWithRoutines({ courseId, sessionId } 
       sectionWhere.sessionId = Number(sessionId);
     }
 
-    return scoped(model.classSectionTermModel).findAll({
+    return model.classSectionTermModel.findAll({
       attributes: ['classSectionTermId', 'term', 'classSectionsId'],
       include: [
         {
@@ -156,8 +156,8 @@ export async function findClassSectionTermsWithRoutines({ courseId, sessionId } 
       ],
       order: [
         [{ model: model.classSectionModel, as: 'classSection' }, 'year', 'ASC'],
-        ['term', 'ASC'],
         [{ model: model.classSectionModel, as: 'classSection' }, 'section', 'ASC'],
+        ['term', 'ASC'],
       ],
     });
   } catch (error) {
