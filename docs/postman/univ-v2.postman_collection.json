@@ -15190,7 +15190,7 @@
     },
     {
       "name": "main",
-      "description": "Class section term setup under `/main/*` (`mainRoute.js`).\n\n**Auth:** Bearer `{{token}}`. Institute + academic year from login. Optional `X-Institute-Id` header.\n\n**Placement key:** `classSectionTermId` from `class_section_term` — not `classSectionsId`.\n\n| Method | Path | Notes |\n|--------|------|-------|\n| POST | `/main/classSections` | Create section master + class section + term rows; response includes `terms[].classSectionTermId` |\n| GET | `/main/classSections` | List class sections |\n| GET | `/main/classSectionSpecific` | Sections for course + session |\n| POST | `/main/sectionSubjectMapper` | Map subjects to institute scope |\n| GET | `/main/sectionSubjectMapper` | List mapper rows (optional `term`) |\n| GET | `/main/classSectionRecord` | Students + teachers for `classSectionTermId` |\n\n**Flow:** POST classSections → save `{{classSectionTermId}}` → GET classSectionRecord.",
+      "description": "Class section term setup under `/main/*` (`mainRoute.js`).\n\n**Auth:** Bearer `{{token}}`. Institute + academic year from login. Optional `X-Institute-Id` header.\n\n**Placement key:** `classSectionTermId` from `class_section_term` — not `classSectionsId`.\n\n| Method | Path | Notes |\n|--------|------|-------|\n| POST | `/main/classSections` | Create section master + class section + term rows; response includes `terms[].classSectionTermId` |\n| GET | `/main/classSections` | List class sections |\n| GET | `/main/classSectionSpecific` | Sections for course + session |\n| POST | `/main/sectionSubjectMapper` | Map subjects to institute scope |\n| GET | `/main/sectionSubjectMapper` | List mapper rows (optional `term`) |\n| GET | `/main/classSectionRecord` | All students + teachers for `classSectionId` + `courseId` |\n\n**Flow:** POST classSections → save `{{classSectionTermId}}` → GET classSectionRecord.",
       "item": [
         {
           "name": "POST classSections",
@@ -15464,7 +15464,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/main/classSectionRecord?courseId={{course_id}}&classSectionTermId={{classSectionTermId}}",
+              "raw": "{{baseurl}}/main/classSectionRecord?courseId={{course_id}}&classSectionId={{classSectionsId}}",
               "host": [
                 "{{baseurl}}"
               ],
@@ -15479,13 +15479,13 @@
                   "description": "Required — positive integer"
                 },
                 {
-                  "key": "classSectionTermId",
-                  "value": "{{classSectionTermId}}",
-                  "description": "Required — class_section_term PK"
+                  "key": "classSectionId",
+                  "value": "{{classSectionsId}}",
+                  "description": "Required — class_sections PK (classSectionId)"
                 }
               ]
             },
-            "description": "**GET /main/classSectionRecord**\n\nStudents enrolled in the term plus teachers mapped to the section.\n\n**Required query:** `courseId`, **`classSectionTermId`**.\n\nGet `classSectionTermId` from POST classSections, GET classSectionSpecific, or GET /course/termsWithClassSections."
+            "description": "**GET /main/classSectionRecord**\n\nClass section details, all students enrolled in any term of the section, and teachers mapped to the section.\n\n**Required query:** `courseId`, **`classSectionId`** (`class_sections.class_sections_id`).\n\n**Response:** `{ classSection: { ..., terms: [{ classSectionTermId, term, termName }] }, student: [{ ..., term, termName }], teacher[] }`.\n\nGet `classSectionId` from POST classSections, GET classSectionSpecific, or GET /course/termsWithClassSections."
           },
           "response": []
         }

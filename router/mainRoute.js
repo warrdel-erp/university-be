@@ -87,7 +87,7 @@ const updateSubjectSchema = z.object({
 
 const classSectionRecordQuerySchema = z.object({
     courseId: z.coerce.number({ required_error: 'courseId is required' }).int().positive(),
-    classSectionTermId: z.coerce.number({ required_error: 'classSectionTermId is required' }).int().positive(),
+    classSectionId: z.coerce.number({ required_error: 'classSectionId is required' }).int().positive(),
 });
 
 const addClassSectionsSchema = z.object({
