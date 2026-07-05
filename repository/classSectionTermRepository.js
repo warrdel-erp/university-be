@@ -48,6 +48,27 @@ export async function findClassSectionTermById(classSectionTermId, options = {})
   });
 }
 
+export async function findClassSectionInTenantScope(classSectionId, options = {}) {
+  return scoped(model.classSectionModel).findOne({
+    where: { classSectionsId: Number(classSectionId) },
+    attributes: ['classSectionsId'],
+    transaction: options.transaction,
+  });
+}
+
+export async function findClassSectionTermsByClassSectionId(classSectionId, options = {}) {
+  const section = await findClassSectionInTenantScope(classSectionId, options);
+  if (!section) {
+    return null;
+  }
+
+  return model.classSectionTermModel.findAll({
+    where: { classSectionsId: Number(classSectionId) },
+    attributes: ['classSectionTermId', 'classSectionsId', 'term'],
+    transaction: options.transaction,
+  });
+}
+
 export async function countStudentsForClassSectionTerm(classSectionTermId, options = {}) {
   const id = Number(classSectionTermId);
   const transaction = options.transaction;
@@ -59,6 +80,28 @@ export async function countStudentsForClassSectionTerm(classSectionTermId, optio
 
   const onMapper = await scoped(model.classStudentMapperModel).count({
     where: { classSectionTermId: id },
+    transaction,
+  });
+
+  return onStudent + onMapper;
+}
+
+export async function countStudentsForClassSectionTerms(classSectionTermIds, options = {}) {
+  const ids = [];
+  for (const classSectionTermId of classSectionTermIds) {
+    ids.push(Number(classSectionTermId));
+  }
+
+  const transaction = options.transaction;
+  const whereClause = { classSectionTermId: { [Op.in]: ids } };
+
+  const onStudent = await scoped(model.studentModel).count({
+    where: whereClause,
+    transaction,
+  });
+
+  const onMapper = await scoped(model.classStudentMapperModel).count({
+    where: whereClause,
     transaction,
   });
 
@@ -100,9 +143,86 @@ export async function countTeacherMappingsForClassSectionTerm(
   return teacherSectionCount + timetableTeacherCount;
 }
 
+export async function countTeacherMappingsForClassSectionTerms(
+  classSectionId,
+  classSectionTermIds,
+  options = {},
+) {
+  const ids = [];
+  for (const classSectionTermId of classSectionTermIds) {
+    ids.push(Number(classSectionTermId));
+  }
+
+  const transaction = options.transaction;
+
+  const teacherSectionCount = await scoped(model.teacherSectionMappingModel).count({
+    where: { classSectionsId: Number(classSectionId) },
+    transaction,
+  });
+
+  const routineScope = buildScope(model.timeTableRoutineModel);
+  const timetableTeacherCount = await scoped(model.classScheduleModel).count({
+    where: { employeeId: { [Op.ne]: null } },
+    include: [
+      {
+        model: model.timeTableRoutineModel,
+        as: 'timeTablecreate',
+        required: true,
+        where: {
+          ...routineScope,
+          classSectionTermId: { [Op.in]: ids },
+        },
+        attributes: [],
+      },
+    ],
+    transaction,
+  });
+
+  return teacherSectionCount + timetableTeacherCount;
+}
+
 export async function deleteClassSectionTermById(classSectionTermId, options = {}) {
   return scoped(model.classSectionTermModel).destroy({
     where: { classSectionTermId: Number(classSectionTermId) },
+    transaction: options.transaction,
+  });
+}
+
+export async function countTimetableRoutinesForClassSectionTerms(classSectionTermIds, options = {}) {
+  const ids = [];
+  for (const classSectionTermId of classSectionTermIds) {
+    ids.push(Number(classSectionTermId));
+  }
+  if (!ids.length) {
+    return 0;
+  }
+
+  return scoped(model.timeTableRoutineModel).count({
+    where: { classSectionTermId: { [Op.in]: ids } },
+    transaction: options.transaction,
+  });
+}
+
+export async function deleteClassSectionTermsByClassSectionId(classSectionId, options = {}) {
+  const section = await findClassSectionInTenantScope(classSectionId, options);
+  if (!section) {
+    return null;
+  }
+
+  return model.classSectionTermModel.destroy({
+    where: { classSectionsId: Number(classSectionId) },
+    transaction: options.transaction,
+  });
+}
+
+export async function deleteClassSectionById(classSectionId, options = {}) {
+  const section = await findClassSectionInTenantScope(classSectionId, options);
+  if (!section) {
+    return null;
+  }
+
+  return scoped(model.classSectionModel).destroy({
+    where: { classSectionsId: Number(classSectionId) },
     transaction: options.transaction,
   });
 }

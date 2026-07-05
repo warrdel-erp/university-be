@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { getDashboard } from '../controllers/dashboardController.js';
+import { getDashboard, getTeacherDashboard } from '../controllers/dashboardController.js';
 import userAuth from '../middleware/authUser.js';
 import { validate } from '../utility/validation.js';
 
@@ -14,6 +14,11 @@ const dashboardQuerySchema = z.object({
   week: z.coerce.number().int().min(1).max(53).optional(),
 });
 
+const teacherDashboardQuerySchema = z.object({
+  employeeId: z.coerce.number().int().positive(),
+});
+
+router.get('/teacher', userAuth, validate({ query: teacherDashboardQuerySchema }), getTeacherDashboard);
 router.get('/', userAuth, validate({ query: dashboardQuerySchema }), getDashboard);
 
 export default router;

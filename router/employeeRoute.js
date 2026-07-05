@@ -35,6 +35,12 @@ const uniqueClassSectionSubjectsQuerySchema = z.object({
     employeeId: positiveIntegerId,
 });
 
+const teacherSubjectQuerySchema = z.object({
+    employeeId: positiveIntegerId,
+    sessionId: optionalPositiveId,
+    term: optionalPositiveId,
+}).strict();
+
 router.get(
     '/uniqueClassSectionSubjects',
     userAuth,
@@ -59,7 +65,7 @@ router.get('/evaluation', userAuth, getSubjectEvalution);
 
 router.get('/cellData', userAuth, getTeacherTimeTable);
 
-router.get('/subject', userAuth, getTeacherSubject);
+router.get('/subject', userAuth, validate({ query: teacherSubjectQuerySchema }), getTeacherSubject);
 
 router.get("/issuedBook", userAuth, getBooksIssuedToEmployee);
 
