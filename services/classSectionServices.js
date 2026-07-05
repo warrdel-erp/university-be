@@ -1,6 +1,61 @@
 import sequelize from '../database/sequelizeConfig.js';
 import * as classSectionTermRepository from '../repository/classSectionTermRepository.js';
 
+export async function renameClassSection(classSectionId, section) {
+  const sectionName = String(section).trim();
+  if (!sectionName) {
+    throw new Error('section is required');
+  }
+
+  const classSectionRow = await classSectionTermRepository.findClassSectionInTenantScope(classSectionId);
+  if (!classSectionRow) {
+    throw new Error('classSectionId not found');
+  }
+
+  const plain = classSectionRow.get ? classSectionRow.get({ plain: true }) : classSectionRow;
+
+  if (plain.section === sectionName) {
+    return {
+      classSectionId: Number(classSectionId),
+      classSectionsId: plain.classSectionsId,
+      section: sectionName,
+      year: plain.year,
+      courseId: plain.courseId,
+      sessionId: plain.sessionId,
+    };
+  }
+
+  const duplicate = await classSectionTermRepository.findClassSectionByCourseSessionYearSection({
+    courseId: plain.courseId,
+    sessionId: plain.sessionId,
+    year: plain.year,
+    section: sectionName,
+    excludeClassSectionsId: classSectionId,
+  });
+  if (duplicate) {
+    throw new Error(
+      'A class section with this name already exists for the same course, session, and year',
+    );
+  }
+
+  const updated = await classSectionTermRepository.updateClassSectionName(
+    classSectionId,
+    sectionName,
+  );
+  if (!updated) {
+    throw new Error('classSectionId not found');
+  }
+
+  return {
+    classSectionId: Number(classSectionId),
+    classSectionsId: plain.classSectionsId,
+    section: sectionName,
+    year: plain.year,
+    courseId: plain.courseId,
+    sessionId: plain.sessionId,
+  };
+}
+
 export async function deleteClassSectionTerm(classSectionId) {
   return sequelize.transaction(async (transaction) => {
     const options = { transaction };

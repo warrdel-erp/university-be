@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { getClassSectionsByFilter } from '../controllers/mainController.js';
-import { deleteClassSectionTerm } from '../controllers/classSectionController.js';
+import { deleteClassSectionTerm, renameClassSection } from '../controllers/classSectionController.js';
 import userAuth from '../middleware/authUser.js';
 import { validate } from '../utility/validation.js';
 
@@ -16,7 +16,13 @@ const deleteClassSectionTermQuerySchema = z.object({
   classSectionId: positiveIntegerId,
 });
 
+const renameClassSectionSchema = z.object({
+  classSectionId: positiveIntegerId,
+  section: z.string().trim().min(1, 'section is required'),
+});
+
 router.get('/', userAuth, getClassSectionsByFilter);
+router.patch('/section', userAuth, validate({ body: renameClassSectionSchema }), renameClassSection);
 router.delete('/term', userAuth, validate({ query: deleteClassSectionTermQuerySchema }), deleteClassSectionTerm);
 
 export default router;

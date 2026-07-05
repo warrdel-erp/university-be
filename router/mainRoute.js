@@ -120,6 +120,7 @@ router.patch('/subject/update', userAuth, validate({ body: updateSubjectSchema }
 // Section master (class table removed)
 router.post('/classSections', userAuth, validate({ body: addClassSectionsSchema }), addClassSections);
 router.get('/classSections', userAuth, getClassSections);
+
 router.get('/classSectionSpecific', userAuth, getClassSectionSpecific);
 router.post('/sectionSubjectMapper', userAuth, addSectionSubjectMapper);
 router.get('/sectionSubjectMapper', userAuth, getSectionSubjectMapper);
