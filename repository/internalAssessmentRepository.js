@@ -59,6 +59,30 @@ const assessmentSubjectInclude = {
   ],
 };
 
+const assessmentExamTypeEvaluationInclude = {
+  model: model.examSetupTypeModel,
+  as: "assessmentExamType",
+  attributes: ["examSetupTypeId", "examType", "examName"],
+  where: buildScope(model.examSetupTypeModel),
+  required: true,
+  include: [
+    {
+      model: model.syllabusDetailsModel,
+      as: "syllabusDetailsExam",
+      attributes: [
+        "syllabusDetailsId",
+        "syllabusId",
+        "examSetupTypeId",
+        "subjectId",
+        "subjectType",
+        "type",
+        "marks",
+        "total",
+      ],
+    },
+  ],
+};
+
 const assessmentExamTypeInclude = {
   model: model.examSetupTypeModel,
   as: "assessmentExamType",
@@ -303,7 +327,7 @@ export async function evaluationInternalAssessment(subjectId, employeeId) {
           },
         ],
       },
-      assessmentExamTypeInclude,
+      assessmentExamTypeEvaluationInclude,
       {
         model: model.employeeModel,
         as: "employees",
