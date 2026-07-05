@@ -14,7 +14,7 @@ const positiveIntegerId = z.coerce
 const sectionDatesQuerySchema = z.object({
     classSectionTermId: positiveIntegerId,
     subjectId: z.string().regex(/^\d+$/, "subjectId must be a number").transform(val => parseInt(val)),
-    employeeId: z.string().regex(/^\d+$/, "employeeId must be a number").transform(val => parseInt(val)),
+    userId: z.string().regex(/^\d+$/, "userId must be a number").transform(val => parseInt(val)),
 });
 
 const optionalPositiveId = z.preprocess(
@@ -23,7 +23,7 @@ const optionalPositiveId = z.preprocess(
 );
 
 const scheduleQuerySchema = z.object({
-    employeeId: z.coerce.number().int().positive(),
+    userId: z.coerce.number().int().positive(),
     date: z.string().optional(),
     sessionId: optionalPositiveId,
     groupPeriods: z.enum(['true', 'false']).optional(),
@@ -32,7 +32,7 @@ const scheduleQuerySchema = z.object({
 }).passthrough();
 
 const uniqueClassSectionSubjectsQuerySchema = z.object({
-    employeeId: positiveIntegerId,
+    userId: positiveIntegerId,
 });
 
 router.get(

@@ -3,7 +3,7 @@ import * as InternalAssessmentServices from "../services/internalAssessmentServi
 export async function addInternalAssessment(req, res) {
     const {
         subjectId, term, examSetupTypeId, type, totalMarks,
-        publishDate, dueDate, description,employeeId,
+        publishDate, dueDate, description,userId,
     } = req.body;
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
@@ -16,7 +16,7 @@ export async function addInternalAssessment(req, res) {
         const data = {
             subjectId, term: Number(term), examSetupTypeId, type, totalMarks,
             publishDate, dueDate, description,
-            createdBy, updatedBy,employeeId
+            createdBy, updatedBy,userId
         };
         const assessment = await InternalAssessmentServices.addInternalAssessment(data,file);
         res.status(201).json({ message: "Internal Assessment created", assessment });
@@ -86,10 +86,10 @@ export async function deleteInternalAssessment(req, res) {
 };
 
 export async function evaluationInternalAssessment(req, res) {
-    const { subjectId,employeeId } = req.query;
-    if (!(subjectId && employeeId)) return res.status(400).json({ message: "subjectId,employeeId is required" });
+    const { subjectId,userId } = req.query;
+    if (!(subjectId && userId)) return res.status(400).json({ message: "subjectId,userId is required" });
     try {
-        const record = await InternalAssessmentServices.evaluationInternalAssessment(subjectId,employeeId);
+        const record = await InternalAssessmentServices.evaluationInternalAssessment(subjectId,userId);
         if (record) res.status(200).json(record);
         else res.status(404).json({ message: "Not found data" });
     } catch (error) {
@@ -103,9 +103,9 @@ export async function createAssessmentEvaluation(req, res) {
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
 
-    if (!body.subjectId || !body.employeeId || !body.examAssessmentId) {
+    if (!body.subjectId || !body.userId || !body.examAssessmentId) {
       return res.status(400).json({
-        message: "subjectId, employeeId, examAssessmentId are required"
+        message: "subjectId, userId, examAssessmentId are required"
       });
     }
 

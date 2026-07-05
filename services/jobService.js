@@ -19,7 +19,7 @@ function to24(timeStr) {
 }
 
 // CHECK CONFLICTS
-async function checkConflict({ jobDate, startTime, endTime, employeeId, location, excludeId }) {
+async function checkConflict({ jobDate, startTime, endTime, userId, location, excludeId }) {
   try {
     const s = to24(startTime);
     const e = to24(endTime);
@@ -33,7 +33,7 @@ async function checkConflict({ jobDate, startTime, endTime, employeeId, location
       jobDate,
       s,
       e,
-      employeeId,
+      userId,
       excludeId
     });
 
@@ -71,7 +71,7 @@ export async function addJob(data) {
       jobDate: data.jobDate,
       startTime: data.startTime,
       endTime: data.endTime,
-      employeeId: data.employeeId,
+      userId: data.userId,
       location: data.location
     });
 
@@ -92,14 +92,14 @@ export async function updateJob(jobId, data) {
     const jobDate = data.jobDate || old.jobDate;
     const start = data.startTime || old.startTime;
     const end = data.endTime || old.endTime;
-    const emp = data.employeeId || old.employeeId;
+    const emp = data.userId || old.userId;
     const loc = data.location || old.location;
 
     await checkConflict({
       jobDate,
       startTime: start,
       endTime: end,
-      employeeId: emp,
+      userId: emp,
       location: loc,
       excludeId: jobId
     });
@@ -154,9 +154,9 @@ export async function getCalendarView({ view, date }) {
 }
 
 // FACULTY CALENDAR
-export async function getFacultyCalendar({ employeeId, start, end }) {
+export async function getFacultyCalendar({ userId, start, end }) {
   try {
-    return await jobRepository.getFacultyCalendar(employeeId, start, end);
+    return await jobRepository.getFacultyCalendar(userId, start, end);
   } catch (error) {
     console.error("Error in getFacultyCalendar:", error.message);
     throw new Error("Unable to fetch faculty calendar");

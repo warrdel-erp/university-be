@@ -14,8 +14,8 @@ export async function addTeacherSubstitute(req, res) {
 
 export async function getTeacherSubstitutes(req, res) {
     try {
-        const { employeeId } = req.query;
-        const result = await teacherSubstituteService.getTeacherSubstitutes(employeeId);
+        const { userId } = req.query;
+        const result = await teacherSubstituteService.getTeacherSubstitutes(userId);
         return SuccessResponse(res, 200, "Teacher substitutes fetched successfully", result);
     } catch (error) {
         return ErrorResponse(res, 500, error.message);

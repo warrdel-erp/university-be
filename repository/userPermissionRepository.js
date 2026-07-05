@@ -1,19 +1,18 @@
 import * as model from "../models/index.js";
 import { scoped } from "../utility/scoped.js";
+import { SCOPES } from "../const/scopes.js";
 
-export async function clearAllUserPermissions(userId, transaction = null) {
+/**
+ * Clear all permission entries for a user under a given role.
+ * If no roleId given, clears ALL entries for the user.
+ */
+export async function clearAllUserPermissions(userId, roleId = null, transaction = null) {
   try {
-    const user = await scoped(model.userModel).findOne({
-      attributes: ["userId"],
-      where: { userId },
-      transaction,
-    });
-    if (!user) {
-      return 0;
-    }
+    const where = { userId };
+    if (roleId) where.roleId = roleId;
 
-    return scoped(model.userPermissionModel).destroy({
-      where: { userId },
+    return model.userRolePermissionModel.destroy({
+      where,
       transaction,
     });
   } catch (error) {
@@ -22,7 +21,18 @@ export async function clearAllUserPermissions(userId, transaction = null) {
   }
 }
 
-export async function setUserPermissions(userId, permissions, transaction = null) {
+/**
+ * Saves permission+scope entries for a user under a given role.
+ * Input supports:
+ *   - Array of strings (permission keys, defaults to INSTITUTE scope)
+ *   - Array of objects { permission, scope }
+ *
+ * @param {number} userId
+ * @param {number} roleId
+ * @param {Array} permissions
+ * @param {object} transaction
+ */
+export async function setUserPermissions(userId, roleId, permissions, transaction = null) {
   try {
     const user = await scoped(model.userModel).findOne({
       attributes: ["userId"],
@@ -33,49 +43,78 @@ export async function setUserPermissions(userId, permissions, transaction = null
       throw new Error("User not found");
     }
 
-    const dataToInsert = permissions.map((perm) => ({
-      userId,
-      permission: perm,
-    }));
+    const dataToInsert = [];
+    for (const item of permissions) {
+      if (typeof item === "string") {
+        // Legacy: plain permission key, default to INSTITUTE scope
+        dataToInsert.push({
+          userId,
+          roleId,
+          permission: item,
+          scope: SCOPES.INSTITUTE,
+        });
+      } else if (item && item.permission) {
+        // New format: { permission, scope, resourceIds }
+        dataToInsert.push({
+          userId,
+          roleId,
+          permission: item.permission,
+          scope: item.scope || SCOPES.INSTITUTE,
+          resourceId: item.resourceIds && item.resourceIds.length > 0 ? item.resourceIds[0] : null,
+        });
+      }
+    }
 
-    return model.userPermissionModel.bulkCreate(dataToInsert, { transaction });
+    if (dataToInsert.length > 0) {
+      return model.userRolePermissionModel.bulkCreate(dataToInsert, { transaction });
+    }
+    return [];
   } catch (error) {
     console.error("Repository: Error in setUserPermissions:", error);
     throw error;
   }
 }
 
-export async function clearAndSetUserPermissions(userId, permissions) {
-  const transaction = await model.userPermissionModel.sequelize.transaction();
+/**
+ * Clear and re-set all user permission entries under a given role.
+ */
+export async function clearAndSetUserPermissions(userId, roleId, permissions) {
+  const transaction = await model.userRolePermissionModel.sequelize.transaction();
   try {
-    await clearAllUserPermissions(userId, transaction);
-    const result = await setUserPermissions(userId, permissions, transaction);
+    await clearAllUserPermissions(userId, roleId, transaction);
+    const result = await setUserPermissions(userId, roleId, permissions, transaction);
     await transaction.commit();
     return result;
   } catch (error) {
     await transaction.rollback();
-    console.error("Error in clearAndSetUserPermissions :", error);
+    console.error("Error in clearAndSetUserPermissions:", error);
     throw error;
   }
 }
 
-export async function getUserPermissionsByUserId(userId) {
+/**
+ * Get all permission+scope entries for a user.
+ * Optionally filter by roleId.
+ */
+export async function getUserPermissionsByUserId(userId, roleId = null) {
   try {
-    const user = await scoped(model.userModel).findOne({
-      attributes: ["userId"],
-      where: { userId },
-    });
-    if (!user) {
-      return [];
-    }
+    const where = { userId };
+    if (roleId) where.roleId = roleId;
 
-    const permissions = await scoped(model.userPermissionModel).findAll({
-      where: { userId },
-      attributes: ["permission"],
+    const entries = await model.userRolePermissionModel.findAll({
+      where,
+      include: [{ model: model.roleModel, as: "userRole", attributes: ["roleId", "role"] }],
     });
-    return permissions.map((p) => p.permission);
+
+    return entries.map((e) => ({
+      permission: e.permission,
+      scope: e.scope,
+      roleId: e.roleId,
+      roleName: e.userRole?.role,
+      resourceId: e.resourceId,
+    }));
   } catch (error) {
-    console.error("Error in getUserPermissionsByUserId :", error);
+    console.error("Error in getUserPermissionsByUserId:", error);
     throw error;
   }
 }

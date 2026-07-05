@@ -4,7 +4,6 @@ import users from "./userModel.js";
 import subjectModel from "./subjectModel.js";
 import examTypeModel from "./examTypeModel.js";
 import courseModel from "./courseModel.js";
-import employeeModel from "./employeeModel.js";
 import classRoomModel from "./classRoomModel.js";
 
 const examSetupModel = sequelize.define(
@@ -68,8 +67,8 @@ const examSetupModel = sequelize.define(
             allowNull: true,
             field: "teacher_id",
             references: {
-                model: employeeModel,
-                key: "employee_id",
+                model: users,
+                key: 'user_id',
             },
         },
         examDate: {

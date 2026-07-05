@@ -21,7 +21,7 @@ const positiveIntegerId = z.coerce
     .positive('id must be greater than 0');
 
 const getTeacherSectionQuerySchema = z.object({
-    employeeId: positiveIntegerId.optional(),
+    userId: positiveIntegerId.optional(),
     sessionId: positiveIntegerId.optional(),
     search: z.string().trim().optional(),
     page: z.coerce
@@ -40,7 +40,7 @@ const getTeacherSectionQuerySchema = z.object({
 });
 
 const getTeacherSubjectQuerySchema = z.object({
-    employeeId: positiveIntegerId.optional(),
+    userId: positiveIntegerId.optional(),
     subjectId: positiveIntegerId.optional(),
     sessionId: positiveIntegerId.optional(),
     search: z.string().trim().optional(),
@@ -67,20 +67,20 @@ const idOrNonEmptyIdArray = z
     .transform((val) => (Array.isArray(val) ? val : [val]));
 
 const createTeacherSubjectSchema = z.object({
-    employeeId: positiveIntegerId,
+    userId: positiveIntegerId,
     subjectId: idOrNonEmptyIdArray,
     instituteId: positiveIntegerId.optional(),
     campusId: positiveIntegerId.optional(),
 });
 
 const createTeacherSectionSchema = z.object({
-    employeeId: positiveIntegerId,
+    userId: positiveIntegerId,
     classSectionsId: idOrNonEmptyIdArray,
 });
 
 const teacherSubjectMappingItemSchema = z.object({
     teacherSubjectMappingId: positiveIntegerId.optional(),
-    employeeId: positiveIntegerId,
+    userId: positiveIntegerId,
     subjectId: positiveIntegerId,
 });
 
@@ -91,7 +91,7 @@ const updateTeacherSubjectSchema = z.object({
 
 const updateTeacherSectionSchema = z.object({
     teacherSectionMappingId: positiveIntegerId,
-    employeeId: positiveIntegerId,
+    userId: positiveIntegerId,
     classSectionsId: idOrNonEmptyIdArray,
 });
 

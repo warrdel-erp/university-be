@@ -2,6 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import university from "./universityModel.js";
 import institute from "./instituteModel.js";
+import role from "./roleModel.js";
 
 const userModel = sequelize.define(
     'users',
@@ -26,10 +27,14 @@ const userModel = sequelize.define(
             allowNull: true,
             field: 'default_institute_id',
         },
-        defaultRole: {
-            type: DataTypes.STRING,
+        defaultRoleId: {
+            type: DataTypes.INTEGER,
             allowNull: true,
-            field: 'default_role'
+            field: 'default_role_id',
+            references: {
+                model: role,
+                key: 'role_id'
+            }
         },
         defaultAcademicYearId: {
             type: DataTypes.INTEGER,

@@ -3,8 +3,8 @@ import { buildScope, scoped } from "../utility/scoped.js";
 
 export async function addRequest(data, options = {}) {
   const employee = await scoped(model.employeeModel).findOne({
-    attributes: ["employeeId"],
-    where: { employeeId: data.employeeId },
+    attributes: ["userId"],
+    where: { userId: data.userId },
     transaction: options.transaction,
   });
   if (!employee) {
@@ -24,7 +24,7 @@ export async function addRequest(data, options = {}) {
 }
 
 export async function getRequests(filters = {}) {
-  const businessWhere = filters.employeeId ? { employeeId: filters.employeeId } : {};
+  const businessWhere = filters.userId ? { userId: filters.userId } : {};
 
   return scoped(model.leaveRequestModel).findAll({
     attributes: { exclude: ["deletedAt"] },
@@ -38,8 +38,7 @@ export async function getRequests(filters = {}) {
         attributes: ["policyId", "policyName", "totalLeavesPerYear"],
       },
       {
-        model: model.employeeModel,
-        as: "employeeRequest",
+        model: model.users, as: "user",
         where: buildScope(model.employeeModel),
         required: true,
       },
@@ -60,8 +59,7 @@ export async function getRequestById(requestId) {
         attributes: ["policyId", "policyName", "totalLeavesPerYear"],
       },
       {
-        model: model.employeeModel,
-        as: "employeeRequest",
+        model: model.users, as: "user",
         where: buildScope(model.employeeModel),
         required: true,
       },

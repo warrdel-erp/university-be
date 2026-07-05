@@ -1,7 +1,7 @@
 import * as service from "../services/leaveRequestService.js";
 
 export async function addRequest(req, res) {
-  const requiredFields = ["employeeId", "policyId", "startDate", "endDate", "totalDays"];
+  const requiredFields = ["userId", "policyId", "startDate", "endDate", "totalDays"];
   const data = { ...req.body };
 
   try {
@@ -18,8 +18,8 @@ export async function addRequest(req, res) {
 
 export async function getAllRequests(req, res) {
   try {
-    const { employeeId } = req.query;
-    const requests = await service.getRequests({ employeeId });
+    const { userId } = req.query;
+    const requests = await service.getRequests({ userId });
     res.status(200).json(requests);
   } catch (err) {
     res.status(500).json({ error: err.message });

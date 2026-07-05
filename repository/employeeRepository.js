@@ -8,8 +8,8 @@ import {
 
 async function assertScopedEmployee(employeeId, options = {}) {
     return scoped(model.employeeModel).findOne({
-        where: { employeeId },
-        attributes: ['employeeId'],
+        where: { userId: employeeId },
+        attributes: ['userId'],
         transaction: options.transaction,
     });
 }
@@ -17,8 +17,8 @@ async function assertScopedEmployee(employeeId, options = {}) {
 export async function resolveEmployeeIdForAuth({ userId, employeeId } = {}) {
     if (employeeId != null && employeeId !== '') {
         const row = await scoped(model.employeeModel).findOne({
-            where: { employeeId: Number(employeeId) },
-            attributes: ['employeeId', 'userId'],
+            where: { userId: Number(employeeId) },
+            attributes: ['userId'],
         });
         if (!row) {
             return null;
@@ -26,7 +26,7 @@ export async function resolveEmployeeIdForAuth({ userId, employeeId } = {}) {
         if (userId != null && Number(row.userId) !== Number(userId)) {
             return null;
         }
-        return row.employeeId;
+        return row.userId;
     }
 
     if (userId != null && userId !== '') {
@@ -59,7 +59,7 @@ export async function updateEmployee(employeeId, data, transaction) {
 
         const result = await scoped(model.employeeModel).update(
             data,
-            { where: { employeeId }, transaction },
+            { where: { userId: employeeId }, transaction },
         );
         return result;
     } catch (error) {
@@ -72,7 +72,7 @@ export async function getAllEmployee(campusId, instituteId, options = {}) {
     try {
         const { employeeId } = options;
         const whereClause = {
-            ...(employeeId && { employeeId }),
+            ...(employeeId && { userId: employeeId }),
             ...(campusId && { campusId }),
             ...(instituteId && { instituteId }),
         };
@@ -437,7 +437,7 @@ export async function deleteEmployeeDetail(employeeId) {
         }
 
         await scoped(model.employeeModel).destroy({
-            where: { employeeId },
+            where: { userId: employeeId },
             individualHooks: true,
         });
         return { message: 'employee deleted successfully' };
@@ -609,17 +609,17 @@ export async function getTeacherSubjectsFromSchedule(employeeId) {
 
         const result = await model.classScheduleModel.findAll({
             where: {
-                [Op.or]: [
-                    { employeeId: scopedEmployeeId },
-                    Sequelize.literal(`
-                      EXISTS (
-                        SELECT 1
-                        FROM teacher_subject_mapping tsm
-                        WHERE tsm.teacher_subject_mapping_id = class_schedule_item.teacher_subject_mapping_id
-                        AND tsm.employee_id = ${scopedEmployeeId}
-                      )
-                    `),
-                ],
+                  [Op.or]: [
+                      { employeeId: scopedEmployeeId },
+                      Sequelize.literal(`
+                        EXISTS (
+                          SELECT 1
+                          FROM teacher_subject_mapping tsm
+                          WHERE tsm.teacher_subject_mapping_id = class_schedule_item.teacher_subject_mapping_id
+                          AND tsm.user_id = ${scopedEmployeeId}
+                        )
+                      `),
+                  ],
             },
             include: [
                 {

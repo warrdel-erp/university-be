@@ -3,12 +3,12 @@ import * as teacherMapping from '../services/teacherMappingServices.js'
 export const teacherSubjectMapping = async (req, res) => {
     const data = req.body;
     const createdBy = req.user.userId;
-    const { employeeId, subjectId } = data;
+    const { userId, subjectId } = data;
     try {
         const hasSubjectIds = [].concat(subjectId ?? []).filter(Boolean).length > 0;
 
-        if (!employeeId || !hasSubjectIds) {
-            return res.status(400).send("employeeId and subjectId are required");
+        if (!userId || !hasSubjectIds) {
+            return res.status(400).send("userId and subjectId are required");
         }
 
         const result = await teacherMapping.teacherSubjectMappingService(data, createdBy);
@@ -20,13 +20,13 @@ export const teacherSubjectMapping = async (req, res) => {
 };
 
 export const teacherSectionMapping = async (req, res) => {
-    let { employeeId, classSectionsId } = req.body;
+    let { userId, classSectionsId } = req.body;
     const createdBy = req.user.userId;
     const data = req.body
     try {
         //  required fields
-        if (!(employeeId && classSectionsId)) {
-            return res.status(400).send(" employeeId, classSectionsId is required");
+        if (!(userId && classSectionsId)) {
+            return res.status(400).send(" userId, classSectionsId is required");
         }
 
         const result = await teacherMapping.teacherSectionMappingService(data, createdBy);
@@ -76,13 +76,13 @@ export const updateTeacherSubjectMapping = async (req, res) => {
 };
 
 export const updateTeacherSectionMapping = async (req, res) => {
-    let { employeeId, classSectionsId, teacherSectionMappingId } = req.body;
+    let { userId, classSectionsId, teacherSectionMappingId } = req.body;
     const createdBy = req.user.userId;
     const data = req.body
     try {
         //  required fields
-        if (!(employeeId && classSectionsId && teacherSectionMappingId)) {
-            return res.status(400).send(" employeeId, classSectionsId and teacherSectionMappingId is required");
+        if (!(userId && classSectionsId && teacherSectionMappingId)) {
+            return res.status(400).send(" userId, classSectionsId and teacherSectionMappingId is required");
         }
 
         const result = await teacherMapping.updateTeacherSectionMapping(data, teacherSectionMappingId);

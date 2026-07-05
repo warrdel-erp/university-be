@@ -79,7 +79,7 @@ export async function getSubjectOptions(courseId, term, academicYearId) {
 
 export async function getTeacherOptions(campusId) {
     return await scoped(model.employeeModel).findAll({
-        attributes: [['employee_name', 'label'], ['employee_id', 'value']],
+        attributes: [['employee_name', 'label'], ['user_id', 'value']],
         where: {
             ...(campusId && { campusId }),
         },
@@ -92,10 +92,16 @@ export async function getTeacherOptions(campusId) {
                 model: model.userRoleModel,
                 as: 'userRoles',
                 attributes: [],
-                where: {
-                    role: ROLES.TEACHER,
-                },
                 required: true,
+                include: [{
+                    model: model.roleModel,
+                    as: 'role',
+                    attributes: [],
+                    where: {
+                        role: ROLES.TEACHER,
+                    },
+                    required: true,
+                }],
             }],
         }],
     });

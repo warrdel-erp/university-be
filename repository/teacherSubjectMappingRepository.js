@@ -14,10 +14,10 @@ export function teacherSubjectWhere(subjectIds) {
     return { subjectId: { [Op.in]: subjectIds } };
 }
 
-async function findEmployeeInInstitute(employeeId) {
+async function findEmployeeInInstitute(userId) {
     return scoped(model.employeeModel).findOne({
-        where: { employeeId },
-        attributes: ['employeeId'],
+        where: { userId },
+        attributes: ['userId'],
     });
 }
 
@@ -94,14 +94,14 @@ function teacherSubjectRowMatchesSearch(row, search) {
 async function findTeacherSubjectMappingInInstitute(teacherSubjectMappingId) {
     return scoped(model.teacherSubjectMappingModel).findOne({
         where: { teacherSubjectMappingId },
-        attributes: ['teacherSubjectMappingId', 'employeeId', 'subjectId'],
+        attributes: ['teacherSubjectMappingId', 'userId', 'subjectId'],
         include: [
             {
                 model: model.employeeModel,
                 as: 'teacherEmployeeData',
                 where: buildScope(model.employeeModel),
                 required: true,
-                attributes: ['employeeId'],
+                attributes: ['userId'],
             },
             {
                 model: model.subjectModel,
@@ -114,18 +114,18 @@ async function findTeacherSubjectMappingInInstitute(teacherSubjectMappingId) {
     });
 }
 
-async function findExistingTeacherSubjectMapping(employeeId, subjectId) {
+async function findExistingTeacherSubjectMapping(userId, subjectId) {
     return scoped(model.teacherSubjectMappingModel).findOne({
-        where: { employeeId, subjectId },
-        attributes: ['teacherSubjectMappingId', 'employeeId', 'subjectId'],
+        where: { userId, subjectId },
+        attributes: ['teacherSubjectMappingId', 'userId', 'subjectId'],
     });
 }
 
 export async function teacherSubjectMapping(data) {
     try {
-        const employee = await findEmployeeInInstitute(data.employeeId);
+        const employee = await findEmployeeInInstitute(data.userId);
         if (!employee) {
-            throw new Error(`Employee ID ${data.employeeId} not found`);
+            throw new Error(`Employee ID ${data.userId} not found`);
         }
 
         const subject = await findSubjectInInstitute(data.subjectId);
@@ -133,7 +133,7 @@ export async function teacherSubjectMapping(data) {
             throw new Error(`Subject ID ${data.subjectId} not found`);
         }
 
-        const existing = await findExistingTeacherSubjectMapping(data.employeeId, data.subjectId);
+        const existing = await findExistingTeacherSubjectMapping(data.userId, data.subjectId);
         if (existing) {
             const error = new Error(
                 `Teacher is already mapped to subject ${data.subjectId}`,
@@ -150,7 +150,7 @@ export async function teacherSubjectMapping(data) {
 }
 
 export async function getTeacherSubjectMapping({
-    employeeId,
+    userId,
     subjectId,
     sessionId,
     academicYearId = getAcademicYearId(),
@@ -164,7 +164,7 @@ export async function getTeacherSubjectMapping({
             : null;
 
         const teacherWhere = {
-            ...(employeeId && { employeeId }),
+            ...(userId && { userId }),
             ...buildScope(model.employeeModel),
         };
 
@@ -207,11 +207,11 @@ export async function getTeacherSubjectMapping({
             };
         }
 
-        const teacherIds = teachers.map((t) => t.employeeId);
+        const teacherIds = teachers.map((t) => t.userId);
 
         const rows = await scoped(model.teacherSubjectMappingModel).findAll({
             where: {
-                employeeId: teacherIds,
+                userId: teacherIds,
                 ...teacherSubjectWhere(subjectIds),
             },
             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
@@ -250,12 +250,12 @@ export async function getTeacherSubjectMapping({
         const groupsByKey = rows.reduce((acc, relation) => {
             const plain = relation.get({ plain: true });
             const courseId = plain?.employeeSubject?.courseId ?? 'none';
-            const empId = plain.employeeId;
+            const empId = plain.userId;
             const key = `${empId}_${courseId}`;
 
             if (!acc[key]) {
                 acc[key] = {
-                    employeeId: empId,
+                    userId: empId,
                     createdBy: plain.createdBy,
                     subjects: [],
                 };
@@ -271,19 +271,19 @@ export async function getTeacherSubjectMapping({
 
         let allGrouped = teachers.flatMap((teacher) => {
             const plainTeacher = teacher.get({ plain: true });
-            const empId = plainTeacher.employeeId;
+            const empId = plainTeacher.userId;
             const empGroupKeys = Object.keys(groupsByKey).filter((k) => k.startsWith(`${empId}_`));
 
             if (!empGroupKeys.length) {
                 return [{
-                    employeeId: empId,
+                    userId: empId,
                     teacherEmployeeData: plainTeacher,
                     employeeSubject: [],
                 }];
             }
 
             return empGroupKeys.map((key) => ({
-                employeeId: empId,
+                userId: empId,
                 createdBy: groupsByKey[key].createdBy,
                 teacherEmployeeData: plainTeacher,
                 employeeSubject: groupsByKey[key].subjects,
@@ -318,10 +318,10 @@ export async function updateTeachersSubjectMapping(teacherSubjectMappingId, info
             throw new Error('Mapping not found');
         }
 
-        if (info.employeeId != null) {
-            const employee = await findEmployeeInInstitute(info.employeeId);
+        if (info.userId != null) {
+            const employee = await findEmployeeInInstitute(info.userId);
             if (!employee) {
-                throw new Error(`Employee ID ${info.employeeId} not found`);
+                throw new Error(`Employee ID ${info.userId} not found`);
             }
         }
 

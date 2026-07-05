@@ -1,6 +1,5 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import employee from "./employeeModel.js";
 import users from "./userModel.js";
 
 const faculityLoadModel = sequelize.define(
@@ -12,13 +11,13 @@ const faculityLoadModel = sequelize.define(
             autoIncrement: true,
             field: 'faculity_load_id'
         },
-        employeeId: {
+        userId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'employee_id',
+            field: 'user_id',
             references: {
-                model: employee,
-                key: 'employee_id'
+                model: users,
+                key: 'user_id'
             }
         },
         definedLoad:{

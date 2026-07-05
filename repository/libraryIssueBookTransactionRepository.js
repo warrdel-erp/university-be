@@ -15,7 +15,7 @@ function studentMemberAttributes() {
 }
 
 function teacherMemberAttributes() {
-  return ["employeeId", "employeeName", "employeeCode", "department"];
+  return ["userId", "employeeName", "employeeCode", "department"];
 }
 
 function inventoryListAttributes() {
@@ -183,8 +183,8 @@ export async function findStudentMemberById(studentId, transaction) {
   });
 }
 
-export async function findTeacherMemberById(employeeId, transaction) {
-  return scoped(model.employeeModel).findByPk(employeeId, {
+export async function findTeacherMemberById(userId, transaction) {
+  return scoped(model.employeeModel).findByPk(userId, {
     attributes: teacherMemberAttributes(),
     transaction,
   });
@@ -197,9 +197,9 @@ export async function countStudentMemberById(studentId, transaction) {
   });
 }
 
-export async function countTeacherMemberById(employeeId, transaction) {
+export async function countTeacherMemberById(userId, transaction) {
   return scoped(model.employeeModel).count({
-    where: { employeeId },
+    where: { userId },
     transaction,
   });
 }
@@ -405,7 +405,7 @@ export async function markInventoriesAvailable(inventoryIds, transaction) {
       issueDate: null,
       dueDate: null,
       studentId: null,
-      employeeId: null,
+      userId: null,
     },
     {
       where: { inventoryId: { [Op.in]: scopedIds } },
@@ -665,7 +665,7 @@ export async function getLibraryBookInventoryIssueHistoryByInventoryId(inventory
           {
             model: model.employeeModel,
             as: "teacherMember",
-            attributes: ["employeeId", "employeeName", "employeeCode", "department"],
+            attributes: ["userId", "employeeName", "employeeCode", "department"],
             required: false,
           },
         ],
@@ -721,7 +721,7 @@ export async function getLibraryMembersList(query = {}) {
   if (!memberType || memberType === "TEACHER") {
     const teachers = await scoped(model.employeeModel).findAll({
       attributes: [...teacherMemberAttributes(), "userId"],
-      order: [["employeeId", "DESC"]],
+      order: [["userId", "DESC"]],
     });
 
     const userIds = teachers.map((teacher) => teacher.userId).filter(Boolean);
@@ -740,7 +740,7 @@ export async function getLibraryMembersList(query = {}) {
         const { userId, ...teacherData } = plain;
         return {
           memberType: "TEACHER",
-          memberId: plain.employeeId,
+          memberId: plain.userId,
           email: user?.email ?? null,
           mobile: user?.phone ?? null,
           ...teacherData,

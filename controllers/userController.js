@@ -86,7 +86,7 @@ export const login = async (req, res) => {
 // admin register student and employee
 export const adminRegisterStudentAndEmployee = async (req, res) => {
   try {
-    const { role, courseId, classSectionId, employeeId } = req.body;
+    const { role, courseId, classSectionId, userId } = req.body;
 
     if (!role) {
       res.status(400).send("All input is required");

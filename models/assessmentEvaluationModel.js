@@ -27,10 +27,10 @@ const assessmentEvaluationModel = sequelize.define(
         employeeId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'employee_id',
+            field: 'user_id',
             references: {
-                model: employeeModel,
-                key: 'employee_id'
+                model: users,
+                key: 'user_id'
             }
         },
         examAssessmentId: {

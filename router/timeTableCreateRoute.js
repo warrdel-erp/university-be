@@ -25,7 +25,7 @@ const getRoutineSchema = z.object({
 });
 
 const getRoutineByTeacherSchema = z.object({
-    employeeId: positiveIntegerId,
+    userId: positiveIntegerId,
     courseId: positiveIntegerId,
     sessionId: positiveIntegerId,
 });
@@ -92,7 +92,7 @@ const addTimeTableMappingSchema = z
         timeTableRoutineId: positiveIntegerId,
         timeTableCreationId: optionalPositiveId,
         timeTableNameId: optionalPositiveId,
-        employeeId: optionalPositiveId,
+        userId: optionalPositiveId,
         subjectId: optionalPositiveId,
         electiveSubjectId: optionalPositiveId,
         teacherSubjectMappingId: optionalPositiveId,
@@ -129,7 +129,7 @@ const updateTimeTableMappingSchema = z.object({
 
 const updateTeacherMappingItemSchema = z.object({
     timeTableMappingId: optionalPositiveId,
-    employeeId: optionalPositiveId,
+    userId: optionalPositiveId,
     subjectId: optionalPositiveId,
     electiveSubjectId: optionalPositiveId,
     teacherType: z.string().optional(),

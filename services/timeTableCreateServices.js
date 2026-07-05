@@ -369,7 +369,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
       timeTableRoutineId,
       day,
       classRoomSectionId,
-      employeeId,
+      userId,
       combinedGroupId: existingCombinedGroupId,
     } = data;
 
@@ -436,9 +436,9 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
       const periodLength = toMoneyNumber(periodInfo.timeTableName?.periodLength ?? 0);
       totalPeriodLength = decimalAdd(totalPeriodLength, periodLength);
 
-      if (employeeId) {
+      if (userId) {
         const conflict = await timeTableCreateRepository.checkTeacherConflictRepository(
-          employeeId,
+          userId,
           day,
           startTime,
           endTime,
@@ -510,11 +510,11 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
       }
     }
 
-    if (employeeId && totalPeriodLength > 0) {
-      const facultyLoad = await getSingleFaculityLoadDetails(employeeId);
+    if (userId && totalPeriodLength > 0) {
+      const facultyLoad = await getSingleFaculityLoadDetails(userId);
       const existingLoad = toMoneyNumber(facultyLoad?.[0]?.currentLoad);
       const currentLoad = decimalAdd(existingLoad, totalPeriodLength);
-      await updateFaculityLoadByEmployeeId(employeeId, { currentLoad }, transaction);
+      await updateFaculityLoadByEmployeeId(userId, { currentLoad }, transaction);
     }
 
     await transaction.commit();
@@ -735,9 +735,9 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
     // LOOP
     for (const item of mappingArray) {
       //  check conflict
-      if (item.employeeId) {
+      if (item.userId) {
         const conflict = await timeTableCreateRepository.checkTeacherConflictRepository(
-          item.employeeId,
+          item.userId,
           baseRow.day,
           startTime,
           endTime,
@@ -783,14 +783,14 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
 
       // ===== CASE 2: NEW ENTRY =====
       else if (item.isNew === true) {
-        if (!item.employeeId) {
-          throw new Error("employeeId is required for new teacher entry");
+        if (!item.userId) {
+          throw new Error("userId is required for new teacher entry");
         }
 
         // update faculty load
-        const facLoad = await getSingleFaculityLoadDetails(item.employeeId);
+        const facLoad = await getSingleFaculityLoadDetails(item.userId);
         if (!facLoad || !facLoad[0]) {
-          throw new Error(`Faculty load not found for employee ${item.employeeId}`);
+          throw new Error(`Faculty load not found for employee ${item.userId}`);
         }
 
         const existingLoad = toMoneyNumber(
@@ -798,7 +798,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
         );
         const newLoad = decimalAdd(existingLoad, periodLength);
 
-        await updateFaculityLoadByEmployeeId(item.employeeId, { currentLoad: newLoad }, transaction);
+        await updateFaculityLoadByEmployeeId(item.userId, { currentLoad: newLoad }, transaction);
 
         const newRow = {
           timeTableNameId: baseRow.timeTableNameId,
@@ -812,7 +812,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           period: baseRow.period,
           isSameTeacher: false,
           timeTableType: baseRow.timeTableType,
-          employeeId: item.employeeId,
+          userId: item.userId,
           teacherType: item.teacherType,
           isAttendence: item.isAttendence,
           isOverridingSyblingElectives: item.isOverridingSyblingElectives,
@@ -1009,9 +1009,9 @@ export async function getTimeTableElective(courseId) {
         ? (curr?.timeTableTeacherSubject?.employeeSubject?.subjectId ?? curr?.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectId)
         : curr?.timeTableSubject?.subjectId;
 
-      const employeeId = sameTeacher
-        ? curr?.timeTableTeacherSubject?.teacherEmployeeData?.employeeId
-        : curr?.employeeDetails?.employeeId;
+      const userId = sameTeacher
+        ? curr?.timeTableTeacherSubject?.teacherEmployeeData?.userId
+        : curr?.employeeDetails?.userId;
 
       const pickColor = sameTeacher
         ? curr?.timeTableTeacherSubject?.teacherEmployeeData?.pickColor
@@ -1026,7 +1026,7 @@ export async function getTimeTableElective(courseId) {
         employeeName: teacherName || "N/A",
         employeeCode: employeeCode || "",
         pickColor: pickColor || "",
-        employeeId: employeeId || null,
+        userId: userId || null,
         timeTableType: curr?.timeTableType,
         subject: curr?.timeTableElective
           ? {
@@ -1142,7 +1142,7 @@ export async function getTimeTableElective(courseId) {
 //         employeeName: teacherData?.employeeName || "N/A",
 //         employeeCode: teacherData?.employeeCode || "",
 //         pickColor: teacherData?.pickColor || "",
-//         employeeId: teacherData?.employeeId || null,
+//         userId: teacherData?.userId || null,
 //         isTeacher: curr?.isTeacher || null,
 //         isAttendence: curr?.isAttendence ?? null,
 //         timeTableType, // Use the raw mapping type for the final grouping key
@@ -1242,7 +1242,7 @@ export async function getTimeTableElective(courseId) {
 //     } else {
 //       // existPeriod.mappingData.push(mappingEntry);
 //       const alreadyExists = existPeriod.mappingData.some(m =>
-//         m.employeeId === mappingEntry.employeeId &&
+//         m.userId === mappingEntry.userId &&
 //         m.subject.subjectId === mappingEntry.subject.subjectId
 //       );
 
@@ -1334,7 +1334,7 @@ export async function getTimeTableCellData(courseId, classSectionTermId) {
           employeeName: teacherData?.employeeName || "N/A",
           employeeCode: teacherData?.employeeCode || "",
           pickColor: teacherData?.pickColor || "",
-          employeeId: teacherData?.employeeId || null,
+          userId: teacherData?.userId || null,
           teacherType: curr?.teacherType || null,
           isAttendence: curr?.isAttendence ?? null,
           timeTableType,
@@ -1423,7 +1423,7 @@ export async function getTimeTableCellData(courseId, classSectionTermId) {
         });
       } else {
         const exists = periodObj.mappingData.some(
-          (m) => m.employeeId === mappingEntry.employeeId && m.subject.subjectId === mappingEntry.subject.subjectId,
+          (m) => m.userId === mappingEntry.userId && m.subject.subjectId === mappingEntry.subject.subjectId,
         );
 
         if (!exists) {
@@ -1693,7 +1693,7 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
             const existing = scheduleItemsMap.find(si => si.type === 'normal' && si.subject.name === subjectName && si.room.name === roomName);
             if (existing) {
               existing.teachers.push({
-                employeeId: teacher?.employeeId || null,
+                userId: teacher?.userId || null,
                 name: teacher?.employeeName || "N/A",
                 timeTableMappingId: item.timeTableMappingId,
                 teacherType: item.teacherType,
@@ -1705,7 +1705,7 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
                 isOverridingSyblingElectives: item.isOverridingSyblingElectives,
                 teachers: [
                   {
-                    employeeId: teacher?.employeeId || null,
+                    userId: teacher?.userId || null,
                     name: teacher?.employeeName || "N/A",
                     color: teacher?.pickColor,
                     timeTableMappingId: item.timeTableMappingId,
@@ -1732,7 +1732,7 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
               const existing = scheduleItemsMap.find(si => si.type === 'elective' && si.subject.name === subjectName && si.room.name === roomName);
               if (existing) {
                 existing.teachers.push({
-                  employeeId: teacher?.employeeId || null,
+                  userId: teacher?.userId || null,
                   name: teacher?.employeeName || "N/A",
                   timeTableMappingId: item.timeTableMappingId,
                   teacherType: item.teacherType,
@@ -1742,7 +1742,7 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
                 scheduleItemsMap.push({
                   type: 'elective',
                   teachers: [{
-                    employeeId: teacher?.employeeId || null,
+                    userId: teacher?.userId || null,
                     name: teacher?.employeeName || "N/A",
                     timeTableMappingId: item.timeTableMappingId,
                     teacherType: item.teacherType,
@@ -1820,7 +1820,7 @@ function mapClassSectionSummary(classSection) {
   };
 }
 
-export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, sessionId) {
+export async function getRoutineByTeacherAndAcademicYear(userId, courseId, sessionId) {
   try {
     const {
       employee,
@@ -1828,12 +1828,12 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, s
       session,
       classSections,
       routines: routineRows,
-    } = await timeTableCreateRepository.getTeacherRoutineBundle(employeeId, courseId, sessionId);
+    } = await timeTableCreateRepository.getTeacherRoutineBundle(userId, courseId, sessionId);
 
     const common = {
       employee: employee
         ? {
-            employeeId: employee.employeeId,
+            userId: employee.userId,
             employeeName: employee.employeeName,
             employeeCode: employee.employeeCode,
             pickColor: employee.pickColor,
@@ -1935,7 +1935,7 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, s
             const existing = scheduleItemsMap.find(si => si.type === 'normal' && si.subject.name === subjectName && si.room.name === roomName);
             if (existing) {
               existing.teachers.push({
-                employeeId: teacher?.employeeId || null,
+                userId: teacher?.userId || null,
                 name: teacher?.employeeName || "N/A",
                 timeTableMappingId: item.timeTableMappingId,
                 teacherType: item.teacherType,
@@ -1947,7 +1947,7 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, s
                 isOverridingSyblingElectives: item.isOverridingSyblingElectives,
                 teachers: [
                   {
-                    employeeId: teacher?.employeeId || null,
+                    userId: teacher?.userId || null,
                     name: teacher?.employeeName || "N/A",
                     color: teacher?.pickColor,
                     timeTableMappingId: item.timeTableMappingId,
@@ -1974,7 +1974,7 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, s
               const existing = scheduleItemsMap.find(si => si.type === 'elective' && si.subject.name === subjectName && si.room.name === roomName);
               if (existing) {
                 existing.teachers.push({
-                  employeeId: teacher?.employeeId || null,
+                  userId: teacher?.userId || null,
                   name: teacher?.employeeName || "N/A",
                   timeTableMappingId: item.timeTableMappingId,
                   teacherType: item.teacherType,
@@ -1984,7 +1984,7 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, s
                 scheduleItemsMap.push({
                   type: 'elective',
                   teachers: [{
-                    employeeId: teacher?.employeeId || null,
+                    userId: teacher?.userId || null,
                     name: teacher?.employeeName || "N/A",
                     timeTableMappingId: item.timeTableMappingId,
                     teacherType: item.teacherType,

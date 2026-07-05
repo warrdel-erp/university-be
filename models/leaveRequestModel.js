@@ -2,7 +2,6 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import users from "./userModel.js";
 import leavePolicies from "./leavePolicyModel.js";
-import employeeModel from "./employeeModel.js";
 
 const leaveRequestModel = sequelize.define(
   "leave_requests",
@@ -13,14 +12,14 @@ const leaveRequestModel = sequelize.define(
       autoIncrement: true,
       field: "request_id"
     },
-    employeeId: {
+    userId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      field: "employee_id",
+      field: 'user_id',
       references: {
-         model: employeeModel, 
-         key: "employee_id" 
-        }
+                model: users,
+                key: 'user_id'
+            }
     },
     policyId: {
       type: DataTypes.INTEGER,

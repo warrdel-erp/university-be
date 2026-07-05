@@ -151,9 +151,9 @@ export async function deleteInternalAssessment(examAssessmentId) {
     return await model.internalAssessmentModel.destroy({ where: { examAssessmentId } });
 };
 
-export async function evaluationInternalAssessment(subjectId, employeeId) {
+export async function evaluationInternalAssessment(subjectId, userId) {
     const assessment = await model.internalAssessmentModel.findOne({
-        where: { subjectId, employeeId },
+        where: { subjectId, userId },
         include: [
             {
                 model: model.subjectModel,
@@ -170,9 +170,8 @@ export async function evaluationInternalAssessment(subjectId, employeeId) {
             },
             ...assessmentIncludes.filter((includeRow) => includeRow.as !== 'assessmentSubject'),
             {
-                model: model.employeeModel,
-                as: "employees",
-                attributes: ["employeeId", "employeeCode", "employeeName"],
+                model: model.users, as: "user",
+                attributes: ["userId", "employeeCode", "employeeName"],
                 where: buildScope(model.employeeModel),
                 required: true,
             },

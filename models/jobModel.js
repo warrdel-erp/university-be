@@ -5,7 +5,7 @@ import instituteModel from "./instituteModel.js";
 import subAccount from "./subAccountModel.js" // this is department
 import courseModel from "./courseModel.js";
 import subjectModel from "./subjectModel.js";
-import employeeModel from "./employeeModel.js";
+
 import users from "./userModel.js";
 import jobSettingModel from "./jobSettingModel.js";
 
@@ -83,13 +83,13 @@ const jobModel = sequelize.define(
       },
     },
 
-    employeeId: {
+    userId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      field: "employee_id",
+      field: 'user_id',
       references: {
-        model: employeeModel,
-        key: "employee_id",
+        model: users,
+        key: 'user_id',
       },
     },
 

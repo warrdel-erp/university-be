@@ -1915,12 +1915,12 @@ export async function getClassSectionRecord(courseId, classSectionTermId) {
             where: {
                 classSectionsId,
             },
-            attributes: ["teacherSectionMappingId", "classSectionsId", "employeeId", "isCordinatory"],
+            attributes: ["teacherSectionMappingId", "classSectionsId", "userId", "isCordinatory"],
             include: [
                 {
                     model: model.employeeModel,
                     as: 'employeeData',
-                    attributes: ["employeeId", "employeeName", "fatherName", "motherName", "employeeCode", "department", "employmentType", "dateOfBirth", "pickColor"],
+                    attributes: ["userId", "employeeName", "fatherName", "motherName", "employeeCode", "department", "employmentType", "dateOfBirth", "pickColor"],
                     where: buildScope(model.employeeModel),
                     required: true,
                     include: [

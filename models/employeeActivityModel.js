@@ -15,10 +15,10 @@ const employeeActivityModel = sequelize.define(
         employeeId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'employee_id',
+            field: 'user_id',
             references: {
-                model: employee,
-                key: 'employee_id'
+                model: users,
+                key: 'user_id'
             }
         },
         activity:{

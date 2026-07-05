@@ -93,11 +93,11 @@ export async function assignTeacher(req, res) {
     try {
         const createdBy = req.user.userId;
         const updatedBy = req.user.userId;
-        const { scheduleId, employeeId } = req.body
-        if (!(scheduleId && employeeId)) {
-            return res.status(400).send('scheduleId and employeeId is required')
+        const { scheduleId, userId } = req.body
+        if (!(scheduleId && userId)) {
+            return res.status(400).send('scheduleId and userId is required')
         }
-        const assignTeacher = await scheduleCreation.assignTeacher(scheduleId, employeeId, createdBy, updatedBy);
+        const assignTeacher = await scheduleCreation.assignTeacher(scheduleId, userId, createdBy, updatedBy);
         res.status(200).json({ message: "schedule assignTeacher succesfully", assignTeacher });
     } catch (error) {
         res.status(500).json({ error: error.message });

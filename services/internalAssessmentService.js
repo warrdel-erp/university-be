@@ -168,8 +168,8 @@ export async function deleteInternalAssessment(id) {
     return await InternalAssessmentRepository.deleteInternalAssessment(id);
 };
 
-// export async function evaluationInternalAssessment(subjectId, employeeId) {
-//   const data = await InternalAssessmentRepository.evaluationInternalAssessment(subjectId, employeeId);
+// export async function evaluationInternalAssessment(subjectId, userId) {
+//   const data = await InternalAssessmentRepository.evaluationInternalAssessment(subjectId, userId);
 //   if (!data) return null;
 
 //   const ia = data.dataValues ?? data;
@@ -218,7 +218,7 @@ export async function deleteInternalAssessment(id) {
 //     internalAssessmentId: ia.examAssessmentId,
 //     subjectId: ia.subjectId,
 //     subjectName: ia.assessmentSubject?.subjectName ?? ia.assessmentSubject?.subject_name ?? null,
-//     employeeId: ia.employeeId ?? employeeId,
+//     userId: ia.userId ?? userId,
 //     semesterId: ia.semesterId,
 //     weightage,
 //     syllabusMarks,
@@ -228,11 +228,11 @@ export async function deleteInternalAssessment(id) {
 //   };
 // };
 
-export async function evaluationInternalAssessment(subjectId, employeeId) {
+export async function evaluationInternalAssessment(subjectId, userId) {
 
   const data = await InternalAssessmentRepository.evaluationInternalAssessment(
     subjectId,
-    employeeId
+    userId
   );  
 
   if (!data) return null;
@@ -310,14 +310,14 @@ export async function createAssessmentEvaluation(body,createdBy,updatedBy) {
   try {
     const {
       subjectId,
-      employeeId,
+      userId,
       examAssessmentId,
       students
     } = body;
 
     const dataToInsert = students.map(student => ({
       subjectId: Number(subjectId),
-      employeeId: Number(employeeId),
+      userId: Number(userId),
       examAssessmentId: Number(examAssessmentId),
       studentId: Number(student.studentId),
       status: student.status || "pending",

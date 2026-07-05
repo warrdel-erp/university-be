@@ -2541,7 +2541,7 @@ function formatStudentTimetable(allData) {
 
       const mappingEntry = {
         timeTableMappingId,
-        employeeId: teacherData?.employeeId,
+        userId: teacherData?.userId,
         employeeName: teacherData?.employeeName,
         employeeCode: teacherData?.employeeCode,
         pickColor: teacherData?.pickColor,

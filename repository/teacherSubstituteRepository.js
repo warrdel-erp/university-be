@@ -6,15 +6,15 @@ const excludeMeta = ["createdAt", "updatedAt", "createdBy", "updatedBy"];
 const employeeInclude = (as) => ({
     model: model.employeeModel,
     as,
-    attributes: ["employeeId", "employeeName", "employeeCode", "userId"],
+    attributes: ["userId", "employeeName", "employeeCode", "userId"],
     required: false,
     where: buildScope(model.employeeModel),
 });
 
-export async function findEmployeeInScope(employeeId, transaction) {
+export async function findEmployeeInScope(userId, transaction) {
     return scoped(model.employeeModel).findOne({
-        where: { employeeId },
-        attributes: ["employeeId", "userId"],
+        where: { userId },
+        attributes: ["userId", "universityId"],
         transaction,
     });
 }

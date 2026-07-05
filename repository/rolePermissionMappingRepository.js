@@ -13,18 +13,13 @@ export async function addRolePermissionMapping(RolePermissionMappingData) {
 export async function getRolePermissionMappingDetails() {
   try {
     return scoped(model.rolePermissionMappingModel).findAll({
-      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "role_id", "permission_id"] },
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "role_id"] },
       include: [
         {
           model: model.roleModel,
-          as: "userMapped",
+          as: "role",
           attributes: ["role"],
-        },
-        {
-          model: model.permissionModel,
-          as: "permissionMapped",
-          attributes: ["permission"],
-        },
+        }
       ],
     });
   } catch (error) {
@@ -36,19 +31,14 @@ export async function getRolePermissionMappingDetails() {
 export async function getSingleRolePermissionMappingDetails(rolePermissionMappingId) {
   try {
     return scoped(model.rolePermissionMappingModel).findOne({
-      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "role_id", "permission_id"] },
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "role_id"] },
       where: { rolePermissionMappingId },
       include: [
         {
           model: model.roleModel,
-          as: "userMapped",
+          as: "role",
           attributes: ["role"],
-        },
-        {
-          model: model.permissionModel,
-          as: "permissionMapped",
-          attributes: ["permission"],
-        },
+        }
       ],
     });
   } catch (error) {
@@ -94,7 +84,7 @@ export async function updateRolePermissionMapping(rolePermissionMappingId, RoleP
 export async function getPermissionByRole(roleId) {
   try {
     return scoped(model.rolePermissionMappingModel).findAll({
-      attributes: ["role_id", "permission_id"],
+      attributes: ["role_id", "permission", "scope"],
       where: { roleId },
     });
   } catch (error) {

@@ -1,18 +1,19 @@
 import * as registerRepository from "../repository/userRepository.js";
 import bcrypt from "bcryptjs";
-import { v4 as uuidv4 } from 'uuid';
-import { getStudentBySectionId, getCourseByCourseId, getEmployeeByemployeeId } from "../repository/courseRepository.js";
+import { v4 as uuidv4 } from "uuid";
+import { getStudentBySectionId, getCourseByCourseId, getEmployeeByuserId } from "../repository/courseRepository.js";
 var salt = bcrypt.genSaltSync(10);
-import sequelize from '../database/sequelizeConfig.js';
+import sequelize from "../database/sequelizeConfig.js";
 import { getPermissionByRole } from "../repository/rolePermissionMappingRepository.js";
 import { getSingleRoleDetails } from "../repository/roleRepository.js";
 import { getEmployeeRolePermissionByUserId } from "../repository/userRolePermissionRepository.js";
 import jwt from "jsonwebtoken";
 import sendEmail from "../utility/sendEmail.js";
-import 'dotenv/config';
-import * as model from '../models/index.js';
-import { PERMISSIONS } from '../const/permissions.js';
-
+import "dotenv/config";
+import * as model from "../models/index.js";
+import { PERMISSIONS } from "../const/permissions.js";
+import { SCOPES } from "../const/scopes.js";
+import * as userRoleService from "./userRoleService.js";
 
 //register
 
@@ -27,27 +28,27 @@ export async function register(info) {
     phone,
     email: email.toLowerCase(),
     uniqueId: uuidv4(),
-    role
+    role,
   };
 
   return await registerRepository.register(data);
-};
+}
 
 export async function getEmployeeRolePermissionUserId(userId) {
   try {
     const result = await getEmployeeRolePermissionByUserId(userId);
     return formatEmployeeDetailsDeep(result?.[0]?.employeeDetails);
   } catch (error) {
-    console.error('Error in getEmployeeRolePermissionUserId:', error);
+    console.error("Error in getEmployeeRolePermissionUserId:", error);
     throw error;
   }
-};
+}
 
 const formatEmployeeDetailsDeep = (employee) => {
   if (!employee) return null;
   // Basic Employee Info
   const employeeInfo = {
-    employeeId: employee.employeeId,
+    userId: employee.userId,
     employeeCode: employee.employeeCode,
     employeeName: employee.employeeName,
     role: employee?.employeeRole?.role,
@@ -56,80 +57,86 @@ const formatEmployeeDetailsDeep = (employee) => {
     instituteName: employee?.employeeInstitute?.instituteName,
   };
   // Subjects Taught
-  const subjects = employee?.teacherEmployeeData?.map(item => {
-    const subj = item?.employeeSubject?.subjects;
-    const semester = item?.employeeSubject?.semestermapping;
-    return {
-      subjectId: subj?.subjectId,
-      subjectName: subj?.subjectName,
-      subjectCode: subj?.subjectCode,
-      subjectType: subj?.subjectType,
-      semesterName: semester?.name,
-      courseName: subj?.courseInfo?.courseName,
-      courseId: subj?.courseId,
-    };
-  }) || [];
+  const subjects =
+    employee?.teacherEmployeeData?.map((item) => {
+      const subj = item?.employeeSubject?.subjects;
+      const semester = item?.employeeSubject?.semestermapping;
+      return {
+        subjectId: subj?.subjectId,
+        subjectName: subj?.subjectName,
+        subjectCode: subj?.subjectCode,
+        subjectType: subj?.subjectType,
+        semesterName: semester?.name,
+        courseName: subj?.courseInfo?.courseName,
+        courseId: subj?.courseId,
+      };
+    }) || [];
   // Courses (distinct course names from subjects)
   const courses = Array.from(
     new Map(
       subjects
-        .filter(s => s.courseId && s.courseName)
-        .map(s => [s.courseId, { courseId: s.courseId, courseName: s.courseName }])
-    ).values()
+        .filter((s) => s.courseId && s.courseName)
+        .map((s) => [s.courseId, { courseId: s.courseId, courseName: s.courseName }]),
+    ).values(),
   );
   // Sections
-  const sections = employee?.employeeData?.map(item => {
-    const section = item?.employeeSection;
-    return {
-      sectionId: section?.classSectionsId,
-      sectionName: section?.section,
-      className: section?.year != null ? String(section.year) : null,
-      semesterId: section?.semesterId,
-      courseId: section?.courseId,
-      studentCount: section?.studentSections?.length || 0,
-    };
-  }) || [];
+  const sections =
+    employee?.employeeData?.map((item) => {
+      const section = item?.employeeSection;
+      return {
+        sectionId: section?.classSectionsId,
+        sectionName: section?.section,
+        className: section?.year != null ? String(section.year) : null,
+        semesterId: section?.semesterId,
+        courseId: section?.courseId,
+        studentCount: section?.studentSections?.length || 0,
+      };
+    }) || [];
   // Students
-  const students = employee?.employeeData?.flatMap(item => {
-    return item?.employeeSection?.studentSections?.map(student => ({
-      studentId: student?.studentId,
-      name: `${student?.firstName} ${student?.middleName || ''} ${student?.lastName || ''}`.trim(),
-      scholarNumber: student?.scholarNumber,
-      email: student?.email,
-      mobileNumber: student?.mobileNumber,
-      status: student?.studentStatus,
-      sectionId: student?.classSectionsId,
-      semesterId: student?.semesterId,
-    })) || [];
-  }) || [];
+  const students =
+    employee?.employeeData?.flatMap((item) => {
+      return (
+        item?.employeeSection?.studentSections?.map((student) => ({
+          studentId: student?.studentId,
+          name: `${student?.firstName} ${student?.middleName || ""} ${student?.lastName || ""}`.trim(),
+          scholarNumber: student?.scholarNumber,
+          email: student?.email,
+          mobileNumber: student?.mobileNumber,
+          status: student?.studentStatus,
+          sectionId: student?.classSectionsId,
+          semesterId: student?.semesterId,
+        })) || []
+      );
+    }) || [];
   // Time Table (Elective)
-  const timeTable = employee?.timeTableMappings?.map(tt => ({
-    day: tt.day,
-    period: tt.period,
-    periodName: tt?.timeTablecreation?.periodName,
-    startTime: tt?.timeTablecreation?.startTime,
-    endTime: tt?.timeTablecreation?.endTime,
-    room: tt?.classRoom?.roomNumber,
-    electiveSubjectName: tt?.timeTableElective?.electiveSubjectName,
-    electiveSubjectCode: tt?.timeTableElective?.electiveSubjectCode,
-  })) || [];
+  const timeTable =
+    employee?.timeTableMappings?.map((tt) => ({
+      day: tt.day,
+      period: tt.period,
+      periodName: tt?.timeTablecreation?.periodName,
+      startTime: tt?.timeTablecreation?.startTime,
+      endTime: tt?.timeTablecreation?.endTime,
+      room: tt?.classRoom?.roomNumber,
+      electiveSubjectName: tt?.timeTableElective?.electiveSubjectName,
+      electiveSubjectCode: tt?.timeTableElective?.electiveSubjectCode,
+    })) || [];
   return {
     employeeInfo,
     courses,
     subjects,
     sections,
     timeTable,
-    students
+    students,
   };
 };
 
 export async function adminRegisterStudentAndEmployee(info) {
   const transaction = await sequelize.transaction();
-  const { role, courseId, classSectionId, employeeId, roleId } = info;
+  const { role, courseId, classSectionId, userId, roleId } = info;
 
   const course = await getCourseByCourseId(courseId);
   const section = await getStudentBySectionId(classSectionId);
-  const employee = await getEmployeeByemployeeId(employeeId);
+  const employee = await getEmployeeByuserId(userId);
   const salt = await bcrypt.genSalt(10);
 
   const createStudentData = (item) => {
@@ -171,26 +178,26 @@ export async function adminRegisterStudentAndEmployee(info) {
   try {
     let results;
 
-    if (role === 'Student') {
+    if (role === "Student") {
       results = await registerRepository.adminRegisterStudentAndEmployee(studentData, transaction);
-      const userIds = results.map(user => user.dataValues.userId);
+      const userIds = results.map((user) => user.dataValues.userId);
 
       for (let i = 0; i < userIds.length; i++) {
         await registerRepository.adminUser({ userId: userIds[i], studentId: studentData[i].studentId }, transaction);
         await registerRepository.updateStudent(studentData[i].studentId, { userId: userIds[i] }, transaction);
       }
 
-      const roleAndPermission = await getPermissionByRole(roleId);
-      const permissionId = roleAndPermission.map(permission => permission.dataValues.permission_id);
-      const data = { userIds, roleId, permissionId };
-      await dataSaveUerRolePermission(userIds, roleId, permissionId, transaction)
-    } else if (role != 'Student') {
+      const roleName = await getSingleRoleDetails(roleId);
+      for (let i = 0; i < userIds.length; i++) {
+        await userRoleService.assignRoleToUser(userIds[i], roleName?.dataValues?.role || role, [], transaction);
+      }
+    } else if (role != "Student") {
       results = await registerRepository.adminRegisterStudentAndEmployee(employeeData, transaction);
-      const userIds = results.map(user => user.dataValues.userId);
+      const userIds = results.map((user) => user.dataValues.userId);
 
       const userEmployeeMapping = userIds.map((userId, index) => ({
         userId,
-        employeeId: employeeId[index % employeeId.length], // map them in order
+        employeeId: employeeData[index].employeeId,
       }));
 
       for (const { userId, employeeId } of userEmployeeMapping) {
@@ -198,46 +205,50 @@ export async function adminRegisterStudentAndEmployee(info) {
         await registerRepository.updateEmployee(employeeId, { userId }, transaction);
       }
 
-      const roleAndPermission = await getPermissionByRole(roleId);
-      const permissionId = roleAndPermission.map(permission => permission.dataValues.permission_id);
-      const data = { userIds, roleId, permissionId };
-      await dataSaveUerRolePermission(userIds, roleId, permissionId, transaction)
+      const roleName = await getSingleRoleDetails(roleId);
+      for (let i = 0; i < userIds.length; i++) {
+        await userRoleService.assignRoleToUser(userIds[i], roleName?.dataValues?.role || role, [], transaction);
+      }
     } else {
-      throw new Error('Invalid role');
+      throw new Error("Invalid role");
     }
 
     await transaction.commit();
     return results;
   } catch (error) {
     await transaction.rollback();
-    console.error('Error during registration:', error);
-    throw new Error('Registration failed');
-  }
-};
-
-
-export async function dataSaveUerRolePermission(userId, roleId, permissionIds, transaction) {
-  const dataToSave = [];
-
-  // userIds.forEach(userId => {
-  permissionIds.forEach(permissionId => {
-    dataToSave.push({
-      userId,
-      roleId,
-      permissionId,
-    });
-  });
-  // });
-
-  try {
-    await registerRepository.saveToUserRolePermission(dataToSave, transaction);
-    console.log('User role permission data saved successfully.');
-  } catch (error) {
-    console.error('Error saving user role permission data:', error);
-    throw new Error('Failed to save user role permission data.');
+    console.error("Error during registration:", error);
+    throw new Error("Registration failed");
   }
 }
 
+export async function dataSaveUerRolePermission(userIds, roleId, permissions, transaction) {
+  const dataToSave = [];
+  const uIds = Array.isArray(userIds) ? userIds : [userIds];
+
+  uIds.forEach((userId) => {
+    permissions.forEach((perm) => {
+      const resourceIds = perm.resourceIds && perm.resourceIds.length > 0 ? perm.resourceIds : [null];
+      resourceIds.forEach((resId) => {
+        dataToSave.push({
+          userId,
+          roleId,
+          permission: perm.permission,
+          scope: perm.scope || "INSTITUTE",
+          resourceId: resId,
+        });
+      });
+    });
+  });
+
+  try {
+    await model.userRolePermissionModel.bulkCreate(dataToSave, { transaction });
+    console.log("User role permission data saved successfully.");
+  } catch (error) {
+    console.error("Error saving user role permission data:", error);
+    throw new Error("Failed to save user role permission data.");
+  }
+}
 
 export async function getAdminRegisterStudentAndEmployee() {
   try {
@@ -247,17 +258,15 @@ export async function getAdminRegisterStudentAndEmployee() {
     ]);
 
     return { students, employees };
-
   } catch (error) {
-    console.error('Error fetching students and employees:', error);
-    throw new Error('Failed to fetch students and employees');
+    console.error("Error fetching students and employees:", error);
+    throw new Error("Failed to fetch students and employees");
   }
-};
-
-export async function emptyPassword(email, transaction) {
-  return await registerRepository.changePassword(email, { dummyPassword: '' }, transaction);
 }
 
+export async function emptyPassword(email, transaction) {
+  return await registerRepository.changePassword(email, { dummyPassword: "" }, transaction);
+}
 
 export async function changePassword(info, transaction) {
   let { email, password } = info;
@@ -265,53 +274,16 @@ export async function changePassword(info, transaction) {
 
   const data = {
     password: newPassword,
-    dummyPassword: '',
-    status: 'active'
+    dummyPassword: "",
+    status: "active",
   };
 
   return await registerRepository.changePassword(email, data, transaction);
-};
+}
 
 export async function getUserRoleAndPermissionsByUserId(userId) {
-  // console.log(`Fetching roles and permissions for userId: ${userId}`);
-
-  const data = await registerRepository.getUserRoleAndPermissionsByUserId(userId);
-  // console.log(`Raw data received:`, JSON.stringify(data, null, 2));
-
-  const groupedData = data.reduce((acc, item) => {
-    const uid = item.user_id;
-
-    if (!uid) {
-      console.warn(`Skipping item with missing user_id:`, item);
-      return acc;
-    }
-
-    if (!acc[uid]) {
-      acc[uid] = {
-        user: item.user,
-        userRole: item.userRole,
-        permissions: [],
-      };
-    }
-
-    const permissions = acc[uid].permissions;
-    // console.log(`Current permissions for user ${uid}:`, permissions);
-
-    if (!permissions.some(p => p.permissionId === item.permission_id)) {
-      if (item.userPermission) {
-        permissions.push(item.userPermission);
-      } else {
-        console.warn(`Missing userPermission for item:`);
-      }
-    }
-
-    return acc;
-  }, {});
-
-  const result = Object.values(groupedData);
-  // console.log(`Final grouped result:`, JSON.stringify(result, null, 2));
-  return result;
-};
+  return await registerRepository.getUserRoleAndPermissionsByUserId(userId);
+}
 
 export const studentRegister = async (registerStudentData, transaction) => {
   try {
@@ -340,26 +312,20 @@ export const studentRegister = async (registerStudentData, transaction) => {
     // Associate user and student
     await registerRepository.adminUser({ userId: userId, studentId: studentId }, transaction);
 
-    // Get permissions by role
-    const roleAndPermission = await getPermissionByRole(roleId);
-    const permissionId = roleAndPermission.map(permission => permission.dataValues.permission_id);
-
-    // Save user role and permissions
-    await dataSaveUerRolePermission(userId, roleId, permissionId, transaction);
+    const roleName = await getSingleRoleDetails(roleId);
+    await userRoleService.assignRoleToUser(userId, roleName?.dataValues?.role || role, [], transaction);
 
     return userId;
   } catch (error) {
-    console.error('Error in student registration:', error);
-    throw new Error('Failed to register student');
+    console.error("Error in student registration:", error);
+    throw new Error("Failed to register student");
   }
 };
 
-
 export const employeeRegister = async (employeePersonalDetail, employeeRegisterData, transaction) => {
   try {
-
-    const { personalEmail, mobileNumber } = employeePersonalDetail
-    const { universityId, roleId, employeeName, employeeId, instituteId } = employeeRegisterData
+    const { personalEmail, mobileNumber } = employeePersonalDetail;
+    const { universityId, roleId, employeeName, employeeId, instituteId } = employeeRegisterData;
     const dummyPassword = uuidv4();
     const password = bcrypt.hashSync(dummyPassword, salt);
     // const roleName = await getSingleRoleDetails(roleId);
@@ -396,8 +362,8 @@ export const employeeRegister = async (employeePersonalDetail, employeeRegisterD
 
     return userId;
   } catch (error) {
-    console.error('Error in employee registration:', error);
-    throw new Error('Failed to register employee');
+    console.error("Error in employee registration:", error);
+    throw new Error("Failed to register employee");
   }
 };
 
@@ -405,16 +371,15 @@ export async function changeStatus(userId) {
   try {
     const userData = await registerRepository.findStatusByUserId(userId);
     const status = userData.dataValues.status;
-    const newStatus = status === 'active' ? 'InActive' : 'active';
+    const newStatus = status === "active" ? "InActive" : "active";
 
     // Update the status
     await registerRepository.changeStatus(userId, { status: newStatus });
-
   } catch (error) {
     console.error(`Error changing status for user ${userId}:`, error);
     throw error;
   }
-};
+}
 
 export const sendLink = async (email) => {
   try {
@@ -446,7 +411,6 @@ export const sendLink = async (email) => {
       messageId: emailResponse.messageId,
       updated: !!updatedUser,
     };
-
   } catch (error) {
     console.error("Error in userService.sendLink:", error);
     throw new Error(error.message || "Internal Server Error in sendLink");
@@ -475,7 +439,6 @@ export const forgotSendLink = async (email) => {
       email: user.email,
       messageId: emailResponse.messageId,
     };
-
   } catch (error) {
     console.error("Error in userService.forgotSendLink:", error);
     throw new Error(error.message || "Internal Server Error in forgotSendLink");
@@ -491,10 +454,7 @@ export const getAllUsers = async (page = 1, limit = 10, search = "") => {
   }
 };
 
-
-
 export async function getMyDetails(userId) {
-
   const user = await registerRepository.getUserByUserId(userId);
 
   if (!user) {
@@ -507,6 +467,28 @@ export async function getMyDetails(userId) {
   delete userData.password;
   delete userData.dummyPassword;
 
+  // Fetch distinct roles from user_role_permission_scope
+  const roleEntries = await model.userRolePermissionModel.findAll({
+    attributes: [
+      [sequelize.fn('DISTINCT', sequelize.col('userRole.role')), 'roleName'],
+      [sequelize.col('userRole.role_id'), 'roleId']
+    ],
+    where: { user_id: userId },
+    include: [
+      {
+        model: model.roleModel,
+        as: 'userRole',
+        attributes: []
+      }
+    ],
+    raw: true
+  });
+
+  userData.roles = roleEntries.map(entry => ({
+    roleId: entry.roleId,
+    roleName: entry.roleName
+  }));
+
   return userData;
 }
 
@@ -514,58 +496,37 @@ export async function saveUserDefaults(userId, data) {
   try {
     return await registerRepository.updateUser(userId, data);
   } catch (error) {
-    console.error('Error in saveUserDefaults service:', error);
+    console.error("Error in saveUserDefaults service:", error);
     throw error;
   }
 }
 
 async function assignNewRolesAndPermissions(userId, transaction) {
-  // Add Role in new user_roles table
-  await model.userRoleModel.create({
-    userId,
-    role: 'ADMIN'
-  }, { transaction });
-
-  // Add all permissions in new user_permissions table
-  const permissionRows = Object.values(PERMISSIONS).map(p => ({
-    userId,
-    permission: p.value
-  }));
-  await model.userPermissionModel.bulkCreate(permissionRows, { transaction });
+  // handled within seedLegacyRoleAndPermissions now
 }
 
 async function seedLegacyRoleAndPermissions(userId, transaction) {
-  // Get or create the 'ADMIN' role in roleModel
-  let adminRole = await model.roleModel.findOne({ where: { role: 'ADMIN' }, transaction });
+  let adminRole = await model.roleModel.findOne({ where: { role: "ADMIN" }, transaction });
   if (!adminRole) {
-    adminRole = await model.roleModel.create({ role: 'ADMIN' }, { transaction });
+    adminRole = await model.roleModel.create({ role: "ADMIN" }, { transaction });
   }
 
-  // Populate permissionModel with all PERMISSIONS values if they don't exist
-  const existingPerms = await model.permissionModel.findAll({ transaction });
-  const existingPermSet = new Set(existingPerms.map(p => p.permission));
-
-  const newPermissionsToInsert = [];
+  // Define admin permissions map
+  const rolePermissionRows = [];
   for (const [key, valueObj] of Object.entries(PERMISSIONS)) {
-    if (!existingPermSet.has(valueObj.value)) {
-      newPermissionsToInsert.push({
-        moduleName: key,
-        permission: valueObj.value
-      });
-    }
-  }
-  if (newPermissionsToInsert.length > 0) {
-    await model.permissionModel.bulkCreate(newPermissionsToInsert, { transaction });
+    rolePermissionRows.push({
+      roleId: adminRole.roleId,
+      permission: valueObj.value,
+      scope: SCOPES.INSTITUTE,
+    });
   }
 
-  // Now populate userRolePermissionModel (the user_role_permission table)
-  const allPermissions = await model.permissionModel.findAll({ transaction });
-  const userRolePermissionRows = allPermissions.map(p => ({
-    userId,
-    roleId: adminRole.roleId,
-    permissionId: p.permissionId
-  }));
-  await model.userRolePermissionModel.bulkCreate(userRolePermissionRows, { transaction });
+  // Insert into role_permissions template
+  await model.rolePermissionMappingModel.destroy({ where: { role_id: adminRole.roleId }, transaction });
+  await model.rolePermissionMappingModel.bulkCreate(rolePermissionRows, { transaction });
+
+  // Assign to user
+  await userRoleService.assignRoleToUser(userId, "ADMIN", [], transaction);
 }
 
 export async function initialSetup(info) {
@@ -581,7 +542,7 @@ export async function initialSetup(info) {
     phone = "9999999990",
     yearTitle = "2026-2027",
     startingDate = "2026-06-01",
-    endingDate = "2027-05-31"
+    endingDate = "2027-05-31",
   } = info;
 
   // 1. Check if email already exists
@@ -594,57 +555,75 @@ export async function initialSetup(info) {
 
   try {
     // 2. Create University
-    const university = await model.universityModel.create({
-      universityName
-    }, { transaction });
+    const university = await model.universityModel.create(
+      {
+        universityName,
+      },
+      { transaction },
+    );
 
     // 3. Hash Password & Create User
     const hashedPassword = await bcrypt.hashSync(password, salt);
-    const user = await model.userModel.create({
-      userName,
-      email: email.toLowerCase(),
-      password: hashedPassword,
-      phone,
-      role: 'ADMIN',
-      defaultRole: 'ADMIN',
-      uniqueId: uuidv4(),
-      status: 'active',
-      universityId: university.universityId
-    }, { transaction });
+    const user = await model.userModel.create(
+      {
+        userName,
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        phone,
+        role: "ADMIN",
+        defaultRole: "ADMIN",
+        uniqueId: uuidv4(),
+        status: "active",
+        universityId: university.universityId,
+      },
+      { transaction },
+    );
 
     // 4. Create Campus
-    const campus = await model.campusModel.create({
-      universityId: university.universityId,
-      campusName,
-      campusCode,
-      createdBy: user.userId
-    }, { transaction });
+    const campus = await model.campusModel.create(
+      {
+        universityId: university.universityId,
+        campusName,
+        campusCode,
+        createdBy: user.userId,
+      },
+      { transaction },
+    );
 
     // 5. Create Institute
-    const institute = await model.instituteModel.create({
-      campusId: campus.campusId,
-      universityId: university.universityId,
-      instituteName,
-      instituteCode,
-      createdBy: user.userId
-    }, { transaction });
+    const institute = await model.instituteModel.create(
+      {
+        campusId: campus.campusId,
+        universityId: university.universityId,
+        instituteName,
+        instituteCode,
+        createdBy: user.userId,
+      },
+      { transaction },
+    );
 
     // 6. Create Academic Year
-    const academicYear = await model.acedmicYearModel.create({
-      universityId: university.universityId,
-      instituteId: institute.instituteId,
-      yearTitle,
-      startingDate,
-      endingDate,
-      isActive: true,
-      updatedBy: user.userId
-    }, { transaction });
+    const academicYear = await model.acedmicYearModel.create(
+      {
+        universityId: university.universityId,
+        instituteId: institute.instituteId,
+        yearTitle,
+        startingDate,
+        endingDate,
+        isActive: true,
+        updatedBy: user.userId,
+      },
+      { transaction },
+    );
 
     // 7. Update User Defaults
-    await user.update({
-      defaultInstituteId: institute.instituteId,
-      defaultAcademicYearId: academicYear.academicYearId
-    }, { transaction });
+    await user.update(
+      {
+        defaultInstituteId: institute.instituteId,
+        defaultAcademicYearId: academicYear.academicYearId,
+      },
+      { transaction },
+    );
 
     // 8. Assign new roles and permissions
     await assignNewRolesAndPermissions(user.userId, transaction);
@@ -667,8 +646,8 @@ export async function initialSetup(info) {
         campus,
         institute,
         academicYear,
-        user: userData
-      }
+        user: userData,
+      },
     };
   } catch (error) {
     await transaction.rollback();

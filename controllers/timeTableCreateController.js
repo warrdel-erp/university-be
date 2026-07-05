@@ -222,10 +222,10 @@ export const getRoutineByClassSectionId = async (req, res) => {
 };
 
 export const getRoutineByTeacherAndAcademicYear = async (req, res) => {
-    const { employeeId, courseId, sessionId } = req.query;
+    const { userId, courseId, sessionId } = req.query;
     try {
         const result = await timeTableCreateServices.getRoutineByTeacherAndAcademicYear(
-            employeeId,
+            userId,
             courseId,
             sessionId,
         );

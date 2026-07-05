@@ -15,10 +15,10 @@ const employeeRoleModel = sequelize.define(
     employeeId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      field: "employee_id",
+      field: 'user_id',
       references: {
         model: employee,
-        key: "employee_id",
+        key: 'user_id',
       },
     },
     roles: {

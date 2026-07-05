@@ -41,8 +41,8 @@ export async function getFaculityLoadDetails() {
   return rows.map(formatFaculityLoad);
 }
 
-export async function getSingleFaculityLoadDetails(employeeId) {
-  const rows = await faculityLoadRepository.getSingleFaculityLoadDetails(employeeId);
+export async function getSingleFaculityLoadDetails(userId) {
+  const rows = await faculityLoadRepository.getSingleFaculityLoadDetails(userId);
   return rows.map(formatFaculityLoad);
 }
 

@@ -2,9 +2,9 @@ import * as transportVehicleService from "../services/vehicleServices.js";
 
 export const addVehicle = async (req, res) => {
   try {
-    const { vehicleNumber, vehicleModel, madeYear, employeeId } = req.body;
-    if (!vehicleNumber || !vehicleModel || !madeYear || !employeeId) {
-      return res.status(400).json({ message: "vehicleNumber, vehicleModel, madeYear, employeeId are required" });
+    const { vehicleNumber, vehicleModel, madeYear, userId } = req.body;
+    if (!vehicleNumber || !vehicleModel || !madeYear || !userId) {
+      return res.status(400).json({ message: "vehicleNumber, vehicleModel, madeYear, userId are required" });
     }
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;

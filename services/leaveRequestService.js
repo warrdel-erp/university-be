@@ -4,16 +4,16 @@ import * as policyRepo from "../repository/leavePolicyRepository.js";
 
 export async function addRequest(data) {
   try {
-    const { employeeId, policyId, totalDays } = data;
+    const { userId, policyId, totalDays } = data;
 
     const policy = await policyRepo.getPolicyById(policyId);
     if (!policy || !policy.isActive) throw new Error("Policy not active");
 
-    let balance = await balanceRepo.getBalance(employeeId, policyId);
+    let balance = await balanceRepo.getBalance(userId, policyId);
 
     if (!balance) {
       balance = await balanceRepo.addBalance({
-        employeeId,
+        userId,
         policyId,
         year: new Date().getFullYear(),
         totalAllocated: policy.totalLeavesPerYear,
@@ -49,7 +49,7 @@ export async function updateRequestStatus(requestId, status, reviewerId) {
   const request = await repo.getRequestById(requestId);
   if (!request) throw new Error("Request not found");
 
-  const balance = await balanceRepo.getBalance(request.employeeId, request.policyId);
+  const balance = await balanceRepo.getBalance(request.userId, request.policyId);
 
   if (status === "rejected") {
     await balanceRepo.updateBalance(balance.balanceId, {

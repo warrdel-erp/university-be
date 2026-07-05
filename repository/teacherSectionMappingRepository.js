@@ -20,10 +20,10 @@ const employeeListAttributes = {
     ],
 };
 
-async function findEmployeeInInstitute(employeeId) {
+async function findEmployeeInInstitute(userId) {
     return scoped(model.employeeModel).findOne({
-        where: { employeeId },
-        attributes: ['employeeId'],
+        where: { userId },
+        attributes: ['userId'],
     });
 }
 
@@ -37,14 +37,14 @@ async function findClassSectionInInstitute(classSectionsId) {
 async function findTeacherSectionMappingInInstitute(teacherSectionMappingId) {
     return scoped(model.teacherSectionMappingModel).findOne({
         where: { teacherSectionMappingId },
-        attributes: ['teacherSectionMappingId', 'employeeId', 'classSectionsId'],
+        attributes: ['teacherSectionMappingId', 'userId', 'classSectionsId'],
         include: [
             {
                 model: model.employeeModel,
                 as: 'employeeData',
                 where: buildScope(model.employeeModel),
                 required: true,
-                attributes: ['employeeId'],
+                attributes: ['userId'],
             },
             {
                 model: model.classSectionModel,
@@ -59,9 +59,9 @@ async function findTeacherSectionMappingInInstitute(teacherSectionMappingId) {
 
 export async function teacherSectionMapping(data) {
     try {
-        const employee = await findEmployeeInInstitute(data.employeeId);
+        const employee = await findEmployeeInInstitute(data.userId);
         if (!employee) {
-            throw new Error(`Employee ID ${data.employeeId} not found`);
+            throw new Error(`Employee ID ${data.userId} not found`);
         }
 
         const classSection = await findClassSectionInInstitute(data.classSectionsId);
@@ -77,7 +77,7 @@ export async function teacherSectionMapping(data) {
 }
 
 export async function getTeacherSectionMapping({
-    employeeId,
+    userId,
     sessionId,
     academicYearId = getAcademicYearId(),
     search,
@@ -96,8 +96,8 @@ export async function getTeacherSectionMapping({
         const courseWhere = buildScope(model.courseModel);
 
         const mappingWhere = {};
-        if (employeeId) {
-            mappingWhere.employeeId = employeeId;
+        if (userId) {
+            mappingWhere.userId = userId;
         }
 
         const trimmedSearch = search?.trim();
@@ -201,10 +201,10 @@ export async function updateTeachersSectionMapping(teacherSectionMappingId, info
             throw new Error('Mapping not found');
         }
 
-        if (info.employeeId != null) {
-            const employee = await findEmployeeInInstitute(info.employeeId);
+        if (info.userId != null) {
+            const employee = await findEmployeeInInstitute(info.userId);
             if (!employee) {
-                throw new Error(`Employee ID ${info.employeeId} not found`);
+                throw new Error(`Employee ID ${info.userId} not found`);
             }
         }
 

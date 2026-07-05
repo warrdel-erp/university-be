@@ -6,7 +6,6 @@ import subjectModel from "./subjectModel.js";
 import acedmicYearModel from "./acedmicYearModel.js";
 import sessionModel from "./sessionModel.js";
 import universityModel from "./universityModel.js";
-import employeeModel from "./employeeModel.js";
 
 const lessonModel = sequelize.define(
     'lesson',
@@ -26,13 +25,13 @@ const lessonModel = sequelize.define(
                 key: 'institute_id'
             }
         }, 
-        employeeId: {
+        userId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'employee_id',
+            field: 'user_id',
             references: {
-                model: employeeModel,
-                key: 'employee_id'
+                model: users,
+                key: 'user_id'
             }
         },
         universityId: {

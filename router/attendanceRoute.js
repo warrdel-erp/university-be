@@ -13,14 +13,14 @@ const positiveIntegerId = z.coerce
 const sectionDatesQuerySchema = z.object({
     classSectionTermId: positiveIntegerId,
     subjectId: z.string().regex(/^\d+$/, "subjectId must be a number").transform(val => parseInt(val)),
-    employeeId: z.string().regex(/^\d+$/, "employeeId must be a number").transform(val => parseInt(val)),
+    userId: z.string().regex(/^\d+$/, "userId must be a number").transform(val => parseInt(val)),
 });
 
 /** Legacy — bulk report not migrated yet */
 const bulkAttendanceReportSchema = z.object({
     classSectionId: z.string().regex(/^\d+$/, "classSectionId must be a number").transform(val => parseInt(val)),
     subjectId: z.string().regex(/^\d+$/, "subjectId must be a number").transform(val => parseInt(val)),
-    employeeId: z.string().regex(/^\d+$/, "employeeId must be a number").transform(val => parseInt(val)),
+    userId: z.string().regex(/^\d+$/, "userId must be a number").transform(val => parseInt(val)),
 });
 
 const batchAttendanceSchema = z.object({
@@ -61,7 +61,7 @@ const addAttendanceSchema = z.object({
 const attendanceByDateQuerySchema = z.object({
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
     classSectionTermId: positiveIntegerId,
-    employeeId: positiveIntegerId,
+    userId: positiveIntegerId,
 });
 
 router.post('/', userAuth, validate({ body: addAttendanceSchema }), addAttendance);
@@ -77,7 +77,7 @@ router.post('/excelImport', userAuth, importBulkAttendance);
 
 router.get('/byDate', userAuth, validate({ query: attendanceByDateQuerySchema }), getAttendanceByDate);
 
-router.get("/previous-sessions/:employeeId", userAuth, getPreviousSessions);
+router.get("/previous-sessions/:userId", userAuth, getPreviousSessions);
 
 router.get("/studentAttendance/bulk", userAuth, validate({ query: bulkAttendanceReportSchema }), getStudentAttendanceReport);
 

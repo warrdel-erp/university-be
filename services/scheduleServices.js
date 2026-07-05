@@ -38,23 +38,23 @@ export async function updateSchedule(scheduleId, ScheduleData, updatedBy) {
 /**
  * Assigns a teacher to an exam schedule after validating that the teacher is not already assigned.
  * @param {number} scheduleId - The ID of the exam schedule.
- * @param {number} employeeId - The ID of the teacher/employee.
+ * @param {number} userId - The ID of the teacher/employee.
  * @param {number} createdBy - User ID of the creator.
  * @param {number} updatedBy - User ID of the updater.
  * @throws {Error} - If the teacher is already assigned to the schedule.
  */
-export async function assignTeacher(scheduleId, employeeId, createdBy, updatedBy) {
+export async function assignTeacher(scheduleId, userId, createdBy, updatedBy) {
   const schedule = await scheduleCreationRepository.getScheduleInScope(scheduleId);
   if (!schedule) {
     throw new Error("Schedule not found for this university and institute");
   }
 
-  const existingAssignment = await scheduleCreationRepository.getAssignmentByScheduleAndEmployee(scheduleId, employeeId);
+  const existingAssignment = await scheduleCreationRepository.getAssignmentByScheduleAndEmployee(scheduleId, userId);
   if (existingAssignment) {
     throw new Error("This teacher is already assigned to this exam schedule");
   }
   
-  const data = { scheduleId, employeeId, createdBy, updatedBy }
+  const data = { scheduleId, userId, createdBy, updatedBy }
   return await scheduleCreationRepository.assignTeacher(data);
 };
 

@@ -25,13 +25,13 @@ export const addEmployee = async (req, res) => {
 export const getAllEmployee = async (req, res) => {
     const campusId = req.query.campusId ? Number(req.query.campusId) : undefined;
     const instituteId = req.query.instituteId ? Number(req.query.instituteId) : undefined;
-    const employeeId = req.query.employeeId ? Number(req.query.employeeId) : undefined;
+    const userId = req.query.userId ? Number(req.query.userId) : undefined;
     const tenant = getTenantStore();
     try {
         const result = await employee.getAllEmployee(campusId, instituteId, {
             userId: req.user.userId,
             role: tenant.defaultRole,
-            employeeId,
+            userId,
         });
         res.status(200).send(result);
     } catch (error) {
@@ -43,12 +43,12 @@ export const getAllEmployee = async (req, res) => {
 };
 
 export const getSingleEmployeeDetails = async (req, res) => {
-    const employeeId = req.params.id;
+    const userId = req.params.id;
     try {
-        if (!employeeId) {
-            return res.status(400).send('employeeId is required')
+        if (!userId) {
+            return res.status(400).send('userId is required')
         }
-        const result = await employee.getSingleEmployeeDetails(employeeId);
+        const result = await employee.getSingleEmployeeDetails(userId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting single employee details:", error);
@@ -57,16 +57,16 @@ export const getSingleEmployeeDetails = async (req, res) => {
 };
 
 export const deleteEmployeeDetail = async (req, res) => {
-    const employeeId = req.params.id;
+    const userId = req.params.id;
     try {
-        if (!employeeId) {
+        if (!userId) {
             res.status(400).send("employee Id is required");
         } else {
-            const result = await employee.deleteEmployeeDetail(employeeId);
+            const result = await employee.deleteEmployeeDetail(userId);
             res.status(200).send(result);
         }
     } catch (error) {
-        console.error(`Error in deleting employeeId Id ${employeeId}:`, error);
+        console.error(`Error in deleting userId Id ${userId}:`, error);
         res.status(500).send("Internal Server Error");
     }
 };
@@ -106,7 +106,7 @@ export const importEmployeeData = async (req, res) => {
 };
 
 export const updateEmployee = async (req, res) => {
-    const employeeId = req.params.id;
+    const userId = req.params.id;
     try {
         const data = req.body;
         const file = req.files;
@@ -119,7 +119,7 @@ export const updateEmployee = async (req, res) => {
         }
 
         const result = await employee.updateEmployee(
-            employeeId,
+            userId,
             data,
             file,
             updatedBy,
@@ -135,13 +135,13 @@ export const updateEmployee = async (req, res) => {
 
 export async function getBooksIssuedToEmployee(req, res) {
     try {
-        const { employeeId } = req.query;
+        const { userId } = req.query;
 
-        if (!employeeId) {
-            return res.status(400).json({ message: "employeeId is required" });
+        if (!userId) {
+            return res.status(400).json({ message: "userId is required" });
         }
 
-        const result = await employee.getBooksIssuedToEmployee(employeeId);
+        const result = await employee.getBooksIssuedToEmployee(userId);
         res.status(200).json(result);
 
     } catch (error) {
@@ -151,13 +151,13 @@ export async function getBooksIssuedToEmployee(req, res) {
 
 export const getTeacherTimeTable = async (req, res) => {
     try {
-        const { employeeId } = req.query;
+        const { userId } = req.query;
 
-        if (!employeeId) {
-            return res.status(400).send("employeeId is required");
+        if (!userId) {
+            return res.status(400).send("userId is required");
         }
 
-        const result = await employee.getTeacherTimeTable(employeeId);
+        const result = await employee.getTeacherTimeTable(userId);
 
         res.status(200).send(result);
 
@@ -169,14 +169,14 @@ export const getTeacherTimeTable = async (req, res) => {
 
 export const getTeacherSubject = async (req, res) => {
     try {
-        const { employeeId, sessionId } = req.query;
+        const { userId, sessionId } = req.query;
         const academicYearId = getAcademicYearId();
 
-        if (!employeeId) {
-            return res.status(400).send("employeeId is required");
+        if (!userId) {
+            return res.status(400).send("userId is required");
         }
 
-        const result = await employee.getTeacherSubject(employeeId, {
+        const result = await employee.getTeacherSubject(userId, {
             sessionId: sessionId != null && sessionId !== '' ? Number(sessionId) : undefined,
             academicYearId: academicYearId != null && academicYearId !== '' ? Number(academicYearId) : undefined,
         });
@@ -191,8 +191,8 @@ export const getTeacherSubject = async (req, res) => {
 
 export async function getSubjectEvalution(req, res) {
     try {
-        const { employeeId } = req.query;
-        const evaluation = await employee.getSubjectEvalution(employeeId);
+        const { userId } = req.query;
+        const evaluation = await employee.getSubjectEvalution(userId);
         if (evaluation) {
             res.status(200).json(evaluation);
         } else {
@@ -205,11 +205,11 @@ export async function getSubjectEvalution(req, res) {
 
 export const getTodayClassSchedule = async (req, res) => {
     try {
-        const { employeeId, date, sessionId, groupPeriods } = req.query;
+        const { userId, date, sessionId, groupPeriods } = req.query;
         const academicYearId = getAcademicYearId();
 
-        if (!employeeId) {
-            return res.status(400).send("employeeId is required");
+        if (!userId) {
+            return res.status(400).send("userId is required");
         }
 
         if (!academicYearId) {
@@ -219,7 +219,7 @@ export const getTodayClassSchedule = async (req, res) => {
         const formattedDate = formatQueryDate(date);
 
         const result = await employee.getTodayClassSchedule(
-            Number(employeeId),
+            Number(userId),
             formattedDate,
             sessionId != null && sessionId !== '' ? Number(sessionId) : undefined,
             groupPeriods === 'true'
@@ -236,13 +236,13 @@ export const getTodayClassSchedule = async (req, res) => {
 
 export const getTeacherCourses = async (req, res) => {
     try {
-        const { employeeId } = req.query;
+        const { userId } = req.query;
 
-        if (!employeeId) {
-            return res.status(400).send('employeeId is required');
+        if (!userId) {
+            return res.status(400).send('userId is required');
         }
 
-        const result = await employee.getTeacherCourses(employeeId);
+        const result = await employee.getTeacherCourses(userId);
         res.status(200).send({ success: true, result });
     } catch (error) {
         console.error('Error in getTeacherCourses controller:', error);
@@ -252,13 +252,13 @@ export const getTeacherCourses = async (req, res) => {
 
 export const getTeacherSubjectsFromSchedule = async (req, res) => {
     try {
-        const { employeeId } = req.query;
+        const { userId } = req.query;
 
-        if (!employeeId) {
-            return res.status(400).send('employeeId is required');
+        if (!userId) {
+            return res.status(400).send('userId is required');
         }
 
-        const result = await employee.getTeacherSubjectsFromSchedule(employeeId);
+        const result = await employee.getTeacherSubjectsFromSchedule(userId);
         res.status(200).send({ success: true, result });
     } catch (error) {
         console.error('Error in getTeacherSubjectsFromSchedule controller:', error);
@@ -268,11 +268,11 @@ export const getTeacherSubjectsFromSchedule = async (req, res) => {
 
 export const getPastClassSchedules = async (req, res) => {
     try {
-        const { employeeId, date, groupPeriods } = req.query;
+        const { userId, date, groupPeriods } = req.query;
         const academicYearId = getAcademicYearId();
 
-        if (!employeeId) {
-            return SuccessResponse(res, 400, "employeeId is required");
+        if (!userId) {
+            return SuccessResponse(res, 400, "userId is required");
         }
 
         if (!academicYearId) {
@@ -283,7 +283,7 @@ export const getPastClassSchedules = async (req, res) => {
         const formattedDate = formatQueryDate(date);
 
         const result = await employee.getPastClassSchedules(
-            employeeId,
+            userId,
             academicYearId,
             formattedDate,
             groupPeriods === 'true'
@@ -298,11 +298,11 @@ export const getPastClassSchedules = async (req, res) => {
 
 export const getUpcomingClassSchedules = async (req, res) => {
     try {
-        const { employeeId, date, groupPeriods } = req.query;
+        const { userId, date, groupPeriods } = req.query;
         const academicYearId = getAcademicYearId();
 
-        if (!employeeId) {
-            return res.status(400).send("employeeId is required");
+        if (!userId) {
+            return res.status(400).send("userId is required");
         }
 
         if (!academicYearId) {
@@ -313,7 +313,7 @@ export const getUpcomingClassSchedules = async (req, res) => {
         const formattedDate = formatQueryDate(date);
 
         const result = await employee.getUpcomingClassSchedules(
-            employeeId,
+            userId,
             academicYearId,
             formattedDate,
             groupPeriods === 'true'
@@ -328,11 +328,11 @@ export const getUpcomingClassSchedules = async (req, res) => {
 
 export const getSectionCounts = async (req, res) => {
     try {
-        const { employeeId, date } = req.query;
+        const { userId, date } = req.query;
         const academicYearId = getAcademicYearId();
 
-        if (!employeeId) {
-            return ErrorResponse(res, 400, "employeeId is required");
+        if (!userId) {
+            return ErrorResponse(res, 400, "userId is required");
         }
 
         if (!academicYearId) {
@@ -343,7 +343,7 @@ export const getSectionCounts = async (req, res) => {
         const formattedDate = formatQueryDate(date);
 
         const { pastCount, upcomingCount, uniqueCombinationsCount, uniqueSubjectsCount } = await employee.getSectionCounts(
-            employeeId,
+            userId,
             academicYearId,
             formattedDate
         );
@@ -362,7 +362,7 @@ export const getSectionCounts = async (req, res) => {
 
 export const getUniqueClassSectionSubjects = async (req, res) => {
     try {
-        const { employeeId } = req.query;
+        const { userId } = req.query;
         const academicYearId = getAcademicYearId();
 
         if (!academicYearId) {
@@ -370,7 +370,7 @@ export const getUniqueClassSectionSubjects = async (req, res) => {
         }
 
         const result = await employee.getUniqueClassSectionSubjects(
-            employeeId,
+            userId,
             academicYearId
         );
 
@@ -383,12 +383,12 @@ export const getUniqueClassSectionSubjects = async (req, res) => {
 
 export async function getEmployeeSectionDates(req, res) {
     try {
-        const { classSectionTermId, subjectId, employeeId } = req.query;
+        const { classSectionTermId, subjectId, userId } = req.query;
 
         const data = await AttendanceCreation.getEmployeeSectionDates(
             classSectionTermId,
             subjectId,
-            employeeId
+            userId
         );
 
         return SuccessResponse(res, 200, "Employee section dates fetched successfully", data);

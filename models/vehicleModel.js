@@ -1,7 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
-import employee from './employeeModel.js'
 import instituteModel from "./instituteModel.js";
 
 const vehicleModel = sequelize.define(
@@ -28,13 +27,13 @@ const vehicleModel = sequelize.define(
             field: 'made_year',
             allowNull: false
         },
-        employeeId: {
+        userId: {
             type: DataTypes.INTEGER,
-            field: 'employee_id',
+            field: 'user_id',
             allowNull: false,
             references: {
-                model: employee,
-                key: 'employee_id'
+                model: users,
+                key: 'user_id'
             }
         },
         instituteId: {
