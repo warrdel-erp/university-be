@@ -10,6 +10,19 @@ function omitAcademicYearScope(scopeWhere = {}) {
   return rest;
 }
 
+export async function getCourseSummaryByCourseId(courseId) {
+  try {
+    return await scoped(model.courseModel).findOne({
+      attributes: ['courseId', 'courseName', 'courseCode', 'termType', 'totalTerms', 'courseDuration'],
+      where: { courseId },
+      raw: true,
+    });
+  } catch (error) {
+    console.error('Error in getting course summary:', error);
+    throw error;
+  }
+}
+
 export async function getCourseByCourseId(courseId) {
   try {
     return await scoped(model.courseModel).findOne({
@@ -360,9 +373,9 @@ export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
   try {
     return await scoped(model.classSectionModel).findAll({
       where: { courseId, sessionId },
-      include: [classSectionTermsInclude()],
       attributes: ['classSectionsId', 'section', 'year'],
       order: [['year', 'ASC'], ['section', 'ASC']],
+      raw: true,
     });
   } catch (error) {
     console.error('Error in Course Repository (getClassSectionsByCourseAndSession):', error);

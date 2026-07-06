@@ -23,73 +23,57 @@ export const getCourseWithSessions = async (courseId) => {
 };
 
 export const getTermsWithClassSections = async (courseId, sessionId) => {
-  try {
-    const [course, session, classSections] = await Promise.all([
-      courseRepository.getCourseByCourseId(courseId),
-      courseRepository.getSessionSummaryById(sessionId),
-      courseRepository.getClassSectionsByCourseAndSession(courseId, sessionId),
-    ]);
+  const [course, session, classSections] = await Promise.all([
+    courseRepository.getCourseSummaryByCourseId(courseId),
+    courseRepository.getSessionSummaryById(sessionId),
+    courseRepository.getClassSectionsByCourseAndSession(courseId, sessionId),
+  ]);
 
-    if (!course) {
-      const error = new Error("Course not found");
-      error.statusCode = 404;
-      throw error;
-    }
-    if (!session) {
-      const error = new Error("Session not found");
-      error.statusCode = 404;
-      throw error;
-    }
-
-    const coursePlain = course.get ? course.get({ plain: true }) : course;
-    const classSectionsByYear = new Map();
-
-    for (const classSection of classSections) {
-      const sectionPlain = classSection.get ? classSection.get({ plain: true }) : classSection;
-      const year = sectionPlain.year;
-
-      if (!classSectionsByYear.has(year)) {
-        classSectionsByYear.set(year, []);
-      }
-
-      classSectionsByYear.get(year).push({
-        classSectionsId: sectionPlain.classSectionsId,
-        section: sectionPlain.section,
-      });
-    }
-
-    const totalYears = Number(coursePlain.courseDuration) || 0;
-    const years = [];
-
-    for (let year = 1; year <= totalYears; year++) {
-      years.push({
-        year,
-        classSections: classSectionsByYear.get(year) ?? [],
-      });
-    }
-
-    return {
-      course: {
-        courseId: coursePlain.courseId,
-        courseName: coursePlain.courseName,
-        courseCode: coursePlain.courseCode,
-        termType: coursePlain.termType,
-        totalTerms: coursePlain.totalTerms,
-        duration: coursePlain.courseDuration,
-      },
-      session: {
-        sessionId: session.sessionId,
-        sessionName: session.sessionName,
-      },
-      years,
-    };
-  } catch (error) {
-    console.error(
-      "Error in Course Service (getTermsWithClassSections):",
-      error,
-    );
+  if (!course) {
+    const error = new Error("Course not found");
+    error.statusCode = 404;
     throw error;
   }
+  if (!session) {
+    const error = new Error("Session not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const totalYears = Number(course.courseDuration) || 0;
+  const years = [];
+
+  for (let year = 1; year <= totalYears; year++) {
+    years.push({ year, classSections: [] });
+  }
+
+  for (const section of classSections) {
+    const yearIndex = section.year - 1;
+    if (yearIndex < 0 || yearIndex >= totalYears) {
+      continue;
+    }
+
+    years[yearIndex].classSections.push({
+      classSectionsId: section.classSectionsId,
+      section: section.section,
+    });
+  }
+
+  return {
+    course: {
+      courseId: course.courseId,
+      courseName: course.courseName,
+      courseCode: course.courseCode,
+      termType: course.termType,
+      totalTerms: course.totalTerms,
+      duration: course.courseDuration,
+    },
+    session: {
+      sessionId: session.sessionId,
+      sessionName: session.sessionName,
+    },
+    years,
+  };
 };
 
 export const getTermOptionsByCourse = async (courseId) => {
