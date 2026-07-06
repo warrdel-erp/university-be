@@ -18,24 +18,13 @@ export async function deleteClassSectionTerm(classSectionId) {
     }
 
     if (classSectionTermIds.length > 0) {
-      const teacherMappingCount = await classSectionTermRepository.countTeacherMappingsForClassSectionTerms(
-        classSectionId,
-        classSectionTermIds,
-        options,
-      );
-      if (teacherMappingCount > 0) {
-        throw new Error(
-          'Teacher employee mapping exists for this class section. Please remove teacher section mapping (DELETE/PATCH /teacher/teacherSection) and timetable teacher mappings (DELETE /timeTableCreate/mapping) before deleting.',
-        );
-      }
-
       const studentCount = await classSectionTermRepository.countStudentsForClassSectionTerms(
         classSectionTermIds,
         options,
       );
       if (studentCount > 0) {
         throw new Error(
-          'Cannot delete this class section because students are assigned to one or more terms. Remove or reassign students first.',
+          'Remove or reassign students before deleting this section.',
         );
       }
 
@@ -45,10 +34,15 @@ export async function deleteClassSectionTerm(classSectionId) {
       );
       if (routineCount > 0) {
         throw new Error(
-          'Cannot delete this class section because timetable routines exist for one or more terms. Remove those routines before deleting.',
+          'Remove timetable routines before deleting this section.',
         );
       }
     }
+
+    await classSectionTermRepository.softDeleteTeacherSectionMappingsForClassSection(
+      classSectionId,
+      options,
+    );
 
     let deletedTermCount = 0;
     if (classSectionTermIds.length > 0) {

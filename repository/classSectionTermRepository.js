@@ -1,6 +1,6 @@
 import * as model from '../models/index.js';
 import { Op } from 'sequelize';
-import { buildScope, scoped } from '../utility/scoped.js';
+import { scoped } from '../utility/scoped.js';
 
 export async function findClassSectionTermBySectionAndTerm(
   classSectionsId,
@@ -108,39 +108,26 @@ export async function countStudentsForClassSectionTerms(classSectionTermIds, opt
   return onStudent + onMapper;
 }
 
+export async function countActiveTeacherSectionMappings(classSectionId, options = {}) {
+  return model.teacherSectionMappingModel.count({
+    where: { classSectionsId: Number(classSectionId) },
+    transaction: options.transaction,
+  });
+}
+
+export async function softDeleteTeacherSectionMappingsForClassSection(classSectionId, options = {}) {
+  return model.teacherSectionMappingModel.destroy({
+    where: { classSectionsId: Number(classSectionId) },
+    transaction: options.transaction,
+  });
+}
+
 export async function countTeacherMappingsForClassSectionTerm(
   classSectionTermId,
   classSectionsId,
   options = {},
 ) {
-  const termId = Number(classSectionTermId);
-  const sectionId = Number(classSectionsId);
-  const transaction = options.transaction;
-
-  const teacherSectionCount = await scoped(model.teacherSectionMappingModel).count({
-    where: { classSectionsId: sectionId },
-    transaction,
-  });
-
-  const routineScope = buildScope(model.timeTableRoutineModel);
-  const timetableTeacherCount = await scoped(model.classScheduleModel).count({
-    where: { employeeId: { [Op.ne]: null } },
-    include: [
-      {
-        model: model.timeTableRoutineModel,
-        as: 'timeTablecreate',
-        required: true,
-        where: {
-          ...routineScope,
-          classSectionTermId: termId,
-        },
-        attributes: [],
-      },
-    ],
-    transaction,
-  });
-
-  return teacherSectionCount + timetableTeacherCount;
+  return countActiveTeacherSectionMappings(classSectionsId, options);
 }
 
 export async function countTeacherMappingsForClassSectionTerms(
@@ -148,37 +135,7 @@ export async function countTeacherMappingsForClassSectionTerms(
   classSectionTermIds,
   options = {},
 ) {
-  const ids = [];
-  for (const classSectionTermId of classSectionTermIds) {
-    ids.push(Number(classSectionTermId));
-  }
-
-  const transaction = options.transaction;
-
-  const teacherSectionCount = await scoped(model.teacherSectionMappingModel).count({
-    where: { classSectionsId: Number(classSectionId) },
-    transaction,
-  });
-
-  const routineScope = buildScope(model.timeTableRoutineModel);
-  const timetableTeacherCount = await scoped(model.classScheduleModel).count({
-    where: { employeeId: { [Op.ne]: null } },
-    include: [
-      {
-        model: model.timeTableRoutineModel,
-        as: 'timeTablecreate',
-        required: true,
-        where: {
-          ...routineScope,
-          classSectionTermId: { [Op.in]: ids },
-        },
-        attributes: [],
-      },
-    ],
-    transaction,
-  });
-
-  return teacherSectionCount + timetableTeacherCount;
+  return countActiveTeacherSectionMappings(classSectionId, options);
 }
 
 export async function deleteClassSectionTermById(classSectionTermId, options = {}) {
