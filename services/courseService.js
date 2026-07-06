@@ -42,6 +42,14 @@ export const getTermsWithClassSections = async (courseId, sessionId) => {
     }
 
     const coursePlain = course.get ? course.get({ plain: true }) : course;
+    const classSectionsIds = [];
+    for (const classSection of classSections) {
+      const sectionPlain = classSection.get ? classSection.get({ plain: true }) : classSection;
+      classSectionsIds.push(sectionPlain.classSectionsId);
+    }
+
+    const studentCountBySection = await courseRepository.countStudentsByClassSectionIds(classSectionsIds);
+
     const classSectionsByYear = new Map();
 
     for (const classSection of classSections) {
@@ -55,6 +63,7 @@ export const getTermsWithClassSections = async (courseId, sessionId) => {
       classSectionsByYear.get(year).push({
         classSectionsId: sectionPlain.classSectionsId,
         section: sectionPlain.section,
+        studentCount: studentCountBySection.get(sectionPlain.classSectionsId) ?? 0,
       });
     }
 
