@@ -210,6 +210,7 @@ export async function addStudent(
         info.courseId,
         info.instituteId,
         sessionId ?? info.sessionId,
+        info.admisssionDate ?? info.admissionDate,
       );
     }
     info.email = info.email.toLowerCase();
@@ -444,7 +445,7 @@ export async function addStudentWithFeePlanProfile({ info, files, createdBy }) {
   );
 }
 
-async function generateScholarNumber(courseId, instituteId, sessionId) {
+async function generateScholarNumber(courseId, instituteId, sessionId, admissionDate) {
   const getCourseCodeDetail = await getCourseCode(courseId);
   const getInstitueCodeDetail = await getInstituteCode(instituteId);
   const courseCode = getCourseCodeDetail?.get("courseCode");
@@ -456,23 +457,43 @@ async function generateScholarNumber(courseId, instituteId, sessionId) {
     );
   }
 
+  let admissionYear = null;
+  if (admissionDate) {
+    const parsedAdmissionDate = new Date(admissionDate);
+    if (!Number.isNaN(parsedAdmissionDate.getTime())) {
+      admissionYear = String(parsedAdmissionDate.getFullYear());
+    } else {
+      const yearFromString = String(admissionDate).slice(0, 4);
+      if (/^\d{4}$/.test(yearFromString)) {
+        admissionYear = yearFromString;
+      }
+    }
+  }
+  if (!admissionYear && sessionId != null) {
+    const sessionYearSuffix = await sessionRepository.getSessionYearSuffix(sessionId);
+    if (sessionYearSuffix) {
+      admissionYear = `20${sessionYearSuffix}`;
+    }
+  }
+  if (!admissionYear) {
+    admissionYear = moment().format("YYYY");
+  }
+
+  const scholarNumberPrefix = `${institueCode}/${courseCode}/${admissionYear}`;
   const getPreviousScholarNumber =
-    await studentRepository.getPreviousScholarNumber(institueCode);
+    await studentRepository.getPreviousScholarNumber(scholarNumberPrefix);
   const previousScholarNumber = getPreviousScholarNumber
     ? getPreviousScholarNumber.get("scholarNumber")
     : null;
-  let scholarNumber;
+
   if (previousScholarNumber) {
     const scholarNumberParts = previousScholarNumber.split("/");
-    const scholarNumberPrefix = scholarNumberParts.slice(0, 3).join("/");
-    const scholarNumberSuffix = parseInt(scholarNumberParts[3], 10) + 1;
-    scholarNumber = `${scholarNumberPrefix}/${scholarNumberSuffix.toString().padStart(6, "0")}`;
-  } else {
-    const sessionYear = await sessionRepository.getSessionYearSuffix(sessionId);
-    const yearLastTwoDigits = sessionYear ?? moment().format("YY");
-    scholarNumber = `${institueCode}/${courseCode}/${yearLastTwoDigits}/100001`;
+    const lastPart = scholarNumberParts[scholarNumberParts.length - 1];
+    const nextCounter = parseInt(lastPart, 10) + 1;
+    return `${scholarNumberPrefix}/${String(nextCounter).padStart(lastPart.length, "0")}`;
   }
-  return scholarNumber;
+
+  return `${scholarNumberPrefix}/100001`;
 }
 
 export async function getAllStudents(payload) {
@@ -652,6 +673,7 @@ export async function importStudentData(excelData, data) {
         convertedData.courseId,
         convertedData.instituteId,
         convertedData.sessionId,
+        convertedData.admissionDate ?? convertedData.admisssionDate,
       );
       // convertedData.scholarNumber = scholarNumber;
       const number = convertedData.scholarNumber
@@ -913,6 +935,7 @@ export async function addAdmissionNoForBulkImport(data, matchedPairs) {
         bulk.courseId,
         bulk.instituteId,
         bulk.sessionId,
+        bulk.admisssionDate ?? bulk.admissionDate,
       );
       createdBy = bulk.createdBy;
       const studentData = { ...bulk, scholarNumber };

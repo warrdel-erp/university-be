@@ -632,20 +632,20 @@ export async function getSingleStudentDetail(studentId) {
     };
 };
 
-export async function getPreviousScholarNumber(instituteCode) {
+export async function getPreviousScholarNumber(scholarNumberPrefix) {
     try {
         const result = await scoped(model.studentModel).findOne({
             attributes: ['scholarNumber'],
             where: {
                 scholarNumber: {
-                    [Op.regexp]: `^${instituteCode}(/|$)`
-                }
+                    [Op.like]: `${scholarNumberPrefix}/%`,
+                },
             },
-            order: [['scholarNumber', 'DESC']]
+            order: [['scholarNumber', 'DESC']],
         });
         return result;
     } catch (error) {
-        console.error(`Error in getPreviousScholarNumber for institue Code ${instituteCode}:`, error);
+        console.error(`Error in getPreviousScholarNumber for prefix ${scholarNumberPrefix}:`, error);
         throw error;
     }
 };
