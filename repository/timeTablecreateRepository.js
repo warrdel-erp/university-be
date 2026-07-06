@@ -866,7 +866,24 @@ export async function updatetimeTableCreate(timeTableMappingId, data) {
 export async function findMappingById(id) {
   try {
     const result = await assertScopedSchedule(id, {
-      attributes: ['timeTableMappingId', 'timeTableRoutineId', 'timeTableCreationId', 'employeeId', 'day', 'period'],
+      attributes: [
+        'timeTableMappingId',
+        'timeTableRoutineId',
+        'timeTableCreationId',
+        'timeTableNameId',
+        'employeeId',
+        'day',
+        'period',
+        'classRoomSectionId',
+        'timeTableType',
+        'subjectId',
+        'electiveSubjectId',
+        'teacherSubjectMappingId',
+        'combinedGroupId',
+        'teacherType',
+        'isAttendence',
+        'isOverridingSyblingElectives',
+      ],
     });
 
     return result;
