@@ -187,8 +187,7 @@ export async function countTeacherMappingsForClassSectionTerm(
   return teacherSectionCount + timetableTeacherCount;
 }
 
-export async function countTeacherMappingsForClassSectionTerms(
-  classSectionId,
+export async function countTimetableTeacherCellsForClassSectionTerms(
   classSectionTermIds,
   options = {},
 ) {
@@ -196,16 +195,14 @@ export async function countTeacherMappingsForClassSectionTerms(
   for (const classSectionTermId of classSectionTermIds) {
     ids.push(Number(classSectionTermId));
   }
+  if (!ids.length) {
+    return 0;
+  }
 
   const transaction = options.transaction;
-
-  const teacherSectionCount = await scoped(model.teacherSectionMappingModel).count({
-    where: { classSectionsId: Number(classSectionId) },
-    transaction,
-  });
-
   const routineScope = buildScope(model.timeTableRoutineModel);
-  const timetableTeacherCount = await scoped(model.classScheduleModel).count({
+
+  return scoped(model.classScheduleModel).count({
     where: { employeeId: { [Op.ne]: null } },
     include: [
       {
@@ -221,8 +218,16 @@ export async function countTeacherMappingsForClassSectionTerms(
     ],
     transaction,
   });
+}
 
-  return teacherSectionCount + timetableTeacherCount;
+export async function softDeleteTeacherSectionMappingsByClassSectionId(
+  classSectionId,
+  options = {},
+) {
+  return scoped(model.teacherSectionMappingModel).destroy({
+    where: { classSectionsId: Number(classSectionId) },
+    transaction: options.transaction,
+  });
 }
 
 export async function deleteClassSectionTermById(classSectionTermId, options = {}) {

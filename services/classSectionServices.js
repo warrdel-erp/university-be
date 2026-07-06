@@ -73,13 +73,12 @@ export async function deleteClassSectionTerm(classSectionId) {
     }
 
     if (classSectionTermIds.length > 0) {
-      const teacherMappingCount = await classSectionTermRepository.countTeacherMappingsForClassSectionTerms(
-        classSectionId,
+      const timetableTeacherCount = await classSectionTermRepository.countTimetableTeacherCellsForClassSectionTerms(
         classSectionTermIds,
         options,
       );
-      if (teacherMappingCount > 0) {
-        throw new Error('Remove teacher mapping before deleting this section.');
+      if (timetableTeacherCount > 0) {
+        throw new Error('Remove timetable teacher assignments before deleting this section.');
       }
 
       const studentCount = await classSectionTermRepository.countStudentsForClassSectionTerms(
@@ -98,6 +97,11 @@ export async function deleteClassSectionTerm(classSectionId) {
         throw new Error('Remove timetable routines before deleting this section.');
       }
     }
+
+    const deletedTeacherMappingCount = await classSectionTermRepository.softDeleteTeacherSectionMappingsByClassSectionId(
+      classSectionId,
+      options,
+    );
 
     let deletedTermCount = 0;
     if (classSectionTermIds.length > 0) {
@@ -123,6 +127,7 @@ export async function deleteClassSectionTerm(classSectionId) {
       message: 'Class section deleted successfully.',
       classSectionId: Number(classSectionId),
       deletedCount: deletedTermCount,
+      deletedTeacherMappingCount,
       classSectionDeleted: true,
     };
   });
