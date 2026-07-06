@@ -87,7 +87,7 @@ const updateSubjectSchema = z.object({
 
 const classSectionRecordQuerySchema = z.object({
     courseId: z.coerce.number({ required_error: 'courseId is required' }).int().positive(),
-    classSectionTermId: z.coerce.number({ required_error: 'classSectionTermId is required' }).int().positive(),
+    classSectionId: z.coerce.number({ required_error: 'classSectionId is required' }).int().positive(),
 });
 
 const addClassSectionsSchema = z.object({
@@ -120,6 +120,7 @@ router.patch('/subject/update', userAuth, validate({ body: updateSubjectSchema }
 // Section master (class table removed)
 router.post('/classSections', userAuth, validate({ body: addClassSectionsSchema }), addClassSections);
 router.get('/classSections', userAuth, getClassSections);
+
 router.get('/classSectionSpecific', userAuth, getClassSectionSpecific);
 router.post('/sectionSubjectMapper', userAuth, addSectionSubjectMapper);
 router.get('/sectionSubjectMapper', userAuth, getSectionSubjectMapper);

@@ -51,9 +51,53 @@ export async function findClassSectionTermById(classSectionTermId, options = {})
 export async function findClassSectionInTenantScope(classSectionId, options = {}) {
   return scoped(model.classSectionModel).findOne({
     where: { classSectionsId: Number(classSectionId) },
-    attributes: ['classSectionsId'],
+    attributes: ['classSectionsId', 'section', 'year', 'courseId', 'sessionId'],
     transaction: options.transaction,
   });
+}
+
+export async function findClassSectionByCourseSessionYearSection(
+  { courseId, sessionId, year, section, excludeClassSectionsId },
+  options = {},
+) {
+  const sectionName = String(section).trim();
+  if (!sectionName) {
+    return null;
+  }
+
+  const where = {
+    courseId: Number(courseId),
+    sessionId: Number(sessionId),
+    year: Number(year),
+    section: sectionName,
+  };
+  if (excludeClassSectionsId != null) {
+    where.classSectionsId = { [Op.ne]: Number(excludeClassSectionsId) };
+  }
+
+  return scoped(model.classSectionModel).findOne({
+    where,
+    attributes: ['classSectionsId', 'section', 'year', 'courseId', 'sessionId'],
+    transaction: options.transaction,
+  });
+}
+
+export async function updateClassSectionName(classSectionId, section, options = {}) {
+  const sectionRow = await findClassSectionInTenantScope(classSectionId, options);
+  if (!sectionRow) {
+    return null;
+  }
+
+  const sectionName = String(section).trim();
+  const updated = await scoped(model.classSectionModel).update(
+    { section: sectionName },
+    {
+      where: { classSectionsId: Number(classSectionId) },
+      transaction: options.transaction,
+    },
+  );
+
+  return updated;
 }
 
 export async function findClassSectionTermsByClassSectionId(classSectionId, options = {}) {

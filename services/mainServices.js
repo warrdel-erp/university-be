@@ -5,7 +5,7 @@ import { getSingleSubAccountDetails } from '../repository/subAccountRepository.j
 import sequelize from "../database/sequelizeConfig.js";
 import * as studentRepository from '../repository/studentRepository.js';
 import { resolveProgramTerm, resolveStudentSection } from '../utility/classSectionIncludes.js';
-import { termsForYear, resolveTotalTerms } from '../utility/courseTerms.js';
+import { buildTermName, termsForYear, resolveTotalTerms } from '../utility/courseTerms.js';
 
 function coercePositiveInt(value) {
     if (value == null || value === '') return null;
@@ -482,29 +482,43 @@ export async function subjectExcel(excelData, courseId, academicYearId, speciali
     }
 }
 
-export async function getClassSectionRecord(courseId, classSectionTermId) {
-    const result = await studentRepository.getClassSectionRecord(courseId, classSectionTermId);
+export async function getClassSectionRecord(courseId, classSectionId) {
+    const result = await studentRepository.getClassSectionRecord(courseId, classSectionId);
+    const course = await getCourseByCourseId(courseId);
+    const termType = course?.termType ?? null;
+
     const section = result.classSection
         ? (result.classSection.get
             ? result.classSection.get({ plain: true })
             : result.classSection)
         : null;
-    const termRow = result.termRow ?? null;
+
+    const terms = [];
+    for (const row of result.termRows ?? []) {
+        const termNum = row.term != null ? Number(row.term) : null;
+        terms.push({
+            classSectionTermId: row.classSectionTermId,
+            term: termNum,
+            termName: termNum != null && termType ? buildTermName(termType, termNum) : null,
+        });
+    }
 
     const response = {
         classSection: section
             ? {
                 classSectionsId: section.classSectionsId,
-                classSectionTermId: termRow?.classSectionTermId ?? Number(classSectionTermId),
                 courseId: section.courseId,
                 academicYearId: section.academicYearId ?? null,
                 sectionName: section.section ?? null,
                 className: section.year != null ? String(section.year) : null,
-                term: termRow?.term ?? resolveProgramTerm(section) ?? null,
+                terms,
             }
             : null,
         student: result.student.map((s) => {
             const plain = s.get ? s.get({ plain: true }) : s;
+            const term = plain.studentClassSectionTerm?.term ?? resolveProgramTerm(resolveStudentSection(plain)) ?? null;
+            const termNum = term != null ? Number(term) : null;
+
             return {
                 studentId: plain.studentId,
                 firstName: plain.firstName,
@@ -513,7 +527,8 @@ export async function getClassSectionRecord(courseId, classSectionTermId) {
                 email: plain.email,
                 phoneNumber: plain.phoneNumber,
                 classSectionTermId: plain.classSectionTermId ?? null,
-                term: plain.studentClassSectionTerm?.term ?? resolveProgramTerm(resolveStudentSection(plain)) ?? null,
+                term: termNum,
+                termName: termNum != null && termType ? buildTermName(termType, termNum) : null,
                 className: resolveStudentSection(plain)?.year != null
                     ? String(resolveStudentSection(plain).year)
                     : null,
