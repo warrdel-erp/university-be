@@ -58,11 +58,13 @@ export const getTermsWithClassSections = async (courseId, sessionId) => {
       });
     }
 
+    const totalYears = Number(coursePlain.courseDuration) || 0;
     const years = [];
-    for (const [year, sections] of classSectionsByYear) {
+
+    for (let year = 1; year <= totalYears; year++) {
       years.push({
         year,
-        classSections: sections,
+        classSections: classSectionsByYear.get(year) ?? [],
       });
     }
 
