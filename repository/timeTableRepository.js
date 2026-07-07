@@ -276,15 +276,39 @@ async function findBlockingRoutine(timeTableNameId) {
     });
 }
 
+async function findBlockingScheduleForPeriod(timeTableCreationId) {
+    const now = new Date();
+
+    return await scoped(model.classScheduleModel).findOne({
+        where: { timeTableCreationId },
+        attributes: ['timeTableMappingId'],
+        include: [{
+            model: model.timeTableRoutineModel,
+            as: 'timeTablecreate',
+            required: true,
+            attributes: ['timeTableRoutineId'],
+            where: {
+                [Op.or]: [
+                    { isPublish: true },
+                    {
+                        startingDate: { [Op.lte]: now },
+                        endingDate: { [Op.gte]: now },
+                    },
+                ],
+            },
+        }],
+    });
+}
+
 export async function deleteTimeTable(timeTableCreationId) {
     const period = await findPeriodInScope(timeTableCreationId);
     if (!period) {
         throw new Error('Time table period not found for this institute and academic year');
     }
 
-    const routineUsingStructure = await findBlockingRoutine(period.timeTableNameId);
-    if (routineUsingStructure) {
-        throw new Error('Time table structure is used in an active or published routine and cannot be deleted');
+    const scheduleUsingPeriod = await findBlockingScheduleForPeriod(timeTableCreationId);
+    if (scheduleUsingPeriod) {
+        throw new Error('Time table period is used in an active or published routine and cannot be deleted');
     }
 
     try {
