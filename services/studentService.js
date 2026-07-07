@@ -28,7 +28,7 @@ import * as libraryRepository from "../repository/libraryCreationRepository.js";
 import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
 import * as model from "../models/index.js";
 import { decimalAdd, decimalSum, toMoneyNumber } from "../utility/decimalMoney.js";
-import { FEE_PLAN_PUBLISH_STATUS } from "../constant.js";
+import { FEE_PLAN_PUBLISH_STATUS, STUDENT_STATUS_ACTIVE, STUDENT_STATUS_ALUMNI } from "../constant.js";
 import { getTenantStore } from "../utility/requestContext.js";
 import {
   classSectionTermsInclude,
@@ -1469,18 +1469,57 @@ function calculateNextPromotionTerm(currentTerm, termsPerYear, totalTerms) {
   };
 }
 
-async function mapPromotionClassSectionRow(row) {
-  const plain = row.get ? row.get({ plain: true }) : row;
-  const term = resolveProgramTerm(plain);
+function assertEligibleForRepeat({ currentTerm, termsPerYear }) {
+  if (!termsPerYear || termsPerYear <= 0) {
+    const error = new Error("Unable to determine terms per year for this course");
+    error.statusCode = 400;
+    throw error;
+  }
+  if (Number(currentTerm) % termsPerYear !== 0) {
+    const error = new Error(
+      "Repeat is only allowed on the last term of the academic year",
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+}
+
+async function getRepeatPromotionContext({ currentTerm, sourceacademicYearId }) {
+  const nextYear = await studentRepository.getNextAcedmicYearAfter(sourceacademicYearId);
+  if (!nextYear) {
+    throw new Error("Next academic year not found");
+  }
+
+  const nextYearPlain = asPlain(nextYear);
   return {
-    classSectionsId: plain.classSectionsId,
-    name: plain.section,
-    term,
-    classSectionTermId: resolveClassSectionTermId(plain, term),
-    sessionId: plain.sessionId,
-    academicYearId: plain.academicYearId,
-    specializationId: plain.specializationId,
+    targetTerm: Number(currentTerm),
+    targetacademicYearId: nextYearPlain.academicYearId,
+    previousAcademicYearId: sourceacademicYearId,
+    crossYear: true,
   };
+}
+
+function mapPromotionClassSectionRow(row) {
+  const plain = asPlain(row);
+  const section = plain.classSection;
+  const term = Number(plain.term);
+  return {
+    classSectionsId: plain.classSectionsId ?? section.classSectionsId,
+    name: section.section,
+    term,
+    classSectionTermId: plain.classSectionTermId,
+    sessionId: section.sessionId,
+    academicYearId: section.academicYearId,
+    specializationId: section.specializationId ?? null,
+  };
+}
+
+function mapPromotionClassSectionRows(rows) {
+  const classSections = [];
+  for (const row of rows) {
+    classSections.push(mapPromotionClassSectionRow(row));
+  }
+  return classSections;
 }
 
 function buildStudentName({ firstName, middleName, lastName }) {
@@ -1509,132 +1548,252 @@ function mapPromotionClassSection(section) {
   };
 }
 
-function buildPromotionHistory(student) {
-  const plain = asPlain(student);
-  const entries = new Map();
+function formatPromotionTermHistoryEntry(row, titleMap) {
+  const classSection = row.classSection;
+  const termId = row.classSectionTermId ?? row.classSectionTerm?.classSectionTermId ?? null;
+  const promotionTerm = row.classSectionTerm?.term ?? resolveProgramTerm(classSection) ?? null;
+  const acedmicYearId = classSection?.academicYearId ?? null;
 
-  for (const row of plain.sectionHistory ?? []) {
-    const classSection = mapPromotionClassSection(row.classSection);
-    const termId = row.classSectionTermId ?? row.classSectionTerm?.classSectionTermId ?? null;
-    if (!classSection?.classSectionsId && !termId) {
+  return {
+    promotionHistoryId: row.id ?? null,
+    promotionTerm,
+    promotionStatus: row.status,
+    classSectionTermId: termId,
+    classSectionId: classSection?.classSectionsId ?? null,
+    classSectionName: classSection?.section ?? null,
+    acedmicYearId,
+    acedmicYearTitle: acedmicYearId != null ? (titleMap.get(Number(acedmicYearId)) ?? null) : null,
+  };
+}
+
+function resolveAlumniFinalHistoryEntry(promotionTermHistory) {
+  let finalEntry = null;
+  for (const entry of promotionTermHistory) {
+    if (entry.promotionStatus !== 'passed' || entry.promotionTerm == null) {
       continue;
     }
-    const historyTerm = row.classSectionTerm?.term ?? classSection?.term ?? null;
-    const key = termId != null
-      ? `${termId}:${row.status}`
-      : `${classSection.classSectionsId}:${historyTerm}:${row.status}`;
-    entries.set(key, {
-      promotionHistoryId: row.id,
-      status: row.status,
-      classSectionTermId: termId,
-      term: historyTerm,
-      classSection,
-    });
+    if (!finalEntry || entry.promotionTerm >= finalEntry.promotionTerm) {
+      finalEntry = entry;
+    }
+  }
+  return finalEntry;
+}
+
+function buildPromotedTo(studentRow, currentHistoryEntry) {
+  if (studentRow.studentStatus === STUDENT_STATUS_ALUMNI) {
+    return null;
   }
 
-  const currentSection = mapPromotionClassSection(resolveStudentSection(plain));
-  const currentTermId = plain.classSectionTermId ?? plain.studentClassSectionTerm?.classSectionTermId ?? null;
-  if (currentSection?.classSectionsId || currentTermId) {
-    const key = currentTermId != null
-      ? `${currentTermId}:current`
-      : `${currentSection.classSectionsId}:${currentSection?.term ?? ''}:current`;
-    if (!entries.has(key)) {
-      entries.set(key, {
-        promotionHistoryId: null,
-        status: 'current',
-        classSectionTermId: currentTermId,
-        term: plain.studentClassSectionTerm?.term ?? currentSection?.term ?? null,
-        classSection: currentSection,
-      });
+  if (currentHistoryEntry) {
+    return {
+      promotionTerm: currentHistoryEntry.promotionTerm,
+      classSectionTermId: currentHistoryEntry.classSectionTermId,
+      classSectionId: currentHistoryEntry.classSectionId,
+      classSectionName: currentHistoryEntry.classSectionName,
+      acedmicYearId: currentHistoryEntry.acedmicYearId,
+      acedmicYearTitle: currentHistoryEntry.acedmicYearTitle,
+    };
+  }
+
+  const section = studentRow.studentSections;
+  const programTerm = studentRow.programTerm;
+  if (!section || !programTerm) {
+    return null;
+  }
+
+  return {
+    promotionTerm: programTerm.term,
+    classSectionTermId: programTerm.classSectionTermId,
+    classSectionId: section.classSectionsId,
+    classSectionName: section.section,
+    acedmicYearId: section.acedmicYear?.academicYearId ?? null,
+    acedmicYearTitle: section.acedmicYear?.yearTitle ?? null,
+  };
+}
+
+function buildPromotionHistory(student, titleMap) {
+  const plain = asPlain(student);
+  const isAlumni = plain.studentStatus === STUDENT_STATUS_ALUMNI;
+  const seenKeys = new Set();
+
+  const promotionTermHistory = [];
+  const passedClassSections = [];
+  const failedClassSections = [];
+  let currentHistoryEntry = null;
+
+  for (const row of plain.sectionHistory ?? []) {
+    if (!row.classSection) {
+      continue;
+    }
+
+    const termId = row.classSectionTermId ?? row.classSectionTerm?.classSectionTermId ?? null;
+    const historyTerm = row.classSectionTerm?.term ?? resolveProgramTerm(row.classSection) ?? null;
+    const key = termId != null
+      ? `${termId}:${row.status}`
+      : `${row.classSection.classSectionsId}:${historyTerm}:${row.status}`;
+
+    if (seenKeys.has(key)) {
+      continue;
+    }
+    seenKeys.add(key);
+
+    const entry = formatPromotionTermHistoryEntry(row, titleMap);
+    promotionTermHistory.push(entry);
+
+    if (row.status === 'passed') {
+      passedClassSections.push(entry);
+    } else if (row.status === 'failed') {
+      failedClassSections.push(entry);
+    } else if (row.status === 'current') {
+      currentHistoryEntry = entry;
     }
   }
 
-  return [...entries.values()].sort((a, b) => {
-    const termA = a.classSection?.term ?? Number.MAX_SAFE_INTEGER;
-    const termB = b.classSection?.term ?? Number.MAX_SAFE_INTEGER;
+  if (!isAlumni) {
+    const currentSectionPlain = asPlain(resolveStudentSection(plain));
+    const currentTermRow = plain.studentClassSectionTerm;
+    const currentTermId = plain.classSectionTermId ?? currentTermRow?.classSectionTermId ?? null;
+
+    if (currentSectionPlain || currentTermId) {
+      const currentTerm = currentTermRow?.term ?? resolveProgramTerm(currentSectionPlain);
+      const key = currentTermId != null
+        ? `${currentTermId}:current`
+        : `${currentSectionPlain?.classSectionsId}:${currentTerm ?? ''}:current`;
+
+      if (!seenKeys.has(key)) {
+        const acedmicYearId = currentSectionPlain?.academicYearId ?? null;
+        const entry = {
+          promotionHistoryId: null,
+          promotionTerm: currentTerm,
+          promotionStatus: 'current',
+          classSectionTermId: currentTermId,
+          classSectionId: currentSectionPlain?.classSectionsId ?? null,
+          classSectionName: currentSectionPlain?.section ?? null,
+          acedmicYearId,
+          acedmicYearTitle: acedmicYearId != null
+            ? (titleMap.get(Number(acedmicYearId)) ?? null)
+            : null,
+        };
+        promotionTermHistory.push(entry);
+        currentHistoryEntry = entry;
+      }
+    }
+  }
+
+  promotionTermHistory.sort((a, b) => {
+    const termA = a.promotionTerm ?? Number.MAX_SAFE_INTEGER;
+    const termB = b.promotionTerm ?? Number.MAX_SAFE_INTEGER;
     if (termA !== termB) {
       return termA - termB;
     }
-    return String(a.status).localeCompare(String(b.status));
+    return String(a.promotionStatus).localeCompare(String(b.promotionStatus));
   });
+
+  const alumniFinalEntry = isAlumni
+    ? resolveAlumniFinalHistoryEntry(promotionTermHistory)
+    : null;
+
+  return {
+    promotionTermHistory,
+    passedClassSections,
+    failedClassSections,
+    currentHistoryEntry,
+    alumniFinalEntry,
+  };
 }
 
-function mapPromotionHistoryStudent(student) {
+function mapPromotionHistoryStudent(student, titleMap) {
   const plain = asPlain(student);
-  const promotionHistory = buildPromotionHistory(student);
-  const admissionEntry = promotionHistory[0];
+  const history = buildPromotionHistory(student, titleMap);
+  const programTerm = plain.studentClassSectionTerm;
+  const studentSections = mapPromotionClassSection(resolveStudentSection(plain));
+  const isAlumni = plain.studentStatus === STUDENT_STATUS_ALUMNI;
+  const alumniFinalEntry = history.alumniFinalEntry;
+  const firstHistory = history.promotionTermHistory[0];
+
+  if (studentSections?.acedmicYear?.academicYearId != null) {
+    studentSections.acedmicYear.yearTitle =
+      titleMap.get(Number(studentSections.acedmicYear.academicYearId)) ?? null;
+  }
+
+  const studentRow = {
+    studentStatus: plain.studentStatus,
+    programTerm,
+    studentSections,
+  };
 
   return {
     studentId: plain.studentId,
-    name: buildStudentName(plain),
+    studentName: buildStudentName(plain),
     scholarNumber: plain.scholarNumber,
     enrollNumber: plain.enrollNumber ?? null,
-    admissionDate: plain.admisssionDate ?? null,
-    course: plain.course
-      ? {
-          courseId: plain.course.courseId,
-          courseName: plain.course.courseName,
-          termType: plain.course.termType,
-        }
-      : null,
-    specialization: plain.specialization
-      ? {
-          specializationId: plain.specialization.specializationId,
-          specializationName: plain.specialization.specializationName,
-        }
-      : null,
-    programTerm: plain.studentClassSectionTerm
-      ? {
-          classSectionTermId: plain.studentClassSectionTerm.classSectionTermId,
-          term: plain.studentClassSectionTerm.term,
-          termName: plain.course?.termType
-            ? buildTermName(plain.course.termType, plain.studentClassSectionTerm.term)
-            : null,
-        }
-      : null,
-    admissionYear: admissionEntry?.classSection?.acedmicYear ?? null,
-    studentSections: mapPromotionClassSection(resolveStudentSection(plain)),
-    promotionHistory,
+    studentStatus: plain.studentStatus,
+    termType: plain.course?.termType ?? null,
+    courseId: plain.course?.courseId ?? null,
+    courseName: plain.course?.courseName ?? null,
+    currentPromotionTerm: isAlumni
+      ? (alumniFinalEntry?.promotionTerm ?? programTerm?.term ?? null)
+      : (programTerm?.term ?? null),
+    currentClassSectionId: isAlumni
+      ? (alumniFinalEntry?.classSectionId ?? null)
+      : (studentSections?.classSectionsId ?? null),
+    currentClassSectionName: isAlumni
+      ? (alumniFinalEntry?.classSectionName ?? null)
+      : (studentSections?.section ?? null),
+    classSectionTermId: isAlumni
+      ? (alumniFinalEntry?.classSectionTermId ?? programTerm?.classSectionTermId ?? null)
+      : (programTerm?.classSectionTermId ?? null),
+    admissionAcedmicYearId: firstHistory?.acedmicYearId ?? null,
+    admissionAcedmicYearTitle: firstHistory?.acedmicYearTitle ?? null,
+    passedClassSections: history.passedClassSections,
+    failedClassSections: history.failedClassSections,
+    promotedTo: buildPromotedTo(studentRow, history.currentHistoryEntry),
+    promotionTermHistory: history.promotionTermHistory,
   };
 }
 
-function collectPromotionYearIds(studentRow) {
+function collectPromotionYearIds(student) {
+  const plain = asPlain(student);
   const ids = [];
-  const push = (year) => {
-    if (year?.academicYearId != null) {
-      ids.push(year.academicYearId);
-    }
-  };
 
-  push(studentRow.admissionYear);
-  push(studentRow.studentSections?.acedmicYear);
-  for (const entry of studentRow.promotionHistory ?? []) {
-    push(entry.classSection?.acedmicYear);
+  for (const hist of plain.sectionHistory ?? []) {
+    const ayId = hist.classSection?.academicYearId;
+    if (ayId != null) {
+      ids.push(ayId);
+    }
   }
+
+  const section = resolveStudentSection(plain);
+  if (section?.academicYearId != null) {
+    ids.push(section.academicYearId);
+  }
+
   return ids;
 }
 
 function applyPromotionYearTitles(studentRow, titleMap) {
-  const fill = (year) => {
-    if (year?.academicYearId != null) {
-      year.yearTitle = titleMap.get(Number(year.academicYearId)) ?? null;
-    }
-  };
-
-  fill(studentRow.admissionYear);
-  fill(studentRow.studentSections?.acedmicYear);
-  for (const entry of studentRow.promotionHistory ?? []) {
-    fill(entry.classSection?.acedmicYear);
-  }
-
   return studentRow;
 }
 
+function formatPromotionHistoryApiStudent(student, titleMap) {
+  return mapPromotionHistoryStudent(student, titleMap);
+}
+
 async function mapPromotionHistoryStudents(rows) {
-  const mapped = rows.map(mapPromotionHistoryStudent);
-  const yearIds = mapped.flatMap(collectPromotionYearIds);
+  const yearIds = [];
+  for (const row of rows) {
+    const ids = collectPromotionYearIds(row);
+    for (const id of ids) {
+      yearIds.push(id);
+    }
+  }
+
   const titleMap = await studentRepository.getAcademicYearTitlesByIds(yearIds);
-  return mapped.map((row) => applyPromotionYearTitles(row, titleMap));
+  const result = [];
+  for (const row of rows) {
+    result.push(formatPromotionHistoryApiStudent(row, titleMap));
+  }
+  return result;
 }
 
 export async function getPromotionHistory(payload = {}) {
@@ -1648,7 +1807,8 @@ export async function getPromotionHistory(payload = {}) {
       error.statusCode = 404;
       throw error;
     }
-    return { data: toPlainRow(student) };
+    const students = await mapPromotionHistoryStudents([student]);
+    return { data: students[0] };
   }
 
   const page = Number(payload.page) || 1;
@@ -1667,7 +1827,7 @@ export async function getPromotionHistory(payload = {}) {
             : undefined,
     });
 
-  const students = toPlainRows(rows);
+  const students = await mapPromotionHistoryStudents(rows);
   return {
     data: { students },
     pagination: { page, limit, total: totalCount, totalPages },
@@ -1771,7 +1931,84 @@ export async function getAvailablePromotionSections({
     crossYear: promotionStep.crossYear,
     termsPerYear,
     totalTerms,
-    classSections: toPlainRows(rows),
+    classSections: mapPromotionClassSectionRows(rows),
+  };
+}
+
+export async function getAvailableRepeatSections({
+  courseId,
+  term,
+  classSectionTermId,
+}) {
+  if (!courseId || term == null || classSectionTermId == null) {
+    throw new Error("courseId, term and classSectionTermId are required");
+  }
+
+  const requestedTerm = Number(term);
+  const termRow = await findClassSectionTermById(Number(classSectionTermId));
+  if (!termRow) {
+    throw new Error("classSectionTermId not found");
+  }
+
+  const termPlain = termRow.get ? termRow.get({ plain: true }) : termRow;
+  const section = termPlain.classSection;
+  if (!section) {
+    throw new Error("classSectionTermId has no linked class section");
+  }
+
+  const currentTerm = Number(termPlain.term);
+  if (!currentTerm) {
+    throw new Error("classSectionTermId has no term");
+  }
+
+  if (requestedTerm !== currentTerm) {
+    throw new Error("term must equal the student's current term");
+  }
+
+  if (section.courseId !== Number(courseId)) {
+    throw new Error("Class section does not belong to the given course");
+  }
+
+  const course = await getCourseByCourseId(Number(courseId));
+  if (!course) {
+    throw new Error("Course not found");
+  }
+
+  const termsPerYear = resolveTermsPerYear(course);
+  assertEligibleForRepeat({ currentTerm, termsPerYear });
+
+  const {
+    targetTerm,
+    targetacademicYearId,
+    previousAcademicYearId,
+    crossYear,
+  } = await getRepeatPromotionContext({
+    currentTerm,
+    sourceacademicYearId: section.academicYearId,
+  });
+
+  const rows = await studentRepository.getPromotionClassSections({
+    courseId: Number(courseId),
+    academicYearId: targetacademicYearId,
+    term: targetTerm,
+    specializationId: section.specializationId ?? null,
+    instituteId: section.instituteId,
+  });
+
+  const classSections = mapPromotionClassSectionRows(rows);
+  if (classSections.length === 0) {
+    throw new Error(
+      `No section configured for term ${currentTerm} in next academic year`,
+    );
+  }
+
+  return {
+    repeatTerm: currentTerm,
+    currentTerm,
+    academicYearId: targetacademicYearId,
+    previousAcademicYearId,
+    crossYear,
+    classSections,
   };
 }
 
@@ -1916,6 +2153,272 @@ export async function promoteStudent(data) {
           sessionId: nextSessionId,
         },
         crossYear: targetSection.academicYearId !== currentAcademicYearId,
+      },
+    };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+export async function promotionPassed(data) {
+  if (!data?.studentId) {
+    const error = new Error("studentId is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const studentDetail = await studentRepository.getStudentForPromate(data.studentId);
+  if (!studentDetail) {
+    const error = new Error("Student not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const studentPlain = asPlain(studentDetail);
+
+  if (studentPlain.studentStatus === STUDENT_STATUS_ALUMNI) {
+    const error = new Error("Student is already alumni");
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const currentTermRow = studentPlain.studentClassSectionTerm;
+  if (!currentTermRow?.term) {
+    const error = new Error("Student current term could not be determined");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const currentTerm = Number(currentTermRow.term);
+  const currentClassSectionTermId = Number(studentPlain.classSectionTermId);
+  const currentSection = currentTermRow.classSection ?? resolveStudentSection(studentPlain);
+
+  const course = await getCourseByCourseId(studentPlain.courseId);
+  if (!course) {
+    const error = new Error("Course not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const { finalTerm } = await getNextPromotionContext({
+    course,
+    currentTerm,
+    sourceacademicYearId: currentSection?.academicYearId,
+  });
+
+  if (!finalTerm) {
+    const error = new Error("Student is not on the final term");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const transaction = await sequelize.transaction();
+  try {
+    const updatedCount = await historyRepository.updateHistoryStatusByStudentAndTermId(
+      {
+        studentId: data.studentId,
+        classSectionTermId: currentClassSectionTermId,
+        status: "passed",
+      },
+      transaction,
+    );
+
+    if (!updatedCount) {
+      const error = new Error("Current promotion history record not found");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    await studentRepository.updateStudentStatus(data.studentId, STUDENT_STATUS_ALUMNI, transaction);
+
+    await transaction.commit();
+
+    return {
+      studentId: data.studentId,
+      studentStatus: STUDENT_STATUS_ALUMNI,
+      finalTerm: currentTerm,
+      classSectionTermId: currentClassSectionTermId,
+      promotionHistoryStatus: "passed",
+    };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+export async function promotionFailed(data) {
+  if (!data?.studentId) {
+    const error = new Error("studentId is required");
+    error.statusCode = 400;
+    throw error;
+  }
+  if (!data?.classSectionTermId) {
+    const error = new Error("classSectionTermId is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const targetClassSectionTermId = Number(data.classSectionTermId);
+
+  const studentDetail = await studentRepository.getStudentForPromate(data.studentId);
+  if (!studentDetail) {
+    const error = new Error("Student not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const targetTermRow = await findClassSectionTermById(targetClassSectionTermId);
+  if (!targetTermRow) {
+    const error = new Error("Target classSectionTermId not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const studentPlain = asPlain(studentDetail);
+  const targetTermPlain = asPlain(targetTermRow);
+  const targetSection = targetTermPlain.classSection;
+  if (!targetSection) {
+    const error = new Error("Target class section not found for classSectionTermId");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (studentPlain.studentStatus === STUDENT_STATUS_ALUMNI) {
+    const error = new Error("Student is already alumni");
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const currentTermRow = studentPlain.studentClassSectionTerm;
+  if (!currentTermRow?.term) {
+    const error = new Error("Student current term could not be determined");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const currentTerm = Number(currentTermRow.term);
+  const currentSection = currentTermRow.classSection ?? resolveStudentSection(studentPlain);
+
+  if (targetSection.instituteId !== studentPlain.instituteId) {
+    const error = new Error("Class section does not belong to the student's institute");
+    error.statusCode = 400;
+    throw error;
+  }
+  if (targetSection.courseId !== studentPlain.courseId) {
+    const error = new Error("Class section does not belong to the student's course");
+    error.statusCode = 400;
+    throw error;
+  }
+  if (
+    studentPlain.specializationId &&
+    targetSection.specializationId &&
+    targetSection.specializationId !== studentPlain.specializationId
+  ) {
+    const error = new Error("Class section specialization does not match the student");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const course = await getCourseByCourseId(studentPlain.courseId);
+  if (!course) {
+    const error = new Error("Course not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const termsPerYear = resolveTermsPerYear(course);
+  assertEligibleForRepeat({ currentTerm, termsPerYear });
+
+  const currentClassSectionTermId = Number(studentPlain.classSectionTermId);
+  const currentAcademicYearId =
+    currentSection?.academicYearId ??
+    studentPlain.studentMapped?.[0]?.academicYearId ??
+    studentPlain.studentSession?.academicYearId;
+
+  const { targetTerm, targetacademicYearId } = await getRepeatPromotionContext({
+    currentTerm,
+    sourceacademicYearId: currentSection?.academicYearId,
+  });
+
+  const targetTermNumber = Number(targetTermPlain.term);
+  if (targetTermNumber !== targetTerm) {
+    const error = new Error(
+      "Target classSectionTermId must be the same term as the student's current term",
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+  if (Number(targetSection.academicYearId) !== Number(targetacademicYearId)) {
+    const error = new Error("Target class section academic year is invalid for this promotion");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const nextSessionId = targetSection.sessionId;
+  const targetClassSectionsId = targetSection.classSectionsId;
+  const oldClassSectionId =
+    currentSection?.classSectionsId ?? currentTermRow.classSectionsId ?? null;
+  const createdBy = data.createdBy ?? null;
+
+  const transaction = await sequelize.transaction();
+  try {
+    await studentRepository.promoteStudent(
+      data.studentId,
+      {
+        classSectionTermId: targetClassSectionTermId,
+        academicYearId: targetSection.academicYearId,
+        sessionId: nextSessionId,
+        classStudentMapperId: studentPlain.studentMapped?.[0]?.classStudentMapperId,
+      },
+      transaction,
+    );
+
+    if (oldClassSectionId) {
+      await historyRepository.createHistory(
+        {
+          studentId: data.studentId,
+          classSectionsId: oldClassSectionId,
+          classSectionTermId: currentClassSectionTermId,
+          status: "failed",
+          createdBy,
+        },
+        transaction,
+      );
+    }
+
+    await historyRepository.createHistory(
+      {
+        studentId: data.studentId,
+        classSectionsId: targetClassSectionsId,
+        classSectionTermId: targetClassSectionTermId,
+        status: "current",
+        createdBy,
+      },
+      transaction,
+    );
+
+    await transaction.commit();
+
+    return {
+      studentId: data.studentId,
+      studentStatus: STUDENT_STATUS_ACTIVE,
+      term: currentTerm,
+      promotionHistoryStatus: "failed",
+      repeat: {
+        previous: {
+          academicYearId: currentAcademicYearId,
+          classSectionTermId: currentClassSectionTermId,
+          classSectionsId: oldClassSectionId,
+          sessionId: studentPlain.sessionId,
+        },
+        current: {
+          academicYearId: targetSection.academicYearId,
+          classSectionTermId: targetClassSectionTermId,
+          classSectionsId: targetClassSectionsId,
+          sessionId: nextSessionId,
+        },
+        crossYear: true,
       },
     };
   } catch (error) {

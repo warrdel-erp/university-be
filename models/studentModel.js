@@ -6,7 +6,7 @@ import institute from './instituteModel.js';
 import affiliatedUniversity from './affiliatedUniversityModel.js';
 import course from './courseModel.js';
 import specialization from "./specializationModel.js";
-import { documentStatus, studentAdmissionStatus, studentStatus } from '../constant.js';
+import { documentStatus, studentAdmissionStatus, STUDENT_STATUS_VALUES, STUDENT_STATUS_ACTIVE } from '../constant.js';
 import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 import users from "./userModel.js";
 import sessionModel from "./sessionModel.js";
@@ -256,8 +256,9 @@ const studentModel = sequelize.define(
             field: 'place_of_birth'
         },
         studentStatus: {
-            type: DataTypes.ENUM(...studentStatus),
+            type: DataTypes.ENUM(...STUDENT_STATUS_VALUES),
             allowNull: true,
+            defaultValue: STUDENT_STATUS_ACTIVE,
             field: 'student_status'
         },
         cancelDate: {

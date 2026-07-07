@@ -154,9 +154,14 @@ export const STUDENT_STATUS_OPTIONS = [
   { label: "Deactive", value: "deactive" },
   { label: "Transferred", value: "transferred" },
   { label: "Graduated", value: "graduated" },
+  { label: "Alumni", value: "alumni" },
 ];
 
 export const STUDENT_STATUS_VALUES = STUDENT_STATUS_OPTIONS.map((o) => o.value);
+
+/** Enrolled / program-complete lifecycle values for students.student_status */
+export const STUDENT_STATUS_ACTIVE = "active";
+export const STUDENT_STATUS_ALUMNI = "alumni";
 
 export const STUDENT_CANCELLATION_STATUSES = [
   "Cancel Student",
@@ -167,6 +172,7 @@ export const STUDENT_CANCELLATION_STATUSES = [
   "deactive",
   "transferred",
   "graduated",
+  "alumni",
 ];
 
 export const studentStatus = STUDENT_STATUS_VALUES;
