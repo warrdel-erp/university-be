@@ -116,3 +116,7 @@ export async function updateTimeTable(info) {
 export async function deleteTimeTable(timeTableCreationId) {
     return await timeTableRepository.deleteTimeTable(timeTableCreationId);
 }
+
+export async function deleteTimeTableStructure(timeTableNameId) {
+    return await timeTableRepository.deleteTimeTableStructure(timeTableNameId);
+}

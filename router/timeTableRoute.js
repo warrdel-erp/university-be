@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { addTimeTable, getTimeTableDetails, getSingleTimeTableDetails, updateTimeTable, deleteTimeTable, getAllTimeTableName } from '../controllers/timeTableController.js';
+import { addTimeTable, getTimeTableDetails, getSingleTimeTableDetails, updateTimeTable, deleteTimeTable, deleteTimeTableStructure, getAllTimeTableName } from '../controllers/timeTableController.js';
 import userAuth from '../middleware/authUser.js';
 import { validate } from '../utility/validation.js';
 
@@ -59,11 +59,16 @@ const deleteTimeTableQuerySchema = z.object({
     timeTableCreationId: positiveIntegerId,
 });
 
+const deleteTimeTableStructureQuerySchema = z.object({
+    timeTableNameId: positiveIntegerId,
+});
+
 router.post('/', userAuth, validate({ body: addTimeTableSchema }), addTimeTable);
 router.get('/all_name', userAuth, validate({ query: getAllTimeTableNameQuerySchema }), getAllTimeTableName);
 router.get('/', userAuth, validate({ query: getTimeTableQuerySchema }), getTimeTableDetails);
 router.get('/single', userAuth, validate({ query: getSingleTimeTableQuerySchema }), getSingleTimeTableDetails);
 router.patch('/', userAuth, validate({ body: updateTimeTableSchema }), updateTimeTable);
 router.delete('/', userAuth, validate({ query: deleteTimeTableQuerySchema }), deleteTimeTable);
+router.delete('/structure', userAuth, validate({ query: deleteTimeTableStructureQuerySchema }), deleteTimeTableStructure);
 
 export default router;

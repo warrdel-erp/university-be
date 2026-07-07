@@ -1,7 +1,9 @@
+import { Op } from 'sequelize';
 import * as model from '../models/index.js'
 import { getTenantStore } from '../utility/requestContext.js';
 import { buildScope, scoped } from '../utility/scoped.js';
 import * as sessionRepository from './sessionRepository.js';
+import sequelize from '../database/sequelizeConfig.js';
 
 const excludeMeta = ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"];
 
@@ -256,13 +258,36 @@ export async function updateTimeTable(timeTableCreationId, info) {
     }
 }
 
-export async function deleteTimeTable(timeTableCreationId) {
-    try {
-        const period = await findPeriodInScope(timeTableCreationId);
-        if (!period) {
-            return null;
-        }
+async function findBlockingRoutine(timeTableNameId) {
+    const now = new Date();
 
+    return await scoped(model.timeTableRoutineModel).findOne({
+        where: {
+            timeTableNameId,
+            [Op.or]: [
+                { isPublish: true },
+                {
+                    startingDate: { [Op.lte]: now },
+                    endingDate: { [Op.gte]: now },
+                },
+            ],
+        },
+        attributes: ['timeTableRoutineId'],
+    });
+}
+
+export async function deleteTimeTable(timeTableCreationId) {
+    const period = await findPeriodInScope(timeTableCreationId);
+    if (!period) {
+        throw new Error('Time table period not found for this institute and academic year');
+    }
+
+    const routineUsingStructure = await findBlockingRoutine(period.timeTableNameId);
+    if (routineUsingStructure) {
+        throw new Error('Time table structure is used in an active or published routine and cannot be deleted');
+    }
+
+    try {
         await model.timeTableStructurePeriodsModel.destroy({
             where: { timeTableCreationId },
             individualHooks: true,
@@ -272,5 +297,39 @@ export async function deleteTimeTable(timeTableCreationId) {
     } catch (error) {
         console.error('Error during soft delete:', error);
         throw new Error('Unable to soft delete account');
+    }
+}
+
+export async function deleteTimeTableStructure(timeTableNameId) {
+    const structure = await getTimeTableStructureById(timeTableNameId);
+    if (!structure) {
+        throw new Error('Time table structure not found for this institute and academic year');
+    }
+
+    const routineUsingStructure = await findBlockingRoutine(timeTableNameId);
+    if (routineUsingStructure) {
+        throw new Error('Time table structure is used in an active or published routine and cannot be deleted');
+    }
+
+    const transaction = await sequelize.transaction();
+    try {
+        await model.timeTableStructurePeriodsModel.destroy({
+            where: { timeTableNameId },
+            individualHooks: true,
+            transaction,
+        });
+
+        await model.timeTableStructureModel.destroy({
+            where: { timeTableNameId },
+            individualHooks: true,
+            transaction,
+        });
+
+        await transaction.commit();
+        return { message: `time table structure deleted successfully for time Table Name Id ${timeTableNameId}` };
+    } catch (error) {
+        await transaction.rollback();
+        console.error('Error during time table structure soft delete:', error);
+        throw error;
     }
 }
