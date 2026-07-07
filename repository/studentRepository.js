@@ -299,26 +299,45 @@ export async function getAllStudents({
 
         const whereCondition = buildStudentListWhere(search, courseId);
 
+        // Only the course join is needed to evaluate the search filter; the heavy
+        // hasMany includes are excluded here so pagination and count stay accurate.
+        const filterInclude = search
+            ? [{ model: model.courseModel, as: "course", attributes: [] }]
+            : [];
+
         const offset = (page - 1) * limit;
-        const queryOptions = {
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+
+        // Step 1: page over distinct student IDs matching the filter.
+        const idRows = await scoped(model.studentModel).findAll({
+            attributes: ["studentId"],
             where: whereCondition,
-            include: baseInclude,
+            include: filterInclude,
             offset,
             limit,
             order: [["studentId", "DESC"]],
-            ...(search && { subQuery: false }),
-        };
+            subQuery: false,
+            raw: true,
+        });
+        const studentIds = idRows.map((row) => row.studentId);
 
-        const rows = await scoped(model.studentModel).findAll(queryOptions);
-        const result = rows.map((row) => row.get({ plain: true }));
+        // Step 2: hydrate full rows for the paged IDs (no row-collapsing from joins).
+        let result = [];
+        if (studentIds.length > 0) {
+            const rows = await scoped(model.studentModel).findAll({
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                where: { studentId: { [Op.in]: studentIds } },
+                include: baseInclude,
+                order: [["studentId", "DESC"]],
+            });
+            result = rows.map((row) => row.get({ plain: true }));
+        }
 
+        // Step 3: total count of matching students for pagination.
         const totalCount = await scoped(model.studentModel).count({
             where: whereCondition,
-            include: baseInclude,
+            include: filterInclude,
             distinct: true,
             col: 'student_id',
-            ...(search && { subQuery: false }),
         });
 
         return {
