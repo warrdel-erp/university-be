@@ -319,13 +319,16 @@ export const getFeePlanInitiate = async (req, res) => {
 };
 
 export const getEmptyFeeDetails = async (req, res) => {
-    const { courseId, sessionId, year } = req.query;
+    const { courseId, sessionId, year, search, page, limit } = req.query;
     try {
         const result = await studentService.getEmptyFeeDetails({
             academicYearId: getAcademicYearId(),
             courseId,
             sessionId,
             year,
+            search,
+            page,
+            limit,
         });
         res.status(200).send(result);
     } catch (error) {

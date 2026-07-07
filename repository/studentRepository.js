@@ -1926,9 +1926,9 @@ export async function findInvoicesByStudentIdsForProfile(
 
 export async function getEmptyFeeDetails(filters = {}) {
     try {
-        const { courseId, sessionId, academicYearId, year } = filters;
+        const { courseId, sessionId, academicYearId, year, search, page = 1, limit = 10 } = filters;
         if (getRequestAcademicYearId() == null && academicYearId == null) {
-            return [];
+            return { result: [], totalCount: 0, page, limit, totalPages: 0 };
         }
 
         const where = {
@@ -1936,6 +1936,17 @@ export async function getEmptyFeeDetails(filters = {}) {
             ...(courseId != null && { courseId }),
             ...(sessionId != null && { sessionId }),
         };
+
+        if (search) {
+            const like = `%${search}%`;
+            where[Op.or] = [
+                { firstName: { [Op.like]: like } },
+                { lastName: { [Op.like]: like } },
+                { middleName: { [Op.like]: like } },
+                { scholarNumber: { [Op.like]: like } },
+                { enrollNumber: { [Op.like]: like } },
+            ];
+        }
 
         const classSectionInclude = year != null
             ? studentClassSectionTermWithSectionInclude({
@@ -1945,6 +1956,10 @@ export async function getEmptyFeeDetails(filters = {}) {
             })
             : studentClassSectionTermWithSectionInclude();
 
+        const sessionInclude = studentSessionWithAcademicYearInclude({
+            academicYearId: academicYearId,
+        });
+
         const include = [
             {
                 model: model.courseModel,
@@ -1952,16 +1967,54 @@ export async function getEmptyFeeDetails(filters = {}) {
                 attributes: ["courseName", "courseCode"],
             },
             classSectionInclude,
-            studentSessionWithAcademicYearInclude({
-                academicYearId: academicYearId,
-            }),
+            sessionInclude,
         ];
 
-        return await scoped(model.studentModel).findAll({
+        // Filtering joins (year class section + session) drive which students match.
+        const filterInclude = [classSectionInclude, sessionInclude];
+
+        const offset = (page - 1) * limit;
+
+        // Step 1: page over distinct student IDs matching the filter.
+        const idRows = await scoped(model.studentModel).findAll({
+            attributes: ["studentId"],
             where,
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"] },
-            include,
+            include: filterInclude,
+            offset,
+            limit,
+            order: [["studentId", "DESC"]],
+            subQuery: false,
+            raw: true,
         });
+        const studentIds = idRows.map((row) => row.studentId);
+
+        // Step 2: hydrate full rows for the paged IDs.
+        let result = [];
+        if (studentIds.length > 0) {
+            const rows = await scoped(model.studentModel).findAll({
+                where: { studentId: { [Op.in]: studentIds } },
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"] },
+                include,
+                order: [["studentId", "DESC"]],
+            });
+            result = rows.map((row) => row.get({ plain: true }));
+        }
+
+        // Step 3: total count of matching students for pagination.
+        const totalCount = await scoped(model.studentModel).count({
+            where,
+            include: filterInclude,
+            distinct: true,
+            col: 'student_id',
+        });
+
+        return {
+            result,
+            totalCount,
+            page,
+            limit,
+            totalPages: Math.ceil(totalCount / limit),
+        };
     } catch (error) {
         console.error('Error in getting feeplan details:', error);
         throw error;

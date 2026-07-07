@@ -256,6 +256,20 @@ const emptyFeeDetailsQuerySchema = z.object({
   courseId: positiveIntegerId.optional(),
   sessionId: positiveIntegerId.optional(),
   year: positiveIntegerId.optional(),
+  search: z.string().trim().optional(),
+  page: z.coerce
+    .number()
+    .int("page must be an integer")
+    .min(1, "page must be at least 1")
+    .optional()
+    .default(1),
+  limit: z.coerce
+    .number()
+    .int("limit must be an integer")
+    .min(1, "limit must be at least 1")
+    .max(100, "limit must be at most 100")
+    .optional()
+    .default(10),
 });
 
 const studentIdQuerySchema = z.object({
