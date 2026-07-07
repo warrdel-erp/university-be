@@ -38,6 +38,7 @@ const addTimeTableSchema = z.object({
     startingTime: z.string().optional(),
     type: z.enum(['Automatic', 'Manual']).optional(),
     courseId: optionalPositiveId,
+    courseIds: z.array(positiveIntegerId).optional(),
     sessionId: optionalPositiveId,
     weekOff: z.array(z.string()).optional(),
     isCourse: z.boolean().optional(),

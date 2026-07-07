@@ -1,7 +1,7 @@
+import { Op } from 'sequelize';
 import * as model from '../models/index.js'
 import { getTenantStore } from '../utility/requestContext.js';
 import { buildScope, scoped } from '../utility/scoped.js';
-import * as sessionRepository from './sessionRepository.js';
 
 const excludeMeta = ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"];
 
@@ -50,59 +50,43 @@ export async function getCourseInScope(courseId) {
 }
 
 async function resolveSessionForStructure(data, scopeWhere, transaction) {
-    const { sessionId, courseId } = data;
+    const { sessionId } = data;
 
-    if (sessionId) {
-        const session = await scoped(model.sessionModel).findOne({
-            where: { sessionId },
-            attributes: ['sessionId', 'universityId', 'instituteId', 'academicYearId'],
-            transaction,
-        });
-        if (!session) {
-            throw new Error('Session not found');
-        }
-        if (Number(session.universityId) !== Number(scopeWhere.universityId)) {
-            throw new Error('Session does not belong to this university');
-        }
-        if (Number(session.instituteId) !== Number(scopeWhere.instituteId)) {
-            throw new Error('Session does not belong to this institute');
-        }
-        if (Number(session.academicYearId) !== Number(scopeWhere.academicYearId)) {
-            throw new Error('Session does not belong to this academic year');
-        }
-        return session.sessionId;
+    if (!sessionId) {
+        return null;
     }
 
-    if (!courseId) {
-        throw new Error('sessionId is required');
-    }
-
-    const mappings = await scoped(model.sessionCouseMappingModel).findAll({
-        where: { courseId },
-        attributes: ['sessionId'],
-        include: [{
-            model: model.sessionModel,
-            as: 'session',
-            required: true,
-            where: {
-                instituteId: scopeWhere.instituteId,
-                universityId: scopeWhere.universityId,
-                academicYearId: scopeWhere.academicYearId,
-            },
-            attributes: ['sessionId'],
-        }],
+    const session = await scoped(model.sessionModel).findOne({
+        where: { sessionId },
+        attributes: ['sessionId', 'universityId', 'instituteId', 'academicYearId'],
         transaction,
     });
-
-    const resolvedSessionIds = [...new Set(mappings.map((mapping) => mapping.sessionId))];
-    if (!resolvedSessionIds.length) {
-        throw new Error('No session mapped to this course for the current academic year');
+    if (!session) {
+        throw new Error('Session not found');
     }
-    if (resolvedSessionIds.length > 1) {
-        throw new Error('sessionId is required when multiple sessions are mapped to this course');
+    if (Number(session.universityId) !== Number(scopeWhere.universityId)) {
+        throw new Error('Session does not belong to this university');
     }
+    if (Number(session.instituteId) !== Number(scopeWhere.instituteId)) {
+        throw new Error('Session does not belong to this institute');
+    }
+    if (Number(session.academicYearId) !== Number(scopeWhere.academicYearId)) {
+        throw new Error('Session does not belong to this academic year');
+    }
+    return session.sessionId;
+}
 
-    return resolvedSessionIds[0];
+function resolveCourseIds(data) {
+    const ids = [];
+    if (Array.isArray(data.courseIds)) {
+        for (const id of data.courseIds) {
+            ids.push(Number(id));
+        }
+    }
+    if (data.courseId) {
+        ids.push(Number(data.courseId));
+    }
+    return [...new Set(ids)];
 }
 
 export async function buildTimeTableStructureCreatePayload(data, transaction) {
@@ -111,8 +95,9 @@ export async function buildTimeTableStructureCreatePayload(data, transaction) {
         throw new Error('universityId, instituteId and academicYearId are required in request context');
     }
 
-    if (data.courseId) {
-        const course = await getCourseInScope(data.courseId);
+    const courseIds = resolveCourseIds(data);
+    for (const courseId of courseIds) {
+        const course = await getCourseInScope(courseId);
         if (!course) {
             throw new Error('Course not found for this university and institute');
         }
@@ -120,22 +105,10 @@ export async function buildTimeTableStructureCreatePayload(data, transaction) {
 
     const sessionId = await resolveSessionForStructure(data, scopeWhere, transaction);
 
-    if (data.courseId) {
-        const isMapped = await sessionRepository.isSessionAlreadyMapped(
-            sessionId,
-            data.courseId,
-            scopeWhere.instituteId,
-            scopeWhere.universityId,
-        );
-        if (!isMapped) {
-            throw new Error('Session is not mapped to this course');
-        }
-    }
-
-    return {
+    const payload = {
         name: data.name,
         maximumPeriod: data.maximumPeriod,
-        courseId: data.courseId ?? null,
+        courseId: courseIds[0] ?? null,
         periodLength: data.periodLength,
         periodGap: data.periodGap,
         startingTime: data.startingTime,
@@ -147,12 +120,29 @@ export async function buildTimeTableStructureCreatePayload(data, transaction) {
         instituteId: scopeWhere.instituteId,
         academicYearId: scopeWhere.academicYearId,
     };
+
+    return { payload, courseIds };
 }
 
 export async function addTimeTableName(data, transaction) {
     try {
-        const payload = await buildTimeTableStructureCreatePayload(data, transaction);
-        return await scoped(model.timeTableStructureModel).create(payload, { transaction });
+        const { payload, courseIds } = await buildTimeTableStructureCreatePayload(data, transaction);
+        const structure = await scoped(model.timeTableStructureModel).create(payload, { transaction });
+
+        if (courseIds.length) {
+            const courseRows = [];
+            for (const courseId of courseIds) {
+                courseRows.push({
+                    timeTableNameId: structure.timeTableNameId,
+                    courseId,
+                    createdBy: data.createdBy,
+                    updatedBy: data.updatedBy,
+                });
+            }
+            await scoped(model.timeTableStructureCourseModel).bulkCreate(courseRows, { transaction });
+        }
+
+        return structure;
     } catch (error) {
         console.error("Error in create time table name:", error);
         throw error;
@@ -184,9 +174,20 @@ export async function getTimeTableStructureById(timeTableNameId, options = {}) {
 export async function getTimeTableStructures({ courseId, sessionId } = {}) {
     try {
         const where = {
-            ...(courseId && { courseId: Number(courseId) }),
             ...(sessionId && { sessionId: Number(sessionId) }),
         };
+
+        if (courseId) {
+            const mappings = await scoped(model.timeTableStructureCourseModel).findAll({
+                where: { courseId: Number(courseId) },
+                attributes: ['timeTableNameId'],
+            });
+            const nameIds = [...new Set(mappings.map((mapping) => mapping.timeTableNameId))];
+            if (!nameIds.length) {
+                return [];
+            }
+            where.timeTableNameId = { [Op.in]: nameIds };
+        }
 
         const rows = await scoped(model.timeTableStructureModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
@@ -204,10 +205,17 @@ export async function getTimeTableStructures({ courseId, sessionId } = {}) {
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                 },
                 {
-                    model: model.courseModel,
-                    as: "timeTableStructureCourse",
-                    attributes: ["courseId", "courseName", "courseCode", "termType"],
+                    model: model.timeTableStructureCourseModel,
+                    as: "structureCourses",
+                    attributes: ["timeTableStructureCourseId", "courseId"],
                     required: false,
+                    include: [
+                        {
+                            model: model.courseModel,
+                            as: "course",
+                            attributes: ["courseId", "courseName", "courseCode", "termType"],
+                        },
+                    ],
                 },
             ],
         });
@@ -215,8 +223,15 @@ export async function getTimeTableStructures({ courseId, sessionId } = {}) {
         const result = [];
         for (const row of rows) {
             const plain = row.get({ plain: true });
-            const course = plain.timeTableStructureCourse;
-            plain.termType = course ? course.termType : null;
+            const courses = [];
+            const structureCourses = plain.structureCourses || [];
+            for (const mapping of structureCourses) {
+                if (mapping.course) {
+                    courses.push(mapping.course);
+                }
+            }
+            plain.courses = courses;
+            plain.termType = courses.length ? courses[0].termType : null;
             result.push(plain);
         }
         return result;
@@ -263,6 +278,14 @@ export async function deleteTimeTable(timeTableCreationId) {
             return null;
         }
 
+        const usedInRoutine = await scoped(model.classScheduleModel).findOne({
+            where: { timeTableCreationId },
+            attributes: ['timeTableMappingId'],
+        });
+        if (usedInRoutine) {
+            throw new Error('Cannot delete: this time table structure is already used in routine creation');
+        }
+
         await model.timeTableStructurePeriodsModel.destroy({
             where: { timeTableCreationId },
             individualHooks: true,
@@ -271,6 +294,9 @@ export async function deleteTimeTable(timeTableCreationId) {
         return { message: `time table creation deleted successfully for time Table Creation Id ${timeTableCreationId}` };
     } catch (error) {
         console.error('Error during soft delete:', error);
+        if (error.message.includes('used in routine creation')) {
+            throw error;
+        }
         throw new Error('Unable to soft delete account');
     }
 }

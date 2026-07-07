@@ -8,6 +8,7 @@ export async function addTimeTable(data, createdBy, updatedBy) {
             name: data.name,
             maximumPeriod: data.maximumPeriod,
             courseId: data.courseId,
+            courseIds: data.courseIds,
             sessionId: data.sessionId,
             periodLength: data.periodLength,
             periodGap: data.periodGap,

@@ -132,7 +132,15 @@ export const deleteTimeTable = async (req, res) => {
 
         console.error(`Error in deleting time table Id ${timeTableCreationId}:`, error);
 
-        res.status(500).send("Internal Server Error");
+        if (error.message?.includes('used in routine creation')) {
+
+            res.status(400).send(error.message);
+
+        } else {
+
+            res.status(500).send("Internal Server Error");
+
+        }
 
     }
 
