@@ -11421,6 +11421,67 @@
               ]
             },
             {
+              "name": "1b list fee plan students",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/student/feePlanStudents?courseId={{timetable_courseId}}&year=1&term=1&feePlanProfileId={{feePlanProfile_id}}&page=1&limit=10",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "student",
+                    "feePlanStudents"
+                  ],
+                  "query": [
+                    {
+                      "key": "courseId",
+                      "value": "{{timetable_courseId}}",
+                      "description": "Optional — course PK"
+                    },
+                    {
+                      "key": "year",
+                      "value": "1",
+                      "description": "Optional — program year from class_sections.year"
+                    },
+                    {
+                      "key": "term",
+                      "value": "1",
+                      "description": "Optional — program term from class_section_term.term"
+                    },
+                    {
+                      "key": "feePlanProfileId",
+                      "value": "{{feePlanProfile_id}}",
+                      "description": "Optional — fee_plan_profile PK"
+                    },
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Optional — default 1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10",
+                      "description": "Optional — default 10, max 100"
+                    }
+                  ]
+                },
+                "description": "**GET /student/feePlanStudents**\n\nLists students with their fee plan data. **All filters are optional** — send any combination of `courseId`, `year`, `term`, `feePlanProfileId` to narrow the list, or none to list all students in scope.\n\n### Query parameters\n\n| Name | Type | Required | Description |\n|------|------|----------|-------------|\n| `courseId` | Integer | No | Course PK |\n| `year` | Integer | No | Program year (`class_sections.year`) |\n| `term` | Integer | No | Program term (`class_section_term.term`) |\n| `feePlanProfileId` | Integer | No | Fee plan profile PK |\n| `page` | Integer | No | Default `1` |\n| `limit` | Integer | No | Default `10`, max `100` |\n\n### Response `data`\n\n`data.students[]` — matching students. Fee/invoice values are resolved per student from that student's own fee plan.\n\nEach `students[]` row uses repository association keys:\n\n| Field | Description |\n|-------|-------------|\n| `firstName`, `middleName`, `lastName` | Student name parts |\n| `scholarNumber` | Scholar number |\n| `course` | `{ courseId, courseName, termType }` |\n| `studentClassSectionTerm` | `{ term, classSection: { year, section } }` |\n| `studentFeePlanProfile` | `{ feePlanProfileId, name, planType }` |\n| `totalFee` | Total course fee from the student's fee plan (`0` if none) |\n| `invoices.total` | Invoice count for this student |\n| `invoices.paid` | Paid invoice count |\n| `paidAmount` | Total paid amount so far by this student |\n\n### Errors\n\n| Status | Reason |\n|--------|--------|\n| 400 | Validation error |\n| 404 | Fee plan profile not found for institute |\n| 500 | Internal server error |"
+              },
+              "response": []
+            },
+            {
               "name": "2 get all students (list)",
               "event": [
                 {

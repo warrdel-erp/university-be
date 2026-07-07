@@ -9,6 +9,7 @@ import {
     studentClassSectionTermWithSectionInclude,
 } from '../utility/classSectionIncludes.js';
 import { buildCourseTermOptions } from '../utility/courseTerms.js';
+import { decimalAdd, toMoneyNumber } from '../utility/decimalMoney.js';
 
 function omitAcademicYearScope(scopeWhere = {}) {
     const { academicYearId, ...rest } = scopeWhere;
@@ -1745,6 +1746,7 @@ export async function findInvoicesByStudentIds(studentIds, options = {}) {
                 "feePlanItemId",
                 "paymentStatus",
                 "status",
+                "paidAmount",
             ],
             transaction,
         });
@@ -1903,6 +1905,8 @@ export async function findInvoicesByStudentIdsForProfile(
                 "feePlanItemId",
                 "paymentStatus",
                 "status",
+                "paidAmount",
+                "total",
             ],
             include: [
                 {
@@ -1920,6 +1924,210 @@ export async function findInvoicesByStudentIdsForProfile(
             `Error in findInvoicesByStudentIdsForProfile for profile ${feePlanProfileId}:`,
             error
         );
+        throw error;
+    }
+}
+
+function buildFeePlanStudentListWhere(filters = {}) {
+    const { courseId, feePlanProfileId } = filters;
+
+    // All filters are optional; only add the ones the caller sent.
+    const where = {};
+    if (courseId != null) {
+        where.courseId = Number(courseId);
+    }
+    if (feePlanProfileId != null) {
+        where.feePlanProfileId = Number(feePlanProfileId);
+    }
+    return where;
+}
+
+function buildFeePlanStudentListFilterIncludes(filters = {}) {
+    const { year, term, academicYearId } = filters;
+
+    const classSectionInclude = year != null || term != null
+        ? studentClassSectionTermWithSectionInclude({
+            ...(term != null && { term: Number(term) }),
+            ...(year != null && {
+                sectionWhere: { year: Number(year) },
+                sectionRequired: true,
+            }),
+            termRequired: true,
+        })
+        : studentClassSectionTermWithSectionInclude();
+
+    const sessionInclude = studentSessionWithAcademicYearInclude({
+        academicYearId,
+    });
+
+    return [classSectionInclude, sessionInclude];
+}
+
+function buildFeePlanStudentListIncludes(filters = {}) {
+    const { year, term, academicYearId } = filters;
+
+    const classSectionInclude = year != null || term != null
+        ? studentClassSectionTermWithSectionInclude({
+            ...(term != null && { term: Number(term) }),
+            ...(year != null && {
+                sectionWhere: { year: Number(year) },
+                sectionRequired: true,
+            }),
+            termRequired: true,
+            sectionAttributes: ['classSectionsId', 'year', 'section'],
+        })
+        : studentClassSectionTermWithSectionInclude({
+            sectionAttributes: ['classSectionsId', 'year', 'section'],
+        });
+
+    return [
+        {
+            model: model.courseModel,
+            as: 'course',
+            attributes: ['courseId', 'courseName', 'termType'],
+        },
+        classSectionInclude,
+        studentSessionWithAcademicYearInclude({ academicYearId }),
+        {
+            model: model.feePlanProfileModel,
+            as: 'studentFeePlanProfile',
+            attributes: ['feePlanProfileId', 'name', 'planType'],
+        },
+    ];
+}
+
+// Map of feePlanProfileId -> total course fee (sum of all sub item amounts of that plan).
+function buildTotalFeeByProfile(feePlanItems) {
+    const totalFeeByProfile = {};
+
+    for (const item of feePlanItems) {
+        const plain = item.get({ plain: true });
+        const profileId = plain.feePlanProfileId;
+        if (totalFeeByProfile[profileId] == null) {
+            totalFeeByProfile[profileId] = 0;
+        }
+        const subItems = plain.feePlanSubItems ?? [];
+        for (const line of subItems) {
+            totalFeeByProfile[profileId] = decimalAdd(totalFeeByProfile[profileId], toMoneyNumber(line.amount));
+        }
+    }
+
+    return totalFeeByProfile;
+}
+
+export async function getStudentsByFeePlanList(filters = {}) {
+    try {
+        const {
+            courseId,
+            year,
+            term,
+            feePlanProfileId,
+            academicYearId,
+            page = 1,
+            limit = 10,
+        } = filters;
+
+        // Academic year is mandatory for tenant scope; without it there is nothing to list.
+        if (getRequestAcademicYearId() == null && academicYearId == null) {
+            return { students: [], totalFee: 0, totalCount: 0, page, limit, totalPages: 0 };
+        }
+
+        const where = buildFeePlanStudentListWhere({ courseId, feePlanProfileId });
+        const filterInclude = buildFeePlanStudentListFilterIncludes({ year, term, academicYearId });
+        const include = buildFeePlanStudentListIncludes({ year, term, academicYearId });
+        const offset = (page - 1) * limit;
+
+        // Step 1: page over matching student ids only (keeps pagination correct with joins).
+        const idRows = await scoped(model.studentModel).findAll({
+            attributes: ['studentId'],
+            where,
+            include: filterInclude,
+            offset,
+            limit,
+            order: [['scholarNumber', 'ASC'], ['studentId', 'ASC']],
+            subQuery: false,
+            raw: true,
+        });
+
+        const studentIds = [];
+        for (const row of idRows) {
+            studentIds.push(row.studentId);
+        }
+
+        const students = [];
+        if (studentIds.length > 0) {
+            // Step 2: load full student rows with course, section, and fee plan details.
+            const rows = await scoped(model.studentModel).findAll({
+                where: { studentId: { [Op.in]: studentIds } },
+                attributes: [
+                    'studentId',
+                    'firstName',
+                    'middleName',
+                    'lastName',
+                    'scholarNumber',
+                    'feePlanProfileId',
+                    'courseId',
+                ],
+                include,
+                order: [['scholarNumber', 'ASC'], ['studentId', 'ASC']],
+            });
+
+            // Collect the distinct fee plans of the listed students.
+            const profileIds = [];
+            for (const row of rows) {
+                const profileId = row.feePlanProfileId;
+                if (profileId != null && !profileIds.includes(profileId)) {
+                    profileIds.push(profileId);
+                }
+            }
+
+            // Total fee per plan and all invoices for these students.
+            const feePlanItems = await findFeePlanItemsByProfileIds(profileIds);
+            const invoices = await findInvoicesByStudentIds(studentIds);
+            const totalFeeByProfile = buildTotalFeeByProfile(feePlanItems);
+
+            for (const row of rows) {
+                const plain = row.get({ plain: true });
+
+                // Count this student's invoices and add up how much is already paid.
+                let invoiceTotal = 0;
+                let invoicePaid = 0;
+                let paidAmount = 0;
+                for (const invoice of invoices) {
+                    if (invoice.studentId !== plain.studentId) {
+                        continue;
+                    }
+                    invoiceTotal += 1;
+                    paidAmount = decimalAdd(paidAmount, toMoneyNumber(invoice.paidAmount));
+                    if (invoice.paymentStatus === 'paid') {
+                        invoicePaid += 1;
+                    }
+                }
+
+                plain.totalFee = totalFeeByProfile[plain.feePlanProfileId] ?? 0;
+                plain.invoices = { total: invoiceTotal, paid: invoicePaid };
+                plain.paidAmount = paidAmount;
+                students.push(plain);
+            }
+        }
+
+        // Step 3: total matching students for pagination metadata.
+        const totalCount = await scoped(model.studentModel).count({
+            where,
+            include: filterInclude,
+            distinct: true,
+            col: 'student_id',
+        });
+
+        return {
+            students,
+            totalCount,
+            page,
+            limit,
+            totalPages: Math.ceil(totalCount / limit),
+        };
+    } catch (error) {
+        console.error('Error in getStudentsByFeePlanList:', error);
         throw error;
     }
 }

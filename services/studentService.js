@@ -2120,6 +2120,44 @@ export async function getFeePlanInitiateAll(pagination = {}) {
   };
 }
 
+/** GET /student/feePlanStudents — students list with fee plan data; all filters are optional. */
+export async function getStudentsByFeePlanList(filters = {}) {
+  const feePlanProfileId = filters.feePlanProfileId != null
+    ? Number(filters.feePlanProfileId)
+    : null;
+
+  // Validate the fee plan only when the caller filters by it.
+  if (feePlanProfileId != null) {
+    const profile = await feePlanProfileRepository.findFeePlanProfileByIdForInstitute(
+      feePlanProfileId,
+    );
+    if (!profile) {
+      const error = new Error("Fee plan profile not found for this institute");
+      error.statusCode = 404;
+      throw error;
+    }
+  }
+
+  const result = await studentRepository.getStudentsByFeePlanList({
+    courseId: filters.courseId,
+    year: filters.year,
+    term: filters.term,
+    feePlanProfileId,
+    academicYearId: filters.academicYearId,
+    page: Number(filters.page) || 1,
+    limit: Number(filters.limit) || 10,
+  });
+
+  return {
+    students: result.students,
+    pagination: {
+      page: result.page,
+      limit: result.limit,
+      total: result.totalCount,
+    },
+  };
+}
+
 export async function getEmptyFeeDetails(filters) {
   return await studentRepository.getEmptyFeeDetails(filters);
 }

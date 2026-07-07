@@ -16,6 +16,7 @@ import {
   getStudentPromotionHistory,
   getFeePlanInitiate,
   getEmptyFeeDetails,
+  getStudentsByFeePlanList,
   getStudentSubject,
   getFeeDetailsByStudentId,
   getBooksIssuedToStudent,
@@ -292,6 +293,26 @@ const feePlanProfilesAllQuerySchema = z.object({
     .default(20),
 });
 
+const feePlanStudentsQuerySchema = z.object({
+  courseId: optionalPositiveIntegerId,
+  year: optionalPositiveIntegerId,
+  term: optionalPositiveIntegerId,
+  feePlanProfileId: optionalPositiveIntegerId,
+  page: z.coerce
+    .number()
+    .int("page must be an integer")
+    .min(1, "page must be at least 1")
+    .optional()
+    .default(1),
+  limit: z.coerce
+    .number()
+    .int("limit must be an integer")
+    .min(1, "limit must be at least 1")
+    .max(100, "limit must be at most 100")
+    .optional()
+    .default(10),
+});
+
 const getAllStudentsQuerySchema = z.object({
   page: z.coerce
     .number()
@@ -558,6 +579,12 @@ router.get(
   getPromotionAvailableSection,
 );
 
+router.get(
+  "/feePlanStudents",
+  userAuth,
+  validate({ query: feePlanStudentsQuerySchema }),
+  getStudentsByFeePlanList,
+);
 router.get(
   "/feePlanProfiles/all",
   userAuth,
