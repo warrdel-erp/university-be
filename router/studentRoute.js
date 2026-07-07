@@ -255,6 +255,7 @@ const getAllAnswerSheetsQuerySchema = z.object({
 const emptyFeeDetailsQuerySchema = z.object({
   courseId: positiveIntegerId.optional(),
   sessionId: positiveIntegerId.optional(),
+  year: positiveIntegerId.optional(),
 });
 
 const studentIdQuerySchema = z.object({
@@ -398,7 +399,29 @@ router.patch(
 );
 router.delete("/:studentId", userAuth, deleteStudentDetail);
 
-router.get("/emptyEnrollNumber", userAuth, getEmptyEnrollNumber);
+const emptyEnrollNumberQuerySchema = z.object({
+  page: z.coerce
+    .number()
+    .int("page must be an integer")
+    .min(1, "page must be at least 1")
+    .optional()
+    .default(1),
+  limit: z.coerce
+    .number()
+    .int("limit must be an integer")
+    .min(1, "limit must be at least 1")
+    .max(100, "limit must be at most 100")
+    .optional()
+    .default(10),
+  search: z.string().trim().optional(),
+});
+
+router.get(
+  "/emptyEnrollNumber",
+  userAuth,
+  validate({ query: emptyEnrollNumberQuerySchema }),
+  getEmptyEnrollNumber
+);
 const sectionStudentMappingBodySchema = z.object({
   studentId: z.union([positiveIntegerId, z.array(positiveIntegerId)]),
   classSectionTermId: positiveIntegerId,
@@ -420,6 +443,20 @@ const promoteStudentBodySchema = z.union([
 const sectionStudentMappingQuerySchema = z.object({
   classSectionTermId: z.coerce.number().int().nonnegative().optional(),
   term: z.coerce.number().int().positive().optional(),
+  page: z.coerce
+    .number()
+    .int("page must be an integer")
+    .min(1, "page must be at least 1")
+    .optional()
+    .default(1),
+  limit: z.coerce
+    .number()
+    .int("limit must be an integer")
+    .min(1, "limit must be at least 1")
+    .max(100, "limit must be at most 100")
+    .optional()
+    .default(10),
+  search: z.string().trim().optional(),
 });
 
 router.post("/studentMapping", userAuth, studentCourseMapping);

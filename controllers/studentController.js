@@ -119,8 +119,13 @@ export const deleteStudentDetail = async (req, res) => {
 };
 
 export const getEmptyEnrollNumber = async (req, res) => {
+    const { page, limit, search } = req.query;
     try {
-        const result = await studentService.getEmptyEnrollNumber(getAcademicYearId());
+        const result = await studentService.getEmptyEnrollNumber(getAcademicYearId(), {
+            page,
+            limit,
+            search,
+        });
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in getting EMpty Enroll Number:`, error);
@@ -171,9 +176,15 @@ export const sectionStudentMapping = async (req, res) => {
 export const getSectionStudentMapping = async (req, res) => {
     const classSectionTermId = req.query.classSectionTermId ?? 0;
     const term = req.query.term != null ? Number(req.query.term) : undefined;
+    const { page, limit, search } = req.query;
 
     try {
-        const result = await studentService.getSectionStudentMapping(classSectionTermId, undefined, term);
+        const result = await studentService.getSectionStudentMapping(
+            classSectionTermId,
+            undefined,
+            term,
+            { page, limit, search },
+        );
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting section student mapping:", error);
@@ -308,12 +319,13 @@ export const getFeePlanInitiate = async (req, res) => {
 };
 
 export const getEmptyFeeDetails = async (req, res) => {
-    const { courseId, sessionId } = req.query;
+    const { courseId, sessionId, year } = req.query;
     try {
         const result = await studentService.getEmptyFeeDetails({
             academicYearId: getAcademicYearId(),
             courseId,
             sessionId,
+            year,
         });
         res.status(200).send(result);
     } catch (error) {

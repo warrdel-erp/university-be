@@ -10050,7 +10050,7 @@
     },
     {
       "name": "fee v2",
-      "description": "## End-to-end flow (run in order)\n\n1. **feeTypeCategory** ΓÇö CRUD fee categories\n2. **feeTypeCatalog** ΓÇö CRUD catalog lines\n3. **feePlanProfile** ΓÇö create plan; **GET /summary**; **GET /all?status=**; **PATCH /assignStudent** (link plan to student)\n4. **student (fee v2)** ΓÇö **GET /student/feePlanProfiles/all**; **GET /student/all**; **GET /student?studentId=**; **POST /student**; **PATCH /feePlanProfile/assignStudent** (assign plan); dropdown **GET /options/feePlans**\n5. **studentFeeInvoice** ΓÇö term: **POST /** ; adhoc: **POST /adhoc** (feeTypeCatalogs[], waiver); list: **GET /all?status=** (all|pending|completed); **GET ?studentId=** (student + invoices)\n6. **studentFeePayment** ΓÇö **GET /payment/details?studentId=** ΓåÆ **POST /payment/details** ΓåÆ **GET /** (list/print) ΓåÆ **GET /single?studentFeePaymentId=**\n\n## Removed\n- GET /feePlanProfile/lookup ΓÇö use **GET /options/feePlans**\n- GET /student/:id/feeDetails ΓÇö use **GET /studentFeeInvoice?studentId=**\n\n## Tables (v2)\nfee_type_categories, fee_type_catalog, fee_plan_profile, fee_plan_item, fee_plan_sub_items, students.fee_plan_profile_id, student_fee_invoice, student_fee_invoice_items, student_fee_payment, payment_item",
+      "description": "## End-to-end flow (run in order)\n\n1. **feeTypeCategory** ΓÇö CRUD fee categories\n2. **feeTypeCatalog** ΓÇö CRUD catalog lines\n3. **feePlanProfile** ΓÇö create plan; **GET /summary**; **GET /all?status=**; **PATCH /assignStudent** (link plan to student)\n4. **student (fee v2)** ΓÇö **GET /student/feePlanProfiles/all**; **GET /student/all**; **GET /student/emptyfeeDetails** (students without fee plan; optional `year`); **GET /student?studentId=**; **POST /student**; **PATCH /feePlanProfile/assignStudent** (assign plan); dropdown **GET /options/feePlans**\n5. **studentFeeInvoice** ΓÇö term: **POST /** ; adhoc: **POST /adhoc** (feeTypeCatalogs[], waiver); list: **GET /all?status=** (all|pending|completed); **GET ?studentId=** (student + invoices)\n6. **studentFeePayment** ΓÇö **GET /payment/details?studentId=** ΓåÆ **POST /payment/details** ΓåÆ **GET /** (list/print) ΓåÆ **GET /single?studentFeePaymentId=**\n\n## Removed\n- GET /feePlanProfile/lookup ΓÇö use **GET /options/feePlans**\n- GET /student/:id/feeDetails ΓÇö use **GET /studentFeeInvoice?studentId=**\n\n## Tables (v2)\nfee_type_categories, fee_type_catalog, fee_plan_profile, fee_plan_item, fee_plan_sub_items, students.fee_plan_profile_id, student_fee_invoice, student_fee_invoice_items, student_fee_payment, payment_item",
       "item": [
         {
           "name": "feeTypeCategory",
@@ -11302,7 +11302,7 @@
         },
         {
           "name": "student (fee v2)",
-          "description": "Fee v2 student APIs: **GET /student/feePlanProfiles/all** ΓåÆ **GET /student/all** ΓåÆ **GET /student?studentId=** ΓåÆ **POST /student** (create) ΓåÆ **PATCH /feePlanProfile/assignStudent** (assign plan; preferred) ΓåÆ optional **PATCH /student/:studentId** (full edit). Then **studentFeeInvoice** per term.",
+          "description": "Fee v2 student APIs: **GET /student/feePlanProfiles/all** ΓåÆ **GET /student/all** ΓåÆ **GET /student/emptyfeeDetails** (no fee plan; optional `year`) ΓåÆ **GET /student?studentId=** ΓåÆ **POST /student** (create) ΓåÆ **PATCH /feePlanProfile/assignStudent** (assign plan; preferred) ΓåÆ optional **PATCH /student/:studentId** (full edit). Then **studentFeeInvoice** per term.",
           "item": [
             {
               "name": "1 fee plan profiles all (paginated)",
@@ -11444,6 +11444,83 @@
                 "description": "**GET /student/all**\n\nQuery: `search` (default `all`), `page` (default 1), `limit` (default 10), optional `courseId`.\n\nAcademic year is derived from `studentSession.sessionAcedmic` (not stored on `students`).\n\nUses auth `universityId` + `defaultInstituteId`.\n\nTest script sets `student_id` from first row when present."
               },
               "response": []
+            },
+            {
+              "name": "2b get students without fee plan (empty fee details)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const rows = pm.response.json();",
+                      "pm.test('response is array', () => pm.expect(Array.isArray(rows)).to.be.true);",
+                      "if (Array.isArray(rows) && rows[0] && rows[0].studentId) {",
+                      "  pm.collectionVariables.set('student_id', String(rows[0].studentId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Academic-Year-Id",
+                    "value": "{{acedmicYear_id}}",
+                    "description": "Academic year scope (from login defaults)"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseurl}}/student/emptyfeeDetails?courseId=34&sessionId=6&year=1",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "student",
+                    "emptyfeeDetails"
+                  ],
+                  "query": [
+                    {
+                      "key": "courseId",
+                      "value": "34",
+                      "description": "Optional. Positive integer. Filters by students.courseId."
+                    },
+                    {
+                      "key": "sessionId",
+                      "value": "6",
+                      "description": "Optional. Positive integer. Filters by students.sessionId."
+                    },
+                    {
+                      "key": "year",
+                      "value": "1",
+                      "description": "Optional. Positive integer. Filters by class_sections.year (program year)."
+                    }
+                  ]
+                },
+                "description": "## Get Empty Fee Details\n\n**HTTP method:** GET\n\n**Endpoint:** `GET /student/emptyfeeDetails`\n\n**Route:** `router.get('/emptyfeeDetails', userAuth, validate({ query: emptyFeeDetailsQuerySchema }), getEmptyFeeDetails)`\n\n**Authentication:** Bearer Token Required (`Authorization: Bearer {{token}}`)\n\n### Description\n\nReturns students without an assigned fee plan (`feePlanProfileId` is `null`), with course, class-section placement, and session details.\n\nUse before **PATCH /feePlanProfile/assignStudent** to list students eligible for fee-plan assignment.\n\n### Headers\n\n| Header | Required | Description |\n|--------|----------|-------------|\n| Authorization | Yes | Bearer `{{token}}` |\n| X-Academic-Year-Id | No | Academic year scope from login defaults |\n\n### Query Parameters (`emptyFeeDetailsQuerySchema`)\n\nAll query fields are **optional**. Each must be a **positive integer** when sent (Zod `positiveIntegerId`).\n\n| Name | Type | Required | Validation | Description |\n|------|------|----------|------------|-------------|\n| courseId | Number | No | Positive integer | Filter by `students.courseId` |\n| sessionId | Number | No | Positive integer | Filter by `students.sessionId` |\n| year | Number | No | Positive integer | Filter by `class_sections.year` (program year, e.g. `1`, `2`, `3`). Returns only students placed in a class section of that year. |\n\n**Example:** `GET /student/emptyfeeDetails?courseId=34&sessionId=6&year=1`\n\n### Request Body\n\nNone.\n\n### Success Response (200)\n\nRaw JSON **array** (not wrapped in `{ success, data }`).\n\n```json\n[\n  {\n    \"studentId\": 2094,\n    \"scholarNumber\": \"ASA/AR/2025/11\",\n    \"enrollNumber\": \"ENR-001\",\n    \"firstName\": \"AKASH\",\n    \"middleName\": null,\n    \"lastName\": \"CHOUDHARY\",\n    \"courseId\": 34,\n    \"sessionId\": 6,\n    \"feePlanProfileId\": null,\n    \"course\": {\n      \"courseName\": \"Bachelor of Architecture\",\n      \"courseCode\": \"BARCH\"\n    },\n    \"studentClassSectionTerm\": {\n      \"classSectionTermId\": 120,\n      \"term\": 1,\n      \"classSectionsId\": 195,\n      \"classSection\": {\n        \"classSectionsId\": 195,\n        \"section\": \"A\",\n        \"year\": 1\n      }\n    },\n    \"studentSession\": {\n      \"sessionId\": 6,\n      \"sessionName\": \"Session 1\",\n      \"academicYearId\": 59,\n      \"sessionAcedmic\": {\n        \"academicYearId\": 59,\n        \"yearTitle\": \"2025-2026\",\n        \"startingDate\": \"2025-07-01\",\n        \"endingDate\": \"2026-06-30\",\n        \"isActive\": true\n      }\n    }\n  }\n]\n```\n\n### Business Rules\n\n* Only students with `feePlanProfileId = null`.\n* Academic year comes from auth context (`getAcademicYearId()`), not from query.\n* If no academic year in context, API returns `[]`.\n* Without `year`: all matching students (any class-section year).\n* With `year`: inner join on class section where `class_sections.year` matches.\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | Invalid `courseId`, `sessionId`, or `year` (not a positive integer) |\n| 401 | Unauthorized |\n| 500 | Internal Server Error |\n\n### Changelog\n\n* Added optional `year` query param to `emptyFeeDetailsQuerySchema`."
+              },
+              "response": [
+                {
+                  "name": "200 OK — example",
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [],
+                  "body": "[\n  {\n    \"studentId\": 2094,\n    \"scholarNumber\": \"ASA/AR/2025/11\",\n    \"enrollNumber\": \"ENR-001\",\n    \"firstName\": \"AKASH\",\n    \"middleName\": null,\n    \"lastName\": \"CHOUDHARY\",\n    \"courseId\": 34,\n    \"sessionId\": 6,\n    \"feePlanProfileId\": null,\n    \"course\": {\n      \"courseName\": \"Bachelor of Architecture\",\n      \"courseCode\": \"BARCH\"\n    },\n    \"studentClassSectionTerm\": {\n      \"classSectionTermId\": 120,\n      \"term\": 1,\n      \"classSectionsId\": 195,\n      \"classSection\": {\n        \"classSectionsId\": 195,\n        \"section\": \"A\",\n        \"year\": 1\n      }\n    },\n    \"studentSession\": {\n      \"sessionId\": 6,\n      \"sessionName\": \"Session 1\",\n      \"academicYearId\": 59,\n      \"sessionAcedmic\": {\n        \"academicYearId\": 59,\n        \"yearTitle\": \"2025-2026\",\n        \"startingDate\": \"2025-07-01\",\n        \"endingDate\": \"2026-06-30\",\n        \"isActive\": true\n      }\n    }\n  }\n]"
+                }
+              ]
             },
             {
               "name": "3 get single student details",
@@ -15877,9 +15954,14 @@
               ]
             },
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-Academic-Year-Id",
+                "value": "{{acedmicYear_id}}"
+              }
+            ],
             "url": {
-              "raw": "{{baseurl}}/student/sectionStudentMapping?classSectionTermId={{classSectionTermId}}",
+              "raw": "{{baseurl}}/student/sectionStudentMapping?term=3&classSectionTermId=33&page=1&limit=10&search=",
               "host": [
                 "{{baseurl}}"
               ],
@@ -15890,11 +15972,32 @@
               "query": [
                 {
                   "key": "classSectionTermId",
-                  "value": "{{classSectionTermId}}"
+                  "value": "33",
+                  "description": "Optional. Filter by class_section_term_id."
+                },
+                {
+                  "key": "term",
+                  "value": "3",
+                  "description": "Optional. Filter by program term number."
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default 1)."
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Page size (default 10, max 100)."
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Optional. Same as GET /student/all — firstName, lastName, middleName, scholarNumber, enrollNumber, fatherName, birthDate, course name."
                 }
               ]
             },
-            "description": "GET students mapped to **classSectionTermId**."
+            "description": "## Get Section Student Mapping\n\n**HTTP method:** GET\n\n**Endpoint:** `GET /student/sectionStudentMapping`\n\n**Authentication:** Bearer Token Required\n\n### Description\n\nReturns paginated class-student mapper rows for the selected `classSectionTermId` and/or `term`, with full student details.\n\n### Query Parameters\n\n| Name | Type | Required | Default | Description |\n|------|------|----------|---------|-------------|\n| classSectionTermId | Number | No | - | Filter by placement term row ID |\n| term | Number | No | - | Filter by program term number |\n| page | Number | No | 1 | Page number |\n| limit | Number | No | 10 | Page size (max 100) |\n| search | String | No | - | Same universal search as `GET /student/all` |\n\n**Example:** `GET /student/sectionStudentMapping?term=3&classSectionTermId=33&page=1&limit=10&search=akash`\n\n### Success Response (200)\n\n```json\n{\n  \"result\": [],\n  \"totalCount\": 0,\n  \"page\": 1,\n  \"limit\": 10,\n  \"totalPages\": 0\n}\n```\n\n`totalCount` and `totalPages` reflect the **filtered** result set when `search` is used.\n\n### Changelog\n\n* Added `page`, `limit`, and `search` query parameters."
           },
           "response": []
         },
@@ -15994,18 +16097,40 @@
               ]
             },
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-Academic-Year-Id",
+                "value": "{{acedmicYear_id}}"
+              }
+            ],
             "url": {
-              "raw": "{{baseurl}}/student/emptyEnrollNumber",
+              "raw": "{{baseurl}}/student/emptyEnrollNumber?page=1&limit=10&search=",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "student",
                 "emptyEnrollNumber"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default 1)."
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Page size (default 10, max 100)."
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Optional. Same as GET /student/all — firstName, lastName, middleName, scholarNumber, enrollNumber, fatherName, birthDate, course name."
+                }
               ]
             },
-            "description": "Students missing enroll number."
+            "description": "## Get Students With Empty Enroll Number\n\n**HTTP method:** GET\n\n**Endpoint:** `GET /student/emptyEnrollNumber`\n\n**Authentication:** Bearer Token Required\n\n### Description\n\nReturns paginated students whose `enrollNumber` is `null` or empty, scoped to the active academic year from auth context.\n\n### Query Parameters (`emptyEnrollNumberQuerySchema`)\n\n| Name | Type | Required | Default | Description |\n|------|------|----------|---------|-------------|\n| page | Number | No | 1 | Page number |\n| limit | Number | No | 10 | Page size (max 100) |\n| search | String | No | - | Universal search — same fields as `GET /student/all` |\n\nAcademic year is **not** a query param; it comes from `X-Academic-Year-Id` / login defaults.\n\n### Success Response (200)\n\n```json\n{\n  \"result\": [],\n  \"totalCount\": 0,\n  \"page\": 1,\n  \"limit\": 10,\n  \"totalPages\": 0\n}\n```\n\n`totalCount` and `totalPages` update when `search` is applied.\n\n### Changelog\n\n* Added `page`, `limit`, and `search` query parameters.\n* Response changed from raw array to paginated object."
           },
           "response": []
         },

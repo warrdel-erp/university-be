@@ -872,30 +872,74 @@ export async function checkEnroll(enrollNumber) {
     return findStudentByEnrollNumber(enrollNumber);
 }
 
-export async function getEmptyEnrollNumber(academicYearId) {
+export async function getEmptyEnrollNumber(academicYearId, { page = 1, limit = 10, search } = {}) {
     try {
         if (getRequestAcademicYearId() == null && academicYearId == null) {
-            return [];
+            return { result: [], totalCount: 0, page, limit, totalPages: 0 };
         }
 
-        return await scoped(model.studentModel).findAll({
-            where: {
-                enrollNumber: {
-                    [Op.or]: [null, ''],
-                },
+        const whereCondition = {
+            enrollNumber: {
+                [Op.or]: [null, ''],
             },
-            include: [
-                studentClassSectionInclude,
-                studentSessionWithAcademicYearInclude({
-                    academicYearId: academicYearId,
-                }),
-                {
-                    model: model.userModel,
-                    as: "userStudent",
-                    attributes: ["universityId", "userId"],
-                },
-            ],
+            ...buildStudentListWhere(search),
+        };
+
+        const baseInclude = [
+            studentClassSectionInclude,
+            studentSessionWithAcademicYearInclude({
+                academicYearId: academicYearId,
+            }),
+            {
+                model: model.userModel,
+                as: "userStudent",
+                attributes: ["universityId", "userId"],
+            },
+        ];
+
+        const filterInclude = search
+            ? [{ model: model.courseModel, as: "course", attributes: [] }]
+            : [];
+
+        const offset = (page - 1) * limit;
+
+        const idRows = await scoped(model.studentModel).findAll({
+            attributes: ["studentId"],
+            where: whereCondition,
+            include: filterInclude,
+            offset,
+            limit,
+            order: [["studentId", "DESC"]],
+            subQuery: false,
+            raw: true,
         });
+        const studentIds = idRows.map((row) => row.studentId);
+
+        let result = [];
+        if (studentIds.length > 0) {
+            const rows = await scoped(model.studentModel).findAll({
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                where: { studentId: { [Op.in]: studentIds } },
+                include: baseInclude,
+                order: [["studentId", "DESC"]],
+            });
+            result = rows.map((row) => row.get({ plain: true }));
+        }
+
+        const totalCount = await scoped(model.studentModel).count({
+            where: whereCondition,
+            include: filterInclude,
+            distinct: true,
+            col: 'student_id',
+        });
+
+        return {
+            result,
+            totalCount,
+            page,
+            limit,
+            totalPages: Math.ceil(totalCount / limit),
+        };
     } catch (error) {
         console.error('Error in checkEnroll Empty:', error);
         throw error;
@@ -1141,10 +1185,10 @@ export async function sectionStudentMappingExcel(data, transaction) {
     }
 };
 
-export async function getSectionStudentMapping(classSectionTermId, academicYearId, term) {
+export async function getSectionStudentMapping(classSectionTermId, academicYearId, term, { page = 1, limit = 10, search } = {}) {
     try {
         if (getRequestAcademicYearId() == null && academicYearId == null) {
-            return [];
+            return { result: [], totalCount: 0, page, limit, totalPages: 0 };
         }
 
         const studentScope = buildScope(model.studentModel);
@@ -1155,6 +1199,21 @@ export async function getSectionStudentMapping(classSectionTermId, academicYearI
         };
         if (classSectionTermId !== 0 && classSectionTermId != null) {
             whereConditions.classSectionTermId = classSectionTermId;
+        }
+
+        // Search is applied at the root WHERE (evaluated after all joins) so that
+        // the nested course column resolves. Paths are relative to the query root.
+        const searchWhere = {};
+        if (search) {
+            const like = `%${search}%`;
+            searchWhere[Op.or] = [
+                { '$studentMapped.first_name$': { [Op.like]: like } },
+                { '$studentMapped.last_name$': { [Op.like]: like } },
+                { '$studentMapped.middle_name$': { [Op.like]: like } },
+                { '$studentMapped.scholar_number$': { [Op.like]: like } },
+                { '$studentMapped.enroll_number$': { [Op.like]: like } },
+                { '$studentMapped.father_name$': { [Op.like]: like } },
+            ];
         }
 
         const termPlacementInclude = {
@@ -1173,80 +1232,124 @@ export async function getSectionStudentMapping(classSectionTermId, academicYearI
             }),
         };
 
-        const queryOptions = {
+        const studentMappedInclude = {
+            model: model.studentModel,
+            as: "studentMapped",
+            required: true,
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            where: whereConditions,
+            where: studentScope,
             include: [
+                studentSessionWithAcademicYearInclude(
+                    academicYearId != null ? { academicYearId: academicYearId } : {},
+                ),
                 {
-                    model: model.userModel,
-                    as: "userClassStudentMapper",
-                    attributes: ["universityId", "userId"],
+                    model: model.campusModel,
+                    as: "campus",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "campusId", "campusCode"] },
                 },
-                termPlacementInclude,
                 {
-                    model: model.studentModel,
-                    as: "studentMapped",
-                    required: true,
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    where: studentScope,
+                    model: model.instituteModel,
+                    as: "institute",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "instituteId", "campusId", "instituteCode"] },
+                },
+                {
+                    model: model.affiliatedIniversityModel,
+                    as: "affiliatedUniversity",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "affiliatedUniversityId", "instituteId", "affiliatedUniversityCode"] },
+                },
+                {
+                    model: model.employeeCodeMasterType,
+                    as: "courseLevel",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "employeeCodeMasterTypeId", "employeeCodeMasterId", "employee_code_master_id"] },
                     include: [
-                        studentSessionWithAcademicYearInclude(
-                            academicYearId != null ? { academicYearId: academicYearId } : {},
-                        ),
                         {
-                            model: model.campusModel,
-                            as: "campus",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "campusId", "campusCode"] },
-                        },
-                        {
-                            model: model.instituteModel,
-                            as: "institute",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "instituteId", "campusId", "instituteCode"] },
-                        },
-                        {
-                            model: model.affiliatedIniversityModel,
-                            as: "affiliatedUniversity",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "affiliatedUniversityId", "instituteId", "affiliatedUniversityCode"] },
-                        },
-                        {
-                            model: model.employeeCodeMasterType,
-                            as: "courseLevel",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "employeeCodeMasterTypeId", "employeeCodeMasterId", "employee_code_master_id"] },
-                            include: [
-                                {
-                                    model: model.employeeCodeMaster,
-                                    as: "codes",
-                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                                },
-                            ],
-                        },
-                        {
-                            model: model.courseModel,
-                            as: "course",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "courseId", "course_levelId", "courseCode"] },
-                        },
-                        {
-                            model: model.specializationModel,
-                            as: "specialization",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "specializationId", "course_Id", "specializationCode"] },
-                        },
-                        studentClassSectionInclude,
-                        {
-                            model: model.studentsEntranceDetail,
-                            as: "entranceDetails",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                        },
-                        {
-                            model: model.studentsAddress,
-                            as: "studentAddress",
+                            model: model.employeeCodeMaster,
+                            as: "codes",
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                         },
                     ],
                 },
+                {
+                    model: model.courseModel,
+                    as: "course",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "courseId", "course_levelId", "courseCode"] },
+                },
+                {
+                    model: model.specializationModel,
+                    as: "specialization",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "specializationId", "course_Id", "specializationCode"] },
+                },
+                studentClassSectionInclude,
+                {
+                    model: model.studentsEntranceDetail,
+                    as: "entranceDetails",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                },
+                {
+                    model: model.studentsAddress,
+                    as: "studentAddress",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                },
             ],
         };
 
-        return await model.classStudentMapperModel.findAll(queryOptions);
+        const filterInclude = [
+            {
+                model: model.studentModel,
+                as: "studentMapped",
+                attributes: [],
+                required: true,
+                where: studentScope,
+            },
+            termPlacementInclude,
+        ];
+
+        const offset = (page - 1) * limit;
+
+        const idRows = await model.classStudentMapperModel.findAll({
+            attributes: ["classStudentMapperId"],
+            where: { ...whereConditions, ...searchWhere },
+            include: filterInclude,
+            offset,
+            limit,
+            order: [["classStudentMapperId", "DESC"]],
+            subQuery: false,
+            raw: true,
+        });
+        const mapperIds = idRows.map((row) => row.classStudentMapperId);
+
+        let result = [];
+        if (mapperIds.length > 0) {
+            result = await model.classStudentMapperModel.findAll({
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                where: { classStudentMapperId: { [Op.in]: mapperIds } },
+                include: [
+                    {
+                        model: model.userModel,
+                        as: "userClassStudentMapper",
+                        attributes: ["universityId", "userId"],
+                    },
+                    termPlacementInclude,
+                    studentMappedInclude,
+                ],
+                order: [["classStudentMapperId", "DESC"]],
+            });
+        }
+
+        const totalCount = await model.classStudentMapperModel.count({
+            where: { ...whereConditions, ...searchWhere },
+            include: filterInclude,
+            distinct: true,
+            col: 'class_student_mapper_id',
+        });
+
+        return {
+            result,
+            totalCount,
+            page,
+            limit,
+            totalPages: Math.ceil(totalCount / limit),
+        };
     } catch (error) {
         console.error(`Error in getting mapped student ${classSectionTermId}:`, error);
         throw error;
@@ -1823,7 +1926,7 @@ export async function findInvoicesByStudentIdsForProfile(
 
 export async function getEmptyFeeDetails(filters = {}) {
     try {
-        const { courseId, sessionId, academicYearId } = filters;
+        const { courseId, sessionId, academicYearId, year } = filters;
         if (getRequestAcademicYearId() == null && academicYearId == null) {
             return [];
         }
@@ -1834,13 +1937,21 @@ export async function getEmptyFeeDetails(filters = {}) {
             ...(sessionId != null && { sessionId }),
         };
 
+        const classSectionInclude = year != null
+            ? studentClassSectionTermWithSectionInclude({
+                sectionWhere: { year: Number(year) },
+                sectionRequired: true,
+                termRequired: true,
+            })
+            : studentClassSectionTermWithSectionInclude();
+
         const include = [
             {
                 model: model.courseModel,
                 as: "course",
                 attributes: ["courseName", "courseCode"],
             },
-            studentClassSectionTermWithSectionInclude(),
+            classSectionInclude,
             studentSessionWithAcademicYearInclude({
                 academicYearId: academicYearId,
             }),

@@ -1310,8 +1310,8 @@ export async function deleteStudentDetail(studentId) {
   }
 }
 
-export async function getEmptyEnrollNumber(academicYearId) {
-  return await studentRepository.getEmptyEnrollNumber(academicYearId);
+export async function getEmptyEnrollNumber(academicYearId, { page = 1, limit = 10, search } = {}) {
+  return await studentRepository.getEmptyEnrollNumber(academicYearId, { page, limit, search });
 }
 
 export async function studentCourseMapping(data) {
@@ -1368,13 +1368,17 @@ export async function sectionStudentMapping(data, createdBy) {
   }
 }
 
-export async function getSectionStudentMapping(classSectionTermId, academicYearId, term) {
-  const rows = await studentRepository.getSectionStudentMapping(
+export async function getSectionStudentMapping(classSectionTermId, academicYearId, term, { page = 1, limit = 10, search } = {}) {
+  const data = await studentRepository.getSectionStudentMapping(
     classSectionTermId,
     academicYearId,
     term,
+    { page, limit, search },
   );
-  return toPlainRows(rows);
+  return {
+    ...data,
+    result: toPlainRows(data.result),
+  };
 }
 
 export async function addElectiveSubject(data, createdBy) {
