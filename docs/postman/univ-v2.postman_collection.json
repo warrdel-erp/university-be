@@ -10128,7 +10128,7 @@
     },
     {
       "name": "fee v2",
-      "description": "## End-to-end flow (run in order)\n\n1. **feeTypeCategory** ΓÇö CRUD fee categories\n2. **feeTypeCatalog** ΓÇö CRUD catalog lines\n3. **feePlanProfile** ΓÇö create plan; **GET /summary**; **GET /all?status=**; **PATCH /assignStudent** (link plan to student)\n4. **student (fee v2)** ΓÇö **GET /student/feePlanProfiles/all**; **GET /student/all**; **GET /student/emptyfeeDetails** (`courseId`, `sessionId`, `year`, `search`, `page`, `limit`); **GET /student?studentId=**; **POST /student**; **PATCH /feePlanProfile/assignStudent** (assign plan); dropdown **GET /options/feePlans**\n5. **studentFeeInvoice** ΓÇö term: **POST /** ; adhoc: **POST /adhoc** (feeTypeCatalogs[], waiver); list: **GET /all?status=** (all|pending|completed); **GET ?studentId=** (student + invoices)\n6. **studentFeePayment** ΓÇö **GET /payment/details?studentId=** ΓåÆ **POST /payment/details** ΓåÆ **GET /** (list/print) ΓåÆ **GET /single?studentFeePaymentId=**\n\n## Removed\n- GET /feePlanProfile/lookup ΓÇö use **GET /options/feePlans**\n- GET /student/:id/feeDetails ΓÇö use **GET /studentFeeInvoice?studentId=**\n\n## Tables (v2)\nfee_type_categories, fee_type_catalog, fee_plan_profile, fee_plan_item, fee_plan_sub_items, students.fee_plan_profile_id, student_fee_invoice, student_fee_invoice_items, student_fee_payment, payment_item",
+      "description": "## End-to-end flow (run in order)\n\n1. **feeTypeCategory** — CRUD fee categories\n2. **feeTypeCatalog** — CRUD catalog lines\n3. **feePlanProfile** — create plan; **GET /summary**; **GET /all?status=**; **PATCH /publish**; **PATCH /assignStudent**; **DELETE /** (draft or published; blocked if students assigned or invoices exist)\n4. **student (fee v2)** — **GET /student/feePlanProfiles/all**; **GET /student/all**; **GET /student/emptyfeeDetails** (`courseId`, `sessionId`, `year`, `search`, `page`, `limit`); **GET /student?studentId=**; **POST /student**; **PATCH /feePlanProfile/assignStudent** (assign plan); dropdown **GET /options/feePlans**\n5. **studentFeeInvoice** — term: **POST /** ; adhoc: **POST /adhoc** (feeTypeCatalogs[], waiver); list: **GET /all?status=** (all|pending|completed); **GET ?studentId=** (student + invoices)\n6. **studentFeePayment** — **GET /payment/details?studentId=** → **POST /payment/details** → **GET /** (list/print) → **GET /single?studentFeePaymentId=**\n\n## Removed\n- GET /feePlanProfile/lookup — use **GET /options/feePlans**\n- GET /student/:id/feeDetails — use **GET /studentFeeInvoice?studentId=**\n\n## Tables (v2)\nfee_type_categories, fee_type_catalog, fee_plan_profile, fee_plan_item, fee_plan_sub_items, students.fee_plan_profile_id, student_fee_invoice, student_fee_invoice_items, student_fee_payment, payment_item",
       "item": [
         {
           "name": "feeTypeCategory",
@@ -10478,7 +10478,7 @@
         },
         {
           "name": "feePlanProfile",
-          "description": "Fee plans v2. **POST /** (draft) → **PATCH /** edit → **PATCH /publish** → **PATCH /assignStudent**. **GET /summary**, **GET /all**, **GET /single**. Dropdown: **GET /options/feePlans** (published only).",
+          "description": "Fee plans v2 under `/feePlanProfile`.\n\n| Method | Path | Notes |\n|--------|------|-------|\n| POST | `/` | Create plan (default `publishStatus: draft`) |\n| PATCH | `/` | Update plan / terms |\n| PATCH | `/publish` | Set published |\n| PATCH | `/assignStudent` | Assign published plan to student |\n| GET | `/summary` | Active / inactive / all counts |\n| GET | `/all?status=` | all / active / inactive |\n| GET | `/?courseSessionId=` | List by course–session |\n| GET | `/single?feePlanProfileId=` | Detail |\n| DELETE | `/?feePlanProfileId=` | Hard-delete draft or published; blocked if students assigned or invoices exist |\n\nDropdown: **GET /options/feePlans** (published only).",
           "item": [
             {
               "name": "create",
@@ -10897,6 +10897,41 @@
                   }
                 },
                 "description": "**PATCH /feePlanProfile/assignStudent** — only **`publishStatus: published`** plans.\n\n**Body:** `studentId`, `feePlanProfileId`. Draft plans return 400.\n\n**GET /options/feePlans** lists published plans only."
+              },
+              "response": []
+            },
+            {
+              "name": "delete fee plan profile",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/feePlanProfile?feePlanProfileId={{feePlanProfile_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feePlanProfile"
+                  ],
+                  "query": [
+                    {
+                      "key": "feePlanProfileId",
+                      "value": "{{feePlanProfile_id}}",
+                      "description": "Required — fee_plan_profile PK"
+                    }
+                  ]
+                },
+                "description": "## Delete Fee Plan Profile\n\n**HTTP method:** DELETE\n\n**Endpoint:** DELETE /feePlanProfile?feePlanProfileId=\n\n**Authentication:** Bearer Token Required (`Authorization: Bearer {{token}}`)\n\n**Tenant scope:** Institute from login defaults (`PUT /user/saveUserDefaults`). Optional `X-Institute-Id` header.\n\n### Description\n\nHard-deletes one fee plan profile and all of its terms (`fee_plan_item`) and fee lines (`fee_plan_sub_items`).\n\nUse when a plan was created by mistake or is unused. Draft and published plans can both be deleted.\n\n### Headers\n\n| Header | Required | Description |\n|--------|----------|-------------|\n| Authorization | Yes | Bearer token |\n| X-Institute-Id | No | Overrides default institute for this request |\n\n### Query Parameters\n\n| Name | Type | Required | Description |\n|------|------|----------|-------------|\n| feePlanProfileId | Integer | Yes | Positive integer. `fee_plan_profile.fee_plan_profile_id`. Use `{{feePlanProfile_id}}` from **create**. |\n\n### Business Rules\n\n* `publishStatus` (`draft` / `published`) does **not** block delete.\n* Blocked when any student has `students.fee_plan_profile_id` = this profile. Count uses `paranoid: false` so **soft-deleted students still block** delete.\n* Blocked when any `student_fee_invoice` exists for this profile's `fee_plan_item` rows (`paranoid: false` on invoice / item join).\n* Cascade is always **hard-delete** (`force: true`): `fee_plan_sub_items` → `fee_plan_item` → `fee_plan_profile`.\n\n### Success Response (200)\n\n```json\n{\n  \"success\": true,\n  \"message\": \"Fee plan profile deleted successfully\",\n  \"data\": {\n    \"feePlanProfileId\": 12,\n    \"publishStatus\": \"draft\",\n    \"deleted\": true\n  }\n}\n```\n\n### Response Fields\n\n| Field | Type | Description |\n|-------|------|-------------|\n| data.feePlanProfileId | Number | Deleted profile PK |\n| data.publishStatus | String | `draft` or `published` at time of delete |\n| data.deleted | Boolean | Always `true` on success |\n\n### Error Responses\n\n**Assigned to students (400):**\n\n```json\n{\n  \"success\": false,\n  \"message\": \"Cannot delete fee plan profile assigned to one or more students\",\n  \"errors\": null\n}\n```\n\n**Invoices already generated (400):**\n\n```json\n{\n  \"success\": false,\n  \"message\": \"Cannot delete fee plan profile that has generated invoices\",\n  \"errors\": null\n}\n```\n\n**Not found (404):**\n\n```json\n{\n  \"success\": false,\n  \"message\": \"Fee plan profile not found\",\n  \"errors\": null\n}\n```\n\n### Error Codes\n\n| Status | Reason |\n|--------|--------|\n| 400 | Zod validation, students assigned, or invoices exist |\n| 401 | Unauthorized |\n| 404 | `feePlanProfileId` not found for institute |\n| 500 | Internal Server Error |\n\n### Sample Flow\n\n```\nPOST /feePlanProfile  (draft)\n↓\nPATCH /feePlanProfile/publish  (optional)\n↓\nIf unused (no students, no invoices):\nDELETE /feePlanProfile?feePlanProfileId={{feePlanProfile_id}}\n```\n\n### Changelog\n\nv1 (2026-07)\n\n- Added DELETE /feePlanProfile.\n- Draft and published both deletable.\n- Blocks only on student assignment (including soft-deleted students) or existing invoices.\n- Cascade hard-delete with `force: true`."
               },
               "response": []
             }

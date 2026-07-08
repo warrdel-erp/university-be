@@ -10,6 +10,7 @@ import {
   getSingleFeePlanProfileDetails,
   assignFeePlanProfileToStudent,
   publishFeePlanProfile,
+  deleteFeePlanProfile,
 } from "../controllers/feePlanProfileController.js";
 import userAuth from "../middleware/authUser.js";
 
@@ -139,5 +140,6 @@ router.get("/summary", userAuth, getFeePlanProfileSummary);
 router.get("/all", userAuth, validate({ query: listAllQuery }), getAllFeePlanProfiles);
 router.get("/", userAuth, validate({ query: listQuery }), getAllFeePlanProfile);
 router.get("/single", userAuth, validate({ query: profileIdQuery }), getSingleFeePlanProfileDetails);
+router.delete("/", userAuth, validate({ query: profileIdQuery }), deleteFeePlanProfile);
 
 export default router;
