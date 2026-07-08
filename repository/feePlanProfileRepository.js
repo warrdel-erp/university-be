@@ -192,6 +192,7 @@ export async function deleteFeePlanSubItemById(feePlanSubitemId, options = {}) {
   const { transaction } = options;
   return scoped(model.feePlanSubItemsModel).destroy({
     where: { feePlanSubitemId },
+    force: true,
     transaction,
   });
 }
@@ -200,6 +201,7 @@ export async function deleteFeePlanSubItemsByFeePlanItemId(feePlanItemId, option
   const { transaction } = options;
   return scoped(model.feePlanSubItemsModel).destroy({
     where: { feePlanItemId },
+    force: true,
     transaction,
   });
 }
@@ -208,6 +210,7 @@ export async function deleteFeePlanItemById(feePlanItemId, options = {}) {
   const { transaction } = options;
   return scoped(model.feePlanItemModel).destroy({
     where: { feePlanItemId },
+    force: true,
     transaction,
   });
 }
@@ -384,6 +387,59 @@ export async function countStudentFeeInvoicesGroupedByFeePlanItem(options = {}) 
     map.set(Number(row.feePlanItemId), Number(row.invoiceCount));
   }
   return map;
+}
+
+export async function countStudentsForFeePlanProfile(feePlanProfileId, options = {}) {
+  const { transaction } = options;
+  return scoped(model.studentModel).count({
+    where: { feePlanProfileId: Number(feePlanProfileId) },
+    paranoid: false,
+    transaction,
+  });
+}
+
+export async function countStudentFeeInvoicesForFeePlanProfile(feePlanProfileId, options = {}) {
+  const { transaction } = options;
+  const itemScope = buildScope(model.feePlanItemModel);
+
+  return scoped(model.studentFeeInvoiceModel).count({
+    where: {
+      feePlanItemId: { [Op.ne]: null },
+    },
+    include: [
+      {
+        model: model.feePlanItemModel,
+        as: "feePlanItem",
+        where: {
+          ...itemScope,
+          feePlanProfileId: Number(feePlanProfileId),
+        },
+        required: true,
+        attributes: [],
+        paranoid: false,
+      },
+    ],
+    paranoid: false,
+    transaction,
+  });
+}
+
+export async function deleteFeePlanProfileCascade(feePlanProfileId, options = {}) {
+  const { transaction } = options;
+  const profileId = Number(feePlanProfileId);
+
+  const items = await findFeePlanItemsByProfileId(profileId, { transaction });
+  for (const item of items) {
+    const plain = typeof item.get === "function" ? item.get({ plain: true }) : item;
+    await deleteFeePlanSubItemsByFeePlanItemId(plain.feePlanItemId, { transaction });
+    await deleteFeePlanItemById(plain.feePlanItemId, { transaction });
+  }
+
+  return scoped(model.feePlanProfileModel).destroy({
+    where: { feePlanProfileId: profileId },
+    force: true,
+    transaction,
+  });
 }
 
 export async function createFeePlanItem(data, options = {}) {
