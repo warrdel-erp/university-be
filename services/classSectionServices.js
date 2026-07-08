@@ -73,14 +73,6 @@ export async function deleteClassSectionTerm(classSectionId) {
     }
 
     if (classSectionTermIds.length > 0) {
-      const timetableTeacherCount = await classSectionTermRepository.countTimetableTeacherCellsForClassSectionTerms(
-        classSectionTermIds,
-        options,
-      );
-      if (timetableTeacherCount > 0) {
-        throw new Error('Remove timetable teacher assignments before deleting this section.');
-      }
-
       const studentCount = await classSectionTermRepository.countStudentsForClassSectionTerms(
         classSectionTermIds,
         options,
@@ -88,20 +80,25 @@ export async function deleteClassSectionTerm(classSectionId) {
       if (studentCount > 0) {
         throw new Error('Remove or reassign students before deleting this section.');
       }
-
-      const routineCount = await classSectionTermRepository.countTimetableRoutinesForClassSectionTerms(
-        classSectionTermIds,
-        options,
-      );
-      if (routineCount > 0) {
-        throw new Error('Remove timetable routines before deleting this section.');
-      }
     }
 
-    const deletedTeacherMappingCount = await classSectionTermRepository.softDeleteTeacherSectionMappingsByClassSectionId(
+    const deletedTeacherMappingCount = await classSectionTermRepository.deleteTeacherSectionMappingsByClassSectionId(
       classSectionId,
       options,
     );
+
+    let deletedTimetableCellCount = 0;
+    let deletedTimetableRoutineCount = 0;
+    if (classSectionTermIds.length > 0) {
+      deletedTimetableCellCount = await classSectionTermRepository.deleteTimetableCellsForClassSectionTerms(
+        classSectionTermIds,
+        options,
+      );
+      deletedTimetableRoutineCount = await classSectionTermRepository.deleteTimetableRoutinesForClassSectionTerms(
+        classSectionTermIds,
+        options,
+      );
+    }
 
     let deletedTermCount = 0;
     if (classSectionTermIds.length > 0) {
@@ -128,6 +125,8 @@ export async function deleteClassSectionTerm(classSectionId) {
       classSectionId: Number(classSectionId),
       deletedCount: deletedTermCount,
       deletedTeacherMappingCount,
+      deletedTimetableCellCount,
+      deletedTimetableRoutineCount,
       classSectionDeleted: true,
     };
   });
