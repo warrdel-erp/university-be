@@ -16,31 +16,33 @@ const optionalPositiveId = z.preprocess(
     positiveIntegerId.optional()
 );
 
-const getTimeTableQuerySchema = z.object({
+const timeTableListQuerySchema = z.object({
     courseId: optionalPositiveId,
-});
-
-const getAllTimeTableNameQuerySchema = z.object({
-    courseId: optionalPositiveId,
-    sessionId: optionalPositiveId,
-});
-
-const getSingleTimeTableQuerySchema = z.object({
-    courseId: optionalPositiveId,
-    sessionId: optionalPositiveId,
 });
 
 const addTimeTableSchema = z.object({
-    name: z.string().optional(),
-    maximumPeriod: z.coerce.number().int().positive().optional(),
+    name: z.string().trim().min(1, 'name is required'),
+    maximumPeriod: z.coerce.number().int().positive(),
     periodLength: z.coerce.number().int().positive().optional(),
     periodGap: z.coerce.number().int().min(0).optional(),
     startingTime: z.string().optional(),
-    type: z.enum(['Automatic', 'Manual']).optional(),
-    courseId: optionalPositiveId,
-    sessionId: optionalPositiveId,
+    type: z.enum(['Automatic', 'Manual']),
+    courseId: positiveIntegerId,
     weekOff: z.array(z.string()).optional(),
     isCourse: z.boolean().optional(),
+}).superRefine((data, ctx) => {
+    if (data.type !== 'Automatic') {
+        return;
+    }
+    if (!data.startingTime) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'startingTime is required for Automatic type', path: ['startingTime'] });
+    }
+    if (data.periodLength == null) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'periodLength is required for Automatic type', path: ['periodLength'] });
+    }
+    if (data.periodGap == null) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'periodGap is required for Automatic type', path: ['periodGap'] });
+    }
 });
 
 const updateTimeTableItemSchema = z.object({
@@ -64,9 +66,9 @@ const deleteTimeTableStructureQuerySchema = z.object({
 });
 
 router.post('/', userAuth, validate({ body: addTimeTableSchema }), addTimeTable);
-router.get('/all_name', userAuth, validate({ query: getAllTimeTableNameQuerySchema }), getAllTimeTableName);
-router.get('/', userAuth, validate({ query: getTimeTableQuerySchema }), getTimeTableDetails);
-router.get('/single', userAuth, validate({ query: getSingleTimeTableQuerySchema }), getSingleTimeTableDetails);
+router.get('/all_name', userAuth, validate({ query: timeTableListQuerySchema }), getAllTimeTableName);
+router.get('/', userAuth, validate({ query: timeTableListQuerySchema }), getTimeTableDetails);
+router.get('/single', userAuth, validate({ query: timeTableListQuerySchema }), getSingleTimeTableDetails);
 router.patch('/', userAuth, validate({ body: updateTimeTableSchema }), updateTimeTable);
 router.delete('/', userAuth, validate({ query: deleteTimeTableQuerySchema }), deleteTimeTable);
 router.delete('/structure', userAuth, validate({ query: deleteTimeTableStructureQuerySchema }), deleteTimeTableStructure);

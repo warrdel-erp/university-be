@@ -2253,7 +2253,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Morning Schedule\",\n  \"sessionId\": {{timetable_sessionId}},\n  \"weekOff\": [\"Sunday\"],\n  \"maximumPeriod\": 6,\n  \"periodLength\": 45,\n  \"periodGap\": 5,\n  \"startingTime\": \"09:00 AM\",\n  \"type\": \"Automatic\",\n  \"isCourse\": true\n}",
+                  "raw": "{\n  \"name\": \"Morning Schedule\",\n  \"courseId\": {{timetable_courseId}},\n  \"weekOff\": [\"Sunday\"],\n  \"maximumPeriod\": 6,\n  \"periodLength\": 45,\n  \"periodGap\": 5,\n  \"startingTime\": \"09:00 AM\",\n  \"type\": \"Automatic\",\n  \"isCourse\": true\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2269,7 +2269,7 @@
                     "timeTable"
                   ]
                 },
-                "description": "**POST /timeTable**\n\nCreates a timetable **structure** (period slots). A structure is a reusable bell schedule template; it is not the class routine itself.\n\n### Body\n\n| Field | Type | Required | Nullable | Description |\n|-------|------|----------|----------|-------------|\n| `name` | String | No | No | Structure name shown to users. |\n| `sessionId` | Integer | Yes* | No | Session PK. Required when `courseId` is omitted; recommended for reusable structures. |\n| `courseId` | Integer | No | Yes | Optional legacy/default course link. Do not send an array. Omit this field when the same structure should be reused by multiple courses. |\n| `maximumPeriod` | Integer | No | No | Number of period rows to create. |\n| `periodLength` | Integer | No | No | Period length in minutes. |\n| `periodGap` | Integer | No | No | Gap between periods in minutes. |\n| `startingTime` | String | No | No | Example: `09:00 AM`. |\n| `type` | Enum | No | No | `Automatic` or `Manual`. |\n| `weekOff` | String[] | No | Yes | Week-off day names, example `[\"Sunday\"]`. |\n| `isCourse` | Boolean | No | Yes | Stored on generated period rows. |\n\n### How to use one structure for multiple courses\n\nCreate the structure once with `sessionId` and without `courseId`. Save the returned `timeTableNameId`. Then call `POST /timeTableCreate/` multiple times with the same `timeTableNameId` and different `classSectionTermId` values. The routine `courseId` is resolved from each selected class section term.\n\n### Enum: `type`\n\n```\nAutomatic\nManual\n```\n\n**200** — array of created period rows. **400** — Zod or business validation JSON/text.\n\n### Changelog\n\n**v2 (2026-07)**\n\n- Documented reusable structure flow.\n- `courseId` is optional and should be omitted when one structure is shared by multiple courses."
+                "description": "**POST /timeTable**\n\nCreates a timetable **structure** (period slots). A structure is a reusable bell schedule template; it is not the class routine itself.\n\n### Body\n\n| Field | Type | Required | Nullable | Description |\n|-------|------|----------|----------|-------------|\n| `courseId` | Integer | **Yes** | No | Course PK. |\n| `name` | String | No | No | Structure name shown to users. |\n| `maximumPeriod` | Integer | No | No | Number of period rows to create. |\n| `periodLength` | Integer | No | No | Period length in minutes. |\n| `periodGap` | Integer | No | No | Gap between periods in minutes. |\n| `startingTime` | String | No | No | Example: `09:00 AM`. |\n| `type` | Enum | No | No | `Automatic` or `Manual`. |\n| `weekOff` | String[] | No | Yes | Week-off day names, example `[\"Sunday\"]`. |\n| `isCourse` | Boolean | No | Yes | Stored on generated period rows. |\n\n**Do not send `sessionId`.** Tenant scope uses the active `academicYearId` from auth context (`universityId`, `instituteId`, `academicYearId`).\n\n### Enum: `type`\n\n```\nAutomatic\nManual\n```\n\n**200** — array of created period rows. **400** — Zod or business validation JSON/text.\n\n### Changelog\n\n**v2 (2026-07)**\n\n- `courseId` is required.\n- `sessionId` removed; structure is scoped by active academic year from request context."
               },
               "response": []
             },
@@ -2287,9 +2287,15 @@
                   ]
                 },
                 "method": "GET",
-                "header": [],
+                "header": [
+                  {
+                    "key": "X-Academic-Year-Id",
+                    "value": "{{acedmicYear_id}}",
+                    "description": "Optional — overrides user defaultAcademicYearId for this request"
+                  }
+                ],
                 "url": {
-                  "raw": "{{baseurl}}/timeTable?courseId={{timetable_courseId}}&acedmicYearId={{timetable_acedmicYearId}}",
+                  "raw": "{{baseurl}}/timeTable?courseId={{timetable_courseId}}",
                   "host": [
                     "{{baseurl}}"
                   ],
@@ -2301,16 +2307,10 @@
                       "key": "courseId",
                       "value": "{{timetable_courseId}}",
                       "description": "Optional course filter"
-                    },
-                    {
-                      "key": "acedmicYearId",
-                      "value": "{{timetable_acedmicYearId}}",
-                      "description": "Optional — ignored; tenant scope from auth context",
-                      "disabled": true
                     }
                   ]
                 },
-                "description": "**GET /timeTable**\n\nLists timetable structures with periods, optional course, session (`timeTableSession`), and `weekOff`.\n\n**Query:** optional `courseId`. For reusable structures created without `courseId`, omit this filter; otherwise course-less reusable structures will not appear in a course-filtered response. Scoped via `scoped(timeTableStructureModel)` (institute + academic year from token).\n\n**Optional ignored:** `acedmicYearId` (frontend compat)."
+                "description": "**GET /timeTable**\n\nLists timetable structures with periods, optional course, session (`timeTableSession`), and `weekOff`.\n\n**Query:** optional `courseId` only.\n\n**Tenant scope (not in query):** `universityId`, `instituteId`, `academicYearId` from logged-in user defaults (`PUT /user/saveUserDefaults` → `defaultInstituteId`, `defaultAcademicYearId`). Optional headers `X-Institute-Id`, `X-Academic-Year-Id` override defaults for the request.\n\nDB column is `acedmic_year_id` (legacy spelling); Sequelize maps it to `academicYearId` in API responses."
               },
               "response": []
             },
@@ -2330,7 +2330,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/timeTable/all_name?courseId={{timetable_courseId}}&sessionId={{timetable_sessionId}}&acedmicYearId={{timetable_acedmicYearId}}",
+                  "raw": "{{baseurl}}/timeTable/all_name?courseId={{timetable_courseId}}",
                   "host": [
                     "{{baseurl}}"
                   ],
@@ -2343,26 +2343,15 @@
                       "key": "courseId",
                       "value": "{{timetable_courseId}}",
                       "description": "Optional course filter"
-                    },
-                    {
-                      "key": "sessionId",
-                      "value": "{{timetable_sessionId}}",
-                      "description": "Optional session filter"
-                    },
-                    {
-                      "key": "acedmicYearId",
-                      "value": "{{timetable_acedmicYearId}}",
-                      "description": "Optional — ignored; tenant scope from auth context",
-                      "disabled": true
                     }
                   ]
                 },
-                "description": "**GET /timeTable/all_name**\n\nSame shape as **GET /timeTable**. Optional `courseId`, `sessionId`. For reusable structures shared across courses, prefer filtering by `sessionId` only and omit `courseId`. Tenant scope from `scoped(timeTableStructureModel)`."
+                "description": "**GET /timeTable/all_name**\n\nSame shape as **GET /timeTable**. Optional `courseId` only. Academic year from active user `defaultAcademicYearId` via `scoped(timeTableStructureModel)`."
               },
               "response": []
             },
             {
-              "name": "get single (course + session)",
+              "name": "get single (by course)",
               "request": {
                 "auth": {
                   "type": "bearer",
@@ -2377,7 +2366,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/timeTable/single?courseId={{timetable_courseId}}&sessionId={{timetable_sessionId}}&acedmicYearId={{timetable_acedmicYearId}}",
+                  "raw": "{{baseurl}}/timeTable/single?courseId={{timetable_courseId}}",
                   "host": [
                     "{{baseurl}}"
                   ],
@@ -2388,21 +2377,12 @@
                   "query": [
                     {
                       "key": "courseId",
-                      "value": "{{timetable_courseId}}"
-                    },
-                    {
-                      "key": "sessionId",
-                      "value": "{{timetable_sessionId}}"
-                    },
-                    {
-                      "key": "acedmicYearId",
-                      "value": "{{timetable_acedmicYearId}}",
-                      "description": "Optional — ignored; tenant scope from auth context",
-                      "disabled": true
+                      "value": "{{timetable_courseId}}",
+                      "description": "Optional course filter"
                     }
                   ]
                 },
-                "description": "**GET /timeTable/single**\n\nOptional `courseId`, `sessionId`. Scoped via `scoped(timeTableStructureModel)`. Includes session info and `weekOff`."
+                "description": "**GET /timeTable/single**\n\nOptional `courseId` only. Academic year from active user `defaultAcademicYearId` via `scoped(timeTableStructureModel)`. Includes session info and `weekOff`."
               },
               "response": []
             },
