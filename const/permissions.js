@@ -521,14 +521,6 @@ export const PERMISSIONS = {
         value: "perm_f693115b",
         parentPermission: 'ROLES_ACCESS_CONTROL',
     },
-    ROLES_ACCESS_CONTROL_EDIT: {
-        value: "perm_67e767a4",
-        parentPermission: 'ROLES_ACCESS_CONTROL',
-    },
-    ROLES_ACCESS_CONTROL_DELETE: {
-        value: "perm_3c82eab6",
-        parentPermission: 'ROLES_ACCESS_CONTROL',
-    },
     ROLES_ACCESS_CONTROL_ASSIGN: {
         value: "ROLES_ACCESS_CONTROL_ASSIGN",
         parentPermission: 'ROLES_ACCESS_CONTROL',
