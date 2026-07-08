@@ -32,6 +32,32 @@ export const addTimeTable = async (req, res) => {
   }
 };
 
+export const addTimeTablePeriod = async (req, res) => {
+  try {
+    const createdBy = req.user.userId;
+    const updatedBy = req.user.userId;
+
+    const result = await timeTableServices.addTimeTablePeriod(
+      req.body,
+      createdBy,
+      updatedBy,
+    );
+
+    res.status(200).send(result);
+  } catch (error) {
+    console.error('Error in adding time table period:', error);
+
+    res
+      .status(
+        error.message?.includes('not found') ||
+          error.message?.includes('required')
+          ? 400
+          : 500,
+      )
+      .send(error.message || 'Internal Server Error');
+  }
+};
+
 export const getTimeTableDetails = async (req, res) => {
   const { courseId } = req.query;
 

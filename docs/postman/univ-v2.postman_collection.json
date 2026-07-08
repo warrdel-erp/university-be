@@ -2132,7 +2132,7 @@
     },
     {
       "name": "time table",
-      "description": "Timetable APIs under `/timeTable` (structure/periods) and `/timeTableCreate` (routine + grid cells).\n\n| Phase | Base | Purpose |\n|-------|------|--------|\n| Structure | `/timeTable` | Reusable bell schedule template + period rows |\n| Routine | `/timeTableCreate` | Link one structure to a **classSectionTermId** + date range |\n| Mapping | `/timeTableCreate/mapping` | Fill day/period cells (`class_schedule_item`) |\n| Publish | `/timeTableCreate/publish` | Lock routine for students/teachers |\n\n**Delete structure APIs:**\n* `DELETE /timeTable?timeTableCreationId=` — soft-delete one period row (blocked only if that period is mapped in an active/published routine).\n* `DELETE /timeTable/structure?timeTableNameId=` — soft-delete whole structure + all its periods (blocked if **any** child routine is active/published).\n* One `timeTableNameId` can have many period rows and many routines — period delete is per-row; structure delete checks all child routines.\n\n**Structure reuse:** one `timeTableNameId` can be used by multiple courses and multiple routines. Do **not** send multiple `courseId` values in `POST /timeTable`; create the structure once (usually with `sessionId` and no `courseId`), then create one routine per class/course term using the same `timeTableNameId` and that term's `classSectionTermId`.\n\n**Placement key:** `classSectionTermId` (from `class_section_term`). `classSectionsId` + `term` are not sent on routine create — backend resolves `classSectionsId` and routine `courseId` from the term row.\n\n**Tenant scope:** `scoped()` injects institute + academic year from auth context. Do not send `acedmicYearId` on create.\n\n**Validation:** Zod on `/timeTableCreate` routes. Invalid input → **400**.\n\n**Suggested flow:** `POST /timeTable` (structure) → `POST /timeTableCreate/` with same `timeTableNameId` + one `classSectionTermId` per routine → mapping → publish → getRoutine.\n\nFolder vars `timetable_*` + collection `classSectionTermId`. Auth: Bearer `{{token}}`.",
+      "description": "Timetable APIs under `/timeTable` (structure/periods) and `/timeTableCreate` (routine + grid cells).\n\n| Phase | Base | Purpose |\n|-------|------|--------|\n| Structure | `/timeTable` | Reusable bell schedule template + period rows (`POST /timeTable/period` adds one period to an existing structure) |\n| Routine | `/timeTableCreate` | Link one structure to a **classSectionTermId** + date range |\n| Mapping | `/timeTableCreate/mapping` | Fill day/period cells (`class_schedule_item`) |\n| Publish | `/timeTableCreate/publish` | Lock routine for students/teachers |\n\n**Delete structure APIs:**\n* `DELETE /timeTable?timeTableCreationId=` — soft-delete one period row (blocked only if that period is mapped in an active/published routine).\n* `DELETE /timeTable/structure?timeTableNameId=` — soft-delete whole structure + all its periods (blocked if **any** child routine is active/published).\n* One `timeTableNameId` can have many period rows and many routines — period delete is per-row; structure delete checks all child routines.\n\n**Structure reuse:** one `timeTableNameId` can be used by multiple courses and multiple routines. Do **not** send multiple `courseId` values in `POST /timeTable`; create the structure once (usually with `sessionId` and no `courseId`), then create one routine per class/course term using the same `timeTableNameId` and that term's `classSectionTermId`.\n\n**Placement key:** `classSectionTermId` (from `class_section_term`). `classSectionsId` + `term` are not sent on routine create — backend resolves `classSectionsId` and routine `courseId` from the term row.\n\n**Tenant scope:** `scoped()` injects institute + academic year from auth context. Do not send `acedmicYearId` on create.\n\n**Validation:** Zod on `/timeTableCreate` routes. Invalid input → **400**.\n\n**Suggested flow:** `POST /timeTable` (structure) → `POST /timeTableCreate/` with same `timeTableNameId` + one `classSectionTermId` per routine → mapping → publish → getRoutine.\n\nFolder vars `timetable_*` + collection `classSectionTermId`. Auth: Bearer `{{token}}`.",
       "variable": [
         {
           "key": "timetable_courseId",
@@ -2270,6 +2270,68 @@
                   ]
                 },
                 "description": "**POST /timeTable**\n\nCreates a timetable **structure** (period slots). A structure is a reusable bell schedule template; it is not the class routine itself.\n\n### Body\n\n| Field | Type | Required | Nullable | Description |\n|-------|------|----------|----------|-------------|\n| `courseId` | Integer | **Yes** | No | Course PK. |\n| `name` | String | No | No | Structure name shown to users. |\n| `maximumPeriod` | Integer | No | No | Number of period rows to create. |\n| `periodLength` | Integer | No | No | Period length in minutes. |\n| `periodGap` | Integer | No | No | Gap between periods in minutes. |\n| `startingTime` | String | No | No | Example: `09:00 AM`. |\n| `type` | Enum | No | No | `Automatic` or `Manual`. |\n| `weekOff` | String[] | No | Yes | Week-off day names, example `[\"Sunday\"]`. |\n| `isCourse` | Boolean | No | Yes | Stored on generated period rows. |\n\n**Do not send `sessionId`.** Tenant scope uses the active `academicYearId` from auth context (`universityId`, `instituteId`, `academicYearId`).\n\n### Enum: `type`\n\n```\nAutomatic\nManual\n```\n\n**200** — array of created period rows. **400** — Zod or business validation JSON/text.\n\n### Changelog\n\n**v2 (2026-07)**\n\n- `courseId` is required.\n- `sessionId` removed; structure is scoped by active academic year from request context."
+              },
+              "response": []
+            },
+            {
+              "name": "add period to structure",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "  const row = pm.response.json();",
+                      "  if (row && row.timeTableCreationId) {",
+                      "    pm.collectionVariables.set('timetable_creationId', String(row.timeTableCreationId));",
+                      "  }",
+                      "  if (row && row.timeTableNameId) {",
+                      "    pm.collectionVariables.set('timetable_timeTableNameId', String(row.timeTableNameId));",
+                      "  }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"timeTableNameId\": {{timetable_timeTableNameId}},\n  \"type\": \"Automatic\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/timeTable/period",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTable",
+                    "period"
+                  ]
+                },
+                "description": "**POST /timeTable/period**\n\nAdds **one new period row** to an existing timetable structure (`time_table_structure_periods`).\n\n### Request body\n\n| Field | Type | Required | Nullable | Description |\n|-------|------|----------|----------|-------------|\n| `timeTableNameId` | Integer | **Yes** | No | Structure PK from **POST /timeTable**. |\n| `periodName` | String | No | No | Defaults to `Period{N}` where N = existing period count + 1. |\n| `startTime` | String | No | Yes | Example: `09:00 AM`. For `Manual`, defaults to empty string. |\n| `endTime` | String | No | Yes | Example: `09:45 AM`. For `Manual`, defaults to empty string. |\n| `type` | Enum | No | No | `Automatic` or `Manual`. Defaults to last period's type, or `Manual`. |\n| `isCourse` | Boolean | No | Yes | Defaults to last period's value, or `false`. |\n| `isBreak` | Boolean | No | Yes | Defaults to `false`. |\n\n### Enum: `type`\n\n```\nAutomatic\nManual\n```\n\n### Business rules\n\n* Structure must exist in current institute + academic year scope.\n* `maximumPeriod` on the parent structure is incremented by 1.\n* When `type` is `Automatic` and `startTime` / `endTime` are omitted, times are generated from the structure's `periodLength`, `periodGap`, and `startingTime` (or from the previous period's `endTime` + gap).\n* Adding a period is allowed even when the structure is already used by routines (unlike period delete, which blocks on active/published mappings).\n\n### Success response (200)\n\nReturns the created period row (`timeTableCreationId`, `timeTableNameId`, `periodName`, `startTime`, `endTime`, `type`, `isCourse`, `isBreak`).\n\n### Error responses\n\n**400** — validation, structure not found, or missing structure fields for Automatic generation.\n\n**401** — unauthorized.\n\n**500** — internal server error."
               },
               "response": []
             },

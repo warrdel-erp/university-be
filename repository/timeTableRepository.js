@@ -109,6 +109,66 @@ export async function getTimeTableStructureById(timeTableNameId, options = {}) {
     }
 }
 
+export async function findStructureInScope(timeTableNameId, options = {}) {
+    return await scoped(model.timeTableStructureModel).findOne({
+        where: { timeTableNameId: Number(timeTableNameId) },
+        attributes: [
+            'timeTableNameId',
+            'maximumPeriod',
+            'periodLength',
+            'periodGap',
+            'startingTime',
+        ],
+        transaction: options.transaction,
+    });
+}
+
+export async function getStructurePeriodsByStructureId(timeTableNameId, options = {}) {
+    return await model.timeTableStructurePeriodsModel.findAll({
+        where: { timeTableNameId: Number(timeTableNameId) },
+        attributes: [
+            'timeTableCreationId',
+            'periodName',
+            'startTime',
+            'endTime',
+            'type',
+            'isCourse',
+            'isBreak',
+        ],
+        order: [['timeTableCreationId', 'ASC']],
+        transaction: options.transaction,
+    });
+}
+
+export async function addTimeTablePeriodRow(data, transaction) {
+    try {
+        return await model.timeTableStructurePeriodsModel.create(data, { transaction });
+    } catch (error) {
+        console.error('Error in create time table period:', error);
+        throw error;
+    }
+}
+
+export async function incrementStructureMaximumPeriod(timeTableNameId, transaction) {
+    const structure = await findStructureInScope(timeTableNameId, { transaction });
+    if (!structure) {
+        return null;
+    }
+
+    const plain = structure.get ? structure.get({ plain: true }) : structure;
+    const currentMax = Number(plain.maximumPeriod) || 0;
+
+    await scoped(model.timeTableStructureModel).update(
+        { maximumPeriod: currentMax + 1 },
+        {
+            where: { timeTableNameId: Number(timeTableNameId) },
+            transaction,
+        },
+    );
+
+    return currentMax + 1;
+}
+
 export async function getTimeTableStructures({ courseId } = {}) {
     try {
         const where = {};

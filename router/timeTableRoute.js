@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { addTimeTable, getTimeTableDetails, getSingleTimeTableDetails, updateTimeTable, deleteTimeTable, deleteTimeTableStructure, getAllTimeTableName } from '../controllers/timeTableController.js';
+import { addTimeTable, addTimeTablePeriod, getTimeTableDetails, getSingleTimeTableDetails, updateTimeTable, deleteTimeTable, deleteTimeTableStructure, getAllTimeTableName } from '../controllers/timeTableController.js';
 import userAuth from '../middleware/authUser.js';
 import { validate } from '../utility/validation.js';
 
@@ -57,6 +57,16 @@ const updateTimeTableItemSchema = z.object({
 
 const updateTimeTableSchema = z.array(updateTimeTableItemSchema).min(1, 'request body must be a non-empty array');
 
+const addTimeTablePeriodSchema = z.object({
+    timeTableNameId: positiveIntegerId,
+    periodName: z.string().trim().min(1, 'periodName cannot be empty').optional(),
+    startTime: z.string().optional(),
+    endTime: z.string().optional(),
+    type: z.enum(['Automatic', 'Manual']).optional(),
+    isCourse: z.boolean().optional(),
+    isBreak: z.boolean().optional(),
+});
+
 const deleteTimeTableQuerySchema = z.object({
     timeTableCreationId: positiveIntegerId,
 });
@@ -66,6 +76,7 @@ const deleteTimeTableStructureQuerySchema = z.object({
 });
 
 router.post('/', userAuth, validate({ body: addTimeTableSchema }), addTimeTable);
+router.post('/period', userAuth, validate({ body: addTimeTablePeriodSchema }), addTimeTablePeriod);
 router.get('/all_name', userAuth, validate({ query: timeTableListQuerySchema }), getAllTimeTableName);
 router.get('/', userAuth, validate({ query: timeTableListQuerySchema }), getTimeTableDetails);
 router.get('/single', userAuth, validate({ query: timeTableListQuerySchema }), getSingleTimeTableDetails);
