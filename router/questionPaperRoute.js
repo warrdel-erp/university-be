@@ -97,18 +97,21 @@ const approveQuestionPaperSchema = z.object({
     id: z.number({ required_error: "id is required" }),
 });
 
-router.post("/", userAuth, validate({ body: createQuestionPaperSchema }), addQuestionPaper);
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 
-router.post("/generate", userAuth, validate({ body: generateQuestionPaperSchema }), generateQuestionPaper);
+router.post("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, 'questionPaper'), validate({ body: createQuestionPaperSchema }), addQuestionPaper);
 
-router.get("/", userAuth, validate({ query: getAllQuestionPapersQuerySchema }), getAllQuestionPapers);
+router.post("/generate", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, 'questionPaper'), validate({ body: generateQuestionPaperSchema }), generateQuestionPaper);
 
-router.get("/:id", userAuth, getSingleQuestionPaper);
+router.get("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER.value, 'questionPaper'), validate({ query: getAllQuestionPapersQuerySchema }), getAllQuestionPapers);
 
-router.put("/", userAuth, validate({ body: updateQuestionPaperSchema }), updateQuestionPaper);
+router.get("/:id", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER.value, 'questionPaper'), getSingleQuestionPaper);
 
-router.delete("/:id", userAuth, deleteQuestionPaper);
+router.put("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_EDIT.value, 'questionPaper'), validate({ body: updateQuestionPaperSchema }), updateQuestionPaper);
 
-router.put("/approve", userAuth, validate({ body: approveQuestionPaperSchema }), approveQuestionPaper);
+router.delete("/:id", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_DELETE.value, 'questionPaper'), deleteQuestionPaper);
+
+router.put("/approve", userAuth, checkAccess(PERMISSIONS.QUESTION_APPROVAL_EDIT.value, 'questionPaper'), validate({ body: approveQuestionPaperSchema }), approveQuestionPaper);
 
 export default router;

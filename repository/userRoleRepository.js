@@ -32,22 +32,29 @@ export async function addUserRole(userId, roleId, transaction = null) {
     });
 
     // Copy template entries into user_role_permission_scope
-    const dataToInsert = templatePermissions.map((tp) => ({
-      userId,
-      roleId: role.roleId,
-      permission: tp.permission,
-      scope: tp.scope,
-      resourceId: tp.resourceId
-    }));
-
-    // Implicitly grant base access context based on the role's association
-    if (role.instituteId) {
-      // Avoid duplicate if the template somehow already has it
-      const hasBaseAccess = dataToInsert.some(p => p.permission === "perm_access_inst");
-      if (!hasBaseAccess) {
+    const dataToInsert = [];
+    templatePermissions.forEach((tp) => {
+      if (tp.permission !== "perm_access_inst") {
         dataToInsert.push({
           userId,
           roleId: role.roleId,
+          permission: tp.permission,
+          scope: tp.scope,
+          resourceId: tp.resourceId
+        });
+      }
+    });
+
+    // Implicitly grant base access context based on the role's association
+    if (role.instituteId) {
+      const existingBaseAccess = await model.userRolePermissionModel.count({
+        where: { userId, permission: "perm_access_inst", resourceId: role.instituteId },
+        transaction
+      });
+      if (existingBaseAccess === 0) {
+        dataToInsert.push({
+          userId,
+          roleId: null,
           permission: "perm_access_inst",
           scope: "INSTITUTE",
           resourceId: role.instituteId

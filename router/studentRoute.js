@@ -23,6 +23,8 @@ import {
   getStudentsByClassSection,
   getAllAnswerSheets,
 } from "../controllers/studentController.js";
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
 import { z } from "zod";
@@ -332,7 +334,7 @@ router.get(
   validate({ query: studentIdQuerySchema }),
   getSingleStudentDetail
 );
-router.post("/import", userAuth, importStudentData);
+router.post("/import", userAuth, checkAccess(PERMISSIONS.ADD_STUDENT_IMPORT.value, 'institute'), importStudentData);
 
 router.patch(
   "/:studentId",
@@ -370,7 +372,7 @@ const sectionStudentMappingQuerySchema = z.object({
   term: z.coerce.number().int().positive().optional(),
 });
 
-router.post("/studentMapping", userAuth, studentCourseMapping);
+router.post("/studentMapping", userAuth, checkAccess(PERMISSIONS.ADD_STUDENT_MAPPING.value, 'institute'), studentCourseMapping);
 router.post(
   "/sectionStudentMapping",
   userAuth,
@@ -383,7 +385,7 @@ router.get(
   validate({ query: sectionStudentMappingQuerySchema }),
   getSectionStudentMapping,
 );
-router.post("/electiveSubject", userAuth, addElectiveSubject);
+router.post("/electiveSubject", userAuth, checkAccess(PERMISSIONS.ADD_STUDENT_ADD_ELECTIVE.value, 'institute'), addElectiveSubject);
 
 const promotionStudentListQuerySchema = z.object({
   page: z.coerce

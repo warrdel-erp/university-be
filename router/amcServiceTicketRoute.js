@@ -90,20 +90,25 @@ const updateServiceTicketSchema = z
     { message: "At least one field is required to update" }
   );
 
-router.post("/", userAuth, validate({ body: addServiceTicketSchema }), addServiceTicket);
-router.get("/numberpreview", userAuth, previewServiceTicketNumber);
-router.get("/summary", userAuth, getServiceTicketSummary);
-router.get("/", userAuth, validate({ query: listQuerySchema }), getAllServiceTickets);
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
+
+router.post("/", userAuth, checkAccess(PERMISSIONS.SERVICE_TICKETS_ADD.value, 'amcServiceTicket'), validate({ body: addServiceTicketSchema }), addServiceTicket);
+router.get("/numberpreview", userAuth, checkAccess(PERMISSIONS.SERVICE_TICKETS_ADD.value, 'amcServiceTicket'), previewServiceTicketNumber);
+router.get("/summary", userAuth, checkAccess(PERMISSIONS.SERVICE_TICKETS.value, 'amcServiceTicket'), getServiceTicketSummary);
+router.get("/", userAuth, checkAccess(PERMISSIONS.SERVICE_TICKETS.value, 'amcServiceTicket'), validate({ query: listQuerySchema }), getAllServiceTickets);
 router.get(
   "/single",
   userAuth,
+  checkAccess(PERMISSIONS.SERVICE_TICKETS.value, 'amcServiceTicket'),
   validate({ query: serviceTicketIdQuerySchema }),
   getSingleServiceTicketDetails
 );
-router.patch("/", userAuth, validate({ body: updateServiceTicketSchema }), updateServiceTicket);
+router.patch("/", userAuth, checkAccess(PERMISSIONS.SERVICE_TICKETS_EDIT.value, 'amcServiceTicket'), validate({ body: updateServiceTicketSchema }), updateServiceTicket);
 router.delete(
   "/",
   userAuth,
+  checkAccess(PERMISSIONS.SERVICE_TICKETS_DELETE.value, 'amcServiceTicket'),
   validate({ query: serviceTicketIdQuerySchema }),
   deleteServiceTicket
 );

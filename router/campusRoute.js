@@ -83,7 +83,7 @@ const updateCampusSchema = z
     { message: "At least one field to update is required" }
   );
 
-router.post("/", userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_ADD.value, 'campus'), validate({ body: campusItemSchema }), campusController.createCampus);
+router.post("/", userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_ADD.value, 'university'), validate({ body: campusItemSchema }), campusController.createCampus);
 router.patch("/", userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_EDIT.value, 'campus'), validate({ body: updateCampusSchema }), campusController.updateCampus);
 router.get("/hierarchy", userAuth, campusController.getCampusHierarchy);
 router.get("/", userAuth, campusController.listCampuses);

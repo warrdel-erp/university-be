@@ -9,6 +9,8 @@ import {
 } from '../controllers/headController.js';
 import userAuth from '../middleware/authUser.js';
 import { validate } from '../utility/validation.js';
+import { checkAccess } from '../middleware/checkAccess.js';
+import { PERMISSIONS } from '../const/permissions.js';
 
 const router = Router();
 
@@ -60,14 +62,14 @@ const headIdQuerySchema = z.object({
     headId: positiveIntegerId,
 });
 
-router.post('/', userAuth, validate({ body: addHeadSchema }), addHead);
+router.post('/', userAuth, checkAccess(PERMISSIONS.HEAD_OF_THE_INSTITUTION_ADD.value, 'head'), validate({ body: addHeadSchema }), addHead);
 
 router.get('/', userAuth, getAllHead);
 
 router.get('/single', userAuth, validate({ query: headIdQuerySchema }), getSingleHeadDetails);
 
-router.patch('/', userAuth, validate({ body: updateHeadSchema }), updateHead);
+router.patch('/', userAuth, checkAccess(PERMISSIONS.HEAD_OF_THE_INSTITUTION_EDIT.value, 'head'), validate({ body: updateHeadSchema }), updateHead);
 
-router.delete('/', userAuth, validate({ query: headIdQuerySchema }), deleteHead);
+router.delete('/', userAuth, checkAccess(PERMISSIONS.HEAD_OF_THE_INSTITUTION_DELETE.value, 'head'), validate({ query: headIdQuerySchema }), deleteHead);
 
 export default router;

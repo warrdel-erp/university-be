@@ -28,7 +28,6 @@ export async function register(info) {
     phone,
     email: email.toLowerCase(),
     uniqueId: uuidv4(),
-    role,
   };
 
   return await registerRepository.register(data);
@@ -570,8 +569,6 @@ export async function initialSetup(info) {
         email: email.toLowerCase(),
         password: hashedPassword,
         phone,
-        role: "ADMIN",
-        defaultRole: "ADMIN",
         uniqueId: uuidv4(),
         status: "active",
         universityId: university.universityId,

@@ -138,25 +138,30 @@ const assetReturnPaymentsQuerySchema = z.object({
   assetReturnTransactionId: positiveIntegerId,
 });
 
-router.post("/", userAuth, validate({ body: createAssetIssueSchema }), addAssetIssue);
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 
-router.post("/return", userAuth, validate({ body: returnAssetIssueSchema }), returnAssetIssueItems);
+router.post("/", userAuth, checkAccess(PERMISSIONS.ASSET_ISSUE_ADD.value, 'assetIssue'), validate({ body: createAssetIssueSchema }), addAssetIssue);
+
+router.post("/return", userAuth, checkAccess(PERMISSIONS.ASSET_ISSUE_RETURN_ADD.value, 'assetIssueReturn'), validate({ body: returnAssetIssueSchema }), returnAssetIssueItems);
 router.get(
   "/return/payments",
   userAuth,
+  checkAccess(PERMISSIONS.ASSET_ISSUE_RETURN.value, 'assetIssueReturn'),
   validate({ query: assetReturnPaymentsQuerySchema }),
   getAssetReturnPaymentsById
 );
-router.get("/return", userAuth, validate({ query: listAssetReturnQuerySchema }), getAllAssetReturnTransactions);
+router.get("/return", userAuth, checkAccess(PERMISSIONS.ASSET_ISSUE_RETURN.value, 'assetIssueReturn'), validate({ query: listAssetReturnQuerySchema }), getAllAssetReturnTransactions);
 router.get(
   "/payments",
   userAuth,
+  checkAccess(PERMISSIONS.ASSET_ISSUE.value, 'assetIssue'),
   validate({ query: assetIssuePaymentsQuerySchema }),
   getAssetIssuePaymentsById
 );
-router.get("/", userAuth, validate({ query: listAssetIssueQuerySchema }), getAllAssetIssues);
+router.get("/", userAuth, checkAccess(PERMISSIONS.ASSET_ISSUE.value, 'assetIssue'), validate({ query: listAssetIssueQuerySchema }), getAllAssetIssues);
 
-router.get("/single", userAuth, validate({ query: singleAssetIssueQuerySchema }), getSingleAssetIssue);
-router.patch("/", userAuth, validate({ body: updateAssetIssueSchema }), updateAssetIssue);
+router.get("/single", userAuth, checkAccess(PERMISSIONS.ASSET_ISSUE.value, 'assetIssue'), validate({ query: singleAssetIssueQuerySchema }), getSingleAssetIssue);
+router.patch("/", userAuth, checkAccess(PERMISSIONS.ASSET_ISSUE_EDIT.value, 'assetIssue'), validate({ body: updateAssetIssueSchema }), updateAssetIssue);
 
 export default router;

@@ -5,6 +5,8 @@ import { login, register, adminRegisterStudentAndEmployee, getAdminRegisterStude
 import useAuth from "../../middleware/authUser.js";
 import { z } from "zod";
 import { validate } from "../../utility/validation.js";
+import { checkAccess } from "../../middleware/checkAccess.js";
+import { PERMISSIONS } from "../../const/permissions.js";
 
 const getAllUsersSchema = z.object({
     instituteId: z.coerce.number(),
@@ -63,9 +65,9 @@ router.get("/adminSignUp", useAuth, getAdminRegisterStudentAndEmployee);
 
 router.post("/changePassword", changePassword);
 
-router.patch("/changeStatus", changeStatus);
+router.patch("/changeStatus", useAuth, checkAccess(PERMISSIONS.USER_MANAGEMENT_CHANGE_STATUS.value, 'user'), changeStatus);
 
-router.patch("/sendLink", sendLink);
+router.patch("/sendLink", useAuth, checkAccess(PERMISSIONS.USER_MANAGEMENT_RESET_PASSWORD.value, 'user'), sendLink);
 
 // forgot 
 
@@ -73,7 +75,7 @@ router.post("/forgotPassword", forgotPassword);
 
 router.patch("/forgotPassword", useAuth, forgotChangePassword);
 
-router.get("/", useAuth, validate({ query: getAllUsersSchema }), getAllUsers);
+router.get("/", useAuth, checkAccess(PERMISSIONS.USER_MANAGEMENT.value, 'user'), validate({ query: getAllUsersSchema }), getAllUsers);
 
 router.get("/myDetails", useAuth, getMyDetails);
 

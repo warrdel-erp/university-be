@@ -19,6 +19,11 @@ export function checkAccess(permissionKey, resource) {
       }
 
       const activeRoleId = req.user.defaultRoleId;
+
+      if (!activeRoleId) {
+        return res.status(403).json({ message: "Access denied: User's default role is not configured" });
+      }
+
       const filter = await getAccessFilter(req.user, permissionKey, resource, activeRoleId);
 
       // Block request immediately if the filter is set to the denial signature ({ id: -1 })

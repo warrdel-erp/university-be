@@ -55,9 +55,16 @@ export async function setUserPermissions(userId, roleId, permissions, transactio
         });
       } else if (item && item.permission) {
         // New format: { permission, scope, resourceIds }
+        let currentRoleId = roleId;
+        if (item.permission === "perm_access_inst") {
+          currentRoleId = null;
+        } else if (!currentRoleId) {
+          throw new Error(`roleId is required for permission ${item.permission}`);
+        }
+        
         dataToInsert.push({
           userId,
-          roleId,
+          roleId: currentRoleId,
           permission: item.permission,
           scope: item.scope || SCOPES.INSTITUTE,
           resourceId: item.resourceIds && item.resourceIds.length > 0 ? item.resourceIds[0] : null,
@@ -82,6 +89,13 @@ export async function clearAndSetUserPermissions(userId, roleId, permissions) {
   const transaction = await model.userRolePermissionModel.sequelize.transaction();
   try {
     await clearAllUserPermissions(userId, roleId, transaction);
+
+    // Also clear perm_access_inst for the user to avoid duplicates, as it's not bound by roleId anymore
+    await model.userRolePermissionModel.destroy({
+      where: { userId, permission: "perm_access_inst" },
+      transaction
+    });
+
     const result = await setUserPermissions(userId, roleId, permissions, transaction);
     await transaction.commit();
     return result;

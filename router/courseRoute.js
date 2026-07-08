@@ -3,6 +3,8 @@ import { z } from "zod";
 import * as courseController from "../controllers/courseController.js";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 
 const router = Router();
 
@@ -38,6 +40,6 @@ router.get("/termsWithClassSections", userAuth, validate({ query: classSectionsG
 
 router.get("/:courseId/terms", userAuth, courseController.getTermOptionsByCourse);
 
-router.delete("/:courseId", userAuth, validate({ params: courseIdParamSchema }), courseController.deleteCourse);
+router.delete("/:courseId", userAuth, checkAccess(PERMISSIONS.COURSES_DELETE.value, 'institute'), validate({ params: courseIdParamSchema }), courseController.deleteCourse);
 
 export default router;

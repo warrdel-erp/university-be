@@ -26,14 +26,14 @@ export async function getUserPermissions(userId, roleId) {
   const permissionMap = {};
   entries.forEach(e => {
     if (!permissionMap[e.permission]) {
-        permissionMap[e.permission] = {
-            permissionKey: e.permission,
-            scopeKey: e.scope,
-            resourceIds: []
-        };
+      permissionMap[e.permission] = {
+        permissionKey: e.permission,
+        scopeKey: e.scope,
+        resourceIds: []
+      };
     }
     if (e.resourceId) {
-        permissionMap[e.permission].resourceIds.push(e.resourceId);
+      permissionMap[e.permission].resourceIds.push(e.resourceId);
     }
   });
 
@@ -127,11 +127,11 @@ const resourceScopeFields = {
 export async function getAccessFilter(user, permissionKey, resource, activeRoleId) {
   const roleId = activeRoleId || user.defaultRoleId;
   const permissions = await getUserPermissions(user.userId, roleId);
-  
+
   const perm = permissions.find(p => p.permissionKey === permissionKey);
   if (!perm) {
     // Return a filter that resolves to nothing if permission is denied
-    return { id: -1 }; 
+    return { id: -1 };
   }
 
   const scope = perm.scopeKey;

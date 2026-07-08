@@ -358,13 +358,27 @@ export const saveUserDefaults = async (req, res) => {
     const { defaultInstituteId, defaultRole, defaultAcademicYearId } = req.body;
 
     if (defaultRole) {
-      const hasRole = await userRoleRepository.checkUserRoleExists(userId, defaultRole);
+      const role = await sequelize.models.role.findOne({
+        where: isNaN(Number(defaultRole)) ? { role: defaultRole } : { roleId: defaultRole },
+      });
+
+      if (!role) {
+        return res.status(400).json({
+          success: false,
+          message: `Role not found: ${defaultRole}`
+        });
+      }
+
+      const hasRole = await userRoleRepository.checkUserRoleExists(userId, role.roleId);
       if (!hasRole) {
         return res.status(400).json({
           success: false,
           message: `User does not have the specified role: ${defaultRole}`
         });
       }
+      
+      // Inject the actual integer roleId into the payload so the repository can update it
+      req.body.defaultRoleId = role.roleId;
     }
 
     const result = await userService.saveUserDefaults(userId, req.body);

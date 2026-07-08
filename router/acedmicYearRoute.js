@@ -10,6 +10,8 @@ import {
     newActivateAndCopyData,
 } from '../controllers/acedmicYearController.js';
 import userAuth from '../middleware/authUser.js';
+import { checkAccess } from '../middleware/checkAccess.js';
+import { PERMISSIONS } from '../const/permissions.js';
 import { validate } from '../utility/validation.js';
 
 const router = Router();
@@ -86,6 +88,7 @@ router.get(
 router.post(
     '/newActivateAndCopyData',
     userAuth,
+    checkAccess(PERMISSIONS.ACADEMIC_YEAR_ACTIVATE_SIBLING.value, 'academicYear'),
     validate({ body: activateAndCopySchema }),
     newActivateAndCopyData,
 );

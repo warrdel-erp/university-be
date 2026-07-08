@@ -28,12 +28,15 @@ const listHallTicketsQuerySchema = z.object({
     limit: z.coerce.number().int("limit must be an integer").min(1, "limit must be at least 1").optional().default(1000),
 });
 
-router.post("/generate", userAuth, validate({ body: generateSchema }), studentHallTicketController.generateHallTickets);
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 
-router.get("/byQr", userAuth, validate({ query: qrQuerySchema }), studentHallTicketController.getHallTicketByQr);
+router.post("/generate", userAuth, checkAccess(PERMISSIONS.HALL_TICKETS_ADD.value, 'studentHallTicket'), validate({ body: generateSchema }), studentHallTicketController.generateHallTickets);
 
-router.get("/", userAuth, validate({ query: listHallTicketsQuerySchema }), studentHallTicketController.getAllHallTickets);
+router.get("/byQr", userAuth, checkAccess(PERMISSIONS.HALL_TICKETS.value, 'studentHallTicket'), validate({ query: qrQuerySchema }), studentHallTicketController.getHallTicketByQr);
 
-router.get("/:id", userAuth, validate({ params: idParamsSchema }), studentHallTicketController.getHallTicketById);
+router.get("/", userAuth, checkAccess(PERMISSIONS.HALL_TICKETS.value, 'studentHallTicket'), validate({ query: listHallTicketsQuerySchema }), studentHallTicketController.getAllHallTickets);
+
+router.get("/:id", userAuth, checkAccess(PERMISSIONS.HALL_TICKETS.value, 'studentHallTicket'), validate({ params: idParamsSchema }), studentHallTicketController.getHallTicketById);
 
 export default router;

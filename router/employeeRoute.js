@@ -3,6 +3,8 @@ import { z } from "zod";
 const router = Router();
 import { addEmployee, getAllEmployee, getSingleEmployeeDetails, deleteEmployeeDetail, importEmployeeData, updateEmployee, getBooksIssuedToEmployee, getTeacherTimeTable, getTeacherSubject, getSubjectEvalution, getTeacherCourses, getEmployeeSectionDates, getTeacherSubjectsFromSchedule } from '../controllers/employeeController.js';
 import userAuth from "../middleware/authUser.js"
+import { checkAccess } from '../middleware/checkAccess.js';
+import { PERMISSIONS } from '../const/permissions.js';
 import { getTodayClassSchedule, getPastClassSchedules, getUpcomingClassSchedules, getUniqueClassSectionSubjects, getSectionCounts } from '../controllers/employeeController.js';
 import { validate } from "../utility/validation.js";
 
@@ -73,7 +75,7 @@ router.patch('/:id', userAuth, updateEmployee);
 
 router.delete('/:id', userAuth, deleteEmployeeDetail);
 
-router.post('/import', userAuth, importEmployeeData);
+router.post('/import', userAuth, checkAccess(PERMISSIONS.STAFF_PROFILES_IMPORT.value, 'institute'), importEmployeeData);
 
 
-export default router; 
+export default router;

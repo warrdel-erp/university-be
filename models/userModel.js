@@ -73,10 +73,7 @@ const userModel = sequelize.define(
             type: DataTypes.STRING,
             allowNull: false
         },
-        role: {
-            type: DataTypes.STRING,
-            allowNull: true
-        },
+
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,

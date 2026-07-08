@@ -154,32 +154,39 @@ const updateAmcContractSchema = z
     }
   );
 
-router.post("/", userAuth, validate({ body: addAmcContractSchema }), addAmcContract);
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
+
+router.post("/", userAuth, checkAccess(PERMISSIONS.AMC_CONTRACTS_ADD.value, 'amcContract'), validate({ body: addAmcContractSchema }), addAmcContract);
 router.post(
   "/submitforapproval",
   userAuth,
+  checkAccess(PERMISSIONS.AMC_CONTRACTS_EDIT.value, 'amcContract'),
   validate({ body: amcContractIdBodySchema }),
   submitAmcContractForApproval
 );
 router.post(
   "/approve",
   userAuth,
+  checkAccess(PERMISSIONS.AMC_CONTRACTS_EDIT.value, 'amcContract'),
   validate({ body: amcContractIdBodySchema }),
   approveAmcContract
 );
-router.get("/numberpreview", userAuth, previewAmcContractNumber);
-router.get("/summary", userAuth, getAmcContractSummary);
-router.get("/", userAuth, validate({ query: listQuerySchema }), getAllAmcContract);
+router.get("/numberpreview", userAuth, checkAccess(PERMISSIONS.AMC_CONTRACTS_ADD.value, 'amcContract'), previewAmcContractNumber);
+router.get("/summary", userAuth, checkAccess(PERMISSIONS.AMC_CONTRACTS.value, 'amcContract'), getAmcContractSummary);
+router.get("/", userAuth, checkAccess(PERMISSIONS.AMC_CONTRACTS.value, 'amcContract'), validate({ query: listQuerySchema }), getAllAmcContract);
 router.get(
   "/single",
   userAuth,
+  checkAccess(PERMISSIONS.AMC_CONTRACTS.value, 'amcContract'),
   validate({ query: amcContractIdQuerySchema }),
   getSingleAmcContractDetails
 );
-router.patch("/", userAuth, validate({ body: updateAmcContractSchema }), updateAmcContract);
+router.patch("/", userAuth, checkAccess(PERMISSIONS.AMC_CONTRACTS_EDIT.value, 'amcContract'), validate({ body: updateAmcContractSchema }), updateAmcContract);
 router.delete(
   "/",
   userAuth,
+  checkAccess(PERMISSIONS.AMC_CONTRACTS_DELETE.value, 'amcContract'),
   validate({ query: amcContractIdQuerySchema }),
   deleteAmcContract
 );

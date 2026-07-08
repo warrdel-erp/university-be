@@ -93,9 +93,13 @@ const assignObtainedMarksSchema = z.object({
     .max(999.99, "obtained_marks must be less than or equal to 999.99"),
 });
 
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
+
 router.post(
   "/bulk",
   userAuth,
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS_ADD.value, 'answerSheetQr'),
   validate({ body: bulkGenerateSchema }),
   generateAnswerSheetQrBulk
 );
@@ -103,6 +107,7 @@ router.post(
 router.get(
   "/requests",
   userAuth,
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, 'answerSheetQr'),
   validate({ query: paginationSchema }),
   getAnswerSheetQrGenerationRequests
 );
@@ -110,6 +115,7 @@ router.get(
 router.get(
   "/requests/:requestId/qrs",
   userAuth,
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, 'answerSheetQr'),
   validate({ params: requestIdParamSchema, query: paginationSchema }),
   getAnswerSheetQrsByRequestId
 );
@@ -117,6 +123,7 @@ router.get(
 router.get(
   "/:id",
   userAuth,
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, 'answerSheetQr'),
   validate({ params: idParamSchema }),
   getAnswerSheetQrById
 );
@@ -124,6 +131,7 @@ router.get(
 router.patch(
   "/map",
   userAuth,
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS_EDIT.value, 'answerSheetQr'),
   validate({ body: mapSchema }),
   mapAnswerSheetQr
 );
@@ -131,6 +139,7 @@ router.patch(
 router.post(
   "/assign/evaluator",
   userAuth,
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS_EDIT.value, 'answerSheetQr'),
   validate({ body: assignTeachersSchema }),
   assignAnswerSheetsToTeachers
 );
@@ -138,6 +147,7 @@ router.post(
 router.get(
   "/evaluator/:assignedToUserId",
   userAuth,
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, 'answerSheetQr'),
   validate({ params: teacherIdParamSchema, query: paginationSchema }),
   getScriptsAssignedToTeacher
 );
@@ -145,6 +155,7 @@ router.get(
 router.patch(
   "/:id/obtainedMarks",
   userAuth,
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS_EDIT.value, 'answerSheetQr'),
   validate({ params: idParamSchema, body: assignObtainedMarksSchema }),
   assignObtainedMarksToAnswerSheet
 );
@@ -162,6 +173,7 @@ const splitPdfSchema = z.object({
 router.post(
   "/splitPdf",
   userAuth,
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS_ADD.value, 'answerSheetQr'),
   validate({ body: splitPdfSchema }),
   splitAnswerSheetPdf
 );
@@ -171,6 +183,7 @@ router.post(
 router.get(
   "/splitPdf/job/:jobDbId",
   userAuth,
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, 'answerSheetQr'),
   getSplitPdfJobStatus
 );
 
