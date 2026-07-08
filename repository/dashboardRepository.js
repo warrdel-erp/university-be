@@ -2,7 +2,7 @@ import { Op, fn, col, where, literal, Sequelize } from 'sequelize';
 import * as model from '../models/index.js';
 import { ROLES } from '../const/roles.js';
 import { buildScope, scoped } from '../utility/scoped.js';
-import { dayNameFromQueryDate, parseLocalDateOnly } from '../utility/helper.js';
+import { formatQueryDate, parseLocalDateOnly } from '../utility/helper.js';
 import { decimalSubtract, toMoneyNumber } from '../utility/decimalMoney.js';
 
 // Month labels for fee collection graph when grouped by year.
@@ -13,17 +13,6 @@ const GROWTH_PERIODS = {
   weekly: 7,
   monthly: 30,
 };
-
-// Published routines whose start/end date range includes the selected day.
-function routineActiveOnDateWhere(currentDate) {
-  return {
-    is_publish: true,
-    [Op.and]: [
-      Sequelize.where(Sequelize.fn('DATE', Sequelize.col('starting_date')), { [Op.lte]: currentDate }),
-      Sequelize.where(Sequelize.fn('DATE', Sequelize.col('ending_date')), { [Op.gte]: currentDate }),
-    ],
-  };
-}
 
 // Returns a new date shifted back by the given number of days.
 function subtractDays(date, days) {
@@ -202,22 +191,11 @@ function toClassResponseItem(classItem) {
 }
 
 // Splits timetable slots into upcoming and today class lists.
-function prepareTodaysClassList(schedules, now, currentDate) {
+function prepareTodaysClassList(todayItems, futureItems) {
   const upcomingClasses = [];
   const todaysClasses = [];
 
-  for (const schedule of schedules) {
-    const period = schedule.timeTablecreation;
-    const startTime = period?.startTime;
-    const classItem = {
-      time: formatClassStartTime(startTime),
-      subject: resolveSubjectName(schedule),
-      teacher: schedule.employeeDetails?.employeeName ?? '',
-      room: schedule.classRoom?.roomNumber ?? '',
-      status: getClassTimelineStatus(startTime, period?.endTime, now, currentDate),
-      sortMinutes: timeToMinutes(startTime),
-    };
-
+  for (const classItem of todayItems) {
     if (classItem.status === 'Upcoming') {
       upcomingClasses.push(classItem);
     } else {
@@ -226,15 +204,32 @@ function prepareTodaysClassList(schedules, now, currentDate) {
   }
 
   upcomingClasses.sort((first, second) => first.sortMinutes - second.sortMinutes);
-  todaysClasses.sort((first, second) => first.sortMinutes - second.sortMinutes);
+  todaysClasses.sort((first, second) => {
+    if (first.status === 'In Progress' && second.status !== 'In Progress') {
+      return -1;
+    }
+    if (first.status !== 'In Progress' && second.status === 'In Progress') {
+      return 1;
+    }
+    return first.sortMinutes - second.sortMinutes;
+  });
+  futureItems.sort((first, second) => {
+    if (first.sortDate !== second.sortDate) {
+      return first.sortDate.localeCompare(second.sortDate);
+    }
+    return first.sortMinutes - second.sortMinutes;
+  });
+
+  const combinedUpcoming = [...upcomingClasses, ...futureItems].slice(0, 3);
+  const limitedToday = todaysClasses.slice(0, 2);
 
   const upcoming = [];
-  for (const classItem of upcomingClasses) {
+  for (const classItem of combinedUpcoming) {
     upcoming.push(toClassResponseItem(classItem));
   }
 
   const today = [];
-  for (const classItem of todaysClasses) {
+  for (const classItem of limitedToday) {
     today.push(toClassResponseItem(classItem));
   }
 
@@ -242,38 +237,52 @@ function prepareTodaysClassList(schedules, now, currentDate) {
 }
 
 // Total and in-progress class counts from fetched schedules.
-function buildClassesTodayStats(schedules, now) {
+function buildClassesTodayStats(todayItems, now) {
   let inProgressCount = 0;
-  for (const schedule of schedules) {
-    const period = schedule.timeTablecreation;
-    if (isPeriodInProgress(now, period.startTime, period.endTime)) {
+  for (const classItem of todayItems) {
+    if (classItem.status === 'In Progress') {
       inProgressCount += 1;
     }
   }
 
   return {
-    total: schedules.length,
+    total: todayItems.length,
     inProgress: inProgressCount,
   };
 }
 
-// Published non-break timetable slots for one date with subject, teacher, and room.
-async function fetchTimetableSchedulesForDate(currentDate) {
-  const dayName = dayNameFromQueryDate(currentDate);
+// Single timetable fetch returning classesToday stats and class timeline.
+export async function getTimetableDayData(currentDate) {
+  const now = new Date();
+  const horizon = parseLocalDateOnly(currentDate);
+  horizon.setDate(horizon.getDate() + 30);
+  const horizonDate = formatQueryDate(horizon);
+  const todayDateString = formatQueryDate(currentDate);
 
-  return scoped(model.classScheduleModel).findAll({
+  const schedules = await scoped(model.classScheduleModel).findAll({
     raw: true,
     nest: true,
-    where: { day: dayName },
-    attributes: ['timeTableMappingId', 'period', 'timeTableType'],
+    attributes: [
+      'timeTableMappingId',
+      'timeTableRoutineId',
+      'timeTableCreationId',
+      'period',
+      'timeTableType',
+      'day',
+      'teacherType',
+    ],
     include: [
       {
         model: model.timeTableRoutineModel,
         as: 'timeTablecreate',
         required: true,
-        attributes: [],
+        attributes: ['startingDate', 'endingDate'],
         where: {
-          ...routineActiveOnDateWhere(currentDate),
+          isPublish: true,
+          [Op.and]: [
+            Sequelize.where(Sequelize.fn('DATE', Sequelize.col('starting_date')), { [Op.lte]: horizonDate }),
+            Sequelize.where(Sequelize.fn('DATE', Sequelize.col('ending_date')), { [Op.gte]: currentDate }),
+          ],
           ...buildScope(model.timeTableRoutineModel),
         },
       },
@@ -282,7 +291,9 @@ async function fetchTimetableSchedulesForDate(currentDate) {
         as: 'timeTablecreation',
         required: true,
         attributes: ['startTime', 'endTime'],
-        where: { isBreak: false },
+        where: {
+          [Op.or]: [{ isBreak: false }, { isBreak: { [Op.is]: null } }],
+        },
       },
       {
         model: model.employeeModel,
@@ -323,16 +334,92 @@ async function fetchTimetableSchedulesForDate(currentDate) {
       },
     ],
   });
-}
 
-// Single timetable fetch returning classesToday stats and class timeline.
-export async function getTimetableDayData(currentDate) {
-  const now = new Date();
-  const schedules = await fetchTimetableSchedulesForDate(currentDate);
+  schedules.sort((a, b) => {
+    const aPrimary = String(a.teacherType ?? '').toLowerCase() === 'primary';
+    const bPrimary = String(b.teacherType ?? '').toLowerCase() === 'primary';
+    if (aPrimary && !bPrimary) {
+      return -1;
+    }
+    if (!aPrimary && bPrimary) {
+      return 1;
+    }
+    return 0;
+  });
+
+  const from = parseLocalDateOnly(currentDate);
+  const to = parseLocalDateOnly(horizonDate);
+  const todayBySlot = new Map();
+  const futureBySlot = new Map();
+
+  for (const schedule of schedules) {
+    const routine = schedule.timeTablecreate;
+    if (!routine?.startingDate || !routine?.endingDate) {
+      continue;
+    }
+
+    const dayIndex = {
+      sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+      thursday: 4, friday: 5, saturday: 6,
+    }[String(schedule.day ?? '').toLowerCase()];
+    if (dayIndex === undefined) {
+      continue;
+    }
+
+    const routineStart = parseLocalDateOnly(routine.startingDate);
+    const routineEnd = parseLocalDateOnly(routine.endingDate);
+    let occurrence = new Date(routineStart);
+    while (occurrence.getDay() !== dayIndex && occurrence <= routineEnd) {
+      occurrence.setDate(occurrence.getDate() + 1);
+    }
+
+    while (occurrence <= routineEnd) {
+      if (occurrence >= from && occurrence <= to) {
+        const occurrenceDate = formatQueryDate(occurrence);
+        const period = schedule.timeTablecreation;
+        const startTime = period?.startTime;
+        const slotKey = `${occurrenceDate}|${schedule.timeTableRoutineId}|${schedule.period}`;
+        const targetMap = occurrenceDate === todayDateString
+          ? todayBySlot
+          : occurrenceDate > todayDateString
+            ? futureBySlot
+            : null;
+
+        if (targetMap) {
+          const existing = targetMap.get(slotKey);
+          const isPrimary = String(schedule.teacherType ?? '').toLowerCase() === 'primary';
+          const existingIsPrimary = existing
+            && String(existing.teacherType ?? '').toLowerCase() === 'primary';
+          if (!existing || (isPrimary && !existingIsPrimary)) {
+            targetMap.set(slotKey, {
+              time: formatClassStartTime(startTime),
+              subject: resolveSubjectName(schedule),
+              teacher: schedule.employeeDetails?.employeeName ?? '',
+              room: schedule.classRoom?.roomNumber ?? '',
+              status: getClassTimelineStatus(startTime, period?.endTime, now, occurrenceDate),
+              sortMinutes: timeToMinutes(startTime),
+              sortDate: occurrenceDate,
+              teacherType: schedule.teacherType,
+            });
+          }
+        }
+      }
+      occurrence.setDate(occurrence.getDate() + 7);
+    }
+  }
+
+  const todayItems = [];
+  for (const classItem of todayBySlot.values()) {
+    todayItems.push(classItem);
+  }
+  const futureItems = [];
+  for (const classItem of futureBySlot.values()) {
+    futureItems.push(classItem);
+  }
 
   return {
-    stats: buildClassesTodayStats(schedules, now),
-    classes: prepareTodaysClassList(schedules, now, currentDate),
+    stats: buildClassesTodayStats(todayItems, now),
+    classes: prepareTodaysClassList(todayItems, futureItems),
   };
 }
 
@@ -804,7 +891,9 @@ export async function getTeacherDashboardUpcomingClasses(employeeId, currentDate
         model: model.timeTableStructurePeriodsModel,
         as: 'timeTablecreation',
         required: true,
-        where: { isBreak: false },
+        where: {
+          [Op.or]: [{ isBreak: false }, { isBreak: { [Op.is]: null } }],
+        },
         attributes: [],
       },
       {

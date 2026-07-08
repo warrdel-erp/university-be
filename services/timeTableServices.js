@@ -8,7 +8,6 @@ export async function addTimeTable(data, createdBy, updatedBy) {
             name: data.name,
             maximumPeriod: data.maximumPeriod,
             courseId: data.courseId,
-            sessionId: data.sessionId,
             periodLength: data.periodLength,
             periodGap: data.periodGap,
             startingTime: data.startingTime,
@@ -26,17 +25,15 @@ export async function addTimeTable(data, createdBy, updatedBy) {
         const timeSlots = [];
         const maxPeriods = data.maximumPeriod;
 
-        const parseTime = (timeString) => {
-            const [time, modifier] = timeString.split(' ');
-            const [hour, minute] = time.split(':').map(Number);
-            const adjustedHour = hour % 12 + (modifier === 'PM' ? 12 : 0);
-            return new Date(1970, 0, 1, adjustedHour, minute);
-        };
-
-        let startingTime = parseTime(data.startingTime);
-
         if (data.type === 'Automatic') {
-            let currentTime = startingTime;
+            const parseTime = (timeString) => {
+                const [time, modifier] = timeString.split(' ');
+                const [hour, minute] = time.split(':').map(Number);
+                const adjustedHour = hour % 12 + (modifier === 'PM' ? 12 : 0);
+                return new Date(1970, 0, 1, adjustedHour, minute);
+            };
+
+            let currentTime = parseTime(data.startingTime);
             const periodLengthMs = data.periodLength * 60000;
             const periodGapMs = data.periodGap * 60000;
 
@@ -74,6 +71,10 @@ export async function addTimeTable(data, createdBy, updatedBy) {
             }
         }
 
+        if (!timeSlots.length) {
+            throw new Error('No periods generated for this timetable structure');
+        }
+
         data.timeSlots = timeSlots;
 
         const timeTableEntry = await timeTableRepository.addTimeTable(data, transaction);
@@ -86,33 +87,31 @@ export async function addTimeTable(data, createdBy, updatedBy) {
     }
 }
 
-export async function getAllTimeTableName(courseId, sessionId) {
-    return await timeTableRepository.getTimeTableStructures({ courseId, sessionId });
+export async function getAllTimeTableName(courseId) {
+    return await timeTableRepository.getTimeTableStructures({ courseId });
 }
 
 export async function getTimeTableDetails(courseId) {
     return await timeTableRepository.getTimeTableStructures({ courseId });
 }
 
-export async function getSingleTimeTableDetails(courseId, sessionId) {
-    return await timeTableRepository.getTimeTableStructures({ courseId, sessionId });
+export async function getSingleTimeTableDetails(courseId) {
+    return await timeTableRepository.getTimeTableStructures({ courseId });
 }
 
 export async function updateTimeTable(info) {
-    try {
-        const updatePromises = info.map(async (item) => {
-            const timeTableCreationId = item.timeTableCreationId;
-            return await timeTableRepository.updateTimeTable(timeTableCreationId, item);
-        });
-
-        const results = await Promise.all(updatePromises);
-        return results;
-    } catch (error) {
-        console.error('Error updating time table:', error);
-        throw new Error('Failed to update time table');
+    const results = [];
+    for (const item of info) {
+        const result = await timeTableRepository.updateTimeTable(item.timeTableCreationId, item);
+        results.push(result);
     }
+    return results;
 }
 
 export async function deleteTimeTable(timeTableCreationId) {
     return await timeTableRepository.deleteTimeTable(timeTableCreationId);
+}
+
+export async function deleteTimeTableStructure(timeTableNameId) {
+    return await timeTableRepository.deleteTimeTableStructure(timeTableNameId);
 }
