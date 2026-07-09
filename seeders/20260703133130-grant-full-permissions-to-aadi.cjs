@@ -43,7 +43,7 @@ module.exports = {
       return;
     }
 
-    const permissionKeys = Object.values(permissionsObj).map(p => p.key);
+    const permissionKeys = Object.values(permissionsObj).map(p => p.value);
     
     // Insert all permissions for the user
     const insertData = permissionKeys.map(perm => ({

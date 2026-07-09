@@ -1,524 +1,524 @@
 export const PERMISSIONS = {
     DASHBOARD: {
-        value: "perm_b596a560",
+        value: "DASHBOARD",
     },
     MASTER_SECTION: {
-        value: "perm_0762b639",
+        value: "MASTER_SECTION",
     },
     COURSES: {
-        value: "perm_b9cd01f5",
+        value: "COURSES",
     },
     COURSE_SESSIONS: {
-        value: "perm_bf511f57",
+        value: "COURSE_SESSIONS",
     },
     ACADEMIC_YEAR: {
-        value: "perm_c93d0e48",
+        value: "ACADEMIC_YEAR",
     },
     CODE_MASTER: {
-        value: "perm_7e60a75a",
+        value: "CODE_MASTER",
     },
     SESSION_SETUP: {
-        value: "perm_9b503c50",
+        value: "SESSION_SETUP",
     },
     ADMIN_PROFILE: {
-        value: "perm_f2eb2f78",
+        value: "ADMIN_PROFILE",
     },
     ROLES_ACCESS_CONTROL: {
-        value: "perm_a942c1e1",
+        value: "ROLES_ACCESS_CONTROL",
     },
     USER_MANAGEMENT: {
-        value: "perm_45b32756",
+        value: "USER_MANAGEMENT",
     },
     ORGANOGARAM: {
-        value: "perm_8fec59a6",
+        value: "ORGANOGARAM",
     },
     ADD_ROLE: {
-        value: "perm_eb904bae",
+        value: "ADD_ROLE",
     },
     ADD_PERMISSION: {
-        value: "perm_aab202a3",
+        value: "ADD_PERMISSION",
     },
     HEAD_OF_THE_INSTITUTION: {
-        value: "perm_b7ede72e",
+        value: "HEAD_OF_THE_INSTITUTION",
     },
     DEPARTMENT: {
-        value: "perm_cf1959e8",
+        value: "DEPARTMENT",
     },
     STAFF_PROFILES: {
-        value: "perm_095fc573",
+        value: "STAFF_PROFILES",
     },
     DESIGNATIONS: {
-        value: "perm_f38323ee",
+        value: "DESIGNATIONS",
     },
     JOB_TYPE_SETTING: {
-        value: "perm_22ec2fa1",
+        value: "JOB_TYPE_SETTING",
     },
     OTHERS_SETTING: {
-        value: "perm_a4aeefa0",
+        value: "OTHERS_SETTING",
     },
     CLASS_SETUP: {
-        value: "perm_a43d1384",
+        value: "CLASS_SETUP",
     },
     SUBJECTS: {
-        value: "perm_05eba049",
+        value: "SUBJECTS",
     },
     SEMESTER_SUBJECT_MAPPING: {
-        value: "perm_4bbf0d66",
+        value: "SEMESTER_SUBJECT_MAPPING",
     },
     SYLLABUS: {
-        value: "perm_3e0da892",
+        value: "SYLLABUS",
     },
     TEACHER_MAPPED_CLASSES: {
-        value: "perm_9b7e5eaa",
+        value: "TEACHER_MAPPED_CLASSES",
     },
     TEACHER_MAPPED_SUBJECTS: {
-        value: "perm_913d727a",
+        value: "TEACHER_MAPPED_SUBJECTS",
     },
     CLASS_RECORDS: {
-        value: "perm_0f6e9c49",
+        value: "CLASS_RECORDS",
     },
     PROGRAM_OUTCOME: {
-        value: "perm_a56f0240",
+        value: "PROGRAM_OUTCOME",
     },
     COURSE_OUTCOME: {
-        value: "perm_43157cd9",
+        value: "COURSE_OUTCOME",
     },
     GRADING_SETUP: {
-        value: "perm_7f23c10e",
+        value: "GRADING_SETUP",
     },
     CREDITS: {
-        value: "perm_1fc59a61",
+        value: "CREDITS",
     },
     EXAM_TYPES: {
-        value: "perm_83623740",
+        value: "EXAM_TYPES",
     },
     ASSIGN_WEIGHTAGE: {
-        value: "perm_e6bd67e4",
+        value: "ASSIGN_WEIGHTAGE",
     },
     RULES_SETUP: {
-        value: "perm_cb4c3134",
+        value: "RULES_SETUP",
     },
     GRADE_ENGINE: {
-        value: "perm_c5a2cbb2",
+        value: "GRADE_ENGINE",
     },
     EXAM_TIME_TABLE_CREATE: {
-        value: "perm_cd1ed4ef",
+        value: "EXAM_TIME_TABLE_CREATE",
     },
     INTERNAL_ASSESSMENT: {
-        value: "perm_ea2f7e76",
+        value: "INTERNAL_ASSESSMENT",
     },
     EXAM_ROOM_ALLOCATE: {
-        value: "perm_e1757a93",
+        value: "EXAM_ROOM_ALLOCATE",
     },
     EXAM_ATTENDANCE: {
-        value: "perm_33fc6889",
+        value: "EXAM_ATTENDANCE",
     },
     EVALUATION: {
-        value: "perm_d2e2d377",
+        value: "EVALUATION",
     },
     MARK_REGISTER: {
-        value: "perm_786b1c34",
+        value: "MARK_REGISTER",
     },
     TRANSCRIPT: {
-        value: "perm_91ebd8b5",
+        value: "TRANSCRIPT",
     },
     LESSON_LIST: {
-        value: "perm_215cd834",
+        value: "LESSON_LIST",
     },
     LESSON_PLAN_BUILDER: {
-        value: "perm_a1f6a148",
+        value: "LESSON_PLAN_BUILDER",
     },
     TOPIC_OVERVIEW: {
-        value: "perm_30a1645a",
+        value: "TOPIC_OVERVIEW",
     },
     LESSON_PLAN_OVERVIEW: {
-        value: "perm_983b6db7",
+        value: "LESSON_PLAN_OVERVIEW",
     },
     STUDY_MATERIAL: {
-        value: "perm_e307bd6c",
+        value: "STUDY_MATERIAL",
     },
     UPLOAD_STUDY_MATERIAL: {
-        value: "perm_b8eff78e",
+        value: "UPLOAD_STUDY_MATERIAL",
     },
     TIME_TABLE_SETUP: {
-        value: "perm_8d12bfdc",
+        value: "TIME_TABLE_SETUP",
     },
     CREATE_TIME_TABLE: {
-        value: "perm_22a9c374",
+        value: "CREATE_TIME_TABLE",
     },
     CLASS_ROUTINE: {
-        value: "perm_edff6782",
+        value: "CLASS_ROUTINE",
     },
     FACULTY_LOAD: {
-        value: "perm_2d9d18a1",
+        value: "FACULTY_LOAD",
     },
     MY_CLASSES: {
-        value: "perm_04dc2b72",
+        value: "MY_CLASSES",
     },
     ATTENDANCE_LIST: {
-        value: "perm_82e1e7de",
+        value: "ATTENDANCE_LIST",
     },
     ADD_STUDENT: {
-        value: "perm_f2f55543",
+        value: "ADD_STUDENT",
     },
     STUDENT_LIST: {
-        value: "perm_f7b04bfa",
+        value: "STUDENT_LIST",
     },
     MISSING_ENROLLMENTS: {
-        value: "perm_ecf39d1f",
+        value: "MISSING_ENROLLMENTS",
     },
     MISSING_FEE_PLAN: {
-        value: "perm_b65a41f8",
+        value: "MISSING_FEE_PLAN",
     },
     STUDENT_PROMOTE: {
-        value: "perm_d55372d0",
+        value: "STUDENT_PROMOTE",
     },
     INCIDENT_LIST: {
-        value: "perm_6f5704a5",
+        value: "INCIDENT_LIST",
     },
     STUDENT_WISE_LIST: {
-        value: "perm_c938900c",
+        value: "STUDENT_WISE_LIST",
     },
     REPORT: {
-        value: "perm_7ae2e19d",
+        value: "REPORT",
     },
     FEES_TYPE: {
-        value: "perm_49ab3855",
+        value: "FEES_TYPE",
     },
     FEES_PLAN: {
-        value: "perm_6bc0f8fc",
+        value: "FEES_PLAN",
     },
     FEES_INVOICE: {
-        value: "perm_d29dfa7f",
+        value: "FEES_INVOICE",
     },
     HR_MASTER: {
-        value: "perm_8053fa45",
+        value: "HR_MASTER",
     },
     STAFF_DIRECTORY: {
-        value: "perm_321e63cc",
+        value: "STAFF_DIRECTORY",
     },
     TEACHER_EVALUATION: {
-        value: "perm_5f2cfe02",
+        value: "TEACHER_EVALUATION",
     },
     APPLY_LEAVE: {
-        value: "perm_f0aa4f77",
+        value: "APPLY_LEAVE",
     },
     APPROVE_LEAVE_REQUEST: {
-        value: "perm_bdcca560",
+        value: "APPROVE_LEAVE_REQUEST",
     },
     PENDING_LEAVE_REQUEST: {
-        value: "perm_14371299",
+        value: "PENDING_LEAVE_REQUEST",
     },
     LEAVE_POLICY: {
-        value: "perm_625c575b",
+        value: "LEAVE_POLICY",
     },
     ATTENDANCE: {
-        value: "perm_40d4afd6",
+        value: "ATTENDANCE",
     },
     SCHEDULE: {
-        value: "perm_42d55750",
+        value: "SCHEDULE",
     },
     SHIFT: {
-        value: "perm_63586b99",
+        value: "SHIFT",
     },
     OVERVIEW: {
-        value: "perm_934a8df7",
+        value: "OVERVIEW",
     },
     MANAGE_ACTIVE_JOBS: {
-        value: "perm_9188d492",
+        value: "MANAGE_ACTIVE_JOBS",
     },
     CALENDAR_VIEW: {
-        value: "perm_4430205c",
+        value: "CALENDAR_VIEW",
         parentPermission: 'CALENDAR',
     },
     BUILDINGS: {
-        value: "perm_bd4af24d",
+        value: "BUILDINGS",
     },
     FLOORS: {
-        value: "perm_bf79bce6",
+        value: "FLOORS",
     },
     ROOM: {
-        value: "perm_87cde409",
+        value: "ROOM",
     },
     CREATE_LIBRARY: {
-        value: "perm_0f4cf54c",
+        value: "CREATE_LIBRARY",
     },
     CATALOGUE: {
-        value: "perm_37f3a9af",
+        value: "CATALOGUE",
     },
     MEMBER_MANAGEMENT: {
-        value: "perm_9b8532ed",
+        value: "MEMBER_MANAGEMENT",
     },
     BOOK_ISSUE: {
-        value: "perm_9dcf1d10",
+        value: "BOOK_ISSUE",
     },
     ISSUE_RETURN_BOOKS: {
-        value: "perm_37733247",
+        value: "ISSUE_RETURN_BOOKS",
     },
     ROUTE: {
-        value: "perm_28f93866",
+        value: "ROUTE",
     },
     VEHICLE: {
-        value: "perm_6e1a9064",
+        value: "VEHICLE",
     },
     ASSIGN_VEHICLE: {
-        value: "perm_47fea526",
+        value: "ASSIGN_VEHICLE",
     },
     DORMITORY_TYPES: {
-        value: "perm_ceb6b092",
+        value: "DORMITORY_TYPES",
     },
     DORMITORY_ROOMS: {
-        value: "perm_55b6630f",
+        value: "DORMITORY_ROOMS",
     },
     ASSIGN_DORMITORY: {
-        value: "perm_fa10eba1",
+        value: "ASSIGN_DORMITORY",
     },
     NOTICE_BOARD: {
-        value: "perm_f4829035",
+        value: "NOTICE_BOARD",
     },
     CALENDAR: {
-        value: "perm_1c5cdfee",
+        value: "CALENDAR",
     },
     CONTENT_TYPE: {
-        value: "perm_93393327",
+        value: "CONTENT_TYPE",
     },
     CONTENT_LIST: {
-        value: "perm_c2ef273d",
+        value: "CONTENT_LIST",
     },
     SHARED_CONTENT_LIST: {
-        value: "perm_8ff84d0d",
+        value: "SHARED_CONTENT_LIST",
     },
     VIDEO_LIST: {
-        value: "perm_34d35c8d",
+        value: "VIDEO_LIST",
     },
     HOMEWORK: {
-        value: "perm_a4599c0d",
+        value: "HOMEWORK",
     },
     ID_CARD: {
-        value: "perm_fde9dc5a",
+        value: "ID_CARD",
     },
     CERTIFICATE: {
-        value: "perm_44390ed5",
+        value: "CERTIFICATE",
     },
     PAYROLL_BULK_PRINT: {
-        value: "perm_d08dd731",
+        value: "PAYROLL_BULK_PRINT",
     },
     CALENDAR_VIEW_JOBS: {
-        value: "perm_32a04883",
+        value: "CALENDAR_VIEW_JOBS",
     },
     CERTIFICATE_LIST: {
-        value: "perm_d7e980aa",
+        value: "CERTIFICATE_LIST",
     },
     CLASS_ROOM: {
-        value: "perm_c3e1145e",
+        value: "CLASS_ROOM",
     },
     DORMITORY_ASSIGNMENT: {
-        value: "perm_c1994cb9",
+        value: "DORMITORY_ASSIGNMENT",
     },
     DORMITORY_ROOM_TYPE: {
-        value: "perm_bb1829a2",
+        value: "DORMITORY_ROOM_TYPE",
     },
     EMPLOYEE_ATTENDANCE: {
-        value: "perm_658ce163",
+        value: "EMPLOYEE_ATTENDANCE",
     },
     LIBRARY_CREATION: {
-        value: "perm_df8f1c3e",
+        value: "LIBRARY_CREATION",
     },
     MISSING_STUDENT_FEE_PLAN: {
-        value: "perm_42f678c0",
+        value: "MISSING_STUDENT_FEE_PLAN",
     },
     RETURN_BOOK: {
-        value: "perm_2e342c3b",
+        value: "RETURN_BOOK",
     },
     SCHEDULE_LIST: {
-        value: "perm_130f6878",
+        value: "SCHEDULE_LIST",
     },
     SHIFT_LIST: {
-        value: "perm_65db710c",
+        value: "SHIFT_LIST",
     },
     STUDENT_WISE_INCIDENT_LIST: {
-        value: "perm_2c14cc0b",
+        value: "STUDENT_WISE_INCIDENT_LIST",
     },
     TRANSPORT_ROUTE: {
-        value: "perm_a6d63ae9",
+        value: "TRANSPORT_ROUTE",
     },
     BY_PASS: {
-        value: "perm_6369bf05",
+        value: "BY_PASS",
     },
     DASHBOARD_SIDEBAR: {
-        value: "perm_4e889cd9",
+        value: "DASHBOARD_SIDEBAR",
         parentPermission: 'DASHBOARD',
     },
     DASHBOARD_EXPORT: {
-        value: "perm_f3397702",
+        value: "DASHBOARD_EXPORT",
         parentPermission: 'DASHBOARD',
     },
     DASHBOARD_PRINT: {
-        value: "perm_6694ac77",
+        value: "DASHBOARD_PRINT",
         parentPermission: 'DASHBOARD',
     },
     MASTER_SECTION_SIDEBAR: {
-        value: "perm_1e9cf7f8",
+        value: "MASTER_SECTION_SIDEBAR",
         parentPermission: 'MASTER_SECTION',
     },
     MASTER_SECTION_ADD: {
-        value: "perm_c7034fc1",
+        value: "MASTER_SECTION_ADD",
         parentPermission: 'MASTER_SECTION',
     },
     MASTER_SECTION_EDIT: {
-        value: "perm_e3e96c27",
+        value: "MASTER_SECTION_EDIT",
         parentPermission: 'MASTER_SECTION',
     },
     MASTER_SECTION_DELETE: {
-        value: "perm_e8f09f8f",
+        value: "MASTER_SECTION_DELETE",
         parentPermission: 'MASTER_SECTION',
     },
     COURSES_SIDEBAR: {
-        value: "perm_eac0407d",
+        value: "COURSES_SIDEBAR",
         parentPermission: 'COURSES',
     },
     COURSES_ADD: {
-        value: "perm_dcd97633",
+        value: "COURSES_ADD",
         parentPermission: 'COURSES',
     },
     COURSES_EDIT: {
-        value: "perm_af6a895e",
+        value: "COURSES_EDIT",
         parentPermission: 'COURSES',
     },
     COURSES_DELETE: {
-        value: "perm_baddf00d",
+        value: "COURSES_DELETE",
         parentPermission: 'COURSES',
     },
     COURSES_CHANGE_STATUS: {
-        value: "perm_statusc0",
+        value: "COURSES_CHANGE_STATUS",
         parentPermission: 'COURSES',
     },
     ACADEMIC_YEAR_SIDEBAR: {
-        value: "perm_6557a840",
+        value: "ACADEMIC_YEAR_SIDEBAR",
         parentPermission: 'ACADEMIC_YEAR',
     },
     ACADEMIC_YEAR_ACTIVATE_SIBLING: {
-        value: "perm_c0ffee01",
+        value: "ACADEMIC_YEAR_ACTIVATE_SIBLING",
         parentPermission: 'ACADEMIC_YEAR',
     },
     CODE_MASTER_SIDEBAR: {
-        value: "perm_72c6cf32",
+        value: "CODE_MASTER_SIDEBAR",
         parentPermission: 'CODE_MASTER',
     },
     CODE_MASTER_ADD: {
-        value: "perm_06321dae",
+        value: "CODE_MASTER_ADD",
         parentPermission: 'CODE_MASTER',
     },
     CODE_MASTER_EDIT: {
-        value: "perm_156c2724",
+        value: "CODE_MASTER_EDIT",
         parentPermission: 'CODE_MASTER',
     },
     CODE_MASTER_DELETE: {
-        value: "perm_0cc2fbdf",
+        value: "CODE_MASTER_DELETE",
         parentPermission: 'CODE_MASTER',
     },
     SESSION_SETUP_SIDEBAR: {
-        value: "perm_710aed86",
+        value: "SESSION_SETUP_SIDEBAR",
         parentPermission: 'SESSION_SETUP',
     },
     SESSION_SETUP_ADD: {
-        value: "perm_4a037af0",
+        value: "SESSION_SETUP_ADD",
         parentPermission: 'SESSION_SETUP',
     },
     SESSION_SETUP_EDIT: {
-        value: "perm_efafcc35",
+        value: "SESSION_SETUP_EDIT",
         parentPermission: 'SESSION_SETUP',
     },
     SESSION_SETUP_DELETE: {
-        value: "perm_ca1b65ef",
+        value: "SESSION_SETUP_DELETE",
         parentPermission: 'SESSION_SETUP',
     },
     DEPARTMENT_SIDEBAR: {
-        value: "perm_e1af1d18",
+        value: "DEPARTMENT_SIDEBAR",
         parentPermission: 'DEPARTMENT',
     },
     DEPARTMENT_ADD: {
-        value: "perm_d9a290b4",
+        value: "DEPARTMENT_ADD",
         parentPermission: 'DEPARTMENT',
     },
     DEPARTMENT_EDIT: {
-        value: "perm_7f8b3a88",
+        value: "DEPARTMENT_EDIT",
         parentPermission: 'DEPARTMENT',
     },
     DEPARTMENT_DELETE: {
-        value: "perm_c4ee61ad",
+        value: "DEPARTMENT_DELETE",
         parentPermission: 'DEPARTMENT',
     },
     ORGANOGARAM_SIDEBAR: {
-        value: "perm_b0960792",
+        value: "ORGANOGARAM_SIDEBAR",
         parentPermission: 'ORGANOGARAM',
     },
     ORGANOGARAM_ADD: {
-        value: "perm_3ba66547",
+        value: "ORGANOGARAM_ADD",
         parentPermission: 'ORGANOGARAM',
     },
     ORGANOGARAM_EDIT: {
-        value: "perm_87f48e99",
+        value: "ORGANOGARAM_EDIT",
         parentPermission: 'ORGANOGARAM',
     },
     ORGANOGARAM_DELETE: {
-        value: "perm_71b0eee4",
+        value: "ORGANOGARAM_DELETE",
         parentPermission: 'ORGANOGARAM',
     },
     HEAD_OF_THE_INSTITUTION_SIDEBAR: {
-        value: "perm_da96cbed",
+        value: "HEAD_OF_THE_INSTITUTION_SIDEBAR",
         parentPermission: 'HEAD_OF_THE_INSTITUTION',
     },
     HEAD_OF_THE_INSTITUTION_ADD: {
-        value: "perm_814b24d0",
+        value: "HEAD_OF_THE_INSTITUTION_ADD",
         parentPermission: 'HEAD_OF_THE_INSTITUTION',
     },
     HEAD_OF_THE_INSTITUTION_EDIT: {
-        value: "perm_10dd3c71",
+        value: "HEAD_OF_THE_INSTITUTION_EDIT",
         parentPermission: 'HEAD_OF_THE_INSTITUTION',
     },
     HEAD_OF_THE_INSTITUTION_DELETE: {
-        value: "perm_1b857765",
+        value: "HEAD_OF_THE_INSTITUTION_DELETE",
         parentPermission: 'HEAD_OF_THE_INSTITUTION',
     },
     BY_PASS_SIDEBAR: {
-        value: "perm_4f06ee57",
+        value: "BY_PASS_SIDEBAR",
         parentPermission: 'BY_PASS',
     },
     BY_PASS_ADD: {
-        value: "perm_77ec20c6",
+        value: "BY_PASS_ADD",
         parentPermission: 'BY_PASS',
     },
     BY_PASS_EDIT: {
-        value: "perm_9143b478",
+        value: "BY_PASS_EDIT",
         parentPermission: 'BY_PASS',
     },
     BY_PASS_DELETE: {
-        value: "perm_d6a65c38",
+        value: "BY_PASS_DELETE",
         parentPermission: 'BY_PASS',
     },
     DESIGNATIONS_SIDEBAR: {
-        value: "perm_00c8cbfa",
+        value: "DESIGNATIONS_SIDEBAR",
         parentPermission: 'DESIGNATIONS',
     },
     DESIGNATIONS_ADD: {
-        value: "perm_aa7da19e",
+        value: "DESIGNATIONS_ADD",
         parentPermission: 'DESIGNATIONS',
     },
     DESIGNATIONS_EDIT: {
-        value: "perm_7da9c5c9",
+        value: "DESIGNATIONS_EDIT",
         parentPermission: 'DESIGNATIONS',
     },
     DESIGNATIONS_DELETE: {
-        value: "perm_630c5d3c",
+        value: "DESIGNATIONS_DELETE",
         parentPermission: 'DESIGNATIONS',
     },
     ROLES_ACCESS_CONTROL_SIDEBAR: {
-        value: "perm_b61c8bc8",
+        value: "ROLES_ACCESS_CONTROL_SIDEBAR",
         parentPermission: 'ROLES_ACCESS_CONTROL',
     },
     ROLES_ACCESS_CONTROL_ADD: {
-        value: "perm_f693115b",
+        value: "ROLES_ACCESS_CONTROL_ADD",
         parentPermission: 'ROLES_ACCESS_CONTROL',
     },
     ROLES_ACCESS_CONTROL_ASSIGN: {
@@ -542,1086 +542,1054 @@ export const PERMISSIONS = {
         parentPermission: 'USER_MANAGEMENT',
     },
     SUBJECTS_SIDEBAR: {
-        value: "perm_03733c26",
+        value: "SUBJECTS_SIDEBAR",
         parentPermission: 'SUBJECTS',
     },
     SUBJECTS_ADD: {
-        value: "perm_7c1a3971",
+        value: "SUBJECTS_ADD",
         parentPermission: 'SUBJECTS',
     },
     SUBJECTS_EDIT: {
-        value: "perm_c3aa9d86",
+        value: "SUBJECTS_EDIT",
         parentPermission: 'SUBJECTS',
     },
     SUBJECTS_DELETE: {
-        value: "perm_ea51efbd",
+        value: "SUBJECTS_DELETE",
         parentPermission: 'SUBJECTS',
     },
     SUBJECTS_IMPORT: {
-        value: "perm_subimport",
+        value: "SUBJECTS_IMPORT",
         parentPermission: 'SUBJECTS',
     },
     CREDITS_SIDEBAR: {
-        value: "perm_68cfe249",
+        value: "CREDITS_SIDEBAR",
         parentPermission: 'CREDITS',
     },
     CREDITS_ASSIGN: {
-        value: "perm_ecb9aad2",
+        value: "CREDITS_ASSIGN",
         parentPermission: 'CREDITS',
     },
     SYLLABUS_SIDEBAR: {
-        value: "perm_020d7681",
+        value: "SYLLABUS_SIDEBAR",
         parentPermission: 'SYLLABUS',
     },
     SYLLABUS_ADD: {
-        value: "perm_a12ed8c7",
+        value: "SYLLABUS_ADD",
         parentPermission: 'SYLLABUS',
     },
     SYLLABUS_EDIT: {
-        value: "perm_7873b9b0",
+        value: "SYLLABUS_EDIT",
         parentPermission: 'SYLLABUS',
     },
     SYLLABUS_DELETE: {
-        value: "perm_75662384",
+        value: "SYLLABUS_DELETE",
         parentPermission: 'SYLLABUS',
     },
     SEMESTER_SUBJECT_MAPPING_SIDEBAR: {
-        value: "perm_df1ff527",
+        value: "SEMESTER_SUBJECT_MAPPING_SIDEBAR",
         parentPermission: 'SEMESTER_SUBJECT_MAPPING',
     },
     SEMESTER_SUBJECT_MAPPING_ASSIGN: {
-        value: "perm_0e61e38a",
+        value: "SEMESTER_SUBJECT_MAPPING_ASSIGN",
     },
     PROGRAM_OUTCOME_SIDEBAR: {
-        value: "perm_2fc668d7",
+        value: "PROGRAM_OUTCOME_SIDEBAR",
         parentPermission: 'PROGRAM_OUTCOME',
     },
     PROGRAM_OUTCOME_ADD: {
-        value: "perm_156f8fa3",
+        value: "PROGRAM_OUTCOME_ADD",
         parentPermission: 'PROGRAM_OUTCOME',
     },
     PROGRAM_OUTCOME_EDIT: {
-        value: "perm_be65ea29",
+        value: "PROGRAM_OUTCOME_EDIT",
         parentPermission: 'PROGRAM_OUTCOME',
     },
     PROGRAM_OUTCOME_DELETE: {
-        value: "perm_fa9ace1d",
+        value: "PROGRAM_OUTCOME_DELETE",
         parentPermission: 'PROGRAM_OUTCOME',
     },
     COURSE_OUTCOME_SIDEBAR: {
-        value: "perm_10c94a8e",
+        value: "COURSE_OUTCOME_SIDEBAR",
         parentPermission: 'COURSE_OUTCOME',
     },
     COURSE_OUTCOME_ADD: {
-        value: "perm_75c83872",
+        value: "COURSE_OUTCOME_ADD",
         parentPermission: 'COURSE_OUTCOME',
     },
     CLASS_SETUP_SIDEBAR: {
-        value: "perm_e8eb3e4c",
+        value: "CLASS_SETUP_SIDEBAR",
         parentPermission: 'CLASS_SETUP',
     },
     CLASS_SETUP_ADD: {
-        value: "perm_9b2e4b3e",
+        value: "CLASS_SETUP_ADD",
         parentPermission: 'CLASS_SETUP',
     },
     TEACHER_MAPPED_CLASSES_SIDEBAR: {
-        value: "perm_aac7b98c",
+        value: "TEACHER_MAPPED_CLASSES_SIDEBAR",
         parentPermission: 'TEACHER_MAPPED_CLASSES',
     },
     TEACHER_MAPPED_CLASSES_ASSIGN: {
-        value: "perm_c73f592f",
+        value: "TEACHER_MAPPED_CLASSES_ASSIGN",
     },
     TEACHER_MAPPED_CLASSES_UNASSIGN: {
-        value: "perm_9c464969",
+        value: "TEACHER_MAPPED_CLASSES_UNASSIGN",
     },
     TEACHER_MAPPED_SUBJECTS_SIDEBAR: {
-        value: "perm_baf7fa2a",
+        value: "TEACHER_MAPPED_SUBJECTS_SIDEBAR",
         parentPermission: 'TEACHER_MAPPED_SUBJECTS',
     },
     TEACHER_MAPPED_SUBJECTS_ASSIGN: {
-        value: "perm_a5e94c0e",
+        value: "TEACHER_MAPPED_SUBJECTS_ASSIGN",
     },
     TEACHER_MAPPED_SUBJECTS_UNASSIGN: {
-        value: "perm_84d3b7ba",
+        value: "TEACHER_MAPPED_SUBJECTS_UNASSIGN",
     },
     CLASS_RECORDS_SIDEBAR: {
-        value: "perm_02896abe",
+        value: "CLASS_RECORDS_SIDEBAR",
         parentPermission: 'CLASS_RECORDS',
     },
     TIME_TABLE_SETUP_SIDEBAR: {
-        value: "perm_94ef76f0",
+        value: "TIME_TABLE_SETUP_SIDEBAR",
         parentPermission: 'TIME_TABLE_SETUP',
     },
     TIME_TABLE_SETUP_ADD: {
-        value: "perm_f3330fb8",
+        value: "TIME_TABLE_SETUP_ADD",
         parentPermission: 'TIME_TABLE_SETUP',
     },
     TIME_TABLE_SETUP_EDIT: {
-        value: "perm_170d0725",
+        value: "TIME_TABLE_SETUP_EDIT",
         parentPermission: 'TIME_TABLE_SETUP',
     },
     TIME_TABLE_SETUP_DELETE: {
-        value: "perm_45ca65f8",
+        value: "TIME_TABLE_SETUP_DELETE",
         parentPermission: 'TIME_TABLE_SETUP',
     },
     CREATE_TIME_TABLE_SIDEBAR: {
-        value: "perm_846abc1d",
+        value: "CREATE_TIME_TABLE_SIDEBAR",
         parentPermission: 'CREATE_TIME_TABLE',
     },
-    CREATE_TIME_TABLE_ADD: {
-        value: "perm_3c8b48d4",
+    CREATE_TIME_TABLE_VIEW: {
+        value: "CREATE_TIME_TABLE_VIEW",
         parentPermission: 'CREATE_TIME_TABLE',
     },
-    CREATE_TIME_TABLE_EDIT: {
-        value: "perm_6a84efb2",
+    CREATE_TIME_TABLE_CREATE_TIMETABLE: {
+        value: "CREATE_TIME_TABLE_CREATE_TIMETABLE",
         parentPermission: 'CREATE_TIME_TABLE',
     },
-    CREATE_TIME_TABLE_DELETE: {
-        value: "perm_26d86f87",
+    CREATE_TIME_TABLE_EDIT_ROUTINE: {
+        value: "CREATE_TIME_TABLE_EDIT_ROUTINE",
+        parentPermission: 'CREATE_TIME_TABLE',
+    },
+    CREATE_TIME_TABLE_DELETE_ROUTINE: {
+        value: "CREATE_TIME_TABLE_DELETE_ROUTINE",
         parentPermission: 'CREATE_TIME_TABLE',
     },
     CLASS_ROUTINE_SIDEBAR: {
-        value: "perm_759c6a23",
-        parentPermission: 'CLASS_ROUTINE',
-    },
-    CLASS_ROUTINE_ADD: {
-        value: "perm_27ae2894",
-        parentPermission: 'CLASS_ROUTINE',
-    },
-    CLASS_ROUTINE_EDIT: {
-        value: "perm_cdbebe13",
-        parentPermission: 'CLASS_ROUTINE',
-    },
-    CLASS_ROUTINE_DELETE: {
-        value: "perm_5c1edae2",
+        value: "CLASS_ROUTINE_SIDEBAR",
         parentPermission: 'CLASS_ROUTINE',
     },
     FACULTY_LOAD_SIDEBAR: {
-        value: "perm_cab37286",
+        value: "FACULTY_LOAD_SIDEBAR",
         parentPermission: 'FACULTY_LOAD',
     },
     FACULTY_LOAD_ADD: {
-        value: "perm_acfc45dd",
+        value: "FACULTY_LOAD_ADD",
         parentPermission: 'FACULTY_LOAD',
     },
     FACULTY_LOAD_EDIT: {
-        value: "perm_81879ebc",
+        value: "FACULTY_LOAD_EDIT",
         parentPermission: 'FACULTY_LOAD',
     },
     FACULTY_LOAD_DELETE: {
-        value: "perm_aa709ea2",
+        value: "FACULTY_LOAD_DELETE",
         parentPermission: 'FACULTY_LOAD',
     },
     MY_CLASSES_SIDEBAR: {
-        value: "perm_5fbc9fdd",
-        parentPermission: 'MY_CLASSES',
-    },
-    MY_CLASSES_ADD: {
-        value: "perm_09f214ab",
-        parentPermission: 'MY_CLASSES',
-    },
-    MY_CLASSES_EDIT: {
-        value: "perm_5fb4bb50",
-        parentPermission: 'MY_CLASSES',
-    },
-    MY_CLASSES_DELETE: {
-        value: "perm_f09dc8ef",
+        value: "MY_CLASSES_SIDEBAR",
         parentPermission: 'MY_CLASSES',
     },
     ATTENDANCE_LIST_SIDEBAR: {
-        value: "perm_0447eeac",
+        value: "ATTENDANCE_LIST_SIDEBAR",
         parentPermission: 'ATTENDANCE_LIST',
     },
     ATTENDANCE_LIST_EXPORT: {
-        value: "perm_d22d8d40",
+        value: "ATTENDANCE_LIST_EXPORT",
         parentPermission: 'ATTENDANCE_LIST',
     },
     ATTENDANCE_LIST_PRINT: {
-        value: "perm_1b5489a4",
+        value: "ATTENDANCE_LIST_PRINT",
         parentPermission: 'ATTENDANCE_LIST',
     },
     LESSON_LIST_SIDEBAR: {
-        value: "perm_fe64463d",
+        value: "LESSON_LIST_SIDEBAR",
         parentPermission: 'LESSON_LIST',
     },
-    LESSON_LIST_EXPORT: {
-        value: "perm_5e22b803",
-        parentPermission: 'LESSON_LIST',
-    },
-    LESSON_LIST_PRINT: {
-        value: "perm_91062714",
+    LESSON_LIST_ADD: {
+        value: "LESSON_LIST_ADD",
         parentPermission: 'LESSON_LIST',
     },
     LESSON_PLAN_BUILDER_SIDEBAR: {
-        value: "perm_f94781d9",
+        value: "LESSON_PLAN_BUILDER_SIDEBAR",
         parentPermission: 'LESSON_PLAN_BUILDER',
     },
     LESSON_PLAN_BUILDER_ADD: {
-        value: "perm_90e82eb2",
+        value: "LESSON_PLAN_BUILDER_ADD",
         parentPermission: 'LESSON_PLAN_BUILDER',
     },
     LESSON_PLAN_BUILDER_EDIT: {
-        value: "perm_fd11fb18",
+        value: "LESSON_PLAN_BUILDER_EDIT",
         parentPermission: 'LESSON_PLAN_BUILDER',
     },
     LESSON_PLAN_BUILDER_DELETE: {
-        value: "perm_768c4f65",
+        value: "LESSON_PLAN_BUILDER_DELETE",
         parentPermission: 'LESSON_PLAN_BUILDER',
     },
     TOPIC_OVERVIEW_SIDEBAR: {
-        value: "perm_401e5b02",
+        value: "TOPIC_OVERVIEW_SIDEBAR",
         parentPermission: 'TOPIC_OVERVIEW',
     },
     TOPIC_OVERVIEW_ADD: {
-        value: "perm_c65d9c01",
+        value: "TOPIC_OVERVIEW_ADD",
         parentPermission: 'TOPIC_OVERVIEW',
     },
     TOPIC_OVERVIEW_EDIT: {
-        value: "perm_fab8208a",
+        value: "TOPIC_OVERVIEW_EDIT",
         parentPermission: 'TOPIC_OVERVIEW',
     },
     TOPIC_OVERVIEW_DELETE: {
-        value: "perm_13871816",
+        value: "TOPIC_OVERVIEW_DELETE",
         parentPermission: 'TOPIC_OVERVIEW',
     },
     LESSON_PLAN_OVERVIEW_SIDEBAR: {
-        value: "perm_eb65d275",
+        value: "LESSON_PLAN_OVERVIEW_SIDEBAR",
+        parentPermission: 'LESSON_PLAN_OVERVIEW',
+    },
+    LESSON_PLAN_OVERVIEW_EDIT: {
+        value: "LESSON_PLAN_OVERVIEW_EDIT",
         parentPermission: 'LESSON_PLAN_OVERVIEW',
     },
 
     GRADING_SETUP_SIDEBAR: {
-        value: "perm_043b0bc6",
+        value: "GRADING_SETUP_SIDEBAR",
         parentPermission: 'GRADING_SETUP',
     },
     GRADING_SETUP_ADD: {
-        value: "perm_d2e4f0b8",
+        value: "GRADING_SETUP_ADD",
         parentPermission: 'GRADING_SETUP',
     },
     GRADING_SETUP_EDIT: {
-        value: "perm_451982e7",
-        parentPermission: 'GRADING_SETUP',
-    },
-    GRADING_SETUP_DELETE: {
-        value: "perm_decaae67",
+        value: "GRADING_SETUP_EDIT",
         parentPermission: 'GRADING_SETUP',
     },
     FEES_TYPE_SIDEBAR: {
-        value: "perm_fd360664",
+        value: "FEES_TYPE_SIDEBAR",
         parentPermission: 'FEES_TYPE',
     },
     FEES_TYPE_ADD: {
-        value: "perm_5aa62f4c",
+        value: "FEES_TYPE_ADD",
         parentPermission: 'FEES_TYPE',
     },
     FEES_TYPE_EDIT: {
-        value: "perm_4a4fff9c",
+        value: "FEES_TYPE_EDIT",
         parentPermission: 'FEES_TYPE',
     },
     FEES_TYPE_DELETE: {
-        value: "perm_2f0413bd",
+        value: "FEES_TYPE_DELETE",
         parentPermission: 'FEES_TYPE',
     },
     FEES_PLAN_SIDEBAR: {
-        value: "perm_826a3e4b",
+        value: "FEES_PLAN_SIDEBAR",
         parentPermission: 'FEES_PLAN',
     },
     FEES_PLAN_ADD: {
-        value: "perm_8d27656a",
+        value: "FEES_PLAN_ADD",
         parentPermission: 'FEES_PLAN',
     },
     FEES_PLAN_EDIT: {
-        value: "perm_f9efc258",
+        value: "FEES_PLAN_EDIT",
         parentPermission: 'FEES_PLAN',
     },
     FEES_PLAN_DELETE: {
-        value: "perm_61b95ad9",
+        value: "FEES_PLAN_DELETE",
+        parentPermission: 'FEES_PLAN',
+    },
+    FEES_PLAN_PUBLISH: {
+        value: "FEES_PLAN_PUBLISH",
         parentPermission: 'FEES_PLAN',
     },
     FEES_INVOICE_SIDEBAR: {
-        value: "perm_0aa49220",
+        value: "FEES_INVOICE_SIDEBAR",
         parentPermission: 'FEES_INVOICE',
     },
     FEES_INVOICE_ADD: {
-        value: "perm_bec59705",
+        value: "FEES_INVOICE_ADD",
         parentPermission: 'FEES_INVOICE',
     },
-    FEES_INVOICE_EDIT: {
-        value: "perm_25623242",
-        parentPermission: 'FEES_INVOICE',
+    STUDENT_FEE_PLANS: {
+        value: "STUDENT_FEE_PLANS",
     },
-    FEES_INVOICE_DELETE: {
-        value: "perm_6991bf5c",
-        parentPermission: 'FEES_INVOICE',
+    STUDENT_FEE_PLANS_SIDEBAR: {
+        value: "STUDENT_FEE_PLANS_SIDEBAR",
+        parentPermission: 'STUDENT_FEE_PLANS',
+    },
+    STUDENT_FEE_PAYMENTS: {
+        value: "STUDENT_FEE_PAYMENTS",
+    },
+    STUDENT_FEE_PAYMENTS_SIDEBAR: {
+        value: "STUDENT_FEE_PAYMENTS_SIDEBAR",
+        parentPermission: 'STUDENT_FEE_PAYMENTS',
     },
     EXAM_TYPES_SIDEBAR: {
-        value: "perm_a8591d2a",
+        value: "EXAM_TYPES_SIDEBAR",
         parentPermission: 'EXAM_TYPES',
     },
     EXAM_TYPES_ADD: {
-        value: "perm_3433c9af",
+        value: "EXAM_TYPES_ADD",
         parentPermission: 'EXAM_TYPES',
     },
     EXAM_TYPES_EDIT: {
-        value: "perm_2dd6f0b5",
+        value: "EXAM_TYPES_EDIT",
         parentPermission: 'EXAM_TYPES',
     },
     EXAM_TYPES_DELETE: {
-        value: "perm_fbe72769",
+        value: "EXAM_TYPES_DELETE",
         parentPermission: 'EXAM_TYPES',
     },
     ASSIGN_WEIGHTAGE_SIDEBAR: {
-        value: "perm_41b2151a",
+        value: "ASSIGN_WEIGHTAGE_SIDEBAR",
         parentPermission: 'ASSIGN_WEIGHTAGE',
     },
     ASSIGN_WEIGHTAGE_ADD: {
-        value: "perm_94b7546d",
-        parentPermission: 'ASSIGN_WEIGHTAGE',
-    },
-    ASSIGN_WEIGHTAGE_EDIT: {
-        value: "perm_bd2d03c6",
-        parentPermission: 'ASSIGN_WEIGHTAGE',
-    },
-    ASSIGN_WEIGHTAGE_DELETE: {
-        value: "perm_a1721e56",
+        value: "ASSIGN_WEIGHTAGE_ADD",
         parentPermission: 'ASSIGN_WEIGHTAGE',
     },
     RULES_SETUP_SIDEBAR: {
-        value: "perm_0dc2286f",
+        value: "RULES_SETUP_SIDEBAR",
         parentPermission: 'RULES_SETUP',
     },
     RULES_SETUP_ADD: {
-        value: "perm_0e8a1e0a",
-        parentPermission: 'RULES_SETUP',
-    },
-    RULES_SETUP_EDIT: {
-        value: "perm_9a0b4ac7",
-        parentPermission: 'RULES_SETUP',
-    },
-    RULES_SETUP_DELETE: {
-        value: "perm_3bf0c2ad",
+        value: "RULES_SETUP_ADD",
         parentPermission: 'RULES_SETUP',
     },
     GRADE_ENGINE_SIDEBAR: {
-        value: "perm_16a9d747",
+        value: "GRADE_ENGINE_SIDEBAR",
         parentPermission: 'GRADE_ENGINE',
     },
     GRADE_ENGINE_EXECUTE: {
-        value: "perm_2cd71898",
+        value: "GRADE_ENGINE_EXECUTE",
     },
     EXAM_TIME_TABLE_CREATE_SIDEBAR: {
-        value: "perm_fd85b482",
+        value: "EXAM_TIME_TABLE_CREATE_SIDEBAR",
         parentPermission: 'EXAM_TIME_TABLE_CREATE',
     },
     EXAM_TIME_TABLE_CREATE_ADD: {
-        value: "perm_0f2b12c3",
+        value: "EXAM_TIME_TABLE_CREATE_ADD",
         parentPermission: 'EXAM_TIME_TABLE_CREATE',
     },
-    EXAM_TIME_TABLE_CREATE_EDIT: {
-        value: "perm_ea2c2b5d",
+    EXAM_TIME_TABLE_CREATE_ASSIGN_ROOMS: {
+        value: "EXAM_TIME_TABLE_CREATE_ASSIGN_ROOMS",
         parentPermission: 'EXAM_TIME_TABLE_CREATE',
     },
-    EXAM_TIME_TABLE_CREATE_DELETE: {
-        value: "perm_f37e12e2",
+    EXAM_TIME_TABLE_CREATE_SEAT_ALLOCATION: {
+        value: "EXAM_TIME_TABLE_CREATE_SEAT_ALLOCATION",
+        parentPermission: 'EXAM_TIME_TABLE_CREATE',
+    },
+    EXAM_TIME_TABLE_CREATE_PAPER_APPROVAL: {
+        value: "EXAM_TIME_TABLE_CREATE_PAPER_APPROVAL",
+        parentPermission: 'EXAM_TIME_TABLE_CREATE',
+    },
+    EXAM_TIME_TABLE_CREATE_UPLOAD_SHEET: {
+        value: "EXAM_TIME_TABLE_CREATE_UPLOAD_SHEET",
+        parentPermission: 'EXAM_TIME_TABLE_CREATE',
+    },
+    EXAM_TIME_TABLE_CREATE_SPLIT_SHEET: {
+        value: "EXAM_TIME_TABLE_CREATE_SPLIT_SHEET",
         parentPermission: 'EXAM_TIME_TABLE_CREATE',
     },
     INTERNAL_ASSESSMENT_SIDEBAR: {
-        value: "perm_42ccc882",
+        value: "INTERNAL_ASSESSMENT_SIDEBAR",
         parentPermission: 'INTERNAL_ASSESSMENT',
     },
     INTERNAL_ASSESSMENT_ADD: {
-        value: "perm_acbe324e",
+        value: "INTERNAL_ASSESSMENT_ADD",
         parentPermission: 'INTERNAL_ASSESSMENT',
     },
     INTERNAL_ASSESSMENT_EDIT: {
-        value: "perm_b31f93f1",
+        value: "INTERNAL_ASSESSMENT_EDIT",
         parentPermission: 'INTERNAL_ASSESSMENT',
     },
     INTERNAL_ASSESSMENT_DELETE: {
-        value: "perm_9fd9ae9f",
+        value: "INTERNAL_ASSESSMENT_DELETE",
+        parentPermission: 'INTERNAL_ASSESSMENT',
+    },
+    INTERNAL_ASSESSMENT_EVALUATE: {
+        value: "INTERNAL_ASSESSMENT_EVALUATE",
         parentPermission: 'INTERNAL_ASSESSMENT',
     },
     EXAM_ROOM_ALLOCATE_SIDEBAR: {
-        value: "perm_498efc88",
+        value: "EXAM_ROOM_ALLOCATE_SIDEBAR",
         parentPermission: 'EXAM_ROOM_ALLOCATE',
     },
-    EXAM_ROOM_ALLOCATE_ADD: {
-        value: "perm_a91fda4c",
-        parentPermission: 'EXAM_ROOM_ALLOCATE',
-    },
+
     EXAM_ROOM_ALLOCATE_EDIT: {
-        value: "perm_aba438bc",
+        value: "EXAM_ROOM_ALLOCATE_EDIT",
         parentPermission: 'EXAM_ROOM_ALLOCATE',
     },
-    EXAM_ROOM_ALLOCATE_DELETE: {
-        value: "perm_7d680126",
-        parentPermission: 'EXAM_ROOM_ALLOCATE',
-    },
+
     EXAM_ATTENDANCE_SIDEBAR: {
-        value: "perm_613111b1",
+        value: "EXAM_ATTENDANCE_SIDEBAR",
         parentPermission: 'EXAM_ATTENDANCE',
     },
     EXAM_ATTENDANCE_EXECUTE: {
-        value: "perm_fc7cf8a6",
+        value: "EXAM_ATTENDANCE_EXECUTE",
+        parentPermission: 'EXAM_ATTENDANCE',
     },
     EVALUATION_SIDEBAR: {
-        value: "perm_6fc41fe0",
+        value: "EVALUATION_SIDEBAR",
         parentPermission: 'EVALUATION',
     },
     EVALUATION_EXECUTE: {
-        value: "perm_f8c3e868",
+        value: "EVALUATION_EXECUTE",
+        parentPermission: 'EVALUATION',
     },
     MARK_REGISTER_SIDEBAR: {
-        value: "perm_8056c0fe",
+        value: "MARK_REGISTER_SIDEBAR",
         parentPermission: 'MARK_REGISTER',
     },
     MARK_REGISTER_EXECUTE: {
-        value: "perm_a4e66ddf",
+        value: "MARK_REGISTER_EXECUTE",
     },
     TRANSCRIPT_SIDEBAR: {
-        value: "perm_540bc022",
+        value: "TRANSCRIPT_SIDEBAR",
         parentPermission: 'TRANSCRIPT',
     },
     TRANSCRIPT_EXPORT: {
-        value: "perm_24c841f0",
+        value: "TRANSCRIPT_EXPORT",
         parentPermission: 'TRANSCRIPT',
     },
     TRANSCRIPT_PRINT: {
-        value: "perm_ce06046d",
+        value: "TRANSCRIPT_PRINT",
         parentPermission: 'TRANSCRIPT',
     },
-    HR_MASTER_SIDEBAR: {
-        value: "perm_620ccbe2",
-        parentPermission: 'HR_MASTER',
-    },
-    HR_MASTER_ADD: {
-        value: "perm_9aa36ce3",
-        parentPermission: 'HR_MASTER',
-    },
-    HR_MASTER_EDIT: {
-        value: "perm_e4fa9fc9",
-        parentPermission: 'HR_MASTER',
-    },
-    HR_MASTER_DELETE: {
-        value: "perm_5c97d263",
-        parentPermission: 'HR_MASTER',
-    },
+
+
     STAFF_DIRECTORY_SIDEBAR: {
-        value: "perm_22117184",
+        value: "STAFF_DIRECTORY_SIDEBAR",
         parentPermission: 'STAFF_DIRECTORY',
     },
     STAFF_DIRECTORY_ADD: {
-        value: "perm_c1de83c1",
+        value: "STAFF_DIRECTORY_ADD",
         parentPermission: 'STAFF_DIRECTORY',
     },
     STAFF_DIRECTORY_EDIT: {
-        value: "perm_6ded37eb",
+        value: "STAFF_DIRECTORY_EDIT",
         parentPermission: 'STAFF_DIRECTORY',
     },
     STAFF_PROFILES_DELETE: {
-        value: "perm_f023ed2b",
+        value: "STAFF_PROFILES_DELETE",
         parentPermission: 'STAFF_PROFILES',
     },
     STAFF_PROFILES_IMPORT: {
-        value: "perm_staffimport",
+        value: "STAFF_PROFILES_IMPORT",
         parentPermission: 'STAFF_PROFILES',
     },
     STAFF_DIRECTORY_DELETE: {
-        value: "perm_ffa79f52",
+        value: "STAFF_DIRECTORY_DELETE",
         parentPermission: 'STAFF_DIRECTORY',
     },
     TEACHER_EVALUATION_SIDEBAR: {
-        value: "perm_e2c68c06",
+        value: "TEACHER_EVALUATION_SIDEBAR",
         parentPermission: 'TEACHER_EVALUATION',
     },
     TEACHER_EVALUATION_ADD: {
-        value: "perm_38477604",
+        value: "TEACHER_EVALUATION_ADD",
         parentPermission: 'TEACHER_EVALUATION',
     },
     TEACHER_EVALUATION_EDIT: {
-        value: "perm_7134cae1",
+        value: "TEACHER_EVALUATION_EDIT",
         parentPermission: 'TEACHER_EVALUATION',
     },
     TEACHER_EVALUATION_DELETE: {
-        value: "perm_294fbd4a",
+        value: "TEACHER_EVALUATION_DELETE",
         parentPermission: 'TEACHER_EVALUATION',
     },
     APPLY_LEAVE_SIDEBAR: {
-        value: "perm_b45a0f6c",
+        value: "APPLY_LEAVE_SIDEBAR",
         parentPermission: 'APPLY_LEAVE',
     },
     APPLY_LEAVE_ADD: {
-        value: "perm_7364c3c7",
+        value: "APPLY_LEAVE_ADD",
         parentPermission: 'APPLY_LEAVE',
     },
-    APPLY_LEAVE_EDIT: {
-        value: "perm_d6644f76",
-        parentPermission: 'APPLY_LEAVE',
-    },
-    APPLY_LEAVE_DELETE: {
-        value: "perm_7a84ece7",
-        parentPermission: 'APPLY_LEAVE',
-    },
+
     APPROVE_LEAVE_REQUEST_SIDEBAR: {
-        value: "perm_908ebc36",
+        value: "APPROVE_LEAVE_REQUEST_SIDEBAR",
         parentPermission: 'APPROVE_LEAVE_REQUEST',
     },
     APPROVE_LEAVE_REQUEST_APPROVE: {
-        value: "perm_4185202c",
+        value: "APPROVE_LEAVE_REQUEST_APPROVE",
     },
     APPROVE_LEAVE_REQUEST_REJECT: {
-        value: "perm_f14ab1ff",
+        value: "APPROVE_LEAVE_REQUEST_REJECT",
     },
     PENDING_LEAVE_REQUEST_SIDEBAR: {
-        value: "perm_7bcc3069",
+        value: "PENDING_LEAVE_REQUEST_SIDEBAR",
         parentPermission: 'PENDING_LEAVE_REQUEST',
     },
     PENDING_LEAVE_REQUEST_APPROVE: {
-        value: "perm_b54a658e",
+        value: "PENDING_LEAVE_REQUEST_APPROVE",
     },
     PENDING_LEAVE_REQUEST_REJECT: {
-        value: "perm_d9db34ae",
+        value: "PENDING_LEAVE_REQUEST_REJECT",
     },
     LEAVE_POLICY_SIDEBAR: {
-        value: "perm_ac3f9697",
+        value: "LEAVE_POLICY_SIDEBAR",
         parentPermission: 'LEAVE_POLICY',
     },
     LEAVE_POLICY_ADD: {
-        value: "perm_e4a5b38d",
+        value: "LEAVE_POLICY_ADD",
         parentPermission: 'LEAVE_POLICY',
     },
     LEAVE_POLICY_EDIT: {
-        value: "perm_299103e9",
+        value: "LEAVE_POLICY_EDIT",
         parentPermission: 'LEAVE_POLICY',
     },
     LEAVE_POLICY_DELETE: {
-        value: "perm_d8d4feb3",
+        value: "LEAVE_POLICY_DELETE",
         parentPermission: 'LEAVE_POLICY',
     },
     EMPLOYEE_ATTENDANCE_SIDEBAR: {
-        value: "perm_3cd78062",
+        value: "EMPLOYEE_ATTENDANCE_SIDEBAR",
         parentPermission: 'EMPLOYEE_ATTENDANCE',
     },
     EMPLOYEE_ATTENDANCE_ADD: {
-        value: "perm_569dced2",
+        value: "EMPLOYEE_ATTENDANCE_ADD",
         parentPermission: 'EMPLOYEE_ATTENDANCE',
     },
     EMPLOYEE_ATTENDANCE_EDIT: {
-        value: "perm_ba0b77c0",
+        value: "EMPLOYEE_ATTENDANCE_EDIT",
         parentPermission: 'EMPLOYEE_ATTENDANCE',
     },
     EMPLOYEE_ATTENDANCE_DELETE: {
-        value: "perm_ccab3c1d",
+        value: "EMPLOYEE_ATTENDANCE_DELETE",
         parentPermission: 'EMPLOYEE_ATTENDANCE',
     },
     SCHEDULE_LIST_SIDEBAR: {
-        value: "perm_9fcb74ae",
+        value: "SCHEDULE_LIST_SIDEBAR",
         parentPermission: 'SCHEDULE_LIST',
     },
     SCHEDULE_LIST_ADD: {
-        value: "perm_7454552c",
+        value: "SCHEDULE_LIST_ADD",
         parentPermission: 'SCHEDULE_LIST',
     },
     SCHEDULE_LIST_EDIT: {
-        value: "perm_a7fcb960",
+        value: "SCHEDULE_LIST_EDIT",
         parentPermission: 'SCHEDULE_LIST',
     },
     SCHEDULE_LIST_DELETE: {
-        value: "perm_8101268f",
+        value: "SCHEDULE_LIST_DELETE",
         parentPermission: 'SCHEDULE_LIST',
     },
     SHIFT_LIST_SIDEBAR: {
-        value: "perm_501cbbc6",
+        value: "SHIFT_LIST_SIDEBAR",
         parentPermission: 'SHIFT_LIST',
     },
     SHIFT_LIST_ADD: {
-        value: "perm_0e8d80a1",
+        value: "SHIFT_LIST_ADD",
         parentPermission: 'SHIFT_LIST',
     },
     SHIFT_LIST_EDIT: {
-        value: "perm_21b78088",
+        value: "SHIFT_LIST_EDIT",
         parentPermission: 'SHIFT_LIST',
     },
     SHIFT_LIST_DELETE: {
-        value: "perm_e0339d57",
+        value: "SHIFT_LIST_DELETE",
         parentPermission: 'SHIFT_LIST',
     },
     ADD_STUDENT_SIDEBAR: {
-        value: "perm_810ac7a5",
+        value: "ADD_STUDENT_SIDEBAR",
         parentPermission: 'ADD_STUDENT',
     },
     ADD_STUDENT_ADD: {
-        value: "perm_737a67dc",
+        value: "ADD_STUDENT_ADD",
         parentPermission: 'ADD_STUDENT',
     },
     ADD_STUDENT_EDIT: {
-        value: "perm_a0a572a2",
+        value: "ADD_STUDENT_EDIT",
         parentPermission: 'ADD_STUDENT',
     },
     ADD_STUDENT_DELETE: {
-        value: "perm_e09642ee",
+        value: "ADD_STUDENT_DELETE",
         parentPermission: 'ADD_STUDENT',
     },
     ADD_STUDENT_IMPORT: {
-        value: "perm_studentim",
+        value: "ADD_STUDENT_IMPORT",
         parentPermission: 'ADD_STUDENT',
     },
     ADD_STUDENT_MAPPING: {
-        value: "perm_studentmap",
+        value: "ADD_STUDENT_MAPPING",
         parentPermission: 'ADD_STUDENT',
     },
     ADD_STUDENT_ADD_ELECTIVE: {
-        value: "perm_studentelec",
+        value: "ADD_STUDENT_ADD_ELECTIVE",
         parentPermission: 'ADD_STUDENT',
     },
     STUDENT_LIST_SIDEBAR: {
-        value: "perm_c3f7ca66",
+        value: "STUDENT_LIST_SIDEBAR",
         parentPermission: 'STUDENT_LIST',
     },
     STUDENT_LIST_EXPORT: {
-        value: "perm_0dca4b25",
+        value: "STUDENT_LIST_EXPORT",
         parentPermission: 'STUDENT_LIST',
     },
     STUDENT_LIST_PRINT: {
-        value: "perm_7d2fa729",
+        value: "STUDENT_LIST_PRINT",
         parentPermission: 'STUDENT_LIST',
     },
     MISSING_ENROLLMENTS_SIDEBAR: {
-        value: "perm_9468a4b8",
+        value: "MISSING_ENROLLMENTS_SIDEBAR",
         parentPermission: 'MISSING_ENROLLMENTS',
     },
     MISSING_ENROLLMENTS_EXPORT: {
-        value: "perm_be62e85b",
+        value: "MISSING_ENROLLMENTS_EXPORT",
         parentPermission: 'MISSING_ENROLLMENTS',
     },
     MISSING_ENROLLMENTS_PRINT: {
-        value: "perm_9f336482",
+        value: "MISSING_ENROLLMENTS_PRINT",
         parentPermission: 'MISSING_ENROLLMENTS',
     },
     MISSING_STUDENT_FEE_PLAN_SIDEBAR: {
-        value: "perm_c9de1a4a",
+        value: "MISSING_STUDENT_FEE_PLAN_SIDEBAR",
         parentPermission: 'MISSING_STUDENT_FEE_PLAN',
     },
     MISSING_STUDENT_FEE_PLAN_EXPORT: {
-        value: "perm_d8a5833d",
+        value: "MISSING_STUDENT_FEE_PLAN_EXPORT",
         parentPermission: 'MISSING_STUDENT_FEE_PLAN',
     },
     MISSING_STUDENT_FEE_PLAN_PRINT: {
-        value: "perm_7e38db16",
+        value: "MISSING_STUDENT_FEE_PLAN_PRINT",
         parentPermission: 'MISSING_STUDENT_FEE_PLAN',
     },
     STUDENT_PROMOTE_SIDEBAR: {
-        value: "perm_766bc4ba",
+        value: "STUDENT_PROMOTE_SIDEBAR",
         parentPermission: 'STUDENT_PROMOTE',
     },
     STUDENT_PROMOTE_EXECUTE: {
-        value: "perm_d2f2cf27",
+        value: "STUDENT_PROMOTE_EXECUTE",
     },
     INCIDENT_LIST_SIDEBAR: {
-        value: "perm_dbf68928",
+        value: "INCIDENT_LIST_SIDEBAR",
         parentPermission: 'INCIDENT_LIST',
     },
     INCIDENT_LIST_EXPORT: {
-        value: "perm_0ff70367",
+        value: "INCIDENT_LIST_EXPORT",
         parentPermission: 'INCIDENT_LIST',
     },
     INCIDENT_LIST_PRINT: {
-        value: "perm_7944bf16",
+        value: "INCIDENT_LIST_PRINT",
         parentPermission: 'INCIDENT_LIST',
     },
     STUDENT_WISE_INCIDENT_LIST_SIDEBAR: {
-        value: "perm_86f46392",
+        value: "STUDENT_WISE_INCIDENT_LIST_SIDEBAR",
         parentPermission: 'STUDENT_WISE_INCIDENT_LIST',
     },
     STUDENT_WISE_INCIDENT_LIST_EXPORT: {
-        value: "perm_abb564e4",
+        value: "STUDENT_WISE_INCIDENT_LIST_EXPORT",
         parentPermission: 'STUDENT_WISE_INCIDENT_LIST',
     },
     STUDENT_WISE_INCIDENT_LIST_PRINT: {
-        value: "perm_08e2ea3a",
+        value: "STUDENT_WISE_INCIDENT_LIST_PRINT",
         parentPermission: 'STUDENT_WISE_INCIDENT_LIST',
     },
     REPORT_SIDEBAR: {
-        value: "perm_4459b995",
+        value: "REPORT_SIDEBAR",
         parentPermission: 'REPORT',
     },
     REPORT_EXPORT: {
-        value: "perm_cd29290d",
+        value: "REPORT_EXPORT",
         parentPermission: 'REPORT',
     },
     REPORT_PRINT: {
-        value: "perm_9f4317a8",
+        value: "REPORT_PRINT",
         parentPermission: 'REPORT',
     },
     LIBRARY_CREATION_SIDEBAR: {
-        value: "perm_9e4f9051",
+        value: "LIBRARY_CREATION_SIDEBAR",
         parentPermission: 'LIBRARY_CREATION',
     },
     LIBRARY_CREATION_ADD: {
-        value: "perm_83905352",
+        value: "LIBRARY_CREATION_ADD",
         parentPermission: 'LIBRARY_CREATION',
     },
     LIBRARY_CREATION_EDIT: {
-        value: "perm_c716366f",
+        value: "LIBRARY_CREATION_EDIT",
         parentPermission: 'LIBRARY_CREATION',
     },
     LIBRARY_CREATION_DELETE: {
-        value: "perm_5918d467",
+        value: "LIBRARY_CREATION_DELETE",
         parentPermission: 'LIBRARY_CREATION',
     },
     CATALOGUE_SIDEBAR: {
-        value: "perm_3b45c14f",
+        value: "CATALOGUE_SIDEBAR",
         parentPermission: 'CATALOGUE',
     },
     CATALOGUE_ADD: {
-        value: "perm_3c58013b",
+        value: "CATALOGUE_ADD",
         parentPermission: 'CATALOGUE',
     },
     CATALOGUE_EDIT: {
-        value: "perm_90eede2b",
+        value: "CATALOGUE_EDIT",
         parentPermission: 'CATALOGUE',
     },
     CATALOGUE_DELETE: {
-        value: "perm_fe43d5c4",
+        value: "CATALOGUE_DELETE",
         parentPermission: 'CATALOGUE',
     },
+    ADD_MEMBER: {
+        value: "ADD_MEMBER",
+    },
     ADD_MEMBER_SIDEBAR: {
-        value: "perm_480392f6",
+        value: "ADD_MEMBER_SIDEBAR",
+        parentPermission: 'ADD_MEMBER',
     },
     ADD_MEMBER_ADD: {
-        value: "perm_7e219685",
+        value: "ADD_MEMBER_ADD",
+        parentPermission: 'ADD_MEMBER',
     },
     ADD_MEMBER_EDIT: {
-        value: "perm_f74a5de6",
+        value: "ADD_MEMBER_EDIT",
+        parentPermission: 'ADD_MEMBER',
     },
     ADD_MEMBER_DELETE: {
-        value: "perm_b3e86c0b",
+        value: "ADD_MEMBER_DELETE",
+        parentPermission: 'ADD_MEMBER',
     },
     BOOK_ISSUE_SIDEBAR: {
-        value: "perm_190af843",
+        value: "BOOK_ISSUE_SIDEBAR",
         parentPermission: 'BOOK_ISSUE',
     },
     BOOK_ISSUE_EXECUTE: {
-        value: "perm_94d8b500",
+        value: "BOOK_ISSUE_EXECUTE",
     },
     RETURN_BOOK_SIDEBAR: {
-        value: "perm_d013abd7",
+        value: "RETURN_BOOK_SIDEBAR",
         parentPermission: 'RETURN_BOOK',
     },
     RETURN_BOOK_EXECUTE: {
-        value: "perm_85e7c28f",
+        value: "RETURN_BOOK_EXECUTE",
     },
     DORMITORY_ROOM_TYPE_SIDEBAR: {
-        value: "perm_f213acf4",
+        value: "DORMITORY_ROOM_TYPE_SIDEBAR",
         parentPermission: 'DORMITORY_ROOM_TYPE',
     },
     DORMITORY_ROOM_TYPE_ADD: {
-        value: "perm_46c697d0",
+        value: "DORMITORY_ROOM_TYPE_ADD",
         parentPermission: 'DORMITORY_ROOM_TYPE',
     },
     DORMITORY_ROOM_TYPE_EDIT: {
-        value: "perm_00c843ea",
+        value: "DORMITORY_ROOM_TYPE_EDIT",
         parentPermission: 'DORMITORY_ROOM_TYPE',
     },
     DORMITORY_ROOM_TYPE_DELETE: {
-        value: "perm_eb562c2e",
+        value: "DORMITORY_ROOM_TYPE_DELETE",
         parentPermission: 'DORMITORY_ROOM_TYPE',
     },
     DORMITORY_ROOMS_SIDEBAR: {
-        value: "perm_35ae3d62",
+        value: "DORMITORY_ROOMS_SIDEBAR",
         parentPermission: 'DORMITORY_ROOMS',
     },
     DORMITORY_ROOMS_ADD: {
-        value: "perm_826f63de",
+        value: "DORMITORY_ROOMS_ADD",
         parentPermission: 'DORMITORY_ROOMS',
     },
     DORMITORY_ROOMS_EDIT: {
-        value: "perm_b972192d",
+        value: "DORMITORY_ROOMS_EDIT",
         parentPermission: 'DORMITORY_ROOMS',
     },
     DORMITORY_ROOMS_DELETE: {
-        value: "perm_852791bb",
+        value: "DORMITORY_ROOMS_DELETE",
         parentPermission: 'DORMITORY_ROOMS',
     },
     DORMITORY_ASSIGNMENT_SIDEBAR: {
-        value: "perm_487454a9",
+        value: "DORMITORY_ASSIGNMENT_SIDEBAR",
         parentPermission: 'DORMITORY_ASSIGNMENT',
     },
     DORMITORY_ASSIGNMENT_ASSIGN: {
-        value: "perm_0783e16c",
+        value: "DORMITORY_ASSIGNMENT_ASSIGN",
     },
     DORMITORY_ASSIGNMENT_UNASSIGN: {
-        value: "perm_82f916d4",
+        value: "DORMITORY_ASSIGNMENT_UNASSIGN",
     },
     TRANSPORT_ROUTE_SIDEBAR: {
-        value: "perm_4b89dfc9",
+        value: "TRANSPORT_ROUTE_SIDEBAR",
         parentPermission: 'TRANSPORT_ROUTE',
     },
     TRANSPORT_ROUTE_ADD: {
-        value: "perm_c348a6f9",
+        value: "TRANSPORT_ROUTE_ADD",
         parentPermission: 'TRANSPORT_ROUTE',
     },
     TRANSPORT_ROUTE_EDIT: {
-        value: "perm_d52c0a1a",
+        value: "TRANSPORT_ROUTE_EDIT",
         parentPermission: 'TRANSPORT_ROUTE',
     },
     TRANSPORT_ROUTE_DELETE: {
-        value: "perm_7422dd27",
+        value: "TRANSPORT_ROUTE_DELETE",
         parentPermission: 'TRANSPORT_ROUTE',
     },
     VEHICLE_SIDEBAR: {
-        value: "perm_b17283ca",
+        value: "VEHICLE_SIDEBAR",
         parentPermission: 'VEHICLE',
     },
     VEHICLE_ADD: {
-        value: "perm_8850f91f",
+        value: "VEHICLE_ADD",
         parentPermission: 'VEHICLE',
     },
     VEHICLE_EDIT: {
-        value: "perm_c6831b30",
+        value: "VEHICLE_EDIT",
         parentPermission: 'VEHICLE',
     },
     VEHICLE_DELETE: {
-        value: "perm_1084fe9b",
+        value: "VEHICLE_DELETE",
         parentPermission: 'VEHICLE',
     },
     ASSIGN_VEHICLE_SIDEBAR: {
-        value: "perm_fa4a542d",
+        value: "ASSIGN_VEHICLE_SIDEBAR",
         parentPermission: 'ASSIGN_VEHICLE',
     },
     ASSIGN_VEHICLE_ASSIGN: {
-        value: "perm_21f1e46d",
+        value: "ASSIGN_VEHICLE_ASSIGN",
     },
     ASSIGN_VEHICLE_UNASSIGN: {
-        value: "perm_3cf3608e",
+        value: "ASSIGN_VEHICLE_UNASSIGN",
     },
     OVERVIEW_SIDEBAR: {
-        value: "perm_9fdd98d7",
+        value: "OVERVIEW_SIDEBAR",
         parentPermission: 'OVERVIEW',
     },
 
     MANAGE_ACTIVE_JOBS_SIDEBAR: {
-        value: "perm_358944a3",
+        value: "MANAGE_ACTIVE_JOBS_SIDEBAR",
         parentPermission: 'MANAGE_ACTIVE_JOBS',
     },
     MANAGE_ACTIVE_JOBS_ADD: {
-        value: "perm_f7d2e723",
+        value: "MANAGE_ACTIVE_JOBS_ADD",
         parentPermission: 'MANAGE_ACTIVE_JOBS',
     },
     MANAGE_ACTIVE_JOBS_EDIT: {
-        value: "perm_1bb5755c",
+        value: "MANAGE_ACTIVE_JOBS_EDIT",
         parentPermission: 'MANAGE_ACTIVE_JOBS',
     },
     MANAGE_ACTIVE_JOBS_DELETE: {
-        value: "perm_bf7f3050",
+        value: "MANAGE_ACTIVE_JOBS_DELETE",
         parentPermission: 'MANAGE_ACTIVE_JOBS',
     },
     CALENDAR_VIEW_JOBS_SIDEBAR: {
-        value: "perm_cbedcac9",
+        value: "CALENDAR_VIEW_JOBS_SIDEBAR",
         parentPermission: 'CALENDAR_VIEW_JOBS',
     },
 
     STUDY_MATERIAL_SIDEBAR: {
-        value: "perm_e95c3e56",
+        value: "STUDY_MATERIAL_SIDEBAR",
         parentPermission: 'STUDY_MATERIAL',
     },
     STUDY_MATERIAL_ADD: {
-        value: "perm_22c68cdb",
+        value: "STUDY_MATERIAL_ADD",
         parentPermission: 'STUDY_MATERIAL',
     },
     STUDY_MATERIAL_EDIT: {
-        value: "perm_f8fff2fb",
+        value: "STUDY_MATERIAL_EDIT",
         parentPermission: 'STUDY_MATERIAL',
     },
     STUDY_MATERIAL_DELETE: {
-        value: "perm_4bb3c743",
+        value: "STUDY_MATERIAL_DELETE",
         parentPermission: 'STUDY_MATERIAL',
     },
     UPLOAD_STUDY_MATERIAL_SIDEBAR: {
-        value: "perm_661e5581",
+        value: "UPLOAD_STUDY_MATERIAL_SIDEBAR",
         parentPermission: 'UPLOAD_STUDY_MATERIAL',
     },
     UPLOAD_STUDY_MATERIAL_ADD: {
-        value: "perm_a69b56fa",
+        value: "UPLOAD_STUDY_MATERIAL_ADD",
         parentPermission: 'UPLOAD_STUDY_MATERIAL',
     },
     UPLOAD_STUDY_MATERIAL_EDIT: {
-        value: "perm_79453f4f",
+        value: "UPLOAD_STUDY_MATERIAL_EDIT",
         parentPermission: 'UPLOAD_STUDY_MATERIAL',
     },
     UPLOAD_STUDY_MATERIAL_DELETE: {
-        value: "perm_33f2222f",
+        value: "UPLOAD_STUDY_MATERIAL_DELETE",
         parentPermission: 'UPLOAD_STUDY_MATERIAL',
     },
     BUILDINGS_SIDEBAR: {
-        value: "perm_0e71311e",
+        value: "BUILDINGS_SIDEBAR",
         parentPermission: 'BUILDINGS',
     },
     BUILDINGS_ADD: {
-        value: "perm_fdbb494c",
+        value: "BUILDINGS_ADD",
         parentPermission: 'BUILDINGS',
     },
     BUILDINGS_EDIT: {
-        value: "perm_518a64f7",
+        value: "BUILDINGS_EDIT",
         parentPermission: 'BUILDINGS',
     },
     BUILDINGS_DELETE: {
-        value: "perm_f04f134f",
+        value: "BUILDINGS_DELETE",
         parentPermission: 'BUILDINGS',
     },
     JOB_TYPE_SETTING_SIDEBAR: {
-        value: "perm_9256a6f5",
+        value: "JOB_TYPE_SETTING_SIDEBAR",
         parentPermission: 'JOB_TYPE_SETTING',
     },
     JOB_TYPE_SETTING_ADD: {
-        value: "perm_10d3e81b",
+        value: "JOB_TYPE_SETTING_ADD",
         parentPermission: 'JOB_TYPE_SETTING',
     },
     JOB_TYPE_SETTING_EDIT: {
-        value: "perm_995551b5",
+        value: "JOB_TYPE_SETTING_EDIT",
         parentPermission: 'JOB_TYPE_SETTING',
     },
     JOB_TYPE_SETTING_DELETE: {
-        value: "perm_648cf18c",
+        value: "JOB_TYPE_SETTING_DELETE",
         parentPermission: 'JOB_TYPE_SETTING',
     },
     OTHERS_SETTING_SIDEBAR: {
-        value: "perm_6c5302c3",
+        value: "OTHERS_SETTING_SIDEBAR",
         parentPermission: 'OTHERS_SETTING',
     },
     OTHERS_SETTING_ADD: {
-        value: "perm_468a566a",
+        value: "OTHERS_SETTING_ADD",
         parentPermission: 'OTHERS_SETTING',
     },
     OTHERS_SETTING_EDIT: {
-        value: "perm_512b45cd",
+        value: "OTHERS_SETTING_EDIT",
         parentPermission: 'OTHERS_SETTING',
     },
     OTHERS_SETTING_DELETE: {
-        value: "perm_37ba0eec",
+        value: "OTHERS_SETTING_DELETE",
         parentPermission: 'OTHERS_SETTING',
     },
     NOTICE_BOARD_SIDEBAR: {
-        value: "perm_88634493",
+        value: "NOTICE_BOARD_SIDEBAR",
         parentPermission: 'NOTICE_BOARD',
     },
     NOTICE_BOARD_ADD: {
-        value: "perm_6363b9ae",
+        value: "NOTICE_BOARD_ADD",
         parentPermission: 'NOTICE_BOARD',
     },
     NOTICE_BOARD_EDIT: {
-        value: "perm_fd075681",
+        value: "NOTICE_BOARD_EDIT",
         parentPermission: 'NOTICE_BOARD',
     },
     NOTICE_BOARD_DELETE: {
-        value: "perm_37136ea8",
+        value: "NOTICE_BOARD_DELETE",
         parentPermission: 'NOTICE_BOARD',
     },
     CALENDAR_SIDEBAR: {
-        value: "perm_d278f3f5",
+        value: "CALENDAR_SIDEBAR",
         parentPermission: 'CALENDAR',
     },
     CALENDAR_ADD: {
-        value: "perm_5fab16fa",
+        value: "CALENDAR_ADD",
         parentPermission: 'CALENDAR',
     },
     CALENDAR_EDIT: {
-        value: "perm_6886adf9",
+        value: "CALENDAR_EDIT",
         parentPermission: 'CALENDAR',
     },
     CALENDAR_DELETE: {
-        value: "perm_b8e47fc5",
+        value: "CALENDAR_DELETE",
         parentPermission: 'CALENDAR',
     },
     CONTENT_TYPE_SIDEBAR: {
-        value: "perm_0484edff",
+        value: "CONTENT_TYPE_SIDEBAR",
         parentPermission: 'CONTENT_TYPE',
     },
     CONTENT_TYPE_ADD: {
-        value: "perm_e1e2b202",
+        value: "CONTENT_TYPE_ADD",
         parentPermission: 'CONTENT_TYPE',
     },
     CONTENT_TYPE_EDIT: {
-        value: "perm_f4724bc2",
+        value: "CONTENT_TYPE_EDIT",
         parentPermission: 'CONTENT_TYPE',
     },
     CONTENT_TYPE_DELETE: {
-        value: "perm_7c93d792",
+        value: "CONTENT_TYPE_DELETE",
         parentPermission: 'CONTENT_TYPE',
     },
     CONTENT_LIST_SIDEBAR: {
-        value: "perm_0f9770a9",
+        value: "CONTENT_LIST_SIDEBAR",
         parentPermission: 'CONTENT_LIST',
     },
     CONTENT_LIST_EXPORT: {
-        value: "perm_ac02b2aa",
+        value: "CONTENT_LIST_EXPORT",
         parentPermission: 'CONTENT_LIST',
     },
     CONTENT_LIST_PRINT: {
-        value: "perm_06db1feb",
+        value: "CONTENT_LIST_PRINT",
         parentPermission: 'CONTENT_LIST',
     },
     SHARED_CONTENT_LIST_SIDEBAR: {
-        value: "perm_9297e0af",
+        value: "SHARED_CONTENT_LIST_SIDEBAR",
         parentPermission: 'SHARED_CONTENT_LIST',
     },
     SHARED_CONTENT_LIST_EXPORT: {
-        value: "perm_cf09b56d",
+        value: "SHARED_CONTENT_LIST_EXPORT",
         parentPermission: 'SHARED_CONTENT_LIST',
     },
     SHARED_CONTENT_LIST_PRINT: {
-        value: "perm_95f5c623",
+        value: "SHARED_CONTENT_LIST_PRINT",
         parentPermission: 'SHARED_CONTENT_LIST',
     },
     VIDEO_LIST_SIDEBAR: {
-        value: "perm_bb220b9e",
+        value: "VIDEO_LIST_SIDEBAR",
         parentPermission: 'VIDEO_LIST',
     },
     VIDEO_LIST_EXPORT: {
-        value: "perm_87940e82",
+        value: "VIDEO_LIST_EXPORT",
         parentPermission: 'VIDEO_LIST',
     },
     VIDEO_LIST_PRINT: {
-        value: "perm_e22e969a",
+        value: "VIDEO_LIST_PRINT",
         parentPermission: 'VIDEO_LIST',
     },
     HOMEWORK_SIDEBAR: {
-        value: "perm_8c9c92e8",
+        value: "HOMEWORK_SIDEBAR",
         parentPermission: 'HOMEWORK',
     },
     HOMEWORK_ADD: {
-        value: "perm_f31dd9fb",
+        value: "HOMEWORK_ADD",
         parentPermission: 'HOMEWORK',
     },
     HOMEWORK_EDIT: {
-        value: "perm_9fb5cc6d",
+        value: "HOMEWORK_EDIT",
         parentPermission: 'HOMEWORK',
     },
     HOMEWORK_DELETE: {
-        value: "perm_f8dde45c",
+        value: "HOMEWORK_DELETE",
         parentPermission: 'HOMEWORK',
     },
     ID_CARD_SIDEBAR: {
-        value: "perm_20dfd018",
+        value: "ID_CARD_SIDEBAR",
         parentPermission: 'ID_CARD',
     },
     ID_CARD_PRINT: {
-        value: "perm_14f4b952",
+        value: "ID_CARD_PRINT",
         parentPermission: 'ID_CARD',
     },
     ID_CARD_DOWNLOAD: {
-        value: "perm_3a6c7603",
+        value: "ID_CARD_DOWNLOAD",
         parentPermission: 'ID_CARD',
     },
     CERTIFICATE_LIST_SIDEBAR: {
-        value: "perm_ef6ded8a",
+        value: "CERTIFICATE_LIST_SIDEBAR",
         parentPermission: 'CERTIFICATE_LIST',
     },
     CERTIFICATE_LIST_PRINT: {
-        value: "perm_a6541940",
+        value: "CERTIFICATE_LIST_PRINT",
         parentPermission: 'CERTIFICATE_LIST',
     },
     CERTIFICATE_LIST_DOWNLOAD: {
-        value: "perm_64ec4caf",
+        value: "CERTIFICATE_LIST_DOWNLOAD",
         parentPermission: 'CERTIFICATE_LIST',
     },
 
@@ -1685,10 +1653,6 @@ export const PERMISSIONS = {
         value: "EXAM_TYPE_TERM_MAPPING_ADD",
         parentPermission: 'EXAM_TYPE_TERM_MAPPING',
     },
-    EXAM_TYPE_TERM_MAPPING_EDIT: {
-        value: "EXAM_TYPE_TERM_MAPPING_EDIT",
-        parentPermission: 'EXAM_TYPE_TERM_MAPPING',
-    },
     EXAM_TYPE_TERM_MAPPING_DELETE: {
         value: "EXAM_TYPE_TERM_MAPPING_DELETE",
         parentPermission: 'EXAM_TYPE_TERM_MAPPING',
@@ -1704,10 +1668,7 @@ export const PERMISSIONS = {
         value: "EXAM_ASSIGN_TEACHER_ADD",
         parentPermission: 'EXAM_ASSIGN_TEACHER',
     },
-    EXAM_ASSIGN_TEACHER_EDIT: {
-        value: "EXAM_ASSIGN_TEACHER_EDIT",
-        parentPermission: 'EXAM_ASSIGN_TEACHER',
-    },
+
     EXAM_ASSIGN_TEACHER_DELETE: {
         value: "EXAM_ASSIGN_TEACHER_DELETE",
         parentPermission: 'EXAM_ASSIGN_TEACHER',
@@ -1723,33 +1684,11 @@ export const PERMISSIONS = {
         value: "HALL_TICKETS_ADD",
         parentPermission: 'HALL_TICKETS',
     },
-    HALL_TICKETS_EDIT: {
-        value: "HALL_TICKETS_EDIT",
-        parentPermission: 'HALL_TICKETS',
-    },
-    HALL_TICKETS_DELETE: {
-        value: "HALL_TICKETS_DELETE",
-        parentPermission: 'HALL_TICKETS',
-    },
+
     ANSWER_SHEET_MAPPING: {
         value: "ANSWER_SHEET_MAPPING",
     },
-    ANSWER_SHEET_MAPPING_SIDEBAR: {
-        value: "ANSWER_SHEET_MAPPING_SIDEBAR",
-        parentPermission: 'ANSWER_SHEET_MAPPING',
-    },
-    ANSWER_SHEET_MAPPING_ADD: {
-        value: "ANSWER_SHEET_MAPPING_ADD",
-        parentPermission: 'ANSWER_SHEET_MAPPING',
-    },
-    ANSWER_SHEET_MAPPING_EDIT: {
-        value: "ANSWER_SHEET_MAPPING_EDIT",
-        parentPermission: 'ANSWER_SHEET_MAPPING',
-    },
-    ANSWER_SHEET_MAPPING_DELETE: {
-        value: "ANSWER_SHEET_MAPPING_DELETE",
-        parentPermission: 'ANSWER_SHEET_MAPPING',
-    },
+
     ANSWER_SHEET_QRS: {
         value: "ANSWER_SHEET_QRS",
     },
@@ -1765,10 +1704,7 @@ export const PERMISSIONS = {
         value: "ANSWER_SHEET_QRS_EDIT",
         parentPermission: 'ANSWER_SHEET_QRS',
     },
-    ANSWER_SHEET_QRS_DELETE: {
-        value: "ANSWER_SHEET_QRS_DELETE",
-        parentPermission: 'ANSWER_SHEET_QRS',
-    },
+
     QUESTION_PAPER_BUILDER: {
         value: "QUESTION_PAPER_BUILDER",
     },
@@ -1795,16 +1731,8 @@ export const PERMISSIONS = {
         value: "QUESTION_APPROVAL_SIDEBAR",
         parentPermission: 'QUESTION_APPROVAL',
     },
-    QUESTION_APPROVAL_ADD: {
-        value: "QUESTION_APPROVAL_ADD",
-        parentPermission: 'QUESTION_APPROVAL',
-    },
     QUESTION_APPROVAL_EDIT: {
         value: "QUESTION_APPROVAL_EDIT",
-        parentPermission: 'QUESTION_APPROVAL',
-    },
-    QUESTION_APPROVAL_DELETE: {
-        value: "QUESTION_APPROVAL_DELETE",
         parentPermission: 'QUESTION_APPROVAL',
     },
     ASSET_MANAGEMENT: {

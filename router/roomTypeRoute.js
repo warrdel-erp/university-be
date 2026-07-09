@@ -6,14 +6,14 @@ import userAuth from "../middleware/authUser.js"
 import { checkAccess } from "../middleware/checkAccess.js";
 import { PERMISSIONS } from "../const/permissions.js";
 
-router.post('/', userAuth, checkAccess(PERMISSIONS.EXAM_ROOM_ALLOCATE_ADD.value, null), addRoomType);
+router.post('/', userAuth, checkAccess(PERMISSIONS.DORMITORY_ROOM_TYPE_ADD.value, null), addRoomType);
 
-router.get('/', userAuth, checkAccess(PERMISSIONS.EXAM_ROOM_ALLOCATE.value, null), getAllRoomType);
+router.get('/', userAuth, checkAccess(PERMISSIONS.DORMITORY_ROOM_TYPE.value, null), getAllRoomType);
 
-router.get('/single' ,userAuth, checkAccess(PERMISSIONS.EXAM_ROOM_ALLOCATE.value, null), getSingleRoomTypeDetails);
+router.get('/single' ,userAuth, checkAccess(PERMISSIONS.DORMITORY_ROOM_TYPE.value, null), getSingleRoomTypeDetails);
 
-router.patch('/' ,userAuth, checkAccess(PERMISSIONS.EXAM_ROOM_ALLOCATE_EDIT.value, null), updateRoomType);
+router.patch('/' ,userAuth, checkAccess(PERMISSIONS.DORMITORY_ROOM_TYPE_EDIT.value, null), updateRoomType);
 
-router.delete('/' ,userAuth, checkAccess(PERMISSIONS.EXAM_ROOM_ALLOCATE_DELETE.value, null), deleteRoomType);
+router.delete('/' ,userAuth, checkAccess(PERMISSIONS.DORMITORY_ROOM_TYPE_DELETE.value, null), deleteRoomType);
 
 export default router;

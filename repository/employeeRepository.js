@@ -92,14 +92,16 @@ export async function getAllEmployee(campusId, instituteId, options = {}) {
                     required: false,
                     include: [
                         {
-                            model: model.userRoleModel.unscoped(),
-                            as: 'userRoles',
-                            attributes: ["role"],
-                        },
-                        {
-                            model: model.userPermissionModel.unscoped(),
-                            as: 'userPermissions',
-                            attributes: ["permission"],
+                            model: model.userRolePermissionModel.unscoped(),
+                            as: 'userRolePermissions',
+                            attributes: ["roleId", "permission", "scope"],
+                            include: [
+                                {
+                                    model: model.roleModel.unscoped(),
+                                    as: 'userRole',
+                                    attributes: ["role"],
+                                }
+                            ]
                         },
                     ],
                 },
@@ -146,14 +148,16 @@ export async function getSingleEmployeeDetails(employeeId) {
                     attributes: ["universityId", "userId"],
                     include: [
                         {
-                            model: model.userRoleModel.unscoped(),
-                            as: 'userRoles',
-                            attributes: ["role"],
-                        },
-                        {
-                            model: model.userPermissionModel.unscoped(),
-                            as: 'userPermissions',
-                            attributes: ["permission"],
+                            model: model.userRolePermissionModel.unscoped(),
+                            as: 'userRolePermissions',
+                            attributes: ["roleId", "permission", "scope"],
+                            include: [
+                                {
+                                    model: model.roleModel.unscoped(),
+                                    as: 'userRole',
+                                    attributes: ["role"],
+                                }
+                            ]
                         },
                     ],
                 },
@@ -164,14 +168,16 @@ export async function getSingleEmployeeDetails(employeeId) {
                     required: false,
                     include: [
                         {
-                            model: model.userRoleModel.unscoped(),
-                            as: 'userRoles',
-                            attributes: ["role"],
-                        },
-                        {
-                            model: model.userPermissionModel.unscoped(),
-                            as: 'userPermissions',
-                            attributes: ["permission"],
+                            model: model.userRolePermissionModel.unscoped(),
+                            as: 'userRolePermissions',
+                            attributes: ["roleId", "permission", "scope"],
+                            include: [
+                                {
+                                    model: model.roleModel.unscoped(),
+                                    as: 'userRole',
+                                    attributes: ["role"],
+                                }
+                            ]
                         },
                     ],
                 },

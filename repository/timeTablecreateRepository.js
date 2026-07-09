@@ -996,7 +996,7 @@ export async function getTimeTableMappingDetail(timeTableRoutineId) {
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] }
         },
         {
-          model: model.users, as: "user",
+          model: model.employeeModel, as: "employeeDetails",
           attributes: ["employeeName", "employeeCode", "pickColor", "userId"]
         }
       ]
@@ -1077,7 +1077,7 @@ export async function getTimeTableCellData(courseId, classSectionTermId) {
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] }
             },
             {
-              model: model.users, as: "user",
+              model: model.employeeModel, as: "employeeDetails",
               attributes: ["employeeName", "employeeCode", "pickColor", "userId"]
             }
           ]
@@ -1249,7 +1249,7 @@ export async function getTeacherTimeTable(userId) {
               ]
             },
             {
-              model: model.users, as: "user",
+              model: model.employeeModel, as: "employeeDetails",
               attributes: [
                 "userId",
                 "employeeName",
@@ -1312,7 +1312,7 @@ export async function getStudentTimeTableRepository(classSectionTermId, subjectI
               as: "timeTableSubject"
             },
             {
-              model: model.users, as: "user"
+              model: model.employeeModel, as: "employeeDetails"
             },
             {
               model: model.teacherSubjectMappingModel,
@@ -1531,7 +1531,7 @@ export async function getNormalRoutinesBySectionScopeRepository(scope = {}) {
           as: 'timeTablecreate',
           include: [
             {
-              model: model.users, as: "user",
+              model: model.employeeModel, as: "employeeDetails",
               attributes: ['userId', 'employeeName', "pickColor"]
             },
             {
@@ -1574,7 +1574,7 @@ export async function getElectiveRoutinesByTableNamesRepository(timeTableNameIds
           as: 'timeTablecreate',
           include: [
             {
-              model: model.users, as: "user",
+              model: model.employeeModel, as: "employeeDetails",
               attributes: ['userId', 'employeeName', "pickColor"]
             },
             {
@@ -1641,7 +1641,7 @@ const teacherNormalScheduleInclude = (userId) => ({
   where: { userId },
   include: [
     {
-      model: model.users, as: "user",
+      model: model.employeeModel, as: "employeeDetails",
       attributes: ['userId', 'employeeName', 'pickColor'],
       where: buildScope(model.employeeModel),
       required: false,
@@ -1688,7 +1688,7 @@ const teacherElectiveScheduleInclude = (userId) => ({
   where: { userId },
   include: [
     {
-      model: model.users, as: "user",
+      model: model.employeeModel, as: "employeeDetails",
       attributes: ['userId', 'employeeName', 'pickColor'],
       where: buildScope(model.employeeModel),
       required: false,
@@ -1995,7 +1995,7 @@ export async function getPastClassSchedulesForEmployee(
           ]
         },
         {
-          model: model.users, as: "user",
+          model: model.employeeModel, as: "employeeDetails",
           attributes: [
             "userId",
             "employeeName",

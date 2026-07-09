@@ -16,10 +16,10 @@ const teacherSubjectMappingModel = sequelize.define(
         employeeId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'user_id',
+            field: 'employee_id',
             references: {
-                model: users,
-                key: 'user_id'
+                model: employee,
+                key: 'employee_id'
             }
         },
         subjectId: {

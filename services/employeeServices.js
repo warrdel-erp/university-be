@@ -107,11 +107,15 @@ function toPlain(value) {
 }
 
 function mapRoleData(authUser = {}) {
-  const userRoles = authUser?.userRoles || [];
-  const userPermissions = authUser?.userPermissions || [];
+  const userRolePermissions = authUser?.userRolePermissions || [];
+
+  const firstRole = userRolePermissions.find(urp => urp?.userRole?.role)?.userRole?.role || "";
+
+  const permissions = userRolePermissions.map(urp => urp?.permission).filter(Boolean);
+
   return {
-    role: userRoles?.[0]?.role || "",
-    permissions: userPermissions.map((permissionItem) => permissionItem.permission).filter(Boolean)
+    role: firstRole,
+    permissions: [...new Set(permissions)]
   };
 }
 
@@ -518,7 +522,9 @@ export async function getSingleEmployeeDetails(userId) {
   return Promise.all((result || []).map(async (row) => {
     const item = toPlain(row) || {};
     const authUser = item?.user || item?.userEmployee || {};
+
     const mappedRoleData = mapRoleData(authUser);
+
     const mappedQualification = Array.isArray(item?.qualification) ? item.qualification : [];
     const mappedDocuments = Array.isArray(item?.documents) ? item.documents : [];
     const officeEntry = await resolveOfficeEntry(item);

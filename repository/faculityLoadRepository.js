@@ -4,13 +4,15 @@ import { buildScope, scoped } from "../utility/scoped.js";
 export async function addFaculityLoad(data) {
   try {
     const employee = await scoped(model.employeeModel).findOne({
-      attributes: ["userId"],
+      attributes: ["employeeId", "userId"],
       where: { userId: data.userId },
     });
     if (!employee) {
       throw new Error("Employee not found");
     }
 
+    data.employeeId = employee.employeeId;
+    delete data.userId;
     return scoped(model.faculityLoadModel).create(data);
   } catch (error) {
     console.error("Error in create faculity load:", error);
@@ -24,10 +26,15 @@ export async function getFaculityLoadDetails() {
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       include: [
         {
-          model: model.users, as: "user",
+          model: model.employeeModel, as: "employee",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-          where: buildScope(model.employeeModel),
           required: true,
+          include: [
+            {
+              model: model.userModel, as: "user",
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "password"] },
+            }
+          ]
         },
       ],
     });
@@ -40,7 +47,7 @@ export async function getFaculityLoadDetails() {
 export async function getSingleFaculityLoadDetails(userId) {
   try {
     const employee = await scoped(model.employeeModel).findOne({
-      attributes: ["userId"],
+      attributes: ["employeeId", "userId"],
       where: { userId },
     });
     if (!employee) {
@@ -49,7 +56,13 @@ export async function getSingleFaculityLoadDetails(userId) {
 
     return scoped(model.faculityLoadModel).findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-      where: { userId },
+      where: { employeeId: employee.employeeId },
+      include: [
+        {
+          model: model.employeeModel, as: "employee",
+          attributes: ["employeeId", "userId"],
+        }
+      ]
     });
   } catch (error) {
     console.error("Error in getting faculity load:", error);
@@ -64,9 +77,8 @@ export async function updateFaculityLoad(faculityLoadId, info) {
       where: { faculityLoadId },
       include: [
         {
-          model: model.users, as: "user",
-          attributes: ["userId"],
-          where: buildScope(model.employeeModel),
+          model: model.employeeModel, as: "employee",
+          attributes: ["employeeId", "userId"],
           required: true,
         },
       ],
@@ -91,9 +103,8 @@ export async function deleteFaculityLoad(faculityLoadId) {
       where: { faculityLoadId },
       include: [
         {
-          model: model.users, as: "user",
-          attributes: ["userId"],
-          where: buildScope(model.employeeModel),
+          model: model.employeeModel, as: "employee",
+          attributes: ["employeeId", "userId"],
           required: true,
         },
       ],
@@ -116,7 +127,7 @@ export async function deleteFaculityLoad(faculityLoadId) {
 export async function updateFaculityLoadByEmployeeId(userId, info, transaction) {
   try {
     const employee = await scoped(model.employeeModel).findOne({
-      attributes: ["userId"],
+      attributes: ["employeeId", "userId"],
       where: { userId },
       transaction,
     });
@@ -125,7 +136,7 @@ export async function updateFaculityLoadByEmployeeId(userId, info, transaction) 
     }
 
     return scoped(model.faculityLoadModel).update(info, {
-      where: { userId },
+      where: { employeeId: employee.employeeId },
       transaction,
     });
   } catch (error) {

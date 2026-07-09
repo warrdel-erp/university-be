@@ -17,6 +17,6 @@ router.post("/add", useAuth, checkAccess(PERMISSIONS.GRADING_SETUP_ADD.value, nu
 router.get("/list", useAuth, checkAccess(PERMISSIONS.GRADING_SETUP.value, null), getAllGradeSchemes);
 router.get("/:id", useAuth, checkAccess(PERMISSIONS.GRADING_SETUP.value, null), getSingleGradeScheme);
 router.patch("/update/:id", useAuth, checkAccess(PERMISSIONS.GRADING_SETUP_EDIT.value, null), updateGradeScheme);
-router.delete("/delete/:id", useAuth, checkAccess(PERMISSIONS.GRADING_SETUP_DELETE.value, null), deleteGradeScheme);
+// router.delete("/delete/:id", useAuth, checkAccess(PERMISSIONS.GRADING_SETUP_DELETE.value, null), deleteGradeScheme);
 
 export default router;

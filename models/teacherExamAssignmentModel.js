@@ -34,7 +34,7 @@ const teacherExamAssignmentModel = sequelize.define(
     userId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      field: "user_id",
+      field: "employee_id",
       references: {
         model: users,
         key: "user_id",
@@ -83,7 +83,7 @@ const teacherExamAssignmentModel = sequelize.define(
     indexes: [
       {
         unique: true,
-        fields: ["exam_schedule_id", "user_id"],
+        fields: ["exam_schedule_id", "employee_id"],
         name: "uq_teacher_exam_assignment_schedule_user",
       },
     ],

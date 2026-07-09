@@ -4,6 +4,8 @@ import * as examScheduleController from "../controllers/examScheduleController.j
 import * as examRoomCapacityController from "../controllers/examScheduleRoomCapacityController.js";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 
 const router = Router();
 
@@ -73,6 +75,7 @@ router.get("/:id", userAuth, examScheduleController.getExamScheduleById);
 router.post(
   "/assignRoom",
   userAuth,
+  checkAccess(PERMISSIONS.EXAM_TIME_TABLE_CREATE_ASSIGN_ROOMS.value, null),
   validate({ body: addExamRoomCapacitySchema }),
   examRoomCapacityController.addExamRoomCapacity,
 );
@@ -80,6 +83,7 @@ router.post(
 router.put(
   "/roomAssignment",
   userAuth,
+  checkAccess(PERMISSIONS.EXAM_TIME_TABLE_CREATE_ASSIGN_ROOMS.value, null),
   validate({ body: updateExamRoomCapacitySchema }),
   examRoomCapacityController.updateExamRoomCapacity,
 );
@@ -87,6 +91,7 @@ router.put(
 router.post(
   "/allocateSeats/randomly",
   userAuth,
+  checkAccess(PERMISSIONS.EXAM_TIME_TABLE_CREATE_SEAT_ALLOCATION.value, null),
   validate({ body: allocateSeatsSchema }),
   examScheduleController.allocateSeats,
 );
@@ -94,6 +99,7 @@ router.post(
 router.post(
   "/allocateSeats/ascending",
   userAuth,
+  checkAccess(PERMISSIONS.EXAM_TIME_TABLE_CREATE_SEAT_ALLOCATION.value, null),
   validate({ body: allocateSeatsSchema }),
   examScheduleController.allocateSeatsAscending,
 );
@@ -101,6 +107,7 @@ router.post(
 router.post(
   "/allocateSeats/descending",
   userAuth,
+  checkAccess(PERMISSIONS.EXAM_TIME_TABLE_CREATE_SEAT_ALLOCATION.value, null),
   validate({ body: allocateSeatsSchema }),
   examScheduleController.allocateSeatsDescending,
 );

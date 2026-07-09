@@ -33,6 +33,6 @@ router.post('/addTerms', userAuth, checkAccess(PERMISSIONS.SEMESTER_SUBJECT_MAPP
 
 router.get('/withExamSchedule', userAuth, validate({ query: subjectsWithScheduleQuerySchema }), getSubjectsWithExamSchedule);
 
-router.get('/withWeightages', userAuth, validate({ query: subjectWeightageListSchema }), getSubjectsWithWeightages);
+router.get('/withWeightages', userAuth, checkAccess(PERMISSIONS.ASSIGN_WEIGHTAGE.value, null), validate({ query: subjectWeightageListSchema }), getSubjectsWithWeightages);
 
 export default router;

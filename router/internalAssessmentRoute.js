@@ -12,6 +12,8 @@ import {
 } from "../controllers/internalAssessmentController.js";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 
 const router = Router();
 
@@ -87,20 +89,20 @@ const updateAssessmentEvaluationSchema = z.object({
     file: z.any().optional(),
 }).strict();
 
-router.post("/", userAuth, validate({ body: addInternalAssessmentSchema }), addInternalAssessment);
+router.post("/", userAuth, checkAccess(PERMISSIONS.INTERNAL_ASSESSMENT_ADD.value, null), validate({ body: addInternalAssessmentSchema }), addInternalAssessment);
 
-router.get("/", userAuth, validate({ query: getAllInternalAssessmentQuerySchema }), getAllInternalAssessment);
+router.get("/", userAuth, checkAccess(PERMISSIONS.INTERNAL_ASSESSMENT.value, null), validate({ query: getAllInternalAssessmentQuerySchema }), getAllInternalAssessment);
 
-router.get("/single", userAuth, validate({ query: examAssessmentIdQuerySchema }), getSingleInternalAssessment);
+router.get("/single", userAuth, checkAccess(PERMISSIONS.INTERNAL_ASSESSMENT.value, null), validate({ query: examAssessmentIdQuerySchema }), getSingleInternalAssessment);
 
-router.patch("/", userAuth, validate({ body: updateInternalAssessmentSchema }), updateInternalAssessments);
+router.patch("/", userAuth, checkAccess(PERMISSIONS.INTERNAL_ASSESSMENT_EDIT.value, null), validate({ body: updateInternalAssessmentSchema }), updateInternalAssessments);
 
-router.delete("/", userAuth, validate({ query: examAssessmentIdQuerySchema }), deleteInternalAssessment);
+router.delete("/", userAuth, checkAccess(PERMISSIONS.INTERNAL_ASSESSMENT_DELETE.value, null), validate({ query: examAssessmentIdQuerySchema }), deleteInternalAssessment);
 
-router.get("/evaluation", userAuth, validate({ query: evaluationQuerySchema }), evaluationInternalAssessment);
+router.get("/evaluation", userAuth, checkAccess(PERMISSIONS.INTERNAL_ASSESSMENT.value, null), validate({ query: evaluationQuerySchema }), evaluationInternalAssessment);
 
-router.post("/evaluation", userAuth, validate({ body: createAssessmentEvaluationSchema }), createAssessmentEvaluation);
+router.post("/evaluation", userAuth, checkAccess(PERMISSIONS.INTERNAL_ASSESSMENT_EVALUATE.value, null), validate({ body: createAssessmentEvaluationSchema }), createAssessmentEvaluation);
 
-router.patch("/evaluation", userAuth, validate({ body: updateAssessmentEvaluationSchema }), updateAssessmentEvaluation);
+router.patch("/evaluation", userAuth, checkAccess(PERMISSIONS.INTERNAL_ASSESSMENT_EVALUATE.value, null), validate({ body: updateAssessmentEvaluationSchema }), updateAssessmentEvaluation);
 
 export default router;

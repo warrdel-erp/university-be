@@ -5,11 +5,13 @@ function formatFaculityLoad(row) {
   const plain = row?.get ? row.get({ plain: true }) : row;
   if (!plain) return plain;
 
-  const { employeeFaculity, ...rest } = plain;
+  const { employee, employeeFaculity, ...rest } = plain;
   return {
     ...rest,
+    userId: employee?.userId || rest.userId, // map employee's userId back to the root level
     definedLoad: rest.definedLoad ?? null,
     currentLoad: toMoneyNumber(rest.currentLoad),
+    ...(employee ? { employee } : {}),
     ...(employeeFaculity ? { employeeFaculity } : {}),
   };
 }

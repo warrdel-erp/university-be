@@ -85,6 +85,6 @@ router.get(
 
 // Get all scopes & permissions
 router.get("/scopes", userAuth, checkAccess(PERMISSIONS.ROLES_ACCESS_CONTROL.value, null), userPermissionController.getAllScopes);
-router.get("/permissions", userAuth, checkAccess(PERMISSIONS.ROLES_ACCESS_CONTROL.value, null), userPermissionController.getAllPermissions);
+router.get("/permissions", userAuth, userPermissionController.getAllPermissions);
 
 export default router;

@@ -13,6 +13,8 @@ import {
 
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
+import { checkAccess, checkAccessAny } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 import { questionTypes } from "../constant.js";
 
 const mcqSchema = z.object({
@@ -97,9 +99,6 @@ const approveQuestionPaperSchema = z.object({
     id: z.number({ required_error: "id is required" }),
 });
 
-import { checkAccess } from "../middleware/checkAccess.js";
-import { PERMISSIONS } from "../const/permissions.js";
-
 router.post("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, null), validate({ body: createQuestionPaperSchema }), addQuestionPaper);
 
 router.post("/generate", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, null), validate({ body: generateQuestionPaperSchema }), generateQuestionPaper);
@@ -112,6 +111,6 @@ router.put("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_EDIT.va
 
 router.delete("/:id", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_DELETE.value, null), deleteQuestionPaper);
 
-router.put("/approve", userAuth, checkAccess(PERMISSIONS.QUESTION_APPROVAL_EDIT.value, null), validate({ body: approveQuestionPaperSchema }), approveQuestionPaper);
+router.put("/approve", userAuth, checkAccessAny([PERMISSIONS.QUESTION_APPROVAL_EDIT.value, PERMISSIONS.EXAM_TIME_TABLE_CREATE_PAPER_APPROVAL.value], null), validate({ body: approveQuestionPaperSchema }), approveQuestionPaper);
 
 export default router;

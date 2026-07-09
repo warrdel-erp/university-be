@@ -3,6 +3,8 @@ import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import { validate } from "../utility/validation.js";
 import userAuth from "../middleware/authUser.js";
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 import {
   recordStudentFeePaymentFromDetails,
   listStudentFeePayments,
@@ -97,6 +99,7 @@ const studentFeePaymentIdQuerySchema = z.object({
 router.get(
   "/",
   userAuth,
+  checkAccess(PERMISSIONS.STUDENT_FEE_PAYMENTS.value, null),
   validate({ query: listPaymentsQuerySchema }),
   listStudentFeePayments
 );

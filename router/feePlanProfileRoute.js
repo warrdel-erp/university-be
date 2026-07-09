@@ -130,7 +130,7 @@ const publishBody = z.object({
 
 router.post("/", userAuth, checkAccess(PERMISSIONS.FEES_PLAN_ADD.value, null), validate({ body: createBody }), addFeePlanProfile);
 router.patch("/", userAuth, checkAccess(PERMISSIONS.FEES_PLAN_EDIT.value, null), validate({ body: updateBody }), updateFeePlanProfile);
-router.patch("/publish", userAuth, checkAccess(PERMISSIONS.FEES_PLAN_EDIT.value, null), validate({ body: publishBody }), publishFeePlanProfile);
+router.patch("/publish", userAuth, checkAccess(PERMISSIONS.FEES_PLAN_PUBLISH.value, null), validate({ body: publishBody }), publishFeePlanProfile);
 
 router.patch(
   "/assignStudent",

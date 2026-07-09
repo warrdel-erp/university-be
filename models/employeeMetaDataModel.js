@@ -35,7 +35,7 @@ const employeeMetaDataModel = sequelize.define(
     employeeId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      field: "user_id",
+      field: "employee_id",
       references: {
         model: employee,
         key: "employee_id",

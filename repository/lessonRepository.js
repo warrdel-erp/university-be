@@ -6,6 +6,16 @@ import { buildTermName } from "../utility/courseTerms.js";
 
 export async function addLesson(data) {
   try {
+    if (data.userId) {
+      const employee = await scoped(model.employeeModel).findOne({
+        attributes: ["employeeId"],
+        where: { userId: data.userId },
+      });
+      if (employee) {
+        data.employeeId = employee.employeeId;
+      }
+      delete data.userId;
+    }
     return await scoped(model.lessonModel).create(data);
   } catch (error) {
     console.error("Error in add lesson :", error);
@@ -482,9 +492,18 @@ export async function deleteSubTopicsByMapping(mappingId, transaction) {
 
 export async function getEmployeeSubjectAndLesson(userId, courseId, sessionId, subjectSearch, subjectId) {
   try {
-    const parsedEmployeeId = userId != null && userId !== ''
-      ? Number(userId)
-      : null;
+    let parsedEmployeeId = userId != null && userId !== '' ? Number(userId) : null;
+    let actualEmployeeId = null;
+    if (parsedEmployeeId) {
+      const emp = await scoped(model.employeeModel).findOne({
+        attributes: ["employeeId"],
+        where: { userId: parsedEmployeeId }
+      });
+      if (emp) {
+        actualEmployeeId = emp.employeeId;
+      }
+    }
+
     const parsedSessionId = sessionId != null && sessionId !== ''
       ? Number(sessionId)
       : null;
@@ -618,18 +637,21 @@ export async function getEmployeeSubjectAndLesson(userId, courseId, sessionId, s
     if (hasEmployeeId && hasSubjectId) {
       const lessons = await scoped(model.lessonModel).findAll({
         where: {
-          userId: parsedEmployeeId,
+          employeeId: actualEmployeeId,
           subjectId: parsedSubjectId,
           ...(hasSessionId && { sessionId: parsedSessionId }),
         },
         attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
         include: [
           {
-            model: model.users, as: "user",
+            model: model.employeeModel, as: "employee",
             required: true,
             paranoid: false,
             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-            where: buildScope(model.employeeModel),
+            include: [{
+              model: model.userModel, as: "user",
+              attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'password'] },
+            }]
           },
           {
             model: model.subjectModel,
@@ -687,7 +709,7 @@ export async function getEmployeeSubjectAndLesson(userId, courseId, sessionId, s
     const lessonWhere = {
       ...buildScope(model.lessonModel),
       ...(hasSessionId && { sessionId: parsedSessionId }),
-      ...(hasEmployeeId && { userId: parsedEmployeeId }),
+      ...(hasEmployeeId && actualEmployeeId && { employeeId: actualEmployeeId }),
       ...(hasSubjectId && { subjectId: parsedSubjectId }),
     };
 
@@ -742,9 +764,20 @@ export async function getEmployeeSubjectAndLesson(userId, courseId, sessionId, s
 
 export async function getSimpleLessonList(whereClause) {
   try {
+    const clause = { ...whereClause };
+    if (clause.userId) {
+      const employee = await scoped(model.employeeModel).findOne({
+        attributes: ["employeeId"],
+        where: { userId: clause.userId },
+      });
+      if (employee) {
+        clause.employeeId = employee.employeeId;
+      }
+      delete clause.userId;
+    }
     const lessons = await scoped(model.lessonModel).findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-      where: whereClause,
+      where: clause,
     });
     return lessons;
   } catch (error) {

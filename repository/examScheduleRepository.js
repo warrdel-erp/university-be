@@ -48,8 +48,8 @@ export async function getExamSchedules(filters = {}) {
                     as: "teacherAssignments",
                     include: [
                         {
-                            model: model.users, as: "user",
-                            attributes: ["employeeName", "userId"],
+                            model: model.employeeModel, as: "teacherEmployee",
+                            attributes: ["employeeName", "employeeId", "userId"],
                         },
                     ],
                 },

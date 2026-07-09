@@ -593,6 +593,7 @@ router.get(
 router.get(
   "/feePlanStudents",
   userAuth,
+  checkAccess(PERMISSIONS.STUDENT_FEE_PLANS.value, null),
   validate({ query: feePlanStudentsQuerySchema }),
   getStudentsByFeePlanList,
 );

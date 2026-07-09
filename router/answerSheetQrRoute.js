@@ -93,7 +93,7 @@ const assignObtainedMarksSchema = z.object({
     .max(999.99, "obtained_marks must be less than or equal to 999.99"),
 });
 
-import { checkAccess } from "../middleware/checkAccess.js";
+import { checkAccess, checkAccessAny } from "../middleware/checkAccess.js";
 import { PERMISSIONS } from "../const/permissions.js";
 
 router.post(
@@ -131,7 +131,7 @@ router.get(
 router.patch(
   "/map",
   userAuth,
-  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS_EDIT.value, null),
+  checkAccess(PERMISSIONS.ANSWER_SHEET_MAPPING.value, null),
   validate({ body: mapSchema }),
   mapAnswerSheetQr
 );
@@ -139,7 +139,7 @@ router.patch(
 router.post(
   "/assign/evaluator",
   userAuth,
-  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS_EDIT.value, null),
+  checkAccess(PERMISSIONS.EVALUATION_EXECUTE.value, null),
   validate({ body: assignTeachersSchema }),
   assignAnswerSheetsToTeachers
 );
@@ -155,7 +155,7 @@ router.get(
 router.patch(
   "/:id/obtainedMarks",
   userAuth,
-  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS_EDIT.value, null),
+  checkAccess(PERMISSIONS.EVALUATION_EXECUTE.value, null),
   validate({ params: idParamSchema, body: assignObtainedMarksSchema }),
   assignObtainedMarksToAnswerSheet
 );
@@ -173,7 +173,7 @@ const splitPdfSchema = z.object({
 router.post(
   "/splitPdf",
   userAuth,
-  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS_ADD.value, null),
+  checkAccessAny([PERMISSIONS.ANSWER_SHEET_QRS_ADD.value, PERMISSIONS.EXAM_TIME_TABLE_CREATE_SPLIT_SHEET.value], null),
   validate({ body: splitPdfSchema }),
   splitAnswerSheetPdf
 );
@@ -183,7 +183,7 @@ router.post(
 router.get(
   "/splitPdf/job/:jobDbId",
   userAuth,
-  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, null),
+  checkAccessAny([PERMISSIONS.ANSWER_SHEET_QRS.value, PERMISSIONS.EXAM_TIME_TABLE_CREATE_SPLIT_SHEET.value], null),
   getSplitPdfJobStatus
 );
 

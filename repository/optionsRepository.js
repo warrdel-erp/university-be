@@ -100,13 +100,13 @@ export async function getTeacherOptions(campusId) {
             attributes: [],
             required: true,
             include: [{
-                model: model.userRoleModel,
-                as: 'userRoles',
+                model: model.userRolePermissionModel,
+                as: 'userRolePermissions',
                 attributes: [],
                 required: true,
                 include: [{
                     model: model.roleModel,
-                    as: 'role',
+                    as: 'userRole',
                     attributes: [],
                     where: {
                         role: ROLES.TEACHER,
