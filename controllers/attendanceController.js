@@ -18,6 +18,43 @@ export async function addAttendance(req, res) {
   }
 }
 
+export async function copyAttendancePeriod(req, res) {
+  const createdBy = req.user.userId;
+  const updatedBy = req.user.userId;
+
+  try {
+    const result = await AttendanceCreation.copyAttendancePeriod(req.body, createdBy, updatedBy);
+    const response = {
+      message: "Attendance copied successfully",
+      copiedFrom: result.copiedFrom,
+      markedPeriods: result.markedPeriods,
+    };
+
+    if (result.skippedPeriods?.length) {
+      response.skippedPeriods = result.skippedPeriods;
+    }
+
+    res.status(201).json(response);
+  } catch (error) {
+    const statusCode = /not found|required|already marked|Invalid|does not belong|No attendance/i.test(error.message)
+      ? 400
+      : 500;
+    res.status(statusCode).json({ error: error.message });
+  }
+}
+
+export async function getCopyAttendancePeriod(req, res) {
+  try {
+    const result = await AttendanceCreation.getCopyAttendancePeriodPreview(req.query);
+    return SuccessResponse(res, 200, "Copy attendance preview fetched successfully", result);
+  } catch (error) {
+    const statusCode = /not found|required|Invalid|does not belong|targetDate is required/i.test(error.message)
+      ? 400
+      : 500;
+    return ErrorResponse(res, statusCode, error.message);
+  }
+}
+
 export async function getAttendanceDetails(req, res) {
   try {
     const Attendance = await AttendanceCreation.getAttendanceDetails();

@@ -3,7 +3,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import * as model from '../models/index.js';
 import moment from "moment";
 import { buildScope, scoped } from "../utility/scoped.js";
-import { classSectionTermsInclude, studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
+import { classSectionTermsInclude, studentClassSectionTermWithSectionInclude, timeTableRoutineClassSectionInclude } from "../utility/classSectionIncludes.js";
 
 export async function addAttendance(attendanceRecords, options = {}) {
     try {
@@ -25,6 +25,141 @@ export async function checkAttendanceExists(timeTableMappingId, date) {
         return count > 0;
     } catch (error) {
         console.error("Error checking attendance existence:", error);
+        throw error;
+    }
+};
+
+export async function getAttendanceRowsByMappingAndDate(timeTableMappingId, date) {
+    try {
+        return await scoped(model.attendanceModel).findAll({
+            attributes: [
+                'studentId',
+                'attendanceStatus',
+                'notes',
+                'description',
+            ],
+            where: {
+                timeTableMappingId: Number(timeTableMappingId),
+                date: { [Op.eq]: fn("DATE", date) },
+            },
+            raw: true,
+        });
+    } catch (error) {
+        console.error("Error in getAttendanceRowsByMappingAndDate:", error);
+        throw error;
+    }
+};
+
+export async function getAttendanceDetailsByMappingAndDate(timeTableMappingId, date, classSectionTermId) {
+    try {
+        return await scoped(model.attendanceModel).findAll({
+            attributes: [
+                'attendanceId',
+                'studentId',
+                'attendanceStatus',
+                'notes',
+                'description',
+                'date',
+                'timeTableMappingId',
+            ],
+            where: {
+                timeTableMappingId: Number(timeTableMappingId),
+                classSectionTermId: Number(classSectionTermId),
+                date: { [Op.eq]: fn("DATE", date) },
+            },
+            include: [
+                {
+                    model: model.studentModel,
+                    as: 'studentAttendance',
+                    attributes: ['firstName', 'middleName', 'lastName', 'scholarNumber', 'enrollNumber'],
+                },
+            ],
+            order: [['studentId', 'ASC']],
+        });
+    } catch (error) {
+        console.error("Error in getAttendanceDetailsByMappingAndDate:", error);
+        throw error;
+    }
+};
+
+export async function getClassScheduleItemByMappingId(timeTableMappingId) {
+    try {
+        return await model.classScheduleModel.findByPk(Number(timeTableMappingId), {
+            attributes: [
+                'timeTableMappingId',
+                'day',
+                'period',
+                'timeTableType',
+                'employeeId',
+                'isSameTeacher',
+            ],
+            include: [
+                {
+                    model: model.timeTableRoutineModel,
+                    as: 'timeTablecreate',
+                    attributes: ['timeTableRoutineId', 'classSectionTermId', 'startingDate', 'endingDate'],
+                    include: [
+                        {
+                            model: model.courseModel,
+                            as: 'timeTableCourse',
+                            attributes: ['courseId', 'courseName'],
+                        },
+                        timeTableRoutineClassSectionInclude({
+                            termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
+                            sectionAttributes: ['classSectionsId', 'year', 'section', 'courseId'],
+                            sectionNestedIncludes: [
+                                {
+                                    model: model.courseModel,
+                                    as: 'courseSection',
+                                    attributes: ['courseId', 'courseName'],
+                                },
+                            ],
+                        }),
+                    ],
+                },
+                {
+                    model: model.timeTableStructurePeriodsModel,
+                    as: 'timeTablecreation',
+                    attributes: ['periodName', 'startTime', 'endTime'],
+                },
+                {
+                    model: model.subjectModel,
+                    as: 'timeTableSubject',
+                    attributes: ['subjectId', 'subjectName', 'subjectCode'],
+                },
+                {
+                    model: model.electiveSubjectModel,
+                    as: 'timeTableElective',
+                    attributes: ['electiveSubjectId', 'electiveSubjectName'],
+                },
+                {
+                    model: model.teacherSubjectMappingModel,
+                    as: 'timeTableTeacherSubject',
+                    attributes: ['teacherSubjectMappingId'],
+                    include: [
+                        {
+                            model: model.subjectModel,
+                            as: 'employeeSubject',
+                            attributes: ['subjectId', 'subjectName', 'subjectCode'],
+                        },
+                    ],
+                },
+                {
+                    model: model.employeeModel,
+                    as: 'employeeDetails',
+                    attributes: ['employeeId', 'employeeName', 'employeeCode'],
+                },
+                {
+                    model: model.classRoomModel,
+                    as: 'classRoom',
+                    attributes: ['roomNumber'],
+                },
+            ],
+            raw: true,
+            nest: true,
+        });
+    } catch (error) {
+        console.error("Error in getClassScheduleItemByMappingId:", error);
         throw error;
     }
 };

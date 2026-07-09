@@ -4768,6 +4768,90 @@
           "response": []
         },
         {
+          "name": "copy attendance period (POST)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"classSectionTermId\": {{classSectionTermId}},\n  \"sourceTimeTableMappingId\": 64,\n  \"sourceDate\": \"2026-06-20\",\n  \"targetTimeTableMappingId\": [65, 66],\n  \"targetDate\": \"2026-06-20\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/attendance/copyPeriod",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "attendance",
+                "copyPeriod"
+              ]
+            },
+            "description": "**POST /attendance/copyPeriod**\n\nCopy attendance from a source period to one or more target periods — same students, same `attendanceStatus`, `notes`, and `description`.\n\n### Required body\n| Field | Type | Notes |\n|-------|------|--------|\n| `classSectionTermId` | number | Must match the **source** period routine term |\n| `sourceTimeTableMappingId` | number | Period to copy **from** (must already be marked) |\n| `sourceDate` | string | `YYYY-MM-DD` |\n| `targetTimeTableMappingId` | number or number[] | Period(s) to copy **to** |\n| `targetDate` | string | `YYYY-MM-DD` |\n\n### Behaviour\n- Source and every target must share the same **term** (`classSectionTermId` / program `term`) and **batch** (`class_sections.year`).\n- Target period(s) must **not** already have attendance on `targetDate`.\n- Skips target when it is the same mapping + date as the source.\n- `attendanceStatus` values: Present, Absent, Medical Leave, Duty Leave, Sports Leave, NCC Leave, Approved Leave, Holiday.\n\n### 201 response\n```json\n{\n  \"message\": \"Attendance copied successfully\",\n  \"copiedFrom\": {\n    \"timeTableMappingId\": 64,\n    \"date\": \"2026-06-20\",\n    \"studentCount\": 30,\n    \"classSectionTermId\": 42,\n    \"term\": 1,\n    \"year\": 1\n  },\n  \"markedPeriods\": [65, 66],\n  \"skippedPeriods\": []\n}\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "copy attendance period preview (GET)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/attendance/copyPeriod?timeTableMappingId=64&date=2026-06-20",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "attendance",
+                "copyPeriod"
+              ],
+              "query": [
+                {
+                  "key": "timeTableMappingId",
+                  "value": "64",
+                  "description": "Source period mapping ID — classSectionTermId is derived from this"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-06-20",
+                  "description": "Attendance date YYYY-MM-DD"
+                }
+              ]
+            },
+            "description": "**GET /attendance/copyPeriod**\n\nFetch source-period attendance and section details before calling **POST /attendance/copyPeriod**.\n\n### Required query\n| Param | Notes |\n|-------|--------|\n| `timeTableMappingId` | Period to copy from (only ID needed) |\n| `date` | `YYYY-MM-DD` |\n\n`classSectionTermId`, term, batch, course, subject, and teacher are resolved from the mapping.\n\n### 200 response `data`\n- `isMarked`, `studentCount`\n- `sectionDetails` — term, year, section, course, subject, teacher\n- `classScheduleItem` — full period info\n- `attendance[]` — students with status to be copied"
+          },
+          "response": []
+        },
+        {
           "name": "update attendance (PATCH)",
           "request": {
             "auth": {

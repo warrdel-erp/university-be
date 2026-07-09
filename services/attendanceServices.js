@@ -6,8 +6,10 @@ import sequelize from "../database/sequelizeConfig.js";
 import { ATTENDANCE_STATUS } from "../constant.js";
 import { resolveProgramYear, resolveStudentClassSectionsId } from "../utility/classSectionIncludes.js";
 import {
+  assertCopyPeriodMappingsMatch,
   assertMappingsBelongToTerm,
   resolveAttendancePlacement,
+  resolveSourcePeriodByMappingId,
 } from "../utility/attendancePlacement.js";
 
 export { ATTENDANCE_STATUS };
@@ -71,6 +73,187 @@ export async function addAttendance(attendanceData, createdBy, updatedBy) {
     console.error('Error adding Attendance:', error);
     throw error;
   }
+};
+
+export async function copyAttendancePeriod(copyData, createdBy, updatedBy) {
+  const sourceMappingId = Number(copyData.sourceTimeTableMappingId);
+  const targetMappingIds = normalizeTimeTableMappingIds(copyData.targetTimeTableMappingId);
+
+  const sourcePlacement = await assertCopyPeriodMappingsMatch(
+    sourceMappingId,
+    targetMappingIds,
+    copyData.classSectionTermId,
+  );
+
+  const sourceRows = await attendanceService.getAttendanceRowsByMappingAndDate(
+    sourceMappingId,
+    copyData.sourceDate,
+  );
+
+  if (!sourceRows.length) {
+    throw new Error('No attendance found for the source period');
+  }
+
+  const pendingTargetIds = [];
+  const skippedTargetIds = [];
+
+  for (const targetMappingId of targetMappingIds) {
+    if (targetMappingId === sourceMappingId && copyData.sourceDate === copyData.targetDate) {
+      skippedTargetIds.push(targetMappingId);
+      continue;
+    }
+
+    const isExists = await attendanceService.checkAttendanceExists(targetMappingId, copyData.targetDate);
+    if (isExists) {
+      skippedTargetIds.push(targetMappingId);
+    } else {
+      pendingTargetIds.push(targetMappingId);
+    }
+  }
+
+  if (pendingTargetIds.length === 0) {
+    throw new Error(
+      targetMappingIds.length === 1
+        ? 'Attendance already marked for the target period'
+        : 'Attendance already marked for all target periods',
+    );
+  }
+
+  const t = await sequelize.transaction();
+  try {
+    const attendanceRecords = [];
+
+    for (const targetMappingId of pendingTargetIds) {
+      for (const row of sourceRows) {
+        attendanceRecords.push({
+          studentId: row.studentId,
+          attendanceStatus: row.attendanceStatus,
+          notes: row.notes,
+          description: row.description,
+          classSectionsId: sourcePlacement.classSectionsId,
+          classSectionTermId: sourcePlacement.classSectionTermId,
+          timeTableMappingId: targetMappingId,
+          date: copyData.targetDate,
+          createdBy,
+          updatedBy,
+        });
+      }
+    }
+
+    const addedAttendance = await attendanceService.addAttendance(attendanceRecords, { transaction: t });
+    await t.commit();
+
+    return {
+      addedAttendance,
+      copiedFrom: {
+        timeTableMappingId: sourceMappingId,
+        date: copyData.sourceDate,
+        studentCount: sourceRows.length,
+        classSectionTermId: sourcePlacement.classSectionTermId,
+        term: sourcePlacement.term,
+        year: sourcePlacement.year,
+      },
+      markedPeriods: pendingTargetIds,
+      skippedPeriods: skippedTargetIds,
+    };
+  } catch (error) {
+    await t.rollback();
+    console.error('Error copying attendance period:', error);
+    throw error;
+  }
+};
+
+function mapCopyAttendanceStudentRow(record) {
+  const plain = record.get ? record.get({ plain: true }) : record;
+  const student = plain.studentAttendance || {};
+
+  return {
+    attendanceId: plain.attendanceId,
+    studentId: plain.studentId,
+    attendanceStatus: plain.attendanceStatus,
+    notes: plain.notes,
+    description: plain.description,
+    firstName: student.firstName,
+    middleName: student.middleName,
+    lastName: student.lastName,
+    scholarNumber: student.scholarNumber,
+    enrollNumber: student.enrollNumber,
+  };
+}
+
+function buildCopyPeriodSectionDetails(classScheduleItem, placement) {
+  const routine = classScheduleItem?.timeTablecreate ?? {};
+  const termRow = routine.timeTableClassSectionTerm ?? {};
+  const section = termRow.classSection ?? {};
+  const routineCourse = routine.timeTableCourse ?? {};
+  const sectionCourse = section.courseSection ?? {};
+
+  let subjectId = null;
+  let subjectName = null;
+  let subjectCode = null;
+
+  if (classScheduleItem?.isSameTeacher && classScheduleItem?.timeTableTeacherSubject?.employeeSubject) {
+    const subject = classScheduleItem.timeTableTeacherSubject.employeeSubject;
+    subjectId = subject.subjectId;
+    subjectName = subject.subjectName;
+    subjectCode = subject.subjectCode;
+  } else if (classScheduleItem?.timeTableSubject) {
+    subjectId = classScheduleItem.timeTableSubject.subjectId;
+    subjectName = classScheduleItem.timeTableSubject.subjectName;
+    subjectCode = classScheduleItem.timeTableSubject.subjectCode;
+  } else if (classScheduleItem?.timeTableElective) {
+    subjectId = classScheduleItem.timeTableElective.electiveSubjectId;
+    subjectName = classScheduleItem.timeTableElective.electiveSubjectName;
+  }
+
+  return {
+    classSectionTermId: placement.classSectionTermId,
+    classSectionsId: placement.classSectionsId,
+    term: placement.term,
+    year: placement.year,
+    section: section.section ?? null,
+    courseId: routineCourse.courseId ?? sectionCourse.courseId ?? section.courseId ?? null,
+    courseName: routineCourse.courseName ?? sectionCourse.courseName ?? null,
+    subjectId,
+    subjectName,
+    subjectCode,
+    employeeId: classScheduleItem?.employeeId ?? classScheduleItem?.employeeDetails?.employeeId ?? null,
+    employeeName: classScheduleItem?.employeeDetails?.employeeName ?? null,
+    employeeCode: classScheduleItem?.employeeDetails?.employeeCode ?? null,
+  };
+}
+
+export async function getCopyAttendancePeriodPreview(query) {
+  const timeTableMappingId = Number(query.timeTableMappingId);
+  const date = query.date;
+
+  const sourcePlacement = await resolveSourcePeriodByMappingId(timeTableMappingId);
+  const classScheduleItem = await attendanceService.getClassScheduleItemByMappingId(timeTableMappingId);
+
+  if (!classScheduleItem) {
+    throw new Error('Invalid timeTableMappingId');
+  }
+
+  const attendanceRows = await attendanceService.getAttendanceDetailsByMappingAndDate(
+    timeTableMappingId,
+    date,
+    sourcePlacement.classSectionTermId,
+  );
+
+  const attendance = [];
+  for (const row of attendanceRows) {
+    attendance.push(mapCopyAttendanceStudentRow(row));
+  }
+
+  return {
+    timeTableMappingId,
+    date,
+    isMarked: attendance.length > 0,
+    studentCount: attendance.length,
+    sectionDetails: buildCopyPeriodSectionDetails(classScheduleItem, sourcePlacement),
+    classScheduleItem,
+    attendance,
+  };
 };
 
 export async function getAttendanceDetails() {

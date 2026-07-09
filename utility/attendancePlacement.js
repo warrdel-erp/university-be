@@ -1,6 +1,10 @@
 import { Op } from 'sequelize';
 import * as model from '../models/index.js';
 import { findClassSectionTermById } from '../repository/classSectionTermRepository.js';
+import {
+  resolveTimeTableRoutineSection,
+  timeTableRoutineClassSectionInclude,
+} from './classSectionIncludes.js';
 
 /**
  * Resolve class_section_term row → placement keys for attendance APIs.
@@ -76,4 +80,147 @@ export async function assertMappingsBelongToTerm(mappingIds, classSectionTermId,
   }
 
   return mappings;
+}
+
+export function resolveMappingRoutinePlacement(mapping) {
+  const plain = mapping.get ? mapping.get({ plain: true }) : mapping;
+  const routine = plain.timeTablecreate;
+  const termRow = routine?.timeTableClassSectionTerm ?? null;
+  const section = termRow?.classSection ?? resolveTimeTableRoutineSection(routine);
+
+  return {
+    classSectionTermId: routine?.classSectionTermId ?? termRow?.classSectionTermId ?? null,
+    term: termRow?.term ?? null,
+    year: section?.year ?? null,
+    classSectionsId: section?.classSectionsId ?? termRow?.classSectionsId ?? null,
+  };
+}
+
+/**
+ * Copy-period guard: source and every target must share the same program term and batch (year).
+ */
+export async function assertCopyPeriodMappingsMatch(
+  sourceMappingId,
+  targetMappingIds,
+  classSectionTermId,
+  options = {},
+) {
+  const uniqueTargetIds = [...new Set(targetMappingIds.map((id) => Number(id)).filter(Boolean))];
+  const allIds = [...new Set([Number(sourceMappingId), ...uniqueTargetIds])];
+
+  const mappings = await model.classScheduleModel.findAll({
+    where: { timeTableMappingId: { [Op.in]: allIds } },
+    attributes: ['timeTableMappingId'],
+    include: [
+      {
+        model: model.timeTableRoutineModel,
+        as: 'timeTablecreate',
+        attributes: ['timeTableRoutineId', 'classSectionTermId'],
+        required: true,
+        include: [
+          timeTableRoutineClassSectionInclude({
+            termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
+            sectionAttributes: ['classSectionsId', 'year', 'section'],
+          }),
+        ],
+      },
+    ],
+    transaction: options.transaction,
+  });
+
+  if (mappings.length !== allIds.length) {
+    throw new Error('Invalid timeTableMappingId');
+  }
+
+  let sourcePlacement = null;
+  const targetPlacements = [];
+
+  for (const mapping of mappings) {
+    const placement = resolveMappingRoutinePlacement(mapping);
+    const mappingId = Number(mapping.timeTableMappingId);
+
+    if (mappingId === Number(sourceMappingId)) {
+      sourcePlacement = placement;
+    } else {
+      targetPlacements.push({ mappingId, placement });
+    }
+  }
+
+  if (!sourcePlacement?.classSectionTermId) {
+    throw new Error('Source period could not be resolved to a class section term');
+  }
+
+  if (Number(classSectionTermId) !== Number(sourcePlacement.classSectionTermId)) {
+    throw new Error('classSectionTermId does not match the source period');
+  }
+
+  for (const { mappingId, placement } of targetPlacements) {
+    if (Number(placement.classSectionTermId) !== Number(sourcePlacement.classSectionTermId)) {
+      throw new Error(
+        `timeTableMappingId ${mappingId} is not in the same term as the source period`,
+      );
+    }
+
+    if (
+      sourcePlacement.term != null
+      && placement.term != null
+      && Number(placement.term) !== Number(sourcePlacement.term)
+    ) {
+      throw new Error(
+        `timeTableMappingId ${mappingId} is not in the same term as the source period`,
+      );
+    }
+
+    if (
+      sourcePlacement.year != null
+      && placement.year != null
+      && Number(placement.year) !== Number(sourcePlacement.year)
+    ) {
+      throw new Error(
+        `timeTableMappingId ${mappingId} is not in the same batch as the source period`,
+      );
+    }
+  }
+
+  return sourcePlacement;
+}
+
+export async function resolveSourcePeriodByMappingId(sourceMappingId, options = {}) {
+  const mapping = await model.classScheduleModel.findOne({
+    where: { timeTableMappingId: Number(sourceMappingId) },
+    attributes: ['timeTableMappingId'],
+    include: [
+      {
+        model: model.timeTableRoutineModel,
+        as: 'timeTablecreate',
+        attributes: ['timeTableRoutineId', 'classSectionTermId'],
+        required: true,
+        include: [
+          timeTableRoutineClassSectionInclude({
+            termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
+            sectionAttributes: ['classSectionsId', 'year', 'section', 'courseId'],
+            sectionNestedIncludes: [
+              {
+                model: model.courseModel,
+                as: 'courseSection',
+                attributes: ['courseId', 'courseName'],
+              },
+            ],
+          }),
+        ],
+      },
+    ],
+    transaction: options.transaction,
+  });
+
+  if (!mapping) {
+    throw new Error('Invalid timeTableMappingId');
+  }
+
+  const placement = resolveMappingRoutinePlacement(mapping);
+  if (!placement.classSectionTermId) {
+    throw new Error('Period could not be resolved to a class section term');
+  }
+
+  return placement;
 }
