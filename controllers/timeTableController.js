@@ -1,140 +1,108 @@
-import * as timeTableServices from '../services/timeTableServices.js';
-
-
+import * as timeTableServices from "../services/timeTableServices.js";
+import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
 export const addTimeTable = async (req, res) => {
+  try {
+    const data = req.body;
 
-    try {
+    const createdBy = req.user.userId;
 
-        const data = req.body;
+    const updatedBy = req.user.userId;
 
-        const createdBy = req.user.userId;
+    const result = await timeTableServices.addTimeTable(
+      data,
+      createdBy,
+      updatedBy,
+    );
 
-        const updatedBy = req.user.userId;
+    return SuccessResponse(res, 200, "Time table added successfully", result);
+  } catch (error) {
+    console.error("Error in adding all time table:", error);
 
-        const result = await timeTableServices.addTimeTable(
-            data,
-            createdBy,
-            updatedBy,
-        );
-
-        res.status(200).send(result);
-
-    } catch (error) {
-
-        console.error("Error in adding all time table:", error);
-
-        res.status(error.message?.includes('not found') || error.message?.includes('not mapped') ? 400 : 500)
-
-            .send(error.message || "Internal Server Error");
-
-    }
-
+    return ErrorResponse(res, 400, error.message || "Internal Server Error");   
+  }
 };
+export const addTimeTablePeriod = async (req, res) => {
+  try {
+    const data = req.body;
 
+    const createdBy = req.user.userId;
+    const updatedBy = req.user.userId;
 
+    const result = await timeTableServices.addTimeTablePeriod(
+      data,
+      createdBy,
+      updatedBy,
+    );
+
+    return SuccessResponse(res, 200, "Time table period added successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, 400, error.message || "Internal Server Error");
+  } 
+};
 
 export const getTimeTableDetails = async (req, res) => {
-    const { courseId } = req.query;
+  const { courseId } = req.query;
 
-    try {
-        const result = await timeTableServices.getTimeTableDetails(courseId);
-        res.status(200).send(result);
-    } catch (error) {
-        console.error("Error in getting time table:", error);
-        res.status(500).send("Internal Server Error");
-    }
+  try {
+    const result = await timeTableServices.getTimeTableDetails(courseId);
+    return SuccessResponse(res, 200, "Time table details fetched successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, 400, error.message || "Internal Server Error");
+  }
 };
-
-
 
 export const getAllTimeTableName = async (req, res) => {
-    const { courseId, sessionId } = req.query;
+  const { courseId } = req.query;
 
-    try {
-        const result = await timeTableServices.getAllTimeTableName(courseId, sessionId);
-        res.status(200).send(result);
-    } catch (error) {
-        console.error("Error in getting time table structure:", error);
-        res.status(500).send("Internal Server Error");
-    }
+  try {
+    const result = await timeTableServices.getAllTimeTableName(courseId);
+    return SuccessResponse(res, 200, "All time table name fetched successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, 400, error.message || "Internal Server Error");
+  }
 };
-
-
 
 export const getSingleTimeTableDetails = async (req, res) => {
-    const { courseId, sessionId } = req.query;
+  const { courseId } = req.query;
 
-    try {
-        const result = await timeTableServices.getSingleTimeTableDetails(courseId, sessionId);
-        res.status(200).send(result);
-    } catch (error) {
-        console.error("Error in getting time table:", error);
-        res.status(500).send("Internal Server Error");
-    }
+  try {
+    const result = await timeTableServices.getSingleTimeTableDetails(courseId);
+    return SuccessResponse(res, 200, "Single time table details fetched successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, 400, error.message || "Internal Server Error");
+  }
 };
-
-
 
 export const updateTimeTable = async (req, res) => {
-
-    const info = req.body;
-
-    try {
-
-        for (const item of info) {
-
-            const { timeTableCreationId } = item;
-
-            if (!timeTableCreationId) {
-
-                return res.status(400).send("timeTableCreationId is required for each object.");
-
-            }
-
-        }
-
-        const result = await timeTableServices.updateTimeTable(req.body);
-
-        res.status(200).send(result);
-
-    } catch (error) {
-
-        console.error(`Error in updating time table`, error);
-
-        res.status(500).send("Internal Server Error");
-
-    }
-
+  try {
+    const result = await timeTableServices.updateTimeTable(req.body);
+    return SuccessResponse(res, 200, "Time table updated successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, 400, error.message || "Internal Server Error");
+  }
 };
-
-
 
 export const deleteTimeTable = async (req, res) => {
+  const { timeTableCreationId } = req.query;
 
-    const { timeTableCreationId } = req.query;
-
-    try {
-
-        if (!timeTableCreationId) {
-
-            res.status(400).send("timeTableCreationId is required");
-
-        } else {
-
-            const result = await timeTableServices.deleteTimeTable(timeTableCreationId);
-
-            res.status(200).send(result);
-
-        }
-
-    } catch (error) {
-
-        console.error(`Error in deleting time table Id ${timeTableCreationId}:`, error);
-
-        res.status(500).send("Internal Server Error");
-
-    }
-
+  try {
+    const result = await timeTableServices.deleteTimeTable(timeTableCreationId);
+    return SuccessResponse(res, 200, "Time table deleted successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, 400, error.message || "Internal Server Error");
+  }
 };
 
+export const deleteTimeTableStructure = async (req, res) => {
+  const { timeTableNameId } = req.query;
+
+  try {
+    const result =
+      await timeTableServices.deleteTimeTableStructure(timeTableNameId);
+
+    return SuccessResponse(res, 200, "Time table structure deleted successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, 400, error.message || "Internal Server Error");
+  }
+};

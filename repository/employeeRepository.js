@@ -429,12 +429,26 @@ export async function getSingleEmployeeDetails(employeeId) {
     };
 };
 
+async function assertEmployeeNotLinked(employeeId) {
+    const subjectLinks = await scoped(model.teacherSubjectMappingModel).count({
+        where: { employeeId },
+    });
+
+    if (subjectLinks > 0) {
+        const error = new Error('Cannot delete employee: employee is connected to subjects.');
+        error.statusCode = 409;
+        throw error;
+    }
+}
+
 export async function deleteEmployeeDetail(employeeId) {
     try {
         const existing = await assertScopedEmployee(employeeId);
         if (!existing) {
             throw new Error('Employee not found');
         }
+
+        await assertEmployeeNotLinked(employeeId);
 
         await scoped(model.employeeModel).destroy({
             where: { userId: employeeId },
@@ -443,6 +457,9 @@ export async function deleteEmployeeDetail(employeeId) {
         return { message: 'employee deleted successfully' };
     } catch (error) {
         console.error('Error during soft delete:', error);
+        if (error.statusCode === 409 || error.message === 'Employee not found') {
+            throw error;
+        }
         throw new Error('Unable to soft delete account');
     }
 };
@@ -490,12 +507,12 @@ export async function getTeacherSubject(employeeId, filters = {}) {
             return [];
         }
 
-        const academicYearId = filters.academicYearId != null ? Number(filters.academicYearId) : undefined;
-        const sessionId = filters.sessionId != null ? Number(filters.sessionId) : undefined;
+        const { academicYearId, sessionId, term } = filters;
         const subjectIds = await resolveSubjectIdsForTeacherFilters({ academicYearId, sessionId });
 
         const subjectWhere = {
             ...(academicYearId != null && { academicYearId }),
+            ...(term != null && { term }),
             ...buildScope(model.subjectModel),
         };
 
@@ -523,7 +540,10 @@ export async function getTeacherSubject(employeeId, filters = {}) {
                             model: model.internalAssessmentModel,
                             as: 'subjectAssessments',
                             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
-                            where: { employeeId },
+                            where: {
+                                employeeId,
+                                ...(term != null && { term }),
+                            },
                             required: false,
                             include: [
                                 {

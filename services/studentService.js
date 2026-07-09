@@ -62,6 +62,7 @@ function buildStudentRowPayload(info) {
     bloodGroup,
     academicYearId,
     term,
+    semesterId,
     classSectionsId,
     classSectionId,
     ...studentRow
@@ -209,6 +210,7 @@ export async function addStudent(
         info.courseId,
         info.instituteId,
         sessionId ?? info.sessionId,
+        info.admisssionDate ?? info.admissionDate,
       );
     }
     info.email = info.email.toLowerCase();
@@ -443,7 +445,7 @@ export async function addStudentWithFeePlanProfile({ info, files, createdBy }) {
   );
 }
 
-async function generateScholarNumber(courseId, instituteId, sessionId) {
+async function generateScholarNumber(courseId, instituteId, sessionId, admissionDate) {
   const getCourseCodeDetail = await getCourseCode(courseId);
   const getInstitueCodeDetail = await getInstituteCode(instituteId);
   const courseCode = getCourseCodeDetail?.get("courseCode");
@@ -455,23 +457,43 @@ async function generateScholarNumber(courseId, instituteId, sessionId) {
     );
   }
 
+  let admissionYear = null;
+  if (admissionDate) {
+    const parsedAdmissionDate = new Date(admissionDate);
+    if (!Number.isNaN(parsedAdmissionDate.getTime())) {
+      admissionYear = String(parsedAdmissionDate.getFullYear());
+    } else {
+      const yearFromString = String(admissionDate).slice(0, 4);
+      if (/^\d{4}$/.test(yearFromString)) {
+        admissionYear = yearFromString;
+      }
+    }
+  }
+  if (!admissionYear && sessionId != null) {
+    const sessionYearSuffix = await sessionRepository.getSessionYearSuffix(sessionId);
+    if (sessionYearSuffix) {
+      admissionYear = `20${sessionYearSuffix}`;
+    }
+  }
+  if (!admissionYear) {
+    admissionYear = moment().format("YYYY");
+  }
+
+  const scholarNumberPrefix = `${institueCode}/${courseCode}/${admissionYear}`;
   const getPreviousScholarNumber =
-    await studentRepository.getPreviousScholarNumber(institueCode);
+    await studentRepository.getPreviousScholarNumber(scholarNumberPrefix);
   const previousScholarNumber = getPreviousScholarNumber
     ? getPreviousScholarNumber.get("scholarNumber")
     : null;
-  let scholarNumber;
+
   if (previousScholarNumber) {
     const scholarNumberParts = previousScholarNumber.split("/");
-    const scholarNumberPrefix = scholarNumberParts.slice(0, 3).join("/");
-    const scholarNumberSuffix = parseInt(scholarNumberParts[3], 10) + 1;
-    scholarNumber = `${scholarNumberPrefix}/${scholarNumberSuffix.toString().padStart(6, "0")}`;
-  } else {
-    const sessionYear = await sessionRepository.getSessionYearSuffix(sessionId);
-    const yearLastTwoDigits = sessionYear ?? moment().format("YY");
-    scholarNumber = `${institueCode}/${courseCode}/${yearLastTwoDigits}/100001`;
+    const lastPart = scholarNumberParts[scholarNumberParts.length - 1];
+    const nextCounter = parseInt(lastPart, 10) + 1;
+    return `${scholarNumberPrefix}/${String(nextCounter).padStart(lastPart.length, "0")}`;
   }
-  return scholarNumber;
+
+  return `${scholarNumberPrefix}/100001`;
 }
 
 export async function getAllStudents(payload) {
@@ -581,12 +603,29 @@ export async function getSingleStudentDetail(studentId) {
 //   }
 // };
 
-export async function importStudentData(excelData, data) {
-  try {
-    const transaction = await sequelize.transaction();
+async function resolveImportRoleId(roleId) {
+  if (
+    roleId == null ||
+    roleId === "" ||
+    roleId === "STUDENT" ||
+    roleId === "Student" ||
+    roleId === "student"
+  ) {
+    return resolveStudentRoleId();
+  }
+  const num = Number(roleId);
+  if (Number.isInteger(num) && num > 0) {
+    return num;
+  }
+  return resolveStudentRoleId();
+}
 
+export async function importStudentData(excelData, data) {
+  const transaction = await sequelize.transaction();
+  try {
     const studentMapping = [];
     const results = [];
+    const importRoleId = await resolveImportRoleId(data.roleId);
 
     // Step 1: Fetch all employee code master data
     const codeAndType = await getEmployeeCodesTypesForStudentImport();
@@ -634,6 +673,7 @@ export async function importStudentData(excelData, data) {
         convertedData.courseId,
         convertedData.instituteId,
         convertedData.sessionId,
+        convertedData.admissionDate ?? convertedData.admisssionDate,
       );
       // convertedData.scholarNumber = scholarNumber;
       const number = convertedData.scholarNumber
@@ -677,13 +717,17 @@ export async function importStudentData(excelData, data) {
       }
       convertedData.classSectionTermId = placement.classSectionTermId;
 
+      const studentPayload = buildStudentRowPayload({
+        ...convertedData,
+        classSectionTermId: placement.classSectionTermId,
+        universityId: convertedData.universityId ?? data.universityId,
+      });
+
       const result = await studentRepository.addStudent(
-        convertedData,
+        studentPayload,
         transaction,
       );
-      // student register
       const role = "Student";
-      const roleId = convertedData.roleId || 1;
       const {
         studentId,
         email,
@@ -700,7 +744,7 @@ export async function importStudentData(excelData, data) {
         scholarNumber,
         universityId,
         role,
-        roleId,
+        roleId: importRoleId,
       };
       const userId = await studentRegister(registerStudentData, transaction);
 
@@ -767,6 +811,9 @@ export async function importStudentData(excelData, data) {
       })),
     };
   } catch (error) {
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
     console.error("Error in importing student data:", error);
     throw error;
   }
@@ -888,6 +935,7 @@ export async function addAdmissionNoForBulkImport(data, matchedPairs) {
         bulk.courseId,
         bulk.instituteId,
         bulk.sessionId,
+        bulk.admisssionDate ?? bulk.admissionDate,
       );
       createdBy = bulk.createdBy;
       const studentData = { ...bulk, scholarNumber };
@@ -1262,8 +1310,8 @@ export async function deleteStudentDetail(studentId) {
   }
 }
 
-export async function getEmptyEnrollNumber(academicYearId) {
-  return await studentRepository.getEmptyEnrollNumber(academicYearId);
+export async function getEmptyEnrollNumber(academicYearId, { page = 1, limit = 10, search } = {}) {
+  return await studentRepository.getEmptyEnrollNumber(academicYearId, { page, limit, search });
 }
 
 export async function studentCourseMapping(data) {
@@ -1320,13 +1368,17 @@ export async function sectionStudentMapping(data, createdBy) {
   }
 }
 
-export async function getSectionStudentMapping(classSectionTermId, academicYearId, term) {
-  const rows = await studentRepository.getSectionStudentMapping(
+export async function getSectionStudentMapping(classSectionTermId, academicYearId, term, { page = 1, limit = 10, search } = {}) {
+  const data = await studentRepository.getSectionStudentMapping(
     classSectionTermId,
     academicYearId,
     term,
+    { page, limit, search },
   );
-  return toPlainRows(rows);
+  return {
+    ...data,
+    result: toPlainRows(data.result),
+  };
 }
 
 export async function addElectiveSubject(data, createdBy) {
@@ -2065,6 +2117,44 @@ export async function getFeePlanInitiateAll(pagination = {}) {
       return formatFeePlanInitiateStudentRow(student, items, invoiceMap);
     }),
     pagination: { page, limit, total },
+  };
+}
+
+/** GET /student/feePlanStudents — students list with fee plan data; all filters are optional. */
+export async function getStudentsByFeePlanList(filters = {}) {
+  const feePlanProfileId = filters.feePlanProfileId != null
+    ? Number(filters.feePlanProfileId)
+    : null;
+
+  // Validate the fee plan only when the caller filters by it.
+  if (feePlanProfileId != null) {
+    const profile = await feePlanProfileRepository.findFeePlanProfileByIdForInstitute(
+      feePlanProfileId,
+    );
+    if (!profile) {
+      const error = new Error("Fee plan profile not found for this institute");
+      error.statusCode = 404;
+      throw error;
+    }
+  }
+
+  const result = await studentRepository.getStudentsByFeePlanList({
+    courseId: filters.courseId,
+    year: filters.year,
+    term: filters.term,
+    feePlanProfileId,
+    academicYearId: filters.academicYearId,
+    page: Number(filters.page) || 1,
+    limit: Number(filters.limit) || 10,
+  });
+
+  return {
+    students: result.students,
+    pagination: {
+      page: result.page,
+      limit: result.limit,
+      total: result.totalCount,
+    },
   };
 }
 

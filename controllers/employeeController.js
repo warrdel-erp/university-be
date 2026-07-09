@@ -59,15 +59,15 @@ export const getSingleEmployeeDetails = async (req, res) => {
 export const deleteEmployeeDetail = async (req, res) => {
     const userId = req.params.id;
     try {
-        if (!userId) {
-            res.status(400).send("employee Id is required");
-        } else {
-            const result = await employee.deleteEmployeeDetail(userId);
-            res.status(200).send(result);
+        if (!employeeId) {
+            return res.status(400).send("employee Id is required");
         }
+        const result = await employee.deleteEmployeeDetail(employeeId);
+        res.status(200).send(result);
     } catch (error) {
-        console.error(`Error in deleting userId Id ${userId}:`, error);
-        res.status(500).send("Internal Server Error");
+        console.error(`Error in deleting employeeId Id ${employeeId}:`, error);
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).send(error.message || "Internal Server Error");
     }
 };
 
@@ -169,15 +169,12 @@ export const getTeacherTimeTable = async (req, res) => {
 
 export const getTeacherSubject = async (req, res) => {
     try {
-        const { userId, sessionId } = req.query;
+        const { employeeId, sessionId, term } = req.query;
         const academicYearId = getAcademicYearId();
 
-        if (!userId) {
-            return res.status(400).send("userId is required");
-        }
-
-        const result = await employee.getTeacherSubject(userId, {
-            sessionId: sessionId != null && sessionId !== '' ? Number(sessionId) : undefined,
+        const result = await employee.getTeacherSubject(employeeId, {
+            sessionId,
+            term,
             academicYearId: academicYearId != null && academicYearId !== '' ? Number(academicYearId) : undefined,
         });
 

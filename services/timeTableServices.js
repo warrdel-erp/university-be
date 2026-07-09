@@ -8,7 +8,6 @@ export async function addTimeTable(data, createdBy, updatedBy) {
             name: data.name,
             maximumPeriod: data.maximumPeriod,
             courseId: data.courseId,
-            sessionId: data.sessionId,
             periodLength: data.periodLength,
             periodGap: data.periodGap,
             startingTime: data.startingTime,
@@ -26,17 +25,15 @@ export async function addTimeTable(data, createdBy, updatedBy) {
         const timeSlots = [];
         const maxPeriods = data.maximumPeriod;
 
-        const parseTime = (timeString) => {
-            const [time, modifier] = timeString.split(' ');
-            const [hour, minute] = time.split(':').map(Number);
-            const adjustedHour = hour % 12 + (modifier === 'PM' ? 12 : 0);
-            return new Date(1970, 0, 1, adjustedHour, minute);
-        };
-
-        let startingTime = parseTime(data.startingTime);
-
         if (data.type === 'Automatic') {
-            let currentTime = startingTime;
+            const parseTime = (timeString) => {
+                const [time, modifier] = timeString.split(' ');
+                const [hour, minute] = time.split(':').map(Number);
+                const adjustedHour = hour % 12 + (modifier === 'PM' ? 12 : 0);
+                return new Date(1970, 0, 1, adjustedHour, minute);
+            };
+
+            let currentTime = parseTime(data.startingTime);
             const periodLengthMs = data.periodLength * 60000;
             const periodGapMs = data.periodGap * 60000;
 
@@ -74,6 +71,10 @@ export async function addTimeTable(data, createdBy, updatedBy) {
             }
         }
 
+        if (!timeSlots.length) {
+            throw new Error('No periods generated for this timetable structure');
+        }
+
         data.timeSlots = timeSlots;
 
         const timeTableEntry = await timeTableRepository.addTimeTable(data, transaction);
@@ -86,33 +87,130 @@ export async function addTimeTable(data, createdBy, updatedBy) {
     }
 }
 
-export async function getAllTimeTableName(courseId, sessionId) {
-    return await timeTableRepository.getTimeTableStructures({ courseId, sessionId });
+export async function getAllTimeTableName(courseId) {
+    return await timeTableRepository.getTimeTableStructures({ courseId });
 }
 
 export async function getTimeTableDetails(courseId) {
     return await timeTableRepository.getTimeTableStructures({ courseId });
 }
 
-export async function getSingleTimeTableDetails(courseId, sessionId) {
-    return await timeTableRepository.getTimeTableStructures({ courseId, sessionId });
+export async function getSingleTimeTableDetails(courseId) {
+    return await timeTableRepository.getTimeTableStructures({ courseId });
 }
 
 export async function updateTimeTable(info) {
-    try {
-        const updatePromises = info.map(async (item) => {
-            const timeTableCreationId = item.timeTableCreationId;
-            return await timeTableRepository.updateTimeTable(timeTableCreationId, item);
-        });
-
-        const results = await Promise.all(updatePromises);
-        return results;
-    } catch (error) {
-        console.error('Error updating time table:', error);
-        throw new Error('Failed to update time table');
+    const results = [];
+    for (const item of info) {
+        const result = await timeTableRepository.updateTimeTable(item.timeTableCreationId, item);
+        results.push(result);
     }
+    return results;
 }
 
 export async function deleteTimeTable(timeTableCreationId) {
     return await timeTableRepository.deleteTimeTable(timeTableCreationId);
+}
+
+export async function deleteTimeTableStructure(timeTableNameId) {
+    return await timeTableRepository.deleteTimeTableStructure(timeTableNameId);
+}
+
+function parseTimeString(timeString) {
+    const [time, modifier] = timeString.split(' ');
+    const [hour, minute] = time.split(':').map(Number);
+    const adjustedHour = hour % 12 + (modifier === 'PM' ? 12 : 0);
+    return new Date(1970, 0, 1, adjustedHour, minute);
+}
+
+function formatTimeString(date) {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+}
+
+export async function addTimeTablePeriod(data, createdBy, updatedBy) {
+    const transaction = await sequelize.transaction();
+    try {
+        const timeTableNameId = Number(data.timeTableNameId);
+        const structure = await timeTableRepository.findStructureInScope(timeTableNameId, { transaction });
+        if (!structure) {
+            throw new Error('Time table structure not found for this institute and academic year');
+        }
+
+        const existingPeriods = await timeTableRepository.getStructurePeriodsByStructureId(
+            timeTableNameId,
+            { transaction },
+        );
+        const nextPeriodNumber = existingPeriods.length + 1;
+
+        let lastPlain = null;
+        if (existingPeriods.length > 0) {
+            const lastPeriod = existingPeriods[existingPeriods.length - 1];
+            lastPlain = lastPeriod.get ? lastPeriod.get({ plain: true }) : lastPeriod;
+        }
+
+        const type = data.type ?? lastPlain?.type ?? 'Manual';
+        const isCourse = data.isCourse ?? lastPlain?.isCourse ?? false;
+        const isBreak = data.isBreak ?? false;
+        const periodName = data.periodName ?? `Period${nextPeriodNumber}`;
+
+        let startTime = data.startTime;
+        let endTime = data.endTime;
+        const structurePlain = structure.get ? structure.get({ plain: true }) : structure;
+
+        if (type === 'Automatic' && startTime == null && endTime == null) {
+            const periodLength = structurePlain.periodLength;
+            const periodGap = structurePlain.periodGap;
+            if (periodLength == null || periodGap == null) {
+                throw new Error(
+                    'periodLength and periodGap are required on the structure for Automatic period generation',
+                );
+            }
+
+            let currentTime;
+            if (lastPlain?.endTime) {
+                currentTime = parseTimeString(lastPlain.endTime);
+                currentTime = new Date(currentTime.getTime() + periodGap * 60000);
+            } else if (structurePlain.startingTime) {
+                currentTime = parseTimeString(structurePlain.startingTime);
+            } else {
+                throw new Error(
+                    'startingTime is required on the structure when adding the first Automatic period',
+                );
+            }
+
+            const periodLengthMs = periodLength * 60000;
+            startTime = formatTimeString(currentTime);
+            endTime = formatTimeString(new Date(currentTime.getTime() + periodLengthMs));
+        } else if (type === 'Manual') {
+            if (startTime == null) {
+                startTime = '';
+            }
+            if (endTime == null) {
+                endTime = '';
+            }
+        }
+
+        const periodRow = await timeTableRepository.addTimeTablePeriodRow(
+            {
+                timeTableNameId,
+                type,
+                periodName,
+                startTime,
+                endTime,
+                isCourse,
+                isBreak,
+                createdBy,
+                updatedBy,
+            },
+            transaction,
+        );
+
+        await timeTableRepository.incrementStructureMaximumPeriod(timeTableNameId, transaction);
+
+        await transaction.commit();
+        return periodRow;
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
+    }
 }

@@ -141,9 +141,6 @@ export const updateSubject = async (req, res) => {
 
 export const addClassSections = async (req, res) => {
     try {
-        if (!req.body?.courseId) {
-            return res.status(400).send('course Id is required');
-        }
         const result = await mainServices.addClassSections(req.body, req.user.userId);
         return res.status(200).send(result);
     } catch (error) {
@@ -232,11 +229,8 @@ export const subjectExcel = async (req, res) => {
 
 export const getClassSectionRecord = async (req, res) => {
     try {
-        const { courseId, classSectionTermId } = req.query;
-        const result = await mainServices.getClassSectionRecord(
-            courseId,
-            classSectionTermId,
-        );
+        const { courseId, classSectionId } = req.query;
+        const result = await mainServices.getClassSectionRecord(courseId, classSectionId);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting class section record:", error);

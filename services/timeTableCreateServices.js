@@ -13,7 +13,205 @@ import { resolveProgramTerm, resolveTimeTableRoutineSection, stripRoutinePersist
 import {
   findClassSectionTermById,
 } from "../repository/classSectionTermRepository.js";
+import { buildTermName, termsForYear } from "../utility/courseTerms.js";
+import { formatQueryDate } from "../utility/helper.js";
 import { randomUUID } from "crypto";
+
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+const COPY_OVERRIDE_FIELDS = [
+  'timeTableRoutineId', 'employeeId', 'subjectId', 'electiveSubjectId',
+  'teacherSubjectMappingId', 'classRoomSectionId', 'isSameTeacher', 'teacherType',
+  'isAttendence', 'isOverridingSyblingElectives', 'timeTableType',
+];
+
+const MAPPING_REQUEST_KEYS = [
+  'classSectionTermIds', 'slots', 'timeTableCreationIds', 'classSectionsId',
+  'classSectionId', 'classSectionTermId', 'sourceTimeTableMappingId',
+  'copyTarget', 'copiedFromTimeTableMappingId',
+];
+
+function parseWeekOff(raw) {
+  if (raw == null) return [];
+  let list = raw;
+  if (typeof list === 'string') {
+    try { list = JSON.parse(list); } catch { return []; }
+  }
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  for (const day of list) out.push(String(day).toLowerCase());
+  return out;
+}
+
+function nextPeriodSlot(periodRows, creationId) {
+  let after = false;
+  for (const row of periodRows) {
+    const p = row.get ? row.get({ plain: true }) : row;
+    if (Number(p.timeTableCreationId) === Number(creationId)) { after = true; continue; }
+    if (after && !p.isBreak) return p;
+  }
+  return null;
+}
+
+function nextWorkingDay(day, weekOffDays) {
+  const start = DAYS.findIndex((d) => d.toLowerCase() === String(day).toLowerCase());
+  if (start < 0) throw new Error(`Invalid day: ${day}`);
+  for (let i = 1; i <= DAYS.length; i++) {
+    const next = DAYS[(start + i) % DAYS.length];
+    if (!weekOffDays.includes(next.toLowerCase())) return next;
+  }
+  throw new Error('No next working day available in this timetable structure');
+}
+
+function normalizeSlots(data) {
+  const source = Array.isArray(data.slots) && data.slots.length ? data.slots : [data];
+  const slots = [];
+  for (const slot of source) {
+    const timeTableCreationId = Number(slot.timeTableCreationId);
+    const period = Number(slot.period);
+    if (!timeTableCreationId || !period) {
+      throw new Error('timeTableCreationId and period are required');
+    }
+    slots.push({ timeTableCreationId, period });
+  }
+  return slots;
+}
+
+function resolveTermIds(data, routine) {
+  if (Array.isArray(data.classSectionTermIds) && data.classSectionTermIds.length) {
+    const ids = [];
+    for (const id of data.classSectionTermIds) {
+      const num = Number(id);
+      if (num) ids.push(num);
+    }
+    return [...new Set(ids)];
+  }
+  const single = data.classSectionTermId ?? routine?.classSectionTermId;
+  return single != null && single !== '' ? [Number(single)] : [];
+}
+
+function applyCopyOverrides(base, request) {
+  const payload = { ...base };
+  for (const field of COPY_OVERRIDE_FIELDS) {
+    const value = request[field];
+    if (value != null && value !== '') payload[field] = value;
+  }
+  return payload;
+}
+
+function stripMappingRow(row) {
+  for (const key of MAPPING_REQUEST_KEYS) delete row[key];
+  return row;
+}
+
+function assertRoutineNotStarted(startingDate) {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const start = new Date(startingDate);
+  start.setHours(0, 0, 0, 0);
+  if (now > start) {
+    throw new Error('Cannot add or update mapping for a routine after its starting date.');
+  }
+}
+
+function shapeTimeTableCreateList(rows, course) {
+  const coursePlain = course?.get ? course.get({ plain: true }) : course;
+  const byYear = {};
+  const meta = {
+    courseId: coursePlain?.courseId ?? null,
+    sessionId: null,
+    courseName: coursePlain?.courseName ?? null,
+    termType: coursePlain?.termType ?? null,
+  };
+
+  for (const row of rows) {
+    const plain = row.get({ plain: true });
+    const section = plain.classSection;
+    if (!section?.year || !plain.term) continue;
+
+    const cs = section.courseSection;
+    if (meta.courseName == null && cs?.courseName) meta.courseName = cs.courseName;
+    if (meta.termType == null && cs?.termType) meta.termType = cs.termType;
+    if (meta.courseId == null && section.courseId != null) meta.courseId = section.courseId;
+    if (meta.sessionId == null && section.sessionId != null) meta.sessionId = section.sessionId;
+
+    const year = Number(section.year);
+    const term = Number(plain.term);
+    const sectionId = Number(plain.classSectionsId);
+
+    if (!byYear[year]) byYear[year] = {};
+    if (!byYear[year][sectionId]) {
+      byYear[year][sectionId] = {
+        classSectionsId: sectionId,
+        section: section.section,
+        year,
+        classSession: section.classSession,
+        termsByNum: {},
+      };
+    }
+
+    byYear[year][sectionId].termsByNum[term] = {
+      term,
+      termName: coursePlain ? buildTermName(coursePlain.termType, term) : `Term ${term}`,
+      classSectionTermId: plain.classSectionTermId,
+      classSectionsId: sectionId,
+      timeTableRoutines: plain.timeTableRoutines || [],
+    };
+  }
+
+  const duration = Number(coursePlain?.courseDuration) || 0;
+  const yearNumbers = [];
+  if (duration > 0) {
+    for (let y = 1; y <= duration; y++) yearNumbers.push(y);
+  } else {
+    for (const y of Object.keys(byYear)) yearNumbers.push(Number(y));
+    yearNumbers.sort((a, b) => a - b);
+  }
+
+  const years = [];
+  for (const yearNum of yearNumbers) {
+    const yearBucket = byYear[yearNum] || {};
+    const sectionIds = Object.keys(yearBucket).map(Number);
+    sectionIds.sort((a, b) => a - b);
+
+    const classSections = [];
+    for (const sectionId of sectionIds) {
+      const sectionEntry = yearBucket[sectionId];
+      const termNumbers = coursePlain
+        ? termsForYear(yearNum, coursePlain)
+        : Object.keys(sectionEntry.termsByNum).map(Number).sort((a, b) => a - b);
+
+      const semesters = [];
+      for (const termNum of termNumbers) {
+        const existing = sectionEntry.termsByNum[termNum];
+        if (existing) {
+          semesters.push(existing);
+        } else {
+          semesters.push({
+            term: termNum,
+            termName: coursePlain ? buildTermName(coursePlain.termType, termNum) : `Term ${termNum}`,
+            classSectionTermId: null,
+            classSectionsId: sectionId,
+            timeTableRoutines: [],
+          });
+        }
+      }
+
+      classSections.push({
+        classSectionsId: sectionEntry.classSectionsId,
+        section: sectionEntry.section,
+        year: sectionEntry.year,
+        classSession: sectionEntry.classSession,
+        semesters,
+      });
+    }
+
+    classSections.sort((a, b) => String(a.section).localeCompare(String(b.section)));
+    years.push({ year: yearNum, classSections });
+  }
+
+  return { ...meta, years };
+}
 
 export async function resolveRoutinePlacement(data, options = {}) {
   const classSectionTermId = data.classSectionTermId;
@@ -42,54 +240,160 @@ function routineScopeWhere(classSectionTermId) {
   return { classSectionTermId: Number(classSectionTermId) };
 }
 
-function normalizeMappingSlots(data) {
-  if (Array.isArray(data.slots) && data.slots.length) {
-    return data.slots.map((slot) => {
-      const timeTableCreationId = Number(slot.timeTableCreationId);
-      const period = Number(slot.period);
-      if (!timeTableCreationId || !period) {
-        throw new Error('Each slot must include timeTableCreationId and period');
-      }
-      return { timeTableCreationId, period };
-    });
-  }
+function buildCopyPayload(sourceRow, target, request) {
+  const src = sourceRow.get ? sourceRow.get({ plain: true }) : sourceRow;
+  const payload = applyCopyOverrides({
+    timeTableRoutineId: src.timeTableRoutineId,
+    timeTableNameId: src.timeTableNameId,
+    timeTableCreationId: target.timeTableCreationId,
+    day: target.day,
+    period: target.period,
+    employeeId: src.employeeId,
+    subjectId: src.subjectId,
+    electiveSubjectId: src.electiveSubjectId,
+    teacherSubjectMappingId: src.teacherSubjectMappingId,
+    classRoomSectionId: src.classRoomSectionId,
+    isSameTeacher: src.isSameTeacher,
+    teacherType: src.teacherType,
+    isAttendence: src.isAttendence,
+    isOverridingSyblingElectives: src.isOverridingSyblingElectives,
+    timeTableType: src.timeTableType,
+    copiedFromTimeTableMappingId: src.timeTableMappingId,
+  }, request);
 
-  const timeTableCreationId = Number(data.timeTableCreationId);
-  const period = Number(data.period);
-  if (!timeTableCreationId || !period) {
-    throw new Error('timeTableCreationId and period are required');
-  }
+  payload.timeTableRoutineId = src.timeTableRoutineId;
+  payload.timeTableNameId = src.timeTableNameId;
+  payload.timeTableCreationId = target.timeTableCreationId;
+  payload.day = target.day;
+  payload.period = target.period;
+  payload.copiedFromTimeTableMappingId = src.timeTableMappingId;
 
-  return [{ timeTableCreationId, period }];
+  return payload;
 }
 
-function normalizeClassSectionTermIds(data, anchorRoutine) {
-  const rawIds = Array.isArray(data.classSectionTermIds)
-    ? data.classSectionTermIds.map(Number).filter(Boolean)
-    : [];
-
-  if (rawIds.length) {
-    return [...new Set(rawIds)];
+async function resolveCopyPayloads(data, options) {
+  const sourceId = Number(data.sourceTimeTableMappingId);
+  const source = await timeTableCreateRepository.getMappingCopySourceRepository(sourceId, options);
+  if (!source) {
+    throw new Error(`Source mapping ${sourceId} not found`);
   }
 
-  if (data.classSectionTermId != null && data.classSectionTermId !== '') {
-    return [Number(data.classSectionTermId)];
+  const src = source.get({ plain: true });
+  let day = src.day;
+  let period = Number(src.period);
+  let timeTableCreationId = Number(src.timeTableCreationId);
+
+  if (data.copyTarget === 'nextPeriod') {
+    const periodRows = await timeTableCreateRepository.getStructurePeriodsRepository(
+      src.timeTableNameId,
+      options,
+    );
+    const next = nextPeriodSlot(periodRows, src.timeTableCreationId);
+    if (!next) {
+      throw new Error('No next period available for this timetable structure');
+    }
+    period += 1;
+    timeTableCreationId = Number(next.timeTableCreationId);
+  } else if (data.copyTarget === 'nextDay') {
+    const structure = await timeTableCreateRepository.getStructureWeekOffRepository(
+      src.timeTableNameId,
+      options,
+    );
+    day = nextWorkingDay(src.day, parseWeekOff(structure?.weekOff));
+  } else {
+    throw new Error('copyTarget must be nextPeriod or nextDay');
   }
 
-  if (anchorRoutine?.classSectionTermId) {
-    return [Number(anchorRoutine.classSectionTermId)];
+  const occupied = await timeTableCreateRepository.findMappingAtSlotRepository(
+    {
+      timeTableRoutineId: src.timeTableRoutineId,
+      day,
+      period,
+      timeTableCreationId,
+    },
+    options,
+  );
+  if (occupied) {
+    throw new Error(`Target cell already has a mapping on ${day} period ${period}`);
   }
 
-  return [];
+  const sourceCellMappings = await timeTableCreateRepository.getSourceCellMappingsRepository(
+    sourceId,
+    options,
+  );
+  const sourceRows = sourceCellMappings.length ? sourceCellMappings : [source];
+  const target = { day, period, timeTableCreationId };
+  const payloads = [];
+
+  for (const sourceRow of sourceRows) {
+    payloads.push(buildCopyPayload(sourceRow, target, data));
+  }
+
+  return payloads;
 }
 
-async function resolveClassSectionTermIdsForMapping(data, anchorRoutine, options = {}) {
-  const direct = normalizeClassSectionTermIds(data, anchorRoutine);
-  if (direct.length) {
-    return direct;
+async function assertNoSlotConflicts({
+  employeeId,
+  classRoomSectionId,
+  day,
+  periodInfo,
+  startingDate,
+  endingDate,
+  conflictOptions,
+}) {
+  const { startTime, endTime } = periodInfo;
+
+  if (employeeId) {
+    const conflict = await timeTableCreateRepository.checkTeacherConflictRepository(
+      employeeId,
+      day,
+      startTime,
+      endTime,
+      startingDate,
+      endingDate,
+      conflictOptions,
+    );
+    if (conflict) {
+      const section = resolveTimeTableRoutineSection(conflict.timeTablecreate);
+      throw new Error(
+        `Teacher Conflict: Teacher already has class on ${day} at ${startTime}-${endTime} in ${section?.year || ''} - ${section?.section || ''}`,
+      );
+    }
   }
 
-  return [];
+  if (classRoomSectionId) {
+    const conflict = await timeTableCreateRepository.checkRoomConflictRepository(
+      classRoomSectionId,
+      day,
+      startTime,
+      endTime,
+      startingDate,
+      endingDate,
+      conflictOptions,
+    );
+    if (conflict) {
+      const section = resolveTimeTableRoutineSection(conflict.timeTablecreate);
+      throw new Error(
+        `Room Conflict: Classroom is already occupied on ${day} at ${startTime}-${endTime} by ${section?.year || ''} - ${section?.section || ''}`,
+      );
+    }
+  }
+}
+
+async function addFacultyLoadForEmployee(employeeId, periodLength, transaction) {
+  if (!employeeId || periodLength <= 0) {
+    return;
+  }
+
+  const facultyLoad = await getSingleFaculityLoadDetails(employeeId);
+  const existingLoad = toMoneyNumber(
+    facultyLoad?.[0]?.dataValues?.currentLoad ?? facultyLoad?.[0]?.currentLoad,
+  );
+  await updateFaculityLoadByEmployeeId(
+    employeeId,
+    { currentLoad: decimalAdd(existingLoad, periodLength) },
+    transaction,
+  );
 }
 
 async function resolveCombinedRoutineTargets(anchorRoutine, classSectionTermIds, transaction) {
@@ -178,10 +482,6 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
       throw new Error('classSectionTermId is required');
     }
 
-    if (!placement.courseId) {
-      placement.courseId = structure.courseId;
-    }
-
     if (placement.classSectionTermId) {
       const termRow = await findClassSectionTermById(placement.classSectionTermId, { transaction });
       if (!termRow) {
@@ -190,18 +490,13 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
       const plain = termRow.get ? termRow.get({ plain: true }) : termRow;
       const section = plain.classSection;
       if (section) {
-        if (structure.courseId && Number(section.courseId) !== Number(structure.courseId)) {
-          throw new Error('classSectionTermId does not match timetable structure course');
-        }
         if (structure.sessionId && Number(section.sessionId) !== Number(structure.sessionId)) {
           throw new Error('classSectionTermId does not match timetable structure session');
         }
         if (!placement.classSectionsId) {
           placement.classSectionsId = section.classSectionsId;
         }
-        if (!placement.courseId) {
-          placement.courseId = section.courseId;
-        }
+        placement.courseId = section.courseId;
       }
     } else if (!placement.courseId && placement.classSectionsId) {
       const section = await timeTableCreateRepository.getClassSectionWithCourseRepository(
@@ -210,6 +505,10 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
       if (section?.courseId) {
         placement.courseId = section.courseId;
       }
+    }
+
+    if (!placement.courseId) {
+      placement.courseId = structure.courseId;
     }
 
     delete placement.term;
@@ -267,12 +566,21 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
 }
 
 export async function gettimeTableCreateDetails(query = {}) {
-    try {
-    const result = await timeTableCreateRepository.getTimeTableCreateDetails({
-      courseId: query.courseId,
-      sessionId: query.sessionId,
+  try {
+    const courseId = query.courseId != null ? Number(query.courseId) : null;
+    const sessionId = query.sessionId != null ? Number(query.sessionId) : null;
+
+    const rows = await timeTableCreateRepository.findClassSectionTermsWithRoutines({
+      courseId,
+      sessionId,
     });
-    return result;
+
+    let course = null;
+    if (courseId) {
+      course = await timeTableCreateRepository.findCourseById(courseId);
+    }
+
+    return shapeTimeTableCreateList(rows, course);
   } catch (error) {
     console.error("Error in gettimeTableCreateDetails:", error.message);
     throw new Error(error.message);
@@ -280,7 +588,7 @@ export async function gettimeTableCreateDetails(query = {}) {
 }
 
 export async function getSingletimeTableCreateDetails(courseId) {
-    try {
+  try {
     const result = await timeTableCreateRepository.getSingleTimeTableCreateDetails(courseId);
 
     return result;
@@ -365,61 +673,121 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
   const transaction = await sequelize.transaction();
 
   try {
+    if (data.sourceTimeTableMappingId != null) {
+      const copyPayloads = await resolveCopyPayloads(data, { transaction });
+      if (!copyPayloads.length) {
+        throw new Error(`Source mapping ${data.sourceTimeTableMappingId} not found`);
+      }
+
+      const firstPayload = copyPayloads[0];
+      const routine = await timeTableCreateRepository.getRoutineByIdRepository(
+        firstPayload.timeTableRoutineId,
+        { transaction },
+      );
+      if (!routine) {
+        throw new Error('Invalid timeTableRoutineId');
+      }
+
+      assertRoutineNotStarted(routine.startingDate);
+
+      const periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(
+        firstPayload.timeTableCreationId,
+      );
+      if (!periodInfo) {
+        throw new Error(`Invalid timeTableCreationId: ${firstPayload.timeTableCreationId}`);
+      }
+
+      const periodLength = toMoneyNumber(periodInfo.timeTableName?.periodLength ?? 0);
+      const conflictOptions = {
+        allowedClassSectionTermIds: [Number(routine.classSectionTermId)],
+        excludeCombinedGroupId: null,
+      };
+
+      for (const payload of copyPayloads) {
+        await assertNoSlotConflicts({
+          employeeId: payload.employeeId,
+          classRoomSectionId: payload.classRoomSectionId,
+          day: payload.day,
+          periodInfo,
+          startingDate: routine.startingDate,
+          endingDate: routine.endingDate,
+          conflictOptions,
+        });
+      }
+
+      const createdMappings = [];
+      for (const payload of copyPayloads) {
+        const rowData = stripMappingRow({
+          ...payload,
+          createdBy,
+          updatedBy,
+        });
+
+        if (rowData.timeTableType === 'elective') {
+          rowData.isSameTeacher = false;
+        }
+
+        const result = await timeTableCreateRepository.addtimeTableMapping(rowData, transaction);
+        createdMappings.push({
+          timeTableMappingId: result.timeTableMappingId,
+          timeTableRoutineId: rowData.timeTableRoutineId,
+          classSectionTermId: routine.classSectionTermId,
+          timeTableCreationId: rowData.timeTableCreationId,
+          period: rowData.period,
+          day: rowData.day,
+          copiedFromTimeTableMappingId: payload.copiedFromTimeTableMappingId,
+        });
+      }
+
+      for (const payload of copyPayloads) {
+        await addFacultyLoadForEmployee(payload.employeeId, periodLength, transaction);
+      }
+
+      await transaction.commit();
+      return {
+        isCopy: true,
+        copiedFromTimeTableMappingId: Number(data.sourceTimeTableMappingId),
+        mappings: createdMappings,
+      };
+    }
+
+    const payload = data;
+
     const {
       timeTableRoutineId,
       day,
       classRoomSectionId,
       userId,
       combinedGroupId: existingCombinedGroupId,
-    } = data;
+    } = payload;
 
     if (!timeTableRoutineId) {
       throw new Error('timeTableRoutineId is required');
     }
 
-    const anchorRoutine = await timeTableCreateRepository.getRoutineByIdRepository(
+    const routine = await timeTableCreateRepository.getRoutineByIdRepository(
       timeTableRoutineId,
       { transaction },
     );
-    if (!anchorRoutine) {
+    if (!routine) {
       throw new Error('Invalid timeTableRoutineId');
     }
 
-    const { startingDate, endingDate } = anchorRoutine;
-    const slots = normalizeMappingSlots(data);
-    const classSectionTermIds = await resolveClassSectionTermIdsForMapping(
-      data,
-      anchorRoutine,
-      { transaction },
-    );
-    if (!classSectionTermIds.length) {
+    const termIds = resolveTermIds(payload, routine);
+    if (!termIds.length) {
       throw new Error(
-        'classSectionTermIds could not be resolved from routine. Send classSectionTermId or classSectionTermIds[], or ensure the routine has classSectionTermId.',
+        'classSectionTermId could not be resolved. Send classSectionTermId, classSectionTermIds[], or use a routine with classSectionTermId.',
       );
     }
 
-    const isCombined = classSectionTermIds.length > 1;
-    const combinedGroupId = isCombined
-      ? (existingCombinedGroupId || randomUUID())
-      : null;
+    assertRoutineNotStarted(routine.startingDate);
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const sDate = new Date(startingDate);
-    sDate.setHours(0, 0, 0, 0);
-
-    if (today > sDate) {
-      throw new Error('Cannot add or update mapping for a routine after its starting date.');
-    }
-
-    const routineTargets = await resolveCombinedRoutineTargets(
-      anchorRoutine,
-      classSectionTermIds,
-      transaction,
-    );
-
+    const slots = normalizeSlots(payload);
+    const isCombined = termIds.length > 1;
+    const combinedGroupId = isCombined ? (existingCombinedGroupId || randomUUID()) : null;
+    const routineTargets = await resolveCombinedRoutineTargets(routine, termIds, transaction);
     const conflictOptions = {
-      allowedClassSectionTermIds: classSectionTermIds,
+      allowedClassSectionTermIds: termIds,
       excludeCombinedGroupId: existingCombinedGroupId || null,
     };
 
@@ -432,67 +800,31 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
         throw new Error(`Invalid timeTableCreationId: ${slot.timeTableCreationId}`);
       }
 
-      const { startTime, endTime } = periodInfo;
-      const periodLength = toMoneyNumber(periodInfo.timeTableName?.periodLength ?? 0);
-      totalPeriodLength = decimalAdd(totalPeriodLength, periodLength);
+      totalPeriodLength = decimalAdd(
+        totalPeriodLength,
+        toMoneyNumber(periodInfo.timeTableName?.periodLength ?? 0),
+      );
 
-      if (userId) {
-        const conflict = await timeTableCreateRepository.checkTeacherConflictRepository(
-          userId,
-          day,
-          startTime,
-          endTime,
-          startingDate,
-          endingDate,
-          conflictOptions,
-        );
-        if (conflict) {
-          const routineSection = resolveTimeTableRoutineSection(conflict.timeTablecreate);
-          const conflictSection = routineSection?.section || '';
-          const conflictClass = routineSection?.year || '';
-          throw new Error(
-            `Teacher Conflict: Teacher already has class on ${day} at ${startTime}-${endTime} in ${conflictClass} - ${conflictSection}`,
-          );
-        }
-      }
-
-      if (classRoomSectionId) {
-        const roomConflict = await timeTableCreateRepository.checkRoomConflictRepository(
-          classRoomSectionId,
-          day,
-          startTime,
-          endTime,
-          startingDate,
-          endingDate,
-          conflictOptions,
-        );
-        if (roomConflict) {
-          const routineSection = resolveTimeTableRoutineSection(roomConflict.timeTablecreate);
-          const conflictSection = routineSection?.section || '';
-          const conflictClass = routineSection?.year || '';
-          throw new Error(
-            `Room Conflict: Classroom is already occupied on ${day} at ${startTime}-${endTime} by ${conflictClass} - ${conflictSection}`,
-          );
-        }
-      }
+      await assertNoSlotConflicts({
+        employeeId,
+        classRoomSectionId,
+        day,
+        periodInfo,
+        startingDate: routine.startingDate,
+        endingDate: routine.endingDate,
+        conflictOptions,
+      });
 
       for (const target of routineTargets) {
-        const rowData = {
-          ...data,
+        const rowData = stripMappingRow({
+          ...payload,
           timeTableRoutineId: target.timeTableRoutineId,
           timeTableCreationId: slot.timeTableCreationId,
           period: slot.period,
           combinedGroupId,
           createdBy,
           updatedBy,
-        };
-
-        delete rowData.classSectionTermIds;
-        delete rowData.slots;
-        delete rowData.timeTableCreationIds;
-        delete rowData.classSectionsId;
-        delete rowData.classSectionId;
-        delete rowData.classSectionTermId;
+        });
 
         if (rowData.timeTableType === 'elective') {
           rowData.isSameTeacher = false;
@@ -506,16 +838,12 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
           timeTableCreationId: slot.timeTableCreationId,
           period: slot.period,
           combinedGroupId,
+          copiedFromTimeTableMappingId: payload.copiedFromTimeTableMappingId ?? null,
         });
       }
     }
 
-    if (userId && totalPeriodLength > 0) {
-      const facultyLoad = await getSingleFaculityLoadDetails(userId);
-      const existingLoad = toMoneyNumber(facultyLoad?.[0]?.currentLoad);
-      const currentLoad = decimalAdd(existingLoad, totalPeriodLength);
-      await updateFaculityLoadByEmployeeId(userId, { currentLoad }, transaction);
-    }
+    await addFacultyLoadForEmployee(employeeId, totalPeriodLength, transaction);
 
     await transaction.commit();
 
@@ -523,7 +851,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
       return {
         isCombined,
         combinedGroupId,
-        classSectionTermIds,
+        classSectionTermIds: termIds,
         mappings: createdMappings,
       };
     }
@@ -539,6 +867,34 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
 export async function cloneTimeTableRoutine(previousRoutineId, startingDate, endingDate, createdBy, updatedBy) {
   const transaction = await sequelize.transaction();
 
+  const routineCloneFields = [
+    'timeTableNameId',
+    'courseId',
+    'academicYearId',
+    'classSectionTermId',
+    'campusId',
+    'instituteId',
+    'timeTableType',
+  ];
+
+  const mappingCloneFields = [
+    'timeTableNameId',
+    'timeTableCreationId',
+    'employeeId',
+    'electiveSubjectId',
+    'subjectId',
+    'teacherSubjectMappingId',
+    'classRoomSectionId',
+    'isSameTeacher',
+    'day',
+    'teacherType',
+    'isAttendence',
+    'period',
+    'timeTableType',
+    'isOverridingSyblingElectives',
+    'combinedGroupId',
+  ];
+
   try {
     const previousRoutine = await timeTableCreateRepository.getFullRoutineDetailsRepository(previousRoutineId);
 
@@ -546,70 +902,67 @@ export async function cloneTimeTableRoutine(previousRoutineId, startingDate, end
       throw new Error(`Routine with ID ${previousRoutineId} not found`);
     }
 
-    const formatDate = (date) => {
-      const d = new Date(date);
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    };
+    const previousPlain = previousRoutine.get({ plain: true });
+    const start = formatQueryDate(startingDate);
+    const end = formatQueryDate(endingDate);
 
-    const start = formatDate(startingDate);
-    const end = formatDate(endingDate);
-
-    // Check for routine overlap for the same class section
     const overlap = await timeTableCreateRepository.checkRoutineOverlapRepository({
-      classSectionTermId: previousRoutine.classSectionTermId,
+      classSectionTermId: previousPlain.classSectionTermId,
       startingDate: start,
       endingDate: end,
     });
 
     if (overlap) {
-      throw new Error(`A routine already exists for this class section that overlaps with the selected date range (${start} to ${end})`);
+      throw new Error(
+        `A routine already exists for this class section term that overlaps with the selected date range (${start} to ${end})`,
+      );
     }
 
-    // Create new routine data from previous one
     const newRoutineData = {
-      ...previousRoutine.get({ plain: true }),
       startingDate: start,
       endingDate: end,
+      isPublish: false,
       createdBy,
-      updatedBy
+      updatedBy,
     };
 
-    // Remove primary key and metadata
-    delete newRoutineData.timeTableRoutineId;
-    delete newRoutineData.createdAt;
-    delete newRoutineData.updatedAt;
-    delete newRoutineData.deletedAt;
-    delete newRoutineData.classSectionsId;
+    for (const field of routineCloneFields) {
+      if (previousPlain[field] !== undefined) {
+        newRoutineData[field] = previousPlain[field];
+      }
+    }
 
     const newRoutine = await timeTableCreateRepository.addTimeTableCreate(newRoutineData, transaction);
     const newRoutineId = newRoutine.timeTableRoutineId;
 
-    // Copy mappings
     const previousMappings = previousRoutine.timeTablecreate || [];
-    if (previousMappings.length > 0) {
-      const newMappings = previousMappings.map(mapping => {
-        const m = { ...mapping.get({ plain: true }) };
-        delete m.timeTableMappingId;
-        delete m.createdAt;
-        delete m.updatedAt;
-        delete m.deletedAt;
-        m.timeTableRoutineId = newRoutineId;
-        m.createdBy = createdBy;
-        m.updatedBy = updatedBy;
-        return m;
-      });
+    const newMappings = [];
 
+    for (const mapping of previousMappings) {
+      const mappingPlain = mapping.get ? mapping.get({ plain: true }) : mapping;
+      const row = {
+        timeTableRoutineId: newRoutineId,
+        createdBy,
+        updatedBy,
+      };
+
+      for (const field of mappingCloneFields) {
+        if (mappingPlain[field] !== undefined) {
+          row[field] = mappingPlain[field];
+        }
+      }
+
+      newMappings.push(row);
+    }
+
+    if (newMappings.length > 0) {
       await timeTableCreateRepository.bulkCreateMappings(newMappings, transaction);
     }
 
     await transaction.commit();
     return newRoutine;
-
   } catch (error) {
-    if (transaction) await transaction.rollback();
+    await transaction.rollback();
     console.error("Error in cloneTimeTableRoutine:", error);
     throw error;
   }
@@ -711,8 +1064,12 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
     }
     const { startTime, endTime } = periodInfo;
 
+    const addingSecondaryTeacher = mappingArray.some(
+      (item) => item.isNew === true && item.teacherType === 'Secondary',
+    );
+
     // Check room conflict once for the entire batch as they share the same slot
-    if (baseRow.classRoomSectionId) {
+    if (baseRow.classRoomSectionId && !addingSecondaryTeacher) {
       const roomConflict = await timeTableCreateRepository.checkRoomConflictRepository(
         baseRow.classRoomSectionId,
         baseRow.day,
@@ -801,21 +1158,25 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
         await updateFaculityLoadByEmployeeId(item.userId, { currentLoad: newLoad }, transaction);
 
         const newRow = {
-          timeTableNameId: baseRow.timeTableNameId,
+          timeTableNameId: Number(baseRow.timeTableNameId || routineInfo.timeTableNameId),
           timeTableRoutineId: baseRow.timeTableRoutineId,
           timeTableCreationId: baseRow.timeTableCreationId,
-          subjectId: item.subjectId,
-          electiveSubjectId: item.electiveSubjectId,
-          // teacherSubjectMappingId: '',
+          subjectId: item.subjectId != null ? Number(item.subjectId) : baseRow.subjectId,
+          electiveSubjectId: item.electiveSubjectId != null
+            ? Number(item.electiveSubjectId)
+            : baseRow.electiveSubjectId,
+          teacherSubjectMappingId: item.teacherSubjectMappingId ?? baseRow.teacherSubjectMappingId,
           classRoomSectionId: baseRow.classRoomSectionId,
           day: baseRow.day,
           period: baseRow.period,
           isSameTeacher: false,
           timeTableType: baseRow.timeTableType,
-          userId: item.userId,
+          combinedGroupId: baseRow.combinedGroupId || null,
+          employeeId: item.employeeId,
           teacherType: item.teacherType,
           isAttendence: item.isAttendence,
-          isOverridingSyblingElectives: item.isOverridingSyblingElectives,
+          isOverridingSyblingElectives: item.isOverridingSyblingElectives
+            ?? baseRow.isOverridingSyblingElectives,
           createdBy,
           updatedBy,
         };
@@ -1801,10 +2162,10 @@ function mapRoutineClassSection(classSection) {
     term: resolveProgramTerm(plain),
     course: plain.courseSection
       ? {
-          courseId: plain.courseSection.courseId,
-          courseName: plain.courseSection.courseName,
-          courseCode: plain.courseSection.courseCode,
-        }
+        courseId: plain.courseSection.courseId,
+        courseName: plain.courseSection.courseName,
+        courseCode: plain.courseSection.courseCode,
+      }
       : null,
   };
 }
@@ -1833,27 +2194,27 @@ export async function getRoutineByTeacherAndAcademicYear(userId, courseId, sessi
     const common = {
       employee: employee
         ? {
-            userId: employee.userId,
-            employeeName: employee.employeeName,
-            employeeCode: employee.employeeCode,
-            pickColor: employee.pickColor,
-          }
+          userId: employee.userId,
+          employeeName: employee.employeeName,
+          employeeCode: employee.employeeCode,
+          pickColor: employee.pickColor,
+        }
         : null,
       course: course
         ? {
-            courseId: course.courseId,
-            courseName: course.courseName,
-            courseCode: course.courseCode,
-          }
+          courseId: course.courseId,
+          courseName: course.courseName,
+          courseCode: course.courseCode,
+        }
         : null,
       session: session
         ? {
-            sessionId: session.sessionId,
-            sessionName: session.sessionName,
-            startingDate: session.startingDate,
-            endingDate: session.endingDate,
-            academicYearId: session.academicYearId,
-          }
+          sessionId: session.sessionId,
+          sessionName: session.sessionName,
+          startingDate: session.startingDate,
+          endingDate: session.endingDate,
+          academicYearId: session.academicYearId,
+        }
         : null,
       classSections: classSections.map(mapClassSectionSummary),
     };

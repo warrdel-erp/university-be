@@ -85,3 +85,13 @@ export async function assignFeePlanProfileToStudent(req, res) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
 }
+
+export async function deleteFeePlanProfile(req, res) {
+  try {
+    const { feePlanProfileId } = req.query;
+    const data = await feePlanProfileService.deleteFeePlanProfile(feePlanProfileId);
+    return SuccessResponse(res, 200, "Fee plan profile deleted successfully", data);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}

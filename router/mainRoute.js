@@ -88,17 +88,14 @@ const updateSubjectSchema = z.object({
 
 const classSectionRecordQuerySchema = z.object({
     courseId: z.coerce.number({ required_error: 'courseId is required' }).int().positive(),
-    classSectionTermId: z.coerce.number({ required_error: 'classSectionTermId is required' }).int().positive(),
+    classSectionId: z.coerce.number({ required_error: 'classSectionId is required' }).int().positive(),
 });
 
 const addClassSectionsSchema = z.object({
     courseId: positiveIntegerId,
     sessionId: positiveIntegerId,
-    sections: z.array(z.object({
-        sectionId: positiveIntegerId,
-        section: z.string().min(1, 'section is required'),
-        year: z.coerce.number().int().positive('year must be a positive integer'),
-    })).min(1, 'sections array is required'),
+    section: z.string().trim().min(1, 'section is required'),
+    year: z.coerce.number().int().positive('year must be a positive integer'),
 }).strict();
 
 const router = Router();
@@ -121,8 +118,9 @@ router.post('/subject', userAuth, checkAccess(PERMISSIONS.SUBJECTS_ADD.value, nu
 router.patch('/subject/update', userAuth, checkAccess(PERMISSIONS.SUBJECTS_EDIT.value, null), validate({ body: updateSubjectSchema }), updateSubject);
 
 // Section master (class table removed)
-router.post('/classSections', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP_ADD.value, null), validate({ body: addClassSectionsSchema }), addClassSections);
-router.get('/classSections', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP.value, null), getClassSections);
+router.post('/classSections', userAuth, validate({ body: addClassSectionsSchema }), addClassSections);
+router.get('/classSections', userAuth, getClassSections);
+
 router.get('/classSectionSpecific', userAuth, getClassSectionSpecific);
 router.post('/sectionSubjectMapper', userAuth, addSectionSubjectMapper);
 router.get('/sectionSubjectMapper', userAuth, getSectionSubjectMapper);

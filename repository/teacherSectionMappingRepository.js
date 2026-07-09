@@ -237,7 +237,7 @@ export async function deleteTeachersSectionMapping(teacherSectionMappingId) {
         });
         return { message: 'delete Teacher Section Mapping deleted successfully' };
     } catch (error) {
-        console.error('Error during soft delete:', error);
+        console.error('Error deleting teacher section mapping:', error);
         throw error;
     }
 }

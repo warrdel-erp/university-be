@@ -37,7 +37,7 @@ export const getAllStudents = async (req, res) => {
 
 // 3. get single student details
 export const getSingleStudentDetail = async (req, res) => {
-    const { studentId } = req.query;
+    const studentId = req.params.studentId ?? req.query.studentId;
     try {
         const result = await studentService.getSingleStudentDetail(studentId);
         if (!result) {
@@ -54,13 +54,9 @@ export const getSingleStudentDetail = async (req, res) => {
 
 export const importStudentData = async (req, res) => {
     try {
-        const { campusId, instituteId, affiliatedUniversityId, sessionId } = req.body;
         const createdBy = req.user.userId;
-        const data = { ...req.body, createdBy };
-
-        if (!(campusId && instituteId && affiliatedUniversityId && sessionId)) {
-            return res.status(400).send('campusId, instituteId, affiliatedUniversityId, and sessionId are required');
-        }
+        const universityId = req.body.universityId ?? req.user.universityId;
+        const data = { ...req.body, createdBy, universityId };
 
         const excelFile = req.files?.student;
         if (!excelFile) {
@@ -77,10 +73,11 @@ export const importStudentData = async (req, res) => {
             return res.status(400).send('Error processing the Excel data');
         }
 
-        res.status(200).send({ message: 'Data imported successfully' });
+        res.status(200).send({ message: 'Data imported successfully', ...result });
     } catch (error) {
         console.error(error);
-        res.status(500).send({ error: error.message || 'An unexpected error occurred' });
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).send({ error: error.message || 'An unexpected error occurred' });
     }
 };
 
@@ -122,8 +119,13 @@ export const deleteStudentDetail = async (req, res) => {
 };
 
 export const getEmptyEnrollNumber = async (req, res) => {
+    const { page, limit, search } = req.query;
     try {
-        const result = await studentService.getEmptyEnrollNumber(getAcademicYearId());
+        const result = await studentService.getEmptyEnrollNumber(getAcademicYearId(), {
+            page,
+            limit,
+            search,
+        });
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in getting EMpty Enroll Number:`, error);
@@ -174,9 +176,15 @@ export const sectionStudentMapping = async (req, res) => {
 export const getSectionStudentMapping = async (req, res) => {
     const classSectionTermId = req.query.classSectionTermId ?? 0;
     const term = req.query.term != null ? Number(req.query.term) : undefined;
+    const { page, limit, search } = req.query;
 
     try {
-        const result = await studentService.getSectionStudentMapping(classSectionTermId, undefined, term);
+        const result = await studentService.getSectionStudentMapping(
+            classSectionTermId,
+            undefined,
+            term,
+            { page, limit, search },
+        );
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting section student mapping:", error);
@@ -310,13 +318,43 @@ export const getFeePlanInitiate = async (req, res) => {
     }
 };
 
+export const getStudentsByFeePlanList = async (req, res) => {
+    try {
+        const { courseId, year, term, feePlanProfileId, page, limit } = req.query;
+        const result = await studentService.getStudentsByFeePlanList({
+            courseId,
+            year,
+            term,
+            feePlanProfileId,
+            academicYearId: getAcademicYearId(),
+            page,
+            limit,
+        });
+        return SuccessResponse(
+            res,
+            200,
+            "Fee plan students fetched successfully",
+            {
+                students: result.students,
+            },
+            result.pagination,
+        );
+    } catch (error) {
+        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+    }
+};
+
 export const getEmptyFeeDetails = async (req, res) => {
-    const { courseId, sessionId } = req.query;
+    const { courseId, sessionId, year, search, page, limit } = req.query;
     try {
         const result = await studentService.getEmptyFeeDetails({
             academicYearId: getAcademicYearId(),
             courseId,
             sessionId,
+            year,
+            search,
+            page,
+            limit,
         });
         res.status(200).send(result);
     } catch (error) {

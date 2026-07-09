@@ -636,6 +636,9 @@ export async function deleteEmployeeDetail(userId) {
     }
   } catch (error) {
     console.error('Error deleting employee:', error);
+    if (error.statusCode) {
+      throw error;
+    }
     return { message: 'An error occurred while trying to delete the employee', error: error.message };
   }
 };
@@ -1644,12 +1647,22 @@ function processScheduleCombinations(schedules) {
 }
 
 function getEmployeeDetails(schedules) {
-  return schedules.length > 0 && schedules[0].employeeDetails
-    ? {
-      userId: schedules[0].employeeDetails.userId,
-      employeeName: schedules[0].employeeDetails.employeeName
-    }
-    : null;
+  if (!schedules.length || !schedules[0].employeeDetails) {
+    return null;
+  }
+
+  const employee = schedules[0].employeeDetails.get
+    ? schedules[0].employeeDetails.get({ plain: true })
+    : schedules[0].employeeDetails;
+
+  return {
+    employeeId: employee.employeeId,
+    employeeName: employee.employeeName,
+    employmentType: employee.employmentType,
+    department: employee.department,
+    totalClasses: schedules.reduce((acc, schedule) => acc + schedule.totalClasses, 0),
+    totalUniqueSubjects: schedules.length
+  };
 }
 
 export async function getUniqueClassSectionSubjects(userId, academicYearId) {

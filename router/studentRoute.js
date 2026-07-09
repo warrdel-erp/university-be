@@ -16,6 +16,7 @@ import {
   getStudentPromotionHistory,
   getFeePlanInitiate,
   getEmptyFeeDetails,
+  getStudentsByFeePlanList,
   getStudentSubject,
   getFeeDetailsByStudentId,
   getBooksIssuedToStudent,
@@ -208,6 +209,20 @@ const studentUpdateBodyFields = {
   ...studentSharedOptionalFields,
 };
 
+const importStudentBodySchema = z.object({
+  campusId: positiveIntegerId,
+  instituteId: positiveIntegerId,
+  sessionId: positiveIntegerId,
+  courseLevelId: positiveIntegerId,
+  courseId: positiveIntegerId,
+  classSectionTermId: positiveIntegerId,
+  academicYearId: optionalPositiveIntegerId,
+  acedmicYearId: optionalPositiveIntegerId,
+  affiliatedUniversityId: nullableAffiliatedUniversityId.optional(),
+  universityId: optionalPositiveIntegerId,
+  roleId: z.union([z.literal(ROLES.STUDENT), positiveIntegerId]).optional(),
+});
+
 const addStudentWithFeePlanProfileBodySchema = z.object({
   feePlanProfileId: requiredFeePlanProfileId,
   universityId: positiveIntegerId,
@@ -243,6 +258,21 @@ const getAllAnswerSheetsQuerySchema = z.object({
 const emptyFeeDetailsQuerySchema = z.object({
   courseId: positiveIntegerId.optional(),
   sessionId: positiveIntegerId.optional(),
+  year: positiveIntegerId.optional(),
+  search: z.string().trim().optional(),
+  page: z.coerce
+    .number()
+    .int("page must be an integer")
+    .min(1, "page must be at least 1")
+    .optional()
+    .default(1),
+  limit: z.coerce
+    .number()
+    .int("limit must be an integer")
+    .min(1, "limit must be at least 1")
+    .max(100, "limit must be at most 100")
+    .optional()
+    .default(10),
 });
 
 const studentIdQuerySchema = z.object({
@@ -263,6 +293,26 @@ const feePlanProfilesAllQuerySchema = z.object({
     .max(100, "limit must be at most 100")
     .optional()
     .default(20),
+});
+
+const feePlanStudentsQuerySchema = z.object({
+  courseId: optionalPositiveIntegerId,
+  year: optionalPositiveIntegerId,
+  term: optionalPositiveIntegerId,
+  feePlanProfileId: optionalPositiveIntegerId,
+  page: z.coerce
+    .number()
+    .int("page must be an integer")
+    .min(1, "page must be at least 1")
+    .optional()
+    .default(1),
+  limit: z.coerce
+    .number()
+    .int("limit must be an integer")
+    .min(1, "limit must be at least 1")
+    .max(100, "limit must be at most 100")
+    .optional()
+    .default(10),
 });
 
 const getAllStudentsQuerySchema = z.object({
@@ -322,6 +372,45 @@ const mapStudentBody = (req, res, next) => {
   }
 };
 
+const mapStudentImportBody = (req, res, next) => {
+  try {
+    const body = { ...req.body };
+
+    if (body.acedmicYearId != null && body.academicYearId == null) {
+      body.academicYearId = body.acedmicYearId;
+    }
+    delete body.acedmicYearId;
+
+    const hasLegacySemester =
+      body.semesterId != null && body.semesterId !== "";
+    const hasLegacySection =
+      body.classSectionsId != null && body.classSectionsId !== "";
+
+    if (
+      (hasLegacySemester || hasLegacySection) &&
+      (body.classSectionTermId == null || body.classSectionTermId === "")
+    ) {
+      return ErrorResponse(
+        res,
+        400,
+        "classSectionTermId is required; semesterId and classSectionsId are no longer supported",
+      );
+    }
+
+    delete body.semesterId;
+    delete body.classSectionsId;
+
+    if (body.affiliatedUniversityId === "") {
+      body.affiliatedUniversityId = null;
+    }
+
+    req.body = body;
+    next();
+  } catch (error) {
+    return ErrorResponse(res, 400, error.message || "Invalid import payload");
+  }
+};
+
 router.get(
   "/all",
   userAuth,
@@ -336,7 +425,6 @@ router.get(
   validate({ query: studentIdQuerySchema }),
   getSingleStudentDetail
 );
-router.post("/import", userAuth, checkAccess(PERMISSIONS.ADD_STUDENT_IMPORT.value, null), importStudentData);
 
 router.patch(
   "/:studentId",
@@ -351,7 +439,29 @@ router.patch(
 );
 router.delete("/:studentId", userAuth, checkAccess(PERMISSIONS.ADD_STUDENT_DELETE.value, null), deleteStudentDetail);
 
-router.get("/emptyEnrollNumber", userAuth, getEmptyEnrollNumber);
+const emptyEnrollNumberQuerySchema = z.object({
+  page: z.coerce
+    .number()
+    .int("page must be an integer")
+    .min(1, "page must be at least 1")
+    .optional()
+    .default(1),
+  limit: z.coerce
+    .number()
+    .int("limit must be an integer")
+    .min(1, "limit must be at least 1")
+    .max(100, "limit must be at most 100")
+    .optional()
+    .default(10),
+  search: z.string().trim().optional(),
+});
+
+router.get(
+  "/emptyEnrollNumber",
+  userAuth,
+  validate({ query: emptyEnrollNumberQuerySchema }),
+  getEmptyEnrollNumber
+);
 const sectionStudentMappingBodySchema = z.object({
   studentId: z.union([positiveIntegerId, z.array(positiveIntegerId)]),
   classSectionTermId: positiveIntegerId,
@@ -373,6 +483,20 @@ const promoteStudentBodySchema = z.union([
 const sectionStudentMappingQuerySchema = z.object({
   classSectionTermId: z.coerce.number().int().nonnegative().optional(),
   term: z.coerce.number().int().positive().optional(),
+  page: z.coerce
+    .number()
+    .int("page must be an integer")
+    .min(1, "page must be at least 1")
+    .optional()
+    .default(1),
+  limit: z.coerce
+    .number()
+    .int("limit must be an integer")
+    .min(1, "limit must be at least 1")
+    .max(100, "limit must be at most 100")
+    .optional()
+    .default(10),
+  search: z.string().trim().optional(),
 });
 
 router.post("/studentMapping", userAuth, checkAccess(PERMISSIONS.ADD_STUDENT_MAPPING.value, null), studentCourseMapping);
@@ -467,6 +591,12 @@ router.get(
 );
 
 router.get(
+  "/feePlanStudents",
+  userAuth,
+  validate({ query: feePlanStudentsQuerySchema }),
+  getStudentsByFeePlanList,
+);
+router.get(
   "/feePlanProfiles/all",
   userAuth,
   checkAccess(PERMISSIONS.STUDENT_LIST.value, null),
@@ -498,6 +628,12 @@ router.get(
   validate({ query: getAllAnswerSheetsQuerySchema }),
   getAllAnswerSheets
 );
+router.get(
+  "/:studentId",
+  userAuth,
+  validate({ params: updateStudentDetailsParamsSchema }),
+  getSingleStudentDetail,
+);
 
 router.post(
   "/",
@@ -507,5 +643,14 @@ router.post(
   mapStudentBody,
   addStudentWithFeePlanProfile
 );
+
+router.post(
+  "/import",
+  userAuth,
+  mapStudentImportBody,
+  validate({ body: importStudentBodySchema }),
+  importStudentData,
+);
+
 
 export default router;

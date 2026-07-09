@@ -477,6 +477,49 @@ export async function getSingleFeePlanProfile(feePlanProfileId) {
   });
 }
 
+/**
+ * Deletes a fee plan profile (draft or published).
+ * Blocked only when assigned to any student or any invoice exists for its terms.
+ */
+export async function deleteFeePlanProfile(feePlanProfileId) {
+  return sequelize.transaction(async (transaction) => {
+    const profile = await repo.findFeePlanProfileByIdForInstitute(feePlanProfileId, {
+      transaction,
+    });
+    if (!profile) {
+      throw httpError("Fee plan profile not found", 404);
+    }
+
+    const assignedStudentCount = await repo.countStudentsForFeePlanProfile(feePlanProfileId, {
+      transaction,
+    });
+    if (assignedStudentCount > 0) {
+      throw httpError(
+        "Cannot delete fee plan profile assigned to one or more students",
+        400
+      );
+    }
+
+    const invoiceCount = await repo.countStudentFeeInvoicesForFeePlanProfile(feePlanProfileId, {
+      transaction,
+    });
+    if (invoiceCount > 0) {
+      throw httpError(
+        "Cannot delete fee plan profile that has generated invoices",
+        400
+      );
+    }
+
+    await repo.deleteFeePlanProfileCascade(feePlanProfileId, { transaction });
+
+    return {
+      feePlanProfileId: Number(feePlanProfileId),
+      publishStatus: toPlain(profile).publishStatus ?? "draft",
+      deleted: true,
+    };
+  });
+}
+
 /** Assign fee v2 plan to student (students.fee_plan_profile_id). */
 export async function assignFeePlanProfileToStudent(body) {
   const { studentId, feePlanProfileId } = body;

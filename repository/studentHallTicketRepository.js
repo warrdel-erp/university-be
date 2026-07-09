@@ -1,7 +1,7 @@
 import { Op, fn, col } from "sequelize";
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
-import { classSectionTermsInclude, studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
+import { studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
 
 export async function findExamSetupTypeTermById(examSetupTypeTermId, transaction) {
     return scoped(model.examSetupTypeTermModel).findByPk(examSetupTypeTermId, {
@@ -30,7 +30,7 @@ export async function getSchedulesWithSubjectsForExamTermSession(examSetupTypeTe
     return scoped(model.examScheduleModel).findAll({
         transaction,
         where: { examSetupTypeTermId, sessionId },
-        attributes: ["examScheduleId", "subjectId", "semesterId", "examDate", "examTime", "duration", "type"],
+        attributes: ["examScheduleId", "subjectId", "term", "examDate", "examTime", "duration", "type"],
         include: [
             {
                 model: model.subjectModel,
@@ -38,13 +38,6 @@ export async function getSchedulesWithSubjectsForExamTermSession(examSetupTypeTe
                 required: false,
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"] },
                 where: buildScope(model.subjectModel),
-            },
-            {
-                model: model.semesterModel,
-                as: "semesterexam",
-                required: false,
-                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"] },
-                where: buildScope(model.semesterModel),
             },
         ],
         order: [
@@ -55,28 +48,82 @@ export async function getSchedulesWithSubjectsForExamTermSession(examSetupTypeTe
     });
 }
 
-export async function getEligibleStudents(sessionId, courseId, term, transaction) {
-    return scoped(model.studentModel).findAll({
-        transaction,
+function studentPlacementInclude({ sessionId, courseId, term, academicYearId }) {
+    return studentClassSectionTermWithSectionInclude({
+        term,
+        termRequired: true,
+        sectionRequired: true,
+        includeSectionTerms: false,
+        sectionAttributes: [],
+        termAttributes: [],
+        sectionWhere: {
+            ...(academicYearId != null && { academicYearId }),
+            ...buildScope(model.classSectionModel),
+            sessionId,
+            courseId,
+        },
+    });
+}
+
+async function resolveEligibleStudentIdsByMapper(sessionId, courseId, term, academicYearId, transaction) {
+    const rows = await model.classStudentMapperModel.findAll({
         attributes: ["studentId"],
         where: {
             sessionId,
+            academicYearId,
+            isPassed: false,
+            ...buildScope(model.classStudentMapperModel),
         },
         include: [
-            studentClassSectionTermWithSectionInclude({
-                term,
-                termRequired: true,
-                sectionRequired: true,
-                sectionWhere: {
-                    ...buildScope(model.classSectionModel),
-                    sessionId,
+            {
+                model: model.studentModel,
+                as: "studentMapped",
+                required: true,
+                attributes: [],
+                where: {
                     courseId,
-                    academicYearId: { [Op.ne]: null },
+                    ...buildScope(model.studentModel),
                 },
-                sectionAttributes: [],
-                termAttributes: [],
-            }),
+                include: [studentPlacementInclude({ sessionId, courseId, term, academicYearId })],
+            },
         ],
+        raw: true,
+        transaction,
+    });
+
+    const studentIds = [];
+    const seen = new Set();
+    for (const row of rows) {
+        if (!seen.has(row.studentId)) {
+            seen.add(row.studentId);
+            studentIds.push(row.studentId);
+        }
+    }
+    return studentIds;
+}
+
+export async function getEligibleStudents(sessionId, courseId, term, academicYearId, transaction) {
+    const mapperStudentIds = await resolveEligibleStudentIdsByMapper(
+        sessionId,
+        courseId,
+        term,
+        academicYearId,
+        transaction,
+    );
+
+    if (mapperStudentIds.length) {
+        return scoped(model.studentModel).findAll({
+            transaction,
+            attributes: ["studentId"],
+            where: { studentId: { [Op.in]: mapperStudentIds } },
+        });
+    }
+
+    return scoped(model.studentModel).findAll({
+        transaction,
+        attributes: ["studentId"],
+        where: { sessionId, courseId },
+        include: [studentPlacementInclude({ sessionId, courseId, term, academicYearId })],
     });
 }
 
@@ -170,6 +217,7 @@ function getHallTicketIncludes() {
             include: [
                 studentClassSectionTermWithSectionInclude({
                     sectionAttributes: ["classSectionsId", "year", "section", "sessionId"],
+                    includeSectionTerms: false,
                 }),
             ],
         },
@@ -194,7 +242,7 @@ function getHallTicketIncludes() {
                 {
                     model: model.courseModel,
                     as: "course",
-                    attributes: ["courseId", "courseName", "courseCode"],
+                    attributes: ["courseId", "courseName", "courseCode", "termType"],
                 },
                 {
                     model: model.acedmicYearModel,

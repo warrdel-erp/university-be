@@ -55,7 +55,19 @@ export async function addTimeTableCreate(data, transaction) {
   }
 }
 
-export async function getTimeTableCreateDetails({ courseId, sessionId } = {}) {
+export async function findCourseById(courseId) {
+  try {
+    return scoped(model.courseModel).findOne({
+      where: { courseId: Number(courseId) },
+      attributes: ['courseId', 'courseName', 'termType', 'courseDuration', 'totalTerms'],
+    });
+  } catch (error) {
+    console.error('Error in findCourseById:', error);
+    throw error;
+  }
+}
+
+export async function findClassSectionTermsWithRoutines({ courseId, sessionId } = {}) {
   try {
     const sectionScope = buildScope(model.classSectionModel);
     const sectionWhere = { ...sectionScope };
@@ -66,7 +78,7 @@ export async function getTimeTableCreateDetails({ courseId, sessionId } = {}) {
       sectionWhere.sessionId = Number(sessionId);
     }
 
-    return scoped(model.classSectionTermModel).findAll({
+    return model.classSectionTermModel.findAll({
       attributes: ['classSectionTermId', 'term', 'classSectionsId'],
       include: [
         {
@@ -78,7 +90,6 @@ export async function getTimeTableCreateDetails({ courseId, sessionId } = {}) {
             'classSectionsId',
             'section',
             'year',
-            'sectionId',
             'courseId',
             'sessionId',
             'academicYearId',
@@ -88,6 +99,12 @@ export async function getTimeTableCreateDetails({ courseId, sessionId } = {}) {
               model: model.sessionModel,
               as: 'classSession',
               attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+            },
+            {
+              model: model.courseModel,
+              as: 'courseSection',
+              attributes: ['courseName', 'termType'],
+              required: false,
             },
           ],
         },
@@ -112,7 +129,7 @@ export async function getTimeTableCreateDetails({ courseId, sessionId } = {}) {
             {
               model: model.courseModel,
               as: 'timeTableCourse',
-              attributes: ['courseName'],
+              attributes: ['courseName', 'termType'],
             },
             {
               model: model.campusModel,
@@ -120,7 +137,7 @@ export async function getTimeTableCreateDetails({ courseId, sessionId } = {}) {
               attributes: ['campusName'],
             },
             timeTableRoutineClassSectionInclude({
-              sectionAttributes: ['section', 'year', 'sectionId', 'classSectionsId'],
+              sectionAttributes: ['section', 'year', 'classSectionsId'],
               sectionNestedIncludes: [
                 {
                   model: model.sessionModel,
@@ -138,12 +155,13 @@ export async function getTimeTableCreateDetails({ courseId, sessionId } = {}) {
         },
       ],
       order: [
-        ['term', 'ASC'],
+        [{ model: model.classSectionModel, as: 'classSection' }, 'year', 'ASC'],
         [{ model: model.classSectionModel, as: 'classSection' }, 'section', 'ASC'],
+        ['term', 'ASC'],
       ],
     });
   } catch (error) {
-    console.error('Error in getting time table create:', error);
+    console.error('Error in findClassSectionTermsWithRoutines:', error);
     throw error;
   }
 }
@@ -267,7 +285,7 @@ export async function getSingleTimeTableCreateDetails(courseId) {
           attributes: ["campusName"],
         },
         timeTableRoutineClassSectionInclude({
-          sectionAttributes: ["section", "year", "sectionId", "classSectionsId"],
+          sectionAttributes: ["section", "year", "classSectionsId"],
         }),
         {
           model: model.acedmicYearModel,
@@ -563,6 +581,98 @@ export async function getMappingByIdRepository(timeTableMappingId, options = {})
   }
 };
 
+export async function getMappingCopySourceRepository(timeTableMappingId, options = {}) {
+  try {
+    return assertScopedSchedule(timeTableMappingId, {
+      transaction: options.transaction,
+      attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+    });
+  } catch (error) {
+    console.error('Error in getMappingCopySourceRepository:', error);
+    throw error;
+  }
+}
+
+export async function getSourceCellMappingsRepository(timeTableMappingId, options = {}) {
+  try {
+    const source = await getMappingCopySourceRepository(timeTableMappingId, options);
+    if (!source) {
+      return [];
+    }
+
+    const src = source.get ? source.get({ plain: true }) : source;
+    return await model.classScheduleModel.findAll({
+      where: {
+        timeTableRoutineId: Number(src.timeTableRoutineId),
+        timeTableCreationId: Number(src.timeTableCreationId),
+        day: src.day,
+        period: Number(src.period),
+      },
+      attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+      transaction: options.transaction,
+      include: [{
+        model: model.timeTableRoutineModel,
+        as: 'timeTablecreate',
+        required: true,
+        where: buildScope(model.timeTableRoutineModel),
+        attributes: ['timeTableRoutineId'],
+      }],
+      order: [['timeTableMappingId', 'ASC']],
+    });
+  } catch (error) {
+    console.error('Error in getSourceCellMappingsRepository:', error);
+    throw error;
+  }
+}
+
+export async function getStructurePeriodsRepository(timeTableNameId, options = {}) {
+  try {
+    return scoped(model.timeTableStructurePeriodsModel).findAll({
+      where: { timeTableNameId: Number(timeTableNameId) },
+      attributes: ['timeTableCreationId', 'periodName', 'isBreak', 'isCourse', 'startTime', 'endTime'],
+      order: [['timeTableCreationId', 'ASC']],
+      transaction: options.transaction,
+    });
+  } catch (error) {
+    console.error('Error in getStructurePeriodsRepository:', error);
+    throw error;
+  }
+}
+
+export async function getStructureWeekOffRepository(timeTableNameId, options = {}) {
+  try {
+    return scoped(model.timeTableStructureModel).findOne({
+      where: { timeTableNameId: Number(timeTableNameId) },
+      attributes: ['weekOff'],
+      transaction: options.transaction,
+    });
+  } catch (error) {
+    console.error('Error in getStructureWeekOffRepository:', error);
+    throw error;
+  }
+}
+
+export async function findMappingAtSlotRepository(
+  { timeTableRoutineId, day, period, timeTableCreationId },
+  options = {},
+) {
+  try {
+    return scoped(model.classScheduleModel).findOne({
+      where: {
+        timeTableRoutineId: Number(timeTableRoutineId),
+        day,
+        period: Number(period),
+        timeTableCreationId: Number(timeTableCreationId),
+      },
+      attributes: ['timeTableMappingId'],
+      transaction: options.transaction,
+    });
+  } catch (error) {
+    console.error('Error in findMappingAtSlotRepository:', error);
+    throw error;
+  }
+}
+
 export async function getMappingsByCombinedGroupIdRepository(combinedGroupId, options = {}) {
   try {
     return await model.classScheduleModel.findAll({
@@ -756,7 +866,24 @@ export async function updatetimeTableCreate(timeTableMappingId, data) {
 export async function findMappingById(id) {
   try {
     const result = await assertScopedSchedule(id, {
-      attributes: ['timeTableMappingId', 'timeTableRoutineId', 'timeTableCreationId', 'userId', 'day', 'period'],
+      attributes: [
+        'timeTableMappingId',
+        'timeTableRoutineId',
+        'timeTableCreationId',
+        'timeTableNameId',
+        'employeeId',
+        'day',
+        'period',
+        'classRoomSectionId',
+        'timeTableType',
+        'subjectId',
+        'electiveSubjectId',
+        'teacherSubjectMappingId',
+        'combinedGroupId',
+        'teacherType',
+        'isAttendence',
+        'isOverridingSyblingElectives',
+      ],
     });
 
     return result;
@@ -843,7 +970,7 @@ export async function getTimeTableMappingDetail(timeTableRoutineId) {
               attributes: ["campusName"],
             },
             timeTableRoutineClassSectionInclude({
-              sectionAttributes: ["section", "year", "sectionId", "classSectionsId"],
+              sectionAttributes: ["section", "year", "classSectionsId"],
               sectionWhere: buildScope(model.classSectionModel),
             }),
             {
@@ -1270,9 +1397,9 @@ export async function ClassSubjectCount(classSectionTermId) {
     const subjectIds = [...new Set(mappings.map((m) => m.subjectId).filter(Boolean))];
     const subjects = subjectIds.length
       ? await scoped(model.subjectModel).findAll({
-          where: { subjectId: { [Op.in]: subjectIds } },
-          attributes: ['subjectId', 'subjectName', 'subjectCode'],
-        })
+        where: { subjectId: { [Op.in]: subjectIds } },
+        attributes: ['subjectId', 'subjectName', 'subjectCode'],
+      })
       : [];
 
     const subjectById = new Map(subjects.map((s) => [s.subjectId, s]));
@@ -1597,7 +1724,7 @@ async function fetchTeacherRoutineContext(userId, courseId, sessionId) {
       where: { courseId, sessionId },
       attributes: ['classSectionsId', 'section', 'year', 'courseId', 'sessionId'],
       include: [
-    classSectionTermsInclude(),
+        classSectionTermsInclude(),
       ],
       order: [['year', 'ASC'], ['section', 'ASC']],
     }),
@@ -2031,8 +2158,19 @@ export async function getUniqueClassSectionSubjectsForEmployee(userId, academicY
           attributes: ['electiveSubjectId', 'electiveSubjectName']
         },
         {
-          model: model.users, as: "user",
-          attributes: ['userId', 'employeeName']
+          model: model.employeeModel,
+          as: "employeeDetails",
+          attributes: [
+            'employeeId',
+            'employeeName',
+            'employeeCode',
+            'department',
+            'employmentType',
+            'pickColor',
+            'employeePhoto',
+            'userId',
+            'campusId',
+          ],
         }
       ]
     });

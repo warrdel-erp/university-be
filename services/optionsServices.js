@@ -25,8 +25,28 @@ export async function getTermOptions(courseId) {
     return options;
 }
 
-export async function getClassSectionOptions(courseId, term, sessionId) {
-    return await optionsRepository.getClassSectionOptions(courseId, term, sessionId);
+export async function getCourseProgramOptions(courseId) {
+    const course = await optionsRepository.getCourseProgramData(courseId);
+    if (!course) {
+        throw new Error('Course not found');
+    }
+
+    const plain = course.get({ plain: true });
+    const duration = Number(plain.courseDuration) || 0;
+
+    const options = [];
+    for (let year = 1; year <= duration; year++) {
+        options.push({
+            label: `Year ${year}`,
+            value: year,
+        });
+    }
+
+    return options;
+}
+
+export async function getClassSectionOptions(courseId, term, sessionId, year) {
+    return await optionsRepository.getClassSectionOptions(courseId, term, sessionId, year);
 }
 
 export async function getSpecializationOptions(courseId) {

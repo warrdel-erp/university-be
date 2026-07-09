@@ -22,12 +22,23 @@ export async function getCourseData(courseId) {
     });
 }
 
-export async function getClassSectionOptions(courseId, term, sessionId) {
+export async function getCourseProgramData(courseId) {
+    return await scoped(model.courseModel).findByPk(courseId, {
+        attributes: ['courseDuration', 'totalTerms', 'termType'],
+    });
+}
+
+export async function getClassSectionOptions(courseId, term, sessionId, year) {
     return await scoped(model.classSectionModel).findAll({
-        attributes: [['section', 'label'], ['class_sections_id', 'value']],
+        attributes: [
+            ['section', 'label'],
+            ['class_sections_id', 'value'],
+            'year',
+        ],
         where: {
             ...(courseId && { courseId }),
             ...(sessionId && { sessionId }),
+            ...(year != null && { year: Number(year) }),
         },
         include: [classSectionTermsInclude({ term, required: term != null })],
     });
