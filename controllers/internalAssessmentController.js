@@ -12,7 +12,7 @@ export async function addInternalAssessment(req, res) {
     publishDate,
     dueDate,
     description,
-    employeeId,
+    userId,
   } = req.body;
   const createdBy = req.user.userId;
   const updatedBy = req.user.userId;
@@ -43,7 +43,7 @@ export async function addInternalAssessment(req, res) {
       description,
       createdBy,
       updatedBy,
-      employeeId,
+      userId,
     };
     const assessment = await InternalAssessmentServices.addInternalAssessment(
       data,
@@ -134,16 +134,16 @@ export async function deleteInternalAssessment(req, res) {
 }
 
 export async function evaluationInternalAssessment(req, res) {
-  const { subjectId, employeeId } = req.query;
-  if (!(subjectId && employeeId))
+  const { subjectId, userId } = req.query;
+  if (!(subjectId && userId))
     return res
       .status(400)
-      .json({ message: "subjectId,employeeId is required" });
+      .json({ message: "subjectId,userId is required" });
   try {
     const record =
       await InternalAssessmentServices.evaluationInternalAssessment(
         subjectId,
-        employeeId,
+        userId,
       );
     if (record) return SuccessResponse(res, 200, "Evaluation record", record);
     else return ErrorResponse(res, 404, "Not found data");
@@ -158,11 +158,11 @@ export async function createAssessmentEvaluation(req, res) {
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
 
-    if (!body.subjectId || !body.employeeId || !body.examAssessmentId) {
+    if (!body.subjectId || !body.userId || !body.examAssessmentId) {
       return ErrorResponse(
         res,
         400,
-        "subjectId, employeeId, examAssessmentId are required",
+        "subjectId, userId, examAssessmentId are required",
       );
     }
 

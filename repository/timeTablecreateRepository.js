@@ -871,7 +871,7 @@ export async function findMappingById(id) {
         'timeTableRoutineId',
         'timeTableCreationId',
         'timeTableNameId',
-        'employeeId',
+        'userId',
         'day',
         'period',
         'classRoomSectionId',
@@ -2161,7 +2161,7 @@ export async function getUniqueClassSectionSubjectsForEmployee(userId, academicY
           model: model.employeeModel,
           as: "employeeDetails",
           attributes: [
-            'employeeId',
+            'userId',
             'employeeName',
             'employeeCode',
             'department',

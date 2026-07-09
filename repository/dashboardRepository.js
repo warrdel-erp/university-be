@@ -79,11 +79,19 @@ const teacherUserInclude = [
     required: true,
     include: [
       {
-        model: model.userRoleModel,
-        as: 'userRoles',
+        model: model.userRolePermissionModel,
+        as: 'userRolePermissions',
         attributes: [],
-        where: { role: ROLES.TEACHER },
         required: true,
+        include: [
+          {
+            model: model.roleModel,
+            as: 'userRole',
+            attributes: [],
+            where: { role: ROLES.TEACHER },
+            required: true,
+          },
+        ],
       },
     ],
   },

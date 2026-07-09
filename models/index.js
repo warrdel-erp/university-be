@@ -1099,6 +1099,9 @@ feeInvoiceDetailModel.belongsTo(feeInvoiceModel, {
 userModel.hasMany(classScheduleModel, { foreignKey: "userId", as: "timeTableMappings" });
 classScheduleModel.belongsTo(userModel, { foreignKey: "userId", as: "user" });
 
+employeeModel.hasMany(classScheduleModel, { foreignKey: "userId", sourceKey: "userId", as: "employeeTimeTableMappings" });
+classScheduleModel.belongsTo(employeeModel, { foreignKey: "userId", targetKey: "userId", as: "employeeDetails" });
+
 feePlanModel.hasMany(feeNewInvoiceModel, { foreignKey: "fee_plan_id", as: "invoices" });
 feeNewInvoiceModel.belongsTo(feePlanModel, { foreignKey: "fee_plan_id", as: "feePlan" });
 

@@ -93,7 +93,7 @@ const mappingBodySchema = z.object({
     timeTableRoutineId: optionalPositiveId,
     timeTableCreationId: optionalPositiveId,
     timeTableNameId: optionalPositiveId,
-    employeeId: optionalPositiveId,
+    userId: optionalPositiveId,
     subjectId: optionalPositiveId,
     electiveSubjectId: optionalPositiveId,
     teacherSubjectMappingId: optionalPositiveId,
@@ -166,8 +166,8 @@ const updateSimpleTeacherMappingSchema = z
         path: [0, 'timeTableMappingId'],
     })
     .refine(
-        (items) => items.every((item) => item.isNew !== true || item.employeeId != null),
-        { message: 'employeeId is required when isNew is true' },
+        (items) => items.every((item) => item.isNew !== true || item.userId != null),
+        { message: 'userId is required when isNew is true' },
     );
 
 const deleteTimeTableMappingQuerySchema = z.object({

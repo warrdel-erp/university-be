@@ -38,7 +38,7 @@ const uniqueClassSectionSubjectsQuerySchema = z.object({
 });
 
 const teacherSubjectQuerySchema = z.object({
-    employeeId: positiveIntegerId,
+    userId: positiveIntegerId,
     sessionId: optionalPositiveId,
     term: optionalPositiveId,
 }).strict();

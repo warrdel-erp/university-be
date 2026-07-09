@@ -20,7 +20,7 @@ import { randomUUID } from "crypto";
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 const COPY_OVERRIDE_FIELDS = [
-  'timeTableRoutineId', 'employeeId', 'subjectId', 'electiveSubjectId',
+  'timeTableRoutineId', 'userId', 'subjectId', 'electiveSubjectId',
   'teacherSubjectMappingId', 'classRoomSectionId', 'isSameTeacher', 'teacherType',
   'isAttendence', 'isOverridingSyblingElectives', 'timeTableType',
 ];
@@ -248,7 +248,7 @@ function buildCopyPayload(sourceRow, target, request) {
     timeTableCreationId: target.timeTableCreationId,
     day: target.day,
     period: target.period,
-    employeeId: src.employeeId,
+    userId: src.userId,
     subjectId: src.subjectId,
     electiveSubjectId: src.electiveSubjectId,
     teacherSubjectMappingId: src.teacherSubjectMappingId,
@@ -333,7 +333,7 @@ async function resolveCopyPayloads(data, options) {
 }
 
 async function assertNoSlotConflicts({
-  employeeId,
+  userId,
   classRoomSectionId,
   day,
   periodInfo,
@@ -343,9 +343,9 @@ async function assertNoSlotConflicts({
 }) {
   const { startTime, endTime } = periodInfo;
 
-  if (employeeId) {
+  if (userId) {
     const conflict = await timeTableCreateRepository.checkTeacherConflictRepository(
-      employeeId,
+      userId,
       day,
       startTime,
       endTime,
@@ -380,17 +380,17 @@ async function assertNoSlotConflicts({
   }
 }
 
-async function addFacultyLoadForEmployee(employeeId, periodLength, transaction) {
-  if (!employeeId || periodLength <= 0) {
+async function addFacultyLoadForEmployee(userId, periodLength, transaction) {
+  if (!userId || periodLength <= 0) {
     return;
   }
 
-  const facultyLoad = await getSingleFaculityLoadDetails(employeeId);
+  const facultyLoad = await getSingleFaculityLoadDetails(userId);
   const existingLoad = toMoneyNumber(
     facultyLoad?.[0]?.dataValues?.currentLoad ?? facultyLoad?.[0]?.currentLoad,
   );
   await updateFaculityLoadByEmployeeId(
-    employeeId,
+    userId,
     { currentLoad: decimalAdd(existingLoad, periodLength) },
     transaction,
   );
@@ -705,7 +705,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
 
       for (const payload of copyPayloads) {
         await assertNoSlotConflicts({
-          employeeId: payload.employeeId,
+          userId: payload.userId,
           classRoomSectionId: payload.classRoomSectionId,
           day: payload.day,
           periodInfo,
@@ -740,7 +740,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
       }
 
       for (const payload of copyPayloads) {
-        await addFacultyLoadForEmployee(payload.employeeId, periodLength, transaction);
+        await addFacultyLoadForEmployee(payload.userId, periodLength, transaction);
       }
 
       await transaction.commit();
@@ -806,7 +806,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
       );
 
       await assertNoSlotConflicts({
-        employeeId,
+        userId,
         classRoomSectionId,
         day,
         periodInfo,
@@ -843,7 +843,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
       }
     }
 
-    await addFacultyLoadForEmployee(employeeId, totalPeriodLength, transaction);
+    await addFacultyLoadForEmployee(userId, totalPeriodLength, transaction);
 
     await transaction.commit();
 
@@ -880,7 +880,7 @@ export async function cloneTimeTableRoutine(previousRoutineId, startingDate, end
   const mappingCloneFields = [
     'timeTableNameId',
     'timeTableCreationId',
-    'employeeId',
+    'userId',
     'electiveSubjectId',
     'subjectId',
     'teacherSubjectMappingId',
@@ -1172,7 +1172,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           isSameTeacher: false,
           timeTableType: baseRow.timeTableType,
           combinedGroupId: baseRow.combinedGroupId || null,
-          employeeId: item.employeeId,
+          userId: item.userId,
           teacherType: item.teacherType,
           isAttendence: item.isAttendence,
           isOverridingSyblingElectives: item.isOverridingSyblingElectives
