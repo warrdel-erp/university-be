@@ -187,8 +187,17 @@ export async function countTeacherMappingsForClassSectionTerm(
   return teacherSectionCount + timetableTeacherCount;
 }
 
-export async function countTeacherMappingsForClassSectionTerms(
+export async function deleteTeacherSectionMappingsByClassSectionId(
   classSectionId,
+  options = {},
+) {
+  return scoped(model.teacherSectionMappingModel).destroy({
+    where: { classSectionsId: Number(classSectionId) },
+    transaction: options.transaction,
+  });
+}
+
+export async function deleteTimetableCellsForClassSectionTerms(
   classSectionTermIds,
   options = {},
 ) {
@@ -196,33 +205,53 @@ export async function countTeacherMappingsForClassSectionTerms(
   for (const classSectionTermId of classSectionTermIds) {
     ids.push(Number(classSectionTermId));
   }
+  if (!ids.length) {
+    return 0;
+  }
 
   const transaction = options.transaction;
-
-  const teacherSectionCount = await scoped(model.teacherSectionMappingModel).count({
-    where: { classSectionsId: Number(classSectionId) },
-    transaction,
-  });
-
   const routineScope = buildScope(model.timeTableRoutineModel);
-  const timetableTeacherCount = await scoped(model.classScheduleModel).count({
-    where: { employeeId: { [Op.ne]: null } },
-    include: [
-      {
-        model: model.timeTableRoutineModel,
-        as: 'timeTablecreate',
-        required: true,
-        where: {
-          ...routineScope,
-          classSectionTermId: { [Op.in]: ids },
-        },
-        attributes: [],
-      },
-    ],
+
+  const routines = await scoped(model.timeTableRoutineModel).findAll({
+    where: {
+      ...routineScope,
+      classSectionTermId: { [Op.in]: ids },
+    },
+    attributes: ['timeTableRoutineId'],
     transaction,
   });
 
-  return teacherSectionCount + timetableTeacherCount;
+  const routineIds = [];
+  for (const routine of routines) {
+    const plain = routine.get ? routine.get({ plain: true }) : routine;
+    routineIds.push(plain.timeTableRoutineId);
+  }
+  if (!routineIds.length) {
+    return 0;
+  }
+
+  return scoped(model.classScheduleModel).destroy({
+    where: { timeTableRoutineId: { [Op.in]: routineIds } },
+    transaction,
+  });
+}
+
+export async function deleteTimetableRoutinesForClassSectionTerms(
+  classSectionTermIds,
+  options = {},
+) {
+  const ids = [];
+  for (const classSectionTermId of classSectionTermIds) {
+    ids.push(Number(classSectionTermId));
+  }
+  if (!ids.length) {
+    return 0;
+  }
+
+  return scoped(model.timeTableRoutineModel).destroy({
+    where: { classSectionTermId: { [Op.in]: ids } },
+    transaction: options.transaction,
+  });
 }
 
 export async function deleteClassSectionTermById(classSectionTermId, options = {}) {

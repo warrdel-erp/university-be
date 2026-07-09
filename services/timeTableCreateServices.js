@@ -1064,8 +1064,12 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
     }
     const { startTime, endTime } = periodInfo;
 
+    const addingSecondaryTeacher = mappingArray.some(
+      (item) => item.isNew === true && item.teacherType === 'Secondary',
+    );
+
     // Check room conflict once for the entire batch as they share the same slot
-    if (baseRow.classRoomSectionId) {
+    if (baseRow.classRoomSectionId && !addingSecondaryTeacher) {
       const roomConflict = await timeTableCreateRepository.checkRoomConflictRepository(
         baseRow.classRoomSectionId,
         baseRow.day,
@@ -1154,21 +1158,25 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
         await updateFaculityLoadByEmployeeId(item.employeeId, { currentLoad: newLoad }, transaction);
 
         const newRow = {
-          timeTableNameId: baseRow.timeTableNameId,
+          timeTableNameId: Number(baseRow.timeTableNameId || routineInfo.timeTableNameId),
           timeTableRoutineId: baseRow.timeTableRoutineId,
           timeTableCreationId: baseRow.timeTableCreationId,
-          subjectId: item.subjectId,
-          electiveSubjectId: item.electiveSubjectId,
-          // teacherSubjectMappingId: '',
+          subjectId: item.subjectId != null ? Number(item.subjectId) : baseRow.subjectId,
+          electiveSubjectId: item.electiveSubjectId != null
+            ? Number(item.electiveSubjectId)
+            : baseRow.electiveSubjectId,
+          teacherSubjectMappingId: item.teacherSubjectMappingId ?? baseRow.teacherSubjectMappingId,
           classRoomSectionId: baseRow.classRoomSectionId,
           day: baseRow.day,
           period: baseRow.period,
           isSameTeacher: false,
           timeTableType: baseRow.timeTableType,
+          combinedGroupId: baseRow.combinedGroupId || null,
           employeeId: item.employeeId,
           teacherType: item.teacherType,
           isAttendence: item.isAttendence,
-          isOverridingSyblingElectives: item.isOverridingSyblingElectives,
+          isOverridingSyblingElectives: item.isOverridingSyblingElectives
+            ?? baseRow.isOverridingSyblingElectives,
           createdBy,
           updatedBy,
         };

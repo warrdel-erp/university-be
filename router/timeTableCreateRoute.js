@@ -162,7 +162,11 @@ const updateSimpleTeacherMappingSchema = z
     .refine((items) => items[0]?.timeTableMappingId != null, {
         message: 'Base row must contain timeTableMappingId',
         path: [0, 'timeTableMappingId'],
-    });
+    })
+    .refine(
+        (items) => items.every((item) => item.isNew !== true || item.employeeId != null),
+        { message: 'employeeId is required when isNew is true' },
+    );
 
 const deleteTimeTableMappingQuerySchema = z.object({
     timeTableMappingId: positiveIntegerId,

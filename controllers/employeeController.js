@@ -215,11 +215,18 @@ export const getTodayClassSchedule = async (req, res) => {
 
         const formattedDate = formatQueryDate(date);
 
+        let groupingType = false;
+        if (groupPeriods === 'consecutive') {
+            groupingType = 'consecutive';
+        } else if (groupPeriods === 'sessional') {
+            groupingType = 'sessional';
+        }
+
         const result = await employee.getTodayClassSchedule(
             Number(employeeId),
             formattedDate,
             sessionId != null && sessionId !== '' ? Number(sessionId) : undefined,
-            groupPeriods === 'true'
+            groupingType
         );
 
         res.status(200).send({ success: true, result });
@@ -279,11 +286,18 @@ export const getPastClassSchedules = async (req, res) => {
         const currentDate = date ? new Date(date) : new Date();
         const formattedDate = formatQueryDate(date);
 
+        let groupingType = false;
+        if (groupPeriods === 'consecutive') {
+            groupingType = 'consecutive';
+        } else if (groupPeriods === 'sessional') {
+            groupingType = 'sessional';
+        }
+
         const result = await employee.getPastClassSchedules(
             employeeId,
             academicYearId,
             formattedDate,
-            groupPeriods === 'true'
+            groupingType
         );
 
         return SuccessResponse(res, 200, "Past class schedules fetched successfully", result);
@@ -309,11 +323,18 @@ export const getUpcomingClassSchedules = async (req, res) => {
         const currentDate = date ? new Date(date) : new Date();
         const formattedDate = formatQueryDate(date);
 
+        let groupingType = false;
+        if (groupPeriods === 'consecutive') {
+            groupingType = 'consecutive';
+        } else if (groupPeriods === 'sessional') {
+            groupingType = 'sessional';
+        }
+
         const result = await employee.getUpcomingClassSchedules(
             employeeId,
             academicYearId,
             formattedDate,
-            groupPeriods === 'true'
+            groupingType
         );
 
         res.status(200).send({ success: true, result });

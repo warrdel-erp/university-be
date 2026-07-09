@@ -16,6 +16,7 @@ import {
   getStudentPromotionHistory,
   getFeePlanInitiate,
   getEmptyFeeDetails,
+  getStudentsByFeePlanList,
   getStudentSubject,
   getFeeDetailsByStudentId,
   getBooksIssuedToStudent,
@@ -255,6 +256,21 @@ const getAllAnswerSheetsQuerySchema = z.object({
 const emptyFeeDetailsQuerySchema = z.object({
   courseId: positiveIntegerId.optional(),
   sessionId: positiveIntegerId.optional(),
+  year: positiveIntegerId.optional(),
+  search: z.string().trim().optional(),
+  page: z.coerce
+    .number()
+    .int("page must be an integer")
+    .min(1, "page must be at least 1")
+    .optional()
+    .default(1),
+  limit: z.coerce
+    .number()
+    .int("limit must be an integer")
+    .min(1, "limit must be at least 1")
+    .max(100, "limit must be at most 100")
+    .optional()
+    .default(10),
 });
 
 const studentIdQuerySchema = z.object({
@@ -275,6 +291,26 @@ const feePlanProfilesAllQuerySchema = z.object({
     .max(100, "limit must be at most 100")
     .optional()
     .default(20),
+});
+
+const feePlanStudentsQuerySchema = z.object({
+  courseId: optionalPositiveIntegerId,
+  year: optionalPositiveIntegerId,
+  term: optionalPositiveIntegerId,
+  feePlanProfileId: optionalPositiveIntegerId,
+  page: z.coerce
+    .number()
+    .int("page must be an integer")
+    .min(1, "page must be at least 1")
+    .optional()
+    .default(1),
+  limit: z.coerce
+    .number()
+    .int("limit must be an integer")
+    .min(1, "limit must be at least 1")
+    .max(100, "limit must be at most 100")
+    .optional()
+    .default(10),
 });
 
 const getAllStudentsQuerySchema = z.object({
@@ -398,7 +434,29 @@ router.patch(
 );
 router.delete("/:studentId", userAuth, deleteStudentDetail);
 
-router.get("/emptyEnrollNumber", userAuth, getEmptyEnrollNumber);
+const emptyEnrollNumberQuerySchema = z.object({
+  page: z.coerce
+    .number()
+    .int("page must be an integer")
+    .min(1, "page must be at least 1")
+    .optional()
+    .default(1),
+  limit: z.coerce
+    .number()
+    .int("limit must be an integer")
+    .min(1, "limit must be at least 1")
+    .max(100, "limit must be at most 100")
+    .optional()
+    .default(10),
+  search: z.string().trim().optional(),
+});
+
+router.get(
+  "/emptyEnrollNumber",
+  userAuth,
+  validate({ query: emptyEnrollNumberQuerySchema }),
+  getEmptyEnrollNumber
+);
 const sectionStudentMappingBodySchema = z.object({
   studentId: z.union([positiveIntegerId, z.array(positiveIntegerId)]),
   classSectionTermId: positiveIntegerId,
@@ -420,6 +478,20 @@ const promoteStudentBodySchema = z.union([
 const sectionStudentMappingQuerySchema = z.object({
   classSectionTermId: z.coerce.number().int().nonnegative().optional(),
   term: z.coerce.number().int().positive().optional(),
+  page: z.coerce
+    .number()
+    .int("page must be an integer")
+    .min(1, "page must be at least 1")
+    .optional()
+    .default(1),
+  limit: z.coerce
+    .number()
+    .int("limit must be an integer")
+    .min(1, "limit must be at least 1")
+    .max(100, "limit must be at most 100")
+    .optional()
+    .default(10),
+  search: z.string().trim().optional(),
 });
 
 router.post("/studentMapping", userAuth, studentCourseMapping);
@@ -507,6 +579,12 @@ router.get(
   getPromotionAvailableSection,
 );
 
+router.get(
+  "/feePlanStudents",
+  userAuth,
+  validate({ query: feePlanStudentsQuerySchema }),
+  getStudentsByFeePlanList,
+);
 router.get(
   "/feePlanProfiles/all",
   userAuth,

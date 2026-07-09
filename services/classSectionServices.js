@@ -73,15 +73,6 @@ export async function deleteClassSectionTerm(classSectionId) {
     }
 
     if (classSectionTermIds.length > 0) {
-      const teacherMappingCount = await classSectionTermRepository.countTeacherMappingsForClassSectionTerms(
-        classSectionId,
-        classSectionTermIds,
-        options,
-      );
-      if (teacherMappingCount > 0) {
-        throw new Error('Remove teacher mapping before deleting this section.');
-      }
-
       const studentCount = await classSectionTermRepository.countStudentsForClassSectionTerms(
         classSectionTermIds,
         options,
@@ -89,14 +80,24 @@ export async function deleteClassSectionTerm(classSectionId) {
       if (studentCount > 0) {
         throw new Error('Remove or reassign students before deleting this section.');
       }
+    }
 
-      const routineCount = await classSectionTermRepository.countTimetableRoutinesForClassSectionTerms(
+    const deletedTeacherMappingCount = await classSectionTermRepository.deleteTeacherSectionMappingsByClassSectionId(
+      classSectionId,
+      options,
+    );
+
+    let deletedTimetableCellCount = 0;
+    let deletedTimetableRoutineCount = 0;
+    if (classSectionTermIds.length > 0) {
+      deletedTimetableCellCount = await classSectionTermRepository.deleteTimetableCellsForClassSectionTerms(
         classSectionTermIds,
         options,
       );
-      if (routineCount > 0) {
-        throw new Error('Remove timetable routines before deleting this section.');
-      }
+      deletedTimetableRoutineCount = await classSectionTermRepository.deleteTimetableRoutinesForClassSectionTerms(
+        classSectionTermIds,
+        options,
+      );
     }
 
     let deletedTermCount = 0;
@@ -123,6 +124,9 @@ export async function deleteClassSectionTerm(classSectionId) {
       message: 'Class section deleted successfully.',
       classSectionId: Number(classSectionId),
       deletedCount: deletedTermCount,
+      deletedTeacherMappingCount,
+      deletedTimetableCellCount,
+      deletedTimetableRoutineCount,
       classSectionDeleted: true,
     };
   });

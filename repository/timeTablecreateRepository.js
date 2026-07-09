@@ -866,7 +866,24 @@ export async function updatetimeTableCreate(timeTableMappingId, data) {
 export async function findMappingById(id) {
   try {
     const result = await assertScopedSchedule(id, {
-      attributes: ['timeTableMappingId', 'timeTableRoutineId', 'timeTableCreationId', 'employeeId', 'day', 'period'],
+      attributes: [
+        'timeTableMappingId',
+        'timeTableRoutineId',
+        'timeTableCreationId',
+        'timeTableNameId',
+        'employeeId',
+        'day',
+        'period',
+        'classRoomSectionId',
+        'timeTableType',
+        'subjectId',
+        'electiveSubjectId',
+        'teacherSubjectMappingId',
+        'combinedGroupId',
+        'teacherType',
+        'isAttendence',
+        'isOverridingSyblingElectives',
+      ],
     });
 
     return result;
@@ -1856,6 +1873,8 @@ export async function getTodayClassScheduleForEmployee(employeeId, currentDate, 
         'period',
         'isAttendence',
         'isSameTeacher',
+        'timeTableNameId',
+        'timeTableCreationId'
       ],
       include: [
         {
@@ -1941,7 +1960,9 @@ export async function getPastClassSchedulesForEmployee(
         'day',
         'period',
         'isAttendence',
-        'isSameTeacher'
+        'isSameTeacher',
+        'timeTableNameId',
+        'timeTableCreationId'
       ],
       include: [
         {
@@ -2195,6 +2216,22 @@ export async function getEmployeeRecurringSchedules(employeeId, academicYearId) 
     });
   } catch (error) {
     console.error("Error in getEmployeeRecurringSchedules:", error);
+    throw error;
+  }
+}
+
+export async function getPeriodsForStructures(timeTableNameIds) {
+  try {
+    return await model.timeTableStructurePeriodsModel.findAll({
+      where: {
+        timeTableNameId: { [Op.in]: timeTableNameIds }
+      },
+      attributes: ['timeTableCreationId', 'timeTableNameId', 'isBreak'],
+      order: [['timeTableNameId', 'ASC'], ['timeTableCreationId', 'ASC']],
+      raw: true
+    });
+  } catch (error) {
+    console.error("Error in getPeriodsForStructures:", error);
     throw error;
   }
 }

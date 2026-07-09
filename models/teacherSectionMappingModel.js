@@ -67,16 +67,11 @@ const teacherSectionMappingModel = sequelize.define(
             defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
             field: 'updated_at'
         },
-        deletedAt: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'deleted_at'
-        },
     },
     {
         tableName: 'teacher_section_mapping',
         timestamps: true,
-        paranoid: true
+        paranoid: false,
     }
 );
 
