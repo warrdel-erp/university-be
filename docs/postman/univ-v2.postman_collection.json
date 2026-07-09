@@ -15906,7 +15906,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/employee/pastSchedule?employeeId=45&groupPeriods=true&groupType=sessional",
+              "raw": "{{baseurl}}/employee/pastSchedule?employeeId=45&groupPeriods=true",
               "host": [
                 "{{baseurl}}"
               ],
@@ -15923,12 +15923,7 @@
                 {
                   "key": "groupPeriods",
                   "value": "true",
-                  "description": "true = merge periods into groups. false = one row per period."
-                },
-                {
-                  "key": "groupType",
-                  "value": "sessional",
-                  "description": "Required when groupPeriods=true. consecutive | sessional | allDay (default consecutive)"
+                  "description": "true = merge consecutive periods (same date, routine, subject). false = one row per period."
                 },
                 {
                   "key": "date",
@@ -15938,7 +15933,7 @@
                 }
               ]
             },
-            "description": "**GET /employee/pastSchedule**\n\nPast timetable slots for a teacher (published routines, scoped by auth academic year).\n\n### Query\n| Param | Required | Notes |\n|-------|----------|--------|\n| `employeeId` | yes | Teacher employeeId |\n| `groupPeriods` | no | `true` / `false` (default `false`) |\n| `groupType` | when grouped | `consecutive` \\| `sessional` \\| `allDay` (default `consecutive`) |\n| `date` | no | Cutoff date; slots before this date only |\n\n### groupType (when `groupPeriods=true`)\n| Value | Behaviour |\n|-------|----------|\n| `consecutive` | Merge back-to-back periods only (same date, routine, subject) |\n| `sessional` | Merge before-break and after-break separately; non-consecutive ok within segment |\n| `allDay` | Merge all periods for the day (same date, routine, teacher, subject) |\n\n### Attendance status (per period)\nEach schedule row includes **`attendanceStatus`**:\n- `MARKED` — at least one attendance row exists for `timeTableMappingId` + `date`\n- `PENDING` — not marked yet\n\n### Grouped mode\nEach group has `classScheduleItems[]` and group-level **`attendanceStatus`**: `MARKED` \\| `PARTIAL` \\| `PENDING`.\n\n**Note:** `POST /attendance` accepts `timeTableMappingId` as a number or array — use IDs from `classScheduleItems`.\n\n### 200 response shape\n```json\n{\n  \"teacher\": { \"employeeId\", \"employeeName\", \"employeeCode\", \"pickColor\" },\n  \"schedules\": [ ... ]\n}\n```"
+            "description": "**GET /employee/pastSchedule**\n\nPast timetable slots for a teacher (published routines, scoped by auth academic year).\n\n### Query\n| Param | Required | Notes |\n|-------|----------|--------|\n| `employeeId` | yes | Teacher employeeId |\n| `groupPeriods` | no | `true` / `false` (default `false`) |\n| `date` | no | Cutoff date; slots before this date only |\n\n### Attendance status (per period)\nEach schedule row includes **`attendanceStatus`**:\n- `MARKED` — at least one attendance row exists for `timeTableMappingId` + `date`\n- `PENDING` — not marked yet\n\n### Grouped mode (`groupPeriods=true`)\nConsecutive periods merge into one object with `classScheduleItems[]` and group-level **`attendanceStatus`**:\n- `MARKED` — all periods in the group are marked\n- `PARTIAL` — some marked, some pending\n- `PENDING` — none marked\n\n**Note:** `POST /attendance` accepts `timeTableMappingId` as a number or array — one POST can mark all periods in a group.\n\n### 200 response shape\n```json\n{\n  \"teacher\": { \"employeeId\", \"employeeName\", \"employeeCode\", \"pickColor\" },\n  \"schedules\": [ ... ]\n}\n```"
           },
           "response": []
         },
