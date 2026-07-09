@@ -82,9 +82,10 @@ const attendanceByDateQuerySchema = z.object({
 
 router.post('/', userAuth, validate({ body: addAttendanceSchema }), addAttendance);
 
-router.post('/copyPeriod', userAuth, validate({ body: copyAttendancePeriodSchema }), copyAttendancePeriod);
 
+router.post('/copyPeriod', userAuth, validate({ body: copyAttendancePeriodSchema }), copyAttendancePeriod);
 router.get('/copyPeriod', userAuth, validate({ query: copyAttendancePeriodQuerySchema }), getCopyAttendancePeriod);
+
 
 router.get('/', userAuth, getAttendanceDetails);
 
