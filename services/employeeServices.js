@@ -1524,17 +1524,15 @@ async function groupConsecutivePeriods(classes, sessionalBreak = false) {
   const groupedResult = [];
 
   let breakPeriodsMap = new Map();
-  if (sessionalBreak) {
-    const structureIds = [...new Set(classes.map(c => c.timeTableNameId).filter(Boolean))];
-    if (structureIds.length > 0) {
-      const allPeriods = await timeTableCreateRepository.getPeriodsForStructures(structureIds);
-      // Create a map to quickly look up breaks
-      for (const p of allPeriods) {
-        if (!breakPeriodsMap.has(p.timeTableNameId)) {
-          breakPeriodsMap.set(p.timeTableNameId, []);
-        }
-        breakPeriodsMap.get(p.timeTableNameId).push(p);
+  const structureIds = [...new Set(classes.map(c => c.timeTableNameId).filter(Boolean))];
+  if (structureIds.length > 0) {
+    const allPeriods = await timeTableCreateRepository.getPeriodsForStructures(structureIds);
+    // Create a map to quickly look up periods for each structure
+    for (const p of allPeriods) {
+      if (!breakPeriodsMap.has(p.timeTableNameId)) {
+        breakPeriodsMap.set(p.timeTableNameId, []);
       }
+      breakPeriodsMap.get(p.timeTableNameId).push(p);
     }
   }
 
@@ -1558,8 +1556,8 @@ async function groupConsecutivePeriods(classes, sessionalBreak = false) {
     return parseInt(a.period) - parseInt(b.period);
   });
 
-  const hasBreakBetween = (item1, item2) => {
-    if (!sessionalBreak || item1.timeTableNameId !== item2.timeTableNameId) return false;
+  const areConsecutivePeriods = (item1, item2) => {
+    if (item1.timeTableNameId !== item2.timeTableNameId) return false;
     const structurePeriods = breakPeriodsMap.get(item1.timeTableNameId);
     if (!structurePeriods) return false;
 
@@ -1567,17 +1565,24 @@ async function groupConsecutivePeriods(classes, sessionalBreak = false) {
     const idx1 = structurePeriods.findIndex(p => p.timeTableCreationId === item1.timeTableCreationId);
     const idx2 = structurePeriods.findIndex(p => p.timeTableCreationId === item2.timeTableCreationId);
     
-    if (idx1 === -1 || idx2 === -1) return false;
+    // They must be distinct valid periods
+    if (idx1 === -1 || idx2 === -1 || idx1 === idx2) return false;
 
-    // Check if any period between them has isBreak = true
     const minIdx = Math.min(idx1, idx2);
     const maxIdx = Math.max(idx1, idx2);
+    
+    // Check all periods that fall between item1 and item2
     for (let i = minIdx + 1; i < maxIdx; i++) {
-      if (structurePeriods[i].isBreak) {
-        return true;
+      if (!structurePeriods[i].isBreak) {
+        // If there's a non-break period between them (e.g. another class), they are not consecutive
+        return false;
+      }
+      if (structurePeriods[i].isBreak && sessionalBreak) {
+        // If there's a break between them and sessionalBreak is true, we must split the group
+        return false;
       }
     }
-    return false;
+    return true;
   };
 
   let currentGroup = null;
@@ -1590,14 +1595,16 @@ async function groupConsecutivePeriods(classes, sessionalBreak = false) {
     if (currentGroup &&
       currentGroup.date === item.date &&
       currentGroup.timeTablecreate.timeTableRoutineId === item.timeTablecreate.timeTableRoutineId &&
-      currentGroup.subjectId === subj.id &&
-      currentGroup.periods[currentGroup.periods.length - 1] + 1 === periodNum
+      currentGroup.subjectId === subj.id
     ) {
-      isConsecutive = true;
+      const lastItem = currentGroup.classScheduleItems[currentGroup.classScheduleItems.length - 1];
+      if (areConsecutivePeriods(lastItem, item)) {
+        isConsecutive = true;
+      }
     }
 
-    if (isConsecutive && !hasBreakBetween(currentGroup.classScheduleItems[currentGroup.classScheduleItems.length - 1], item)) {
-      // Consecutive period and no break between them
+    if (isConsecutive) {
+      // Consecutive period
       currentGroup.classScheduleItems.push(item);
       currentGroup.periods.push(periodNum);
     } else {
