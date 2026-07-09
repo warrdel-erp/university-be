@@ -2224,7 +2224,7 @@ export async function getPeriodsForStructures(timeTableNameIds) {
   try {
     return await model.timeTableStructurePeriodsModel.findAll({
       where: {
-        timeTableNameId: { [model.Sequelize.Op.in]: timeTableNameIds }
+        timeTableNameId: { [Op.in]: timeTableNameIds }
       },
       attributes: ['timeTableCreationId', 'timeTableNameId', 'isBreak'],
       order: [['timeTableNameId', 'ASC'], ['timeTableCreationId', 'ASC']],
