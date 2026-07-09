@@ -202,7 +202,7 @@ export async function getSubjectEvalution(req, res) {
 
 export const getTodayClassSchedule = async (req, res) => {
     try {
-        const { employeeId, date, sessionId, groupPeriods } = req.query;
+        const { employeeId, date, sessionId, groupPeriods, groupType } = req.query;
         const academicYearId = getAcademicYearId();
 
         if (!employeeId) {
@@ -219,7 +219,8 @@ export const getTodayClassSchedule = async (req, res) => {
             Number(employeeId),
             formattedDate,
             sessionId != null && sessionId !== '' ? Number(sessionId) : undefined,
-            groupPeriods === 'true'
+            groupPeriods === 'true',
+            groupType
         );
 
         res.status(200).send({ success: true, result });
@@ -265,7 +266,7 @@ export const getTeacherSubjectsFromSchedule = async (req, res) => {
 
 export const getPastClassSchedules = async (req, res) => {
     try {
-        const { employeeId, date, groupPeriods } = req.query;
+        const { employeeId, date, groupPeriods, groupType } = req.query;
         const academicYearId = getAcademicYearId();
 
         if (!employeeId) {
@@ -283,7 +284,8 @@ export const getPastClassSchedules = async (req, res) => {
             employeeId,
             academicYearId,
             formattedDate,
-            groupPeriods === 'true'
+            groupPeriods === 'true',
+            groupType
         );
 
         return SuccessResponse(res, 200, "Past class schedules fetched successfully", result);

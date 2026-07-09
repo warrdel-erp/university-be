@@ -27,6 +27,16 @@ const scheduleQuerySchema = z.object({
     date: z.string().optional(),
     sessionId: optionalPositiveId,
     groupPeriods: z.enum(['true', 'false']).optional(),
+    groupType: z.enum(['consecutive', 'sessional', 'allDay']).optional(),
+    instituteId: optionalPositiveId,
+    universityId: optionalPositiveId,
+}).passthrough();
+
+const scheduleGroupingQuerySchema = z.object({
+    employeeId: z.coerce.number().int().positive(),
+    date: z.string().optional(),
+    groupPeriods: z.enum(['true', 'false']).optional(),
+    groupType: z.enum(['consecutive', 'sessional', 'allDay']).optional(),
     instituteId: optionalPositiveId,
     universityId: optionalPositiveId,
 }).passthrough();
@@ -54,7 +64,7 @@ router.get('/sectionDates', userAuth, validate({ query: sectionDatesQuerySchema 
 
 router.get('/sectionCounts', userAuth, getSectionCounts);
 
-router.get('/pastSchedule', userAuth, getPastClassSchedules);
+router.get('/pastSchedule', userAuth, validate({ query: scheduleGroupingQuerySchema }), getPastClassSchedules);
 router.get('/upcomingSchedule', userAuth, getUpcomingClassSchedules);
 
 router.get('/courses', userAuth, getTeacherCourses);

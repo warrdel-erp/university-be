@@ -1879,7 +1879,7 @@ export async function getTodayClassScheduleForEmployee(employeeId, currentDate, 
           model: model.timeTableRoutineModel,
           as: "timeTablecreate",
           required: true,
-          attributes: ['timeTableRoutineId', 'startingDate', 'endingDate'],
+          attributes: ['timeTableRoutineId', 'timeTableNameId', 'startingDate', 'endingDate'],
           where: {
             ...routineActiveOnDateWhere(currentDate),
             ...buildScope(model.timeTableRoutineModel),
@@ -1902,7 +1902,7 @@ export async function getTodayClassScheduleForEmployee(employeeId, currentDate, 
         {
           model: model.timeTableStructurePeriodsModel,
           as: "timeTablecreation",
-          attributes: ['periodName', 'startTime', 'endTime'],
+          attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime', 'isBreak'],
         },
         {
           model: model.teacherSubjectMappingModel,
@@ -1965,7 +1965,7 @@ export async function getPastClassSchedulesForEmployee(
           model: model.timeTableRoutineModel,
           as: "timeTablecreate",
           required: true,
-          attributes: ['timeTableRoutineId', 'startingDate', 'endingDate'],
+          attributes: ['timeTableRoutineId', 'timeTableNameId', 'startingDate', 'endingDate'],
           where: {
             is_publish: true,
             academicYearId,
@@ -1988,7 +1988,7 @@ export async function getPastClassSchedulesForEmployee(
         {
           model: model.timeTableStructurePeriodsModel,
           as: "timeTablecreation",
-          attributes: ['periodName', 'startTime', 'endTime']
+          attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime', 'isBreak']
         },
         {
           model: model.teacherSubjectMappingModel,
@@ -2060,7 +2060,7 @@ export async function getUpcomingClassSchedulesForEmployee(
           model: model.timeTableRoutineModel,
           as: "timeTablecreate",
           required: true,
-          attributes: ['timeTableRoutineId', 'startingDate', 'endingDate'],
+          attributes: ['timeTableRoutineId', 'timeTableNameId', 'startingDate', 'endingDate'],
           where: {
             is_publish: true,
             academicYearId,
@@ -2083,7 +2083,7 @@ export async function getUpcomingClassSchedulesForEmployee(
         {
           model: model.timeTableStructurePeriodsModel,
           as: "timeTablecreation",
-          attributes: ['periodName', 'startTime', 'endTime']
+          attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime', 'isBreak']
         },
         {
           model: model.teacherSubjectMappingModel,
