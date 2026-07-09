@@ -565,16 +565,8 @@ export const PERMISSIONS = {
         value: "perm_68cfe249",
         parentPermission: 'CREDITS',
     },
-    CREDITS_ADD: {
+    CREDITS_ASSIGN: {
         value: "perm_ecb9aad2",
-        parentPermission: 'CREDITS',
-    },
-    CREDITS_EDIT: {
-        value: "perm_f4140308",
-        parentPermission: 'CREDITS',
-    },
-    CREDITS_DELETE: {
-        value: "perm_efcdb53d",
         parentPermission: 'CREDITS',
     },
     SYLLABUS_SIDEBAR: {
@@ -600,9 +592,6 @@ export const PERMISSIONS = {
     SEMESTER_SUBJECT_MAPPING_ASSIGN: {
         value: "perm_0e61e38a",
     },
-    SEMESTER_SUBJECT_MAPPING_UNASSIGN: {
-        value: "perm_2e8017ab",
-    },
     PROGRAM_OUTCOME_SIDEBAR: {
         value: "perm_2fc668d7",
         parentPermission: 'PROGRAM_OUTCOME',
@@ -627,28 +616,12 @@ export const PERMISSIONS = {
         value: "perm_75c83872",
         parentPermission: 'COURSE_OUTCOME',
     },
-    COURSE_OUTCOME_EDIT: {
-        value: "perm_93725688",
-        parentPermission: 'COURSE_OUTCOME',
-    },
-    COURSE_OUTCOME_DELETE: {
-        value: "perm_4530e966",
-        parentPermission: 'COURSE_OUTCOME',
-    },
     CLASS_SETUP_SIDEBAR: {
         value: "perm_e8eb3e4c",
         parentPermission: 'CLASS_SETUP',
     },
     CLASS_SETUP_ADD: {
-        value: "perm_44485d68",
-        parentPermission: 'CLASS_SETUP',
-    },
-    CLASS_SETUP_EDIT: {
-        value: "perm_768332ba",
-        parentPermission: 'CLASS_SETUP',
-    },
-    CLASS_SETUP_DELETE: {
-        value: "perm_5a73369a",
+        value: "perm_9b2e4b3e",
         parentPermission: 'CLASS_SETUP',
     },
     TEACHER_MAPPED_CLASSES_SIDEBAR: {
@@ -673,18 +646,6 @@ export const PERMISSIONS = {
     },
     CLASS_RECORDS_SIDEBAR: {
         value: "perm_02896abe",
-        parentPermission: 'CLASS_RECORDS',
-    },
-    CLASS_RECORDS_ADD: {
-        value: "perm_25a6a3d7",
-        parentPermission: 'CLASS_RECORDS',
-    },
-    CLASS_RECORDS_EDIT: {
-        value: "perm_dd04c318",
-        parentPermission: 'CLASS_RECORDS',
-    },
-    CLASS_RECORDS_DELETE: {
-        value: "perm_d89b914f",
         parentPermission: 'CLASS_RECORDS',
     },
     TIME_TABLE_SETUP_SIDEBAR: {
@@ -1711,18 +1672,6 @@ export const PERMISSIONS = {
     },
     BLOOMS_TAXONOMY_SIDEBAR: {
         value: "BLOOMS_TAXONOMY_SIDEBAR",
-        parentPermission: 'BLOOMS_TAXONOMY',
-    },
-    BLOOMS_TAXONOMY_ADD: {
-        value: "BLOOMS_TAXONOMY_ADD",
-        parentPermission: 'BLOOMS_TAXONOMY',
-    },
-    BLOOMS_TAXONOMY_EDIT: {
-        value: "BLOOMS_TAXONOMY_EDIT",
-        parentPermission: 'BLOOMS_TAXONOMY',
-    },
-    BLOOMS_TAXONOMY_DELETE: {
-        value: "BLOOMS_TAXONOMY_DELETE",
         parentPermission: 'BLOOMS_TAXONOMY',
     },
     EXAM_TYPE_TERM_MAPPING: {

@@ -9,6 +9,8 @@ import {
   deleteFeeTypeCategory,
 } from "../controllers/feeTypeCategoryController.js";
 import userAuth from "../middleware/authUser.js";
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 
 const router = Router();
 
@@ -36,10 +38,10 @@ const updateFeeTypeCategorySchema = z
     message: "At least one of name, description is required",
   });
 
-router.post("/", userAuth, validate({ body: addFeeTypeCategorySchema }), addFeeTypeCategory);
-router.get("/", userAuth, getAllFeeTypeCategory);
-router.get("/single", userAuth, validate({ query: feeTypeCategoryIdQuerySchema }), getSingleFeeTypeCategoryDetails);
-router.patch("/", userAuth, validate({ body: updateFeeTypeCategorySchema }), updateFeeTypeCategory);
-router.delete("/", userAuth, validate({ query: feeTypeCategoryIdQuerySchema }), deleteFeeTypeCategory);
+router.post("/", userAuth, checkAccess(PERMISSIONS.FEES_TYPE_ADD.value, null), validate({ body: addFeeTypeCategorySchema }), addFeeTypeCategory);
+router.get("/", userAuth, checkAccess(PERMISSIONS.FEES_TYPE.value, null), getAllFeeTypeCategory);
+router.get("/single", userAuth, checkAccess(PERMISSIONS.FEES_TYPE.value, null), validate({ query: feeTypeCategoryIdQuerySchema }), getSingleFeeTypeCategoryDetails);
+router.patch("/", userAuth, checkAccess(PERMISSIONS.FEES_TYPE_EDIT.value, null), validate({ body: updateFeeTypeCategorySchema }), updateFeeTypeCategory);
+router.delete("/", userAuth, checkAccess(PERMISSIONS.FEES_TYPE_DELETE.value, null), validate({ query: feeTypeCategoryIdQuerySchema }), deleteFeeTypeCategory);
 
 export default router;

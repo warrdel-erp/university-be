@@ -111,19 +111,18 @@ router.post('/institute', userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_ADD.v
 
 router.post('/affiliatedUniversity', userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_ADD.value, 'institute'), addAffiliatedUniversity);
 
-router.post('/course', userAuth, checkAccess(PERMISSIONS.COURSES_ADD.value, 'institute'), validate({ body: addCourseSchema }), addCourse);
-router.patch('/course', userAuth, checkAccess(PERMISSIONS.COURSES_EDIT.value, 'institute'), validate({ body: updateCourseSchema }), updateCourse);
-router.patch('/course/status', userAuth, checkAccess(PERMISSIONS.COURSES_CHANGE_STATUS.value, 'institute'), validate({ body: changeCourseStatusSchema }), changeCourseStatus);
+router.post('/course', userAuth, checkAccess(PERMISSIONS.COURSES_ADD.value, null), validate({ body: addCourseSchema }), addCourse);
+router.patch('/course', userAuth, checkAccess(PERMISSIONS.COURSES_EDIT.value, null), validate({ body: updateCourseSchema }), updateCourse);
+router.patch('/course/status', userAuth, checkAccess(PERMISSIONS.COURSES_CHANGE_STATUS.value, null), validate({ body: changeCourseStatusSchema }), changeCourseStatus);
 
 router.post('/specialization', userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_ADD.value, 'specialization'), addSpecialization);
 
-router.post('/subject', userAuth, validate({ body: addSubjectSchema }), addSubject);
-
-router.patch('/subject/update', userAuth, validate({ body: updateSubjectSchema }), updateSubject);
+router.post('/subject', userAuth, checkAccess(PERMISSIONS.SUBJECTS_ADD.value, null), validate({ body: addSubjectSchema }), addSubject);
+router.patch('/subject/update', userAuth, checkAccess(PERMISSIONS.SUBJECTS_EDIT.value, null), validate({ body: updateSubjectSchema }), updateSubject);
 
 // Section master (class table removed)
-router.post('/classSections', userAuth, validate({ body: addClassSectionsSchema }), addClassSections);
-router.get('/classSections', userAuth, getClassSections);
+router.post('/classSections', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP_ADD.value, null), validate({ body: addClassSectionsSchema }), addClassSections);
+router.get('/classSections', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP.value, null), getClassSections);
 router.get('/classSectionSpecific', userAuth, getClassSectionSpecific);
 router.post('/sectionSubjectMapper', userAuth, addSectionSubjectMapper);
 router.get('/sectionSubjectMapper', userAuth, getSectionSubjectMapper);
@@ -134,7 +133,7 @@ router.get(
     getClassSectionRecord,
 );
 
-router.post('/subjectExcel', userAuth, checkAccess(PERMISSIONS.SUBJECTS_IMPORT.value, 'institute'), subjectExcel);
+router.post('/subjectExcel', userAuth, checkAccess(PERMISSIONS.SUBJECTS_IMPORT.value, null), subjectExcel);
 
 router.get("/monthly-income", getMonthlyIncome);
 

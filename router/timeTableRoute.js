@@ -59,11 +59,14 @@ const deleteTimeTableQuerySchema = z.object({
     timeTableCreationId: positiveIntegerId,
 });
 
-router.post('/', userAuth, validate({ body: addTimeTableSchema }), addTimeTable);
-router.get('/all_name', userAuth, validate({ query: getAllTimeTableNameQuerySchema }), getAllTimeTableName);
-router.get('/', userAuth, validate({ query: getTimeTableQuerySchema }), getTimeTableDetails);
-router.get('/single', userAuth, validate({ query: getSingleTimeTableQuerySchema }), getSingleTimeTableDetails);
-router.patch('/', userAuth, validate({ body: updateTimeTableSchema }), updateTimeTable);
-router.delete('/', userAuth, validate({ query: deleteTimeTableQuerySchema }), deleteTimeTable);
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
+
+router.post('/', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP_ADD.value, null), validate({ body: addTimeTableSchema }), addTimeTable);
+router.get('/all_name', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP.value, null), validate({ query: getAllTimeTableNameQuerySchema }), getAllTimeTableName);
+router.get('/', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP.value, null), validate({ query: getTimeTableQuerySchema }), getTimeTableDetails);
+router.get('/single', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP.value, null), validate({ query: getSingleTimeTableQuerySchema }), getSingleTimeTableDetails);
+router.patch('/', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP_EDIT.value, null), validate({ body: updateTimeTableSchema }), updateTimeTable);
+router.delete('/', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP_DELETE.value, null), validate({ query: deleteTimeTableQuerySchema }), deleteTimeTable);
 
 export default router;

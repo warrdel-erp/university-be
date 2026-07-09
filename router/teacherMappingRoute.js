@@ -12,6 +12,8 @@ import {
     deleteTeacherSectionMapping,
 } from '../controllers/teacherMappingController.js';
 import userAuth from '../middleware/authUser.js';
+import { checkAccess } from '../middleware/checkAccess.js';
+import { PERMISSIONS } from '../const/permissions.js';
 
 const router = Router();
 
@@ -103,23 +105,24 @@ const teacherSectionMappingIdParamSchema = z.object({
     teacherSectionMappingId: positiveIntegerId,
 });
 
-router.post('/teacherSubject', userAuth, validate({ body: createTeacherSubjectSchema }), teacherSubjectMapping);
+router.post('/teacherSubject', userAuth, checkAccess(PERMISSIONS.TEACHER_MAPPED_SUBJECTS_ASSIGN.value, null), validate({ body: createTeacherSubjectSchema }), teacherSubjectMapping);
 
-router.post('/teacherSection', userAuth, validate({ body: createTeacherSectionSchema }), teacherSectionMapping);
+router.post('/teacherSection', userAuth, checkAccess(PERMISSIONS.TEACHER_MAPPED_CLASSES_ASSIGN.value, null), validate({ body: createTeacherSectionSchema }), teacherSectionMapping);
 
-router.get('/teacherSubject', userAuth, validate({ query: getTeacherSubjectQuerySchema }), getTeacherSubjectMapping);
+router.get('/teacherSubject', userAuth, checkAccess(PERMISSIONS.TEACHER_MAPPED_SUBJECTS.value, null), validate({ query: getTeacherSubjectQuerySchema }), getTeacherSubjectMapping);
 
 // router.get('/teacherSubject/employee',userAuth , getTeacherSubjectMappingByEmployee);
 
-router.get('/teacherSection', userAuth, validate({ query: getTeacherSectionQuerySchema }), getTeacherSectionMapping);
+router.get('/teacherSection', userAuth, checkAccess(PERMISSIONS.TEACHER_MAPPED_CLASSES.value, null), validate({ query: getTeacherSectionQuerySchema }), getTeacherSectionMapping);
 
-router.patch('/teacherSubject', userAuth, validate({ body: updateTeacherSubjectSchema }), updateTeacherSubjectMapping);
+router.patch('/teacherSubject', userAuth, checkAccess(PERMISSIONS.TEACHER_MAPPED_SUBJECTS_ASSIGN.value, null), validate({ body: updateTeacherSubjectSchema }), updateTeacherSubjectMapping);
 
-router.patch('/teacherSection', userAuth, validate({ body: updateTeacherSectionSchema }), updateTeacherSectionMapping);
+router.patch('/teacherSection', userAuth, checkAccess(PERMISSIONS.TEACHER_MAPPED_CLASSES_ASSIGN.value, null), validate({ body: updateTeacherSectionSchema }), updateTeacherSectionMapping);
 
 router.delete(
     '/teacherSubject/:teacherSubjectMappingId',
     userAuth,
+    checkAccess(PERMISSIONS.TEACHER_MAPPED_SUBJECTS_UNASSIGN.value, null),
     validate({ params: teacherSubjectMappingIdParamSchema }),
     deleteTeacherSubjectMapping,
 );
@@ -127,6 +130,7 @@ router.delete(
 router.delete(
     '/teacherSection/:teacherSectionMappingId',
     userAuth,
+    checkAccess(PERMISSIONS.TEACHER_MAPPED_CLASSES_UNASSIGN.value, null),
     validate({ params: teacherSectionMappingIdParamSchema }),
     deleteTeacherSectionMapping,
 );

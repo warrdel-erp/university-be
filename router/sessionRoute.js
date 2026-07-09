@@ -41,9 +41,9 @@ const updateCourseSessionMappingSchema = z.object({
 
 router.post('/', userAuth, checkAccess(PERMISSIONS.SESSION_SETUP_ADD.value, 'session'), validate({ body: sessionSchema }), addSession);
 
-router.get('/', userAuth, getAllSession);
+router.get('/', userAuth, checkAccess(PERMISSIONS.SESSION_SETUP.value, null), getAllSession);
 
-router.get('/single', userAuth, getSingleSessionDetails);
+router.get('/single', userAuth, checkAccess(PERMISSIONS.SESSION_SETUP.value, null), getSingleSessionDetails);
 
 router.patch('/', userAuth, checkAccess(PERMISSIONS.SESSION_SETUP_EDIT.value, 'session'), validate({ body: updateSessionSchema }), updateSession);
 

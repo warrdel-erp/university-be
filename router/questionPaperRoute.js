@@ -100,18 +100,18 @@ const approveQuestionPaperSchema = z.object({
 import { checkAccess } from "../middleware/checkAccess.js";
 import { PERMISSIONS } from "../const/permissions.js";
 
-router.post("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, 'questionPaper'), validate({ body: createQuestionPaperSchema }), addQuestionPaper);
+router.post("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, null), validate({ body: createQuestionPaperSchema }), addQuestionPaper);
 
-router.post("/generate", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, 'questionPaper'), validate({ body: generateQuestionPaperSchema }), generateQuestionPaper);
+router.post("/generate", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, null), validate({ body: generateQuestionPaperSchema }), generateQuestionPaper);
 
-router.get("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER.value, 'questionPaper'), validate({ query: getAllQuestionPapersQuerySchema }), getAllQuestionPapers);
+router.get("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER.value, null), validate({ query: getAllQuestionPapersQuerySchema }), getAllQuestionPapers);
 
-router.get("/:id", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER.value, 'questionPaper'), getSingleQuestionPaper);
+router.get("/:id", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER.value, null), getSingleQuestionPaper);
 
-router.put("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_EDIT.value, 'questionPaper'), validate({ body: updateQuestionPaperSchema }), updateQuestionPaper);
+router.put("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_EDIT.value, null), validate({ body: updateQuestionPaperSchema }), updateQuestionPaper);
 
-router.delete("/:id", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_DELETE.value, 'questionPaper'), deleteQuestionPaper);
+router.delete("/:id", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_DELETE.value, null), deleteQuestionPaper);
 
-router.put("/approve", userAuth, checkAccess(PERMISSIONS.QUESTION_APPROVAL_EDIT.value, 'questionPaper'), validate({ body: approveQuestionPaperSchema }), approveQuestionPaper);
+router.put("/approve", userAuth, checkAccess(PERMISSIONS.QUESTION_APPROVAL_EDIT.value, null), validate({ body: approveQuestionPaperSchema }), approveQuestionPaper);
 
 export default router;

@@ -3,14 +3,17 @@ const router =  Router();
 import {addRoomType,getAllRoomType,getSingleRoomTypeDetails,updateRoomType,deleteRoomType} from "../controllers/roomTypeController.js";
 import userAuth from "../middleware/authUser.js"
 
-router.post('/', userAuth, addRoomType);
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 
-router.get('/', userAuth, getAllRoomType);
+router.post('/', userAuth, checkAccess(PERMISSIONS.EXAM_ROOM_ALLOCATE_ADD.value, null), addRoomType);
 
-router.get('/single' ,userAuth, getSingleRoomTypeDetails);
+router.get('/', userAuth, checkAccess(PERMISSIONS.EXAM_ROOM_ALLOCATE.value, null), getAllRoomType);
 
-router.patch('/' ,userAuth, updateRoomType);
+router.get('/single' ,userAuth, checkAccess(PERMISSIONS.EXAM_ROOM_ALLOCATE.value, null), getSingleRoomTypeDetails);
 
-router.delete('/' ,userAuth, deleteRoomType);
+router.patch('/' ,userAuth, checkAccess(PERMISSIONS.EXAM_ROOM_ALLOCATE_EDIT.value, null), updateRoomType);
+
+router.delete('/' ,userAuth, checkAccess(PERMISSIONS.EXAM_ROOM_ALLOCATE_DELETE.value, null), deleteRoomType);
 
 export default router;

@@ -40,42 +40,43 @@ const uniqueClassSectionSubjectsQuerySchema = z.object({
 router.get(
     '/uniqueClassSectionSubjects',
     userAuth,
+    checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
     validate({ query: uniqueClassSectionSubjectsQuerySchema }),
     getUniqueClassSectionSubjects,
 );
 
-router.get('/schedule', userAuth, validate({ query: scheduleQuerySchema }), getTodayClassSchedule);
+router.get('/schedule', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), validate({ query: scheduleQuerySchema }), getTodayClassSchedule);
 
-router.get('/sectionDates', userAuth, validate({ query: sectionDatesQuerySchema }), getEmployeeSectionDates);
+router.get('/sectionDates', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), validate({ query: sectionDatesQuerySchema }), getEmployeeSectionDates);
 
-router.get('/sectionCounts', userAuth, getSectionCounts);
+router.get('/sectionCounts', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getSectionCounts);
 
-router.get('/pastSchedule', userAuth, getPastClassSchedules);
-router.get('/upcomingSchedule', userAuth, getUpcomingClassSchedules);
+router.get('/pastSchedule', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getPastClassSchedules);
+router.get('/upcomingSchedule', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getUpcomingClassSchedules);
 
-router.get('/courses', userAuth, getTeacherCourses);
+router.get('/courses', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getTeacherCourses);
 
-router.get('/coursesFromSchedule', userAuth, getTeacherSubjectsFromSchedule);
+router.get('/coursesFromSchedule', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getTeacherSubjectsFromSchedule);
 
-router.get('/evaluation', userAuth, getSubjectEvalution);
+router.get('/evaluation', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getSubjectEvalution);
 
-router.get('/cellData', userAuth, getTeacherTimeTable);
+router.get('/cellData', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getTeacherTimeTable);
 
-router.get('/subject', userAuth, getTeacherSubject);
+router.get('/subject', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getTeacherSubject);
 
-router.get("/issuedBook", userAuth, getBooksIssuedToEmployee);
+router.get("/issuedBook", userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getBooksIssuedToEmployee);
 
-router.post('/addEmp', userAuth, addEmployee);
+router.post('/addEmp', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY_ADD.value, null), addEmployee);
 
-router.get('/', userAuth, getAllEmployee);
+router.get('/', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getAllEmployee);
 
-router.get('/:id', userAuth, getSingleEmployeeDetails);
+router.get('/:id', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getSingleEmployeeDetails);
 
-router.patch('/:id', userAuth, updateEmployee);
+router.patch('/:id', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY_EDIT.value, null), updateEmployee);
 
-router.delete('/:id', userAuth, deleteEmployeeDetail);
+router.delete('/:id', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY_DELETE.value, null), deleteEmployeeDetail);
 
-router.post('/import', userAuth, checkAccess(PERMISSIONS.STAFF_PROFILES_IMPORT.value, 'institute'), importEmployeeData);
+router.post('/import', userAuth, checkAccess(PERMISSIONS.STAFF_PROFILES_IMPORT.value, null), importEmployeeData);
 
 
 export default router;

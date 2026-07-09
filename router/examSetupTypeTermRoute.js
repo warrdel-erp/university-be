@@ -16,8 +16,8 @@ const bulkCreateSchema = z.object({
     })).min(1)
 });
 
-router.post('/bulk', userAuth, checkAccess(PERMISSIONS.EXAM_TYPE_TERM_MAPPING_ADD.value, 'examSetupTypeTerm'), validate(bulkCreateSchema), examSetupTypeTermController.bulkCreateExamSetupTypeTerm);
-router.delete('/:id', userAuth, checkAccess(PERMISSIONS.EXAM_TYPE_TERM_MAPPING_DELETE.value, 'examSetupTypeTerm'), examSetupTypeTermController.deleteExamSetupTypeTerm);
+router.post('/bulk', userAuth, checkAccess(PERMISSIONS.EXAM_TYPE_TERM_MAPPING_ADD.value, null), validate(bulkCreateSchema), examSetupTypeTermController.bulkCreateExamSetupTypeTerm);
+router.delete('/:id', userAuth, checkAccess(PERMISSIONS.EXAM_TYPE_TERM_MAPPING_DELETE.value, null), examSetupTypeTermController.deleteExamSetupTypeTerm);
 
 
 export default router;

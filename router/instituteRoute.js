@@ -96,6 +96,6 @@ router.patch(
   validate({ body: updateAffiliatedUniversitySchema }),
   instituteController.updateAffiliatedUniversity
 );
-router.get("/", userAuth, validate({ query: listInstituteSchema }), instituteController.listInstitutes);
+router.get("/", userAuth, checkAccess(PERMISSIONS.MASTER_SECTION.value, null), validate({ query: listInstituteSchema }), instituteController.listInstitutes);
 
 export default router;

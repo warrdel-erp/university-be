@@ -63,15 +63,15 @@ const activateAndCopySchema = acedmicYearBodySchema.extend({
 });
 
 /** Upsert + activate for active university and institute (from auth context). */
-router.post('/', userAuth, validate({ body: acedmicYearBodySchema }), addacedmicYear);
+router.post('/', userAuth, checkAccess(PERMISSIONS.ACADEMIC_YEAR_ACTIVATE_SIBLING.value, null), validate({ body: acedmicYearBodySchema }), addacedmicYear);
 
 /** All academic years for active university + institute (active and inactive). */
 router.get('/', userAuth, getAllacedmicYear);
 
 /** Update academic year — defaults to active year from X-Academic-Year-Id when academicYearId omitted. */
-router.patch('/', userAuth, validate({ body: updateAcedmicYearSchema }), updateacedmicYear);
+router.patch('/', userAuth, checkAccess(PERMISSIONS.ACADEMIC_YEAR_ACTIVATE_SIBLING.value, null), validate({ body: updateAcedmicYearSchema }), updateacedmicYear);
 
-router.delete('/', userAuth, validate({ query: academicYearIdQuerySchema }), deleteacedmicYear);
+router.delete('/', userAuth, checkAccess(PERMISSIONS.ACADEMIC_YEAR.value, null), validate({ query: academicYearIdQuerySchema }), deleteacedmicYear);
 
 /** Active academic years for active institute (from auth context) — returns array. */
 router.get('/active', userAuth, getActiveAcedmicYearByInstitute);

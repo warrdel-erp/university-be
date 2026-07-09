@@ -31,12 +31,12 @@ const listHallTicketsQuerySchema = z.object({
 import { checkAccess } from "../middleware/checkAccess.js";
 import { PERMISSIONS } from "../const/permissions.js";
 
-router.post("/generate", userAuth, checkAccess(PERMISSIONS.HALL_TICKETS_ADD.value, 'studentHallTicket'), validate({ body: generateSchema }), studentHallTicketController.generateHallTickets);
+router.post("/generate", userAuth, checkAccess(PERMISSIONS.HALL_TICKETS_ADD.value, null), validate({ body: generateSchema }), studentHallTicketController.generateHallTickets);
 
-router.get("/byQr", userAuth, checkAccess(PERMISSIONS.HALL_TICKETS.value, 'studentHallTicket'), validate({ query: qrQuerySchema }), studentHallTicketController.getHallTicketByQr);
+router.get("/byQr", userAuth, checkAccess(PERMISSIONS.HALL_TICKETS.value, null), validate({ query: qrQuerySchema }), studentHallTicketController.getHallTicketByQr);
 
-router.get("/", userAuth, checkAccess(PERMISSIONS.HALL_TICKETS.value, 'studentHallTicket'), validate({ query: listHallTicketsQuerySchema }), studentHallTicketController.getAllHallTickets);
+router.get("/", userAuth, checkAccess(PERMISSIONS.HALL_TICKETS.value, null), validate({ query: listHallTicketsQuerySchema }), studentHallTicketController.getAllHallTickets);
 
-router.get("/:id", userAuth, checkAccess(PERMISSIONS.HALL_TICKETS.value, 'studentHallTicket'), validate({ params: idParamsSchema }), studentHallTicketController.getHallTicketById);
+router.get("/:id", userAuth, checkAccess(PERMISSIONS.HALL_TICKETS.value, null), validate({ params: idParamsSchema }), studentHallTicketController.getHallTicketById);
 
 export default router;

@@ -29,17 +29,17 @@ const courseIdParamSchema = z.object({
 });
 
 // Routes
-router.get("/", userAuth, validate({ query: listCoursesSchema }), courseController.listCourses);
+router.get("/", userAuth, checkAccess(PERMISSIONS.COURSES.value, null), validate({ query: listCoursesSchema }), courseController.listCourses);
 
-router.get("/withSubjects", userAuth, validate({ query: courseListWithSubjectsSchema }), courseController.getCourseWithSubjects);
+router.get("/withSubjects", userAuth, checkAccess(PERMISSIONS.COURSES.value, null), validate({ query: courseListWithSubjectsSchema }), courseController.getCourseWithSubjects);
 
-router.get("/:courseId/sessions", userAuth, validate({ query: getCourseSessionsSchema }), courseController.getCourseSessions);
+router.get("/:courseId/sessions", userAuth, checkAccess(PERMISSIONS.COURSES.value, null), validate({ query: getCourseSessionsSchema }), courseController.getCourseSessions);
 
 
-router.get("/termsWithClassSections", userAuth, validate({ query: classSectionsGroupedSchema }), courseController.getTermsWithClassSections);
+router.get("/termsWithClassSections", userAuth, checkAccess(PERMISSIONS.COURSES.value, null), validate({ query: classSectionsGroupedSchema }), courseController.getTermsWithClassSections);
 
-router.get("/:courseId/terms", userAuth, courseController.getTermOptionsByCourse);
+router.get("/:courseId/terms", userAuth, checkAccess(PERMISSIONS.COURSES.value, null), courseController.getTermOptionsByCourse);
 
-router.delete("/:courseId", userAuth, checkAccess(PERMISSIONS.COURSES_DELETE.value, 'institute'), validate({ params: courseIdParamSchema }), courseController.deleteCourse);
+router.delete("/:courseId", userAuth, checkAccess(PERMISSIONS.COURSES_DELETE.value, null), validate({ params: courseIdParamSchema }), courseController.deleteCourse);
 
-export default router;
+export default router; 

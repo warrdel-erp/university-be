@@ -9,6 +9,8 @@ import {
   deleteFeeTypeCatalog,
 } from "../controllers/feeTypeCatalogController.js";
 import userAuth from "../middleware/authUser.js";
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 import { feeTypeLedgerTypes } from "../constant.js";
 
 const router = Router();
@@ -64,10 +66,10 @@ const updateFeeTypeCatalogSchema = z
     }
   );
 
-router.post("/", userAuth, validate({ body: addFeeTypeCatalogSchema }), addFeeTypeCatalog);
-router.get("/", userAuth, getAllFeeTypeCatalog);
-router.get("/single", userAuth, validate({ query: feeTypeCatalogIdQuerySchema }), getSingleFeeTypeCatalogDetails);
-router.patch("/", userAuth, validate({ body: updateFeeTypeCatalogSchema }), updateFeeTypeCatalog);
-router.delete("/", userAuth, validate({ query: feeTypeCatalogIdQuerySchema }), deleteFeeTypeCatalog);
+router.post("/", userAuth, checkAccess(PERMISSIONS.FEES_TYPE_ADD.value, null), validate({ body: addFeeTypeCatalogSchema }), addFeeTypeCatalog);
+router.get("/", userAuth, checkAccess(PERMISSIONS.FEES_TYPE.value, null), getAllFeeTypeCatalog);
+router.get("/single", userAuth, checkAccess(PERMISSIONS.FEES_TYPE.value, null), validate({ query: feeTypeCatalogIdQuerySchema }), getSingleFeeTypeCatalogDetails);
+router.patch("/", userAuth, checkAccess(PERMISSIONS.FEES_TYPE_EDIT.value, null), validate({ body: updateFeeTypeCatalogSchema }), updateFeeTypeCatalog);
+router.delete("/", userAuth, checkAccess(PERMISSIONS.FEES_TYPE_DELETE.value, null), validate({ query: feeTypeCatalogIdQuerySchema }), deleteFeeTypeCatalog);
 
 export default router;

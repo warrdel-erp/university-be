@@ -78,12 +78,13 @@ router.get("/my", userAuth, userPermissionController.getMyAuthorization);
 router.get(
   "/getByUserId/:userId",
   userAuth,
+  checkAccess(PERMISSIONS.ROLES_ACCESS_CONTROL.value, null),
   validate({ params: getByIdSchema }),
   userPermissionController.getPermissionsById,
 );
 
 // Get all scopes & permissions
-router.get("/scopes", userAuth, userPermissionController.getAllScopes);
-router.get("/permissions", userAuth, userPermissionController.getAllPermissions);
+router.get("/scopes", userAuth, checkAccess(PERMISSIONS.ROLES_ACCESS_CONTROL.value, null), userPermissionController.getAllScopes);
+router.get("/permissions", userAuth, checkAccess(PERMISSIONS.ROLES_ACCESS_CONTROL.value, null), userPermissionController.getAllPermissions);
 
 export default router;

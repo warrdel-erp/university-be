@@ -39,14 +39,14 @@ const departmentIdQuerySchema = z.object({
 
 router.post('/', userAuth, checkAccess(PERMISSIONS.DEPARTMENT_ADD.value, 'department'), validate({ body: addDepartmentSchema }), addDepartment);
 
-router.get('/', userAuth, getAllDepartment);
+router.get('/', userAuth, checkAccess(PERMISSIONS.DEPARTMENT.value, null), getAllDepartment);
 
-router.get('/single', userAuth, validate({ query: departmentIdQuerySchema }), getSingleDepartmentDetails);
+router.get('/single', userAuth, checkAccess(PERMISSIONS.DEPARTMENT.value, null), validate({ query: departmentIdQuerySchema }), getSingleDepartmentDetails);
 
 router.patch('/', userAuth, checkAccess(PERMISSIONS.DEPARTMENT_EDIT.value, 'department'), validate({ body: updateDepartmentSchema }), updateDepartment);
 
 router.delete('/', userAuth, checkAccess(PERMISSIONS.DEPARTMENT_DELETE.value, 'department'), validate({ query: departmentIdQuerySchema }), deleteDepartment);
 
-router.get('/byId', userAuth, validate({ query: departmentIdQuerySchema }), getDepartmentByIdEmployee);
+router.get('/byId', userAuth, checkAccess(PERMISSIONS.DEPARTMENT.value, null), validate({ query: departmentIdQuerySchema }), getDepartmentByIdEmployee);
 
 export default router;

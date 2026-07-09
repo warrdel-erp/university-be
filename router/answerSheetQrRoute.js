@@ -99,7 +99,7 @@ import { PERMISSIONS } from "../const/permissions.js";
 router.post(
   "/bulk",
   userAuth,
-  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS_ADD.value, 'answerSheetQr'),
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS_ADD.value, null),
   validate({ body: bulkGenerateSchema }),
   generateAnswerSheetQrBulk
 );
@@ -107,7 +107,7 @@ router.post(
 router.get(
   "/requests",
   userAuth,
-  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, 'answerSheetQr'),
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, null),
   validate({ query: paginationSchema }),
   getAnswerSheetQrGenerationRequests
 );
@@ -115,7 +115,7 @@ router.get(
 router.get(
   "/requests/:requestId/qrs",
   userAuth,
-  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, 'answerSheetQr'),
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, null),
   validate({ params: requestIdParamSchema, query: paginationSchema }),
   getAnswerSheetQrsByRequestId
 );
@@ -123,7 +123,7 @@ router.get(
 router.get(
   "/:id",
   userAuth,
-  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, 'answerSheetQr'),
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, null),
   validate({ params: idParamSchema }),
   getAnswerSheetQrById
 );
@@ -131,7 +131,7 @@ router.get(
 router.patch(
   "/map",
   userAuth,
-  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS_EDIT.value, 'answerSheetQr'),
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS_EDIT.value, null),
   validate({ body: mapSchema }),
   mapAnswerSheetQr
 );
@@ -139,7 +139,7 @@ router.patch(
 router.post(
   "/assign/evaluator",
   userAuth,
-  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS_EDIT.value, 'answerSheetQr'),
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS_EDIT.value, null),
   validate({ body: assignTeachersSchema }),
   assignAnswerSheetsToTeachers
 );
@@ -147,7 +147,7 @@ router.post(
 router.get(
   "/evaluator/:assignedToUserId",
   userAuth,
-  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, 'answerSheetQr'),
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, null),
   validate({ params: teacherIdParamSchema, query: paginationSchema }),
   getScriptsAssignedToTeacher
 );
@@ -155,7 +155,7 @@ router.get(
 router.patch(
   "/:id/obtainedMarks",
   userAuth,
-  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS_EDIT.value, 'answerSheetQr'),
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS_EDIT.value, null),
   validate({ params: idParamSchema, body: assignObtainedMarksSchema }),
   assignObtainedMarksToAnswerSheet
 );
@@ -173,7 +173,7 @@ const splitPdfSchema = z.object({
 router.post(
   "/splitPdf",
   userAuth,
-  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS_ADD.value, 'answerSheetQr'),
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS_ADD.value, null),
   validate({ body: splitPdfSchema }),
   splitAnswerSheetPdf
 );
@@ -183,7 +183,7 @@ router.post(
 router.get(
   "/splitPdf/job/:jobDbId",
   userAuth,
-  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, 'answerSheetQr'),
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, null),
   getSplitPdfJobStatus
 );
 

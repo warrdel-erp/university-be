@@ -12,6 +12,8 @@ import {
   publishFeePlanProfile,
 } from "../controllers/feePlanProfileController.js";
 import userAuth from "../middleware/authUser.js";
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 
 const router = Router();
 
@@ -125,9 +127,9 @@ const publishBody = z.object({
   feePlanProfileId: id,
 });
 
-router.post("/", userAuth, validate({ body: createBody }), addFeePlanProfile);
-router.patch("/", userAuth, validate({ body: updateBody }), updateFeePlanProfile);
-router.patch("/publish", userAuth, validate({ body: publishBody }), publishFeePlanProfile);
+router.post("/", userAuth, checkAccess(PERMISSIONS.FEES_PLAN_ADD.value, null), validate({ body: createBody }), addFeePlanProfile);
+router.patch("/", userAuth, checkAccess(PERMISSIONS.FEES_PLAN_EDIT.value, null), validate({ body: updateBody }), updateFeePlanProfile);
+router.patch("/publish", userAuth, checkAccess(PERMISSIONS.FEES_PLAN_EDIT.value, null), validate({ body: publishBody }), publishFeePlanProfile);
 
 router.patch(
   "/assignStudent",
@@ -135,9 +137,9 @@ router.patch(
   validate({ body: assignStudentBody }),
   assignFeePlanProfileToStudent
 );
-router.get("/summary", userAuth, getFeePlanProfileSummary);
-router.get("/all", userAuth, validate({ query: listAllQuery }), getAllFeePlanProfiles);
-router.get("/", userAuth, validate({ query: listQuery }), getAllFeePlanProfile);
-router.get("/single", userAuth, validate({ query: profileIdQuery }), getSingleFeePlanProfileDetails);
+router.get("/summary", userAuth, checkAccess(PERMISSIONS.FEES_PLAN.value, null), getFeePlanProfileSummary);
+router.get("/all", userAuth, checkAccess(PERMISSIONS.FEES_PLAN.value, null), validate({ query: listAllQuery }), getAllFeePlanProfiles);
+router.get("/", userAuth, checkAccess(PERMISSIONS.FEES_PLAN.value, null), validate({ query: listQuery }), getAllFeePlanProfile);
+router.get("/single", userAuth, checkAccess(PERMISSIONS.FEES_PLAN.value, null), validate({ query: profileIdQuery }), getSingleFeePlanProfileDetails);
 
 export default router;
