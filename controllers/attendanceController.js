@@ -45,10 +45,10 @@ export async function copyAttendancePeriod(req, res) {
 
 export async function getCopyAttendancePeriod(req, res) {
   try {
-    const result = await AttendanceCreation.getCopyAttendancePeriodPreview(req.query);
-    return SuccessResponse(res, 200, "Copy attendance preview fetched successfully", result);
+    const result = await AttendanceCreation.getCopyAttendanceNextPeriods(req.query);
+    return SuccessResponse(res, 200, "Next copyable periods fetched successfully", result);
   } catch (error) {
-    const statusCode = /not found|required|Invalid|does not belong|targetDate is required/i.test(error.message)
+    const statusCode = /not found|required|Invalid|does not belong|No attendance/i.test(error.message)
       ? 400
       : 500;
     return ErrorResponse(res, statusCode, error.message);

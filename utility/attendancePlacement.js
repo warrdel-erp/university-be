@@ -188,25 +188,46 @@ export async function assertCopyPeriodMappingsMatch(
 export async function resolveSourcePeriodByMappingId(sourceMappingId, options = {}) {
   const mapping = await model.classScheduleModel.findOne({
     where: { timeTableMappingId: Number(sourceMappingId) },
-    attributes: ['timeTableMappingId'],
+    attributes: ['timeTableMappingId', 'day', 'period', 'timeTableRoutineId', 'isSameTeacher'],
     include: [
       {
         model: model.timeTableRoutineModel,
         as: 'timeTablecreate',
-        attributes: ['timeTableRoutineId', 'classSectionTermId'],
+        attributes: ['timeTableRoutineId', 'classSectionTermId', 'startingDate', 'endingDate'],
         required: true,
         include: [
           timeTableRoutineClassSectionInclude({
             termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
-            sectionAttributes: ['classSectionsId', 'year', 'section', 'courseId'],
-            sectionNestedIncludes: [
-              {
-                model: model.courseModel,
-                as: 'courseSection',
-                attributes: ['courseId', 'courseName'],
-              },
-            ],
+            sectionAttributes: ['classSectionsId', 'year', 'section'],
           }),
+        ],
+      },
+      {
+        model: model.timeTableStructurePeriodsModel,
+        as: 'timeTablecreation',
+        attributes: ['periodName', 'startTime', 'endTime', 'isBreak'],
+        required: false,
+      },
+      {
+        model: model.subjectModel,
+        as: 'timeTableSubject',
+        attributes: ['subjectId', 'subjectName'],
+      },
+      {
+        model: model.electiveSubjectModel,
+        as: 'timeTableElective',
+        attributes: ['electiveSubjectId', 'electiveSubjectName'],
+      },
+      {
+        model: model.teacherSubjectMappingModel,
+        as: 'timeTableTeacherSubject',
+        attributes: ['teacherSubjectMappingId'],
+        include: [
+          {
+            model: model.subjectModel,
+            as: 'employeeSubject',
+            attributes: ['subjectId', 'subjectName'],
+          },
         ],
       },
     ],
@@ -217,10 +238,50 @@ export async function resolveSourcePeriodByMappingId(sourceMappingId, options = 
     throw new Error('Invalid timeTableMappingId');
   }
 
+  const plain = mapping.get ? mapping.get({ plain: true }) : mapping;
+  const routine = plain.timeTablecreate ?? {};
   const placement = resolveMappingRoutinePlacement(mapping);
+
   if (!placement.classSectionTermId) {
     throw new Error('Period could not be resolved to a class section term');
   }
 
-  return placement;
+  return {
+    ...placement,
+    timeTableMappingId: Number(sourceMappingId),
+    day: plain.day,
+    period: plain.period,
+    isSameTeacher: plain.isSameTeacher,
+    timeTableRoutineId: plain.timeTableRoutineId ?? routine.timeTableRoutineId,
+    startingDate: routine.startingDate,
+    endingDate: routine.endingDate,
+    timeTablecreation: plain.timeTablecreation ?? null,
+    timeTableSubject: plain.timeTableSubject ?? null,
+    timeTableElective: plain.timeTableElective ?? null,
+    timeTableTeacherSubject: plain.timeTableTeacherSubject ?? null,
+  };
+}
+
+export function canCopyPeriodToTarget(sourcePlacement, targetPlacement) {
+  if (Number(targetPlacement.classSectionTermId) !== Number(sourcePlacement.classSectionTermId)) {
+    return false;
+  }
+
+  if (
+    sourcePlacement.term != null
+    && targetPlacement.term != null
+    && Number(targetPlacement.term) !== Number(sourcePlacement.term)
+  ) {
+    return false;
+  }
+
+  if (
+    sourcePlacement.year != null
+    && targetPlacement.year != null
+    && Number(targetPlacement.year) !== Number(sourcePlacement.year)
+  ) {
+    return false;
+  }
+
+  return true;
 }

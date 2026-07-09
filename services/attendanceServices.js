@@ -8,7 +8,9 @@ import { resolveProgramYear, resolveStudentClassSectionsId } from "../utility/cl
 import {
   assertCopyPeriodMappingsMatch,
   assertMappingsBelongToTerm,
+  canCopyPeriodToTarget,
   resolveAttendancePlacement,
+  resolveMappingRoutinePlacement,
   resolveSourcePeriodByMappingId,
 } from "../utility/attendancePlacement.js";
 
@@ -163,96 +165,163 @@ export async function copyAttendancePeriod(copyData, createdBy, updatedBy) {
   }
 };
 
-function mapCopyAttendanceStudentRow(record) {
-  const plain = record.get ? record.get({ plain: true }) : record;
-  const student = plain.studentAttendance || {};
+function getWeekdayName(dateString) {
+  const weekdayNames = [
+    'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+  ];
+  return weekdayNames[new Date(dateString).getDay()];
+}
+
+function isDateWithinRoutine(dateString, startingDate, endingDate) {
+  if (!startingDate || !endingDate) {
+    return false;
+  }
+
+  const checkDate = new Date(dateString);
+  checkDate.setHours(0, 0, 0, 0);
+
+  const startDate = new Date(startingDate);
+  startDate.setHours(0, 0, 0, 0);
+
+  const endDate = new Date(endingDate);
+  endDate.setHours(0, 0, 0, 0);
+
+  return checkDate >= startDate && checkDate <= endDate;
+}
+
+function getPeriodSubjectInfo(periodItem) {
+  if (periodItem.isSameTeacher && periodItem.timeTableTeacherSubject?.employeeSubject) {
+    const subject = periodItem.timeTableTeacherSubject.employeeSubject;
+    return { subjectId: subject.subjectId, subjectName: subject.subjectName };
+  }
+
+  if (periodItem.timeTableSubject) {
+    return {
+      subjectId: periodItem.timeTableSubject.subjectId,
+      subjectName: periodItem.timeTableSubject.subjectName,
+    };
+  }
+
+  if (periodItem.timeTableElective) {
+    return {
+      subjectId: periodItem.timeTableElective.electiveSubjectId,
+      subjectName: periodItem.timeTableElective.electiveSubjectName,
+    };
+  }
+
+  return { subjectId: null, subjectName: null };
+}
+
+function mapCopyPeriodItem(periodItem) {
+  const subject = getPeriodSubjectInfo(periodItem);
+  const structurePeriod = periodItem.timeTablecreation ?? {};
+  const targetPlacement = resolveMappingRoutinePlacement(periodItem);
 
   return {
-    attendanceId: plain.attendanceId,
-    studentId: plain.studentId,
-    attendanceStatus: plain.attendanceStatus,
-    notes: plain.notes,
-    description: plain.description,
-    firstName: student.firstName,
-    middleName: student.middleName,
-    lastName: student.lastName,
-    scholarNumber: student.scholarNumber,
-    enrollNumber: student.enrollNumber,
+    timeTableMappingId: periodItem.timeTableMappingId,
+    classSectionTermId: targetPlacement.classSectionTermId,
+    period: periodItem.period,
+    periodName: structurePeriod.periodName ?? null,
+    startTime: structurePeriod.startTime ?? null,
+    endTime: structurePeriod.endTime ?? null,
+    subjectId: subject.subjectId,
+    subjectName: subject.subjectName,
   };
 }
 
-function buildCopyPeriodSectionDetails(classScheduleItem, placement) {
-  const routine = classScheduleItem?.timeTablecreate ?? {};
-  const termRow = routine.timeTableClassSectionTerm ?? {};
-  const section = termRow.classSection ?? {};
-  const routineCourse = routine.timeTableCourse ?? {};
-  const sectionCourse = section.courseSection ?? {};
-
-  let subjectId = null;
-  let subjectName = null;
-  let subjectCode = null;
-
-  if (classScheduleItem?.isSameTeacher && classScheduleItem?.timeTableTeacherSubject?.employeeSubject) {
-    const subject = classScheduleItem.timeTableTeacherSubject.employeeSubject;
-    subjectId = subject.subjectId;
-    subjectName = subject.subjectName;
-    subjectCode = subject.subjectCode;
-  } else if (classScheduleItem?.timeTableSubject) {
-    subjectId = classScheduleItem.timeTableSubject.subjectId;
-    subjectName = classScheduleItem.timeTableSubject.subjectName;
-    subjectCode = classScheduleItem.timeTableSubject.subjectCode;
-  } else if (classScheduleItem?.timeTableElective) {
-    subjectId = classScheduleItem.timeTableElective.electiveSubjectId;
-    subjectName = classScheduleItem.timeTableElective.electiveSubjectName;
-  }
+function mapCurrentPeriod(sourcePeriod, date, isMarked) {
+  const subject = getPeriodSubjectInfo(sourcePeriod);
+  const structurePeriod = sourcePeriod.timeTablecreation ?? {};
 
   return {
-    classSectionTermId: placement.classSectionTermId,
-    classSectionsId: placement.classSectionsId,
-    term: placement.term,
-    year: placement.year,
-    section: section.section ?? null,
-    courseId: routineCourse.courseId ?? sectionCourse.courseId ?? section.courseId ?? null,
-    courseName: routineCourse.courseName ?? sectionCourse.courseName ?? null,
-    subjectId,
-    subjectName,
-    subjectCode,
-    employeeId: classScheduleItem?.employeeId ?? classScheduleItem?.employeeDetails?.employeeId ?? null,
-    employeeName: classScheduleItem?.employeeDetails?.employeeName ?? null,
-    employeeCode: classScheduleItem?.employeeDetails?.employeeCode ?? null,
-  };
-}
-
-export async function getCopyAttendancePeriodPreview(query) {
-  const timeTableMappingId = Number(query.timeTableMappingId);
-  const date = query.date;
-
-  const sourcePlacement = await resolveSourcePeriodByMappingId(timeTableMappingId);
-  const classScheduleItem = await attendanceService.getClassScheduleItemByMappingId(timeTableMappingId);
-
-  if (!classScheduleItem) {
-    throw new Error('Invalid timeTableMappingId');
-  }
-
-  const attendanceRows = await attendanceService.getAttendanceDetailsByMappingAndDate(
-    timeTableMappingId,
+    timeTableMappingId: sourcePeriod.timeTableMappingId,
+    classSectionTermId: sourcePeriod.classSectionTermId,
     date,
-    sourcePlacement.classSectionTermId,
+    day: sourcePeriod.day,
+    period: sourcePeriod.period,
+    periodName: structurePeriod.periodName ?? null,
+    startTime: structurePeriod.startTime ?? null,
+    endTime: structurePeriod.endTime ?? null,
+    subjectId: subject.subjectId,
+    subjectName: subject.subjectName,
+    isMarked,
+  };
+}
+
+async function getCopyToPeriodsForSameDay(sourcePeriod, date) {
+  const calendarDay = getWeekdayName(date);
+  if (calendarDay.toLowerCase() !== String(sourcePeriod.day).toLowerCase()) {
+    return [];
+  }
+
+  if (!isDateWithinRoutine(date, sourcePeriod.startingDate, sourcePeriod.endingDate)) {
+    return [];
+  }
+
+  const laterPeriods = await attendanceService.getNextPeriodsOnSameDay(
+    sourcePeriod.timeTableRoutineId,
+    sourcePeriod.day,
+    sourcePeriod.period,
   );
 
-  const attendance = [];
-  for (const row of attendanceRows) {
-    attendance.push(mapCopyAttendanceStudentRow(row));
+  if (!laterPeriods.length) {
+    return [];
   }
 
+  const candidateIds = [];
+  for (const periodItem of laterPeriods) {
+    candidateIds.push(Number(periodItem.timeTableMappingId));
+  }
+
+  const markedIds = await attendanceService.getMarkedTimeTableMappingIdsOnDate(candidateIds, date);
+  const copyToPeriods = [];
+
+  for (const periodItem of laterPeriods) {
+    const targetMappingId = Number(periodItem.timeTableMappingId);
+    if (targetMappingId === Number(sourcePeriod.timeTableMappingId)) {
+      continue;
+    }
+
+    const targetPlacement = resolveMappingRoutinePlacement(periodItem);
+    const isMarked = markedIds.has(targetMappingId);
+    const canCopy = canCopyPeriodToTarget(sourcePeriod, targetPlacement) && !isMarked;
+
+    if (!canCopy) {
+      continue;
+    }
+
+    copyToPeriods.push(mapCopyPeriodItem(periodItem));
+  }
+
+  return copyToPeriods;
+}
+
+export async function getCopyAttendanceNextPeriods(query) {
+  const timeTableMappingId = Number(query.timeTableMappingId);
+  const date = query.date;
+  const sourcePeriod = await resolveSourcePeriodByMappingId(timeTableMappingId);
+
+  const sourceIsMarked = await attendanceService.checkAttendanceExists(timeTableMappingId, date);
+  if (!sourceIsMarked) {
+    throw new Error('No attendance found for the source period');
+  }
+
+  const currentPeriod = mapCurrentPeriod(sourcePeriod, date, true);
+  const copyToPeriods = await getCopyToPeriodsForSameDay(sourcePeriod, date);
+
   return {
-    timeTableMappingId,
     date,
-    isMarked: attendance.length > 0,
-    studentCount: attendance.length,
-    sectionDetails: buildCopyPeriodSectionDetails(classScheduleItem, sourcePlacement),
-    classScheduleItem,
-    attendance,
+    classSectionTermId: sourcePeriod.classSectionTermId,
+    subjectId: currentPeriod.subjectId,
+    subjectName: currentPeriod.subjectName,
+    currentPeriod,
+    copyToPeriods,
   };
 };
 

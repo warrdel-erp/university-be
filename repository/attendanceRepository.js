@@ -50,46 +50,20 @@ export async function getAttendanceRowsByMappingAndDate(timeTableMappingId, date
     }
 };
 
-export async function getAttendanceDetailsByMappingAndDate(timeTableMappingId, date, classSectionTermId) {
+export async function getNextPeriodsOnSameDay(timeTableRoutineId, day, afterPeriod) {
     try {
-        return await scoped(model.attendanceModel).findAll({
-            attributes: [
-                'attendanceId',
-                'studentId',
-                'attendanceStatus',
-                'notes',
-                'description',
-                'date',
-                'timeTableMappingId',
-            ],
+        return await model.classScheduleModel.findAll({
             where: {
-                timeTableMappingId: Number(timeTableMappingId),
-                classSectionTermId: Number(classSectionTermId),
-                date: { [Op.eq]: fn("DATE", date) },
+                timeTableRoutineId: Number(timeTableRoutineId),
+                day,
+                period: { [Op.gt]: Number(afterPeriod) },
+                deletedAt: null,
+                isAttendence: true,
             },
-            include: [
-                {
-                    model: model.studentModel,
-                    as: 'studentAttendance',
-                    attributes: ['firstName', 'middleName', 'lastName', 'scholarNumber', 'enrollNumber'],
-                },
-            ],
-            order: [['studentId', 'ASC']],
-        });
-    } catch (error) {
-        console.error("Error in getAttendanceDetailsByMappingAndDate:", error);
-        throw error;
-    }
-};
-
-export async function getClassScheduleItemByMappingId(timeTableMappingId) {
-    try {
-        return await model.classScheduleModel.findByPk(Number(timeTableMappingId), {
             attributes: [
                 'timeTableMappingId',
-                'day',
                 'period',
-                'timeTableType',
+                'day',
                 'employeeId',
                 'isSameTeacher',
             ],
@@ -98,34 +72,27 @@ export async function getClassScheduleItemByMappingId(timeTableMappingId) {
                     model: model.timeTableRoutineModel,
                     as: 'timeTablecreate',
                     attributes: ['timeTableRoutineId', 'classSectionTermId', 'startingDate', 'endingDate'],
+                    required: true,
                     include: [
-                        {
-                            model: model.courseModel,
-                            as: 'timeTableCourse',
-                            attributes: ['courseId', 'courseName'],
-                        },
                         timeTableRoutineClassSectionInclude({
                             termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
-                            sectionAttributes: ['classSectionsId', 'year', 'section', 'courseId'],
-                            sectionNestedIncludes: [
-                                {
-                                    model: model.courseModel,
-                                    as: 'courseSection',
-                                    attributes: ['courseId', 'courseName'],
-                                },
-                            ],
+                            sectionAttributes: ['classSectionsId', 'year', 'section'],
                         }),
                     ],
                 },
                 {
                     model: model.timeTableStructurePeriodsModel,
                     as: 'timeTablecreation',
-                    attributes: ['periodName', 'startTime', 'endTime'],
+                    attributes: ['periodName', 'startTime', 'endTime', 'isBreak'],
+                    required: true,
+                    where: {
+                        isBreak: false,
+                    },
                 },
                 {
                     model: model.subjectModel,
                     as: 'timeTableSubject',
-                    attributes: ['subjectId', 'subjectName', 'subjectCode'],
+                    attributes: ['subjectId', 'subjectName'],
                 },
                 {
                     model: model.electiveSubjectModel,
@@ -140,26 +107,45 @@ export async function getClassScheduleItemByMappingId(timeTableMappingId) {
                         {
                             model: model.subjectModel,
                             as: 'employeeSubject',
-                            attributes: ['subjectId', 'subjectName', 'subjectCode'],
+                            attributes: ['subjectId', 'subjectName'],
                         },
                     ],
                 },
-                {
-                    model: model.employeeModel,
-                    as: 'employeeDetails',
-                    attributes: ['employeeId', 'employeeName', 'employeeCode'],
-                },
-                {
-                    model: model.classRoomModel,
-                    as: 'classRoom',
-                    attributes: ['roomNumber'],
-                },
             ],
+            order: [['period', 'ASC']],
             raw: true,
             nest: true,
         });
     } catch (error) {
-        console.error("Error in getClassScheduleItemByMappingId:", error);
+        console.error("Error in getNextPeriodsOnSameDay:", error);
+        throw error;
+    }
+};
+
+export async function getMarkedTimeTableMappingIdsOnDate(mappingIds, date) {
+    try {
+        const uniqueIds = [...new Set(mappingIds.map((id) => Number(id)).filter(Boolean))];
+        if (!uniqueIds.length) {
+            return new Set();
+        }
+
+        const rows = await scoped(model.attendanceModel).findAll({
+            attributes: ['timeTableMappingId'],
+            where: {
+                timeTableMappingId: { [Op.in]: uniqueIds },
+                date: { [Op.eq]: fn("DATE", date) },
+            },
+            raw: true,
+        });
+
+        const markedIds = new Set();
+        for (const row of rows) {
+            markedIds.add(Number(row.timeTableMappingId));
+        }
+
+        return markedIds;
+    } catch (error) {
+        console.error("Error in getMarkedTimeTableMappingIdsOnDate:", error);
         throw error;
     }
 };
