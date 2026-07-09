@@ -4768,6 +4768,90 @@
           "response": []
         },
         {
+          "name": "copy attendance period (POST)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timeTableMappingId\": 64,\n  \"date\": \"2026-06-20\",\n  \"copyToTimeTableMappingId\": [65]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/attendance/copyPeriod",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "attendance",
+                "copyPeriod"
+              ]
+            },
+            "description": "**POST /attendance/copyPeriod**\n\nCopy attendance from the current period to later same-day period(s).\n\n### Required body\n| Field | Type | Notes |\n|-------|------|--------|\n| `timeTableMappingId` | number | Source period (must already be marked) — same as GET |\n| `date` | string | `YYYY-MM-DD` — same day for source and targets |\n| `copyToTimeTableMappingId` | number or number[] | Target period(s) from GET `copyToPeriods[]` |\n\n`classSectionTermId` is derived from the source mapping.\n\n### Example\n```json\n{\n  \"timeTableMappingId\": 64,\n  \"date\": \"2026-06-20\",\n  \"copyToTimeTableMappingId\": [65]\n}\n```\n\n### Behaviour\n- Copy only within the **same calendar day** and **same routine** (later periods only).\n- Targets must appear in GET `/attendance/copyPeriod` `copyToPeriods` for that source + date.\n- Copies each student's `attendanceStatus`, `notes`, and `description`.\n\n### 201 response\n```json\n{\n  \"message\": \"Attendance copied successfully\",\n  \"copiedFrom\": {\n    \"timeTableMappingId\": 64,\n    \"date\": \"2026-06-20\",\n    \"studentCount\": 30,\n    \"classSectionTermId\": 42,\n    \"term\": 1,\n    \"year\": 1\n  },\n  \"markedPeriods\": [65],\n  \"skippedPeriods\": []\n}\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "copy attendance period preview (GET)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/attendance/copyPeriod?timeTableMappingId=64&date=2026-06-20",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "attendance",
+                "copyPeriod"
+              ],
+              "query": [
+                {
+                  "key": "timeTableMappingId",
+                  "value": "64",
+                  "description": "Source period mapping ID — classSectionTermId is derived from this"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-06-20",
+                  "description": "Attendance date YYYY-MM-DD"
+                }
+              ]
+            },
+            "description": "**GET /attendance/copyPeriod**\n\nReturns the current marked period and later same-day periods where attendance can be copied.\n\nCopy is allowed only within the **same calendar day** and **same routine** (later periods only).\n\n### Required query\n| Param | Notes |\n|-------|--------|\n| `timeTableMappingId` | Marked source period |\n| `date` | `YYYY-MM-DD` |\n\n### 200 response `data`\n```json\n{\n  \"date\": \"2026-06-20\",\n  \"classSectionTermId\": 42,\n  \"subjectId\": 12,\n  \"subjectName\": \"Building Construction III\",\n  \"currentPeriod\": {\n    \"timeTableMappingId\": 64,\n    \"classSectionTermId\": 42,\n    \"date\": \"2026-06-20\",\n    \"day\": \"Friday\",\n    \"period\": 3,\n    \"periodName\": \"Period 3\",\n    \"startTime\": \"10:45:00\",\n    \"endTime\": \"11:45:00\",\n    \"subjectName\": \"Building Construction III\",\n    \"isMarked\": true\n  },\n  \"copyToPeriods\": [\n    {\n      \"timeTableMappingId\": 65,\n      \"classSectionTermId\": 42,\n      \"period\": 4,\n      \"periodName\": \"Period 4\",\n      \"startTime\": \"11:45:00\",\n      \"endTime\": \"12:45:00\",\n      \"subjectName\": \"Building Construction III\"\n    }\n  ]\n}\n```"
+          },
+          "response": []
+        },
+        {
           "name": "update attendance (PATCH)",
           "request": {
             "auth": {
