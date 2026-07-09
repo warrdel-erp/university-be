@@ -1873,6 +1873,8 @@ export async function getTodayClassScheduleForEmployee(employeeId, currentDate, 
         'period',
         'isAttendence',
         'isSameTeacher',
+        'timeTableNameId',
+        'timeTableCreationId'
       ],
       include: [
         {
@@ -1958,7 +1960,9 @@ export async function getPastClassSchedulesForEmployee(
         'day',
         'period',
         'isAttendence',
-        'isSameTeacher'
+        'isSameTeacher',
+        'timeTableNameId',
+        'timeTableCreationId'
       ],
       include: [
         {
@@ -2212,6 +2216,22 @@ export async function getEmployeeRecurringSchedules(employeeId, academicYearId) 
     });
   } catch (error) {
     console.error("Error in getEmployeeRecurringSchedules:", error);
+    throw error;
+  }
+}
+
+export async function getPeriodsForStructures(timeTableNameIds) {
+  try {
+    return await model.timeTableStructurePeriodsModel.findAll({
+      where: {
+        timeTableNameId: { [model.Sequelize.Op.in]: timeTableNameIds }
+      },
+      attributes: ['timeTableCreationId', 'timeTableNameId', 'isBreak'],
+      order: [['timeTableNameId', 'ASC'], ['timeTableCreationId', 'ASC']],
+      raw: true
+    });
+  } catch (error) {
+    console.error("Error in getPeriodsForStructures:", error);
     throw error;
   }
 }

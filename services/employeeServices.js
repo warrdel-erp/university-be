@@ -1309,7 +1309,7 @@ export async function getTodayClassSchedule(employeeId, currentDate, sessionId, 
   );
 
   if (groupPeriods) {
-    return applyGroupAttendanceStatus(groupConsecutivePeriods(schedules));
+    return applyGroupAttendanceStatus(await groupConsecutivePeriods(schedules, groupPeriods === 'sessional'));
   }
 
   return schedules;
@@ -1449,7 +1449,8 @@ export async function getPastClassSchedules(employeeId, academicYearId, currentD
   );
 
   if (groupPeriods) {
-    const grouped = applyGroupAttendanceStatus(groupConsecutivePeriods(schedules));
+    const grouped = applyGroupAttendanceStatus(await groupConsecutivePeriods(schedules, groupPeriods === 'sessional'));
+    // Sort descending by date
     grouped.sort((a, b) => new Date(b.date) - new Date(a.date));
     return { teacher, schedules: grouped };
   }
@@ -1506,7 +1507,7 @@ export async function getUpcomingClassSchedules(employeeId, academicYearId, curr
   upcomingClasses.sort((a, b) => new Date(a.date) - new Date(b.date));
 
   if (groupPeriods) {
-    const grouped = groupConsecutivePeriods(upcomingClasses);
+    const grouped = await groupConsecutivePeriods(upcomingClasses, groupPeriods === 'sessional');
     grouped.sort((a, b) => new Date(a.date) - new Date(b.date));
     return grouped;
   }
@@ -1514,7 +1515,7 @@ export async function getUpcomingClassSchedules(employeeId, academicYearId, curr
   return upcomingClasses;
 }
 
-function groupConsecutivePeriods(classes) {
+async function groupConsecutivePeriods(classes, sessionalBreak = false) {
   if (!classes.length) return [];
 
   // Grouping should preserve date sort order (already sorted in main functions)
@@ -1522,12 +1523,20 @@ function groupConsecutivePeriods(classes) {
 
   const groupedResult = [];
 
-  // To group correctly, we need to handle sorting by date, then routine, then subject, then period
-  // But wait, the input 'classes' is already sorted by date.
-  // We can process it sequentially and only group items with same date, routine and subject if they are consecutive.
-
-  // First, stable sort by routine, subject, and period within each date group
-  // Actually, it's easier to just re-sort properly for grouping, then re-sort by date for final output.
+  let breakPeriodsMap = new Map();
+  if (sessionalBreak) {
+    const structureIds = [...new Set(classes.map(c => c.timeTableNameId).filter(Boolean))];
+    if (structureIds.length > 0) {
+      const allPeriods = await timeTableCreateRepository.getPeriodsForStructures(structureIds);
+      // Create a map to quickly look up breaks
+      for (const p of allPeriods) {
+        if (!breakPeriodsMap.has(p.timeTableNameId)) {
+          breakPeriodsMap.set(p.timeTableNameId, []);
+        }
+        breakPeriodsMap.get(p.timeTableNameId).push(p);
+      }
+    }
+  }
 
   const getSubjectInfo = (item) => {
     if (item.timeTableSubject) return { id: item.timeTableSubject.subjectId, name: item.timeTableSubject.subjectName };
@@ -1549,19 +1558,46 @@ function groupConsecutivePeriods(classes) {
     return parseInt(a.period) - parseInt(b.period);
   });
 
+  const hasBreakBetween = (item1, item2) => {
+    if (!sessionalBreak || item1.timeTableNameId !== item2.timeTableNameId) return false;
+    const structurePeriods = breakPeriodsMap.get(item1.timeTableNameId);
+    if (!structurePeriods) return false;
+
+    // Find the indices of item1 and item2 in the structure periods
+    const idx1 = structurePeriods.findIndex(p => p.timeTableCreationId === item1.timeTableCreationId);
+    const idx2 = structurePeriods.findIndex(p => p.timeTableCreationId === item2.timeTableCreationId);
+    
+    if (idx1 === -1 || idx2 === -1) return false;
+
+    // Check if any period between them has isBreak = true
+    const minIdx = Math.min(idx1, idx2);
+    const maxIdx = Math.max(idx1, idx2);
+    for (let i = minIdx + 1; i < maxIdx; i++) {
+      if (structurePeriods[i].isBreak) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   let currentGroup = null;
 
   for (const item of classes) {
     const subj = getSubjectInfo(item);
     const periodNum = parseInt(item.period);
 
+    let isConsecutive = false;
     if (currentGroup &&
       currentGroup.date === item.date &&
       currentGroup.timeTablecreate.timeTableRoutineId === item.timeTablecreate.timeTableRoutineId &&
       currentGroup.subjectId === subj.id &&
       currentGroup.periods[currentGroup.periods.length - 1] + 1 === periodNum
     ) {
-      // Consecutive period
+      isConsecutive = true;
+    }
+
+    if (isConsecutive && !hasBreakBetween(currentGroup.classScheduleItems[currentGroup.classScheduleItems.length - 1], item)) {
+      // Consecutive period and no break between them
       currentGroup.classScheduleItems.push(item);
       currentGroup.periods.push(periodNum);
     } else {
@@ -1576,12 +1612,6 @@ function groupConsecutivePeriods(classes) {
       groupedResult.push(currentGroup);
     }
   }
-
-  // Final sort based on date (descending for past, ascending for upcoming?)
-  // Actually, the original functions had different sort orders. 
-  // Let's check if we should restore it.
-  // For simplicity, let's just use the fact that 'classes' was passed with a specific sort.
-  // Wait, I already re-sorted it. I should re-apply the desired date sort.
 
   return groupedResult;
 }
