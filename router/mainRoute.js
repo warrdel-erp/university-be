@@ -118,12 +118,11 @@ router.post('/subject', userAuth, checkAccess(PERMISSIONS.SUBJECTS_ADD.value, nu
 router.patch('/subject/update', userAuth, checkAccess(PERMISSIONS.SUBJECTS_EDIT.value, null), validate({ body: updateSubjectSchema }), updateSubject);
 
 // Section master (class table removed)
-router.post('/classSections', userAuth, validate({ body: addClassSectionsSchema }), addClassSections);
-router.get('/classSections', userAuth, getClassSections);
-
-router.get('/classSectionSpecific', userAuth, getClassSectionSpecific);
-router.post('/sectionSubjectMapper', userAuth, addSectionSubjectMapper);
-router.get('/sectionSubjectMapper', userAuth, getSectionSubjectMapper);
+router.post('/classSections', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP_ADD.value, null), validate({ body: addClassSectionsSchema }), addClassSections);
+router.get('/classSections', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP.value, null), getClassSections);
+router.get('/classSectionSpecific', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP.value, null), getClassSectionSpecific);
+router.post('/sectionSubjectMapper', userAuth, checkAccess(PERMISSIONS.SEMESTER_SUBJECT_MAPPING_ASSIGN.value, null), addSectionSubjectMapper);
+router.get('/sectionSubjectMapper', userAuth, checkAccess(PERMISSIONS.SEMESTER_SUBJECT_MAPPING.value, null), getSectionSubjectMapper);
 router.get(
     '/classSectionRecord',
     userAuth,

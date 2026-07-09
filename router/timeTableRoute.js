@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { addTimeTable, addTimeTablePeriod, getTimeTableDetails, getSingleTimeTableDetails, updateTimeTable, deleteTimeTable, deleteTimeTableStructure, getAllTimeTableName } from '../controllers/timeTableController.js';
 import userAuth from '../middleware/authUser.js';
+import { checkAccess } from '../middleware/checkAccess.js';
+import { PERMISSIONS } from '../const/permissions.js';
 import { validate } from '../utility/validation.js';
 
 const router = Router();
@@ -75,13 +77,13 @@ const deleteTimeTableStructureQuerySchema = z.object({
     timeTableNameId: positiveIntegerId,
 });
 
-router.post('/', userAuth, validate({ body: addTimeTableSchema }), addTimeTable);
-router.post('/period', userAuth, validate({ body: addTimeTablePeriodSchema }), addTimeTablePeriod);
-router.get('/all_name', userAuth, validate({ query: timeTableListQuerySchema }), getAllTimeTableName);
-router.get('/', userAuth, validate({ query: timeTableListQuerySchema }), getTimeTableDetails);
-router.get('/single', userAuth, validate({ query: timeTableListQuerySchema }), getSingleTimeTableDetails);
-router.patch('/', userAuth, validate({ body: updateTimeTableSchema }), updateTimeTable);
-router.delete('/', userAuth, validate({ query: deleteTimeTableQuerySchema }), deleteTimeTable);
-router.delete('/structure', userAuth, validate({ query: deleteTimeTableStructureQuerySchema }), deleteTimeTableStructure);
+router.post('/', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP_ADD.value, null), validate({ body: addTimeTableSchema }), addTimeTable);
+router.post('/period', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP_ADD.value, null), validate({ body: addTimeTablePeriodSchema }), addTimeTablePeriod);
+router.get('/all_name', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP.value, null), validate({ query: timeTableListQuerySchema }), getAllTimeTableName);
+router.get('/', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP.value, null), validate({ query: timeTableListQuerySchema }), getTimeTableDetails);
+router.get('/single', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP.value, null), validate({ query: timeTableListQuerySchema }), getSingleTimeTableDetails);
+router.patch('/', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP_EDIT.value, null), validate({ body: updateTimeTableSchema }), updateTimeTable);
+router.delete('/', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP_DELETE.value, null), validate({ query: deleteTimeTableQuerySchema }), deleteTimeTable);
+router.delete('/structure', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP_DELETE.value, null), validate({ query: deleteTimeTableStructureQuerySchema }), deleteTimeTableStructure);
 
 export default router;

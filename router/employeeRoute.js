@@ -68,7 +68,7 @@ router.get('/evaluation', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.valu
 
 router.get('/cellData', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getTeacherTimeTable);
 
-router.get('/subject', userAuth, validate({ query: teacherSubjectQuerySchema }), getTeacherSubject);
+router.get('/subject', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), validate({ query: teacherSubjectQuerySchema }), getTeacherSubject);
 
 router.get("/issuedBook", userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getBooksIssuedToEmployee);
 
