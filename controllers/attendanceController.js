@@ -36,7 +36,7 @@ export async function copyAttendancePeriod(req, res) {
 
     res.status(201).json(response);
   } catch (error) {
-    const statusCode = /not found|required|already marked|Invalid|does not belong|No attendance/i.test(error.message)
+    const statusCode = /not found|required|already marked|Invalid|does not belong|No attendance|not a valid copy target/i.test(error.message)
       ? 400
       : 500;
     res.status(statusCode).json({ error: error.message });

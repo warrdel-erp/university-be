@@ -78,18 +78,34 @@ export async function addAttendance(attendanceData, createdBy, updatedBy) {
 };
 
 export async function copyAttendancePeriod(copyData, createdBy, updatedBy) {
-  const sourceMappingId = Number(copyData.sourceTimeTableMappingId);
-  const targetMappingIds = normalizeTimeTableMappingIds(copyData.targetTimeTableMappingId);
+  const sourceMappingId = Number(copyData.timeTableMappingId);
+  const date = copyData.date;
+  const targetMappingIds = normalizeTimeTableMappingIds(copyData.copyToTimeTableMappingId);
 
+  const sourcePeriod = await resolveSourcePeriodByMappingId(sourceMappingId);
   const sourcePlacement = await assertCopyPeriodMappingsMatch(
     sourceMappingId,
     targetMappingIds,
-    copyData.classSectionTermId,
+    sourcePeriod.classSectionTermId,
   );
+
+  const allowedCopyToPeriods = await getCopyToPeriodsForSameDay(sourcePeriod, date);
+  const allowedTargetIds = new Set();
+  for (const period of allowedCopyToPeriods) {
+    allowedTargetIds.add(Number(period.timeTableMappingId));
+  }
+
+  for (const targetMappingId of targetMappingIds) {
+    if (!allowedTargetIds.has(Number(targetMappingId))) {
+      throw new Error(
+        `timeTableMappingId ${targetMappingId} is not a valid copy target for this period on ${date}`,
+      );
+    }
+  }
 
   const sourceRows = await attendanceService.getAttendanceRowsByMappingAndDate(
     sourceMappingId,
-    copyData.sourceDate,
+    date,
   );
 
   if (!sourceRows.length) {
@@ -100,12 +116,12 @@ export async function copyAttendancePeriod(copyData, createdBy, updatedBy) {
   const skippedTargetIds = [];
 
   for (const targetMappingId of targetMappingIds) {
-    if (targetMappingId === sourceMappingId && copyData.sourceDate === copyData.targetDate) {
+    if (targetMappingId === sourceMappingId) {
       skippedTargetIds.push(targetMappingId);
       continue;
     }
 
-    const isExists = await attendanceService.checkAttendanceExists(targetMappingId, copyData.targetDate);
+    const isExists = await attendanceService.checkAttendanceExists(targetMappingId, date);
     if (isExists) {
       skippedTargetIds.push(targetMappingId);
     } else {
@@ -135,7 +151,7 @@ export async function copyAttendancePeriod(copyData, createdBy, updatedBy) {
           classSectionsId: sourcePlacement.classSectionsId,
           classSectionTermId: sourcePlacement.classSectionTermId,
           timeTableMappingId: targetMappingId,
-          date: copyData.targetDate,
+          date,
           createdBy,
           updatedBy,
         });
@@ -149,7 +165,7 @@ export async function copyAttendancePeriod(copyData, createdBy, updatedBy) {
       addedAttendance,
       copiedFrom: {
         timeTableMappingId: sourceMappingId,
-        date: copyData.sourceDate,
+        date,
         studentCount: sourceRows.length,
         classSectionTermId: sourcePlacement.classSectionTermId,
         term: sourcePlacement.term,

@@ -59,14 +59,12 @@ const addAttendanceSchema = z.object({
 });
 
 const copyAttendancePeriodSchema = z.object({
-    classSectionTermId: positiveIntegerId,
-    sourceTimeTableMappingId: positiveIntegerId,
-    sourceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "sourceDate must be YYYY-MM-DD"),
-    targetTimeTableMappingId: z.union([
+    timeTableMappingId: positiveIntegerId,
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
+    copyToTimeTableMappingId: z.union([
         z.coerce.number().int().positive(),
         z.array(z.coerce.number().int().positive()).min(1),
     ]),
-    targetDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "targetDate must be YYYY-MM-DD"),
 });
 
 const copyAttendancePeriodQuerySchema = z.object({

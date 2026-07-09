@@ -4789,7 +4789,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"classSectionTermId\": {{classSectionTermId}},\n  \"sourceTimeTableMappingId\": 64,\n  \"sourceDate\": \"2026-06-20\",\n  \"targetTimeTableMappingId\": [65, 66],\n  \"targetDate\": \"2026-06-20\"\n}",
+              "raw": "{\n  \"timeTableMappingId\": 64,\n  \"date\": \"2026-06-20\",\n  \"copyToTimeTableMappingId\": [65]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4806,7 +4806,7 @@
                 "copyPeriod"
               ]
             },
-            "description": "**POST /attendance/copyPeriod**\n\nCopy attendance from a source period to one or more target periods — same students, same `attendanceStatus`, `notes`, and `description`.\n\n### Required body\n| Field | Type | Notes |\n|-------|------|--------|\n| `classSectionTermId` | number | Must match the **source** period routine term |\n| `sourceTimeTableMappingId` | number | Period to copy **from** (must already be marked) |\n| `sourceDate` | string | `YYYY-MM-DD` |\n| `targetTimeTableMappingId` | number or number[] | Period(s) to copy **to** |\n| `targetDate` | string | `YYYY-MM-DD` |\n\n### Behaviour\n- Source and every target must share the same **term** (`classSectionTermId` / program `term`) and **batch** (`class_sections.year`).\n- Target period(s) must **not** already have attendance on `targetDate`.\n- Skips target when it is the same mapping + date as the source.\n- `attendanceStatus` values: Present, Absent, Medical Leave, Duty Leave, Sports Leave, NCC Leave, Approved Leave, Holiday.\n\n### 201 response\n```json\n{\n  \"message\": \"Attendance copied successfully\",\n  \"copiedFrom\": {\n    \"timeTableMappingId\": 64,\n    \"date\": \"2026-06-20\",\n    \"studentCount\": 30,\n    \"classSectionTermId\": 42,\n    \"term\": 1,\n    \"year\": 1\n  },\n  \"markedPeriods\": [65, 66],\n  \"skippedPeriods\": []\n}\n```"
+            "description": "**POST /attendance/copyPeriod**\n\nCopy attendance from the current period to later same-day period(s).\n\n### Required body\n| Field | Type | Notes |\n|-------|------|--------|\n| `timeTableMappingId` | number | Source period (must already be marked) — same as GET |\n| `date` | string | `YYYY-MM-DD` — same day for source and targets |\n| `copyToTimeTableMappingId` | number or number[] | Target period(s) from GET `copyToPeriods[]` |\n\n`classSectionTermId` is derived from the source mapping.\n\n### Example\n```json\n{\n  \"timeTableMappingId\": 64,\n  \"date\": \"2026-06-20\",\n  \"copyToTimeTableMappingId\": [65]\n}\n```\n\n### Behaviour\n- Copy only within the **same calendar day** and **same routine** (later periods only).\n- Targets must appear in GET `/attendance/copyPeriod` `copyToPeriods` for that source + date.\n- Copies each student's `attendanceStatus`, `notes`, and `description`.\n\n### 201 response\n```json\n{\n  \"message\": \"Attendance copied successfully\",\n  \"copiedFrom\": {\n    \"timeTableMappingId\": 64,\n    \"date\": \"2026-06-20\",\n    \"studentCount\": 30,\n    \"classSectionTermId\": 42,\n    \"term\": 1,\n    \"year\": 1\n  },\n  \"markedPeriods\": [65],\n  \"skippedPeriods\": []\n}\n```"
           },
           "response": []
         },
