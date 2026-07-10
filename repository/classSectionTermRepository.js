@@ -1,5 +1,5 @@
 import * as model from '../models/index.js';
-import { Op } from 'sequelize';
+import { Op, fn, col } from 'sequelize';
 import { buildScope, scoped } from '../utility/scoped.js';
 
 export async function findClassSectionTermBySectionAndTerm(
@@ -150,6 +150,61 @@ export async function countStudentsForClassSectionTerms(classSectionTermIds, opt
   });
 
   return onStudent + onMapper;
+}
+
+export async function countStudentsByClassSectionTermIds(classSectionTermIds, options = {}) {
+  const countMap = new Map();
+  const ids = [];
+
+  for (const classSectionTermId of classSectionTermIds) {
+    const id = Number(classSectionTermId);
+    if (!countMap.has(id)) {
+      countMap.set(id, 0);
+      ids.push(id);
+    }
+  }
+
+  if (!ids.length) {
+    return countMap;
+  }
+
+  const transaction = options.transaction;
+  const whereClause = { classSectionTermId: { [Op.in]: ids } };
+
+  const [studentRows, mapperRows] = await Promise.all([
+    scoped(model.studentModel).findAll({
+      attributes: [
+        'classSectionTermId',
+        [fn('COUNT', fn('DISTINCT', col('students.student_id'))), 'studentCount'],
+      ],
+      where: whereClause,
+      group: ['classSectionTermId'],
+      raw: true,
+      transaction,
+    }),
+    scoped(model.classStudentMapperModel).findAll({
+      attributes: [
+        'classSectionTermId',
+        [fn('COUNT', fn('DISTINCT', col('class_student_mapper.student_id'))), 'studentCount'],
+      ],
+      where: whereClause,
+      group: ['classSectionTermId'],
+      raw: true,
+      transaction,
+    }),
+  ]);
+
+  for (const row of studentRows) {
+    const id = Number(row.classSectionTermId);
+    countMap.set(id, countMap.get(id) + Number(row.studentCount));
+  }
+
+  for (const row of mapperRows) {
+    const id = Number(row.classSectionTermId);
+    countMap.set(id, countMap.get(id) + Number(row.studentCount));
+  }
+
+  return countMap;
 }
 
 export async function countTeacherMappingsForClassSectionTerm(

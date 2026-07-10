@@ -23,6 +23,7 @@ import { getCampusCode, getInstituteCode } from '../repository/collegeRepository
 import * as libraryRepository from '../repository/libraryCreationRepository.js';
 import * as timeTableCreateRepository from '../repository/timeTablecreateRepository.js';
 import * as attendanceRepository from '../repository/attendanceRepository.js';
+import * as classSectionTermRepository from '../repository/classSectionTermRepository.js';
 import * as evaluationRepository from "../repository/evalutionRepository.js";
 import { getSingleRoleDetails } from '../repository/roleRepository.js';
 import { addHead } from '../repository/headRepository.js';
@@ -1304,8 +1305,13 @@ export async function getTodayClassSchedule(employeeId, currentDate, sessionId, 
   );
 
   const expanded = expandScheduleForExactDate(rawSchedules, currentDate);
-  const schedules = await enrichSchedulesWithAttendance(
-    expanded.map(stripTeacherFieldsFromSchedule),
+  const strippedSchedules = [];
+  for (const schedule of expanded) {
+    strippedSchedules.push(stripTeacherFieldsFromSchedule(schedule));
+  }
+
+  const schedules = await enrichSchedulesWithStudentCount(
+    await enrichSchedulesWithAttendance(strippedSchedules),
   );
 
   if (groupPeriods) {
@@ -1361,6 +1367,72 @@ function stripTeacherFieldsFromSchedule(schedule) {
 
 function getAttendanceStatusKey(schedule) {
   return `${schedule.timeTableMappingId}_${schedule.date}`;
+}
+
+function resolveScheduleClassSectionTermId(schedule) {
+  const routine = schedule.timeTablecreate;
+  if (!routine) {
+    return null;
+  }
+
+  const routinePlain = routine.get ? routine.get({ plain: true }) : routine;
+  if (routinePlain.classSectionTermId) {
+    return routinePlain.classSectionTermId;
+  }
+
+  const classSectionTerm = routinePlain.timeTableClassSectionTerm;
+  if (classSectionTerm && classSectionTerm.classSectionTermId) {
+    return classSectionTerm.classSectionTermId;
+  }
+
+  return null;
+}
+
+async function enrichSchedulesWithStudentCount(schedules) {
+  if (!schedules.length) {
+    return schedules;
+  }
+
+  const resolvedTermIds = [];
+  const uniqueTermIds = [];
+  const seenTermIds = new Set();
+
+  for (const schedule of schedules) {
+    const classSectionTermId = resolveScheduleClassSectionTermId(schedule);
+    resolvedTermIds.push(classSectionTermId);
+
+    if (classSectionTermId) {
+      const numericId = Number(classSectionTermId);
+      if (!seenTermIds.has(numericId)) {
+        seenTermIds.add(numericId);
+        uniqueTermIds.push(numericId);
+      }
+    }
+  }
+
+  const studentCountMap = await classSectionTermRepository.countStudentsByClassSectionTermIds(
+    uniqueTermIds,
+  );
+
+  const enriched = [];
+  for (let i = 0; i < schedules.length; i++) {
+    const classSectionTermId = resolvedTermIds[i];
+    let studentCount = 0;
+
+    if (classSectionTermId) {
+      const count = studentCountMap.get(Number(classSectionTermId));
+      if (count != null) {
+        studentCount = count;
+      }
+    }
+
+    enriched.push({
+      ...schedules[i],
+      studentCount,
+    });
+  }
+
+  return enriched;
 }
 
 async function enrichSchedulesWithAttendance(schedules) {
