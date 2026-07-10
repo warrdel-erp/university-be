@@ -1310,9 +1310,7 @@ export async function getTodayClassSchedule(employeeId, currentDate, sessionId, 
     strippedSchedules.push(stripTeacherFieldsFromSchedule(schedule));
   }
 
-  const schedules = await enrichSchedulesWithStudentCount(
-    await enrichSchedulesWithAttendance(strippedSchedules),
-  );
+  const schedules = await enrichTodayClassSchedules(strippedSchedules);
 
   if (groupPeriods) {
     return applyGroupAttendanceStatus(await groupConsecutivePeriods(schedules, groupPeriods === 'sessional'));
@@ -1359,7 +1357,11 @@ function stripTeacherFieldsFromSchedule(schedule) {
   }
 
   if (Array.isArray(cleaned.classScheduleItems)) {
-    cleaned.classScheduleItems = cleaned.classScheduleItems.map(stripTeacherFieldsFromSchedule);
+    const cleanedItems = [];
+    for (const item of cleaned.classScheduleItems) {
+      cleanedItems.push(stripTeacherFieldsFromSchedule(item));
+    }
+    cleaned.classScheduleItems = cleanedItems;
   }
 
   return cleaned;
@@ -1388,16 +1390,25 @@ function resolveScheduleClassSectionTermId(schedule) {
   return null;
 }
 
-async function enrichSchedulesWithStudentCount(schedules) {
+async function enrichTodayClassSchedules(schedules) {
   if (!schedules.length) {
     return schedules;
   }
 
+  const mappingIdSet = new Set();
+  const dates = [];
   const resolvedTermIds = [];
   const uniqueTermIds = [];
   const seenTermIds = new Set();
 
   for (const schedule of schedules) {
+    if (schedule.timeTableMappingId) {
+      mappingIdSet.add(schedule.timeTableMappingId);
+    }
+    if (schedule.date) {
+      dates.push(schedule.date);
+    }
+
     const classSectionTermId = resolveScheduleClassSectionTermId(schedule);
     resolvedTermIds.push(classSectionTermId);
 
@@ -1410,15 +1421,35 @@ async function enrichSchedulesWithStudentCount(schedules) {
     }
   }
 
-  const studentCountMap = await classSectionTermRepository.countStudentsByClassSectionTermIds(
-    uniqueTermIds,
-  );
+  const mappingIds = [];
+  for (const mappingId of mappingIdSet) {
+    mappingIds.push(mappingId);
+  }
+
+  let from = dates[0];
+  let to = dates[0];
+  for (const date of dates) {
+    if (date < from) {
+      from = date;
+    }
+    if (date > to) {
+      to = date;
+    }
+  }
+
+  const [studentCountMap, markedMap, presentMap] = await Promise.all([
+    classSectionTermRepository.countStudentsByClassSectionTermIds(uniqueTermIds),
+    attendanceRepository.getAttendanceMarkedMap(mappingIds, from, to),
+    attendanceRepository.getAttendanceMap(mappingIds, from, to),
+  ]);
 
   const enriched = [];
   for (let i = 0; i < schedules.length; i++) {
+    const schedule = schedules[i];
+    const key = getAttendanceStatusKey(schedule);
     const classSectionTermId = resolvedTermIds[i];
-    let studentCount = 0;
 
+    let studentCount = 0;
     if (classSectionTermId) {
       const count = studentCountMap.get(Number(classSectionTermId));
       if (count != null) {
@@ -1427,8 +1458,10 @@ async function enrichSchedulesWithStudentCount(schedules) {
     }
 
     enriched.push({
-      ...schedules[i],
+      ...schedule,
       studentCount,
+      attendanceCount: presentMap[key] ?? 0,
+      attendanceStatus: markedMap[key] > 0 ? 'MARKED' : 'PENDING',
     });
   }
 
@@ -1440,29 +1473,87 @@ async function enrichSchedulesWithAttendance(schedules) {
     return schedules;
   }
 
-  const mappingIds = [...new Set(schedules.map((s) => s.timeTableMappingId).filter(Boolean))];
-  const dates = schedules.map((s) => s.date).filter(Boolean);
-  const from = dates.reduce((min, d) => (d < min ? d : min), dates[0]);
-  const to = dates.reduce((max, d) => (d > max ? d : max), dates[0]);
+  const mappingIdSet = new Set();
+  const dates = [];
+  for (const schedule of schedules) {
+    if (schedule.timeTableMappingId) {
+      mappingIdSet.add(schedule.timeTableMappingId);
+    }
+    if (schedule.date) {
+      dates.push(schedule.date);
+    }
+  }
 
-  const markedMap = await attendanceRepository.getAttendanceMarkedMap(mappingIds, from, to);
+  const mappingIds = [];
+  for (const mappingId of mappingIdSet) {
+    mappingIds.push(mappingId);
+  }
 
-  return schedules.map((schedule) => {
-    const markedCount = markedMap[getAttendanceStatusKey(schedule)] || 0;
-    return {
+  if (!dates.length) {
+    return schedules;
+  }
+
+  let from = dates[0];
+  let to = dates[0];
+  for (const date of dates) {
+    if (date < from) {
+      from = date;
+    }
+    if (date > to) {
+      to = date;
+    }
+  }
+
+  const [markedMap, presentMap] = await Promise.all([
+    attendanceRepository.getAttendanceMarkedMap(mappingIds, from, to),
+    attendanceRepository.getAttendanceMap(mappingIds, from, to),
+  ]);
+
+  const enriched = [];
+  for (const schedule of schedules) {
+    const key = getAttendanceStatusKey(schedule);
+
+    enriched.push({
       ...schedule,
-      attendanceStatus: markedCount > 0 ? 'MARKED' : 'PENDING',
-    };
-  });
+      attendanceCount: presentMap[key] ?? 0,
+      attendanceStatus: markedMap[key] > 0 ? 'MARKED' : 'PENDING',
+    });
+  }
+
+  return enriched;
 }
 
 function applyGroupAttendanceStatus(groups) {
   for (const group of groups) {
-    const items = group.classScheduleItems || [];
-    const allMarked = items.length > 0 && items.every((item) => item.attendanceStatus === 'MARKED');
-    const anyMarked = items.some((item) => item.attendanceStatus === 'MARKED');
+    const items = group.classScheduleItems;
+    let allMarked = items.length > 0;
+    let anyMarked = false;
 
-    group.attendanceStatus = allMarked ? 'MARKED' : (anyMarked ? 'PARTIAL' : 'PENDING');
+    for (const item of items) {
+      if (item.attendanceStatus !== 'MARKED') {
+        allMarked = false;
+      }
+      if (item.attendanceStatus === 'MARKED') {
+        anyMarked = true;
+      }
+    }
+
+    if (allMarked) {
+      group.attendanceStatus = 'MARKED';
+    } else if (anyMarked) {
+      group.attendanceStatus = 'PARTIAL';
+    } else {
+      group.attendanceStatus = 'PENDING';
+    }
+
+    let attendanceCount = 0;
+    for (const item of items) {
+      if (item.attendanceStatus === 'MARKED') {
+        attendanceCount = item.attendanceCount;
+        break;
+      }
+    }
+    group.attendanceCount = attendanceCount;
   }
 
   return groups;
