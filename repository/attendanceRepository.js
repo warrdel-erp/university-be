@@ -2,6 +2,7 @@ import { Op, fn, col, where } from "sequelize";
 import sequelize from "../database/sequelizeConfig.js";
 import * as model from '../models/index.js';
 import moment from "moment";
+import { ATTENDANCE_PRESENT_STATUSES } from "../constant.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { classSectionTermsInclude, studentClassSectionTermWithSectionInclude, timeTableRoutineClassSectionInclude } from "../utility/classSectionIncludes.js";
 
@@ -406,7 +407,7 @@ export async function getAttendanceMap(mappingIds, from, to) {
         ],
         where: {
             timeTableMappingId: mappingIds,
-            attendanceStatus: "Present",
+            attendanceStatus: { [Op.in]: ATTENDANCE_PRESENT_STATUSES },
             [Op.and]: [
                 where(fn("DATE", dateCol), { [Op.gte]: from }),
                 where(fn("DATE", dateCol), { [Op.lte]: to }),
