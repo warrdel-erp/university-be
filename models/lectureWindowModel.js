@@ -28,7 +28,7 @@ const lectureWindowModel = sequelize.define(
         },
         employeeId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'employee_id',
             references: {
                 model: employeeModel,

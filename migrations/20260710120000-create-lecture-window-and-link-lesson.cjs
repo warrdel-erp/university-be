@@ -22,13 +22,13 @@ module.exports = {
       },
       employee_id: {
         type: Sequelize.INTEGER,
-        allowNull: false,
+        allowNull: true,
         references: {
           model: 'employee',
           key: 'employee_id',
         },
         onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
+        onDelete: 'SET NULL',
       },
       university_id: {
         type: Sequelize.INTEGER,
