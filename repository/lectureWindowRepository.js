@@ -60,10 +60,45 @@ export async function getLectureWindows(filters = {}) {
     ...(filters.sessionId && { sessionId: Number(filters.sessionId) }),
   };
 
+  const lessonInclude = {
+    model: model.lessonModel,
+    as: "windowLessons",
+    attributes: lessonAttributes,
+    required: Boolean(filters.lessonId),
+    where: filters.lessonId
+      ? { lessonId: Number(filters.lessonId) }
+      : undefined,
+    include: [
+      {
+        model: model.topicModel,
+        as: "topicSession",
+        attributes: topicAttributes,
+        required: false,
+      },
+    ],
+  };
+
   return scoped(model.lectureWindowModel).findAll({
     attributes: { exclude: excludeMeta },
     where,
-    include: lectureWindowIncludes,
+    include: [
+      {
+        model: model.subjectModel,
+        as: "lectureWindowSubject",
+        attributes: ["subjectId", "subjectName", "courseId"],
+      },
+      {
+        model: model.employeeModel,
+        as: "lectureWindowEmployee",
+        attributes: ["employeeId", "employeeName", "employeeCode", "pickColor"],
+      },
+      {
+        model: model.sessionModel,
+        as: "lectureWindowSession",
+        attributes: ["sessionId", "sessionName", "startingDate", "endingDate"],
+      },
+      lessonInclude,
+    ],
     order: [["startDate", "DESC"], ["lectureWindowId", "DESC"]],
   });
 }

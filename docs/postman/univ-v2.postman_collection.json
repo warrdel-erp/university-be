@@ -5333,7 +5333,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/lecture?subjectId=12&employeeId=39&sessionId=6",
+              "raw": "{{baseurl}}/lecture?employeeId=39&subjectId=12&lessonId=10",
               "host": [
                 "{{baseurl}}"
               ],
@@ -5342,23 +5342,29 @@
               ],
               "query": [
                 {
-                  "key": "subjectId",
-                  "value": "12",
-                  "description": "Optional — filter by subject"
-                },
-                {
                   "key": "employeeId",
                   "value": "39",
                   "description": "Optional — filter by teacher"
                 },
                 {
+                  "key": "subjectId",
+                  "value": "12",
+                  "description": "Optional — filter by subject"
+                },
+                {
+                  "key": "lessonId",
+                  "value": "10",
+                  "description": "Optional — only windows that contain this lesson"
+                },
+                {
                   "key": "sessionId",
                   "value": "6",
-                  "description": "Optional — filter by session"
+                  "description": "Optional — filter by session",
+                  "disabled": true
                 }
               ]
             },
-            "description": "**GET /lecture**\n\nLists lecture windows for the **active academic year**, with nested subject, employee, session, and `windowLessons[]` (including topics).\n\n### Authentication\nBearer Token Required\n\n### Query parameters\n| Param | Type | Required | Default | Description |\n|-------|------|----------|---------|-------------|\n| subjectId | Integer | No | — | Filter by subject |\n| employeeId | Integer | No | — | Filter by teacher |\n| sessionId | Integer | No | — | Filter by session |\n\n### Not accepted\n| Param | Notes |\n|-------|-------|\n| academicYearId | Always from auth session |\n| instituteId | Always from auth session via `scoped()` |\n| universityId | Always from auth session via `scoped()` |\n\n### Success (200)\n```json\n{\n  \"success\": true,\n  \"message\": \"Lecture windows fetched successfully\",\n  \"data\": [\n    {\n      \"lectureWindowId\": 1,\n      \"startDate\": \"2026-07-01\",\n      \"endDate\": \"2026-07-15\",\n      \"name\": \"Unit 1 — Introduction\",\n      \"windowLessons\": []\n    }\n  ]\n}\n```\n\n### Errors\n| Status | Reason |\n|--------|--------|\n| 400 | Validation / missing active academicYearId |\n| 401 | Unauthorized |\n| 500 | Internal Server Error |"
+            "description": "**GET /lecture**\n\nLists lecture windows for the **active academic year**, with nested subject, employee, session, and `windowLessons[]` (including topics).\n\n### Authentication\nBearer Token Required\n\n### Query parameters\n| Param | Type | Required | Default | Description |\n|-------|------|----------|---------|-------------|\n| employeeId | Integer | No | — | Filter by teacher |\n| subjectId | Integer | No | — | Filter by subject |\n| lessonId | Integer | No | — | Only windows that contain this lesson (`windowLessons` filtered to that lesson) |\n| sessionId | Integer | No | — | Filter by session |\n\n### Not accepted\n| Param | Notes |\n|-------|-------|\n| academicYearId | Always from auth session |\n| instituteId | Always from auth session via `scoped()` |\n| universityId | Always from auth session via `scoped()` |\n\n### Success (200)\n```json\n{\n  \"success\": true,\n  \"message\": \"Lecture windows fetched successfully\",\n  \"data\": [\n    {\n      \"lectureWindowId\": 1,\n      \"startDate\": \"2026-07-01\",\n      \"endDate\": \"2026-07-15\",\n      \"name\": \"Unit 1 — Introduction\",\n      \"windowLessons\": []\n    }\n  ]\n}\n```\n\n### Errors\n| Status | Reason |\n|--------|--------|\n| 400 | Validation / missing active academicYearId |\n| 401 | Unauthorized |\n| 500 | Internal Server Error |"
           },
           "response": []
         },

@@ -38,6 +38,7 @@ const lectureWindowListQuerySchema = z.object({
     subjectId: optionalPositiveId,
     employeeId: optionalPositiveId,
     sessionId: optionalPositiveId,
+    lessonId: optionalPositiveId,
 }).strict();
 
 const lectureWindowIdParamsSchema = z.object({
