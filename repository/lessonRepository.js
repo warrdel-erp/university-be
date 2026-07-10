@@ -91,7 +91,14 @@ export async function getLessonDetails(academicYearId) {
         },
       ],
     });
-    return lesson;
+    return lesson.map((row) => {
+      const plain = row.get ? row.get({ plain: true }) : row;
+      return {
+        ...plain,
+        lectureWindowId: plain.lectureWindow?.lectureWindowId ?? plain.lectureWindowId ?? null,
+        lectureWindowName: plain.lectureWindow?.name ?? null,
+      };
+    });
   } catch (error) {
     console.error("Error fetching lesson details:", error);
     throw error;
@@ -173,7 +180,16 @@ export async function getSingleLessonDetails(lessonId) {
       ],
     });
 
-    return lesson;
+    if (!lesson) {
+      return null;
+    }
+
+    const plain = lesson.get({ plain: true });
+    return {
+      ...plain,
+      lectureWindowId: plain.lectureWindow?.lectureWindowId ?? plain.lectureWindowId ?? null,
+      lectureWindowName: plain.lectureWindow?.name ?? null,
+    };
   } catch (error) {
     console.error("Error fetching Fee Plan details single:", error);
     throw error;
@@ -627,6 +643,12 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
           ...(courseId && { courseId: Number(courseId) }),
         },
       },
+      {
+        model: model.lectureWindowModel,
+        as: 'lectureWindow',
+        required: false,
+        attributes: ['lectureWindowId', 'name'],
+      },
     ];
 
     if (hasEmployeeId && hasSubjectId) {
@@ -681,9 +703,13 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
             lessonSubject: _subject,
             topicSession,
             lessionSemester,
+            lectureWindow,
             ...lesson
           }) => ({
             ...lesson,
+            lectureWindowId: lectureWindow?.lectureWindowId ?? lesson.lectureWindowId ?? null,
+            lectureWindowName: lectureWindow?.name ?? null,
+            lectureWindow,
             topicSession,
             lessionSemester,
           })),
@@ -746,6 +772,13 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
       const plain = row.get({ plain: true });
       if (plain.employeeSubject) {
         plain.employeeSubject = toEmployeeSubject(plain.employeeSubject);
+        if (Array.isArray(plain.employeeSubject.lessonSubject)) {
+          plain.employeeSubject.lessonSubject = plain.employeeSubject.lessonSubject.map((lesson) => ({
+            ...lesson,
+            lectureWindowId: lesson.lectureWindow?.lectureWindowId ?? lesson.lectureWindowId ?? null,
+            lectureWindowName: lesson.lectureWindow?.name ?? null,
+          }));
+        }
       }
       return plain;
     });
@@ -760,8 +793,24 @@ export async function getSimpleLessonList(whereClause) {
     const lessons = await scoped(model.lessonModel).findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
       where: whereClause,
+      include: [
+        {
+          model: model.lectureWindowModel,
+          as: "lectureWindow",
+          attributes: ["lectureWindowId", "name"],
+          required: false,
+        },
+      ],
     });
-    return lessons;
+
+    return lessons.map((row) => {
+      const lesson = row.get({ plain: true });
+      return {
+        ...lesson,
+        lectureWindowId: lesson.lectureWindow?.lectureWindowId ?? lesson.lectureWindowId ?? null,
+        lectureWindowName: lesson.lectureWindow?.name ?? null,
+      };
+    });
   } catch (error) {
     console.error("Error fetching simple lesson list:", error);
     throw error;

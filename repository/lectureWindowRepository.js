@@ -54,18 +54,25 @@ export async function addLectureWindow(data, transaction) {
 
 export async function getLectureWindows(filters = {}) {
   const where = {
-    academicYearId: filters.academicYearId,
-    ...(filters.subjectId && { subjectId: Number(filters.subjectId) }),
-    ...(filters.employeeId && { employeeId: Number(filters.employeeId) }),
-    ...(filters.sessionId && { sessionId: Number(filters.sessionId) }),
+    academicYearId: Number(filters.academicYearId),
   };
+
+  if (filters.subjectId != null) {
+    where.subjectId = Number(filters.subjectId);
+  }
+  if (filters.employeeId != null) {
+    where.employeeId = Number(filters.employeeId);
+  }
+  if (filters.sessionId != null) {
+    where.sessionId = Number(filters.sessionId);
+  }
 
   const lessonInclude = {
     model: model.lessonModel,
     as: "windowLessons",
     attributes: lessonAttributes,
-    required: Boolean(filters.lessonId),
-    where: filters.lessonId
+    required: filters.lessonId != null,
+    where: filters.lessonId != null
       ? { lessonId: Number(filters.lessonId) }
       : undefined,
     include: [
