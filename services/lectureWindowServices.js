@@ -1,6 +1,4 @@
 import * as lectureWindowRepository from "../repository/lectureWindowRepository.js";
-import * as lessonRepository from "../repository/lessonRepository.js";
-import sequelize from "../database/sequelizeConfig.js";
 
 function assertValidDateRange(startDate, endDate) {
   if (new Date(startDate) > new Date(endDate)) {
@@ -11,37 +9,13 @@ function assertValidDateRange(startDate, endDate) {
 export async function addLectureWindow(data, createdBy, updatedBy) {
   assertValidDateRange(data.startDate, data.endDate);
 
-  const transaction = await sequelize.transaction();
+  const lectureWindow = await lectureWindowRepository.addLectureWindow({
+    ...data,
+    createdBy,
+    updatedBy,
+  });
 
-  try {
-    const lectureWindow = await lectureWindowRepository.addLectureWindow({
-      ...data,
-      createdBy,
-      updatedBy,
-    }, transaction);
-
-    if (Array.isArray(data.lessons) && data.lessons.length) {
-      for (const lessonItem of data.lessons) {
-        await lessonRepository.addLesson({
-          ...lessonItem,
-          lectureWindowId: lectureWindow.lectureWindowId,
-          subjectId: data.subjectId,
-          employeeId: data.employeeId,
-          academicYearId: data.academicYearId,
-          sessionId: data.sessionId,
-          createdBy,
-          updatedBy,
-        }, transaction);
-      }
-    }
-
-    await transaction.commit();
-    return lectureWindowRepository.getLectureWindowById(lectureWindow.lectureWindowId, data.academicYearId);
-  } catch (error) {
-    await transaction.rollback();
-    console.error("Error in addLectureWindow:", error);
-    throw error;
-  }
+  return lectureWindowRepository.getLectureWindowById(lectureWindow.lectureWindowId, data.academicYearId);
 }
 
 export async function getLectureWindows(filters) {
@@ -61,7 +35,6 @@ export async function updateLectureWindow(lectureWindowId, data, updatedBy, acad
     ...data,
     updatedBy,
   };
-  delete payload.lessons;
   delete payload.lessonIds;
   delete payload.academicYearId;
 

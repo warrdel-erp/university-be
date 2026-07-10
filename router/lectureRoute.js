@@ -32,10 +32,6 @@ const lectureWindowBodySchema = z.object({
     endDate: dateString,
     name: z.string().optional(),
     description: z.string().optional(),
-    lessons: z.array(z.object({
-        name: z.string(),
-        description: z.string().optional(),
-    })).optional(),
 }).strict();
 
 const lectureWindowListQuerySchema = z.object({
