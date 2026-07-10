@@ -109,6 +109,7 @@ import feeInvoiceDetailRecordModel from "./feeInvoiceDetailRecordModel.js";
 import feeNewInvoiceModel from "./feeNewInvoiceModel.js";
 import studentInvoiceMapperModel from "./studentInvoiceMapperModel.js";
 import lessonModel from "./lessonModel.js";
+import lectureWindowModel from "./lectureWindowModel.js";
 import topicModel from "./topicModel.js";
 import subTopicModel from "./subTopicModel.js";
 import lessonMappingModel from "./lessonMappingModel.js";
@@ -1205,6 +1206,18 @@ feeTypeCatalogModel.hasMany(studentFeeInvoiceItemsModel, {
 lessonModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "lessonSubject" });
 subjectModel.hasMany(lessonModel, { foreignKey: "subjectId", as: "lessonSubject" });
 
+lectureWindowModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "lectureWindowSubject" });
+subjectModel.hasMany(lectureWindowModel, { foreignKey: "subjectId", as: "lectureWindows" });
+
+lectureWindowModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "lectureWindowEmployee" });
+employeeModel.hasMany(lectureWindowModel, { foreignKey: "employeeId", as: "lectureWindows" });
+
+lectureWindowModel.belongsTo(sessionModel, { foreignKey: "sessionId", as: "lectureWindowSession" });
+sessionModel.hasMany(lectureWindowModel, { foreignKey: "sessionId", as: "lectureWindows" });
+
+lectureWindowModel.hasMany(lessonModel, { foreignKey: "lectureWindowId", as: "windowLessons" });
+lessonModel.belongsTo(lectureWindowModel, { foreignKey: "lectureWindowId", as: "lectureWindow" });
+
 lessonModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "employeeLesson" });
 employeeModel.hasMany(lessonModel, { foreignKey: "employeeId", as: "employeeLesson" });
 
@@ -1765,6 +1778,7 @@ export {
   studentInvoiceMapperModel,
   studentFeeInvoiceItemsModel,
   lessonModel,
+  lectureWindowModel,
   topicModel,
   subTopicModel,
   lessonMappingModel,

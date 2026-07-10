@@ -4,9 +4,9 @@ import { buildScope, scoped } from "../utility/scoped.js";
 import { classSectionTermsInclude } from "../utility/classSectionIncludes.js";
 import { buildTermName } from "../utility/courseTerms.js";
 
-export async function addLesson(data) {
+export async function addLesson(data, transaction) {
   try {
-    return await scoped(model.lessonModel).create(data);
+    return await scoped(model.lessonModel).create(data, { transaction });
   } catch (error) {
     console.error("Error in add lesson :", error);
     throw error;
@@ -83,6 +83,12 @@ export async function getLessonDetails(academicYearId) {
           as: "employeeLesson",
           attributes: ["employeeId", "campusId", "instituteId", "employeeCode", "employeeName"],
         },
+        {
+          model: model.lectureWindowModel,
+          as: "lectureWindow",
+          attributes: ["lectureWindowId", "name", "startDate", "endDate", "description"],
+          required: false,
+        },
       ],
     });
     return lesson;
@@ -142,6 +148,12 @@ export async function getSingleLessonDetails(lessonId) {
           model: model.sessionModel,
           as: "lessionSession",
           attributes: ["sessionName", "startingDate", "endingDate", "classTillDate"],
+        },
+        {
+          model: model.lectureWindowModel,
+          as: "lectureWindow",
+          attributes: ["lectureWindowId", "name", "startDate", "endDate", "description"],
+          required: false,
         },
         {
           model: model.topicModel,
