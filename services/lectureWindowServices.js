@@ -56,7 +56,7 @@ export async function deleteLectureWindow(lectureWindowId, academicYearId) {
     return false;
   }
 
-  if ((window.lessons || window.windowLessons || []).length > 0) {
+  if ((window.lessons || []).length > 0) {
     throw new Error("Cannot delete lecture window while lessons are present");
   }
 

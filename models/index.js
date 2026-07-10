@@ -1215,7 +1215,7 @@ employeeModel.hasMany(lectureWindowModel, { foreignKey: "employeeId", as: "lectu
 lectureWindowModel.belongsTo(sessionModel, { foreignKey: "sessionId", as: "lectureWindowSession" });
 sessionModel.hasMany(lectureWindowModel, { foreignKey: "sessionId", as: "lectureWindows" });
 
-lectureWindowModel.hasMany(lessonModel, { foreignKey: "lectureWindowId", as: "windowLessons" });
+lectureWindowModel.hasMany(lessonModel, { foreignKey: "lectureWindowId", as: "lessons" });
 lessonModel.belongsTo(lectureWindowModel, { foreignKey: "lectureWindowId", as: "lectureWindow" });
 
 lessonModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "employeeLesson" });

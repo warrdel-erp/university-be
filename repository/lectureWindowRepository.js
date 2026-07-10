@@ -4,49 +4,46 @@ import { scoped } from "../utility/scoped.js";
 
 const excludeMeta = ["createdAt", "updatedAt", "createdBy", "updatedBy"];
 
-const lessonAttributes = {
-  exclude: excludeMeta,
-};
+function buildLectureWindowIncludes(filters = {}) {
+  const lessonWhere = filters.lessonId != null
+    ? { lessonId: Number(filters.lessonId) }
+    : undefined;
 
-const topicAttributes = {
-  exclude: [
-    ...excludeMeta,
-    "specialization_id",
-    "course_id",
-  ],
-};
-
-const lectureWindowIncludes = [
-  {
-    model: model.subjectModel,
-    as: "lectureWindowSubject",
-    attributes: ["subjectId", "subjectName", "courseId"],
-  },
-  {
-    model: model.employeeModel,
-    as: "lectureWindowEmployee",
-    attributes: ["employeeId", "employeeName", "employeeCode", "pickColor"],
-  },
-  {
-    model: model.sessionModel,
-    as: "lectureWindowSession",
-    attributes: ["sessionId", "sessionName", "startingDate", "endingDate"],
-  },
-  {
-    model: model.lessonModel,
-    as: "windowLessons",
-    attributes: lessonAttributes,
-    required: false,
-    include: [
-      {
-        model: model.topicModel,
-        as: "topicSession",
-        attributes: topicAttributes,
-        required: false,
-      },
-    ],
-  },
-];
+  return [
+    {
+      model: model.subjectModel,
+      as: "lectureWindowSubject",
+      attributes: ["subjectId", "subjectName", "courseId"],
+    },
+    {
+      model: model.employeeModel,
+      as: "lectureWindowEmployee",
+      attributes: ["employeeId", "employeeName", "employeeCode", "pickColor"],
+    },
+    {
+      model: model.sessionModel,
+      as: "lectureWindowSession",
+      attributes: ["sessionId", "sessionName", "startingDate", "endingDate"],
+    },
+    {
+      model: model.lessonModel,
+      as: "lessons",
+      attributes: { exclude: excludeMeta },
+      required: filters.lessonId != null,
+      where: lessonWhere,
+      include: [
+        {
+          model: model.topicModel,
+          as: "topicSession",
+          attributes: {
+            exclude: [...excludeMeta, "specialization_id", "course_id"],
+          },
+          required: false,
+        },
+      ],
+    },
+  ];
+}
 
 export async function addLectureWindow(data, transaction) {
   return scoped(model.lectureWindowModel).create(data, { transaction });
@@ -67,111 +64,28 @@ export async function getLectureWindows(filters = {}) {
     where.sessionId = Number(filters.sessionId);
   }
 
-  const lessonInclude = {
-    model: model.lessonModel,
-    as: "windowLessons",
-    attributes: lessonAttributes,
-    required: filters.lessonId != null,
-    where: filters.lessonId != null
-      ? { lessonId: Number(filters.lessonId) }
-      : undefined,
-    include: [
-      {
-        model: model.topicModel,
-        as: "topicSession",
-        attributes: topicAttributes,
-        required: false,
-      },
-    ],
-  };
-
   return scoped(model.lectureWindowModel).findAll({
     attributes: { exclude: excludeMeta },
     where,
-    include: [
-      {
-        model: model.subjectModel,
-        as: "lectureWindowSubject",
-        attributes: ["subjectId", "subjectName", "courseId"],
-      },
-      {
-        model: model.employeeModel,
-        as: "lectureWindowEmployee",
-        attributes: ["employeeId", "employeeName", "employeeCode", "pickColor"],
-      },
-      {
-        model: model.sessionModel,
-        as: "lectureWindowSession",
-        attributes: ["sessionId", "sessionName", "startingDate", "endingDate"],
-      },
-      lessonInclude,
+    include: buildLectureWindowIncludes(filters),
+    order: [
+      ["startDate", "DESC"],
+      ["lectureWindowId", "DESC"],
+      [{ model: model.lessonModel, as: "lessons" }, "lessonId", "ASC"],
     ],
-    order: [["startDate", "DESC"], ["lectureWindowId", "DESC"]],
   });
 }
 
 export async function getLectureWindowById(lectureWindowId, academicYearId) {
-  const window = await scoped(model.lectureWindowModel).findOne({
+  return scoped(model.lectureWindowModel).findOne({
     attributes: { exclude: excludeMeta },
     where: {
       lectureWindowId: Number(lectureWindowId),
       academicYearId: Number(academicYearId),
     },
-    include: [
-      {
-        model: model.subjectModel,
-        as: "lectureWindowSubject",
-        attributes: ["subjectId", "subjectName", "courseId"],
-      },
-      {
-        model: model.employeeModel,
-        as: "lectureWindowEmployee",
-        attributes: ["employeeId", "employeeName", "employeeCode", "pickColor"],
-      },
-      {
-        model: model.sessionModel,
-        as: "lectureWindowSession",
-        attributes: ["sessionId", "sessionName", "startingDate", "endingDate"],
-      },
-      {
-        model: model.lessonModel,
-        as: "windowLessons",
-        attributes: ["lessonId", "name", "description", "lectureWindowId", "subjectId", "employeeId", "sessionId"],
-        required: false,
-        include: [
-          {
-            model: model.topicModel,
-            as: "topicSession",
-            attributes: topicAttributes,
-            required: false,
-          },
-        ],
-        order: [["lessonId", "ASC"]],
-      },
-    ],
-    order: [[{ model: model.lessonModel, as: "windowLessons" }, "lessonId", "ASC"]],
+    include: buildLectureWindowIncludes(),
+    order: [[{ model: model.lessonModel, as: "lessons" }, "lessonId", "ASC"]],
   });
-
-  if (!window) {
-    return null;
-  }
-
-  const plain = window.get({ plain: true });
-  return {
-    ...plain,
-    lectureWindowId: plain.lectureWindowId,
-    name: plain.name,
-    lessons: (plain.windowLessons || []).map((lesson) => ({
-      lessonId: lesson.lessonId,
-      name: lesson.name,
-      description: lesson.description,
-      lectureWindowId: lesson.lectureWindowId,
-      subjectId: lesson.subjectId,
-      employeeId: lesson.employeeId,
-      sessionId: lesson.sessionId,
-      topicSession: lesson.topicSession || [],
-    })),
-  };
 }
 
 export async function updateLectureWindow(lectureWindowId, data, academicYearId) {
