@@ -4,9 +4,18 @@ import { buildScope, scoped } from "../utility/scoped.js";
 import { classSectionTermsInclude } from "../utility/classSectionIncludes.js";
 import { buildTermName } from "../utility/courseTerms.js";
 
-export async function addLesson(data) {
+const lectureWindowInclude = {
+  model: model.lectureWindowModel,
+  as: "lectureWindow",
+  required: false,
+  attributes: {
+    exclude: ["createdAt", "updatedAt", "createdBy", "updatedBy"],
+  },
+};
+
+export async function addLesson(data, transaction) {
   try {
-    return await scoped(model.lessonModel).create(data);
+    return await scoped(model.lessonModel).create(data, { transaction });
   } catch (error) {
     console.error("Error in add lesson :", error);
     throw error;
@@ -83,6 +92,7 @@ export async function getLessonDetails(academicYearId) {
           as: "employeeLesson",
           attributes: ["employeeId", "campusId", "instituteId", "employeeCode", "employeeName"],
         },
+        lectureWindowInclude,
       ],
     });
     return lesson;
@@ -143,6 +153,7 @@ export async function getSingleLessonDetails(lessonId) {
           as: "lessionSession",
           attributes: ["sessionName", "startingDate", "endingDate", "classTillDate"],
         },
+        lectureWindowInclude,
         {
           model: model.topicModel,
           as: "topicSession",
@@ -615,6 +626,7 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
           ...(courseId && { courseId: Number(courseId) }),
         },
       },
+      lectureWindowInclude,
     ];
 
     if (hasEmployeeId && hasSubjectId) {
@@ -745,11 +757,11 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
 
 export async function getSimpleLessonList(whereClause) {
   try {
-    const lessons = await scoped(model.lessonModel).findAll({
+    return await scoped(model.lessonModel).findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
       where: whereClause,
+      include: [lectureWindowInclude],
     });
-    return lessons;
   } catch (error) {
     console.error("Error fetching simple lesson list:", error);
     throw error;

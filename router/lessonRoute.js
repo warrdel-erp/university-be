@@ -1,7 +1,38 @@
-import { Router } from 'express'
+import { Router } from 'express';
+import { z } from 'zod';
+
 const router = Router();
-import {addLesson,getAllLesson,getSingleLessonDetails,addTopice,addMapping,getMapping,updateMapping,updateCompleteMapping,deleteMapping,getEmployeeSubjectAndLesson,getSimpleLessonList} from "../controllers/lessonController.js";
-import userAuth from "../middleware/authUser.js"
+
+import {
+    addLesson,
+    getAllLesson,
+    getSingleLessonDetails,
+    addTopice,
+    addMapping,
+    getMapping,
+    updateMapping,
+    updateCompleteMapping,
+    deleteMapping,
+    getEmployeeSubjectAndLesson,
+    getSimpleLessonList,
+    linkLessonsToWindow,
+} from "../controllers/lessonController.js";
+
+import userAuth from "../middleware/authUser.js";
+import { validate } from "../utility/validation.js";
+
+const positiveIntegerId = z.coerce
+    .number()
+    .int('id must be an integer')
+    .positive('id must be greater than 0');
+
+const linkLessonQuerySchema = z.object({
+    lessonId: positiveIntegerId,
+}).strict();
+
+const linkLessonBodySchema = z.object({
+    lectureWindowId: positiveIntegerId,
+}).strict();
 
 router.post('/', userAuth, addLesson);
 
@@ -9,7 +40,7 @@ router.get('/', userAuth, getAllLesson);
 
 router.get('/simple', userAuth, getSimpleLessonList);
 
-router.get('/single' ,userAuth, getSingleLessonDetails);
+router.get('/single', userAuth, getSingleLessonDetails);
 
 router.post('/topic', userAuth, addTopice);
 
@@ -24,5 +55,12 @@ router.patch('/mapping/:lessonMappingId', userAuth, updateCompleteMapping);
 router.delete('/mapping/:lessonMappingId', userAuth, deleteMapping);
 
 router.get('/employee', userAuth, getEmployeeSubjectAndLesson);
+
+router.post(
+    '/link',
+    userAuth,
+    validate({ query: linkLessonQuerySchema, body: linkLessonBodySchema }),
+    linkLessonsToWindow,
+);
 
 export default router;
