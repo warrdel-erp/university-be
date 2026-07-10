@@ -2,6 +2,7 @@ import { Op, fn, col, where } from "sequelize";
 import sequelize from "../database/sequelizeConfig.js";
 import * as model from '../models/index.js';
 import moment from "moment";
+import { ATTENDANCE_PRESENT_STATUSES } from "../constant.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { classSectionTermsInclude, studentClassSectionTermWithSectionInclude, timeTableRoutineClassSectionInclude } from "../utility/classSectionIncludes.js";
 
@@ -392,32 +393,42 @@ export async function getTimetable(timeTableRoutineId) {
 }
 
 export async function getAttendanceMap(mappingIds, from, to) {
+    if (!mappingIds.length) {
+        return {};
+    }
+
+    const dateCol = sequelize.col("date");
+
     const rows = await scoped(model.attendanceModel).findAll({
         attributes: [
             "timeTableMappingId",
-            "date",
-            [sequelize.fn("COUNT", sequelize.col("student_id")), "presentCount"],
+            [fn("DATE", dateCol), "attendanceDate"],
+            [fn("COUNT", sequelize.col("student_id")), "presentCount"],
         ],
         where: {
             timeTableMappingId: mappingIds,
-            date: { [Op.between]: [from, to] },
-            attendanceStatus: "Present",
+            attendanceStatus: { [Op.in]: ATTENDANCE_PRESENT_STATUSES },
+            [Op.and]: [
+                where(fn("DATE", dateCol), { [Op.gte]: from }),
+                where(fn("DATE", dateCol), { [Op.lte]: to }),
+            ],
         },
-        group: ["timeTableMappingId", "date"],
+        group: ["timeTableMappingId", fn("DATE", dateCol)],
+        raw: true,
     });
 
     const map = {};
     for (const r of rows) {
-        const dateKey = moment(r.date).format("YYYY-MM-DD");
+        const dateKey = moment(r.attendanceDate).format("YYYY-MM-DD");
         const key = `${r.timeTableMappingId}_${dateKey}`;
-        map[key] = Number(r.get("presentCount"));
+        map[key] = Number(r.presentCount);
     }
 
     return map;
 }
 
 export async function getAttendanceMarkedMap(mappingIds, from, to) {
-    if (!mappingIds?.length) {
+    if (!mappingIds.length) {
         return {};
     }
 

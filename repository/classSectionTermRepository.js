@@ -171,37 +171,20 @@ export async function countStudentsByClassSectionTermIds(classSectionTermIds, op
   const transaction = options.transaction;
   const whereClause = { classSectionTermId: { [Op.in]: ids } };
 
-  const [studentRows, mapperRows] = await Promise.all([
-    scoped(model.studentModel).findAll({
-      attributes: [
-        'classSectionTermId',
-        [fn('COUNT', fn('DISTINCT', col('students.student_id'))), 'studentCount'],
-      ],
-      where: whereClause,
-      group: ['classSectionTermId'],
-      raw: true,
-      transaction,
-    }),
-    scoped(model.classStudentMapperModel).findAll({
-      attributes: [
-        'classSectionTermId',
-        [fn('COUNT', fn('DISTINCT', col('class_student_mapper.student_id'))), 'studentCount'],
-      ],
-      where: whereClause,
-      group: ['classSectionTermId'],
-      raw: true,
-      transaction,
-    }),
-  ]);
+  const studentRows = await scoped(model.studentModel).findAll({
+    attributes: [
+      'classSectionTermId',
+      [fn('COUNT', col('student_id')), 'studentCount'],
+    ],
+    where: whereClause,
+    group: ['classSectionTermId'],
+    raw: true,
+    transaction,
+  });
 
   for (const row of studentRows) {
     const id = Number(row.classSectionTermId);
-    countMap.set(id, countMap.get(id) + Number(row.studentCount));
-  }
-
-  for (const row of mapperRows) {
-    const id = Number(row.classSectionTermId);
-    countMap.set(id, countMap.get(id) + Number(row.studentCount));
+    countMap.set(id, Number(row.studentCount));
   }
 
   return countMap;
