@@ -1,4 +1,5 @@
 import * as timeTableCreateServices from '../services/timeTableCreateServices.js';
+import { ErrorResponse, SuccessResponse } from '../utility/response.js';
 
 export const addtimeTableCreate = async (req, res) => {
     try {
@@ -27,12 +28,14 @@ export const cloneTimeTableRoutine = async (req, res) => {
             createdBy,
             updatedBy,
         );
-        res.status(200).send(result);
+        return SuccessResponse(res, 200, 'Routine cloned successfully', result);
     } catch (error) {
         console.error("Error in cloning time table routine:", error);
-        const message = error.message || 'Internal Server Error';
-        const statusCode = /required|not found|overlap/i.test(message) ? 400 : 500;
-        res.status(statusCode).send(message);
+        return ErrorResponse(
+            res,
+            error.statusCode || 500,
+            error.message || 'Internal Server Error',
+        );
     }
 };
 
