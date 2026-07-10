@@ -4,6 +4,15 @@ import { buildScope, scoped } from "../utility/scoped.js";
 import { classSectionTermsInclude } from "../utility/classSectionIncludes.js";
 import { buildTermName } from "../utility/courseTerms.js";
 
+const lectureWindowInclude = {
+  model: model.lectureWindowModel,
+  as: "lectureWindow",
+  required: false,
+  attributes: {
+    exclude: ["createdAt", "updatedAt", "createdBy", "updatedBy"],
+  },
+};
+
 export async function addLesson(data, transaction) {
   try {
     return await scoped(model.lessonModel).create(data, { transaction });
@@ -83,22 +92,10 @@ export async function getLessonDetails(academicYearId) {
           as: "employeeLesson",
           attributes: ["employeeId", "campusId", "instituteId", "employeeCode", "employeeName"],
         },
-        {
-          model: model.lectureWindowModel,
-          as: "lectureWindow",
-          attributes: ["lectureWindowId", "name", "startDate", "endDate", "description"],
-          required: false,
-        },
+        lectureWindowInclude,
       ],
     });
-    return lesson.map((row) => {
-      const plain = row.get ? row.get({ plain: true }) : row;
-      return {
-        ...plain,
-        lectureWindowId: plain.lectureWindow?.lectureWindowId ?? plain.lectureWindowId ?? null,
-        lectureWindowName: plain.lectureWindow?.name ?? null,
-      };
-    });
+    return lesson;
   } catch (error) {
     console.error("Error fetching lesson details:", error);
     throw error;
@@ -156,12 +153,7 @@ export async function getSingleLessonDetails(lessonId) {
           as: "lessionSession",
           attributes: ["sessionName", "startingDate", "endingDate", "classTillDate"],
         },
-        {
-          model: model.lectureWindowModel,
-          as: "lectureWindow",
-          attributes: ["lectureWindowId", "name", "startDate", "endDate", "description"],
-          required: false,
-        },
+        lectureWindowInclude,
         {
           model: model.topicModel,
           as: "topicSession",
@@ -180,16 +172,7 @@ export async function getSingleLessonDetails(lessonId) {
       ],
     });
 
-    if (!lesson) {
-      return null;
-    }
-
-    const plain = lesson.get({ plain: true });
-    return {
-      ...plain,
-      lectureWindowId: plain.lectureWindow?.lectureWindowId ?? plain.lectureWindowId ?? null,
-      lectureWindowName: plain.lectureWindow?.name ?? null,
-    };
+    return lesson;
   } catch (error) {
     console.error("Error fetching Fee Plan details single:", error);
     throw error;
@@ -643,12 +626,7 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
           ...(courseId && { courseId: Number(courseId) }),
         },
       },
-      {
-        model: model.lectureWindowModel,
-        as: 'lectureWindow',
-        required: false,
-        attributes: ['lectureWindowId', 'name'],
-      },
+      lectureWindowInclude,
     ];
 
     if (hasEmployeeId && hasSubjectId) {
@@ -703,13 +681,9 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
             lessonSubject: _subject,
             topicSession,
             lessionSemester,
-            lectureWindow,
             ...lesson
           }) => ({
             ...lesson,
-            lectureWindowId: lectureWindow?.lectureWindowId ?? lesson.lectureWindowId ?? null,
-            lectureWindowName: lectureWindow?.name ?? null,
-            lectureWindow,
             topicSession,
             lessionSemester,
           })),
@@ -772,13 +746,6 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
       const plain = row.get({ plain: true });
       if (plain.employeeSubject) {
         plain.employeeSubject = toEmployeeSubject(plain.employeeSubject);
-        if (Array.isArray(plain.employeeSubject.lessonSubject)) {
-          plain.employeeSubject.lessonSubject = plain.employeeSubject.lessonSubject.map((lesson) => ({
-            ...lesson,
-            lectureWindowId: lesson.lectureWindow?.lectureWindowId ?? lesson.lectureWindowId ?? null,
-            lectureWindowName: lesson.lectureWindow?.name ?? null,
-          }));
-        }
       }
       return plain;
     });
@@ -790,26 +757,10 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
 
 export async function getSimpleLessonList(whereClause) {
   try {
-    const lessons = await scoped(model.lessonModel).findAll({
+    return await scoped(model.lessonModel).findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
       where: whereClause,
-      include: [
-        {
-          model: model.lectureWindowModel,
-          as: "lectureWindow",
-          attributes: ["lectureWindowId", "name"],
-          required: false,
-        },
-      ],
-    });
-
-    return lessons.map((row) => {
-      const lesson = row.get({ plain: true });
-      return {
-        ...lesson,
-        lectureWindowId: lesson.lectureWindow?.lectureWindowId ?? lesson.lectureWindowId ?? null,
-        lectureWindowName: lesson.lectureWindow?.name ?? null,
-      };
+      include: [lectureWindowInclude],
     });
   } catch (error) {
     console.error("Error fetching simple lesson list:", error);
