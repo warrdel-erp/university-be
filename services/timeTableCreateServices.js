@@ -356,7 +356,7 @@ async function assertNoSlotConflicts({
     if (conflict) {
       const section = resolveTimeTableRoutineSection(conflict.timeTablecreate);
       throw new Error(
-        `Teacher conflict: Teacher already has a class on ${day} at ${startTime}-${endTime} in ${section?.year || ''} - ${section?.section || ''}`,
+        `Teacher Conflict: Teacher already has class on ${day} at ${startTime}-${endTime} in ${section?.year || ''} - ${section?.section || ''}`,
       );
     }
   }
@@ -374,7 +374,7 @@ async function assertNoSlotConflicts({
     if (conflict) {
       const section = resolveTimeTableRoutineSection(conflict.timeTablecreate);
       throw new Error(
-        `Room conflict: Classroom is already occupied on ${day} at ${startTime}-${endTime} by ${section?.year || ''} - ${section?.section || ''}`,
+        `Room Conflict: Classroom is already occupied on ${day} at ${startTime}-${endTime} by ${section?.year || ''} - ${section?.section || ''}`,
       );
     }
   }
@@ -528,7 +528,7 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
       });
 
       if (overlap) {
-        throw new Error(`Date conflict: A routine already exists for this class section from ${placement.startingDate} to ${placement.endingDate}`);
+        throw new Error(`A routine already exists for this class section term that overlaps with the selected date range (${placement.startingDate} to ${placement.endingDate})`);
       }
     }
 
@@ -899,7 +899,7 @@ export async function cloneTimeTableRoutine(previousRoutineId, startingDate, end
     const previousRoutine = await timeTableCreateRepository.getFullRoutineDetailsRepository(previousRoutineId);
 
     if (!previousRoutine) {
-      throw new Error("Previous routine not found");
+      throw new Error(`Routine with ID ${previousRoutineId} not found`);
     }
 
     const previousPlain = previousRoutine.get({ plain: true });
@@ -914,7 +914,7 @@ export async function cloneTimeTableRoutine(previousRoutineId, startingDate, end
 
     if (overlap) {
       throw new Error(
-        `Date conflict: A routine already exists for this class section from ${formatQueryDate(overlap.startingDate)} to ${formatQueryDate(overlap.endingDate)}`,
+        `A routine already exists for this class section term that overlaps with the selected date range (${start} to ${end})`,
       );
     }
 
@@ -995,7 +995,7 @@ export async function changeTimeTableCreate(body, updatedBy) {
       });
 
       if (overlap) {
-        throw new Error(`Date conflict: A routine already exists for this class section from ${start} to ${end}`);
+        throw new Error(`A routine already exists for this class section term that overlaps with the selected date range (${start} to ${end})`);
       }
     }
 
@@ -1084,7 +1084,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
         const conflictSection = routineSection?.section || "";
         const conflictClass = routineSection?.year || "";
         throw new Error(
-          `Room conflict: Classroom is already occupied on ${baseRow.day} at ${startTime}-${endTime} by ${conflictClass} - ${conflictSection}`
+          `Room Conflict: Classroom is already occupied on ${baseRow.day} at ${startTime}-${endTime} by ${conflictClass} - ${conflictSection}`
         );
       }
     }
@@ -1107,7 +1107,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           const conflictSection = routineSection?.section || "";
           const conflictClass = routineSection?.year || "";
           throw new Error(
-            `Teacher conflict: Teacher already has a class on ${baseRow.day} at ${startTime}-${endTime} in ${conflictClass} - ${conflictSection}`
+            `Teacher Conflict: Teacher already has class on ${baseRow.day} at ${startTime}-${endTime} in ${conflictClass} - ${conflictSection}`
           );
         }
       }
