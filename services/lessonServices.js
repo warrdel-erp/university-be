@@ -247,3 +247,16 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
 export async function getSimpleLessonList(whereClause) {
     return await lesson.getSimpleLessonList(whereClause);
 }
+
+export async function linkLessonsToWindow(lectureWindowId, lessonIds, updatedBy, academicYearId) {
+    const window = await lectureWindowRepository.getLectureWindowById(lectureWindowId, academicYearId);
+    if (!window) {
+        throw new Error("Lecture window not found");
+    }
+
+    return lectureWindowRepository.linkLessonsToWindow(lectureWindowId, lessonIds, updatedBy);
+}
+
+export async function getLectureWindowById(lectureWindowId, academicYearId) {
+    return lectureWindowRepository.getLectureWindowById(lectureWindowId, academicYearId);
+}

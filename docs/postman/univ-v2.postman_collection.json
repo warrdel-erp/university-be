@@ -5171,8 +5171,89 @@
     },
     {
       "name": "lesson",
-      "description": "Lesson plans under `/lesson`.\n\nLessons belong under a **lecture window** (`lectureWindowId`). Prefer linking via `POST /lecture/:lectureWindowId/lessons`.\n\n**GET /lesson/employee** — teacher mappings via `teacher_subject_mapping` → `subject` (`employeeSubject`) → `lessonSubject` → topics/semester. Scoped by auth academic year.",
+      "description": "Lesson plans under `/lesson`.\n\nLessons belong under a **lecture window** (`lectureWindowId`).\n\n**Auth:** Bearer `{{token}}`.\n\n**Tenant scope:** `universityId`, `instituteId`, and `academicYearId` come from the active login context via `scoped()` / session. Prefer not sending them in body.\n\n### Flow with lecture windows\n```\nPOST /lecture                         → create window\nPOST /lesson                          → create lesson (requires lectureWindowId)\n  or POST /lesson/link?lessonId=      → attach existing lesson to a window\nGET /lecture/:lectureWindowId         → window name + lessons[]\nGET /lesson/employee | /simple | /    → lesson lists (include lectureWindowId + lectureWindowName)\n```\n\n### Endpoints in this folder\n| Method | Path | Purpose |\n|--------|------|---------|\n| POST | /lesson | Create lesson (requires `lectureWindowId`) |\n| GET | /lesson | List lessons |\n| GET | /lesson/simple | Simple lesson list |\n| GET | /lesson/single | One lesson by `lessonId` |\n| POST | /lesson/link | Link one lesson to a lecture window |\n| GET | /lesson/employee | Teacher → subjects → lessons |\n| POST | /lesson/topic | Add topic |\n| POST/GET/PATCH/DELETE | /lesson/mapping... | Lesson timetable mapping |",
       "item": [
+        {
+          "name": "create lesson",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lesson",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lesson"
+              ]
+            },
+            "description": "**POST /lesson**\n\nCreates a lesson under an existing lecture window.\n\n### Authentication\nBearer Token Required\n\n### Request body\n| Field | Type | Required | Description |\n|-------|------|----------|-------------|\n| name | String | Yes | Lesson name |\n| subjectId | Integer | Yes | Subject ID |\n| sessionId | Integer | Yes | Session ID |\n| lectureWindowId | Integer | Yes | Parent lecture window ID |\n| employeeId | Integer | No | Teacher employee ID |\n| description | String | No | Notes |\n\n### Not accepted / injected\n| Field | Notes |\n|-------|-------|\n| academicYearId | From active session |\n| instituteId / universityId | From `scoped()` |\n\n### Business rules\n- `lectureWindowId` must exist for the active academic year, otherwise `404 Lecture window not found`.\n\n### Success (201)\n```json\n{\n  \"message\": \"Data added successfully\",\n  \"lessonData\": { \"lessonId\": 10, \"name\": \"Lesson 1\", \"lectureWindowId\": 1 }\n}\n```\n\n### Errors\n| Status | Reason |\n|--------|--------|\n| 400 | Missing required fields / missing active academicYearId |\n| 404 | Lecture window not found |\n| 401 | Unauthorized |\n| 500 | Internal Server Error |",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Lesson 1\",\n  \"subjectId\": 12,\n  \"sessionId\": 6,\n  \"lectureWindowId\": 1,\n  \"employeeId\": 39,\n  \"description\": \"Basics\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get all lessons",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lesson?academicYearId=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lesson"
+              ],
+              "query": [
+                {
+                  "key": "academicYearId",
+                  "value": "1",
+                  "description": "Optional filter (legacy); tenant scope still applies"
+                }
+              ]
+            },
+            "description": "**GET /lesson**\n\nLists lessons. Each lesson includes `lectureWindowId` and `lectureWindowName` when linked.\n\n### Authentication\nBearer Token Required\n\n### Query parameters\n| Param | Type | Required | Description |\n|-------|------|----------|-------------|\n| academicYearId | Integer | No | Optional filter |\n\n### Success (200)\nArray of lessons with nested subject/topics and lecture window fields."
+          },
+          "response": []
+        },
         {
           "name": "get simple lessons",
           "request": {
@@ -5187,7 +5268,12 @@
               ]
             },
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": {
               "raw": "{{baseurl}}/lesson/simple?employeeId=41&subjectId=54&sessionId=6",
               "host": [
@@ -5201,19 +5287,110 @@
                 {
                   "key": "employeeId",
                   "value": "41",
-                  "type": "text"
+                  "description": "Optional filter"
                 },
                 {
                   "key": "subjectId",
                   "value": "54",
-                  "type": "text"
+                  "description": "Optional filter"
                 },
                 {
                   "key": "sessionId",
                   "value": "6",
-                  "type": "text"
+                  "description": "Optional filter"
                 }
               ]
+            },
+            "description": "**GET /lesson/simple**\n\nLightweight lesson list. Response includes `lectureWindowId` and `lectureWindowName`.\n\n### Authentication\nBearer Token Required\n\n### Query parameters\nAny lesson column filters accepted by the repository where clause (commonly `employeeId`, `subjectId`, `sessionId`).\n\n### Success (200)\n```json\n[\n  {\n    \"lessonId\": 10,\n    \"name\": \"Lesson 1\",\n    \"lectureWindowId\": 1,\n    \"lectureWindowName\": \"Unit 1 — Introduction\"\n  }\n]\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "get single lesson",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lesson/single?lessonId=10",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lesson",
+                "single"
+              ],
+              "query": [
+                {
+                  "key": "lessonId",
+                  "value": "10",
+                  "description": "Required lesson ID"
+                }
+              ]
+            },
+            "description": "**GET /lesson/single**\n\nReturns one lesson with topics and lecture window fields (`lectureWindowId`, `lectureWindowName`).\n\n### Authentication\nBearer Token Required\n\n### Query parameters\n| Param | Type | Required | Description |\n|-------|------|----------|-------------|\n| lessonId | Integer | Yes | Lesson ID |\n\n### Errors\n| Status | Reason |\n|--------|--------|\n| 404 | Lesson not found |\n| 401 | Unauthorized |\n| 500 | Internal Server Error |"
+          },
+          "response": []
+        },
+        {
+          "name": "link lesson to lecture window",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lesson/link?lessonId=10",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lesson",
+                "link"
+              ],
+              "query": [
+                {
+                  "key": "lessonId",
+                  "value": "10",
+                  "description": "Lesson to attach"
+                }
+              ]
+            },
+            "description": "**POST /lesson/link**\n\nAttaches an existing lesson to a lecture window by setting the lesson's `lectureWindowId`.\n\n### Authentication\nBearer Token Required\n\n### Query parameters\n| Name | Type | Required | Description |\n|------|------|----------|-------------|\n| lessonId | Integer | Yes | Lesson to link |\n\n### Request body\n| Field | Type | Required | Description |\n|-------|------|----------|-------------|\n| lectureWindowId | Integer | Yes | Target lecture window ID |\n\n### Business rules\n- Lecture window must exist in the active academic year.\n- Re-linking moves the lesson to this window.\n\n### Success (200)\n```json\n{\n  \"success\": true,\n  \"message\": \"Lessons linked successfully\",\n  \"data\": {\n    \"linkedCount\": 1,\n    \"result\": {\n      \"lectureWindowId\": 1,\n      \"name\": \"Unit 1 — Introduction\",\n      \"lessons\": []\n    }\n  }\n}\n```\n\n### Errors\n| Status | Reason |\n|--------|--------|\n| 400 | Validation / missing active academicYearId |\n| 401 | Unauthorized |\n| 404 | Lecture window not found |\n| 500 | Internal Server Error |",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lectureWindowId\": 1\n}"
             }
           },
           "response": []
@@ -5232,7 +5409,12 @@
               ]
             },
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": {
               "raw": "{{baseurl}}/lesson/employee?employeeId=26&courseId=34&sessionId=6&subjectSearch=math",
               "host": [
@@ -5246,26 +5428,276 @@
                 {
                   "key": "employeeId",
                   "value": "26",
-                  "description": "Required"
+                  "description": "Teacher employee ID"
                 },
                 {
                   "key": "courseId",
                   "value": "34",
-                  "description": "Optional course filter on subject"
+                  "description": "Optional course filter"
                 },
                 {
                   "key": "sessionId",
                   "value": "6",
-                  "description": "Optional session filter on lessons"
+                  "description": "Optional session filter"
                 },
                 {
                   "key": "subjectSearch",
                   "value": "math",
-                  "description": "Optional — partial match on subjectName"
+                  "description": "Optional subject name search"
+                },
+                {
+                  "key": "subjectId",
+                  "value": "",
+                  "description": "Optional exact subject filter",
+                  "disabled": true
                 }
               ]
             },
-            "description": "**GET /lesson/employee**\n\nTeacher `teacher_subject_mapping` rows with nested subject, lessons, topics, and semester.\n\n**Query:** `employeeId` (typical), optional `courseId`, `sessionId`, `subjectSearch`, `subjectId`.\n\n**Scoped:** `scoped(teacherSubjectMapping)` + `buildScope(subjectModel)` / `buildScope(lessonModel)`. Academic year from auth context.\n\n**Response:** `employeeSubject` is the subject row with placement resolved from `class_sections` + `class_section_term`:\n- `term`, `termName` (from subject.term + course.termType)\n- `classSectionTermId`, `classSectionsId`, `year`, `section`\n- Lessons at `employeeSubject.lessonSubject[]`"
+            "description": "**GET /lesson/employee**\n\nTeacher mappings via `teacher_subject_mapping` → subject → lessons → topics/semester.\n\nEach lesson in `employeeSubject.lessonSubject[]` includes:\n- `lectureWindowId`\n- `lectureWindowName`\n\n### Authentication\nBearer Token Required\n\n### Query parameters\n| Param | Type | Required | Description |\n|-------|------|----------|-------------|\n| employeeId | Integer | Yes* | Teacher ID |\n| courseId | Integer | No | Course filter |\n| sessionId | Integer | No | Session filter |\n| subjectSearch | String | No | Subject name search |\n| subjectId | Integer | No | Exact subject filter |\n\nScoped by auth academic year."
+          },
+          "response": []
+        },
+        {
+          "name": "add topic",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lesson/topic",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lesson",
+                "topic"
+              ]
+            },
+            "description": "**POST /lesson/topic**\n\nAdds a topic under a lesson.\n\n### Request body\n| Field | Type | Required | Description |\n|-------|------|----------|-------------|\n| name | String | Yes | Topic name |\n| lessonId | Integer | Yes | Parent lesson ID |\n| description | String | No | Notes |",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Topic 1\",\n  \"lessonId\": 10,\n  \"description\": \"Intro topic\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "add mapping",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lesson/mapping",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lesson",
+                "mapping"
+              ]
+            },
+            "description": "**POST /lesson/mapping**\n\nMaps a topic to a timetable cell/date.\n\n### Request body\n| Field | Type | Required | Description |\n|-------|------|----------|-------------|\n| topicId | Integer | Yes | Topic ID |\n| timeTableMappingId | Integer | Yes | Timetable mapping ID |\n| date | String (YYYY-MM-DD) | Yes | Lecture date |\n| completeDate | String | No | Completion date |\n| note | String | No | Notes |\n| lectureUrl | String | No | URL |\n| file | String | No | File ref |\n| status | String | No | Default `inComplete` |\n| subTopic | Object[] | No | Nested sub-topics to create |",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"topicId\": 1,\n  \"timeTableMappingId\": 100,\n  \"date\": \"2026-07-10\",\n  \"note\": \"optional\",\n  \"status\": \"inComplete\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get mapping",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lesson/mapping?academicYearId=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lesson",
+                "mapping"
+              ],
+              "query": [
+                {
+                  "key": "academicYearId",
+                  "value": "1",
+                  "description": "Optional filter"
+                }
+              ]
+            },
+            "description": "**GET /lesson/mapping**\n\nLists lesson mappings (grouped by timetable mapping)."
+          },
+          "response": []
+        },
+        {
+          "name": "update mapping complete date",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lesson",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lesson"
+              ]
+            },
+            "description": "**PATCH /lesson**\n\nSets `completeDate` on a lesson mapping.\n\n### Request body\n| Field | Type | Required | Description |\n|-------|------|----------|-------------|\n| lessonMappingId | Integer | Yes | Mapping ID |\n| completeDate | String | Yes | Completion date |",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lessonMappingId\": 1,\n  \"completeDate\": \"2026-07-10\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update complete mapping",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lesson/mapping/1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lesson",
+                "mapping",
+                "1"
+              ]
+            },
+            "description": "**PATCH /lesson/mapping/:lessonMappingId**\n\nUpdates a full lesson mapping (and optional nested sub-topics).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Updated note\",\n  \"status\": \"complete\",\n  \"lectureUrl\": \"https://example.com/lecture\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "delete mapping",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lesson/mapping/1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lesson",
+                "mapping",
+                "1"
+              ]
+            },
+            "description": "**DELETE /lesson/mapping/:lessonMappingId**\n\nDeletes a lesson mapping."
           },
           "response": []
         }
@@ -5273,7 +5705,7 @@
     },
     {
       "name": "lecture",
-      "description": "Lecture windows under `/lecture`.\n\nA **lecture window** is a date range (`startDate`–`endDate`) for a teacher + subject + session. Lessons live under a window via `lectureWindowId`.\n\n**Auth:** Bearer `{{token}}`.\n\n**Tenant scope (`utility/scoped.js`):** `universityId`, `instituteId`, and `academicYearId` always come from the active login context (`PUT /user/saveUserDefaults` + optional `X-Institute-Id` / `X-Academic-Year-Id`). Do **not** send them in body or query — Zod `.strict()` rejects them.\n\n### Flow\n```\nCreate lecture window\n↓\nList / get window (includes windowLessons[])\n↓\nLink lessons OR update window dates/name\n↓\nDelete window only when it has zero lessons\n```",
+      "description": "Lecture windows under `/lecture`.\n\nA **lecture window** is a date range (`startDate`–`endDate`) for a subject + session (+ optional employee). Lessons live under a window via `lectureWindowId`.\n\n**Auth:** Bearer `{{token}}`.\n\n**Tenant scope (`utility/scoped.js`):** `universityId`, `instituteId`, and `academicYearId` always come from the active login context. Do **not** send them in body or query — Zod `.strict()` rejects them.\n\n### Flow\n```\nPOST /lecture\n↓\nPOST /lesson  (with lectureWindowId)\n  or POST /lesson/link?lessonId=  (body: lectureWindowId)\n↓\nGET /lecture/:lectureWindowId   → name + lessons[]\n↓\nPATCH /lecture/:id              → update dates/name\n↓\nDELETE /lecture/:id             → only when zero lessons\n```",
       "item": [
         {
           "name": "create lecture window",
@@ -5313,7 +5745,7 @@
                 "lecture"
               ]
             },
-            "description": "**POST /lecture**\n\nCreates a lecture window for the active academic year. Lessons are linked separately via `POST /lecture/:lectureWindowId/lessons`.\n\n### Authentication\nBearer Token Required\n\n### Headers\n| Header | Required | Description |\n|--------|----------|-------------|\n| Authorization | Yes | Bearer `{{token}}` |\n| Content-Type | Yes | `application/json` |\n\n### Request body\n| Field | Type | Required | Nullable | Description |\n|-------|------|----------|----------|-------------|\n| subjectId | Integer | Yes | No | Subject ID |\n| employeeId | Integer | No | Yes | Teacher employee ID (optional) |\n| sessionId | Integer | Yes | No | Session ID |\n| startDate | String (YYYY-MM-DD) | Yes | No | Window start date |\n| endDate | String (YYYY-MM-DD) | Yes | No | Window end date (`>= startDate`) |\n| name | String | No | Yes | Window label |\n| description | String | No | Yes | Notes |\n\n### Removed / not accepted\n| Field | Notes |\n|-------|-------|\n| lessons | Not accepted on create — use `POST /lecture/:lectureWindowId/lessons` |\n| academicYearId | From auth session via `scoped()` / controller |\n| instituteId | From auth session via `scoped().create()` |\n| universityId | From auth session via `scoped().create()` |\n\n### Business rules\n- `startDate` cannot be after `endDate`.\n\n### Success (201)\n```json\n{\n  \"success\": true,\n  \"message\": \"Lecture window created successfully\",\n  \"data\": {\n    \"lectureWindowId\": 1,\n    \"subjectId\": 12,\n    \"employeeId\": 39,\n    \"sessionId\": 6,\n    \"academicYearId\": 1,\n    \"name\": \"Unit 1 — Introduction\",\n    \"description\": \"First two weeks\",\n    \"startDate\": \"2026-07-01\",\n    \"endDate\": \"2026-07-15\",\n    \"windowLessons\": []\n  }\n}\n```\n\n### Errors\n| Status | Reason |\n|--------|--------|\n| 400 | Validation error / missing active academicYearId / invalid date range |\n| 401 | Unauthorized |\n| 500 | Internal Server Error |"
+            "description": "**POST /lecture**\n\nCreates a lecture window for the active academic year. Lessons are linked separately via `POST /lesson` or `POST /lesson/link?lessonId=`.\n\n### Authentication\nBearer Token Required\n\n### Headers\n| Header | Required | Description |\n|--------|----------|-------------|\n| Authorization | Yes | Bearer `{{token}}` |\n| Content-Type | Yes | `application/json` |\n\n### Request body\n| Field | Type | Required | Nullable | Description |\n|-------|------|----------|----------|-------------|\n| subjectId | Integer | Yes | No | Subject ID |\n| employeeId | Integer | No | Yes | Teacher employee ID (optional) |\n| sessionId | Integer | Yes | No | Session ID |\n| startDate | String (YYYY-MM-DD) | Yes | No | Window start date |\n| endDate | String (YYYY-MM-DD) | Yes | No | Window end date (`>= startDate`) |\n| name | String | No | Yes | Window label |\n| description | String | No | Yes | Notes |\n\n### Removed / not accepted\n| Field | Notes |\n|-------|-------|\n| lessons | Not accepted on create — use `POST /lesson` or `POST /lesson/link?lessonId=` |\n| academicYearId | From auth session via `scoped()` / controller |\n| instituteId | From auth session via `scoped().create()` |\n| universityId | From auth session via `scoped().create()` |\n\n### Business rules\n- `startDate` cannot be after `endDate`.\n\n### Success (201)\n```json\n{\n  \"success\": true,\n  \"message\": \"Lecture window created successfully\",\n  \"data\": {\n    \"lectureWindowId\": 1,\n    \"subjectId\": 12,\n    \"employeeId\": 39,\n    \"sessionId\": 6,\n    \"academicYearId\": 1,\n    \"name\": \"Unit 1 — Introduction\",\n    \"description\": \"First two weeks\",\n    \"startDate\": \"2026-07-01\",\n    \"endDate\": \"2026-07-15\",\n    \"windowLessons\": []\n  }\n}\n```\n\n### Errors\n| Status | Reason |\n|--------|--------|\n| 400 | Validation error / missing active academicYearId / invalid date range |\n| 401 | Unauthorized |\n| 500 | Internal Server Error |"
           },
           "response": []
         },
@@ -5393,7 +5825,7 @@
                 "1"
               ]
             },
-            "description": "**GET /lecture/:lectureWindowId**\n\nReturns one lecture window for the active academic year, including nested lessons and topics.\n\n### Authentication\nBearer Token Required\n\n### Path parameters\n| Name | Type | Required | Description |\n|------|------|----------|-------------|\n| lectureWindowId | Integer | Yes | Lecture window ID |\n\n### Success (200)\nSame shape as a single item from list.\n\n### Errors\n| Status | Reason |\n|--------|--------|\n| 400 | Invalid params / missing active academicYearId |\n| 404 | Lecture window not found (or wrong academic year) |\n| 401 | Unauthorized |\n| 500 | Internal Server Error |"
+            "description": "**GET /lecture/:lectureWindowId**\n\nReturns one lecture window for the active academic year, including **name** and all **lessons**.\n\n### Authentication\nBearer Token Required\n\n### Path parameters\n| Name | Type | Required | Description |\n|------|------|----------|-------------|\n| lectureWindowId | Integer | Yes | Lecture window ID |\n\n### Success (200)\n```json\n{\n  \"success\": true,\n  \"message\": \"Lecture window fetched successfully\",\n  \"data\": {\n    \"lectureWindowId\": 1,\n    \"name\": \"Unit 1 — Introduction\",\n    \"startDate\": \"2026-07-01\",\n    \"endDate\": \"2026-07-15\",\n    \"lessons\": [\n      {\n        \"lessonId\": 10,\n        \"name\": \"Lesson 1\",\n        \"description\": \"Basics\",\n        \"lectureWindowId\": 1\n      }\n    ]\n  }\n}\n```\n\n### Errors\n| Status | Reason |\n|--------|--------|\n| 400 | Invalid params / missing active academicYearId |\n| 404 | Lecture window not found (or wrong academic year) |\n| 401 | Unauthorized |\n| 500 | Internal Server Error |"
           },
           "response": []
         },
@@ -5419,12 +5851,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Unit 1 — Revised\",\n  \"description\": \"Updated notes\",\n  \"startDate\": \"2026-07-01\",\n  \"endDate\": \"2026-07-20\",\n  \"lessonIds\": [10, 11]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"name\": \"Unit 1 — Revised\",\n  \"description\": \"Updated notes\",\n  \"startDate\": \"2026-07-01\",\n  \"endDate\": \"2026-07-20\"\n}"
             },
             "url": {
               "raw": "{{baseurl}}/lecture/1",
@@ -5436,7 +5863,7 @@
                 "1"
               ]
             },
-            "description": "**PATCH /lecture/:lectureWindowId**\n\nUpdates lecture window fields. Optional `lessonIds` links existing lessons to this window.\n\n### Authentication\nBearer Token Required\n\n### Path parameters\n| Name | Type | Required | Description |\n|------|------|----------|-------------|\n| lectureWindowId | Integer | Yes | Lecture window ID |\n\n### Request body\n| Field | Type | Required | Nullable | Description |\n|-------|------|----------|----------|-------------|\n| startDate | String (YYYY-MM-DD) | No | No | New start date |\n| endDate | String (YYYY-MM-DD) | No | No | New end date |\n| name | String | No | Yes | Window label |\n| description | String | No | Yes | Notes |\n| lessonIds | Integer[] | No | No | Existing lesson IDs to attach to this window |\n\n### Not accepted\n| Field | Notes |\n|-------|-------|\n| academicYearId | Cannot be changed; always from auth session |\n| instituteId | From auth session via `scoped()` — not accepted in body |\n| universityId | From auth session via `scoped()` — not accepted in body |\n\n### Business rules\n- If both `startDate` and `endDate` are sent, `startDate` cannot be after `endDate`.\n- Window must belong to the active academic year.\n\n### Success (200)\n```json\n{\n  \"success\": true,\n  \"message\": \"Lecture window updated successfully\",\n  \"data\": { \"lectureWindowId\": 1, \"windowLessons\": [] }\n}\n```\n\n### Errors\n| Status | Reason |\n|--------|--------|\n| 400 | Validation / invalid date range / missing academicYearId |\n| 404 | Lecture window not found |\n| 401 | Unauthorized |\n| 500 | Internal Server Error |"
+            "description": "**PATCH /lecture/:lectureWindowId**\n\nUpdates lecture window fields. To attach lessons, prefer `POST /lesson/link?lessonId=` (or create via `POST /lesson` with `lectureWindowId`).\n\nOptional `lessonIds` in body is still accepted for bulk link on update.\n\n### Authentication\nBearer Token Required\n\n### Path parameters\n| Name | Type | Required | Description |\n|------|------|----------|-------------|\n| lectureWindowId | Integer | Yes | Lecture window ID |\n\n### Request body\n| Field | Type | Required | Description |\n|-------|------|----------|-------------|\n| startDate | String (YYYY-MM-DD) | No | New start date |\n| endDate | String (YYYY-MM-DD) | No | New end date |\n| name | String | No | Window label |\n| description | String | No | Notes |\n| lessonIds | Integer[] | No | Optional bulk link (prefer `/lesson/link`) |\n\n### Not accepted\n| Field | Notes |\n|-------|-------|\n| academicYearId | Always from auth session |\n| instituteId / universityId | From `scoped()` |\n\n### Errors\n| Status | Reason |\n|--------|--------|\n| 400 | Validation / invalid date range / missing academicYearId |\n| 404 | Lecture window not found |\n| 401 | Unauthorized |\n| 500 | Internal Server Error |"
           },
           "response": []
         },
@@ -5466,50 +5893,6 @@
               ]
             },
             "description": "**DELETE /lecture/:lectureWindowId**\n\nDeletes a lecture window **only when it has no lessons**.\n\n### Authentication\nBearer Token Required\n\n### Path parameters\n| Name | Type | Required | Description |\n|------|------|----------|-------------|\n| lectureWindowId | Integer | Yes | Lecture window ID |\n\n### Business rules\n- Allowed only if `windowLessons` is empty.\n- If any lesson exists under the window → `400` and window is **not** deleted.\n- Soft-delete is **not** used on lecture windows (hard delete).\n\n### Success (200)\n```json\n{\n  \"success\": true,\n  \"message\": \"Lecture window deleted successfully\"\n}\n```\n\n### Errors\n| Status | Reason |\n|--------|--------|\n| 400 | Lessons are present under this window / missing academicYearId |\n| 404 | Lecture window not found |\n| 401 | Unauthorized |\n| 500 | Internal Server Error |\n\n### Error example (lessons present)\n```json\n{\n  \"success\": false,\n  \"message\": \"Cannot delete lecture window while lessons are present\",\n  \"errors\": null\n}\n```"
-          },
-          "response": []
-        },
-        {
-          "name": "link lessons to lecture window",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"lessonIds\": [10, 11, 12]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/lecture/1/lessons",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "lecture",
-                "1",
-                "lessons"
-              ]
-            },
-            "description": "**POST /lecture/:lectureWindowId/lessons**\n\nAttaches existing lessons to a lecture window by setting each lesson's `lectureWindowId`.\n\n### Authentication\nBearer Token Required\n\n### Path parameters\n| Name | Type | Required | Description |\n|------|------|----------|-------------|\n| lectureWindowId | Integer | Yes | Target lecture window ID |\n\n### Request body\n| Field | Type | Required | Nullable | Description |\n|-------|------|----------|----------|-------------|\n| lessonIds | Integer[] | Yes | No | At least one lesson ID |\n\n### Business rules\n- Lecture window must exist in the active academic year.\n- Each lesson entry stores one `lectureWindowId` (re-linking moves the lesson to this window).\n\n### Success (200)\n```json\n{\n  \"success\": true,\n  \"message\": \"Lessons linked successfully\",\n  \"data\": {\n    \"linkedCount\": 3,\n    \"result\": { \"lectureWindowId\": 1, \"windowLessons\": [] }\n  }\n}\n```\n\n### Errors\n| Status | Reason |\n|--------|--------|\n| 400 | Validation / empty lessonIds / missing academicYearId |\n| 404 | Lecture window not found |\n| 401 | Unauthorized |\n| 500 | Internal Server Error |"
           },
           "response": []
         }

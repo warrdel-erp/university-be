@@ -128,25 +128,3 @@ export async function deleteLectureWindow(req, res) {
         return ErrorResponse(res, statusCode, error.message || "Internal Server Error");
     }
 }
-
-export async function linkLessonsToWindow(req, res) {
-    try {
-        const academicYearId = requireActiveAcademicYearId(res);
-        if (!academicYearId) {
-            return;
-        }
-
-        const { lectureWindowId } = req.params;
-        const { lessonIds } = req.body;
-        const updatedBy = req.user.userId;
-
-        const linkedCount = await lectureWindow.linkLessonsToWindow(lectureWindowId, lessonIds, updatedBy, academicYearId);
-        const result = await lectureWindow.getLectureWindowById(lectureWindowId, academicYearId);
-
-        return SuccessResponse(res, 200, "Lessons linked successfully", { linkedCount, result });
-    } catch (error) {
-        console.error("Error in linkLessonsToWindow:", error);
-        const statusCode = /not found/i.test(error.message) ? 404 : 500;
-        return ErrorResponse(res, statusCode, error.message || "Internal Server Error");
-    }
-}

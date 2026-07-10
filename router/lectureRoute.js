@@ -7,7 +7,6 @@ import {
     getLectureWindowById,
     updateLectureWindow,
     deleteLectureWindow,
-    linkLessonsToWindow,
 } from "../controllers/lectureWindowController.js";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
@@ -53,10 +52,6 @@ const lectureWindowUpdateSchema = z.object({
     lessonIds: z.array(positiveIntegerId).optional(),
 }).strict();
 
-const linkLessonsBodySchema = z.object({
-    lessonIds: z.array(positiveIntegerId).min(1),
-}).strict();
-
 router.post('/', userAuth, validate({ body: lectureWindowBodySchema }), addLectureWindow);
 
 router.get('/', userAuth, validate({ query: lectureWindowListQuerySchema }), getLectureWindows);
@@ -66,7 +61,5 @@ router.get('/:lectureWindowId', userAuth, validate({ params: lectureWindowIdPara
 router.patch('/:lectureWindowId', userAuth, validate({ params: lectureWindowIdParamsSchema, body: lectureWindowUpdateSchema }), updateLectureWindow);
 
 router.delete('/:lectureWindowId', userAuth, validate({ params: lectureWindowIdParamsSchema }), deleteLectureWindow);
-
-router.post('/:lectureWindowId/lessons', userAuth, validate({ params: lectureWindowIdParamsSchema, body: linkLessonsBodySchema }), linkLessonsToWindow);
 
 export default router;

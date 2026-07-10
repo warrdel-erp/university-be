@@ -62,12 +62,3 @@ export async function deleteLectureWindow(lectureWindowId, academicYearId) {
 
   return lectureWindowRepository.deleteLectureWindow(lectureWindowId, academicYearId);
 }
-
-export async function linkLessonsToWindow(lectureWindowId, lessonIds, updatedBy, academicYearId) {
-  const window = await lectureWindowRepository.getLectureWindowById(lectureWindowId, academicYearId);
-  if (!window) {
-    throw new Error("Lecture window not found");
-  }
-
-  return lectureWindowRepository.linkLessonsToWindow(lectureWindowId, lessonIds, updatedBy);
-}

@@ -154,3 +154,30 @@ export async function getSimpleLessonList(req, res) {
         res.status(500).json({ error: error.message });
     }
 };
+
+export async function linkLessonsToWindow(req, res) {
+    try {
+        const academicYearId = getAcademicYearId();
+        if (!academicYearId) {
+            return ErrorResponse(res, 400, "academicYearId not found in user session");
+        }
+
+        const { lessonId } = req.query;
+        const { lectureWindowId } = req.body;
+        const updatedBy = req.user.userId;
+
+        const linkedCount = await lesson.linkLessonsToWindow(
+            lectureWindowId,
+            [lessonId],
+            updatedBy,
+            Number(academicYearId),
+        );
+        const result = await lesson.getLectureWindowById(lectureWindowId, Number(academicYearId));
+
+        return SuccessResponse(res, 200, "Lessons linked successfully", { linkedCount, result });
+    } catch (error) {
+        console.error("Error in linkLessonsToWindow:", error);
+        const statusCode = /not found/i.test(error.message) ? 404 : 500;
+        return ErrorResponse(res, statusCode, error.message || "Internal Server Error");
+    }
+};
