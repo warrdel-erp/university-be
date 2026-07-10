@@ -36,16 +36,12 @@ const lectureWindowBodySchema = z.object({
         name: z.string(),
         description: z.string().optional(),
     })).optional(),
-    instituteId: optionalPositiveId,
-    universityId: optionalPositiveId,
 }).strict();
 
 const lectureWindowListQuerySchema = z.object({
     subjectId: optionalPositiveId,
     employeeId: optionalPositiveId,
     sessionId: optionalPositiveId,
-    instituteId: optionalPositiveId,
-    universityId: optionalPositiveId,
 }).strict();
 
 const lectureWindowIdParamsSchema = z.object({
@@ -58,8 +54,6 @@ const lectureWindowUpdateSchema = z.object({
     name: z.string().optional(),
     description: z.string().optional(),
     lessonIds: z.array(positiveIntegerId).optional(),
-    instituteId: optionalPositiveId,
-    universityId: optionalPositiveId,
 }).strict();
 
 const linkLessonsBodySchema = z.object({
