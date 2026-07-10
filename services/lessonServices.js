@@ -1,18 +1,23 @@
 import * as lesson from "../repository/lessonRepository.js";
+import * as lectureWindowRepository from "../repository/lectureWindowRepository.js";
 import sequelize from '../database/sequelizeConfig.js';
 
 export async function addLesson(data, createdBy, updatedBy) {
-    try {
-        const payload = {
-            ...data,
-            createdBy,
-            updatedBy,
-        };
-        return await lesson.addLesson(payload);
-    } catch (error) {
-        console.error("Error in addLesson:", error);
-        throw error;
+    const window = await lectureWindowRepository.getLectureWindowById(
+        data.lectureWindowId,
+        data.academicYearId,
+    );
+    if (!window) {
+        throw new Error("Lecture window not found");
     }
+
+    const payload = {
+        ...data,
+        lectureWindowId: window.lectureWindowId,
+        createdBy,
+        updatedBy,
+    };
+    return lesson.addLesson(payload);
 }
 
 export async function getLessonDetails(academicYearId) {

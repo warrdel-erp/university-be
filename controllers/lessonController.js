@@ -1,18 +1,28 @@
 import * as lesson from "../services/lessonServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
+import { getAcademicYearId } from "../utility/requestContext.js";
 
 export async function addLesson(req, res) {
-    const { name, subjectId, academicYearId, sessionId } = req.body
+    const { name, subjectId, sessionId, lectureWindowId } = req.body;
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if (!(name && subjectId && academicYearId && sessionId)) {
-            return res.status(400).send('name,subjectId,academicYearId and sessionId is required')
+        const academicYearId = getAcademicYearId();
+        if (!academicYearId) {
+            return res.status(400).send("academicYearId not found in user session");
         }
-        const lessonData = await lesson.addLesson(req.body, createdBy, updatedBy);
+        if (!(name && subjectId && sessionId && lectureWindowId)) {
+            return res.status(400).send("name, subjectId, sessionId and lectureWindowId are required");
+        }
+        const lessonData = await lesson.addLesson(
+            { ...req.body, academicYearId: Number(academicYearId) },
+            createdBy,
+            updatedBy,
+        );
         res.status(201).json({ message: "Data added successfully", lessonData });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const statusCode = /not found/i.test(error.message) ? 404 : 500;
+        res.status(statusCode).json({ error: error.message });
     }
 };
 

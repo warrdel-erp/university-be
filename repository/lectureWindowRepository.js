@@ -111,14 +111,67 @@ export async function getLectureWindows(filters = {}) {
 }
 
 export async function getLectureWindowById(lectureWindowId, academicYearId) {
-  return scoped(model.lectureWindowModel).findOne({
+  const window = await scoped(model.lectureWindowModel).findOne({
     attributes: { exclude: excludeMeta },
     where: {
       lectureWindowId: Number(lectureWindowId),
       academicYearId: Number(academicYearId),
     },
-    include: lectureWindowIncludes,
+    include: [
+      {
+        model: model.subjectModel,
+        as: "lectureWindowSubject",
+        attributes: ["subjectId", "subjectName", "courseId"],
+      },
+      {
+        model: model.employeeModel,
+        as: "lectureWindowEmployee",
+        attributes: ["employeeId", "employeeName", "employeeCode", "pickColor"],
+      },
+      {
+        model: model.sessionModel,
+        as: "lectureWindowSession",
+        attributes: ["sessionId", "sessionName", "startingDate", "endingDate"],
+      },
+      {
+        model: model.lessonModel,
+        as: "windowLessons",
+        attributes: ["lessonId", "name", "description", "lectureWindowId", "subjectId", "employeeId", "sessionId"],
+        required: false,
+        include: [
+          {
+            model: model.topicModel,
+            as: "topicSession",
+            attributes: topicAttributes,
+            required: false,
+          },
+        ],
+        order: [["lessonId", "ASC"]],
+      },
+    ],
+    order: [[{ model: model.lessonModel, as: "windowLessons" }, "lessonId", "ASC"]],
   });
+
+  if (!window) {
+    return null;
+  }
+
+  const plain = window.get({ plain: true });
+  return {
+    ...plain,
+    lectureWindowId: plain.lectureWindowId,
+    name: plain.name,
+    lessons: (plain.windowLessons || []).map((lesson) => ({
+      lessonId: lesson.lessonId,
+      name: lesson.name,
+      description: lesson.description,
+      lectureWindowId: lesson.lectureWindowId,
+      subjectId: lesson.subjectId,
+      employeeId: lesson.employeeId,
+      sessionId: lesson.sessionId,
+      topicSession: lesson.topicSession || [],
+    })),
+  };
 }
 
 export async function updateLectureWindow(lectureWindowId, data, academicYearId) {
