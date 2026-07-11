@@ -899,7 +899,9 @@ export async function cloneTimeTableRoutine(previousRoutineId, startingDate, end
     const previousRoutine = await timeTableCreateRepository.getFullRoutineDetailsRepository(previousRoutineId);
 
     if (!previousRoutine) {
-      throw new Error(`Routine with ID ${previousRoutineId} not found`);
+      const error = new Error('Routine not found');
+      error.statusCode = 404;
+      throw error;
     }
 
     const previousPlain = previousRoutine.get({ plain: true });
@@ -913,9 +915,9 @@ export async function cloneTimeTableRoutine(previousRoutineId, startingDate, end
     });
 
     if (overlap) {
-      throw new Error(
-        `A routine already exists for this class section term that overlaps with the selected date range (${start} to ${end})`,
-      );
+      const error = new Error('Routine date range overlaps');
+      error.statusCode = 409;
+      throw error;
     }
 
     const newRoutineData = {
