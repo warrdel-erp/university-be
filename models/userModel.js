@@ -73,6 +73,12 @@ const userModel = sequelize.define(
             type: DataTypes.STRING,
             allowNull: false
         },
+        isTeacher: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+            field: 'is_teacher'
+        },
 
         createdAt: {
             type: DataTypes.DATE,

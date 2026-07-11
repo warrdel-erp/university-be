@@ -208,21 +208,31 @@ export async function addEmployee(data, files, createdBy, roleId) {
       mobileNumber: address?.mobileNumber
     }
 
+    // Detect if this is the legacy TEACHER role (string name, not a numeric roleId)
+    const isTeacherRole = String(roleData?.role ?? '').trim().toUpperCase() === 'TEACHER';
+
     const employeeRegisterData = {
       universityId,
-      // roleId: finalRegisterRoleId,
       employeeName: data.employeeName,
       userId: null,
-      instituteId
+      instituteId,
+      isTeacher: isTeacherRole,
     }
 
     const userId = await employeeRegister(employeePersonalDetail, employeeRegisterData, transaction);
 
-    // Add user role entry 
-    if (roleData) {
-      await userRoleService.assignRoleToUser(userId, roleData.role, roleData.permissions, transaction);
-    } else {
-      throw new Error("Role data is required")
+    // Add user role entry
+    // Teachers are a special backward-compatibility case: no entry in user_role,
+    // they are identified by isTeacher = true on the users record.
+    if (!isTeacherRole) {
+      if (roleData) {
+        const isNumericRoleId = roleData.role != null && !isNaN(Number(roleData.role));
+        if (isNumericRoleId) {
+          await userRoleService.assignRoleToUser(userId, Number(roleData.role), roleData.permissions, transaction);
+        }
+      } else {
+        throw new Error("Role data is required");
+      }
     }
 
     // Add employee 
@@ -255,6 +265,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
     // Add employee address
     const addressDetail = await employeeAddressRepository.addAddress({
       userId,
+      employeeId,
       createdBy,
       ...address
     }, transaction);
@@ -270,6 +281,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
     // Add employee cor-address
     await employeeAddressRepository.addCorsAddress({
       userId,
+      employeeId,
       createdBy,
       ...normalizedCorsAddress
     }, transaction);
@@ -277,6 +289,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
     // Add employee office details
     await employeeOfficeRepository.addOfficeDetails({
       userId,
+      employeeId,
       createdBy,
       ...normalizedOffice
     }, transaction);

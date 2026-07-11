@@ -311,8 +311,11 @@ export const studentRegister = async (registerStudentData, transaction) => {
     // Associate user and student
     await registerRepository.adminUser({ userId: userId, studentId: studentId }, transaction);
 
-    const roleName = await getSingleRoleDetails(roleId);
-    await userRoleService.assignRoleToUser(userId, roleName?.dataValues?.role || role, [], transaction);
+    // Roles are dynamic — only assign a role if a valid roleId was resolved.
+    if (roleId != null) {
+      const roleName = await getSingleRoleDetails(roleId);
+      await userRoleService.assignRoleToUser(userId, roleName?.dataValues?.role || role, [], transaction);
+    }
 
     return userId;
   } catch (error) {
@@ -324,11 +327,9 @@ export const studentRegister = async (registerStudentData, transaction) => {
 export const employeeRegister = async (employeePersonalDetail, employeeRegisterData, transaction) => {
   try {
     const { personalEmail, mobileNumber } = employeePersonalDetail;
-    const { universityId, roleId, employeeName, employeeId, instituteId } = employeeRegisterData;
+    const { universityId, roleId, employeeName, employeeId, instituteId, isTeacher } = employeeRegisterData;
     const dummyPassword = uuidv4();
     const password = bcrypt.hashSync(dummyPassword, salt);
-    // const roleName = await getSingleRoleDetails(roleId);
-    // const role = roleName?.dataValues?.role
     const data = {
       userName: employeeName,
       universityId: universityId,
@@ -336,10 +337,10 @@ export const employeeRegister = async (employeePersonalDetail, employeeRegisterD
       phone: mobileNumber || null,
       email: personalEmail || null,
       uniqueId: dummyPassword,
-      // role,
       employeeId: employeeId,
       dummyPassword: dummyPassword,
       defaultInstituteId: instituteId,
+      isTeacher: isTeacher === true,
     };
 
     // Register the student and employee
@@ -352,19 +353,13 @@ export const employeeRegister = async (employeePersonalDetail, employeeRegisterD
       await registerRepository.adminUser({ userId: userId, employeeId: employeeId }, transaction);
     }
 
-    // Get permissions by role
-    // const roleAndPermission = await getPermissionByRole(roleId);
-    // const permissionId = roleAndPermission.map(permission => permission.dataValues.permission_id);
-
-    // Save user role and permissions
-    // await dataSaveUerRolePermission(userId, roleId, permissionId, transaction);
-
     return userId;
   } catch (error) {
     console.error("Error in employee registration:", error);
     throw new Error("Failed to register employee");
   }
 };
+
 
 export async function changeStatus(userId) {
   try {
