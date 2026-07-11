@@ -110,7 +110,8 @@ const resourceScopeFields = {
   default: {
     OWN: 'userId',
     INSTITUTE: 'instituteId',
-    CAMPUS: 'campusId'
+    CAMPUS: 'campusId',
+    UNIVERSITY: "universityId"
   }
 };
 

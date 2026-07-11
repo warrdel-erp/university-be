@@ -12,7 +12,7 @@ import { getAccessFilter, getUserPermissions } from "../utility/authEngine.js";
  * @param {string} resource - Target resource entity name (e.g. 'student', 'employee')
  */
 export function checkAccess(permissionKey, resource) {
-  return async (req, res, next) => {
+  const func = async (req, res, next) => {
     try {
       if (!req.user) {
         return res.status(401).json({ message: "User context not found" });
@@ -51,6 +51,8 @@ export function checkAccess(permissionKey, resource) {
       return res.status(403).json({ message: "Access denied: Insufficient permissions" });
     }
   };
+
+  return func
 }
 
 /**
@@ -74,7 +76,7 @@ export function checkAccessAny(permissionKeys, resource) {
       }
 
       const permissions = await getUserPermissions(req.user.userId, activeRoleId);
-      
+
       let validFilter = null;
       let validScope = null;
       let hasAccess = false;

@@ -425,5 +425,23 @@ export const initialSetup = async (req, res) => {
   }
 };
 
+export const getGrantedAccess = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const data = await userService.getGrantedAccess(userId);
+    return res.status(200).json({
+      success: true,
+      message: "Granted access details fetched successfully",
+      data
+    });
+  } catch (error) {
+    console.error("Error in getGrantedAccess controller:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch granted access details"
+    });
+  }
+};
+
 
 

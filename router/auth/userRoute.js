@@ -1,7 +1,7 @@
 import { Router } from "express";
 const router = Router();
 
-import { login, register, adminRegisterStudentAndEmployee, getAdminRegisterStudentAndEmployee, changePassword, changeStatus, sendLink, forgotPassword, forgotChangePassword, getAllUsers, getMyDetails, saveUserDefaults, initialSetup } from "../../controllers/userController.js";
+import { login, register, adminRegisterStudentAndEmployee, getAdminRegisterStudentAndEmployee, changePassword, changeStatus, sendLink, forgotPassword, forgotChangePassword, getAllUsers, getMyDetails, saveUserDefaults, initialSetup, getGrantedAccess } from "../../controllers/userController.js";
 import useAuth from "../../middleware/authUser.js";
 import { z } from "zod";
 import { validate } from "../../utility/validation.js";
@@ -78,6 +78,8 @@ router.patch("/forgotPassword", useAuth, forgotChangePassword);
 router.get("/", useAuth, checkAccess(PERMISSIONS.USER_MANAGEMENT.value, 'user'), validate({ query: getAllUsersSchema }), getAllUsers);
 
 router.get("/myDetails", useAuth, getMyDetails);
+
+router.get("/grantedAccess", useAuth, getGrantedAccess);
 
 router.put("/saveUserDefaults", useAuth, validate({ body: saveUserDefaultsSchema }), saveUserDefaults);
 

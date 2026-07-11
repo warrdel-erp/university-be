@@ -1,10 +1,10 @@
 import * as registerRepository from "../repository/userRepository.js";
+import { Op } from "sequelize";
 import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
 import { getStudentBySectionId, getCourseByCourseId, getEmployeeByuserId } from "../repository/courseRepository.js";
 var salt = bcrypt.genSaltSync(10);
 import sequelize from "../database/sequelizeConfig.js";
-import { getPermissionByRole } from "../repository/rolePermissionMappingRepository.js";
 import { getSingleRoleDetails } from "../repository/roleRepository.js";
 import { getEmployeeRolePermissionByUserId } from "../repository/userRolePermissionRepository.js";
 import jwt from "jsonwebtoken";
@@ -483,10 +483,12 @@ export async function getMyDetails(userId) {
     raw: true
   });
 
-  userData.roles = roleEntries.map(entry => ({
-    roleId: entry.roleId,
-    roleName: entry.roleName
-  }));
+  userData.roles = roleEntries
+    .filter(entry => entry.roleName != null && entry.roleName !== '')
+    .map(entry => ({
+      roleId: entry.roleId,
+      roleName: entry.roleName
+    }));
 
   return userData;
 }
@@ -504,28 +506,41 @@ async function assignNewRolesAndPermissions(userId, transaction) {
   // handled within seedLegacyRoleAndPermissions now
 }
 
-async function seedLegacyRoleAndPermissions(userId, transaction) {
-  let adminRole = await model.roleModel.findOne({ where: { role: "ADMIN" }, transaction });
-  if (!adminRole) {
-    adminRole = await model.roleModel.create({ role: "ADMIN" }, { transaction });
+async function seedLegacyRoleAndPermissions(userId, universityId, transaction) {
+  // 1. Find or create the CLIENT_ADMIN role
+  let clientAdminRole = await model.roleModel.findOne({ where: { role: "CLIENT_ADMIN" }, transaction });
+  if (!clientAdminRole) {
+    clientAdminRole = await model.roleModel.create({ role: "CLIENT_ADMIN" }, { transaction });
   }
 
-  // Define admin permissions map
+  // 2. Build full permission template for CLIENT_ADMIN
+  //    MASTER_SECTION gets UNIVERSITY scope; all other permissions get INSTITUTE scope
   const rolePermissionRows = [];
   for (const [key, valueObj] of Object.entries(PERMISSIONS)) {
+    const isMasterSection = valueObj.value === PERMISSIONS.MASTER_SECTION.value
+      || valueObj.parentPermission === 'MASTER_SECTION';
     rolePermissionRows.push({
-      roleId: adminRole.roleId,
+      roleId: clientAdminRole.roleId,
       permission: valueObj.value,
-      scope: SCOPES.INSTITUTE,
+      scope: isMasterSection ? SCOPES.UNIVERSITY : SCOPES.INSTITUTE,
     });
   }
 
-  // Insert into role_permissions template
-  await model.rolePermissionMappingModel.destroy({ where: { role_id: adminRole.roleId }, transaction });
+  // 4. Sync role_permissions template
+  await model.rolePermissionMappingModel.destroy({ where: { role_id: clientAdminRole.roleId }, transaction });
   await model.rolePermissionMappingModel.bulkCreate(rolePermissionRows, { transaction });
 
-  // Assign to user
-  await userRoleService.assignRoleToUser(userId, "ADMIN", [], transaction);
+  // 5. Assign the CLIENT_ADMIN role to the user (copies all non-perm_access_inst rows)
+  await userRoleService.assignRoleToUser(userId, clientAdminRole.roleId, [], transaction);
+
+  // 6. Explicitly insert UNIVERSITY-scoped perm_access_inst with the real roleId
+  await model.userRolePermissionModel.create({
+    userId,
+    roleId: clientAdminRole.roleId,
+    permission: PERMISSIONS.ACCESS_INSTITUTE.value,
+    scope: SCOPES.UNIVERSITY,
+    resourceId: universityId
+  }, { transaction });
 }
 
 export async function initialSetup(info) {
@@ -626,7 +641,7 @@ export async function initialSetup(info) {
     await assignNewRolesAndPermissions(user.userId, transaction);
 
     // 9. Assign legacy role, permissions, and role-permissions mapping
-    await seedLegacyRoleAndPermissions(user.userId, transaction);
+    await seedLegacyRoleAndPermissions(user.userId, university.universityId, transaction);
 
     await transaction.commit();
 
@@ -651,4 +666,134 @@ export async function initialSetup(info) {
     console.error("Error in initialSetup service:", error);
     throw error;
   }
+}
+
+export async function getGrantedAccess(userId) {
+  const user = await model.userModel.findByPk(userId);
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  // 1. Fetch user's permission scopes for perm_access_inst
+  const accessEntries = await model.userRolePermissionModel.findAll({
+    where: {
+      userId,
+      permission: 'perm_access_inst'
+    }
+  });
+
+  const allowedCampusIds = new Set();
+  const allowedInstituteIds = new Set();
+  let hasUniversityAccess = false;
+
+  for (const entry of accessEntries) {
+    if (entry.scope === 'UNIVERSITY') {
+      hasUniversityAccess = true;
+    } else if (entry.scope === 'CAMPUS' && entry.resourceId) {
+      allowedCampusIds.add(entry.resourceId);
+    } else if (entry.scope === 'INSTITUTE' && entry.resourceId) {
+      allowedInstituteIds.add(entry.resourceId);
+    }
+  }
+
+  // If UNIVERSITY scope is granted, they get all campuses and institutes under that university
+  if (hasUniversityAccess) {
+    const campuses = await model.campusModel.findAll({
+      where: { universityId: user.universityId }
+    });
+    campuses.forEach(c => allowedCampusIds.add(c.campusId));
+
+    const institutes = await model.instituteModel.findAll({
+      where: { universityId: user.universityId }
+    });
+    institutes.forEach(i => allowedInstituteIds.add(i.instituteId));
+  } else {
+    // If they have CAMPUS scope, they get all institutes in those campuses
+    if (allowedCampusIds.size > 0) {
+      const campusInstitutes = await model.instituteModel.findAll({
+        where: { campusId: { [Op.in]: Array.from(allowedCampusIds) } }
+      });
+      campusInstitutes.forEach(i => allowedInstituteIds.add(i.instituteId));
+    }
+
+    // If they have INSTITUTE scope, they must also see the parent campuses of those institutes
+    if (allowedInstituteIds.size > 0) {
+      const institutes = await model.instituteModel.findAll({
+        where: { instituteId: { [Op.in]: Array.from(allowedInstituteIds) } }
+      });
+      institutes.forEach(i => allowedCampusIds.add(i.campusId));
+    }
+  }
+
+  // Fetch the final details of campuses and institutes
+  const campuses = allowedCampusIds.size > 0
+    ? await model.campusModel.findAll({
+      where: { campusId: { [Op.in]: Array.from(allowedCampusIds) } }
+    })
+    : [];
+
+  const institutes = allowedInstituteIds.size > 0
+    ? await model.instituteModel.findAll({
+      where: { instituteId: { [Op.in]: Array.from(allowedInstituteIds) } }
+    })
+    : [];
+
+  // Get university from the allowed institutes or fallback to user.universityId
+  let university = null;
+  const universityIds = new Set();
+  if (institutes.length > 0) {
+    institutes.forEach(i => {
+      if (i.universityId) {
+        universityIds.add(i.universityId);
+      }
+    });
+  }
+
+  if (universityIds.size > 0) {
+    university = await model.universityModel.findByPk(Array.from(universityIds)[0]);
+  } else {
+    university = await model.universityModel.findByPk(user.universityId);
+  }
+
+  // Fetch active academic years for the allowed institutes
+  const academicYears = allowedInstituteIds.size > 0
+    ? await model.acedmicYearModel.findAll({
+      where: {
+        instituteId: { [Op.in]: Array.from(allowedInstituteIds) },
+        isActive: true
+      }
+    })
+    : [];
+
+  // Fetch distinct roles for the user
+  const roleEntries = await model.userRolePermissionModel.findAll({
+    attributes: [
+      [sequelize.fn('DISTINCT', sequelize.col('userRole.role')), 'roleName'],
+      [sequelize.col('userRole.role_id'), 'roleId']
+    ],
+    where: { user_id: userId },
+    include: [
+      {
+        model: model.roleModel,
+        as: 'userRole',
+        attributes: []
+      }
+    ],
+    raw: true
+  });
+
+  const roles = roleEntries
+    .filter(entry => entry.roleName != null && entry.roleName !== '')
+    .map(entry => ({
+      roleId: entry.roleId,
+      roleName: entry.roleName
+    }));
+
+  return {
+    university,
+    campuses,
+    institutes,
+    academicYears,
+    roles
+  };
 }
