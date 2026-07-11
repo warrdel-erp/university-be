@@ -35,7 +35,7 @@ const cloneRoutineSchema = z
         previousRoutineId: positiveIntegerId,
         startingDate: z.string().min(1),
         endingDate: z.string().min(1),
-        previousEndingDate: z.string().min(1).optional(),
+        previousDate: z.string().min(1).optional(),
     })
     .refine((data) => new Date(data.endingDate) >= new Date(data.startingDate), {
         message: 'endingDate cannot be before startingDate',
@@ -43,11 +43,11 @@ const cloneRoutineSchema = z
     })
     .refine(
         (data) =>
-            data.previousEndingDate == null
-            || new Date(data.previousEndingDate) < new Date(data.startingDate),
+            data.previousDate == null
+            || new Date(data.previousDate) < new Date(data.startingDate),
         {
-            message: 'previousEndingDate must be before startingDate',
-            path: ['previousEndingDate'],
+            message: 'previousDate must be before startingDate',
+            path: ['previousDate'],
         },
     );
 

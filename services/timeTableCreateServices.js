@@ -870,7 +870,7 @@ export async function cloneTimeTableRoutine(
   endingDate,
   createdBy,
   updatedBy,
-  previousEndingDate,
+  previousDate,
 ) {
   const transaction = await sequelize.transaction();
 
@@ -914,13 +914,13 @@ export async function cloneTimeTableRoutine(
     const previousPlain = previousRoutine.get({ plain: true });
     const start = formatQueryDate(startingDate);
     const end = formatQueryDate(endingDate);
-    const previousEnd = previousEndingDate != null
-      ? formatQueryDate(previousEndingDate)
+    const previousEnd = previousDate != null
+      ? formatQueryDate(previousDate)
       : null;
 
     if (previousEnd != null) {
       if (previousEnd < formatQueryDate(previousPlain.startingDate)) {
-        const error = new Error('previousEndingDate before routine start');
+        const error = new Error('previousDate before routine start');
         error.statusCode = 400;
         throw error;
       }
