@@ -6,8 +6,12 @@ import sequelize from "../database/sequelizeConfig.js";
 import { ATTENDANCE_STATUS } from "../constant.js";
 import { resolveProgramYear, resolveStudentClassSectionsId } from "../utility/classSectionIncludes.js";
 import {
+  assertCopyPeriodMappingsMatch,
   assertMappingsBelongToTerm,
+  canCopyPeriodToTarget,
   resolveAttendancePlacement,
+  resolveMappingRoutinePlacement,
+  resolveSourcePeriodByMappingId,
 } from "../utility/attendancePlacement.js";
 
 export { ATTENDANCE_STATUS };
@@ -71,6 +75,270 @@ export async function addAttendance(attendanceData, createdBy, updatedBy) {
     console.error('Error adding Attendance:', error);
     throw error;
   }
+};
+
+export async function copyAttendancePeriod(copyData, createdBy, updatedBy) {
+  const sourceMappingId = Number(copyData.timeTableMappingId);
+  const date = copyData.date;
+  const targetMappingIds = normalizeTimeTableMappingIds(copyData.copyToTimeTableMappingId);
+
+  const sourcePeriod = await resolveSourcePeriodByMappingId(sourceMappingId);
+  const sourcePlacement = await assertCopyPeriodMappingsMatch(
+    sourceMappingId,
+    targetMappingIds,
+    sourcePeriod.classSectionTermId,
+  );
+
+  const allowedCopyToPeriods = await getCopyToPeriodsForSameDay(sourcePeriod, date);
+  const allowedTargetIds = new Set();
+  for (const period of allowedCopyToPeriods) {
+    allowedTargetIds.add(Number(period.timeTableMappingId));
+  }
+
+  for (const targetMappingId of targetMappingIds) {
+    if (!allowedTargetIds.has(Number(targetMappingId))) {
+      throw new Error(
+        `timeTableMappingId ${targetMappingId} is not a valid copy target for this period on ${date}`,
+      );
+    }
+  }
+
+  const sourceRows = await attendanceService.getAttendanceRowsByMappingAndDate(
+    sourceMappingId,
+    date,
+  );
+
+  if (!sourceRows.length) {
+    throw new Error('No attendance found for the source period');
+  }
+
+  const pendingTargetIds = [];
+  const skippedTargetIds = [];
+
+  for (const targetMappingId of targetMappingIds) {
+    if (targetMappingId === sourceMappingId) {
+      skippedTargetIds.push(targetMappingId);
+      continue;
+    }
+
+    const isExists = await attendanceService.checkAttendanceExists(targetMappingId, date);
+    if (isExists) {
+      skippedTargetIds.push(targetMappingId);
+    } else {
+      pendingTargetIds.push(targetMappingId);
+    }
+  }
+
+  if (pendingTargetIds.length === 0) {
+    throw new Error(
+      targetMappingIds.length === 1
+        ? 'Attendance already marked for the target period'
+        : 'Attendance already marked for all target periods',
+    );
+  }
+
+  const t = await sequelize.transaction();
+  try {
+    const attendanceRecords = [];
+
+    for (const targetMappingId of pendingTargetIds) {
+      for (const row of sourceRows) {
+        attendanceRecords.push({
+          studentId: row.studentId,
+          attendanceStatus: row.attendanceStatus,
+          notes: row.notes,
+          description: row.description,
+          classSectionsId: sourcePlacement.classSectionsId,
+          classSectionTermId: sourcePlacement.classSectionTermId,
+          timeTableMappingId: targetMappingId,
+          date,
+          createdBy,
+          updatedBy,
+        });
+      }
+    }
+
+    const addedAttendance = await attendanceService.addAttendance(attendanceRecords, { transaction: t });
+    await t.commit();
+
+    return {
+      addedAttendance,
+      copiedFrom: {
+        timeTableMappingId: sourceMappingId,
+        date,
+        studentCount: sourceRows.length,
+        classSectionTermId: sourcePlacement.classSectionTermId,
+        term: sourcePlacement.term,
+        year: sourcePlacement.year,
+      },
+      markedPeriods: pendingTargetIds,
+      skippedPeriods: skippedTargetIds,
+    };
+  } catch (error) {
+    await t.rollback();
+    console.error('Error copying attendance period:', error);
+    throw error;
+  }
+};
+
+function getWeekdayName(dateString) {
+  const weekdayNames = [
+    'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+  ];
+  return weekdayNames[new Date(dateString).getDay()];
+}
+
+function isDateWithinRoutine(dateString, startingDate, endingDate) {
+  if (!startingDate || !endingDate) {
+    return false;
+  }
+
+  const checkDate = new Date(dateString);
+  checkDate.setHours(0, 0, 0, 0);
+
+  const startDate = new Date(startingDate);
+  startDate.setHours(0, 0, 0, 0);
+
+  const endDate = new Date(endingDate);
+  endDate.setHours(0, 0, 0, 0);
+
+  return checkDate >= startDate && checkDate <= endDate;
+}
+
+function getPeriodSubjectInfo(periodItem) {
+  if (periodItem.isSameTeacher && periodItem.timeTableTeacherSubject?.employeeSubject) {
+    const subject = periodItem.timeTableTeacherSubject.employeeSubject;
+    return { subjectId: subject.subjectId, subjectName: subject.subjectName };
+  }
+
+  if (periodItem.timeTableSubject) {
+    return {
+      subjectId: periodItem.timeTableSubject.subjectId,
+      subjectName: periodItem.timeTableSubject.subjectName,
+    };
+  }
+
+  if (periodItem.timeTableElective) {
+    return {
+      subjectId: periodItem.timeTableElective.electiveSubjectId,
+      subjectName: periodItem.timeTableElective.electiveSubjectName,
+    };
+  }
+
+  return { subjectId: null, subjectName: null };
+}
+
+function mapCopyPeriodItem(periodItem) {
+  const subject = getPeriodSubjectInfo(periodItem);
+  const structurePeriod = periodItem.timeTablecreation ?? {};
+  const targetPlacement = resolveMappingRoutinePlacement(periodItem);
+
+  return {
+    timeTableMappingId: periodItem.timeTableMappingId,
+    classSectionTermId: targetPlacement.classSectionTermId,
+    period: periodItem.period,
+    periodName: structurePeriod.periodName ?? null,
+    startTime: structurePeriod.startTime ?? null,
+    endTime: structurePeriod.endTime ?? null,
+    subjectId: subject.subjectId,
+    subjectName: subject.subjectName,
+  };
+}
+
+function mapCurrentPeriod(sourcePeriod, date, isMarked) {
+  const subject = getPeriodSubjectInfo(sourcePeriod);
+  const structurePeriod = sourcePeriod.timeTablecreation ?? {};
+
+  return {
+    timeTableMappingId: sourcePeriod.timeTableMappingId,
+    classSectionTermId: sourcePeriod.classSectionTermId,
+    date,
+    day: sourcePeriod.day,
+    period: sourcePeriod.period,
+    periodName: structurePeriod.periodName ?? null,
+    startTime: structurePeriod.startTime ?? null,
+    endTime: structurePeriod.endTime ?? null,
+    subjectId: subject.subjectId,
+    subjectName: subject.subjectName,
+    isMarked,
+  };
+}
+
+async function getCopyToPeriodsForSameDay(sourcePeriod, date) {
+  const calendarDay = getWeekdayName(date);
+  if (calendarDay.toLowerCase() !== String(sourcePeriod.day).toLowerCase()) {
+    return [];
+  }
+
+  if (!isDateWithinRoutine(date, sourcePeriod.startingDate, sourcePeriod.endingDate)) {
+    return [];
+  }
+
+  const laterPeriods = await attendanceService.getNextPeriodsOnSameDay(
+    sourcePeriod.timeTableRoutineId,
+    sourcePeriod.day,
+    sourcePeriod.period,
+  );
+
+  if (!laterPeriods.length) {
+    return [];
+  }
+
+  const candidateIds = [];
+  for (const periodItem of laterPeriods) {
+    candidateIds.push(Number(periodItem.timeTableMappingId));
+  }
+
+  const markedIds = await attendanceService.getMarkedTimeTableMappingIdsOnDate(candidateIds, date);
+  const copyToPeriods = [];
+
+  for (const periodItem of laterPeriods) {
+    const targetMappingId = Number(periodItem.timeTableMappingId);
+    if (targetMappingId === Number(sourcePeriod.timeTableMappingId)) {
+      continue;
+    }
+
+    const targetPlacement = resolveMappingRoutinePlacement(periodItem);
+    const isMarked = markedIds.has(targetMappingId);
+    const canCopy = canCopyPeriodToTarget(sourcePeriod, targetPlacement) && !isMarked;
+
+    if (!canCopy) {
+      continue;
+    }
+
+    copyToPeriods.push(mapCopyPeriodItem(periodItem));
+  }
+
+  return copyToPeriods;
+}
+
+export async function getCopyAttendanceNextPeriods(query) {
+  const timeTableMappingId = Number(query.timeTableMappingId);
+  const date = query.date;
+  const sourcePeriod = await resolveSourcePeriodByMappingId(timeTableMappingId);
+
+  const sourceIsMarked = await attendanceService.checkAttendanceExists(timeTableMappingId, date);
+  if (!sourceIsMarked) {
+    throw new Error('No attendance found for the source period');
+  }
+
+  const currentPeriod = mapCurrentPeriod(sourcePeriod, date, true);
+  const copyToPeriods = await getCopyToPeriodsForSameDay(sourcePeriod, date);
+
+  return {
+    date,
+    classSectionTermId: sourcePeriod.classSectionTermId,
+    subjectId: currentPeriod.subjectId,
+    subjectName: currentPeriod.subjectName,
+    currentPeriod,
+    copyToPeriods,
+  };
 };
 
 export async function getAttendanceDetails() {

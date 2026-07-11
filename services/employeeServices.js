@@ -23,6 +23,7 @@ import { getCampusCode, getInstituteCode } from '../repository/collegeRepository
 import * as libraryRepository from '../repository/libraryCreationRepository.js';
 import * as timeTableCreateRepository from '../repository/timeTablecreateRepository.js';
 import * as attendanceRepository from '../repository/attendanceRepository.js';
+import * as classSectionTermRepository from '../repository/classSectionTermRepository.js';
 import * as evaluationRepository from "../repository/evalutionRepository.js";
 import { getSingleRoleDetails } from '../repository/roleRepository.js';
 import { addHead } from '../repository/headRepository.js';
@@ -1304,12 +1305,17 @@ export async function getTodayClassSchedule(employeeId, currentDate, sessionId, 
   );
 
   const expanded = expandScheduleForExactDate(rawSchedules, currentDate);
-  const schedules = await enrichSchedulesWithAttendance(
-    expanded.map(stripTeacherFieldsFromSchedule),
-  );
+  const strippedSchedules = [];
+  for (const schedule of expanded) {
+    strippedSchedules.push(stripTeacherFieldsFromSchedule(schedule));
+  }
+
+  const schedules = await enrichTodayClassSchedules(strippedSchedules);
 
   if (groupPeriods) {
-    return applyGroupAttendanceStatus(await groupConsecutivePeriods(schedules, groupPeriods === 'sessional'));
+    return applyGroupAttendanceStatus(
+      await groupConsecutivePeriods(schedules, groupPeriods === 'sessional'),
+    );
   }
 
   return schedules;
@@ -1353,7 +1359,11 @@ function stripTeacherFieldsFromSchedule(schedule) {
   }
 
   if (Array.isArray(cleaned.classScheduleItems)) {
-    cleaned.classScheduleItems = cleaned.classScheduleItems.map(stripTeacherFieldsFromSchedule);
+    const cleanedItems = [];
+    for (const item of cleaned.classScheduleItems) {
+      cleanedItems.push(stripTeacherFieldsFromSchedule(item));
+    }
+    cleaned.classScheduleItems = cleanedItems;
   }
 
   return cleaned;
@@ -1363,34 +1373,177 @@ function getAttendanceStatusKey(schedule) {
   return `${schedule.timeTableMappingId}_${schedule.date}`;
 }
 
+function resolveScheduleClassSectionTermId(schedule) {
+  const routine = schedule.timeTablecreate;
+  if (!routine) {
+    return null;
+  }
+
+  const routinePlain = routine.get ? routine.get({ plain: true }) : routine;
+  if (routinePlain.classSectionTermId) {
+    return routinePlain.classSectionTermId;
+  }
+
+  const classSectionTerm = routinePlain.timeTableClassSectionTerm;
+  if (classSectionTerm && classSectionTerm.classSectionTermId) {
+    return classSectionTerm.classSectionTermId;
+  }
+
+  return null;
+}
+
+function collectScheduleQueryParams(schedules) {
+  const mappingIdSet = new Set();
+  const dates = [];
+  const resolvedTermIds = [];
+  const uniqueTermIds = [];
+  const seenTermIds = new Set();
+
+  for (const schedule of schedules) {
+    if (schedule.timeTableMappingId) {
+      mappingIdSet.add(schedule.timeTableMappingId);
+    }
+    if (schedule.date) {
+      dates.push(schedule.date);
+    }
+
+    const classSectionTermId = resolveScheduleClassSectionTermId(schedule);
+    resolvedTermIds.push(classSectionTermId);
+
+    if (classSectionTermId) {
+      const numericId = Number(classSectionTermId);
+      if (!seenTermIds.has(numericId)) {
+        seenTermIds.add(numericId);
+        uniqueTermIds.push(numericId);
+      }
+    }
+  }
+
+  const mappingIds = [];
+  for (const mappingId of mappingIdSet) {
+    mappingIds.push(mappingId);
+  }
+
+  let from = '';
+  let to = '';
+  if (dates.length) {
+    from = dates[0];
+    to = dates[0];
+    for (const date of dates) {
+      if (date < from) {
+        from = date;
+      }
+      if (date > to) {
+        to = date;
+      }
+    }
+  }
+
+  return { mappingIds, from, to, resolvedTermIds, uniqueTermIds };
+}
+
+function resolveScheduleAttendanceFields(schedule, presentMap, markedMap) {
+  const key = getAttendanceStatusKey(schedule);
+  const presentCount = presentMap[key];
+
+  let attendanceCount = 0;
+  if (presentCount != null) {
+    attendanceCount = presentCount;
+  }
+
+  return {
+    attendanceCount,
+    attendanceStatus: markedMap[key] > 0 ? 'MARKED' : 'PENDING',
+  };
+}
+
+async function enrichTodayClassSchedules(schedules) {
+  if (!schedules.length) {
+    return schedules;
+  }
+
+  const { mappingIds, from, to, resolvedTermIds, uniqueTermIds } = collectScheduleQueryParams(schedules);
+
+  const [studentCountMap, markedMap, presentMap] = await Promise.all([
+    classSectionTermRepository.countStudentsByClassSectionTermIds(uniqueTermIds),
+    attendanceRepository.getAttendanceMarkedMap(mappingIds, from, to),
+    attendanceRepository.getAttendanceMap(mappingIds, from, to),
+  ]);
+
+  const enriched = [];
+  for (let i = 0; i < schedules.length; i++) {
+    const schedule = schedules[i];
+    const classSectionTermId = resolvedTermIds[i];
+    const attendanceFields = resolveScheduleAttendanceFields(schedule, presentMap, markedMap);
+
+    let studentCount = 0;
+    if (classSectionTermId) {
+      const count = studentCountMap.get(Number(classSectionTermId));
+      if (count != null) {
+        studentCount = count;
+      }
+    }
+
+    enriched.push({
+      ...schedule,
+      studentCount,
+      ...attendanceFields,
+    });
+  }
+
+  return enriched;
+}
+
 async function enrichSchedulesWithAttendance(schedules) {
   if (!schedules.length) {
     return schedules;
   }
 
-  const mappingIds = [...new Set(schedules.map((s) => s.timeTableMappingId).filter(Boolean))];
-  const dates = schedules.map((s) => s.date).filter(Boolean);
-  const from = dates.reduce((min, d) => (d < min ? d : min), dates[0]);
-  const to = dates.reduce((max, d) => (d > max ? d : max), dates[0]);
+  const { mappingIds, from, to } = collectScheduleQueryParams(schedules);
+  if (!from) {
+    return schedules;
+  }
 
-  const markedMap = await attendanceRepository.getAttendanceMarkedMap(mappingIds, from, to);
+  const [markedMap, presentMap] = await Promise.all([
+    attendanceRepository.getAttendanceMarkedMap(mappingIds, from, to),
+    attendanceRepository.getAttendanceMap(mappingIds, from, to),
+  ]);
 
-  return schedules.map((schedule) => {
-    const markedCount = markedMap[getAttendanceStatusKey(schedule)] || 0;
-    return {
+  const enriched = [];
+  for (const schedule of schedules) {
+    enriched.push({
       ...schedule,
-      attendanceStatus: markedCount > 0 ? 'MARKED' : 'PENDING',
-    };
-  });
+      ...resolveScheduleAttendanceFields(schedule, presentMap, markedMap),
+    });
+  }
+
+  return enriched;
 }
 
-function applyGroupAttendanceStatus(groups) {
+async function applyGroupAttendanceStatus(groups) {
   for (const group of groups) {
-    const items = group.classScheduleItems || [];
-    const allMarked = items.length > 0 && items.every((item) => item.attendanceStatus === 'MARKED');
-    const anyMarked = items.some((item) => item.attendanceStatus === 'MARKED');
+    const items = group.classScheduleItems;
+    let allMarked = items.length > 0;
+    let anyMarked = false;
 
-    group.attendanceStatus = allMarked ? 'MARKED' : (anyMarked ? 'PARTIAL' : 'PENDING');
+    for (const item of items) {
+      if (item.attendanceStatus !== 'MARKED') {
+        allMarked = false;
+      }
+      if (item.attendanceStatus === 'MARKED') {
+        anyMarked = true;
+      }
+    }
+
+    if (allMarked) {
+      group.attendanceStatus = 'MARKED';
+    } else if (anyMarked) {
+      group.attendanceStatus = 'PARTIAL';
+    } else {
+      group.attendanceStatus = 'PENDING';
+    }
+
+    delete group.attendanceCount;
   }
 
   return groups;
@@ -1449,7 +1602,9 @@ export async function getPastClassSchedules(employeeId, academicYearId, currentD
   );
 
   if (groupPeriods) {
-    const grouped = applyGroupAttendanceStatus(await groupConsecutivePeriods(schedules, groupPeriods === 'sessional'));
+    const grouped = applyGroupAttendanceStatus(
+      await groupConsecutivePeriods(schedules, groupPeriods === 'sessional'),
+    );
     // Sort descending by date
     grouped.sort((a, b) => new Date(b.date) - new Date(a.date));
     return { teacher, schedules: grouped };

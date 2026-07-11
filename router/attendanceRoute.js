@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { z } from "zod";
 const router = Router();
-import { addAttendance, getAttendanceDetails, updateAttendance, importAttendance, importBulkAttendance, getAttendanceByDate, getPreviousSessions, getStudentAttendanceReport, getStudentsBatchAttendance, getEmployeeSectionDates } from "../controllers/attendanceController.js";
+import { addAttendance, copyAttendancePeriod, getCopyAttendancePeriod, getAttendanceDetails, updateAttendance, importAttendance, importBulkAttendance, getAttendanceByDate, getPreviousSessions, getStudentAttendanceReport, getStudentsBatchAttendance, getEmployeeSectionDates } from "../controllers/attendanceController.js";
 import userAuth from "../middleware/authUser.js"
 import { validate } from "../utility/validation.js";
 
@@ -58,6 +58,20 @@ const addAttendanceSchema = z.object({
     section: z.string().optional(),
 });
 
+const copyAttendancePeriodSchema = z.object({
+    timeTableMappingId: positiveIntegerId,
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
+    copyToTimeTableMappingId: z.union([
+        z.coerce.number().int().positive(),
+        z.array(z.coerce.number().int().positive()).min(1),
+    ]),
+});
+
+const copyAttendancePeriodQuerySchema = z.object({
+    timeTableMappingId: positiveIntegerId,
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
+});
+
 const attendanceByDateQuerySchema = z.object({
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
     classSectionTermId: positiveIntegerId,
@@ -65,6 +79,11 @@ const attendanceByDateQuerySchema = z.object({
 });
 
 router.post('/', userAuth, validate({ body: addAttendanceSchema }), addAttendance);
+
+
+router.post('/copyPeriod', userAuth, validate({ body: copyAttendancePeriodSchema }), copyAttendancePeriod);
+router.get('/copyPeriod', userAuth, validate({ query: copyAttendancePeriodQuerySchema }), getCopyAttendancePeriod);
+
 
 router.get('/', userAuth, getAttendanceDetails);
 
