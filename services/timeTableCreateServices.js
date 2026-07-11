@@ -340,6 +340,7 @@ async function assertNoSlotConflicts({
   startingDate,
   endingDate,
   conflictOptions,
+  transaction,
 }) {
   const { startTime, endTime } = periodInfo;
 
@@ -352,6 +353,7 @@ async function assertNoSlotConflicts({
       startingDate,
       endingDate,
       conflictOptions,
+      transaction,
     );
     if (conflict) {
       const section = resolveTimeTableRoutineSection(conflict.timeTablecreate);
@@ -370,6 +372,7 @@ async function assertNoSlotConflicts({
       startingDate,
       endingDate,
       conflictOptions,
+      transaction,
     );
     if (conflict) {
       const section = resolveTimeTableRoutineSection(conflict.timeTablecreate);
@@ -588,7 +591,7 @@ export async function gettimeTableCreateDetails(query = {}) {
 }
 
 export async function getSingletimeTableCreateDetails(courseId) {
-    try {
+  try {
     const result = await timeTableCreateRepository.getSingleTimeTableCreateDetails(courseId);
 
     return result;
@@ -983,6 +986,7 @@ export async function cloneTimeTableRoutine(
         startingDate: start,
         endingDate: end,
         conflictOptions,
+        transaction,
       });
     }
 
@@ -2228,10 +2232,10 @@ function mapRoutineClassSection(classSection) {
     term: resolveProgramTerm(plain),
     course: plain.courseSection
       ? {
-          courseId: plain.courseSection.courseId,
-          courseName: plain.courseSection.courseName,
-          courseCode: plain.courseSection.courseCode,
-        }
+        courseId: plain.courseSection.courseId,
+        courseName: plain.courseSection.courseName,
+        courseCode: plain.courseSection.courseCode,
+      }
       : null,
   };
 }
@@ -2260,27 +2264,27 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, s
     const common = {
       employee: employee
         ? {
-            employeeId: employee.employeeId,
-            employeeName: employee.employeeName,
-            employeeCode: employee.employeeCode,
-            pickColor: employee.pickColor,
-          }
+          employeeId: employee.employeeId,
+          employeeName: employee.employeeName,
+          employeeCode: employee.employeeCode,
+          pickColor: employee.pickColor,
+        }
         : null,
       course: course
         ? {
-            courseId: course.courseId,
-            courseName: course.courseName,
-            courseCode: course.courseCode,
-          }
+          courseId: course.courseId,
+          courseName: course.courseName,
+          courseCode: course.courseCode,
+        }
         : null,
       session: session
         ? {
-            sessionId: session.sessionId,
-            sessionName: session.sessionName,
-            startingDate: session.startingDate,
-            endingDate: session.endingDate,
-            academicYearId: session.academicYearId,
-          }
+          sessionId: session.sessionId,
+          sessionName: session.sessionName,
+          startingDate: session.startingDate,
+          endingDate: session.endingDate,
+          academicYearId: session.academicYearId,
+        }
         : null,
       classSections: classSections.map(mapClassSectionSummary),
     };
