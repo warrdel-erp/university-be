@@ -2479,27 +2479,45 @@ export async function getStudentsWithAnswerSheetStatus(sessionId, courseId, term
         return [];
     }
 
+    const sessionFilter = Number(sessionId);
+    const courseFilter = Number(courseId);
+    const termFilter = Number(term);
+
+    if (!Number.isFinite(sessionFilter) || !Number.isFinite(courseFilter) || !Number.isFinite(termFilter)) {
+        return [];
+    }
+
     const sectionWhere = {
-        sessionId,
-        courseId,
+        sessionId: sessionFilter,
+        courseId: courseFilter,
         academicYearId,
         ...buildScope(model.classSectionModel),
     };
     const answerSheetWhere = {
-        examScheduleId,
+        examScheduleId: Number(examScheduleId),
         ...buildScope(model.answerSheetQrModel),
     };
 
     return scoped(model.studentModel).findAll({
-        attributes: ["studentId", "firstName", "middleName", "lastName", "enrollNumber", "scholarNumber"],
+        attributes: [
+            "studentId",
+            "firstName",
+            "middleName",
+            "lastName",
+            "enrollNumber",
+            "scholarNumber",
+            "classSectionTermId",
+        ],
         include: [
             studentSessionWithAcademicYearInclude({}),
             studentClassSectionTermWithSectionInclude({
-                term,
+                term: termFilter,
                 termRequired: true,
                 sectionRequired: true,
                 sectionWhere,
                 includeSectionTerms: false,
+                termAttributes: ["classSectionTermId", "term", "classSectionsId"],
+                sectionAttributes: ["classSectionsId", "year", "section", "sessionId", "courseId"],
             }),
             {
                 model: model.answerSheetQrModel,

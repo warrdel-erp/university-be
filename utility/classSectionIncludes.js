@@ -38,13 +38,13 @@ export function studentClassSectionTermWithSectionInclude({
     includeSectionTerms = true,
 } = {}) {
     const termWhere = {};
-    if (classSectionTermId != null) {
+    if (classSectionTermId != null && Number.isFinite(Number(classSectionTermId))) {
         termWhere.classSectionTermId = Number(classSectionTermId);
     }
-    if (term != null) {
+    if (term != null && Number.isFinite(Number(term))) {
         termWhere.term = Number(term);
     }
-    if (classSectionsId != null) {
+    if (classSectionsId != null && Number.isFinite(Number(classSectionsId))) {
         termWhere.classSectionsId = Number(classSectionsId);
     }
 

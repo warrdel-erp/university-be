@@ -251,6 +251,8 @@ const getAllAnswerSheetsQuerySchema = z.object({
     .number()
     .int("examScheduleId must be an integer")
     .positive("examScheduleId must be greater than 0"),
+  sessionId: optionalPositiveIntegerId,
+  examSetupTypeTermId: optionalPositiveIntegerId,
 });
 
 const emptyFeeDetailsQuerySchema = z.object({
