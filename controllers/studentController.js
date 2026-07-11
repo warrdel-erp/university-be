@@ -471,7 +471,8 @@ export const getAllAnswerSheets = async (req, res) => {
         });
     } catch (error) {
         console.error("Error in getAllAnswerSheets:", error);
-        res.status(500).json({
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).json({
             success: false,
             message: error.message || "Internal Server Error",
             error: error.message
