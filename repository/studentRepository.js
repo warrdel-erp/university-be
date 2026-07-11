@@ -2499,8 +2499,7 @@ export async function getStudentsWithAnswerSheetStatus(sessionId, courseId, term
                 termRequired: true,
                 sectionRequired: true,
                 sectionWhere,
-                sectionAttributes: [],
-                termAttributes: [],
+                includeSectionTerms: false,
             }),
             {
                 model: model.answerSheetQrModel,
