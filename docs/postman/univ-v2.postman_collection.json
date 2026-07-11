@@ -2646,7 +2646,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"previousRoutineId\": {{timetable_routineId}},\n  \"startingDate\": \"2026-07-01\",\n  \"endingDate\": \"2026-12-31\"\n}",
+                  "raw": "{\n  \"previousRoutineId\": {{timetable_routineId}},\n  \"startingDate\": \"2026-07-01\",\n  \"endingDate\": \"2026-12-31\",\n  \"previousDate\": \"2026-06-30\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2663,7 +2663,7 @@
                     "clone"
                   ]
                 },
-                "description": "**POST /timeTableCreate/clone**\n\nCopies a routine and all its mapping cells to a new date range.\n\n### Body (Zod)\n| Field | Required | Type | Notes |\n|-------|----------|------|-------|\n| `previousRoutineId` | yes | int | Source routine PK (`timeTableRoutineId`) |\n| `startingDate` | yes | string | `YYYY-MM-DD` |\n| `endingDate` | yes | string | `YYYY-MM-DD`; must be >= `startingDate` |\n\nNo optional fields on this route.\n\nPreserves `classSectionTermId`, course, campus, and all period mappings from the source routine. New routine is created unpublished (`isPublish: false`). Overlap is checked for the same `classSectionTermId`.\n\n**400** if source routine not found or dates overlap an existing routine for that term."
+                "description": "**POST /timeTableCreate/clone**\n\nCopies a routine and all its mapping cells to a new date range. Optionally closes the source routine by updating its `endingDate`.\n\n### Body (Zod)\n| Field | Required | Type | Notes |\n|-------|----------|------|-------|\n| `previousRoutineId` | yes | int | Source routine PK (`timeTableRoutineId`) |\n| `startingDate` | yes | string | New routine start `YYYY-MM-DD` |\n| `endingDate` | yes | string | New routine end `YYYY-MM-DD`; must be >= `startingDate` |\n| `previousDate` | no | string | Sets source routine `endingDate` to this value (`YYYY-MM-DD`); must be before new `startingDate` |\n\nPreserves `classSectionTermId`, course, campus, and all period mappings from the source routine. New routine is created unpublished (`isPublish: false`).\n\nAlso checks teacher/room conflicts for the new date range.\n\n**404** source routine not found.\n**409** date range overlaps an existing routine for that term, or teacher/room conflict.\n**400** invalid `previousDate` (before source routine start) or period not found."
               },
               "response": []
             },

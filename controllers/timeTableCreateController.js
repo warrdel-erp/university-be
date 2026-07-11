@@ -18,7 +18,7 @@ export const addtimeTableCreate = async (req, res) => {
 
 export const cloneTimeTableRoutine = async (req, res) => {
     try {
-        const { previousRoutineId, startingDate, endingDate } = req.body;
+        const { previousRoutineId, startingDate, endingDate, previousDate } = req.body;
         const createdBy = req.user.userId;
         const updatedBy = req.user.userId;
         const result = await timeTableCreateServices.cloneTimeTableRoutine(
@@ -27,6 +27,7 @@ export const cloneTimeTableRoutine = async (req, res) => {
             endingDate,
             createdBy,
             updatedBy,
+            previousDate,
         );
         return SuccessResponse(res, 200, 'Routine cloned successfully', result);
     } catch (error) {

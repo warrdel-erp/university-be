@@ -35,11 +35,21 @@ const cloneRoutineSchema = z
         previousRoutineId: positiveIntegerId,
         startingDate: z.string().min(1),
         endingDate: z.string().min(1),
+        previousDate: z.string().min(1).optional(),
     })
     .refine((data) => new Date(data.endingDate) >= new Date(data.startingDate), {
         message: 'endingDate cannot be before startingDate',
         path: ['endingDate'],
-    });
+    })
+    .refine(
+        (data) =>
+            data.previousDate == null
+            || new Date(data.previousDate) < new Date(data.startingDate),
+        {
+            message: 'previousDate must be before startingDate',
+            path: ['previousDate'],
+        },
+    );
 
 const getSingleQuerySchema = z.object({
     courseId: optionalPositiveId,
@@ -195,7 +205,9 @@ const classSubjectCountQuerySchema = z.object({
 router.get('/getRoutine', userAuth, validate({ query: getRoutineSchema }), getRoutineByClassSectionId);
 router.get('/getRoutineByTeacher', userAuth, validate({ query: getRoutineByTeacherSchema }), getRoutineByTeacherAndAcademicYear);
 router.post('/', userAuth, validate({ body: addTimeTableCreateSchema }), addtimeTableCreate);
+
 router.post('/clone', userAuth, validate({ body: cloneRoutineSchema }), cloneTimeTableRoutine);
+
 router.get('/', userAuth, validate({ query: getTimeTableCreateListQuerySchema }), gettimeTableCreateDetails);
 router.get('/single', userAuth, validate({ query: getSingleQuerySchema }), getSingletimeTableCreateDetails);
 router.get('/create', userAuth, validate({ query: getTimeTableByCourseAndSectionQuerySchema }), getTimeTableByCourseAndSection);

@@ -828,16 +828,17 @@ export async function bulkCreateMappings(mappings, transaction) {
   }
 }
 
-export async function changeTimeTableCreate(timeTableRoutineId, data) {
+export async function changeTimeTableCreate(timeTableRoutineId, data, transaction) {
   try {
-    const routine = await assertScopedRoutine(timeTableRoutineId);
+    const routine = await assertScopedRoutine(timeTableRoutineId, { transaction });
     if (!routine) {
       return [0];
     }
     const result = await scoped(model.timeTableRoutineModel).update(
       stripRoutinePersistPayload(data),
       {
-        where: { timeTableRoutineId }
+        where: { timeTableRoutineId },
+        transaction,
       },
     );
     return result;
