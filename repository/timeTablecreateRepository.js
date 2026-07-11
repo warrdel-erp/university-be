@@ -439,9 +439,11 @@ export async function checkTeacherConflictRepository(
   startingDate,
   endingDate,
   options = {},
+  transaction = null,
 ) {
   try {
     const conflict = await model.classScheduleModel.findOne({
+      transaction: transaction ?? null,
       where: {
         employeeId,
         day
@@ -717,9 +719,11 @@ export async function checkRoomConflictRepository(
   startingDate,
   endingDate,
   options = {},
+  transaction = null,
 ) {
   try {
     const conflict = await model.classScheduleModel.findOne({
+      transaction: transaction ?? null,
       where: {
         classRoomSectionId,
         day
@@ -1402,9 +1406,9 @@ export async function ClassSubjectCount(classSectionTermId) {
     const subjectIds = [...new Set(mappings.map((m) => m.subjectId).filter(Boolean))];
     const subjects = subjectIds.length
       ? await scoped(model.subjectModel).findAll({
-          where: { subjectId: { [Op.in]: subjectIds } },
-          attributes: ['subjectId', 'subjectName', 'subjectCode'],
-        })
+        where: { subjectId: { [Op.in]: subjectIds } },
+        attributes: ['subjectId', 'subjectName', 'subjectCode'],
+      })
       : [];
 
     const subjectById = new Map(subjects.map((s) => [s.subjectId, s]));
@@ -1733,7 +1737,7 @@ async function fetchTeacherRoutineContext(employeeId, courseId, sessionId) {
       where: { courseId, sessionId },
       attributes: ['classSectionsId', 'section', 'year', 'courseId', 'sessionId'],
       include: [
-    classSectionTermsInclude(),
+        classSectionTermsInclude(),
       ],
       order: [['year', 'ASC'], ['section', 'ASC']],
     }),
