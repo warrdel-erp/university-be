@@ -965,17 +965,11 @@ export async function cloneTimeTableRoutine(
         continue;
       }
 
-      let periodInfo = periodInfoByCreationId.get(mappingPlain.timeTableCreationId);
+      const creationId = Number(mappingPlain.timeTableCreationId);
+      let periodInfo = periodInfoByCreationId.get(creationId);
       if (!periodInfo) {
-        periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(
-          mappingPlain.timeTableCreationId,
-        );
-        if (!periodInfo) {
-          const error = new Error('Period not found');
-          error.statusCode = 400;
-          throw error;
-        }
-        periodInfoByCreationId.set(mappingPlain.timeTableCreationId, periodInfo);
+        periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(creationId);
+        periodInfoByCreationId.set(creationId, periodInfo);
       }
 
       await assertNoSlotConflicts({
