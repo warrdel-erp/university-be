@@ -92,7 +92,8 @@ export async function getTeacherOptions(campusId) {
     return await scoped(model.employeeModel).findAll({
         attributes: [
             ['employee_name', 'label'],
-            [Sequelize.col('employeeDetails.user_id'), 'value'],
+            [Sequelize.col('user.user_id'), 'value'],
+            ['employee_id', 'employeeId'],
         ],
         where: {
             ...(campusId && { campusId }),
@@ -104,12 +105,6 @@ export async function getTeacherOptions(campusId) {
                 attributes: [],
                 required: true,
                 where: { isTeacher: true },
-            },
-            {
-                model: model.userStudentEmployeeModel,
-                as: 'employeeDetails',
-                attributes: [],
-                required: true,
             },
         ],
     });

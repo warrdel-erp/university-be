@@ -715,7 +715,7 @@ export async function getEmployeeSubjectAndLesson(userId, courseId, sessionId, s
 
     const rows = await scoped(model.teacherSubjectMappingModel).findAll({
       where: {
-        ...(hasEmployeeId && { userId: parsedEmployeeId }),
+        ...(hasEmployeeId && { employeeId: actualEmployeeId }),
         ...(hasSubjectId && { subjectId: parsedSubjectId }),
       },
       attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },

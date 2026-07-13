@@ -9,7 +9,7 @@ import {
 async function assertScopedEmployee(employeeId, options = {}) {
     return scoped(model.employeeModel).findOne({
         where: { userId: employeeId },
-        attributes: ['userId'],
+        attributes: ['userId', 'employeeId'],
         transaction: options.transaction,
     });
 }
@@ -633,16 +633,18 @@ export async function getTeacherSubjectsFromSchedule(employeeId) {
         const scopedEmployeeId = Number(employeeId);
         const routineWhere = buildScope(model.timeTableRoutineModel);
 
+        const actualEmployeeId = employee.employeeId;
+
         const result = await model.classScheduleModel.findAll({
             where: {
                   [Op.or]: [
-                      { employeeId: scopedEmployeeId },
+                      { userId: scopedEmployeeId },
                       Sequelize.literal(`
                         EXISTS (
                           SELECT 1
                           FROM teacher_subject_mapping tsm
                           WHERE tsm.teacher_subject_mapping_id = class_schedule_item.teacher_subject_mapping_id
-                          AND tsm.user_id = ${scopedEmployeeId}
+                          AND tsm.employee_id = ${actualEmployeeId}
                         )
                       `),
                   ],

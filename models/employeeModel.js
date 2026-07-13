@@ -16,7 +16,7 @@ const employeeModel = sequelize.define(
         userId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'employee_id',
+            field: 'user_id',
             references: {
                 model: users,
                 key: 'user_id'
