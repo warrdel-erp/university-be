@@ -439,9 +439,11 @@ export async function checkTeacherConflictRepository(
   startingDate,
   endingDate,
   options = {},
+  transaction = null,
 ) {
   try {
     const conflict = await model.classScheduleModel.findOne({
+      transaction: transaction ?? null,
       where: {
         userId,
         day
@@ -717,9 +719,11 @@ export async function checkRoomConflictRepository(
   startingDate,
   endingDate,
   options = {},
+  transaction = null,
 ) {
   try {
     const conflict = await model.classScheduleModel.findOne({
+      transaction: transaction ?? null,
       where: {
         classRoomSectionId,
         day
@@ -828,16 +832,17 @@ export async function bulkCreateMappings(mappings, transaction) {
   }
 }
 
-export async function changeTimeTableCreate(timeTableRoutineId, data) {
+export async function changeTimeTableCreate(timeTableRoutineId, data, transaction) {
   try {
-    const routine = await assertScopedRoutine(timeTableRoutineId);
+    const routine = await assertScopedRoutine(timeTableRoutineId, { transaction });
     if (!routine) {
       return [0];
     }
     const result = await scoped(model.timeTableRoutineModel).update(
       stripRoutinePersistPayload(data),
       {
-        where: { timeTableRoutineId }
+        where: { timeTableRoutineId },
+        transaction,
       },
     );
     return result;
@@ -1865,6 +1870,8 @@ export async function getTodayClassScheduleForEmployee(userId, currentDate, sess
         'period',
         'isAttendence',
         'isSameTeacher',
+        'timeTableNameId',
+        'timeTableCreationId'
       ],
       include: [
         {
@@ -1950,7 +1957,9 @@ export async function getPastClassSchedulesForEmployee(
         'day',
         'period',
         'isAttendence',
-        'isSameTeacher'
+        'isSameTeacher',
+        'timeTableNameId',
+        'timeTableCreationId'
       ],
       include: [
         {
@@ -2203,6 +2212,22 @@ export async function getEmployeeRecurringSchedules(userId, academicYearId) {
     });
   } catch (error) {
     console.error("Error in getEmployeeRecurringSchedules:", error);
+    throw error;
+  }
+}
+
+export async function getPeriodsForStructures(timeTableNameIds) {
+  try {
+    return await model.timeTableStructurePeriodsModel.findAll({
+      where: {
+        timeTableNameId: { [Op.in]: timeTableNameIds }
+      },
+      attributes: ['timeTableCreationId', 'timeTableNameId', 'isBreak'],
+      order: [['timeTableNameId', 'ASC'], ['timeTableCreationId', 'ASC']],
+      raw: true
+    });
+  } catch (error) {
+    console.error("Error in getPeriodsForStructures:", error);
     throw error;
   }
 }

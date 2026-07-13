@@ -28,7 +28,7 @@ const scheduleQuerySchema = z.object({
     userId: z.coerce.number().int().positive(),
     date: z.string().optional(),
     sessionId: optionalPositiveId,
-    groupPeriods: z.enum(['true', 'false']).optional(),
+    groupPeriods: z.enum(['false', 'sessional', 'consecutive']).optional(),
     instituteId: optionalPositiveId,
     universityId: optionalPositiveId,
 }).passthrough();

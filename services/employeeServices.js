@@ -23,6 +23,7 @@ import { getCampusCode, getInstituteCode } from '../repository/collegeRepository
 import * as libraryRepository from '../repository/libraryCreationRepository.js';
 import * as timeTableCreateRepository from '../repository/timeTablecreateRepository.js';
 import * as attendanceRepository from '../repository/attendanceRepository.js';
+import * as classSectionTermRepository from '../repository/classSectionTermRepository.js';
 import * as evaluationRepository from "../repository/evalutionRepository.js";
 import { getSingleRoleDetails } from '../repository/roleRepository.js';
 import { addHead } from '../repository/headRepository.js';
@@ -1322,12 +1323,17 @@ export async function getTodayClassSchedule(userId, currentDate, sessionId, grou
   );
 
   const expanded = expandScheduleForExactDate(rawSchedules, currentDate);
-  const schedules = await enrichSchedulesWithAttendance(
-    expanded.map(stripTeacherFieldsFromSchedule),
-  );
+  const strippedSchedules = [];
+  for (const schedule of expanded) {
+    strippedSchedules.push(stripTeacherFieldsFromSchedule(schedule));
+  }
+
+  const schedules = await enrichTodayClassSchedules(strippedSchedules);
 
   if (groupPeriods) {
-    return applyGroupAttendanceStatus(groupConsecutivePeriods(schedules));
+    return applyGroupAttendanceStatus(
+      await groupConsecutivePeriods(schedules, groupPeriods === 'sessional'),
+    );
   }
 
   return schedules;
@@ -1371,7 +1377,11 @@ function stripTeacherFieldsFromSchedule(schedule) {
   }
 
   if (Array.isArray(cleaned.classScheduleItems)) {
-    cleaned.classScheduleItems = cleaned.classScheduleItems.map(stripTeacherFieldsFromSchedule);
+    const cleanedItems = [];
+    for (const item of cleaned.classScheduleItems) {
+      cleanedItems.push(stripTeacherFieldsFromSchedule(item));
+    }
+    cleaned.classScheduleItems = cleanedItems;
   }
 
   return cleaned;
@@ -1381,34 +1391,177 @@ function getAttendanceStatusKey(schedule) {
   return `${schedule.timeTableMappingId}_${schedule.date}`;
 }
 
+function resolveScheduleClassSectionTermId(schedule) {
+  const routine = schedule.timeTablecreate;
+  if (!routine) {
+    return null;
+  }
+
+  const routinePlain = routine.get ? routine.get({ plain: true }) : routine;
+  if (routinePlain.classSectionTermId) {
+    return routinePlain.classSectionTermId;
+  }
+
+  const classSectionTerm = routinePlain.timeTableClassSectionTerm;
+  if (classSectionTerm && classSectionTerm.classSectionTermId) {
+    return classSectionTerm.classSectionTermId;
+  }
+
+  return null;
+}
+
+function collectScheduleQueryParams(schedules) {
+  const mappingIdSet = new Set();
+  const dates = [];
+  const resolvedTermIds = [];
+  const uniqueTermIds = [];
+  const seenTermIds = new Set();
+
+  for (const schedule of schedules) {
+    if (schedule.timeTableMappingId) {
+      mappingIdSet.add(schedule.timeTableMappingId);
+    }
+    if (schedule.date) {
+      dates.push(schedule.date);
+    }
+
+    const classSectionTermId = resolveScheduleClassSectionTermId(schedule);
+    resolvedTermIds.push(classSectionTermId);
+
+    if (classSectionTermId) {
+      const numericId = Number(classSectionTermId);
+      if (!seenTermIds.has(numericId)) {
+        seenTermIds.add(numericId);
+        uniqueTermIds.push(numericId);
+      }
+    }
+  }
+
+  const mappingIds = [];
+  for (const mappingId of mappingIdSet) {
+    mappingIds.push(mappingId);
+  }
+
+  let from = '';
+  let to = '';
+  if (dates.length) {
+    from = dates[0];
+    to = dates[0];
+    for (const date of dates) {
+      if (date < from) {
+        from = date;
+      }
+      if (date > to) {
+        to = date;
+      }
+    }
+  }
+
+  return { mappingIds, from, to, resolvedTermIds, uniqueTermIds };
+}
+
+function resolveScheduleAttendanceFields(schedule, presentMap, markedMap) {
+  const key = getAttendanceStatusKey(schedule);
+  const presentCount = presentMap[key];
+
+  let attendanceCount = 0;
+  if (presentCount != null) {
+    attendanceCount = presentCount;
+  }
+
+  return {
+    attendanceCount,
+    attendanceStatus: markedMap[key] > 0 ? 'MARKED' : 'PENDING',
+  };
+}
+
+async function enrichTodayClassSchedules(schedules) {
+  if (!schedules.length) {
+    return schedules;
+  }
+
+  const { mappingIds, from, to, resolvedTermIds, uniqueTermIds } = collectScheduleQueryParams(schedules);
+
+  const [studentCountMap, markedMap, presentMap] = await Promise.all([
+    classSectionTermRepository.countStudentsByClassSectionTermIds(uniqueTermIds),
+    attendanceRepository.getAttendanceMarkedMap(mappingIds, from, to),
+    attendanceRepository.getAttendanceMap(mappingIds, from, to),
+  ]);
+
+  const enriched = [];
+  for (let i = 0; i < schedules.length; i++) {
+    const schedule = schedules[i];
+    const classSectionTermId = resolvedTermIds[i];
+    const attendanceFields = resolveScheduleAttendanceFields(schedule, presentMap, markedMap);
+
+    let studentCount = 0;
+    if (classSectionTermId) {
+      const count = studentCountMap.get(Number(classSectionTermId));
+      if (count != null) {
+        studentCount = count;
+      }
+    }
+
+    enriched.push({
+      ...schedule,
+      studentCount,
+      ...attendanceFields,
+    });
+  }
+
+  return enriched;
+}
+
 async function enrichSchedulesWithAttendance(schedules) {
   if (!schedules.length) {
     return schedules;
   }
 
-  const mappingIds = [...new Set(schedules.map((s) => s.timeTableMappingId).filter(Boolean))];
-  const dates = schedules.map((s) => s.date).filter(Boolean);
-  const from = dates.reduce((min, d) => (d < min ? d : min), dates[0]);
-  const to = dates.reduce((max, d) => (d > max ? d : max), dates[0]);
+  const { mappingIds, from, to } = collectScheduleQueryParams(schedules);
+  if (!from) {
+    return schedules;
+  }
 
-  const markedMap = await attendanceRepository.getAttendanceMarkedMap(mappingIds, from, to);
+  const [markedMap, presentMap] = await Promise.all([
+    attendanceRepository.getAttendanceMarkedMap(mappingIds, from, to),
+    attendanceRepository.getAttendanceMap(mappingIds, from, to),
+  ]);
 
-  return schedules.map((schedule) => {
-    const markedCount = markedMap[getAttendanceStatusKey(schedule)] || 0;
-    return {
+  const enriched = [];
+  for (const schedule of schedules) {
+    enriched.push({
       ...schedule,
-      attendanceStatus: markedCount > 0 ? 'MARKED' : 'PENDING',
-    };
-  });
+      ...resolveScheduleAttendanceFields(schedule, presentMap, markedMap),
+    });
+  }
+
+  return enriched;
 }
 
-function applyGroupAttendanceStatus(groups) {
+async function applyGroupAttendanceStatus(groups) {
   for (const group of groups) {
-    const items = group.classScheduleItems || [];
-    const allMarked = items.length > 0 && items.every((item) => item.attendanceStatus === 'MARKED');
-    const anyMarked = items.some((item) => item.attendanceStatus === 'MARKED');
+    const items = group.classScheduleItems;
+    let allMarked = items.length > 0;
+    let anyMarked = false;
 
-    group.attendanceStatus = allMarked ? 'MARKED' : (anyMarked ? 'PARTIAL' : 'PENDING');
+    for (const item of items) {
+      if (item.attendanceStatus !== 'MARKED') {
+        allMarked = false;
+      }
+      if (item.attendanceStatus === 'MARKED') {
+        anyMarked = true;
+      }
+    }
+
+    if (allMarked) {
+      group.attendanceStatus = 'MARKED';
+    } else if (anyMarked) {
+      group.attendanceStatus = 'PARTIAL';
+    } else {
+      group.attendanceStatus = 'PENDING';
+    }
+
+    delete group.attendanceCount;
   }
 
   return groups;
@@ -1467,7 +1620,10 @@ export async function getPastClassSchedules(userId, academicYearId, currentDateS
   );
 
   if (groupPeriods) {
-    const grouped = applyGroupAttendanceStatus(groupConsecutivePeriods(schedules));
+    const grouped = applyGroupAttendanceStatus(
+      await groupConsecutivePeriods(schedules, groupPeriods === 'sessional'),
+    );
+    // Sort descending by date
     grouped.sort((a, b) => new Date(b.date) - new Date(a.date));
     return { teacher, schedules: grouped };
   }
@@ -1524,7 +1680,7 @@ export async function getUpcomingClassSchedules(userId, academicYearId, currentD
   upcomingClasses.sort((a, b) => new Date(a.date) - new Date(b.date));
 
   if (groupPeriods) {
-    const grouped = groupConsecutivePeriods(upcomingClasses);
+    const grouped = await groupConsecutivePeriods(upcomingClasses, groupPeriods === 'sessional');
     grouped.sort((a, b) => new Date(a.date) - new Date(b.date));
     return grouped;
   }
@@ -1532,7 +1688,7 @@ export async function getUpcomingClassSchedules(userId, academicYearId, currentD
   return upcomingClasses;
 }
 
-function groupConsecutivePeriods(classes) {
+async function groupConsecutivePeriods(classes, sessionalBreak = false) {
   if (!classes.length) return [];
 
   // Grouping should preserve date sort order (already sorted in main functions)
@@ -1540,12 +1696,18 @@ function groupConsecutivePeriods(classes) {
 
   const groupedResult = [];
 
-  // To group correctly, we need to handle sorting by date, then routine, then subject, then period
-  // But wait, the input 'classes' is already sorted by date.
-  // We can process it sequentially and only group items with same date, routine and subject if they are consecutive.
-
-  // First, stable sort by routine, subject, and period within each date group
-  // Actually, it's easier to just re-sort properly for grouping, then re-sort by date for final output.
+  let breakPeriodsMap = new Map();
+  const structureIds = [...new Set(classes.map(c => c.timeTableNameId).filter(Boolean))];
+  if (structureIds.length > 0) {
+    const allPeriods = await timeTableCreateRepository.getPeriodsForStructures(structureIds);
+    // Create a map to quickly look up periods for each structure
+    for (const p of allPeriods) {
+      if (!breakPeriodsMap.has(p.timeTableNameId)) {
+        breakPeriodsMap.set(p.timeTableNameId, []);
+      }
+      breakPeriodsMap.get(p.timeTableNameId).push(p);
+    }
+  }
 
   const getSubjectInfo = (item) => {
     if (item.timeTableSubject) return { id: item.timeTableSubject.subjectId, name: item.timeTableSubject.subjectName };
@@ -1567,18 +1729,54 @@ function groupConsecutivePeriods(classes) {
     return parseInt(a.period) - parseInt(b.period);
   });
 
+  const areConsecutivePeriods = (item1, item2) => {
+    if (item1.timeTableNameId !== item2.timeTableNameId) return false;
+    const structurePeriods = breakPeriodsMap.get(item1.timeTableNameId);
+    if (!structurePeriods) return false;
+
+    // Find the indices of item1 and item2 in the structure periods
+    const idx1 = structurePeriods.findIndex(p => p.timeTableCreationId === item1.timeTableCreationId);
+    const idx2 = structurePeriods.findIndex(p => p.timeTableCreationId === item2.timeTableCreationId);
+    
+    // They must be distinct valid periods
+    if (idx1 === -1 || idx2 === -1 || idx1 === idx2) return false;
+
+    const minIdx = Math.min(idx1, idx2);
+    const maxIdx = Math.max(idx1, idx2);
+    
+    // Check all periods that fall between item1 and item2
+    for (let i = minIdx + 1; i < maxIdx; i++) {
+      if (!structurePeriods[i].isBreak) {
+        // If there's a non-break period between them (e.g. another class), they are not consecutive
+        return false;
+      }
+      if (structurePeriods[i].isBreak && sessionalBreak) {
+        // If there's a break between them and sessionalBreak is true, we must split the group
+        return false;
+      }
+    }
+    return true;
+  };
+
   let currentGroup = null;
 
   for (const item of classes) {
     const subj = getSubjectInfo(item);
     const periodNum = parseInt(item.period);
 
+    let isConsecutive = false;
     if (currentGroup &&
       currentGroup.date === item.date &&
       currentGroup.timeTablecreate.timeTableRoutineId === item.timeTablecreate.timeTableRoutineId &&
-      currentGroup.subjectId === subj.id &&
-      currentGroup.periods[currentGroup.periods.length - 1] + 1 === periodNum
+      currentGroup.subjectId === subj.id
     ) {
+      const lastItem = currentGroup.classScheduleItems[currentGroup.classScheduleItems.length - 1];
+      if (areConsecutivePeriods(lastItem, item)) {
+        isConsecutive = true;
+      }
+    }
+
+    if (isConsecutive) {
       // Consecutive period
       currentGroup.classScheduleItems.push(item);
       currentGroup.periods.push(periodNum);
@@ -1594,12 +1792,6 @@ function groupConsecutivePeriods(classes) {
       groupedResult.push(currentGroup);
     }
   }
-
-  // Final sort based on date (descending for past, ascending for upcoming?)
-  // Actually, the original functions had different sort orders. 
-  // Let's check if we should restore it.
-  // For simplicity, let's just use the fact that 'classes' was passed with a specific sort.
-  // Wait, I already re-sorted it. I should re-apply the desired date sort.
 
   return groupedResult;
 }

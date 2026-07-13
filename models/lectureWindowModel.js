@@ -1,23 +1,21 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
-import employee from "./employeeModel.js";
 import instituteModel from "./instituteModel.js";
 import subjectModel from "./subjectModel.js";
 import acedmicYearModel from "./acedmicYearModel.js";
 import sessionModel from "./sessionModel.js";
 import universityModel from "./universityModel.js";
 import employeeModel from "./employeeModel.js";
-import lectureWindowModel from "./lectureWindowModel.js";
 
-const lessonModel = sequelize.define(
-    'lesson',
+const lectureWindowModel = sequelize.define(
+    'lecture_window',
     {
-        lessonId: {
+        lectureWindowId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'lesson_id'
+            field: 'lecture_window_id'
         },
         instituteId: {
             type: DataTypes.INTEGER,
@@ -30,10 +28,10 @@ const lessonModel = sequelize.define(
         },
         employeeId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'employee_id',
             references: {
-                model: employee,
+                model: employeeModel,
                 key: 'employee_id'
             }
         },
@@ -73,22 +71,23 @@ const lessonModel = sequelize.define(
                 key: 'session_id'
             }
         },
-        lectureWindowId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'lecture_window_id',
-            references: {
-                model: lectureWindowModel,
-                key: 'lecture_window_id'
-            }
-        },
         name: {
             type: DataTypes.STRING,
-            allowNull: false,
+            allowNull: true,
         },
         description: {
             type: DataTypes.STRING,
             allowNull: true
+        },
+        startDate: {
+            type: DataTypes.DATEONLY,
+            allowNull: false,
+            field: 'start_date'
+        },
+        endDate: {
+            type: DataTypes.DATEONLY,
+            allowNull: false,
+            field: 'end_date'
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -119,20 +118,15 @@ const lessonModel = sequelize.define(
             allowNull: false,
             defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
             field: 'updated_at'
-        },
-        deletedAt: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'deleted_at'
         }
     },
     {
-        tableName: 'lesson',
+        tableName: 'lecture_window',
         timestamps: true,
-        paranoid: true
+        paranoid: false
     }
 );
 
-lessonModel.scopeConfig = { university: true, institute: true, academicYear: true };
+lectureWindowModel.scopeConfig = { university: true, institute: true, academicYear: true };
 
-export default lessonModel;
+export default lectureWindowModel;

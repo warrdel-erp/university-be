@@ -340,6 +340,7 @@ async function assertNoSlotConflicts({
   startingDate,
   endingDate,
   conflictOptions,
+  transaction,
 }) {
   const { startTime, endTime } = periodInfo;
 
@@ -352,6 +353,7 @@ async function assertNoSlotConflicts({
       startingDate,
       endingDate,
       conflictOptions,
+      transaction,
     );
     if (conflict) {
       const section = resolveTimeTableRoutineSection(conflict.timeTablecreate);
@@ -370,6 +372,7 @@ async function assertNoSlotConflicts({
       startingDate,
       endingDate,
       conflictOptions,
+      transaction,
     );
     if (conflict) {
       const section = resolveTimeTableRoutineSection(conflict.timeTablecreate);
@@ -864,7 +867,14 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
   }
 }
 
-export async function cloneTimeTableRoutine(previousRoutineId, startingDate, endingDate, createdBy, updatedBy) {
+export async function cloneTimeTableRoutine(
+  previousRoutineId,
+  startingDate,
+  endingDate,
+  createdBy,
+  updatedBy,
+  previousDate,
+) {
   const transaction = await sequelize.transaction();
 
   const routineCloneFields = [
@@ -899,23 +909,85 @@ export async function cloneTimeTableRoutine(previousRoutineId, startingDate, end
     const previousRoutine = await timeTableCreateRepository.getFullRoutineDetailsRepository(previousRoutineId);
 
     if (!previousRoutine) {
-      throw new Error(`Routine with ID ${previousRoutineId} not found`);
+      const error = new Error('Routine not found');
+      error.statusCode = 404;
+      throw error;
     }
 
     const previousPlain = previousRoutine.get({ plain: true });
     const start = formatQueryDate(startingDate);
     const end = formatQueryDate(endingDate);
+    const previousEnd = previousDate != null
+      ? formatQueryDate(previousDate)
+      : null;
+
+    if (previousEnd != null) {
+      if (previousEnd < formatQueryDate(previousPlain.startingDate)) {
+        const error = new Error('previousDate before routine start');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      await timeTableCreateRepository.changeTimeTableCreate(
+        previousRoutineId,
+        {
+          endingDate: previousEnd,
+          updatedBy,
+        },
+        transaction,
+      );
+    }
 
     const overlap = await timeTableCreateRepository.checkRoutineOverlapRepository({
       classSectionTermId: previousPlain.classSectionTermId,
       startingDate: start,
       endingDate: end,
+      excludeRoutineId: previousEnd != null ? previousRoutineId : undefined,
     });
 
     if (overlap) {
-      throw new Error(
-        `A routine already exists for this class section term that overlaps with the selected date range (${start} to ${end})`,
-      );
+      const error = new Error('Routine date range overlaps');
+      error.statusCode = 409;
+      throw error;
+    }
+
+    const previousMappings = previousRoutine.timeTablecreate || [];
+    const periodInfoByCreationId = new Map();
+    const conflictOptions = {
+      allowedClassSectionTermIds: [],
+      excludeCombinedGroupId: null,
+    };
+
+    for (const mapping of previousMappings) {
+      const mappingPlain = mapping.get ? mapping.get({ plain: true }) : mapping;
+
+      if (!mappingPlain.employeeId && !mappingPlain.classRoomSectionId) {
+        continue;
+      }
+
+      let periodInfo = periodInfoByCreationId.get(mappingPlain.timeTableCreationId);
+      if (!periodInfo) {
+        periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(
+          mappingPlain.timeTableCreationId,
+        );
+        if (!periodInfo) {
+          const error = new Error('Period not found');
+          error.statusCode = 400;
+          throw error;
+        }
+        periodInfoByCreationId.set(mappingPlain.timeTableCreationId, periodInfo);
+      }
+
+      await assertNoSlotConflicts({
+        employeeId: mappingPlain.employeeId,
+        classRoomSectionId: mappingPlain.classRoomSectionId,
+        day: mappingPlain.day,
+        periodInfo,
+        startingDate: start,
+        endingDate: end,
+        conflictOptions,
+        transaction,
+      });
     }
 
     const newRoutineData = {
@@ -934,8 +1006,6 @@ export async function cloneTimeTableRoutine(previousRoutineId, startingDate, end
 
     const newRoutine = await timeTableCreateRepository.addTimeTableCreate(newRoutineData, transaction);
     const newRoutineId = newRoutine.timeTableRoutineId;
-
-    const previousMappings = previousRoutine.timeTablecreate || [];
     const newMappings = [];
 
     for (const mapping of previousMappings) {
@@ -1974,6 +2044,7 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
       classSectionTermId: placement.classSectionTermId,
       section,
       term: placement.term != null ? Number(placement.term) : null,
+      year: classSection?.year != null ? Number(classSection.year) : null,
     };
 
     const normalRoutines =
@@ -2140,6 +2211,7 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
         name: timeTableCreateName.name || "N/A",
         startDate: routine.startingDate,
         endDate: routine.endingDate,
+        year: classSection?.year != null ? Number(classSection.year) : null,
         periods: formattedPeriods
       };
     });

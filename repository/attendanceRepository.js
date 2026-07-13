@@ -2,8 +2,9 @@ import { Op, fn, col, where } from "sequelize";
 import sequelize from "../database/sequelizeConfig.js";
 import * as model from '../models/index.js';
 import moment from "moment";
+import { ATTENDANCE_PRESENT_STATUSES } from "../constant.js";
 import { buildScope, scoped } from "../utility/scoped.js";
-import { classSectionTermsInclude, studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
+import { classSectionTermsInclude, studentClassSectionTermWithSectionInclude, timeTableRoutineClassSectionInclude } from "../utility/classSectionIncludes.js";
 
 export async function addAttendance(attendanceRecords, options = {}) {
     try {
@@ -25,6 +26,127 @@ export async function checkAttendanceExists(timeTableMappingId, date) {
         return count > 0;
     } catch (error) {
         console.error("Error checking attendance existence:", error);
+        throw error;
+    }
+};
+
+export async function getAttendanceRowsByMappingAndDate(timeTableMappingId, date) {
+    try {
+        return await scoped(model.attendanceModel).findAll({
+            attributes: [
+                'studentId',
+                'attendanceStatus',
+                'notes',
+                'description',
+            ],
+            where: {
+                timeTableMappingId: Number(timeTableMappingId),
+                date: { [Op.eq]: fn("DATE", date) },
+            },
+            raw: true,
+        });
+    } catch (error) {
+        console.error("Error in getAttendanceRowsByMappingAndDate:", error);
+        throw error;
+    }
+};
+
+export async function getNextPeriodsOnSameDay(timeTableRoutineId, day, afterPeriod) {
+    try {
+        return await model.classScheduleModel.findAll({
+            where: {
+                timeTableRoutineId: Number(timeTableRoutineId),
+                day,
+                period: { [Op.gt]: Number(afterPeriod) },
+                deletedAt: null,
+                isAttendence: true,
+            },
+            attributes: [
+                'timeTableMappingId',
+                'period',
+                'day',
+                'employeeId',
+                'isSameTeacher',
+            ],
+            include: [
+                {
+                    model: model.timeTableRoutineModel,
+                    as: 'timeTablecreate',
+                    attributes: ['timeTableRoutineId', 'classSectionTermId', 'startingDate', 'endingDate'],
+                    required: true,
+                    include: [
+                        timeTableRoutineClassSectionInclude({
+                            termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
+                            sectionAttributes: ['classSectionsId', 'year', 'section'],
+                        }),
+                    ],
+                },
+                {
+                    model: model.timeTableStructurePeriodsModel,
+                    as: 'timeTablecreation',
+                    attributes: ['periodName', 'startTime', 'endTime', 'isBreak'],
+                    required: true,
+                    where: {
+                        isBreak: false,
+                    },
+                },
+                {
+                    model: model.subjectModel,
+                    as: 'timeTableSubject',
+                    attributes: ['subjectId', 'subjectName'],
+                },
+                {
+                    model: model.electiveSubjectModel,
+                    as: 'timeTableElective',
+                    attributes: ['electiveSubjectId', 'electiveSubjectName'],
+                },
+                {
+                    model: model.teacherSubjectMappingModel,
+                    as: 'timeTableTeacherSubject',
+                    attributes: ['teacherSubjectMappingId'],
+                    include: [
+                        {
+                            model: model.subjectModel,
+                            as: 'employeeSubject',
+                            attributes: ['subjectId', 'subjectName'],
+                        },
+                    ],
+                },
+            ],
+            order: [['period', 'ASC']],
+            raw: true,
+            nest: true,
+        });
+    } catch (error) {
+        console.error("Error in getNextPeriodsOnSameDay:", error);
+        throw error;
+    }
+};
+
+export async function getMarkedTimeTableMappingIdsOnDate(mappingIds, date) {
+    try {
+        const uniqueIds = [...new Set(mappingIds.map((id) => Number(id)).filter(Boolean))];
+        if (!uniqueIds.length) {
+            return new Set();
+        }
+
+        const rows = await scoped(model.attendanceModel).findAll({
+            attributes: ['timeTableMappingId'],
+            where: {
+                timeTableMappingId: { [Op.in]: uniqueIds },
+                date: { [Op.eq]: fn("DATE", date) },
+            },
+            raw: true,
+        });
+
+        const markedIds = new Set();
+        for (const row of rows) {
+            markedIds.add(Number(row.timeTableMappingId));
+        }
+
+        return markedIds;
+    } catch (error) {
+        console.error("Error in getMarkedTimeTableMappingIdsOnDate:", error);
         throw error;
     }
 };
@@ -271,32 +393,42 @@ export async function getTimetable(timeTableRoutineId) {
 }
 
 export async function getAttendanceMap(mappingIds, from, to) {
+    if (!mappingIds.length) {
+        return {};
+    }
+
+    const dateCol = sequelize.col("date");
+
     const rows = await scoped(model.attendanceModel).findAll({
         attributes: [
             "timeTableMappingId",
-            "date",
-            [sequelize.fn("COUNT", sequelize.col("student_id")), "presentCount"],
+            [fn("DATE", dateCol), "attendanceDate"],
+            [fn("COUNT", sequelize.col("student_id")), "presentCount"],
         ],
         where: {
             timeTableMappingId: mappingIds,
-            date: { [Op.between]: [from, to] },
-            attendanceStatus: "Present",
+            attendanceStatus: { [Op.in]: ATTENDANCE_PRESENT_STATUSES },
+            [Op.and]: [
+                where(fn("DATE", dateCol), { [Op.gte]: from }),
+                where(fn("DATE", dateCol), { [Op.lte]: to }),
+            ],
         },
-        group: ["timeTableMappingId", "date"],
+        group: ["timeTableMappingId", fn("DATE", dateCol)],
+        raw: true,
     });
 
     const map = {};
     for (const r of rows) {
-        const dateKey = moment(r.date).format("YYYY-MM-DD");
+        const dateKey = moment(r.attendanceDate).format("YYYY-MM-DD");
         const key = `${r.timeTableMappingId}_${dateKey}`;
-        map[key] = Number(r.get("presentCount"));
+        map[key] = Number(r.presentCount);
     }
 
     return map;
 }
 
 export async function getAttendanceMarkedMap(mappingIds, from, to) {
-    if (!mappingIds?.length) {
+    if (!mappingIds.length) {
         return {};
     }
 

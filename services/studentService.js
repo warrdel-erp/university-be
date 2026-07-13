@@ -2776,9 +2776,21 @@ export async function getStudentsByClassSection({
 export async function getAllAnswerSheets(filters) {
   const { examScheduleId } = filters;
 
-  const schedule = await studentRepository.getScopedExamScheduleForEvaluation(
-    examScheduleId,
-  );
+  let schedule;
+  try {
+    schedule = await studentRepository.getScopedExamScheduleForEvaluation(
+      examScheduleId,
+    );
+  } catch (error) {
+    const message = error.message || "Unable to load exam schedule";
+    const scopedError = new Error(
+      /academic year scope|institute scope|university scope/i.test(message)
+        ? "Academic year or institute context is required"
+        : message,
+    );
+    scopedError.statusCode = 400;
+    throw scopedError;
+  }
 
   if (!schedule) {
     const error = new Error(
@@ -2790,9 +2802,12 @@ export async function getAllAnswerSheets(filters) {
 
   const examSetupTypeTerm = schedule.examSetupTypeTerm;
   const sessionId = schedule.sessionId;
-
   const courseId = examSetupTypeTerm?.courseId;
-  const term = examSetupTypeTerm?.term;
+  const term = schedule.term ?? examSetupTypeTerm?.term;
+
+  if (sessionId == null || courseId == null || term == null) {
+    return [];
+  }
 
   const studentsdata = await studentRepository.getStudentsWithAnswerSheetStatus(
     sessionId,
@@ -2801,7 +2816,5 @@ export async function getAllAnswerSheets(filters) {
     examScheduleId,
   );
 
-  const data = studentsdata.map((student) => toPlainRow(student));
-
-  return data;
+  return studentsdata.map((student) => toPlainRow(student));
 }

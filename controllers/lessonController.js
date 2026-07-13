@@ -1,18 +1,28 @@
 import * as lesson from "../services/lessonServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
+import { getAcademicYearId } from "../utility/requestContext.js";
 
 export async function addLesson(req, res) {
-    const { name, subjectId, academicYearId, sessionId } = req.body
+    const { name, subjectId, sessionId, lectureWindowId } = req.body;
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if (!(name && subjectId && academicYearId && sessionId)) {
-            return res.status(400).send('name,subjectId,academicYearId and sessionId is required')
+        const academicYearId = getAcademicYearId();
+        if (!academicYearId) {
+            return res.status(400).send("academicYearId not found in user session");
         }
-        const lessonData = await lesson.addLesson(req.body, createdBy, updatedBy);
+        if (!(name && subjectId && sessionId && lectureWindowId)) {
+            return res.status(400).send("name, subjectId, sessionId and lectureWindowId are required");
+        }
+        const lessonData = await lesson.addLesson(
+            { ...req.body, academicYearId: Number(academicYearId) },
+            createdBy,
+            updatedBy,
+        );
         res.status(201).json({ message: "Data added successfully", lessonData });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const statusCode = /not found/i.test(error.message) ? 404 : 500;
+        res.status(statusCode).json({ error: error.message });
     }
 };
 
@@ -142,5 +152,32 @@ export async function getSimpleLessonList(req, res) {
         res.status(200).json(result);
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+};
+
+export async function linkLessonsToWindow(req, res) {
+    try {
+        const academicYearId = getAcademicYearId();
+        if (!academicYearId) {
+            return ErrorResponse(res, 400, "academicYearId not found in user session");
+        }
+
+        const { lessonId } = req.query;
+        const { lectureWindowId } = req.body;
+        const updatedBy = req.user.userId;
+
+        const linkedCount = await lesson.linkLessonsToWindow(
+            lectureWindowId,
+            [lessonId],
+            updatedBy,
+            Number(academicYearId),
+        );
+        const result = await lesson.getLectureWindowById(lectureWindowId, Number(academicYearId));
+
+        return SuccessResponse(res, 200, "Lessons linked successfully", { linkedCount, result });
+    } catch (error) {
+        console.error("Error in linkLessonsToWindow:", error);
+        const statusCode = /not found/i.test(error.message) ? 404 : 500;
+        return ErrorResponse(res, statusCode, error.message || "Internal Server Error");
     }
 };

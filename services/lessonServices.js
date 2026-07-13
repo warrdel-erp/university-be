@@ -1,18 +1,23 @@
 import * as lesson from "../repository/lessonRepository.js";
+import * as lectureWindowRepository from "../repository/lectureWindowRepository.js";
 import sequelize from '../database/sequelizeConfig.js';
 
 export async function addLesson(data, createdBy, updatedBy) {
-    try {
-        const payload = {
-            ...data,
-            createdBy,
-            updatedBy,
-        };
-        return await lesson.addLesson(payload);
-    } catch (error) {
-        console.error("Error in addLesson:", error);
-        throw error;
+    const window = await lectureWindowRepository.getLectureWindowById(
+        data.lectureWindowId,
+        data.academicYearId,
+    );
+    if (!window) {
+        throw new Error("Lecture window not found");
     }
+
+    const payload = {
+        ...data,
+        lectureWindowId: window.lectureWindowId,
+        createdBy,
+        updatedBy,
+    };
+    return lesson.addLesson(payload);
 }
 
 export async function getLessonDetails(academicYearId) {
@@ -241,4 +246,17 @@ export async function getEmployeeSubjectAndLesson(userId, courseId, sessionId, s
 
 export async function getSimpleLessonList(whereClause) {
     return await lesson.getSimpleLessonList(whereClause);
+}
+
+export async function linkLessonsToWindow(lectureWindowId, lessonIds, updatedBy, academicYearId) {
+    const window = await lectureWindowRepository.getLectureWindowById(lectureWindowId, academicYearId);
+    if (!window) {
+        throw new Error("Lecture window not found");
+    }
+
+    return lectureWindowRepository.linkLessonsToWindow(lectureWindowId, lessonIds, updatedBy);
+}
+
+export async function getLectureWindowById(lectureWindowId, academicYearId) {
+    return lectureWindowRepository.getLectureWindowById(lectureWindowId, academicYearId);
 }
