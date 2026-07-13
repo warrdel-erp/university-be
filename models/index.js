@@ -1224,8 +1224,8 @@ feeTypeCatalogModel.hasMany(studentFeeInvoiceItemsModel, {
 lessonModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "lessonSubject" });
 subjectModel.hasMany(lessonModel, { foreignKey: "subjectId", as: "lessonSubject" });
 
-lessonModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "employee" });
-employeeModel.hasMany(lessonModel, { foreignKey: "employeeId", as: "lessons" });
+lessonModel.belongsTo(userModel, { foreignKey: "userId", as: "user" });
+userModel.hasMany(lessonModel, { foreignKey: "userId", as: "lessons" });
 
 lectureWindowModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "lectureWindowSubject" });
 subjectModel.hasMany(lectureWindowModel, { foreignKey: "subjectId", as: "lectureWindows" });
@@ -1852,6 +1852,7 @@ export {
   s3FileModel,
   pdfSplitJobModel,
   hodDepartmentModel,
+  userModel as users,
 };
 
 import sequelize from "../database/sequelizeConfig.js";

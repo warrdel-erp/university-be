@@ -89,7 +89,14 @@ export async function getLessonDetails(academicYearId) {
         },
         {
           model: model.users, as: "user",
-          attributes: ["userId", "campusId", "instituteId", "employeeCode", "employeeName"],
+          attributes: ["userId"],
+          include: [
+            {
+              model: model.employeeModel,
+              as: "employee",
+              attributes: ["campusId", "instituteId", "employeeCode", "employeeName"],
+            },
+          ],
         },
         lectureWindowInclude,
       ],
@@ -301,7 +308,7 @@ export async function getMapping(academicYearId) {
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             },
             {
-              model: model.users, as: "user",
+              model: model.employeeModel, as: "employeeDetails",
               attributes: ["employeeName", "employeeCode", "pickColor", "userId"],
             },
             {
@@ -639,20 +646,20 @@ export async function getEmployeeSubjectAndLesson(userId, courseId, sessionId, s
     if (hasEmployeeId && hasSubjectId) {
       const lessons = await scoped(model.lessonModel).findAll({
         where: {
-          employeeId: actualEmployeeId,
+          userId: parsedEmployeeId,
           subjectId: parsedSubjectId,
           ...(hasSessionId && { sessionId: parsedSessionId }),
         },
         attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
         include: [
           {
-            model: model.employeeModel, as: "employee",
+            model: model.userModel, as: "user",
             required: true,
             paranoid: false,
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'password'] },
             include: [{
-              model: model.userModel, as: "user",
-              attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'password'] },
+              model: model.employeeModel, as: "employee",
+              attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
             }]
           },
           {
@@ -711,7 +718,7 @@ export async function getEmployeeSubjectAndLesson(userId, courseId, sessionId, s
     const lessonWhere = {
       ...buildScope(model.lessonModel),
       ...(hasSessionId && { sessionId: parsedSessionId }),
-      ...(hasEmployeeId && actualEmployeeId && { employeeId: actualEmployeeId }),
+      ...(hasEmployeeId && parsedEmployeeId && { userId: parsedEmployeeId }),
       ...(hasSubjectId && { subjectId: parsedSubjectId }),
     };
 
