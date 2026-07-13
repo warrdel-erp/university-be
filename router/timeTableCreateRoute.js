@@ -62,9 +62,12 @@ const getTimeTableCreateListQuerySchema = z.object({
 
 const getTimeTableByCourseAndSectionQuerySchema = z.object({
     courseId: positiveIntegerId,
-    classSectionTermId: positiveIntegerId,
+    classSectionTermId: optionalPositiveId,
     timeTableType: z.string().optional(),
-});
+}).refine(
+    (data) => data.timeTableType === 'elective' || data.classSectionTermId != null,
+    { message: 'classSectionTermId is required', path: ['classSectionTermId'] },
+);
 
 const addTimeTableCreateSchema = z.object({
     timeTableNameId: positiveIntegerId,
