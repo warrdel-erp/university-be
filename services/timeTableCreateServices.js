@@ -2044,6 +2044,7 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
       classSectionTermId: placement.classSectionTermId,
       section,
       term: placement.term != null ? Number(placement.term) : null,
+      year: classSection?.year != null ? Number(classSection.year) : null,
     };
 
     const normalRoutines =
@@ -2210,6 +2211,7 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
         name: timeTableCreateName.name || "N/A",
         startDate: routine.startingDate,
         endDate: routine.endingDate,
+        year: classSection?.year != null ? Number(classSection.year) : null,
         periods: formattedPeriods
       };
     });

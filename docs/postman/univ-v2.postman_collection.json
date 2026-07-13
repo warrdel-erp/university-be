@@ -3407,7 +3407,7 @@
                     }
                   ]
                 },
-                "description": "**GET /timeTableCreate/getRoutine**\n\nFull weekly grid for a class section term (normal + elective, weekOff, teacher/subject/room per slot).\n\n**Required query:** `classSectionTermId`.\n\n**Response keys:** `classSectionTermId`, `section`, `term`, `routines`, `classSection`."
+                "description": "**GET /timeTableCreate/getRoutine**\n\nFull weekly grid for a class section term (normal + elective, weekOff, teacher/subject/room per slot).\n\n**Required query:** `classSectionTermId`.\n\n**Auth:** Bearer token required.\n\n**Response keys:** `classSectionTermId`, `section`, `term`, `year`, `routines`, `classSection`.\n\n### `routines[]` item fields\n| Field | Type | Description |\n|-------|------|-------------|\n| `timeTableRoutineId` | Integer | Routine PK |\n| `isPublished` | Boolean | Publish flag |\n| `timeTableNameId` | Integer | Structure PK |\n| `name` | String | Structure name |\n| `startDate` | String | Routine start `YYYY-MM-DD` |\n| `endDate` | String | Routine end `YYYY-MM-DD` |\n| `year` | Integer\\|null | Class section program year |\n| `periods` | Array | Period grid with days/slots |\n\n**Changelog:** Added `year` on each routine and on the top-level response."
               },
               "response": []
             },
