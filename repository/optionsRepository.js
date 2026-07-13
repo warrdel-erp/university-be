@@ -10,9 +10,12 @@ export async function getAffiliatedUniversityOptions() {
     });
 }
 
-export async function getCourseOptions() {
+export async function getCourseOptions(courseLevelId) {
     return await scoped(model.courseModel).findAll({
         attributes: [['course_name', 'label'], ['course_id', 'value']],
+        where: {
+            ...(courseLevelId != null && { course_levelId: Number(courseLevelId) }),
+        },
     });
 }
 

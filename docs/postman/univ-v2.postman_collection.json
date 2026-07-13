@@ -7712,15 +7712,24 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/options/courses",
+              "raw": "{{baseurl}}/options/courses?courseLevelId=",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "options",
                 "courses"
+              ],
+              "query": [
+                {
+                  "key": "courseLevelId",
+                  "value": "",
+                  "description": "Optional — filter courses by course level (employee_code_master_type_id)",
+                  "disabled": true
+                }
               ]
-            }
+            },
+            "description": "**GET /options/courses**\n\nCourse dropdown options (`label` / `value`).\n\n**Auth:** Bearer token required.\n\n### Query\n| Field | Required | Type | Notes |\n|-------|----------|------|-------|\n| `courseLevelId` | no | int | Filters by `course.course_level_id` |\n\n**Changelog:** Added optional `courseLevelId` query filter."
           },
           "response": []
         },
