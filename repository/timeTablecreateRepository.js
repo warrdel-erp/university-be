@@ -381,14 +381,19 @@ export async function addtimeTableMapping(data, transaction) {
 
 export async function getPeriodInfoRepository(timeTableCreationId) {
   try {
+    if (timeTableCreationId == null || !Number.isFinite(Number(timeTableCreationId))) {
+      return null;
+    }
+
     return await model.timeTableStructurePeriodsModel.findOne({
-      where: { timeTableCreationId },
-      attributes: ["startTime", "endTime"],
+      where: { timeTableCreationId: Number(timeTableCreationId) },
+      attributes: ["startTime", "endTime", "timeTableCreationId"],
       include: [
         {
           model: model.timeTableStructureModel,
           as: "timeTableName",
-          attributes: ["periodLength"]
+          attributes: ["periodLength"],
+          required: false,
         }
       ]
     });

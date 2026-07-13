@@ -34,6 +34,10 @@ const classSectionsQuerySchema = z.object({
     year: optionalPositiveIntegerId,
 });
 
+const coursesQuerySchema = z.object({
+    courseLevelId: optionalPositiveIntegerId,
+});
+
 const specializationsQuerySchema = z.object({
     courseId: optionalPositiveIntegerId,
 });
@@ -59,7 +63,12 @@ const topicsQuerySchema = z.object({
 
 router.get('/affiliatedUniversity', userAuth, optionsController.getAffiliatedUniversityOptions);
 
-router.get('/courses', userAuth, optionsController.getCourseOptions);
+router.get(
+    '/courses',
+    userAuth,
+    validate({ query: coursesQuerySchema }),
+    optionsController.getCourseOptions,
+);
 
 router.get(
     '/courseTerms',
