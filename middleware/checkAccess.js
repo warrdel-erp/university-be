@@ -18,6 +18,17 @@ export function checkAccess(permissionKey, resource) {
         return res.status(401).json({ message: "User context not found" });
       }
 
+      // Special case: if the user is flagged as a teacher, bypass all permission checks.
+      if (req.user.isTeacher === true) {
+        req.accessFilter = null;
+        const store = requestContext.getStore();
+        if (store) {
+          store.accessFilter = null;
+          store.permissionScope = null;
+        }
+        return next();
+      }
+
       const activeRoleId = req.user.defaultRoleId;
 
       if (!activeRoleId) {
@@ -67,6 +78,17 @@ export function checkAccessAny(permissionKeys, resource) {
     try {
       if (!req.user) {
         return res.status(401).json({ message: "User context not found" });
+      }
+
+      // Special case: if the user is flagged as a teacher, bypass all permission checks.
+      if (req.user.isTeacher === true) {
+        req.accessFilter = null;
+        const store = requestContext.getStore();
+        if (store) {
+          store.accessFilter = null;
+          store.permissionScope = null;
+        }
+        return next();
       }
 
       const activeRoleId = req.user.defaultRoleId;

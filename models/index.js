@@ -448,8 +448,8 @@ employeeCorAddressModel.belongsTo(employeeCodeMasterType, { foreignKey: "c_city"
 employeeCodeMasterType.hasMany(employeeCorAddressModel, { foreignKey: "c_city", as: "codeMasterCity" });
 
 // teacher subject mapping
-employeeModel.hasMany(teacherSubjectMappingModel, { foreignKey: "employeeId", as: "teacherEmployeeData" });
-teacherSubjectMappingModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "teacherEmployeeData" });
+employeeModel.hasMany(teacherSubjectMappingModel, { foreignKey: "userId", sourceKey: "userId", as: "teacherEmployeeData" });
+teacherSubjectMappingModel.belongsTo(employeeModel, { foreignKey: "userId", targetKey: "userId", as: "teacherEmployeeData" });
 
 subjectModel.hasMany(teacherSubjectMappingModel, {
   foreignKey: "subjectId",
@@ -461,8 +461,8 @@ teacherSubjectMappingModel.belongsTo(subjectModel, {
 });
 
 // teacher section mapping
-employeeModel.hasMany(teacherSectionMappingModel, { foreignKey: "employeeId", as: "employeeData" });
-teacherSectionMappingModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "employeeData" });
+employeeModel.hasMany(teacherSectionMappingModel, { foreignKey: "userId", sourceKey: "userId", as: "employeeData" });
+teacherSectionMappingModel.belongsTo(employeeModel, { foreignKey: "userId", targetKey: "userId", as: "employeeData" });
 
 employeeModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "employeeCampus" });
 campusModel.hasMany(employeeModel, { foreignKey: "campus_id", as: "employeeCampus" });

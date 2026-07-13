@@ -669,6 +669,35 @@ export async function getGrantedAccess(userId) {
     throw new Error("User not found");
   }
 
+  // ── Teacher special case ────────────────────────────────────────────────────
+  // Teachers have no perm_access_inst entries, so we derive their campus,
+  // institute and academic years directly from their employee record.
+  if (user.isTeacher === true) {
+    const employee = await model.employeeModel.findOne({
+      where: { userId },
+      attributes: ['campusId', 'instituteId'],
+    });
+
+    const campuses = employee?.campusId
+      ? await model.campusModel.findAll({ where: { campusId: employee.campusId } })
+      : [];
+
+    const institutes = employee?.instituteId
+      ? await model.instituteModel.findAll({ where: { instituteId: employee.instituteId } })
+      : [];
+
+    const academicYears = employee?.instituteId
+      ? await model.acedmicYearModel.findAll({
+          where: { instituteId: employee.instituteId, isActive: true },
+        })
+      : [];
+
+    const university = await model.universityModel.findByPk(user.universityId);
+
+    return { university, campuses, institutes, academicYears, roles: [] };
+  }
+  // ────────────────────────────────────────────────────────────────────────────
+
   // 1. Fetch user's permission scopes for perm_access_inst
   const accessEntries = await model.userRolePermissionModel.findAll({
     where: {

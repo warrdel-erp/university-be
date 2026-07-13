@@ -13,7 +13,7 @@ const teacherSectionMappingModel = sequelize.define(
             autoIncrement: true,
             field: 'teacher_section_mapping_id'
         },
-        employeeId: {
+        userId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'user_id',

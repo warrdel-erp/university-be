@@ -644,7 +644,7 @@ export async function getTeacherSubjectsFromSchedule(employeeId) {
                           SELECT 1
                           FROM teacher_subject_mapping tsm
                           WHERE tsm.teacher_subject_mapping_id = class_schedule_item.teacher_subject_mapping_id
-                          AND tsm.employee_id = ${actualEmployeeId}
+                          AND tsm.user_id = ${employee.userId}
                         )
                       `),
                   ],
