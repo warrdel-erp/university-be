@@ -85,6 +85,16 @@ const timeTableStructureModel = sequelize.define(
             allowNull: true,
             field: 'starting_time'
         },
+        startingDate: {
+            type: DataTypes.DATEONLY,
+            allowNull: true,
+            field: 'starting_date'
+        },
+        endingDate: {
+            type: DataTypes.DATEONLY,
+            allowNull: true,
+            field: 'ending_date'
+        },
         weekOff: {
             type: DataTypes.JSON,
             allowNull: true,

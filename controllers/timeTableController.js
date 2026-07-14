@@ -106,3 +106,20 @@ export const deleteTimeTableStructure = async (req, res) => {
     return ErrorResponse(res, 400, error.message || "Internal Server Error");
   }
 };
+
+export const updateStructureEndingDate = async (req, res) => {
+  try {
+    const { timeTableNameId, endingDate } = req.body;
+    const updatedBy = req.user.userId;
+
+    const result = await timeTableServices.updateStructureEndingDate(
+      timeTableNameId,
+      endingDate,
+      updatedBy,
+    );
+
+    return SuccessResponse(res, 200, "Structure endingDate updated successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, 400, error.message || "Internal Server Error");
+  }
+};

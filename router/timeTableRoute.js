@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { addTimeTable, addTimeTablePeriod, getTimeTableDetails, getSingleTimeTableDetails, updateTimeTable, deleteTimeTable, deleteTimeTableStructure, getAllTimeTableName } from '../controllers/timeTableController.js';
+import { addTimeTable, addTimeTablePeriod, getTimeTableDetails, getSingleTimeTableDetails, updateTimeTable, deleteTimeTable, deleteTimeTableStructure, getAllTimeTableName, updateStructureEndingDate } from '../controllers/timeTableController.js';
 import userAuth from '../middleware/authUser.js';
 import { validate } from '../utility/validation.js';
 
@@ -26,11 +26,20 @@ const addTimeTableSchema = z.object({
     periodLength: z.coerce.number().int().positive().optional(),
     periodGap: z.coerce.number().int().min(0).optional(),
     startingTime: z.string().optional(),
+    startingDate: z.string().min(1, 'startingDate is required'),
+    endingDate: z.string().min(1, 'endingDate is required'),
     type: z.enum(['Automatic', 'Manual']),
     courseId: positiveIntegerId,
     weekOff: z.array(z.string()).optional(),
     isCourse: z.boolean().optional(),
 }).superRefine((data, ctx) => {
+    if (new Date(data.endingDate) < new Date(data.startingDate)) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'endingDate cannot be before startingDate',
+            path: ['endingDate'],
+        });
+    }
     if (data.type !== 'Automatic') {
         return;
     }
@@ -75,12 +84,18 @@ const deleteTimeTableStructureQuerySchema = z.object({
     timeTableNameId: positiveIntegerId,
 });
 
+const updateStructureEndingDateSchema = z.object({
+    timeTableNameId: positiveIntegerId,
+    endingDate: z.string().min(1, 'endingDate is required'),
+});
+
 router.post('/', userAuth, validate({ body: addTimeTableSchema }), addTimeTable);
 router.post('/period', userAuth, validate({ body: addTimeTablePeriodSchema }), addTimeTablePeriod);
 router.get('/all_name', userAuth, validate({ query: timeTableListQuerySchema }), getAllTimeTableName);
 router.get('/', userAuth, validate({ query: timeTableListQuerySchema }), getTimeTableDetails);
 router.get('/single', userAuth, validate({ query: timeTableListQuerySchema }), getSingleTimeTableDetails);
 router.patch('/', userAuth, validate({ body: updateTimeTableSchema }), updateTimeTable);
+router.patch('/structure', userAuth, validate({ body: updateStructureEndingDateSchema }), updateStructureEndingDate);
 router.delete('/', userAuth, validate({ query: deleteTimeTableQuerySchema }), deleteTimeTable);
 router.delete('/structure', userAuth, validate({ query: deleteTimeTableStructureQuerySchema }), deleteTimeTableStructure);
 

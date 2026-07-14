@@ -19,6 +19,32 @@ import { randomUUID } from "crypto";
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+function assertRoutineDatesWithinStructure(structure, startingDate, endingDate) {
+  const structureStart = structure.startingDate != null
+    ? formatQueryDate(structure.startingDate)
+    : null;
+  const structureEnd = structure.endingDate != null
+    ? formatQueryDate(structure.endingDate)
+    : null;
+
+  if (!structureStart || !structureEnd) {
+    return;
+  }
+
+  if (!startingDate || !endingDate) {
+    throw new Error('startingDate and endingDate are required and must fall within the structure date window');
+  }
+
+  const routineStart = formatQueryDate(startingDate);
+  const routineEnd = formatQueryDate(endingDate);
+
+  if (routineStart < structureStart || routineEnd > structureEnd) {
+    throw new Error(
+      `Routine dates (${routineStart} to ${routineEnd}) must be inside the structure window (${structureStart} to ${structureEnd})`,
+    );
+  }
+}
+
 const COPY_OVERRIDE_FIELDS = [
   'timeTableRoutineId', 'employeeId', 'subjectId', 'electiveSubjectId',
   'teacherSubjectMappingId', 'classRoomSectionId', 'isSameTeacher', 'teacherType',
@@ -519,6 +545,17 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
     delete placement.classSectionsId;
 
     if (
+      placement.startingDate
+      && placement.endingDate
+    ) {
+      assertRoutineDatesWithinStructure(
+        structure,
+        placement.startingDate,
+        placement.endingDate,
+      );
+    }
+
+    if (
       placement.classSectionTermId
       && placement.startingDate
       && placement.endingDate
@@ -921,6 +958,14 @@ export async function cloneTimeTableRoutine(
       ? formatQueryDate(previousDate)
       : null;
 
+    const structure = await getTimeTableStructureById(previousPlain.timeTableNameId, { transaction });
+    if (!structure) {
+      const error = new Error('timeTableNameId not found');
+      error.statusCode = 404;
+      throw error;
+    }
+    assertRoutineDatesWithinStructure(structure, start, end);
+
     if (previousEnd != null) {
       if (previousEnd < formatQueryDate(previousPlain.startingDate)) {
         const error = new Error('previousDate before routine start');
@@ -1035,6 +1080,14 @@ export async function cloneTimeTableRoutine(
 export async function changeTimeTableCreate(body, updatedBy) {
   try {
     const { timeTableRoutineId, classSectionTermId, ...updateData } = body;
+    const current = await timeTableCreateRepository.getRoutineByIdRepository(timeTableRoutineId);
+    if (!current) {
+      throw new Error('Routine not found');
+    }
+    if (current.isPublish) {
+      throw new Error('Published routine cannot be updated');
+    }
+
     let placementFields = { ...updateData };
 
     if (classSectionTermId != null) {
@@ -1046,10 +1099,17 @@ export async function changeTimeTableCreate(body, updatedBy) {
     }
 
     if (placementFields.startingDate || placementFields.endingDate || placementFields.classSectionTermId) {
-      const current = await timeTableCreateRepository.getRoutineByIdRepository(timeTableRoutineId);
       const resolvedTermId = placementFields.classSectionTermId || current.classSectionTermId;
       const start = placementFields.startingDate || current.startingDate;
       const end = placementFields.endingDate || current.endingDate;
+
+      if (placementFields.startingDate || placementFields.endingDate) {
+        const structure = await getTimeTableStructureById(current.timeTableNameId);
+        if (!structure) {
+          throw new Error('timeTableNameId not found');
+        }
+        assertRoutineDatesWithinStructure(structure, start, end);
+      }
 
       const overlap = await timeTableCreateRepository.checkRoutineOverlapRepository({
         classSectionTermId: resolvedTermId,
