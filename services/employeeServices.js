@@ -1780,17 +1780,67 @@ async function groupConsecutivePeriods(classes, sessionalBreak = false) {
     }
 
     if (isConsecutive) {
-      // Consecutive period
+      // Consecutive period — extend group through this period's end time
       currentGroup.classScheduleItems.push(item);
       currentGroup.periods.push(periodNum);
+
+      const structurePeriods = breakPeriodsMap.get(item.timeTableNameId) || [];
+      let structurePeriod = null;
+      for (const p of structurePeriods) {
+        if (p.timeTableCreationId === item.timeTableCreationId) {
+          structurePeriod = p;
+          break;
+        }
+      }
+
+      const creation = item.timeTablecreation || {};
+      const itemStart = creation.startTime || (structurePeriod && structurePeriod.startTime) || null;
+      const itemEnd = creation.endTime || (structurePeriod && structurePeriod.endTime) || null;
+      if (itemEnd) {
+        currentGroup.endTime = itemEnd;
+        currentGroup.timeTablecreation = {
+          ...(currentGroup.timeTablecreation || {}),
+          endTime: itemEnd,
+        };
+      }
+      if (itemStart && !currentGroup.startTime) {
+        currentGroup.startTime = itemStart;
+        if (!currentGroup.timeTablecreation || !currentGroup.timeTablecreation.startTime) {
+          currentGroup.timeTablecreation = {
+            ...(currentGroup.timeTablecreation || {}),
+            startTime: itemStart,
+          };
+        }
+      }
     } else {
-      // New group
+      // New group — span starts at this period
+      const structurePeriods = breakPeriodsMap.get(item.timeTableNameId) || [];
+      let structurePeriod = null;
+      for (const p of structurePeriods) {
+        if (p.timeTableCreationId === item.timeTableCreationId) {
+          structurePeriod = p;
+          break;
+        }
+      }
+
+      const creation = item.timeTablecreation || {};
+      const startTime = creation.startTime || (structurePeriod && structurePeriod.startTime) || null;
+      const endTime = creation.endTime || (structurePeriod && structurePeriod.endTime) || null;
+      const periodName = creation.periodName || (structurePeriod && structurePeriod.periodName) || null;
       currentGroup = {
         ...item,
         subjectId: subj.id,
         subjectName: subj.name,
         classScheduleItems: [item],
-        periods: [periodNum]
+        periods: [periodNum],
+        startTime,
+        endTime,
+        timeTablecreation: {
+          timeTableCreationId: item.timeTableCreationId,
+          periodName,
+          startTime,
+          endTime,
+        },
       };
       groupedResult.push(currentGroup);
     }
