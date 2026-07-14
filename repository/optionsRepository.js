@@ -145,10 +145,137 @@ export async function getFeePlanProfileOptions(courseId, sessionId) {
     return { courseSessionId, rows };
 }
 
-export async function getTopicOptions(filters) {
-    const { instituteId: _i, universityId: _u, ...safeFilters } = filters ?? {};
-    return await scoped(model.topicModel).findAll({
-        attributes: [['name', 'label'], ['topic_id', 'value']],
-        where: safeFilters,
+const lectureWindowOptionAttributes = [
+    'lectureWindowId',
+    'name',
+    'description',
+    'startDate',
+    'endDate',
+    'subjectId',
+    'employeeId',
+    'sessionId',
+];
+
+const lessonOptionAttributes = [
+    'lessonId',
+    'name',
+    'description',
+    'lectureWindowId',
+    'subjectId',
+    'employeeId',
+    'sessionId',
+];
+
+export async function getEmployeeOptionDetail(employeeId) {
+    return scoped(model.employeeModel).findOne({
+        raw: true,
+        nest: true,
+        where: { employeeId: Number(employeeId) },
+        attributes: ['employeeId', 'employeeName', 'employeeCode', 'pickColor'],
+    });
+}
+
+export async function getSubjectOptionDetail(subjectId) {
+    return scoped(model.subjectModel).findOne({
+        raw: true,
+        nest: true,
+        where: { subjectId: Number(subjectId) },
+        attributes: ['subjectId', 'subjectName', 'courseId', 'term'],
+    });
+}
+
+export async function getLectureWindowOptionRows(filters) {
+    const where = {
+        academicYearId: Number(filters.academicYearId),
+        employeeId: Number(filters.employeeId),
+        subjectId: Number(filters.subjectId),
+    };
+
+    return scoped(model.lectureWindowModel).findAll({
+        raw: true,
+        nest: true,
+        attributes: ['lectureWindowId', 'name'],
+        where,
+        order: [['startDate', 'DESC'], ['lectureWindowId', 'DESC']],
+    });
+}
+
+export async function getLectureWindowOptionDetail(lectureWindowId, academicYearId) {
+    return scoped(model.lectureWindowModel).findOne({
+        raw: true,
+        nest: true,
+        attributes: lectureWindowOptionAttributes,
+        where: {
+            lectureWindowId: Number(lectureWindowId),
+            academicYearId: Number(academicYearId),
+        },
+        include: [
+            {
+                model: model.subjectModel,
+                as: 'lectureWindowSubject',
+                attributes: ['subjectId', 'subjectName', 'courseId'],
+            },
+            {
+                model: model.employeeModel,
+                as: 'lectureWindowEmployee',
+                attributes: ['employeeId', 'employeeName', 'employeeCode', 'pickColor'],
+            },
+            {
+                model: model.sessionModel,
+                as: 'lectureWindowSession',
+                attributes: ['sessionId', 'sessionName', 'startingDate', 'endingDate'],
+            },
+        ],
+    });
+}
+
+export async function getLessonOptionRows(filters) {
+    return scoped(model.lessonModel).findAll({
+        raw: true,
+        nest: true,
+        attributes: ['lessonId', 'name'],
+        where: {
+            lectureWindowId: Number(filters.lectureWindowId),
+            academicYearId: Number(filters.academicYearId),
+        },
+        order: [['lessonId', 'ASC']],
+    });
+}
+
+export async function getLessonOptionDetail(lessonId, academicYearId) {
+    return scoped(model.lessonModel).findOne({
+        raw: true,
+        nest: true,
+        attributes: lessonOptionAttributes,
+        where: {
+            lessonId: Number(lessonId),
+            academicYearId: Number(academicYearId),
+        },
+        include: [
+            {
+                model: model.lectureWindowModel,
+                as: 'lectureWindow',
+                attributes: lectureWindowOptionAttributes,
+            },
+            {
+                model: model.subjectModel,
+                as: 'lessonSubject',
+                attributes: ['subjectId', 'subjectName', 'courseId'],
+            },
+        ],
+    });
+}
+
+export async function getTopicOptionRows(lessonId) {
+    return scoped(model.topicModel).findAll({
+        attributes: ['topicId', 'name'],
+        where: { lessonId: Number(lessonId) },
+        include: [{
+            model: model.subTopicModel,
+            as: 'subTopic',
+            attributes: ['subTopicId', 'name'],
+            required: false,
+        }],
+        order: [['topicId', 'ASC']],
     });
 }

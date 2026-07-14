@@ -1952,10 +1952,15 @@ export async function getTodayClassScheduleForEmployee(employeeId, currentDate, 
   }
 }
 
+/**
+ * Loads published routine mappings for a teacher where routine.startingDate < currentDate.
+ * Used by GET /employee/pastSchedule; service layer expands each mapping into past dates.
+ */
 export async function getPastClassSchedulesForEmployee(
   employeeId,
   academicYearId,
-  currentDate
+  currentDate,
+  sessionId
 ) {
   try {
     const result = await model.classScheduleModel.findAll({
@@ -1992,9 +1997,14 @@ export async function getPastClassSchedulesForEmployee(
             {
               model: model.courseModel,
               as: "timeTableCourse",
-              attributes: ['courseName']
+              attributes: ['courseId', 'courseName']
             },
             timeTableRoutineClassSectionInclude({
+              sectionRequired: Boolean(sessionId),
+              sectionWhere: {
+                ...(sessionId && { sessionId }),
+              },
+              termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
               sectionAttributes: ['year', 'section', 'classSectionsId'],
             })
           ]
@@ -2002,7 +2012,8 @@ export async function getPastClassSchedulesForEmployee(
         {
           model: model.timeTableStructurePeriodsModel,
           as: "timeTablecreation",
-          attributes: ['periodName', 'startTime', 'endTime']
+          required: true,
+          attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime']
         },
         {
           model: model.teacherSubjectMappingModel,

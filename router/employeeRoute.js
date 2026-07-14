@@ -22,6 +22,7 @@ const optionalPositiveId = z.preprocess(
     z.coerce.number().int().positive().optional(),
 );
 
+// Shared query schema for GET /employee/schedule and GET /employee/pastSchedule.
 const scheduleQuerySchema = z.object({
     employeeId: z.coerce.number().int().positive(),
     date: z.string().optional(),
@@ -54,7 +55,14 @@ router.get('/sectionDates', userAuth, validate({ query: sectionDatesQuerySchema 
 
 router.get('/sectionCounts', userAuth, getSectionCounts);
 
-router.get('/pastSchedule', userAuth, getPastClassSchedules);
+/**
+ * GET /employee/pastSchedule
+ * Query: employeeId (required), date?, sessionId?, groupPeriods? (consecutive | sessional)
+ * Response: { teacher, schedules[] } — past slots before cutoff date, newest first.
+ * groupPeriods merges consecutive periods (same as /schedule); grouped rows include classScheduleItems[].
+ */
+router.get('/pastSchedule', userAuth, validate({ query: scheduleQuerySchema }), getPastClassSchedules);
+
 router.get('/upcomingSchedule', userAuth, getUpcomingClassSchedules);
 
 router.get('/courses', userAuth, getTeacherCourses);

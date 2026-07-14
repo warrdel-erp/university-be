@@ -1549,8 +1549,30 @@ async function applyGroupAttendanceStatus(groups) {
   return groups;
 }
 
-export async function getPastClassSchedules(employeeId, academicYearId, currentDateString, groupPeriods = false) {
-  const rawSchedules = await timeTableCreateRepository.getPastClassSchedulesForEmployee(employeeId, academicYearId, currentDateString);
+/**
+ * Past teacher schedule: expands recurring weekly mappings into dated occurrences
+ * strictly before currentDateString, enriches attendance, optionally groups periods.
+ *
+ * @param {number|string} employeeId
+ * @param {number} academicYearId
+ * @param {string} currentDateString - YYYY-MM-DD cutoff (dates before this only)
+ * @param {false|'consecutive'|'sessional'} groupPeriods
+ * @param {number} [sessionId] - when set, only routines for that session
+ * @returns {Promise<{ teacher: object|null, schedules: object[] }>}
+ */
+export async function getPastClassSchedules(
+  employeeId,
+  academicYearId,
+  currentDateString,
+  groupPeriods = false,
+  sessionId,
+) {
+  const rawSchedules = await timeTableCreateRepository.getPastClassSchedulesForEmployee(
+    employeeId,
+    academicYearId,
+    currentDateString,
+    sessionId,
+  );
 
   const daysOfWeek = {
     'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3,
@@ -1605,7 +1627,6 @@ export async function getPastClassSchedules(employeeId, academicYearId, currentD
     const grouped = applyGroupAttendanceStatus(
       await groupConsecutivePeriods(schedules, groupPeriods === 'sessional'),
     );
-    // Sort descending by date
     grouped.sort((a, b) => new Date(b.date) - new Date(a.date));
     return { teacher, schedules: grouped };
   }
