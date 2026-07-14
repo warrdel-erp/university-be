@@ -612,15 +612,27 @@ export async function getTimeTableByCourseAndSection(courseId, classSectionTermI
     if (!Array.isArray(data) || !data.length) return [];
 
     return data.map((item) => {
+      const structure = item?.timeTableCreateName;
+      let weekOff = structure?.weekOff ?? [];
+      if (typeof weekOff === 'string') {
+        try {
+          weekOff = JSON.parse(weekOff);
+        } catch {
+          weekOff = [];
+        }
+      }
+      if (!Array.isArray(weekOff)) {
+        weekOff = [];
+      }
+
       const periods =
-        item?.timeTableCreateName?.timeTableName?.map((period) => ({
+        structure?.timeTableName?.map((period) => ({
           startTime: period.startTime,
           endTime: period.endTime,
           timeTableCreationId: period.timeTableCreationId,
           type: period.type,
           periodGap: period.periodGap,
           periodLength: period.periodLength,
-          weekOff: period.weekOff,
           isBreak: period.isBreak,
           periodName: period.periodName,
           classSectionsId: item.classSectionsId,
@@ -630,11 +642,12 @@ export async function getTimeTableByCourseAndSection(courseId, classSectionTermI
       return {
         timeTableRoutineId: item.timeTableRoutineId,
         timeTableType: item.timeTableType,
-        name: item?.timeTableCreateName?.name,
+        name: structure?.name,
         isPublish: item.isPublish,
-        timeTableNameId: item?.timeTableCreateName?.timeTableNameId,
-        maximumPeriod: item?.timeTableCreateName?.timeTableName?.[0]?.maximumPeriod,
-        isCourse: item?.timeTableCreateName?.timeTableName?.[0]?.isCourse,
+        timeTableNameId: structure?.timeTableNameId,
+        maximumPeriod: structure?.timeTableName?.[0]?.maximumPeriod,
+        isCourse: structure?.timeTableName?.[0]?.isCourse,
+        weekOff,
         courseId: item.courseId,
         classSectionsId: resolveTimeTableRoutineSection(item)?.classSectionsId ?? null,
         classSectionTermId: item.classSectionTermId,

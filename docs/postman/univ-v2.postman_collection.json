@@ -2812,7 +2812,7 @@
                     }
                   ]
                 },
-                "description": "**GET /timeTableCreate/create**\n\nRoutines for a course/term with flattened `periods` array for the UI builder.\n\n**Required query:** `courseId`, `classSectionTermId`.\n\n**Optional:** `timeTableType` (`normal` | `elective`)."
+                "description": "**GET /timeTableCreate/create**\n\nRoutines for a course/term with flattened `periods` array for the UI builder.\n\n**Query:**\n| Field | Required | Notes |\n|-------|----------|-------|\n| `courseId` | yes | Course PK |\n| `classSectionTermId` | yes for `normal` | Optional when `timeTableType=elective` |\n| `timeTableType` | no | `normal` \\| `elective` |\n\n**Response item:** includes structure `weekOff` (string array, e.g. `[\"Sunday\"]`) plus `periods[]`.\n\n**Changelog:** Added `weekOff` from timetable structure; `classSectionTermId` optional for elective."
               },
               "response": []
             },

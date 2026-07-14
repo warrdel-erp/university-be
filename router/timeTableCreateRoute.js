@@ -62,9 +62,12 @@ const getTimeTableCreateListQuerySchema = z.object({
 
 const getTimeTableByCourseAndSectionQuerySchema = z.object({
     courseId: positiveIntegerId,
-    classSectionTermId: positiveIntegerId,
+    classSectionTermId: optionalPositiveId,
     timeTableType: z.string().optional(),
-});
+}).refine(
+    (data) => data.timeTableType === 'elective' || data.classSectionTermId != null,
+    { message: 'classSectionTermId is required', path: ['classSectionTermId'] },
+);
 
 const addTimeTableCreateSchema = z.object({
     timeTableNameId: positiveIntegerId,
@@ -210,7 +213,10 @@ router.post('/clone', userAuth, validate({ body: cloneRoutineSchema }), cloneTim
 
 router.get('/', userAuth, validate({ query: getTimeTableCreateListQuerySchema }), gettimeTableCreateDetails);
 router.get('/single', userAuth, validate({ query: getSingleQuerySchema }), getSingletimeTableCreateDetails);
-router.get('/create', userAuth, validate({ query: getTimeTableByCourseAndSectionQuerySchema }), getTimeTableByCourseAndSection);
+
+router.get('/create', userAuth, validate({ query: getTimeTableByCourseAndSectionQuerySchema }), 
+getTimeTableByCourseAndSection);
+
 router.patch('/create', userAuth, validate({ body: changeTimeTableCreateSchema }), changeTimeTableCreate);
 
 router.post('/mapping', userAuth, validate({ body: addTimeTableMappingSchema }), addtimeTableMapping);
