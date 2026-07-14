@@ -501,12 +501,9 @@ async function assignNewRolesAndPermissions(userId, transaction) {
   // handled within seedLegacyRoleAndPermissions now
 }
 
-async function seedLegacyRoleAndPermissions(userId, universityId, transaction) {
+async function seedLegacyRoleAndPermissions(userId, universityId, instituteId, transaction) {
   // 1. Find or create the CLIENT_ADMIN role
-  let clientAdminRole = await model.roleModel.findOne({ where: { role: "CLIENT_ADMIN" }, transaction });
-  if (!clientAdminRole) {
-    clientAdminRole = await model.roleModel.create({ role: "CLIENT_ADMIN" }, { transaction });
-  }
+  const clientAdminRole = await model.roleModel.create({ role: "CLIENT_ADMIN", instituteId: instituteId }, { transaction });
 
   // 2. Build full permission template for CLIENT_ADMIN
   //    MASTER_SECTION gets UNIVERSITY scope; all other permissions get INSTITUTE scope
@@ -518,11 +515,12 @@ async function seedLegacyRoleAndPermissions(userId, universityId, transaction) {
       roleId: clientAdminRole.roleId,
       permission: valueObj.value,
       scope: isMasterSection ? SCOPES.UNIVERSITY : SCOPES.INSTITUTE,
+      resourceId: isMasterSection ? universityId : instituteId
     });
   }
 
   // 4. Sync role_permissions template
-  await model.rolePermissionMappingModel.destroy({ where: { role_id: clientAdminRole.roleId }, transaction });
+  await model.rolePermissionMappingModel.destroy({ where: { roleId: clientAdminRole.roleId }, transaction });
   await model.rolePermissionMappingModel.bulkCreate(rolePermissionRows, { transaction });
 
   // 5. Assign the CLIENT_ADMIN role to the user (copies all non-perm_access_inst rows)
@@ -536,6 +534,8 @@ async function seedLegacyRoleAndPermissions(userId, universityId, transaction) {
     scope: SCOPES.UNIVERSITY,
     resourceId: universityId
   }, { transaction });
+
+  return clientAdminRole.roleId;
 }
 
 export async function initialSetup(info) {
@@ -636,7 +636,9 @@ export async function initialSetup(info) {
     await assignNewRolesAndPermissions(user.userId, transaction);
 
     // 9. Assign legacy role, permissions, and role-permissions mapping
-    await seedLegacyRoleAndPermissions(user.userId, university.universityId, transaction);
+    const clientAdminRoleId = await seedLegacyRoleAndPermissions(user.userId, university.universityId, institute.instituteId, transaction);
+
+    await user.update({ defaultRoleId: clientAdminRoleId }, { transaction });
 
     await transaction.commit();
 
@@ -688,8 +690,8 @@ export async function getGrantedAccess(userId) {
 
     const academicYears = employee?.instituteId
       ? await model.acedmicYearModel.findAll({
-          where: { instituteId: employee.instituteId, isActive: true },
-        })
+        where: { instituteId: employee.instituteId, isActive: true },
+      })
       : [];
 
     const university = await model.universityModel.findByPk(user.universityId);

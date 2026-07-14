@@ -24,7 +24,7 @@ const assessmentEvaluationModel = sequelize.define(
                 key: 'subject_id'
             }
         },
-        employeeId: {
+        userId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'user_id',

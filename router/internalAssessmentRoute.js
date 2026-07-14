@@ -32,7 +32,7 @@ const addInternalAssessmentSchema = z.object({
     publishDate: z.string().min(1),
     dueDate: z.string().min(1),
     description: z.string().min(1),
-    employeeId: positiveIntegerId.optional(),
+    userId: positiveIntegerId.optional(),
 }).strict();
 
 const getAllInternalAssessmentQuerySchema = z.object({
@@ -54,12 +54,12 @@ const updateInternalAssessmentSchema = z.array(z.object({
     publishDate: z.string().min(1).optional(),
     dueDate: z.string().min(1).optional(),
     description: z.string().min(1).optional(),
-    employeeId: positiveIntegerId.optional(),
+    userId: positiveIntegerId.optional(),
 }).strict()).min(1, 'Request body must be a non-empty array.');
 
 const evaluationQuerySchema = z.object({
     subjectId: positiveIntegerId,
-    employeeId: positiveIntegerId,
+    userId: positiveIntegerId,
 }).strict();
 
 const assessmentEvaluationStudentSchema = z.object({
@@ -72,7 +72,7 @@ const assessmentEvaluationStudentSchema = z.object({
 
 const createAssessmentEvaluationSchema = z.object({
     subjectId: positiveIntegerId,
-    employeeId: positiveIntegerId,
+    userId: positiveIntegerId,
     examAssessmentId: positiveIntegerId,
     students: z.array(assessmentEvaluationStudentSchema).min(1, 'students array is required'),
 }).strict();
@@ -80,7 +80,7 @@ const createAssessmentEvaluationSchema = z.object({
 const updateAssessmentEvaluationSchema = z.object({
     assessmentEvalutionId: positiveIntegerId,
     subjectId: positiveIntegerId.optional(),
-    employeeId: positiveIntegerId.optional(),
+    userId: positiveIntegerId.optional(),
     examAssessmentId: positiveIntegerId.optional(),
     studentId: positiveIntegerId.optional(),
     status: z.string().min(1).optional(),
