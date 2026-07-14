@@ -777,18 +777,27 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
     }
 
     const termIds = resolveTermIds(payload, routine);
-    if (!termIds.length) {
-      throw new Error(
-        'classSectionTermId could not be resolved. Send classSectionTermId, classSectionTermIds[], or use a routine with classSectionTermId.',
-      );
-    }
 
     assertRoutineNotStarted(routine.startingDate);
 
     const slots = normalizeSlots(payload);
     const isCombined = termIds.length > 1;
     const combinedGroupId = isCombined ? (existingCombinedGroupId || randomUUID()) : null;
-    const routineTargets = await resolveCombinedRoutineTargets(routine, termIds, transaction);
+
+    // With term id(s): normal / combined section flow.
+    // Without term id: still allow mapping on this routine (e.g. elective with null classSectionTermId).
+    let routineTargets;
+    if (termIds.length > 0) {
+      routineTargets = await resolveCombinedRoutineTargets(routine, termIds, transaction);
+    } else {
+      routineTargets = [{
+        classSectionTermId: routine.classSectionTermId != null
+          ? Number(routine.classSectionTermId)
+          : null,
+        timeTableRoutineId: Number(timeTableRoutineId),
+      }];
+    }
+
     const conflictOptions = {
       allowedClassSectionTermIds: termIds,
       excludeCombinedGroupId: existingCombinedGroupId || null,
