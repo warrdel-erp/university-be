@@ -381,14 +381,19 @@ export async function addtimeTableMapping(data, transaction) {
 
 export async function getPeriodInfoRepository(timeTableCreationId) {
   try {
+    if (timeTableCreationId == null || !Number.isFinite(Number(timeTableCreationId))) {
+      return null;
+    }
+
     return await model.timeTableStructurePeriodsModel.findOne({
-      where: { timeTableCreationId },
-      attributes: ["startTime", "endTime"],
+      where: { timeTableCreationId: Number(timeTableCreationId) },
+      attributes: ["startTime", "endTime", "timeTableCreationId"],
       include: [
         {
           model: model.timeTableStructureModel,
           as: "timeTableName",
-          attributes: ["periodLength"]
+          attributes: ["periodLength"],
+          required: false,
         }
       ]
     });
@@ -1902,6 +1907,7 @@ export async function getTodayClassScheduleForEmployee(employeeId, currentDate, 
               sectionWhere: {
                 ...(sessionId && { sessionId }),
               },
+              termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
               sectionAttributes: ['year', 'section', 'classSectionsId'],
             }),
           ],
@@ -1909,7 +1915,8 @@ export async function getTodayClassScheduleForEmployee(employeeId, currentDate, 
         {
           model: model.timeTableStructurePeriodsModel,
           as: "timeTablecreation",
-          attributes: ['periodName', 'startTime', 'endTime'],
+          required: true,
+          attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime'],
         },
         {
           model: model.teacherSubjectMappingModel,
@@ -1990,6 +1997,7 @@ export async function getPastClassSchedulesForEmployee(
               attributes: ['courseName']
             },
             timeTableRoutineClassSectionInclude({
+              termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
               sectionAttributes: ['year', 'section', 'classSectionsId'],
             })
           ]
@@ -1997,7 +2005,8 @@ export async function getPastClassSchedulesForEmployee(
         {
           model: model.timeTableStructurePeriodsModel,
           as: "timeTablecreation",
-          attributes: ['periodName', 'startTime', 'endTime']
+          required: true,
+          attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime']
         },
         {
           model: model.teacherSubjectMappingModel,
@@ -2062,7 +2071,10 @@ export async function getUpcomingClassSchedulesForEmployee(
         'timeTableType',
         'day',
         'period',
-        'isAttendence'
+        'isAttendence',
+        'isSameTeacher',
+        'timeTableNameId',
+        'timeTableCreationId'
       ],
       include: [
         {
@@ -2085,6 +2097,7 @@ export async function getUpcomingClassSchedulesForEmployee(
               attributes: ['courseName']
             },
             timeTableRoutineClassSectionInclude({
+              termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
               sectionAttributes: ['year', 'section', 'classSectionsId'],
             })
           ]
@@ -2092,7 +2105,8 @@ export async function getUpcomingClassSchedulesForEmployee(
         {
           model: model.timeTableStructurePeriodsModel,
           as: "timeTablecreation",
-          attributes: ['periodName', 'startTime', 'endTime']
+          required: true,
+          attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime']
         },
         {
           model: model.teacherSubjectMappingModel,
@@ -2231,7 +2245,14 @@ export async function getPeriodsForStructures(timeTableNameIds) {
       where: {
         timeTableNameId: { [Op.in]: timeTableNameIds }
       },
-      attributes: ['timeTableCreationId', 'timeTableNameId', 'isBreak'],
+      attributes: [
+        'timeTableCreationId',
+        'timeTableNameId',
+        'periodName',
+        'startTime',
+        'endTime',
+        'isBreak',
+      ],
       order: [['timeTableNameId', 'ASC'], ['timeTableCreationId', 'ASC']],
       raw: true
     });

@@ -14,7 +14,8 @@ export const getAffiliatedUniversityOptions = async (req, res) => {
 
 export const getCourseOptions = async (req, res) => {
     try {
-        const result = await optionsServices.getCourseOptions();
+        const { courseLevelId } = req.query;
+        const result = await optionsServices.getCourseOptions(courseLevelId);
         return SuccessResponse(res, 200, "Course options fetched successfully", result);
     } catch (error) {
         console.error("Error in getCourseOptions:", error);

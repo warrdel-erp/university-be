@@ -82,16 +82,11 @@ const timeTableStructurePeriodsModel = sequelize.define(
                 key: 'user_id'
             }
         },
-        deletedAt: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'deleted_at'
-        },
     },
     {
         tableName: 'time_table_structure_periods',
         timestamps: true,
-        paranoid: true
+        paranoid: false,
     },
 );
 

@@ -6,8 +6,8 @@ export async function getAffiliatedUniversityOptions() {
     return await optionsRepository.getAffiliatedUniversityOptions();
 }
 
-export async function getCourseOptions() {
-    return await optionsRepository.getCourseOptions();
+export async function getCourseOptions(courseLevelId) {
+    return await optionsRepository.getCourseOptions(courseLevelId);
 }
 
 export async function getTermOptions(courseId) {
