@@ -3299,7 +3299,7 @@
                     }
                   ]
                 },
-                "description": "**GET /timeTableCreate/elective?courseId=**\n\nElective subjects/options for timetable slots."
+                "description": "**GET /timeTableCreate/elective?courseId=**\n\nElective timetable for a course. Each `mappingData[]` item includes teacher/subject plus `roomId` (`classRoomSectionId`) and `roomName` (`roomNumber`)."
               },
               "response": []
             },

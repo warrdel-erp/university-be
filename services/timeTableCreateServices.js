@@ -1453,6 +1453,8 @@ export async function getTimeTableElective(courseId) {
         pickColor: pickColor || "",
         employeeId: employeeId || null,
         timeTableType: curr?.timeTableType,
+        roomId: curr?.classRoom?.classRoomSectionId || null,
+        roomName: curr?.classRoom?.roomNumber || null,
         subject: curr?.timeTableElective
           ? {
             subjectId: curr?.timeTableElective?.electiveSubjectId,
