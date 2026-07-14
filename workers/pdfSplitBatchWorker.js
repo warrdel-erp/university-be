@@ -39,6 +39,7 @@ import {
   PAGES_PER_STUDENT,
   BATCH_CONCURRENCY,
   AWS_BUCKET_NAME,
+  AWS_BUCKET_PREFIX,
   s3,
   getTempPdfPath,
   getTempSplitPath,
@@ -100,7 +101,7 @@ async function processBatchJob(bullmqJob) {
       const s3Result = await s3
         .upload({
           Bucket: AWS_BUCKET_NAME,
-          Key: s3DestKey,
+          Key: AWS_BUCKET_PREFIX + s3DestKey,
           Body: splitBuffer,
           ContentType: "application/pdf",
         })
