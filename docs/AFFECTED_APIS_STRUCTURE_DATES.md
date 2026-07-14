@@ -5,6 +5,21 @@
 
 ---
 
+## API list
+
+| Method | Path | Status |
+|--------|------|--------|
+| `POST` | `/timeTable` | Breaking — `startingDate` / `endingDate` required |
+| `PATCH` | `/timeTable/structure` | **New** — update structure `endingDate` |
+| `GET` | `/timeTable` | Updated — returns structure dates |
+| `GET` | `/timeTable/all_name` | Updated — returns structure dates |
+| `GET` | `/timeTable/single` | Updated — returns structure dates |
+| `POST` | `/timeTableCreate/` | Breaking — dates required, inside structure window |
+| `POST` | `/timeTableCreate/clone` | Updated — clone dates inside structure window |
+| `PATCH` | `/timeTableCreate/create` | Updated — blocked when published |
+
+---
+
 ## Affected APIs
 
 ### `POST /timeTable` — create structure
@@ -156,5 +171,5 @@ Clone `startingDate` / `endingDate` must fall inside the source structure window
 - [ ] Routine create: allow reusing the same structure (`timeTableNameId`) for multiple class section terms
 - [ ] Routine edit: disable update UI when `isPublish = true`
 - [ ] Routine clone: keep new dates inside structure window
-- [ ] Handle 400: dates outside structure window; published routine cannot be updated
-- [ ] Confirm BE migrations `20260714120000` and `20260714130000` are applied before FE release
+
+
