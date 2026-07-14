@@ -1759,17 +1759,42 @@ async function groupConsecutivePeriods(classes, sessionalBreak = false) {
     }
 
     if (isConsecutive) {
-      // Consecutive period
+      // Consecutive period — extend group through this period's end time
       currentGroup.classScheduleItems.push(item);
       currentGroup.periods.push(periodNum);
+      const itemStart = item.timeTablecreation?.startTime;
+      const itemEnd = item.timeTablecreation?.endTime;
+      if (itemEnd) {
+        currentGroup.endTime = itemEnd;
+        if (currentGroup.timeTablecreation) {
+          currentGroup.timeTablecreation = {
+            ...currentGroup.timeTablecreation,
+            endTime: itemEnd,
+          };
+        }
+      }
+      if (itemStart && !currentGroup.startTime) {
+        currentGroup.startTime = itemStart;
+      }
     } else {
-      // New group
+      // New group — span starts at this period
+      const startTime = item.timeTablecreation?.startTime ?? null;
+      const endTime = item.timeTablecreation?.endTime ?? null;
       currentGroup = {
         ...item,
         subjectId: subj.id,
         subjectName: subj.name,
         classScheduleItems: [item],
-        periods: [periodNum]
+        periods: [periodNum],
+        startTime,
+        endTime,
+        timeTablecreation: item.timeTablecreation
+          ? {
+              ...item.timeTablecreation,
+              startTime,
+              endTime,
+            }
+          : item.timeTablecreation,
       };
       groupedResult.push(currentGroup);
     }
