@@ -3299,7 +3299,7 @@
                     }
                   ]
                 },
-                "description": "**GET /timeTableCreate/elective?courseId=**\n\nElective subjects/options for timetable slots."
+                "description": "**GET /timeTableCreate/elective?courseId=**\n\nElective timetable for a course. Each `mappingData[]` item includes teacher/subject plus `roomId` (`classRoomSectionId`) and `roomName` (`roomNumber`)."
               },
               "response": []
             },
@@ -4681,7 +4681,7 @@
     },
     {
       "name": "attendance",
-      "description": "Class attendance under `/attendance`.\n\n**Auth:** Bearer `{{token}}` — tenant `universityId` / `instituteId` from auth context.\n\n**Marking:** `POST /` accepts `timeTableMappingId` as a **number** (one period) or **number[]** (grouped consecutive periods). Same `attendance` list is saved for each mapping ID.\n\n**Check marked status:** use **GET /employee/pastSchedule?groupPeriods=true** (`attendanceStatus` on group) or **GET /previous-classes/:employeeId** (flat per-period list).\n\n**attendanceStatus values:** Present, Absent, Medical Leave, Duty Leave, Sports Leave, NCC Leave, Approved Leave, Holiday.",
+      "description": "Class attendance under `/attendance`.\n\n**Auth:** Bearer `{{token}}` — tenant `universityId` / `instituteId` from auth context.\n\n**Marking:** `POST /` accepts `timeTableMappingId` as a **number** (one period) or **number[]** (grouped consecutive periods). Same `attendance` list is saved for each mapping ID.\n\n**Check marked status:** use **GET /employee/pastSchedule?groupPeriods=consecutive** (`attendanceStatus` on group) or **GET /previous-classes/:employeeId** (flat per-period list).\n\n**attendanceStatus values:** Present, Absent, Medical Leave, Duty Leave, Sports Leave, NCC Leave, Approved Leave, Holiday.",
       "item": [
         {
           "name": "mark attendance (POST)",
@@ -4763,7 +4763,7 @@
                 "attendance"
               ]
             },
-            "description": "**POST /attendance** — grouped periods\n\nSame student list is written for each `timeTableMappingId` in the array. Use mapping IDs from `classScheduleItems` when `GET /employee/pastSchedule?groupPeriods=true`."
+            "description": "**POST /attendance** — grouped periods\n\nSame student list is written for each `timeTableMappingId` in the array. Use mapping IDs from `classScheduleItems` when `GET /employee/pastSchedule?groupPeriods=consecutive`."
           },
           "response": []
         },
@@ -4993,7 +4993,7 @@
                 "35"
               ]
             },
-            "description": "**GET /attendance/previous-sessions/:employeeId**\n\nFlat list of past class dates per period with mark status (through yesterday).\n\nEach row includes:\n- `status`: `MARKED` | `PENDING`\n- `attendance`: present count string e.g. `\"5 / 30\"`\n- `timeTableMappingId`, `date`, `period`, subject, class section\n\nDoes **not** group consecutive periods — use **GET /employee/pastSchedule?groupPeriods=true** for group-level `attendanceStatus`."
+            "description": "**GET /attendance/previous-sessions/:employeeId**\n\nFlat list of past class dates per period with mark status (through yesterday).\n\nEach row includes:\n- `status`: `MARKED` | `PENDING`\n- `attendance`: present count string e.g. `\"5 / 30\"`\n- `timeTableMappingId`, `date`, `period`, subject, class section\n\nDoes **not** group consecutive periods — use **GET /employee/pastSchedule?groupPeriods=consecutive** for group-level `attendanceStatus`."
           },
           "response": []
         },
@@ -7953,6 +7953,80 @@
           "response": []
         },
         {
+          "name": "lectureWindows",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/options/lectureWindows?employeeId=45&subjectId=12",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "options",
+                "lectureWindows"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "45"
+                },
+                {
+                  "key": "subjectId",
+                  "value": "12"
+                }
+              ]
+            },
+            "description": "**GET /options/lectureWindows**\n\nCascade step 1. Query: `employeeId`, `subjectId` (required).\n\n**200 data:** `{ selected: { employee, subject }, options: [{ lectureWindowId, name }] }`"
+          },
+          "response": []
+        },
+        {
+          "name": "lessons",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/options/lessons?lectureWindowId=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "options",
+                "lessons"
+              ],
+              "query": [
+                {
+                  "key": "lectureWindowId",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "**GET /options/lessons**\n\nCascade step 2. Query: `lectureWindowId` (required).\n\n**200 data:** `{ selected: { lectureWindow + nested subject/employee/session }, options: [{ lessonId, name }] }`"
+          },
+          "response": []
+        },
+        {
           "name": "topics",
           "request": {
             "auth": {
@@ -7982,7 +8056,8 @@
                   "value": "4"
                 }
               ]
-            }
+            },
+            "description": "**GET /options/topics**\n\nCascade step 3. Query: `lessonId` (required).\n\n**200 data:** `{ selected: { lesson + lectureWindow + lessonSubject }, options: [{ topicId, name, subTopic: [{ subTopicId, name }] }] }`"
           },
           "response": []
         }
@@ -16557,7 +16632,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/employee/pastSchedule?employeeId=45&groupPeriods=true",
+              "raw": "{{baseurl}}/employee/pastSchedule?employeeId=45&groupPeriods=consecutive",
               "host": [
                 "{{baseurl}}"
               ],
@@ -16569,22 +16644,29 @@
                 {
                   "key": "employeeId",
                   "value": "45",
-                  "description": "Required — teacher employeeId"
-                },
-                {
-                  "key": "groupPeriods",
-                  "value": "true",
-                  "description": "true = merge consecutive periods (same date, routine, subject). false = one row per period."
+                  "description": "Required. Teacher employee ID."
                 },
                 {
                   "key": "date",
                   "value": "2026-06-24",
-                  "description": "Optional — cutoff date (YYYY-MM-DD). Defaults to today. Only dates strictly before this are returned.",
+                  "description": "Optional. YYYY-MM-DD cutoff. Defaults to today. Only dates strictly before this are returned.",
+                  "disabled": true
+                },
+                {
+                  "key": "sessionId",
+                  "value": "",
+                  "description": "Optional. Filter by session ID.",
+                  "disabled": true
+                },
+                {
+                  "key": "groupPeriods",
+                  "value": "consecutive",
+                  "description": "Optional. consecutive | sessional — merge consecutive periods. Omit for one row per period.",
                   "disabled": true
                 }
               ]
             },
-            "description": "**GET /employee/pastSchedule**\n\nPast timetable slots for a teacher (published routines, scoped by auth academic year).\n\n### Query\n| Param | Required | Notes |\n|-------|----------|--------|\n| `employeeId` | yes | Teacher employeeId |\n| `groupPeriods` | no | `true` / `false` (default `false`) |\n| `date` | no | Cutoff date; slots before this date only |\n\n### Attendance status (per period)\nEach schedule row includes **`attendanceStatus`**:\n- `MARKED` — at least one attendance row exists for `timeTableMappingId` + `date`\n- `PENDING` — not marked yet\n\n### Grouped mode (`groupPeriods=true`)\nConsecutive periods merge into one object with `classScheduleItems[]` and group-level **`attendanceStatus`**:\n- `MARKED` — all periods in the group are marked\n- `PARTIAL` — some marked, some pending\n- `PENDING` — none marked\n\n**Note:** `POST /attendance` accepts `timeTableMappingId` as a number or array — one POST can mark all periods in a group.\n\n### 200 response shape\n```json\n{\n  \"teacher\": { \"employeeId\", \"employeeName\", \"employeeCode\", \"pickColor\" },\n  \"schedules\": [ ... ]\n}\n```"
+            "description": "**GET /employee/pastSchedule**\n\nPast timetable slots for a teacher (published routines, scoped by auth academic year).\n\n### Query\n| Param | Required | Notes |\n|-------|----------|--------|\n| `employeeId` | yes | Teacher employeeId |\n| `groupPeriods` | no | `consecutive` or `sessional` to merge consecutive periods |\n| `date` | no | Cutoff date; slots before this date only |\n| `sessionId` | no | Filter by session |\n\n### Attendance status (per period)\nEach schedule row includes **`attendanceStatus`**:\n- `MARKED` — at least one attendance row exists for `timeTableMappingId` + `date`\n- `PENDING` — not marked yet\n\n### Grouped mode (`groupPeriods=consecutive` | `sessional`)\nConsecutive periods merge into one object with `classScheduleItems[]`, summed `startTime`/`endTime`, and group-level **`attendanceStatus`**:\n- `MARKED` — all periods in the group are marked\n- `PARTIAL` — some marked, some pending\n- `PENDING` — none marked\n\n**Note:** `POST /attendance` accepts `timeTableMappingId` as a number or array — one POST can mark all periods in a group.\n\n### 200 response shape\n```json\n{\n  \"success\": true,\n  \"message\": \"Past class schedules fetched successfully\",\n  \"data\": {\n    \"teacher\": { \"employeeId\", \"employeeName\", \"employeeCode\", \"pickColor\" },\n    \"schedules\": [ ... ]\n  }\n}\n```"
           },
           "response": []
         },
