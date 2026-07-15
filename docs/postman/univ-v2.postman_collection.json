@@ -2132,19 +2132,19 @@
     },
     {
       "name": "time table",
-      "description": "Timetable APIs under `/timeTable` (structure/periods) and `/timeTableCreate` (routine + grid cells).\n\n| Phase | Base | Purpose |\n|-------|------|--------|\n| Structure | `/timeTable` | Reusable bell schedule + **date window** (`startingDate` / `endingDate`) + period rows |\n| Routine | `/timeTableCreate` | Link one structure to a **classSectionTermId** + date range **inside** structure window |\n| Mapping | `/timeTableCreate/mapping` | Fill day/period cells (`class_schedule_item`) |\n| Publish | `/timeTableCreate/publish` | Lock routine — published routines cannot be updated |\n\n**Structure date window**\n* `POST /timeTable` requires `startingDate` + `endingDate`.\n* `PATCH /timeTable/structure` updates structure `endingDate` only (allowed even after linked routines are published).\n* Routine create / clone / update dates must stay inside the structure window.\n* Same `timeTableNameId` can be reused for many routines.\n\n**Suggested flow:** `POST /timeTable` (with dates) → `POST /timeTableCreate/` (dates inside structure) → mapping → publish → optionally `PATCH /timeTable/structure` to extend `endingDate`.\n\nSee `docs/AFFECTED_APIS_STRUCTURE_DATES.md`.\n\nFolder vars `timetable_*` + collection `classSectionTermId`. Auth: Bearer `{{token}}`.",
+      "description": "Timetable APIs under `/timeTable` (structure/periods) and `/timeTableCreate` (routine + grid cells).\n\n| Phase | Base | Purpose |\n|-------|------|--------|\n| Structure | `/timeTable` | Reusable bell schedule + period rows (no dates, no courseId) |\n| Course mapping | `/timeTable/courseMapping` | Bind one `(courseId, sessionId)` + date window to a structure |\n| Routine | `/timeTableCreate` | Place structure on a classSectionTerm; dates must sit inside the mapping window |\n| Mapping | `/timeTableCreate/mapping` | Fill day/period cells |\n| Publish | `/timeTableCreate/publish` | Lock routine |\n\n**Cardinality**\n* One `timeTableNameId` → many `courseMappings` (many `courseId`s; unique per `timeTableNameId + courseId + sessionId`).\n* Routine stores `timetableStructureCourseMapperId` (no `timeTableNameId` on routine row).\n\n**Flow:** `POST /timeTable` → `POST /timeTable/courseMapping` (repeat per course) → `POST /timeTableCreate/` → mapping → publish.\n\nAuth: Bearer `{{token}}`.",
       "variable": [
         {
           "key": "timetable_courseId",
           "value": "34",
           "type": "string",
-          "description": "Course PK"
+          "description": "Course PK — used by courseMapping + routine filters"
         },
         {
           "key": "timetable_sessionId",
           "value": "6",
           "type": "string",
-          "description": "Session PK — used on routine list filters, not required on structure create"
+          "description": "Session PK — used on courseMapping create/update and routine list filters"
         },
         {
           "key": "timetable_acedmicYearId",
@@ -2163,6 +2163,12 @@
           "value": "1",
           "type": "string",
           "description": "Structure PK (time_table_structure.time_table_name_id)"
+        },
+        {
+          "key": "timetable_structureCourseMapperId",
+          "value": "1",
+          "type": "string",
+          "description": "Structure-course-session mapping PK (timetable_structure_course_mapper_id)"
         },
         {
           "key": "timetable_routineId",
@@ -2210,16 +2216,18 @@
       "item": [
         {
           "name": "structure (/timeTable)",
+          "description": "Structure APIs under `/timeTable`.\n\n| Method | Path | Purpose |\n|--------|------|--------|\n| POST | `/timeTable` | Create structure + period rows (no dates/course) |\n| POST | `/timeTable/courseMapping` | Map `(courseId, sessionId)` + dates; call once per course |\n| PATCH | `/timeTable/structure` | Update mapping by `timetableStructureCourseMapperId` |\n| POST | `/timeTable/period` | Add one period row |\n| GET | `/timeTable` | List structures + `courseMappings[]` |\n| GET | `/timeTable/all_name` | Same list |\n| GET | `/timeTable/single` | Same list |\n| PATCH | `/timeTable` | Update period row fields |\n| DELETE | `/timeTable` | Delete one period row |\n| DELETE | `/timeTable/structure` | Hard-delete structure + periods + course mappings |\n",
           "item": [
             {
-              "name": "create structure (dates + weekOff)",
+              "name": "create structure",
               "event": [
                 {
                   "listen": "test",
                   "script": {
                     "exec": [
                       "if (pm.response.code === 200) {",
-                      "  const data = pm.response.json();",
+                      "  const body = pm.response.json();",
+                      "  const data = body.data || body;",
                       "  const row = Array.isArray(data) ? data[0] : data;",
                       "  if (row && row.timeTableCreationId) {",
                       "    pm.collectionVariables.set('timetable_creationId', String(row.timeTableCreationId));",
@@ -2253,7 +2261,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Morning Schedule\",\n  \"courseId\": {{timetable_courseId}},\n  \"weekOff\": [\"Sunday\"],\n  \"maximumPeriod\": 6,\n  \"periodLength\": 45,\n  \"periodGap\": 5,\n  \"startingTime\": \"09:00 AM\",\n  \"type\": \"Automatic\",\n  \"isCourse\": true,\n  \"startingDate\": \"2026-01-01\",\n  \"endingDate\": \"2026-12-31\"\n}",
+                  "raw": "{\n  \"name\": \"Morning Schedule\",\n  \"weekOff\": [\n    \"Sunday\"\n  ],\n  \"maximumPeriod\": 6,\n  \"periodLength\": 45,\n  \"periodGap\": 5,\n  \"startingTime\": \"09:00 AM\",\n  \"type\": \"Automatic\",\n  \"isCourse\": true,\n  \"sessionId\": {{timetable_sessionId}}\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2269,12 +2277,81 @@
                     "timeTable"
                   ]
                 },
-                "description": "**POST /timeTable**\n\nCreates a timetable **structure** (period slots + date window). Reusable template — not the class routine.\n\n### Request body\n\n| Field | Type | Required | Description |\n|-------|------|----------|-------------|\n| `courseId` | Integer | **Yes** | Course PK |\n| `name` | String | **Yes** | Structure name |\n| `maximumPeriod` | Integer | **Yes** | Number of period rows to create |\n| `startingDate` | String | **Yes** | Structure window start `YYYY-MM-DD` |\n| `endingDate` | String | **Yes** | Structure window end `YYYY-MM-DD` (`>= startingDate`) |\n| `type` | Enum | **Yes** | `Automatic` or `Manual` |\n| `periodLength` | Integer | Yes* | Minutes (*required for Automatic) |\n| `periodGap` | Integer | Yes* | Minutes (*required for Automatic) |\n| `startingTime` | String | Yes* | e.g. `09:00 AM` (*required for Automatic) |\n| `weekOff` | String[] | No | e.g. `[\"Sunday\"]` |\n| `isCourse` | Boolean | No | Stored on generated period rows |\n\n### Response\n\nArray of created period rows (`timeTableCreationId`, `timeTableNameId`, …). Structure `startingDate` / `endingDate` appear on **GET /timeTable**.\n\n**400** — missing dates, `endingDate` before `startingDate`, or Automatic field validation.\n\n### Changelog\n\n**v3 (2026-07)** — `startingDate` / `endingDate` required. See `docs/AFFECTED_APIS_STRUCTURE_DATES.md`."
+                "description": "**POST /timeTable**\n\nCreates a reusable bell template + period rows. Dates and courses live on course mappings.\n\n### Request body\n\n| Field | Type | Required | Description |\n|-------|------|----------|-------------|\n| `name` | String | **Yes** | Structure name |\n| `maximumPeriod` | Integer | **Yes** | Number of period rows to create |\n| `type` | Enum | **Yes** | `Automatic` or `Manual` |\n| `periodLength` | Integer | Yes* | Minutes (*required for Automatic) |\n| `periodGap` | Integer | Yes* | Minutes (*required for Automatic) |\n| `startingTime` | String | Yes* | e.g. `09:00 AM` (*required for Automatic) |\n| `weekOff` | String[] | No | e.g. `[\"Sunday\"]` |\n| `sessionId` | Integer | No | Optional on structure; mapping `sessionId` is authoritative for routines |\n| `isCourse` | Boolean | No | Flag stored on generated period rows |\n\n**Do not send** `courseId`, `startingDate`, or `endingDate`.\n\n**Next:** call **POST /timeTable/courseMapping** once per course (same `timeTableNameId` may map many `courseId`s)."
               },
               "response": []
             },
             {
-              "name": "update structure endingDate",
+              "name": "create course mapping",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200 || pm.response.code === 201) {",
+                      "  const body = pm.response.json();",
+                      "  const row = body.data || body;",
+                      "  if (row && row.timetableStructureCourseMapperId) {",
+                      "    pm.collectionVariables.set('timetable_structureCourseMapperId', String(row.timetableStructureCourseMapperId));",
+                      "  }",
+                      "  if (row && row.timeTableNameId) {",
+                      "    pm.collectionVariables.set('timetable_timeTableNameId', String(row.timeTableNameId));",
+                      "  }",
+                      "  if (row && row.courseId) {",
+                      "    pm.collectionVariables.set('timetable_courseId', String(row.courseId));",
+                      "  }",
+                      "  if (row && row.sessionId) {",
+                      "    pm.collectionVariables.set('timetable_sessionId', String(row.sessionId));",
+                      "  }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"timeTableNameId\": {{timetable_timeTableNameId}},\n  \"courseId\": {{timetable_courseId}},\n  \"sessionId\": {{timetable_sessionId}},\n  \"startingDate\": \"2026-01-01\",\n  \"endingDate\": \"2026-12-31\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/timeTable/courseMapping",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTable",
+                    "courseMapping"
+                  ]
+                },
+                "description": "**POST /timeTable/courseMapping**\n\nMaps one `(courseId, sessionId)` to a structure with a date window. Required before creating routines for that course/session.\n\nSame `timeTableNameId` may be mapped to **multiple `courseId`s** — call this endpoint once per course.\n\n### Request body\n\n| Field | Type | Required | Description |\n|-------|------|----------|-------------|\n| `timeTableNameId` | Integer | **Yes** | Structure PK |\n| `courseId` | Integer | **Yes** | Course PK |\n| `sessionId` | Integer | **Yes** | Session PK |\n| `startingDate` | String | **Yes** | `YYYY-MM-DD` |\n| `endingDate` | String | **Yes** | `YYYY-MM-DD` (>= startingDate) |\n\n**Unique:** `(timeTableNameId, courseId, sessionId)`.\n\n**200** returns mapping including `timetableStructureCourseMapperId` (use for PATCH).\n\n**400** if duplicate triple or structure not in scope."
+              },
+              "response": []
+            },
+            {
+              "name": "update course mapping",
               "request": {
                 "auth": {
                   "type": "bearer",
@@ -2295,7 +2372,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"timeTableNameId\": {{timetable_timeTableNameId}},\n  \"endingDate\": \"2027-06-30\"\n}",
+                  "raw": "{\n  \"timetableStructureCourseMapperId\": {{timetable_structureCourseMapperId}},\n  \"timeTableNameId\": {{timetable_timeTableNameId}},\n  \"courseId\": {{timetable_courseId}},\n  \"sessionId\": {{timetable_sessionId}},\n  \"startingDate\": \"2026-01-01\",\n  \"endingDate\": \"2027-06-30\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2312,7 +2389,7 @@
                     "structure"
                   ]
                 },
-                "description": "**PATCH /timeTable/structure**\n\nUpdates **only** structure `endingDate`. Allowed even when linked routines are published.\n\n### Request body\n\n```json\n{\n  \"timeTableNameId\": 10,\n  \"endingDate\": \"2027-06-30\"\n}\n```\n\n| Field | Type | Required | Description |\n|-------|------|----------|-------------|\n| `timeTableNameId` | Integer | **Yes** | Structure PK |\n| `endingDate` | String | **Yes** | New end `YYYY-MM-DD` |\n\n### Response\n\n```json\n{\n  \"timeTableNameId\": 10,\n  \"courseId\": 42,\n  \"sessionId\": null,\n  \"startingDate\": \"2026-01-01\",\n  \"endingDate\": \"2027-06-30\"\n}\n```\n\n### Rules\n\n* `endingDate` must be `>= structure.startingDate`\n* `endingDate` must be `>=` latest linked routine `endingDate`\n* Does not change `startingDate`, periods, or routines\n\n**400** — validation / business rule errors."
+                "description": "**PATCH /timeTable/structure**\n\nUpdates one structure–course–session mapping row. Keyed by mapper PK — not by structure alone.\n\n### Request body\n\n| Field | Type | Required | Description |\n|-------|------|----------|-------------|\n| `timetableStructureCourseMapperId` | Integer | **Yes** | Mapping PK |\n| `timeTableNameId` | Integer | No | Move mapping to another structure |\n| `courseId` | Integer | No | Change course (cascades to linked routines) |\n| `sessionId` | Integer | No | Change session |\n| `startingDate` | String | No | Window start `YYYY-MM-DD` |\n| `endingDate` | String | No | Window end `YYYY-MM-DD` |\n\nAt least one of `timeTableNameId` / `courseId` / `sessionId` / `startingDate` / `endingDate` is required.\n\n### Rules\n\n* Unique `(timeTableNameId, courseId, sessionId)` must not collide\n* `endingDate` >= `startingDate`\n* Cannot shrink past existing routine dates on this mapper\n* Allowed even when linked routines are published\n\n**400** — mapping missing / validation / uniqueness errors."
               },
               "response": []
             },
@@ -2400,27 +2477,20 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseurl}}/timeTable?courseId={{timetable_courseId}}",
+                  "raw": "{{baseurl}}/timeTable",
                   "host": [
                     "{{baseurl}}"
                   ],
                   "path": [
                     "timeTable"
-                  ],
-                  "query": [
-                    {
-                      "key": "courseId",
-                      "value": "{{timetable_courseId}}",
-                      "description": "Optional course filter"
-                    }
                   ]
                 },
-                "description": "**GET /timeTable**\n\nLists structures with periods, optional course filter, `weekOff`, and structure date window.\n\n**Query:** optional `courseId`.\n\n### Response fields (per structure)\n\nIncludes `startingDate`, `endingDate` (structure window), periods, course, session.\n\n```json\n{\n  \"timeTableNameId\": 10,\n  \"name\": \"Morning Schedule\",\n  \"startingDate\": \"2026-01-01\",\n  \"endingDate\": \"2026-12-31\"\n}\n```"
+                "description": "**GET /timeTable**\n\nLists all structures in tenant scope (institute + academic year).\n\n**No query params.** Structure has no `courseId` / dates on the root — use `courseMappings[]`.\n\n### Response fields (per structure)\n\n`timeTableNameId`, `name`, `weekOff`, `maximumPeriod`, `sessionId` (optional on structure), `courseMappings[]`, periods (`timeTableName[]`), optional `timeTableSession`.\n\n```json\n{\n  \"timeTableNameId\": 10,\n  \"name\": \"Morning Schedule\",\n  \"sessionId\": 6,\n  \"weekOff\": [\"Sunday\"],\n  \"maximumPeriod\": 6,\n  \"courseMappings\": [\n    {\n      \"timetableStructureCourseMapperId\": 1,\n      \"timeTableNameId\": 10,\n      \"courseId\": 34,\n      \"sessionId\": 6,\n      \"startingDate\": \"2026-01-01\",\n      \"endingDate\": \"2026-12-31\",\n      \"course\": { \"courseId\": 34, \"courseName\": \"B.Tech CSE\", \"courseCode\": \"CSE\" }\n    },\n    {\n      \"timetableStructureCourseMapperId\": 2,\n      \"timeTableNameId\": 10,\n      \"courseId\": 35,\n      \"sessionId\": 6,\n      \"startingDate\": \"2026-01-01\",\n      \"endingDate\": \"2026-12-31\",\n      \"course\": { \"courseId\": 35, \"courseName\": \"B.Arch\", \"courseCode\": \"ARCH\" }\n    }\n  ],\n  \"timeTableName\": [\n    { \"timeTableCreationId\": 1, \"periodName\": \"Period1\", \"startTime\": \"09:00 AM\", \"endTime\": \"09:45 AM\" }\n  ]\n}\n```\n\nOne structure → many `courseMappings` (one row per course/session)."
               },
               "response": []
             },
             {
-              "name": "get all names (course scoped)",
+              "name": "get all names",
               "request": {
                 "auth": {
                   "type": "bearer",
@@ -2435,28 +2505,21 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/timeTable/all_name?courseId={{timetable_courseId}}",
+                  "raw": "{{baseurl}}/timeTable/all_name",
                   "host": [
                     "{{baseurl}}"
                   ],
                   "path": [
                     "timeTable",
                     "all_name"
-                  ],
-                  "query": [
-                    {
-                      "key": "courseId",
-                      "value": "{{timetable_courseId}}",
-                      "description": "Optional course filter"
-                    }
                   ]
                 },
-                "description": "**GET /timeTable/all_name**\n\nSame response shape as **GET /timeTable**, including `startingDate` / `endingDate`.\n\n**Query:** optional `courseId`."
+                "description": "**GET /timeTable/all_name**\n\nSame response as **GET /timeTable** (includes `courseMappings[]`).\n\n**No query params.**"
               },
               "response": []
             },
             {
-              "name": "get single (by course)",
+              "name": "get single",
               "request": {
                 "auth": {
                   "type": "bearer",
@@ -2471,23 +2534,16 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/timeTable/single?courseId={{timetable_courseId}}",
+                  "raw": "{{baseurl}}/timeTable/single",
                   "host": [
                     "{{baseurl}}"
                   ],
                   "path": [
                     "timeTable",
                     "single"
-                  ],
-                  "query": [
-                    {
-                      "key": "courseId",
-                      "value": "{{timetable_courseId}}",
-                      "description": "Optional course filter"
-                    }
                   ]
                 },
-                "description": "**GET /timeTable/single**\n\nSame response shape as **GET /timeTable**, including `startingDate` / `endingDate`, session, and `weekOff`.\n\n**Query:** optional `courseId`."
+                "description": "**GET /timeTable/single**\n\nSame response as **GET /timeTable** (includes `courseMappings[]`).\n\n**No query params.**"
               },
               "response": []
             },
@@ -2529,7 +2585,7 @@
                     "timeTable"
                   ]
                 },
-                "description": "**PATCH /timeTable**\n\nNon-empty array of period updates. Each item **requires** `timeTableCreationId`. Optional: `startTime`, `endTime`, `periodName`, `isCourse`, `isBreak`, `type`.\n\n**400** — Zod validation JSON on invalid body."
+                "description": "**PATCH /timeTable**\n\nUpdates one or more **period rows** on a structure.\n\nBody: non-empty array. Each item **requires** `timeTableCreationId`.\n\nOptional fields: `startTime`, `endTime`, `periodName`, `isCourse` (period flag, not course FK), `isBreak`, `type`.\n\n```json\n[\n  {\n    \"timeTableCreationId\": 1,\n    \"startTime\": \"09:00 AM\",\n    \"endTime\": \"09:45 AM\",\n    \"periodName\": \"Period1\"\n  }\n]\n```\n\n**400** — Zod validation on invalid body."
               },
               "response": []
             },
@@ -2600,7 +2656,7 @@
                     }
                   ]
                 },
-                "description": "**DELETE /timeTable/structure?timeTableNameId=**\n\nSoft-deletes a **whole timetable structure** from `time_table_structure` and **all its period rows** from `time_table_structure_periods` in one transaction.\n\nOne `timeTableNameId` can be referenced by **many child routines** and **many period rows** — this API removes the structure and all of its periods together.\n\n### Query parameters\n\n| Name | Type | Required | Description |\n|------|------|----------|-------------|\n| `timeTableNameId` | Integer | Yes | Structure PK (`time_table_structure.time_table_name_id`) |\n\n### Business rules\n\n* Deletion is **blocked** when **any** routine referencing this structure is **published** (`isPublish = true`) **or** **active** (today is between `startingDate` and `endingDate`).\n* Deletion is **allowed** when all linked routines are unpublished and outside their active date range.\n* Scoped to current institute + academic year from auth context.\n* Use this when removing an entire bell schedule template; use **DELETE /timeTable** to remove a single period only.\n\n### Success response (200)\n\n```json\n{\n  \"message\": \"time table structure deleted successfully for time Table Name Id 5\"\n}\n```\n\n### Error responses\n\n| Status | Reason |\n|--------|--------|\n| 400 | Missing or invalid `timeTableNameId` (Zod validation) |\n| 404 | Structure not found for this institute and academic year |\n| 409 | Structure is used in an active or published routine |\n| 500 | Internal server error |"
+                "description": "**DELETE /timeTable/structure?timeTableNameId=**\n\nHard-deletes a **whole timetable structure**, all its **period rows**, and all **course mappings** for that structure.\n\n### Query parameters\n\n| Name | Type | Required | Description |\n|------|------|----------|-------------|\n| `timeTableNameId` | Integer | Yes | Structure PK |\n\n### Business rules\n\n* Blocked when any linked routine (via course mapping) is **published** or **active** (today between routine dates).\n* Allowed when all linked routines are unpublished and outside their active date range.\n* Scoped to current institute + academic year.\n\n### Success response (200)\n\n```json\n{\n  \"success\": true,\n  \"message\": \"Time table structure deleted successfully\",\n  \"data\": null\n}\n```\n\n### Error responses\n\n| Status | Reason |\n|--------|--------|\n| 400 | Missing or invalid `timeTableNameId` |\n| 404 | Structure not found in scope |\n| 409 | Structure is used in an active or published routine |\n| 500 | Internal server error |"
               },
               "response": []
             }
@@ -2608,6 +2664,7 @@
         },
         {
           "name": "routine (/timeTableCreate)",
+          "description": "Routine APIs under `/timeTableCreate`.\n\nPrerequisite: structure + **course mapping** must exist for the section's `(courseId, sessionId)`.\n\n| Method | Path | Purpose |\n|--------|------|--------|\n| POST | `/timeTableCreate/` | Create routine (resolves mapping from structure + section course/session) |\n| POST | `/timeTableCreate/clone` | Clone routine into a new date range |\n| GET | `/timeTableCreate/` | Nested year → section → semester list |\n| GET | `/timeTableCreate/create` | Builder payload with periods + weekOff |\n| PATCH | `/timeTableCreate/create` | Update dates / placement (blocked if published) |\n| POST | `/timeTableCreate/mapping` | Add grid cell |\n| PATCH | `/timeTableCreate/publish` | Publish routine |\n\nRoutine row stores `timetableStructureCourseMapperId` (structure via join). Dates must sit inside the mapping window.",
           "item": [
             {
               "name": "create routine",
@@ -2617,9 +2674,13 @@
                   "script": {
                     "exec": [
                       "if (pm.response.code === 200) {",
-                      "  const data = pm.response.json();",
+                      "  const body = pm.response.json();",
+                      "  const data = body.data || body;",
                       "  if (data && data.timeTableRoutineId) {",
                       "    pm.collectionVariables.set('timetable_routineId', String(data.timeTableRoutineId));",
+                      "  }",
+                      "  if (data && data.timetableStructureCourseMapperId) {",
+                      "    pm.collectionVariables.set('timetable_structureCourseMapperId', String(data.timetableStructureCourseMapperId));",
                       "  }",
                       "}"
                     ],
@@ -2663,7 +2724,7 @@
                     "timeTableCreate"
                   ]
                 },
-                "description": "**POST /timeTableCreate/**\n\nCreates a routine linked to one reusable `timeTableNameId` and one `classSectionTermId`.\nRoutine dates **must fall inside** the structure `startingDate` / `endingDate` window.\n\n### Request body\n\n```json\n{\n  \"timeTableNameId\": 10,\n  \"classSectionTermId\": 101,\n  \"campusId\": 1,\n  \"timeTableType\": \"normal\",\n  \"startingDate\": \"2026-01-01\",\n  \"endingDate\": \"2026-06-30\"\n}\n```\n\n| Field | Type | Required | Description |\n|-------|------|----------|-------------|\n| `timeTableNameId` | Integer | Yes | Structure PK (reusable across many routines) |\n| `classSectionTermId` | Integer | Yes for `normal` | Placement key |\n| `startingDate` | String | **Yes** | `>= structure.startingDate` |\n| `endingDate` | String | **Yes** | `<= structure.endingDate` and `>= startingDate` |\n| `campusId` | Integer | No | Campus PK |\n| `timeTableType` | Enum | No | `normal` \\| `elective` (default `normal`) |\n\n**400** — dates outside structure window, overlap for same term, missing structure/term.\n\nSaves `timeTableRoutineId` → `timetable_routineId`."
+                "description": "**POST /timeTableCreate/**\n\nCreates a routine for a structure + class section term.\n\nResolves `courseId` / `sessionId` from the class section, then looks up **structure course mapping** `(timeTableNameId, courseId, sessionId)`. Stores `timetableStructureCourseMapperId` on the routine.\n\nRoutine dates **must fall inside** that mapping's `startingDate` / `endingDate` (not on the structure root).\n\n### Request body\n\n```json\n{\n  \"timeTableNameId\": 10,\n  \"classSectionTermId\": 101,\n  \"campusId\": 1,\n  \"timeTableType\": \"normal\",\n  \"startingDate\": \"2026-01-01\",\n  \"endingDate\": \"2026-06-30\"\n}\n```\n\n| Field | Type | Required | Description |\n|-------|------|----------|-------------|\n| `timeTableNameId` | Integer | Yes | Structure PK — must already be mapped for this course/session |\n| `classSectionTermId` | Integer | Yes for `normal` | Supplies `courseId` + `sessionId` |\n| `startingDate` | String | **Yes** | `>= courseMapping.startingDate` |\n| `endingDate` | String | **Yes** | `<= courseMapping.endingDate` and `>= startingDate` |\n| `campusId` | Integer | No | Campus PK |\n| `timeTableType` | Enum | No | `normal` \\| `elective` (default `normal`) |\n| `courseId` | Integer | No | Rarely needed; usually from section |\n\n**Prerequisite:** `POST /timeTable/courseMapping` for this structure + section course/session.\n\n**400** — mapping missing / dates outside mapping window / missing placement.\n**409** — overlapping routine for the same class section term."
               },
               "response": []
             },
@@ -2706,7 +2767,7 @@
                     "clone"
                   ]
                 },
-                "description": "**POST /timeTableCreate/clone**\n\nCopies a routine + mappings to a new date range. New dates must stay inside the structure window.\n\n### Request body\n\n| Field | Required | Type | Notes |\n|-------|----------|------|-------|\n| `previousRoutineId` | yes | int | Source routine PK |\n| `startingDate` | yes | string | New start `YYYY-MM-DD` (inside structure window) |\n| `endingDate` | yes | string | New end `YYYY-MM-DD` (`>= startingDate`, inside structure window) |\n| `previousDate` | no | string | Optionally closes source routine end date |\n\nNew routine is unpublished (`isPublish: false`).\n\n**404** source not found. **400** dates outside structure window. **409** overlap / teacher-room conflict."
+                "description": "**POST /timeTableCreate/clone**\n\nCopies a routine + grid cells to a new date range. New dates must stay inside the **same structure–course mapping** window as the source routine.\n\n### Request body\n\n| Field | Required | Type | Notes |\n|-------|----------|------|-------|\n| `previousRoutineId` | yes | int | Source routine PK |\n| `startingDate` | yes | string | New start `YYYY-MM-DD` (inside mapping window) |\n| `endingDate` | yes | string | New end `YYYY-MM-DD` (`>= startingDate`, inside mapping window) |\n| `previousDate` | no | string | Optionally closes source routine end date (must be before new `startingDate`) |\n\nNew routine is unpublished (`isPublish: false`) and keeps the same `timetableStructureCourseMapperId`.\n\n**404** source / mapping not found. **400** dates outside mapping window. **409** overlap / teacher-room conflict."
               },
               "response": []
             },
@@ -2881,7 +2942,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"timeTableRoutineId\": {{timetable_routineId}},\n  \"startingDate\": \"2026-01-01\",\n  \"endingDate\": \"2026-06-30\",\n  \"classSectionTermId\": {{classSectionTermId}}\n}",
+                  "raw": "{\n  \"timeTableRoutineId\": {{timetable_routineId}},\n  \"startingDate\": \"2026-01-01\",\n  \"endingDate\": \"2026-06-30\",\n  \"classSectionTermId\": {{classSectionTermId}},\n  \"timeTableNameId\": {{timetable_timeTableNameId}},\n  \"courseId\": {{timetable_courseId}}\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2898,7 +2959,7 @@
                     "create"
                   ]
                 },
-                "description": "**PATCH /timeTableCreate/create**\n\nUpdates routine metadata (dates / placement).\n\n### Request body\n\n```json\n{\n  \"timeTableRoutineId\": 55,\n  \"startingDate\": \"2026-02-01\",\n  \"endingDate\": \"2026-06-30\",\n  \"classSectionTermId\": 101\n}\n```\n\n| Field | Required | Notes |\n|-------|----------|-------|\n| `timeTableRoutineId` | Yes | Routine PK |\n| `startingDate` | No | Must stay inside structure window |\n| `endingDate` | No | Must stay inside structure window |\n| `classSectionTermId` | No | Placement change |\n\n### Rules\n\n| Condition | Behavior |\n|-----------|----------|\n| `isPublish = false` | Allowed |\n| `isPublish = true` | **Blocked** — `Published routine cannot be updated` |\n\nTo extend the overall window after publish, use **`PATCH /timeTable/structure`**."
+                "description": "**PATCH /timeTableCreate/create**\n\nUpdates routine metadata (dates / placement / structure–course mapping).\n\n### Request body\n\n```json\n{\n  \"timeTableRoutineId\": 55,\n  \"startingDate\": \"2026-02-01\",\n  \"endingDate\": \"2026-06-30\",\n  \"classSectionTermId\": 101,\n  \"timeTableNameId\": 10,\n  \"courseId\": 34\n}\n```\n\n| Field | Required | Notes |\n|-------|----------|-------|\n| `timeTableRoutineId` | Yes | Routine PK |\n| `startingDate` | No | Must stay inside **course mapping** window |\n| `endingDate` | No | Must stay inside **course mapping** window |\n| `classSectionTermId` | No | Placement change (re-resolves session/course) |\n| `timeTableNameId` | No | Switch structure — must have a mapping for resolved course/session |\n| `courseId` | No | Switch course — mapping must exist |\n| `campusId` | No | Campus PK |\n| `timeTableType` | No | `normal` \\| `elective` |\n\n### Rules\n\n| Condition | Behavior |\n|-----------|----------|\n| `isPublish = false` | Allowed |\n| `isPublish = true` | **Blocked** — `Published routine cannot be updated` |\n\nTo extend the overall date window after publish, use **`PATCH /timeTable/structure`** with `timetableStructureCourseMapperId`."
               },
               "response": []
             },

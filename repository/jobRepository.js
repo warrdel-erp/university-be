@@ -398,13 +398,23 @@ export async function fetchTimetableAsJobs(filters, fromDate, toDate) {
       ...(fromDate && { endingDate: { [Op.gte]: fromDate } }),
       ...(toDate && { startingDate: { [Op.lte]: toDate } }),
     },
+    include: [
+      {
+        model: model.timeTableStructureCourseModel,
+        as: 'structureCourseMapping',
+        required: true,
+        attributes: ['timeTableNameId'],
+      },
+    ],
   });
 
   const rows = [];
 
   for (const table of tables) {
+    const timeTableNameId = table.structureCourseMapping.timeTableNameId;
+
     const config = await model.timeTableStructurePeriodsModel.findOne({
-      where: { timeTableNameId: table.timeTableNameId },
+      where: { timeTableNameId },
     });
 
     if (!config) continue;

@@ -42,10 +42,8 @@ export const addTimeTablePeriod = async (req, res) => {
 };
 
 export const getTimeTableDetails = async (req, res) => {
-  const { courseId } = req.query;
-
   try {
-    const result = await timeTableServices.getTimeTableDetails(courseId);
+    const result = await timeTableServices.getTimeTableDetails();
     return SuccessResponse(res, 200, "Time table details fetched successfully", result);
   } catch (error) {
     return ErrorResponse(res, 400, error.message || "Internal Server Error");
@@ -53,10 +51,8 @@ export const getTimeTableDetails = async (req, res) => {
 };
 
 export const getAllTimeTableName = async (req, res) => {
-  const { courseId } = req.query;
-
   try {
-    const result = await timeTableServices.getAllTimeTableName(courseId);
+    const result = await timeTableServices.getAllTimeTableName();
     return SuccessResponse(res, 200, "All time table name fetched successfully", result);
   } catch (error) {
     return ErrorResponse(res, 400, error.message || "Internal Server Error");
@@ -64,10 +60,8 @@ export const getAllTimeTableName = async (req, res) => {
 };
 
 export const getSingleTimeTableDetails = async (req, res) => {
-  const { courseId } = req.query;
-
   try {
-    const result = await timeTableServices.getSingleTimeTableDetails(courseId);
+    const result = await timeTableServices.getSingleTimeTableDetails();
     return SuccessResponse(res, 200, "Single time table details fetched successfully", result);
   } catch (error) {
     return ErrorResponse(res, 400, error.message || "Internal Server Error");
@@ -107,18 +101,28 @@ export const deleteTimeTableStructure = async (req, res) => {
   }
 };
 
-export const updateStructureEndingDate = async (req, res) => {
+export const updateStructure = async (req, res) => {
   try {
-    const { timeTableNameId, endingDate } = req.body;
-    const updatedBy = req.user.userId;
-
-    const result = await timeTableServices.updateStructureEndingDate(
-      timeTableNameId,
-      endingDate,
-      updatedBy,
+    const result = await timeTableServices.updateStructure(
+      req.body,
+      req.user.userId,
     );
 
-    return SuccessResponse(res, 200, "Structure endingDate updated successfully", result);
+    return SuccessResponse(res, 200, "Structure course mapping updated successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, 400, error.message || "Internal Server Error");
+  }
+};
+
+export const addStructureCourseMapping = async (req, res) => {
+  try {
+    const result = await timeTableServices.addStructureCourseMapping(
+      req.body,
+      req.user.userId,
+      req.user.userId,
+    );
+
+    return SuccessResponse(res, 200, "Structure course mapping added successfully", result);
   } catch (error) {
     return ErrorResponse(res, 400, error.message || "Internal Server Error");
   }

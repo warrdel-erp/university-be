@@ -1,5 +1,5 @@
 import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
-import { getSingleTimeTableById, getTimeTableStructureById } from "../repository/timeTableRepository.js";
+import { getSingleTimeTableById, getTimeTableStructureById, getStructureCourseMapping, getStructureCourseMappingById } from "../repository/timeTableRepository.js";
 import { getTeacherDetailsByTeacherSubjectId } from "../repository/teacherSubjectMappingRepository.js";
 import {
   getSingleFaculityLoadDetails,
@@ -19,28 +19,19 @@ import { randomUUID } from "crypto";
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-function assertRoutineDatesWithinStructure(structure, startingDate, endingDate) {
-  const structureStart = structure.startingDate != null
-    ? formatQueryDate(structure.startingDate)
-    : null;
-  const structureEnd = structure.endingDate != null
-    ? formatQueryDate(structure.endingDate)
-    : null;
-
-  if (!structureStart || !structureEnd) {
-    return;
+function assertRoutineDatesWithinStructure(courseMapping, startingDate, endingDate) {
+  if (!courseMapping) {
+    throw new Error('Structure course mapping not found — map the course to this structure with dates first');
   }
 
-  if (!startingDate || !endingDate) {
-    throw new Error('startingDate and endingDate are required and must fall within the structure date window');
-  }
-
+  const structureStart = formatQueryDate(courseMapping.startingDate);
+  const structureEnd = formatQueryDate(courseMapping.endingDate);
   const routineStart = formatQueryDate(startingDate);
   const routineEnd = formatQueryDate(endingDate);
 
   if (routineStart < structureStart || routineEnd > structureEnd) {
     throw new Error(
-      `Routine dates (${routineStart} to ${routineEnd}) must be inside the structure window (${structureStart} to ${structureEnd})`,
+      `Routine dates (${routineStart} to ${routineEnd}) must be inside the structure-course window (${structureStart} to ${structureEnd})`,
     );
   }
 }
@@ -440,7 +431,7 @@ async function resolveCombinedRoutineTargets(anchorRoutine, classSectionTermIds,
     const peerRoutine = await timeTableCreateRepository.findRoutineForCombinedSessionRepository(
       {
         classSectionTermId,
-        timeTableNameId: anchorRoutine.timeTableNameId,
+        timetableStructureCourseMapperId: anchorRoutine.timetableStructureCourseMapperId,
         timeTableType: anchorRoutine.timeTableType || 'normal',
         startingDate: anchorRoutine.startingDate,
         endingDate: anchorRoutine.endingDate,
@@ -511,49 +502,56 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
       throw new Error('classSectionTermId is required');
     }
 
+    let sessionId = placement.sessionId;
+
     if (placement.classSectionTermId) {
       const termRow = await findClassSectionTermById(placement.classSectionTermId, { transaction });
       if (!termRow) {
         throw new Error('classSectionTermId not found');
       }
-      const plain = termRow.get ? termRow.get({ plain: true }) : termRow;
-      const section = plain.classSection;
-      if (section) {
-        if (structure.sessionId && Number(section.sessionId) !== Number(structure.sessionId)) {
-          throw new Error('classSectionTermId does not match timetable structure session');
-        }
-        if (!placement.classSectionsId) {
-          placement.classSectionsId = section.classSectionsId;
-        }
-        placement.courseId = section.courseId;
+      const section = termRow.get({ plain: true }).classSection;
+      if (!section) {
+        throw new Error('class section not found for classSectionTermId');
       }
+      placement.courseId = section.courseId;
+      sessionId = section.sessionId;
     } else if (!placement.courseId && placement.classSectionsId) {
       const section = await timeTableCreateRepository.getClassSectionWithCourseRepository(
         placement.classSectionsId,
       );
-      if (section?.courseId) {
-        placement.courseId = section.courseId;
+      if (!section) {
+        throw new Error('classSectionsId not found');
       }
+      placement.courseId = section.courseId;
+      sessionId = section.sessionId;
     }
 
     if (!placement.courseId) {
-      placement.courseId = structure.courseId;
+      throw new Error('courseId is required — resolve from classSectionTermId or send courseId on routine create');
+    }
+
+    if (!sessionId) {
+      throw new Error('sessionId is required — resolve from classSectionTermId');
     }
 
     delete placement.term;
     delete placement.classSectionId;
     delete placement.classSectionsId;
+    delete placement.sessionId;
 
-    if (
-      placement.startingDate
-      && placement.endingDate
-    ) {
-      assertRoutineDatesWithinStructure(
-        structure,
-        placement.startingDate,
-        placement.endingDate,
-      );
-    }
+    const courseMapping = await getStructureCourseMapping(
+      data.timeTableNameId,
+      placement.courseId,
+      sessionId,
+      { transaction },
+    );
+    assertRoutineDatesWithinStructure(
+      courseMapping,
+      placement.startingDate,
+      placement.endingDate,
+    );
+    placement.timetableStructureCourseMapperId = courseMapping.timetableStructureCourseMapperId;
+    delete placement.timeTableNameId;
 
     if (
       placement.classSectionTermId
@@ -648,22 +646,21 @@ export async function getTimeTableByCourseAndSection(courseId, classSectionTermI
 
     if (!Array.isArray(data) || !data.length) return [];
 
-    return data.map((item) => {
-      const structure = item?.timeTableCreateName;
-      let weekOff = structure?.weekOff ?? [];
+    const result = [];
+    for (const item of data) {
+      const mapping = item.structureCourseMapping;
+      const structure = mapping.timeTableStructure;
+      let weekOff = structure.weekOff;
       if (typeof weekOff === 'string') {
-        try {
-          weekOff = JSON.parse(weekOff);
-        } catch {
-          weekOff = [];
-        }
+        weekOff = JSON.parse(weekOff);
       }
       if (!Array.isArray(weekOff)) {
         weekOff = [];
       }
 
-      const periods =
-        structure?.timeTableName?.map((period) => ({
+      const periods = [];
+      for (const period of structure.timeTableName || []) {
+        periods.push({
           startTime: period.startTime,
           endTime: period.endTime,
           timeTableCreationId: period.timeTableCreationId,
@@ -674,29 +671,36 @@ export async function getTimeTableByCourseAndSection(courseId, classSectionTermI
           periodName: period.periodName,
           classSectionsId: item.classSectionsId,
           classSectionTermId: item.classSectionTermId,
-        })) || [];
+        });
+      }
 
-      return {
+      const section = resolveTimeTableRoutineSection(item);
+      const firstPeriod = structure.timeTableName && structure.timeTableName[0];
+
+      result.push({
         timeTableRoutineId: item.timeTableRoutineId,
         timeTableType: item.timeTableType,
-        name: structure?.name,
+        name: structure.name,
         isPublish: item.isPublish,
-        timeTableNameId: structure?.timeTableNameId,
-        maximumPeriod: structure?.timeTableName?.[0]?.maximumPeriod,
-        isCourse: structure?.timeTableName?.[0]?.isCourse,
+        timeTableNameId: mapping.timeTableNameId,
+        timetableStructureCourseMapperId: item.timetableStructureCourseMapperId,
+        maximumPeriod: firstPeriod ? firstPeriod.maximumPeriod : undefined,
+        isCourse: firstPeriod ? firstPeriod.isCourse : undefined,
         weekOff,
         courseId: item.courseId,
-        classSectionsId: resolveTimeTableRoutineSection(item)?.classSectionsId ?? null,
+        classSectionsId: section ? section.classSectionsId : null,
         classSectionTermId: item.classSectionTermId,
-        classSectionsName: resolveTimeTableRoutineSection(item)?.section,
-        courseName: item?.timeTableCourse?.courseName,
+        classSectionsName: section ? section.section : undefined,
+        courseName: item.timeTableCourse ? item.timeTableCourse.courseName : undefined,
         startingDate: item.startingDate,
         endingDate: item.endingDate,
-        timeTableClassSectionTerm: item?.timeTableClassSectionTerm,
-        timeTableClassSection: resolveTimeTableRoutineSection(item),
+        timeTableClassSectionTerm: item.timeTableClassSectionTerm,
+        timeTableClassSection: section,
         periods,
-      };
-    });
+      });
+    }
+
+    return result;
   } catch (error) {
     console.error("Service error:", error);
     throw error;
@@ -937,7 +941,7 @@ export async function cloneTimeTableRoutine(
   const transaction = await sequelize.transaction();
 
   const routineCloneFields = [
-    'timeTableNameId',
+    'timetableStructureCourseMapperId',
     'courseId',
     'academicYearId',
     'classSectionTermId',
@@ -980,13 +984,24 @@ export async function cloneTimeTableRoutine(
       ? formatQueryDate(previousDate)
       : null;
 
-    const structure = await getTimeTableStructureById(previousPlain.timeTableNameId, { transaction });
+    const previousMapping = await getStructureCourseMappingById(
+      previousPlain.timetableStructureCourseMapperId,
+      { transaction },
+    );
+    if (!previousMapping) {
+      const error = new Error('Structure course mapping not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const structure = await getTimeTableStructureById(previousMapping.timeTableNameId, { transaction });
     if (!structure) {
       const error = new Error('timeTableNameId not found');
       error.statusCode = 404;
       throw error;
     }
-    assertRoutineDatesWithinStructure(structure, start, end);
+
+    assertRoutineDatesWithinStructure(previousMapping, start, end);
 
     if (previousEnd != null) {
       if (previousEnd < formatQueryDate(previousPlain.startingDate)) {
@@ -1057,6 +1072,7 @@ export async function cloneTimeTableRoutine(
       isPublish: false,
       createdBy,
       updatedBy,
+      timetableStructureCourseMapperId: previousPlain.timetableStructureCourseMapperId,
     };
 
     for (const field of routineCloneFields) {
@@ -1120,18 +1136,53 @@ export async function changeTimeTableCreate(body, updatedBy) {
       };
     }
 
-    if (placementFields.startingDate || placementFields.endingDate || placementFields.classSectionTermId) {
+    if (
+      placementFields.startingDate
+      || placementFields.endingDate
+      || placementFields.classSectionTermId
+      || placementFields.courseId
+      || placementFields.timeTableNameId
+    ) {
       const resolvedTermId = placementFields.classSectionTermId || current.classSectionTermId;
       const start = placementFields.startingDate || current.startingDate;
       const end = placementFields.endingDate || current.endingDate;
 
-      if (placementFields.startingDate || placementFields.endingDate) {
-        const structure = await getTimeTableStructureById(current.timeTableNameId);
-        if (!structure) {
-          throw new Error('timeTableNameId not found');
-        }
-        assertRoutineDatesWithinStructure(structure, start, end);
+      const currentMapping = await getStructureCourseMappingById(current.timetableStructureCourseMapperId);
+      if (!currentMapping) {
+        throw new Error('Structure course mapping not found');
       }
+
+      const timeTableNameId = placementFields.timeTableNameId || currentMapping.timeTableNameId;
+      let sessionId = currentMapping.sessionId;
+      let courseId = placementFields.courseId || current.courseId;
+
+      if (placementFields.classSectionTermId) {
+        const termRow = await findClassSectionTermById(placementFields.classSectionTermId);
+        if (!termRow) {
+          throw new Error('classSectionTermId not found');
+        }
+        const section = termRow.get({ plain: true }).classSection;
+        if (!section) {
+          throw new Error('class section not found for classSectionTermId');
+        }
+        sessionId = section.sessionId;
+        courseId = placementFields.courseId || section.courseId;
+        placementFields.courseId = courseId;
+      }
+
+      const structure = await getTimeTableStructureById(timeTableNameId);
+      if (!structure) {
+        throw new Error('timeTableNameId not found');
+      }
+
+      const courseMapping = await getStructureCourseMapping(
+        timeTableNameId,
+        courseId,
+        sessionId,
+      );
+      assertRoutineDatesWithinStructure(courseMapping, start, end);
+      placementFields.timetableStructureCourseMapperId = courseMapping.timetableStructureCourseMapperId;
+      delete placementFields.timeTableNameId;
 
       const overlap = await timeTableCreateRepository.checkRoutineOverlapRepository({
         classSectionTermId: resolvedTermId,
@@ -1402,7 +1453,7 @@ export async function getTimeTableMappingDetail(timeTableRoutineId) {
 
     // Week-off days from timetable
     const weekOffDaysSet = new Set();
-    const timeTableNameList = timeTableCreate?.timeTableCreateName?.timeTableName || [];
+    const timeTableNameList = timeTableCreate.structureCourseMapping.timeTableStructure.timeTableName || [];
 
     for (let i = 0; i < timeTableNameList.length; i++) {
       const entry = timeTableNameList[i];
@@ -2092,16 +2143,20 @@ export async function getSubjectWithCount(classSectionTermId) {
     subjectsList = mergeSubjectLists(subjectsList, resolvedSubjects);
   }
 
-  return finalResult.map(({ routine, countMap }) => ({
-    timeTableNameId: routine.timeTableCreateName?.timeTableNameId,
-    timeTableName: routine.timeTableCreateName?.name,
-    subjects: subjectsList.map((subject) => ({
-      subjectId: subject.subjectId,
-      subject: subject.subject,
-      subjectCode: subject.subjectCode,
-      count: countMap[subject.subjectId] || 0,
-    })),
-  }));
+  return finalResult.map(({ routine, countMap }) => {
+    const mapping = routine.structureCourseMapping;
+    const structure = mapping.timeTableStructure;
+    return {
+      timeTableNameId: mapping.timeTableNameId,
+      timeTableName: structure.name,
+      subjects: subjectsList.map((subject) => ({
+        subjectId: subject.subjectId,
+        subject: subject.subject,
+        subjectCode: subject.subjectCode,
+        count: countMap[subject.subjectId] || 0,
+      })),
+    };
+  });
 }
 
 export async function getRoutineByClassSectionId(classSectionTermId) {
@@ -2132,17 +2187,26 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
       return { ...placementMeta, routines: [], classSection };
     }
 
-    const timeTableNameIds = normalRoutines.map(r => r.timeTableNameId);
+    const timeTableNameIds = [];
+    for (const r of normalRoutines) {
+      timeTableNameIds.push(r.structureCourseMapping.timeTableNameId);
+    }
     const electiveRoutines = await timeTableCreateRepository.getElectiveRoutinesByTableNamesRepository(timeTableNameIds);
 
     const daysList = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
     const formattedRoutines = normalRoutines.map(routine => {
-      const timeTableCreateName = routine.timeTableCreateName || {};
+      const mapping = routine.structureCourseMapping;
+      const timeTableCreateName = mapping.timeTableStructure;
       const periods = timeTableCreateName.timeTableName || [];
       const normalScheduleItems = routine.timeTablecreate || [];
 
-      const matchingElectives = electiveRoutines.filter(er => er.timeTableNameId === routine.timeTableNameId);
+      const matchingElectives = [];
+      for (const er of electiveRoutines) {
+        if (er.structureCourseMapping.timeTableNameId === mapping.timeTableNameId) {
+          matchingElectives.push(er);
+        }
+      }
       const electiveScheduleItems = matchingElectives.flatMap(er => er.timeTablecreate || []);
 
       let weekOffList = [];
@@ -2285,7 +2349,7 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
       return {
         timeTableRoutineId: routine.timeTableRoutineId,
         isPublished: routine.isPublish,
-        timeTableNameId: routine.timeTableNameId,
+        timeTableNameId: routine.structureCourseMapping.timeTableNameId,
         name: timeTableCreateName.name || "N/A",
         startDate: routine.startingDate,
         endDate: routine.endingDate,
@@ -2376,7 +2440,7 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, s
     const daysList = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
     const formattedRoutines = routineRows.map(({ routine, electiveScheduleItems }) => {
-      const timeTableCreateName = routine.timeTableCreateName || {};
+      const timeTableCreateName = routine.structureCourseMapping.timeTableStructure;
       const periods = timeTableCreateName.timeTableName || [];
       const normalScheduleItems = routine.timeTablecreate || [];
       const classSection = mapRoutineClassSection(resolveTimeTableRoutineSection(routine));
@@ -2526,7 +2590,7 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, s
       return {
         timeTableRoutineId: routine.timeTableRoutineId,
         isPublished: routine.isPublish,
-        timeTableNameId: routine.timeTableNameId,
+        timeTableNameId: routine.structureCourseMapping.timeTableNameId,
         name: timeTableCreateName.name || "N/A",
         startDate: routine.startingDate,
         endDate: routine.endingDate,

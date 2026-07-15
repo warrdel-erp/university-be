@@ -1,7 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js"
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
-import courseModel from "./courseModel.js";
 import university from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
 import acedmicYear from "./acedmicYearModel.js";
@@ -61,15 +60,6 @@ const timeTableStructureModel = sequelize.define(
                 key: 'session_id'
             }
         },
-        courseId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'course_id',
-            references: {
-                model: courseModel,
-                key: 'course_id'
-            }
-        },
         periodLength: {
             type: DataTypes.INTEGER,
             allowNull: true,
@@ -84,16 +74,6 @@ const timeTableStructureModel = sequelize.define(
             type: DataTypes.STRING,
             allowNull: true,
             field: 'starting_time'
-        },
-        startingDate: {
-            type: DataTypes.DATEONLY,
-            allowNull: true,
-            field: 'starting_date'
-        },
-        endingDate: {
-            type: DataTypes.DATEONLY,
-            allowNull: true,
-            field: 'ending_date'
         },
         weekOff: {
             type: DataTypes.JSON,
@@ -130,16 +110,11 @@ const timeTableStructureModel = sequelize.define(
                 key: 'user_id'
             }
         },
-        deletedAt: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'deleted_at'
-        },
     },
     {
         tableName: 'time_table_structure',
         timestamps: true,
-        paranoid: true
+        paranoid: false,
     },
 );
 

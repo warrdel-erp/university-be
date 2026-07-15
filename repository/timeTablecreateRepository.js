@@ -2,7 +2,7 @@ import { Op, Sequelize } from 'sequelize';
 import * as model from '../models/index.js';
 import { buildScope, scoped } from '../utility/scoped.js';
 import { ATTENDANCE_PRESENT_STATUSES } from '../constant.js';
-import { classSectionTermsInclude, studentClassSectionTermWithSectionInclude, timeTableRoutineClassSectionInclude, stripRoutinePersistPayload } from '../utility/classSectionIncludes.js';
+import { classSectionTermsInclude, studentClassSectionTermWithSectionInclude, timeTableRoutineClassSectionInclude, stripRoutinePersistPayload, routineStructureInclude } from '../utility/classSectionIncludes.js';
 
 const presentStatusSqlList = ATTENDANCE_PRESENT_STATUSES.map((s) => `'${s}'`).join(', ');
 
@@ -112,20 +112,9 @@ export async function findClassSectionTermsWithRoutines({ courseId, sessionId } 
           model: model.timeTableRoutineModel,
           as: 'timeTableRoutines',
           required: false,
-          attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+          attributes: { exclude: ['createdAt', 'updatedAt', 'createdBy', 'updatedBy'] },
           include: [
-            {
-              model: model.timeTableStructureModel,
-              as: 'timeTableCreateName',
-              attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updated'] },
-              include: [
-                {
-                  model: model.timeTableStructurePeriodsModel,
-                  as: 'timeTableName',
-                  attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updated'] },
-                },
-              ],
-            },
+            routineStructureInclude(),
             {
               model: model.courseModel,
               as: 'timeTableCourse',
@@ -228,16 +217,7 @@ export async function getTimeTableByCourseAndSection(
   return await scoped(model.timeTableRoutineModel).findAll({
     where: whereClause,
     include: [
-      {
-        model: model.timeTableStructureModel,
-        as: "timeTableCreateName",
-        include: [
-          {
-            model: model.timeTableStructurePeriodsModel,
-            as: "timeTableName"
-          }
-        ]
-      },
+      routineStructureInclude(),
       {
         model: model.courseModel,
         as: "timeTableCourse",
@@ -247,7 +227,8 @@ export async function getTimeTableByCourseAndSection(
     ],
     order: [
       [
-        { model: model.timeTableStructureModel, as: "timeTableCreateName" },
+        { model: model.timeTableStructureCourseModel, as: "structureCourseMapping" },
+        { model: model.timeTableStructureModel, as: "timeTableStructure" },
         { model: model.timeTableStructurePeriodsModel, as: "timeTableName" },
         "timeTableCreationId",
         "ASC"
@@ -260,20 +241,9 @@ export async function getTimeTableByCourseAndSection(
 export async function getSingleTimeTableCreateDetails(courseId) {
   try {
     const result = await scoped(model.timeTableRoutineModel).findAll({
-      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      attributes: { exclude: ["createdAt", "updatedAt"] },
       include: [
-        {
-          model: model.timeTableStructureModel,
-          as: "timeTableCreateName",
-          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updated"] },
-          include: [
-            {
-              model: model.timeTableStructurePeriodsModel,
-              as: "timeTableName",
-              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updated"] }
-            }
-          ]
-        },
+        routineStructureInclude(),
         {
           model: model.courseModel,
           as: 'timeTableCourse',
@@ -507,8 +477,9 @@ export async function getRoutineByIdRepository(timeTableRoutineId, options = {})
         'endingDate',
         'isPublish',
         'classSectionTermId',
-        'timeTableNameId',
+        'timetableStructureCourseMapperId',
         'timeTableType',
+        'courseId',
       ],
       transaction: options.transaction,
     });
@@ -544,14 +515,14 @@ export async function updateRoutineClassSectionTermId(timeTableRoutineId, classS
 };
 
 export async function findRoutineForCombinedSessionRepository(
-  { classSectionTermId, timeTableNameId, timeTableType, startingDate, endingDate },
+  { classSectionTermId, timetableStructureCourseMapperId, timeTableType, startingDate, endingDate },
   options = {},
 ) {
   try {
     return await scoped(model.timeTableRoutineModel).findOne({
       where: {
         classSectionTermId: Number(classSectionTermId),
-        timeTableNameId: Number(timeTableNameId),
+        timetableStructureCourseMapperId: Number(timetableStructureCourseMapperId),
         timeTableType: timeTableType || 'normal',
         [Op.and]: [
           { startingDate: { [Op.lte]: endingDate } },
@@ -564,7 +535,7 @@ export async function findRoutineForCombinedSessionRepository(
         'endingDate',
         'isPublish',
         'classSectionTermId',
-        'timeTableNameId',
+        'timetableStructureCourseMapperId',
         'timeTableType',
       ],
       transaction: options.transaction,
@@ -952,21 +923,10 @@ export async function getTimeTableMappingDetail(timeTableRoutineId) {
           model: model.timeTableRoutineModel,
           as: 'timeTablecreate',
           required: true,
-          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+          attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "updatedBy"] },
           where: buildScope(model.timeTableRoutineModel),
           include: [
-            {
-              model: model.timeTableStructureModel,
-              as: "timeTableCreateName",
-              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-              include: [
-                {
-                  model: model.timeTableStructurePeriodsModel,
-                  as: "timeTableName",
-                  attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] }
-                }
-              ]
-            },
+            routineStructureInclude(),
             {
               model: model.courseModel,
               as: 'timeTableCourse',
@@ -1491,13 +1451,11 @@ export async function timeTableData(classSectionTermId) {
             },
           ],
         },
-        {
-          model: model.timeTableStructureModel,
-          as: 'timeTableCreateName',
-          attributes: ['timeTableNameId', 'name', 'instituteId', 'academicYearId'],
-          where: buildScope(model.timeTableStructureModel),
+        routineStructureInclude({
+          withPeriods: false,
           required: false,
-        },
+          structureWhere: buildScope(model.timeTableStructureModel),
+        }),
       ],
     });
   } catch (error) {
@@ -1526,20 +1484,9 @@ export async function getNormalRoutinesBySectionScopeRepository(scope = {}) {
 
     return await scoped(model.timeTableRoutineModel).findAll({
       where,
-      attributes: ['timeTableRoutineId', 'timeTableNameId', 'startingDate', 'endingDate', 'isPublish', 'timeTableType', 'classSectionTermId'],
+      attributes: ['timeTableRoutineId', 'timetableStructureCourseMapperId', 'startingDate', 'endingDate', 'isPublish', 'timeTableType', 'classSectionTermId'],
       include: [
-        {
-          model: model.timeTableStructureModel,
-          as: 'timeTableCreateName',
-          attributes: ['name', 'timeTableNameId', 'weekOff'],
-          include: [
-            {
-              model: model.timeTableStructurePeriodsModel,
-              as: 'timeTableName',
-              attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime', 'isBreak'],
-            }
-          ]
-        },
+        routineStructureInclude(),
         {
           model: model.classScheduleModel,
           as: 'timeTablecreate',
@@ -1578,11 +1525,19 @@ export async function getElectiveRoutinesByTableNamesRepository(timeTableNameIds
   try {
     return await scoped(model.timeTableRoutineModel).findAll({
       where: {
-        timeTableNameId: { [Op.in]: timeTableNameIds },
-        timeTableType: 'elective'
+        timeTableType: 'elective',
       },
-      attributes: ['timeTableRoutineId', 'timeTableNameId', 'timeTableType'],
+      attributes: ['timeTableRoutineId', 'timetableStructureCourseMapperId', 'timeTableType'],
       include: [
+        {
+          model: model.timeTableStructureCourseModel,
+          as: 'structureCourseMapping',
+          required: true,
+          attributes: ['timetableStructureCourseMapperId', 'timeTableNameId'],
+          where: {
+            timeTableNameId: { [Op.in]: timeTableNameIds },
+          },
+        },
         {
           model: model.classScheduleModel,
           where: employeeId ? { employeeId } : {},
@@ -1613,20 +1568,10 @@ export async function getElectiveRoutinesByTableNamesRepository(timeTableNameIds
   }
 }
 
-const teacherRoutineStructureInclude = {
-  model: model.timeTableStructureModel,
-  as: 'timeTableCreateName',
-  attributes: ['name', 'timeTableNameId', 'weekOff'],
-  where: buildScope(model.timeTableStructureModel),
+const teacherRoutineStructureInclude = routineStructureInclude({
   required: false,
-  include: [
-    {
-      model: model.timeTableStructurePeriodsModel,
-      as: 'timeTableName',
-      attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime', 'isBreak'],
-    },
-  ],
-};
+  structureWhere: buildScope(model.timeTableStructureModel),
+});
 
 const teacherClassSectionInclude = (courseId, sessionId) =>
   timeTableRoutineClassSectionInclude({
@@ -1757,7 +1702,7 @@ async function fetchNormalRoutinesForTeacher(employeeId, courseId, sessionId) {
     },
     attributes: [
       'timeTableRoutineId',
-      'timeTableNameId',
+      'timetableStructureCourseMapperId',
       'startingDate',
       'endingDate',
       'isPublish',
@@ -1788,10 +1733,18 @@ async function fetchElectiveScheduleItemsForTeacher(
     where: {
       courseId,
       timeTableType: 'elective',
-      timeTableNameId: { [Op.in]: timeTableNameIds },
     },
-    attributes: ['timeTableRoutineId', 'timeTableNameId'],
+    attributes: ['timeTableRoutineId', 'timetableStructureCourseMapperId'],
     include: [
+      {
+        model: model.timeTableStructureCourseModel,
+        as: 'structureCourseMapping',
+        required: true,
+        attributes: ['timetableStructureCourseMapperId', 'timeTableNameId'],
+        where: {
+          timeTableNameId: { [Op.in]: timeTableNameIds },
+        },
+      },
       teacherElectiveScheduleInclude(employeeId),
       teacherClassSectionInclude(courseId, sessionId),
     ],
@@ -1803,9 +1756,10 @@ async function fetchElectiveScheduleItemsForTeacher(
     if (!items.length) {
       continue;
     }
-    const existing = electiveItemsByTableNameId.get(electiveRoutine.timeTableNameId) || [];
+    const tableNameId = electiveRoutine.structureCourseMapping.timeTableNameId;
+    const existing = electiveItemsByTableNameId.get(tableNameId) || [];
     electiveItemsByTableNameId.set(
-      electiveRoutine.timeTableNameId,
+      tableNameId,
       existing.concat(items),
     );
   }
@@ -1820,9 +1774,10 @@ export async function getTeacherRoutineBundle(employeeId, courseId, sessionId) {
       fetchNormalRoutinesForTeacher(employeeId, courseId, sessionId),
     ]);
 
-    const timeTableNameIds = [
-      ...new Set(normalRoutines.map((routine) => routine.timeTableNameId).filter(Boolean)),
-    ];
+    const timeTableNameIds = [];
+    for (const routine of normalRoutines) {
+      timeTableNameIds.push(routine.structureCourseMapping.timeTableNameId);
+    }
     const electiveItemsByTableNameId = await fetchElectiveScheduleItemsForTeacher(
       employeeId,
       courseId,
@@ -1830,15 +1785,21 @@ export async function getTeacherRoutineBundle(employeeId, courseId, sessionId) {
       timeTableNameIds,
     );
 
+    const routines = [];
+    for (const routine of normalRoutines) {
+      routines.push({
+        routine,
+        electiveScheduleItems:
+          electiveItemsByTableNameId.get(routine.structureCourseMapping.timeTableNameId) || [],
+      });
+    }
+
     return {
       employee,
       course,
       session,
       classSections,
-      routines: normalRoutines.map((routine) => ({
-        routine,
-        electiveScheduleItems: electiveItemsByTableNameId.get(routine.timeTableNameId) || [],
-      })),
+      routines,
     };
   } catch (error) {
     console.error('Error in getTeacherRoutineBundle:', error);
@@ -1850,7 +1811,7 @@ export async function getClassSectionWithCourseRepository(classSectionsId) {
   try {
     return await scoped(model.classSectionModel).findOne({
       where: { classSectionsId: classSectionsId },
-      attributes: ['classSectionsId', 'section'],
+      attributes: ['classSectionsId', 'section', 'courseId', 'sessionId'],
       include: [
         {
           model: model.courseModel,
