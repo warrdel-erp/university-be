@@ -1,5 +1,5 @@
 import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
-import { getSingleTimeTableById, getTimeTableStructureById, getStructureCourseMappingById } from "../repository/timeTableRepository.js";
+import { getSingleTimeTableById, getTimeTableStructureById, getStructureCourseMappingById, getMappedStructuresForCourseSession } from "../repository/timeTableRepository.js";
 import { getTeacherDetailsByTeacherSubjectId } from "../repository/teacherSubjectMappingRepository.js";
 import {
   getSingleFaculityLoadDetails,
@@ -2153,18 +2153,28 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
       section = classSection?.section ?? null;
     }
 
+    const courseId = classSection?.courseId != null ? Number(classSection.courseId) : null;
+    const sessionId = classSection?.sessionId != null ? Number(classSection.sessionId) : null;
+
     const placementMeta = {
       classSectionTermId: placement.classSectionTermId,
       section,
       term: placement.term != null ? Number(placement.term) : null,
       year: classSection?.year != null ? Number(classSection.year) : null,
+      courseId,
+      sessionId,
     };
 
     const normalRoutines =
       await timeTableCreateRepository.getNormalRoutinesBySectionScopeRepository(scope);
 
     if (!normalRoutines || !normalRoutines.length) {
-      return { ...placementMeta, structures: [], classSection };
+      const structures = await buildMappedStructuresWithoutRoutines(
+        courseId,
+        sessionId,
+        classSection,
+      );
+      return { ...placementMeta, structures, classSection };
     }
 
     const timeTableNameIds = [];
@@ -2220,6 +2230,11 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
           timeTableNameId,
           name: timeTableCreateName.name || 'N/A',
           weekOff: weekOffList,
+          timetableStructureCourseMapperId: mapping.timetableStructureCourseMapperId,
+          courseId: mapping.courseId != null ? Number(mapping.courseId) : courseId,
+          sessionId: mapping.sessionId != null ? Number(mapping.sessionId) : sessionId,
+          startingDate: mapping.startingDate ?? null,
+          endingDate: mapping.endingDate ?? null,
           routines: [],
         });
       }
@@ -2382,6 +2397,20 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
       });
     }
 
+    // Also include course/session mappings that have no routine yet for this section
+    if (courseId != null && sessionId != null) {
+      const mappedWithoutRoutine = await buildMappedStructuresWithoutRoutines(
+        courseId,
+        sessionId,
+        classSection,
+      );
+      for (const mapped of mappedWithoutRoutine) {
+        if (!structuresById.has(mapped.timeTableNameId)) {
+          structuresById.set(mapped.timeTableNameId, mapped);
+        }
+      }
+    }
+
     const structures = [];
     for (const structure of structuresById.values()) {
       structures.push(structure);
@@ -2392,6 +2421,99 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
     console.error("Error in getRoutineByClassSectionId Service:", error);
     throw error;
   }
+}
+
+function parseWeekOffList(weekOffRaw) {
+  let weekOffList = [];
+  try {
+    weekOffList = Array.isArray(weekOffRaw)
+      ? weekOffRaw
+      : (typeof weekOffRaw === 'string' ? JSON.parse(weekOffRaw) : []);
+    if (typeof weekOffList === 'string') {
+      weekOffList = JSON.parse(weekOffList);
+    }
+  } catch (e) {
+    weekOffList = [];
+  }
+  return weekOffList;
+}
+
+function buildEmptyPeriodGrid(periods, weekOffList) {
+  const daysList = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const weekOffLower = [];
+  for (const day of weekOffList) {
+    weekOffLower.push(String(day).toLowerCase());
+  }
+
+  const formattedPeriods = [];
+  for (const period of periods) {
+    const formattedDays = [];
+    for (const daysName of daysList) {
+      if (weekOffLower.includes(daysName.toLowerCase())) {
+        formattedDays.push({
+          name: daysName,
+          isDayOff: true,
+        });
+        continue;
+      }
+      if (period.isBreak) {
+        formattedDays.push({
+          name: daysName,
+          isBreak: true,
+        });
+        continue;
+      }
+      formattedDays.push({
+        name: daysName,
+        scheduleItems: [],
+      });
+    }
+    formattedPeriods.push({
+      timeTableCreationId: period.timeTableCreationId,
+      name: period.periodName,
+      startTime: period.startTime,
+      endTime: period.endTime,
+      days: formattedDays,
+    });
+  }
+  return formattedPeriods;
+}
+
+async function buildMappedStructuresWithoutRoutines(courseId, sessionId, classSection) {
+  if (courseId == null || sessionId == null) {
+    return [];
+  }
+
+  const rows = await getMappedStructuresForCourseSession(courseId, sessionId);
+  const structures = [];
+
+  for (const row of rows) {
+    const plain = row.get ? row.get({ plain: true }) : row;
+    const structure = plain.timeTableStructure;
+    const course = plain.course;
+    const session = plain.session;
+    const weekOffList = parseWeekOffList(structure.weekOff);
+    const periodRows = structure.timeTableName || [];
+
+    structures.push({
+      timeTableNameId: plain.timeTableNameId,
+      name: structure.name || 'N/A',
+      weekOff: weekOffList,
+      timetableStructureCourseMapperId: plain.timetableStructureCourseMapperId,
+      courseId: plain.courseId,
+      courseName: course.courseName,
+      courseCode: course.courseCode,
+      sessionId: plain.sessionId,
+      sessionName: session.sessionName,
+      startingDate: plain.startingDate,
+      endingDate: plain.endingDate,
+      year: classSection?.year != null ? Number(classSection.year) : null,
+      routines: [],
+      periods: buildEmptyPeriodGrid(periodRows, weekOffList),
+    });
+  }
+
+  return structures;
 }
 
 function mapRoutineClassSection(classSection) {

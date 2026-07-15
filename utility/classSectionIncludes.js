@@ -167,6 +167,7 @@ export function routineStructureInclude({
             'timetableStructureCourseMapperId',
             'timeTableNameId',
             'courseId',
+            'sessionId',
             'startingDate',
             'endingDate',
         ],

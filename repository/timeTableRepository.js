@@ -402,6 +402,71 @@ export async function getStructureMappingPrintRows(filters = {}) {
     });
 }
 
+export async function getMappedStructuresForCourseSession(courseId, sessionId) {
+    return await scoped(model.timeTableStructureCourseModel).findAll({
+        where: {
+            courseId: Number(courseId),
+            sessionId: Number(sessionId),
+        },
+        attributes: [
+            'timetableStructureCourseMapperId',
+            'timeTableNameId',
+            'courseId',
+            'sessionId',
+            'startingDate',
+            'endingDate',
+        ],
+        include: [
+            {
+                model: model.timeTableStructureModel,
+                as: 'timeTableStructure',
+                required: true,
+                attributes: [
+                    'timeTableNameId',
+                    'name',
+                    'maximumPeriod',
+                    'periodLength',
+                    'periodGap',
+                    'startingTime',
+                    'weekOff',
+                ],
+                where: buildScope(model.timeTableStructureModel),
+                include: [
+                    {
+                        model: model.timeTableStructurePeriodsModel,
+                        as: 'timeTableName',
+                        attributes: [
+                            'timeTableCreationId',
+                            'periodName',
+                            'startTime',
+                            'endTime',
+                            'type',
+                            'isCourse',
+                            'isBreak',
+                        ],
+                    },
+                ],
+            },
+            {
+                model: model.courseModel,
+                as: 'course',
+                required: true,
+                attributes: ['courseId', 'courseName', 'courseCode'],
+            },
+            {
+                model: model.sessionModel,
+                as: 'session',
+                required: true,
+                attributes: ['sessionId', 'sessionName'],
+            },
+        ],
+        order: [
+            ['timeTableNameId', 'ASC'],
+            ['timetableStructureCourseMapperId', 'ASC'],
+        ],
+    });
+}
+
 export async function getSingleTimeTableById(timeTableCreationId) {
     try {
         const period = await findPeriodInScope(timeTableCreationId);
