@@ -74,11 +74,10 @@ export const getTimeTableByCourseAndSection = async (req, res) => {
             classSectionTermId,
             timeTableType,
         );
-        res.status(200).json(result);
+       SuccessResponse(res, 200, 'Time table fetched successfully', result);
     } catch (error) {
+        ErrorResponse(res, 500, "Internal Server Error");
         console.error("Error fetching timetable:", error);
-        const statusCode = /not found|could not be resolved/.test(error.message) ? 400 : 500;
-        res.status(statusCode).send(error.message || "Internal Server Error");
     }
 };
 
