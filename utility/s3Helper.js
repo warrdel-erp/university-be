@@ -2,27 +2,7 @@ import AWS from "aws-sdk";
 import fs from "fs";
 import path from "path";
 
-const AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
-const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
-const AWS_REGION = process.env.AWS_REGION || "us-east-1";
-const AWS_BUCKET_NAME = process.env.AWS_BUCKET_NAME || "warrdel-erp";
-
-const isAwsConfigured = !!(AWS_ACCESS_KEY_ID && AWS_SECRET_ACCESS_KEY);
-
-let s3 = null;
-if (isAwsConfigured) {
-  s3 = new AWS.S3({
-    accessKeyId: AWS_ACCESS_KEY_ID,
-    secretAccessKey: AWS_SECRET_ACCESS_KEY,
-    region: AWS_REGION,
-    signatureVersion: "v4",
-  });
-  console.log(">>>>> AWS S3 configured successfully >>>>>");
-} else {
-  console.warn(
-    "⚠️ AWS S3 credentials not found in env. S3 features will fail until credentials are set."
-  );
-}
+import { AWS_BUCKET_NAME, AWS_BUCKET_PREFIX, s3Client as s3 } from "./awsConfig.js";
 
 function ensureAwsConfigured() {
   if (!s3) {
@@ -44,7 +24,7 @@ export async function getUploadSignedUrl(key, mimeType, expiresSec = 3600) {
 
   const params = {
     Bucket: AWS_BUCKET_NAME,
-    Key: key,
+    Key: AWS_BUCKET_PREFIX + key,
     ContentType: mimeType,
     Expires: expiresSec,
   };
@@ -71,7 +51,7 @@ export async function getDownloadSignedUrl(key, expiresSec = 3600) {
 
   const params = {
     Bucket: AWS_BUCKET_NAME,
-    Key: key,
+    Key: AWS_BUCKET_PREFIX + key,
     Expires: expiresSec,
   };
 
@@ -96,7 +76,7 @@ export async function verifyFileInS3(key) {
 
   const params = {
     Bucket: AWS_BUCKET_NAME,
-    Key: key,
+    Key: AWS_BUCKET_PREFIX + key,
   };
 
   try {
@@ -124,7 +104,7 @@ export async function downloadFileFromS3(key, localFilePath) {
 
   const params = {
     Bucket: AWS_BUCKET_NAME,
-    Key: key,
+    Key: AWS_BUCKET_PREFIX + key,
   };
 
   const fileStream = fs.createWriteStream(localFilePath);
@@ -156,7 +136,7 @@ export async function getFileBufferFromS3(key) {
 
   const params = {
     Bucket: AWS_BUCKET_NAME,
-    Key: key,
+    Key: AWS_BUCKET_PREFIX + key,
   };
 
   try {
@@ -184,13 +164,13 @@ export async function uploadFileToS3(fileSource, key, mimeType) {
 
   const params = {
     Bucket: AWS_BUCKET_NAME,
-    Key: key,
+    Key: AWS_BUCKET_PREFIX + key,
     Body: fileBuffer,
     ContentType: mimeType,
   };
 
   await s3.putObject(params).promise();
-  return `https://${AWS_BUCKET_NAME}.s3.amazonaws.com/${key}`;
+  return `https://${AWS_BUCKET_NAME}.s3.amazonaws.com/${AWS_BUCKET_PREFIX}${key}`;
 }
 
 /**
@@ -203,7 +183,7 @@ export async function listFilesInS3(prefix = "") {
 
   const params = {
     Bucket: AWS_BUCKET_NAME,
-    Prefix: prefix,
+    Prefix: AWS_BUCKET_PREFIX + prefix,
   };
 
   try {
