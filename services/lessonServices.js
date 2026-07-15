@@ -83,6 +83,61 @@ export async function addMapping(data, createdBy, updatedBy) {
   }
 }
 
+/**
+ * Copy an existing lesson/topic mapping onto a new timetable cell + date.
+ */
+export async function copyMapping(data, createdBy, updatedBy) {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const source = await lesson.getLessonMappingById(data.sourceLessonMappingId, transaction);
+    if (!source) {
+      throw Object.assign(new Error("Source lesson mapping not found"), { statusCode: 404 });
+    }
+
+    const schedule = await lesson.getClassScheduleById(data.timeTableMappingId, transaction);
+    if (!schedule) {
+      throw Object.assign(
+        new Error(`Timetable cell ${data.timeTableMappingId} not found`),
+        { statusCode: 404 },
+      );
+    }
+
+    const row = await lesson.addLessionMapping(
+      {
+        topicId: source.topicId,
+        timeTableMappingId: Number(data.timeTableMappingId),
+        date: data.date,
+        completeDate: null,
+        note: data.note !== undefined ? data.note : source.note,
+        lectureUrl: data.lectureUrl !== undefined ? data.lectureUrl : source.lectureUrl,
+        file: data.file !== undefined ? data.file : source.file,
+        status: "inComplete",
+        createdBy,
+        updatedBy,
+      },
+      transaction,
+    );
+
+    await transaction.commit();
+    return {
+      message: "Lesson mapping copied successfully",
+      copied: {
+        lessonMappingId: row.lessonMappingId,
+        topicId: row.topicId,
+        timeTableMappingId: row.timeTableMappingId,
+        date: row.date,
+        status: row.status,
+        sourceLessonMappingId: Number(data.sourceLessonMappingId),
+      },
+    };
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error in copyMapping:", error);
+    throw error;
+  }
+}
+
 export async function getMapping(academicYearId) {
   try {
     const originalData = await lesson.getMapping(academicYearId);

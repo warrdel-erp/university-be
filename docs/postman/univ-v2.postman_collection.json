@@ -5585,6 +5585,49 @@
           "response": []
         },
         {
+          "name": "copy lesson mapping",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lesson/mapping/copy",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lesson",
+                "mapping",
+                "copy"
+              ]
+            },
+            "description": "**POST /lesson/mapping/copy**\n\nCopies an existing lesson/topic mapping onto a **new timetable cell + date**.\n\nCopies from source: `topicId`, `note`, `lectureUrl`, `file`.\nNew row starts as `status: inComplete` (`completeDate: null`).\n\n### Request body\n```json\n{\n  \"sourceLessonMappingId\": 12,\n  \"timeTableMappingId\": 200,\n  \"date\": \"2026-07-16\"\n}\n```",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sourceLessonMappingId\": 12,\n  \"timeTableMappingId\": 200,\n  \"date\": \"2026-07-16\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
           "name": "get mapping",
           "request": {
             "auth": {
@@ -8011,7 +8054,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/options/lectureWindows?employeeId=45&subjectId=12",
+              "raw": "{{baseurl}}/options/lectureWindows?employeeId=45&subjectId=12&date=2026-07-15&sessionId=27",
               "host": [
                 "{{baseurl}}"
               ],
@@ -8027,10 +8070,20 @@
                 {
                   "key": "subjectId",
                   "value": "12"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-07-15",
+                  "description": "Scheduling date (YYYY-MM-DD). Only lecture windows where startDate <= date <= endDate"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "27",
+                  "description": "Optional session filter"
                 }
               ]
             },
-            "description": "**GET /options/lectureWindows**\n\nCascade step 1. Query: `employeeId`, `subjectId` (required).\n\n**200 data:** `{ selected: { employee, subject }, options: [{ lectureWindowId, name }] }`"
+            "description": "**GET /options/lectureWindows**\n\nCascade step 1.\n\n**Query**\n| Key | Required | Notes |\n|-----|----------|--------|\n| `employeeId` | Yes | Teacher |\n| `subjectId` | Yes | Subject |\n| `date` | Yes | Scheduling/today date `YYYY-MM-DD` — returns windows where `startDate <= date <= endDate` |\n| `sessionId` | No | Session filter |\n\n**200 data:** `{ selected: { employee, subject }, options: [{ lectureWindowId, name }] }`"
           },
           "response": []
         },
@@ -10090,7 +10143,7 @@
           "request": {
             "method": "POST",
             "header": [],
-            "description": "**POST /libraryCreation/addBook**\n\nCreates one `library_book` row from `book` payload and one-or-more `library_book_inventory` rows from `inventory` array in a single transaction.\n\nSupports both `accessionNumber` and legacy `accessionNo` (mapped to `accessionNumber`).\n\n**Full payload example:**\n```json\n{\n  \"book\": {\n    \"libraryCreationId\": 1,\n    \"libraryFloorId\": 1,\n    \"title\": \"Introduction to Algorithms\",\n    \"subtitle\": \"Third Edition\",\n    \"authors\": \"Thomas H. Cormen\",\n    \"publisher\": \"MIT Press\",\n    \"placeOfPublication\": \"Cambridge\",\n    \"yearOfPublication\": 2009,\n    \"edition\": \"3rd\",\n    \"seriesTitle\": \"MIT Series\",\n    \"volumeNumber\": \"1\",\n    \"language\": \"English\",\n    \"isbn\": \"9780262033848\",\n    \"issn\": null,\n    \"barcode\": \"BK-ALG-0001\",\n    \"physicalDescription\": \"Hardcover\",\n    \"numberOfPages\": 1312,\n    \"illustrations\": true,\n    \"summary\": \"Comprehensive algorithms textbook\",\n    \"keywords\": \"algorithms,data structures,computer science\",\n    \"additionalAuthor\": \"Charles E. Leiserson\",\n    \"subjectId\": [1, 2],\n    \"categoryId\": [{{libraryCategory_id}}],\n    \"classSectionsId\": 0,\n    \"remark\": \"\",\n    \"itemType\": \"print\"\n  },\n  \"inventory\": [\n    {\n      \"accessionNumber\": \"ACC-1001\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"status\": \"available\",\n      \"condition\": \"Good\",\n      \"billNo\": \"Bill No.\",\n      \"billDate\": \"2026-05-06\",\n      \"itemPrice\": \"100.00\",\n      \"netPrice\": \"90.00\",\n      \"currency\": \"INR\"\n    }\n  ]\n}\n```\n\n**Partial payload example:**\n```json\n{\n  \"book\": {\n    \"libraryCreationId\": 1,\n    \"title\": \"Introduction to Algorithms\"\n  },\n  \"inventory\": [\n    {\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"accessionNo\": \"ACC-1002\"\n    }\n  ]\n}\n```",
+            "description": "**POST /libraryCreation/addBook**\n\nCreates one `library_book` row from `book` payload and one-or-more `library_book_inventory` rows from `inventory` array in a single transaction.\n\nSupports both `accessionNumber` and legacy `accessionNo` (mapped to `accessionNumber`).\n\n**Full payload example:**\n```json\n{\n  \"book\": {\n    \"libraryCreationId\": 1,\n    \"libraryFloorId\": 1,\n    \"title\": \"Introduction to Algorithms\",\n    \"subtitle\": \"Third Edition\",\n    \"authors\": \"Thomas H. Cormen\",\n    \"publisher\": \"MIT Press\",\n    \"placeOfPublication\": \"Cambridge\",\n    \"yearOfPublication\": 2009,\n    \"edition\": \"3rd\",\n    \"seriesTitle\": \"MIT Series\",\n    \"volumeNumber\": \"1\",\n    \"language\": \"English\",\n    \"isbn\": \"9780262033848\",\n    \"issn\": null,\n    \"barcode\": \"BK-ALG-0001\",\n    \"physicalDescription\": \"Hardcover\",\n    \"numberOfPages\": 1312,\n    \"illustrations\": true,\n    \"summary\": \"Comprehensive algorithms textbook\",\n    \"keywords\": \"algorithms,data structures,computer science\",\n    \"additionalAuthor\": \"Charles E. Leiserson\",\n    \"subjectId\": [1, 2],\n    \"categoryId\": [{{libraryCategory_id}}],\n    \"classSectionsId\": 0,\n    \"remark\": \"\",\n    \"itemType\": \"print\"\n  },\n  \"inventory\": [\n    {\n      \"accessionNumber\": \"ACC-1001\",\n      \"accessionDate\": \"2024-01-10\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"status\": \"available\",\n      \"condition\": \"Good\",\n      \"billNo\": \"Bill No.\",\n      \"billDate\": \"2026-05-06\",\n      \"itemPrice\": \"100.00\",\n      \"netPrice\": \"90.00\",\n      \"currency\": \"INR\"\n    }\n  ]\n}\n```\n\n**Partial payload example:**\n```json\n{\n  \"book\": {\n    \"libraryCreationId\": 1,\n    \"title\": \"Introduction to Algorithms\"\n  },\n  \"inventory\": [\n    {\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"accessionNo\": \"ACC-1002\"\n    }\n  ]\n}\n```",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -10103,7 +10156,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"book\": {\n    \"libraryCreationId\": {{libraryCreation_id}},\n    \"libraryFloorId\": {{libraryFloor_id}},\n    \"title\": \"Introduction to Algorithms\",\n    \"subtitle\": \"Third Edition\",\n    \"authors\": \"Thomas H. Cormen\",\n    \"publisher\": \"MIT Press\",\n    \"placeOfPublication\": \"Cambridge\",\n    \"yearOfPublication\": 2009,\n    \"edition\": \"3rd\",\n    \"seriesTitle\": \"MIT Series\",\n    \"volumeNumber\": \"1\",\n    \"language\": \"English\",\n    \"isbn\": \"9780262033848\",\n    \"issn\": null,\n    \"barcode\": \"BK-ALG-0001\",\n    \"physicalDescription\": \"Hardcover\",\n    \"numberOfPages\": 1312,\n    \"illustrations\": true,\n    \"summary\": \"Comprehensive algorithms textbook\",\n    \"keywords\": \"algorithms,data structures,computer science\",\n    \"additionalAuthor\": \"Charles E. Leiserson\",\n    \"subjectId\": [1, 2],\n    \"categoryId\": [{{libraryCategory_id}}],\n    \"classSectionsId\": 0,\n    \"remark\": \"\",\n    \"itemType\": \"print\"\n  },\n  \"inventory\": [\n    {\n      \"accessionNumber\": \"ACC-1001\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"status\": \"available\",\n      \"condition\": \"Good\",\n      \"billNo\": \"Bill No.\",\n      \"billDate\": \"2026-05-06\",\n      \"itemPrice\": \"100.00\",\n      \"netPrice\": \"90.00\",\n      \"currency\": \"INR\"\n    }\n  ]\n}",
+              "raw": "{\n  \"book\": {\n    \"libraryCreationId\": {{libraryCreation_id}},\n    \"libraryFloorId\": {{libraryFloor_id}},\n    \"title\": \"Introduction to Algorithms\",\n    \"subtitle\": \"Third Edition\",\n    \"authors\": \"Thomas H. Cormen\",\n    \"publisher\": \"MIT Press\",\n    \"placeOfPublication\": \"Cambridge\",\n    \"yearOfPublication\": 2009,\n    \"edition\": \"3rd\",\n    \"seriesTitle\": \"MIT Series\",\n    \"volumeNumber\": \"1\",\n    \"language\": \"English\",\n    \"isbn\": \"9780262033848\",\n    \"issn\": null,\n    \"barcode\": \"BK-ALG-0001\",\n    \"physicalDescription\": \"Hardcover\",\n    \"numberOfPages\": 1312,\n    \"illustrations\": true,\n    \"summary\": \"Comprehensive algorithms textbook\",\n    \"keywords\": \"algorithms,data structures,computer science\",\n    \"additionalAuthor\": \"Charles E. Leiserson\",\n    \"subjectId\": [1, 2],\n    \"categoryId\": [{{libraryCategory_id}}],\n    \"classSectionsId\": 0,\n    \"remark\": \"\",\n    \"itemType\": \"print\"\n  },\n  \"inventory\": [\n    {\n      \"accessionNumber\": \"ACC-1001\",\n      \"accessionDate\": \"2024-01-10\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"status\": \"available\",\n      \"condition\": \"Good\",\n      \"billNo\": \"Bill No.\",\n      \"billDate\": \"2026-05-06\",\n      \"itemPrice\": \"100.00\",\n      \"netPrice\": \"90.00\",\n      \"currency\": \"INR\"\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -10266,11 +10319,11 @@
                 {
                   "key": "search",
                   "value": "",
-                  "description": "Single search ΓÇö title, subtitle, author, isbn, publisher, keywords, accessionNumber, status, billNo, billDate, libraryBookId"
+                  "description": "Single search ΓÇö title, subtitle, author, isbn, publisher, keywords, accessionNumber, status, billNo, billDate, accessionDate, libraryBookId"
                 }
               ]
             },
-            "description": "**GET /libraryCreation/allBook**\n\nPaginated book list. Use **`search`** only for lookup (all former filter fields merged). Sorted by `libraryBookId` DESC.\n\n**Query (6 keys)**\n| Key | Required | Default | Notes |\n|-----|----------|---------|--------|\n| `libraryCreationId` | Yes | ΓÇö | Library ID |\n| `libraryFloorId` | No | ΓÇö | Floor scope; omit for whole library |\n| `page` | No | 1 | Page number |\n| `limit` | No | 20 | Max 100 |\n| `search` | No | ΓÇö | One field: book + inventory fields; omit for all |\n\n**`search` matches:** title, subtitle, authors, isbn, publisher, keywords, accessionNumber, status, billNo, billDate, numeric `libraryBookId`\n\n**Examples**\n- `GET .../allBook?libraryCreationId=1&page=1&limit=20`\n- `GET .../allBook?libraryCreationId=1&libraryFloorId=1&search=design&page=1&limit=20`\n- `GET .../allBook?libraryCreationId=1&search=available&page=1&limit=20`\n\n**Response:** `data[]` + `paginationData`"
+            "description": "**GET /libraryCreation/allBook**\n\nPaginated book list. Use **`search`** only for lookup (all former filter fields merged). Sorted by `libraryBookId` DESC.\n\n**Query (6 keys)**\n| Key | Required | Default | Notes |\n|-----|----------|---------|--------|\n| `libraryCreationId` | Yes | ΓÇö | Library ID |\n| `libraryFloorId` | No | ΓÇö | Floor scope; omit for whole library |\n| `page` | No | 1 | Page number |\n| `limit` | No | 20 | Max 100 |\n| `search` | No | ΓÇö | One field: book + inventory fields; omit for all |\n\n**`search` matches:** title, subtitle, authors, isbn, publisher, keywords, accessionNumber, status, billNo, billDate, accessionDate, numeric `libraryBookId`\n\n**Examples**\n- `GET .../allBook?libraryCreationId=1&page=1&limit=20`\n- `GET .../allBook?libraryCreationId=1&libraryFloorId=1&search=design&page=1&limit=20`\n- `GET .../allBook?libraryCreationId=1&search=available&page=1&limit=20`\n\n**Response:** `data[]` + `paginationData`"
           },
           "response": [
             {
@@ -10279,7 +10332,7 @@
               "code": 200,
               "_postman_previewlanguage": "json",
               "header": [],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Books\",\n  \"data\": [\n    {\n      \"libraryBookId\": 1,\n      \"libraryCreationId\": 1,\n      \"title\": \"Introduction to Algorithms\",\n      \"author\": \"Thomas H. Cormen\",\n      \"categories\": [{ \"libraryCategoryId\": 1, \"name\": \"Reference\" }],\n      \"subjects\": [{ \"subjectId\": 47, \"subjectName\": \"Ecology & Built Environment\" }],\n      \"accessionNumber\": [\"ACC-1001\"],\n      \"billNo\": [\"BILL-2024-01\"],\n      \"billDate\": [\"2024-01-15\"],\n      \"status\": \"available\",\n      \"condition\": \"Good\",\n      \"aisleDetails\": { \"libraryAisleId\": 1, \"name\": \"Library\", \"libraryFloorId\": 1 },\n      \"rackDetails\": { \"libraryRackId\": 1, \"name\": \"ASA LIBRARY\" },\n      \"rowDetails\": { \"libraryRowId\": 1, \"name\": \"ASA LIBRARY\" },\n      \"inventoryCopies\": [\n        {\n          \"inventoryId\": 81,\n          \"accessionNumber\": \"ACC-1001\",\n          \"billNo\": \"BILL-2024-01\",\n          \"billDate\": \"2024-01-15\",\n          \"status\": \"available\",\n          \"condition\": \"Good\",\n          \"aisleDetails\": { \"libraryAisleId\": 1, \"name\": \"Library\", \"libraryFloorId\": 1 },\n          \"rackDetails\": { \"libraryRackId\": 1, \"name\": \"ASA LIBRARY\" },\n          \"rowDetails\": { \"libraryRowId\": 1, \"name\": \"ASA LIBRARY\" }\n        }\n      ]\n    }\n  ],\n  \"paginationData\": {\n    \"total\": 5305,\n    \"page\": 1,\n    \"limit\": 20,\n    \"totalPages\": 266\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"Books\",\n  \"data\": [\n    {\n      \"libraryBookId\": 1,\n      \"libraryCreationId\": 1,\n      \"title\": \"Introduction to Algorithms\",\n      \"author\": \"Thomas H. Cormen\",\n      \"categories\": [{ \"libraryCategoryId\": 1, \"name\": \"Reference\" }],\n      \"subjects\": [{ \"subjectId\": 47, \"subjectName\": \"Ecology & Built Environment\" }],\n      \"accessionNumber\": [\"ACC-1001\"],\n      \"accessionDate\": [\"2024-01-10\"],\n      \"billNo\": [\"BILL-2024-01\"],\n      \"billDate\": [\"2024-01-15\"],\n      \"status\": \"available\",\n      \"condition\": \"Good\",\n      \"aisleDetails\": { \"libraryAisleId\": 1, \"name\": \"Library\", \"libraryFloorId\": 1 },\n      \"rackDetails\": { \"libraryRackId\": 1, \"name\": \"ASA LIBRARY\" },\n      \"rowDetails\": { \"libraryRowId\": 1, \"name\": \"ASA LIBRARY\" },\n      \"inventoryCopies\": [\n        {\n          \"inventoryId\": 81,\n          \"accessionNumber\": \"ACC-1001\",\n          \"accessionDate\": \"2024-01-10\",\n          \"billNo\": \"BILL-2024-01\",\n          \"billDate\": \"2024-01-15\",\n          \"status\": \"available\",\n          \"condition\": \"Good\",\n          \"aisleDetails\": { \"libraryAisleId\": 1, \"name\": \"Library\", \"libraryFloorId\": 1 },\n          \"rackDetails\": { \"libraryRackId\": 1, \"name\": \"ASA LIBRARY\" },\n          \"rowDetails\": { \"libraryRowId\": 1, \"name\": \"ASA LIBRARY\" }\n        }\n      ]\n    }\n  ],\n  \"paginationData\": {\n    \"total\": 5305,\n    \"page\": 1,\n    \"limit\": 20,\n    \"totalPages\": 266\n  }\n}"
             },
             {
               "name": "200 OK ΓÇö with search",
@@ -10287,7 +10340,7 @@
               "code": 200,
               "_postman_previewlanguage": "json",
               "header": [],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Books\",\n  \"data\": [\n    {\n      \"libraryBookId\": 42,\n      \"libraryCreationId\": 1,\n      \"title\": \"Interior Design Basics\",\n      \"author\": \"Jane Doe\",\n      \"categories\": [],\n      \"subjects\": [],\n      \"accessionNumber\": [\"2036\"],\n      \"billNo\": [],\n      \"billDate\": [],\n      \"status\": \"available\",\n      \"condition\": null,\n      \"aisleDetails\": null,\n      \"rackDetails\": null,\n      \"rowDetails\": null,\n      \"inventoryCopies\": [\n        {\n          \"inventoryId\": 120,\n          \"accessionNumber\": \"2036\",\n          \"billNo\": null,\n          \"billDate\": null,\n          \"status\": \"available\",\n          \"condition\": null,\n          \"aisleDetails\": null,\n          \"rackDetails\": null,\n          \"rowDetails\": null\n        }\n      ]\n    }\n  ],\n  \"paginationData\": {\n    \"total\": 12,\n    \"page\": 1,\n    \"limit\": 20,\n    \"totalPages\": 1\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"Books\",\n  \"data\": [\n    {\n      \"libraryBookId\": 42,\n      \"libraryCreationId\": 1,\n      \"title\": \"Interior Design Basics\",\n      \"author\": \"Jane Doe\",\n      \"categories\": [],\n      \"subjects\": [],\n      \"accessionNumber\": [\"2036\"],\n      \"accessionDate\": [],\n      \"billNo\": [],\n      \"billDate\": [],\n      \"status\": \"available\",\n      \"condition\": null,\n      \"aisleDetails\": null,\n      \"rackDetails\": null,\n      \"rowDetails\": null,\n      \"inventoryCopies\": [\n        {\n          \"inventoryId\": 120,\n          \"accessionNumber\": \"2036\",\n          \"accessionDate\": null,\n          \"billNo\": null,\n          \"billDate\": null,\n          \"status\": \"available\",\n          \"condition\": null,\n          \"aisleDetails\": null,\n          \"rackDetails\": null,\n          \"rowDetails\": null\n        }\n      ]\n    }\n  ],\n  \"paginationData\": {\n    \"total\": 12,\n    \"page\": 1,\n    \"limit\": 20,\n    \"totalPages\": 1\n  }\n}"
             }
           ]
         },
@@ -10388,7 +10441,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"book\": {\n    \"libraryBookId\": {{libraryBook_id}},\n    \"title\": \"Introduction to Algorithms - 3rd Edition\"\n  },\n  \"inventory\": [\n    {\n      \"inventoryId\": {{inventory_id}},\n      \"accessionNumber\": \"ACC-1001\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"status\": \"available\",\n      \"condition\": \"Good\"\n    }\n  ]\n}",
+              "raw": "{\n  \"book\": {\n    \"libraryBookId\": {{libraryBook_id}},\n    \"title\": \"Introduction to Algorithms - 3rd Edition\"\n  },\n  \"inventory\": [\n    {\n      \"inventoryId\": {{inventory_id}},\n      \"accessionNumber\": \"ACC-1001\",\n      \"accessionDate\": \"2024-01-10\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"status\": \"available\",\n      \"condition\": \"Good\"\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"

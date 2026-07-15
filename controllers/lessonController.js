@@ -80,6 +80,19 @@ export async function addMapping(req, res) {
     }
 };
 
+export async function copyMapping(req, res) {
+    const createdBy = req.user.userId;
+    const updatedBy = req.user.userId;
+    try {
+        const lessonData = await lesson.copyMapping(req.body, createdBy, updatedBy);
+        return SuccessResponse(res, 201, lessonData.message, { copied: lessonData.copied });
+    } catch (error) {
+        console.error("Error in copyMapping:", error);
+        const statusCode = error.statusCode || (/not found/i.test(error.message) ? 404 : 500);
+        return ErrorResponse(res, statusCode, error.message || "Internal Server Error");
+    }
+};
+
 export async function getMapping(req, res) {
     const { academicYearId } = req.query
     try {

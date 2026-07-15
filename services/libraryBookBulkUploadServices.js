@@ -22,7 +22,7 @@ const BULK_BOOK_FIELDS = [
 /** Columns written to library_book_inventory table (one row per Excel line). */
 const BULK_INVENTORY_FIELDS = [
   "accessionNumber", "libraryAisleId", "libraryRackId", "libraryRowId", "studentId",
-  "employeeId", "issueDate", "dueDate", "status", "billNo", "billDate",
+  "employeeId", "issueDate", "dueDate", "status", "billNo", "billDate", "accessionDate",
   "itemPrice", "netPrice", "currency", "condition",
 ];
 
@@ -34,7 +34,7 @@ const BULK_NUMBER_FIELDS = [
 ];
 
 /** Fields passed through parseCustomDate (supports Excel date serials / strings). */
-const BULK_DATE_FIELDS = ["billDate", "issueDate", "dueDate"];
+const BULK_DATE_FIELDS = ["billDate", "accessionDate", "issueDate", "dueDate"];
 
 /**
  * Excel headers "Aisle", "Rack", "Row" hold location *names*, not IDs.
@@ -150,6 +150,13 @@ const BULK_INVENTORY_FIELD_ALIASES = {
     "BILLDATE",
     "bill date",
     "Bill Date",
+  ],
+  accessionDate: [
+    "accessiondate",
+    "AccessionDate",
+    "ACCESSIONDATE",
+    "accession date",
+    "Accession Date",
   ],
   itemPrice: [
     "itemprice",
@@ -1139,7 +1146,7 @@ function parseAndValidateBulkUploadExcelRows(excelRows) {
       result: {
         status: "error",
         message:
-          "Excel file has no valid data rows. Row 1 must be headers (accessionNumber, title, authors, publisher, billDate, ...) and data from row 2 onward.",
+          "Excel file has no valid data rows. Row 1 must be headers (accessionNumber, title, authors, publisher, accessionDate, billDate, ...) and data from row 2 onward.",
       },
     };
   }
