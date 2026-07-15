@@ -1,6 +1,7 @@
 import * as timeTableCreateServices from '../services/timeTableCreateServices.js';
 import { ErrorResponse, SuccessResponse } from '../utility/response.js';
 
+
 export const addtimeTableCreate = async (req, res) => {
     try {
         const data = req.body;
@@ -220,10 +221,9 @@ export const getRoutineByClassSectionId = async (req, res) => {
     const { classSectionTermId } = req.query;
     try {
         const result = await timeTableCreateServices.getRoutineByClassSectionId(classSectionTermId);
-        res.status(200).send(result);
+        SuccessResponse(res, 200, 'Routine fetched successfully', result);
     } catch (error) {
-        console.error("Error in getting routine by class section id:", error);
-        res.status(500).send({ message: "Internal Server Error", error: error.message });
+        ErrorResponse(res, 500, "Internal Server Error");
     }
 };
 
