@@ -2216,7 +2216,7 @@
       "item": [
         {
           "name": "structure (/timeTable)",
-          "description": "Structure APIs — `router/timeTableRoute.js`\n\n**`sessionId` is not stored on structure.** Send it only on `POST /timeTable/courseMapping`.\n\n| Method | Path | Purpose |\n|--------|------|---------|\n| POST | `/timeTable` | Create structure + periods |\n| GET | `/timeTable` | List all (mapped + unmapped) |\n| GET | `/timeTable/single?timeTableNameId=` | One structure by id |\n| POST | `/timeTable/courseMapping` | Map course + session + dates |\n| PATCH | `/timeTable/structure` | Update mapping by mapper PK |\n| POST | `/timeTable/period` | Add one period |\n| PATCH | `/timeTable` | Update period rows |\n| DELETE | `/timeTable` | Delete one period |\n| DELETE | `/timeTable/structure` | Hard-delete structure + periods + mappings |",
+          "description": "Structure APIs — `router/timeTableRoute.js`\n\n**`sessionId` is not stored on structure.** Send it only on `POST /timeTable/courseMapping`.\n\n| Method | Path | Purpose |\n|--------|------|---------|\n| POST | `/timeTable` | Create structure + periods |\n| GET | `/timeTable` | List all (mapped + unmapped) |\n| GET | `/timeTable/single?timeTableNameId=` | One structure by id |\n| POST | `/timeTable/courseMapping` | Map course + session + dates |\n| PATCH | `/timeTable/structure` | Update mapping by mapper PK |\n| POST | `/timeTable/period` | Add one period |\n| PATCH | `/timeTable` | Update period rows |\n| DELETE | `/timeTable` | Delete one period |",
           "item": [
             {
               "name": "create structure",
@@ -2599,42 +2599,6 @@
                   ]
                 },
                 "description": "**DELETE /timeTable?timeTableCreationId=**\n\nSoft-deletes **one period row** from `time_table_structure_periods`. Does **not** delete the parent structure (`time_table_structure`).\n\nOne structure (`timeTableNameId`) can have **many period rows** and be reused by **many routines** — this API deletes only the selected period.\n\n### Query parameters\n\n| Name | Type | Required | Description |\n|------|------|----------|-------------|\n| `timeTableCreationId` | Integer | Yes | Period PK (`time_table_structure_periods.time_table_creation_id`) |\n\n### Business rules\n\n* Deletion is **blocked** only when this **specific period** is mapped in `class_schedule_item` under a routine that is **published** (`isPublish = true`) **or** **active** (today is between `startingDate` and `endingDate`).\n* Other periods under the same structure can still be deleted if they are not mapped in an active/published routine.\n* Scoped to current institute + academic year from auth context.\n\n### Success response (200)\n\n```json\n{\n  \"message\": \"time table creation deleted successfully for time Table Creation Id 10\"\n}\n```\n\n### Error responses\n\n| Status | Reason |\n|--------|--------|\n| 400 | Missing or invalid `timeTableCreationId` (Zod validation) |\n| 404 | Period not found for this institute and academic year |\n| 409 | This period is used in an active or published routine |\n| 500 | Internal server error |"
-              },
-              "response": []
-            },
-            {
-              "name": "delete structure",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                  "raw": "{{baseurl}}/timeTable/structure?timeTableNameId={{timetable_timeTableNameId}}",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "timeTable",
-                    "structure"
-                  ],
-                  "query": [
-                    {
-                      "key": "timeTableNameId",
-                      "value": "{{timetable_timeTableNameId}}",
-                      "description": "Required — structure PK (time_table_structure.time_table_name_id)"
-                    }
-                  ]
-                },
-                "description": "**DELETE /timeTable/structure?timeTableNameId=**\n\nHard-deletes structure + all period rows + all course mappings.\n\n| Query | Required | Description |\n|-------|----------|-------------|\n| `timeTableNameId` | Yes | Structure PK |\n\nBlocked when any routine under its mappings is published or currently active."
               },
               "response": []
             }
@@ -3489,7 +3453,7 @@
                     }
                   ]
                 },
-                "description": "**GET /timeTableCreate/getRoutine**\n\nFull weekly grid for a class section term (normal + elective, weekOff, teacher/subject/room per slot).\n\n**Required query:** `classSectionTermId`.\n\n**Auth:** Bearer token required.\n\n**Response keys:** `classSectionTermId`, `section`, `term`, `year`, `routines`, `classSection`.\n\n### `routines[]` item fields\n| Field | Type | Description |\n|-------|------|-------------|\n| `timeTableRoutineId` | Integer | Routine PK |\n| `isPublished` | Boolean | Publish flag |\n| `timeTableNameId` | Integer | Structure PK |\n| `name` | String | Structure name |\n| `startDate` | String | Routine start `YYYY-MM-DD` |\n| `endDate` | String | Routine end `YYYY-MM-DD` |\n| `year` | Integer\\|null | Class section program year |\n| `periods` | Array | Period grid with days/slots |\n\n**Changelog:** Added `year` on each routine and on the top-level response."
+                "description": "**GET /timeTableCreate/getRoutine**\n\nFull weekly grid for a class section term, grouped **structure → routines[]**.\n\n**Required query:** `classSectionTermId`.\n\n**Auth:** Bearer token required.\n\n**Response shape:**\n```json\n{\n  \"classSectionTermId\": 101,\n  \"section\": \"A\",\n  \"term\": 1,\n  \"year\": 1,\n  \"classSection\": {},\n  \"structures\": [\n    {\n      \"timeTableNameId\": 10,\n      \"name\": \"Morning Schedule\",\n      \"weekOff\": [\"Sunday\"],\n      \"routines\": [\n        {\n          \"timeTableRoutineId\": 55,\n          \"timetableStructureCourseMapperId\": 1,\n          \"isPublished\": true,\n          \"startDate\": \"2026-01-01\",\n          \"endDate\": \"2026-06-30\",\n          \"year\": 1,\n          \"periods\": []\n        }\n      ]\n    }\n  ]\n}\n```\n\n| Level | Fields |\n|-------|--------|\n| Top | `classSectionTermId`, `section`, `term`, `year`, `classSection`, `structures` |\n| `structures[]` | `timeTableNameId`, `name`, `weekOff`, `routines` |\n| `routines[]` | `timeTableRoutineId`, `timetableStructureCourseMapperId`, `isPublished`, `startDate`, `endDate`, `year`, `periods` |\n"
               },
               "response": []
             },

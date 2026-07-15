@@ -327,32 +327,6 @@ export async function updateTimeTable(timeTableCreationId, info) {
     }
 }
 
-async function findBlockingRoutine(timeTableNameId) {
-    const now = new Date();
-
-    return await scoped(model.timeTableRoutineModel).findOne({
-        where: {
-            [Op.or]: [
-                { isPublish: true },
-                {
-                    startingDate: { [Op.lte]: now },
-                    endingDate: { [Op.gte]: now },
-                },
-            ],
-        },
-        attributes: ['timeTableRoutineId'],
-        include: [
-            {
-                model: model.timeTableStructureCourseModel,
-                as: 'structureCourseMapping',
-                required: true,
-                attributes: [],
-                where: { timeTableNameId: Number(timeTableNameId) },
-            },
-        ],
-    });
-}
-
 async function findBlockingScheduleForPeriod(timeTableCreationId) {
     const now = new Date();
 
@@ -398,43 +372,5 @@ export async function deleteTimeTable(timeTableCreationId) {
     } catch (error) {
         console.error('Error during soft delete:', error);
         throw new Error('Unable to soft delete account');
-    }
-}
-
-export async function deleteTimeTableStructure(timeTableNameId) {
-    const structure = await getTimeTableStructureById(timeTableNameId);
-    if (!structure) {
-        throw new Error('Time table structure not found for this institute and academic year');
-    }
-
-    const routineUsingStructure = await findBlockingRoutine(timeTableNameId);
-    if (routineUsingStructure) {
-        throw new Error('Time table structure is used in an active or published routine and cannot be deleted');
-    }
-
-    const transaction = await sequelize.transaction();
-    try {
-        await model.timeTableStructurePeriodsModel.destroy({
-            where: { timeTableNameId },
-            individualHooks: true,
-            transaction,
-        });
-
-        await model.timeTableStructureCourseModel.destroy({
-            where: { timeTableNameId },
-            transaction,
-        });
-
-        await scoped(model.timeTableStructureModel).destroy({
-            where: { timeTableNameId },
-            transaction,
-        });
-
-        await transaction.commit();
-        return { message: `time table structure deleted successfully for time Table Name Id ${timeTableNameId}` };
-    } catch (error) {
-        await transaction.rollback();
-        console.error('Error during time table structure delete:', error);
-        throw error;
     }
 }

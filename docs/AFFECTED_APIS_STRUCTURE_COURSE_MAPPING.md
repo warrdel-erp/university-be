@@ -50,7 +50,6 @@ One structure may have many mappings for different `(courseId, sessionId)` pairs
 | `PATCH` | `/timeTable/structure` | **Breaking** — keyed by mapper id; can change structure/course/session/dates |
 | `GET` | `/timeTable` | **Updated** — dates on `courseMappings[]`, not structure root |
 | `GET` | `/timeTable/single` | **Updated** — one structure by `timeTableNameId` query |
-| `DELETE` | `/timeTable/structure` | **Updated** — hard-deletes structure + periods + course mappings |
 | `POST` | `/timeTableCreate/` | **Updated** — dates vs **structure–course** window (not structure) |
 | `POST` | `/timeTableCreate/clone` | **Updated** — same window rule |
 | `PATCH` | `/timeTableCreate/create` | **Updated** — same window rule; still blocked when published |
@@ -213,16 +212,6 @@ Same shape as one list item (periods + `courseMappings[]`).
 ```
 
 FE date pickers for a course must use the matching `courseMappings` entry (by `courseId` + `sessionId`), not the structure root.
-
----
-
-### `DELETE /timeTable/structure`
-
-**Status:** Updated
-
-Hard-deletes structure, its period rows, and course mappings (no soft delete).
-
-Still blocked when any linked routine is published or currently active (today inside routine dates).
 
 ---
 

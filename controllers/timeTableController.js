@@ -79,19 +79,6 @@ export const deleteTimeTable = async (req, res) => {
   }
 };
 
-export const deleteTimeTableStructure = async (req, res) => {
-  const { timeTableNameId } = req.query;
-
-  try {
-    const result =
-      await timeTableServices.deleteTimeTableStructure(timeTableNameId);
-
-    return SuccessResponse(res, 200, "Time table structure deleted successfully", result);
-  } catch (error) {
-    return ErrorResponse(res, 400, error.message || "Internal Server Error");
-  }
-};
-
 export const updateStructure = async (req, res) => {
   try {
     const result = await timeTableServices.updateStructure(
