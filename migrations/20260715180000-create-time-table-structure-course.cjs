@@ -7,6 +7,15 @@ module.exports = {
     const transaction = await queryInterface.sequelize.transaction();
 
     try {
+      const tables = await queryInterface.showAllTables();
+      const tableNames = tables.map((t) => (typeof t === 'string' ? t : t.tableName || t.name || Object.values(t)[0]));
+      const hasMappingTable = tableNames.includes('time_table_structure_course');
+
+      // MySQL DDL auto-commits; a previous failed run may leave an empty table behind.
+      if (hasMappingTable) {
+        await queryInterface.dropTable('time_table_structure_course', { transaction });
+      }
+
       await queryInterface.createTable(
         'time_table_structure_course',
         {
@@ -124,60 +133,73 @@ module.exports = {
         },
       );
 
-      // Backfill: for each structure with dates, map each distinct routine course
-      await queryInterface.sequelize.query(
-        `
-        INSERT INTO time_table_structure_course
-          (
-            time_table_name_id,
-            course_id,
-            university_id,
-            institute_id,
-            acedmic_year_id,
-            session_id,
-            starting_date,
-            ending_date,
-            created_at,
-            updated_at,
-            created_by,
-            updated_by
-          )
-        SELECT
-          s.time_table_name_id,
-          r.course_id,
-          s.university_id,
-          s.institute_id,
-          s.acedmic_year_id,
-          s.session_id,
-          s.starting_date,
-          s.ending_date,
-          CURRENT_TIMESTAMP,
-          CURRENT_TIMESTAMP,
-          s.created_by,
-          s.updated_by
-        FROM time_table_structure s
-        INNER JOIN time_table_routine r
-          ON r.time_table_name_id = s.time_table_name_id
-         AND r.deleted_at IS NULL
-        WHERE s.starting_date IS NOT NULL
-          AND s.ending_date IS NOT NULL
-          AND r.course_id IS NOT NULL
-        GROUP BY
-          s.time_table_name_id,
-          r.course_id,
-          s.university_id,
-          s.institute_id,
-          s.acedmic_year_id,
-          s.session_id,
-          s.starting_date,
-          s.ending_date,
-          s.created_by,
-          s.updated_by
-        `,
-        { transaction },
-      );
-
       const structure = await queryInterface.describeTable('time_table_structure');
+      const hasStructureSession = Boolean(structure.session_id);
+      const hasStructureDates = Boolean(structure.starting_date && structure.ending_date);
+
+      if (hasStructureDates) {
+        const sessionExpr = hasStructureSession
+          ? 'COALESCE(s.session_id, cs.session_id)'
+          : 'cs.session_id';
+
+        // Backfill only rows with a resolvable session_id (structure or class section).
+        await queryInterface.sequelize.query(
+          `
+          INSERT INTO time_table_structure_course
+            (
+              time_table_name_id,
+              course_id,
+              university_id,
+              institute_id,
+              acedmic_year_id,
+              session_id,
+              starting_date,
+              ending_date,
+              created_at,
+              updated_at,
+              created_by,
+              updated_by
+            )
+          SELECT
+            s.time_table_name_id,
+            r.course_id,
+            s.university_id,
+            s.institute_id,
+            s.acedmic_year_id,
+            ${sessionExpr},
+            s.starting_date,
+            s.ending_date,
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP,
+            s.created_by,
+            s.updated_by
+          FROM time_table_structure s
+          INNER JOIN time_table_routine r
+            ON r.time_table_name_id = s.time_table_name_id
+           AND r.deleted_at IS NULL
+          LEFT JOIN class_section_term cst
+            ON cst.class_section_term_id = r.class_section_term_id
+          LEFT JOIN class_sections cs
+            ON cs.class_sections_id = cst.class_sections_id
+          WHERE s.starting_date IS NOT NULL
+            AND s.ending_date IS NOT NULL
+            AND r.course_id IS NOT NULL
+            AND ${sessionExpr} IS NOT NULL
+          GROUP BY
+            s.time_table_name_id,
+            r.course_id,
+            s.university_id,
+            s.institute_id,
+            s.acedmic_year_id,
+            ${sessionExpr},
+            s.starting_date,
+            s.ending_date,
+            s.created_by,
+            s.updated_by
+          `,
+          { transaction },
+        );
+      }
 
       if (structure.starting_date) {
         await queryInterface.removeColumn('time_table_structure', 'starting_date', { transaction });
