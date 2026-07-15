@@ -11,6 +11,8 @@ export async function addTimeTable(data, createdBy, updatedBy) {
             periodLength: data.periodLength,
             periodGap: data.periodGap,
             startingTime: data.startingTime,
+            startingDate: data.startingDate,
+            endingDate: data.endingDate,
             weekOff: data.weekOff,
             createdBy,
             updatedBy,
@@ -114,6 +116,14 @@ export async function deleteTimeTable(timeTableCreationId) {
 
 export async function deleteTimeTableStructure(timeTableNameId) {
     return await timeTableRepository.deleteTimeTableStructure(timeTableNameId);
+}
+
+export async function updateStructureEndingDate(timeTableNameId, endingDate, updatedBy) {
+    return await timeTableRepository.updateStructureEndingDate(
+        timeTableNameId,
+        endingDate,
+        updatedBy,
+    );
 }
 
 function parseTimeString(timeString) {

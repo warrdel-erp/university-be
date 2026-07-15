@@ -34,6 +34,10 @@ const classSectionsQuerySchema = z.object({
     year: optionalPositiveIntegerId,
 });
 
+const coursesQuerySchema = z.object({
+    courseLevelId: optionalPositiveIntegerId,
+});
+
 const specializationsQuerySchema = z.object({
     courseId: optionalPositiveIntegerId,
 });
@@ -54,12 +58,26 @@ const feePlansQuerySchema = z.object({
 });
 
 const topicsQuerySchema = z.object({
-    lessonId: optionalPositiveIntegerId,
+    lessonId: positiveIntegerId,
+});
+
+const lectureWindowsQuerySchema = z.object({
+    employeeId: positiveIntegerId,
+    subjectId: positiveIntegerId,
+});
+
+const lessonsQuerySchema = z.object({
+    lectureWindowId: positiveIntegerId,
 });
 
 router.get('/affiliatedUniversity', userAuth, optionsController.getAffiliatedUniversityOptions);
 
-router.get('/courses', userAuth, optionsController.getCourseOptions);
+router.get(
+    '/courses',
+    userAuth,
+    validate({ query: coursesQuerySchema }),
+    optionsController.getCourseOptions,
+);
 
 router.get(
     '/courseTerms',
@@ -108,6 +126,20 @@ router.get(
     userAuth,
     validate({ query: feePlansQuerySchema }),
     optionsController.getFeePlanOptions,
+);
+
+router.get(
+    '/lectureWindows',
+    userAuth,
+    validate({ query: lectureWindowsQuerySchema }),
+    optionsController.getLectureWindowOptions,
+);
+
+router.get(
+    '/lessons',
+    userAuth,
+    validate({ query: lessonsQuerySchema }),
+    optionsController.getLessonOptions,
 );
 
 router.get(

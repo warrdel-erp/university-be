@@ -1,8 +1,9 @@
-import { Op } from 'sequelize';
+import { Op, fn, col } from 'sequelize';
 import * as model from '../models/index.js'
 import { getTenantStore } from '../utility/requestContext.js';
 import { buildScope, scoped } from '../utility/scoped.js';
 import sequelize from '../database/sequelizeConfig.js';
+import { formatQueryDate } from '../utility/helper.js';
 
 const excludeMeta = ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"];
 
@@ -68,6 +69,8 @@ export async function buildTimeTableStructureCreatePayload(data, transaction) {
         periodLength: data.periodLength,
         periodGap: data.periodGap,
         startingTime: data.startingTime,
+        startingDate: data.startingDate,
+        endingDate: data.endingDate,
         weekOff: data.weekOff,
         createdBy: data.createdBy,
         updatedBy: data.updatedBy,
@@ -100,7 +103,7 @@ export async function addTimeTable(data, transaction) {
 export async function getTimeTableStructureById(timeTableNameId, options = {}) {
     try {
         return await scoped(model.timeTableStructureModel).findByPk(Number(timeTableNameId), {
-            attributes: ['timeTableNameId', 'courseId', 'sessionId'],
+            attributes: ['timeTableNameId', 'courseId', 'sessionId', 'startingDate', 'endingDate'],
             transaction: options.transaction,
         });
     } catch (error) {
@@ -118,9 +121,61 @@ export async function findStructureInScope(timeTableNameId, options = {}) {
             'periodLength',
             'periodGap',
             'startingTime',
+            'startingDate',
+            'endingDate',
         ],
         transaction: options.transaction,
     });
+}
+
+export async function getMaxRoutineEndingDateForStructure(timeTableNameId, options = {}) {
+    const row = await scoped(model.timeTableRoutineModel).findOne({
+        where: { timeTableNameId: Number(timeTableNameId) },
+        attributes: [[fn('MAX', col('ending_date')), 'maxEndingDate']],
+        raw: true,
+        transaction: options.transaction,
+    });
+
+    return row?.maxEndingDate ?? null;
+}
+
+export async function updateStructureEndingDate(timeTableNameId, endingDate, updatedBy) {
+    const structure = await getTimeTableStructureById(timeTableNameId);
+    if (!structure) {
+        throw new Error('Time table structure not found for this institute and academic year');
+    }
+
+    const plain = structure.get ? structure.get({ plain: true }) : structure;
+    const nextEndingDate = formatQueryDate(endingDate);
+
+    if (plain.startingDate != null) {
+        const structureStart = formatQueryDate(plain.startingDate);
+        if (nextEndingDate < structureStart) {
+            throw new Error('endingDate cannot be before structure startingDate');
+        }
+    }
+
+    const maxRoutineEndingDate = await getMaxRoutineEndingDateForStructure(timeTableNameId);
+    if (maxRoutineEndingDate != null) {
+        const latestRoutineEnd = formatQueryDate(maxRoutineEndingDate);
+        if (nextEndingDate < latestRoutineEnd) {
+            throw new Error(
+                `endingDate cannot be before the latest routine endingDate (${latestRoutineEnd})`,
+            );
+        }
+    }
+
+    await scoped(model.timeTableStructureModel).update(
+        {
+            endingDate: nextEndingDate,
+            updatedBy,
+        },
+        {
+            where: { timeTableNameId: Number(timeTableNameId) },
+        },
+    );
+
+    return await getTimeTableStructureById(timeTableNameId);
 }
 
 export async function getStructurePeriodsByStructureId(timeTableNameId, options = {}) {

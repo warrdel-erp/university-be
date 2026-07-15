@@ -6,8 +6,8 @@ export async function getAffiliatedUniversityOptions() {
     return await optionsRepository.getAffiliatedUniversityOptions();
 }
 
-export async function getCourseOptions() {
-    return await optionsRepository.getCourseOptions();
+export async function getCourseOptions(courseLevelId) {
+    return await optionsRepository.getCourseOptions(courseLevelId);
 }
 
 export async function getTermOptions(courseId) {
@@ -109,6 +109,58 @@ export async function getFeePlanOptions(filters) {
     };
 }
 
-export async function getTopicOptions(filters) {
-    return await optionsRepository.getTopicOptions(filters);
+export async function getLectureWindowOptions(employeeId, subjectId, academicYearId) {
+    const [employee, subject, options] = await Promise.all([
+        optionsRepository.getEmployeeOptionDetail(employeeId),
+        optionsRepository.getSubjectOptionDetail(subjectId),
+        optionsRepository.getLectureWindowOptionRows({
+            employeeId,
+            subjectId,
+            academicYearId,
+        }),
+    ]);
+
+    if (!employee) {
+        throw new Error('Employee not found');
+    }
+    if (!subject) {
+        throw new Error('Subject not found');
+    }
+
+    return {
+        selected: { employee, subject },
+        options,
+    };
+}
+
+export async function getLessonOptions(lectureWindowId, academicYearId) {
+    const [lectureWindow, options] = await Promise.all([
+        optionsRepository.getLectureWindowOptionDetail(lectureWindowId, academicYearId),
+        optionsRepository.getLessonOptionRows({ lectureWindowId, academicYearId }),
+    ]);
+
+    if (!lectureWindow) {
+        throw new Error('Lecture window not found');
+    }
+
+    return {
+        selected: { lectureWindow },
+        options,
+    };
+}
+
+export async function getTopicOptions(lessonId, academicYearId) {
+    const [lesson, options] = await Promise.all([
+        optionsRepository.getLessonOptionDetail(lessonId, academicYearId),
+        optionsRepository.getTopicOptionRows(lessonId),
+    ]);
+
+    if (!lesson) {
+        throw new Error('Lesson not found');
+    }
+
+    return {
+        selected: { lesson },
+        options,
+    };
 }

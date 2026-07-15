@@ -19,6 +19,32 @@ import { randomUUID } from "crypto";
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+function assertRoutineDatesWithinStructure(structure, startingDate, endingDate) {
+  const structureStart = structure.startingDate != null
+    ? formatQueryDate(structure.startingDate)
+    : null;
+  const structureEnd = structure.endingDate != null
+    ? formatQueryDate(structure.endingDate)
+    : null;
+
+  if (!structureStart || !structureEnd) {
+    return;
+  }
+
+  if (!startingDate || !endingDate) {
+    throw new Error('startingDate and endingDate are required and must fall within the structure date window');
+  }
+
+  const routineStart = formatQueryDate(startingDate);
+  const routineEnd = formatQueryDate(endingDate);
+
+  if (routineStart < structureStart || routineEnd > structureEnd) {
+    throw new Error(
+      `Routine dates (${routineStart} to ${routineEnd}) must be inside the structure window (${structureStart} to ${structureEnd})`,
+    );
+  }
+}
+
 const COPY_OVERRIDE_FIELDS = [
   'timeTableRoutineId', 'userId', 'subjectId', 'electiveSubjectId',
   'teacherSubjectMappingId', 'classRoomSectionId', 'isSameTeacher', 'teacherType',
@@ -519,6 +545,17 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
     delete placement.classSectionsId;
 
     if (
+      placement.startingDate
+      && placement.endingDate
+    ) {
+      assertRoutineDatesWithinStructure(
+        structure,
+        placement.startingDate,
+        placement.endingDate,
+      );
+    }
+
+    if (
       placement.classSectionTermId
       && placement.startingDate
       && placement.endingDate
@@ -612,15 +649,27 @@ export async function getTimeTableByCourseAndSection(courseId, classSectionTermI
     if (!Array.isArray(data) || !data.length) return [];
 
     return data.map((item) => {
+      const structure = item?.timeTableCreateName;
+      let weekOff = structure?.weekOff ?? [];
+      if (typeof weekOff === 'string') {
+        try {
+          weekOff = JSON.parse(weekOff);
+        } catch {
+          weekOff = [];
+        }
+      }
+      if (!Array.isArray(weekOff)) {
+        weekOff = [];
+      }
+
       const periods =
-        item?.timeTableCreateName?.timeTableName?.map((period) => ({
+        structure?.timeTableName?.map((period) => ({
           startTime: period.startTime,
           endTime: period.endTime,
           timeTableCreationId: period.timeTableCreationId,
           type: period.type,
           periodGap: period.periodGap,
           periodLength: period.periodLength,
-          weekOff: period.weekOff,
           isBreak: period.isBreak,
           periodName: period.periodName,
           classSectionsId: item.classSectionsId,
@@ -630,11 +679,12 @@ export async function getTimeTableByCourseAndSection(courseId, classSectionTermI
       return {
         timeTableRoutineId: item.timeTableRoutineId,
         timeTableType: item.timeTableType,
-        name: item?.timeTableCreateName?.name,
+        name: structure?.name,
         isPublish: item.isPublish,
-        timeTableNameId: item?.timeTableCreateName?.timeTableNameId,
-        maximumPeriod: item?.timeTableCreateName?.timeTableName?.[0]?.maximumPeriod,
-        isCourse: item?.timeTableCreateName?.timeTableName?.[0]?.isCourse,
+        timeTableNameId: structure?.timeTableNameId,
+        maximumPeriod: structure?.timeTableName?.[0]?.maximumPeriod,
+        isCourse: structure?.timeTableName?.[0]?.isCourse,
+        weekOff,
         courseId: item.courseId,
         classSectionsId: resolveTimeTableRoutineSection(item)?.classSectionsId ?? null,
         classSectionTermId: item.classSectionTermId,
@@ -777,18 +827,27 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
     }
 
     const termIds = resolveTermIds(payload, routine);
-    if (!termIds.length) {
-      throw new Error(
-        'classSectionTermId could not be resolved. Send classSectionTermId, classSectionTermIds[], or use a routine with classSectionTermId.',
-      );
-    }
 
     assertRoutineNotStarted(routine.startingDate);
 
     const slots = normalizeSlots(payload);
     const isCombined = termIds.length > 1;
     const combinedGroupId = isCombined ? (existingCombinedGroupId || randomUUID()) : null;
-    const routineTargets = await resolveCombinedRoutineTargets(routine, termIds, transaction);
+
+    // With term id(s): normal / combined section flow.
+    // Without term id: still allow mapping on this routine (e.g. elective with null classSectionTermId).
+    let routineTargets;
+    if (termIds.length > 0) {
+      routineTargets = await resolveCombinedRoutineTargets(routine, termIds, transaction);
+    } else {
+      routineTargets = [{
+        classSectionTermId: routine.classSectionTermId != null
+          ? Number(routine.classSectionTermId)
+          : null,
+        timeTableRoutineId: Number(timeTableRoutineId),
+      }];
+    }
+
     const conflictOptions = {
       allowedClassSectionTermIds: termIds,
       excludeCombinedGroupId: existingCombinedGroupId || null,
@@ -921,6 +980,14 @@ export async function cloneTimeTableRoutine(
       ? formatQueryDate(previousDate)
       : null;
 
+    const structure = await getTimeTableStructureById(previousPlain.timeTableNameId, { transaction });
+    if (!structure) {
+      const error = new Error('timeTableNameId not found');
+      error.statusCode = 404;
+      throw error;
+    }
+    assertRoutineDatesWithinStructure(structure, start, end);
+
     if (previousEnd != null) {
       if (previousEnd < formatQueryDate(previousPlain.startingDate)) {
         const error = new Error('previousDate before routine start');
@@ -965,17 +1032,11 @@ export async function cloneTimeTableRoutine(
         continue;
       }
 
-      let periodInfo = periodInfoByCreationId.get(mappingPlain.timeTableCreationId);
+      const creationId = Number(mappingPlain.timeTableCreationId);
+      let periodInfo = periodInfoByCreationId.get(creationId);
       if (!periodInfo) {
-        periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(
-          mappingPlain.timeTableCreationId,
-        );
-        if (!periodInfo) {
-          const error = new Error('Period not found');
-          error.statusCode = 400;
-          throw error;
-        }
-        periodInfoByCreationId.set(mappingPlain.timeTableCreationId, periodInfo);
+        periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(creationId);
+        periodInfoByCreationId.set(creationId, periodInfo);
       }
 
       await assertNoSlotConflicts({
@@ -1041,6 +1102,14 @@ export async function cloneTimeTableRoutine(
 export async function changeTimeTableCreate(body, updatedBy) {
   try {
     const { timeTableRoutineId, classSectionTermId, ...updateData } = body;
+    const current = await timeTableCreateRepository.getRoutineByIdRepository(timeTableRoutineId);
+    if (!current) {
+      throw new Error('Routine not found');
+    }
+    if (current.isPublish) {
+      throw new Error('Published routine cannot be updated');
+    }
+
     let placementFields = { ...updateData };
 
     if (classSectionTermId != null) {
@@ -1052,10 +1121,17 @@ export async function changeTimeTableCreate(body, updatedBy) {
     }
 
     if (placementFields.startingDate || placementFields.endingDate || placementFields.classSectionTermId) {
-      const current = await timeTableCreateRepository.getRoutineByIdRepository(timeTableRoutineId);
       const resolvedTermId = placementFields.classSectionTermId || current.classSectionTermId;
       const start = placementFields.startingDate || current.startingDate;
       const end = placementFields.endingDate || current.endingDate;
+
+      if (placementFields.startingDate || placementFields.endingDate) {
+        const structure = await getTimeTableStructureById(current.timeTableNameId);
+        if (!structure) {
+          throw new Error('timeTableNameId not found');
+        }
+        assertRoutineDatesWithinStructure(structure, start, end);
+      }
 
       const overlap = await timeTableCreateRepository.checkRoutineOverlapRepository({
         classSectionTermId: resolvedTermId,
@@ -1459,6 +1535,8 @@ export async function getTimeTableElective(courseId) {
         pickColor: pickColor || "",
         userId: userId || null,
         timeTableType: curr?.timeTableType,
+        roomId: curr?.classRoom?.classRoomSectionId || null,
+        roomName: curr?.classRoom?.roomNumber || null,
         subject: curr?.timeTableElective
           ? {
             subjectId: curr?.timeTableElective?.electiveSubjectId,

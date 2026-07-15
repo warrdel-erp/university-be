@@ -24,6 +24,7 @@ const optionalPositiveId = z.preprocess(
     z.coerce.number().int().positive().optional(),
 );
 
+// Shared query schema for GET /employee/schedule and GET /employee/pastSchedule.
 const scheduleQuerySchema = z.object({
     userId: z.coerce.number().int().positive(),
     date: z.string().optional(),
@@ -57,7 +58,8 @@ router.get('/sectionDates', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.va
 
 router.get('/sectionCounts', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getSectionCounts);
 
-router.get('/pastSchedule', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getPastClassSchedules);
+router.get('/pastSchedule', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), validate({ query: scheduleQuerySchema }), getPastClassSchedules);
+
 router.get('/upcomingSchedule', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getUpcomingClassSchedules);
 
 router.get('/courses', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getTeacherCourses);

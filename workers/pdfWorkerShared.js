@@ -11,7 +11,7 @@ import path from "path";
 import fs from "fs";
 import os from "os";
 import { pipeline } from "stream/promises";
-import AWS from "aws-sdk";
+import { AWS_BUCKET_NAME, AWS_BUCKET_PREFIX, s3Client as s3 } from "../utility/awsConfig.js";
 
 import * as pdfSplitJobRepository from "../repository/pdfSplitJobRepository.js";
 
@@ -33,14 +33,8 @@ export const BATCH_SIZE_STUDENTS = Math.max(
  */
 export const BATCH_CONCURRENCY = Number(process.env.SPLIT_BATCH_CONCURRENCY) || 3;
 
-export const AWS_BUCKET_NAME = process.env.AWS_BUCKET_NAME || "images.university";
-
-export const s3 = new AWS.S3({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION || "ap-south-1",
-  signatureVersion: "v4",
-});
+// Re-export for workers
+export { AWS_BUCKET_NAME, AWS_BUCKET_PREFIX, s3 };
 
 // ─── Path helpers ─────────────────────────────────────────────────────────────
 
@@ -70,7 +64,7 @@ export function safeUnlink(filePath) {
  */
 export async function downloadPdfToTemp(s3Key, tempPath) {
   const readStream = s3
-    .getObject({ Bucket: AWS_BUCKET_NAME, Key: s3Key })
+    .getObject({ Bucket: AWS_BUCKET_NAME, Key: AWS_BUCKET_PREFIX + s3Key })
     .createReadStream();
   const writeStream = fs.createWriteStream(tempPath);
   await pipeline(readStream, writeStream);
@@ -135,8 +129,8 @@ export async function finalizeParentJobIfDone(jobRecord) {
 
   console.log(
     `[PdfWorker] Parent job ${id} finalized → ${status} ` +
-      `(${freshJob.completedBatches} ok, ${freshJob.failedBatches} failed of ${freshJob.totalBatches} batches, ` +
-      `${freshJob.processedStudents}/${totalStudents} students). ` +
-      (failedSegments.length > 0 ? `${failedSegments.length} student(s) failed.` : "All students OK.")
+    `(${freshJob.completedBatches} ok, ${freshJob.failedBatches} failed of ${freshJob.totalBatches} batches, ` +
+    `${freshJob.processedStudents}/${totalStudents} students). ` +
+    (failedSegments.length > 0 ? `${failedSegments.length} student(s) failed.` : "All students OK.")
   );
 }

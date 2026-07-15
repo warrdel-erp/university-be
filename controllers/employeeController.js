@@ -272,7 +272,7 @@ export const getTeacherSubjectsFromSchedule = async (req, res) => {
 
 export const getPastClassSchedules = async (req, res) => {
     try {
-        const { userId, date, groupPeriods } = req.query;
+        const { userId, date, sessionId, groupPeriods } = req.query;
         const academicYearId = getAcademicYearId();
 
         if (!userId) {
@@ -283,7 +283,6 @@ export const getPastClassSchedules = async (req, res) => {
             return SuccessResponse(res, 400, "academicYearId not found in user session");
         }
 
-        const currentDate = date ? new Date(date) : new Date();
         const formattedDate = formatQueryDate(date);
 
         let groupingType = false;
@@ -297,7 +296,8 @@ export const getPastClassSchedules = async (req, res) => {
             userId,
             academicYearId,
             formattedDate,
-            groupingType
+            groupingType,
+            sessionId != null && sessionId !== '' ? Number(sessionId) : undefined,
         );
 
         return SuccessResponse(res, 200, "Past class schedules fetched successfully", result);

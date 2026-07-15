@@ -381,14 +381,19 @@ export async function addtimeTableMapping(data, transaction) {
 
 export async function getPeriodInfoRepository(timeTableCreationId) {
   try {
+    if (timeTableCreationId == null || !Number.isFinite(Number(timeTableCreationId))) {
+      return null;
+    }
+
     return await model.timeTableStructurePeriodsModel.findOne({
-      where: { timeTableCreationId },
-      attributes: ["startTime", "endTime"],
+      where: { timeTableCreationId: Number(timeTableCreationId) },
+      attributes: ["startTime", "endTime", "timeTableCreationId"],
       include: [
         {
           model: model.timeTableStructureModel,
           as: "timeTableName",
-          attributes: ["periodLength"]
+          attributes: ["periodLength"],
+          required: false,
         }
       ]
     });
@@ -1894,6 +1899,7 @@ export async function getTodayClassScheduleForEmployee(userId, currentDate, sess
               sectionWhere: {
                 ...(sessionId && { sessionId }),
               },
+              termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
               sectionAttributes: ['year', 'section', 'classSectionsId'],
             }),
           ],
@@ -1901,7 +1907,8 @@ export async function getTodayClassScheduleForEmployee(userId, currentDate, sess
         {
           model: model.timeTableStructurePeriodsModel,
           as: "timeTablecreation",
-          attributes: ['periodName', 'startTime', 'endTime'],
+          required: true,
+          attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime'],
         },
         {
           model: model.teacherSubjectMappingModel,
@@ -1939,10 +1946,15 @@ export async function getTodayClassScheduleForEmployee(userId, currentDate, sess
   }
 }
 
+/**
+ * Loads published routine mappings for a teacher where routine.startingDate < currentDate.
+ * Used by GET /employee/pastSchedule; service layer expands each mapping into past dates.
+ */
 export async function getPastClassSchedulesForEmployee(
   userId,
   academicYearId,
-  currentDate
+  currentDate,
+  sessionId
 ) {
   try {
     const result = await model.classScheduleModel.findAll({
@@ -1979,9 +1991,14 @@ export async function getPastClassSchedulesForEmployee(
             {
               model: model.courseModel,
               as: "timeTableCourse",
-              attributes: ['courseName']
+              attributes: ['courseId', 'courseName']
             },
             timeTableRoutineClassSectionInclude({
+              sectionRequired: Boolean(sessionId),
+              sectionWhere: {
+                ...(sessionId && { sessionId }),
+              },
+              termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
               sectionAttributes: ['year', 'section', 'classSectionsId'],
             })
           ]
@@ -1989,7 +2006,8 @@ export async function getPastClassSchedulesForEmployee(
         {
           model: model.timeTableStructurePeriodsModel,
           as: "timeTablecreation",
-          attributes: ['periodName', 'startTime', 'endTime']
+          required: true,
+          attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime']
         },
         {
           model: model.teacherSubjectMappingModel,
@@ -2053,7 +2071,10 @@ export async function getUpcomingClassSchedulesForEmployee(
         'timeTableType',
         'day',
         'period',
-        'isAttendence'
+        'isAttendence',
+        'isSameTeacher',
+        'timeTableNameId',
+        'timeTableCreationId'
       ],
       include: [
         {
@@ -2076,6 +2097,7 @@ export async function getUpcomingClassSchedulesForEmployee(
               attributes: ['courseName']
             },
             timeTableRoutineClassSectionInclude({
+              termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
               sectionAttributes: ['year', 'section', 'classSectionsId'],
             })
           ]
@@ -2083,7 +2105,8 @@ export async function getUpcomingClassSchedulesForEmployee(
         {
           model: model.timeTableStructurePeriodsModel,
           as: "timeTablecreation",
-          attributes: ['periodName', 'startTime', 'endTime']
+          required: true,
+          attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime']
         },
         {
           model: model.teacherSubjectMappingModel,
@@ -2222,7 +2245,14 @@ export async function getPeriodsForStructures(timeTableNameIds) {
       where: {
         timeTableNameId: { [Op.in]: timeTableNameIds }
       },
-      attributes: ['timeTableCreationId', 'timeTableNameId', 'isBreak'],
+      attributes: [
+        'timeTableCreationId',
+        'timeTableNameId',
+        'periodName',
+        'startTime',
+        'endTime',
+        'isBreak',
+      ],
       order: [['timeTableNameId', 'ASC'], ['timeTableCreationId', 'ASC']],
       raw: true
     });

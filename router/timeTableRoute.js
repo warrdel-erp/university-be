@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { addTimeTable, addTimeTablePeriod, getTimeTableDetails, getSingleTimeTableDetails, updateTimeTable, deleteTimeTable, deleteTimeTableStructure, getAllTimeTableName } from '../controllers/timeTableController.js';
+import { addTimeTable, addTimeTablePeriod, getTimeTableDetails, getSingleTimeTableDetails, updateTimeTable, deleteTimeTable, deleteTimeTableStructure, getAllTimeTableName, updateStructureEndingDate } from '../controllers/timeTableController.js';
 import userAuth from '../middleware/authUser.js';
 import { checkAccess } from '../middleware/checkAccess.js';
 import { PERMISSIONS } from '../const/permissions.js';
@@ -28,11 +28,20 @@ const addTimeTableSchema = z.object({
     periodLength: z.coerce.number().int().positive().optional(),
     periodGap: z.coerce.number().int().min(0).optional(),
     startingTime: z.string().optional(),
+    startingDate: z.string().min(1, 'startingDate is required'),
+    endingDate: z.string().min(1, 'endingDate is required'),
     type: z.enum(['Automatic', 'Manual']),
     courseId: positiveIntegerId,
     weekOff: z.array(z.string()).optional(),
     isCourse: z.boolean().optional(),
 }).superRefine((data, ctx) => {
+    if (new Date(data.endingDate) < new Date(data.startingDate)) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'endingDate cannot be before startingDate',
+            path: ['endingDate'],
+        });
+    }
     if (data.type !== 'Automatic') {
         return;
     }
@@ -77,12 +86,18 @@ const deleteTimeTableStructureQuerySchema = z.object({
     timeTableNameId: positiveIntegerId,
 });
 
+const updateStructureEndingDateSchema = z.object({
+    timeTableNameId: positiveIntegerId,
+    endingDate: z.string().min(1, 'endingDate is required'),
+});
+
 router.post('/', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP_ADD.value, null), validate({ body: addTimeTableSchema }), addTimeTable);
 router.post('/period', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP_ADD.value, null), validate({ body: addTimeTablePeriodSchema }), addTimeTablePeriod);
 router.get('/all_name', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP.value, null), validate({ query: timeTableListQuerySchema }), getAllTimeTableName);
 router.get('/', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP.value, null), validate({ query: timeTableListQuerySchema }), getTimeTableDetails);
 router.get('/single', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP.value, null), validate({ query: timeTableListQuerySchema }), getSingleTimeTableDetails);
 router.patch('/', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP_EDIT.value, null), validate({ body: updateTimeTableSchema }), updateTimeTable);
+router.patch('/structure', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP_EDIT.value, null), validate({ body: updateStructureEndingDateSchema }), updateStructureEndingDate);
 router.delete('/', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP_DELETE.value, null), validate({ query: deleteTimeTableQuerySchema }), deleteTimeTable);
 router.delete('/structure', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP_DELETE.value, null), validate({ query: deleteTimeTableStructureQuerySchema }), deleteTimeTableStructure);
 
