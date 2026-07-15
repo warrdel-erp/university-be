@@ -39,7 +39,6 @@ export async function buildTimeTableStructureCreatePayload(data) {
         periodGap: data.periodGap,
         startingTime: data.startingTime,
         weekOff: data.weekOff,
-        sessionId: data.sessionId,
         createdBy: data.createdBy,
         updatedBy: data.updatedBy,
         universityId: scopeWhere.universityId,
@@ -73,7 +72,6 @@ export async function getTimeTableStructureById(timeTableNameId, options = {}) {
         return await scoped(model.timeTableStructureModel).findByPk(Number(timeTableNameId), {
             attributes: [
                 'timeTableNameId',
-                'sessionId',
                 'universityId',
                 'instituteId',
                 'academicYearId',
@@ -240,12 +238,6 @@ export async function getTimeTableStructures() {
             attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "updatedBy"] },
             include: [
                 {
-                    model: model.sessionModel,
-                    as: "timeTableSession",
-                    attributes: ["sessionId", "sessionName", "startingDate", "endingDate", "classTillDate", "academicYearId", "instituteId"],
-                    required: false,
-                },
-                {
                     model: model.timeTableStructureCourseModel,
                     as: "courseMappings",
                     attributes: {
@@ -256,6 +248,20 @@ export async function getTimeTableStructures() {
                             model: model.courseModel,
                             as: "course",
                             attributes: ["courseId", "courseName", "courseCode"],
+                            required: false,
+                        },
+                        {
+                            model: model.sessionModel,
+                            as: "session",
+                            attributes: [
+                                "sessionId",
+                                "sessionName",
+                                "startingDate",
+                                "endingDate",
+                                "classTillDate",
+                                "academicYearId",
+                                "instituteId",
+                            ],
                             required: false,
                         },
                     ],

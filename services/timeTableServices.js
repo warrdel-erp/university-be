@@ -12,7 +12,6 @@ export async function addTimeTable(data, createdBy, updatedBy) {
             periodGap: data.periodGap,
             startingTime: data.startingTime,
             weekOff: data.weekOff,
-            sessionId: data.sessionId,
             createdBy,
             updatedBy,
         };

@@ -77,12 +77,8 @@ Create structure + period rows only. **Do not send** `courseId`, `startingDate`,
   "name": "Morning Schedule",
   "weekOff": ["Sunday"],
   "maximumPeriod": 6,
-  "periodLength": 45,
-  "periodGap": 5,
-  "startingTime": "09:00 AM",
   "type": "Automatic",
-  "isCourse": true,
-  "sessionId": 6
+  "isCourse": true
 }
 ```
 
@@ -94,11 +90,12 @@ Create structure + period rows only. **Do not send** `courseId`, `startingDate`,
 | `periodLength` | Yes* | Required for Automatic |
 | `periodGap` | Yes* | Required for Automatic |
 | `startingTime` | Yes* | Required for Automatic |
-| `sessionId` | No | Stored on structure |
 | `weekOff` | No | e.g. `["Sunday"]` |
 | `isCourse` | No | Flag on generated period rows |
 
 `universityId` / `instituteId` / `academicYearId` come from auth scope.
+
+**Do not send** `courseId`, `sessionId`, `startingDate`, or `endingDate` — those go on course mapping.
 
 **Next step:** call `POST /timeTable/courseMapping` before creating routines for a course.
 
@@ -185,7 +182,6 @@ Each item includes `courseMappings[]`:
 {
   "timeTableNameId": 10,
   "name": "Morning Schedule",
-  "sessionId": 6,
   "universityId": 4,
   "instituteId": 12,
   "academicYearId": 59,
@@ -207,8 +203,7 @@ Each item includes `courseMappings[]`:
       }
     }
   ],
-  "timeTableName": [ /* period rows */ ],
-  "timeTableSession": { /* optional */ }
+  "timeTableName": [ /* period rows */ ]
 }
 ```
 
@@ -322,3 +317,4 @@ No direct dependency on the new mapping table (inherits validity via routine).
 - `20260715190000` adds `timetable_structure_course_mapper_id` on `time_table_routine` (backfilled from structure–course rows)
 - `20260715191000` removes `time_table_name_id` and `deleted_at` from `time_table_routine` (hard delete only; structure via mapper)
 - `20260715192000` upgrades older unique `(structure, course)` to `(structure, course, session)` and forces `session_id` NOT NULL
+- `20260715200000` removes `session_id` from `time_table_structure` (session only on mapper)

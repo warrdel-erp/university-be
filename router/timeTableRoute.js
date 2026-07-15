@@ -17,7 +17,6 @@ const addTimeTableSchema = z.object({
     periodLength: z.coerce.number().int().positive().optional(),
     periodGap: z.coerce.number().int().min(0).optional(),
     startingTime: z.string().optional(),
-    sessionId: positiveIntegerId.optional(),
     type: z.enum(['Automatic', 'Manual']),
     weekOff: z.array(z.string()).optional(),
     isCourse: z.boolean().optional(),

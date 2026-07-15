@@ -4,7 +4,6 @@ import users from "./userModel.js";
 import university from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
 import acedmicYear from "./acedmicYearModel.js";
-import sessionModel from "./sessionModel.js";
 
 const timeTableStructureModel = sequelize.define(
     'time_table_structure',
@@ -49,15 +48,6 @@ const timeTableStructureModel = sequelize.define(
             references: {
                 model: acedmicYear,
                 key: 'acedmic_year_id'
-            }
-        },
-        sessionId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'session_id',
-            references: {
-                model: sessionModel,
-                key: 'session_id'
             }
         },
         periodLength: {
