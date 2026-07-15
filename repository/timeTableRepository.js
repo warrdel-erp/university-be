@@ -289,6 +289,68 @@ export async function getTimeTableStructureDetailsById(timeTableNameId) {
     });
 }
 
+export async function getStructureMappingPrintRows(filters = {}) {
+    const where = {};
+    if (filters.timetableStructureCourseMapperId != null) {
+        where.timetableStructureCourseMapperId = Number(filters.timetableStructureCourseMapperId);
+    }
+    if (filters.timeTableNameId != null) {
+        where.timeTableNameId = Number(filters.timeTableNameId);
+    }
+    if (filters.courseId != null) {
+        where.courseId = Number(filters.courseId);
+    }
+    if (filters.sessionId != null) {
+        where.sessionId = Number(filters.sessionId);
+    }
+
+    return await scoped(model.timeTableStructureCourseModel).findAll({
+        where,
+        attributes: [
+            'timetableStructureCourseMapperId',
+            'timeTableNameId',
+            'courseId',
+            'sessionId',
+            'startingDate',
+            'endingDate',
+        ],
+        include: [
+            {
+                model: model.timeTableStructureModel,
+                as: 'timeTableStructure',
+                required: true,
+                attributes: [
+                    'timeTableNameId',
+                    'name',
+                    'maximumPeriod',
+                    'periodLength',
+                    'periodGap',
+                    'startingTime',
+                    'weekOff',
+                ],
+                where: buildScope(model.timeTableStructureModel),
+            },
+            {
+                model: model.courseModel,
+                as: 'course',
+                required: true,
+                attributes: ['courseId', 'courseName', 'courseCode'],
+            },
+            {
+                model: model.sessionModel,
+                as: 'session',
+                required: true,
+                attributes: ['sessionId', 'sessionName'],
+            },
+        ],
+        order: [
+            ['timeTableNameId', 'ASC'],
+            ['courseId', 'ASC'],
+            ['sessionId', 'ASC'],
+        ],
+    });
+}
+
 export async function getSingleTimeTableById(timeTableCreationId) {
     try {
         const period = await findPeriodInScope(timeTableCreationId);

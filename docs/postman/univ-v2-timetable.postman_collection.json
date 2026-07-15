@@ -115,6 +115,59 @@
               "event": []
             },
             {
+              "name": "get structure mapping print table",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timeTable/print?courseId={{timetable_courseId}}&sessionId={{timetable_sessionId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTable",
+                    "print"
+                  ],
+                  "query": [
+                    {
+                      "key": "courseId",
+                      "value": "{{timetable_courseId}}",
+                      "description": "Optional"
+                    },
+                    {
+                      "key": "sessionId",
+                      "value": "{{timetable_sessionId}}",
+                      "description": "Optional"
+                    },
+                    {
+                      "key": "timeTableNameId",
+                      "value": "{{timetable_timeTableNameId}}",
+                      "description": "Optional",
+                      "disabled": true
+                    },
+                    {
+                      "key": "timetableStructureCourseMapperId",
+                      "value": "{{timetable_structureCourseMapperId}}",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "**GET /timeTable/print**\n\nFlat structure + course-mapping rows for printing a table (no periods).\n\n### Query (all optional)\n| Name | Description |\n|------|-------------|\n| `courseId` | Filter by course |\n| `sessionId` | Filter by session |\n| `timeTableNameId` | Filter by structure |\n| `timetableStructureCourseMapperId` | Filter by mapping PK |\n\n### Response `data[]` fields\n`timetableStructureCourseMapperId`, `timeTableNameId`, `structureName`, `maximumPeriod`, `periodLength`, `periodGap`, `startingTime`, `weekOff`, `courseId`, `courseName`, `courseCode`, `sessionId`, `sessionName`, `startingDate`, `endingDate`"
+              },
+              "response": []
+            },
+            {
               "name": "get single structure",
               "request": {
                 "description": "**GET /timeTable/single?timeTableNameId=**\n\nReturns **one** structure by id (with periods + `courseMappings[]`).\n\n| Query | Required | Description |\n|-------|----------|-------------|\n| `timeTableNameId` | Yes | Structure PK |\n\n**400** if missing/invalid id or structure not in scope.",

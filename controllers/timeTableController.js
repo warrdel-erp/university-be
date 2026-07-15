@@ -59,6 +59,15 @@ export const getSingleTimeTableDetails = async (req, res) => {
   }
 };
 
+export const getStructureMappingPrintData = async (req, res) => {
+  try {
+    const result = await timeTableServices.getStructureMappingPrintData(req.query);
+    return SuccessResponse(res, 200, "Structure mapping print data fetched successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, 400, error.message || "Internal Server Error");
+  }
+};
+
 export const updateTimeTable = async (req, res) => {
   try {
     const result = await timeTableServices.updateTimeTable(req.body);

@@ -99,6 +99,38 @@ export async function getSingleTimeTableDetails(timeTableNameId) {
     return structure;
 }
 
+export async function getStructureMappingPrintData(filters = {}) {
+    const rows = await timeTableRepository.getStructureMappingPrintRows(filters);
+    const result = [];
+
+    for (const row of rows) {
+        const plain = row.get ? row.get({ plain: true }) : row;
+        const structure = plain.timeTableStructure;
+        const course = plain.course;
+        const session = plain.session;
+
+        result.push({
+            timetableStructureCourseMapperId: plain.timetableStructureCourseMapperId,
+            timeTableNameId: plain.timeTableNameId,
+            structureName: structure.name,
+            maximumPeriod: structure.maximumPeriod,
+            periodLength: structure.periodLength,
+            periodGap: structure.periodGap,
+            startingTime: structure.startingTime,
+            weekOff: structure.weekOff,
+            courseId: plain.courseId,
+            courseName: course.courseName,
+            courseCode: course.courseCode,
+            sessionId: plain.sessionId,
+            sessionName: session.sessionName,
+            startingDate: plain.startingDate,
+            endingDate: plain.endingDate,
+        });
+    }
+
+    return result;
+}
+
 export async function updateTimeTable(info) {
     const results = [];
     for (const item of info) {

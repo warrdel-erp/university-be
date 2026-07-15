@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { addTimeTable, addTimeTablePeriod, addStructureCourseMapping, getTimeTableDetails, getSingleTimeTableDetails, updateTimeTable, deleteTimeTable, updateStructure } from '../controllers/timeTableController.js';
+import { addTimeTable, addTimeTablePeriod, addStructureCourseMapping, getTimeTableDetails, getSingleTimeTableDetails, getStructureMappingPrintData, updateTimeTable, deleteTimeTable, updateStructure } from '../controllers/timeTableController.js';
 import userAuth from '../middleware/authUser.js';
 import { validate } from '../utility/validation.js';
 
@@ -11,6 +11,10 @@ const positiveIntegerId = z.coerce
     .int('id must be an integer')
     .positive('id must be greater than 0');
 
+const optionalPositiveId = z.preprocess(
+    (val) => (val === '' || val == null ? undefined : val),
+    positiveIntegerId.optional(),
+);
 const addTimeTableSchema = z.object({
     name: z.string().trim().min(1, 'name is required'),
     maximumPeriod: z.coerce.number().int().positive(),
@@ -78,6 +82,13 @@ const getSingleStructureQuerySchema = z.object({
     timeTableNameId: positiveIntegerId,
 });
 
+const getStructureMappingPrintQuerySchema = z.object({
+    timetableStructureCourseMapperId: optionalPositiveId,
+    timeTableNameId: optionalPositiveId,
+    courseId: optionalPositiveId,
+    sessionId: optionalPositiveId,
+});
+
 const updateStructureSchema = z
     .object({
         timetableStructureCourseMapperId: positiveIntegerId,
@@ -108,6 +119,9 @@ router.post('/', userAuth, validate({ body: addTimeTableSchema }), addTimeTable)
 router.post('/courseMapping', userAuth, validate({ body: addStructureCourseMappingSchema }), addStructureCourseMapping);
 router.post('/period', userAuth, validate({ body: addTimeTablePeriodSchema }), addTimeTablePeriod);
 router.get('/', userAuth, getTimeTableDetails);
+
+router.get('/structureMappings', userAuth, validate({ query: getStructureMappingPrintQuerySchema }), getStructureMappingPrintData);
+
 router.get('/single', userAuth, validate({ query: getSingleStructureQuerySchema }), getSingleTimeTableDetails);
 router.patch('/', userAuth, validate({ body: updateTimeTableSchema }), updateTimeTable);
 router.patch('/structure', userAuth, validate({ body: updateStructureSchema }), updateStructure);
