@@ -91,6 +91,13 @@ export async function getTimeTableDetails() {
     return await timeTableRepository.getTimeTableStructures();
 }
 
+export async function getAllTimeTableName(query = {}) {
+    return await timeTableRepository.getTimeTableStructures({
+        courseId: query.courseId,
+        sessionId: query.sessionId,
+    });
+}
+
 export async function getSingleTimeTableDetails(timeTableNameId) {
     const structure = await timeTableRepository.getTimeTableStructureDetailsById(timeTableNameId);
     if (!structure) {

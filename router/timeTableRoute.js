@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { addTimeTable, addTimeTablePeriod, addStructureCourseMapping, getTimeTableDetails, getSingleTimeTableDetails, getStructureMappingPrintData, updateTimeTable, deleteTimeTable, updateStructure } from '../controllers/timeTableController.js';
+import { addTimeTable, addTimeTablePeriod, addStructureCourseMapping, getTimeTableDetails, getAllTimeTableName, getSingleTimeTableDetails, getStructureMappingPrintData, updateTimeTable, deleteTimeTable, updateStructure } from '../controllers/timeTableController.js';
 import userAuth from '../middleware/authUser.js';
 import { validate } from '../utility/validation.js';
 
@@ -89,6 +89,11 @@ const getStructureMappingPrintQuerySchema = z.object({
     sessionId: optionalPositiveId,
 });
 
+const getAllTimeTableNameQuerySchema = z.object({
+    courseId: optionalPositiveId,
+    sessionId: optionalPositiveId,
+});
+
 const updateStructureSchema = z
     .object({
         timetableStructureCourseMapperId: positiveIntegerId,
@@ -118,6 +123,7 @@ const updateStructureSchema = z
 router.post('/', userAuth, validate({ body: addTimeTableSchema }), addTimeTable);
 router.post('/courseMapping', userAuth, validate({ body: addStructureCourseMappingSchema }), addStructureCourseMapping);
 router.post('/period', userAuth, validate({ body: addTimeTablePeriodSchema }), addTimeTablePeriod);
+router.get('/all_name', userAuth, validate({ query: getAllTimeTableNameQuerySchema }), getAllTimeTableName);
 router.get('/', userAuth, getTimeTableDetails);
 
 router.get('/structureMappings', userAuth, validate({ query: getStructureMappingPrintQuerySchema }), getStructureMappingPrintData);

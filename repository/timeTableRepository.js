@@ -269,11 +269,62 @@ const structureListInclude = [
     },
 ];
 
-export async function getTimeTableStructures() {
+export async function getTimeTableStructures(filters = {}) {
     try {
+        const mappingInclude = {
+            model: model.timeTableStructureCourseModel,
+            as: "courseMappings",
+            attributes: {
+                exclude: ["createdAt", "updatedAt", "createdBy", "updatedBy"],
+            },
+            required: false,
+            include: [
+                {
+                    model: model.courseModel,
+                    as: "course",
+                    attributes: ["courseId", "courseName", "courseCode"],
+                    required: false,
+                },
+                {
+                    model: model.sessionModel,
+                    as: "session",
+                    attributes: [
+                        "sessionId",
+                        "sessionName",
+                        "startingDate",
+                        "endingDate",
+                        "classTillDate",
+                        "academicYearId",
+                        "instituteId",
+                    ],
+                    required: false,
+                },
+            ],
+        };
+
+        const mappingWhere = {};
+        if (filters.courseId != null) {
+            mappingWhere.courseId = Number(filters.courseId);
+            mappingInclude.required = true;
+        }
+        if (filters.sessionId != null) {
+            mappingWhere.sessionId = Number(filters.sessionId);
+            mappingInclude.required = true;
+        }
+        if (Object.keys(mappingWhere).length > 0) {
+            mappingInclude.where = mappingWhere;
+        }
+
         return await scoped(model.timeTableStructureModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "updatedBy"] },
-            include: structureListInclude,
+            include: [
+                mappingInclude,
+                {
+                    model: model.timeTableStructurePeriodsModel,
+                    as: "timeTableName",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                },
+            ],
         });
     } catch (error) {
         console.error('Error in getting time table:', error);

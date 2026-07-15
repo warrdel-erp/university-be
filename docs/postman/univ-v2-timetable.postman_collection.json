@@ -134,6 +134,48 @@
               ]
             },
             {
+              "name": "get all names (by course)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timeTable/all_name?courseId={{timetable_courseId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTable",
+                    "all_name"
+                  ],
+                  "query": [
+                    {
+                      "key": "courseId",
+                      "value": "{{timetable_courseId}}",
+                      "description": "Optional — filter structures mapped to this course"
+                    },
+                    {
+                      "key": "sessionId",
+                      "value": "{{timetable_sessionId}}",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "**GET /timeTable/all_name**\n\nRestored FE endpoint. Returns structures (with periods + matching courseMappings[]).\n\nOptional query: courseId, sessionId.\n\nExample: /timeTable/all_name?courseId=45"
+              },
+              "response": []
+            },
+            {
               "name": "get structure mappings (print table)",
               "request": {
                 "auth": {
