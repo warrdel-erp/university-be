@@ -70,7 +70,7 @@ const getTimeTableByCourseAndSectionQuerySchema = z.object({
 );
 
 const addTimeTableCreateSchema = z.object({
-    timeTableNameId: positiveIntegerId,
+    timetableStructureCourseMapperId: positiveIntegerId,
     classSectionTermId: optionalPositiveId,
     courseId: optionalPositiveId,
     campusId: optionalPositiveId,
@@ -92,7 +92,7 @@ const changeTimeTableCreateSchema = z.object({
     startingDate: z.string().optional(),
     endingDate: z.string().optional(),
     classSectionTermId: optionalPositiveId,
-    timeTableNameId: optionalPositiveId,
+    timetableStructureCourseMapperId: optionalPositiveId,
     courseId: optionalPositiveId,
     campusId: optionalPositiveId,
     timeTableType: z.enum(['normal', 'elective']).optional(),

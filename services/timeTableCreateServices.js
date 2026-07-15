@@ -1,5 +1,5 @@
 import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
-import { getSingleTimeTableById, getTimeTableStructureById, getStructureCourseMapping, getStructureCourseMappingById } from "../repository/timeTableRepository.js";
+import { getSingleTimeTableById, getTimeTableStructureById, getStructureCourseMappingById } from "../repository/timeTableRepository.js";
 import { getTeacherDetailsByTeacherSubjectId } from "../repository/teacherSubjectMappingRepository.js";
 import {
   getSingleFaculityLoadDetails,
@@ -480,13 +480,12 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
 
     const timeTableType = data.timeTableType ?? 'normal';
 
-    if (!data.timeTableNameId) {
-      throw new Error('timeTableNameId is required — create timetable structure first');
-    }
-
-    const structure = await getTimeTableStructureById(data.timeTableNameId, { transaction });
-    if (!structure) {
-      throw new Error('timeTableNameId not found');
+    const courseMapping = await getStructureCourseMappingById(
+      data.timetableStructureCourseMapperId,
+      { transaction },
+    );
+    if (!courseMapping) {
+      throw new Error('timetableStructureCourseMapperId not found — map the course to a structure first');
     }
 
     if (timeTableType === 'normal' && (data.classSectionTermId == null || data.classSectionTermId === '')) {
@@ -502,8 +501,6 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
       throw new Error('classSectionTermId is required');
     }
 
-    let sessionId = placement.sessionId;
-
     if (placement.classSectionTermId) {
       const termRow = await findClassSectionTermById(placement.classSectionTermId, { transaction });
       if (!termRow) {
@@ -513,45 +510,33 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
       if (!section) {
         throw new Error('class section not found for classSectionTermId');
       }
-      placement.courseId = section.courseId;
-      sessionId = section.sessionId;
-    } else if (!placement.courseId && placement.classSectionsId) {
-      const section = await timeTableCreateRepository.getClassSectionWithCourseRepository(
-        placement.classSectionsId,
-      );
-      if (!section) {
-        throw new Error('classSectionsId not found');
+      if (Number(section.courseId) !== Number(courseMapping.courseId)) {
+        throw new Error('classSectionTermId course does not match structure course mapping');
+      }
+      if (Number(section.sessionId) !== Number(courseMapping.sessionId)) {
+        throw new Error('classSectionTermId session does not match structure course mapping');
       }
       placement.courseId = section.courseId;
-      sessionId = section.sessionId;
+    } else if (!placement.courseId) {
+      placement.courseId = courseMapping.courseId;
     }
 
     if (!placement.courseId) {
-      throw new Error('courseId is required — resolve from classSectionTermId or send courseId on routine create');
-    }
-
-    if (!sessionId) {
-      throw new Error('sessionId is required — resolve from classSectionTermId');
+      throw new Error('courseId is required — resolve from classSectionTermId or course mapping');
     }
 
     delete placement.term;
     delete placement.classSectionId;
     delete placement.classSectionsId;
     delete placement.sessionId;
+    delete placement.timeTableNameId;
 
-    const courseMapping = await getStructureCourseMapping(
-      data.timeTableNameId,
-      placement.courseId,
-      sessionId,
-      { transaction },
-    );
     assertRoutineDatesWithinStructure(
       courseMapping,
       placement.startingDate,
       placement.endingDate,
     );
     placement.timetableStructureCourseMapperId = courseMapping.timetableStructureCourseMapperId;
-    delete placement.timeTableNameId;
 
     if (
       placement.classSectionTermId
@@ -1141,19 +1126,19 @@ export async function changeTimeTableCreate(body, updatedBy) {
       || placementFields.endingDate
       || placementFields.classSectionTermId
       || placementFields.courseId
-      || placementFields.timeTableNameId
+      || placementFields.timetableStructureCourseMapperId
     ) {
       const resolvedTermId = placementFields.classSectionTermId || current.classSectionTermId;
       const start = placementFields.startingDate || current.startingDate;
       const end = placementFields.endingDate || current.endingDate;
 
-      const currentMapping = await getStructureCourseMappingById(current.timetableStructureCourseMapperId);
-      if (!currentMapping) {
+      const mapperId = placementFields.timetableStructureCourseMapperId
+        || current.timetableStructureCourseMapperId;
+      const courseMapping = await getStructureCourseMappingById(mapperId);
+      if (!courseMapping) {
         throw new Error('Structure course mapping not found');
       }
 
-      const timeTableNameId = placementFields.timeTableNameId || currentMapping.timeTableNameId;
-      let sessionId = currentMapping.sessionId;
       let courseId = placementFields.courseId || current.courseId;
 
       if (placementFields.classSectionTermId) {
@@ -1165,21 +1150,16 @@ export async function changeTimeTableCreate(body, updatedBy) {
         if (!section) {
           throw new Error('class section not found for classSectionTermId');
         }
-        sessionId = section.sessionId;
-        courseId = placementFields.courseId || section.courseId;
+        if (Number(section.courseId) !== Number(courseMapping.courseId)) {
+          throw new Error('classSectionTermId course does not match structure course mapping');
+        }
+        if (Number(section.sessionId) !== Number(courseMapping.sessionId)) {
+          throw new Error('classSectionTermId session does not match structure course mapping');
+        }
+        courseId = section.courseId;
         placementFields.courseId = courseId;
       }
 
-      const structure = await getTimeTableStructureById(timeTableNameId);
-      if (!structure) {
-        throw new Error('timeTableNameId not found');
-      }
-
-      const courseMapping = await getStructureCourseMapping(
-        timeTableNameId,
-        courseId,
-        sessionId,
-      );
       assertRoutineDatesWithinStructure(courseMapping, start, end);
       placementFields.timetableStructureCourseMapperId = courseMapping.timetableStructureCourseMapperId;
       delete placementFields.timeTableNameId;

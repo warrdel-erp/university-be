@@ -232,51 +232,61 @@ export async function incrementStructureMaximumPeriod(timeTableNameId, transacti
     return currentMax + 1;
 }
 
+const structureListInclude = [
+    {
+        model: model.timeTableStructureCourseModel,
+        as: "courseMappings",
+        attributes: {
+            exclude: ["createdAt", "updatedAt", "createdBy", "updatedBy"],
+        },
+        include: [
+            {
+                model: model.courseModel,
+                as: "course",
+                attributes: ["courseId", "courseName", "courseCode"],
+                required: false,
+            },
+            {
+                model: model.sessionModel,
+                as: "session",
+                attributes: [
+                    "sessionId",
+                    "sessionName",
+                    "startingDate",
+                    "endingDate",
+                    "classTillDate",
+                    "academicYearId",
+                    "instituteId",
+                ],
+                required: false,
+            },
+        ],
+    },
+    {
+        model: model.timeTableStructurePeriodsModel,
+        as: "timeTableName",
+        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+    },
+];
+
 export async function getTimeTableStructures() {
     try {
         return await scoped(model.timeTableStructureModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "updatedBy"] },
-            include: [
-                {
-                    model: model.timeTableStructureCourseModel,
-                    as: "courseMappings",
-                    attributes: {
-                        exclude: ["createdAt", "updatedAt", "createdBy", "updatedBy"],
-                    },
-                    include: [
-                        {
-                            model: model.courseModel,
-                            as: "course",
-                            attributes: ["courseId", "courseName", "courseCode"],
-                            required: false,
-                        },
-                        {
-                            model: model.sessionModel,
-                            as: "session",
-                            attributes: [
-                                "sessionId",
-                                "sessionName",
-                                "startingDate",
-                                "endingDate",
-                                "classTillDate",
-                                "academicYearId",
-                                "instituteId",
-                            ],
-                            required: false,
-                        },
-                    ],
-                },
-                {
-                    model: model.timeTableStructurePeriodsModel,
-                    as: "timeTableName",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                },
-            ],
+            include: structureListInclude,
         });
     } catch (error) {
         console.error('Error in getting time table:', error);
         throw error;
     }
+}
+
+export async function getTimeTableStructureDetailsById(timeTableNameId) {
+    return await scoped(model.timeTableStructureModel).findOne({
+        where: { timeTableNameId: Number(timeTableNameId) },
+        attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "updatedBy"] },
+        include: structureListInclude,
+    });
 }
 
 export async function getSingleTimeTableById(timeTableCreationId) {

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { addTimeTable, addTimeTablePeriod, addStructureCourseMapping, getTimeTableDetails, getSingleTimeTableDetails, updateTimeTable, deleteTimeTable, deleteTimeTableStructure, getAllTimeTableName, updateStructure } from '../controllers/timeTableController.js';
+import { addTimeTable, addTimeTablePeriod, addStructureCourseMapping, getTimeTableDetails, getSingleTimeTableDetails, updateTimeTable, deleteTimeTable, deleteTimeTableStructure, updateStructure } from '../controllers/timeTableController.js';
 import userAuth from '../middleware/authUser.js';
 import { validate } from '../utility/validation.js';
 
@@ -78,6 +78,10 @@ const deleteTimeTableStructureQuerySchema = z.object({
     timeTableNameId: positiveIntegerId,
 });
 
+const getSingleStructureQuerySchema = z.object({
+    timeTableNameId: positiveIntegerId,
+});
+
 const updateStructureSchema = z
     .object({
         timetableStructureCourseMapperId: positiveIntegerId,
@@ -107,9 +111,8 @@ const updateStructureSchema = z
 router.post('/', userAuth, validate({ body: addTimeTableSchema }), addTimeTable);
 router.post('/courseMapping', userAuth, validate({ body: addStructureCourseMappingSchema }), addStructureCourseMapping);
 router.post('/period', userAuth, validate({ body: addTimeTablePeriodSchema }), addTimeTablePeriod);
-router.get('/all_name', userAuth, getAllTimeTableName);
 router.get('/', userAuth, getTimeTableDetails);
-router.get('/single', userAuth, getSingleTimeTableDetails);
+router.get('/single', userAuth, validate({ query: getSingleStructureQuerySchema }), getSingleTimeTableDetails);
 router.patch('/', userAuth, validate({ body: updateTimeTableSchema }), updateTimeTable);
 router.patch('/structure', userAuth, validate({ body: updateStructureSchema }), updateStructure);
 router.delete('/', userAuth, validate({ query: deleteTimeTableQuerySchema }), deleteTimeTable);

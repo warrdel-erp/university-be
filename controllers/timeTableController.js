@@ -50,18 +50,9 @@ export const getTimeTableDetails = async (req, res) => {
   }
 };
 
-export const getAllTimeTableName = async (req, res) => {
-  try {
-    const result = await timeTableServices.getAllTimeTableName();
-    return SuccessResponse(res, 200, "All time table name fetched successfully", result);
-  } catch (error) {
-    return ErrorResponse(res, 400, error.message || "Internal Server Error");
-  }
-};
-
 export const getSingleTimeTableDetails = async (req, res) => {
   try {
-    const result = await timeTableServices.getSingleTimeTableDetails();
+    const result = await timeTableServices.getSingleTimeTableDetails(req.query.timeTableNameId);
     return SuccessResponse(res, 200, "Single time table details fetched successfully", result);
   } catch (error) {
     return ErrorResponse(res, 400, error.message || "Internal Server Error");

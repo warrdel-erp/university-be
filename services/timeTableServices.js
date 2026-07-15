@@ -87,16 +87,16 @@ export async function addTimeTable(data, createdBy, updatedBy) {
     }
 }
 
-export async function getAllTimeTableName() {
-    return await timeTableRepository.getTimeTableStructures();
-}
-
 export async function getTimeTableDetails() {
     return await timeTableRepository.getTimeTableStructures();
 }
 
-export async function getSingleTimeTableDetails() {
-    return await timeTableRepository.getTimeTableStructures();
+export async function getSingleTimeTableDetails(timeTableNameId) {
+    const structure = await timeTableRepository.getTimeTableStructureDetailsById(timeTableNameId);
+    if (!structure) {
+        throw new Error('Time table structure not found for this institute and academic year');
+    }
+    return structure;
 }
 
 export async function updateTimeTable(info) {

@@ -49,8 +49,7 @@ One structure may have many mappings for different `(courseId, sessionId)` pairs
 | `POST` | `/timeTable/courseMapping` | **New** — map course + session + date window to structure |
 | `PATCH` | `/timeTable/structure` | **Breaking** — keyed by mapper id; can change structure/course/session/dates |
 | `GET` | `/timeTable` | **Updated** — dates on `courseMappings[]`, not structure root |
-| `GET` | `/timeTable/all_name` | **Updated** — same as above |
-| `GET` | `/timeTable/single` | **Updated** — same as above |
+| `GET` | `/timeTable/single` | **Updated** — one structure by `timeTableNameId` query |
 | `DELETE` | `/timeTable/structure` | **Updated** — hard-deletes structure + periods + course mappings |
 | `POST` | `/timeTableCreate/` | **Updated** — dates vs **structure–course** window (not structure) |
 | `POST` | `/timeTableCreate/clone` | **Updated** — same window rule |
@@ -170,13 +169,19 @@ At least one updatable field is required.
 
 ---
 
-### `GET /timeTable`, `/all_name`, `/single`
+### `GET /timeTable`
 
 **Status:** Updated response shape
 
-Structure root **no longer** has `startingDate` / `endingDate` / `courseId` / `deletedAt`.
+Lists all structures in scope. Structure root has no dates/`courseId`/`sessionId`. Each item includes `courseMappings[]`.
 
-Each item includes `courseMappings[]`:
+### `GET /timeTable/single?timeTableNameId=`
+
+**Status:** Updated — returns one structure
+
+**Query:** `timeTableNameId` (required)
+
+Same shape as one list item (periods + `courseMappings[]`).
 
 ```json
 {
