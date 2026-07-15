@@ -85,7 +85,10 @@ export async function copyMapping(req, res) {
     const updatedBy = req.user.userId;
     try {
         const lessonData = await lesson.copyMapping(req.body, createdBy, updatedBy);
-        return SuccessResponse(res, 201, lessonData.message, { copied: lessonData.copied });
+        return SuccessResponse(res, 201, lessonData.message, {
+            copied: lessonData.copied,
+            sourceLessonMappingId: lessonData.sourceLessonMappingId,
+        });
     } catch (error) {
         console.error("Error in copyMapping:", error);
         const statusCode = error.statusCode || (/not found/i.test(error.message) ? 404 : 500);

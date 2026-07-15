@@ -39,10 +39,14 @@ const linkLessonBodySchema = z.object({
     lectureWindowId: positiveIntegerId,
 }).strict();
 
-const copyMappingBodySchema = z.object({
-    sourceLessonMappingId: positiveIntegerId,
+const copyMappingTargetSchema = z.object({
     timeTableMappingId: positiveIntegerId,
     date: dateOnly,
+}).strict();
+
+const copyMappingBodySchema = z.object({
+    sourceLessonMappingId: positiveIntegerId,
+    targets: z.array(copyMappingTargetSchema).min(1, 'at least one target is required'),
     note: z.string().optional().nullable(),
     lectureUrl: z.string().optional().nullable(),
     file: z.any().optional().nullable(),
