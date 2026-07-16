@@ -189,7 +189,13 @@ export async function getLectureWindowOptionRows(filters) {
         academicYearId: Number(filters.academicYearId),
         employeeId: Number(filters.employeeId),
         subjectId: Number(filters.subjectId),
+        startDate: { [Op.lte]: filters.date },
+        endDate: { [Op.gte]: filters.date },
     };
+
+    if (filters.sessionId != null) {
+        where.sessionId = Number(filters.sessionId);
+    }
 
     return scoped(model.lectureWindowModel).findAll({
         raw: true,

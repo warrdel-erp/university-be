@@ -360,6 +360,7 @@ function buildBookListWhere(libraryCreationId, filters = {}) {
     { '$inventoryCopies.status$': pattern },
     { '$inventoryCopies.bill_no$': pattern },
     { '$inventoryCopies.bill_date$': pattern },
+    { '$inventoryCopies.accession_date$': pattern },
   ];
 
   const numericId = Number(term);
@@ -858,6 +859,7 @@ export async function getBooksIssuedToStudent(studentId) {
         "inventoryId",
         "libraryBookId",
         "accessionNumber",
+        "accessionDate",
         "billNo",
         "billDate",
         "itemPrice",
@@ -923,6 +925,7 @@ export async function getBooksIssuedToEmployee(employeeId) {
         "inventoryId",
         "libraryBookId",
         "accessionNumber",
+        "accessionDate",
         "billNo",
         "billDate",
         "itemPrice",

@@ -109,7 +109,7 @@ export async function getFeePlanOptions(filters) {
     };
 }
 
-export async function getLectureWindowOptions(employeeId, subjectId, academicYearId) {
+export async function getLectureWindowOptions(employeeId, subjectId, academicYearId, date, sessionId) {
     const [employee, subject, options] = await Promise.all([
         optionsRepository.getEmployeeOptionDetail(employeeId),
         optionsRepository.getSubjectOptionDetail(subjectId),
@@ -117,6 +117,8 @@ export async function getLectureWindowOptions(employeeId, subjectId, academicYea
             employeeId,
             subjectId,
             academicYearId,
+            date,
+            sessionId,
         }),
     ]);
 
