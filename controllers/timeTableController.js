@@ -144,4 +144,19 @@ export const deleteTimeTableName = async (req, res) => {
   }
 };
 
+export const cloneTimeTableStructure = async (req, res) => {
+  try {
+    const { timeTableNameId, name } = req.body;
+    const result = await timeTableServices.cloneTimeTableStructure(
+      timeTableNameId,
+      name,
+      req.user.userId,
+      req.user.userId,
+    );
+    return SuccessResponse(res, 200, "Structure cloned successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, 400, error.message || "Internal Server Error");
+  }
+};
+
 

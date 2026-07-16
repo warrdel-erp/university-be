@@ -12,7 +12,7 @@
       "item": [
         {
           "name": "structure (/timeTable)",
-          "description": "| # | Method | Path | Purpose |\n|---|--------|------|---------|\n| 1 | POST | `/timeTable` | Create structure + periods |\n| 1 | POST | `/timeTable/period` | Add one period |\n| 1 | PATCH | `/timeTable` | Update period rows (array) |\n| 1 | DELETE | `/timeTable` | Delete one period |\n| 2 | POST | `/timeTable/courseMapping` | Map course + session + dates |\n| 2 | PATCH | `/timeTable/structure` | Update mapping by mapper id |\n| 2 | DELETE | `/timeTable/courseMapping` | Delete mapping if no routine |\n| 3 | GET | `/timeTable` | List structures + `courseMappings[]` |\n| 3 | GET | `/timeTable/all_name` | Structures filtered by course/session |\n| 3 | GET | `/timeTable/single` | One structure by id |\n| 3 | GET | `/timeTable/structureMappings` | Flat print/table rows |\n| 4 | DELETE | `/timeTable/structure` | Delete structure if unmapped |",
+          "description": "| # | Method | Path | Purpose |\n|---|--------|------|---------|\n| 1 | POST | `/timeTable` | Create structure + periods |\n| 1 | POST | `/timeTable/clone` | Copy existing structure + periods |\n| 1 | POST | `/timeTable/period` | Add one period |\n| 1 | PATCH | `/timeTable` | Update period rows (array) |\n| 1 | DELETE | `/timeTable` | Delete one period |\n| 2 | POST | `/timeTable/courseMapping` | Map course + session + dates |\n| 2 | PATCH | `/timeTable/structure` | Update mapping by mapper id |\n| 2 | DELETE | `/timeTable/courseMapping` | Delete mapping if no routine |\n| 3 | GET | `/timeTable` | List structures + `courseMappings[]` |\n| 3 | GET | `/timeTable/all_name` | Structures filtered by course/session |\n| 3 | GET | `/timeTable/single` | One structure by id |\n| 3 | GET | `/timeTable/structureMappings` | Flat print/table rows |\n| 4 | DELETE | `/timeTable/structure` | Delete structure if unmapped |",
           "item": [
             {
               "name": "create structure",
@@ -65,6 +65,67 @@
                       "try {",
                       "  const res = pm.response.json();",
                       "  const row = res.data && res.data[0];",
+                      "  if (row && row.timeTableNameId) {",
+                      "    pm.collectionVariables.set('timetable_timeTableNameId', String(row.timeTableNameId));",
+                      "  }",
+                      "} catch (e) {}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "clone structure",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseurl}}/timeTable/structure/clone",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTable",
+                    "clone"
+                  ],
+                  "query": []
+                },
+                "description": "**POST /timeTable/clone**\n\nCopies an existing structure template and all its period rows.\n\nStores `sourceTimeTableNameId` on the new structure (self FK).\n\nDoes **not** copy course mappings, routines, or grid cells.\n\n```json\n{\n  \"timeTableNameId\": 10,\n  \"name\": \"Morning Schedule Copy\"\n}\n```\n\n`name` is optional. Default: `Copy of {source name}`.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"timeTableNameId\": {{timetable_timeTableNameId}},\n  \"name\": \"Morning Schedule Copy\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "try {",
+                      "  const res = pm.response.json();",
+                      "  const row = res.data;",
                       "  if (row && row.timeTableNameId) {",
                       "    pm.collectionVariables.set('timetable_timeTableNameId', String(row.timeTableNameId));",
                       "  }",
@@ -1462,12 +1523,12 @@
   "variable": [
     {
       "key": "baseurl",
-      "value": "",
+      "value": "http://localhost:8080",
       "type": "string"
     },
     {
       "key": "token",
-      "value": "",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjY3NiwidW5pdmVyc2l0eUlkIjo1LCJkZWZhdWx0SW5zdGl0dXRlSWQiOjE4LCJkZWZhdWx0Um9sZSI6IkFETUlOIiwiZGVmYXVsdEFjYWRlbWljWWVhcklkIjo3OSwidXNlck5hbWUiOiJjc3RhZG1pbiIsInVuaXF1ZUlkIjoiNWJlNzc0OGMtMmQ4NS00ZGQyLWFjMmUtZjM4YWQ5YmQ2ZjU1IiwicGFzc3dvcmQiOiIkMmEkMTAkend6U2d5OFlJbng1ZGNPd2xRTEEwLlNzNS5ERFJVUFNYcXdLaDZzcFB6S1ZybUN6ejdTREMiLCJkdW1teVBhc3N3b3JkIjpudWxsLCJzdGF0dXMiOiJhY3RpdmUiLCJwaG9uZSI6Ijk5OTk5OTk5OTkiLCJlbWFpbCI6ImNzdC5hZG1pbkB0ZXN0LmxvY2FsIiwicm9sZSI6IkFETUlOIiwiY3JlYXRlZEF0IjoiMjAyNi0wNi0zMFQwNzo1NDoyMy4wMDBaIiwidXBkYXRlZEF0IjoiMjAyNi0wNy0xNFQwNjoxMjoyMi4wMDBaIiwiZGVsZXRlZEF0IjpudWxsLCJpbnN0aXR1dGVOYW1lIjoiQ1NUIEVuZ2luZWVyaW5nIEluc3RpdHV0ZSIsImlhdCI6MTc4NDE4MjAzMCwiZXhwIjoxNzg2Nzc0MDMwfQ.tbazAvhFqlFtPjYyFW4xMdvOXkttLHlkCAzEemetIZQ",
       "type": "string"
     },
     {

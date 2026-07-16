@@ -13,6 +13,7 @@ import {
     updateStructure,
     deleteTimeTableName,
     deleteStructureCourseMapping,
+    cloneTimeTableStructure,
 } from '../controllers/timeTableController.js';
 import userAuth from '../middleware/authUser.js';
 import { validate } from '../utility/validation.js';
@@ -88,6 +89,11 @@ const addTimeTablePeriodSchema = z.object({
     isBreak: z.boolean().optional(),
 });
 
+const cloneTimeTableStructureSchema = z.object({
+    timeTableNameId: positiveIntegerId,
+    name: z.string().trim().min(1, 'name cannot be empty').optional(),
+});
+
 const deleteTimeTableQuerySchema = z.object({
     timeTableCreationId: positiveIntegerId,
 });
@@ -146,6 +152,7 @@ const deleteStructureCourseMappingQuerySchema = z.object({
 // 1. Structure template — create / edit periods
 // ---------------------------------------------------------------------------
 router.post('/', userAuth, validate({ body: addTimeTableSchema }), addTimeTable);
+router.post('/structure/clone', userAuth, validate({ body: cloneTimeTableStructureSchema }), cloneTimeTableStructure);
 router.post('/period', userAuth, validate({ body: addTimeTablePeriodSchema }), addTimeTablePeriod);
 router.patch('/', userAuth, validate({ body: updateTimeTableSchema }), updateTimeTable);
 router.delete('/', userAuth, validate({ query: deleteTimeTableQuerySchema }), deleteTimeTable);

@@ -39,6 +39,7 @@ export async function buildTimeTableStructureCreatePayload(data) {
         periodGap: data.periodGap,
         startingTime: data.startingTime,
         weekOff: data.weekOff,
+        sourceTimeTableNameId: data.sourceTimeTableNameId ?? null,
         createdBy: data.createdBy,
         updatedBy: data.updatedBy,
         universityId: scopeWhere.universityId,

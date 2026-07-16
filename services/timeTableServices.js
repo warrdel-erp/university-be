@@ -365,3 +365,68 @@ export async function addTimeTablePeriod(data, createdBy, updatedBy) {
         throw error;
     }
 }
+
+export async function cloneTimeTableStructure(sourceTimeTableNameId, name, createdBy, updatedBy) {
+    const transaction = await sequelize.transaction();
+
+    try {
+        const source = await timeTableRepository.getTimeTableStructureDetailsById(sourceTimeTableNameId);
+        if (!source) {
+            throw new Error('Structure not found');
+        }
+
+        const plain = source.get({ plain: true });
+        const sourcePeriods = plain.timeTableName || [];
+        const newName = name && name.trim() ? name.trim() : `Copy of ${plain.name}`;
+
+        const newStructure = await timeTableRepository.addTimeTableName(
+            {
+                name: newName,
+                maximumPeriod: plain.maximumPeriod,
+                periodLength: plain.periodLength,
+                periodGap: plain.periodGap,
+                startingTime: plain.startingTime,
+                weekOff: plain.weekOff,
+                sourceTimeTableNameId: Number(sourceTimeTableNameId),
+                createdBy,
+                updatedBy,
+            },
+            transaction,
+        );
+
+        const newTimeTableNameId = newStructure.timeTableNameId;
+        const timeSlots = [];
+
+        for (const period of sourcePeriods) {
+            timeSlots.push({
+                timeTableNameId: newTimeTableNameId,
+                periodName: period.periodName,
+                startTime: period.startTime,
+                endTime: period.endTime,
+                type: period.type,
+                isCourse: period.isCourse,
+                isBreak: period.isBreak,
+                createdBy,
+                updatedBy,
+            });
+        }
+
+        let periods = [];
+        if (timeSlots.length) {
+            periods = await timeTableRepository.addTimeTable({ timeSlots }, transaction);
+        }
+
+        await transaction.commit();
+
+        return {
+            timeTableNameId: newTimeTableNameId,
+            name: newName,
+            sourceTimeTableNameId: Number(sourceTimeTableNameId),
+            maximumPeriod: plain.maximumPeriod,
+            periods,
+        };
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
+    }
+}

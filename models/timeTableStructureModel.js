@@ -70,6 +70,15 @@ const timeTableStructureModel = sequelize.define(
             allowNull: true,
             field: 'week_off'
         },
+        sourceTimeTableNameId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'source_time_table_name_id',
+            references: {
+                model: 'time_table_structure',
+                key: 'time_table_name_id',
+            },
+        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,

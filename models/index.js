@@ -539,6 +539,15 @@ timeTableStructureModel.hasMany(timeTableStructureCourseModel, {
   as: "courseMappings",
 });
 
+timeTableStructureModel.belongsTo(timeTableStructureModel, {
+  foreignKey: "source_time_table_name_id",
+  as: "sourceStructure",
+});
+timeTableStructureModel.hasMany(timeTableStructureModel, {
+  foreignKey: "source_time_table_name_id",
+  as: "clonedStructures",
+});
+
 timeTableStructureCourseModel.belongsTo(courseModel, {
   foreignKey: "course_id",
   as: "course",
