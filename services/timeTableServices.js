@@ -4,6 +4,7 @@ import { formatQueryDate } from '../utility/helper.js';
 
 export async function addTimeTable(data, createdBy, updatedBy) {
     const transaction = await sequelize.transaction();
+
     try {
         const structureItem = {
             name: data.name,
@@ -280,6 +281,7 @@ function formatTimeString(date) {
 
 export async function addTimeTablePeriod(data, createdBy, updatedBy) {
     const transaction = await sequelize.transaction();
+
     try {
         const timeTableNameId = Number(data.timeTableNameId);
         const structure = await timeTableRepository.findStructureInScope(timeTableNameId, { transaction });
@@ -416,15 +418,16 @@ export async function cloneTimeTableStructure(sourceTimeTableNameId, name, creat
             periods = await timeTableRepository.addTimeTable({ timeSlots }, transaction);
         }
 
-        await transaction.commit();
-
-        return {
+        const result = {
             timeTableNameId: newTimeTableNameId,
             name: newName,
             sourceTimeTableNameId: Number(sourceTimeTableNameId),
             maximumPeriod: plain.maximumPeriod,
             periods,
         };
+
+        await transaction.commit();
+        return result;
     } catch (error) {
         await transaction.rollback();
         throw error;
