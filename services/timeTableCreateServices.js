@@ -2076,47 +2076,68 @@ export async function getSubjectWithCount(classSectionTermId) {
     timeTableCreateRepository.timeTableData(classSectionTermId),
   ]);
 
+  if (!subjectsData) {
+    throw new Error('classSectionTermId not found');
+  }
+
   const studentSubjects = subjectsFromClassSectionStudents(subjectsData);
   const finalResult = [];
 
   for (const routine of timeTableData) {
-    const { countMap, subjectsFromCells } = countSubjectsInRoutine(routine?.timeTablecreate);
+    const mapping = routine.structureCourseMapping;
+    if (!mapping || !mapping.timeTableStructure) {
+      continue;
+    }
 
+    const { countMap, subjectsFromCells } = countSubjectsInRoutine(routine.timeTablecreate || []);
     finalResult.push({
       routine,
+      mapping,
       countMap,
       subjectsFromCells,
     });
   }
 
-  let subjectsList = mergeSubjectLists(
-    studentSubjects,
-    ...finalResult.map((entry) => entry.subjectsFromCells),
-  );
+  const cellSubjectLists = [];
+  for (const entry of finalResult) {
+    cellSubjectLists.push(entry.subjectsFromCells);
+  }
 
-  const unresolvedIds = subjectsList
-    .filter((subject) => !subject.subject && !subject.subjectCode)
-    .map((subject) => subject.subjectId);
+  let subjectsList = mergeSubjectLists(studentSubjects, ...cellSubjectLists);
+
+  const unresolvedIds = [];
+  for (const subject of subjectsList) {
+    if (!subject.subject && !subject.subjectCode) {
+      unresolvedIds.push(subject.subjectId);
+    }
+  }
 
   if (unresolvedIds.length) {
     const resolvedSubjects = await timeTableCreateRepository.getSubjectsByIds(unresolvedIds);
     subjectsList = mergeSubjectLists(subjectsList, resolvedSubjects);
   }
 
-  return finalResult.map(({ routine, countMap }) => {
-    const mapping = routine.structureCourseMapping;
-    const structure = mapping.timeTableStructure;
-    return {
-      timeTableNameId: mapping.timeTableNameId,
-      timeTableName: structure.name,
-      subjects: subjectsList.map((subject) => ({
+  const result = [];
+  for (const entry of finalResult) {
+    const structure = entry.mapping.timeTableStructure;
+    const subjects = [];
+    for (const subject of subjectsList) {
+      subjects.push({
         subjectId: subject.subjectId,
         subject: subject.subject,
         subjectCode: subject.subjectCode,
-        count: countMap[subject.subjectId] || 0,
-      })),
-    };
-  });
+        count: entry.countMap[subject.subjectId] || 0,
+      });
+    }
+
+    result.push({
+      timeTableNameId: entry.mapping.timeTableNameId,
+      timeTableName: structure.name,
+      subjects,
+    });
+  }
+
+  return result;
 }
 
 export async function getRoutineByClassSectionId(classSectionTermId) {
