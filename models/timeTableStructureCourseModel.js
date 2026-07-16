@@ -116,6 +116,13 @@ const timeTableStructureCourseModel = sequelize.define(
     tableName: "time_table_structure_course",
     timestamps: true,
     paranoid: false,
+    indexes: [
+      {
+        unique: true,
+        fields: ["time_table_name_id", "course_id", "session_id"],
+        name: "uniq_tts_course_session",
+      },
+    ],
   },
 );
 
