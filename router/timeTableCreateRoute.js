@@ -98,6 +98,23 @@ const changeTimeTableCreateSchema = z.object({
     timeTableType: z.enum(['normal', 'elective']).optional(),
 });
 
+const updatePeriodItemSchema = z.object({
+    timeTableCreationId: positiveIntegerId,
+    startTime: z.string().optional(),
+    endTime: z.string().optional(),
+    periodName: z.string().optional(),
+    isCourse: z.boolean().optional(),
+    isBreak: z.boolean().optional(),
+    type: z.enum(['Automatic', 'Manual']).optional(),
+});
+
+const updatePeriodsSchema = z.array(updatePeriodItemSchema).min(1, 'request body must be a non-empty array');
+
+const patchTimeTableCreateSchema = z.union([
+    updatePeriodsSchema,
+    changeTimeTableCreateSchema,
+]);
+
 const mappingSlotSchema = z.object({
     timeTableCreationId: positiveIntegerId,
     period: z.coerce.number().int().positive('period must be greater than 0'),
@@ -220,7 +237,7 @@ router.get('/single', userAuth, validate({ query: getSingleQuerySchema }), getSi
 router.get('/create', userAuth, validate({ query: getTimeTableByCourseAndSectionQuerySchema }), 
 getTimeTableByCourseAndSection);
 
-router.patch('/create', userAuth, validate({ body: changeTimeTableCreateSchema }), changeTimeTableCreate);
+router.patch('/create', userAuth, validate({ body: patchTimeTableCreateSchema }), changeTimeTableCreate);
 
 router.post('/mapping', userAuth, validate({ body: addTimeTableMappingSchema }), addtimeTableMapping);
 

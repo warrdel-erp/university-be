@@ -1,4 +1,5 @@
 import * as timeTableCreateServices from '../services/timeTableCreateServices.js';
+import * as timeTableServices from '../services/timeTableServices.js';
 import { ErrorResponse, SuccessResponse } from '../utility/response.js';
 
 
@@ -125,11 +126,18 @@ export const getSingletimeTableMappingDetail = async (req, res) => {
 export const changeTimeTableCreate = async (req, res) => {
     const updatedBy = req.user.userId;
     try {
+        if (Array.isArray(req.body)) {
+            const result = await timeTableServices.updateTimeTable(req.body);
+            return SuccessResponse(res, 200, 'Time table updated successfully', result);
+        }
+
         const result = await timeTableCreateServices.changeTimeTableCreate(req.body, updatedBy);
-        res.status(200).send(result);
+        return SuccessResponse(res, 200, 'Routine updated successfully', result);
     } catch (error) {
-        console.error(`Error in updating time table create`, error);
-        res.status(500).send("Internal Server Error");
+        console.error('Error in updating time table create', error);
+        const message = error.message || 'Internal Server Error';
+        const statusCode = /not found|cannot be updated|overlap|does not match|required/i.test(message) ? 400 : 500;
+        return ErrorResponse(res, statusCode, message);
     }
 };
 

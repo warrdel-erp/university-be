@@ -12,6 +12,7 @@ import {
     deleteTimeTable,
     updateStructure,
     deleteTimeTableName,
+    deleteStructureCourseMapping,
 } from '../controllers/timeTableController.js';
 import userAuth from '../middleware/authUser.js';
 import { validate } from '../utility/validation.js';
@@ -137,6 +138,10 @@ const deleteTimeTableNameQuerySchema = z.object({
     timeTableNameId: positiveIntegerId,
 });
 
+const deleteStructureCourseMappingQuerySchema = z.object({
+    timetableStructureCourseMapperId: positiveIntegerId,
+});
+
 // ---------------------------------------------------------------------------
 // 1. Structure template — create / edit periods
 // ---------------------------------------------------------------------------
@@ -150,6 +155,7 @@ router.delete('/', userAuth, validate({ query: deleteTimeTableQuerySchema }), de
 // ---------------------------------------------------------------------------
 router.post('/courseMapping', userAuth, validate({ body: addStructureCourseMappingSchema }), addStructureCourseMapping);
 router.patch('/structure', userAuth, validate({ body: updateStructureSchema }), updateStructure);
+router.delete('/courseMapping', userAuth, validate({ query: deleteStructureCourseMappingQuerySchema }), deleteStructureCourseMapping);
 
 // ---------------------------------------------------------------------------
 // 3. Read / list — UI lists, dropdowns, print table

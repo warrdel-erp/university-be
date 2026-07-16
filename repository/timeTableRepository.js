@@ -162,6 +162,39 @@ export async function getRoutineDateBoundsForMapper(timetableStructureCourseMapp
     };
 }
 
+export async function findRoutineByStructureCourseMapperId(timetableStructureCourseMapperId) {
+    return await scoped(model.timeTableRoutineModel).findOne({
+        where: { timetableStructureCourseMapperId: Number(timetableStructureCourseMapperId) },
+        attributes: ['timeTableRoutineId'],
+    });
+}
+
+export async function deleteStructureCourseMappingById(timetableStructureCourseMapperId) {
+    const mapping = await getStructureCourseMappingById(timetableStructureCourseMapperId);
+    if (!mapping) {
+        throw new Error('Course mapping not found');
+    }
+
+    const routineUsingMapping = await findRoutineByStructureCourseMapperId(
+        timetableStructureCourseMapperId,
+    );
+    if (routineUsingMapping) {
+        throw new Error('Course mapping is used in a routine and cannot be deleted');
+    }
+
+    await scoped(model.timeTableStructureCourseModel).destroy({
+        where: { timetableStructureCourseMapperId: Number(timetableStructureCourseMapperId) },
+    });
+
+    return {
+        message: `structure course mapping deleted successfully for timetableStructureCourseMapperId ${timetableStructureCourseMapperId}`,
+        timetableStructureCourseMapperId: Number(timetableStructureCourseMapperId),
+        courseId: mapping.courseId,
+        timeTableNameId: mapping.timeTableNameId,
+        sessionId: mapping.sessionId,
+    };
+}
+
 export async function updateStructureCourseMappingById(timetableStructureCourseMapperId, updates, previousCourseId) {
     await scoped(model.timeTableStructureCourseModel).update(updates, {
         where: {

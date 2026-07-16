@@ -12,7 +12,7 @@
       "item": [
         {
           "name": "structure (/timeTable)",
-          "description": "| Method | Path | Purpose |\n|--------|------|---------|\n| POST | `/timeTable` | Create structure + periods |\n| GET | `/timeTable` | List structures + `courseMappings[]` |\n| GET | `/timeTable/structureMappings` | Flat print/table rows |\n| GET | `/timeTable/single` | One structure by id |\n| POST | `/timeTable/courseMapping` | Map course + session + dates |\n| PATCH | `/timeTable/structure` | Update mapping by mapper id |\n| POST | `/timeTable/period` | Add period |\n| PATCH | `/timeTable` | Update period rows |\n| DELETE | `/timeTable` | Delete one period |\n| DELETE | `/timeTable/structure` | Delete structure if no course mapped |",
+          "description": "| Method | Path | Purpose |\n|--------|------|---------|\n| POST | `/timeTable` | Create structure + periods |\n| GET | `/timeTable` | List structures + `courseMappings[]` |\n| GET | `/timeTable/structureMappings` | Flat print/table rows |\n| GET | `/timeTable/single` | One structure by id |\n| POST | `/timeTable/courseMapping` | Map course + session + dates |\n| PATCH | `/timeTable/structure` | Update mapping by mapper id |\n| DELETE | `/timeTable/courseMapping` | Delete mapping if no routine |\n| POST | `/timeTable/period` | Add period |\n| PATCH | `/timeTable` | Update period rows |\n| DELETE | `/timeTable` | Delete one period |\n| DELETE | `/timeTable/structure` | Delete structure if no course mapped |",
           "item": [
             {
               "name": "create structure",
@@ -67,6 +67,67 @@
                       "  const row = res.data && res.data[0];",
                       "  if (row && row.timeTableNameId) {",
                       "    pm.collectionVariables.set('timetable_timeTableNameId', String(row.timeTableNameId));",
+                      "  }",
+                      "} catch (e) {}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "map structure to course",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseurl}}/timeTable/courseMapping",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTable",
+                    "courseMapping"
+                  ],
+                  "query": []
+                },
+                "description": "**POST /timeTable/courseMapping**\n\nBinds structure → course + session + date window.\nReturns `timetableStructureCourseMapperId` for routine create.\n\n**Unique:** `(timeTableNameId, courseId, sessionId)`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"timeTableNameId\": {{timetable_timeTableNameId}},\n  \"courseId\": {{timetable_courseId}},\n  \"sessionId\": {{timetable_sessionId}},\n  \"startingDate\": \"2026-01-01\",\n  \"endingDate\": \"2026-12-31\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "try {",
+                      "  const res = pm.response.json();",
+                      "  const data = res.data;",
+                      "  if (data && data.timetableStructureCourseMapperId) {",
+                      "    pm.collectionVariables.set('timetable_structureCourseMapperId', String(data.timetableStructureCourseMapperId));",
                       "  }",
                       "} catch (e) {}"
                     ]
@@ -176,6 +237,42 @@
               "response": []
             },
             {
+              "name": "get single structure",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timeTable/single?timeTableNameId={{timetable_timeTableNameId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTable",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "timeTableNameId",
+                      "value": "{{timetable_timeTableNameId}}",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**GET /timeTable/single?timeTableNameId=**\n\nOne structure with periods + `courseMappings[]`."
+              },
+              "response": []
+            },
+            {
               "name": "get structure mappings (print table)",
               "request": {
                 "auth": {
@@ -229,103 +326,6 @@
               "response": []
             },
             {
-              "name": "get single structure",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseurl}}/timeTable/single?timeTableNameId={{timetable_timeTableNameId}}",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "timeTable",
-                    "single"
-                  ],
-                  "query": [
-                    {
-                      "key": "timeTableNameId",
-                      "value": "{{timetable_timeTableNameId}}",
-                      "description": "Required"
-                    }
-                  ]
-                },
-                "description": "**GET /timeTable/single?timeTableNameId=**\n\nOne structure with periods + `courseMappings[]`."
-              },
-              "response": []
-            },
-            {
-              "name": "map structure to course",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseurl}}/timeTable/courseMapping",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "timeTable",
-                    "courseMapping"
-                  ],
-                  "query": []
-                },
-                "description": "**POST /timeTable/courseMapping**\n\nBinds structure → course + session + date window.\nReturns `timetableStructureCourseMapperId` for routine create.\n\n**Unique:** `(timeTableNameId, courseId, sessionId)`",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"timeTableNameId\": {{timetable_timeTableNameId}},\n  \"courseId\": {{timetable_courseId}},\n  \"sessionId\": {{timetable_sessionId}},\n  \"startingDate\": \"2026-01-01\",\n  \"endingDate\": \"2026-12-31\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": [],
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "try {",
-                      "  const res = pm.response.json();",
-                      "  const data = res.data;",
-                      "  if (data && data.timetableStructureCourseMapperId) {",
-                      "    pm.collectionVariables.set('timetable_structureCourseMapperId', String(data.timetableStructureCourseMapperId));",
-                      "  }",
-                      "} catch (e) {}"
-                    ]
-                  }
-                }
-              ]
-            },
-            {
               "name": "update course mapping",
               "request": {
                 "auth": {
@@ -366,6 +366,42 @@
                     }
                   }
                 }
+              },
+              "response": []
+            },
+            {
+              "name": "delete course mapping",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timeTable/courseMapping?timetableStructureCourseMapperId={{timetable_structureCourseMapperId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTable",
+                    "courseMapping"
+                  ],
+                  "query": [
+                    {
+                      "key": "timetableStructureCourseMapperId",
+                      "value": "{{timetable_structureCourseMapperId}}",
+                      "description": "Required — mapping PK"
+                    }
+                  ]
+                },
+                "description": "**DELETE /timeTable/courseMapping?timetableStructureCourseMapperId=**\n\nDeletes a structure–course mapping (`time_table_structure_course`) when **no routine** references it.\n\n### Rules\n\n* **Allowed** only if zero rows in `time_table_routine` for this mapper id.\n* **Blocked** if any routine exists under this mapping.\n\n### Success (200)\n\n```json\n{\n  \"success\": true,\n  \"message\": \"Structure course mapping deleted successfully\",\n  \"data\": {\n    \"message\": \"structure course mapping deleted successfully for timetableStructureCourseMapperId 1\",\n    \"timetableStructureCourseMapperId\": 1,\n    \"courseId\": 45,\n    \"timeTableNameId\": 10,\n    \"sessionId\": 6\n  }\n}\n```"
               },
               "response": []
             },
@@ -457,6 +493,50 @@
               "response": []
             },
             {
+              "name": "update structure periods (batch)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseurl}}/timeTableCreate/create",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTableCreate",
+                    "create"
+                  ],
+                  "query": []
+                },
+                "description": "**PATCH /timeTableCreate/create** — batch update structure period rows.\n\nSend a **non-empty array** (same as `PATCH /timeTable`):\n\n```json\n[\n  {\n    \"timeTableCreationId\": 112,\n    \"startTime\": \"10:00 AM\",\n    \"endTime\": \"10:55 AM\",\n    \"periodName\": \"Period2\",\n    \"isBreak\": true\n  }\n]\n```",
+                "body": {
+                  "mode": "raw",
+                  "raw": "[\n  {\n    \"timeTableCreationId\": {{timetable_creationId}},\n    \"startTime\": \"10:00 AM\",\n    \"endTime\": \"10:55 AM\",\n    \"periodName\": \"Period2\",\n    \"isBreak\": true\n  },\n  {\n    \"timeTableCreationId\": 114,\n    \"startTime\": \"12:00 PM\",\n    \"endTime\": \"12:55 PM\",\n    \"periodName\": \"Period4\",\n    \"isBreak\": false\n  }\n]",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
               "name": "delete period",
               "request": {
                 "auth": {
@@ -534,6 +614,52 @@
           "description": "Routines keyed by `timetableStructureCourseMapperId` (not `timeTableNameId`).\n\n| Method | Path | Purpose |\n|--------|------|---------|\n| POST | `/timeTableCreate/` | Create routine |\n| POST | `/timeTableCreate/clone` | Clone routine |\n| GET | `/timeTableCreate/` | List routines by course/session |\n| GET | `/timeTableCreate/create` | Structure for section UI |\n| PATCH | `/timeTableCreate/create` | Update draft routine |\n| POST | `/timeTableCreate/mapping` | Assign cell |\n| GET | `/timeTableCreate/mapping` | Mapping list (body) |\n| GET | `/timeTableCreate/getRoutine` | Grid: structure → routines[] |\n| PATCH | `/timeTableCreate/publish` | Publish |",
           "item": [
             {
+              "name": "get routine by course and section",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timeTableCreate/create?courseId={{timetable_courseId}}&classSectionTermId={{classSectionTermId}}&timeTableType={{timetable_timeTableType}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTableCreate",
+                    "create"
+                  ],
+                  "query": [
+                    {
+                      "key": "courseId",
+                      "value": "{{timetable_courseId}}",
+                      "description": "Required"
+                    },
+                    {
+                      "key": "classSectionTermId",
+                      "value": "{{classSectionTermId}}",
+                      "description": "Required for normal"
+                    },
+                    {
+                      "key": "timeTableType",
+                      "value": "{{timetable_timeTableType}}",
+                      "description": "Optional"
+                    }
+                  ]
+                },
+                "description": "**GET /timeTableCreate/create** — bootstrap structure/mapper for create UI.\n`classSectionTermId` required unless `timeTableType=elective`."
+              },
+              "response": []
+            },
+            {
               "name": "create routine",
               "request": {
                 "auth": {
@@ -592,6 +718,50 @@
               ]
             },
             {
+              "name": "update routine (dates/section)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseurl}}/timeTableCreate/create",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTableCreate",
+                    "create"
+                  ],
+                  "query": []
+                },
+                "description": "**PATCH /timeTableCreate/create** — update draft routine (object body). Blocked if published.\nOptional `timetableStructureCourseMapperId` to switch mapper.\n\nFor **period batch update**, send an **array** to the same URL (see `update structure periods`).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"timeTableRoutineId\": {{timetable_routineId}},\n  \"startingDate\": \"2026-01-01\",\n  \"endingDate\": \"2026-06-30\",\n  \"classSectionTermId\": {{classSectionTermId}},\n  \"timetableStructureCourseMapperId\": {{timetable_structureCourseMapperId}}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
               "name": "clone routine",
               "request": {
                 "auth": {
@@ -626,172 +796,6 @@
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"previousRoutineId\": {{timetable_routineId}},\n  \"startingDate\": \"2026-07-01\",\n  \"endingDate\": \"2026-12-31\",\n  \"previousDate\": \"2026-06-30\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "get all routines",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseurl}}/timeTableCreate?courseId={{timetable_courseId}}&sessionId={{timetable_sessionId}}",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "timeTableCreate"
-                  ],
-                  "query": [
-                    {
-                      "key": "courseId",
-                      "value": "{{timetable_courseId}}",
-                      "description": "Optional"
-                    },
-                    {
-                      "key": "sessionId",
-                      "value": "{{timetable_sessionId}}",
-                      "description": "Optional"
-                    }
-                  ]
-                },
-                "description": "**GET /timeTableCreate/** — optional `courseId`, `sessionId`."
-              },
-              "response": []
-            },
-            {
-              "name": "get single routine by course",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseurl}}/timeTableCreate/single?courseId={{timetable_courseId}}",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "timeTableCreate",
-                    "single"
-                  ],
-                  "query": [
-                    {
-                      "key": "courseId",
-                      "value": "{{timetable_courseId}}",
-                      "description": "Optional but needed"
-                    }
-                  ]
-                },
-                "description": "**GET /timeTableCreate/single?courseId=**"
-              },
-              "response": []
-            },
-            {
-              "name": "get routine by course and section",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseurl}}/timeTableCreate/create?courseId={{timetable_courseId}}&classSectionTermId={{classSectionTermId}}&timeTableType={{timetable_timeTableType}}",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "timeTableCreate",
-                    "create"
-                  ],
-                  "query": [
-                    {
-                      "key": "courseId",
-                      "value": "{{timetable_courseId}}",
-                      "description": "Required"
-                    },
-                    {
-                      "key": "classSectionTermId",
-                      "value": "{{classSectionTermId}}",
-                      "description": "Required for normal"
-                    },
-                    {
-                      "key": "timeTableType",
-                      "value": "{{timetable_timeTableType}}",
-                      "description": "Optional"
-                    }
-                  ]
-                },
-                "description": "**GET /timeTableCreate/create** — bootstrap structure/mapper for create UI.\n`classSectionTermId` required unless `timeTableType=elective`."
-              },
-              "response": []
-            },
-            {
-              "name": "update routine (dates/section)",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseurl}}/timeTableCreate/create",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "timeTableCreate",
-                    "create"
-                  ],
-                  "query": []
-                },
-                "description": "**PATCH /timeTableCreate/create** — update draft routine. Blocked if published.\nOptional `timetableStructureCourseMapperId` to switch mapper.",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"timeTableRoutineId\": {{timetable_routineId}},\n  \"startingDate\": \"2026-01-01\",\n  \"endingDate\": \"2026-06-30\",\n  \"classSectionTermId\": {{classSectionTermId}},\n  \"timetableStructureCourseMapperId\": {{timetable_structureCourseMapperId}}\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -846,50 +850,6 @@
               "response": []
             },
             {
-              "name": "add mapping (copy cell)",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseurl}}/timeTableCreate/mapping",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "timeTableCreate",
-                    "mapping"
-                  ],
-                  "query": []
-                },
-                "description": "**POST /timeTableCreate/mapping** — copy with `sourceTimeTableMappingId` + `copyTarget` (`nextPeriod` | `nextDay`).",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"sourceTimeTableMappingId\": {{timetable_mappingId}},\n  \"copyTarget\": \"nextPeriod\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
               "name": "add mapping (multi-slot / combined)",
               "request": {
                 "auth": {
@@ -924,6 +884,50 @@
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"timeTableRoutineId\": {{timetable_routineId}},\n  \"timeTableNameId\": {{timetable_timeTableNameId}},\n  \"employeeId\": {{timetable_employeeId}},\n  \"subjectId\": 1,\n  \"day\": \"Monday\",\n  \"timeTableType\": \"normal\",\n  \"classSectionTermIds\": [{{classSectionTermId}}],\n  \"slots\": [\n    { \"timeTableCreationId\": {{timetable_creationId}}, \"period\": 1 }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "add mapping (copy cell)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseurl}}/timeTableCreate/mapping",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTableCreate",
+                    "mapping"
+                  ],
+                  "query": []
+                },
+                "description": "**POST /timeTableCreate/mapping** — copy with `sourceTimeTableMappingId` + `copyTarget` (`nextPeriod` | `nextDay`).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"sourceTimeTableMappingId\": {{timetable_mappingId}},\n  \"copyTarget\": \"nextPeriod\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -974,42 +978,6 @@
                     }
                   }
                 }
-              },
-              "response": []
-            },
-            {
-              "name": "get single mapping by course",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseurl}}/timeTableCreate/single/mapping?courseId={{timetable_courseId}}",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "timeTableCreate",
-                    "single",
-                    "mapping"
-                  ],
-                  "query": [
-                    {
-                      "key": "courseId",
-                      "value": "{{timetable_courseId}}"
-                    }
-                  ]
-                },
-                "description": "**GET /timeTableCreate/single/mapping?courseId=**"
               },
               "response": []
             },
@@ -1144,6 +1112,78 @@
               "response": []
             },
             {
+              "name": "publish routine",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timeTableCreate/publish?timeTableRoutineId={{timetable_routineId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTableCreate",
+                    "publish"
+                  ],
+                  "query": [
+                    {
+                      "key": "timeTableRoutineId",
+                      "value": "{{timetable_routineId}}",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**PATCH /timeTableCreate/publish?timeTableRoutineId=** — sets `isPublish: true`."
+              },
+              "response": []
+            },
+            {
+              "name": "get routine grid (section)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timeTableCreate/getRoutine?classSectionTermId={{classSectionTermId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTableCreate",
+                    "getRoutine"
+                  ],
+                  "query": [
+                    {
+                      "key": "classSectionTermId",
+                      "value": "{{classSectionTermId}}",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**GET /timeTableCreate/getRoutine**\n\nWeekly grid grouped **structure → routines[]**.\n\n```json\n{\n  \"classSectionTermId\": 101,\n  \"structures\": [\n    {\n      \"timeTableNameId\": 10,\n      \"name\": \"Morning Schedule\",\n      \"weekOff\": [\"Sunday\"],\n      \"routines\": [\n        {\n          \"timeTableRoutineId\": 55,\n          \"timetableStructureCourseMapperId\": 1,\n          \"isPublished\": true,\n          \"startDate\": \"2026-01-01\",\n          \"endDate\": \"2026-06-30\",\n          \"periods\": []\n        }\n      ]\n    }\n  ]\n}\n```"
+              },
+              "response": []
+            },
+            {
               "name": "get cell data",
               "request": {
                 "auth": {
@@ -1257,78 +1297,6 @@
               "response": []
             },
             {
-              "name": "publish routine",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "PATCH",
-                "header": [],
-                "url": {
-                  "raw": "{{baseurl}}/timeTableCreate/publish?timeTableRoutineId={{timetable_routineId}}",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "timeTableCreate",
-                    "publish"
-                  ],
-                  "query": [
-                    {
-                      "key": "timeTableRoutineId",
-                      "value": "{{timetable_routineId}}",
-                      "description": "Required"
-                    }
-                  ]
-                },
-                "description": "**PATCH /timeTableCreate/publish?timeTableRoutineId=** — sets `isPublish: true`."
-              },
-              "response": []
-            },
-            {
-              "name": "get routine grid (section)",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseurl}}/timeTableCreate/getRoutine?classSectionTermId={{classSectionTermId}}",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "timeTableCreate",
-                    "getRoutine"
-                  ],
-                  "query": [
-                    {
-                      "key": "classSectionTermId",
-                      "value": "{{classSectionTermId}}",
-                      "description": "Required"
-                    }
-                  ]
-                },
-                "description": "**GET /timeTableCreate/getRoutine**\n\nWeekly grid grouped **structure → routines[]**.\n\n```json\n{\n  \"classSectionTermId\": 101,\n  \"structures\": [\n    {\n      \"timeTableNameId\": 10,\n      \"name\": \"Morning Schedule\",\n      \"weekOff\": [\"Sunday\"],\n      \"routines\": [\n        {\n          \"timeTableRoutineId\": 55,\n          \"timetableStructureCourseMapperId\": 1,\n          \"isPublished\": true,\n          \"startDate\": \"2026-01-01\",\n          \"endDate\": \"2026-06-30\",\n          \"periods\": []\n        }\n      ]\n    }\n  ]\n}\n```"
-              },
-              "response": []
-            },
-            {
               "name": "get routine by teacher",
               "request": {
                 "auth": {
@@ -1371,6 +1339,118 @@
                   ]
                 },
                 "description": "**GET /timeTableCreate/getRoutineByTeacher** — `employeeId`, `courseId`, `sessionId`."
+              },
+              "response": []
+            },
+            {
+              "name": "get all routines",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timeTableCreate?courseId={{timetable_courseId}}&sessionId={{timetable_sessionId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTableCreate"
+                  ],
+                  "query": [
+                    {
+                      "key": "courseId",
+                      "value": "{{timetable_courseId}}",
+                      "description": "Optional"
+                    },
+                    {
+                      "key": "sessionId",
+                      "value": "{{timetable_sessionId}}",
+                      "description": "Optional"
+                    }
+                  ]
+                },
+                "description": "**GET /timeTableCreate/** — optional `courseId`, `sessionId`."
+              },
+              "response": []
+            },
+            {
+              "name": "get single routine by course",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timeTableCreate/single?courseId={{timetable_courseId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTableCreate",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "courseId",
+                      "value": "{{timetable_courseId}}",
+                      "description": "Optional but needed"
+                    }
+                  ]
+                },
+                "description": "**GET /timeTableCreate/single?courseId=**"
+              },
+              "response": []
+            },
+            {
+              "name": "get single mapping by course",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timeTableCreate/single/mapping?courseId={{timetable_courseId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTableCreate",
+                    "single",
+                    "mapping"
+                  ],
+                  "query": [
+                    {
+                      "key": "courseId",
+                      "value": "{{timetable_courseId}}"
+                    }
+                  ]
+                },
+                "description": "**GET /timeTableCreate/single/mapping?courseId=**"
               },
               "response": []
             }

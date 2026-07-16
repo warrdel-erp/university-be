@@ -124,6 +124,16 @@ export const addStructureCourseMapping = async (req, res) => {
   }
 };
 
+export const deleteStructureCourseMapping = async (req, res) => {
+  try {
+    const result = await timeTableServices.deleteStructureCourseMapping(
+      req.query.timetableStructureCourseMapperId,
+    );
+    return SuccessResponse(res, 200, "Structure course mapping deleted successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, 400, error.message || "Internal Server Error");
+  }
+};
 
 export const deleteTimeTableName = async (req, res) => {
   try {
