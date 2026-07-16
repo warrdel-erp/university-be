@@ -2,6 +2,53 @@ import * as timeTableRepository from '../repository/timeTableRepository.js';
 import sequelize from '../database/sequelizeConfig.js';
 import { formatQueryDate } from '../utility/helper.js';
 
+function toDateOnlyString(value) {
+    if (value == null || value === '') {
+        return null;
+    }
+    if (typeof value === 'string') {
+        const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+        if (match) {
+            return match[1];
+        }
+    }
+    return formatQueryDate(value);
+}
+
+async function assertNoOverlappingCourseSessionDates({
+    courseId,
+    sessionId,
+    startingDate,
+    endingDate,
+    excludeMapperId = null,
+}) {
+    const start = toDateOnlyString(startingDate);
+    const end = toDateOnlyString(endingDate);
+
+    if (!start || !end) {
+        throw new Error('startingDate and endingDate are required');
+    }
+    if (start > end) {
+        throw new Error('endingDate cannot be before startingDate');
+    }
+
+    const overlap = await timeTableRepository.findOverlappingStructureCourseMapping({
+        courseId,
+        sessionId,
+        startingDate: start,
+        endingDate: end,
+        excludeMapperId,
+    });
+
+    if (overlap) {
+        throw new Error(
+            `Date range overlaps (${toDateOnlyString(overlap.startingDate)} to ${toDateOnlyString(overlap.endingDate)})`,
+        );
+    }
+
+    return { start, end };
+}
+
 export async function addTimeTable(data, createdBy, updatedBy) {
     const transaction = await sequelize.transaction();
 
@@ -179,9 +226,15 @@ export async function updateStructure(body, updatedBy) {
         updatedBy,
     };
 
-    if (formatQueryDate(updates.endingDate) < formatQueryDate(updates.startingDate)) {
-        throw new Error('endingDate cannot be before startingDate');
-    }
+    const { start, end } = await assertNoOverlappingCourseSessionDates({
+        courseId: updates.courseId,
+        sessionId: updates.sessionId,
+        startingDate: updates.startingDate,
+        endingDate: updates.endingDate,
+        excludeMapperId: mapping.timetableStructureCourseMapperId,
+    });
+    updates.startingDate = start;
+    updates.endingDate = end;
 
     const structure = await timeTableRepository.getTimeTableStructureById(updates.timeTableNameId);
     if (!structure) {
@@ -214,20 +267,20 @@ export async function updateStructure(body, updatedBy) {
         if (
             body.startingDate
             && bounds.minStartingDate
-            && formatQueryDate(body.startingDate) > formatQueryDate(bounds.minStartingDate)
+            && start > toDateOnlyString(bounds.minStartingDate)
         ) {
             throw new Error(
-                `startingDate cannot be after the earliest routine startingDate (${formatQueryDate(bounds.minStartingDate)})`,
+                `startingDate cannot be after the earliest routine startingDate (${toDateOnlyString(bounds.minStartingDate)})`,
             );
         }
 
         if (
             body.endingDate
             && bounds.maxEndingDate
-            && formatQueryDate(body.endingDate) < formatQueryDate(bounds.maxEndingDate)
+            && end < toDateOnlyString(bounds.maxEndingDate)
         ) {
             throw new Error(
-                `endingDate cannot be before the latest routine endingDate (${formatQueryDate(bounds.maxEndingDate)})`,
+                `endingDate cannot be before the latest routine endingDate (${toDateOnlyString(bounds.maxEndingDate)})`,
             );
         }
     }
@@ -254,6 +307,13 @@ export async function addStructureCourseMapping(data, createdBy, updatedBy) {
         throw new Error('Course mapping already exists for this structure, course and session');
     }
 
+    const { start, end } = await assertNoOverlappingCourseSessionDates({
+        courseId: data.courseId,
+        sessionId: data.sessionId,
+        startingDate: data.startingDate,
+        endingDate: data.endingDate,
+    });
+
     return timeTableRepository.addStructureCourseMapping({
         timeTableNameId: data.timeTableNameId,
         courseId: data.courseId,
@@ -261,8 +321,8 @@ export async function addStructureCourseMapping(data, createdBy, updatedBy) {
         universityId: structure.universityId,
         instituteId: structure.instituteId,
         academicYearId: structure.academicYearId,
-        startingDate: data.startingDate,
-        endingDate: data.endingDate,
+        startingDate: start,
+        endingDate: end,
         createdBy,
         updatedBy,
     });

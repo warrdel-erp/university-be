@@ -125,6 +125,38 @@ export async function getStructureCourseMapping(timeTableNameId, courseId, sessi
     });
 }
 
+export async function findOverlappingStructureCourseMapping({
+    courseId,
+    sessionId,
+    startingDate,
+    endingDate,
+    excludeMapperId = null,
+}, options = {}) {
+    const where = {
+        courseId: Number(courseId),
+        sessionId: Number(sessionId),
+        startingDate: { [Op.lte]: endingDate },
+        endingDate: { [Op.gte]: startingDate },
+    };
+
+    if (excludeMapperId != null) {
+        where.timetableStructureCourseMapperId = { [Op.ne]: Number(excludeMapperId) };
+    }
+
+    return await scoped(model.timeTableStructureCourseModel).findOne({
+        where,
+        attributes: [
+            'timetableStructureCourseMapperId',
+            'timeTableNameId',
+            'courseId',
+            'sessionId',
+            'startingDate',
+            'endingDate',
+        ],
+        transaction: options.transaction,
+    });
+}
+
 export async function addStructureCourseMapping(data, transaction) {
     return await scoped(model.timeTableStructureCourseModel).create(data, { transaction });
 }
