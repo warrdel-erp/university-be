@@ -1,6 +1,18 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { addTimeTable, addTimeTablePeriod, addStructureCourseMapping, getTimeTableDetails, getAllTimeTableName, getSingleTimeTableDetails, getStructureMappingPrintData, updateTimeTable, deleteTimeTable, updateStructure, deleteTimeTableName } from '../controllers/timeTableController.js';
+import {
+    addTimeTable,
+    addTimeTablePeriod,
+    addStructureCourseMapping,
+    getTimeTableDetails,
+    getAllTimeTableName,
+    getSingleTimeTableDetails,
+    getStructureMappingPrintData,
+    updateTimeTable,
+    deleteTimeTable,
+    updateStructure,
+    deleteTimeTableName,
+} from '../controllers/timeTableController.js';
 import userAuth from '../middleware/authUser.js';
 import { validate } from '../utility/validation.js';
 
@@ -15,6 +27,7 @@ const optionalPositiveId = z.preprocess(
     (val) => (val === '' || val == null ? undefined : val),
     positiveIntegerId.optional(),
 );
+
 const addTimeTableSchema = z.object({
     name: z.string().trim().min(1, 'name is required'),
     maximumPeriod: z.coerce.number().int().positive(),
@@ -124,19 +137,31 @@ const deleteTimeTableNameQuerySchema = z.object({
     timeTableNameId: positiveIntegerId,
 });
 
+// ---------------------------------------------------------------------------
+// 1. Structure template — create / edit periods
+// ---------------------------------------------------------------------------
 router.post('/', userAuth, validate({ body: addTimeTableSchema }), addTimeTable);
-router.post('/courseMapping', userAuth, validate({ body: addStructureCourseMappingSchema }), addStructureCourseMapping);
 router.post('/period', userAuth, validate({ body: addTimeTablePeriodSchema }), addTimeTablePeriod);
-router.get('/all_name', userAuth, validate({ query: getAllTimeTableNameQuerySchema }), getAllTimeTableName);
-router.get('/', userAuth, getTimeTableDetails);
-
-router.get('/structureMappings', userAuth, validate({ query: getStructureMappingPrintQuerySchema }), getStructureMappingPrintData);
-
-router.get('/single', userAuth, validate({ query: getSingleStructureQuerySchema }), getSingleTimeTableDetails);
 router.patch('/', userAuth, validate({ body: updateTimeTableSchema }), updateTimeTable);
-router.patch('/structure', userAuth, validate({ body: updateStructureSchema }), updateStructure);
 router.delete('/', userAuth, validate({ query: deleteTimeTableQuerySchema }), deleteTimeTable);
 
+// ---------------------------------------------------------------------------
+// 2. Course mapping — bind structure → course + session + dates
+// ---------------------------------------------------------------------------
+router.post('/courseMapping', userAuth, validate({ body: addStructureCourseMappingSchema }), addStructureCourseMapping);
+router.patch('/structure', userAuth, validate({ body: updateStructureSchema }), updateStructure);
+
+// ---------------------------------------------------------------------------
+// 3. Read / list — UI lists, dropdowns, print table
+// ---------------------------------------------------------------------------
+router.get('/', userAuth, getTimeTableDetails);
+router.get('/all_name', userAuth, validate({ query: getAllTimeTableNameQuerySchema }), getAllTimeTableName);
+router.get('/single', userAuth, validate({ query: getSingleStructureQuerySchema }), getSingleTimeTableDetails);
+router.get('/structureMappings', userAuth, validate({ query: getStructureMappingPrintQuerySchema }), getStructureMappingPrintData);
+
+// ---------------------------------------------------------------------------
+// 4. Delete structure — only when no course/program is mapped
+// ---------------------------------------------------------------------------
 router.delete('/structure', userAuth, validate({ query: deleteTimeTableNameQuerySchema }), deleteTimeTableName);
 
 export default router;
