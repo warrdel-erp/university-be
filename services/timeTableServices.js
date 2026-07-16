@@ -151,6 +151,10 @@ export async function deleteTimeTable(timeTableCreationId) {
     return await timeTableRepository.deleteTimeTable(timeTableCreationId);
 }
 
+export async function deleteTimeTableName(timeTableNameId) {
+    return await timeTableRepository.deleteTimeTableName(timeTableNameId);
+}
+
 export async function updateStructure(body, updatedBy) {
     const mapping = await timeTableRepository.getStructureCourseMappingById(
         body.timetableStructureCourseMapperId,

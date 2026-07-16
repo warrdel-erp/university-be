@@ -123,3 +123,15 @@ export const addStructureCourseMapping = async (req, res) => {
     return ErrorResponse(res, 400, error.message || "Internal Server Error");
   }
 };
+
+
+export const deleteTimeTableName = async (req, res) => {
+  try {
+    const result = await timeTableServices.deleteTimeTableName(req.query.timeTableNameId);
+    return SuccessResponse(res, 200, "Time table name deleted successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, 400, error.message || "Internal Server Error");
+  }
+};
+
+

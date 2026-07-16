@@ -552,3 +552,42 @@ export async function deleteTimeTable(timeTableCreationId) {
         throw new Error('Unable to soft delete account');
     }
 }
+
+export async function deleteTimeTableName(timeTableNameId) {
+    const structure = await getTimeTableStructureById(timeTableNameId);
+    if (!structure) {
+        throw new Error('Time table structure not found for this institute and academic year');
+    }
+
+    const mappedProgram = await scoped(model.timeTableStructureCourseModel).findOne({
+        where: { timeTableNameId: Number(timeTableNameId) },
+        attributes: ['timetableStructureCourseMapperId'],
+    });
+
+    if (mappedProgram) {
+        throw new Error('Time table structure cannot be deleted because a program/course is mapped to it');
+    }
+
+    const transaction = await sequelize.transaction();
+    try {
+        await model.timeTableStructurePeriodsModel.destroy({
+            where: { timeTableNameId: Number(timeTableNameId) },
+            individualHooks: true,
+            transaction,
+        });
+
+        await scoped(model.timeTableStructureModel).destroy({
+            where: { timeTableNameId: Number(timeTableNameId) },
+            transaction,
+        });
+
+        await transaction.commit();
+        return {
+            message: `time table structure deleted successfully for time Table Name Id ${timeTableNameId}`,
+        };
+    } catch (error) {
+        await transaction.rollback();
+        console.error('Error during time table structure delete:', error);
+        throw error;
+    }
+}

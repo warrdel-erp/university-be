@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { addTimeTable, addTimeTablePeriod, addStructureCourseMapping, getTimeTableDetails, getAllTimeTableName, getSingleTimeTableDetails, getStructureMappingPrintData, updateTimeTable, deleteTimeTable, updateStructure } from '../controllers/timeTableController.js';
+import { addTimeTable, addTimeTablePeriod, addStructureCourseMapping, getTimeTableDetails, getAllTimeTableName, getSingleTimeTableDetails, getStructureMappingPrintData, updateTimeTable, deleteTimeTable, updateStructure, deleteTimeTableName } from '../controllers/timeTableController.js';
 import userAuth from '../middleware/authUser.js';
 import { validate } from '../utility/validation.js';
 
@@ -120,6 +120,10 @@ const updateStructureSchema = z
         { message: 'endingDate cannot be before startingDate', path: ['endingDate'] },
     );
 
+const deleteTimeTableNameQuerySchema = z.object({
+    timeTableNameId: positiveIntegerId,
+});
+
 router.post('/', userAuth, validate({ body: addTimeTableSchema }), addTimeTable);
 router.post('/courseMapping', userAuth, validate({ body: addStructureCourseMappingSchema }), addStructureCourseMapping);
 router.post('/period', userAuth, validate({ body: addTimeTablePeriodSchema }), addTimeTablePeriod);
@@ -132,5 +136,7 @@ router.get('/single', userAuth, validate({ query: getSingleStructureQuerySchema 
 router.patch('/', userAuth, validate({ body: updateTimeTableSchema }), updateTimeTable);
 router.patch('/structure', userAuth, validate({ body: updateStructureSchema }), updateStructure);
 router.delete('/', userAuth, validate({ query: deleteTimeTableQuerySchema }), deleteTimeTable);
+
+router.delete('/structure', userAuth, validate({ query: deleteTimeTableNameQuerySchema }), deleteTimeTableName);
 
 export default router;

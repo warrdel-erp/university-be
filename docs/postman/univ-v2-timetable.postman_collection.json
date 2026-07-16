@@ -12,7 +12,7 @@
       "item": [
         {
           "name": "structure (/timeTable)",
-          "description": "| Method | Path | Purpose |\n|--------|------|---------|\n| POST | `/timeTable` | Create structure + periods |\n| GET | `/timeTable` | List structures + `courseMappings[]` |\n| GET | `/timeTable/structureMappings` | Flat print/table rows |\n| GET | `/timeTable/single` | One structure by id |\n| POST | `/timeTable/courseMapping` | Map course + session + dates |\n| PATCH | `/timeTable/structure` | Update mapping by mapper id |\n| POST | `/timeTable/period` | Add period |\n| PATCH | `/timeTable` | Update period rows |\n| DELETE | `/timeTable` | Delete one period |\n\nNo `DELETE /timeTable/structure`.",
+          "description": "| Method | Path | Purpose |\n|--------|------|---------|\n| POST | `/timeTable` | Create structure + periods |\n| GET | `/timeTable` | List structures + `courseMappings[]` |\n| GET | `/timeTable/structureMappings` | Flat print/table rows |\n| GET | `/timeTable/single` | One structure by id |\n| POST | `/timeTable/courseMapping` | Map course + session + dates |\n| PATCH | `/timeTable/structure` | Update mapping by mapper id |\n| POST | `/timeTable/period` | Add period |\n| PATCH | `/timeTable` | Update period rows |\n| DELETE | `/timeTable` | Delete one period |\n| DELETE | `/timeTable/structure` | Delete structure if no course mapped |",
           "item": [
             {
               "name": "create structure",
@@ -488,6 +488,42 @@
                   ]
                 },
                 "description": "**DELETE /timeTable?timeTableCreationId=**\n\nDeletes one period row. Blocked if used in published/active routine."
+              },
+              "response": []
+            },
+            {
+              "name": "delete structure",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timeTable/structure?timeTableNameId={{timetable_timeTableNameId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTable",
+                    "structure"
+                  ],
+                  "query": [
+                    {
+                      "key": "timeTableNameId",
+                      "value": "{{timetable_timeTableNameId}}",
+                      "description": "Required — structure PK"
+                    }
+                  ]
+                },
+                "description": "**DELETE /timeTable/structure?timeTableNameId=**\n\nDeletes an unmapped structure template + all its period rows.\n\n### Query\n\n| Name | Required | Description |\n|------|----------|-------------|\n| `timeTableNameId` | Yes | Structure PK |\n\n### Rules\n\n* **Allowed** only when **no course/program mapping** exists (`time_table_structure_course` empty for this structure).\n* **Blocked** if any course is mapped — remove/unmap course first.\n* Hard-deletes structure periods, then the structure.\n\n### Success (200)\n\n```json\n{\n  \"success\": true,\n  \"message\": \"Time table name deleted successfully\",\n  \"data\": {\n    \"message\": \"time table structure deleted successfully for time Table Name Id 10\"\n  }\n}\n```\n\n### Errors\n\n| Status | Reason |\n|--------|--------|\n| 400 | Invalid/missing `timeTableNameId` |\n| 400 | Structure not found in scope |\n| 400 | A program/course is mapped to this structure |"
               },
               "response": []
             }
