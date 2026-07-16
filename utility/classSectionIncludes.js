@@ -128,9 +128,51 @@ export function resolveTimeTableRoutineSection(routine) {
 }
 
 export function stripRoutinePersistPayload(data) {
-    if (!data || typeof data !== 'object') return data;
-    const { classSectionsId, classSectionId, term, ...rest } = data;
+    const { classSectionsId, classSectionId, term, timeTableNameId, ...rest } = data;
     return rest;
+}
+
+/** Routine → structure-course mapping → structure (+ optional periods). */
+export function routineStructureInclude({
+    withPeriods = true,
+    required = true,
+    structureWhere,
+} = {}) {
+    const structureInclude = {
+        model: model.timeTableStructureModel,
+        as: 'timeTableStructure',
+        required: true,
+        attributes: { exclude: ['createdAt', 'updatedAt', 'createdBy', 'updatedBy'] },
+    };
+
+    if (structureWhere) {
+        structureInclude.where = structureWhere;
+    }
+
+    if (withPeriods) {
+        structureInclude.include = [
+            {
+                model: model.timeTableStructurePeriodsModel,
+                as: 'timeTableName',
+                attributes: { exclude: ['createdAt', 'updatedAt', 'createdBy', 'updatedBy'] },
+            },
+        ];
+    }
+
+    return {
+        model: model.timeTableStructureCourseModel,
+        as: 'structureCourseMapping',
+        required,
+        attributes: [
+            'timetableStructureCourseMapperId',
+            'timeTableNameId',
+            'courseId',
+            'sessionId',
+            'startingDate',
+            'endingDate',
+        ],
+        include: [structureInclude],
+    };
 }
 
 /** Resolve class_sections_id from student row. */

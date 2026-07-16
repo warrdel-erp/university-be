@@ -70,7 +70,7 @@ const getTimeTableByCourseAndSectionQuerySchema = z.object({
 );
 
 const addTimeTableCreateSchema = z.object({
-    timeTableNameId: positiveIntegerId,
+    timetableStructureCourseMapperId: positiveIntegerId,
     classSectionTermId: optionalPositiveId,
     courseId: optionalPositiveId,
     campusId: optionalPositiveId,
@@ -92,11 +92,28 @@ const changeTimeTableCreateSchema = z.object({
     startingDate: z.string().optional(),
     endingDate: z.string().optional(),
     classSectionTermId: optionalPositiveId,
-    timeTableNameId: optionalPositiveId,
+    timetableStructureCourseMapperId: optionalPositiveId,
     courseId: optionalPositiveId,
     campusId: optionalPositiveId,
     timeTableType: z.enum(['normal', 'elective']).optional(),
 });
+
+const updatePeriodItemSchema = z.object({
+    timeTableCreationId: positiveIntegerId,
+    startTime: z.string().optional(),
+    endTime: z.string().optional(),
+    periodName: z.string().optional(),
+    isCourse: z.boolean().optional(),
+    isBreak: z.boolean().optional(),
+    type: z.enum(['Automatic', 'Manual']).optional(),
+});
+
+const updatePeriodsSchema = z.array(updatePeriodItemSchema).min(1, 'request body must be a non-empty array');
+
+const patchTimeTableCreateSchema = z.union([
+    updatePeriodsSchema,
+    changeTimeTableCreateSchema,
+]);
 
 const mappingSlotSchema = z.object({
     timeTableCreationId: positiveIntegerId,
@@ -208,30 +225,39 @@ const classSubjectCountQuerySchema = z.object({
     classSectionTermId: positiveIntegerId,
 });
 
-router.get('/getRoutine', userAuth, validate({ query: getRoutineSchema }), getRoutineByClassSectionId);
-router.get('/getRoutineByTeacher', userAuth, validate({ query: getRoutineByTeacherSchema }), getRoutineByTeacherAndAcademicYear);
-router.post('/', userAuth, validate({ body: addTimeTableCreateSchema }), addtimeTableCreate);
-
-router.post('/clone', userAuth, validate({ body: cloneRoutineSchema }), cloneTimeTableRoutine);
-
+// ---------------------------------------------------------------------------
+// 1. Read / bootstrap — structure selection and routine lookup
+// ---------------------------------------------------------------------------
 router.get('/', userAuth, validate({ query: getTimeTableCreateListQuerySchema }), gettimeTableCreateDetails);
 router.get('/single', userAuth, validate({ query: getSingleQuerySchema }), getSingletimeTableCreateDetails);
-
-router.get('/create', userAuth, validate({ query: getTimeTableByCourseAndSectionQuerySchema }), 
+router.get('/create', userAuth, validate({ query: getTimeTableByCourseAndSectionQuerySchema }),
 getTimeTableByCourseAndSection);
+router.get('/getRoutine', userAuth, validate({ query: getRoutineSchema }), getRoutineByClassSectionId);
+router.get('/getRoutineByTeacher', userAuth, validate({ query: getRoutineByTeacherSchema }), getRoutineByTeacherAndAcademicYear);
 
-router.patch('/create', userAuth, validate({ body: changeTimeTableCreateSchema }), changeTimeTableCreate);
+// ---------------------------------------------------------------------------
+// 2. Routine lifecycle — create / update / clone / publish
+// ---------------------------------------------------------------------------
+router.post('/', userAuth, validate({ body: addTimeTableCreateSchema }), addtimeTableCreate);
+router.patch('/create', userAuth, validate({ body: patchTimeTableCreateSchema }), changeTimeTableCreate);
+router.post('/clone', userAuth, validate({ body: cloneRoutineSchema }), cloneTimeTableRoutine);
+router.patch('/publish', userAuth, validate({ query: publishTimeTableQuerySchema }), publishTimeTable);
 
+// ---------------------------------------------------------------------------
+// 3. Mapping lifecycle — assign timetable cells / teachers
+// ---------------------------------------------------------------------------
 router.post('/mapping', userAuth, validate({ body: addTimeTableMappingSchema }), addtimeTableMapping);
-
 router.get('/mapping', userAuth, validate({ body: getTimeTableMappingBodySchema }), getTimeTableMappingDetail);
 router.get('/single/mapping', userAuth, validate({ query: getSingleQuerySchema }), getSingletimeTableMappingDetail);
 router.patch('/mapping', userAuth, validate({ body: updateTimeTableMappingSchema }), updatetimeTableCreate);
 router.patch('/mapping/update-create', userAuth, validate({ body: updateSimpleTeacherMappingSchema }), updateSimpleTeacherMappingController);
 router.delete('/mapping', userAuth, validate({ query: deleteTimeTableMappingQuerySchema }), deletetimeTableMapping);
+
+// ---------------------------------------------------------------------------
+// 4. Grid helpers / reporting
+// ---------------------------------------------------------------------------
 router.get('/cellData', userAuth, validate({ query: getTimeTableCellDataQuerySchema }), getTimeTableCellData);
 router.get('/elective', userAuth, validate({ query: getTimeTableElectiveQuerySchema }), getTimeTableElective);
-router.patch('/publish', userAuth, validate({ query: publishTimeTableQuerySchema }), publishTimeTable);
 router.get('/subjectCount', userAuth, validate({ query: classSubjectCountQuerySchema }), ClassSubjectCount);
 
 export default router;

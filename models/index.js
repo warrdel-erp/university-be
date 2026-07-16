@@ -44,6 +44,7 @@ import teacherSectionMappingModel from "./teacherSectionMappingModel.js";
 import libraryCreationModel from "./libraryCreationModel.js";
 import libraryAuthorityModel from "./libraryAuthorityModel.js";
 import timeTableStructureModel from "./timeTableStructureModel.js";
+import timeTableStructureCourseModel from "./timeTableStructureCourseModel.js";
 import timeTableStructurePeriodsModel from "./timeTableStructurePeriodsModel.js";
 import faculityLoadModel from "./faculityLoadModel.js";
 import timeTableRoutineModel from "./timeTableRoutineModel.js";
@@ -529,17 +530,50 @@ timeTableStructureModel.hasMany(timeTableStructurePeriodsModel, {
   as: "timeTableName",
 });
 
-timeTableStructureModel.belongsTo(courseModel, { foreignKey: "course_id", as: "timeTableStructureCourse" });
-courseModel.hasMany(timeTableStructureModel, { foreignKey: "course_id", as: "timeTableStructureCourse" });
-
-timeTableStructureModel.belongsTo(sessionModel, { foreignKey: "session_id", as: "timeTableSession" });
-sessionModel.hasMany(timeTableStructureModel, { foreignKey: "session_id", as: "timeTableStructures" });
-
-timeTableRoutineModel.belongsTo(timeTableStructureModel, {
+timeTableStructureCourseModel.belongsTo(timeTableStructureModel, {
   foreignKey: "time_table_name_id",
-  as: "timeTableCreateName",
+  as: "timeTableStructure",
 });
-timeTableStructureModel.hasMany(timeTableRoutineModel, { foreignKey: "time_table_name_id", as: "timeTableCreateName" });
+timeTableStructureModel.hasMany(timeTableStructureCourseModel, {
+  foreignKey: "time_table_name_id",
+  as: "courseMappings",
+});
+
+timeTableStructureModel.belongsTo(timeTableStructureModel, {
+  foreignKey: "source_time_table_name_id",
+  as: "sourceStructure",
+});
+timeTableStructureModel.hasMany(timeTableStructureModel, {
+  foreignKey: "source_time_table_name_id",
+  as: "clonedStructures",
+});
+
+timeTableStructureCourseModel.belongsTo(courseModel, {
+  foreignKey: "course_id",
+  as: "course",
+});
+courseModel.hasMany(timeTableStructureCourseModel, {
+  foreignKey: "course_id",
+  as: "timeTableStructureCourses",
+});
+
+timeTableStructureCourseModel.belongsTo(sessionModel, {
+  foreignKey: "session_id",
+  as: "session",
+});
+sessionModel.hasMany(timeTableStructureCourseModel, {
+  foreignKey: "session_id",
+  as: "timeTableStructureCourses",
+});
+
+timeTableRoutineModel.belongsTo(timeTableStructureCourseModel, {
+  foreignKey: "timetable_structure_course_mapper_id",
+  as: "structureCourseMapping",
+});
+timeTableStructureCourseModel.hasMany(timeTableRoutineModel, {
+  foreignKey: "timetable_structure_course_mapper_id",
+  as: "routines",
+});
 
 timeTableRoutineModel.belongsTo(courseModel, { foreignKey: "course_id", as: "timeTableCourse" });
 courseModel.hasMany(timeTableRoutineModel, { foreignKey: "course_id", as: "timeTableCourse" });
@@ -1712,6 +1746,7 @@ export {
   libraryAuthorityModel,
   answerSheetQrModel,
   timeTableStructureModel,
+  timeTableStructureCourseModel,
   timeTableStructurePeriodsModel,
   faculityLoadModel,
   timeTableRoutineModel,
