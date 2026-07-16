@@ -604,6 +604,14 @@ export async function deleteTimeTableName(timeTableNameId) {
 
     const transaction = await sequelize.transaction();
     try {
+        await scoped(model.timeTableStructureModel).update(
+            { sourceTimeTableNameId: null },
+            {
+                where: { sourceTimeTableNameId: Number(timeTableNameId) },
+                transaction,
+            },
+        );
+
         await model.timeTableStructurePeriodsModel.destroy({
             where: { timeTableNameId: Number(timeTableNameId) },
             individualHooks: true,
