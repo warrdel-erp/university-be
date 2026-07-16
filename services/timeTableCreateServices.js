@@ -2460,11 +2460,12 @@ function formatElectiveScheduleItems(periodElectiveItems) {
   for (const item of periodElectiveItems) {
     const teacher = item.employeeDetails;
     const subject = item.timeTableElective;
-
-    const subjectName = subject?.electiveSubjectName || 'N/A';
-    const subjectId = subject?.electiveSubjectId || null;
-    const roomName = item.classRoom?.roomNumber || 'N/A';
-    const roomId = item.classRoom?.classRoomSectionId || null;
+    const subjectName = subject ? subject.electiveSubjectName : 'N/A';
+    const subjectId = subject ? subject.electiveSubjectId : null;
+    const roomName = item.classRoom ? item.classRoom.roomNumber : 'N/A';
+    const roomId = item.classRoom ? item.classRoom.classRoomSectionId : null;
+    const teacherId = teacher ? teacher.employeeId : null;
+    const teacherName = teacher ? teacher.employeeName : 'N/A';
 
     let existing = null;
     for (const si of scheduleItemsMap) {
@@ -2476,8 +2477,8 @@ function formatElectiveScheduleItems(periodElectiveItems) {
 
     if (existing) {
       existing.teachers.push({
-        employeeId: teacher?.employeeId || null,
-        name: teacher?.employeeName || 'N/A',
+        employeeId: teacherId,
+        name: teacherName,
         timeTableMappingId: item.timeTableMappingId,
         teacherType: item.teacherType,
         isAttendence: item.isAttendence,
@@ -2486,8 +2487,8 @@ function formatElectiveScheduleItems(periodElectiveItems) {
       scheduleItemsMap.push({
         type: 'elective',
         teachers: [{
-          employeeId: teacher?.employeeId || null,
-          name: teacher?.employeeName || 'N/A',
+          employeeId: teacherId,
+          name: teacherName,
           timeTableMappingId: item.timeTableMappingId,
           teacherType: item.teacherType,
           isAttendence: item.isAttendence,
@@ -2555,34 +2556,43 @@ function formatElectiveRoutinePeriods(periods, scheduleItems, weekOffList) {
 
 async function getElectiveRoutineGridByCourseId(courseId) {
   const courseIdNum = Number(courseId);
+  const placementMeta = {
+    classSectionTermId: null,
+    section: null,
+    term: null,
+    year: null,
+    courseId: courseIdNum,
+    sessionId: null,
+  };
+
   const electiveRoutines =
     await timeTableCreateRepository.getElectiveRoutinesByCourseIdRepository(courseIdNum);
 
-  const structuresByMapperId = new Map();
+  const structuresById = new Map();
 
   for (const routine of electiveRoutines) {
     const mapping = routine.structureCourseMapping;
-    const mapperId = mapping.timetableStructureCourseMapperId;
+    const timeTableNameId = mapping.timeTableNameId;
     const timeTableCreateName = mapping.timeTableStructure;
     const periods = timeTableCreateName.timeTableName || [];
     const scheduleItems = routine.timeTablecreate || [];
     const weekOffList = parseWeekOffList(timeTableCreateName.weekOff);
 
-    if (!structuresByMapperId.has(mapperId)) {
-      structuresByMapperId.set(mapperId, {
-        timeTableNameId: mapping.timeTableNameId,
+    if (!structuresById.has(timeTableNameId)) {
+      structuresById.set(timeTableNameId, {
+        timeTableNameId,
         name: timeTableCreateName.name || 'N/A',
         weekOff: weekOffList,
-        timetableStructureCourseMapperId: mapperId,
-        courseId: mapping.courseId != null ? Number(mapping.courseId) : courseIdNum,
-        sessionId: mapping.sessionId != null ? Number(mapping.sessionId) : null,
-        startingDate: mapping.startingDate ?? null,
-        endingDate: mapping.endingDate ?? null,
+        timetableStructureCourseMapperId: mapping.timetableStructureCourseMapperId,
+        courseId: Number(mapping.courseId),
+        sessionId: Number(mapping.sessionId),
+        startingDate: mapping.startingDate,
+        endingDate: mapping.endingDate,
         routines: [],
       });
     }
 
-    structuresByMapperId.get(mapperId).routines.push({
+    structuresById.get(timeTableNameId).routines.push({
       timeTableRoutineId: routine.timeTableRoutineId,
       timetableStructureCourseMapperId: routine.timetableStructureCourseMapperId,
       isPublished: routine.isPublish,
@@ -2595,19 +2605,20 @@ async function getElectiveRoutineGridByCourseId(courseId) {
 
   const mappedWithoutRoutine = await buildMappedStructuresWithoutRoutines(courseIdNum, null, null);
   for (const mapped of mappedWithoutRoutine) {
-    if (!structuresByMapperId.has(mapped.timetableStructureCourseMapperId)) {
-      structuresByMapperId.set(mapped.timetableStructureCourseMapperId, mapped);
+    if (!structuresById.has(mapped.timeTableNameId)) {
+      structuresById.set(mapped.timeTableNameId, mapped);
     }
   }
 
   const structures = [];
-  for (const structure of structuresByMapperId.values()) {
+  for (const structure of structuresById.values()) {
     structures.push(structure);
   }
 
   return {
-    courseId: courseIdNum,
+    ...placementMeta,
     structures,
+    classSection: null,
   };
 }
 
@@ -2668,7 +2679,6 @@ function mapRoutineClassSection(classSection) {
 }
 
 function mapClassSectionSummary(classSection) {
-  if (!classSection) return null;
   const plain = classSection.get ? classSection.get({ plain: true }) : classSection;
   return {
     classSectionsId: plain.classSectionsId,
@@ -2689,8 +2699,13 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, s
   const employee = bundle.employee;
   const course = bundle.course;
   const session = bundle.session;
-  const classSections = bundle.classSections || [];
-  const routineRows = bundle.routines || [];
+  const classSections = bundle.classSections;
+  const routineRows = bundle.routines;
+
+  const classSectionSummaries = [];
+  for (const classSection of classSections) {
+    classSectionSummaries.push(mapClassSectionSummary(classSection));
+  }
 
   const common = {
     employee: employee
@@ -2717,7 +2732,7 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, s
         academicYearId: session.academicYearId,
       }
       : null,
-    classSections: classSections.map(mapClassSectionSummary),
+    classSections: classSectionSummaries,
   };
 
   if (!routineRows.length) {
@@ -2729,16 +2744,9 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, s
 
   for (const row of routineRows) {
     const routine = row.routine;
-    const electiveScheduleItems = Array.isArray(row.electiveScheduleItems)
-      ? row.electiveScheduleItems
-      : [];
-
+    const electiveScheduleItems = row.electiveScheduleItems;
     const mapping = routine.structureCourseMapping;
-    const timeTableCreateName = mapping?.timeTableStructure;
-    if (!mapping || !timeTableCreateName) {
-      continue;
-    }
-
+    const timeTableCreateName = mapping.timeTableStructure;
     const periods = timeTableCreateName.timeTableName || [];
     const normalScheduleItems = routine.timeTablecreate || [];
     const classSection = mapRoutineClassSection(resolveTimeTableRoutineSection(routine));
@@ -2799,15 +2807,18 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, s
           if (item.timeTableTeacherSubject) {
             teacher = item.timeTableTeacherSubject.teacherEmployeeData;
             const mappedSubject = item.timeTableTeacherSubject.employeeSubject;
-            if (mappedSubject?.subjectId) {
+            if (mappedSubject && mappedSubject.subjectId) {
               subject = mappedSubject;
             }
           }
 
-          const subjectName = subject?.subjectName || 'N/A';
-          const subjectId = subject?.subjectId || null;
-          const roomName = item.classRoom?.roomNumber || 'N/A';
-          const roomId = item.classRoom?.classRoomSectionId || null;
+          const subjectName = subject ? subject.subjectName : 'N/A';
+          const subjectId = subject ? subject.subjectId : null;
+          const roomName = item.classRoom ? item.classRoom.roomNumber : 'N/A';
+          const roomId = item.classRoom ? item.classRoom.classRoomSectionId : null;
+          const teacherId = teacher ? teacher.employeeId : null;
+          const teacherName = teacher ? teacher.employeeName : 'N/A';
+          const teacherColor = teacher ? teacher.pickColor : undefined;
 
           let existing = null;
           for (const si of scheduleItemsMap) {
@@ -2819,8 +2830,8 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, s
 
           if (existing) {
             existing.teachers.push({
-              employeeId: teacher?.employeeId || null,
-              name: teacher?.employeeName || 'N/A',
+              employeeId: teacherId,
+              name: teacherName,
               timeTableMappingId: item.timeTableMappingId,
               teacherType: item.teacherType,
               isAttendence: item.isAttendence,
@@ -2831,9 +2842,9 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, s
               isOverridingSyblingElectives: item.isOverridingSyblingElectives,
               teachers: [
                 {
-                  employeeId: teacher?.employeeId || null,
-                  name: teacher?.employeeName || 'N/A',
-                  color: teacher?.pickColor,
+                  employeeId: teacherId,
+                  name: teacherName,
+                  color: teacherColor,
                   timeTableMappingId: item.timeTableMappingId,
                   teacherType: item.teacherType,
                   isAttendence: item.isAttendence,
@@ -2849,11 +2860,12 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, s
           for (const item of periodElectiveItems) {
             const teacher = item.employeeDetails;
             const subject = item.timeTableElective;
-
-            const subjectName = subject?.electiveSubjectName || 'N/A';
-            const subjectId = subject?.electiveSubjectId || null;
-            const roomName = item.classRoom?.roomNumber || 'N/A';
-            const roomId = item.classRoom?.classRoomSectionId || null;
+            const subjectName = subject ? subject.electiveSubjectName : 'N/A';
+            const subjectId = subject ? subject.electiveSubjectId : null;
+            const roomName = item.classRoom ? item.classRoom.roomNumber : 'N/A';
+            const roomId = item.classRoom ? item.classRoom.classRoomSectionId : null;
+            const teacherId = teacher ? teacher.employeeId : null;
+            const teacherName = teacher ? teacher.employeeName : 'N/A';
 
             let existing = null;
             for (const si of scheduleItemsMap) {
@@ -2865,8 +2877,8 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, s
 
             if (existing) {
               existing.teachers.push({
-                employeeId: teacher?.employeeId || null,
-                name: teacher?.employeeName || 'N/A',
+                employeeId: teacherId,
+                name: teacherName,
                 timeTableMappingId: item.timeTableMappingId,
                 teacherType: item.teacherType,
                 isAttendence: item.isAttendence,
@@ -2875,8 +2887,8 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, s
               scheduleItemsMap.push({
                 type: 'elective',
                 teachers: [{
-                  employeeId: teacher?.employeeId || null,
-                  name: teacher?.employeeName || 'N/A',
+                  employeeId: teacherId,
+                  name: teacherName,
                   timeTableMappingId: item.timeTableMappingId,
                   teacherType: item.teacherType,
                   isAttendence: item.isAttendence,

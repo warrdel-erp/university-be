@@ -1677,7 +1677,7 @@ export async function getTeacherRoutineBundle(employeeId, courseId, sessionId) {
     employee,
     course,
     session,
-    classSections: classSections || [],
+    classSections,
     routines,
   };
 }
