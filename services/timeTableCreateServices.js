@@ -21,18 +21,18 @@ const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 
 function assertRoutineDatesWithinStructure(courseMapping, startingDate, endingDate) {
   if (!courseMapping) {
-    throw new Error('Structure course mapping not found — map the course to this structure with dates first');
+    throw new Error('Invalid mapperId. Map the course to the structure first');
   }
 
-  const structureStart = formatQueryDate(courseMapping.startingDate);
-  const structureEnd = formatQueryDate(courseMapping.endingDate);
+  const mappingStart = formatQueryDate(courseMapping.startingDate);
+  const mappingEnd = formatQueryDate(courseMapping.endingDate);
   const routineStart = formatQueryDate(startingDate);
   const routineEnd = formatQueryDate(endingDate);
 
-  if (routineStart < structureStart || routineEnd > structureEnd) {
-    throw new Error(
-      `Routine dates (${routineStart} to ${routineEnd}) must be inside the structure-course window (${structureStart} to ${structureEnd})`,
-    );
+  if (routineStart < mappingStart) {
+    throw new Error('Routine startingDate must be within the mapped date range');
+  } else if (routineEnd > mappingEnd) {
+    throw new Error('Routine endingDate must be within the mapped date range');
   }
 }
 
@@ -374,9 +374,7 @@ async function assertNoSlotConflicts({
     );
     if (conflict) {
       const section = resolveTimeTableRoutineSection(conflict.timeTablecreate);
-      throw new Error(
-        `Teacher Conflict: Teacher already has class on ${day} at ${startTime}-${endTime} in ${section?.year || ''} - ${section?.section || ''}`,
-      );
+      throw new Error('Teacher conflict: teacher already scheduled for this slot');
     }
   }
 
@@ -393,9 +391,7 @@ async function assertNoSlotConflicts({
     );
     if (conflict) {
       const section = resolveTimeTableRoutineSection(conflict.timeTablecreate);
-      throw new Error(
-        `Room Conflict: Classroom is already occupied on ${day} at ${startTime}-${endTime} by ${section?.year || ''} - ${section?.section || ''}`,
-      );
+      throw new Error('Room conflict: classroom already occupied for this slot');
     }
   }
 }
@@ -485,7 +481,7 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
       { transaction },
     );
     if (!courseMapping) {
-      throw new Error('timetableStructureCourseMapperId not found — map the course to a structure first');
+      throw new Error('Invalid mapperId. Map the course to the structure first');
     }
 
     if (timeTableType === 'normal' && (data.classSectionTermId == null || data.classSectionTermId === '')) {
@@ -531,11 +527,16 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
     delete placement.sessionId;
     delete placement.timeTableNameId;
 
-    assertRoutineDatesWithinStructure(
-      courseMapping,
-      placement.startingDate,
-      placement.endingDate,
-    );
+    if (placement.startingDate && placement.endingDate) {
+      assertRoutineDatesWithinStructure(
+        courseMapping,
+        placement.startingDate,
+        placement.endingDate,
+      );
+    } else {
+      throw new Error('startingDate and endingDate are required');
+    }
+
     placement.timetableStructureCourseMapperId = courseMapping.timetableStructureCourseMapperId;
 
     if (
@@ -551,7 +552,7 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
       });
 
       if (overlap) {
-        throw new Error(`A routine already exists for this class section term that overlaps with the selected date range (${placement.startingDate} to ${placement.endingDate})`);
+        throw new Error('Routine already exists for this section in the selected date range');
       }
     }
 
@@ -1160,7 +1161,12 @@ export async function changeTimeTableCreate(body, updatedBy) {
         placementFields.courseId = courseId;
       }
 
-      assertRoutineDatesWithinStructure(courseMapping, start, end);
+      if (start && end) {
+        assertRoutineDatesWithinStructure(courseMapping, start, end);
+      } else {
+        throw new Error('startingDate and endingDate are required');
+      }
+
       placementFields.timetableStructureCourseMapperId = courseMapping.timetableStructureCourseMapperId;
       delete placementFields.timeTableNameId;
 
@@ -1172,7 +1178,7 @@ export async function changeTimeTableCreate(body, updatedBy) {
       });
 
       if (overlap) {
-        throw new Error(`A routine already exists for this class section term that overlaps with the selected date range (${start} to ${end})`);
+        throw new Error('Routine already exists for this section in the selected date range');
       }
     }
 
@@ -1260,9 +1266,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
         const routineSection = resolveTimeTableRoutineSection(roomConflict.timeTablecreate);
         const conflictSection = routineSection?.section || "";
         const conflictClass = routineSection?.year || "";
-        throw new Error(
-          `Room Conflict: Classroom is already occupied on ${baseRow.day} at ${startTime}-${endTime} by ${conflictClass} - ${conflictSection}`
-        );
+        throw new Error('Room conflict: classroom already occupied for this slot');
       }
     }
 
@@ -1283,9 +1287,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           const routineSection = resolveTimeTableRoutineSection(conflict.timeTablecreate);
           const conflictSection = routineSection?.section || "";
           const conflictClass = routineSection?.year || "";
-          throw new Error(
-            `Teacher Conflict: Teacher already has class on ${baseRow.day} at ${startTime}-${endTime} in ${conflictClass} - ${conflictSection}`
-          );
+          throw new Error('Teacher conflict: teacher already scheduled for this slot');
         }
       }
       // conflict logic END

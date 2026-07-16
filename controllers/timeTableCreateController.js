@@ -13,7 +13,10 @@ export const addtimeTableCreate = async (req, res) => {
     } catch (error) {
         console.error("Error in adding time table create :", error);
         const message = error.message || 'Internal Server Error';
-        const statusCode = /required|not found|does not match|could not be resolved|overlap/i.test(message) ? 400 : 500;
+        const statusCode =
+          /required|not found|does not match|could not be resolved|overlap|conflict|Routine already exists|Teacher conflict|Room conflict|must be inside|within the mapped date range|Map the course to the structure first|Invalid mapperId/i.test(message)
+            ? 400
+            : 500;
         res.status(statusCode).send(message);
     }
 };
@@ -136,7 +139,10 @@ export const changeTimeTableCreate = async (req, res) => {
     } catch (error) {
         console.error('Error in updating time table create', error);
         const message = error.message || 'Internal Server Error';
-        const statusCode = /not found|cannot be updated|overlap|does not match|required/i.test(message) ? 400 : 500;
+        const statusCode =
+          /not found|cannot be updated|overlap|conflict|Routine already exists|Teacher conflict|Room conflict|does not match|required|must be inside|within the mapped date range|Map the course to the structure first|Invalid mapperId/i.test(message)
+            ? 400
+            : 500;
         return ErrorResponse(res, statusCode, message);
     }
 };
