@@ -19,20 +19,47 @@ import { randomUUID } from "crypto";
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+function toDateOnlyString(value) {
+  if (value == null || value === '') {
+    return null;
+  }
+  if (typeof value === 'string') {
+    const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (match) {
+      return match[1];
+    }
+  }
+  return formatQueryDate(value);
+}
+
 function assertRoutineDatesWithinStructure(courseMapping, startingDate, endingDate) {
   if (!courseMapping) {
     throw new Error('Invalid mapperId. Map the course to the structure first');
   }
 
-  const mappingStart = formatQueryDate(courseMapping.startingDate);
-  const mappingEnd = formatQueryDate(courseMapping.endingDate);
-  const routineStart = formatQueryDate(startingDate);
-  const routineEnd = formatQueryDate(endingDate);
+  const mappingStart = toDateOnlyString(courseMapping.startingDate);
+  const mappingEnd = toDateOnlyString(courseMapping.endingDate);
+  const routineStart = toDateOnlyString(startingDate);
+  const routineEnd = toDateOnlyString(endingDate);
 
+  if (!mappingStart || !mappingEnd) {
+    throw new Error('Structure course mapping startingDate and endingDate are required');
+  }
+  if (!routineStart || !routineEnd) {
+    throw new Error('startingDate and endingDate are required');
+  }
+  if (routineStart > routineEnd) {
+    throw new Error('Routine endingDate cannot be before startingDate');
+  }
   if (routineStart < mappingStart) {
-    throw new Error('Routine startingDate must be within the mapped date range');
-  } else if (routineEnd > mappingEnd) {
-    throw new Error('Routine endingDate must be within the mapped date range');
+    throw new Error(
+      `Routine startingDate (${routineStart}) cannot be before mapping startingDate (${mappingStart})`,
+    );
+  }
+  if (routineEnd > mappingEnd) {
+    throw new Error(
+      `Routine endingDate (${routineEnd}) cannot be after mapping endingDate (${mappingEnd})`,
+    );
   }
 }
 
@@ -516,6 +543,8 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
         placement.startingDate,
         placement.endingDate,
       );
+      placement.startingDate = toDateOnlyString(placement.startingDate);
+      placement.endingDate = toDateOnlyString(placement.endingDate);
     } else {
       throw new Error('startingDate and endingDate are required');
     }
@@ -926,10 +955,10 @@ export async function cloneTimeTableRoutine(
     }
 
     const previousPlain = previousRoutine.get({ plain: true });
-    const start = formatQueryDate(startingDate);
-    const end = formatQueryDate(endingDate);
+    const start = toDateOnlyString(startingDate);
+    const end = toDateOnlyString(endingDate);
     const previousEnd = previousDate != null
-      ? formatQueryDate(previousDate)
+      ? toDateOnlyString(previousDate)
       : null;
 
     const previousMapping = await getStructureCourseMappingById(
@@ -952,7 +981,7 @@ export async function cloneTimeTableRoutine(
     assertRoutineDatesWithinStructure(previousMapping, start, end);
 
     if (previousEnd != null) {
-      if (previousEnd < formatQueryDate(previousPlain.startingDate)) {
+      if (previousEnd < toDateOnlyString(previousPlain.startingDate)) {
         const error = new Error('previousDate before routine start');
         error.statusCode = 400;
         throw error;
@@ -1090,8 +1119,8 @@ export async function changeTimeTableCreate(body, updatedBy) {
     || placementFields.timetableStructureCourseMapperId
   ) {
     const resolvedTermId = placementFields.classSectionTermId || current.classSectionTermId;
-    const start = placementFields.startingDate || current.startingDate;
-    const end = placementFields.endingDate || current.endingDate;
+    const start = toDateOnlyString(placementFields.startingDate || current.startingDate);
+    const end = toDateOnlyString(placementFields.endingDate || current.endingDate);
 
     const mapperId = placementFields.timetableStructureCourseMapperId
       || current.timetableStructureCourseMapperId;
@@ -1121,12 +1150,10 @@ export async function changeTimeTableCreate(body, updatedBy) {
       placementFields.courseId = courseId;
     }
 
-    if (start && end) {
-      assertRoutineDatesWithinStructure(courseMapping, start, end);
-    } else {
-      throw new Error('startingDate and endingDate are required');
-    }
+    assertRoutineDatesWithinStructure(courseMapping, start, end);
 
+    placementFields.startingDate = start;
+    placementFields.endingDate = end;
     placementFields.timetableStructureCourseMapperId = courseMapping.timetableStructureCourseMapperId;
     delete placementFields.timeTableNameId;
 
