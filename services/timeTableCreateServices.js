@@ -625,6 +625,10 @@ export async function getSingletimeTableCreateDetails(courseId) {
 }
 
 export async function getTimeTableByCourseAndSection(courseId, classSectionTermId, timeTableType) {
+  if (timeTableType === 'elective') {
+    return getElectiveRoutineGridByCourseId(courseId);
+  }
+
   const data = await timeTableCreateRepository.getTimeTableByCourseAndSection(
     courseId,
     classSectionTermId,
@@ -2450,8 +2454,165 @@ function buildEmptyPeriodGrid(periods, weekOffList) {
   return formattedPeriods;
 }
 
+function formatElectiveScheduleItems(periodElectiveItems) {
+  const scheduleItemsMap = [];
+
+  for (const item of periodElectiveItems) {
+    const teacher = item.employeeDetails;
+    const subject = item.timeTableElective;
+
+    const subjectName = subject?.electiveSubjectName || 'N/A';
+    const subjectId = subject?.electiveSubjectId || null;
+    const roomName = item.classRoom?.roomNumber || 'N/A';
+    const roomId = item.classRoom?.classRoomSectionId || null;
+
+    let existing = null;
+    for (const si of scheduleItemsMap) {
+      if (si.type === 'elective' && si.subject.name === subjectName && si.room.name === roomName) {
+        existing = si;
+        break;
+      }
+    }
+
+    if (existing) {
+      existing.teachers.push({
+        employeeId: teacher?.employeeId || null,
+        name: teacher?.employeeName || 'N/A',
+        timeTableMappingId: item.timeTableMappingId,
+        teacherType: item.teacherType,
+        isAttendence: item.isAttendence,
+      });
+    } else {
+      scheduleItemsMap.push({
+        type: 'elective',
+        teachers: [{
+          employeeId: teacher?.employeeId || null,
+          name: teacher?.employeeName || 'N/A',
+          timeTableMappingId: item.timeTableMappingId,
+          teacherType: item.teacherType,
+          isAttendence: item.isAttendence,
+        }],
+        subject: { electiveSubjectId: subjectId, name: subjectName },
+        room: { classRoomSectionId: roomId, name: roomName },
+      });
+    }
+  }
+
+  return scheduleItemsMap;
+}
+
+function formatElectiveRoutinePeriods(periods, scheduleItems, weekOffList) {
+  const daysList = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const weekOffLower = [];
+  for (const day of weekOffList) {
+    weekOffLower.push(String(day).toLowerCase());
+  }
+
+  const formattedPeriods = [];
+  for (const period of periods) {
+    const formattedDays = [];
+    for (const daysName of daysList) {
+      if (weekOffLower.includes(daysName.toLowerCase())) {
+        formattedDays.push({
+          name: daysName,
+          isDayOff: true,
+        });
+        continue;
+      }
+
+      if (period.isBreak) {
+        formattedDays.push({
+          name: daysName,
+          isBreak: true,
+        });
+        continue;
+      }
+
+      const periodElectiveItems = [];
+      for (const si of scheduleItems) {
+        if (si.timeTableCreationId === period.timeTableCreationId && si.day === daysName) {
+          periodElectiveItems.push(si);
+        }
+      }
+
+      formattedDays.push({
+        name: daysName,
+        scheduleItems: formatElectiveScheduleItems(periodElectiveItems),
+      });
+    }
+
+    formattedPeriods.push({
+      timeTableCreationId: period.timeTableCreationId,
+      name: period.periodName,
+      startTime: period.startTime,
+      endTime: period.endTime,
+      days: formattedDays,
+    });
+  }
+
+  return formattedPeriods;
+}
+
+async function getElectiveRoutineGridByCourseId(courseId) {
+  const courseIdNum = Number(courseId);
+  const electiveRoutines =
+    await timeTableCreateRepository.getElectiveRoutinesByCourseIdRepository(courseIdNum);
+
+  const structuresByMapperId = new Map();
+
+  for (const routine of electiveRoutines) {
+    const mapping = routine.structureCourseMapping;
+    const mapperId = mapping.timetableStructureCourseMapperId;
+    const timeTableCreateName = mapping.timeTableStructure;
+    const periods = timeTableCreateName.timeTableName || [];
+    const scheduleItems = routine.timeTablecreate || [];
+    const weekOffList = parseWeekOffList(timeTableCreateName.weekOff);
+
+    if (!structuresByMapperId.has(mapperId)) {
+      structuresByMapperId.set(mapperId, {
+        timeTableNameId: mapping.timeTableNameId,
+        name: timeTableCreateName.name || 'N/A',
+        weekOff: weekOffList,
+        timetableStructureCourseMapperId: mapperId,
+        courseId: mapping.courseId != null ? Number(mapping.courseId) : courseIdNum,
+        sessionId: mapping.sessionId != null ? Number(mapping.sessionId) : null,
+        startingDate: mapping.startingDate ?? null,
+        endingDate: mapping.endingDate ?? null,
+        routines: [],
+      });
+    }
+
+    structuresByMapperId.get(mapperId).routines.push({
+      timeTableRoutineId: routine.timeTableRoutineId,
+      timetableStructureCourseMapperId: routine.timetableStructureCourseMapperId,
+      isPublished: routine.isPublish,
+      startDate: routine.startingDate,
+      endDate: routine.endingDate,
+      year: null,
+      periods: formatElectiveRoutinePeriods(periods, scheduleItems, weekOffList),
+    });
+  }
+
+  const mappedWithoutRoutine = await buildMappedStructuresWithoutRoutines(courseIdNum, null, null);
+  for (const mapped of mappedWithoutRoutine) {
+    if (!structuresByMapperId.has(mapped.timetableStructureCourseMapperId)) {
+      structuresByMapperId.set(mapped.timetableStructureCourseMapperId, mapped);
+    }
+  }
+
+  const structures = [];
+  for (const structure of structuresByMapperId.values()) {
+    structures.push(structure);
+  }
+
+  return {
+    courseId: courseIdNum,
+    structures,
+  };
+}
+
 async function buildMappedStructuresWithoutRoutines(courseId, sessionId, classSection) {
-  if (courseId == null || sessionId == null) {
+  if (courseId == null) {
     return [];
   }
 
@@ -2507,6 +2668,7 @@ function mapRoutineClassSection(classSection) {
 }
 
 function mapClassSectionSummary(classSection) {
+  if (!classSection) return null;
   const plain = classSection.get ? classSection.get({ plain: true }) : classSection;
   return {
     classSectionsId: plain.classSectionsId,
@@ -2518,13 +2680,17 @@ function mapClassSectionSummary(classSection) {
 }
 
 export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, sessionId) {
-  const {
-    employee,
-    course,
-    session,
-    classSections,
-    routines: routineRows,
-  } = await timeTableCreateRepository.getTeacherRoutineBundle(employeeId, courseId, sessionId);
+  const bundle = await timeTableCreateRepository.getTeacherRoutineBundle(
+    employeeId,
+    courseId,
+    sessionId,
+  );
+
+  const employee = bundle.employee;
+  const course = bundle.course;
+  const session = bundle.session;
+  const classSections = bundle.classSections || [];
+  const routineRows = bundle.routines || [];
 
   const common = {
     employee: employee
@@ -2559,83 +2725,105 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, s
   }
 
   const daysList = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const formattedRoutines = [];
 
-  const formattedRoutines = routineRows.map(({ routine, electiveScheduleItems }) => {
-    const timeTableCreateName = routine.structureCourseMapping.timeTableStructure;
+  for (const row of routineRows) {
+    const routine = row.routine;
+    const electiveScheduleItems = Array.isArray(row.electiveScheduleItems)
+      ? row.electiveScheduleItems
+      : [];
+
+    const mapping = routine.structureCourseMapping;
+    const timeTableCreateName = mapping?.timeTableStructure;
+    if (!mapping || !timeTableCreateName) {
+      continue;
+    }
+
     const periods = timeTableCreateName.timeTableName || [];
     const normalScheduleItems = routine.timeTablecreate || [];
     const classSection = mapRoutineClassSection(resolveTimeTableRoutineSection(routine));
-
-    let weekOffList = [];
-    try {
-      const weekOffRaw = timeTableCreateName.weekOff;
-      weekOffList = Array.isArray(weekOffRaw)
-        ? weekOffRaw
-        : (typeof weekOffRaw === 'string' ? JSON.parse(weekOffRaw) : []);
-
-      if (typeof weekOffList === 'string') {
-        weekOffList = JSON.parse(weekOffList);
-      }
-    } catch (e) {
-      weekOffList = [];
+    const weekOffList = parseWeekOffList(timeTableCreateName.weekOff);
+    const weekOffLower = [];
+    for (const day of weekOffList) {
+      weekOffLower.push(String(day).toLowerCase());
     }
-    const weekOffLower = weekOffList.map(d => String(d).toLowerCase());
 
-    const formattedPeriods = periods.map(period => {
-      const formattedDays = daysList.map(daysName => {
+    const formattedPeriods = [];
+    for (const period of periods) {
+      const formattedDays = [];
+      for (const daysName of daysList) {
         if (weekOffLower.includes(daysName.toLowerCase())) {
-          return {
+          formattedDays.push({
             name: daysName,
             isDayOff: true,
-          };
+          });
+          continue;
         }
 
         if (period.isBreak) {
-          return {
+          formattedDays.push({
             name: daysName,
             isBreak: true,
-          };
+          });
+          continue;
         }
 
-        // Get items for this period and day (Normal)
-        const periodNormalItems = normalScheduleItems.filter(si =>
-          si.timeTableCreationId === period.timeTableCreationId && si.day === daysName
-        );
+        const periodNormalItems = [];
+        for (const si of normalScheduleItems) {
+          if (si.timeTableCreationId === period.timeTableCreationId && si.day === daysName) {
+            periodNormalItems.push(si);
+          }
+        }
 
-        // Get items for this period and day (Elective)
-        const periodElectiveItems = electiveScheduleItems.filter(si =>
-          si.timeTableCreationId === period.timeTableCreationId && si.day === daysName
-        );
+        const periodElectiveItems = [];
+        for (const si of electiveScheduleItems) {
+          if (si.timeTableCreationId === period.timeTableCreationId && si.day === daysName) {
+            periodElectiveItems.push(si);
+          }
+        }
 
-        // Check if any normal item in this slot overrides electives
-        const isOverriding = periodNormalItems.some(item => item.isOverridingSyblingElectives === true);
+        let isOverriding = false;
+        for (const item of periodNormalItems) {
+          if (item.isOverridingSyblingElectives === true) {
+            isOverriding = true;
+            break;
+          }
+        }
 
         const scheduleItemsMap = [];
 
-        periodNormalItems.forEach(item => {
+        for (const item of periodNormalItems) {
           let teacher = item.employeeDetails;
-          let subject = item?.timeTableSubject;
+          let subject = item.timeTableSubject;
 
           if (item.timeTableTeacherSubject) {
             teacher = item.timeTableTeacherSubject.teacherEmployeeData;
-            subject = item.timeTableTeacherSubject.employeeSubject?.subjectId
-              ? item.timeTableTeacherSubject.employeeSubject
-              : item.timeTableTeacherSubject.employeeSubject?.subjects;
+            const mappedSubject = item.timeTableTeacherSubject.employeeSubject;
+            if (mappedSubject?.subjectId) {
+              subject = mappedSubject;
+            }
           }
 
-          const subjectName = subject?.subjectName || "N/A";
+          const subjectName = subject?.subjectName || 'N/A';
           const subjectId = subject?.subjectId || null;
-          const roomName = item.classRoom?.roomNumber || "N/A";
+          const roomName = item.classRoom?.roomNumber || 'N/A';
           const roomId = item.classRoom?.classRoomSectionId || null;
 
-          const existing = scheduleItemsMap.find(si => si.type === 'normal' && si.subject.name === subjectName && si.room.name === roomName);
+          let existing = null;
+          for (const si of scheduleItemsMap) {
+            if (si.type === 'normal' && si.subject.name === subjectName && si.room.name === roomName) {
+              existing = si;
+              break;
+            }
+          }
+
           if (existing) {
             existing.teachers.push({
               employeeId: teacher?.employeeId || null,
-              name: teacher?.employeeName || "N/A",
+              name: teacher?.employeeName || 'N/A',
               timeTableMappingId: item.timeTableMappingId,
               teacherType: item.teacherType,
-              isAttendence: item.isAttendence
+              isAttendence: item.isAttendence,
             });
           } else {
             scheduleItemsMap.push({
@@ -2644,81 +2832,88 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, s
               teachers: [
                 {
                   employeeId: teacher?.employeeId || null,
-                  name: teacher?.employeeName || "N/A",
+                  name: teacher?.employeeName || 'N/A',
                   color: teacher?.pickColor,
                   timeTableMappingId: item.timeTableMappingId,
                   teacherType: item.teacherType,
-                  isAttendence: item.isAttendence
-                }
+                  isAttendence: item.isAttendence,
+                },
               ],
-              subject: { subjectId: subjectId, name: subjectName },
-              room: { classRoomSectionId: roomId, name: roomName }
+              subject: { subjectId, name: subjectName },
+              room: { classRoomSectionId: roomId, name: roomName },
             });
           }
-        });
+        }
 
         if (!isOverriding) {
-          periodElectiveItems.forEach(item => {
+          for (const item of periodElectiveItems) {
             const teacher = item.employeeDetails;
             const subject = item.timeTableElective;
 
-            const subjectName = subject?.electiveSubjectName || "N/A";
+            const subjectName = subject?.electiveSubjectName || 'N/A';
             const subjectId = subject?.electiveSubjectId || null;
-            const roomName = item.classRoom?.roomNumber || "N/A";
+            const roomName = item.classRoom?.roomNumber || 'N/A';
             const roomId = item.classRoom?.classRoomSectionId || null;
 
-            const existing = scheduleItemsMap.find(si => si.type === 'elective' && si.subject.name === subjectName && si.room.name === roomName);
+            let existing = null;
+            for (const si of scheduleItemsMap) {
+              if (si.type === 'elective' && si.subject.name === subjectName && si.room.name === roomName) {
+                existing = si;
+                break;
+              }
+            }
+
             if (existing) {
               existing.teachers.push({
                 employeeId: teacher?.employeeId || null,
-                name: teacher?.employeeName || "N/A",
+                name: teacher?.employeeName || 'N/A',
                 timeTableMappingId: item.timeTableMappingId,
                 teacherType: item.teacherType,
-                isAttendence: item.isAttendence
+                isAttendence: item.isAttendence,
               });
             } else {
               scheduleItemsMap.push({
                 type: 'elective',
                 teachers: [{
                   employeeId: teacher?.employeeId || null,
-                  name: teacher?.employeeName || "N/A",
+                  name: teacher?.employeeName || 'N/A',
                   timeTableMappingId: item.timeTableMappingId,
                   teacherType: item.teacherType,
-                  isAttendence: item.isAttendence
+                  isAttendence: item.isAttendence,
                 }],
                 subject: { electiveSubjectId: subjectId, name: subjectName },
-                room: { classRoomSectionId: roomId, name: roomName }
+                room: { classRoomSectionId: roomId, name: roomName },
               });
             }
-          });
+          }
         }
 
-        return {
+        formattedDays.push({
           name: daysName,
-          scheduleItems: scheduleItemsMap
-        };
-      });
+          scheduleItems: scheduleItemsMap,
+        });
+      }
 
-      return {
+      formattedPeriods.push({
         timeTableCreationId: period.timeTableCreationId,
         name: period.periodName,
         startTime: period.startTime,
         endTime: period.endTime,
-        days: formattedDays
-      };
-    });
+        days: formattedDays,
+      });
+    }
 
-    return {
+    formattedRoutines.push({
       timeTableRoutineId: routine.timeTableRoutineId,
       isPublished: routine.isPublish,
-      timeTableNameId: routine.structureCourseMapping.timeTableNameId,
-      name: timeTableCreateName.name || "N/A",
+      timeTableNameId: mapping.timeTableNameId,
+      name: timeTableCreateName.name || 'N/A',
       startDate: routine.startingDate,
       endDate: routine.endingDate,
       classSection,
-      periods: formattedPeriods
-    };
-  });
+      periods: formattedPeriods,
+    });
+  }
 
   return { ...common, routines: formattedRoutines };
 }

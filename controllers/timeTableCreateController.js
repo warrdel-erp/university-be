@@ -248,9 +248,9 @@ export const getRoutineByTeacherAndAcademicYear = async (req, res) => {
             courseId,
             sessionId,
         );
-        res.status(200).send(result);
+        return SuccessResponse(res, 200, 'Teacher routine fetched successfully', result);
     } catch (error) {
-        console.error("Error in getting routine by teacher and academic year:", error);
-        res.status(500).send("Internal Server Error");
+        console.error('Error in getting routine by teacher and academic year:', error);
+        return ErrorResponse(res, 500, error.message || 'Internal Server Error');
     }
 };

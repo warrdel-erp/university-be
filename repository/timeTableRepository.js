@@ -443,11 +443,15 @@ export async function getStructureMappingPrintRows(filters = {}) {
 }
 
 export async function getMappedStructuresForCourseSession(courseId, sessionId) {
+    const where = {
+        courseId: Number(courseId),
+    };
+    if (sessionId != null) {
+        where.sessionId = Number(sessionId);
+    }
+
     return await scoped(model.timeTableStructureCourseModel).findAll({
-        where: {
-            courseId: Number(courseId),
-            sessionId: Number(sessionId),
-        },
+        where,
         attributes: [
             'timetableStructureCourseMapperId',
             'timeTableNameId',

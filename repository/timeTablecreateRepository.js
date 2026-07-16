@@ -1390,8 +1390,58 @@ export async function getElectiveRoutinesByTableNamesRepository(timeTableNameIds
   });
 }
 
+export async function getElectiveRoutinesByCourseIdRepository(courseId) {
+  return await scoped(model.timeTableRoutineModel).findAll({
+    where: {
+      courseId: Number(courseId),
+      timeTableType: 'elective',
+    },
+    attributes: [
+      'timeTableRoutineId',
+      'timetableStructureCourseMapperId',
+      'startingDate',
+      'endingDate',
+      'isPublish',
+      'timeTableType',
+      'courseId',
+    ],
+    include: [
+      routineStructureInclude(),
+      {
+        model: model.classScheduleModel,
+        as: 'timeTablecreate',
+        include: [
+          {
+            model: model.employeeModel,
+            as: 'employeeDetails',
+            attributes: ['employeeId', 'employeeName', 'pickColor'],
+          },
+          {
+            model: model.electiveSubjectModel,
+            as: 'timeTableElective',
+            attributes: ['electiveSubjectId', 'electiveSubjectName'],
+          },
+          {
+            model: model.classRoomModel,
+            as: 'classRoom',
+            attributes: ['classRoomSectionId', 'roomNumber'],
+          },
+        ],
+      },
+    ],
+    order: [
+      [
+        { model: model.timeTableStructureCourseModel, as: 'structureCourseMapping' },
+        'timeTableNameId',
+        'ASC',
+      ],
+      ['timeTableRoutineId', 'ASC'],
+    ],
+  });
+}
+
 const teacherRoutineStructureInclude = routineStructureInclude({
-  required: false,
+  required: true,
   structureWhere: buildScope(model.timeTableStructureModel),
 });
 
@@ -1574,11 +1624,12 @@ async function fetchElectiveScheduleItemsForTeacher(
 
   const electiveItemsByTableNameId = new Map();
   for (const electiveRoutine of electiveRoutines) {
+    const mapping = electiveRoutine.structureCourseMapping;
     const items = electiveRoutine.timeTablecreate || [];
-    if (!items.length) {
+    if (!mapping || mapping.timeTableNameId == null || !items.length) {
       continue;
     }
-    const tableNameId = electiveRoutine.structureCourseMapping.timeTableNameId;
+    const tableNameId = mapping.timeTableNameId;
     const existing = electiveItemsByTableNameId.get(tableNameId) || [];
     electiveItemsByTableNameId.set(
       tableNameId,
@@ -1596,9 +1647,16 @@ export async function getTeacherRoutineBundle(employeeId, courseId, sessionId) {
   ]);
 
   const timeTableNameIds = [];
+  const safeNormalRoutines = [];
   for (const routine of normalRoutines) {
-    timeTableNameIds.push(routine.structureCourseMapping.timeTableNameId);
+    const mapping = routine.structureCourseMapping;
+    if (!mapping || mapping.timeTableNameId == null || !mapping.timeTableStructure) {
+      continue;
+    }
+    timeTableNameIds.push(mapping.timeTableNameId);
+    safeNormalRoutines.push(routine);
   }
+
   const electiveItemsByTableNameId = await fetchElectiveScheduleItemsForTeacher(
     employeeId,
     courseId,
@@ -1607,11 +1665,11 @@ export async function getTeacherRoutineBundle(employeeId, courseId, sessionId) {
   );
 
   const routines = [];
-  for (const routine of normalRoutines) {
+  for (const routine of safeNormalRoutines) {
+    const tableNameId = routine.structureCourseMapping.timeTableNameId;
     routines.push({
       routine,
-      electiveScheduleItems:
-        electiveItemsByTableNameId.get(routine.structureCourseMapping.timeTableNameId) || [],
+      electiveScheduleItems: electiveItemsByTableNameId.get(tableNameId) || [],
     });
   }
 
@@ -1619,7 +1677,7 @@ export async function getTeacherRoutineBundle(employeeId, courseId, sessionId) {
     employee,
     course,
     session,
-    classSections,
+    classSections: classSections || [],
     routines,
   };
 }
