@@ -19,8 +19,8 @@ export async function getAllStudentNotice(role) {
   return notice.getAllStudentNotice(role);
 }
 
-export async function getAllEmployeeNotice(createdBy, role) {
-  return notice.getAllEmployeeNotice(createdBy, role);
+export async function getAllEmployeeNotice(createdBy, role, academicYearId) {
+  return notice.getAllEmployeeNotice(createdBy, role, academicYearId);
 }
 
 export async function updateNotice(noticeId, data, updatedBy) {

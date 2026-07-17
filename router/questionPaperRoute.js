@@ -13,6 +13,8 @@ import {
 
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
+import { checkAccess, checkAccessAny } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 import { questionTypes } from "../constant.js";
 
 const mcqSchema = z.object({
@@ -97,18 +99,18 @@ const approveQuestionPaperSchema = z.object({
     id: z.number({ required_error: "id is required" }),
 });
 
-router.post("/", userAuth, validate({ body: createQuestionPaperSchema }), addQuestionPaper);
+router.post("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, null), validate({ body: createQuestionPaperSchema }), addQuestionPaper);
 
-router.post("/generate", userAuth, validate({ body: generateQuestionPaperSchema }), generateQuestionPaper);
+router.post("/generate", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, null), validate({ body: generateQuestionPaperSchema }), generateQuestionPaper);
 
-router.get("/", userAuth, validate({ query: getAllQuestionPapersQuerySchema }), getAllQuestionPapers);
+router.get("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER.value, null), validate({ query: getAllQuestionPapersQuerySchema }), getAllQuestionPapers);
 
-router.get("/:id", userAuth, getSingleQuestionPaper);
+router.get("/:id", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER.value, null), getSingleQuestionPaper);
 
-router.put("/", userAuth, validate({ body: updateQuestionPaperSchema }), updateQuestionPaper);
+router.put("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_EDIT.value, null), validate({ body: updateQuestionPaperSchema }), updateQuestionPaper);
 
-router.delete("/:id", userAuth, deleteQuestionPaper);
+router.delete("/:id", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_DELETE.value, null), deleteQuestionPaper);
 
-router.put("/approve", userAuth, validate({ body: approveQuestionPaperSchema }), approveQuestionPaper);
+router.put("/approve", userAuth, checkAccessAny([PERMISSIONS.QUESTION_APPROVAL_EDIT.value, PERMISSIONS.EXAM_TIME_TABLE_CREATE_PAPER_APPROVAL.value], null), validate({ body: approveQuestionPaperSchema }), approveQuestionPaper);
 
 export default router;

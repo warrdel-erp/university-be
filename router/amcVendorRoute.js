@@ -78,24 +78,30 @@ const codePreviewBodySchema = z.object({
   assetCategoryId: positiveIntegerId,
 });
 
-router.post("/", userAuth, validate({ body: addAmcVendorSchema }), addAmcVendor);
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
+
+router.post("/", userAuth, checkAccess(PERMISSIONS.AMC_VENDORS_ADD.value, 'amcVendor'), validate({ body: addAmcVendorSchema }), addAmcVendor);
 router.post(
   "/codepreview",
   userAuth,
+  checkAccess(PERMISSIONS.AMC_VENDORS_ADD.value, 'amcVendor'),
   validate({ body: codePreviewBodySchema }),
   previewAmcVendorCode
 );
-router.get("/", userAuth, validate({ query: listQuerySchema }), getAllAmcVendor);
+router.get("/", userAuth, checkAccess(PERMISSIONS.AMC_VENDORS.value, 'amcVendor'), validate({ query: listQuerySchema }), getAllAmcVendor);
 router.get(
   "/single",
   userAuth,
+  checkAccess(PERMISSIONS.AMC_VENDORS.value, 'amcVendor'),
   validate({ query: amcVendorIdQuerySchema }),
   getSingleAmcVendorDetails
 );
-router.patch("/", userAuth, validate({ body: updateAmcVendorSchema }), updateAmcVendor);
+router.patch("/", userAuth, checkAccess(PERMISSIONS.AMC_VENDORS_EDIT.value, 'amcVendor'), validate({ body: updateAmcVendorSchema }), updateAmcVendor);
 router.delete(
   "/",
   userAuth,
+  checkAccess(PERMISSIONS.AMC_VENDORS_DELETE.value, 'amcVendor'),
   validate({ query: amcVendorIdQuerySchema }),
   deleteAmcVendor
 );

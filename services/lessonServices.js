@@ -171,11 +171,11 @@ export async function getMapping(academicYearId) {
       const teacherMapping = ttMapping.timeTableTeacherSubject?.teacherEmployeeData;
       const finalEmp = empDetails || teacherMapping;
 
-      const empId = finalEmp?.employeeId || ttMapping.timeTableMappingId;
+      const empId = finalEmp?.userId || ttMapping.timeTableMappingId;
 
       if (!grouped[empId]) {
         grouped[empId] = {
-          employeeId: finalEmp?.employeeId || null,
+          userId: finalEmp?.userId || null,
           employeeName: finalEmp?.employeeName || 'N/A',
           employeeCode: finalEmp?.employeeCode || 'N/A',
           pickColor: finalEmp?.pickColor || '#ccc',
@@ -299,9 +299,9 @@ export async function deleteMapping(lessonMappingId) {
   }
 }
 
-export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionId, subjectSearch, subjectId) {
+export async function getEmployeeSubjectAndLesson(userId, courseId, sessionId, subjectSearch, subjectId) {
     const data = await lesson.getEmployeeSubjectAndLesson(
-        employeeId,
+        userId,
         courseId,
         sessionId,
         subjectSearch,

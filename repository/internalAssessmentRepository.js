@@ -18,10 +18,10 @@ async function assertScopedSubject(subjectId, transaction) {
   });
 }
 
-async function assertScopedEmployee(employeeId, transaction) {
+async function assertScopedEmployee(userId, transaction) {
   return scoped(model.employeeModel).findOne({
-    where: { employeeId },
-    attributes: ["employeeId"],
+    where: { userId },
+    attributes: ["userId"],
     transaction,
   });
 }
@@ -202,8 +202,8 @@ export async function addInternalAssessment(data) {
   if (!subject) {
     throw new Error("Subject not found");
   }
-  if (data.employeeId) {
-    const employee = await assertScopedEmployee(data.employeeId);
+  if (data.userId) {
+    const employee = await assertScopedEmployee(data.userId);
     if (!employee) {
       throw new Error("Employee not found");
     }
@@ -224,7 +224,7 @@ export async function getAllInternalAssessment(examSetupTypeId) {
     attributes: [
       "examAssessmentId",
       "subjectId",
-      "employeeId",
+      "userId",
       "term",
       "examSetupTypeId",
       "type",
@@ -250,7 +250,7 @@ export async function getInternalAssessmentById(examAssessmentId) {
     attributes: [
       "examAssessmentId",
       "subjectId",
-      "employeeId",
+      "userId",
       "term",
       "examSetupTypeId",
       "type",
@@ -294,12 +294,12 @@ export async function deleteInternalAssessment(examAssessmentId) {
   });
 }
 
-export async function evaluationInternalAssessment(subjectId, employeeId) {
+export async function evaluationInternalAssessment(subjectId, userId) {
   const assessment = await model.internalAssessmentModel.findOne({
     attributes: [
       "examAssessmentId",
       "subjectId",
-      "employeeId",
+      "userId",
       "term",
       "examSetupTypeId",
       "type",
@@ -310,7 +310,7 @@ export async function evaluationInternalAssessment(subjectId, employeeId) {
       "description",
       "file",
     ],
-    where: { subjectId, employeeId },
+    where: { subjectId, userId },
     include: [
       {
         model: model.subjectModel,
@@ -329,10 +329,9 @@ export async function evaluationInternalAssessment(subjectId, employeeId) {
       },
       assessmentExamTypeEvaluationInclude,
       {
-        model: model.employeeModel,
-        as: "employees",
-        attributes: ["employeeId", "employeeCode", "employeeName"],
-        where: buildScope(model.employeeModel),
+        model: model.userModel,
+        as: "user",
+        attributes: ["user_id"],
         required: true,
       },
     ],
@@ -401,7 +400,7 @@ export async function bulkInsertEvaluation(dataArray) {
       return await model.assessmentEvaluationModel.bulkCreate(rows, {
         updateOnDuplicate: [
           "subjectId",
-          "employeeId",
+          "userId",
           "examAssessmentId",
           "studentId",
           "status",

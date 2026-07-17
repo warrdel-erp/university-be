@@ -3,14 +3,17 @@ const router =  Router();
 import {addPo,getAllPo,getSinglePoDetails,updatePo,deletePo} from "../controllers/poController.js";
 import userAuth from "../middleware/authUser.js"
 
-router.post('/', userAuth, addPo);
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 
-router.get('/', userAuth, getAllPo);
+router.post('/', userAuth, checkAccess(PERMISSIONS.PROGRAM_OUTCOME_ADD.value, null), addPo);
 
-router.get('/single' ,userAuth, getSinglePoDetails);
+router.get('/', userAuth, checkAccess(PERMISSIONS.PROGRAM_OUTCOME.value, null), getAllPo);
 
-router.patch('/' ,userAuth, updatePo);
+router.get('/single' ,userAuth, checkAccess(PERMISSIONS.PROGRAM_OUTCOME.value, null), getSinglePoDetails);
 
-router.delete('/' ,userAuth, deletePo);
+router.patch('/' ,userAuth, checkAccess(PERMISSIONS.PROGRAM_OUTCOME_EDIT.value, null), updatePo);
+
+router.delete('/' ,userAuth, checkAccess(PERMISSIONS.PROGRAM_OUTCOME_DELETE.value, null), deletePo);
 
 export default router;

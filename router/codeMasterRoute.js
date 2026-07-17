@@ -9,6 +9,8 @@ import {
 } from '../controllers/codeMasterController.js';
 import userAuth from '../middleware/authUser.js';
 import { validate } from '../utility/validation.js';
+import { checkAccess } from '../middleware/checkAccess.js';
+import { PERMISSIONS } from '../const/permissions.js';
 
 const router = Router();
 
@@ -41,13 +43,14 @@ const employeeCodeMasterTypeIdParamSchema = z.object({
 
 router.get('/', userAuth, getAllEmployeeType);
 
-router.post('/addCode', userAuth, validate({ body: addEmployeeCodeSchema }), addEmployeeCode);
+router.post('/addCode', userAuth, checkAccess(PERMISSIONS.CODE_MASTER_ADD.value, 'codeMaster'), validate({ body: addEmployeeCodeSchema }), addEmployeeCode);
 
 router.get('/getCodesTypes', userAuth, validate({ query: getCodesTypesQuerySchema }), getEmployeeCodesTypes);
 
 router.patch(
     '/:employeeCodeMasterTypeId',
     userAuth,
+    checkAccess(PERMISSIONS.CODE_MASTER_EDIT.value, 'codeMaster'),
     validate({ params: employeeCodeMasterTypeIdParamSchema, body: updateCodeMasterTypeSchema }),
     updateCodeMasterType,
 );
@@ -55,6 +58,7 @@ router.patch(
 router.delete(
     '/:employeeCodeMasterTypeId',
     userAuth,
+    checkAccess(PERMISSIONS.CODE_MASTER_DELETE.value, 'codeMaster'),
     validate({ params: employeeCodeMasterTypeIdParamSchema }),
     deleteCodeMasterType,
 );

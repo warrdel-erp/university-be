@@ -432,7 +432,9 @@ export async function addStudentWithFeePlanProfile({ info, files, createdBy }) {
 
   const { universityId, sessionId } = info;
 
-  const roleId = await resolveStudentRoleId();
+  // Roles are dynamic — skip role table lookup; studentRegister falls back to
+  // the hardcoded "Student" role string when roleId is null.
+  const roleId = null;
 
   return addStudent(
     info,
@@ -2631,7 +2633,7 @@ function formatStudentTimetable(allData) {
 
       const mappingEntry = {
         timeTableMappingId,
-        employeeId: teacherData?.employeeId,
+        userId: teacherData?.userId,
         employeeName: teacherData?.employeeName,
         employeeCode: teacherData?.employeeCode,
         pickColor: teacherData?.pickColor,

@@ -74,7 +74,7 @@ const studentMemberInclude = {
 const teacherMemberInclude = {
   model: model.employeeModel,
   as: "teacherMember",
-  attributes: ["employeeId", "employeeName", "employeeCode", "department"],
+  attributes: ["userId", "employeeName", "employeeCode", "department"],
   required: false,
 };
 
@@ -97,7 +97,7 @@ const paymentPayeeIncludes = [
   {
     model: model.employeeModel,
     as: "employeePayee",
-    attributes: ["employeeId", "employeeName", "employeeCode", "department"],
+    attributes: ["userId", "employeeName", "employeeCode", "department"],
     required: false,
   },
 ];
@@ -518,18 +518,18 @@ export async function findStudentMemberDetailsById(studentId, options = {}) {
   });
 }
 
-export async function findTeacherById(employeeId, options = {}) {
+export async function findTeacherById(userId, options = {}) {
   return scoped(model.employeeModel).findOne({
-    attributes: ["employeeId"],
-    where: { employeeId },
+    attributes: ["userId"],
+    where: { userId },
     transaction: options.transaction,
   });
 }
 
-export async function findEmployeeMemberDetailsById(employeeId, options = {}) {
+export async function findEmployeeMemberDetailsById(userId, options = {}) {
   return scoped(model.employeeModel).findOne({
-    attributes: ["employeeId", "employeeName", "employeeCode", "department"],
-    where: { employeeId },
+    attributes: ["userId", "employeeName", "employeeCode", "department"],
+    where: { userId },
     transaction: options.transaction,
   });
 }
@@ -550,11 +550,11 @@ export async function findStudentMemberDetailsByIds(studentIds, options = {}) {
   });
 }
 
-export async function findEmployeeMemberDetailsByIds(employeeIds, options = {}) {
-  if (!employeeIds.length) return [];
+export async function findEmployeeMemberDetailsByIds(userIds, options = {}) {
+  if (!userIds.length) return [];
   return scoped(model.employeeModel).findAll({
-    attributes: ["employeeId", "employeeName", "employeeCode", "department"],
-    where: { employeeId: employeeIds },
+    attributes: ["userId", "employeeName", "employeeCode", "department"],
+    where: { userId: userIds },
     transaction: options.transaction,
   });
 }

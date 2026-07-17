@@ -5,9 +5,9 @@ export const addFaculityLoad = async (req, res) => {
     const data = req.body;
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
-    const { employeeId } = req.body;
-    if (!employeeId) {
-      return res.status(400).send("employeeId is required");
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).send("userId is required");
     }
     const result = await faculityLoadServices.addFaculityLoad(data, createdBy, updatedBy);
     res.status(200).send(result);
@@ -28,9 +28,9 @@ export const getFaculityLoadDetails = async (req, res) => {
 };
 
 export const getSingleFaculityLoadDetails = async (req, res) => {
-  const { employeeId } = req.query;
+  const { userId } = req.query;
   try {
-    const result = await faculityLoadServices.getSingleFaculityLoadDetails(employeeId);
+    const result = await faculityLoadServices.getSingleFaculityLoadDetails(userId);
     res.status(200).send(result);
   } catch (error) {
     console.error("Error in getting faculity load:", error);
@@ -39,11 +39,11 @@ export const getSingleFaculityLoadDetails = async (req, res) => {
 };
 
 export const updateFaculityLoad = async (req, res) => {
-  const { faculityLoadId, employeeId } = req.body;
+  const { faculityLoadId, userId } = req.body;
   const updatedBy = req.user.userId;
   try {
-    if (!(faculityLoadId && employeeId)) {
-      return res.status(400).send("Both faculityLoadId and employeeId are required for each object.");
+    if (!(faculityLoadId && userId)) {
+      return res.status(400).send("Both faculityLoadId and userId are required for each object.");
     }
 
     const result = await faculityLoadServices.updateFaculityLoad(faculityLoadId, req.body, updatedBy);

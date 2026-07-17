@@ -3,6 +3,8 @@ import { z } from "zod";
 const router = Router();
 import { addEmployee, getAllEmployee, getSingleEmployeeDetails, deleteEmployeeDetail, importEmployeeData, updateEmployee, getBooksIssuedToEmployee, getTeacherTimeTable, getTeacherSubject, getSubjectEvalution, getTeacherCourses, getEmployeeSectionDates, getTeacherSubjectsFromSchedule } from '../controllers/employeeController.js';
 import userAuth from "../middleware/authUser.js"
+import { checkAccess } from '../middleware/checkAccess.js';
+import { PERMISSIONS } from '../const/permissions.js';
 import { getTodayClassSchedule, getPastClassSchedules, getUpcomingClassSchedules, getUniqueClassSectionSubjects, getSectionCounts } from '../controllers/employeeController.js';
 import { validate } from "../utility/validation.js";
 
@@ -14,7 +16,7 @@ const positiveIntegerId = z.coerce
 const sectionDatesQuerySchema = z.object({
     classSectionTermId: positiveIntegerId,
     subjectId: z.string().regex(/^\d+$/, "subjectId must be a number").transform(val => parseInt(val)),
-    employeeId: z.string().regex(/^\d+$/, "employeeId must be a number").transform(val => parseInt(val)),
+    userId: z.string().regex(/^\d+$/, "userId must be a number").transform(val => parseInt(val)),
 });
 
 const optionalPositiveId = z.preprocess(
@@ -24,7 +26,7 @@ const optionalPositiveId = z.preprocess(
 
 // Shared query schema for GET /employee/schedule and GET /employee/pastSchedule.
 const scheduleQuerySchema = z.object({
-    employeeId: z.coerce.number().int().positive(),
+    userId: z.coerce.number().int().positive(),
     date: z.string().optional(),
     sessionId: optionalPositiveId,
     groupPeriods: z.enum(['false', 'sessional', 'consecutive']).optional(),
@@ -33,11 +35,11 @@ const scheduleQuerySchema = z.object({
 }).passthrough();
 
 const uniqueClassSectionSubjectsQuerySchema = z.object({
-    employeeId: positiveIntegerId,
+    userId: positiveIntegerId,
 });
 
 const teacherSubjectQuerySchema = z.object({
-    employeeId: positiveIntegerId,
+    userId: positiveIntegerId,
     sessionId: optionalPositiveId,
     term: optionalPositiveId,
 }).strict();
@@ -45,49 +47,44 @@ const teacherSubjectQuerySchema = z.object({
 router.get(
     '/uniqueClassSectionSubjects',
     userAuth,
+    checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
     validate({ query: uniqueClassSectionSubjectsQuerySchema }),
     getUniqueClassSectionSubjects,
 );
 
-router.get('/schedule', userAuth, validate({ query: scheduleQuerySchema }), getTodayClassSchedule);
+router.get('/schedule', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), validate({ query: scheduleQuerySchema }), getTodayClassSchedule);
 
-router.get('/sectionDates', userAuth, validate({ query: sectionDatesQuerySchema }), getEmployeeSectionDates);
+router.get('/sectionDates', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), validate({ query: sectionDatesQuerySchema }), getEmployeeSectionDates);
 
-router.get('/sectionCounts', userAuth, getSectionCounts);
+router.get('/sectionCounts', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getSectionCounts);
 
-/**
- * GET /employee/pastSchedule
- * Query: employeeId (required), date?, sessionId?, groupPeriods? (consecutive | sessional)
- * Response: { teacher, schedules[] } — past slots before cutoff date, newest first.
- * groupPeriods merges consecutive periods (same as /schedule); grouped rows include classScheduleItems[].
- */
-router.get('/pastSchedule', userAuth, validate({ query: scheduleQuerySchema }), getPastClassSchedules);
+router.get('/pastSchedule', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), validate({ query: scheduleQuerySchema }), getPastClassSchedules);
 
-router.get('/upcomingSchedule', userAuth, getUpcomingClassSchedules);
+router.get('/upcomingSchedule', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getUpcomingClassSchedules);
 
-router.get('/courses', userAuth, getTeacherCourses);
+router.get('/courses', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getTeacherCourses);
 
-router.get('/coursesFromSchedule', userAuth, getTeacherSubjectsFromSchedule);
+router.get('/coursesFromSchedule', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getTeacherSubjectsFromSchedule);
 
-router.get('/evaluation', userAuth, getSubjectEvalution);
+router.get('/evaluation', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getSubjectEvalution);
 
-router.get('/cellData', userAuth, getTeacherTimeTable);
+router.get('/cellData', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getTeacherTimeTable);
 
-router.get('/subject', userAuth, validate({ query: teacherSubjectQuerySchema }), getTeacherSubject);
+router.get('/subject', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), validate({ query: teacherSubjectQuerySchema }), getTeacherSubject);
 
-router.get("/issuedBook", userAuth, getBooksIssuedToEmployee);
+router.get("/issuedBook", userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getBooksIssuedToEmployee);
 
-router.post('/addEmp', userAuth, addEmployee);
+router.post('/addEmp', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY_ADD.value, null), addEmployee);
 
-router.get('/', userAuth, getAllEmployee);
+router.get('/', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getAllEmployee);
 
-router.get('/:id', userAuth, getSingleEmployeeDetails);
+router.get('/:id', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getSingleEmployeeDetails);
 
-router.patch('/:id', userAuth, updateEmployee);
+router.patch('/:id', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY_EDIT.value, null), updateEmployee);
 
-router.delete('/:id', userAuth, deleteEmployeeDetail);
+router.delete('/:id', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY_DELETE.value, null), deleteEmployeeDetail);
 
-router.post('/import', userAuth, importEmployeeData);
+router.post('/import', userAuth, checkAccess(PERMISSIONS.STAFF_PROFILES_IMPORT.value, null), importEmployeeData);
 
 
-export default router; 
+export default router;

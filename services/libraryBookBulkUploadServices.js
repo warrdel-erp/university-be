@@ -22,7 +22,7 @@ const BULK_BOOK_FIELDS = [
 /** Columns written to library_book_inventory table (one row per Excel line). */
 const BULK_INVENTORY_FIELDS = [
   "accessionNumber", "libraryAisleId", "libraryRackId", "libraryRowId", "studentId",
-  "employeeId", "issueDate", "dueDate", "status", "billNo", "billDate", "accessionDate",
+  "userId", "issueDate", "dueDate", "status", "billNo", "billDate", "accessionDate",
   "itemPrice", "netPrice", "currency", "condition",
 ];
 
@@ -30,7 +30,7 @@ const BULK_INVENTORY_FIELDS = [
 const BULK_NUMBER_FIELDS = [
   "libraryCreationId", "libraryFloorId", "yearOfPublication", "numberOfPages",
   "classSectionsId", "libraryAisleId", "libraryRackId", "libraryRowId",
-  "studentId", "employeeId", "itemPrice", "netPrice",
+  "studentId", "userId", "itemPrice", "netPrice",
 ];
 
 /** Fields passed through parseCustomDate (supports Excel date serials / strings). */
@@ -110,7 +110,7 @@ const BULK_INVENTORY_FIELD_ALIASES = {
     "scholar number",
     "Scholar Number",
   ],
-  employeeId: [
+  userId: [
     "employeeid",
     "EmployeeId",
     "EMPLOYEEID",
@@ -812,21 +812,21 @@ async function buildBulkUploadNewBookRecord(
   const subjectId =
     rawSubjectId !== undefined && rawSubjectId !== null
       ? await resolveBulkUploadSubjectIds(
-          rawSubjectId,
-          subjectNameToIdMap,
-          excelRowNumber,
-          transaction,
-        )
+        rawSubjectId,
+        subjectNameToIdMap,
+        excelRowNumber,
+        transaction,
+      )
       : null;
 
   const categoryId =
     rawCategoryId !== undefined && rawCategoryId !== null
       ? await resolveBulkUploadCategoryIds(
-          rawCategoryId,
-          categoryNameToIdMap,
-          excelRowNumber,
-          transaction,
-        )
+        rawCategoryId,
+        categoryNameToIdMap,
+        excelRowNumber,
+        transaction,
+      )
       : null;
 
   return {

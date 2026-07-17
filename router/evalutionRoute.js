@@ -3,14 +3,17 @@ const router =  Router();
 import {addEvaluation,getAllEvaluation,getSingleEvaluationDetails,updateEvaluation,deleteEvaluation} from "../controllers/evalutionController.js";
 import userAuth from "../middleware/authUser.js"
 
-router.post('/', userAuth, addEvaluation);
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 
-router.get('/', userAuth, getAllEvaluation);
+router.post('/', userAuth, checkAccess(PERMISSIONS.EVALUATION.value, null), addEvaluation);
 
-router.get('/single' ,userAuth, getSingleEvaluationDetails);
+router.get('/', userAuth, checkAccess(PERMISSIONS.EVALUATION.value, null), getAllEvaluation);
 
-router.patch('/' ,userAuth, updateEvaluation);
+router.get('/single' ,userAuth, checkAccess(PERMISSIONS.EVALUATION.value, null), getSingleEvaluationDetails);
 
-router.delete('/' ,userAuth, deleteEvaluation);
+router.patch('/' ,userAuth, checkAccess(PERMISSIONS.EVALUATION.value, null), updateEvaluation);
+
+router.delete('/' ,userAuth, checkAccess(PERMISSIONS.EVALUATION.value, null), deleteEvaluation);
 
 export default router;

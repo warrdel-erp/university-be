@@ -3,8 +3,9 @@ import { z } from 'zod';
 import { validate } from '../utility/validation.js';
 import { SUBJECT_TYPES, SUBJECT_CATEGORIES } from '../constant.js';
 import { getAllCollegesAndCourses, addCampus, addInstitute, addAffiliatedUniversity, addCourse, addSpecialization, addSubject, addClassSections, getClassSections, addSectionSubjectMapper, getSectionSubjectMapper, subjectExcel, updateCourse, changeCourseStatus, getClassSectionSpecific, getClassSectionRecord, updateSubject, getMonthlyIncome } from '../controllers/mainController.js';
-import userAuth from '../middleware/authUser.js'
-
+import userAuth from '../middleware/authUser.js';
+import { checkAccess } from '../middleware/checkAccess.js';
+import { PERMISSIONS } from '../const/permissions.js';
 const positiveIntegerId = z.coerce
     .number()
     .int('id must be an integer')
@@ -101,29 +102,27 @@ const router = Router();
 
 router.get('/all', userAuth, getAllCollegesAndCourses);
 
-router.post('/campus', userAuth, addCampus);
+router.post('/campus', userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_ADD.value, 'campus'), addCampus);
 
-router.post('/institute', userAuth, addInstitute);
+router.post('/institute', userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_ADD.value, 'institute'), addInstitute);
 
-router.post('/affiliatedUniversity', userAuth, addAffiliatedUniversity);
+router.post('/affiliatedUniversity', userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_ADD.value, 'institute'), addAffiliatedUniversity);
 
-router.post('/course', userAuth, validate({ body: addCourseSchema }), addCourse);
-router.patch('/course', userAuth, validate({ body: updateCourseSchema }), updateCourse);
-router.patch('/course/status', userAuth, validate({ body: changeCourseStatusSchema }), changeCourseStatus);
+router.post('/course', userAuth, checkAccess(PERMISSIONS.COURSES_ADD.value, null), validate({ body: addCourseSchema }), addCourse);
+router.patch('/course', userAuth, checkAccess(PERMISSIONS.COURSES_EDIT.value, null), validate({ body: updateCourseSchema }), updateCourse);
+router.patch('/course/status', userAuth, checkAccess(PERMISSIONS.COURSES_CHANGE_STATUS.value, null), validate({ body: changeCourseStatusSchema }), changeCourseStatus);
 
-router.post('/specialization', userAuth, addSpecialization);
+router.post('/specialization', userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_ADD.value, 'specialization'), addSpecialization);
 
-router.post('/subject', userAuth, validate({ body: addSubjectSchema }), addSubject);
-
-router.patch('/subject/update', userAuth, validate({ body: updateSubjectSchema }), updateSubject);
+router.post('/subject', userAuth, checkAccess(PERMISSIONS.SUBJECTS_ADD.value, null), validate({ body: addSubjectSchema }), addSubject);
+router.patch('/subject/update', userAuth, checkAccess(PERMISSIONS.SUBJECTS_EDIT.value, null), validate({ body: updateSubjectSchema }), updateSubject);
 
 // Section master (class table removed)
-router.post('/classSections', userAuth, validate({ body: addClassSectionsSchema }), addClassSections);
-router.get('/classSections', userAuth, getClassSections);
-
-router.get('/classSectionSpecific', userAuth, getClassSectionSpecific);
-router.post('/sectionSubjectMapper', userAuth, addSectionSubjectMapper);
-router.get('/sectionSubjectMapper', userAuth, getSectionSubjectMapper);
+router.post('/classSections', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP_ADD.value, null), validate({ body: addClassSectionsSchema }), addClassSections);
+router.get('/classSections', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP.value, null), getClassSections);
+router.get('/classSectionSpecific', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP.value, null), getClassSectionSpecific);
+router.post('/sectionSubjectMapper', userAuth, checkAccess(PERMISSIONS.SEMESTER_SUBJECT_MAPPING_ASSIGN.value, null), addSectionSubjectMapper);
+router.get('/sectionSubjectMapper', userAuth, checkAccess(PERMISSIONS.SEMESTER_SUBJECT_MAPPING.value, null), getSectionSubjectMapper);
 router.get(
     '/classSectionRecord',
     userAuth,
@@ -131,7 +130,7 @@ router.get(
     getClassSectionRecord,
 );
 
-router.post('/subjectExcel', userAuth, subjectExcel);
+router.post('/subjectExcel', userAuth, checkAccess(PERMISSIONS.SUBJECTS_IMPORT.value, null), subjectExcel);
 
 router.get("/monthly-income", getMonthlyIncome);
 

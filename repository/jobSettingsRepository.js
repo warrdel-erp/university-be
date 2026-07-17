@@ -33,8 +33,7 @@ export async function getSingleJobType(jobSettingId) {
           required: false,
           include: [
             {
-              model: model.employeeModel,
-              as: "facultyJobs",
+              model: model.users, as: "user",
               attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"],
             },
             {

@@ -161,7 +161,7 @@ export async function getUserRolePermissionByUserId(userId) {
                     model: model.userStudentEmployeeModel,
                     as: 'userDetails',
                     distinct: true,
-                    attributes: ["employeeId", "studentId"],
+                    attributes: ["userId", "studentId"],
                     include: [
                         {
                             model: model.studentModel,
@@ -279,7 +279,7 @@ export async function getUserRolePermissionByUserId(userId) {
                         //                     model: model.teacherSectionMappingModel,
                         //                     as: "employeeSection",
                         //                     distinct: true,
-                        //                     // attributes: ["employeeId", 'classSectionsId', 'isCordinatory'],
+                        //                     // attributes: ["userId", 'classSectionsId', 'isCordinatory'],
                         //                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                         //                     include: [
                         //                         {
@@ -313,7 +313,7 @@ export async function getUserRolePermissionByUserId(userId) {
                         //                                     model: model.teacherSubjectMappingModel,
                         //                                     as: "employeeSubject",
                         //                                     // distinct: true,
-                        //                                     // attributes: ["teacherSubjectMappingId", 'employeeId', 'classSubjectMapperId'],
+                        //                                     // attributes: ["teacherSubjectMappingId", 'userId', 'classSubjectMapperId'],
                         //                                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                         //                                 }
                         //                             ]

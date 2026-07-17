@@ -18,8 +18,8 @@ const employeeAchievement = sequelize.define(
             allowNull: false,
             field: 'employee_id',
             references: {
-                model: employee,
-                key: 'employee_id'
+                model: users,
+                key: 'user_id'
             }
         },
         achievementCategory: {

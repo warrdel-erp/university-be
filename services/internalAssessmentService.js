@@ -38,7 +38,7 @@ function formatInternalAssessmentDetail(item) {
   return {
     examAssessmentId: ia.examAssessmentId,
     subjectId: ia.subjectId,
-    employeeId: ia.employeeId,
+    userId: ia.userId,
     type: ia.type,
 
     subject: {
@@ -140,10 +140,10 @@ export async function deleteInternalAssessment(id) {
   return await InternalAssessmentRepository.deleteInternalAssessment(id);
 }
 
-export async function evaluationInternalAssessment(subjectId, employeeId) {
+export async function evaluationInternalAssessment(subjectId, userId) {
   const data = await InternalAssessmentRepository.evaluationInternalAssessment(
     subjectId,
-    employeeId,
+    userId,
   );
 
   if (!data) return null;
@@ -228,7 +228,7 @@ export async function evaluationInternalAssessment(subjectId, employeeId) {
 
 export async function createAssessmentEvaluation(body, createdBy, updatedBy) {
   try {
-    const { subjectId, employeeId, examAssessmentId, students } = body;
+    const { subjectId, userId, examAssessmentId, students } = body;
 
     const seenStudentIds = new Set();
     const dataToInsert = [];
@@ -244,7 +244,7 @@ export async function createAssessmentEvaluation(body, createdBy, updatedBy) {
       seenStudentIds.add(studentId);
       dataToInsert.push({
         subjectId: Number(subjectId),
-        employeeId: Number(employeeId),
+        userId: Number(userId),
         examAssessmentId: Number(examAssessmentId),
         studentId,
         status: student.status || "pending",

@@ -16,6 +16,8 @@ import {
     cloneTimeTableStructure,
 } from '../controllers/timeTableController.js';
 import userAuth from '../middleware/authUser.js';
+import { checkAccess } from '../middleware/checkAccess.js';
+import { PERMISSIONS } from '../const/permissions.js';
 import { validate } from '../utility/validation.js';
 
 const router = Router();
@@ -151,30 +153,30 @@ const deleteStructureCourseMappingQuerySchema = z.object({
 // ---------------------------------------------------------------------------
 // 1. Structure template — create / edit periods
 // ---------------------------------------------------------------------------
-router.post('/', userAuth, validate({ body: addTimeTableSchema }), addTimeTable);
-router.post('/structure/clone', userAuth, validate({ body: cloneTimeTableStructureSchema }), cloneTimeTableStructure);
-router.post('/period', userAuth, validate({ body: addTimeTablePeriodSchema }), addTimeTablePeriod);
-router.patch('/', userAuth, validate({ body: updateTimeTableSchema }), updateTimeTable);
-router.delete('/', userAuth, validate({ query: deleteTimeTableQuerySchema }), deleteTimeTable);
+router.post('/', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP_ADD.value, null), validate({ body: addTimeTableSchema }), addTimeTable);
+router.post('/structure/clone', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP_ADD.value, null), validate({ body: cloneTimeTableStructureSchema }), cloneTimeTableStructure);
+router.post('/period', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP_ADD.value, null), validate({ body: addTimeTablePeriodSchema }), addTimeTablePeriod);
+router.patch('/', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP_EDIT.value, null), validate({ body: updateTimeTableSchema }), updateTimeTable);
+router.delete('/', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP_DELETE.value, null), validate({ query: deleteTimeTableQuerySchema }), deleteTimeTable);
 
 // ---------------------------------------------------------------------------
 // 2. Course mapping — bind structure → course + session + dates
 // ---------------------------------------------------------------------------
-router.post('/courseMapping', userAuth, validate({ body: addStructureCourseMappingSchema }), addStructureCourseMapping);
-router.patch('/structure', userAuth, validate({ body: updateStructureSchema }), updateStructure);
-router.delete('/courseMapping', userAuth, validate({ query: deleteStructureCourseMappingQuerySchema }), deleteStructureCourseMapping);
+router.post('/courseMapping', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP_ADD.value, null), validate({ body: addStructureCourseMappingSchema }), addStructureCourseMapping);
+router.patch('/structure', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP_EDIT.value, null), validate({ body: updateStructureSchema }), updateStructure);
+router.delete('/courseMapping', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP_DELETE.value, null), validate({ query: deleteStructureCourseMappingQuerySchema }), deleteStructureCourseMapping);
 
 // ---------------------------------------------------------------------------
 // 3. Read / list — UI lists, dropdowns, print table
 // ---------------------------------------------------------------------------
-router.get('/', userAuth, getTimeTableDetails);
-router.get('/all_name', userAuth, validate({ query: getAllTimeTableNameQuerySchema }), getAllTimeTableName);
-router.get('/single', userAuth, validate({ query: getSingleStructureQuerySchema }), getSingleTimeTableDetails);
-router.get('/structureMappings', userAuth, validate({ query: getStructureMappingPrintQuerySchema }), getStructureMappingPrintData);
+router.get('/', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP.value, null), getTimeTableDetails);
+router.get('/all_name', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP.value, null), validate({ query: getAllTimeTableNameQuerySchema }), getAllTimeTableName);
+router.get('/single', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP.value, null), validate({ query: getSingleStructureQuerySchema }), getSingleTimeTableDetails);
+router.get('/structureMappings', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP.value, null), validate({ query: getStructureMappingPrintQuerySchema }), getStructureMappingPrintData);
 
 // ---------------------------------------------------------------------------
 // 4. Delete structure — only when no course/program is mapped
 // ---------------------------------------------------------------------------
-router.delete('/structure', userAuth, validate({ query: deleteTimeTableNameQuerySchema }), deleteTimeTableName);
+router.delete('/structure', userAuth, checkAccess(PERMISSIONS.TIME_TABLE_SETUP_DELETE.value, null), validate({ query: deleteTimeTableNameQuerySchema }), deleteTimeTableName);
 
 export default router;

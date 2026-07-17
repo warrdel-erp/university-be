@@ -50,10 +50,13 @@ const governanceBodyIdQuerySchema = z.object({
     governanceBodyId: z.coerce.number().int().positive(),
 });
 
-router.post('/', userAuth, validate({ body: createGovernanceBodySchema }), createGovernanceBody);
-router.get('/', userAuth, getAllGovernanceBodies);
-router.get('/single', userAuth, validate({ query: governanceBodyIdQuerySchema }), getGovernanceBodyById);
-router.patch('/', userAuth, validate({ body: updateGovernanceBodySchema }), updateGovernanceBody);
-router.delete('/', userAuth, validate({ query: governanceBodyIdQuerySchema }), deleteGovernanceBody);
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
+
+router.post('/', userAuth, checkAccess(PERMISSIONS.GOVERNANCE_ADD.value, 'governanceBody'), validate({ body: createGovernanceBodySchema }), createGovernanceBody);
+router.get('/', userAuth, checkAccess(PERMISSIONS.GOVERNANCE.value, 'governanceBody'), getAllGovernanceBodies);
+router.get('/single', userAuth, checkAccess(PERMISSIONS.GOVERNANCE.value, 'governanceBody'), validate({ query: governanceBodyIdQuerySchema }), getGovernanceBodyById);
+router.patch('/', userAuth, checkAccess(PERMISSIONS.GOVERNANCE_EDIT.value, 'governanceBody'), validate({ body: updateGovernanceBodySchema }), updateGovernanceBody);
+router.delete('/', userAuth, checkAccess(PERMISSIONS.GOVERNANCE_DELETE.value, 'governanceBody'), validate({ query: governanceBodyIdQuerySchema }), deleteGovernanceBody);
 
 export default router;

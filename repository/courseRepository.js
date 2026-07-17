@@ -194,7 +194,7 @@ export async function getStudentBySectionId(classSectionId) {
   }
 }
 
-export async function getEmployeeByemployeeId(employeeId) {
+export async function getEmployeeByuserId(userId) {
   try {
     return await scoped(model.employeeModel).findAll({
       attributes: ['employeeName'],
@@ -205,7 +205,7 @@ export async function getEmployeeByemployeeId(employeeId) {
           attributes: ['phoneNumber', 'mobileNumber', 'personal_email', 'officalEmailId'],
         },
       ],
-      where: { employeeId },
+      where: { userId },
     });
   } catch (error) {
     console.error('Error in getting employee details:', error);

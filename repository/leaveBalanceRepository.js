@@ -3,8 +3,8 @@ import { buildScope, scoped } from "../utility/scoped.js";
 
 export async function addBalance(data, options = {}) {
   const employee = await scoped(model.employeeModel).findOne({
-    attributes: ["employeeId"],
-    where: { employeeId: data.employeeId },
+    attributes: ["userId"],
+    where: { userId: data.userId },
     transaction: options.transaction,
   });
   if (!employee) {
@@ -23,17 +23,17 @@ export async function addBalance(data, options = {}) {
   return scoped(model.leaveBalanceModel).create(data, { transaction: options.transaction });
 }
 
-export async function getBalancesByEmployee(employeeId) {
+export async function getBalancesByEmployee(userId) {
   const employee = await scoped(model.employeeModel).findOne({
-    attributes: ["employeeId"],
-    where: { employeeId },
+    attributes: ["userId"],
+    where: { userId },
   });
   if (!employee) {
     return [];
   }
 
   return scoped(model.leaveBalanceModel).findAll({
-    where: { employeeId },
+    where: { userId },
     include: [
       {
         model: model.leavePolicyModel,
@@ -45,17 +45,17 @@ export async function getBalancesByEmployee(employeeId) {
   });
 }
 
-export async function getBalance(employeeId, policyId) {
+export async function getBalance(userId, policyId) {
   const employee = await scoped(model.employeeModel).findOne({
-    attributes: ["employeeId"],
-    where: { employeeId },
+    attributes: ["userId"],
+    where: { userId },
   });
   if (!employee) {
     return null;
   }
 
   return scoped(model.leaveBalanceModel).findOne({
-    where: { employeeId, policyId },
+    where: { userId, policyId },
     include: [
       {
         model: model.leavePolicyModel,
@@ -69,7 +69,7 @@ export async function getBalance(employeeId, policyId) {
 
 export async function updateBalance(balanceId, data, options = {}) {
   const balance = await scoped(model.leaveBalanceModel).findOne({
-    attributes: ["balanceId", "employeeId", "policyId"],
+    attributes: ["balanceId", "userId", "policyId"],
     where: { balanceId },
     include: [
       {
@@ -86,8 +86,8 @@ export async function updateBalance(balanceId, data, options = {}) {
   }
 
   const employee = await scoped(model.employeeModel).findOne({
-    attributes: ["employeeId"],
-    where: { employeeId: balance.employeeId },
+    attributes: ["userId"],
+    where: { userId: balance.userId },
     transaction: options.transaction,
   });
   if (!employee) {

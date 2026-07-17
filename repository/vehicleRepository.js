@@ -3,8 +3,8 @@ import { buildScope, scoped } from "../utility/scoped.js";
 
 export async function createVehicle(vehicleData) {
   const employee = await scoped(model.employeeModel).findOne({
-    attributes: ["employeeId"],
-    where: { employeeId: vehicleData.employeeId },
+    attributes: ["userId"],
+    where: { userId: vehicleData.userId },
   });
   if (!employee) {
     throw new Error("Employee not found");

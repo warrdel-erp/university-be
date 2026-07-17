@@ -179,7 +179,7 @@ export async function getAttendanceDetails() {
                         {
                             model: model.employeeModel,
                             as: 'employeeDetails',
-                            attributes: ["employeeId", "campusId", "instituteId", "employeeCode", "employeeName"],
+                            attributes: ["userId", "campusId", "instituteId", "employeeCode", "employeeName"],
                         },
                         {
                             model: model.electiveSubjectModel,
@@ -253,7 +253,7 @@ export async function addImportAttendance(attendanceRecords) {
     }
 };
 
-export async function getAttendanceByDate(date, classSectionTermId, employeeId) {
+export async function getAttendanceByDate(date, classSectionTermId, userId) {
     try {
         const attendanceDetails = await scoped(model.attendanceModel).findAll({
             attributes: {
@@ -311,8 +311,8 @@ export async function getAttendanceByDate(date, classSectionTermId, employeeId) 
         });
 
         const employee = await scoped(model.employeeModel).findOne({
-            where: { employeeId },
-            attributes: ['employeeId'],
+            where: { userId },
+            attributes: ['userId'],
         });
 
         const subjectDetail = employee
@@ -326,7 +326,7 @@ export async function getAttendanceByDate(date, classSectionTermId, employeeId) 
                         "updatedBy",
                     ],
                 },
-                where: { employeeId },
+                where: { userId },
                 include: [
                     {
                         model: model.classSubjectMapperModel,
@@ -470,10 +470,10 @@ export async function getStudentCount(classSectionsId) {
     });
 };
 
-export async function getTeacherMappings(employeeId) {
+export async function getTeacherMappings(userId) {
     const employee = await scoped(model.employeeModel).findOne({
-        where: { employeeId },
-        attributes: ['employeeId'],
+        where: { userId: userId },
+        attributes: ['userId'],
     });
     if (!employee) {
         return [];
@@ -482,8 +482,8 @@ export async function getTeacherMappings(employeeId) {
     return await model.classScheduleModel.findAll({
         where: {
             [Op.or]: [
-                { employeeId },
-                { "$timeTableTeacherSubject.employee_id$": employeeId },
+                { userId },
+                { "$timeTableTeacherSubject.userId$": userId },
             ],
         },
         include: [
@@ -520,11 +520,11 @@ export async function getTeacherMappings(employeeId) {
     });
 };
 
-export async function getStudentAttendanceReport(classSectionsId, subjectId, employeeId) {
+export async function getStudentAttendanceReport(classSectionsId, subjectId, userId) {
     try {
         const employee = await scoped(model.employeeModel).findOne({
-            where: { employeeId },
-            attributes: ['employeeId'],
+            where: { userId },
+            attributes: ['userId'],
         });
         if (!employee) {
             return [];
@@ -545,7 +545,7 @@ export async function getStudentAttendanceReport(classSectionsId, subjectId, emp
                             as: 'timeTableMapping',
                             required: true,
                             where: {
-                                employeeId,
+                                userId,
                                 subjectId,
                             },
                             attributes: ['timeTableMappingId'],
@@ -570,11 +570,11 @@ export async function getStudentAttendanceReport(classSectionsId, subjectId, emp
     }
 };
 
-export async function getEmployeeScheduleWithRoutine(classSectionTermId, subjectId, employeeId) {
+export async function getEmployeeScheduleWithRoutine(classSectionTermId, subjectId, userId) {
     try {
         const employee = await scoped(model.employeeModel).findOne({
-            where: { employeeId },
-            attributes: ['employeeId'],
+            where: { userId },
+            attributes: ['userId'],
         });
         if (!employee) {
             return [];
@@ -583,7 +583,7 @@ export async function getEmployeeScheduleWithRoutine(classSectionTermId, subject
         return await model.classScheduleModel.findAll({
             where: {
                 subjectId,
-                employeeId,
+                userId,
                 deletedAt: null,
             },
             include: [
@@ -672,7 +672,7 @@ export async function getStudentsByIds(studentIds) {
     }
 }
 
-export async function getDetailsByTerm(classSectionTermId, subjectId, employeeId) {
+export async function getDetailsByTerm(classSectionTermId, subjectId, userId) {
     try {
         const [termDetails, subjectDetails, employeeDetails] = await Promise.all([
             scoped(model.classSectionTermModel).findOne({
@@ -692,7 +692,7 @@ export async function getDetailsByTerm(classSectionTermId, subjectId, employeeId
                 attributes: ['subjectName', 'subjectCode'],
             }),
             scoped(model.employeeModel).findOne({
-                where: { employeeId, deletedAt: null },
+                where: { userId, deletedAt: null },
                 attributes: ['employeeName', 'employeeCode'],
             }),
         ]);

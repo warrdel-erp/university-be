@@ -63,19 +63,24 @@ export async function getAllStudentNotice(role) {
   }
 }
 
-export async function getAllEmployeeNotice(createdBy, role) {
+export async function getAllEmployeeNotice(createdBy, role, academicYearId) {
   try {
-    const noticeCreated = await scoped(model.noticeModel).findAll({
+    const scopeOptions = academicYearId ? { scopeConfig: { academicYear: false } } : {};
+    const whereAcademicYear = academicYearId ? { academicYearId } : {};
+
+    const noticeCreated = await scoped(model.noticeModel, scopeOptions).findAll({
       attributes: { exclude: excludeMeta },
       where: {
         ...(createdBy && { createdBy }),
+        ...whereAcademicYear,
       },
     });
 
-    const noticeAll = await scoped(model.noticeModel).findAll({
+    const noticeAll = await scoped(model.noticeModel, scopeOptions).findAll({
       attributes: { exclude: excludeMeta },
       where: {
         [Op.and]: [messageToContains(role || ROLES.TEACHER)],
+        ...whereAcademicYear,
       },
     });
 

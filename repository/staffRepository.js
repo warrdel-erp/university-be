@@ -20,7 +20,7 @@ export async function addStaff(staffData) {
     try {
         const payload = {
             departmentId: staffData?.departmentId,
-            employeeId: staffData?.employeeId,
+            userId: staffData?.userId,
             createdBy: staffData?.createdBy,
             updatedBy: staffData?.updatedBy
         };
@@ -65,7 +65,7 @@ export async function updateStaff(staffId, staffData) {
     try {
         const payload = {
             departmentId: staffData?.departmentId,
-            employeeId: staffData?.employeeId,
+            userId: staffData?.userId,
             updatedBy: staffData?.updatedBy
         };
         return await scoped(model.staffModel).update(payload, {

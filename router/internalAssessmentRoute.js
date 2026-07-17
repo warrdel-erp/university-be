@@ -12,6 +12,8 @@ import {
 } from "../controllers/internalAssessmentController.js";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 
 const router = Router();
 
@@ -30,7 +32,7 @@ const addInternalAssessmentSchema = z.object({
     publishDate: z.string().min(1),
     dueDate: z.string().min(1),
     description: z.string().min(1),
-    employeeId: positiveIntegerId.optional(),
+    userId: positiveIntegerId.optional(),
 }).strict();
 
 const getAllInternalAssessmentQuerySchema = z.object({
@@ -52,12 +54,12 @@ const updateInternalAssessmentSchema = z.array(z.object({
     publishDate: z.string().min(1).optional(),
     dueDate: z.string().min(1).optional(),
     description: z.string().min(1).optional(),
-    employeeId: positiveIntegerId.optional(),
+    userId: positiveIntegerId.optional(),
 }).strict()).min(1, 'Request body must be a non-empty array.');
 
 const evaluationQuerySchema = z.object({
     subjectId: positiveIntegerId,
-    employeeId: positiveIntegerId,
+    userId: positiveIntegerId,
 }).strict();
 
 const assessmentEvaluationStudentSchema = z.object({
@@ -70,7 +72,7 @@ const assessmentEvaluationStudentSchema = z.object({
 
 const createAssessmentEvaluationSchema = z.object({
     subjectId: positiveIntegerId,
-    employeeId: positiveIntegerId,
+    userId: positiveIntegerId,
     examAssessmentId: positiveIntegerId,
     students: z.array(assessmentEvaluationStudentSchema).min(1, 'students array is required'),
 }).strict();
@@ -78,7 +80,7 @@ const createAssessmentEvaluationSchema = z.object({
 const updateAssessmentEvaluationSchema = z.object({
     assessmentEvalutionId: positiveIntegerId,
     subjectId: positiveIntegerId.optional(),
-    employeeId: positiveIntegerId.optional(),
+    userId: positiveIntegerId.optional(),
     examAssessmentId: positiveIntegerId.optional(),
     studentId: positiveIntegerId.optional(),
     status: z.string().min(1).optional(),
@@ -87,20 +89,20 @@ const updateAssessmentEvaluationSchema = z.object({
     file: z.any().optional(),
 }).strict();
 
-router.post("/", userAuth, validate({ body: addInternalAssessmentSchema }), addInternalAssessment);
+router.post("/", userAuth, checkAccess(PERMISSIONS.INTERNAL_ASSESSMENT_ADD.value, null), validate({ body: addInternalAssessmentSchema }), addInternalAssessment);
 
-router.get("/", userAuth, validate({ query: getAllInternalAssessmentQuerySchema }), getAllInternalAssessment);
+router.get("/", userAuth, checkAccess(PERMISSIONS.INTERNAL_ASSESSMENT.value, null), validate({ query: getAllInternalAssessmentQuerySchema }), getAllInternalAssessment);
 
-router.get("/single", userAuth, validate({ query: examAssessmentIdQuerySchema }), getSingleInternalAssessment);
+router.get("/single", userAuth, checkAccess(PERMISSIONS.INTERNAL_ASSESSMENT.value, null), validate({ query: examAssessmentIdQuerySchema }), getSingleInternalAssessment);
 
-router.patch("/", userAuth, validate({ body: updateInternalAssessmentSchema }), updateInternalAssessments);
+router.patch("/", userAuth, checkAccess(PERMISSIONS.INTERNAL_ASSESSMENT_EDIT.value, null), validate({ body: updateInternalAssessmentSchema }), updateInternalAssessments);
 
-router.delete("/", userAuth, validate({ query: examAssessmentIdQuerySchema }), deleteInternalAssessment);
+router.delete("/", userAuth, checkAccess(PERMISSIONS.INTERNAL_ASSESSMENT_DELETE.value, null), validate({ query: examAssessmentIdQuerySchema }), deleteInternalAssessment);
 
-router.get("/evaluation", userAuth, validate({ query: evaluationQuerySchema }), evaluationInternalAssessment);
+router.get("/evaluation", userAuth, checkAccess(PERMISSIONS.INTERNAL_ASSESSMENT.value, null), validate({ query: evaluationQuerySchema }), evaluationInternalAssessment);
 
-router.post("/evaluation", userAuth, validate({ body: createAssessmentEvaluationSchema }), createAssessmentEvaluation);
+router.post("/evaluation", userAuth, checkAccess(PERMISSIONS.INTERNAL_ASSESSMENT_EVALUATE.value, null), validate({ body: createAssessmentEvaluationSchema }), createAssessmentEvaluation);
 
-router.patch("/evaluation", userAuth, validate({ body: updateAssessmentEvaluationSchema }), updateAssessmentEvaluation);
+router.patch("/evaluation", userAuth, checkAccess(PERMISSIONS.INTERNAL_ASSESSMENT_EVALUATE.value, null), validate({ body: updateAssessmentEvaluationSchema }), updateAssessmentEvaluation);
 
 export default router;

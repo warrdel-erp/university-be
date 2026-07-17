@@ -81,10 +81,10 @@ const libraryBookInventoryModel = sequelize.define(
     employeeId: {
       type: DataTypes.INTEGER,
       allowNull: true,
-      field: "employee_id",
+      field: 'user_id',
       references: {
         model: employeeModel,
-        key: "employee_id",
+        key: 'user_id',
       },
     },
     libraryRackId: {

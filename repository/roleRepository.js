@@ -48,15 +48,15 @@ export async function findStudentRoleId() {
 }
 
 export async function findRoleByRoleName(roleName) {
-  const rows = await sequelize.query(
-    `SELECT role_id AS roleId, role
-     FROM role
-     WHERE role = CONVERT(:roleName USING latin1)
-       AND deleted_at IS NULL
-     LIMIT 1`,
-    { replacements: { roleName }, type: QueryTypes.SELECT }
-  );
-  return rows[0] ?? null;
+  try {
+    const roleRecord = await scoped(model.roleModel).findOne({
+      where: { role: roleName }
+    });
+    return roleRecord ? (typeof roleRecord.get === "function" ? roleRecord.get({ plain: true }) : roleRecord) : null;
+  } catch (error) {
+    console.error("Error finding role by name:", error);
+    throw error;
+  }
 }
 
 export async function deleteRole(roleId) {

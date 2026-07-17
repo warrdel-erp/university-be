@@ -320,11 +320,11 @@ export async function getPeriodInfoRepository(timeTableCreationId) {
   });
 };
 
-// export async function checkTeacherConflictRepository(employeeId, day, startTime, endTime) {
+// export async function checkTeacherConflictRepository(userId, day, startTime, endTime) {
 //   try {
 //     return await model.classScheduleModel.findOne({
 //       where: {
-//         employeeId,
+//         userId,
 //         day
 //       },
 //       include: [
@@ -354,7 +354,7 @@ export async function getPeriodInfoRepository(timeTableCreationId) {
 // };
 
 export async function checkTeacherConflictRepository(
-  employeeId,
+  userId,
   day,
   startTime,
   endTime,
@@ -989,12 +989,12 @@ export async function getTimeTableCellData(courseId, classSectionTermId) {
   return result;
 };
 
-// export async function getTeacherTimeTable(employeeId,universityId,instituteId,role) {
-//   console.log(`>>>>>>>>employeeId`,employeeId);
+// export async function getTeacherTimeTable(userId,universityId,instituteId,role) {
+//   console.log(`>>>>>>>>userId`,userId);
 
 //   try {
 
-//     const teacherWhere = { employeeId };
+//     const teacherWhere = { userId };
 
 //     const result = await scoped(model.timeTableRoutineModel).findAll({
 //       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
@@ -1032,7 +1032,7 @@ export async function getTimeTableCellData(courseId, classSectionTermId) {
 //                 {
 //                   model: model.employeeModel,
 //                   as: "teacherEmployeeData",
-//                   attributes: ["employeeId", "employeeName", "employeeCode", "pickColor"],
+//                   attributes: ["userId", "employeeName", "employeeCode", "pickColor"],
 //                   where: teacherWhere
 //                 },
 //                 {
@@ -1051,8 +1051,8 @@ export async function getTimeTableCellData(courseId, classSectionTermId) {
 //             //  NORMAL SUBJECT FLOW
 //             {
 //               model: model.employeeModel,
-//               as: "employeeDetails",
-//               attributes: ["employeeId", "employeeName", "employeeCode", "pickColor"],
+//               as: "user",
+//               attributes: ["userId", "employeeName", "employeeCode", "pickColor"],
 //               required: false,
 //               where: teacherWhere
 //             },
@@ -1537,8 +1537,8 @@ const teacherClassSectionInclude = (courseId, sessionId) =>
     ],
   });
 
-const teacherNormalScheduleInclude = (employeeId, subjectId) => {
-  const scheduleWhere = { employeeId: Number(employeeId) };
+const teacherNormalScheduleInclude = (userId, subjectId) => {
+  const scheduleWhere = { userId: Number(userId) };
   if (subjectId != null) {
     scheduleWhere.subjectId = Number(subjectId);
   }
@@ -1548,60 +1548,58 @@ const teacherNormalScheduleInclude = (employeeId, subjectId) => {
     as: 'timeTablecreate',
     required: true,
     where: scheduleWhere,
-  include: [
-    {
-      model: model.employeeModel,
-      as: 'employeeDetails',
-      attributes: ['employeeId', 'employeeName', 'pickColor'],
-      where: buildScope(model.employeeModel),
-      required: false,
-    },
-    {
-      model: model.subjectModel,
-      as: 'timeTableSubject',
-      attributes: ['subjectId', 'subjectName'],
-      where: buildScope(model.subjectModel),
-      required: false,
-    },
-    {
-      model: model.classRoomModel,
-      as: 'classRoom',
-      attributes: ['classRoomSectionId', 'roomNumber'],
-    },
-    {
-      model: model.teacherSubjectMappingModel,
-      as: 'timeTableTeacherSubject',
-      include: [
-        {
-          model: model.employeeModel,
-          as: 'teacherEmployeeData',
-          attributes: ['employeeId', 'employeeName', 'pickColor'],
-          where: buildScope(model.employeeModel),
-          required: false,
-        },
-        {
-          model: model.subjectModel,
-          as: 'employeeSubject',
-          attributes: ['subjectId', 'subjectName'],
-          where: buildScope(model.subjectModel),
-          required: false,
-        },
-      ],
-    },
-  ],
+    include: [
+      {
+        model: model.employeeModel, as: "employeeDetails",
+        attributes: ['userId', 'employeeName', 'pickColor'],
+        where: buildScope(model.employeeModel),
+        required: false,
+      },
+      {
+        model: model.subjectModel,
+        as: 'timeTableSubject',
+        attributes: ['subjectId', 'subjectName'],
+        where: buildScope(model.subjectModel),
+        required: false,
+      },
+      {
+        model: model.classRoomModel,
+        as: 'classRoom',
+        attributes: ['classRoomSectionId', 'roomNumber'],
+      },
+      {
+        model: model.teacherSubjectMappingModel,
+        as: 'timeTableTeacherSubject',
+        include: [
+          {
+            model: model.employeeModel,
+            as: 'teacherEmployeeData',
+            attributes: ['userId', 'employeeName', 'pickColor'],
+            where: buildScope(model.employeeModel),
+            required: false,
+          },
+          {
+            model: model.subjectModel,
+            as: 'employeeSubject',
+            attributes: ['subjectId', 'subjectName'],
+            where: buildScope(model.subjectModel),
+            required: false,
+          },
+        ],
+      },
+    ],
   };
 };
 
-const teacherElectiveScheduleInclude = (employeeId) => ({
+const teacherElectiveScheduleInclude = (userId) => ({
   model: model.classScheduleModel,
   as: 'timeTablecreate',
   required: true,
-  where: { employeeId },
+  where: { userId },
   include: [
     {
-      model: model.employeeModel,
-      as: 'employeeDetails',
-      attributes: ['employeeId', 'employeeName', 'pickColor'],
+      model: model.employeeModel, as: "employeeDetails",
+      attributes: ['userId', 'employeeName', 'pickColor'],
       where: buildScope(model.employeeModel),
       required: false,
     },
@@ -1618,11 +1616,11 @@ const teacherElectiveScheduleInclude = (employeeId) => ({
   ],
 });
 
-async function fetchTeacherRoutineContext(employeeId, courseId, sessionId) {
+async function fetchTeacherRoutineContext(userId, courseId, sessionId) {
   return Promise.all([
     scoped(model.employeeModel).findOne({
-      where: { employeeId },
-      attributes: ['employeeId', 'employeeName', 'employeeCode', 'pickColor'],
+      where: { userId },
+      attributes: ['userId', 'employeeName', 'employeeCode', 'pickColor'],
     }),
     scoped(model.courseModel).findOne({
       where: { courseId },
@@ -1643,7 +1641,7 @@ async function fetchTeacherRoutineContext(employeeId, courseId, sessionId) {
   ]);
 }
 
-async function fetchNormalRoutinesForTeacher(employeeId, courseId, sessionId, subjectId) {
+async function fetchNormalRoutinesForTeacher(userId, courseId, sessionId, subjectId) {
   return scoped(model.timeTableRoutineModel).findAll({
     where: {
       courseId,
@@ -1661,7 +1659,7 @@ async function fetchNormalRoutinesForTeacher(employeeId, courseId, sessionId, su
     ],
     include: [
       teacherRoutineStructureInclude,
-      teacherNormalScheduleInclude(employeeId, subjectId),
+      teacherNormalScheduleInclude(userId, subjectId),
       teacherClassSectionInclude(courseId, sessionId),
     ],
     order: [['timeTableRoutineId', 'ASC']],
@@ -1669,7 +1667,7 @@ async function fetchNormalRoutinesForTeacher(employeeId, courseId, sessionId, su
 }
 
 async function fetchElectiveScheduleItemsForTeacher(
-  employeeId,
+  userId,
   courseId,
   sessionId,
   timeTableNameIds,
@@ -1862,185 +1860,184 @@ export async function getTodayClassScheduleForEmployee(employeeId, currentDate, 
  * Used by GET /employee/pastSchedule; service layer expands each mapping into past dates.
  */
 export async function getPastClassSchedulesForEmployee(
-  employeeId,
+  userId,
   academicYearId,
   currentDate,
   sessionId
 ) {
   return await model.classScheduleModel.findAll({
-      raw: true,
-      nest: true,
-      where: {
-        employeeId: Number(employeeId),
-      },
-      attributes: [
-        'timeTableMappingId',
-        'timeTableType',
-        'day',
-        'period',
-        'isAttendence',
-        'isSameTeacher',
-        'timeTableNameId',
-        'timeTableCreationId'
-      ],
-      include: [
-        {
-          model: model.timeTableRoutineModel,
-          as: "timeTablecreate",
-          required: true,
-          attributes: ['timeTableRoutineId', 'startingDate', 'endingDate'],
-          where: {
-            is_publish: true,
-            academicYearId,
-            startingDate: {
-              [Op.lt]: currentDate
-            },
-            ...buildScope(model.timeTableRoutineModel),
+    raw: true,
+    nest: true,
+    where: {
+      userId: Number(userId),
+    },
+    attributes: [
+      'timeTableMappingId',
+      'timeTableType',
+      'day',
+      'period',
+      'isAttendence',
+      'isSameTeacher',
+      'timeTableNameId',
+      'timeTableCreationId'
+    ],
+    include: [
+      {
+        model: model.timeTableRoutineModel,
+        as: "timeTablecreate",
+        required: true,
+        attributes: ['timeTableRoutineId', 'startingDate', 'endingDate'],
+        where: {
+          is_publish: true,
+          academicYearId,
+          startingDate: {
+            [Op.lt]: currentDate
           },
-          include: [
-            {
-              model: model.courseModel,
-              as: "timeTableCourse",
-              attributes: ['courseId', 'courseName']
+          ...buildScope(model.timeTableRoutineModel),
+        },
+        include: [
+          {
+            model: model.courseModel,
+            as: "timeTableCourse",
+            attributes: ['courseId', 'courseName']
+          },
+          timeTableRoutineClassSectionInclude({
+            sectionRequired: Boolean(sessionId),
+            sectionWhere: {
+              ...(sessionId && { sessionId }),
             },
-            timeTableRoutineClassSectionInclude({
-              sectionRequired: Boolean(sessionId),
-              sectionWhere: {
-                ...(sessionId && { sessionId }),
-              },
-              termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
-              sectionAttributes: ['year', 'section', 'classSectionsId'],
-            })
-          ]
-        },
-        {
-          model: model.timeTableStructurePeriodsModel,
-          as: "timeTablecreation",
-          required: true,
-          attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime']
-        },
-        {
-          model: model.teacherSubjectMappingModel,
-          as: "timeTableTeacherSubject",
-          attributes: ['teacherSubjectMappingId'],
-          include: [
-            {
-              model: model.subjectModel,
-              as: "employeeSubject",
-              attributes: ['subjectId', 'subjectName'],
-            }
-          ]
-        },
-        {
-          model: model.employeeModel,
-          as: "employeeDetails",
-          attributes: [
-            "employeeId",
-            "employeeName",
-            "employeeCode",
-            "pickColor"
-          ]
-        },
-        {
-          model: model.subjectModel,
-          as: "timeTableSubject",
-          attributes: ['subjectId', 'subjectName']
-        },
-        {
-          model: model.electiveSubjectModel,
-          as: "timeTableElective",
-          attributes: ['electiveSubjectId', 'electiveSubjectName']
-        },
-        {
-          model: model.classRoomModel,
-          as: "classRoom",
-          attributes: ['roomNumber']
-        }
-      ],
+            termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
+            sectionAttributes: ['year', 'section', 'classSectionsId'],
+          })
+        ]
+      },
+      {
+        model: model.timeTableStructurePeriodsModel,
+        as: "timeTablecreation",
+        required: true,
+        attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime']
+      },
+      {
+        model: model.teacherSubjectMappingModel,
+        as: "timeTableTeacherSubject",
+        attributes: ['teacherSubjectMappingId'],
+        include: [
+          {
+            model: model.subjectModel,
+            as: "employeeSubject",
+            attributes: ['subjectId', 'subjectName'],
+          }
+        ]
+      },
+      {
+        model: model.employeeModel, as: "employeeDetails",
+        attributes: [
+          "userId",
+          "employeeName",
+          "employeeCode",
+          "pickColor"
+        ]
+      },
+      {
+        model: model.subjectModel,
+        as: "timeTableSubject",
+        attributes: ['subjectId', 'subjectName']
+      },
+      {
+        model: model.electiveSubjectModel,
+        as: "timeTableElective",
+        attributes: ['electiveSubjectId', 'electiveSubjectName']
+      },
+      {
+        model: model.classRoomModel,
+        as: "classRoom",
+        attributes: ['roomNumber']
+      }
+    ],
   });
 }
 
 export async function getUpcomingClassSchedulesForEmployee(
-  employeeId,
+  userId,
   academicYearId,
   currentDate
 ) {
   return await model.classScheduleModel.findAll({
-      raw: true,
-      nest: true,
-      where: {
-        employeeId: Number(employeeId),
-      },
-      attributes: [
-        'timeTableMappingId',
-        'timeTableType',
-        'day',
-        'period',
-        'isAttendence',
-        'isSameTeacher',
-        'timeTableNameId',
-        'timeTableCreationId'
-      ],
-      include: [
-        {
-          model: model.timeTableRoutineModel,
-          as: "timeTablecreate",
-          required: true,
-          attributes: ['timeTableRoutineId', 'startingDate', 'endingDate'],
-          where: {
-            is_publish: true,
-            academicYearId,
-            endingDate: {
-              [Op.gte]: currentDate
-            },
-            ...buildScope(model.timeTableRoutineModel),
+    raw: true,
+    nest: true,
+    where: {
+      userId: Number(userId),
+    },
+    attributes: [
+      'timeTableMappingId',
+      'timeTableType',
+      'day',
+      'period',
+      'isAttendence',
+      'isSameTeacher',
+      'timeTableNameId',
+      'timeTableCreationId'
+    ],
+    include: [
+      {
+        model: model.timeTableRoutineModel,
+        as: "timeTablecreate",
+        required: true,
+        attributes: ['timeTableRoutineId', 'startingDate', 'endingDate'],
+        where: {
+          is_publish: true,
+          academicYearId,
+          endingDate: {
+            [Op.gte]: currentDate
           },
-          include: [
-            {
-              model: model.courseModel,
-              as: "timeTableCourse",
-              attributes: ['courseName']
-            },
-            timeTableRoutineClassSectionInclude({
-              termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
-              sectionAttributes: ['year', 'section', 'classSectionsId'],
-            })
-          ]
+          ...buildScope(model.timeTableRoutineModel),
         },
-        {
-          model: model.timeTableStructurePeriodsModel,
-          as: "timeTablecreation",
-          required: true,
-          attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime']
-        },
-        {
-          model: model.teacherSubjectMappingModel,
-          as: "timeTableTeacherSubject",
-          attributes: ['teacherSubjectMappingId'],
-          include: [
-            {
-              model: model.subjectModel,
-              as: "employeeSubject",
-              attributes: ['subjectId', 'subjectName'],
-            }
-          ]
-        },
-        {
-          model: model.subjectModel,
-          as: "timeTableSubject",
-          attributes: ['subjectId', 'subjectName']
-        },
-        {
-          model: model.electiveSubjectModel,
-          as: "timeTableElective",
-          attributes: ['electiveSubjectId', 'electiveSubjectName']
-        },
-        {
-          model: model.classRoomModel,
-          as: "classRoom",
-          attributes: ['roomNumber']
-        }
-      ],
+        include: [
+          {
+            model: model.courseModel,
+            as: "timeTableCourse",
+            attributes: ['courseName']
+          },
+          timeTableRoutineClassSectionInclude({
+            termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
+            sectionAttributes: ['year', 'section', 'classSectionsId'],
+          })
+        ]
+      },
+      {
+        model: model.timeTableStructurePeriodsModel,
+        as: "timeTablecreation",
+        required: true,
+        attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime']
+      },
+      {
+        model: model.teacherSubjectMappingModel,
+        as: "timeTableTeacherSubject",
+        attributes: ['teacherSubjectMappingId'],
+        include: [
+          {
+            model: model.subjectModel,
+            as: "employeeSubject",
+            attributes: ['subjectId', 'subjectName'],
+          }
+        ]
+      },
+      {
+        model: model.subjectModel,
+        as: "timeTableSubject",
+        attributes: ['subjectId', 'subjectName']
+      },
+      {
+        model: model.electiveSubjectModel,
+        as: "timeTableElective",
+        attributes: ['electiveSubjectId', 'electiveSubjectName']
+      },
+      {
+        model: model.classRoomModel,
+        as: "classRoom",
+        attributes: ['roomNumber']
+      }
+    ],
   });
 }
 

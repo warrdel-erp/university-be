@@ -143,9 +143,9 @@ export async function getExamStructureSchedule(examSetupTypeId) {
 
         const teachers = (sub.employeeSubject || []).map((ts) => ({
           teacherSubjectMappingId: ts.teacherSubjectMappingId,
-          employeeId: ts.employeeId,
+          userId: ts.userId,
           employee: {
-            employeeId: ts.teacherEmployeeData?.employeeId || null,
+            userId: ts.teacherEmployeeData?.userId || null,
             employeeName: ts.teacherEmployeeData?.employeeName || null,
             employeeCode: ts.teacherEmployeeData?.employeeCode || null,
             department: ts.teacherEmployeeData?.department || null,

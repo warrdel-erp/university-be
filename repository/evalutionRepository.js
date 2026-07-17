@@ -22,9 +22,8 @@ export async function getEvaluationDetails(examSetupTypeId) {
       },
       include: [
         {
-          model: model.employeeModel,
-          as: "employeeEvalution",
-          attributes: ["employeeId", "employeeName", "employeeCode", "department"],
+          model: model.users, as: "user",
+          attributes: ["userId", "employeeName", "employeeCode", "department"],
           where: buildScope(model.employeeModel),
           required: false,
         },
@@ -61,9 +60,8 @@ export async function getSingleEvaluationDetails(evalutionId) {
       },
       include: [
         {
-          model: model.employeeModel,
-          as: "employeeEvalution",
-          attributes: ["employeeId", "employeeName", "employeeCode", "department"],
+          model: model.users, as: "user",
+          attributes: ["userId", "employeeName", "employeeCode", "department"],
           where: buildScope(model.employeeModel),
           required: false,
         },
@@ -91,18 +89,17 @@ export async function getSingleEvaluationDetails(evalutionId) {
   }
 }
 
-export async function getTeacherSubjectEvalution(employeeId) {
+export async function getTeacherSubjectEvalution(userId) {
   try {
     const Evaluation = await scoped(model.evalutionModel).findOne({
-      where: { employeeId },
+      where: { userId },
       attributes: {
         exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
       },
       include: [
         {
-          model: model.employeeModel,
-          as: "employeeEvalution",
-          attributes: ["employeeId", "employeeName", "employeeCode", "department"],
+          model: model.users, as: "user",
+          attributes: ["userId", "employeeName", "employeeCode", "department"],
           where: buildScope(model.employeeModel),
           required: true,
         },

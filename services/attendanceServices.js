@@ -366,18 +366,18 @@ export async function getAttendanceDetails() {
     const subjectCode = timeTableMapping?.isSameTeacher
       ? timeTableMapping?.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectCode
       : timeTableMapping?.timeTableSubject?.subjectCode;
-    const employeeId = timeTableMapping?.isSameTeacher
-      ? timeTableMapping?.timeTableTeacherSubject?.employeeId
-      : timeTableMapping.employeeId;
+    const userId = timeTableMapping?.isSameTeacher
+      ? timeTableMapping?.timeTableTeacherSubject?.userId
+      : timeTableMapping.userId;
     const classSectionsId = classAttendance?.classSectionsId;
     const sectionName = classAttendance?.section;
-    const groupKey = `${subjectId}_${employeeId}_${classSectionsId}_${recordDate}`;
+    const groupKey = `${subjectId}_${userId}_${classSectionsId}_${recordDate}`;
     if (!groupedData[groupKey]) {
       groupedData[groupKey] = {
         subjectId,
         subjectName,
         subjectCode,
-        employeeId,
+        userId,
         classSectionId: classSectionsId,
         sectionName,
         date: recordDate,
@@ -537,8 +537,8 @@ export async function importAttendanceData(excelData, commonData) {
 };
 
 
-export async function getAttendanceByDate(date, classSectionTermId, employeeId) {
-  const data = await attendanceService.getAttendanceByDate(date, classSectionTermId, employeeId);
+export async function getAttendanceByDate(date, classSectionTermId, userId) {
+  const data = await attendanceService.getAttendanceByDate(date, classSectionTermId, userId);
 
   const { attendanceDetails = [], subjectDetail = {} } = data;
 
@@ -588,8 +588,8 @@ export async function getAttendanceByDate(date, classSectionTermId, employeeId) 
 
 
 
-export async function getPreviousSessions(employeeId, req) {
-  const mappings = await attendanceService.getTeacherMappings(employeeId);
+export async function getPreviousSessions(userId, req) {
+  const mappings = await attendanceService.getTeacherMappings(userId);
 
   if (!Array.isArray(mappings) || !mappings.length) {
     return { data: [] };
@@ -695,18 +695,18 @@ export async function getPreviousSessions(employeeId, req) {
   };
 };
 
-export async function getStudentAttendanceReport(classSectionsId, subjectId, employeeId) {
-  const students = await attendanceService.getStudentAttendanceReport(classSectionsId, subjectId, employeeId);
+export async function getStudentAttendanceReport(classSectionsId, subjectId, userId) {
+  const students = await attendanceService.getStudentAttendanceReport(classSectionsId, subjectId, userId);
 
   return students;
 
 };
 
-export async function getEmployeeSectionDates(classSectionTermId, subjectId, employeeId) {
+export async function getEmployeeSectionDates(classSectionTermId, subjectId, userId) {
   const placement = await resolveAttendancePlacement(classSectionTermId);
   const [scheduleItems, details] = await Promise.all([
-    attendanceService.getEmployeeScheduleWithRoutine(placement.classSectionTermId, subjectId, employeeId),
-    attendanceService.getDetailsByTerm(placement.classSectionTermId, subjectId, employeeId),
+    attendanceService.getEmployeeScheduleWithRoutine(placement.classSectionTermId, subjectId, userId),
+    attendanceService.getDetailsByTerm(placement.classSectionTermId, subjectId, userId),
   ]);
 
   const dateMap = {};

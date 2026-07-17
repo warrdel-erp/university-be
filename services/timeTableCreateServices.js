@@ -64,7 +64,7 @@ function assertRoutineDatesWithinStructure(courseMapping, startingDate, endingDa
 }
 
 const COPY_OVERRIDE_FIELDS = [
-  'timeTableRoutineId', 'employeeId', 'subjectId', 'electiveSubjectId',
+  'timeTableRoutineId', 'userId', 'subjectId', 'electiveSubjectId',
   'teacherSubjectMappingId', 'classRoomSectionId', 'isSameTeacher', 'teacherType',
   'isAttendence', 'isOverridingSyblingElectives', 'timeTableType',
 ];
@@ -368,7 +368,7 @@ function buildCopyPayload(sourceRow, target, request) {
     timeTableCreationId: target.timeTableCreationId,
     day: target.day,
     period: target.period,
-    employeeId: src.employeeId,
+    userId: src.userId,
     subjectId: src.subjectId,
     electiveSubjectId: src.electiveSubjectId,
     teacherSubjectMappingId: src.teacherSubjectMappingId,
@@ -459,7 +459,7 @@ function throwSlotConflictError(message) {
 }
 
 async function assertNoSlotConflicts({
-  employeeId,
+  userId,
   classRoomSectionId,
   day,
   periodInfo,
@@ -483,9 +483,9 @@ async function assertNoSlotConflicts({
     ...(excludeRoutineId != null && { excludeRoutineId }),
   };
 
-  if (employeeId) {
+  if (userId) {
     const conflict = await timeTableCreateRepository.checkTeacherConflictRepository(
-      employeeId,
+      userId,
       day,
       startTime,
       endTime,
@@ -533,17 +533,17 @@ async function assertNoSlotConflicts({
   }
 }
 
-async function addFacultyLoadForEmployee(employeeId, periodLength, transaction) {
-  if (!employeeId || periodLength <= 0) {
+async function addFacultyLoadForEmployee(userId, periodLength, transaction) {
+  if (!userId || periodLength <= 0) {
     return;
   }
 
-  const facultyLoad = await getSingleFaculityLoadDetails(employeeId);
+  const facultyLoad = await getSingleFaculityLoadDetails(userId);
   const existingLoad = toMoneyNumber(
     facultyLoad?.[0]?.dataValues?.currentLoad ?? facultyLoad?.[0]?.currentLoad,
   );
   await updateFaculityLoadByEmployeeId(
-    employeeId,
+    userId,
     { currentLoad: decimalAdd(existingLoad, periodLength) },
     transaction,
   );
@@ -965,7 +965,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
 
       for (const payload of copyPayloads) {
         await assertNoSlotConflicts({
-          employeeId: payload.employeeId,
+          userId: payload.userId,
           classRoomSectionId: payload.classRoomSectionId,
           day: payload.day,
           periodInfo,
@@ -1004,7 +1004,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
       }
 
       for (const payload of copyPayloads) {
-        await addFacultyLoadForEmployee(payload.employeeId, periodLength, transaction);
+        await addFacultyLoadForEmployee(payload.userId, periodLength, transaction);
       }
 
       await transaction.commit();
@@ -1021,7 +1021,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
       timeTableRoutineId,
       day,
       classRoomSectionId,
-      employeeId,
+      userId,
       combinedGroupId: existingCombinedGroupId,
     } = payload;
 
@@ -1083,7 +1083,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
       );
 
       await assertNoSlotConflicts({
-        employeeId,
+        userId,
         classRoomSectionId,
         day,
         periodInfo,
@@ -1134,7 +1134,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
       }
     }
 
-    await addFacultyLoadForEmployee(employeeId, totalPeriodLength, transaction);
+    await addFacultyLoadForEmployee(userId, totalPeriodLength, transaction);
 
     await transaction.commit();
 
@@ -1177,7 +1177,7 @@ export async function cloneTimeTableRoutine(
   const mappingCloneFields = [
     'timeTableNameId',
     'timeTableCreationId',
-    'employeeId',
+    'userId',
     'electiveSubjectId',
     'subjectId',
     'teacherSubjectMappingId',
@@ -1507,9 +1507,9 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
     // LOOP
     for (const item of mappingArray) {
       //  check conflict
-      if (item.employeeId) {
+      if (item.userId) {
         const conflict = await timeTableCreateRepository.checkTeacherConflictRepository(
-          item.employeeId,
+          item.userId,
           baseRow.day,
           startTime,
           endTime,
@@ -1553,14 +1553,14 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
 
       // ===== CASE 2: NEW ENTRY =====
       else if (item.isNew === true) {
-        if (!item.employeeId) {
-          throw new Error("employeeId is required for new teacher entry");
+        if (!item.userId) {
+          throw new Error("userId is required for new teacher entry");
         }
 
         // update faculty load
-        const facLoad = await getSingleFaculityLoadDetails(item.employeeId);
+        const facLoad = await getSingleFaculityLoadDetails(item.userId);
         if (!facLoad || !facLoad[0]) {
-          throw new Error(`Faculty load not found for employee ${item.employeeId}`);
+          throw new Error(`Faculty load not found for employee ${item.userId}`);
         }
 
         const existingLoad = toMoneyNumber(
@@ -1568,7 +1568,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
         );
         const newLoad = decimalAdd(existingLoad, periodLength);
 
-        await updateFaculityLoadByEmployeeId(item.employeeId, { currentLoad: newLoad }, transaction);
+        await updateFaculityLoadByEmployeeId(item.userId, { currentLoad: newLoad }, transaction);
 
         const newRow = {
           timeTableNameId: Number(baseRow.timeTableNameId || routineInfo.timeTableNameId),
@@ -1585,7 +1585,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           isSameTeacher: false,
           timeTableType: baseRow.timeTableType,
           combinedGroupId: baseRow.combinedGroupId || null,
-          employeeId: item.employeeId,
+          userId: item.userId,
           teacherType: item.teacherType,
           isAttendence: item.isAttendence,
           isOverridingSyblingElectives: item.isOverridingSyblingElectives
@@ -1782,9 +1782,9 @@ export async function getTimeTableElective(courseId) {
         ? (curr?.timeTableTeacherSubject?.employeeSubject?.subjectId ?? curr?.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectId)
         : curr?.timeTableSubject?.subjectId;
 
-      const employeeId = sameTeacher
-        ? curr?.timeTableTeacherSubject?.teacherEmployeeData?.employeeId
-        : curr?.employeeDetails?.employeeId;
+      const userId = sameTeacher
+        ? curr?.timeTableTeacherSubject?.teacherEmployeeData?.userId
+        : curr?.employeeDetails?.userId;
 
       const pickColor = sameTeacher
         ? curr?.timeTableTeacherSubject?.teacherEmployeeData?.pickColor
@@ -1799,7 +1799,7 @@ export async function getTimeTableElective(courseId) {
         employeeName: teacherName || "N/A",
         employeeCode: employeeCode || "",
         pickColor: pickColor || "",
-        employeeId: employeeId || null,
+        userId: userId || null,
         timeTableType: curr?.timeTableType,
         roomId: curr?.classRoom?.classRoomSectionId || null,
         roomName: curr?.classRoom?.roomNumber || null,
@@ -1917,7 +1917,7 @@ export async function getTimeTableElective(courseId) {
 //         employeeName: teacherData?.employeeName || "N/A",
 //         employeeCode: teacherData?.employeeCode || "",
 //         pickColor: teacherData?.pickColor || "",
-//         employeeId: teacherData?.employeeId || null,
+//         userId: teacherData?.userId || null,
 //         isTeacher: curr?.isTeacher || null,
 //         isAttendence: curr?.isAttendence ?? null,
 //         timeTableType, // Use the raw mapping type for the final grouping key
@@ -2017,7 +2017,7 @@ export async function getTimeTableElective(courseId) {
 //     } else {
 //       // existPeriod.mappingData.push(mappingEntry);
 //       const alreadyExists = existPeriod.mappingData.some(m =>
-//         m.employeeId === mappingEntry.employeeId &&
+//         m.userId === mappingEntry.userId &&
 //         m.subject.subjectId === mappingEntry.subject.subjectId
 //       );
 
@@ -2109,7 +2109,7 @@ export async function getTimeTableCellData(courseId, classSectionTermId) {
           employeeName: teacherData?.employeeName || "N/A",
           employeeCode: teacherData?.employeeCode || "",
           pickColor: teacherData?.pickColor || "",
-          employeeId: teacherData?.employeeId || null,
+          userId: teacherData?.userId || null,
           teacherType: curr?.teacherType || null,
           isAttendence: curr?.isAttendence ?? null,
           timeTableType,
@@ -2198,7 +2198,7 @@ export async function getTimeTableCellData(courseId, classSectionTermId) {
         });
       } else {
         const exists = periodObj.mappingData.some(
-          (m) => m.employeeId === mappingEntry.employeeId && m.subject.subjectId === mappingEntry.subject.subjectId,
+          (m) => m.userId === mappingEntry.userId && m.subject.subjectId === mappingEntry.subject.subjectId,
         );
 
         if (!exists) {

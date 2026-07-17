@@ -41,14 +41,22 @@ export async function buildRequestContextStore({
     }
 
     let universityId;
+    let campusId;
+
     if (universityIdFromUser != null && universityIdFromUser !== "") {
         universityId = parseInt(universityIdFromUser, 10);
-    } else if (instituteId) {
+    }
+
+    // Resolve campusId and universityId from institute if not already known
+    if (instituteId) {
         const institute = await model.instituteModel.findByPk(instituteId, {
-            attributes: ["universityId"],
+            attributes: ["universityId", "campusId"],
         });
         if (institute) {
-            universityId = institute.universityId ?? institute.get?.("universityId");
+            if (!universityId) {
+                universityId = institute.universityId ?? institute.get?.("universityId");
+            }
+            campusId = institute.campusId ?? institute.get?.("campusId");
         }
     }
 
@@ -59,6 +67,7 @@ export async function buildRequestContextStore({
         defaultAcademicYearId: academicYearId,
         academicYearId,
         universityId,
+        campusId,
         userId,
         bypass: bypass === true,
     };

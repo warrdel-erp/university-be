@@ -14,6 +14,8 @@ import {
   termAllSubject,
 } from '../controllers/syllabusController.js';
 import userAuth from '../middleware/authUser.js';
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 import { validate } from '../utility/validation.js';
 
 const router = Router();
@@ -63,27 +65,28 @@ const deleteSyllabusUnitQuerySchema = z.object({
     .positive(),
 });
 
-router.post('/', userAuth, addSyllabus);
+router.post('/', userAuth, checkAccess(PERMISSIONS.SYLLABUS_ADD.value, null), addSyllabus);
 
-router.get('/', userAuth, getAllSyllabus);
+router.get('/', userAuth, checkAccess(PERMISSIONS.SYLLABUS.value, null), getAllSyllabus);
 
-router.get('/single', userAuth, getSingleSyllabusDetails);
+router.get('/single', userAuth, checkAccess(PERMISSIONS.SYLLABUS.value, null), getSingleSyllabusDetails);
 
-router.patch('/', userAuth, updateSyllabus);
+router.patch('/', userAuth, checkAccess(PERMISSIONS.SYLLABUS_EDIT.value, null), updateSyllabus);
 
-router.delete('/', userAuth, deleteSyllabus);
+router.delete('/', userAuth, checkAccess(PERMISSIONS.SYLLABUS_DELETE.value, null), deleteSyllabus);
 
-router.get('/courseSubject', userAuth, courseAllSubject);
+router.get('/courseSubject', userAuth, checkAccess(PERMISSIONS.SYLLABUS.value, null), courseAllSubject);
 
-router.post('/addUnit', userAuth, validate({ body: addSyllabusUnitSchema }), addSyllabusUnit);
+router.post('/addUnit', userAuth, checkAccess(PERMISSIONS.SYLLABUS_ADD.value, null), validate({ body: addSyllabusUnitSchema }), addSyllabusUnit);
 
-router.get('/getUnit', userAuth, validate({ query: getSyllabusUnitQuerySchema }), syllabusUnitGet);
+router.get('/getUnit', userAuth, checkAccess(PERMISSIONS.SYLLABUS.value, null), validate({ query: getSyllabusUnitQuerySchema }), syllabusUnitGet);
 
-router.patch('/unit', userAuth, validate({ body: updateSyllabusUnitSchema }), updateSyllabusUnit);
+router.patch('/unit', userAuth, checkAccess(PERMISSIONS.SYLLABUS_EDIT.value, null), validate({ body: updateSyllabusUnitSchema }), updateSyllabusUnit);
 
 router.delete(
   '/unit',
   userAuth,
+  checkAccess(PERMISSIONS.SYLLABUS_DELETE.value, null),
   validate({ query: deleteSyllabusUnitQuerySchema }),
   deleteSyllabusUnit
 );
@@ -96,6 +99,7 @@ const termSubjectQuerySchema = z.object({
 router.get(
   '/semesterSubject',
   userAuth,
+  checkAccess(PERMISSIONS.SYLLABUS.value, null),
   validate({ query: termSubjectQuerySchema }),
   termAllSubject,
 );

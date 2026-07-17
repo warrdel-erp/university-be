@@ -10,6 +10,8 @@ import {
 } from '../controllers/departmentController.js';
 import userAuth from '../middleware/authUser.js';
 import { validate } from '../utility/validation.js';
+import { checkAccess } from '../middleware/checkAccess.js';
+import { PERMISSIONS } from '../const/permissions.js';
 
 const router = Router();
 
@@ -35,16 +37,16 @@ const departmentIdQuerySchema = z.object({
     departmentId: positiveIntegerId,
 });
 
-router.post('/', userAuth, validate({ body: addDepartmentSchema }), addDepartment);
+router.post('/', userAuth, checkAccess(PERMISSIONS.DEPARTMENT_ADD.value, 'department'), validate({ body: addDepartmentSchema }), addDepartment);
 
-router.get('/', userAuth, getAllDepartment);
+router.get('/', userAuth, checkAccess(PERMISSIONS.DEPARTMENT.value, null), getAllDepartment);
 
-router.get('/single', userAuth, validate({ query: departmentIdQuerySchema }), getSingleDepartmentDetails);
+router.get('/single', userAuth, checkAccess(PERMISSIONS.DEPARTMENT.value, null), validate({ query: departmentIdQuerySchema }), getSingleDepartmentDetails);
 
-router.patch('/', userAuth, validate({ body: updateDepartmentSchema }), updateDepartment);
+router.patch('/', userAuth, checkAccess(PERMISSIONS.DEPARTMENT_EDIT.value, 'department'), validate({ body: updateDepartmentSchema }), updateDepartment);
 
-router.delete('/', userAuth, validate({ query: departmentIdQuerySchema }), deleteDepartment);
+router.delete('/', userAuth, checkAccess(PERMISSIONS.DEPARTMENT_DELETE.value, 'department'), validate({ query: departmentIdQuerySchema }), deleteDepartment);
 
-router.get('/byId', userAuth, validate({ query: departmentIdQuerySchema }), getDepartmentByIdEmployee);
+router.get('/byId', userAuth, checkAccess(PERMISSIONS.DEPARTMENT.value, null), validate({ query: departmentIdQuerySchema }), getDepartmentByIdEmployee);
 
 export default router;

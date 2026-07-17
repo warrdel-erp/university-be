@@ -2,7 +2,6 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import users from "./userModel.js";
 import scheduleModel from "./scheduleModel.js";
-import employeeModel from "./employeeModel.js";
 
 const scheduleAssignModel = sequelize.define(
     "schedule_assign",
@@ -22,13 +21,13 @@ const scheduleAssignModel = sequelize.define(
                 key: 'schedule_id'
             }
         },
-        employeeId: {
+        userId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'employee_id',
+            field: 'user_id',
             references: {
-                model: employeeModel,
-                key: 'employee_id'
+                model: users,
+                key: 'user_id'
             }
         },
         createdBy: {

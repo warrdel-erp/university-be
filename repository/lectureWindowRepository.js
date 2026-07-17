@@ -46,6 +46,16 @@ function buildLectureWindowIncludes(filters = {}) {
 }
 
 export async function addLectureWindow(data, transaction) {
+  if (data.employeeId) {
+    const emp = await scoped(model.employeeModel).findOne({
+      where: { userId: data.employeeId },
+      attributes: ["employeeId"],
+      transaction,
+    });
+    if (emp) {
+      data.employeeId = emp.employeeId;
+    }
+  }
   return scoped(model.lectureWindowModel).create(data, { transaction });
 }
 
@@ -58,7 +68,11 @@ export async function getLectureWindows(filters = {}) {
     where.subjectId = Number(filters.subjectId);
   }
   if (filters.employeeId != null) {
-    where.employeeId = Number(filters.employeeId);
+    const emp = await scoped(model.employeeModel).findOne({
+      where: { userId: Number(filters.employeeId) },
+      attributes: ["employeeId"],
+    });
+    where.employeeId = emp ? emp.employeeId : null;
   }
   if (filters.sessionId != null) {
     where.sessionId = Number(filters.sessionId);
@@ -98,6 +112,16 @@ export async function updateLectureWindow(lectureWindowId, data, academicYearId)
   });
   if (!existing) {
     return null;
+  }
+
+  if (data.employeeId) {
+    const emp = await scoped(model.employeeModel).findOne({
+      where: { userId: data.employeeId },
+      attributes: ["employeeId"],
+    });
+    if (emp) {
+      data.employeeId = emp.employeeId;
+    }
   }
 
   await scoped(model.lectureWindowModel).update(data, {

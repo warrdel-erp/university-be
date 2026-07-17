@@ -675,7 +675,7 @@ export async function getSingleBookDetails(libraryBookId, transaction) {
           {
             model: model.employeeModel,
             as: "employeeDetailsBook",
-            attributes: ["employee_id", "employeeCode", "department", "employeeName"],
+            attributes: ["userId", "employeeCode", "department", "employeeName"],
           },
         ],
       },
@@ -836,7 +836,7 @@ export async function getAllIssuedBooks() {
         {
           model: model.employeeModel,
           as: "employeeDetailsBook",
-          attributes: ["employee_id", "employeeCode", "department", "employeeName"],
+          attributes: ["userId", "employeeCode", "department", "employeeName"],
         },
         {
           model: model.libraryAisleModel,
@@ -916,10 +916,10 @@ export async function getBooksIssuedToStudent(studentId) {
   }
 }
 
-export async function getBooksIssuedToEmployee(employeeId) {
+export async function getBooksIssuedToEmployee(userId) {
   try {
     const result = await model.libraryBookInventoryModel.findAll({
-      where: { employeeId, status: "issued" },
+      where: { userId, status: "issued" },
 
       attributes: [
         "inventoryId",
@@ -931,7 +931,7 @@ export async function getBooksIssuedToEmployee(employeeId) {
         "itemPrice",
         "netPrice",
         "currency",
-        "employeeId",
+        "userId",
         "issueDate",
         "dueDate",
         "status",
@@ -962,7 +962,7 @@ export async function getBooksIssuedToEmployee(employeeId) {
         {
           model: model.employeeModel,
           as: "employeeDetailsBook",
-          attributes: ["employee_id", "employeeCode", "department", "employeeName"],
+          attributes: ["userId", "employeeCode", "department", "employeeName"],
         },
       ],
     });

@@ -2,8 +2,6 @@ import * as RoleCreation  from  "../services/roleServices.js";
 
 export async function addRole(req, res) {
     const {role} = req.body
-    // const createdBy = req.user.userId;
-    // const updatedBy = req.user.userId;
     try {
         if(!(role)){
            return res.status(400).send('role is required')
@@ -44,9 +42,8 @@ export async function updateRole(req, res) {
         if(!(roleId)){
             return res.status(400).send('roleId is required')
          }
-        //  const updatedBy = req.user.userId;
         const updatedRole = await RoleCreation.updateRole(roleId, req.body);
-            res.status(200).json({message: "Role update succesfully" });
+        res.status(200).json({message: "Role update succesfully" });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -64,6 +61,32 @@ export async function deleteRole(req, res) {
         } else {
             res.status(404).json({ message: "Role not found" });
         }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+export async function getRolePermissions(req, res) {
+    try {
+        const { roleId } = req.params;
+        if (!roleId) {
+            return res.status(400).send('roleId is required');
+        }
+        const data = await RoleCreation.getRolePermissions(roleId);
+        res.status(200).json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+export async function assignRolePermissions(req, res) {
+    try {
+        const { roleId, permissions } = req.body;
+        if (!roleId || !Array.isArray(permissions)) {
+            return res.status(400).send('roleId and permissions array are required');
+        }
+        const data = await RoleCreation.assignRolePermissions(roleId, permissions);
+        res.status(200).json({ message: "Permissions assigned to role successfully", data });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

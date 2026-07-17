@@ -1,5 +1,5 @@
 import * as model from '../models/index.js';
-import { Op } from 'sequelize';
+import { Op, Sequelize } from 'sequelize';
 import { scoped, buildScope } from '../utility/scoped.js';
 import { ROLES } from '../const/roles.js';
 import { classSectionTermsInclude } from '../utility/classSectionIncludes.js';
@@ -93,25 +93,23 @@ export async function getSubjectOptions(courseId, term, academicYearId) {
 
 export async function getTeacherOptions(campusId) {
     return await scoped(model.employeeModel).findAll({
-        attributes: [['employee_name', 'label'], ['employee_id', 'value']],
+        attributes: [
+            ['employee_name', 'label'],
+            [Sequelize.col('user.user_id'), 'value'],
+            ['employee_id', 'employeeId'],
+        ],
         where: {
             ...(campusId && { campusId }),
         },
-        include: [{
-            model: model.userModel,
-            as: 'user',
-            attributes: [],
-            required: true,
-            include: [{
-                model: model.userRoleModel,
-                as: 'userRoles',
+        include: [
+            {
+                model: model.userModel,
+                as: 'user',
                 attributes: [],
-                where: {
-                    role: ROLES.TEACHER,
-                },
                 required: true,
-            }],
-        }],
+                where: { isTeacher: true },
+            },
+        ],
     });
 }
 

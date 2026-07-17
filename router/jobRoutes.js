@@ -16,7 +16,7 @@ const router = express.Router();
 router.post("/add", useAuth, addJob);
 router.get("/list", useAuth, getAllJobs);
 router.get("/calendar", useAuth, getCalendarView); 
-router.get("/calendar/faculty/:employeeId", useAuth, getFacultyCalendar);
+router.get("/calendar/faculty/:userId", useAuth, getFacultyCalendar);
 router.get("/calendar/department/:subAccountId", useAuth, getDepartmentCalendar);
 
 router.get("/:id", useAuth, getSingleJob);

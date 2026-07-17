@@ -88,9 +88,15 @@ export async function getLessonDetails(academicYearId) {
           },
         },
         {
-          model: model.employeeModel,
-          as: "employeeLesson",
-          attributes: ["employeeId", "campusId", "instituteId", "employeeCode", "employeeName"],
+          model: model.users, as: "user",
+          attributes: ["userId"],
+          include: [
+            {
+              model: model.employeeModel,
+              as: "employee",
+              attributes: ["campusId", "instituteId", "employeeCode", "employeeName"],
+            },
+          ],
         },
         lectureWindowInclude,
       ],
@@ -328,9 +334,8 @@ export async function getMapping(academicYearId) {
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             },
             {
-              model: model.employeeModel,
-              as: "employeeDetails",
-              attributes: ["employeeName", "employeeCode", "pickColor", "employeeId"],
+              model: model.employeeModel, as: "employeeDetails",
+              attributes: ["employeeName", "employeeCode", "pickColor", "userId"],
             },
             {
               model: model.teacherSubjectMappingModel,
@@ -342,7 +347,8 @@ export async function getMapping(academicYearId) {
                   "deletedAt",
                   "createdBy",
                   "updated",
-                  "employee_id",
+                  "user_id",
+                  "userId",
                   "class_subject_mapper_id",
                 ],
               },
@@ -350,7 +356,7 @@ export async function getMapping(academicYearId) {
                 {
                   model: model.employeeModel,
                   as: "teacherEmployeeData",
-                  attributes: ["employeeName", "employeeCode", "pickColor", "employeeId"],
+                  attributes: ["employeeName", "employeeCode", "pickColor", "userId"],
                 },
               ],
             },
@@ -466,10 +472,10 @@ export async function deleteSubTopicsByMapping(mappingId, transaction) {
   }
 }
 
-// export async function getEmployeeSubjectAndLesson(academicYearId,employeeId,courseId,sessionId) {
+// export async function getEmployeeSubjectAndLesson(academicYearId,userId,courseId,sessionId) {
 //   try {
 //     const whereClause = {
-//       ...(employeeId && { employeeId }),
+//       ...(userId && { userId }),
 //       ...(academicYearId && { academicYearId }),
 //     };
 //     const lesson = await model.teacherSubjectMappingModel.findAll({
@@ -519,11 +525,20 @@ export async function deleteSubTopicsByMapping(mappingId, transaction) {
 //   }
 // };
 
-export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionId, subjectSearch, subjectId) {
+export async function getEmployeeSubjectAndLesson(userId, courseId, sessionId, subjectSearch, subjectId) {
   try {
-    const parsedEmployeeId = employeeId != null && employeeId !== ''
-      ? Number(employeeId)
-      : null;
+    let parsedEmployeeId = userId != null && userId !== '' ? Number(userId) : null;
+    let actualEmployeeId = null;
+    if (parsedEmployeeId) {
+      const emp = await scoped(model.employeeModel).findOne({
+        attributes: ["employeeId"],
+        where: { userId: parsedEmployeeId }
+      });
+      if (emp) {
+        actualEmployeeId = emp.employeeId;
+      }
+    }
+
     const parsedSessionId = sessionId != null && sessionId !== ''
       ? Number(sessionId)
       : null;
@@ -658,19 +673,21 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
     if (hasEmployeeId && hasSubjectId) {
       const lessons = await scoped(model.lessonModel).findAll({
         where: {
-          employeeId: parsedEmployeeId,
+          userId: parsedEmployeeId,
           subjectId: parsedSubjectId,
           ...(hasSessionId && { sessionId: parsedSessionId }),
         },
         attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
         include: [
           {
-            model: model.employeeModel,
-            as: 'employeeLesson',
+            model: model.userModel, as: "user",
             required: true,
             paranoid: false,
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-            where: buildScope(model.employeeModel),
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'password'] },
+            include: [{
+              model: model.employeeModel, as: "employee",
+              attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+            }]
           },
           {
             model: model.subjectModel,
@@ -697,7 +714,7 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
       const { employeeLesson, lessonSubject } = plainLessons[0];
 
       return [{
-        employeeId: parsedEmployeeId,
+        userId: parsedEmployeeId,
         subjectId: parsedSubjectId,
         teacherEmployeeData: employeeLesson,
         employeeSubject: {
@@ -728,13 +745,13 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
     const lessonWhere = {
       ...buildScope(model.lessonModel),
       ...(hasSessionId && { sessionId: parsedSessionId }),
-      ...(hasEmployeeId && { employeeId: parsedEmployeeId }),
+      ...(hasEmployeeId && parsedEmployeeId && { userId: parsedEmployeeId }),
       ...(hasSubjectId && { subjectId: parsedSubjectId }),
     };
 
     const rows = await scoped(model.teacherSubjectMappingModel).findAll({
       where: {
-        ...(hasEmployeeId && { employeeId: parsedEmployeeId }),
+        ...(hasEmployeeId && { employeeId: actualEmployeeId }),
         ...(hasSubjectId && { subjectId: parsedSubjectId }),
       },
       attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },

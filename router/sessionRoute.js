@@ -4,13 +4,14 @@ import { addSession, getAllSession, getSingleSessionDetails, updateSession, dele
 import userAuth from "../middleware/authUser.js"
 import { z } from 'zod';
 import { validate } from '../utility/validation.js';
+import { checkAccess } from '../middleware/checkAccess.js';
+import { PERMISSIONS } from '../const/permissions.js';
 
 const sessionSchema = z.object({
     sessionName: z.string({ required_error: "Session name is required" }).min(1, "Session name cannot be empty"),
     startingDate: z.string({ required_error: "Starting date is required" }),
     endingDate: z.string({ required_error: "Ending date is required" }),
     classTillDate: z.string({ required_error: "Class till date is required" }),
-    courseId: z.array(z.coerce.number().int().positive()).optional()
 });
 
 const updateSessionSchema = sessionSchema.partial().extend({
@@ -38,19 +39,20 @@ const updateCourseSessionMappingSchema = z.object({
     courseId: z.coerce.number().int().positive().optional(),
 });
 
-router.post('/', userAuth, validate({ body: sessionSchema }), addSession);
+router.post('/', userAuth, checkAccess(PERMISSIONS.SESSION_SETUP_ADD.value, 'session'), validate({ body: sessionSchema }), addSession);
 
-router.get('/', userAuth, getAllSession);
+router.get('/', userAuth, checkAccess(PERMISSIONS.SESSION_SETUP.value, null), getAllSession);
 
-router.get('/single', userAuth, getSingleSessionDetails);
+router.get('/single', userAuth, checkAccess(PERMISSIONS.SESSION_SETUP.value, null), getSingleSessionDetails);
 
-router.patch('/', userAuth, validate({ body: updateSessionSchema }), updateSession);
+router.patch('/', userAuth, checkAccess(PERMISSIONS.SESSION_SETUP_EDIT.value, 'session'), validate({ body: updateSessionSchema }), updateSession);
 
-router.delete('/', userAuth, deleteSession);
+router.delete('/', userAuth, checkAccess(PERMISSIONS.SESSION_SETUP_DELETE.value, 'session'), deleteSession);
 
 router.post(
     '/courseSessionMapping',
     userAuth,
+    checkAccess(PERMISSIONS.SESSION_SETUP_ADD.value, 'sessionCourseMapping'),
     validate({ body: courseSessionMappingSchema }),
     couseSessionMapping
 );
@@ -58,10 +60,11 @@ router.post(
 router.patch(
     '/courseSessionMapping/update',
     userAuth,
+    checkAccess(PERMISSIONS.SESSION_SETUP_EDIT.value, 'sessionCourseMapping'),
     validate({ body: updateCourseSessionMappingSchema }),
     updateCouseSessionMapping
 );
 
-router.delete('/courseSessionMapping', userAuth, validate({ query: deleteCourseSessionMappingSchema }), deleteCouseSessionMapping);
+router.delete('/courseSessionMapping', userAuth, checkAccess(PERMISSIONS.SESSION_SETUP_DELETE.value, 'sessionCourseMapping'), validate({ query: deleteCourseSessionMappingSchema }), deleteCouseSessionMapping);
 
 export default router; 

@@ -54,7 +54,7 @@ function formatInventoryForResponse(inv) {
     libraryRackId: inv.libraryRackId ?? null,
     libraryRowId: inv.libraryRowId ?? null,
     studentId: inv.studentId ?? null,
-    employeeId: inv.employeeId ?? null,
+    userId: inv.userId ?? null,
     issueDate: inv.issueDate ?? null,
     dueDate: inv.dueDate ?? null,
     status: inv.status ?? null,
@@ -664,7 +664,7 @@ async function addBookWithInventoryRecord(bookData, inventoryList, createdBy, up
           libraryRowId: inv.libraryRowId,
           status: inv.status ?? "available",
           studentId: inv.studentId ?? null,
-          employeeId: inv.employeeId ?? null,
+          userId: inv.userId ?? null,
           issueDate: inv.issueDate ?? null,
           dueDate: inv.dueDate ?? null,
           accessionDate: inv.accessionDate == "" ? null : inv.accessionDate,
@@ -810,7 +810,7 @@ export async function updateInventory(inventoryId, inventoryData, transaction) {
     inventoryData.status = "available";
     inventoryData.dueDate = null;
     inventoryData.studentId = null;
-    inventoryData.employeeId = null;
+    inventoryData.userId = null;
   }
 
   return await libraryCreationService.updateInventory(inventoryId, inventoryData, transaction);

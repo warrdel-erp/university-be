@@ -118,21 +118,26 @@ const updateAssetSchema = z
     { message: "At least one field is required to update" }
   );
 
-router.post("/", userAuth, validate({ body: addAssetSchema }), addAsset);
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 
-router.get("/", userAuth, validate({ query: listAssetQuerySchema }), getAllAsset);
+router.post("/", userAuth, checkAccess(PERMISSIONS.ASSET_MANAGEMENT_ADD.value, 'asset'), validate({ body: addAssetSchema }), addAsset);
+
+router.get("/", userAuth, checkAccess(PERMISSIONS.ASSET_MANAGEMENT.value, 'asset'), validate({ query: listAssetQuerySchema }), getAllAsset);
 router.get(
   "/codepreview",
   userAuth,
+  checkAccess(PERMISSIONS.ASSET_MANAGEMENT_ADD.value, 'asset'),
   validate({ query: assetCodePreviewQuerySchema }),
   previewAssetCode
 );
-router.get("/single", userAuth, validate({ query: assetIdQuerySchema }), getSingleAssetDetails);
-router.patch("/", userAuth, validate({ body: updateAssetSchema }), updateAsset);
-router.delete("/", userAuth, validate({ query: assetIdQuerySchema }), deleteAsset);
+router.get("/single", userAuth, checkAccess(PERMISSIONS.ASSET_MANAGEMENT.value, 'asset'), validate({ query: assetIdQuerySchema }), getSingleAssetDetails);
+router.patch("/", userAuth, checkAccess(PERMISSIONS.ASSET_MANAGEMENT_EDIT.value, 'asset'), validate({ body: updateAssetSchema }), updateAsset);
+router.delete("/", userAuth, checkAccess(PERMISSIONS.ASSET_MANAGEMENT_DELETE.value, 'asset'), validate({ query: assetIdQuerySchema }), deleteAsset);
 router.delete(
   "/inventory",
   userAuth,
+  checkAccess(PERMISSIONS.ASSET_MANAGEMENT_DELETE.value, 'asset'),
   validate({ query: assetInventoryItemIdQuerySchema }),
   deleteAssetInventoryItem
 );

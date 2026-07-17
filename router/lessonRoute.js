@@ -54,15 +54,15 @@ const copyMappingBodySchema = z.object({
 
 router.post('/', userAuth, addLesson);
 
-router.get('/', userAuth, getAllLesson);
+router.post('/', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_ADD.value, null), addLesson);
 
-router.get('/simple', userAuth, getSimpleLessonList);
+router.get('/', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getAllLesson);
 
-router.get('/single', userAuth, getSingleLessonDetails);
+router.get('/simple', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getSimpleLessonList);
 
-router.post('/topic', userAuth, addTopice);
+router.get('/single', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getSingleLessonDetails);
 
-router.post('/mapping', userAuth, addMapping);
+router.post('/topic', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_ADD.value, null), addTopice);
 
 router.post(
     '/mapping/copy',
@@ -73,13 +73,15 @@ router.post(
 
 router.get('/mapping', userAuth, getMapping);
 
-router.patch('/', userAuth, updateMapping);
+router.get('/mapping', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getMapping);
 
-router.patch('/mapping/:lessonMappingId', userAuth, updateCompleteMapping);
+router.patch('/', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_EDIT.value, null), updateMapping);
 
-router.delete('/mapping/:lessonMappingId', userAuth, deleteMapping);
+router.patch('/mapping/:lessonMappingId', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_EDIT.value, null), updateCompleteMapping);
 
-router.get('/employee', userAuth, getEmployeeSubjectAndLesson);
+router.delete('/mapping/:lessonMappingId', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_DELETE.value, null), deleteMapping);
+
+router.get('/employee', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getEmployeeSubjectAndLesson);
 
 router.post(
     '/link',

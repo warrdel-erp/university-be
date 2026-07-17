@@ -147,10 +147,10 @@ export async function deleteMapping(req, res) {
 };
 
 export async function getEmployeeSubjectAndLesson(req, res) {
-    const { employeeId, courseId, sessionId, subjectSearch, subjectId } = req.query
+    const { userId, courseId, sessionId, subjectSearch, subjectId } = req.query
     try {
         const Lessons = await lesson.getEmployeeSubjectAndLesson(
-            employeeId,
+            userId,
             courseId,
             sessionId,
             subjectSearch,

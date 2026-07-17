@@ -2,14 +2,14 @@ import * as teacherExamAssignmentServices from "../services/teacherExamAssignmen
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
 export async function assignTeacherToExam(req, res) {
-    const { examScheduleId, employeeId, deadline } = req.body;
+    const { examScheduleId, userId, deadline } = req.body;
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
 
     try {
         const assignment = await teacherExamAssignmentServices.assignExam({
             examScheduleId,
-            employeeId,
+            userId,
             deadline,
             createdBy,
             updatedBy
@@ -22,12 +22,12 @@ export async function assignTeacherToExam(req, res) {
 }
 
 export async function getAllExamAssignments(req, res) {
-    const { examScheduleId, employeeId } = req.query;
+    const { examScheduleId, userId } = req.query;
 
     try {
         const assignments = await teacherExamAssignmentServices.getAssignments({
             examScheduleId,
-            employeeId,
+            userId,
         });
         return SuccessResponse(res, 200, "Assignments retrieved successfully", assignments);
     } catch (error) {

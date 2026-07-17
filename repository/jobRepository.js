@@ -23,8 +23,7 @@ export async function getAllJobs() {
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
         },
         {
-          model: model.employeeModel,
-          as: "facultyJobs",
+          model: model.users, as: "user",
           attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"],
         },
         {
@@ -62,8 +61,7 @@ export async function getSingleJob(jobId) {
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
         },
         {
-          model: model.employeeModel,
-          as: "facultyJobs",
+          model: model.users, as: "user",
           attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"],
         },
         {
@@ -124,11 +122,11 @@ export async function deleteJob(jobId) {
   }
 }
 
-export async function findEmployeeConflict({ jobDate, s, e, employeeId, excludeId }) {
+export async function findEmployeeConflict({ jobDate, s, e, userId, excludeId }) {
   return scoped(model.jobModel).findOne({
     where: {
       jobDate,
-      employeeId,
+      userId,
       jobId: excludeId ? { [Op.ne]: excludeId } : { [Op.ne]: 0 },
       [Op.and]: Sequelize.literal(
         `STR_TO_DATE(start_time, '%H:%i:%s') < '${e}' AND STR_TO_DATE(end_time, '%H:%i:%s') > '${s}'`
@@ -191,8 +189,7 @@ export async function getCalendarJobs(view, date) {
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       },
       {
-        model: model.employeeModel,
-        as: "facultyJobs",
+        model: model.users, as: "user",
         attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"],
       },
       {
@@ -218,10 +215,10 @@ export async function getCalendarJobs(view, date) {
   });
 }
 
-export async function getFacultyCalendar(employeeId, start, end) {
+export async function getFacultyCalendar(userId, start, end) {
   const employee = await scoped(model.employeeModel).findOne({
-    attributes: ["employeeId"],
-    where: { employeeId },
+    attributes: ["userId"],
+    where: { userId },
   });
   if (!employee) {
     return [];
@@ -229,7 +226,7 @@ export async function getFacultyCalendar(employeeId, start, end) {
 
   return scoped(model.jobModel).findAll({
     where: {
-      employeeId,
+      userId,
       jobDate: { [Op.between]: [start, end] },
     },
     order: [
@@ -261,12 +258,12 @@ export async function getDepartmentCalendar(subAccountId, start, end) {
 }
 
 export async function getFilteredJobs(filters) {
-  const { type, jobTypeId, subAccountId, employeeId, date, status, page, limit } = filters;
+  const { type, jobTypeId, subAccountId, userId, date, status, page, limit } = filters;
 
   const where = {
     ...(jobTypeId && { jobSettingId: jobTypeId }),
     ...(subAccountId && { subAccountId }),
-    ...(employeeId && { employeeId }),
+    ...(userId && { userId }),
     ...(status && { status }),
     ...(date && { jobDate: date }),
   };
@@ -310,8 +307,7 @@ export async function getFilteredJobs(filters) {
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       },
       {
-        model: model.employeeModel,
-        as: "facultyJobs",
+        model: model.users, as: "user",
         attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"],
       },
       {
@@ -345,11 +341,11 @@ export async function getJobData(filters, targetDate) {
   return scoped(model.jobModel).findAll({
     where: {
       jobDate: targetDate.toISOString().slice(0, 10),
-      ...(filters.employeeId && { employeeId: filters.employeeId }),
+      ...(filters.userId && { userId: filters.userId }),
       ...(filters.status && { status: filters.status }),
     },
     include: [
-      { model: model.employeeModel, as: "facultyJobs" },
+      { model: model.users, as: "user" },
       { model: model.subAccountModel, as: "departmentJobs" },
     ],
   });
@@ -357,7 +353,7 @@ export async function getJobData(filters, targetDate) {
 
 export async function fetchJobs(filters, fromDate, toDate) {
   const where = {
-    ...(filters.employeeId && { employeeId: filters.employeeId }),
+    ...(filters.userId && { userId: filters.userId }),
     ...(filters.subAccountId && { subAccountId: filters.subAccountId }),
     ...(filters.status && { status: filters.status }),
   };
@@ -373,7 +369,7 @@ export async function fetchJobs(filters, fromDate, toDate) {
   const jobs = await scoped(model.jobModel).findAll({
     where,
     include: [
-      { model: model.employeeModel, as: "facultyJobs" },
+      { model: model.users, as: "user" },
       { model: model.subAccountModel, as: "departmentJobs" },
     ],
   });
@@ -433,9 +429,9 @@ export async function fetchTimetableAsJobs(filters, fromDate, toDate) {
           where: {
             timeTableRoutineId: table.timeTableRoutineId,
             day: dayName,
-            ...(filters.employeeId && { employeeId: filters.employeeId }),
+            ...(filters.userId && { userId: filters.userId }),
           },
-          include: [{ model: model.employeeModel, as: "employeeDetails" }],
+          include: [{ model: model.users, as: "user" }],
         });
 
         for (const l of lectures) {
