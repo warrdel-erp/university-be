@@ -169,12 +169,11 @@ function assertRoutineEditable(startingDate) {
 }
 
 function shapeRoutineListItem(routine) {
-  const plain = routine?.get ? routine.get({ plain: true }) : routine;
   return {
-    name: plain.structureCourseMapping?.timeTableStructure?.name ?? null,
-    startingDate: plain.startingDate,
-    endingDate: plain.endingDate,
-    isPublish: Boolean(plain.isPublish),
+    name: routine.structureCourseMapping.timeTableStructure.name,
+    startingDate: routine.startingDate,
+    endingDate: routine.endingDate,
+    isPublish: Boolean(routine.isPublish),
   };
 }
 
@@ -182,6 +181,14 @@ function buildTermRoutineSummary(routines) {
   let draftRoutineCount = 0;
   let publishedRoutineCount = 0;
   const timeTableRoutines = [];
+
+  if (!routines) {
+    return {
+      timeTableRoutines,
+      draftRoutineCount,
+      publishedRoutineCount,
+    };
+  }
 
   for (const routine of routines) {
     const row = shapeRoutineListItem(routine);
@@ -238,7 +245,7 @@ function shapeTimeTableCreateList(rows, course) {
       };
     }
 
-    const termRoutineSummary = buildTermRoutineSummary(plain.timeTableRoutines || []);
+    const termRoutineSummary = buildTermRoutineSummary(plain.timeTableRoutines);
 
     draftRoutineCount += termRoutineSummary.draftRoutineCount;
     publishedRoutineCount += termRoutineSummary.publishedRoutineCount;
@@ -748,8 +755,11 @@ export async function gettimeTableCreateDetails(query = {}) {
   });
 
   let course = null;
-  if (courseId) {
+  if (courseId != null) {
     course = await timeTableCreateRepository.findCourseById(courseId);
+  } else if (rows.length > 0) {
+    const first = rows[0].get({ plain: true });
+    course = first.classSection.courseSection;
   }
 
   return shapeTimeTableCreateList(rows, course);

@@ -92,7 +92,7 @@ export async function findClassSectionTermsWithRoutines({ courseId, sessionId } 
           {
             model: model.courseModel,
             as: 'courseSection',
-            attributes: ['courseName', 'termType'],
+            attributes: ['courseId', 'courseName', 'termType', 'courseDuration', 'totalTerms'],
             required: false,
           },
         ],
@@ -101,74 +101,24 @@ export async function findClassSectionTermsWithRoutines({ courseId, sessionId } 
         model: model.timeTableRoutineModel,
         as: 'timeTableRoutines',
         required: false,
-        attributes: { exclude: ['createdAt', 'updatedAt', 'createdBy', 'updatedBy'] },
+        where: buildScope(model.timeTableRoutineModel),
+        attributes: [
+          'timeTableRoutineId',
+          'startingDate',
+          'endingDate',
+          'isPublish',
+          'classSectionTermId',
+        ],
         include: [
           routineStructureInclude({ withPeriods: false }),
-          {
-            model: model.courseModel,
-            as: 'timeTableCourse',
-            attributes: ['courseName', 'termType'],
-          },
-          {
-            model: model.campusModel,
-            as: 'timeTableCampus',
-            attributes: ['campusName'],
-          },
-          timeTableRoutineClassSectionInclude({
-            sectionAttributes: ['section', 'year', 'classSectionsId'],
-            sectionNestedIncludes: [
-              {
-                model: model.sessionModel,
-                as: 'classSession',
-                attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
-              },
-            ],
-          }),
-          {
-            model: model.acedmicYearModel,
-            as: 'acedmicYearTimeTable',
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
-          },
         ],
+        order: [['startingDate', 'ASC'], ['timeTableRoutineId', 'ASC']],
       },
     ],
     order: [
       [{ model: model.classSectionModel, as: 'classSection' }, 'year', 'ASC'],
       [{ model: model.classSectionModel, as: 'classSection' }, 'section', 'ASC'],
       ['term', 'ASC'],
-    ],
-  });
-}
-
-export async function findRoutinesByCourseAndSession({ courseId, sessionId } = {}) {
-  const routineWhere = {};
-  if (courseId != null) {
-    routineWhere.courseId = Number(courseId);
-  }
-
-  const mappingInclude = routineStructureInclude({
-    withPeriods: false,
-    required: sessionId != null,
-  });
-  if (sessionId != null) {
-    mappingInclude.where = { sessionId: Number(sessionId) };
-  }
-
-  return scoped(model.timeTableRoutineModel).findAll({
-    where: routineWhere,
-    attributes: [
-      'timeTableRoutineId',
-      'startingDate',
-      'endingDate',
-      'isPublish',
-      'classSectionTermId',
-      'timeTableType',
-      'courseId',
-    ],
-    include: [mappingInclude],
-    order: [
-      ['startingDate', 'ASC'],
-      ['timeTableRoutineId', 'ASC'],
     ],
   });
 }
