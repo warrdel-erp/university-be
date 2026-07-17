@@ -473,7 +473,7 @@
                   ],
                   "query": []
                 },
-                "description": "**GET /timeTable**\n\nLists all structures. Dates/course/session are only on `courseMappings[]`.\n\nUnmapped → `courseMappings: []`."
+                "description": "**GET /timeTable**\n\nLists root structures with cloned copies nested in `variants[]`.\n\n- `sourceTimeTableNameId: null` → root structure\n- `sourceTimeTableNameId` set → nested under its source in `variants[]` (supports copy-of-copy)\n\nEach structure includes `courseMappings[]`, period rows (`timeTableName[]`), and `variants[]`.\n\nUnmapped → `courseMappings: []`. Empty copies → `variants: []`."
               },
               "response": [],
               "event": [
@@ -672,7 +672,7 @@
         },
         {
           "name": "routine (/timeTableCreate)",
-          "description": "| # | Method | Path | Purpose |\n|---|--------|------|---------|\n| 1 | GET | `/timeTableCreate/` | List routines |\n| 1 | GET | `/timeTableCreate/single` | Routines by course |\n| 1 | GET | `/timeTableCreate/create` | Bootstrap UI for section |\n| 1 | GET | `/timeTableCreate/getRoutine` | Grid: structure → routines[] |\n| 1 | GET | `/timeTableCreate/getRoutineByTeacher` | Teacher grid |\n| 2 | POST | `/timeTableCreate/` | Create routine |\n| 2 | PATCH | `/timeTableCreate/create` | Update routine **or** batch-update periods (array) |\n| 2 | POST | `/timeTableCreate/clone` | Clone routine |\n| 2 | PATCH | `/timeTableCreate/publish` | Publish routine |\n| 3 | POST | `/timeTableCreate/mapping` | Assign cell |\n| 3 | GET | `/timeTableCreate/mapping` | List cells (body) |\n| 3 | GET | `/timeTableCreate/single/mapping` | Mapping list by course |\n| 3 | PATCH | `/timeTableCreate/mapping` | Change cell type |\n| 3 | PATCH | `/timeTableCreate/mapping/update-create` | Bulk teacher/subject update |\n| 3 | DELETE | `/timeTableCreate/mapping` | Delete cell |\n| 4 | GET | `/timeTableCreate/cellData` | Combined cell UI |\n| 4 | GET | `/timeTableCreate/elective` | Elective cells |\n| 4 | GET | `/timeTableCreate/subjectCount` | Subject period counts |",
+          "description": "| # | Method | Path | Purpose |\n|---|--------|------|---------|\n| 1 | GET | `/timeTableCreate/` | List routines |\n| 1 | GET | `/timeTableCreate/single` | Routines by course |\n| 1 | GET | `/timeTableCreate/create` | Bootstrap UI for section |\n| 1 | GET | `/timeTableCreate/getRoutine` | Grid: structure → routines[] |\n| 1 | GET | `/timeTableCreate/getRoutineByTeacher` | Teacher grid |\n| 2 | POST | `/timeTableCreate/` | Create routine |\n| 2 | PATCH | `/timeTableCreate/create` | Update routine **or** batch-update periods (array) |\n| 2 | DELETE | `/timeTableCreate/` | Delete draft routine |\n| 2 | POST | `/timeTableCreate/clone` | Clone routine |\n| 2 | PATCH | `/timeTableCreate/publish` | Publish routine |\n| 3 | POST | `/timeTableCreate/mapping` | Assign cell |\n| 3 | GET | `/timeTableCreate/mapping` | List cells (body) |\n| 3 | GET | `/timeTableCreate/single/mapping` | Mapping list by course |\n| 3 | PATCH | `/timeTableCreate/mapping` | Change cell type |\n| 3 | PATCH | `/timeTableCreate/mapping/update-create` | Bulk teacher/subject update |\n| 3 | DELETE | `/timeTableCreate/mapping` | Delete cell |\n| 4 | GET | `/timeTableCreate/cellData` | Combined cell UI |\n| 4 | GET | `/timeTableCreate/elective` | Elective cells |\n| 4 | GET | `/timeTableCreate/subjectCount` | Subject period counts |",
           "item": [
             {
               "name": "get all routines",
@@ -710,7 +710,7 @@
                     }
                   ]
                 },
-                "description": "**GET /timeTableCreate/** — optional `courseId`, `sessionId`."
+                "description": "**GET /timeTableCreate/** — optional `courseId`, `sessionId`.\n\n### Top-level fields\n| Field | Description |\n|-------|-------------|\n| `draftRoutineCount` | Total draft routines for course/session filter |\n| `publishedRoutineCount` | Total published routines for course/session filter |\n| `years[]` | Section/term tree |\n\n### Per `classSectionTermId` (inside `years → classSections → semesters[]`)\n| Field | Description |\n|-------|-------------|\n| `draftRoutineCount` | Draft routines for that section-term |\n| `publishedRoutineCount` | Published routines for that section-term |\n| `timeTableRoutines[]` | `name`, `startingDate`, `endingDate`, `isPublish` |"
               },
               "response": []
             },
@@ -871,10 +871,16 @@
                       "key": "sessionId",
                       "value": "{{timetable_sessionId}}",
                       "description": "Required"
+                    },
+                    {
+                      "key": "subjectId",
+                      "value": "",
+                      "description": "Optional — filter normal schedule cells by subjectId",
+                      "disabled": true
                     }
                   ]
                 },
-                "description": "**GET /timeTableCreate/getRoutineByTeacher** — `employeeId`, `courseId`, `sessionId`."
+                "description": "**GET /timeTableCreate/getRoutineByTeacher** — `employeeId`, `courseId`, `sessionId` required.\n\nOptional `subjectId` filters the teacher's normal schedule cells to that subject only."
               },
               "response": []
             },
@@ -1057,6 +1063,41 @@
                   ]
                 },
                 "description": "**PATCH /timeTableCreate/publish?timeTableRoutineId=** — sets `isPublish: true`."
+              },
+              "response": []
+            },
+            {
+              "name": "delete routine",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timeTableCreate?timeTableRoutineId={{timetable_routineId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTableCreate"
+                  ],
+                  "query": [
+                    {
+                      "key": "timeTableRoutineId",
+                      "value": "{{timetable_routineId}}",
+                      "description": "Required — routine PK"
+                    }
+                  ]
+                },
+                "description": "**DELETE /timeTableCreate?timeTableRoutineId=**\n\nDeletes a draft routine and all its grid cells (`class_schedule_item`).\n\n### Rules\n- Routine must **not** be published (`isPublish: false`)\n- Routine must **not** have started (`startingDate` is in the future)\n\n### Response `data`\n`timeTableRoutineId`, `deletedScheduleCount`, `message`\n\n### Errors\n| Status | When |\n|--------|------|\n| **404** | Routine not found |\n| **400** | Published routine, or routine already started |"
               },
               "response": []
             },

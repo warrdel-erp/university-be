@@ -1,0 +1,31 @@
+---
+alwaysApply: true
+---
+# Sequelize Query Conventions
+
+Build every query with Sequelize ORM features (`include`, association joins, `fn`, `col`, `where`, `Op`, `subQuery`). Never write raw SQL or `Sequelize.literal()` unless there is no ORM alternative and it is explicitly approved.
+
+## Tenant scoping
+- Read/write tenant-owned models through `scoped(model.x)` (from `utility/scoped.js`), not `model.x` directly.
+- When scoping a joined association, add `where: buildScope(model.x)` on that `include`.
+
+```js
+// GOOD
+return scoped(model.timeTableRoutineModel).findOne({ where: { timeTableRoutineId }, attributes });
+
+// GOOD — scope on a join
+include: [{ model: model.timeTableRoutineModel, as: 'timeTablecreate', required: true, where: buildScope(model.timeTableRoutineModel) }]
+```
+
+## Attributes & includes
+- Always pass explicit `attributes` (list or `{ exclude: [...] }`); never select all columns implicitly.
+- Reuse shared include builders (e.g. `routineStructureInclude`, `timeTableRoutineClassSectionInclude`) instead of re-declaring nested joins inline.
+- Set `required: true/false` intentionally to control INNER vs LEFT joins.
+
+## Filtering & dates
+- Use `Op` for all operators; build conditional `where` with plain objects and `if` guards.
+- Compare DATE-only columns with `Sequelize.where(Sequelize.fn('DATE', Sequelize.col(...)), { [Op.lte]: date })` to avoid UTC shifts.
+
+## Writes
+- Thread `transaction` through every create/update/delete that participates in a multi-step operation.
+- Coerce external ids with `Number(id)` before querying.

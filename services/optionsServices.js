@@ -88,6 +88,10 @@ export async function getTeacherOptions(campusId) {
     return await optionsRepository.getTeacherOptions(campusId);
 }
 
+export async function getTimeTableStructureOptions() {
+    return await optionsRepository.getTimeTableStructureOptions();
+}
+
 export async function getFeePlanOptions(filters) {
     const empty = { courseSessionId: null, profiles: [] };
     const { courseId, sessionId } = filters;

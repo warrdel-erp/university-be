@@ -97,6 +97,16 @@ export const getTeacherOptions = async (req, res) => {
     }
 };
 
+export const getTimeTableStructureOptions = async (req, res) => {
+    try {
+        const result = await optionsServices.getTimeTableStructureOptions();
+        return SuccessResponse(res, 200, "Time table structure options fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getTimeTableStructureOptions:", error);
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
+    }
+};
+
 export const getFeePlanOptions = async (req, res) => {
     try {
         const result = await optionsServices.getFeePlanOptions(req.query);
