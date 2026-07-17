@@ -473,7 +473,7 @@
                   ],
                   "query": []
                 },
-                "description": "**GET /timeTable**\n\nLists all structures. Dates/course/session are only on `courseMappings[]`.\n\nUnmapped → `courseMappings: []`."
+                "description": "**GET /timeTable**\n\nLists root structures with cloned copies nested in `variants[]`.\n\n- `sourceTimeTableNameId: null` → root structure\n- `sourceTimeTableNameId` set → nested under its source in `variants[]` (supports copy-of-copy)\n\nEach structure includes `courseMappings[]`, period rows (`timeTableName[]`), and `variants[]`.\n\nUnmapped → `courseMappings: []`. Empty copies → `variants: []`."
               },
               "response": [],
               "event": [
