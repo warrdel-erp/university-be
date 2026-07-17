@@ -1,9 +1,7 @@
 import { Op, fn, col } from 'sequelize';
 import * as model from '../models/index.js'
-import { getTenantStore } from '../utility/requestContext.js';
 import { buildScope, scoped } from '../utility/scoped.js';
 import sequelize from '../database/sequelizeConfig.js';
-import { formatQueryDate } from '../utility/helper.js';
 
 const excludeMeta = ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"];
 
@@ -11,15 +9,8 @@ const structureInclude = (extra = {}) => ({
     model: model.timeTableStructureModel,
     as: 'timeTableName',
     required: true,
-    attributes: ['name', 'courseId', 'instituteId', 'academicYearId'],
+    attributes: ['name', 'instituteId', 'academicYearId'],
     where: buildScope(model.timeTableStructureModel),
-    include: [
-        {
-            model: model.courseModel,
-            as: 'timeTableStructureCourse',
-            attributes: ['courseId', 'courseName'],
-        },
-    ],
     ...extra,
 });
 
@@ -35,43 +26,20 @@ async function findPeriodInScope(timeTableCreationId) {
     });
 }
 
-export async function getCourseInScope(courseId) {
-    const store = getTenantStore();
-    if (!store?.universityId || !store?.instituteId || !courseId) {
-        return null;
-    }
-
-    return await scoped(model.courseModel).findOne({
-        where: {
-            courseId,
-            universityId: store.universityId,
-            instituteId: store.instituteId,
-        },
-        attributes: ['courseId'],
-    });
-}
-
-export async function buildTimeTableStructureCreatePayload(data, transaction) {
+export async function buildTimeTableStructureCreatePayload(data) {
     const scopeWhere = buildScope(model.timeTableStructureModel);
     if (!scopeWhere.universityId || !scopeWhere.instituteId || !scopeWhere.academicYearId) {
         throw new Error('universityId, instituteId and academicYearId are required in request context');
     }
 
-    const course = await getCourseInScope(data.courseId);
-    if (!course) {
-        throw new Error('Course not found for this university and institute');
-    }
-
     return {
         name: data.name,
         maximumPeriod: data.maximumPeriod,
-        courseId: data.courseId,
         periodLength: data.periodLength,
         periodGap: data.periodGap,
         startingTime: data.startingTime,
-        startingDate: data.startingDate,
-        endingDate: data.endingDate,
         weekOff: data.weekOff,
+        sourceTimeTableNameId: data.sourceTimeTableNameId ?? null,
         createdBy: data.createdBy,
         updatedBy: data.updatedBy,
         universityId: scopeWhere.universityId,
@@ -81,35 +49,24 @@ export async function buildTimeTableStructureCreatePayload(data, transaction) {
 }
 
 export async function addTimeTableName(data, transaction) {
-    try {
-        const payload = await buildTimeTableStructureCreatePayload(data, transaction);
-        return await scoped(model.timeTableStructureModel).create(payload, { transaction });
-    } catch (error) {
-        console.error("Error in create time table name:", error);
-        throw error;
-    }
+    const payload = await buildTimeTableStructureCreatePayload(data);
+    return await scoped(model.timeTableStructureModel).create(payload, { transaction });
 }
 
 export async function addTimeTable(data, transaction) {
-    try {
-        const result = await model.timeTableStructurePeriodsModel.bulkCreate(data.timeSlots, { transaction });
-        return result;
-    } catch (error) {
-        console.error("Error in create time table:", error);
-        throw error;
-    }
+    return await model.timeTableStructurePeriodsModel.bulkCreate(data.timeSlots, { transaction });
 }
 
 export async function getTimeTableStructureById(timeTableNameId, options = {}) {
-    try {
-        return await scoped(model.timeTableStructureModel).findByPk(Number(timeTableNameId), {
-            attributes: ['timeTableNameId', 'courseId', 'sessionId', 'startingDate', 'endingDate'],
-            transaction: options.transaction,
-        });
-    } catch (error) {
-        console.error('Error in getting time table structure by id:', error);
-        throw error;
-    }
+    return await scoped(model.timeTableStructureModel).findByPk(Number(timeTableNameId), {
+        attributes: [
+            'timeTableNameId',
+            'universityId',
+            'instituteId',
+            'academicYearId',
+        ],
+        transaction: options.transaction,
+    });
 }
 
 export async function findStructureInScope(timeTableNameId, options = {}) {
@@ -121,6 +78,46 @@ export async function findStructureInScope(timeTableNameId, options = {}) {
             'periodLength',
             'periodGap',
             'startingTime',
+        ],
+        transaction: options.transaction,
+    });
+}
+
+export async function getStructureCourseMappingById(timetableStructureCourseMapperId, options = {}) {
+    return await scoped(model.timeTableStructureCourseModel).findByPk(
+      timetableStructureCourseMapperId,
+      {
+        attributes: [
+            'timetableStructureCourseMapperId',
+            'timeTableNameId',
+            'courseId',
+            'universityId',
+            'instituteId',
+            'academicYearId',
+            'sessionId',
+            'startingDate',
+            'endingDate',
+        ],
+        transaction: options.transaction,
+      },
+    );
+}
+
+export async function getStructureCourseMapping(timeTableNameId, courseId, sessionId, options = {}) {
+    return await scoped(model.timeTableStructureCourseModel).findOne({
+        where: {
+            timeTableNameId,
+            courseId,
+            sessionId,
+        },
+        attributes: [
+            'timetableStructureCourseMapperId',
+            'timeTableNameId',
+            'courseId',
+            'universityId',
+            'instituteId',
+            'academicYearId',
+            'sessionId',
             'startingDate',
             'endingDate',
         ],
@@ -128,54 +125,115 @@ export async function findStructureInScope(timeTableNameId, options = {}) {
     });
 }
 
-export async function getMaxRoutineEndingDateForStructure(timeTableNameId, options = {}) {
-    const row = await scoped(model.timeTableRoutineModel).findOne({
-        where: { timeTableNameId: Number(timeTableNameId) },
-        attributes: [[fn('MAX', col('ending_date')), 'maxEndingDate']],
-        raw: true,
+export async function findOverlappingStructureCourseMapping({
+    courseId,
+    sessionId,
+    startingDate,
+    endingDate,
+    excludeMapperId = null,
+}, options = {}) {
+    const where = {
+        courseId: Number(courseId),
+        sessionId: Number(sessionId),
+        startingDate: { [Op.lte]: endingDate },
+        endingDate: { [Op.gte]: startingDate },
+    };
+
+    if (excludeMapperId != null) {
+        where.timetableStructureCourseMapperId = { [Op.ne]: Number(excludeMapperId) };
+    }
+
+    return await scoped(model.timeTableStructureCourseModel).findOne({
+        where,
+        attributes: [
+            'timetableStructureCourseMapperId',
+            'timeTableNameId',
+            'courseId',
+            'sessionId',
+            'startingDate',
+            'endingDate',
+        ],
         transaction: options.transaction,
     });
-
-    return row?.maxEndingDate ?? null;
 }
 
-export async function updateStructureEndingDate(timeTableNameId, endingDate, updatedBy) {
-    const structure = await getTimeTableStructureById(timeTableNameId);
-    if (!structure) {
-        throw new Error('Time table structure not found for this institute and academic year');
-    }
+export async function addStructureCourseMapping(data, transaction) {
+    return await scoped(model.timeTableStructureCourseModel).create(data, { transaction });
+}
 
-    const plain = structure.get ? structure.get({ plain: true }) : structure;
-    const nextEndingDate = formatQueryDate(endingDate);
-
-    if (plain.startingDate != null) {
-        const structureStart = formatQueryDate(plain.startingDate);
-        if (nextEndingDate < structureStart) {
-            throw new Error('endingDate cannot be before structure startingDate');
-        }
-    }
-
-    const maxRoutineEndingDate = await getMaxRoutineEndingDateForStructure(timeTableNameId);
-    if (maxRoutineEndingDate != null) {
-        const latestRoutineEnd = formatQueryDate(maxRoutineEndingDate);
-        if (nextEndingDate < latestRoutineEnd) {
-            throw new Error(
-                `endingDate cannot be before the latest routine endingDate (${latestRoutineEnd})`,
-            );
-        }
-    }
-
-    await scoped(model.timeTableStructureModel).update(
-        {
-            endingDate: nextEndingDate,
-            updatedBy,
+export async function getRoutineDateBoundsForMapper(timetableStructureCourseMapperId) {
+    const row = await scoped(model.timeTableRoutineModel).findOne({
+        where: {
+            timetableStructureCourseMapperId,
         },
-        {
-            where: { timeTableNameId: Number(timeTableNameId) },
-        },
+        attributes: [
+            [fn('MIN', col('starting_date')), 'minStartingDate'],
+            [fn('MAX', col('ending_date')), 'maxEndingDate'],
+        ],
+        raw: true,
+    });
+
+    return {
+        minStartingDate: row ? row.minStartingDate : null,
+        maxEndingDate: row ? row.maxEndingDate : null,
+    };
+}
+
+export async function findRoutineByStructureCourseMapperId(timetableStructureCourseMapperId) {
+    return await scoped(model.timeTableRoutineModel).findOne({
+        where: { timetableStructureCourseMapperId: Number(timetableStructureCourseMapperId) },
+        attributes: ['timeTableRoutineId'],
+    });
+}
+
+export async function deleteStructureCourseMappingById(timetableStructureCourseMapperId) {
+    const mapping = await getStructureCourseMappingById(timetableStructureCourseMapperId);
+    if (!mapping) {
+        throw new Error('Course mapping not found');
+    }
+
+    const routineUsingMapping = await findRoutineByStructureCourseMapperId(
+        timetableStructureCourseMapperId,
     );
+    if (routineUsingMapping) {
+        throw new Error('Course mapping is used in a routine and cannot be deleted');
+    }
 
-    return await getTimeTableStructureById(timeTableNameId);
+    await scoped(model.timeTableStructureCourseModel).destroy({
+        where: { timetableStructureCourseMapperId: Number(timetableStructureCourseMapperId) },
+    });
+
+    return {
+        message: `structure course mapping deleted successfully for timetableStructureCourseMapperId ${timetableStructureCourseMapperId}`,
+        timetableStructureCourseMapperId: Number(timetableStructureCourseMapperId),
+        courseId: mapping.courseId,
+        timeTableNameId: mapping.timeTableNameId,
+        sessionId: mapping.sessionId,
+    };
+}
+
+export async function updateStructureCourseMappingById(timetableStructureCourseMapperId, updates, previousCourseId) {
+    await scoped(model.timeTableStructureCourseModel).update(updates, {
+        where: {
+            timetableStructureCourseMapperId,
+        },
+    });
+
+    if (updates.courseId !== previousCourseId) {
+        await scoped(model.timeTableRoutineModel).update(
+            {
+                courseId: updates.courseId,
+                updatedBy: updates.updatedBy,
+            },
+            {
+                where: {
+                    timetableStructureCourseMapperId,
+                },
+            },
+        );
+    }
+
+    return getStructureCourseMappingById(timetableStructureCourseMapperId);
 }
 
 export async function getStructurePeriodsByStructureId(timeTableNameId, options = {}) {
@@ -196,12 +254,7 @@ export async function getStructurePeriodsByStructureId(timeTableNameId, options 
 }
 
 export async function addTimeTablePeriodRow(data, transaction) {
-    try {
-        return await model.timeTableStructurePeriodsModel.create(data, { transaction });
-    } catch (error) {
-        console.error('Error in create time table period:', error);
-        throw error;
-    }
+    return await model.timeTableStructurePeriodsModel.create(data, { transaction });
 }
 
 export async function incrementStructureMaximumPeriod(timeTableNameId, transaction) {
@@ -224,104 +277,265 @@ export async function incrementStructureMaximumPeriod(timeTableNameId, transacti
     return currentMax + 1;
 }
 
-export async function getTimeTableStructures({ courseId } = {}) {
-    try {
-        const where = {};
-        if (courseId) {
-            where.courseId = Number(courseId);
-        }
+const structureListInclude = [
+    {
+        model: model.timeTableStructureCourseModel,
+        as: "courseMappings",
+        attributes: {
+            exclude: ["createdAt", "updatedAt", "createdBy", "updatedBy"],
+        },
+        include: [
+            {
+                model: model.courseModel,
+                as: "course",
+                attributes: ["courseId", "courseName", "courseCode"],
+                required: false,
+            },
+            {
+                model: model.sessionModel,
+                as: "session",
+                attributes: [
+                    "sessionId",
+                    "sessionName",
+                    "startingDate",
+                    "endingDate",
+                    "classTillDate",
+                    "academicYearId",
+                    "instituteId",
+                ],
+                required: false,
+            },
+        ],
+    },
+    {
+        model: model.timeTableStructurePeriodsModel,
+        as: "timeTableName",
+        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+    },
+];
 
-        const rows = await scoped(model.timeTableStructureModel).findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            where,
-            include: [
-                {
-                    model: model.sessionModel,
-                    as: "timeTableSession",
-                    attributes: ["sessionId", "sessionName", "startingDate", "endingDate", "classTillDate", "academicYearId", "instituteId"],
-                    required: false,
-                },
-                {
-                    model: model.timeTableStructurePeriodsModel,
-                    as: "timeTableName",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                },
-                {
-                    model: model.courseModel,
-                    as: "timeTableStructureCourse",
-                    attributes: ["courseId", "courseName", "courseCode", "termType"],
-                    required: false,
-                },
-            ],
-        });
+export async function getTimeTableStructures(filters = {}) {
+    const mappingInclude = {
+        model: model.timeTableStructureCourseModel,
+        as: "courseMappings",
+        attributes: {
+            exclude: ["createdAt", "updatedAt", "createdBy", "updatedBy"],
+        },
+        required: false,
+        include: [
+            {
+                model: model.courseModel,
+                as: "course",
+                attributes: ["courseId", "courseName", "courseCode"],
+                required: false,
+            },
+            {
+                model: model.sessionModel,
+                as: "session",
+                attributes: [
+                    "sessionId",
+                    "sessionName",
+                    "startingDate",
+                    "endingDate",
+                    "classTillDate",
+                    "academicYearId",
+                    "instituteId",
+                ],
+                required: false,
+            },
+        ],
+    };
 
-        const result = [];
-        for (const row of rows) {
-            const plain = row.get({ plain: true });
-            const course = plain.timeTableStructureCourse;
-            plain.termType = course ? course.termType : null;
-            result.push(plain);
-        }
-        return result;
-    } catch (error) {
-        console.error('Error in getting time table:', error);
-        throw error;
+    const mappingWhere = {};
+    if (filters.courseId != null) {
+        mappingWhere.courseId = Number(filters.courseId);
+        mappingInclude.required = true;
     }
+    if (filters.sessionId != null) {
+        mappingWhere.sessionId = Number(filters.sessionId);
+        mappingInclude.required = true;
+    }
+    if (Object.keys(mappingWhere).length > 0) {
+        mappingInclude.where = mappingWhere;
+    }
+
+    return await scoped(model.timeTableStructureModel).findAll({
+        attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "updatedBy"] },
+        include: [
+            mappingInclude,
+            {
+                model: model.timeTableStructurePeriodsModel,
+                as: "timeTableName",
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            },
+        ],
+    });
+}
+
+export async function getTimeTableStructureDetailsById(timeTableNameId) {
+    return await scoped(model.timeTableStructureModel).findOne({
+        where: { timeTableNameId: Number(timeTableNameId) },
+        attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "updatedBy"] },
+        include: structureListInclude,
+    });
+}
+
+export async function getStructureMappingPrintRows(filters = {}) {
+    const where = {};
+    if (filters.timetableStructureCourseMapperId != null) {
+        where.timetableStructureCourseMapperId = Number(filters.timetableStructureCourseMapperId);
+    }
+    if (filters.timeTableNameId != null) {
+        where.timeTableNameId = Number(filters.timeTableNameId);
+    }
+    if (filters.courseId != null) {
+        where.courseId = Number(filters.courseId);
+    }
+    if (filters.sessionId != null) {
+        where.sessionId = Number(filters.sessionId);
+    }
+
+    return await scoped(model.timeTableStructureCourseModel).findAll({
+        where,
+        attributes: [
+            'timetableStructureCourseMapperId',
+            'timeTableNameId',
+            'courseId',
+            'sessionId',
+            'startingDate',
+            'endingDate',
+        ],
+        include: [
+            {
+                model: model.timeTableStructureModel,
+                as: 'timeTableStructure',
+                required: true,
+                attributes: [
+                    'timeTableNameId',
+                    'name',
+                    'maximumPeriod',
+                    'periodLength',
+                    'periodGap',
+                    'startingTime',
+                    'weekOff',
+                ],
+                where: buildScope(model.timeTableStructureModel),
+            },
+            {
+                model: model.courseModel,
+                as: 'course',
+                required: true,
+                attributes: ['courseId', 'courseName', 'courseCode'],
+            },
+            {
+                model: model.sessionModel,
+                as: 'session',
+                required: true,
+                attributes: ['sessionId', 'sessionName'],
+            },
+        ],
+        order: [
+            ['timeTableNameId', 'ASC'],
+            ['courseId', 'ASC'],
+            ['sessionId', 'ASC'],
+        ],
+    });
+}
+
+export async function getMappedStructuresForCourseSession(courseId, sessionId) {
+    const where = {
+        courseId: Number(courseId),
+    };
+    if (sessionId != null) {
+        where.sessionId = Number(sessionId);
+    }
+
+    return await scoped(model.timeTableStructureCourseModel).findAll({
+        where,
+        attributes: [
+            'timetableStructureCourseMapperId',
+            'timeTableNameId',
+            'courseId',
+            'sessionId',
+            'startingDate',
+            'endingDate',
+        ],
+        include: [
+            {
+                model: model.timeTableStructureModel,
+                as: 'timeTableStructure',
+                required: true,
+                attributes: [
+                    'timeTableNameId',
+                    'name',
+                    'maximumPeriod',
+                    'periodLength',
+                    'periodGap',
+                    'startingTime',
+                    'weekOff',
+                ],
+                where: buildScope(model.timeTableStructureModel),
+                include: [
+                    {
+                        model: model.timeTableStructurePeriodsModel,
+                        as: 'timeTableName',
+                        attributes: [
+                            'timeTableCreationId',
+                            'periodName',
+                            'startTime',
+                            'endTime',
+                            'type',
+                            'isCourse',
+                            'isBreak',
+                        ],
+                    },
+                ],
+            },
+            {
+                model: model.courseModel,
+                as: 'course',
+                required: true,
+                attributes: ['courseId', 'courseName', 'courseCode'],
+            },
+            {
+                model: model.sessionModel,
+                as: 'session',
+                required: true,
+                attributes: ['sessionId', 'sessionName'],
+            },
+        ],
+        order: [
+            ['timeTableNameId', 'ASC'],
+            ['timetableStructureCourseMapperId', 'ASC'],
+        ],
+    });
 }
 
 export async function getSingleTimeTableById(timeTableCreationId) {
-    try {
-        const period = await findPeriodInScope(timeTableCreationId);
-        if (!period) {
-            return [];
-        }
-
-        return [period];
-    } catch (error) {
-        console.error('Error in getting time table by id:', error);
-        throw error;
+    const period = await findPeriodInScope(timeTableCreationId);
+    if (!period) {
+        return [];
     }
+
+    return [period];
 }
 
 export async function updateTimeTable(timeTableCreationId, info) {
-    try {
-        const period = await findPeriodInScope(timeTableCreationId);
-        if (!period) {
-            throw new Error('Time table period not found for this institute and academic year');
-        }
-
-        const updateData = {};
-        if (info.startTime !== undefined) updateData.startTime = info.startTime;
-        if (info.endTime !== undefined) updateData.endTime = info.endTime;
-        if (info.periodName !== undefined) updateData.periodName = info.periodName;
-        if (info.isCourse !== undefined) updateData.isCourse = info.isCourse;
-        if (info.isBreak !== undefined) updateData.isBreak = info.isBreak;
-        if (info.type !== undefined) updateData.type = info.type;
-
-        return await model.timeTableStructurePeriodsModel.update(updateData, {
-            where: { timeTableCreationId },
-        });
-    } catch (error) {
-        console.error(`Error updating time table ${timeTableCreationId}:`, error);
-        throw error;
+    const period = await findPeriodInScope(timeTableCreationId);
+    if (!period) {
+        throw new Error('Time table period not found for this institute and academic year');
     }
-}
 
-async function findBlockingRoutine(timeTableNameId) {
-    const now = new Date();
+    const updateData = {};
+    if (info.startTime !== undefined) updateData.startTime = info.startTime;
+    if (info.endTime !== undefined) updateData.endTime = info.endTime;
+    if (info.periodName !== undefined) updateData.periodName = info.periodName;
+    if (info.isCourse !== undefined) updateData.isCourse = info.isCourse;
+    if (info.isBreak !== undefined) updateData.isBreak = info.isBreak;
+    if (info.type !== undefined) updateData.type = info.type;
 
-    return await scoped(model.timeTableRoutineModel).findOne({
-        where: {
-            timeTableNameId,
-            [Op.or]: [
-                { isPublish: true },
-                {
-                    startingDate: { [Op.lte]: now },
-                    endingDate: { [Op.gte]: now },
-                },
-            ],
-        },
-        attributes: ['timeTableRoutineId'],
+    return await model.timeTableStructurePeriodsModel.update(updateData, {
+        where: { timeTableCreationId },
     });
 }
 
@@ -360,49 +574,59 @@ export async function deleteTimeTable(timeTableCreationId) {
         throw new Error('Time table period is used in an active or published routine and cannot be deleted');
     }
 
-    try {
-        await model.timeTableStructurePeriodsModel.destroy({
-            where: { timeTableCreationId },
-            individualHooks: true,
-        });
+    await model.timeTableStructurePeriodsModel.destroy({
+        where: { timeTableCreationId },
+        individualHooks: true,
+    });
 
-        return { message: `time table creation deleted successfully for time Table Creation Id ${timeTableCreationId}` };
-    } catch (error) {
-        console.error('Error during soft delete:', error);
-        throw new Error('Unable to soft delete account');
-    }
+    return { message: `time table creation deleted successfully for time Table Creation Id ${timeTableCreationId}` };
 }
 
-export async function deleteTimeTableStructure(timeTableNameId) {
+export async function deleteTimeTableName(timeTableNameId) {
     const structure = await getTimeTableStructureById(timeTableNameId);
     if (!structure) {
         throw new Error('Time table structure not found for this institute and academic year');
     }
 
-    const routineUsingStructure = await findBlockingRoutine(timeTableNameId);
-    if (routineUsingStructure) {
-        throw new Error('Time table structure is used in an active or published routine and cannot be deleted');
+    const mappedProgram = await scoped(model.timeTableStructureCourseModel).findOne({
+        where: { timeTableNameId: Number(timeTableNameId) },
+        attributes: ['timetableStructureCourseMapperId'],
+    });
+
+    if (mappedProgram) {
+        throw new Error('Time table structure cannot be deleted because a program/course is mapped to it');
     }
 
     const transaction = await sequelize.transaction();
+
     try {
+        await scoped(model.timeTableStructureModel).update(
+            { sourceTimeTableNameId: null },
+            {
+                where: { sourceTimeTableNameId: Number(timeTableNameId) },
+                transaction,
+            },
+        );
+
         await model.timeTableStructurePeriodsModel.destroy({
-            where: { timeTableNameId },
+            where: { timeTableNameId: Number(timeTableNameId) },
             individualHooks: true,
             transaction,
         });
 
         await scoped(model.timeTableStructureModel).destroy({
-            where: { timeTableNameId },
-            individualHooks: true,
+            where: { timeTableNameId: Number(timeTableNameId) },
             transaction,
         });
 
+        const result = {
+            message: `time table structure deleted successfully for time Table Name Id ${timeTableNameId}`,
+        };
+
         await transaction.commit();
-        return { message: `time table structure deleted successfully for time Table Name Id ${timeTableNameId}` };
+        return result;
     } catch (error) {
         await transaction.rollback();
-        console.error('Error during time table structure soft delete:', error);
         throw error;
     }
 }

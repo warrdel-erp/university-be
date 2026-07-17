@@ -6,7 +6,7 @@ import acedmicYearModel from "./acedmicYearModel.js";
 import courseModel from "./courseModel.js";
 import classSectionTermModel from "./classSectionTermModel.js";
 import users from "./userModel.js";
-import timeTableStructureModel from "./timeTableStructureModel.js";
+import timeTableStructureCourseModel from "./timeTableStructureCourseModel.js";
 
 const timeTableRoutineModel = sequelize.define(
     'time_table_routine',
@@ -17,13 +17,13 @@ const timeTableRoutineModel = sequelize.define(
             autoIncrement: true,
             field: 'time_table_routine_id'
         },
-        timeTableNameId: {
+        timetableStructureCourseMapperId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'time_table_name_id',
+            field: 'timetable_structure_course_mapper_id',
             references: {
-                model: timeTableStructureModel,
-                key: 'time_table_name_id'
+                model: timeTableStructureCourseModel,
+                key: 'timetable_structure_course_mapper_id'
             }
         },
         courseId: {
@@ -123,16 +123,11 @@ const timeTableRoutineModel = sequelize.define(
                 key: 'user_id'
             }
         },
-        deletedAt: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'deleted_at'
-        },
     },
     {
         tableName: 'time_table_routine',
         timestamps: true,
-        paranoid: true
+        paranoid: false,
     }
 );
 

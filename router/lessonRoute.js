@@ -9,6 +9,7 @@ import {
     getSingleLessonDetails,
     addTopice,
     addMapping,
+    copyMapping,
     getMapping,
     updateMapping,
     updateCompleteMapping,
@@ -26,6 +27,10 @@ const positiveIntegerId = z.coerce
     .int('id must be an integer')
     .positive('id must be greater than 0');
 
+const dateOnly = z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD');
+
 const linkLessonQuerySchema = z.object({
     lessonId: positiveIntegerId,
 }).strict();
@@ -34,8 +39,20 @@ const linkLessonBodySchema = z.object({
     lectureWindowId: positiveIntegerId,
 }).strict();
 
-import { checkAccess } from "../middleware/checkAccess.js";
-import { PERMISSIONS } from "../const/permissions.js";
+const copyMappingTargetSchema = z.object({
+    timeTableMappingId: positiveIntegerId,
+    date: dateOnly,
+}).strict();
+
+const copyMappingBodySchema = z.object({
+    sourceLessonMappingId: positiveIntegerId,
+    targets: z.array(copyMappingTargetSchema).min(1, 'at least one target is required'),
+    note: z.string().optional().nullable(),
+    lectureUrl: z.string().optional().nullable(),
+    file: z.any().optional().nullable(),
+}).strict();
+
+router.post('/', userAuth, addLesson);
 
 router.post('/', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_ADD.value, null), addLesson);
 
@@ -47,7 +64,14 @@ router.get('/single', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.valu
 
 router.post('/topic', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_ADD.value, null), addTopice);
 
-router.post('/mapping', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_ADD.value, null), addMapping);
+router.post(
+    '/mapping/copy',
+    userAuth,
+    validate({ body: copyMappingBodySchema }),
+    copyMapping,
+);
+
+router.get('/mapping', userAuth, getMapping);
 
 router.get('/mapping', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getMapping);
 

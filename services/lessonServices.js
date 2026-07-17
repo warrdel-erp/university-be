@@ -83,6 +83,73 @@ export async function addMapping(data, createdBy, updatedBy) {
   }
 }
 
+/**
+ * Copy an existing lesson/topic mapping onto one or more timetable cells.
+ * The same source can be taught in multiple cells, so each target carries its own
+ * timeTableMappingId + date. All copies are created in a single transaction.
+ */
+export async function copyMapping(data, createdBy, updatedBy) {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const source = await lesson.getLessonMappingById(data.sourceLessonMappingId, transaction);
+    if (!source) {
+      throw Object.assign(new Error("Source lesson mapping not found"), { statusCode: 404 });
+    }
+
+    const note = data.note !== undefined ? data.note : source.note;
+    const lectureUrl = data.lectureUrl !== undefined ? data.lectureUrl : source.lectureUrl;
+    const file = data.file !== undefined ? data.file : source.file;
+
+    const copied = [];
+
+    for (const target of data.targets) {
+      const schedule = await lesson.getClassScheduleById(target.timeTableMappingId, transaction);
+      if (!schedule) {
+        throw Object.assign(
+          new Error(`Timetable cell ${target.timeTableMappingId} not found`),
+          { statusCode: 404 },
+        );
+      }
+
+      const row = await lesson.addLessionMapping(
+        {
+          topicId: source.topicId,
+          timeTableMappingId: Number(target.timeTableMappingId),
+          date: target.date,
+          completeDate: null,
+          note,
+          lectureUrl,
+          file,
+          status: "inComplete",
+          createdBy,
+          updatedBy,
+        },
+        transaction,
+      );
+
+      copied.push({
+        lessonMappingId: row.lessonMappingId,
+        topicId: row.topicId,
+        timeTableMappingId: row.timeTableMappingId,
+        date: row.date,
+        status: row.status,
+      });
+    }
+
+    await transaction.commit();
+    return {
+      message: `Lesson mapping copied to ${copied.length} cell(s) successfully`,
+      copied,
+      sourceLessonMappingId: Number(data.sourceLessonMappingId),
+    };
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error in copyMapping:", error);
+    throw error;
+  }
+}
+
 export async function getMapping(academicYearId) {
   try {
     const originalData = await lesson.getMapping(academicYearId);

@@ -64,6 +64,10 @@ const topicsQuerySchema = z.object({
 const lectureWindowsQuerySchema = z.object({
     employeeId: positiveIntegerId,
     subjectId: positiveIntegerId,
+    date: z
+        .string({ required_error: 'date is required' })
+        .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD'),
+    sessionId: optionalPositiveIntegerId,
 });
 
 const lessonsQuerySchema = z.object({

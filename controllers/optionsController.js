@@ -109,7 +109,7 @@ export const getFeePlanOptions = async (req, res) => {
 
 export const getLectureWindowOptions = async (req, res) => {
     try {
-        const { employeeId, subjectId } = req.query;
+        const { employeeId, subjectId, date, sessionId } = req.query;
         const academicYearId = getAcademicYearId();
         if (!academicYearId) {
             return ErrorResponse(res, 400, "academicYearId not found in user session");
@@ -119,6 +119,8 @@ export const getLectureWindowOptions = async (req, res) => {
             Number(employeeId),
             Number(subjectId),
             Number(academicYearId),
+            date,
+            sessionId != null ? Number(sessionId) : undefined,
         );
         return SuccessResponse(res, 200, "Lecture window options fetched successfully", result);
     } catch (error) {

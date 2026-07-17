@@ -1,5 +1,7 @@
 import * as timeTableCreateServices from '../services/timeTableCreateServices.js';
+import * as timeTableServices from '../services/timeTableServices.js';
 import { ErrorResponse, SuccessResponse } from '../utility/response.js';
+
 
 export const addtimeTableCreate = async (req, res) => {
     try {
@@ -11,7 +13,10 @@ export const addtimeTableCreate = async (req, res) => {
     } catch (error) {
         console.error("Error in adding time table create :", error);
         const message = error.message || 'Internal Server Error';
-        const statusCode = /required|not found|does not match|could not be resolved|overlap/i.test(message) ? 400 : 500;
+        const statusCode =
+          /required|not found|does not match|could not be resolved|overlap|conflict|Routine already exists|Teacher conflict|Room conflict|must be inside|within the mapped date range|Map the course to the structure first|Invalid mapperId/i.test(message)
+            ? 400
+            : 500;
         res.status(statusCode).send(message);
     }
 };
@@ -73,11 +78,10 @@ export const getTimeTableByCourseAndSection = async (req, res) => {
             classSectionTermId,
             timeTableType,
         );
-        res.status(200).json(result);
+       SuccessResponse(res, 200, 'Time table fetched successfully', result);
     } catch (error) {
+        ErrorResponse(res, 500, "Internal Server Error");
         console.error("Error fetching timetable:", error);
-        const statusCode = /not found|could not be resolved/.test(error.message) ? 400 : 500;
-        res.status(statusCode).send(error.message || "Internal Server Error");
     }
 };
 
@@ -125,11 +129,21 @@ export const getSingletimeTableMappingDetail = async (req, res) => {
 export const changeTimeTableCreate = async (req, res) => {
     const updatedBy = req.user.userId;
     try {
+        if (Array.isArray(req.body)) {
+            const result = await timeTableServices.updateTimeTable(req.body);
+            return SuccessResponse(res, 200, 'Time table updated successfully', result);
+        }
+
         const result = await timeTableCreateServices.changeTimeTableCreate(req.body, updatedBy);
-        res.status(200).send(result);
+        return SuccessResponse(res, 200, 'Routine updated successfully', result);
     } catch (error) {
-        console.error(`Error in updating time table create`, error);
-        res.status(500).send("Internal Server Error");
+        console.error('Error in updating time table create', error);
+        const message = error.message || 'Internal Server Error';
+        const statusCode =
+          /not found|cannot be updated|overlap|conflict|Routine already exists|Teacher conflict|Room conflict|does not match|required|must be inside|within the mapped date range|Map the course to the structure first|Invalid mapperId/i.test(message)
+            ? 400
+            : 500;
+        return ErrorResponse(res, statusCode, message);
     }
 };
 
@@ -220,10 +234,9 @@ export const getRoutineByClassSectionId = async (req, res) => {
     const { classSectionTermId } = req.query;
     try {
         const result = await timeTableCreateServices.getRoutineByClassSectionId(classSectionTermId);
-        res.status(200).send(result);
+        SuccessResponse(res, 200, 'Routine fetched successfully', result);
     } catch (error) {
-        console.error("Error in getting routine by class section id:", error);
-        res.status(500).send({ message: "Internal Server Error", error: error.message });
+        ErrorResponse(res, 500, "Internal Server Error");
     }
 };
 
@@ -235,9 +248,9 @@ export const getRoutineByTeacherAndAcademicYear = async (req, res) => {
             courseId,
             sessionId,
         );
-        res.status(200).send(result);
+        return SuccessResponse(res, 200, 'Teacher routine fetched successfully', result);
     } catch (error) {
-        console.error("Error in getting routine by teacher and academic year:", error);
-        res.status(500).send("Internal Server Error");
+        console.error('Error in getting routine by teacher and academic year:', error);
+        return ErrorResponse(res, 500, error.message || 'Internal Server Error');
     }
 };

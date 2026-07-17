@@ -212,6 +212,32 @@ export async function addLessionMapping(data, transaction) {
   }
 }
 
+export async function getLessonMappingById(lessonMappingId, transaction) {
+  return scoped(model.lessonMappingModel).findOne({
+    where: { lessonMappingId: Number(lessonMappingId) },
+    attributes: [
+      "lessonMappingId",
+      "topicId",
+      "timeTableMappingId",
+      "date",
+      "completeDate",
+      "note",
+      "lectureUrl",
+      "file",
+      "status",
+    ],
+    transaction,
+  });
+}
+
+export async function getClassScheduleById(timeTableMappingId, transaction) {
+  return scoped(model.classScheduleModel).findOne({
+    where: { timeTableMappingId: Number(timeTableMappingId) },
+    attributes: ["timeTableMappingId"],
+    transaction,
+  });
+}
+
 export async function getMapping(academicYearId) {
   try {
     const lessonWhereClause = {

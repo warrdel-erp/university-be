@@ -31,6 +31,11 @@ const libraryBookInventoryModel = sequelize.define(
       unique: true,
       field: "accession_number",
     },
+    accessionDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+      field: "accession_date",
+    },
     billNo: {
       type: DataTypes.STRING,
       allowNull: true,
