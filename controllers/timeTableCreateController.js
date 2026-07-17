@@ -140,7 +140,7 @@ export const changeTimeTableCreate = async (req, res) => {
         console.error('Error in updating time table create', error);
         const message = error.message || 'Internal Server Error';
         const statusCode =
-          /not found|cannot be updated|overlap|conflict|Routine already exists|Teacher conflict|Room conflict|does not match|required|must be inside|within the mapped date range|Map the course to the structure first|Invalid mapperId/i.test(message)
+          /not found|cannot be updated|starting date|overlap|conflict|Routine already exists|Teacher conflict|Room conflict|does not match|required|must be inside|within the mapped date range|Map the course to the structure first|Invalid mapperId/i.test(message)
             ? 400
             : 500;
         return ErrorResponse(res, statusCode, message);
@@ -217,6 +217,19 @@ export const publishTimeTable = async (req, res) => {
         res.status(200).send(response);
     } catch (error) {
         res.status(500).send(error.message);
+    }
+};
+
+export const deleteTimeTableRoutine = async (req, res) => {
+    try {
+        const { timeTableRoutineId } = req.query;
+        const result = await timeTableCreateServices.deleteTimeTableRoutine(timeTableRoutineId);
+        return SuccessResponse(res, 200, result.message, result);
+    } catch (error) {
+        console.error(`Error in deleting routine ${req.query.timeTableRoutineId}:`, error);
+        const message = error.message || 'Internal Server Error';
+        const statusCode = /not found/i.test(message) ? 404 : /cannot be deleted|cannot be updated|starting date/i.test(message) ? 400 : 500;
+        return ErrorResponse(res, statusCode, message);
     }
 };
 

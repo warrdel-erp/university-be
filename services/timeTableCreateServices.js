@@ -153,8 +153,18 @@ function assertRoutineNotStarted(startingDate) {
   now.setHours(0, 0, 0, 0);
   const start = new Date(startingDate);
   start.setHours(0, 0, 0, 0);
-  if (now > start) {
-    throw new Error('Cannot add or update mapping for a routine after its starting date.');
+  if (now >= start) {
+    throw new Error('Cannot add or update mapping for a routine on or after its starting date.');
+  }
+}
+
+function assertRoutineEditable(startingDate) {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const start = new Date(startingDate);
+  start.setHours(0, 0, 0, 0);
+  if (now >= start) {
+    throw new Error('Routine cannot be updated on or after its starting date');
   }
 }
 
@@ -384,6 +394,9 @@ async function assertNoSlotConflicts({
   startingDate,
   endingDate,
   conflictOptions,
+  electiveSubjectId,
+  courseId,
+  excludeRoutineId,
   transaction,
 }) {
   const { startTime, endTime } = periodInfo;
@@ -400,7 +413,6 @@ async function assertNoSlotConflicts({
       transaction,
     );
     if (conflict) {
-      const section = resolveTimeTableRoutineSection(conflict.timeTablecreate);
       throw new Error('Teacher conflict: teacher already scheduled for this slot');
     }
   }
@@ -417,8 +429,24 @@ async function assertNoSlotConflicts({
       transaction,
     );
     if (conflict) {
-      const section = resolveTimeTableRoutineSection(conflict.timeTablecreate);
       throw new Error('Room conflict: classroom already occupied for this slot');
+    }
+  }
+
+  if (electiveSubjectId && courseId && startTime && endTime) {
+    const conflict = await timeTableCreateRepository.checkElectiveSubjectConflictRepository(
+      electiveSubjectId,
+      courseId,
+      day,
+      startTime,
+      endTime,
+      startingDate,
+      endingDate,
+      { excludeRoutineId },
+      transaction,
+    );
+    if (conflict) {
+      throw new Error('Elective conflict: subject already scheduled for this slot');
     }
   }
 }
@@ -700,8 +728,40 @@ export async function updateTimeTableCreate(TimeTableCreateId, info, updatedBy) 
   return data;
 }
 
-export async function deleteTimeTableCreate(TimeTableCreateId) {
-  return await timeTableCreateRepository.deleteTimeTableCreate(TimeTableCreateId);
+export async function deleteTimeTableRoutine(timeTableRoutineId) {
+  const routine = await timeTableCreateRepository.getRoutineByIdRepository(timeTableRoutineId);
+  if (!routine) {
+    throw new Error('Routine not found');
+  }
+  if (routine.isPublish) {
+    throw new Error('Published routine cannot be deleted');
+  }
+  assertRoutineEditable(routine.startingDate);
+
+  const transaction = await sequelize.transaction();
+  try {
+    const deletedScheduleCount = await timeTableCreateRepository.deleteSchedulesByRoutineIdRepository(
+      timeTableRoutineId,
+      { transaction },
+    );
+    const deletedRoutineCount = await timeTableCreateRepository.deleteTimeTableRoutineRepository(
+      timeTableRoutineId,
+      { transaction },
+    );
+    if (!deletedRoutineCount) {
+      throw new Error('Routine not found');
+    }
+
+    await transaction.commit();
+    return {
+      message: 'Routine deleted successfully',
+      timeTableRoutineId: Number(timeTableRoutineId),
+      deletedScheduleCount,
+    };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
 }
 
 export async function deletetimeTableMapping(timeTableMappingId, options = {}) {
@@ -751,6 +811,10 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
           startingDate: routine.startingDate,
           endingDate: routine.endingDate,
           conflictOptions,
+          electiveSubjectId: payload.electiveSubjectId,
+          courseId: routine.courseId,
+          excludeRoutineId: routine.timeTableRoutineId,
+          transaction,
         });
       }
 
@@ -816,6 +880,10 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
 
     assertRoutineNotStarted(routine.startingDate);
 
+    if (payload.timeTableType === 'elective' && !payload.electiveSubjectId) {
+      throw new Error('electiveSubjectId is required for elective mapping');
+    }
+
     const slots = normalizeSlots(payload);
     const isCombined = termIds.length > 1;
     const combinedGroupId = isCombined ? (existingCombinedGroupId || randomUUID()) : null;
@@ -861,6 +929,10 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
         startingDate: routine.startingDate,
         endingDate: routine.endingDate,
         conflictOptions,
+        electiveSubjectId: payload.electiveSubjectId,
+        courseId: routine.courseId,
+        excludeRoutineId: routine.timeTableRoutineId,
+        transaction,
       });
 
       for (const target of routineTargets) {
@@ -1043,6 +1115,9 @@ export async function cloneTimeTableRoutine(
         startingDate: start,
         endingDate: end,
         conflictOptions,
+        electiveSubjectId: mappingPlain.electiveSubjectId,
+        courseId: previousPlain.courseId,
+        excludeRoutineId: previousRoutineId,
         transaction,
       });
     }
@@ -1104,6 +1179,7 @@ export async function changeTimeTableCreate(body, updatedBy) {
   if (current.isPublish) {
     throw new Error('Published routine cannot be updated');
   }
+  assertRoutineEditable(current.startingDate);
 
   let placementFields = { ...updateData };
 

@@ -263,13 +263,22 @@ export async function updateTimeTableCreate(faculityLoadId, info) {
   return result;
 };
 
-export async function deleteTimeTableCreate(faculityLoadId) {
-  const result = await scoped(model.timeTableRoutineModel).destroy({
-    where: { faculityLoadId },
-    individualHooks: true
+export async function deleteSchedulesByRoutineIdRepository(timeTableRoutineId, options = {}) {
+  const { transaction } = options;
+  return model.classScheduleModel.destroy({
+    where: { timeTableRoutineId: Number(timeTableRoutineId) },
+    individualHooks: true,
+    transaction,
   });
-  return { message: `faculity load deleted successfully for time Table Creation Id :-${faculityLoadId}` };
-};
+}
+
+export async function deleteTimeTableRoutineRepository(timeTableRoutineId, options = {}) {
+  const { transaction } = options;
+  return scoped(model.timeTableRoutineModel).destroy({
+    where: { timeTableRoutineId: Number(timeTableRoutineId) },
+    transaction,
+  });
+}
 
 export async function deletetimeTableMapping(timeTableMappingId, options = {}) {
   const { transaction, deleteCombinedGroup = false } = options;
@@ -413,6 +422,66 @@ export async function checkTeacherConflictRepository(
   if (isAllowedCombinedConflict(conflict, options)) {
     return null;
   }
+
+  return conflict;
+};
+
+export async function checkElectiveSubjectConflictRepository(
+  electiveSubjectId,
+  courseId,
+  day,
+  startTime,
+  endTime,
+  startingDate,
+  endingDate,
+  options = {},
+  transaction = null,
+) {
+  const { excludeRoutineId = null } = options;
+
+  const routineWhere = {
+    courseId: Number(courseId),
+    timeTableType: 'elective',
+    [Op.and]: [
+      { startingDate: { [Op.lte]: endingDate } },
+      { endingDate: { [Op.gte]: startingDate } },
+    ],
+    ...buildScope(model.timeTableRoutineModel),
+  };
+
+  if (excludeRoutineId != null) {
+    routineWhere.timeTableRoutineId = { [Op.ne]: Number(excludeRoutineId) };
+  }
+
+  const conflict = await model.classScheduleModel.findOne({
+    transaction: transaction ?? null,
+    where: {
+      electiveSubjectId: Number(electiveSubjectId),
+      day,
+      timeTableType: 'elective',
+    },
+    include: [
+      {
+        model: model.timeTableStructurePeriodsModel,
+        as: 'timeTablecreation',
+        attributes: ['startTime', 'endTime'],
+        required: true,
+        where: {
+          [Op.and]: [
+            { startTime: { [Op.lt]: endTime } },
+            { endTime: { [Op.gt]: startTime } },
+          ],
+        },
+      },
+      {
+        model: model.timeTableRoutineModel,
+        as: 'timeTablecreate',
+        attributes: ['timeTableRoutineId', 'courseId', 'startingDate', 'endingDate'],
+        required: true,
+        where: routineWhere,
+      },
+    ],
+  });
 
   return conflict;
 };

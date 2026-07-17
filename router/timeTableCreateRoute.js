@@ -6,6 +6,7 @@ import {
     addtimeTableCreate, cloneTimeTableRoutine, gettimeTableCreateDetails, getSingletimeTableCreateDetails, addtimeTableMapping, getTimeTableMappingDetail, getSingletimeTableMappingDetail, getTimeTableCellData
     , updatetimeTableCreate, getTimeTableElective, publishTimeTable, updateSimpleTeacherMappingController
     , deletetimeTableMapping, ClassSubjectCount, changeTimeTableCreate, getTimeTableByCourseAndSection, getRoutineByClassSectionId, getRoutineByTeacherAndAcademicYear
+    , deleteTimeTableRoutine
 } from '../controllers/timeTableCreateController.js';
 
 const router = Router();
@@ -221,6 +222,10 @@ const publishTimeTableQuerySchema = z.object({
     timeTableRoutineId: positiveIntegerId,
 });
 
+const deleteTimeTableRoutineQuerySchema = z.object({
+    timeTableRoutineId: positiveIntegerId,
+});
+
 const classSubjectCountQuerySchema = z.object({
     classSectionTermId: positiveIntegerId,
 });
@@ -240,6 +245,7 @@ router.get('/getRoutineByTeacher', userAuth, validate({ query: getRoutineByTeach
 // ---------------------------------------------------------------------------
 router.post('/', userAuth, validate({ body: addTimeTableCreateSchema }), addtimeTableCreate);
 router.patch('/create', userAuth, validate({ body: patchTimeTableCreateSchema }), changeTimeTableCreate);
+router.delete('/', userAuth, validate({ query: deleteTimeTableRoutineQuerySchema }), deleteTimeTableRoutine);
 router.post('/clone', userAuth, validate({ body: cloneRoutineSchema }), cloneTimeTableRoutine);
 router.patch('/publish', userAuth, validate({ query: publishTimeTableQuerySchema }), publishTimeTable);
 
