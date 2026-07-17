@@ -8641,6 +8641,39 @@
           "event": []
         },
         {
+          "id": "a7c3e91f-2b48-4d6a-9f10-structures-opt01",
+          "name": "structures",
+          "request": {
+            "description": "**GET /options/structures**\n\nTimetable structure dropdown options in flat `{ label, value }` format.\n\n- `label` = structure `name`\n- `value` = `timeTableNameId`\n\n**Includes originals and copies** as sibling options (no nesting by `sourceTimeTableNameId`).\n\n**Auth:** Bearer token required. Scoped by university / institute / academic year.",
+            "url": {
+              "raw": "{{baseurl}}/options/structures",
+              "path": [
+                "options",
+                "structures"
+              ],
+              "host": [
+                "{{baseurl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "type": "string",
+                  "value": "{{token}}",
+                  "key": "token"
+                }
+              ]
+            },
+            "header": []
+          },
+          "response": [],
+          "event": []
+        },
+        {
           "id": "2c3815af-5d5c-4fd3-b5ea-ce8d7093dbe6",
           "name": "fee plans",
           "request": {

@@ -113,6 +113,13 @@ export async function getTeacherOptions(campusId) {
     });
 }
 
+export async function getTimeTableStructureOptions() {
+    return scoped(model.timeTableStructureModel).findAll({
+        attributes: [['name', 'label'], ['time_table_name_id', 'value']],
+        order: [['name', 'ASC'], ['time_table_name_id', 'ASC']],
+    });
+}
+
 export async function findSessionCourseMappingByCourseAndSession(
     courseId,
     sessionId,

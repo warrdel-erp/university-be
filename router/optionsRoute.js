@@ -126,6 +126,12 @@ router.get(
 );
 
 router.get(
+    '/structures',
+    userAuth,
+    optionsController.getTimeTableStructureOptions,
+);
+
+router.get(
     '/feePlans',
     userAuth,
     validate({ query: feePlansQuerySchema }),

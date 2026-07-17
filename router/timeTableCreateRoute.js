@@ -8,6 +8,7 @@ import {
     addtimeTableCreate, cloneTimeTableRoutine, gettimeTableCreateDetails, getSingletimeTableCreateDetails, addtimeTableMapping, getTimeTableMappingDetail, getSingletimeTableMappingDetail, getTimeTableCellData
     , updatetimeTableCreate, getTimeTableElective, publishTimeTable, updateSimpleTeacherMappingController
     , deletetimeTableMapping, ClassSubjectCount, changeTimeTableCreate, getTimeTableByCourseAndSection, getRoutineByClassSectionId, getRoutineByTeacherAndAcademicYear
+    , deleteTimeTableRoutine
 } from '../controllers/timeTableCreateController.js';
 
 const router = Router();
@@ -30,6 +31,7 @@ const getRoutineByTeacherSchema = z.object({
     userId: positiveIntegerId,
     courseId: positiveIntegerId,
     sessionId: positiveIntegerId,
+    subjectId: optionalPositiveId,
 });
 
 const cloneRoutineSchema = z
@@ -223,6 +225,10 @@ const publishTimeTableQuerySchema = z.object({
     timeTableRoutineId: positiveIntegerId,
 });
 
+const deleteTimeTableRoutineQuerySchema = z.object({
+    timeTableRoutineId: positiveIntegerId,
+});
+
 const classSubjectCountQuerySchema = z.object({
     classSectionTermId: positiveIntegerId,
 });
@@ -230,20 +236,22 @@ const classSubjectCountQuerySchema = z.object({
 // ---------------------------------------------------------------------------
 // 1. Read / bootstrap — structure selection and routine lookup
 // ---------------------------------------------------------------------------
-router.get('/', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ query: getTimeTableCreateListQuerySchema }), gettimeTableCreateDetails);
-router.get('/single', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ query: getSingleQuerySchema }), getSingletimeTableCreateDetails);
-router.get('/create', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ query: getTimeTableByCourseAndSectionQuerySchema }),
+router.get('/', userAuth, validate({ query: getTimeTableCreateListQuerySchema }), gettimeTableCreateDetails);
+
+router.get('/single', userAuth, validate({ query: getSingleQuerySchema }), getSingletimeTableCreateDetails);
+router.get('/create', userAuth, validate({ query: getTimeTableByCourseAndSectionQuerySchema }),
     getTimeTableByCourseAndSection);
-router.get('/getRoutine', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ query: getRoutineSchema }), getRoutineByClassSectionId);
-router.get('/getRoutineByTeacher', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ query: getRoutineByTeacherSchema }), getRoutineByTeacherAndAcademicYear);
+router.get('/getRoutine', userAuth, validate({ query: getRoutineSchema }), getRoutineByClassSectionId);
+router.get('/getRoutineByTeacher', userAuth, validate({ query: getRoutineByTeacherSchema }), getRoutineByTeacherAndAcademicYear);
 
 // ---------------------------------------------------------------------------
 // 2. Routine lifecycle — create / update / clone / publish
 // ---------------------------------------------------------------------------
-router.post('/', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_CREATE_TIMETABLE.value, null), validate({ body: addTimeTableCreateSchema }), addtimeTableCreate);
-router.patch('/create', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_EDIT_ROUTINE.value, null), validate({ body: patchTimeTableCreateSchema }), changeTimeTableCreate);
-router.post('/clone', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_CREATE_TIMETABLE.value, null), validate({ body: cloneRoutineSchema }), cloneTimeTableRoutine);
-router.patch('/publish', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_EDIT_ROUTINE.value, null), validate({ query: publishTimeTableQuerySchema }), publishTimeTable);
+router.post('/', userAuth, validate({ body: addTimeTableCreateSchema }), addtimeTableCreate);
+router.patch('/create', userAuth, validate({ body: patchTimeTableCreateSchema }), changeTimeTableCreate);
+router.delete('/', userAuth, validate({ query: deleteTimeTableRoutineQuerySchema }), deleteTimeTableRoutine);
+router.post('/clone', userAuth, validate({ body: cloneRoutineSchema }), cloneTimeTableRoutine);
+router.patch('/publish', userAuth, validate({ query: publishTimeTableQuerySchema }), publishTimeTable);
 
 // ---------------------------------------------------------------------------
 // 3. Mapping lifecycle — assign timetable cells / teachers

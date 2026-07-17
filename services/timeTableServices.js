@@ -49,6 +49,28 @@ async function assertNoOverlappingCourseSessionDates({
     return { start, end };
 }
 
+function shapeStructureVariantTree(structures) {
+    const byId = new Map();
+    const roots = [];
+
+    for (const row of structures) {
+        const plain = row.get({ plain: true });
+        plain.variants = [];
+        byId.set(plain.timeTableNameId, plain);
+    }
+
+    for (const structure of byId.values()) {
+        const sourceId = structure.sourceTimeTableNameId;
+        if (sourceId != null && byId.has(sourceId)) {
+            byId.get(sourceId).variants.push(structure);
+            continue;
+        }
+        roots.push(structure);
+    }
+
+    return roots;
+}
+
 export async function addTimeTable(data, createdBy, updatedBy) {
     const transaction = await sequelize.transaction();
 
@@ -136,7 +158,8 @@ export async function addTimeTable(data, createdBy, updatedBy) {
 }
 
 export async function getTimeTableDetails() {
-    return await timeTableRepository.getTimeTableStructures();
+    const structures = await timeTableRepository.getTimeTableStructures();
+    return shapeStructureVariantTree(structures);
 }
 
 export async function getAllTimeTableName(query = {}) {
