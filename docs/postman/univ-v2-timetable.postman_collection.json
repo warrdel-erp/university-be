@@ -871,10 +871,16 @@
                       "key": "sessionId",
                       "value": "{{timetable_sessionId}}",
                       "description": "Required"
+                    },
+                    {
+                      "key": "subjectId",
+                      "value": "",
+                      "description": "Optional — filter normal schedule cells by subjectId",
+                      "disabled": true
                     }
                   ]
                 },
-                "description": "**GET /timeTableCreate/getRoutineByTeacher** — `employeeId`, `courseId`, `sessionId`."
+                "description": "**GET /timeTableCreate/getRoutineByTeacher** — `employeeId`, `courseId`, `sessionId` required.\n\nOptional `subjectId` filters the teacher's normal schedule cells to that subject only."
               },
               "response": []
             },

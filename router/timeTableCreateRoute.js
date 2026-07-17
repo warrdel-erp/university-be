@@ -29,6 +29,7 @@ const getRoutineByTeacherSchema = z.object({
     employeeId: positiveIntegerId,
     courseId: positiveIntegerId,
     sessionId: positiveIntegerId,
+    subjectId: optionalPositiveId,
 });
 
 const cloneRoutineSchema = z
@@ -234,6 +235,7 @@ const classSubjectCountQuerySchema = z.object({
 // 1. Read / bootstrap — structure selection and routine lookup
 // ---------------------------------------------------------------------------
 router.get('/', userAuth, validate({ query: getTimeTableCreateListQuerySchema }), gettimeTableCreateDetails);
+
 router.get('/single', userAuth, validate({ query: getSingleQuerySchema }), getSingletimeTableCreateDetails);
 router.get('/create', userAuth, validate({ query: getTimeTableByCourseAndSectionQuerySchema }),
 getTimeTableByCourseAndSection);

@@ -2960,11 +2960,12 @@ function mapClassSectionSummary(classSection) {
   };
 }
 
-export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, sessionId) {
+export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, sessionId, subjectId) {
   const bundle = await timeTableCreateRepository.getTeacherRoutineBundle(
     employeeId,
     courseId,
     sessionId,
+    subjectId,
   );
 
   const employee = bundle.employee;

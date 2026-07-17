@@ -1537,11 +1537,17 @@ const teacherClassSectionInclude = (courseId, sessionId) =>
     ],
   });
 
-const teacherNormalScheduleInclude = (employeeId) => ({
-  model: model.classScheduleModel,
-  as: 'timeTablecreate',
-  required: true,
-  where: { employeeId },
+const teacherNormalScheduleInclude = (employeeId, subjectId) => {
+  const scheduleWhere = { employeeId: Number(employeeId) };
+  if (subjectId != null) {
+    scheduleWhere.subjectId = Number(subjectId);
+  }
+
+  return {
+    model: model.classScheduleModel,
+    as: 'timeTablecreate',
+    required: true,
+    where: scheduleWhere,
   include: [
     {
       model: model.employeeModel,
@@ -1583,7 +1589,8 @@ const teacherNormalScheduleInclude = (employeeId) => ({
       ],
     },
   ],
-});
+  };
+};
 
 const teacherElectiveScheduleInclude = (employeeId) => ({
   model: model.classScheduleModel,
@@ -1636,7 +1643,7 @@ async function fetchTeacherRoutineContext(employeeId, courseId, sessionId) {
   ]);
 }
 
-async function fetchNormalRoutinesForTeacher(employeeId, courseId, sessionId) {
+async function fetchNormalRoutinesForTeacher(employeeId, courseId, sessionId, subjectId) {
   return scoped(model.timeTableRoutineModel).findAll({
     where: {
       courseId,
@@ -1654,7 +1661,7 @@ async function fetchNormalRoutinesForTeacher(employeeId, courseId, sessionId) {
     ],
     include: [
       teacherRoutineStructureInclude,
-      teacherNormalScheduleInclude(employeeId),
+      teacherNormalScheduleInclude(employeeId, subjectId),
       teacherClassSectionInclude(courseId, sessionId),
     ],
     order: [['timeTableRoutineId', 'ASC']],
@@ -1710,10 +1717,10 @@ async function fetchElectiveScheduleItemsForTeacher(
   return electiveItemsByTableNameId;
 }
 
-export async function getTeacherRoutineBundle(employeeId, courseId, sessionId) {
+export async function getTeacherRoutineBundle(employeeId, courseId, sessionId, subjectId) {
   const [[employee, course, session, classSections], normalRoutines] = await Promise.all([
     fetchTeacherRoutineContext(employeeId, courseId, sessionId),
-    fetchNormalRoutinesForTeacher(employeeId, courseId, sessionId),
+    fetchNormalRoutinesForTeacher(employeeId, courseId, sessionId, subjectId),
   ]);
 
   const timeTableNameIds = [];

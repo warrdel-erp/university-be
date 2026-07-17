@@ -260,12 +260,13 @@ export const getRoutineByClassSectionId = async (req, res) => {
 };
 
 export const getRoutineByTeacherAndAcademicYear = async (req, res) => {
-    const { employeeId, courseId, sessionId } = req.query;
+    const { employeeId, courseId, sessionId, subjectId } = req.query;
     try {
         const result = await timeTableCreateServices.getRoutineByTeacherAndAcademicYear(
             employeeId,
             courseId,
             sessionId,
+            subjectId,
         );
         return SuccessResponse(res, 200, 'Teacher routine fetched successfully', result);
     } catch (error) {
