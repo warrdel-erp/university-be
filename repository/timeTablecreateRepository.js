@@ -103,7 +103,7 @@ export async function findClassSectionTermsWithRoutines({ courseId, sessionId } 
         required: false,
         attributes: { exclude: ['createdAt', 'updatedAt', 'createdBy', 'updatedBy'] },
         include: [
-          routineStructureInclude(),
+          routineStructureInclude({ withPeriods: false }),
           {
             model: model.courseModel,
             as: 'timeTableCourse',
@@ -136,6 +136,39 @@ export async function findClassSectionTermsWithRoutines({ courseId, sessionId } 
       [{ model: model.classSectionModel, as: 'classSection' }, 'year', 'ASC'],
       [{ model: model.classSectionModel, as: 'classSection' }, 'section', 'ASC'],
       ['term', 'ASC'],
+    ],
+  });
+}
+
+export async function findRoutinesByCourseAndSession({ courseId, sessionId } = {}) {
+  const routineWhere = {};
+  if (courseId != null) {
+    routineWhere.courseId = Number(courseId);
+  }
+
+  const mappingInclude = routineStructureInclude({
+    withPeriods: false,
+    required: sessionId != null,
+  });
+  if (sessionId != null) {
+    mappingInclude.where = { sessionId: Number(sessionId) };
+  }
+
+  return scoped(model.timeTableRoutineModel).findAll({
+    where: routineWhere,
+    attributes: [
+      'timeTableRoutineId',
+      'startingDate',
+      'endingDate',
+      'isPublish',
+      'classSectionTermId',
+      'timeTableType',
+      'courseId',
+    ],
+    include: [mappingInclude],
+    order: [
+      ['startingDate', 'ASC'],
+      ['timeTableRoutineId', 'ASC'],
     ],
   });
 }
@@ -287,7 +320,7 @@ export async function deletetimeTableMapping(timeTableMappingId, options = {}) {
     attributes: ['timeTableMappingId', 'combinedGroupId'],
   });
   if (!schedule) {
-    throw new Error('Unable to soft delete account');
+    throw new Error('Mapping not found');
   }
 
   const mappingIds = [timeTableMappingId];

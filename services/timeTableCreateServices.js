@@ -8,7 +8,7 @@ import {
 } from "../repository/faculityLoadRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 import { getHolidayStartEndDate } from "../repository/holidayRepository.js";
-import { decimalAdd, toMoneyNumber } from "../utility/decimalMoney.js";
+import { decimalAdd, decimalSubtract, toMoneyNumber } from "../utility/decimalMoney.js";
 import { resolveProgramTerm, resolveTimeTableRoutineSection, stripRoutinePersistPayload } from "../utility/classSectionIncludes.js";
 import {
   findClassSectionTermById,
@@ -168,9 +168,43 @@ function assertRoutineEditable(startingDate) {
   }
 }
 
+function shapeRoutineListItem(routine) {
+  const plain = routine?.get ? routine.get({ plain: true }) : routine;
+  return {
+    name: plain.structureCourseMapping?.timeTableStructure?.name ?? null,
+    startingDate: plain.startingDate,
+    endingDate: plain.endingDate,
+    isPublish: Boolean(plain.isPublish),
+  };
+}
+
+function buildTermRoutineSummary(routines) {
+  let draftRoutineCount = 0;
+  let publishedRoutineCount = 0;
+  const timeTableRoutines = [];
+
+  for (const routine of routines) {
+    const row = shapeRoutineListItem(routine);
+    timeTableRoutines.push(row);
+    if (row.isPublish) {
+      publishedRoutineCount += 1;
+    } else {
+      draftRoutineCount += 1;
+    }
+  }
+
+  return {
+    timeTableRoutines,
+    draftRoutineCount,
+    publishedRoutineCount,
+  };
+}
+
 function shapeTimeTableCreateList(rows, course) {
   const coursePlain = course?.get ? course.get({ plain: true }) : course;
   const byYear = {};
+  let draftRoutineCount = 0;
+  let publishedRoutineCount = 0;
   const meta = {
     courseId: coursePlain?.courseId ?? null,
     sessionId: null,
@@ -204,12 +238,19 @@ function shapeTimeTableCreateList(rows, course) {
       };
     }
 
+    const termRoutineSummary = buildTermRoutineSummary(plain.timeTableRoutines || []);
+
+    draftRoutineCount += termRoutineSummary.draftRoutineCount;
+    publishedRoutineCount += termRoutineSummary.publishedRoutineCount;
+
     byYear[year][sectionId].termsByNum[term] = {
       term,
       termName: coursePlain ? buildTermName(coursePlain.termType, term) : `Term ${term}`,
       classSectionTermId: plain.classSectionTermId,
       classSectionsId: sectionId,
-      timeTableRoutines: plain.timeTableRoutines || [],
+      draftRoutineCount: termRoutineSummary.draftRoutineCount,
+      publishedRoutineCount: termRoutineSummary.publishedRoutineCount,
+      timeTableRoutines: termRoutineSummary.timeTableRoutines,
     };
   }
 
@@ -225,15 +266,26 @@ function shapeTimeTableCreateList(rows, course) {
   const years = [];
   for (const yearNum of yearNumbers) {
     const yearBucket = byYear[yearNum] || {};
-    const sectionIds = Object.keys(yearBucket).map(Number);
+    const sectionIds = [];
+    const sectionKeys = Object.keys(yearBucket);
+    for (const key of sectionKeys) {
+      sectionIds.push(Number(key));
+    }
     sectionIds.sort((a, b) => a - b);
 
     const classSections = [];
     for (const sectionId of sectionIds) {
       const sectionEntry = yearBucket[sectionId];
-      const termNumbers = coursePlain
-        ? termsForYear(yearNum, coursePlain)
-        : Object.keys(sectionEntry.termsByNum).map(Number).sort((a, b) => a - b);
+      let termNumbers = [];
+      if (coursePlain) {
+        termNumbers = termsForYear(yearNum, coursePlain);
+      } else {
+        const termKeys = Object.keys(sectionEntry.termsByNum);
+        for (const key of termKeys) {
+          termNumbers.push(Number(key));
+        }
+        termNumbers.sort((a, b) => a - b);
+      }
 
       const semesters = [];
       for (const termNum of termNumbers) {
@@ -246,6 +298,8 @@ function shapeTimeTableCreateList(rows, course) {
             termName: coursePlain ? buildTermName(coursePlain.termType, termNum) : `Term ${termNum}`,
             classSectionTermId: null,
             classSectionsId: sectionId,
+            draftRoutineCount: 0,
+            publishedRoutineCount: 0,
             timeTableRoutines: [],
           });
         }
@@ -264,7 +318,12 @@ function shapeTimeTableCreateList(rows, course) {
     years.push({ year: yearNum, classSections });
   }
 
-  return { ...meta, years };
+  return {
+    ...meta,
+    years,
+    draftRoutineCount,
+    publishedRoutineCount,
+  };
 }
 
 export async function resolveRoutinePlacement(data, options = {}) {
@@ -386,6 +445,12 @@ async function resolveCopyPayloads(data, options) {
   return payloads;
 }
 
+function throwSlotConflictError(message) {
+  const error = new Error(message);
+  error.statusCode = 409;
+  throw error;
+}
+
 async function assertNoSlotConflicts({
   employeeId,
   classRoomSectionId,
@@ -399,7 +464,17 @@ async function assertNoSlotConflicts({
   excludeRoutineId,
   transaction,
 }) {
+  if (!periodInfo || !periodInfo.startTime || !periodInfo.endTime) {
+    const error = new Error('Period startTime and endTime are required for conflict checks');
+    error.statusCode = 400;
+    throw error;
+  }
+
   const { startTime, endTime } = periodInfo;
+  const mergedOptions = {
+    ...conflictOptions,
+    ...(excludeRoutineId != null && { excludeRoutineId }),
+  };
 
   if (employeeId) {
     const conflict = await timeTableCreateRepository.checkTeacherConflictRepository(
@@ -409,11 +484,11 @@ async function assertNoSlotConflicts({
       endTime,
       startingDate,
       endingDate,
-      conflictOptions,
+      mergedOptions,
       transaction,
     );
     if (conflict) {
-      throw new Error('Teacher conflict: teacher already scheduled for this slot');
+      throwSlotConflictError('Teacher conflict: teacher already scheduled for this slot');
     }
   }
 
@@ -425,15 +500,15 @@ async function assertNoSlotConflicts({
       endTime,
       startingDate,
       endingDate,
-      conflictOptions,
+      mergedOptions,
       transaction,
     );
     if (conflict) {
-      throw new Error('Room conflict: classroom already occupied for this slot');
+      throwSlotConflictError('Room conflict: classroom already occupied for this slot');
     }
   }
 
-  if (electiveSubjectId && courseId && startTime && endTime) {
+  if (electiveSubjectId && courseId) {
     const conflict = await timeTableCreateRepository.checkElectiveSubjectConflictRepository(
       electiveSubjectId,
       courseId,
@@ -442,11 +517,11 @@ async function assertNoSlotConflicts({
       endTime,
       startingDate,
       endingDate,
-      { excludeRoutineId },
+      mergedOptions,
       transaction,
     );
     if (conflict) {
-      throw new Error('Elective conflict: subject already scheduled for this slot');
+      throwSlotConflictError('Elective conflict: subject already scheduled for this slot');
     }
   }
 }
@@ -465,6 +540,40 @@ async function addFacultyLoadForEmployee(employeeId, periodLength, transaction) 
     { currentLoad: decimalAdd(existingLoad, periodLength) },
     transaction,
   );
+}
+
+async function subtractFacultyLoadForEmployee(employeeId, periodLength, transaction) {
+  if (!employeeId || periodLength <= 0) {
+    return;
+  }
+
+  const facultyLoad = await getSingleFaculityLoadDetails(employeeId);
+  const existingLoad = toMoneyNumber(
+    facultyLoad?.[0]?.dataValues?.currentLoad ?? facultyLoad?.[0]?.currentLoad,
+  );
+  await updateFaculityLoadByEmployeeId(
+    employeeId,
+    { currentLoad: Math.max(0, decimalSubtract(existingLoad, periodLength)) },
+    transaction,
+  );
+}
+
+async function assertMappingSlotAvailable(
+  { timeTableRoutineId, day, period, timeTableCreationId },
+  transaction,
+) {
+  const occupied = await timeTableCreateRepository.findMappingAtSlotRepository(
+    {
+      timeTableRoutineId,
+      day,
+      period,
+      timeTableCreationId,
+    },
+    { transaction },
+  );
+  if (occupied) {
+    throwSlotConflictError(`Cell already has a mapping on ${day} period ${period}`);
+  }
 }
 
 async function resolveCombinedRoutineTargets(anchorRoutine, classSectionTermIds, transaction) {
@@ -765,7 +874,49 @@ export async function deleteTimeTableRoutine(timeTableRoutineId) {
 }
 
 export async function deletetimeTableMapping(timeTableMappingId, options = {}) {
-  return await timeTableCreateRepository.deletetimeTableMapping(timeTableMappingId, options);
+  const transaction = await sequelize.transaction();
+
+  try {
+    const schedule = await timeTableCreateRepository.getMappingByIdRepository(
+      timeTableMappingId,
+      { transaction },
+    );
+    if (!schedule) {
+      const error = new Error('Mapping not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const routine = await timeTableCreateRepository.getRoutineByIdRepository(
+      schedule.timeTableRoutineId,
+      { transaction },
+    );
+    if (!routine) {
+      const error = new Error('Routine not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    assertRoutineNotStarted(routine.startingDate);
+
+    const periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(
+      schedule.timeTableCreationId,
+    );
+    const periodLength = toMoneyNumber(periodInfo?.timeTableName?.periodLength ?? 0);
+
+    const result = await timeTableCreateRepository.deletetimeTableMapping(timeTableMappingId, {
+      ...options,
+      transaction,
+    });
+
+    await subtractFacultyLoadForEmployee(schedule.employeeId, periodLength, transaction);
+
+    await transaction.commit();
+    return result;
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
 }
 
 export async function addtimeTableMapping(data, createdBy, updatedBy) {
@@ -936,6 +1087,16 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
       });
 
       for (const target of routineTargets) {
+        await assertMappingSlotAvailable(
+          {
+            timeTableRoutineId: target.timeTableRoutineId,
+            day,
+            period: slot.period,
+            timeTableCreationId: slot.timeTableCreationId,
+          },
+          transaction,
+        );
+
         const rowData = stripMappingRow({
           ...payload,
           timeTableRoutineId: target.timeTableRoutineId,
@@ -1091,6 +1252,7 @@ export async function cloneTimeTableRoutine(
     const conflictOptions = {
       allowedClassSectionTermIds: [],
       excludeCombinedGroupId: null,
+      excludeRoutineId: Number(previousRoutineId),
     };
 
     for (const mapping of previousMappings) {
@@ -1103,7 +1265,10 @@ export async function cloneTimeTableRoutine(
       const creationId = Number(mappingPlain.timeTableCreationId);
       let periodInfo = periodInfoByCreationId.get(creationId);
       if (!periodInfo) {
-        periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(creationId);
+        periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(
+          creationId,
+          { transaction },
+        );
         periodInfoByCreationId.set(creationId, periodInfo);
       }
 
@@ -1117,7 +1282,6 @@ export async function cloneTimeTableRoutine(
         conflictOptions,
         electiveSubjectId: mappingPlain.electiveSubjectId,
         courseId: previousPlain.courseId,
-        excludeRoutineId: previousRoutineId,
         transaction,
       });
     }

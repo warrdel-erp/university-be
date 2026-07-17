@@ -97,7 +97,7 @@ export const addtimeTableMapping = async (req, res) => {
         );
         res.status(200).send(result);
     } catch (error) {
-        res.status(400).send({
+        res.status(error.statusCode || 400).send({
             success: false,
             message: error.message || "Something went wrong",
         });
@@ -184,7 +184,13 @@ export const deletetimeTableMapping = async (req, res) => {
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in deleting time table mapping Id ${timeTableMappingId}:`, error);
-        res.status(500).send("Internal Server Error");
+        const message = error.message || 'Internal Server Error';
+        const statusCode = error.statusCode
+            || (/not found/i.test(message) ? 404 : /starting date/i.test(message) ? 400 : 500);
+        res.status(statusCode).send({
+            success: false,
+            message,
+        });
     }
 };
 
