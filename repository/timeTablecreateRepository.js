@@ -641,8 +641,25 @@ export async function getMappingsByCombinedGroupIdRepository(combinedGroupId, op
 function isAllowedCombinedConflict(conflict, options = {}) {
   if (!conflict) return true;
 
-  const { allowedClassSectionTermIds = [], excludeCombinedGroupId = null } = options;
+  const {
+    allowedClassSectionTermIds = [],
+    excludeCombinedGroupId = null,
+    excludeRoutineId = null,
+  } = options;
   const routine = conflict.timeTablecreate;
+  const conflictRoutineId = conflict.timeTableRoutineId
+    ?? conflict.dataValues?.timeTableRoutineId
+    ?? routine?.timeTableRoutineId
+    ?? routine?.dataValues?.timeTableRoutineId;
+
+  if (
+    excludeRoutineId != null
+    && conflictRoutineId != null
+    && Number(conflictRoutineId) === Number(excludeRoutineId)
+  ) {
+    return true;
+  }
+
   const conflictTermId = routine?.classSectionTermId ?? routine?.dataValues?.classSectionTermId;
 
   if (
