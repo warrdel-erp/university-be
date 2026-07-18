@@ -5,6 +5,7 @@ import student from "./studentModel.js";
 import classSection from "./classSectionModel.js";
 import classSectionTermModel from "./classSectionTermModel.js";
 import classScheduleModel from "./classScheduleModel.js";
+import timeTableCellDateWiseModel from "./timeTableCellDateWiseModel.js";
 import institute from "./instituteModel.js";
 import university from "./universityModel.js";
 
@@ -51,6 +52,15 @@ const attendanceModel = sequelize.define(
             references: {
                 model: classScheduleModel,
                 key: 'time_table_mapping_id'
+            }
+        },
+        timeTableCellDateWiseId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'time_table_cell_date_wise_id',
+            references: {
+                model: timeTableCellDateWiseModel,
+                key: 'time_table_cell_date_wise_id'
             }
         },
         classSectionsId: {

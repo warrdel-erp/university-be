@@ -10,11 +10,11 @@
 
 | Table | Action |
 |-------|--------|
-| `time_table_cell` | **NEW** — week template cell (day, period, subject, room) |
-| `time_table_cell_teachers` | **NEW** — teachers on week cell |
-| `time_table_cell_date_wise` | **NEW** — actual calendar-day class instance |
-| `time_table_cell_teachers_date_wise` | **NEW** — teachers on that date instance |
-| `attendance` | **ALTER** — FK `time_table_mapping_id` → `time_table_cell_date_wise_id` |
+| `time_table_cell` | **NEW** — week template cell; PK = `time_table_mapping_id` |
+| `time_table_cell_teachers` | **NEW** — teachers on week cell (`user_id`, `time_table_mapping_id`) |
+| `time_table_cell_date_wise` | **NEW** — calendar instance (`time_table_mapping_id` + `date`) |
+| `time_table_cell_teachers_date_wise` | **NEW** — teachers on date instance (`user_id`) |
+| `attendance` | **ALTER** — added `time_table_cell_date_wise_id` (nullable during cutover; keeps `time_table_mapping_id`) |
 | `lesson_mapping` | **ALTER** — retarget FK off `time_table_mapping_id` |
 | `class_schedule_item` | **DROP** after cutover |
 

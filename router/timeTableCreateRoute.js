@@ -184,6 +184,7 @@ const updateTimeTableMappingSchema = z.object({
 
 const updateTeacherMappingItemSchema = z.object({
     timeTableMappingId: optionalPositiveId,
+    timeTableCellTeacherId: optionalPositiveId,
     userId: optionalPositiveId,
     subjectId: optionalPositiveId,
     electiveSubjectId: optionalPositiveId,

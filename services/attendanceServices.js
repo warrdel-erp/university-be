@@ -1,4 +1,5 @@
 import * as attendanceService from "../repository/attendanceRepository.js";
+import * as employeeScheduleRepository from "../repository/employeeScheduleRepository.js";
 import moment from "moment";
 import * as helper from "../utility/helper.js";
 import xlsx from 'xlsx';
@@ -705,49 +706,49 @@ export async function getStudentAttendanceReport(classSectionsId, subjectId, use
 export async function getEmployeeSectionDates(classSectionTermId, subjectId, userId) {
   const placement = await resolveAttendancePlacement(classSectionTermId);
   const [scheduleItems, details] = await Promise.all([
-    attendanceService.getEmployeeScheduleWithRoutine(placement.classSectionTermId, subjectId, userId),
+    employeeScheduleRepository.getEmployeeSectionDateWiseRows(
+      placement.classSectionTermId,
+      subjectId,
+      userId,
+    ),
     attendanceService.getDetailsByTerm(placement.classSectionTermId, subjectId, userId),
   ]);
 
   const dateMap = {};
 
   for (const item of scheduleItems) {
-    const routine = item.timeTablecreate;
-    if (!routine || !routine.startingDate || !routine.endingDate) continue;
+    const plain = item.get({ plain: true });
+    const cell = plain.timeTableCell;
+    const routine = cell.timeTableRoutine;
+    const dateKey = plain.date;
 
-    const targetDay = item.day.toLowerCase();
-    const specificDates = helper.getDatesForDayInRange(routine.startingDate, routine.endingDate, targetDay);
+    if (!dateMap[dateKey]) {
+      dateMap[dateKey] = {
+        date: dateKey,
+        day: cell.day,
+        timeTableRoutineId: routine.timeTableRoutineId,
+        periods: [],
+      };
+    }
 
-    specificDates.forEach(date => {
-      const dateKey = date.toISOString().split('T')[0];
-      if (!dateMap[dateKey]) {
-        dateMap[dateKey] = {
-          date: dateKey,
-          day: item.day,
-          timeTableRoutineId: routine.timeTableRoutineId,
-          periods: []
-        };
-      }
-      dateMap[dateKey].periods.push({
-        timeTableMappingId: item.timeTableMappingId,
-        timeTableCreationId: item.timeTablecreation?.timeTableCreationId,
-        periodName: item.timeTablecreation?.periodName,
-        startTime: item.timeTablecreation?.startTime,
-        endTime: item.timeTablecreation?.endTime
-      });
+    dateMap[dateKey].periods.push({
+      timeTableCellDateWiseId: plain.timeTableCellDateWiseId,
+      timeTableMappingId: plain.timeTableMappingId,
+      timeTableCreationId: cell.timeTablecreation?.timeTableCreationId,
+      periodName: cell.timeTablecreation?.periodName,
+      startTime: cell.timeTablecreation?.startTime,
+      endTime: cell.timeTablecreation?.endTime,
     });
   }
 
-  // Convert map to array and sort
-  const dates = Object.values(dateMap).map(dayData => {
-    // Sort periods within the day by start time
+  const dates = Object.values(dateMap).map((dayData) => {
     dayData.periods.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
     return dayData;
   }).sort((a, b) => a.date.localeCompare(b.date));
 
   return {
     details,
-    dates
+    dates,
   };
 }
 
