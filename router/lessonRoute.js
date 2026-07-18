@@ -19,6 +19,9 @@ import {
     linkLessonsToWindow,
 } from "../controllers/lessonController.js";
 
+import { PERMISSIONS } from '../const/permissions.js';
+import { checkAccess } from '../middleware/checkAccess.js';
+
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
 
