@@ -66,12 +66,12 @@ export async function addTopice(req, res) {
 };
 
 export async function addMapping(req, res) {
-    const { topicId, timeTableMappingId, date } = req.body
+    const { topicId, timeTableCellDateWiseId } = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if (!(topicId && timeTableMappingId && date)) {
-            return res.status(400).send('topiceId,timeTableMappingId and date is required')
+        if (!(topicId && timeTableCellDateWiseId)) {
+            return res.status(400).send('topicId and timeTableCellDateWiseId are required')
         }
         const lessonData = await lesson.addMapping(req.body, createdBy, updatedBy);
         res.status(201).json({ message: "Data added successfully", lessonData });

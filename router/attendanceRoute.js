@@ -26,8 +26,8 @@ const bulkAttendanceReportSchema = z.object({
 const batchAttendanceSchema = z.object({
     classSectionTermId: positiveIntegerId,
     filters: z.array(z.object({
-        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
-        timeTableMappingId: z.number()
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD").optional(),
+        timeTableCellDateWiseId: z.number()
     })).min(1)
 });
 
@@ -44,11 +44,11 @@ const attendanceStatusEnum = z.enum([
 
 const addAttendanceSchema = z.object({
     classSectionTermId: positiveIntegerId,
-    timeTableMappingId: z.union([
+    timeTableCellDateWiseId: z.union([
         z.coerce.number().int().positive(),
         z.array(z.coerce.number().int().positive()).min(1),
     ]),
-    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD").optional(),
     attendance: z.array(z.object({
         studentId: z.coerce.number().int().positive(),
         attendanceStatus: attendanceStatusEnum,
@@ -59,17 +59,15 @@ const addAttendanceSchema = z.object({
 });
 
 const copyAttendancePeriodSchema = z.object({
-    timeTableMappingId: positiveIntegerId,
-    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
-    copyToTimeTableMappingId: z.union([
+    timeTableCellDateWiseId: positiveIntegerId,
+    copyToTimeTableCellDateWiseId: z.union([
         z.coerce.number().int().positive(),
         z.array(z.coerce.number().int().positive()).min(1),
     ]),
 });
 
 const copyAttendancePeriodQuerySchema = z.object({
-    timeTableMappingId: positiveIntegerId,
-    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
+    timeTableCellDateWiseId: positiveIntegerId,
 });
 
 const attendanceByDateQuerySchema = z.object({

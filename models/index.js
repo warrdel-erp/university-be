@@ -678,15 +678,21 @@ classSectionTermModel.hasMany(attendanceModel, { foreignKey: "class_section_term
 attendanceModel.belongsTo(studentModel, { foreignKey: "student_id", as: "studentAttendance" });
 studentModel.hasMany(attendanceModel, { foreignKey: "student_id", as: "studentAttendance" });
 
-attendanceModel.belongsTo(classScheduleModel, { foreignKey: "timeTableMappingId", as: "timeTableMapping" });
-classScheduleModel.hasMany(attendanceModel, { foreignKey: "timeTableMappingId", as: "attendances" });
-
 attendanceModel.belongsTo(timeTableCellDateWiseModel, {
   foreignKey: "timeTableCellDateWiseId",
   as: "timeTableCellDateWise",
 });
 timeTableCellDateWiseModel.hasMany(attendanceModel, {
   foreignKey: "timeTableCellDateWiseId",
+  as: "attendances",
+});
+
+attendanceModel.belongsTo(timeTableCellModel, {
+  foreignKey: "timeTableMappingId",
+  as: "timeTableCell",
+});
+timeTableCellModel.hasMany(attendanceModel, {
+  foreignKey: "timeTableMappingId",
   as: "attendances",
 });
 
@@ -1403,8 +1409,23 @@ topicModel.hasMany(lessonMappingModel, { foreignKey: "topicId", as: "topicMappin
 subTopicModel.belongsTo(topicModel, { foreignKey: "topicId", as: "topic" });
 topicModel.hasMany(subTopicModel, { foreignKey: "topicId", as: "subTopic" });
 
-lessonMappingModel.belongsTo(classScheduleModel, { foreignKey: "timeTableMappingId", as: "timeTableMapping" });
-classScheduleModel.hasMany(lessonMappingModel, { foreignKey: "timeTableMappingId", as: "timeTableMapping" });
+lessonMappingModel.belongsTo(timeTableCellDateWiseModel, {
+  foreignKey: "timeTableCellDateWiseId",
+  as: "timeTableCellDateWise",
+});
+timeTableCellDateWiseModel.hasMany(lessonMappingModel, {
+  foreignKey: "timeTableCellDateWiseId",
+  as: "lessonMappings",
+});
+
+lessonMappingModel.belongsTo(timeTableCellModel, {
+  foreignKey: "timeTableMappingId",
+  as: "timeTableCell",
+});
+timeTableCellModel.hasMany(lessonMappingModel, {
+  foreignKey: "timeTableMappingId",
+  as: "lessonMappings",
+});
 
 courseModel.hasMany(examStructureModel, { foreignKey: "courseId", sourceKey: "courseId", as: "examStructuresCourse" });
 examStructureModel.belongsTo(courseModel, { foreignKey: "courseId", targetKey: "courseId", as: "courseExam" });

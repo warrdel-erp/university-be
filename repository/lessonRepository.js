@@ -218,6 +218,7 @@ export async function getLessonMappingById(lessonMappingId, transaction) {
     attributes: [
       "lessonMappingId",
       "topicId",
+      "timeTableCellDateWiseId",
       "timeTableMappingId",
       "date",
       "completeDate",
@@ -230,10 +231,10 @@ export async function getLessonMappingById(lessonMappingId, transaction) {
   });
 }
 
-export async function getClassScheduleById(timeTableMappingId, transaction) {
-  return scoped(model.classScheduleModel).findOne({
-    where: { timeTableMappingId: Number(timeTableMappingId) },
-    attributes: ["timeTableMappingId"],
+export async function getDateWiseCellById(timeTableCellDateWiseId, transaction) {
+  return model.timeTableCellDateWiseModel.findOne({
+    where: { timeTableCellDateWiseId: Number(timeTableCellDateWiseId) },
+    attributes: ["timeTableCellDateWiseId", "timeTableMappingId", "date"],
     transaction,
   });
 }
@@ -276,87 +277,84 @@ export async function getMapping(academicYearId) {
           ],
         },
         {
-          model: model.classScheduleModel,
-          as: "timeTableMapping",
-          attributes: {
-            exclude: [
-              "createdAt",
-              "updatedAt",
-              "deletedAt",
-              "createdBy",
-              "updatedBy",
-              "teacher_subject_mapping_id",
-              "time_table_routine_id",
-              "time_table_creation_id",
-              "class_room_section_id",
-              "elective_subject_id",
-              "subject_id",
-            ],
-          },
+          model: model.timeTableCellDateWiseModel,
+          as: "timeTableCellDateWise",
+          required: false,
+          attributes: ["timeTableCellDateWiseId", "timeTableMappingId", "date", "classRoomSectionId"],
           include: [
             {
-              model: model.timeTableRoutineModel,
-              as: "timeTablecreate",
+              model: model.timeTableCellModel,
+              as: "timeTableCell",
               required: true,
-              where: buildScope(model.timeTableRoutineModel),
-              attributes: {
-                exclude: [
-                  "createdAt",
-                  "updatedAt",
-                  "deletedAt",
-                  "createdBy",
-                  "updatedBy",
-                  "time_table_name_id",
-                  "course_id",
-                  "campus_id",
-                  "class_sections_id",
-                  "acedmic_year_id",
-                ],
-              },
+              attributes: [
+                "timeTableMappingId",
+                "day",
+                "period",
+                "timeTableType",
+                "subjectId",
+                "electiveSubjectId",
+                "teacherSubjectMappingId",
+              ],
               include: [
                 {
-                  model: model.classSectionTermModel,
-                  as: "timeTableClassSectionTerm",
-                  attributes: ["classSectionTermId", "term", "classSectionsId"],
+                  model: model.timeTableRoutineModel,
+                  as: "timeTableRoutine",
+                  required: true,
+                  where: buildScope(model.timeTableRoutineModel),
+                  attributes: [
+                    "timeTableRoutineId",
+                    "classSectionTermId",
+                    "startingDate",
+                    "endingDate",
+                  ],
                   include: [
                     {
-                      model: model.classSectionModel,
-                      as: "classSection",
-                      attributes: ["section", "year", "classSectionsId"],
+                      model: model.classSectionTermModel,
+                      as: "timeTableClassSectionTerm",
+                      attributes: ["classSectionTermId", "term", "classSectionsId"],
+                      include: [
+                        {
+                          model: model.classSectionModel,
+                          as: "classSection",
+                          attributes: ["section", "year", "classSectionsId"],
+                        },
+                      ],
                     },
                   ],
                 },
-              ],
-            },
-            {
-              model: model.timeTableStructurePeriodsModel,
-              as: "timeTablecreation",
-              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            },
-            {
-              model: model.employeeModel, as: "employeeDetails",
-              attributes: ["employeeName", "employeeCode", "pickColor", "userId"],
-            },
-            {
-              model: model.teacherSubjectMappingModel,
-              as: "timeTableTeacherSubject",
-              attributes: {
-                exclude: [
-                  "createdAt",
-                  "updatedAt",
-                  "deletedAt",
-                  "createdBy",
-                  "updated",
-                  "user_id",
-                  "userId",
-                  "class_subject_mapper_id",
-                ],
-              },
-              include: [
                 {
-                  model: model.employeeModel,
-                  as: "teacherEmployeeData",
-                  attributes: ["employeeName", "employeeCode", "pickColor", "userId"],
+                  model: model.timeTableStructurePeriodsModel,
+                  as: "timeTablecreation",
+                  attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                  required: false,
+                },
+                {
+                  model: model.timeTableCellTeachersModel,
+                  as: "timeTableCellTeachers",
+                  required: false,
+                  attributes: ["userId", "teacherType"],
+                  include: [
+                    {
+                      model: model.employeeModel,
+                      as: "employeeDetails",
+                      attributes: ["employeeName", "employeeCode", "pickColor", "userId"],
+                      required: false,
+                    },
+                  ],
+                },
+                {
+                  model: model.teacherSubjectMappingModel,
+                  as: "timeTableTeacherSubject",
+                  required: false,
+                  attributes: ["teacherSubjectMappingId", "userId"],
+                  include: [
+                    {
+                      model: model.employeeModel,
+                      as: "teacherEmployeeData",
+                      attributes: ["employeeName", "employeeCode", "pickColor", "userId"],
+                      required: false,
+                    },
+                  ],
                 },
               ],
             },

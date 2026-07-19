@@ -43,8 +43,7 @@ const linkLessonBodySchema = z.object({
 }).strict();
 
 const copyMappingTargetSchema = z.object({
-    timeTableMappingId: positiveIntegerId,
-    date: dateOnly,
+    timeTableCellDateWiseId: positiveIntegerId,
 }).strict();
 
 const copyMappingBodySchema = z.object({
@@ -54,6 +53,20 @@ const copyMappingBodySchema = z.object({
     lectureUrl: z.string().optional().nullable(),
     file: z.any().optional().nullable(),
 }).strict();
+
+const addMappingBodySchema = z.object({
+    topicId: positiveIntegerId,
+    timeTableCellDateWiseId: positiveIntegerId,
+    completeDate: dateOnly.optional().nullable(),
+    note: z.string().optional().nullable(),
+    lectureUrl: z.string().optional().nullable(),
+    file: z.any().optional().nullable(),
+    status: z.string().optional(),
+    subTopic: z.array(z.object({
+        name: z.string(),
+        description: z.string().optional().nullable(),
+    })).optional(),
+}).passthrough();
 
 router.post('/', userAuth, addLesson);
 
@@ -66,6 +79,14 @@ router.get('/simple', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.valu
 router.get('/single', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getSingleLessonDetails);
 
 router.post('/topic', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_ADD.value, null), addTopice);
+
+router.post(
+    '/mapping',
+    userAuth,
+    checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_ADD.value, null),
+    validate({ body: addMappingBodySchema }),
+    addMapping,
+);
 
 router.post(
     '/mapping/copy',

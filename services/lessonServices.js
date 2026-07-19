@@ -1,6 +1,7 @@
 import * as lesson from "../repository/lessonRepository.js";
 import * as lectureWindowRepository from "../repository/lectureWindowRepository.js";
 import sequelize from '../database/sequelizeConfig.js';
+import { resolveSourcePeriodByDateWiseId } from '../utility/attendancePlacement.js';
 
 export async function addLesson(data, createdBy, updatedBy) {
     const window = await lectureWindowRepository.getLectureWindowById(
@@ -46,10 +47,16 @@ export async function addMapping(data, createdBy, updatedBy) {
   const transaction = await sequelize.transaction();
 
   try {
+    const period = await resolveSourcePeriodByDateWiseId(
+      Number(data.timeTableCellDateWiseId),
+      { transaction },
+    );
+
     const payload = {
       topicId: data.topicId,
-      timeTableMappingId: data.timeTableMappingId,
-      date: data.date,
+      timeTableCellDateWiseId: period.timeTableCellDateWiseId,
+      timeTableMappingId: period.timeTableMappingId,
+      date: period.date,
       completeDate: data.completeDate || null,
       note: data.note || null,
       lectureUrl: data.lectureUrl || null,
@@ -59,7 +66,7 @@ export async function addMapping(data, createdBy, updatedBy) {
       updatedBy,
     };
 
-    const lessonMapping = await lesson.addLessionMapping(payload, transaction);
+    await lesson.addLessionMapping(payload, transaction);
 
     if (data.subTopic && Array.isArray(data.subTopic)) {
       for (const sub of data.subTopic) {
@@ -84,9 +91,7 @@ export async function addMapping(data, createdBy, updatedBy) {
 }
 
 /**
- * Copy an existing lesson/topic mapping onto one or more timetable cells.
- * The same source can be taught in multiple cells, so each target carries its own
- * timeTableMappingId + date. All copies are created in a single transaction.
+ * Copy an existing lesson/topic mapping onto one or more date-wise periods.
  */
 export async function copyMapping(data, createdBy, updatedBy) {
   const transaction = await sequelize.transaction();
@@ -104,19 +109,17 @@ export async function copyMapping(data, createdBy, updatedBy) {
     const copied = [];
 
     for (const target of data.targets) {
-      const schedule = await lesson.getClassScheduleById(target.timeTableMappingId, transaction);
-      if (!schedule) {
-        throw Object.assign(
-          new Error(`Timetable cell ${target.timeTableMappingId} not found`),
-          { statusCode: 404 },
-        );
-      }
+      const period = await resolveSourcePeriodByDateWiseId(
+        Number(target.timeTableCellDateWiseId),
+        { transaction },
+      );
 
       const row = await lesson.addLessionMapping(
         {
           topicId: source.topicId,
-          timeTableMappingId: Number(target.timeTableMappingId),
-          date: target.date,
+          timeTableCellDateWiseId: period.timeTableCellDateWiseId,
+          timeTableMappingId: period.timeTableMappingId,
+          date: period.date,
           completeDate: null,
           note,
           lectureUrl,
@@ -131,6 +134,7 @@ export async function copyMapping(data, createdBy, updatedBy) {
       copied.push({
         lessonMappingId: row.lessonMappingId,
         topicId: row.topicId,
+        timeTableCellDateWiseId: row.timeTableCellDateWiseId,
         timeTableMappingId: row.timeTableMappingId,
         date: row.date,
         status: row.status,
@@ -139,7 +143,7 @@ export async function copyMapping(data, createdBy, updatedBy) {
 
     await transaction.commit();
     return {
-      message: `Lesson mapping copied to ${copied.length} cell(s) successfully`,
+      message: `Lesson mapping copied to ${copied.length} period(s) successfully`,
       copied,
       sourceLessonMappingId: Number(data.sourceLessonMappingId),
     };
@@ -148,6 +152,18 @@ export async function copyMapping(data, createdBy, updatedBy) {
     console.error("Error in copyMapping:", error);
     throw error;
   }
+}
+
+function pickTeacherFromCell(cell) {
+  const teachers = cell.timeTableCellTeachers || [];
+  for (const teacher of teachers) {
+    if (teacher.employeeDetails) {
+      return teacher.employeeDetails;
+    }
+  }
+  const tsmEmp = cell.timeTableTeacherSubject?.teacherEmployeeData
+    || cell.timeTableTeacherSubject?.employeeDetails;
+  return tsmEmp || null;
 }
 
 export async function getMapping(academicYearId) {
@@ -161,17 +177,14 @@ export async function getMapping(academicYearId) {
       const item = row.get ? row.get({ plain: true }) : row;
       plainData.push(item);
 
-      const ttMapping = item.timeTableMapping;
-
-      if (!ttMapping) {
+      const dateWise = item.timeTableCellDateWise;
+      const cell = dateWise?.timeTableCell;
+      if (!cell) {
         continue;
       }
 
-      const empDetails = ttMapping.employeeDetails;
-      const teacherMapping = ttMapping.timeTableTeacherSubject?.teacherEmployeeData;
-      const finalEmp = empDetails || teacherMapping;
-
-      const empId = finalEmp?.userId || ttMapping.timeTableMappingId;
+      const finalEmp = pickTeacherFromCell(cell);
+      const empId = finalEmp?.userId || cell.timeTableMappingId;
 
       if (!grouped[empId]) {
         grouped[empId] = {
@@ -183,24 +196,27 @@ export async function getMapping(academicYearId) {
         };
       }
 
-      const ttCreate = ttMapping.timeTablecreate || {};
-      const classSection = ttCreate.timeTableClassSectionTerm?.classSection || ttCreate.timeTableClassSection || {};
+      const ttCreate = cell.timeTableRoutine || {};
+      const classSection = ttCreate.timeTableClassSectionTerm?.classSection
+        || ttCreate.timeTableClassSection
+        || {};
       const subject = item.mappingTopic?.lessonTopic?.lessonSubject || {};
       const lessonRow = item.mappingTopic?.lessonTopic || {};
       const topic = item.mappingTopic || {};
       const subTopics = topic.subTopic || [];
 
       grouped[empId].timeTables.push({
-        timeTableMappingId: ttMapping.timeTableMappingId,
-        day: ttMapping.day,
-        date: item.date,
+        timeTableCellDateWiseId: dateWise.timeTableCellDateWiseId,
+        timeTableMappingId: cell.timeTableMappingId,
+        day: cell.day,
+        date: item.date || dateWise.date,
         lectureUrl: item.lectureUrl,
         note: item.note,
         lessonMappingId: item.lessonMappingId,
         status: item.status,
         completeDate: item.completeDate,
-        period: ttMapping.period,
-        timeTableType: ttMapping.timeTableType,
+        period: cell.period,
+        timeTableType: cell.timeTableType,
         classSection,
         subject,
         lesson: {
@@ -245,8 +261,6 @@ export async function updateCompleteMapping(lessonMappingId, data, updatedBy) {
   try {
     const payload = {
       topicId: data.topicId,
-      timeTableMappingId: data.timeTableMappingId,
-      date: data.date,
       completeDate: data.completeDate || null,
       note: data.note || null,
       lectureUrl: data.lectureUrl || null,
@@ -254,6 +268,19 @@ export async function updateCompleteMapping(lessonMappingId, data, updatedBy) {
       status: data.status || 'inComplete',
       updatedBy
     };
+
+    if (data.timeTableCellDateWiseId != null) {
+      const period = await resolveSourcePeriodByDateWiseId(
+        Number(data.timeTableCellDateWiseId),
+        { transaction },
+      );
+      payload.timeTableCellDateWiseId = period.timeTableCellDateWiseId;
+      payload.timeTableMappingId = period.timeTableMappingId;
+      payload.date = period.date;
+    } else if (data.timeTableMappingId != null && data.date != null) {
+      payload.timeTableMappingId = data.timeTableMappingId;
+      payload.date = data.date;
+    }
 
     const updatedLesson = await lesson.updateLessionMapping(
       lessonMappingId,

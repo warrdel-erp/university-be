@@ -135,8 +135,7 @@ const jsonObjectField = z.preprocess(
 
 
 const classSectionStudentsQuerySchema = z.object({
-  timeTableMappingId: positiveIntegerId,
-  date: dateField,
+  timeTableCellDateWiseId: positiveIntegerId,
   academicYearId: optionalPositiveIntegerId,
   groupPeriods: z.union([z.boolean(), z.string()]).optional(),
 }).passthrough();

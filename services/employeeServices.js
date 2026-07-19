@@ -1403,11 +1403,14 @@ function stripTeacherFieldsFromSchedule(schedule) {
 }
 
 function getAttendanceStatusKey(schedule) {
-  return `${schedule.timeTableMappingId}_${schedule.date}`;
+  if (schedule.timeTableCellDateWiseId != null) {
+    return `dw:${schedule.timeTableCellDateWiseId}`;
+  }
+  return `m:${schedule.timeTableMappingId}_${schedule.date}`;
 }
 
 function resolveScheduleClassSectionTermId(schedule) {
-  const routine = schedule.timeTablecreate;
+  const routine = schedule.timeTablecreate || schedule.timeTableRoutine;
   if (!routine) {
     return null;
   }
@@ -1426,6 +1429,7 @@ function resolveScheduleClassSectionTermId(schedule) {
 }
 
 function collectScheduleQueryParams(schedules) {
+  const dateWiseIdSet = new Set();
   const mappingIdSet = new Set();
   const dates = [];
   const resolvedTermIds = [];
@@ -1433,6 +1437,9 @@ function collectScheduleQueryParams(schedules) {
   const seenTermIds = new Set();
 
   for (const schedule of schedules) {
+    if (schedule.timeTableCellDateWiseId != null) {
+      dateWiseIdSet.add(Number(schedule.timeTableCellDateWiseId));
+    }
     if (schedule.timeTableMappingId) {
       mappingIdSet.add(schedule.timeTableMappingId);
     }
@@ -1450,6 +1457,11 @@ function collectScheduleQueryParams(schedules) {
         uniqueTermIds.push(numericId);
       }
     }
+  }
+
+  const dateWiseIds = [];
+  for (const id of dateWiseIdSet) {
+    dateWiseIds.push(id);
   }
 
   const mappingIds = [];
@@ -1472,12 +1484,20 @@ function collectScheduleQueryParams(schedules) {
     }
   }
 
-  return { mappingIds, from, to, resolvedTermIds, uniqueTermIds };
+  return { dateWiseIds, mappingIds, from, to, resolvedTermIds, uniqueTermIds };
 }
 
 function resolveScheduleAttendanceFields(schedule, presentMap, markedMap) {
   const key = getAttendanceStatusKey(schedule);
-  const presentCount = presentMap[key];
+  let presentCount = presentMap[key];
+  let markedCount = markedMap[key];
+
+  if (presentCount == null && schedule.timeTableMappingId && schedule.date) {
+    presentCount = presentMap[`m:${schedule.timeTableMappingId}_${schedule.date}`];
+  }
+  if (markedCount == null && schedule.timeTableMappingId && schedule.date) {
+    markedCount = markedMap[`m:${schedule.timeTableMappingId}_${schedule.date}`];
+  }
 
   let attendanceCount = 0;
   if (presentCount != null) {
@@ -1486,7 +1506,7 @@ function resolveScheduleAttendanceFields(schedule, presentMap, markedMap) {
 
   return {
     attendanceCount,
-    attendanceStatus: markedMap[key] > 0 ? 'MARKED' : 'PENDING',
+    attendanceStatus: markedCount > 0 ? 'MARKED' : 'PENDING',
   };
 }
 
@@ -1495,12 +1515,13 @@ async function enrichTodayClassSchedules(schedules) {
     return schedules;
   }
 
-  const { mappingIds, from, to, resolvedTermIds, uniqueTermIds } = collectScheduleQueryParams(schedules);
+  const { dateWiseIds, mappingIds, from, to, resolvedTermIds, uniqueTermIds } =
+    collectScheduleQueryParams(schedules);
 
   const [studentCountMap, markedMap, presentMap] = await Promise.all([
     classSectionTermRepository.countStudentsByClassSectionTermIds(uniqueTermIds),
-    attendanceRepository.getAttendanceMarkedMap(mappingIds, from, to),
-    attendanceRepository.getAttendanceMap(mappingIds, from, to),
+    attendanceRepository.getAttendanceMarkedMap({ dateWiseIds, mappingIds, from, to }),
+    attendanceRepository.getAttendanceMap({ dateWiseIds, mappingIds, from, to }),
   ]);
 
   const enriched = [];
@@ -1532,14 +1553,14 @@ async function enrichSchedulesWithAttendance(schedules) {
     return schedules;
   }
 
-  const { mappingIds, from, to } = collectScheduleQueryParams(schedules);
+  const { dateWiseIds, mappingIds, from, to } = collectScheduleQueryParams(schedules);
   if (!from) {
     return schedules;
   }
 
   const [markedMap, presentMap] = await Promise.all([
-    attendanceRepository.getAttendanceMarkedMap(mappingIds, from, to),
-    attendanceRepository.getAttendanceMap(mappingIds, from, to),
+    attendanceRepository.getAttendanceMarkedMap({ dateWiseIds, mappingIds, from, to }),
+    attendanceRepository.getAttendanceMap({ dateWiseIds, mappingIds, from, to }),
   ]);
 
   const enriched = [];

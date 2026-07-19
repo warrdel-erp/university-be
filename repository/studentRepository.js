@@ -2390,7 +2390,7 @@ export async function getStudentDetailsRepository(studentId) {
     }
 }
 
-export async function getStudentsByClassSection(classSectionTermId, timeTableMappingId, date) {
+export async function getStudentsByClassSection(classSectionTermId, timeTableCellDateWiseId) {
 
     try {
         const academicYearId = getRequestAcademicYearId();
@@ -2438,11 +2438,11 @@ export async function getStudentsByClassSection(classSectionTermId, timeTableMap
                         "notes",
                         "description",
                         "date",
+                        "timeTableCellDateWiseId",
                         "timeTableMappingId",
                     ],
                     where: {
-                        timeTableMappingId,
-                        [Op.and]: [Sequelize.where(Sequelize.fn('DATE', Sequelize.col('studentAttendance.date')), date)],
+                        timeTableCellDateWiseId: Number(timeTableCellDateWiseId),
                     },
                     required: false,
                 },

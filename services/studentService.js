@@ -40,6 +40,7 @@ import {
   timeTableRoutineClassSectionInclude,
   resolveTimeTableRoutineSection,
 } from "../utility/classSectionIncludes.js";
+import { resolveSourcePeriodByDateWiseId } from "../utility/attendancePlacement.js";
 
 function normalizeAffiliatedUniversityId(value) {
   if (value == null || value === '') return null;
@@ -2707,48 +2708,17 @@ function formatStudentTimetable(allData) {
 }
 
 export async function getStudentsByClassSection({
-  timeTableMappingId,
-  date,
+  timeTableCellDateWiseId,
 }) {
   try {
-    const classScheduleItem = await model.classScheduleModel.findByPk(
-      timeTableMappingId,
-      {
-        attributes: ["timeTableMappingId", "day", "timeTableType"],
-        include: [
-          {
-            model: model.timeTableRoutineModel,
-            as: "timeTablecreate",
-            attributes: ["classSectionTermId"],
-            include: [
-              timeTableRoutineClassSectionInclude({
-                sectionAttributes: ["classSectionsId", "section"],
-              }),
-            ],
-          },
-          {
-            model: model.subjectModel,
-            as: "timeTableSubject",
-            attributes: ["subjectId", "subjectName"],
-            include: [
-              {
-                model: model.courseModel,
-                as: "courseInfo",
-                attributes: ["courseId", "courseName", "courseCode"],
-              },
-            ],
-          },
-        ],
-        raw: true,
-        nest: true,
-      },
+    const period = await resolveSourcePeriodByDateWiseId(
+      Number(timeTableCellDateWiseId),
     );
 
-    const classSectionTermId =
-      classScheduleItem?.timeTablecreate?.classSectionTermId ?? null;
+    const classSectionTermId = period.classSectionTermId;
     if (!classSectionTermId) {
       const error = new Error(
-        "classSectionTermId could not be resolved from timeTableMappingId",
+        "classSectionTermId could not be resolved from timeTableCellDateWiseId",
       );
       error.statusCode = 400;
       throw error;
@@ -2756,14 +2726,25 @@ export async function getStudentsByClassSection({
 
     const students = await studentRepository.getStudentsByClassSection(
       classSectionTermId,
-      timeTableMappingId,
-      date,
+      period.timeTableCellDateWiseId,
     );
 
+    const cell = period.timeTableCell || {};
     const response = {
       classSectionTermId: Number(classSectionTermId),
+      timeTableCellDateWiseId: period.timeTableCellDateWiseId,
+      timeTableMappingId: period.timeTableMappingId,
+      date: period.date,
       students: toPlainRows(students),
-      classScheduleItem,
+      period: {
+        timeTableCellDateWiseId: period.timeTableCellDateWiseId,
+        timeTableMappingId: period.timeTableMappingId,
+        date: period.date,
+        day: cell.day,
+        period: cell.period,
+        timeTableType: cell.timeTableType,
+        timeTableSubject: cell.timeTableSubject || null,
+      },
     };
 
     return response;
