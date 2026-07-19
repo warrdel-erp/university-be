@@ -1344,10 +1344,10 @@
                   ],
                   "query": []
                 },
-                "description": "**PATCH /timeTableCreate/mapping** — set cell `timeTableType`.",
+                "description": "**PATCH /timeTableCreate/mapping** — set cell `timeTableType`. Body: `timeTableCellId` (week cell PK).",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"timeTableMappingId\": {{timetable_mappingId}},\n  \"timeTableType\": \"normal\"\n}",
+                  "raw": "{\n  \"timeTableCellId\": {{timetable_mappingId}},\n  \"timeTableType\": \"normal\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"

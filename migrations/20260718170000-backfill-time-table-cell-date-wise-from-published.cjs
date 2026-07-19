@@ -14,7 +14,7 @@
  *   3. For each week cell whose day matches that weekday, insert one date-wise row
  *   4. Copy week teachers onto each date-wise row
  *
- * Idempotent: unique (mapping_id, date) + INSERT IGNORE; teachers use NOT EXISTS.
+ * Idempotent: unique (time_table_cell_id, date) + INSERT IGNORE; teachers use NOT EXISTS.
  */
 
 const WEEKDAY_BY_JS_INDEX = [
@@ -109,7 +109,6 @@ async function backfillDateWiseForPublished(queryInterface, transaction) {
     INNER JOIN time_table_structure s
       ON s.time_table_name_id = m.time_table_name_id
     WHERE r.is_publish = 1
-      AND r.deleted_at IS NULL
       AND r.starting_date IS NOT NULL
       AND r.ending_date IS NOT NULL
     `,
@@ -129,7 +128,7 @@ async function backfillDateWiseForPublished(queryInterface, transaction) {
     const [cells] = await queryInterface.sequelize.query(
       `
       SELECT
-        c.time_table_mapping_id AS timeTableMappingId,
+        c.time_table_cell_id AS timeTableCellId,
         c.day AS day,
         c.class_room_section_id AS classRoomSectionId,
         c.created_by AS createdBy,
@@ -192,9 +191,9 @@ async function backfillDateWiseForPublished(queryInterface, transaction) {
       for (let i = 0; i < slice.length; i += 1) {
         const item = slice[i];
         values.push(
-          `(:mappingId${i}, :date${i}, :roomId${i}, :createdBy${i}, :updatedBy${i})`,
+          `(:cellId${i}, :date${i}, :roomId${i}, :createdBy${i}, :updatedBy${i})`,
         );
-        replacements[`mappingId${i}`] = Number(item.cell.timeTableMappingId);
+        replacements[`cellId${i}`] = Number(item.cell.timeTableCellId);
         replacements[`date${i}`] = item.date;
         replacements[`roomId${i}`] = item.cell.classRoomSectionId;
         replacements[`createdBy${i}`] = actorId;
@@ -204,7 +203,7 @@ async function backfillDateWiseForPublished(queryInterface, transaction) {
       await queryInterface.sequelize.query(
         `
         INSERT IGNORE INTO time_table_cell_date_wise (
-          time_table_mapping_id,
+          time_table_cell_id,
           date,
           class_room_section_id,
           created_by,
@@ -235,10 +234,10 @@ async function backfillDateWiseForPublished(queryInterface, transaction) {
         COALESCE(tw.updated_by, :actorId)
       FROM time_table_cell_date_wise dw
       INNER JOIN time_table_cell c
-        ON c.time_table_mapping_id = dw.time_table_mapping_id
+        ON c.time_table_cell_id = dw.time_table_cell_id
         AND c.deleted_at IS NULL
       INNER JOIN time_table_cell_teachers tw
-        ON tw.time_table_mapping_id = c.time_table_mapping_id
+        ON tw.time_table_cell_id = c.time_table_cell_id
         AND tw.deleted_at IS NULL
       WHERE c.time_table_routine_id = :routineId
         AND dw.deleted_at IS NULL
@@ -298,7 +297,7 @@ module.exports = {
         INNER JOIN time_table_cell_date_wise dw
           ON dw.time_table_cell_date_wise_id = dwt.time_table_cell_date_wise_id
         INNER JOIN time_table_cell c
-          ON c.time_table_mapping_id = dw.time_table_mapping_id
+          ON c.time_table_cell_id = dw.time_table_cell_id
         INNER JOIN time_table_routine r
           ON r.time_table_routine_id = c.time_table_routine_id
         WHERE r.is_publish = 1
@@ -311,7 +310,7 @@ module.exports = {
         DELETE dw
         FROM time_table_cell_date_wise dw
         INNER JOIN time_table_cell c
-          ON c.time_table_mapping_id = dw.time_table_mapping_id
+          ON c.time_table_cell_id = dw.time_table_cell_id
         INNER JOIN time_table_routine r
           ON r.time_table_routine_id = c.time_table_routine_id
         WHERE r.is_publish = 1

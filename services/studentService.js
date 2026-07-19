@@ -2612,29 +2612,31 @@ function formatStudentTimetable(allData) {
     const course = item.timeTableCourse || {};
     const classSection = resolveTimeTableRoutineSection(item) || {};
 
-    (item.timeTablecreate || []).forEach((period) => {
+    for (const period of item.timeTableCells || []) {
       const {
         day,
-        timeTableMappingId,
+        timeTableCellId,
         isSameTeacher,
         timeTableCreationId,
         timeTablecreation,
         timeTableSubject,
-        employeeDetails,
         timeTableTeacherSubject,
+        timeTableCellTeachers,
       } = period;
 
       const subjectData = isSameTeacher
-        ? timeTableTeacherSubject?.employeeSubject?.subjects
+        ? (timeTableTeacherSubject?.employeeSubject?.subjects
+          ?? timeTableTeacherSubject?.employeeSubject)
         : timeTableSubject;
 
+      const teacherRow = timeTableCellTeachers?.[0];
       const teacherData = isSameTeacher
         ? timeTableTeacherSubject?.teacherEmployeeData
-        : employeeDetails;
+        : teacherRow?.employeeDetails;
 
       const mappingEntry = {
-        timeTableMappingId,
-        userId: teacherData?.userId,
+        timeTableCellId,
+        userId: teacherData?.userId ?? teacherRow?.userId,
         employeeName: teacherData?.employeeName,
         employeeCode: teacherData?.employeeCode,
         pickColor: teacherData?.pickColor,
@@ -2660,7 +2662,7 @@ function formatStudentTimetable(allData) {
           classSectionTermId: item.classSectionTermId ?? null,
         },
       });
-    });
+    }
   }
 
   const formatted = [];
@@ -2733,12 +2735,12 @@ export async function getStudentsByClassSection({
     const response = {
       classSectionTermId: Number(classSectionTermId),
       timeTableCellDateWiseId: period.timeTableCellDateWiseId,
-      timeTableMappingId: period.timeTableMappingId,
+      timeTableCellId: period.timeTableCellId,
       date: period.date,
       students: toPlainRows(students),
       period: {
         timeTableCellDateWiseId: period.timeTableCellDateWiseId,
-        timeTableMappingId: period.timeTableMappingId,
+        timeTableCellId: period.timeTableCellId,
         date: period.date,
         day: cell.day,
         period: cell.period,

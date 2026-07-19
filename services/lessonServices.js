@@ -55,7 +55,7 @@ export async function addMapping(data, createdBy, updatedBy) {
     const payload = {
       topicId: data.topicId,
       timeTableCellDateWiseId: period.timeTableCellDateWiseId,
-      timeTableMappingId: period.timeTableMappingId,
+      timeTableCellId: period.timeTableCellId,
       date: period.date,
       completeDate: data.completeDate || null,
       note: data.note || null,
@@ -118,7 +118,7 @@ export async function copyMapping(data, createdBy, updatedBy) {
         {
           topicId: source.topicId,
           timeTableCellDateWiseId: period.timeTableCellDateWiseId,
-          timeTableMappingId: period.timeTableMappingId,
+          timeTableCellId: period.timeTableCellId,
           date: period.date,
           completeDate: null,
           note,
@@ -135,7 +135,7 @@ export async function copyMapping(data, createdBy, updatedBy) {
         lessonMappingId: row.lessonMappingId,
         topicId: row.topicId,
         timeTableCellDateWiseId: row.timeTableCellDateWiseId,
-        timeTableMappingId: row.timeTableMappingId,
+        timeTableCellId: row.timeTableCellId,
         date: row.date,
         status: row.status,
       });
@@ -184,7 +184,7 @@ export async function getMapping(academicYearId) {
       }
 
       const finalEmp = pickTeacherFromCell(cell);
-      const empId = finalEmp?.userId || cell.timeTableMappingId;
+      const empId = finalEmp?.userId || cell.timeTableCellId;
 
       if (!grouped[empId]) {
         grouped[empId] = {
@@ -207,7 +207,7 @@ export async function getMapping(academicYearId) {
 
       grouped[empId].timeTables.push({
         timeTableCellDateWiseId: dateWise.timeTableCellDateWiseId,
-        timeTableMappingId: cell.timeTableMappingId,
+        timeTableCellId: cell.timeTableCellId,
         day: cell.day,
         date: item.date || dateWise.date,
         lectureUrl: item.lectureUrl,
@@ -275,10 +275,10 @@ export async function updateCompleteMapping(lessonMappingId, data, updatedBy) {
         { transaction },
       );
       payload.timeTableCellDateWiseId = period.timeTableCellDateWiseId;
-      payload.timeTableMappingId = period.timeTableMappingId;
+      payload.timeTableCellId = period.timeTableCellId;
       payload.date = period.date;
-    } else if (data.timeTableMappingId != null && data.date != null) {
-      payload.timeTableMappingId = data.timeTableMappingId;
+    } else if (data.timeTableCellId != null && data.date != null) {
+      payload.timeTableCellId = data.timeTableCellId;
       payload.date = data.date;
     }
 

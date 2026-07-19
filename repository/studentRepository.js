@@ -2439,7 +2439,7 @@ export async function getStudentsByClassSection(classSectionTermId, timeTableCel
                         "description",
                         "date",
                         "timeTableCellDateWiseId",
-                        "timeTableMappingId",
+                        "timeTableCellId",
                     ],
                     where: {
                         timeTableCellDateWiseId: Number(timeTableCellDateWiseId),

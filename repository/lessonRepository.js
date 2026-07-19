@@ -219,7 +219,7 @@ export async function getLessonMappingById(lessonMappingId, transaction) {
       "lessonMappingId",
       "topicId",
       "timeTableCellDateWiseId",
-      "timeTableMappingId",
+      "timeTableCellId",
       "date",
       "completeDate",
       "note",
@@ -234,7 +234,7 @@ export async function getLessonMappingById(lessonMappingId, transaction) {
 export async function getDateWiseCellById(timeTableCellDateWiseId, transaction) {
   return model.timeTableCellDateWiseModel.findOne({
     where: { timeTableCellDateWiseId: Number(timeTableCellDateWiseId) },
-    attributes: ["timeTableCellDateWiseId", "timeTableMappingId", "date"],
+    attributes: ["timeTableCellDateWiseId", "timeTableCellId", "date"],
     transaction,
   });
 }
@@ -280,14 +280,14 @@ export async function getMapping(academicYearId) {
           model: model.timeTableCellDateWiseModel,
           as: "timeTableCellDateWise",
           required: false,
-          attributes: ["timeTableCellDateWiseId", "timeTableMappingId", "date", "classRoomSectionId"],
+          attributes: ["timeTableCellDateWiseId", "timeTableCellId", "date", "classRoomSectionId"],
           include: [
             {
               model: model.timeTableCellModel,
               as: "timeTableCell",
               required: true,
               attributes: [
-                "timeTableMappingId",
+                "timeTableCellId",
                 "day",
                 "period",
                 "timeTableType",

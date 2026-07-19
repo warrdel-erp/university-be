@@ -409,41 +409,43 @@ export async function getEmployeeRolePermissionByUserId(userId) {
                             ]
                         },
                         {
-                            model: model.classScheduleModel,
-                            as: 'timeTableMappings',
+                            model: model.timeTableCellTeachersModel,
+                            as: 'timeTableCellTeachers',
                             attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
                             include: [
                                 {
-                                    model: model.timeTableRoutineModel,
-                                    as: 'timeTablecreate',
+                                    model: model.timeTableCellModel,
+                                    as: 'timeTableCell',
                                     attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
+                                    include: [
+                                        {
+                                            model: model.timeTableRoutineModel,
+                                            as: 'timeTableRoutine',
+                                            attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
+                                        },
+                                        {
+                                            model: model.classRoomModel,
+                                            as: 'classRoom',
+                                            attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
+                                        },
+                                        {
+                                            model: model.timeTableStructurePeriodsModel,
+                                            as: 'timeTablecreation',
+                                            attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
+                                        },
+                                        {
+                                            model: model.electiveSubjectModel,
+                                            as: 'timeTableElective',
+                                            attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
+                                        },
+                                        {
+                                            model: model.subjectModel,
+                                            as: 'timeTableSubject',
+                                            attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
+                                        },
+                                    ],
                                 },
-                                {
-                                    model: model.classRoomModel,
-                                    as: 'classRoom',
-                                    attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
-                                },
-                                {
-                                    model: model.timeTableStructurePeriodsModel,
-                                    as: 'timeTablecreation',
-                                    attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
-                                },
-                                {
-                                    model: model.electiveSubjectModel,
-                                    as: 'timeTableElective',
-                                    attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
-                                },
-                                {
-                                    model: model.electiveSubjectModel,
-                                    as: 'timeTableElective',
-                                    attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
-                                },
-                                {
-                                    model: model.subjectModel,
-                                    as: 'timeTableSubject',
-                                    attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
-                                }
-                            ]
+                            ],
                         }
                     ]
                 },

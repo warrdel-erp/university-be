@@ -145,12 +145,12 @@ const mappingBodySchema = z.object({
     slots: z.array(mappingSlotSchema).min(1).optional(),
     combinedGroupId: z.string().uuid().optional(),
 
-    sourceTimeTableMappingId: optionalPositiveId,
+    sourceTimeTableCellId: optionalPositiveId,
     copyTarget: z.enum(['nextPeriod', 'nextDay']).optional(),
 });
 
 const addTimeTableMappingSchema = mappingBodySchema.superRefine((body, ctx) => {
-    const isCopy = body.sourceTimeTableMappingId != null;
+    const isCopy = body.sourceTimeTableCellId != null;
     const hasSlots = Array.isArray(body.slots) && body.slots.length > 0;
     const hasCell = body.timeTableRoutineId != null
         && body.timeTableCreationId != null
@@ -159,7 +159,7 @@ const addTimeTableMappingSchema = mappingBodySchema.superRefine((body, ctx) => {
     if (isCopy && body.copyTarget == null) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: 'copyTarget is required when sourceTimeTableMappingId is sent (nextPeriod | nextDay)',
+            message: 'copyTarget is required when sourceTimeTableCellId is sent (nextPeriod | nextDay)',
             path: ['copyTarget'],
         });
     }
@@ -167,7 +167,7 @@ const addTimeTableMappingSchema = mappingBodySchema.superRefine((body, ctx) => {
     if (!isCopy && !hasSlots && !hasCell) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: 'Send sourceTimeTableMappingId+copyTarget, slots[], or timeTableRoutineId with timeTableCreationId and period',
+            message: 'Send sourceTimeTableCellId+copyTarget, slots[], or timeTableRoutineId with timeTableCreationId and period',
             path: ['timeTableRoutineId'],
         });
     }
@@ -178,12 +178,12 @@ const getTimeTableMappingBodySchema = z.object({
 });
 
 const updateTimeTableMappingSchema = z.object({
-    timeTableMappingId: positiveIntegerId,
+    timeTableCellId: positiveIntegerId,
     timeTableType: z.enum(['normal', 'elective']),
 });
 
 const updateTeacherMappingItemSchema = z.object({
-    timeTableMappingId: optionalPositiveId,
+    timeTableCellId: optionalPositiveId,
     timeTableCellTeacherId: optionalPositiveId,
     userId: optionalPositiveId,
     subjectId: optionalPositiveId,
@@ -197,9 +197,9 @@ const updateTeacherMappingItemSchema = z.object({
 const updateSimpleTeacherMappingSchema = z
     .array(updateTeacherMappingItemSchema)
     .min(1, 'request body must be a non-empty array')
-    .refine((items) => items[0]?.timeTableMappingId != null, {
-        message: 'Base row must contain timeTableMappingId',
-        path: [0, 'timeTableMappingId'],
+    .refine((items) => items[0]?.timeTableCellId != null, {
+        message: 'Base row must contain timeTableCellId',
+        path: [0, 'timeTableCellId'],
     })
     .refine(
         (items) => items.every((item) => item.isNew !== true || item.userId != null),
@@ -207,7 +207,7 @@ const updateSimpleTeacherMappingSchema = z
     );
 
 const deleteTimeTableMappingQuerySchema = z.object({
-    timeTableMappingId: positiveIntegerId,
+    timeTableCellId: positiveIntegerId,
     deleteCombinedGroup: z
         .preprocess((val) => val === 'true' || val === true, z.boolean())
         .optional(),

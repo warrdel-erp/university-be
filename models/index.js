@@ -688,15 +688,15 @@ timeTableCellDateWiseModel.hasMany(attendanceModel, {
 });
 
 attendanceModel.belongsTo(timeTableCellModel, {
-  foreignKey: "timeTableMappingId",
+  foreignKey: "timeTableCellId",
   as: "timeTableCell",
 });
 timeTableCellModel.hasMany(attendanceModel, {
-  foreignKey: "timeTableMappingId",
+  foreignKey: "timeTableCellId",
   as: "attendances",
 });
 
-// time_table_cell (week template) — PK timeTableMappingId
+// time_table_cell (week template) — PK timeTableCellId
 timeTableCellModel.belongsTo(timeTableRoutineModel, { foreignKey: "timeTableRoutineId", as: "timeTableRoutine" });
 timeTableRoutineModel.hasMany(timeTableCellModel, { foreignKey: "timeTableRoutineId", as: "timeTableCells" });
 
@@ -731,11 +731,11 @@ teacherSubjectMappingModel.hasMany(timeTableCellModel, {
 });
 
 timeTableCellTeachersModel.belongsTo(timeTableCellModel, {
-  foreignKey: "timeTableMappingId",
+  foreignKey: "timeTableCellId",
   as: "timeTableCell",
 });
 timeTableCellModel.hasMany(timeTableCellTeachersModel, {
-  foreignKey: "timeTableMappingId",
+  foreignKey: "timeTableCellId",
   as: "timeTableCellTeachers",
 });
 
@@ -754,11 +754,11 @@ employeeModel.hasMany(timeTableCellTeachersModel, {
 });
 
 timeTableCellDateWiseModel.belongsTo(timeTableCellModel, {
-  foreignKey: "timeTableMappingId",
+  foreignKey: "timeTableCellId",
   as: "timeTableCell",
 });
 timeTableCellModel.hasMany(timeTableCellDateWiseModel, {
-  foreignKey: "timeTableMappingId",
+  foreignKey: "timeTableCellId",
   as: "timeTableCellDateWise",
 });
 
@@ -1251,10 +1251,7 @@ feeInvoiceDetailModel.belongsTo(feeInvoiceModel, {
   as: "feeInvoices",
 });
 
-userModel.hasMany(classScheduleModel, { foreignKey: "userId", as: "timeTableMappings" });
 classScheduleModel.belongsTo(userModel, { foreignKey: "userId", as: "user" });
-
-employeeModel.hasMany(classScheduleModel, { foreignKey: "userId", sourceKey: "userId", as: "employeeTimeTableMappings" });
 classScheduleModel.belongsTo(employeeModel, { foreignKey: "userId", targetKey: "userId", as: "employeeDetails" });
 
 feePlanModel.hasMany(feeNewInvoiceModel, { foreignKey: "fee_plan_id", as: "invoices" });
@@ -1419,11 +1416,11 @@ timeTableCellDateWiseModel.hasMany(lessonMappingModel, {
 });
 
 lessonMappingModel.belongsTo(timeTableCellModel, {
-  foreignKey: "timeTableMappingId",
+  foreignKey: "timeTableCellId",
   as: "timeTableCell",
 });
 timeTableCellModel.hasMany(lessonMappingModel, {
-  foreignKey: "timeTableMappingId",
+  foreignKey: "timeTableCellId",
   as: "lessonMappings",
 });
 

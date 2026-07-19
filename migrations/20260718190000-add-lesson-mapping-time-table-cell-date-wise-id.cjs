@@ -2,10 +2,11 @@
 
 /**
  * Lesson mapping cutover to date-wise period key:
- * 1. Add lesson_mapping.time_table_cell_date_wise_id
- * 2. Backfill from mapping + date
- * 3. Normalize time_table_mapping_id onto week-cell PKs
- * 4. Point time_table_mapping_id FK at time_table_cell (when possible)
+ * 1. Rename lesson_mapping.time_table_mapping_id → time_table_cell_id
+ * 2. Add lesson_mapping.time_table_cell_date_wise_id
+ * 3. Backfill from cell + date
+ * 4. Normalize time_table_cell_id onto week-cell PKs
+ * 5. Point time_table_cell_id FK at time_table_cell (when possible)
  *
  * Prerequisites: cell tables + date-wise backfill (160000 / 170000).
  */
@@ -44,6 +45,26 @@ module.exports = {
       throw new Error('time_table_cell_date_wise missing — run date-wise backfill first');
     }
 
+    // 1) Rename dual-write column (legacy mapping id → week-cell id)
+    {
+      const table = await queryInterface.describeTable('lesson_mapping');
+      if (table.time_table_mapping_id && !table.time_table_cell_id) {
+        const mappingFks = await findForeignKeysOnColumn(
+          queryInterface,
+          'lesson_mapping',
+          'time_table_mapping_id',
+        );
+        for (const fk of mappingFks) {
+          await queryInterface.sequelize.query(
+            `ALTER TABLE lesson_mapping DROP FOREIGN KEY \`${fk.constraintName}\``,
+          );
+        }
+        await queryInterface.sequelize.query(
+          'ALTER TABLE lesson_mapping CHANGE COLUMN `time_table_mapping_id` `time_table_cell_id` INTEGER NOT NULL',
+        );
+      }
+    }
+
     const table = await queryInterface.describeTable('lesson_mapping');
 
     if (!table.time_table_cell_date_wise_id) {
@@ -69,7 +90,7 @@ module.exports = {
         `
         UPDATE lesson_mapping lm
         INNER JOIN time_table_cell_date_wise dw
-          ON dw.time_table_mapping_id = lm.time_table_mapping_id
+          ON dw.time_table_cell_id = lm.time_table_cell_id
           AND dw.date = DATE(lm.date)
           AND dw.deleted_at IS NULL
         SET lm.time_table_cell_date_wise_id = dw.time_table_cell_date_wise_id
@@ -103,14 +124,14 @@ module.exports = {
               ) AS cell_id
             FROM class_schedule_item csi
             WHERE csi.deleted_at IS NULL
-          ) map ON map.old_mapping_id = lm.time_table_mapping_id
+          ) map ON map.old_mapping_id = lm.time_table_cell_id
           INNER JOIN time_table_cell_date_wise dw
-            ON dw.time_table_mapping_id = map.cell_id
+            ON dw.time_table_cell_id = map.cell_id
             AND dw.date = DATE(lm.date)
             AND dw.deleted_at IS NULL
           SET
             lm.time_table_cell_date_wise_id = dw.time_table_cell_date_wise_id,
-            lm.time_table_mapping_id = map.cell_id
+            lm.time_table_cell_id = map.cell_id
           WHERE lm.time_table_cell_date_wise_id IS NULL
             AND lm.deleted_at IS NULL
             AND lm.date IS NOT NULL
@@ -132,7 +153,7 @@ module.exports = {
     const fks = await findForeignKeysOnColumn(
       queryInterface,
       'lesson_mapping',
-      'time_table_mapping_id',
+      'time_table_cell_id',
     );
 
     for (const fk of fks) {
@@ -144,7 +165,7 @@ module.exports = {
     const stillPointing = await findForeignKeysOnColumn(
       queryInterface,
       'lesson_mapping',
-      'time_table_mapping_id',
+      'time_table_cell_id',
     );
     if (stillPointing.length === 0) {
       const [[orphan]] = await queryInterface.sequelize.query(
@@ -152,18 +173,18 @@ module.exports = {
         SELECT COUNT(*) AS cnt
         FROM lesson_mapping lm
         LEFT JOIN time_table_cell c
-          ON c.time_table_mapping_id = lm.time_table_mapping_id
+          ON c.time_table_cell_id = lm.time_table_cell_id
         WHERE lm.deleted_at IS NULL
-          AND c.time_table_mapping_id IS NULL
+          AND c.time_table_cell_id IS NULL
         `,
       );
       if (Number(orphan.cnt) === 0) {
         await queryInterface.sequelize.query(
           `
           ALTER TABLE lesson_mapping
-          ADD CONSTRAINT fk_lesson_mapping_time_table_mapping_id_cell
-          FOREIGN KEY (time_table_mapping_id)
-          REFERENCES time_table_cell (time_table_mapping_id)
+          ADD CONSTRAINT fk_lesson_mapping_time_table_cell_id
+          FOREIGN KEY (time_table_cell_id)
+          REFERENCES time_table_cell (time_table_cell_id)
           ON UPDATE CASCADE
           ON DELETE RESTRICT
           `,
@@ -183,7 +204,7 @@ module.exports = {
       FROM information_schema.TABLE_CONSTRAINTS
       WHERE TABLE_SCHEMA = DATABASE()
         AND TABLE_NAME = 'lesson_mapping'
-        AND CONSTRAINT_NAME = 'fk_lesson_mapping_time_table_mapping_id_cell'
+        AND CONSTRAINT_NAME = 'fk_lesson_mapping_time_table_cell_id'
         AND CONSTRAINT_TYPE = 'FOREIGN KEY'
       `,
     );

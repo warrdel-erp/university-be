@@ -6,7 +6,7 @@ import classRoomModel from './classRoomModel.js';
 
 /**
  * Actual calendar-day instance of a week cell.
- * Links back with timeTableMappingId (same identifier as week cell PK).
+ * Links back with timeTableCellId (week cell PK).
  */
 const timeTableCellDateWiseModel = sequelize.define(
   'time_table_cell_date_wise',
@@ -17,13 +17,13 @@ const timeTableCellDateWiseModel = sequelize.define(
       autoIncrement: true,
       field: 'time_table_cell_date_wise_id',
     },
-    timeTableMappingId: {
+    timeTableCellId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      field: 'time_table_mapping_id',
+      field: 'time_table_cell_id',
       references: {
         model: timeTableCellModel,
-        key: 'time_table_mapping_id',
+        key: 'time_table_cell_id',
       },
     },
     date: {

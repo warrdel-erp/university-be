@@ -57,7 +57,7 @@ export async function getNextDateWisePeriodsOnSameDay(timeTableRoutineId, date, 
             },
             attributes: [
                 'timeTableCellDateWiseId',
-                'timeTableMappingId',
+                'timeTableCellId',
                 'date',
                 'classRoomSectionId',
             ],
@@ -72,7 +72,7 @@ export async function getNextDateWisePeriodsOnSameDay(timeTableRoutineId, date, 
                         isAttendence: true,
                     },
                     attributes: [
-                        'timeTableMappingId',
+                        'timeTableCellId',
                         'period',
                         'day',
                         'isSameTeacher',
@@ -189,14 +189,14 @@ export async function getAttendanceDetails() {
                 {
                     model: model.timeTableCellDateWiseModel,
                     as: 'timeTableCellDateWise',
-                    attributes: ['timeTableCellDateWiseId', 'timeTableMappingId', 'date'],
+                    attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date'],
                     required: false,
                     include: [
                         {
                             model: model.timeTableCellModel,
                             as: 'timeTableCell',
                             attributes: [
-                                'timeTableMappingId',
+                                'timeTableCellId',
                                 'subjectId',
                                 'electiveSubjectId',
                                 'isSameTeacher',
@@ -454,12 +454,12 @@ export async function getAttendanceMap({ dateWiseIds = [], mappingIds = [], from
     if (mappingIds.length && from && to) {
         const rows = await scoped(model.attendanceModel).findAll({
             attributes: [
-                "timeTableMappingId",
+                "timeTableCellId",
                 [fn("DATE", dateCol), "attendanceDate"],
                 [fn("COUNT", sequelize.col("student_id")), "presentCount"],
             ],
             where: {
-                timeTableMappingId: { [Op.in]: mappingIds },
+                timeTableCellId: { [Op.in]: mappingIds },
                 timeTableCellDateWiseId: null,
                 attendanceStatus: { [Op.in]: ATTENDANCE_PRESENT_STATUSES },
                 [Op.and]: [
@@ -467,12 +467,12 @@ export async function getAttendanceMap({ dateWiseIds = [], mappingIds = [], from
                     where(fn("DATE", dateCol), { [Op.lte]: to }),
                 ],
             },
-            group: ["timeTableMappingId", fn("DATE", dateCol)],
+            group: ["timeTableCellId", fn("DATE", dateCol)],
             raw: true,
         });
         for (const r of rows) {
             const dateKey = moment(r.attendanceDate).format("YYYY-MM-DD");
-            map[`m:${r.timeTableMappingId}_${dateKey}`] = Number(r.presentCount);
+            map[`m:${r.timeTableCellId}_${dateKey}`] = Number(r.presentCount);
         }
     }
 
@@ -503,24 +503,24 @@ export async function getAttendanceMarkedMap({ dateWiseIds = [], mappingIds = []
     if (mappingIds.length && from && to) {
         const rows = await scoped(model.attendanceModel).findAll({
             attributes: [
-                "timeTableMappingId",
+                "timeTableCellId",
                 [fn("DATE", dateCol), "attendanceDate"],
                 [fn("COUNT", sequelize.col("student_id")), "markedCount"],
             ],
             where: {
-                timeTableMappingId: { [Op.in]: mappingIds },
+                timeTableCellId: { [Op.in]: mappingIds },
                 timeTableCellDateWiseId: null,
                 [Op.and]: [
                     where(fn("DATE", dateCol), { [Op.gte]: from }),
                     where(fn("DATE", dateCol), { [Op.lte]: to }),
                 ],
             },
-            group: ["timeTableMappingId", fn("DATE", dateCol)],
+            group: ["timeTableCellId", fn("DATE", dateCol)],
             raw: true,
         });
         for (const r of rows) {
             const dateKey = moment(r.attendanceDate).format("YYYY-MM-DD");
-            map[`m:${r.timeTableMappingId}_${dateKey}`] = Number(r.markedCount);
+            map[`m:${r.timeTableCellId}_${dateKey}`] = Number(r.markedCount);
         }
     }
 
@@ -538,7 +538,7 @@ export async function getStudentCount(classSectionsId) {
 
 export async function getTeacherDateWiseSessions(userId) {
     return model.timeTableCellDateWiseModel.findAll({
-        attributes: ['timeTableCellDateWiseId', 'timeTableMappingId', 'date', 'classRoomSectionId'],
+        attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
         include: [
             {
                 model: model.timeTableCellTeachersDateWiseModel,
@@ -552,7 +552,7 @@ export async function getTeacherDateWiseSessions(userId) {
                 as: 'timeTableCell',
                 required: true,
                 attributes: [
-                    'timeTableMappingId',
+                    'timeTableCellId',
                     'period',
                     'day',
                     'subjectId',
@@ -646,7 +646,7 @@ export async function getStudentAttendanceReport(classSectionsId, subjectId, use
                                     as: 'timeTableCell',
                                     required: true,
                                     where: { subjectId: Number(subjectId) },
-                                    attributes: ['timeTableMappingId', 'subjectId', 'period'],
+                                    attributes: ['timeTableCellId', 'subjectId', 'period'],
                                     include: [
                                         {
                                             model: model.timeTableStructurePeriodsModel,
@@ -686,7 +686,7 @@ export async function getStudentsBatchAttendance(classSectionTermId, filters) {
                         'date',
                         'attendanceStatus',
                         'timeTableCellDateWiseId',
-                        'timeTableMappingId',
+                        'timeTableCellId',
                     ],
                     where: {
                         [Op.or]: filters.map((f) => ({

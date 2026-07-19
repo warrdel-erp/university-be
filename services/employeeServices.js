@@ -1155,7 +1155,7 @@ export async function getTeacherTimeTable(userId) {
     for (const period of plain.timeTableCells) {
       const {
         day,
-        timeTableMappingId,
+        timeTableCellId,
         isSameTeacher,
         timeTableCreationId,
         timeTableType,
@@ -1179,7 +1179,7 @@ export async function getTeacherTimeTable(userId) {
         : employeeDetails;
 
       const mappingEntry = {
-        timeTableMappingId,
+        timeTableCellId,
         userId: teacherData?.userId,
         employeeName: teacherData?.employeeName,
         employeeCode: teacherData?.employeeCode,
@@ -1406,7 +1406,7 @@ function getAttendanceStatusKey(schedule) {
   if (schedule.timeTableCellDateWiseId != null) {
     return `dw:${schedule.timeTableCellDateWiseId}`;
   }
-  return `m:${schedule.timeTableMappingId}_${schedule.date}`;
+  return `m:${schedule.timeTableCellId}_${schedule.date}`;
 }
 
 function resolveScheduleClassSectionTermId(schedule) {
@@ -1440,8 +1440,8 @@ function collectScheduleQueryParams(schedules) {
     if (schedule.timeTableCellDateWiseId != null) {
       dateWiseIdSet.add(Number(schedule.timeTableCellDateWiseId));
     }
-    if (schedule.timeTableMappingId) {
-      mappingIdSet.add(schedule.timeTableMappingId);
+    if (schedule.timeTableCellId) {
+      mappingIdSet.add(schedule.timeTableCellId);
     }
     if (schedule.date) {
       dates.push(schedule.date);
@@ -1492,11 +1492,11 @@ function resolveScheduleAttendanceFields(schedule, presentMap, markedMap) {
   let presentCount = presentMap[key];
   let markedCount = markedMap[key];
 
-  if (presentCount == null && schedule.timeTableMappingId && schedule.date) {
-    presentCount = presentMap[`m:${schedule.timeTableMappingId}_${schedule.date}`];
+  if (presentCount == null && schedule.timeTableCellId && schedule.date) {
+    presentCount = presentMap[`m:${schedule.timeTableCellId}_${schedule.date}`];
   }
-  if (markedCount == null && schedule.timeTableMappingId && schedule.date) {
-    markedCount = markedMap[`m:${schedule.timeTableMappingId}_${schedule.date}`];
+  if (markedCount == null && schedule.timeTableCellId && schedule.date) {
+    markedCount = markedMap[`m:${schedule.timeTableCellId}_${schedule.date}`];
   }
 
   let attendanceCount = 0;

@@ -148,10 +148,10 @@ export const changeTimeTableCreate = async (req, res) => {
 };
 
 export const updatetimeTableCreate = async (req, res) => {
-    const { timeTableType, timeTableMappingId } = req.body;
+    const { timeTableType, timeTableCellId } = req.body;
     const updatedBy = req.user.userId;
     try {
-        const result = await timeTableCreateServices.updatetimeTableCreate(timeTableMappingId, timeTableType, updatedBy);
+        const result = await timeTableCreateServices.updatetimeTableCreate(timeTableCellId, timeTableType, updatedBy);
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in updating time table type`, error);
@@ -176,14 +176,14 @@ export const updateSimpleTeacherMappingController = async (req, res) => {
 };
 
 export const deletetimeTableMapping = async (req, res) => {
-    const { timeTableMappingId, deleteCombinedGroup } = req.query;
+    const { timeTableCellId, deleteCombinedGroup } = req.query;
     try {
-        const result = await timeTableCreateServices.deletetimeTableMapping(timeTableMappingId, {
+        const result = await timeTableCreateServices.deletetimeTableMapping(timeTableCellId, {
             deleteCombinedGroup: deleteCombinedGroup === true || deleteCombinedGroup === 'true',
         });
         res.status(200).send(result);
     } catch (error) {
-        console.error(`Error in deleting time table mapping Id ${timeTableMappingId}:`, error);
+        console.error(`Error in deleting time table mapping Id ${timeTableCellId}:`, error);
         const message = error.message || 'Internal Server Error';
         const statusCode = error.statusCode
             || (/not found/i.test(message) ? 404 : /starting date/i.test(message) ? 400 : 500);

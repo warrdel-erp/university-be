@@ -26,7 +26,7 @@ async function backfillCellsAndTeachers(queryInterface, transaction) {
   await queryInterface.sequelize.query(
     `
     INSERT INTO time_table_cell (
-      time_table_mapping_id,
+      time_table_cell_id,
       time_table_name_id,
       time_table_routine_id,
       time_table_creation_id,
@@ -92,7 +92,7 @@ async function backfillCellsAndTeachers(queryInterface, transaction) {
       AND NOT EXISTS (
         SELECT 1
         FROM time_table_cell existing
-        WHERE existing.time_table_mapping_id = ranked.cell_id
+        WHERE existing.time_table_cell_id = ranked.cell_id
       )
     `,
     { transaction },
@@ -101,7 +101,7 @@ async function backfillCellsAndTeachers(queryInterface, transaction) {
   await queryInterface.sequelize.query(
     `
     INSERT INTO time_table_cell_teachers (
-      time_table_mapping_id,
+      time_table_cell_id,
       user_id,
       teacher_type,
       \`is_Attendence\`,
@@ -145,7 +145,7 @@ async function backfillCellsAndTeachers(queryInterface, transaction) {
     WHERE NOT EXISTS (
       SELECT 1
       FROM time_table_cell_teachers existing
-      WHERE existing.time_table_mapping_id = ranked.cell_id
+      WHERE existing.time_table_cell_id = ranked.cell_id
         AND existing.user_id = ranked.user_id
         AND existing.deleted_at IS NULL
     )
@@ -156,7 +156,7 @@ async function backfillCellsAndTeachers(queryInterface, transaction) {
 
 async function syncCellAutoIncrement(queryInterface) {
   const [[row]] = await queryInterface.sequelize.query(
-    `SELECT IFNULL(MAX(time_table_mapping_id), 0) + 1 AS next_ai FROM time_table_cell`,
+    `SELECT IFNULL(MAX(time_table_cell_id), 0) + 1 AS next_ai FROM time_table_cell`,
   );
   const nextAi = Number(row.next_ai) || 1;
   await queryInterface.sequelize.query(
@@ -222,7 +222,7 @@ module.exports = {
         DELETE tw FROM time_table_cell_teachers tw
         INNER JOIN (
           ${CELL_ID_FROM_CLASS_SCHEDULE}
-        ) src ON src.cell_id = tw.time_table_mapping_id
+        ) src ON src.cell_id = tw.time_table_cell_id
         `,
         { transaction },
       );
@@ -232,7 +232,7 @@ module.exports = {
         DELETE c FROM time_table_cell c
         INNER JOIN (
           ${CELL_ID_FROM_CLASS_SCHEDULE}
-        ) src ON src.cell_id = c.time_table_mapping_id
+        ) src ON src.cell_id = c.time_table_cell_id
         `,
         { transaction },
       );

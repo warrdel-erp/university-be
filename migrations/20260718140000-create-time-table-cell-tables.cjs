@@ -10,7 +10,7 @@ module.exports = {
 
     if (!tableNames.includes('time_table_cell')) {
       await queryInterface.createTable('time_table_cell', {
-        time_table_mapping_id: {
+        time_table_cell_id: {
           type: Sequelize.INTEGER,
           primaryKey: true,
           autoIncrement: true,
@@ -142,10 +142,10 @@ module.exports = {
           autoIncrement: true,
           allowNull: false,
         },
-        time_table_mapping_id: {
+        time_table_cell_id: {
           type: Sequelize.INTEGER,
           allowNull: false,
-          references: { model: 'time_table_cell', key: 'time_table_mapping_id' },
+          references: { model: 'time_table_cell', key: 'time_table_cell_id' },
           onUpdate: 'CASCADE',
           onDelete: 'CASCADE',
         },
@@ -192,8 +192,8 @@ module.exports = {
         },
       });
 
-      await queryInterface.addIndex('time_table_cell_teachers', ['time_table_mapping_id'], {
-        name: 'idx_time_table_cell_teachers_mapping_id',
+      await queryInterface.addIndex('time_table_cell_teachers', ['time_table_cell_id'], {
+        name: 'idx_time_table_cell_teachers_cell_id',
       });
       await queryInterface.addIndex('time_table_cell_teachers', ['user_id'], {
         name: 'idx_time_table_cell_teachers_user_id',
@@ -208,10 +208,10 @@ module.exports = {
           autoIncrement: true,
           allowNull: false,
         },
-        time_table_mapping_id: {
+        time_table_cell_id: {
           type: Sequelize.INTEGER,
           allowNull: false,
-          references: { model: 'time_table_cell', key: 'time_table_mapping_id' },
+          references: { model: 'time_table_cell', key: 'time_table_cell_id' },
           onUpdate: 'CASCADE',
           onDelete: 'CASCADE',
         },
@@ -254,9 +254,9 @@ module.exports = {
 
       await queryInterface.addIndex(
         'time_table_cell_date_wise',
-        ['time_table_mapping_id', 'date'],
+        ['time_table_cell_id', 'date'],
         {
-          name: 'uq_time_table_cell_date_wise_mapping_date',
+          name: 'uq_time_table_cell_date_wise_cell_date',
           unique: true,
         },
       );

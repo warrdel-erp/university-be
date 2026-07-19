@@ -73,7 +73,7 @@ export async function addAttendance(attendanceData, createdBy, updatedBy) {
           classSectionsId: placement.classSectionsId,
           classSectionTermId: placement.classSectionTermId,
           timeTableCellDateWiseId: Number(dateWiseId),
-          timeTableMappingId: Number(dateWise.timeTableMappingId),
+          timeTableCellId: Number(dateWise.timeTableCellId),
           date: dateWise.date || attendanceData.date,
           createdBy,
           updatedBy,
@@ -173,7 +173,7 @@ export async function copyAttendancePeriod(copyData, createdBy, updatedBy) {
           classSectionsId: sourcePlacement.classSectionsId,
           classSectionTermId: sourcePlacement.classSectionTermId,
           timeTableCellDateWiseId: Number(targetDateWiseId),
-          timeTableMappingId: Number(target.timeTableMappingId),
+          timeTableCellId: Number(target.timeTableCellId),
           date,
           createdBy,
           updatedBy,
@@ -188,7 +188,7 @@ export async function copyAttendancePeriod(copyData, createdBy, updatedBy) {
       addedAttendance,
       copiedFrom: {
         timeTableCellDateWiseId: sourceDateWiseId,
-        timeTableMappingId: sourcePeriod.timeTableMappingId,
+        timeTableCellId: sourcePeriod.timeTableCellId,
         date,
         studentCount: sourceRows.length,
         classSectionTermId: sourcePlacement.classSectionTermId,
@@ -239,7 +239,7 @@ function mapCopyPeriodItem(periodItem) {
 
   return {
     timeTableCellDateWiseId: plain.timeTableCellDateWiseId,
-    timeTableMappingId: plain.timeTableMappingId,
+    timeTableCellId: plain.timeTableCellId,
     classSectionTermId: targetPlacement.classSectionTermId,
     period: cell.period,
     periodName: structurePeriod.periodName ?? null,
@@ -256,7 +256,7 @@ function mapCurrentPeriod(sourcePeriod, date, isMarked) {
 
   return {
     timeTableCellDateWiseId: sourcePeriod.timeTableCellDateWiseId,
-    timeTableMappingId: sourcePeriod.timeTableMappingId,
+    timeTableCellId: sourcePeriod.timeTableCellId,
     classSectionTermId: sourcePeriod.classSectionTermId,
     date,
     day: sourcePeriod.day,
@@ -465,7 +465,7 @@ function validateAttendanceRow(attendance) {
     "studentId",
     "classSectionsId",
     "timeTableCellDateWiseId",
-    "timeTableMappingId",
+    "timeTableCellId",
     "createdBy",
     "updatedBy",
     "attendanceStatus",
@@ -517,7 +517,7 @@ export async function importAttendanceData(excelData, commonData) {
           studentId: parsedStudent.studentId,
           classSectionsId: parsedStudent.classSectionsId,
           timeTableCellDateWiseId: parsedStudent.timeTableCellDateWiseId,
-          timeTableMappingId: dateWise.timeTableMappingId,
+          timeTableCellId: dateWise.timeTableCellId,
           date,
           attendanceStatus: status,
           ...commonData,
@@ -662,7 +662,7 @@ export async function getPreviousSessions(userId) {
       attendance: `${presentCount ?? 0} / ${totalStudents}`,
       status: isMarked ? 'MARKED' : 'PENDING',
       timeTableCellDateWiseId: session.timeTableCellDateWiseId,
-      timeTableMappingId: session.timeTableMappingId,
+      timeTableCellId: session.timeTableCellId,
     });
   }
 
@@ -716,7 +716,7 @@ export async function getEmployeeSectionDates(classSectionTermId, subjectId, use
 
     dateMap[dateKey].periods.push({
       timeTableCellDateWiseId: plain.timeTableCellDateWiseId,
-      timeTableMappingId: plain.timeTableMappingId,
+      timeTableCellId: plain.timeTableCellId,
       timeTableCreationId: cell.timeTablecreation?.timeTableCreationId,
       periodName: cell.timeTablecreation?.periodName,
       startTime: cell.timeTablecreation?.startTime,
@@ -856,7 +856,7 @@ async function prepareFinalAttendanceRecords(rawEntries, studentIds, commonData)
         typeof student.get === "function" ? student.get({ plain: true }) : student,
       ),
       timeTableCellDateWiseId: entry.timeTableCellDateWiseId,
-      timeTableMappingId: dateWise.timeTableMappingId,
+      timeTableCellId: dateWise.timeTableCellId,
       date: entry.date,
       attendanceStatus: entry.attendanceStatus,
       ...commonData,

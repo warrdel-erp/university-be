@@ -2,13 +2,14 @@
 
 /**
  * Attendance cutover to date-wise period key:
- * 1. Backfill attendance.time_table_cell_date_wise_id from mapping + date
- * 2. Normalize attendance.time_table_mapping_id onto week-cell PKs
+ * 1. Rename attendance.time_table_mapping_id → time_table_cell_id
+ * 2. Backfill attendance.time_table_cell_date_wise_id from cell + date
+ * 3. Normalize attendance.time_table_cell_id onto week-cell PKs
  *    (Primary / lowest id — same grouping as cell backfill)
- * 3. Point time_table_mapping_id FK at time_table_cell (when possible)
+ * 4. Point time_table_cell_id FK at time_table_cell (when possible)
  *
  * Prerequisites:
- *   20260718150000 — column exists
+ *   20260718150000 — date-wise column exists
  *   20260718160000 — week cells
  *   20260718170000 — date-wise rows
  *
@@ -49,14 +50,34 @@ module.exports = {
       throw new Error('time_table_cell_date_wise missing — run date-wise backfill first');
     }
 
+    // 1) Rename dual-write column (legacy mapping id → week-cell id)
+    {
+      const table = await queryInterface.describeTable('attendance');
+      if (table.time_table_mapping_id && !table.time_table_cell_id) {
+        const mappingFks = await findForeignKeysOnColumn(
+          queryInterface,
+          'attendance',
+          'time_table_mapping_id',
+        );
+        for (const fk of mappingFks) {
+          await queryInterface.sequelize.query(
+            `ALTER TABLE attendance DROP FOREIGN KEY \`${fk.constraintName}\``,
+          );
+        }
+        await queryInterface.sequelize.query(
+          'ALTER TABLE attendance CHANGE COLUMN `time_table_mapping_id` `time_table_cell_id` INTEGER NOT NULL',
+        );
+      }
+    }
+
     const transaction = await queryInterface.sequelize.transaction();
     try {
-      // 1) Direct match: attendance mapping id already equals week cell PK
+      // 2) Direct match: attendance cell id already equals week cell PK
       await queryInterface.sequelize.query(
         `
         UPDATE attendance a
         INNER JOIN time_table_cell_date_wise dw
-          ON dw.time_table_mapping_id = a.time_table_mapping_id
+          ON dw.time_table_cell_id = a.time_table_cell_id
           AND dw.date = DATE(a.date)
           AND dw.deleted_at IS NULL
         SET a.time_table_cell_date_wise_id = dw.time_table_cell_date_wise_id
@@ -67,7 +88,7 @@ module.exports = {
         { transaction },
       );
 
-      // 2) Secondary / non-canonical class_schedule mapping → cell PK → date-wise
+      // 3) Secondary / non-canonical class_schedule mapping → cell PK → date-wise
       if (await tableExists(queryInterface, 'class_schedule_item')) {
         await queryInterface.sequelize.query(
           `
@@ -91,14 +112,14 @@ module.exports = {
               ) AS cell_id
             FROM class_schedule_item csi
             WHERE csi.deleted_at IS NULL
-          ) map ON map.old_mapping_id = a.time_table_mapping_id
+          ) map ON map.old_mapping_id = a.time_table_cell_id
           INNER JOIN time_table_cell_date_wise dw
-            ON dw.time_table_mapping_id = map.cell_id
+            ON dw.time_table_cell_id = map.cell_id
             AND dw.date = DATE(a.date)
             AND dw.deleted_at IS NULL
           SET
             a.time_table_cell_date_wise_id = dw.time_table_cell_date_wise_id,
-            a.time_table_mapping_id = map.cell_id
+            a.time_table_cell_id = map.cell_id
           WHERE a.time_table_cell_date_wise_id IS NULL
             AND a.deleted_at IS NULL
             AND a.date IS NOT NULL
@@ -113,7 +134,7 @@ module.exports = {
       throw error;
     }
 
-    // 3) Retarget mapping FK to time_table_cell (DDL — outside transaction)
+    // 4) Retarget FK to time_table_cell (DDL — outside transaction)
     if (!(await tableExists(queryInterface, 'time_table_cell'))) {
       return;
     }
@@ -121,7 +142,7 @@ module.exports = {
     const fks = await findForeignKeysOnColumn(
       queryInterface,
       'attendance',
-      'time_table_mapping_id',
+      'time_table_cell_id',
     );
 
     for (const fk of fks) {
@@ -133,7 +154,7 @@ module.exports = {
     const stillPointing = await findForeignKeysOnColumn(
       queryInterface,
       'attendance',
-      'time_table_mapping_id',
+      'time_table_cell_id',
     );
     if (stillPointing.length === 0) {
       const [[orphan]] = await queryInterface.sequelize.query(
@@ -141,18 +162,18 @@ module.exports = {
         SELECT COUNT(*) AS cnt
         FROM attendance a
         LEFT JOIN time_table_cell c
-          ON c.time_table_mapping_id = a.time_table_mapping_id
+          ON c.time_table_cell_id = a.time_table_cell_id
         WHERE a.deleted_at IS NULL
-          AND c.time_table_mapping_id IS NULL
+          AND c.time_table_cell_id IS NULL
         `,
       );
       if (Number(orphan.cnt) === 0) {
         await queryInterface.sequelize.query(
           `
           ALTER TABLE attendance
-          ADD CONSTRAINT fk_attendance_time_table_mapping_id_cell
-          FOREIGN KEY (time_table_mapping_id)
-          REFERENCES time_table_cell (time_table_mapping_id)
+          ADD CONSTRAINT fk_attendance_time_table_cell_id
+          FOREIGN KEY (time_table_cell_id)
+          REFERENCES time_table_cell (time_table_cell_id)
           ON UPDATE CASCADE
           ON DELETE RESTRICT
           `,
@@ -166,14 +187,13 @@ module.exports = {
       return;
     }
 
-    // Drop cell FK if we added it; do not restore class_schedule FK automatically
     const [rows] = await queryInterface.sequelize.query(
       `
       SELECT CONSTRAINT_NAME AS constraintName
       FROM information_schema.TABLE_CONSTRAINTS
       WHERE TABLE_SCHEMA = DATABASE()
         AND TABLE_NAME = 'attendance'
-        AND CONSTRAINT_NAME = 'fk_attendance_time_table_mapping_id_cell'
+        AND CONSTRAINT_NAME = 'fk_attendance_time_table_cell_id'
         AND CONSTRAINT_TYPE = 'FOREIGN KEY'
       `,
     );
@@ -184,15 +204,13 @@ module.exports = {
       );
     }
 
-    // Clear backfilled date-wise ids only where they match mapping+date
-    // (safe undo of this migration's SET)
     if (await tableExists(queryInterface, 'time_table_cell_date_wise')) {
       await queryInterface.sequelize.query(
         `
         UPDATE attendance a
         INNER JOIN time_table_cell_date_wise dw
           ON dw.time_table_cell_date_wise_id = a.time_table_cell_date_wise_id
-          AND dw.time_table_mapping_id = a.time_table_mapping_id
+          AND dw.time_table_cell_id = a.time_table_cell_id
           AND dw.date = DATE(a.date)
         SET a.time_table_cell_date_wise_id = NULL
         WHERE a.time_table_cell_date_wise_id IS NOT NULL

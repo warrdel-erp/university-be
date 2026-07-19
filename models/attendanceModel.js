@@ -12,7 +12,7 @@ import university from "./universityModel.js";
 /**
  * Student attendance for one dated class period.
  * Period key: timeTableCellDateWiseId (calendar instance).
- * timeTableMappingId is denormalized week-cell PK (dual-write / legacy joins).
+ * timeTableCellId is denormalized week-cell PK (dual-write).
  */
 const attendanceModel = sequelize.define(
     'attendance',
@@ -59,13 +59,13 @@ const attendanceModel = sequelize.define(
                 key: 'time_table_cell_date_wise_id'
             }
         },
-        timeTableMappingId: {
+        timeTableCellId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'time_table_mapping_id',
+            field: 'time_table_cell_id',
             references: {
                 model: timeTableCellModel,
-                key: 'time_table_mapping_id'
+                key: 'time_table_cell_id'
             }
         },
         classSectionsId: {

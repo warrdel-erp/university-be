@@ -22,7 +22,7 @@ function flattenDateWiseScheduleRow(row) {
 
   return {
     timeTableCellDateWiseId: plain.timeTableCellDateWiseId,
-    timeTableMappingId: plain.timeTableMappingId,
+    timeTableCellId: plain.timeTableCellId,
     date: plain.date,
     timeTableType: cell.timeTableType,
     day: cell.day,
@@ -84,7 +84,7 @@ function dateWiseScheduleIncludes({ sessionId, academicYearId } = {}) {
       as: 'timeTableCell',
       required: true,
       attributes: [
-        'timeTableMappingId',
+        'timeTableCellId',
         'timeTableType',
         'day',
         'period',
@@ -197,7 +197,7 @@ export async function getTodayClassScheduleForEmployee(userId, currentDate, sess
 
   const rows = await model.timeTableCellDateWiseModel.findAll({
     where: { date: currentDate },
-    attributes: ['timeTableCellDateWiseId', 'timeTableMappingId', 'date', 'classRoomSectionId'],
+    attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
     include: includes,
     order: [['date', 'ASC']],
   });
@@ -217,7 +217,7 @@ export async function getPastClassSchedulesForEmployee(
 ) {
   const rows = await model.timeTableCellDateWiseModel.findAll({
     where: { date: { [Op.lt]: currentDate } },
-    attributes: ['timeTableCellDateWiseId', 'timeTableMappingId', 'date', 'classRoomSectionId'],
+    attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
     include: withTeacherFilter(
       dateWiseScheduleIncludes({ sessionId, academicYearId }),
       userId,
@@ -239,7 +239,7 @@ export async function getUpcomingClassSchedulesForEmployee(
 ) {
   const rows = await model.timeTableCellDateWiseModel.findAll({
     where: { date: { [Op.gte]: currentDate } },
-    attributes: ['timeTableCellDateWiseId', 'timeTableMappingId', 'date', 'classRoomSectionId'],
+    attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
     include: withTeacherFilter(
       dateWiseScheduleIncludes({ academicYearId }),
       userId,
@@ -278,7 +278,7 @@ export async function getUniqueClassSectionSubjectsForEmployee(userId, academicY
 
   const cells = await model.timeTableCellModel.findAll({
     attributes: [
-      'timeTableMappingId',
+      'timeTableCellId',
       'day',
       'subjectId',
       'electiveSubjectId',
@@ -434,7 +434,7 @@ export async function getTeacherWeekCells(userId) {
         as: 'timeTableCells',
         required: true,
         attributes: [
-          'timeTableMappingId',
+          'timeTableCellId',
           'day',
           'period',
           'isSameTeacher',
@@ -504,7 +504,7 @@ export async function getTeacherWeekCells(userId) {
 
 export async function getTeacherSubjectsFromWeekCells(userId) {
   const cells = await model.timeTableCellModel.findAll({
-    attributes: ['timeTableMappingId', 'subjectId', 'electiveSubjectId', 'teacherSubjectMappingId'],
+    attributes: ['timeTableCellId', 'subjectId', 'electiveSubjectId', 'teacherSubjectMappingId'],
     include: [
       {
         model: model.timeTableCellTeachersModel,
@@ -617,7 +617,7 @@ export async function getTeacherSubjectsFromWeekCells(userId) {
 
 export async function getEmployeeSectionDateWiseRows(classSectionTermId, subjectId, userId) {
   return model.timeTableCellDateWiseModel.findAll({
-    attributes: ['timeTableCellDateWiseId', 'timeTableMappingId', 'date'],
+    attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date'],
     include: [
       {
         model: model.timeTableCellTeachersDateWiseModel,
@@ -631,7 +631,7 @@ export async function getEmployeeSectionDateWiseRows(classSectionTermId, subject
         as: 'timeTableCell',
         required: true,
         where: { subjectId: Number(subjectId) },
-        attributes: ['timeTableMappingId', 'day', 'period', 'timeTableCreationId', 'subjectId'],
+        attributes: ['timeTableCellId', 'day', 'period', 'timeTableCreationId', 'subjectId'],
         include: [
           {
             model: model.timeTableRoutineModel,

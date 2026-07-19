@@ -11,16 +11,16 @@ import subjectModel from './subjectModel.js';
 
 /**
  * Week-routine template cell (no teacher on this row).
- * PK keeps existing identifier: timeTableMappingId.
+ * PK: timeTableCellId / time_table_cell_id.
  */
 const timeTableCellModel = sequelize.define(
   'time_table_cell',
   {
-    timeTableMappingId: {
+    timeTableCellId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
-      field: 'time_table_mapping_id',
+      field: 'time_table_cell_id',
     },
     timeTableNameId: {
       type: DataTypes.INTEGER,

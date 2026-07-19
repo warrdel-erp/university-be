@@ -107,18 +107,21 @@ const formatEmployeeDetailsDeep = (employee) => {
         })) || []
       );
     }) || [];
-  // Time Table (Elective)
+  // Time Table (from week-cell teachers)
   const timeTable =
-    employee?.timeTableMappings?.map((tt) => ({
-      day: tt.day,
-      period: tt.period,
-      periodName: tt?.timeTablecreation?.periodName,
-      startTime: tt?.timeTablecreation?.startTime,
-      endTime: tt?.timeTablecreation?.endTime,
-      room: tt?.classRoom?.roomNumber,
-      electiveSubjectName: tt?.timeTableElective?.electiveSubjectName,
-      electiveSubjectCode: tt?.timeTableElective?.electiveSubjectCode,
-    })) || [];
+    employee?.timeTableCellTeachers?.map((row) => {
+      const cell = row.timeTableCell;
+      return {
+        day: cell?.day,
+        period: cell?.period,
+        periodName: cell?.timeTablecreation?.periodName,
+        startTime: cell?.timeTablecreation?.startTime,
+        endTime: cell?.timeTablecreation?.endTime,
+        room: cell?.classRoom?.roomNumber,
+        electiveSubjectName: cell?.timeTableElective?.electiveSubjectName,
+        electiveSubjectCode: cell?.timeTableElective?.electiveSubjectCode,
+      };
+    }) || [];
   return {
     employeeInfo,
     courses,

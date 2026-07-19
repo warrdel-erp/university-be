@@ -10,7 +10,7 @@ import universityModel from "./universityModel.js";
 /**
  * Topic taught in a dated class period.
  * Period key: timeTableCellDateWiseId.
- * timeTableMappingId is denormalized week-cell PK (dual-write).
+ * timeTableCellId is denormalized week-cell PK (dual-write).
  */
 const lessonMappingModel = sequelize.define(
     'lesson_mapping',
@@ -57,13 +57,13 @@ const lessonMappingModel = sequelize.define(
                 key: 'time_table_cell_date_wise_id'
             }
         },
-        timeTableMappingId: {
+        timeTableCellId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'time_table_mapping_id',
+            field: 'time_table_cell_id',
             references: {
                 model: timeTableCellModel,
-                key: 'time_table_mapping_id'
+                key: 'time_table_cell_id'
             }
         },
         date: {

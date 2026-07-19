@@ -634,7 +634,7 @@ export async function getTeacherSubjectsFromSchedule(userId) {
 
         const result = await model.timeTableCellModel.findAll({
             attributes: [
-                'timeTableMappingId',
+                'timeTableCellId',
                 'subjectId',
                 'electiveSubjectId',
                 'teacherSubjectMappingId',

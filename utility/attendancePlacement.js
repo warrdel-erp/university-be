@@ -44,7 +44,7 @@ function dateWiseCellInclude() {
       as: 'timeTableCell',
       required: true,
       attributes: [
-        'timeTableMappingId',
+        'timeTableCellId',
         'timeTableRoutineId',
         'timeTableCreationId',
         'period',
@@ -116,7 +116,7 @@ export async function assertDateWiseCellsBelongToTerm(dateWiseIds, classSectionT
 
   const rows = await model.timeTableCellDateWiseModel.findAll({
     where: { timeTableCellDateWiseId: { [Op.in]: uniqueIds } },
-    attributes: ['timeTableCellDateWiseId', 'timeTableMappingId', 'date', 'classRoomSectionId'],
+    attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
     include: dateWiseCellInclude(),
     transaction: options.transaction,
   });
@@ -167,7 +167,7 @@ export async function assertCopyPeriodDateWiseMatch(
 
   const rows = await model.timeTableCellDateWiseModel.findAll({
     where: { timeTableCellDateWiseId: { [Op.in]: allIds } },
-    attributes: ['timeTableCellDateWiseId', 'timeTableMappingId', 'date'],
+    attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date'],
     include: dateWiseCellInclude(),
     transaction: options.transaction,
   });
@@ -232,7 +232,7 @@ export async function assertCopyPeriodDateWiseMatch(
 export async function resolveSourcePeriodByDateWiseId(sourceDateWiseId, options = {}) {
   const row = await model.timeTableCellDateWiseModel.findOne({
     where: { timeTableCellDateWiseId: Number(sourceDateWiseId) },
-    attributes: ['timeTableCellDateWiseId', 'timeTableMappingId', 'date', 'classRoomSectionId'],
+    attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
     include: dateWiseCellInclude(),
     transaction: options.transaction,
   });
@@ -253,7 +253,7 @@ export async function resolveSourcePeriodByDateWiseId(sourceDateWiseId, options 
   return {
     ...placement,
     timeTableCellDateWiseId: Number(sourceDateWiseId),
-    timeTableMappingId: Number(plain.timeTableMappingId),
+    timeTableCellId: Number(plain.timeTableCellId),
     date: plain.date,
     day: cell.day,
     period: cell.period,

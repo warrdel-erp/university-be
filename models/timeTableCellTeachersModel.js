@@ -16,13 +16,13 @@ const timeTableCellTeachersModel = sequelize.define(
       autoIncrement: true,
       field: 'time_table_cell_teacher_id',
     },
-    timeTableMappingId: {
+    timeTableCellId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      field: 'time_table_mapping_id',
+      field: 'time_table_cell_id',
       references: {
         model: timeTableCellModel,
-        key: 'time_table_mapping_id',
+        key: 'time_table_cell_id',
       },
     },
     userId: {
