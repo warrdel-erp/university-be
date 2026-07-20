@@ -60,6 +60,33 @@ Work top → bottom. Later steps need IDs from earlier ones.
 
 Until **D (publish)** succeeds, E–H have nothing to key on.
 
+### 2.1 Existing database (legacy `class_schedule_item` data)
+
+**GET handlers do not read `class_schedule_item`.** They query only `time_table_cell`, `time_table_cell_teachers`, and (for day views) `time_table_cell_date_wise`. Deploying the new code **without** backfill migrations will return **empty** week grids and schedules even when legacy rows still exist.
+
+Run migrations **1–8** in [§6](#6-migrations-backend--testing) before testing GET APIs against old data.
+
+| After this migration | GET APIs that start returning legacy data |
+|----------------------|-------------------------------------------|
+| `20260718160000` | Week template: `GET /timeTableCreate/getRoutine`, `mapping`, `cellData`, `elective`, `getRoutineByTeacher`; student week timetable |
+| `20260718170000` | Day view: `GET /employee/schedule`, `sectionDates`; anything needing `timeTableCellDateWiseId` |
+| `20260718180000` | Existing **attendance** rows linked to date-wise ids |
+| `20260718190000` | Existing **lesson_mapping** rows linked to date-wise ids |
+
+**ID compatibility:** backfill sets `time_table_cell_id` = the **Primary** (or lowest) legacy `time_table_mapping_id` per slot. If the FE still stores old mapping ids, week-grid calls using that id as `timeTableCellId` often still work. Secondary co-teacher mapping ids are **not** kept as cell ids — use one cell id + `teachers` array. `timeTableCellDateWiseId` is new; it appears only after publish + `170000` (or a new publish on deployed code).
+
+**Verify backfill (PostgreSQL):**
+
+```sql
+SELECT COUNT(*) AS legacy_rows FROM class_schedule_item;
+SELECT COUNT(*) AS cells FROM time_table_cell;
+SELECT COUNT(*) AS date_wise FROM time_table_cell_date_wise;
+SELECT COUNT(*) AS attendance_with_date_wise
+FROM attendance WHERE time_table_cell_date_wise_id IS NOT NULL;
+```
+
+Legacy row count ≠ cell count (co-teachers collapse to one cell). Date-wise count > 0 only for **published** routines after `170000`.
+
 ---
 
 ## 3. Data model (short)
