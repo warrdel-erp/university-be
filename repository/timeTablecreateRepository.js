@@ -34,6 +34,28 @@ async function assertScopedSchedule(timeTableCellId, options = {}) {
   return cell;
 }
 
+async function filterConflictByRoutineScope(conflict, options = {}) {
+  if (!conflict) {
+    return null;
+  }
+
+  const routineId = conflict.timeTableRoutineId
+    ?? conflict.dataValues?.timeTableRoutineId
+    ?? conflict.timeTableRoutine?.timeTableRoutineId
+    ?? conflict.timeTableRoutine?.dataValues?.timeTableRoutineId;
+
+  if (routineId == null) {
+    return conflict;
+  }
+
+  const scopedRoutine = await assertScopedRoutine(Number(routineId), {
+    transaction: options.transaction,
+    attributes: ['timeTableRoutineId'],
+  });
+
+  return scopedRoutine ? conflict : null;
+}
+
 export async function addTimeTableCreate(data, transaction) {
   const result = await scoped(model.timeTableRoutineModel).create(
     stripRoutinePersistPayload(data),
@@ -500,22 +522,18 @@ export async function checkTeacherConflictRepository(
             { startingDate: { [Op.lte]: endingDate } },
             { endingDate: { [Op.gte]: startingDate } },
           ],
-          ...buildScope(model.timeTableRoutineModel),
         },
-        include: [
-          timeTableRoutineClassSectionInclude({
-            sectionAttributes: ['section', 'year'],
-          }),
-        ],
       },
     ],
   });
 
-  if (isAllowedCombinedConflict(conflict, options)) {
+  const scopedConflict = await filterConflictByRoutineScope(conflict, { transaction });
+
+  if (isAllowedCombinedConflict(scopedConflict, options)) {
     return null;
   }
 
-  return conflict;
+  return scopedConflict;
 };
 
 export async function checkElectiveSubjectConflictRepository(
@@ -538,7 +556,6 @@ export async function checkElectiveSubjectConflictRepository(
       { startingDate: { [Op.lte]: endingDate } },
       { endingDate: { [Op.gte]: startingDate } },
     ],
-    ...buildScope(model.timeTableRoutineModel),
   };
 
   if (excludeRoutineId != null) {
@@ -575,7 +592,9 @@ export async function checkElectiveSubjectConflictRepository(
     ],
   });
 
-  return conflict;
+  const scopedConflict = await filterConflictByRoutineScope(conflict, { transaction });
+
+  return scopedConflict;
 };
 
 export async function getRoutineByIdRepository(timeTableRoutineId, options = {}) {
@@ -812,22 +831,18 @@ export async function checkRoomConflictRepository(
             { startingDate: { [Op.lte]: endingDate } },
             { endingDate: { [Op.gte]: startingDate } },
           ],
-          ...buildScope(model.timeTableRoutineModel),
         },
-        include: [
-          timeTableRoutineClassSectionInclude({
-            sectionAttributes: ['section', 'year'],
-          }),
-        ],
       },
     ],
   });
 
-  if (isAllowedCombinedConflict(conflict, options)) {
+  const scopedConflict = await filterConflictByRoutineScope(conflict, { transaction });
+
+  if (isAllowedCombinedConflict(scopedConflict, options)) {
     return null;
   }
 
-  return conflict;
+  return scopedConflict;
 };
 
 export async function getFullRoutineDetailsRepository(timeTableRoutineId, options = {}) {
