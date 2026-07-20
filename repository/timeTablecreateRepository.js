@@ -1028,6 +1028,13 @@ export async function addCellTeacherRepository(data, transaction) {
   return model.timeTableCellTeachersModel.create(data, { transaction });
 }
 
+export async function updateCellTeacherRepository(timeTableCellTeacherId, data, transaction) {
+  return model.timeTableCellTeachersModel.update(data, {
+    where: { timeTableCellTeacherId: Number(timeTableCellTeacherId) },
+    transaction,
+  });
+}
+
 export async function findCellTeacherRepository(timeTableCellId, options = {}) {
   const where = { timeTableCellId: Number(timeTableCellId) };
   if (options.teacherType != null) {
@@ -1460,6 +1467,14 @@ export async function getRoutineForPublishRepository(timeTableRoutineId, options
 }
 
 export async function getRoutineCellsForPublishRepository(timeTableRoutineId, options = {}) {
+  const routine = await assertScopedRoutine(Number(timeTableRoutineId), {
+    transaction: options.transaction,
+    attributes: ['timeTableRoutineId'],
+  });
+  if (!routine) {
+    return [];
+  }
+
   return model.timeTableCellModel.findAll({
     where: { timeTableRoutineId: Number(timeTableRoutineId) },
     attributes: [
@@ -1469,13 +1484,6 @@ export async function getRoutineCellsForPublishRepository(timeTableRoutineId, op
       'timeTableRoutineId',
     ],
     include: [
-      {
-        model: model.timeTableRoutineModel,
-        as: 'timeTableRoutine',
-        required: true,
-        where: buildScope(model.timeTableRoutineModel),
-        attributes: ['timeTableRoutineId'],
-      },
       {
         model: model.timeTableCellTeachersModel,
         as: 'timeTableCellTeachers',
@@ -1516,21 +1524,41 @@ export async function clearDateWiseForMappingIdsRepository(mappingIds, transacti
   });
 }
 
+export async function countDateWiseRowsForCellIds(cellIds, options = {}) {
+  if (!cellIds.length) {
+    return 0;
+  }
+
+  return model.timeTableCellDateWiseModel.count({
+    where: { timeTableCellId: { [Op.in]: cellIds } },
+    transaction: options.transaction,
+  });
+}
+
 export async function bulkCreateDateWiseCellsRepository(rows, transaction) {
   if (!rows.length) {
     return [];
   }
-  return model.timeTableCellDateWiseModel.bulkCreate(rows, {
-    transaction,
-    returning: true,
-  });
+
+  const created = [];
+  for (const row of rows) {
+    const instance = await model.timeTableCellDateWiseModel.create(row, { transaction });
+    created.push(instance);
+  }
+  return created;
 }
 
 export async function bulkCreateDateWiseTeachersRepository(rows, transaction) {
   if (!rows.length) {
     return [];
   }
-  return model.timeTableCellTeachersDateWiseModel.bulkCreate(rows, { transaction });
+
+  const created = [];
+  for (const row of rows) {
+    const instance = await model.timeTableCellTeachersDateWiseModel.create(row, { transaction });
+    created.push(instance);
+  }
+  return created;
 }
 
 export async function ClassSubjectCount(classSectionTermId) {

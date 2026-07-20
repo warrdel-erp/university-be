@@ -1603,6 +1603,97 @@ export async function updatetimeTableCreate(timeTableCellId, timeTableType, upda
   return result;
 }
 
+async function findTeacherSlotForUpdate(baseMappingId, item, transaction) {
+  if (item.timeTableCellTeacherId != null) {
+    return timeTableCreateRepository.findCellTeacherRepository(baseMappingId, {
+      timeTableCellTeacherId: item.timeTableCellTeacherId,
+      transaction,
+    });
+  }
+
+  if (item.teacherType != null) {
+    return timeTableCreateRepository.findCellTeacherRepository(baseMappingId, {
+      teacherType: item.teacherType,
+      transaction,
+    });
+  }
+
+  if (item.userId != null) {
+    return timeTableCreateRepository.findCellTeacherRepository(baseMappingId, {
+      userId: item.userId,
+      transaction,
+    });
+  }
+
+  return null;
+}
+
+function buildMappingCellPatch(item, updatedBy) {
+  const cellPatch = { updatedBy };
+
+  if (item.subjectId != null) cellPatch.subjectId = Number(item.subjectId);
+  if (item.electiveSubjectId != null) cellPatch.electiveSubjectId = Number(item.electiveSubjectId);
+  if (item.classRoomSectionId != null) cellPatch.classRoomSectionId = Number(item.classRoomSectionId);
+  if (item.teacherSubjectMappingId != null) {
+    cellPatch.teacherSubjectMappingId = item.teacherSubjectMappingId;
+  }
+  if (item.timeTableType != null) cellPatch.timeTableType = item.timeTableType;
+  if (item.isOverridingSyblingElectives != null) {
+    cellPatch.isOverridingSyblingElectives = item.isOverridingSyblingElectives;
+  }
+  if (item.isAttendence != null && item.teacherType == null) {
+    cellPatch.isAttendence = item.isAttendence;
+  }
+  if (item.subjectId != null || item.electiveSubjectId != null || item.teacherSubjectMappingId != null) {
+    cellPatch.isSameTeacher = false;
+  }
+
+  return cellPatch;
+}
+
+function hasMappingCellFieldUpdate(item) {
+  return item.subjectId != null
+    || item.electiveSubjectId != null
+    || item.classRoomSectionId != null
+    || item.teacherSubjectMappingId != null
+    || item.timeTableType != null
+    || item.isOverridingSyblingElectives != null
+    || (item.isAttendence != null && item.teacherType == null);
+}
+
+function hasTeacherSlotUpdate(item) {
+  return item.teacherType != null
+    || item.timeTableCellTeacherId != null
+    || item.userId != null
+    || item.isAttendence != null
+    || item.isOverridingSyblingElectives != null;
+}
+
+async function assignTeacherToMappingCell({
+  baseMappingId,
+  item,
+  periodLength,
+  createdBy,
+  updatedBy,
+  transaction,
+}) {
+  const cellPatch = buildMappingCellPatch(item, updatedBy);
+  if (Object.keys(cellPatch).length > 1) {
+    await timeTableCreateRepository.updateMapping(baseMappingId, cellPatch, transaction);
+  }
+
+  await addFacultyLoadForEmployee(item.userId, periodLength, transaction);
+
+  await timeTableCreateRepository.addCellTeacherRepository({
+    timeTableCellId: baseMappingId,
+    userId: Number(item.userId),
+    teacherType: item.teacherType || 'Primary',
+    isAttendence: item.isAttendence != null ? item.isAttendence : true,
+    createdBy,
+    updatedBy,
+  }, transaction);
+}
+
 export async function updateSimpleTeacherMapping(mappingArray, createdBy, updatedBy) {
   const transaction = await sequelize.transaction();
 
@@ -1643,9 +1734,10 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
       (item) => item.isNew === true && item.teacherType === 'Secondary',
     );
 
-    if (baseRow.classRoomSectionId && !addingSecondaryTeacher) {
+    const effectiveRoomId = base.classRoomSectionId ?? baseRow.classRoomSectionId;
+    if (effectiveRoomId && !addingSecondaryTeacher) {
       const roomConflict = await timeTableCreateRepository.checkRoomConflictRepository(
-        baseRow.classRoomSectionId,
+        effectiveRoomId,
         baseRow.day,
         startTime,
         endTime,
@@ -1681,26 +1773,28 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           throw new Error('userId is required for new teacher entry');
         }
 
-        const facLoad = await getSingleFaculityLoadDetails(item.userId);
-        if (!facLoad || !facLoad[0]) {
-          throw new Error(`Faculty load not found for employee ${item.userId}`);
+        if (item.teacherType === 'Secondary') {
+          const primaryTeacher = await timeTableCreateRepository.findCellTeacherRepository(
+            baseMappingId,
+            { teacherType: 'Primary', transaction },
+          );
+          if (!primaryTeacher) {
+            throw new Error('Assign primary teacher before adding a secondary teacher');
+          }
+
+          const existingSecondary = await timeTableCreateRepository.findCellTeacherRepository(
+            baseMappingId,
+            { teacherType: 'Secondary', transaction },
+          );
+          if (existingSecondary) {
+            throw new Error('Secondary teacher already assigned for this cell');
+          }
         }
 
-        const existingLoad = toMoneyNumber(
-          facLoad[0].dataValues?.currentLoad ?? facLoad[0].currentLoad,
-        );
-        const newLoad = decimalAdd(existingLoad, periodLength);
+        await addFacultyLoadForEmployee(item.userId, periodLength, transaction);
 
-        await updateFaculityLoadByEmployeeId(item.userId, { currentLoad: newLoad }, transaction);
-
-        if (item.subjectId != null || item.electiveSubjectId != null || item.teacherSubjectMappingId != null) {
-          const cellPatch = { updatedBy };
-          if (item.subjectId != null) cellPatch.subjectId = Number(item.subjectId);
-          if (item.electiveSubjectId != null) cellPatch.electiveSubjectId = Number(item.electiveSubjectId);
-          if (item.teacherSubjectMappingId != null) {
-            cellPatch.teacherSubjectMappingId = item.teacherSubjectMappingId;
-          }
-          cellPatch.isSameTeacher = false;
+        const cellPatch = buildMappingCellPatch(item, updatedBy);
+        if (Object.keys(cellPatch).length > 1) {
           await timeTableCreateRepository.updateMapping(baseMappingId, cellPatch, transaction);
         }
 
@@ -1715,51 +1809,75 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
         continue;
       }
 
-      if (item.timeTableCellId || item.timeTableCellTeacherId) {
-        const teacher = await timeTableCreateRepository.findCellTeacherRepository(
-          baseMappingId,
-          {
-            teacherType: item.teacherType,
-            timeTableCellTeacherId: item.timeTableCellTeacherId,
-            userId: item.userId,
-            transaction,
-          },
-        );
+      if (!hasTeacherSlotUpdate(item) && !hasMappingCellFieldUpdate(item)) {
+        continue;
+      }
 
-        if (!teacher && item.teacherType == null && item.timeTableCellTeacherId == null) {
-          const cellPatch = { updatedBy };
-          if (item.isOverridingSyblingElectives != null) {
-            cellPatch.isOverridingSyblingElectives = item.isOverridingSyblingElectives;
-          }
-          if (item.isAttendence != null) {
-            cellPatch.isAttendence = item.isAttendence;
-          }
+      if (!hasTeacherSlotUpdate(item)) {
+        const cellPatch = buildMappingCellPatch(item, updatedBy);
+        if (Object.keys(cellPatch).length > 1) {
           await timeTableCreateRepository.updateMapping(baseMappingId, cellPatch, transaction);
-          continue;
         }
+        continue;
+      }
 
-        if (!teacher) {
+      let teacher = await findTeacherSlotForUpdate(baseMappingId, item, transaction);
+
+      if (!teacher) {
+        if (!item.userId) {
           throw new Error(`Teacher row not found for mapping ${baseMappingId}`);
         }
 
-        const noChange = teacher.teacherType === item.teacherType
-          && teacher.isAttendence === item.isAttendence
-          && (item.isOverridingSyblingElectives == null
-            || baseRow.isOverridingSyblingElectives === item.isOverridingSyblingElectives);
+        await assignTeacherToMappingCell({
+          baseMappingId,
+          item,
+          periodLength,
+          createdBy,
+          updatedBy,
+          transaction,
+        });
+        continue;
+      }
 
-        if (!noChange) {
-          await timeTableCreateRepository.updateMapping(
-            baseMappingId,
-            {
-              teacherType: item.teacherType,
-              isAttendence: item.isAttendence,
-              isOverridingSyblingElectives: item.isOverridingSyblingElectives,
-              timeTableCellTeacherId: teacher.timeTableCellTeacherId,
-              updatedBy,
-            },
-            transaction,
-          );
-        }
+      const teacherPlain = teacher.get ? teacher.get({ plain: true }) : teacher;
+      const cellPatch = buildMappingCellPatch(item, updatedBy);
+      if (Object.keys(cellPatch).length > 1) {
+        await timeTableCreateRepository.updateMapping(baseMappingId, cellPatch, transaction);
+      }
+
+      if (item.userId != null && Number(teacherPlain.userId) !== Number(item.userId)) {
+        await subtractFacultyLoadForEmployee(teacherPlain.userId, periodLength, transaction);
+        await addFacultyLoadForEmployee(item.userId, periodLength, transaction);
+        await timeTableCreateRepository.updateCellTeacherRepository(
+          teacherPlain.timeTableCellTeacherId,
+          {
+            userId: Number(item.userId),
+            updatedBy,
+          },
+          transaction,
+        );
+        teacherPlain.userId = Number(item.userId);
+      }
+
+      const teacherTypeToSave = item.teacherType != null ? item.teacherType : teacherPlain.teacherType;
+      const attendenceToSave = item.isAttendence != null ? item.isAttendence : teacherPlain.isAttendence;
+      const noChange = teacherPlain.teacherType === teacherTypeToSave
+        && teacherPlain.isAttendence === attendenceToSave
+        && (item.isOverridingSyblingElectives == null
+          || baseRow.isOverridingSyblingElectives === item.isOverridingSyblingElectives);
+
+      if (!noChange) {
+        await timeTableCreateRepository.updateMapping(
+          baseMappingId,
+          {
+            teacherType: teacherTypeToSave,
+            isAttendence: attendenceToSave,
+            isOverridingSyblingElectives: item.isOverridingSyblingElectives,
+            timeTableCellTeacherId: teacherPlain.timeTableCellTeacherId,
+            updatedBy,
+          },
+          transaction,
+        );
       }
     }
 
@@ -2392,6 +2510,61 @@ export async function getTimeTableCellData(courseId, classSectionTermId) {
   return { formatted: finalResult };
 }
 
+const WEEKDAY_BY_JS_INDEX = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+];
+
+const WEEKDAY_ALIASES = {
+  sun: 'sunday',
+  sunday: 'sunday',
+  mon: 'monday',
+  monday: 'monday',
+  tue: 'tuesday',
+  tues: 'tuesday',
+  tuesday: 'tuesday',
+  wed: 'wednesday',
+  wednesday: 'wednesday',
+  thu: 'thursday',
+  thur: 'thursday',
+  thurs: 'thursday',
+  thursday: 'thursday',
+  fri: 'friday',
+  friday: 'friday',
+  sat: 'saturday',
+  saturday: 'saturday',
+};
+
+function normalizeWeekdayKey(value) {
+  if (value == null) {
+    return null;
+  }
+  const key = String(value).trim().toLowerCase();
+  return WEEKDAY_ALIASES[key] || null;
+}
+
+function weekdayNameFromDateOnly(dateStr) {
+  const date = new Date(`${dateStr}T12:00:00`);
+  return WEEKDAY_BY_JS_INDEX[date.getDay()];
+}
+
+function eachDateInRange(startStr, endStr) {
+  const dates = [];
+  let current = startStr;
+  while (current <= endStr) {
+    dates.push(current);
+    const next = new Date(`${current}T12:00:00`);
+    next.setDate(next.getDate() + 1);
+    current = toDateOnlyString(next);
+  }
+  return dates;
+}
+
 export async function publishTimeTableService(timeTableRoutineId) {
   const transaction = await sequelize.transaction();
 
@@ -2405,6 +2578,7 @@ export async function publishTimeTableService(timeTableRoutineId) {
     }
 
     const plain = routine.get({ plain: true });
+
     const start = toDateOnlyString(plain.startingDate);
     const end = toDateOnlyString(plain.endingDate);
     if (!start || !end) {
@@ -2414,24 +2588,49 @@ export async function publishTimeTableService(timeTableRoutineId) {
       throw new Error('Routine endingDate cannot be before startingDate');
     }
 
-    const actorId = getTenantStore().userId;
-    const weekOff = parseWeekOff(plain.structureCourseMapping.timeTableStructure.weekOff);
+    const actorId = getTenantStore().userId ?? plain.updatedBy ?? plain.createdBy;
+    if (!actorId) {
+      throw new Error('User id is required to publish time table');
+    }
+
+    const weekOff = parseWeekOff(plain.structureCourseMapping?.timeTableStructure?.weekOff);
 
     const cells = await timeTableCreateRepository.getRoutineCellsForPublishRepository(
       timeTableRoutineId,
       { transaction },
     );
 
+    if (!cells.length) {
+      throw new Error('No timetable cells found for this routine');
+    }
+
     const cellsByDay = new Map();
     const mappingIds = [];
     for (const cell of cells) {
       const cellPlain = cell.get({ plain: true });
       mappingIds.push(Number(cellPlain.timeTableCellId));
-      const dayKey = String(cellPlain.day).toLowerCase();
+      const dayKey = normalizeWeekdayKey(cellPlain.day);
+      if (!dayKey) {
+        continue;
+      }
       if (!cellsByDay.has(dayKey)) {
         cellsByDay.set(dayKey, []);
       }
       cellsByDay.get(dayKey).push(cellPlain);
+    }
+
+    if (cellsByDay.size === 0) {
+      throw new Error('Timetable cells have invalid day values');
+    }
+
+    if (plain.isPublish) {
+      const existingDateWiseCount = await timeTableCreateRepository.countDateWiseRowsForCellIds(
+        mappingIds,
+        { transaction },
+      );
+      if (existingDateWiseCount > 0) {
+        throw new Error('Time table routine is already published');
+      }
     }
 
     await timeTableCreateRepository.clearDateWiseForMappingIdsRepository(
@@ -2441,12 +2640,12 @@ export async function publishTimeTableService(timeTableRoutineId) {
 
     const planned = [];
     for (const dateStr of eachDateInRange(start, end)) {
-      const weekday = weekdayNameFromDateOnly(dateStr);
-      if (weekOff.includes(weekday.toLowerCase())) {
+      const weekday = normalizeWeekdayKey(weekdayNameFromDateOnly(dateStr));
+      if (!weekday || weekOff.includes(weekday)) {
         continue;
       }
 
-      const dayCells = cellsByDay.get(weekday.toLowerCase());
+      const dayCells = cellsByDay.get(weekday);
       if (!dayCells) {
         continue;
       }
@@ -2454,6 +2653,10 @@ export async function publishTimeTableService(timeTableRoutineId) {
       for (const cell of dayCells) {
         planned.push({ cell, date: dateStr });
       }
+    }
+
+    if (!planned.length) {
+      throw new Error('No date-wise timetable rows could be generated for this routine');
     }
 
     const dateWisePayload = [];
@@ -2475,7 +2678,7 @@ export async function publishTimeTableService(timeTableRoutineId) {
     const teacherPayload = [];
     for (let i = 0; i < createdDateWise.length; i++) {
       const dateWiseRow = createdDateWise[i];
-      const teachers = planned[i].cell.timeTableCellTeachers;
+      const teachers = planned[i].cell.timeTableCellTeachers || [];
       for (const teacher of teachers) {
         teacherPayload.push({
           timeTableCellDateWiseId: dateWiseRow.timeTableCellDateWiseId,
@@ -2507,33 +2710,6 @@ export async function publishTimeTableService(timeTableRoutineId) {
     await transaction.rollback();
     throw error;
   }
-}
-
-const WEEKDAY_BY_JS_INDEX = [
-  'Sunday',
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-];
-
-function weekdayNameFromDateOnly(dateStr) {
-  const date = new Date(`${dateStr}T12:00:00`);
-  return WEEKDAY_BY_JS_INDEX[date.getDay()];
-}
-
-function eachDateInRange(startStr, endStr) {
-  const dates = [];
-  let current = startStr;
-  while (current <= endStr) {
-    dates.push(current);
-    const next = new Date(`${current}T12:00:00`);
-    next.setDate(next.getDate() + 1);
-    current = toDateOnlyString(next);
-  }
-  return dates;
 }
 
 function mergeSubjectLists(...lists) {
