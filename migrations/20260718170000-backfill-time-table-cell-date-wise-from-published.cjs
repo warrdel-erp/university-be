@@ -5,7 +5,7 @@
  * from published routines' week cells (same expansion rules as publish API).
  *
  * Prerequisites:
- *   - 20260718140000 create tables
+ *   - 20260718140000…143000 create cell tables (PK = time_table_cell_id)
  *   - 20260718160000 backfill time_table_cell + time_table_cell_teachers
  *
  * For each published routine with starting_date / ending_date:
@@ -260,16 +260,16 @@ async function backfillDateWiseForPublished(queryInterface, transaction) {
 module.exports = {
   async up(queryInterface) {
     if (!(await tableExists(queryInterface, 'time_table_cell'))) {
-      throw new Error('time_table_cell missing — run 20260718140000 / 20260718160000 first');
+      throw new Error('time_table_cell missing — run 20260718140000 first');
     }
     if (!(await tableExists(queryInterface, 'time_table_cell_teachers'))) {
-      throw new Error('time_table_cell_teachers missing — run 20260718160000 first');
+      throw new Error('time_table_cell_teachers missing — run 20260718141000 first');
     }
     if (!(await tableExists(queryInterface, 'time_table_cell_date_wise'))) {
-      throw new Error('time_table_cell_date_wise missing — run 20260718140000 first');
+      throw new Error('time_table_cell_date_wise missing — run 20260718142000 first');
     }
     if (!(await tableExists(queryInterface, 'time_table_cell_teachers_date_wise'))) {
-      throw new Error('time_table_cell_teachers_date_wise missing — run 20260718140000 first');
+      throw new Error('time_table_cell_teachers_date_wise missing — run 20260718143000 first');
     }
 
     const transaction = await queryInterface.sequelize.transaction();

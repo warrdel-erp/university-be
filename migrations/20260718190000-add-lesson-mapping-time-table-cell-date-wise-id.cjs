@@ -1,14 +1,17 @@
 'use strict';
 
 /**
- * Lesson mapping cutover to date-wise period key:
- * 1. Rename lesson_mapping.time_table_mapping_id → time_table_cell_id
- * 2. Add lesson_mapping.time_table_cell_date_wise_id
+ * lesson_mapping — single cutover migration (schema + data):
+ * 1. Rename time_table_mapping_id → time_table_cell_id
+ * 2. Add time_table_cell_date_wise_id
  * 3. Backfill from cell + date
  * 4. Normalize time_table_cell_id onto week-cell PKs
- * 5. Point time_table_cell_id FK at time_table_cell (when possible)
+ * 5. Point time_table_cell_id FK at time_table_cell
  *
- * Prerequisites: cell tables + date-wise backfill (160000 / 170000).
+ * Prerequisites:
+ *   20260718140000…143000 — cell tables
+ *   20260718160000 — week cell backfill
+ *   20260718170000 — date-wise backfill
  */
 
 async function tableExists(queryInterface, tableName) {

@@ -1,19 +1,17 @@
 'use strict';
 
 /**
- * Attendance cutover to date-wise period key:
- * 1. Rename attendance.time_table_mapping_id → time_table_cell_id
- * 2. Backfill attendance.time_table_cell_date_wise_id from cell + date
- * 3. Normalize attendance.time_table_cell_id onto week-cell PKs
- *    (Primary / lowest id — same grouping as cell backfill)
- * 4. Point time_table_cell_id FK at time_table_cell (when possible)
+ * attendance — single cutover migration (schema + data):
+ * 1. Add time_table_cell_date_wise_id (nullable, FK → date-wise)
+ * 2. Rename time_table_mapping_id → time_table_cell_id
+ * 3. Backfill date-wise id from cell + date
+ * 4. Normalize time_table_cell_id onto week-cell PKs (Primary / lowest)
+ * 5. Point time_table_cell_id FK at time_table_cell
  *
  * Prerequisites:
- *   20260718150000 — date-wise column exists
- *   20260718160000 — week cells
- *   20260718170000 — date-wise rows
- *
- * Leaves time_table_cell_date_wise_id nullable for rows that cannot match.
+ *   20260718140000…143000 — cell tables
+ *   20260718160000 — week cell backfill
+ *   20260718170000 — date-wise backfill
  */
 
 async function tableExists(queryInterface, tableName) {
@@ -42,15 +40,36 @@ async function findForeignKeysOnColumn(queryInterface, tableName, columnName) {
 }
 
 module.exports = {
-  async up(queryInterface) {
+  async up(queryInterface, Sequelize) {
     if (!(await tableExists(queryInterface, 'attendance'))) {
       return;
     }
     if (!(await tableExists(queryInterface, 'time_table_cell_date_wise'))) {
-      throw new Error('time_table_cell_date_wise missing — run date-wise backfill first');
+      throw new Error('time_table_cell_date_wise missing — run create + date-wise backfill first');
     }
 
-    // 1) Rename dual-write column (legacy mapping id → week-cell id)
+    // 1) Add date-wise period key
+    {
+      const table = await queryInterface.describeTable('attendance');
+      if (!table.time_table_cell_date_wise_id) {
+        await queryInterface.addColumn('attendance', 'time_table_cell_date_wise_id', {
+          type: Sequelize.INTEGER,
+          allowNull: true,
+          references: {
+            model: 'time_table_cell_date_wise',
+            key: 'time_table_cell_date_wise_id',
+          },
+          onUpdate: 'CASCADE',
+          onDelete: 'RESTRICT',
+        });
+
+        await queryInterface.addIndex('attendance', ['time_table_cell_date_wise_id'], {
+          name: 'idx_attendance_time_table_cell_date_wise_id',
+        });
+      }
+    }
+
+    // 2) Rename dual-write column (legacy mapping id → week-cell id)
     {
       const table = await queryInterface.describeTable('attendance');
       if (table.time_table_mapping_id && !table.time_table_cell_id) {
@@ -72,7 +91,7 @@ module.exports = {
 
     const transaction = await queryInterface.sequelize.transaction();
     try {
-      // 2) Direct match: attendance cell id already equals week cell PK
+      // 3) Direct match: attendance cell id already equals week cell PK
       await queryInterface.sequelize.query(
         `
         UPDATE attendance a
@@ -88,7 +107,7 @@ module.exports = {
         { transaction },
       );
 
-      // 3) Secondary / non-canonical class_schedule mapping → cell PK → date-wise
+      // 4) Secondary / non-canonical class_schedule mapping → cell PK → date-wise
       if (await tableExists(queryInterface, 'class_schedule_item')) {
         await queryInterface.sequelize.query(
           `
@@ -134,7 +153,7 @@ module.exports = {
       throw error;
     }
 
-    // 4) Retarget FK to time_table_cell (DDL — outside transaction)
+    // 5) Retarget FK to time_table_cell (DDL — outside transaction)
     if (!(await tableExists(queryInterface, 'time_table_cell'))) {
       return;
     }
@@ -204,18 +223,13 @@ module.exports = {
       );
     }
 
-    if (await tableExists(queryInterface, 'time_table_cell_date_wise')) {
-      await queryInterface.sequelize.query(
-        `
-        UPDATE attendance a
-        INNER JOIN time_table_cell_date_wise dw
-          ON dw.time_table_cell_date_wise_id = a.time_table_cell_date_wise_id
-          AND dw.time_table_cell_id = a.time_table_cell_id
-          AND dw.date = DATE(a.date)
-        SET a.time_table_cell_date_wise_id = NULL
-        WHERE a.time_table_cell_date_wise_id IS NOT NULL
-        `,
+    const table = await queryInterface.describeTable('attendance');
+    if (table.time_table_cell_date_wise_id) {
+      await queryInterface.removeIndex(
+        'attendance',
+        'idx_attendance_time_table_cell_date_wise_id',
       );
+      await queryInterface.removeColumn('attendance', 'time_table_cell_date_wise_id');
     }
   },
 };

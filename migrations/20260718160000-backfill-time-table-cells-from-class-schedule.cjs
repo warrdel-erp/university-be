@@ -10,8 +10,10 @@
  * Canonical mapping id = Primary (else lowest mapping id).
  * All user_id rows in the group become time_table_cell_teachers.
  *
- * Date-wise expansion is a separate migration:
+ * Date-wise expansion:
  *   20260718170000-backfill-time-table-cell-date-wise-from-published.cjs
+ *
+ * Create migration already uses time_table_cell_id (no rename bridge needed).
  */
 
 async function tableExists(queryInterface, tableName) {
@@ -194,7 +196,7 @@ module.exports = {
       return;
     }
     if (!(await tableExists(queryInterface, 'time_table_cell'))) {
-      throw new Error('time_table_cell missing — run create-time-table-cell-tables first');
+      throw new Error('time_table_cell missing — run 20260718140000 first');
     }
 
     const transaction = await queryInterface.sequelize.transaction();

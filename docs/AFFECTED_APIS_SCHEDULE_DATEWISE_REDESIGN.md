@@ -34,15 +34,15 @@
 
 **Unchanged tables:** `time_table_structure`, `time_table_structure_periods`, `time_table_structure_course`, `time_table_routine`
 
-**Migrations (Jul 18–20 cutover):**
-- `20260718140000` create cell tables
-- `20260718150000` attendance date-wise column
+**Migrations (testing — one create/update per table):**
+- `20260718140000` create `time_table_cell`
+- `20260718141000` create `time_table_cell_teachers`
+- `20260718142000` create `time_table_cell_date_wise`
+- `20260718143000` create `time_table_cell_teachers_date_wise`
 - `20260718160000` backfill week cells + teachers from `class_schedule_item`
-- `20260718165000` rename cell PK `time_table_mapping_id` → `time_table_cell_id` (bridge for DBs that already ran 140000/160000)
 - `20260718170000` date-wise expand for published routines
-- `20260718180000` attendance: rename dual-write col + backfill date-wise id + FK → cell
-- `20260718190000` lesson_mapping: same as attendance
-- `20260720100000` ensure cell-id columns + FKs (idempotent)
+- `20260718180000` **attendance** — add date-wise id, rename mapping → cell id, backfill, FK
+- `20260718190000` **lesson_mapping** — same pattern as attendance
 
 ---
 
@@ -194,7 +194,7 @@
 | Layer | Paths |
 |-------|--------|
 | Models | `timeTableCellModel.js`, `timeTableCellTeachersModel.js`, `timeTableCellDateWiseModel.js`, `timeTableCellTeachersDateWiseModel.js`, `attendanceModel.js`, `lessonMappingModel.js`, `models/index.js` |
-| Migrations | `20260718140000` … `20260718190000`, `20260720100000` |
+| Migrations | `20260718140000` … `20260718143000` (creates), `160000`/`170000` (backfills), `180000`/`190000` (attendance / lesson_mapping) |
 | Services | `timeTableCreateServices.js`, `attendanceServices.js`, `employeeServices.js`, `lessonServices.js`, `studentService.js` |
 | Repositories | `timeTablecreateRepository.js`, `attendanceRepository.js`, `employeeScheduleRepository.js`, `lessonRepository.js`, `studentRepository.js` |
 | Utils | `attendancePlacement.js` |
