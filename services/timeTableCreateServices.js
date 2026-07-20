@@ -149,6 +149,60 @@ function stripMappingRow(row) {
   return row;
 }
 
+async function normalizeMappingTeacherInput(data, options = {}) {
+  const normalized = { ...data };
+
+  if (normalized.userId == null && normalized.employeeId != null) {
+    normalized.userId = Number(normalized.employeeId);
+  }
+
+  if (
+    normalized.userId == null
+    && normalized.teacherSubjectMappingId != null
+  ) {
+    const teacherRows = await getTeacherDetailsByTeacherSubjectId(
+      Number(normalized.teacherSubjectMappingId),
+    );
+    const teacherRow = teacherRows?.[0];
+    const teacherPlain = teacherRow?.get ? teacherRow.get({ plain: true }) : teacherRow;
+    if (teacherPlain?.userId != null) {
+      normalized.userId = Number(teacherPlain.userId);
+    }
+  }
+
+  if (
+    normalized.userId != null
+    && (!Array.isArray(normalized.teachers) || normalized.teachers.length === 0)
+  ) {
+    normalized.teachers = [{
+      userId: Number(normalized.userId),
+      teacherType: normalized.teacherType || 'Primary',
+      isAttendence: normalized.isAttendence != null ? normalized.isAttendence : true,
+    }];
+  }
+
+  return normalized;
+}
+
+function formatMappingCreateResult(cell, extra = {}) {
+  const plain = cell?.get ? cell.get({ plain: true }) : cell;
+  const teachers = cell?.createdTeachers || plain?.timeTableCellTeachers || [];
+  const teacherRows = [];
+  for (const teacher of teachers) {
+    const teacherPlain = teacher?.get ? teacher.get({ plain: true }) : teacher;
+    teacherRows.push(teacherPlain);
+  }
+
+  const primaryTeacher = teacherRows[0] || null;
+
+  return {
+    timeTableCellId: plain.timeTableCellId,
+    timeTableCellTeacherId: primaryTeacher?.timeTableCellTeacherId ?? null,
+    timeTableCellTeachers: teacherRows,
+    ...extra,
+  };
+}
+
 function assertRoutineNotStarted(startingDate) {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
@@ -400,7 +454,11 @@ function buildCopyPayload(sourceRow, target, request, teachers) {
   payload.period = target.period;
   payload.copiedFromTimeTableCellId = src.timeTableCellId;
 
-  if (request.userId != null) {
+  // When copying from an existing cell (sourceTimeTableCellId),
+  // we must copy the entire cell including all its teacher rows.
+  // Only override teachers when this is NOT a copy operation.
+  const isCopyOperation = request.sourceTimeTableCellId != null;
+  if (!isCopyOperation && request.userId != null) {
     payload.teachers = [{
       userId: Number(request.userId),
       teacherType: request.teacherType || 'Primary',
@@ -977,8 +1035,10 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
   const transaction = await sequelize.transaction();
 
   try {
-    if (data.sourceTimeTableCellId != null) {
-      const copyPayloads = await resolveCopyPayloads(data, { transaction });
+    const request = await normalizeMappingTeacherInput(data, { transaction });
+
+    if (request.sourceTimeTableCellId != null) {
+      const copyPayloads = await resolveCopyPayloads(request, { transaction });
       if (!copyPayloads.length) {
         throw new Error(`Source mapping ${data.sourceTimeTableCellId} not found`);
       }
@@ -1059,15 +1119,14 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
         }
 
         const result = await timeTableCreateRepository.addtimeTableMapping(rowData, transaction);
-        createdMappings.push({
-          timeTableCellId: result.timeTableCellId,
+        createdMappings.push(formatMappingCreateResult(result, {
           timeTableRoutineId: rowData.timeTableRoutineId,
           classSectionTermId: routine.classSectionTermId,
           timeTableCreationId: rowData.timeTableCreationId,
           period: rowData.period,
           day: rowData.day,
           copiedFromTimeTableCellId: payload.copiedFromTimeTableCellId,
-        });
+        }));
       }
 
       for (const payload of copyPayloads) {
@@ -1083,12 +1142,12 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
       await transaction.commit();
       return {
         isCopy: true,
-        copiedFromTimeTableCellId: Number(data.sourceTimeTableCellId),
+        copiedFromTimeTableCellId: Number(request.sourceTimeTableCellId),
         mappings: createdMappings,
       };
     }
 
-    const payload = data;
+    const payload = request;
 
     const {
       timeTableRoutineId,
@@ -1195,15 +1254,14 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
         }
 
         const result = await timeTableCreateRepository.addtimeTableMapping(rowData, transaction);
-        createdMappings.push({
-          timeTableCellId: result.timeTableCellId,
+        createdMappings.push(formatMappingCreateResult(result, {
           timeTableRoutineId: target.timeTableRoutineId,
           classSectionTermId: target.classSectionTermId,
           timeTableCreationId: slot.timeTableCreationId,
           period: slot.period,
           combinedGroupId,
           copiedFromTimeTableCellId: payload.copiedFromTimeTableCellId ?? null,
-        });
+        }));
       }
     }
 

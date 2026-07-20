@@ -129,6 +129,7 @@ const mappingBodySchema = z.object({
     timeTableCreationId: optionalPositiveId,
     timeTableNameId: optionalPositiveId,
     userId: optionalPositiveId,
+    employeeId: optionalPositiveId,
     subjectId: optionalPositiveId,
     electiveSubjectId: optionalPositiveId,
     teacherSubjectMappingId: optionalPositiveId,

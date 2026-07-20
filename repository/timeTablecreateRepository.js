@@ -14,18 +14,24 @@ async function assertScopedRoutine(timeTableRoutineId, options = {}) {
 
 async function assertScopedSchedule(timeTableCellId, options = {}) {
   const { transaction, attributes = ['timeTableCellId', 'timeTableRoutineId'] } = options;
-  return model.timeTableCellModel.findOne({
+  const cell = await model.timeTableCellModel.findOne({
     where: { timeTableCellId },
     attributes,
     transaction,
-    include: [{
-      model: model.timeTableRoutineModel,
-      as: 'timeTableRoutine',
-      required: true,
-      where: buildScope(model.timeTableRoutineModel),
-      attributes: ['timeTableRoutineId'],
-    }],
   });
+  if (!cell) {
+    return null;
+  }
+
+  const routine = await assertScopedRoutine(cell.timeTableRoutineId, {
+    transaction,
+    attributes: ['timeTableRoutineId'],
+  });
+  if (!routine) {
+    return null;
+  }
+
+  return cell;
 }
 
 export async function addTimeTableCreate(data, transaction) {
@@ -232,27 +238,22 @@ export async function updateTimeTableCreate(faculityLoadId, info) {
   return result;
 };
 
-export async function deleteSchedulesByRoutineIdRepository(timeTableRoutineId, options = {}) {
-  const { transaction } = options;
-  const routineId = Number(timeTableRoutineId);
-
-  const cells = await model.timeTableCellModel.findAll({
-    where: { timeTableRoutineId: routineId },
-    attributes: ['timeTableCellId'],
-    transaction,
-  });
-
-  const mappingIds = [];
-  for (const cell of cells) {
-    mappingIds.push(cell.timeTableCellId);
+async function destroyCellGraphByCellIds(mappingIds, transaction) {
+  if (!mappingIds.length) {
+    return {
+      deletedMappingIds: [],
+      deletedTimeTableCellTeacherIds: [],
+      deletedTimeTableCellDateWiseIds: [],
+    };
   }
 
-  if (mappingIds.length === 0) {
-    return 0;
+  const numericIds = [];
+  for (const mappingId of mappingIds) {
+    numericIds.push(Number(mappingId));
   }
 
   const dateWiseRows = await model.timeTableCellDateWiseModel.findAll({
-    where: { timeTableCellId: { [Op.in]: mappingIds } },
+    where: { timeTableCellId: { [Op.in]: numericIds } },
     attributes: ['timeTableCellDateWiseId'],
     transaction,
   });
@@ -273,15 +274,55 @@ export async function deleteSchedulesByRoutineIdRepository(timeTableRoutineId, o
     });
   }
 
-  await model.timeTableCellTeachersModel.destroy({
-    where: { timeTableCellId: { [Op.in]: mappingIds } },
+  const teacherRows = await model.timeTableCellTeachersModel.findAll({
+    where: { timeTableCellId: { [Op.in]: numericIds } },
+    attributes: ['timeTableCellTeacherId'],
     transaction,
   });
 
-  return model.timeTableCellModel.destroy({
-    where: { timeTableCellId: { [Op.in]: mappingIds } },
+  const deletedTimeTableCellTeacherIds = [];
+  for (const row of teacherRows) {
+    deletedTimeTableCellTeacherIds.push(row.timeTableCellTeacherId);
+  }
+
+  await model.timeTableCellTeachersModel.destroy({
+    where: { timeTableCellId: { [Op.in]: numericIds } },
     transaction,
   });
+
+  await model.timeTableCellModel.destroy({
+    where: { timeTableCellId: { [Op.in]: numericIds } },
+    transaction,
+  });
+
+  return {
+    deletedMappingIds: numericIds,
+    deletedTimeTableCellTeacherIds,
+    deletedTimeTableCellDateWiseIds: dateWiseIds,
+  };
+}
+
+export async function deleteSchedulesByRoutineIdRepository(timeTableRoutineId, options = {}) {
+  const { transaction } = options;
+  const routineId = Number(timeTableRoutineId);
+
+  const cells = await model.timeTableCellModel.findAll({
+    where: { timeTableRoutineId: routineId },
+    attributes: ['timeTableCellId'],
+    transaction,
+  });
+
+  const mappingIds = [];
+  for (const cell of cells) {
+    mappingIds.push(cell.timeTableCellId);
+  }
+
+  if (mappingIds.length === 0) {
+    return 0;
+  }
+
+  const graph = await destroyCellGraphByCellIds(mappingIds, transaction);
+  return graph.deletedMappingIds.length;
 }
 
 export async function deleteTimeTableRoutineRepository(timeTableRoutineId, options = {}) {
@@ -302,26 +343,22 @@ export async function deletetimeTableMapping(timeTableCellId, options = {}) {
     throw new Error('Mapping not found');
   }
 
-  const mappingIds = [timeTableCellId];
+  const mappingIds = [Number(timeTableCellId)];
   if (deleteCombinedGroup && schedule.combinedGroupId) {
     const siblings = await getMappingsByCombinedGroupIdRepository(schedule.combinedGroupId, { transaction });
     mappingIds.length = 0;
-    siblings.forEach((row) => mappingIds.push(row.timeTableCellId));
+    for (const row of siblings) {
+      mappingIds.push(Number(row.timeTableCellId));
+    }
   }
 
-  await model.timeTableCellTeachersModel.destroy({
-    where: { timeTableCellId: { [Op.in]: mappingIds } },
-    transaction,
-  });
-
-  await model.timeTableCellModel.destroy({
-    where: { timeTableCellId: { [Op.in]: mappingIds } },
-    transaction,
-  });
+  const graph = await destroyCellGraphByCellIds(mappingIds, transaction);
 
   return {
     message: 'time table mapping deleted successfully',
-    deletedMappingIds: mappingIds,
+    deletedMappingIds: graph.deletedMappingIds,
+    deletedTimeTableCellTeacherIds: graph.deletedTimeTableCellTeacherIds,
+    deletedTimeTableCellDateWiseIds: graph.deletedTimeTableCellDateWiseIds,
   };
 };
 
@@ -349,8 +386,9 @@ export async function addtimeTableMapping(data, transaction) {
     }];
   }
 
+  const createdTeachers = [];
   for (const teacher of teacherRows) {
-    await model.timeTableCellTeachersModel.create({
+    const teacherRow = await model.timeTableCellTeachersModel.create({
       timeTableCellId: cell.timeTableCellId,
       userId: Number(teacher.userId),
       teacherType: teacher.teacherType || 'Primary',
@@ -358,8 +396,10 @@ export async function addtimeTableMapping(data, transaction) {
       createdBy: data.createdBy,
       updatedBy: data.updatedBy,
     }, { transaction });
+    createdTeachers.push(teacherRow);
   }
 
+  cell.createdTeachers = createdTeachers;
   return cell;
 };
 
@@ -656,6 +696,14 @@ export async function findMappingAtSlotRepository(
   { timeTableRoutineId, day, period, timeTableCreationId },
   options = {},
 ) {
+  const routine = await assertScopedRoutine(Number(timeTableRoutineId), {
+    transaction: options.transaction,
+    attributes: ['timeTableRoutineId'],
+  });
+  if (!routine) {
+    return null;
+  }
+
   return model.timeTableCellModel.findOne({
     where: {
       timeTableRoutineId: Number(timeTableRoutineId),
@@ -665,13 +713,6 @@ export async function findMappingAtSlotRepository(
     },
     attributes: ['timeTableCellId'],
     transaction: options.transaction,
-    include: [{
-      model: model.timeTableRoutineModel,
-      as: 'timeTableRoutine',
-      required: true,
-      where: buildScope(model.timeTableRoutineModel),
-      attributes: ['timeTableRoutineId'],
-    }],
   });
 }
 
