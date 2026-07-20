@@ -1614,11 +1614,12 @@ export async function getPastClassSchedules(
   );
 
   if (groupPeriods) {
-    const grouped = applyGroupAttendanceStatus(
-      await groupConsecutivePeriods(schedules, groupPeriods === 'sessional'),
-    );
+    const grouped = await groupConsecutivePeriods(schedules, groupPeriods === 'sessional');
     grouped.sort((a, b) => new Date(b.date) - new Date(a.date));
-    return { teacher, schedules: grouped };
+    return {
+      teacher,
+      schedules: await applyGroupAttendanceStatus(grouped),
+    };
   }
 
   return { teacher, schedules };
