@@ -525,17 +525,7 @@ export async function deleteSubTopicsByMapping(mappingId, transaction) {
 
 export async function getEmployeeSubjectAndLesson(userId, courseId, sessionId, subjectSearch, subjectId) {
   try {
-    let parsedEmployeeId = userId != null && userId !== '' ? Number(userId) : null;
-    let actualEmployeeId = null;
-    if (parsedEmployeeId) {
-      const emp = await scoped(model.employeeModel).findOne({
-        attributes: ["employeeId"],
-        where: { userId: parsedEmployeeId }
-      });
-      if (emp) {
-        actualEmployeeId = emp.employeeId;
-      }
-    }
+    const parsedUserId = userId != null && userId !== '' ? Number(userId) : null;
 
     const parsedSessionId = sessionId != null && sessionId !== ''
       ? Number(sessionId)
@@ -543,7 +533,7 @@ export async function getEmployeeSubjectAndLesson(userId, courseId, sessionId, s
     const parsedSubjectId = subjectId != null && subjectId !== '' && subjectId !== 'undefined'
       ? Number(subjectId)
       : null;
-    const hasEmployeeId = Number.isInteger(parsedEmployeeId) && parsedEmployeeId > 0;
+    const hasUserId = Number.isInteger(parsedUserId) && parsedUserId > 0;
     const hasSessionId = Number.isInteger(parsedSessionId) && parsedSessionId > 0;
     const hasSubjectId = Number.isInteger(parsedSubjectId) && parsedSubjectId > 0;
 
@@ -668,10 +658,10 @@ export async function getEmployeeSubjectAndLesson(userId, courseId, sessionId, s
       lectureWindowInclude,
     ];
 
-    if (hasEmployeeId && hasSubjectId) {
+    if (hasUserId && hasSubjectId) {
       const lessons = await scoped(model.lessonModel).findAll({
         where: {
-          userId: parsedEmployeeId,
+          userId: parsedUserId,
           subjectId: parsedSubjectId,
           ...(hasSessionId && { sessionId: parsedSessionId }),
         },
@@ -712,7 +702,7 @@ export async function getEmployeeSubjectAndLesson(userId, courseId, sessionId, s
       const { employeeLesson, lessonSubject } = plainLessons[0];
 
       return [{
-        userId: parsedEmployeeId,
+        userId: parsedUserId,
         subjectId: parsedSubjectId,
         teacherEmployeeData: employeeLesson,
         employeeSubject: {
@@ -743,13 +733,13 @@ export async function getEmployeeSubjectAndLesson(userId, courseId, sessionId, s
     const lessonWhere = {
       ...buildScope(model.lessonModel),
       ...(hasSessionId && { sessionId: parsedSessionId }),
-      ...(hasEmployeeId && parsedEmployeeId && { userId: parsedEmployeeId }),
+      ...(hasUserId && { userId: parsedUserId }),
       ...(hasSubjectId && { subjectId: parsedSubjectId }),
     };
 
     const rows = await scoped(model.teacherSubjectMappingModel).findAll({
       where: {
-        ...(hasEmployeeId && { employeeId: actualEmployeeId }),
+        ...(hasUserId && { userId: parsedUserId }),
         ...(hasSubjectId && { subjectId: parsedSubjectId }),
       },
       attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
