@@ -68,18 +68,23 @@ const addMappingBodySchema = z.object({
     })).optional(),
 }).passthrough();
 
-router.post('/', userAuth, addLesson);
-
+// ---------------------------------------------------------------------------
+// 1. Lesson plan — CRUD / list
+// ---------------------------------------------------------------------------
 router.post('/', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_ADD.value, null), addLesson);
-
 router.get('/', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getAllLesson);
-
 router.get('/simple', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getSimpleLessonList);
-
 router.get('/single', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getSingleLessonDetails);
+router.get('/employee', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getEmployeeSubjectAndLesson);
 
+// ---------------------------------------------------------------------------
+// 2. Topics
+// ---------------------------------------------------------------------------
 router.post('/topic', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_ADD.value, null), addTopice);
 
+// ---------------------------------------------------------------------------
+// 3. Mapping — period key = timeTableCellDateWiseId
+// ---------------------------------------------------------------------------
 router.post(
     '/mapping',
     userAuth,
@@ -87,26 +92,20 @@ router.post(
     validate({ body: addMappingBodySchema }),
     addMapping,
 );
-
 router.post(
     '/mapping/copy',
     userAuth,
     validate({ body: copyMappingBodySchema }),
     copyMapping,
 );
-
-router.get('/mapping', userAuth, getMapping);
-
 router.get('/mapping', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getMapping);
-
 router.patch('/', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_EDIT.value, null), updateMapping);
-
 router.patch('/mapping/:lessonMappingId', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_EDIT.value, null), updateCompleteMapping);
-
 router.delete('/mapping/:lessonMappingId', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_DELETE.value, null), deleteMapping);
 
-router.get('/employee', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getEmployeeSubjectAndLesson);
-
+// ---------------------------------------------------------------------------
+// 4. Lecture window link
+// ---------------------------------------------------------------------------
 router.post(
     '/link',
     userAuth,

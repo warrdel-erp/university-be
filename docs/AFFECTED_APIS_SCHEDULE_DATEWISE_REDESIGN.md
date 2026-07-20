@@ -2,7 +2,7 @@
 
 **Date:** July 2026 (updated 20 Jul 2026)  
 **Audience:** Backend + Frontend  
-**Change:** Replace `class_schedule_item` (one row per teacher) with week cell + teachers + date-wise instance tables. Attendance keys off date-wise class id.
+**Change:** Replace `class_schedule_item` (one row per teacher) with week cell + teachers + date-wise instance tables. Attendance / lesson / roster keys off date-wise class id.
 
 ---
 
@@ -34,15 +34,41 @@
 
 **Unchanged tables:** `time_table_structure`, `time_table_structure_periods`, `time_table_structure_course`, `time_table_routine`
 
-**Migrations (testing — one create/update per table):**
-- `20260718140000` create `time_table_cell`
-- `20260718141000` create `time_table_cell_teachers`
-- `20260718142000` create `time_table_cell_date_wise`
-- `20260718143000` create `time_table_cell_teachers_date_wise`
-- `20260718160000` backfill week cells + teachers from `class_schedule_item`
-- `20260718170000` date-wise expand for published routines
-- `20260718180000` **attendance** — add date-wise id, rename mapping → cell id, backfill, FK
-- `20260718190000` **lesson_mapping** — same pattern as attendance
+### Migrations (one create / one alter per table)
+
+| Order | Migration | Table |
+|-------|-----------|--------|
+| 1 | `20260718140000` | create `time_table_cell` |
+| 2 | `20260718141000` | create `time_table_cell_teachers` |
+| 3 | `20260718142000` | create `time_table_cell_date_wise` |
+| 4 | `20260718143000` | create `time_table_cell_teachers_date_wise` |
+| 5 | `20260718160000` | backfill week cells + teachers from `class_schedule_item` |
+| 6 | `20260718170000` | date-wise expand for published routines |
+| 7 | `20260718180000` | **attendance** — add date-wise id, rename mapping → cell id, backfill, FK |
+| 8 | `20260718190000` | **lesson_mapping** — same pattern as attendance |
+
+---
+
+## Server mount order (`server.js`)
+
+Schedule stack is grouped together:
+
+```
+/timeTable          → structure + courseMapping + periods
+/timeTableCreate    → week cells + teachers; publish → date-wise
+/faculityLoad
+/attendance         → keys: timeTableCellDateWiseId
+/lesson             → mapping keys: timeTableCellDateWiseId
+/lecture
+```
+
+Related consumers (also date-wise / week-cell):
+
+```
+/employee           → schedule / past / upcoming / cellData / sectionDates
+/student            → classSectionStudents + studentTimetable
+/dashboard          → teacher dashboard may use schedule helpers
+```
 
 ---
 
@@ -53,85 +79,102 @@
 | Status | Meaning |
 |--------|---------|
 | **Done** | Code uses new tables / date-wise id |
-| **Partial** | Mostly migrated; some leftover `class_schedule_item` path |
-| **Pending** | Still on `class_schedule_item` / old mapping id |
 | Unchanged | Contract and tables unchanged |
 
-### `/timeTableCreate` — routine + mapping
+---
 
-| Method | Path | Status | Notes |
-|--------|------|--------|-------|
-| `GET` | `/timeTableCreate/` | Done | Routines / terms list |
-| `GET` | `/timeTableCreate/single` | Done | Routine + structure meta |
-| `GET` | `/timeTableCreate/create` | Done | Empty grid; elective path uses cells |
-| `GET` | `/timeTableCreate/getRoutine` | Done | `time_table_cell` + `time_table_cell_teachers` |
-| `GET` | `/timeTableCreate/getRoutineByTeacher` | Done | Filter via cell teachers `userId` |
-| `POST` | `/timeTableCreate/` | Unchanged | `time_table_routine` only |
-| `PATCH` | `/timeTableCreate/create` | Unchanged | Routine object; periods unchanged |
-| `DELETE` | `/timeTableCreate/` | Done | Soft-deletes date-wise → teachers → cells → routine |
-| `POST` | `/timeTableCreate/clone` | Done | Copies cells + teachers |
-| `PATCH` | `/timeTableCreate/publish` | Done | Expands date-wise + date-wise teachers |
-| `POST` | `/timeTableCreate/mapping` | Done | Writes cell + teachers |
-| `GET` | `/timeTableCreate/mapping` | Done | Reads cell + teachers |
-| `GET` | `/timeTableCreate/single/mapping` | Done | Reads cell + teachers |
-| `PATCH` | `/timeTableCreate/mapping` | Done | Updates cell |
-| `PATCH` | `/timeTableCreate/mapping/update-create` | Done | Secondary → `time_table_cell_teachers` |
-| `DELETE` | `/timeTableCreate/mapping` | Done | Soft-deletes cell + teachers (+ date-wise) |
-| `GET` | `/timeTableCreate/cellData` | Done | `time_table_cell` + `time_table_cell_teachers` (one mapping entry per teacher) |
-| `GET` | `/timeTableCreate/elective` | Done | Same cell + teachers path as cellData |
-| `GET` | `/timeTableCreate/subjectCount` | Done | Counts from `time_table_cell` |
+### `/timeTable` — structure (router sections)
 
-### `/attendance`
+| # | Section | Method | Path | Status |
+|---|---------|--------|------|--------|
+| 1 | Structure template | `POST`/`PATCH`/`DELETE` | `/`, `/period`, `/structure/clone` | Unchanged |
+| 2 | Course mapping | `POST`/`PATCH`/`DELETE` | `/courseMapping`, `/structure` | Unchanged |
+| 3 | Read / list | `GET` | `/`, `/all_name`, `/single`, `/structureMappings` | Unchanged |
+| 4 | Delete structure | `DELETE` | `/structure` | Unchanged |
 
-| Method | Path | Status | Notes |
-|--------|------|--------|-------|
-| `POST` | `/attendance/` | Done | Body: `timeTableCellDateWiseId`; dual-writes week cell id |
-| `POST` | `/attendance/copyPeriod` | Done | Source/targets: `timeTableCellDateWiseId` |
-| `GET` | `/attendance/copyPeriod` | Done | Query: `timeTableCellDateWiseId` |
-| `GET` | `/attendance/` | Done | Join via date-wise → week cell |
-| `PATCH` | `/attendance/` | Done | By `attendanceId` |
-| `POST` | `/attendance/import` | Done | Keys date-wise id |
-| `POST` | `/attendance/excelImport` | Done | Header period id = date-wise id |
-| `GET` | `/attendance/byDate` | Done | Term + date (meta may still be light) |
-| `GET` | `/attendance/previous-sessions/:userId` | Done | Date-wise teacher rows |
-| `GET` | `/attendance/studentAttendance/bulk` | Done | Report via date-wise + teachers |
-| `POST` | `/attendance/getStudentAttendance/batch` | Done | Filters: `timeTableCellDateWiseId` |
-| `GET` | `/attendance/sectionDates` | Done | Date-wise periods (also on `/employee/sectionDates`) |
+---
 
-### `/employee`
+### `/timeTableCreate` — routine + week cells (router sections)
 
-| Method | Path | Status | Notes |
-|--------|------|--------|-------|
-| `GET` | `/employee/schedule` | Done | Date-wise + teachers; MARKED via date-wise id |
-| `GET` | `/employee/pastSchedule` | Done | Same |
-| `GET` | `/employee/upcomingSchedule` | Done | Same |
-| `GET` | `/employee/sectionDates` | Done | Date-wise instances |
-| `GET` | `/employee/sectionCounts` | Done | Date-wise / week cells |
-| `GET` | `/employee/uniqueClassSectionSubjects` | Done | Week cells + teachers |
-| `GET` | `/employee/coursesFromSchedule` | Done | Week cells |
-| `GET` | `/employee/cellData` | Done | Week cells + teachers via `employeeScheduleRepository.getTeacherWeekCells` |
+| # | Section | Method | Path | Status | Notes |
+|---|---------|--------|------|--------|-------|
+| 1 | Read / bootstrap | `GET` | `/` | Done | Routines / terms list |
+| | | `GET` | `/single` | Done | Routine + structure meta |
+| | | `GET` | `/create` | Done | Empty grid; elective path uses cells |
+| | | `GET` | `/getRoutine` | Done | `time_table_cell` + teachers |
+| | | `GET` | `/getRoutineByTeacher` | Done | Filter via cell teachers `userId` |
+| 2 | Routine lifecycle | `POST` | `/` | Unchanged | `time_table_routine` only |
+| | | `PATCH` | `/create` | Unchanged | Routine object; periods unchanged |
+| | | `DELETE` | `/` | Done | Soft-deletes date-wise → teachers → cells → routine |
+| | | `POST` | `/clone` | Done | Copies cells + teachers |
+| | | `PATCH` | `/publish` | Done | Expands date-wise + date-wise teachers |
+| 3 | Mapping lifecycle | `POST` | `/mapping` | Done | Writes cell + teachers |
+| | | `GET` | `/mapping` | Done | Reads cell + teachers |
+| | | `GET` | `/single/mapping` | Done | Reads cell + teachers |
+| | | `PATCH` | `/mapping` | Done | Updates cell (`timeTableCellId` + type) |
+| | | `PATCH` | `/mapping/update-create` | Done | Secondary → `time_table_cell_teachers` |
+| | | `DELETE` | `/mapping` | Done | Soft-deletes cell + teachers (+ date-wise) |
+| 4 | Grid helpers | `GET` | `/cellData` | Done | Cells + teachers (one mapping entry per teacher) |
+| | | `GET` | `/elective` | Done | Same as cellData |
+| | | `GET` | `/subjectCount` | Done | Counts from `time_table_cell` |
 
-### `/lesson`
+---
 
-| Method | Path | Status | Notes |
-|--------|------|--------|-------|
-| `POST` | `/lesson/mapping` | Done | Body: `timeTableCellDateWiseId`; dual-writes cell id + date |
-| `POST` | `/lesson/mapping/copy` | Done | Targets: `timeTableCellDateWiseId` |
-| `GET` | `/lesson/mapping` | Done | Join date-wise → week cell → routine |
-| Other | `/lesson/*` | Unchanged | Topics / windows / complete by `lessonMappingId` |
+### `/attendance` — period key = `timeTableCellDateWiseId` (router sections)
+
+| # | Section | Method | Path | Status | Notes |
+|---|---------|--------|------|--------|-------|
+| 1 | Mark / update | `POST` | `/` | Done | Body: `timeTableCellDateWiseId`; dual-writes week cell id |
+| | | `PATCH` | `/` | Done | By `attendanceId` |
+| 2 | Copy period | `POST`/`GET` | `/copyPeriod` | Done | Source/targets: `timeTableCellDateWiseId` |
+| 3 | List / lookup | `GET` | `/` | Done | Join via date-wise → week cell |
+| | | `GET` | `/byDate` | Done | Term + date |
+| | | `GET` | `/previous-sessions/:userId` | Done | Date-wise teacher rows |
+| | | `GET` | `/sectionDates` | Done | Date-wise periods |
+| 4 | Reports / batch | `GET` | `/studentAttendance/bulk` | Done | Via date-wise + teachers |
+| | | `POST` | `/getStudentAttendance/batch` | Done | Filters: `timeTableCellDateWiseId` |
+| 5 | Import | `POST` | `/import`, `/excelImport` | Done | Header / keys = date-wise id |
+
+---
+
+### `/employee` — schedule consumers (router sections)
+
+| # | Section | Method | Path | Status | Notes |
+|---|---------|--------|------|--------|-------|
+| 1 | Date-wise schedule | `GET` | `/schedule` | Done | Date-wise + teachers; MARKED via date-wise id |
+| | | `GET` | `/pastSchedule` | Done | Same |
+| | | `GET` | `/upcomingSchedule` | Done | Same |
+| | | `GET` | `/sectionDates` | Done | Date-wise instances |
+| | | `GET` | `/sectionCounts` | Done | Date-wise / week cells |
+| 2 | Week-cell subjects | `GET` | `/uniqueClassSectionSubjects` | Done | Week cells + teachers |
+| | | `GET` | `/coursesFromSchedule` | Done | Week cells |
+| | | `GET` | `/courses` | Done | Teacher courses |
+| | | `GET` | `/cellData` | Done | `getTeacherWeekCells` |
+| | | `GET` | `/subject`, `/evaluation` | Done | — |
+| 3 | Staff directory CRUD | `GET`/`POST`/`PATCH`/`DELETE` | `/`, `/addEmp`, `/:id`, … | Unchanged | Not schedule |
+
+---
+
+### `/lesson` — mapping key = `timeTableCellDateWiseId` (router sections)
+
+| # | Section | Method | Path | Status | Notes |
+|---|---------|--------|------|--------|-------|
+| 1 | Lesson plan CRUD | `POST`/`GET` | `/`, `/simple`, `/single`, `/employee` | Unchanged | Topics / windows by `lessonMappingId` |
+| 2 | Topics | `POST` | `/topic` | Unchanged | — |
+| 3 | Mapping | `POST` | `/mapping` | Done | Body: `timeTableCellDateWiseId` |
+| | | `POST` | `/mapping/copy` | Done | Targets: `timeTableCellDateWiseId` |
+| | | `GET` | `/mapping` | Done | Join date-wise → week cell → routine |
+| | | `PATCH`/`DELETE` | `/`, `/mapping/:id` | Unchanged | By `lessonMappingId` |
+| 4 | Lecture window | `POST` | `/link` | Unchanged | — |
+
+---
 
 ### `/student`
 
 | Method | Path | Status | Notes |
 |--------|------|--------|-------|
-| `GET` | students by class section | Done | Query: `timeTableCellDateWiseId`; attendance by date-wise id |
-| Student week timetable | Done | `time_table_cell` + teachers (subject filter on cells) |
-
-### `/timeTable` (structure)
-
-| Method | Path | Status | Tables |
-|--------|------|--------|--------|
-| Structure CRUD / courseMapping / periods | `/timeTable/*` | Unchanged | structure, periods, mapper only |
+| `GET` | `/classSectionStudents` | Done | Query: `timeTableCellDateWiseId` |
+| `GET` | `/studentTimetable` | Done | Week cells + teachers |
 
 ---
 
@@ -163,7 +206,7 @@
 
 ## Cutover checklist
 
-1. ~~Create four cell tables + attendance column~~
+1. ~~Create four cell tables (one migration each)~~
 2. ~~Migrate mapping / publish / clone / delete routine~~
 3. ~~Migrate getRoutine / getRoutineByTeacher~~
 4. ~~Backfill cells + teachers + date-wise from `class_schedule_item`~~
@@ -172,7 +215,7 @@
 7. ~~Finish leftover `timeTableCreate` cellData / elective (+ employee cellData)~~
 8. ~~Retarget `lesson_mapping` (+ lesson APIs) off `class_schedule_item`~~
 9. ~~Retarget remaining `/student` schedule-id usages~~
-10. ~~Backfill `attendance.time_table_cell_date_wise_id` for legacy rows — `20260718180000`~~
+10. ~~Backfill `attendance.time_table_cell_date_wise_id` — `20260718180000`~~
 11. Make `attendance.time_table_cell_date_wise_id` NOT NULL; drop dual-write of week cell id when safe
 12. Drop `class_schedule_item` (model + table)
 
@@ -185,7 +228,7 @@
 | Done | ~38 |
 | Partial | 0 |
 | Pending | drop `class_schedule_item` + NOT NULL on attendance date-wise id |
-| Unchanged | structure `/timeTable/*` |
+| Unchanged | structure `/timeTable/*` + staff/lesson CRUD |
 
 ---
 
@@ -193,8 +236,10 @@
 
 | Layer | Paths |
 |-------|--------|
+| Server | `server.js` — schedule stack mounts |
+| Routers | `timeTableRoute.js`, `timeTableCreateRoute.js`, `attendanceRoute.js`, `employeeRoute.js`, `lessonRoute.js`, `studentRoute.js` |
 | Models | `timeTableCellModel.js`, `timeTableCellTeachersModel.js`, `timeTableCellDateWiseModel.js`, `timeTableCellTeachersDateWiseModel.js`, `attendanceModel.js`, `lessonMappingModel.js`, `models/index.js` |
-| Migrations | `20260718140000` … `20260718143000` (creates), `160000`/`170000` (backfills), `180000`/`190000` (attendance / lesson_mapping) |
+| Migrations | `20260718140000` … `143000` (creates), `160000`/`170000` (backfills), `180000`/`190000` (attendance / lesson_mapping) |
 | Services | `timeTableCreateServices.js`, `attendanceServices.js`, `employeeServices.js`, `lessonServices.js`, `studentService.js` |
 | Repositories | `timeTablecreateRepository.js`, `attendanceRepository.js`, `employeeScheduleRepository.js`, `lessonRepository.js`, `studentRepository.js` |
 | Utils | `attendancePlacement.js` |

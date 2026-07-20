@@ -76,30 +76,37 @@ const attendanceByDateQuerySchema = z.object({
     userId: positiveIntegerId,
 });
 
+// ---------------------------------------------------------------------------
+// 1. Mark / update — period key = timeTableCellDateWiseId
+// ---------------------------------------------------------------------------
 router.post('/', userAuth, validate({ body: addAttendanceSchema }), addAttendance);
+router.patch('/', userAuth, updateAttendance);
 
-
+// ---------------------------------------------------------------------------
+// 2. Copy period
+// ---------------------------------------------------------------------------
 router.post('/copyPeriod', userAuth, validate({ body: copyAttendancePeriodSchema }), copyAttendancePeriod);
 router.get('/copyPeriod', userAuth, validate({ query: copyAttendancePeriodQuerySchema }), getCopyAttendancePeriod);
 
-
+// ---------------------------------------------------------------------------
+// 3. List / lookup
+// ---------------------------------------------------------------------------
 router.get('/', userAuth, getAttendanceDetails);
-
-router.patch('/', userAuth, updateAttendance);
-
-// @deprecated
-router.post('/import', userAuth, importAttendance);
-
-router.post('/excelImport', userAuth, importBulkAttendance);
-
 router.get('/byDate', userAuth, validate({ query: attendanceByDateQuerySchema }), getAttendanceByDate);
-
 router.get("/previous-sessions/:userId", userAuth, getPreviousSessions);
+router.get('/sectionDates', userAuth, validate({ query: sectionDatesQuerySchema }), getEmployeeSectionDates);
 
+// ---------------------------------------------------------------------------
+// 4. Reports / batch
+// ---------------------------------------------------------------------------
 router.get("/studentAttendance/bulk", userAuth, validate({ query: bulkAttendanceReportSchema }), getStudentAttendanceReport);
-
 router.post('/getStudentAttendance/batch', userAuth, validate({ body: batchAttendanceSchema }), getStudentsBatchAttendance);
 
-router.get('/sectionDates', userAuth, validate({ query: sectionDatesQuerySchema }), getEmployeeSectionDates);
+// ---------------------------------------------------------------------------
+// 5. Import
+// ---------------------------------------------------------------------------
+// @deprecated
+router.post('/import', userAuth, importAttendance);
+router.post('/excelImport', userAuth, importBulkAttendance);
 
 export default router;
