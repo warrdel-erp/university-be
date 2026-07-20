@@ -1403,10 +1403,7 @@ function stripTeacherFieldsFromSchedule(schedule) {
 }
 
 function getAttendanceStatusKey(schedule) {
-  if (schedule.timeTableCellDateWiseId != null) {
-    return `dw:${schedule.timeTableCellDateWiseId}`;
-  }
-  return `m:${schedule.timeTableCellId}_${schedule.date}`;
+  return `dw:${Number(schedule.timeTableCellDateWiseId)}`;
 }
 
 function resolveScheduleClassSectionTermId(schedule) {
@@ -1430,7 +1427,6 @@ function resolveScheduleClassSectionTermId(schedule) {
 
 function collectScheduleQueryParams(schedules) {
   const dateWiseIdSet = new Set();
-  const mappingIdSet = new Set();
   const dates = [];
   const resolvedTermIds = [];
   const uniqueTermIds = [];
@@ -1439,9 +1435,6 @@ function collectScheduleQueryParams(schedules) {
   for (const schedule of schedules) {
     if (schedule.timeTableCellDateWiseId != null) {
       dateWiseIdSet.add(Number(schedule.timeTableCellDateWiseId));
-    }
-    if (schedule.timeTableCellId) {
-      mappingIdSet.add(schedule.timeTableCellId);
     }
     if (schedule.date) {
       dates.push(schedule.date);
@@ -1464,11 +1457,6 @@ function collectScheduleQueryParams(schedules) {
     dateWiseIds.push(id);
   }
 
-  const mappingIds = [];
-  for (const mappingId of mappingIdSet) {
-    mappingIds.push(mappingId);
-  }
-
   let from = '';
   let to = '';
   if (dates.length) {
@@ -1484,28 +1472,20 @@ function collectScheduleQueryParams(schedules) {
     }
   }
 
-  return { dateWiseIds, mappingIds, from, to, resolvedTermIds, uniqueTermIds };
+  return { dateWiseIds, from, to, resolvedTermIds, uniqueTermIds };
 }
 
+/**
+ * MARKED / PENDING is keyed only by timeTableCellDateWiseId.
+ * Shared across Primary / Secondary teachers on the same dated period.
+ */
 function resolveScheduleAttendanceFields(schedule, presentMap, markedMap) {
   const key = getAttendanceStatusKey(schedule);
-  let presentCount = presentMap[key];
-  let markedCount = markedMap[key];
-
-  if (presentCount == null && schedule.timeTableCellId && schedule.date) {
-    presentCount = presentMap[`m:${schedule.timeTableCellId}_${schedule.date}`];
-  }
-  if (markedCount == null && schedule.timeTableCellId && schedule.date) {
-    markedCount = markedMap[`m:${schedule.timeTableCellId}_${schedule.date}`];
-  }
-
-  let attendanceCount = 0;
-  if (presentCount != null) {
-    attendanceCount = presentCount;
-  }
+  const presentCount = presentMap[key];
+  const markedCount = markedMap[key];
 
   return {
-    attendanceCount,
+    attendanceCount: presentCount != null ? presentCount : 0,
     attendanceStatus: markedCount > 0 ? 'MARKED' : 'PENDING',
   };
 }
@@ -1515,13 +1495,13 @@ async function enrichTodayClassSchedules(schedules) {
     return schedules;
   }
 
-  const { dateWiseIds, mappingIds, from, to, resolvedTermIds, uniqueTermIds } =
+  const { dateWiseIds, resolvedTermIds, uniqueTermIds } =
     collectScheduleQueryParams(schedules);
 
   const [studentCountMap, markedMap, presentMap] = await Promise.all([
     classSectionTermRepository.countStudentsByClassSectionTermIds(uniqueTermIds),
-    attendanceRepository.getAttendanceMarkedMap({ dateWiseIds, mappingIds, from, to }),
-    attendanceRepository.getAttendanceMap({ dateWiseIds, mappingIds, from, to }),
+    attendanceRepository.getAttendanceMarkedMap({ dateWiseIds }),
+    attendanceRepository.getAttendanceMap({ dateWiseIds }),
   ]);
 
   const enriched = [];
@@ -1553,14 +1533,14 @@ async function enrichSchedulesWithAttendance(schedules) {
     return schedules;
   }
 
-  const { dateWiseIds, mappingIds, from, to } = collectScheduleQueryParams(schedules);
-  if (!from) {
+  const { dateWiseIds } = collectScheduleQueryParams(schedules);
+  if (!dateWiseIds.length) {
     return schedules;
   }
 
   const [markedMap, presentMap] = await Promise.all([
-    attendanceRepository.getAttendanceMarkedMap({ dateWiseIds, mappingIds, from, to }),
-    attendanceRepository.getAttendanceMap({ dateWiseIds, mappingIds, from, to }),
+    attendanceRepository.getAttendanceMarkedMap({ dateWiseIds }),
+    attendanceRepository.getAttendanceMap({ dateWiseIds }),
   ]);
 
   const enriched = [];
@@ -1651,13 +1631,20 @@ export async function getUpcomingClassSchedules(userId, academicYearId, currentD
     currentDateString,
   );
 
-  if (groupPeriods) {
-    const grouped = await groupConsecutivePeriods(upcomingClasses, groupPeriods === 'sessional');
-    grouped.sort((a, b) => new Date(a.date) - new Date(b.date));
-    return grouped;
+  const strippedSchedules = [];
+  for (const schedule of upcomingClasses) {
+    strippedSchedules.push(stripTeacherFieldsFromSchedule(schedule));
   }
 
-  return upcomingClasses;
+  const schedules = await enrichSchedulesWithAttendance(strippedSchedules);
+
+  if (groupPeriods) {
+    const grouped = await groupConsecutivePeriods(schedules, groupPeriods === 'sessional');
+    grouped.sort((a, b) => new Date(a.date) - new Date(b.date));
+    return applyGroupAttendanceStatus(grouped);
+  }
+
+  return schedules;
 }
 
 async function groupConsecutivePeriods(classes, sessionalBreak = false) {

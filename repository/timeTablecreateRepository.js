@@ -274,6 +274,7 @@ async function destroyCellGraphByCellIds(mappingIds, transaction) {
     numericIds.push(Number(mappingId));
   }
 
+  // 1) Date-wise teachers → date-wise cells (usually empty on unpublished drafts)
   const dateWiseRows = await model.timeTableCellDateWiseModel.findAll({
     where: { timeTableCellId: { [Op.in]: numericIds } },
     attributes: ['timeTableCellDateWiseId'],
@@ -296,6 +297,7 @@ async function destroyCellGraphByCellIds(mappingIds, transaction) {
     });
   }
 
+  // 2) Week teachers for these cells (always — Primary / Secondary)
   const teacherRows = await model.timeTableCellTeachersModel.findAll({
     where: { timeTableCellId: { [Op.in]: numericIds } },
     attributes: ['timeTableCellTeacherId'],
@@ -307,11 +309,14 @@ async function destroyCellGraphByCellIds(mappingIds, transaction) {
     deletedTimeTableCellTeacherIds.push(row.timeTableCellTeacherId);
   }
 
-  await model.timeTableCellTeachersModel.destroy({
-    where: { timeTableCellId: { [Op.in]: numericIds } },
-    transaction,
-  });
+  if (deletedTimeTableCellTeacherIds.length > 0) {
+    await model.timeTableCellTeachersModel.destroy({
+      where: { timeTableCellTeacherId: { [Op.in]: deletedTimeTableCellTeacherIds } },
+      transaction,
+    });
+  }
 
+  // 3) Week cells
   await model.timeTableCellModel.destroy({
     where: { timeTableCellId: { [Op.in]: numericIds } },
     transaction,
@@ -1026,6 +1031,88 @@ export async function updateMapping(id, data, transaction) {
 
 export async function addCellTeacherRepository(data, transaction) {
   return model.timeTableCellTeachersModel.create(data, { transaction });
+}
+
+export async function syncTeacherToDateWiseCellsRepository(
+  timeTableCellId,
+  teacher,
+  options = {},
+) {
+  const dateWiseRows = await model.timeTableCellDateWiseModel.findAll({
+    where: { timeTableCellId: Number(timeTableCellId) },
+    attributes: ['timeTableCellDateWiseId'],
+    transaction: options.transaction,
+  });
+
+  if (!dateWiseRows.length) {
+    return 0;
+  }
+
+  let created = 0;
+  for (const dateWise of dateWiseRows) {
+    const existing = await model.timeTableCellTeachersDateWiseModel.findOne({
+      where: {
+        timeTableCellDateWiseId: dateWise.timeTableCellDateWiseId,
+        userId: Number(teacher.userId),
+      },
+      attributes: ['timeTableCellTeachersDateWiseId'],
+      transaction: options.transaction,
+    });
+
+    if (existing) {
+      continue;
+    }
+
+    await model.timeTableCellTeachersDateWiseModel.create({
+      timeTableCellDateWiseId: dateWise.timeTableCellDateWiseId,
+      userId: Number(teacher.userId),
+      teacherType: teacher.teacherType || 'Secondary',
+      isAttendence: teacher.isAttendence != null ? teacher.isAttendence : false,
+      createdBy: teacher.createdBy,
+      updatedBy: teacher.updatedBy,
+    }, { transaction: options.transaction });
+    created += 1;
+  }
+
+  return created;
+}
+
+export async function updateDateWiseTeachersUserIdRepository(
+  timeTableCellId,
+  previousUserId,
+  nextUserId,
+  options = {},
+) {
+  const dateWiseRows = await model.timeTableCellDateWiseModel.findAll({
+    where: { timeTableCellId: Number(timeTableCellId) },
+    attributes: ['timeTableCellDateWiseId'],
+    transaction: options.transaction,
+  });
+
+  if (!dateWiseRows.length) {
+    return 0;
+  }
+
+  const dateWiseIds = [];
+  for (const row of dateWiseRows) {
+    dateWiseIds.push(row.timeTableCellDateWiseId);
+  }
+
+  const [updated] = await model.timeTableCellTeachersDateWiseModel.update(
+    {
+      userId: Number(nextUserId),
+      updatedBy: options.updatedBy,
+    },
+    {
+      where: {
+        timeTableCellDateWiseId: { [Op.in]: dateWiseIds },
+        userId: Number(previousUserId),
+      },
+      transaction: options.transaction,
+    },
+  );
+
+  return updated;
 }
 
 export async function updateCellTeacherRepository(timeTableCellTeacherId, data, transaction) {

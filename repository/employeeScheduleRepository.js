@@ -13,12 +13,25 @@ function routineActiveOnDateWhere(currentDate) {
   };
 }
 
-function flattenDateWiseScheduleRow(row) {
+function flattenDateWiseScheduleRow(row, viewerUserId = null) {
   const plain = row.get({ plain: true });
   const cell = plain.timeTableCell;
-  const teachers = plain.timeTableCellTeachersDateWise;
-  const teacher = teachers[0];
+  const teachers = plain.timeTableCellTeachersDateWise || [];
+
+  let teacher = teachers[0] || null;
+  if (viewerUserId != null) {
+    for (const rowTeacher of teachers) {
+      if (Number(rowTeacher.userId) === Number(viewerUserId)) {
+        teacher = rowTeacher;
+        break;
+      }
+    }
+  }
+
   const room = plain.classRoom || cell.classRoom;
+  const routine = cell.timeTableRoutine;
+  const classSectionTerm = routine?.timeTableClassSectionTerm;
+  const classSection = classSectionTerm?.classSection;
 
   return {
     timeTableCellDateWiseId: plain.timeTableCellDateWiseId,
@@ -27,17 +40,25 @@ function flattenDateWiseScheduleRow(row) {
     timeTableType: cell.timeTableType,
     day: cell.day,
     period: cell.period,
-    isAttendence: teacher.isAttendence,
+    // Primary or Secondary — both get full class details below
+    teacherType: teacher ? teacher.teacherType : null,
+    isAttendence: teacher ? teacher.isAttendence : false,
     isSameTeacher: cell.isSameTeacher,
     timeTableNameId: cell.timeTableNameId,
     timeTableCreationId: cell.timeTableCreationId,
-    timeTablecreate: cell.timeTableRoutine,
+    timeTablecreate: routine,
     timeTablecreation: cell.timeTablecreation,
     timeTableTeacherSubject: cell.timeTableTeacherSubject,
     timeTableSubject: cell.timeTableSubject,
     timeTableElective: cell.timeTableElective,
     classRoom: room ? { roomNumber: room.roomNumber } : null,
-    employeeDetails: teacher.employeeDetails || null,
+    course: routine?.timeTableCourse || null,
+    classSectionTermId: routine?.classSectionTermId
+      ?? classSectionTerm?.classSectionTermId
+      ?? null,
+    year: classSection?.year ?? null,
+    section: classSection?.section ?? null,
+    employeeDetails: teacher?.employeeDetails || null,
   };
 }
 
@@ -168,9 +189,11 @@ function withTeacherFilter(includes, userId) {
   const result = [];
   for (const include of includes) {
     if (include.as === 'timeTableCellTeachersDateWise') {
+      // Match by userId only — Primary and Secondary both return the class
       result.push({
         ...include,
         where: { userId: Number(userId) },
+        required: true,
       });
       continue;
     }
@@ -204,7 +227,7 @@ export async function getTodayClassScheduleForEmployee(userId, currentDate, sess
 
   const result = [];
   for (const row of rows) {
-    result.push(flattenDateWiseScheduleRow(row));
+    result.push(flattenDateWiseScheduleRow(row, userId));
   }
   return result;
 }
@@ -227,7 +250,7 @@ export async function getPastClassSchedulesForEmployee(
 
   const result = [];
   for (const row of rows) {
-    result.push(flattenDateWiseScheduleRow(row));
+    result.push(flattenDateWiseScheduleRow(row, userId));
   }
   return result;
 }
@@ -249,7 +272,7 @@ export async function getUpcomingClassSchedulesForEmployee(
 
   const result = [];
   for (const row of rows) {
-    result.push(flattenDateWiseScheduleRow(row));
+    result.push(flattenDateWiseScheduleRow(row, userId));
   }
   return result;
 }

@@ -181,16 +181,13 @@ export const deletetimeTableMapping = async (req, res) => {
         const result = await timeTableCreateServices.deletetimeTableMapping(timeTableCellId, {
             deleteCombinedGroup: deleteCombinedGroup === true || deleteCombinedGroup === 'true',
         });
-        res.status(200).send(result);
+        return SuccessResponse(res, 200, result.message, result);
     } catch (error) {
         console.error(`Error in deleting time table mapping Id ${timeTableCellId}:`, error);
         const message = error.message || 'Internal Server Error';
         const statusCode = error.statusCode
-            || (/not found/i.test(message) ? 404 : /starting date/i.test(message) ? 400 : 500);
-        res.status(statusCode).send({
-            success: false,
-            message,
-        });
+            || (/not found/i.test(message) ? 404 : /starting date|published routine|cannot edit or delete/i.test(message) ? 400 : 500);
+        return ErrorResponse(res, statusCode, message);
     }
 };
 

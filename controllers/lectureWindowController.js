@@ -42,11 +42,11 @@ export async function getLectureWindows(req, res) {
             return;
         }
 
-        const { subjectId, employeeId, sessionId, lessonId } = req.query;
+        const { subjectId, userId, sessionId, lessonId } = req.query;
         const result = await lectureWindow.getLectureWindows({
             academicYearId,
             subjectId,
-            employeeId,
+            userId,
             sessionId,
             lessonId,
         });

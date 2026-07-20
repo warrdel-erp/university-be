@@ -222,8 +222,20 @@ function assertMappingRoutineEditable(routine) {
   const start = new Date(routine.startingDate);
   start.setHours(0, 0, 0, 0);
   if (today > start) {
-    throw new Error('Cannot add or update mapping for a published routine after its starting date.');
+    throw new Error('Cannot edit or delete mapping for a published routine after its starting date.');
   }
+}
+
+/**
+ * Unpublished draft: week cell (+ teachers) may be deleted anytime.
+ * Published: only before/on start date per assertMappingRoutineEditable;
+ * date-wise rows (if any) are removed with the cell graph.
+ */
+function assertMappingDeletable(routine) {
+  if (!routine.isPublish) {
+    return;
+  }
+  assertMappingRoutineEditable(routine);
 }
 
 function assertRoutineEditable(startingDate) {
@@ -990,10 +1002,11 @@ export async function deletetimeTableMapping(timeTableCellId, options = {}) {
       throw error;
     }
 
-    assertMappingRoutineEditable(routine);
+    assertMappingDeletable(routine);
 
     const periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(
       schedule.timeTableCreationId,
+      { transaction },
     );
     const periodLength = toMoneyNumber(periodInfo?.timeTableName?.periodLength ?? 0);
 
@@ -1024,7 +1037,11 @@ export async function deletetimeTableMapping(timeTableCellId, options = {}) {
     }
 
     await transaction.commit();
-    return result;
+    return {
+      ...result,
+      isPublish: Boolean(routine.isPublish),
+      deletedTimeTableCellTeacherIds: result.deletedTimeTableCellTeacherIds,
+    };
   } catch (error) {
     await transaction.rollback();
     throw error;
@@ -1692,6 +1709,18 @@ async function assignTeacherToMappingCell({
     createdBy,
     updatedBy,
   }, transaction);
+
+  await timeTableCreateRepository.syncTeacherToDateWiseCellsRepository(
+    baseMappingId,
+    {
+      userId: Number(item.userId),
+      teacherType: item.teacherType || 'Primary',
+      isAttendence: item.isAttendence != null ? item.isAttendence : true,
+      createdBy,
+      updatedBy,
+    },
+    { transaction },
+  );
 }
 
 export async function updateSimpleTeacherMapping(mappingArray, createdBy, updatedBy) {
@@ -1731,7 +1760,8 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
     const { startTime, endTime } = periodInfo;
 
     const addingSecondaryTeacher = mappingArray.some(
-      (item) => item.isNew === true && item.teacherType === 'Secondary',
+      (item) => item.isNew === true
+        && String(item.teacherType || '').toLowerCase() === 'secondary',
     );
 
     const effectiveRoomId = base.classRoomSectionId ?? baseRow.classRoomSectionId;
@@ -1773,7 +1803,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           throw new Error('userId is required for new teacher entry');
         }
 
-        if (item.teacherType === 'Secondary') {
+        if (String(item.teacherType || '').toLowerCase() === 'secondary') {
           const primaryTeacher = await timeTableCreateRepository.findCellTeacherRepository(
             baseMappingId,
             { teacherType: 'Primary', transaction },
@@ -1798,14 +1828,29 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           await timeTableCreateRepository.updateMapping(baseMappingId, cellPatch, transaction);
         }
 
+        const teacherType = item.teacherType || 'Secondary';
+        const isAttendence = item.isAttendence != null ? item.isAttendence : false;
+
         await timeTableCreateRepository.addCellTeacherRepository({
           timeTableCellId: baseMappingId,
           userId: Number(item.userId),
-          teacherType: item.teacherType || 'Secondary',
-          isAttendence: item.isAttendence != null ? item.isAttendence : false,
+          teacherType,
+          isAttendence,
           createdBy,
           updatedBy,
         }, transaction);
+
+        await timeTableCreateRepository.syncTeacherToDateWiseCellsRepository(
+          baseMappingId,
+          {
+            userId: Number(item.userId),
+            teacherType,
+            isAttendence,
+            createdBy,
+            updatedBy,
+          },
+          { transaction },
+        );
         continue;
       }
 
@@ -1846,7 +1891,8 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
       }
 
       if (item.userId != null && Number(teacherPlain.userId) !== Number(item.userId)) {
-        await subtractFacultyLoadForEmployee(teacherPlain.userId, periodLength, transaction);
+        const previousUserId = Number(teacherPlain.userId);
+        await subtractFacultyLoadForEmployee(previousUserId, periodLength, transaction);
         await addFacultyLoadForEmployee(item.userId, periodLength, transaction);
         await timeTableCreateRepository.updateCellTeacherRepository(
           teacherPlain.timeTableCellTeacherId,
@@ -1855,6 +1901,12 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
             updatedBy,
           },
           transaction,
+        );
+        await timeTableCreateRepository.updateDateWiseTeachersUserIdRepository(
+          baseMappingId,
+          previousUserId,
+          Number(item.userId),
+          { transaction, updatedBy },
         );
         teacherPlain.userId = Number(item.userId);
       }

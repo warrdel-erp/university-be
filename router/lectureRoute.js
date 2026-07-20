@@ -27,7 +27,7 @@ const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM
 
 const lectureWindowBodySchema = z.object({
     subjectId: positiveIntegerId,
-    employeeId: optionalPositiveId,
+    userId: optionalPositiveId,
     sessionId: positiveIntegerId,
     startDate: dateString,
     endDate: dateString,
@@ -37,7 +37,7 @@ const lectureWindowBodySchema = z.object({
 
 const lectureWindowListQuerySchema = z.object({
     subjectId: optionalPositiveId,
-    employeeId: optionalPositiveId,
+    userId: optionalPositiveId,
     sessionId: optionalPositiveId,
     lessonId: optionalPositiveId,
 }).strict();
