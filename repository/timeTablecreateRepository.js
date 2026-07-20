@@ -403,7 +403,7 @@ export async function addtimeTableMapping(data, transaction) {
   return cell;
 };
 
-export async function getPeriodInfoRepository(timeTableCreationId) {
+export async function getPeriodInfoRepository(timeTableCreationId, options = {}) {
   if (timeTableCreationId == null || !Number.isFinite(Number(timeTableCreationId))) {
     return null;
   }
@@ -411,6 +411,7 @@ export async function getPeriodInfoRepository(timeTableCreationId) {
   return await model.timeTableStructurePeriodsModel.findOne({
     where: { timeTableCreationId: Number(timeTableCreationId) },
     attributes: ["startTime", "endTime", "timeTableCreationId"],
+    transaction: options.transaction,
     include: [
       {
         model: model.timeTableStructureModel,
@@ -829,7 +830,7 @@ export async function checkRoomConflictRepository(
   return conflict;
 };
 
-export async function getFullRoutineDetailsRepository(timeTableRoutineId) {
+export async function getFullRoutineDetailsRepository(timeTableRoutineId, options = {}) {
   return scoped(model.timeTableRoutineModel).findOne({
     where: { timeTableRoutineId: Number(timeTableRoutineId) },
     attributes: [
@@ -847,6 +848,7 @@ export async function getFullRoutineDetailsRepository(timeTableRoutineId) {
       'createdBy',
       'updatedBy',
     ],
+    transaction: options.transaction,
     include: [
       {
         model: model.timeTableCellModel,
@@ -885,7 +887,7 @@ export async function checkRoutineOverlapRepository({
   startingDate,
   endingDate,
   excludeRoutineId,
-}) {
+}, options = {}) {
   if (classSectionTermId == null) {
     return null;
   }
@@ -899,6 +901,7 @@ export async function checkRoutineOverlapRepository({
         { endingDate: { [Op.gte]: startingDate } },
       ],
     },
+    transaction: options.transaction,
   });
 }
 

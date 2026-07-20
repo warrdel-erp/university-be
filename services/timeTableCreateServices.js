@@ -1322,7 +1322,10 @@ export async function cloneTimeTableRoutine(
   ];
 
   try {
-    const previousRoutine = await timeTableCreateRepository.getFullRoutineDetailsRepository(previousRoutineId);
+    const previousRoutine = await timeTableCreateRepository.getFullRoutineDetailsRepository(
+      previousRoutineId,
+      { transaction },
+    );
 
     if (!previousRoutine) {
       const error = new Error('Routine not found');
@@ -1378,7 +1381,7 @@ export async function cloneTimeTableRoutine(
       startingDate: start,
       endingDate: end,
       excludeRoutineId: previousEnd != null ? previousRoutineId : undefined,
-    });
+    }, { transaction });
 
     if (overlap) {
       const error = new Error('Routine date range overlaps');
@@ -1403,7 +1406,7 @@ export async function cloneTimeTableRoutine(
       const creationId = Number(cell.timeTableCreationId);
       let periodInfo = periodInfoByCreationId.get(creationId);
       if (!periodInfo) {
-        periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(creationId);
+        periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(creationId, { transaction });
         periodInfoByCreationId.set(creationId, periodInfo);
       }
 
@@ -1477,6 +1480,12 @@ export async function cloneTimeTableRoutine(
       }
 
       await timeTableCreateRepository.addtimeTableMapping(row, transaction);
+
+      const periodInfo = periodInfoByCreationId.get(Number(cell.timeTableCreationId));
+      const periodLength = toMoneyNumber(periodInfo?.timeTableName?.periodLength ?? 0);
+      for (const teacher of row.teachers) {
+        await addFacultyLoadForEmployee(teacher.userId, periodLength, transaction);
+      }
     }
 
     await transaction.commit();
