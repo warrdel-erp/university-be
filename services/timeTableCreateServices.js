@@ -159,6 +159,19 @@ function assertRoutineNotStarted(startingDate) {
   }
 }
 
+function assertMappingRoutineEditable(routine) {
+  if (!routine.isPublish) {
+    return;
+  }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const start = new Date(routine.startingDate);
+  start.setHours(0, 0, 0, 0);
+  if (today > start) {
+    throw new Error('Cannot add or update mapping for a published routine after its starting date.');
+  }
+}
+
 function assertRoutineEditable(startingDate) {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
@@ -919,7 +932,7 @@ export async function deletetimeTableMapping(timeTableCellId, options = {}) {
       throw error;
     }
 
-    assertRoutineNotStarted(routine.startingDate);
+    assertMappingRoutineEditable(routine);
 
     const periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(
       schedule.timeTableCreationId,
@@ -979,7 +992,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
         throw new Error('Invalid timeTableRoutineId');
       }
 
-      assertRoutineNotStarted(routine.startingDate);
+      assertMappingRoutineEditable(routine);
 
       const periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(
         firstPayload.timeTableCreationId,
@@ -1099,7 +1112,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
 
     const termIds = resolveTermIds(payload, routine);
 
-    assertRoutineNotStarted(routine.startingDate);
+    assertMappingRoutineEditable(routine);
 
     if (payload.timeTableType === 'elective' && !payload.electiveSubjectId) {
       throw new Error('electiveSubjectId is required for elective mapping');
@@ -1425,7 +1438,6 @@ export async function changeTimeTableCreate(body, updatedBy) {
   if (current.isPublish) {
     throw new Error('Published routine cannot be updated');
   }
-  assertRoutineEditable(current.startingDate);
 
   let placementFields = { ...updateData };
 
@@ -1506,8 +1518,20 @@ export async function changeTimeTableCreate(body, updatedBy) {
 }
 
 export async function updatetimeTableCreate(timeTableCellId, timeTableType, updatedBy) {
+  const cell = await timeTableCreateRepository.findMappingById(Number(timeTableCellId));
+  if (!cell) {
+    throw new Error(`Mapping ${timeTableCellId} not found`);
+  }
+
+  const cellPlain = cell.get ? cell.get({ plain: true }) : cell;
+  const routine = await timeTableCreateRepository.getRoutineByIdRepository(cellPlain.timeTableRoutineId);
+  if (!routine) {
+    throw new Error(`Routine ${cellPlain.timeTableRoutineId} not found`);
+  }
+
+  assertMappingRoutineEditable(routine);
+
   const data = { timeTableType, updatedBy };
-  // DB/model PK remains time_table_cell_id on time_table_cell
   const result = await timeTableCreateRepository.updatetimeTableCreate(Number(timeTableCellId), data);
   return result;
 }
@@ -1530,16 +1554,9 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
     if (!routineInfo) {
       throw new Error(`Routine ${baseRow.timeTableRoutineId} not found`);
     }
-    const { startingDate, endingDate, isPublish } = routineInfo;
+    const { startingDate, endingDate } = routineInfo;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const sDate = new Date(startingDate);
-    sDate.setHours(0, 0, 0, 0);
-
-    if (isPublish && today > sDate) {
-      throw new Error('Cannot add or update mapping for a published routine after its starting date.');
-    }
+    assertMappingRoutineEditable(routineInfo);
 
     const ttCreationData = await getSingleTimeTableById(baseRow.timeTableCreationId);
 

@@ -258,6 +258,7 @@ router.patch('/publish', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_EDI
 // 3. Mapping lifecycle — assign timetable cells / teachers
 // ---------------------------------------------------------------------------
 router.post('/mapping', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_CREATE_TIMETABLE.value, null), validate({ body: addTimeTableMappingSchema }), addtimeTableMapping);
+
 router.get('/mapping', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ body: getTimeTableMappingBodySchema }), getTimeTableMappingDetail);
 router.get('/single/mapping', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ query: getSingleQuerySchema }), getSingletimeTableMappingDetail);
 router.patch('/mapping', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_EDIT_ROUTINE.value, null), validate({ body: updateTimeTableMappingSchema }), updatetimeTableCreate);
