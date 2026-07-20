@@ -2623,16 +2623,6 @@ export async function publishTimeTableService(timeTableRoutineId) {
       throw new Error('Timetable cells have invalid day values');
     }
 
-    if (plain.isPublish) {
-      const existingDateWiseCount = await timeTableCreateRepository.countDateWiseRowsForCellIds(
-        mappingIds,
-        { transaction },
-      );
-      if (existingDateWiseCount > 0) {
-        throw new Error('Time table routine is already published');
-      }
-    }
-
     await timeTableCreateRepository.clearDateWiseForMappingIdsRepository(
       mappingIds,
       transaction,
@@ -2701,13 +2691,36 @@ export async function publishTimeTableService(timeTableRoutineId) {
     });
 
     await transaction.commit();
+
+    const dateWiseByCellId = {};
+    for (const item of planned) {
+      const cellId = Number(item.cell.timeTableCellId);
+      dateWiseByCellId[cellId] = (dateWiseByCellId[cellId] || 0) + 1;
+    }
+
+    const cellSummary = [];
+    for (const cellId of mappingIds) {
+      cellSummary.push({
+        timeTableCellId: cellId,
+        dateWiseCount: dateWiseByCellId[cellId] || 0,
+      });
+    }
+
     return {
       message: 'Time table published successfully',
+      timeTableRoutineId: Number(timeTableRoutineId),
+      startingDate: start,
+      endingDate: end,
+      weekCellCount: mappingIds.length,
       dateWiseCount: createdDateWise.length,
       teacherDateWiseCount: teacherPayload.length,
+      cells: cellSummary,
     };
   } catch (error) {
     await transaction.rollback();
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      throw new Error('Date-wise timetable row already exists for this cell and date');
+    }
     throw error;
   }
 }
