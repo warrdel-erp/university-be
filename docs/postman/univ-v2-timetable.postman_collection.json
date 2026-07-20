@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-timetable0001",
     "name": "univ-v2-timetable",
-    "description": "Schedule date-wise redesign — full integration collection.\n\n**Docs:** `docs/AFFECTED_APIS_SCHEDULE_DATEWISE_REDESIGN.md` · `docs/SCHEDULE_DATEWISE_API_URLS.md`\n\n## ID legend\n| Use | Field | Do not use |\n|-----|-------|------------|\n| Week grid / mapping | `timeTableCellId` | `timeTableMappingId` |\n| Day / attendance / lesson / roster | `timeTableCellDateWiseId` | mapping id + date |\n\n## Integration order\n1. `① /timeTable` — structure + courseMapping\n2. `② /timeTableCreate` — cells + publish (creates date-wise rows)\n3. `③ /employee` — schedule → capture `timeTableCellDateWiseId`\n4. `④ /attendance` — mark with date-wise id\n5. `⑤ /lesson` — map with date-wise id\n6. `⑥ /student` — roster + week timetable\n\n## Smoke chain\n```\nGET  /timeTable/\nPOST /timeTableCreate/\nPOST /timeTableCreate/mapping\nPATCH /timeTableCreate/publish?timeTableRoutineId=\nGET  /employee/schedule?userId=\nPOST /attendance/\nPOST /lesson/mapping\nGET  /student/classSectionStudents?timeTableCellDateWiseId=\n```\n\nSet `baseurl` + `token` before calling. Run backfill migrations on existing DB before testing GETs.",
+    "description": "Schedule date-wise redesign — full integration collection.\n\n**Docs:** `docs/AFFECTED_APIS_SCHEDULE_DATEWISE_REDESIGN.md` · `docs/SCHEDULE_DATEWISE_API_URLS.md`\n\n## ID legend\n| Use | Field | Do not use |\n|-----|-------|------------|\n| Week grid / mapping | `timeTableCellId` | `timeTableMappingId` |\n| Day / attendance / lesson / roster | `timeTableCellDateWiseId` | mapping id + date |\n| Lecture window teacher | `userId` | `employeeId` on `lecture_window` |\n\n## Integration order\n1. `① /timeTable` — structure + courseMapping\n2. `② /timeTableCreate` — cells + publish (creates date-wise rows)\n3. `③ /employee` — schedule → capture `timeTableCellDateWiseId`\n4. `④ /attendance` — mark with date-wise id\n5. `⑤ /lesson` — map with date-wise id\n5b. `⑤b /lecture + /options` — lecture window `userId`; options accept `userId` or `employeeId`\n6. `⑥ /student` — roster + week timetable\n\n## Smoke chain\n```\nGET  /timeTable/\nPOST /timeTableCreate/\nPOST /timeTableCreate/mapping\nPATCH /timeTableCreate/publish?timeTableRoutineId=\nGET  /employee/schedule?userId=\nPOST /attendance/\nPOST /lesson/mapping\nGET  /student/classSectionStudents?timeTableCellDateWiseId=\n```\n\nSet `baseurl` + `token` before calling. Run backfill migrations on existing DB before testing GETs.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -2604,7 +2604,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/lesson/employee",
+              "raw": "{{baseurl}}/lesson/employee?userId={{timetable_userId}}",
               "host": [
                 "{{baseurl}}"
               ],
@@ -2612,9 +2612,30 @@
                 "lesson",
                 "employee"
               ],
-              "query": []
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{timetable_userId}}",
+                  "description": "Required — teacher userId"
+                },
+                {
+                  "key": "courseId",
+                  "value": "{{timetable_courseId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{timetable_sessionId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "subjectId",
+                  "value": "{{timetable_subjectId}}",
+                  "disabled": true
+                }
+              ]
             },
-            "description": "**GET /lesson/employee**"
+            "description": "**GET /lesson/employee** — `userId` required (not employeeId)."
           },
           "response": []
         },
@@ -2899,16 +2920,329 @@
                 }
               ]
             },
-            "description": "**POST /lesson/link?lessonId=** — body: `lectureWindowId`.",
+            "description": "**POST /lesson/link?lessonId=** — body: `lectureWindowId` (from POST /lecture).",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"lectureWindowId\": 1\n}",
+              "raw": "{\n  \"lectureWindowId\": {{timetable_lectureWindowId}}\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "⑤b /lecture + /options — userId on lecture window",
+      "description": "Lecture windows store teacher as **`userId`** (not employeeId).\n\n| Method | Path | Notes |\n|--------|------|-------|\n| POST | `/lecture` | body optional `userId` |\n| GET | `/lecture` | filter optional `userId` |\n| GET | `/lecture/:lectureWindowId` | detail + lessons |\n| PATCH | `/lecture/:lectureWindowId` | dates/name |\n| DELETE | `/lecture/:lectureWindowId` | only if no lessons |\n| GET | `/options/lectureWindows` | **`userId` OR `employeeId`** (at least one) + `subjectId` + `date` |\n\nWhen `employeeId` is sent on options, API resolves employee → `userId` then filters windows.",
+      "item": [
+        {
+          "name": "POST create lecture window",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lecture",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lecture"
+              ]
+            },
+            "description": "**POST /lecture** — optional `userId` (teacher). Tenant + academicYear from session.\n\n```json\n{\n  \"subjectId\": {{timetable_subjectId}},\n  \"userId\": {{timetable_userId}},\n  \"sessionId\": {{timetable_sessionId}},\n  \"startDate\": \"2026-07-01\",\n  \"endDate\": \"2026-07-15\",\n  \"name\": \"Unit 1 — Introduction\"\n}\n```",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjectId\": {{timetable_subjectId}},\n  \"userId\": {{timetable_userId}},\n  \"sessionId\": {{timetable_sessionId}},\n  \"startDate\": \"2026-07-01\",\n  \"endDate\": \"2026-07-15\",\n  \"name\": \"Unit 1 — Introduction\",\n  \"description\": \"First two weeks\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const id = res.data && res.data.lectureWindowId;",
+                  "  if (id) pm.collectionVariables.set('timetable_lectureWindowId', String(id));",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET list lecture windows",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/lecture?userId={{timetable_userId}}&subjectId={{timetable_subjectId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lecture"
+              ],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{timetable_userId}}",
+                  "description": "Optional — teacher userId"
+                },
+                {
+                  "key": "subjectId",
+                  "value": "{{timetable_subjectId}}",
+                  "description": "Optional"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{timetable_sessionId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "lessonId",
+                  "value": "{{timetable_lessonId}}",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**GET /lecture** — optional filters (AND): `subjectId`, **`userId`**, `sessionId`, `lessonId`."
+          },
+          "response": []
+        },
+        {
+          "name": "GET lecture window by id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/lecture/{{timetable_lectureWindowId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lecture",
+                "{{timetable_lectureWindowId}}"
+              ]
+            },
+            "description": "**GET /lecture/:lectureWindowId** — includes lessons[]."
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH update lecture window",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lecture/{{timetable_lectureWindowId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lecture",
+                "{{timetable_lectureWindowId}}"
+              ]
+            },
+            "description": "**PATCH /lecture/:lectureWindowId** — dates/name/description; optional lessonIds.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Unit 1 — Revised\",\n  \"startDate\": \"2026-07-01\",\n  \"endDate\": \"2026-07-20\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE lecture window",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/lecture/{{timetable_lectureWindowId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lecture",
+                "{{timetable_lectureWindowId}}"
+              ]
+            },
+            "description": "**DELETE /lecture/:lectureWindowId** — fails if lessons exist."
+          },
+          "response": []
+        },
+        {
+          "name": "GET options/lectureWindows (by userId)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/options/lectureWindows?userId={{timetable_userId}}&subjectId={{timetable_subjectId}}&date=2026-07-15&sessionId={{timetable_sessionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "options",
+                "lectureWindows"
+              ],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{timetable_userId}}",
+                  "description": "Teacher userId (preferred)"
+                },
+                {
+                  "key": "subjectId",
+                  "value": "{{timetable_subjectId}}"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-07-15",
+                  "description": "YYYY-MM-DD"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{timetable_sessionId}}",
+                  "description": "Optional"
+                }
+              ]
+            },
+            "description": "**GET /options/lectureWindows**\n\n| Key | Required | Notes |\n|-----|----------|-------|\n| `userId` | Yes* | Teacher userId |\n| `employeeId` | Yes* | Alt — resolves to userId |\n| `subjectId` | Yes | |\n| `date` | Yes | YYYY-MM-DD; windows with startDate <= date <= endDate |\n| `sessionId` | No | |\n\n*At least one of `userId` or `employeeId`.\n\n**200:** `{ selected: { employee, subject }, options: [{ lectureWindowId, name }] }`"
+          },
+          "response": []
+        },
+        {
+          "name": "GET options/lectureWindows (by employeeId)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/options/lectureWindows?employeeId={{timetable_employeeId}}&subjectId={{timetable_subjectId}}&date=2026-07-15",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "options",
+                "lectureWindows"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "{{timetable_employeeId}}",
+                  "description": "Resolves to userId"
+                },
+                {
+                  "key": "subjectId",
+                  "value": "{{timetable_subjectId}}"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-07-15"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{timetable_sessionId}}",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**GET /options/lectureWindows** with `employeeId` — server looks up employee.userId then filters lecture windows the same way."
           },
           "response": []
         }
@@ -3071,7 +3405,8 @@
     {
       "key": "timetable_employeeId",
       "value": "",
-      "type": "string"
+      "type": "string",
+      "description": "For GET /options/lectureWindows when resolving via employeeId → userId"
     },
     {
       "key": "timetable_timeTableType",
@@ -3120,6 +3455,11 @@
     },
     {
       "key": "timetable_lessonMappingId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "timetable_lectureWindowId",
       "value": "",
       "type": "string"
     }

@@ -5859,7 +5859,7 @@
           "id": "d5f7fa1b-2a8e-43bc-9915-339553cebe96",
           "name": "get employee subjects and lessons",
           "request": {
-            "description": "**GET /lesson/employee**\n\nTeacher mappings via `teacher_subject_mapping` → subject → lessons → topics/semester.\n\nEach lesson in `employeeSubject.lessonSubject[]` includes:\n- `lectureWindowId`\n- `lectureWindowName`\n\n### Authentication\nBearer Token Required\n\n### Query parameters\n| Param | Type | Required | Description |\n|-------|------|----------|-------------|\n| employeeId | Integer | Yes* | Teacher ID |\n| courseId | Integer | No | Course filter |\n| sessionId | Integer | No | Session filter |\n| subjectSearch | String | No | Subject name search |\n| subjectId | Integer | No | Exact subject filter |\n\nScoped by auth academic year.",
+            "description": "**GET /lesson/employee**\n\nTeacher mappings via `teacher_subject_mapping` → subject → lessons → topics/semester.\n\nEach lesson in `employeeSubject.lessonSubject[]` includes:\n- `lectureWindowId`\n- `lectureWindowName`\n\n### Authentication\nBearer Token Required\n\n### Query parameters\n| Param | Type | Required | Description |\n|-------|------|----------|-------------|\n| userId | Integer | Yes | Teacher userId |\n| courseId | Integer | No | Course filter |\n| sessionId | Integer | No | Session filter |\n| subjectSearch | String | No | Subject name search |\n| subjectId | Integer | No | Exact subject filter |\n\nScoped by auth academic year.",
             "url": {
               "path": [
                 "lesson",
@@ -5871,11 +5871,11 @@
               "query": [
                 {
                   "description": {
-                    "content": "Teacher employee ID",
+                    "content": "Teacher userId",
                     "type": "text/plain"
                   },
-                  "key": "employeeId",
-                  "value": "26"
+                  "key": "userId",
+                  "value": "646"
                 },
                 {
                   "description": {
@@ -6250,13 +6250,13 @@
     {
       "id": "b696ccfd-177c-4aad-9896-de886532c6c8",
       "name": "lecture",
-      "description": "Lecture windows under `/lecture`.\n\nA **lecture window** is a date range (`startDate`–`endDate`) for a subject + session (+ optional employee). Lessons live under a window via `lectureWindowId`.\n\n**Auth:** Bearer `{{token}}`.\n\n**Tenant scope (`utility/scoped.js`):** `universityId`, `instituteId`, and `academicYearId` always come from the active login context. Do **not** send them in body or query — Zod `.strict()` rejects them.\n\n### Flow\n```\nPOST /lecture\n↓\nPOST /lesson  (with lectureWindowId)\n  or POST /lesson/link?lessonId=  (body: lectureWindowId)\n↓\nGET /lecture/:lectureWindowId   → name + lessons[]\n↓\nPATCH /lecture/:id              → update dates/name\n↓\nDELETE /lecture/:id             → only when zero lessons\n```",
+      "description": "Lecture windows under `/lecture`.\n\nA **lecture window** is a date range (`startDate`–`endDate`) for a subject + session (+ optional teacher `userId`). Lessons live under a window via `lectureWindowId`.\n\n**Auth:** Bearer `{{token}}`.\n\n**Tenant scope (`utility/scoped.js`):** `universityId`, `instituteId`, and `academicYearId` always come from the active login context. Do **not** send them in body or query — Zod `.strict()` rejects them.\n\n### Flow\n```\nPOST /lecture\n↓\nPOST /lesson  (with lectureWindowId)\n  or POST /lesson/link?lessonId=  (body: lectureWindowId)\n↓\nGET /lecture/:lectureWindowId   → name + lessons[]\n↓\nPATCH /lecture/:id              → update dates/name\n↓\nDELETE /lecture/:id             → only when zero lessons\n```",
       "item": [
         {
           "id": "af8b7cbe-a94d-49ba-9b84-d6e1380cf261",
           "name": "create lecture window",
           "request": {
-            "description": "**POST /lecture**\n\nCreates a lecture window for the active academic year. Lessons are linked separately via `POST /lesson` or `POST /lesson/link?lessonId=`.\n\n### Authentication\nBearer Token Required\n\n### Headers\n| Header | Required | Description |\n|--------|----------|-------------|\n| Authorization | Yes | Bearer `{{token}}` |\n| Content-Type | Yes | `application/json` |\n\n### Request body\n| Field | Type | Required | Nullable | Description |\n|-------|------|----------|----------|-------------|\n| subjectId | Integer | Yes | No | Subject ID |\n| employeeId | Integer | No | Yes | Teacher employee ID (optional) |\n| sessionId | Integer | Yes | No | Session ID |\n| startDate | String (YYYY-MM-DD) | Yes | No | Window start date |\n| endDate | String (YYYY-MM-DD) | Yes | No | Window end date (`>= startDate`) |\n| name | String | No | Yes | Window label |\n| description | String | No | Yes | Notes |\n\n### Removed / not accepted\n| Field | Notes |\n|-------|-------|\n| lessons | Not accepted on create — use `POST /lesson` or `POST /lesson/link?lessonId=` |\n| academicYearId | From auth session via `scoped()` / controller |\n| instituteId | From auth session via `scoped().create()` |\n| universityId | From auth session via `scoped().create()` |\n\n### Business rules\n- `startDate` cannot be after `endDate`.\n\n### Success (201)\n```json\n{\n  \"success\": true,\n  \"message\": \"Lecture window created successfully\",\n  \"data\": {\n    \"lectureWindowId\": 1,\n    \"subjectId\": 12,\n    \"employeeId\": 39,\n    \"sessionId\": 6,\n    \"academicYearId\": 1,\n    \"name\": \"Unit 1 — Introduction\",\n    \"description\": \"First two weeks\",\n    \"startDate\": \"2026-07-01\",\n    \"endDate\": \"2026-07-15\",\n    \"windowLessons\": []\n  }\n}\n```\n\n### Errors\n| Status | Reason |\n|--------|--------|\n| 400 | Validation error / missing active academicYearId / invalid date range |\n| 401 | Unauthorized |\n| 500 | Internal Server Error |",
+            "description": "**POST /lecture**\n\nCreates a lecture window for the active academic year. Lessons are linked separately via `POST /lesson` or `POST /lesson/link?lessonId=`.\n\n### Authentication\nBearer Token Required\n\n### Headers\n| Header | Required | Description |\n|--------|----------|-------------|\n| Authorization | Yes | Bearer `{{token}}` |\n| Content-Type | Yes | `application/json` |\n\n### Request body\n| Field | Type | Required | Nullable | Description |\n|-------|------|----------|----------|-------------|\n| subjectId | Integer | Yes | No | Subject ID |\n| userId | Integer | No | Yes | Teacher userId (optional; employee.userId) |\n| sessionId | Integer | Yes | No | Session ID |\n| startDate | String (YYYY-MM-DD) | Yes | No | Window start date |\n| endDate | String (YYYY-MM-DD) | Yes | No | Window end date (`>= startDate`) |\n| name | String | No | Yes | Window label |\n| description | String | No | Yes | Notes |\n\n### Removed / not accepted\n| Field | Notes |\n|-------|-------|\n| lessons | Not accepted on create — use `POST /lesson` or `POST /lesson/link?lessonId=` |\n| academicYearId | From auth session via `scoped()` / controller |\n| instituteId | From auth session via `scoped().create()` |\n| universityId | From auth session via `scoped().create()` |\n\n### Business rules\n- `startDate` cannot be after `endDate`.\n\n### Success (201)\n```json\n{\n  \"success\": true,\n  \"message\": \"Lecture window created successfully\",\n  \"data\": {\n    \"lectureWindowId\": 1,\n    \"subjectId\": 12,\n    \"userId\": 646,\n    \"sessionId\": 6,\n    \"academicYearId\": 1,\n    \"name\": \"Unit 1 — Introduction\",\n    \"description\": \"First two weeks\",\n    \"startDate\": \"2026-07-01\",\n    \"endDate\": \"2026-07-15\",\n    \"windowLessons\": []\n  }\n}\n```\n\n### Errors\n| Status | Reason |\n|--------|--------|\n| 400 | Validation error / missing active academicYearId / invalid date range |\n| 401 | Unauthorized |\n| 500 | Internal Server Error |",
             "url": {
               "path": [
                 "lecture"
@@ -6276,7 +6276,7 @@
             "method": "POST",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"subjectId\": 12,\n  \"employeeId\": 39,\n  \"sessionId\": 6,\n  \"startDate\": \"2026-07-01\",\n  \"endDate\": \"2026-07-15\",\n  \"name\": \"Unit 1 — Introduction\",\n  \"description\": \"First two weeks\"\n}",
+              "raw": "{\n  \"subjectId\": 12,\n  \"userId\": 646,\n  \"sessionId\": 6,\n  \"startDate\": \"2026-07-01\",\n  \"endDate\": \"2026-07-15\",\n  \"name\": \"Unit 1 — Introduction\",\n  \"description\": \"First two weeks\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -6301,7 +6301,7 @@
           "id": "49d931cf-5749-41f1-97df-d6f2c0b0d3bd",
           "name": "list lecture windows",
           "request": {
-            "description": "**GET /lecture**\n\nLists lecture windows for the **active academic year**.\n\n### Filter behavior (AND)\nOnly the query keys you send are applied, and they are combined with **AND**:\n\n| Query | Result |\n|-------|--------|\n| `?subjectId=12` | All windows for subject 12 |\n| `?subjectId=12&employeeId=39` | Windows matching **both** subject 12 and employee 39 |\n| `?subjectId=12&employeeId=39&sessionId=6` | Windows matching **all three** on the same row |\n| no filters | All windows for active academic year |\n\n### Authentication\nBearer Token Required\n\n### Query parameters\n| Param | Type | Required | Description |\n|-------|------|----------|-------------|\n| subjectId | Integer | No | Filter by subject |\n| employeeId | Integer | No | Filter by teacher |\n| sessionId | Integer | No | Filter by session |\n| lessonId | Integer | No | Only windows that contain this lesson |\n\n### Not accepted\n| Param | Notes |\n|-------|-------|\n| academicYearId | Always from auth session |\n| instituteId | Always from auth session via `scoped()` |\n| universityId | Always from auth session via `scoped()` |\n\n### Success (200)\n```json\n{\n  \"success\": true,\n  \"message\": \"Lecture windows fetched successfully\",\n  \"data\": []\n}\n```\n\n### Errors\n| Status | Reason |\n|--------|--------|\n| 400 | Validation / missing active academicYearId |\n| 401 | Unauthorized |\n| 500 | Internal Server Error |",
+            "description": "**GET /lecture**\n\nLists lecture windows for the **active academic year**.\n\n### Filter behavior (AND)\nOnly the query keys you send are applied, and they are combined with **AND**:\n\n| Query | Result |\n|-------|--------|\n| `?subjectId=12` | All windows for subject 12 |\n| `?subjectId=12&userId=646` | Windows matching **both** subject 12 and userId 646 |\n| `?subjectId=12&userId=646&sessionId=6` | Windows matching **all three** on the same row |\n| no filters | All windows for active academic year |\n\n### Authentication\nBearer Token Required\n\n### Query parameters\n| Param | Type | Required | Description |\n|-------|------|----------|-------------|\n| subjectId | Integer | No | Filter by subject |\n| userId | Integer | No | Filter by teacher userId |\n| sessionId | Integer | No | Filter by session |\n| lessonId | Integer | No | Only windows that contain this lesson |\n\n### Not accepted\n| Param | Notes |\n|-------|-------|\n| academicYearId | Always from auth session |\n| instituteId | Always from auth session via `scoped()` |\n| universityId | Always from auth session via `scoped()` |\n\n### Success (200)\n```json\n{\n  \"success\": true,\n  \"message\": \"Lecture windows fetched successfully\",\n  \"data\": []\n}\n```\n\n### Errors\n| Status | Reason |\n|--------|--------|\n| 400 | Validation / missing active academicYearId |\n| 401 | Unauthorized |\n| 500 | Internal Server Error |",
             "url": {
               "path": [
                 "lecture"
@@ -6312,11 +6312,11 @@
               "query": [
                 {
                   "description": {
-                    "content": "Optional — filter by teacher",
+                    "content": "Optional — filter by teacher userId",
                     "type": "text/plain"
                   },
-                  "key": "employeeId",
-                  "value": "39"
+                  "key": "userId",
+                  "value": "646"
                 },
                 {
                   "description": {
@@ -8718,7 +8718,7 @@
           "id": "e4446292-6722-4d5a-82a4-5bcaa03951f7",
           "name": "lectureWindows",
           "request": {
-            "description": "**GET /options/lectureWindows**\n\nCascade step 1.\n\n**Query**\n| Key | Required | Notes |\n|-----|----------|--------|\n| `employeeId` | Yes | Teacher |\n| `subjectId` | Yes | Subject |\n| `date` | Yes | Scheduling/today date `YYYY-MM-DD` — returns windows where `startDate <= date <= endDate` |\n| `sessionId` | No | Session filter |\n\n**200 data:** `{ selected: { employee, subject }, options: [{ lectureWindowId, name }] }`",
+            "description": "**GET /options/lectureWindows**\n\nCascade step 1.\n\n**Query**\n| Key | Required | Notes |\n|-----|----------|--------|\n| `userId` | Yes* | Teacher userId |\n| `employeeId` | Yes* | Alt — resolves employee → userId |\n| `subjectId` | Yes | Subject |\n| `date` | Yes | Scheduling/today date `YYYY-MM-DD` — returns windows where `startDate <= date <= endDate` |\n| `sessionId` | No | Session filter |\n\n*At least one of `userId` or `employeeId`.\n\n**200 data:** `{ selected: { employee, subject }, options: [{ lectureWindowId, name }] }`",
             "url": {
               "path": [
                 "options",
@@ -8729,8 +8729,8 @@
               ],
               "query": [
                 {
-                  "key": "employeeId",
-                  "value": "45"
+                  "key": "userId",
+                  "value": "646"
                 },
                 {
                   "key": "subjectId",
@@ -8751,6 +8751,15 @@
                   },
                   "key": "sessionId",
                   "value": "27"
+                },
+                {
+                  "key": "employeeId",
+                  "value": "45",
+                  "disabled": true,
+                  "description": {
+                    "content": "Optional alt — resolves to userId when userId omitted",
+                    "type": "text/plain"
+                  }
                 }
               ],
               "variable": []
