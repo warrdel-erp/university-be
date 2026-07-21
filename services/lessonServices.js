@@ -629,22 +629,10 @@ export async function getLectureWindowById(lectureWindowId, academicYearId) {
     return lectureWindowRepository.getLectureWindowById(lectureWindowId, academicYearId);
 }
 
-function formatMappedDate(value) {
-  if (value == null) return null;
-  if (typeof value === 'string') return value.slice(0, 10);
-  return toDateOnlyString(new Date(value));
-}
-
-function isCompletedStatus(status) {
-  if (status == null) return false;
-  const normalized = String(status).toLowerCase();
-  return normalized === 'complete' || normalized === 'completed';
-}
-
 /**
- * Progress table rows:
- * Lesson | Topic | Sub Topic | Completed Date | Upcoming Date | Status | Action
- * + class date via timeTableCellDateWiseId
+ * Mapped lesson plans for teacher + subject (+ optional course/session/lesson/status).
+ * Same source + shape as scheduleItems[].lessonPlan from getRoutineByTeacher,
+ * so both endpoints stay consistent (no date window here — all cells).
  */
 export async function getMappedLessonProgress({
   userId,
@@ -661,102 +649,36 @@ export async function getMappedLessonProgress({
     throw Object.assign(new Error('subjectId is required'), { statusCode: 400 });
   }
 
-  const today = toDateOnlyString(new Date());
-  const rowsRaw = await lesson.getMappedLessonRows({
+  const dateWiseRows = await lesson.getTeacherWeekDateWiseCells({
     userId,
-    subjectId,
     courseId,
     sessionId,
-    lessonId,
-    status,
+    subjectId,
   });
 
-  const rows = [];
-  let completed = 0;
-
-  for (const row of rowsRaw) {
-    const plain = row.get ? row.get({ plain: true }) : row;
-    const topic = plain.mappingTopic || {};
-    const lessonRow = topic.lessonTopic || {};
-    const dateWise = plain.timeTableCellDateWise || {};
-    const cell = dateWise.timeTableCell || {};
-    const routine = cell.timeTableRoutine || {};
-    const termRow = routine.timeTableClassSectionTerm || {};
-    const section = termRow.classSection || {};
-    const viewerTeacher = resolveViewerTeacher(dateWise.timeTableCellTeachersDateWise, userId);
-
-    const classDate = formatMappedDate(dateWise.date || plain.date);
-    const completedDate = formatMappedDate(plain.completeDate);
-    const done = isCompletedStatus(plain.status);
-    if (done) completed += 1;
-
-    let upcomingDate = null;
-    if (!done && classDate != null && classDate >= today) {
-      upcomingDate = classDate;
+  const dateWiseIds = [];
+  for (const row of dateWiseRows) {
+    const id = row.get ? row.get('timeTableCellDateWiseId') : row.timeTableCellDateWiseId;
+    if (id != null) {
+      dateWiseIds.push(Number(id));
     }
-
-    const subTopics = [];
-    for (const sub of topic.subTopic || []) {
-      subTopics.push({
-        subTopicId: sub.subTopicId,
-        name: sub.name,
-        description: sub.description || null,
-      });
-    }
-
-    rows.push({
-      lessonMappingId: plain.lessonMappingId,
-      lesson: {
-        lessonId: lessonRow.lessonId,
-        name: lessonRow.name,
-        description: lessonRow.description || null,
-        lectureWindowId: lessonRow.lectureWindowId || null,
-      },
-      topic: {
-        topicId: topic.topicId,
-        name: topic.name,
-        description: topic.description || null,
-      },
-      subTopics,
-      subTopicNames: subTopics.map((s) => s.name).join(', '),
-      completedDate: done ? completedDate : null,
-      upcomingDate,
-      status: plain.status,
-      note: plain.note || null,
-      lectureUrl: plain.lectureUrl || null,
-      classDate,
-      timeTableCellDateWiseId: dateWise.timeTableCellDateWiseId || plain.timeTableCellDateWiseId,
-      timeTableCellId: cell.timeTableCellId || plain.timeTableCellId,
-      day: cell.day || null,
-      period: cell.period || null,
-      periodName: cell.timeTablecreation?.periodName || null,
-      startTime: cell.timeTablecreation?.startTime || null,
-      endTime: cell.timeTablecreation?.endTime || null,
-      teacherType: viewerTeacher?.teacherType || null,
-      roomNumber: dateWise.classRoom?.roomNumber || null,
-      classSection: {
-        classSectionTermId: routine.classSectionTermId ?? termRow.classSectionTermId ?? null,
-        classSectionsId: termRow.classSectionsId ?? section.classSectionsId ?? null,
-        year: section.year ?? null,
-        section: section.section ?? null,
-        term: termRow.term ?? null,
-      },
-      subject: lessonRow.lessonSubject
-        ? {
-            subjectId: lessonRow.lessonSubject.subjectId,
-            subjectName: lessonRow.lessonSubject.subjectName,
-            subjectCode: lessonRow.lessonSubject.subjectCode || null,
-          }
-        : null,
-    });
   }
 
-  return {
-    progress: {
-      completed,
-      total: rows.length,
-      label: `${completed}/${rows.length}`,
-    },
-    rows,
-  };
+  const mappingRows = await lesson.getLessonPlanSummariesByDateWiseIds(dateWiseIds);
+
+  const lessonPlan = [];
+  for (const row of mappingRows) {
+    const plan = mapLessonPlanSummary(row);
+
+    if (lessonId != null && plan.lessonId !== Number(lessonId)) {
+      continue;
+    }
+    if (status != null && status !== '' && plan.status !== status) {
+      continue;
+    }
+
+    lessonPlan.push(plan);
+  }
+
+  return { lessonPlan };
 }

@@ -227,7 +227,7 @@ export async function getMappedLessonProgress(req, res) {
             lessonId: lessonId != null ? Number(lessonId) : undefined,
             status,
         });
-        return SuccessResponse(res, 200, "Mapped lesson progress fetched successfully", result);
+        return SuccessResponse(res, 200, "Mapped lesson plans fetched successfully", result);
     } catch (error) {
         console.error("Error in getMappedLessonProgress:", error);
         const statusCode = error.statusCode || (/required/i.test(error.message) ? 400 : 500);

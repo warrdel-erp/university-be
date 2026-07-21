@@ -2602,7 +2602,7 @@
                 }
               ]
             },
-            "description": "**GET /lesson/mapped** — progress table rows.\n\nColumns: Progress `completed/total`, Lesson, Topic, Sub Topic, Completed Date, Upcoming Date, Status, Action.\n\nEach row includes class date via **`timeTableCellDateWiseId`** / `classDate`.\n\nRequired: `userId`, `subjectId`. Optional: `courseId`, `sessionId`, `lessonId`, `status`."
+            "description": "**GET /lesson/mapped**\n\nRequired: `userId`, `subjectId`. Optional: `courseId`, `sessionId`, `lessonId`, `status`.\n\nReturns `{ lessonPlan: [...] }` — same object shape as `scheduleItems[].lessonPlan` on getRoutineByTeacher:\n`lessonMappingId`, `lessonId`, `lessonName`, `topicId`, `topicName`, `subTopics`, `subTopicName`, `lectureWindowId`, `lectureWindowName`, `note`, `lectureUrl`, `file`, `status`, `completeDate`."
           },
           "response": []
         },

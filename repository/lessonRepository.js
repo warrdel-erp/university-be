@@ -813,20 +813,27 @@ export async function getTeacherWeekDateWiseCells({
   startDate,
   endDate,
 }) {
+  const dateConditions = [];
+  if (startDate != null) {
+    dateConditions.push(
+      Sequelize.where(
+        Sequelize.fn('DATE', Sequelize.col('time_table_cell_date_wise.date')),
+        { [Op.gte]: startDate },
+      ),
+    );
+  }
+  if (endDate != null) {
+    dateConditions.push(
+      Sequelize.where(
+        Sequelize.fn('DATE', Sequelize.col('time_table_cell_date_wise.date')),
+        { [Op.lte]: endDate },
+      ),
+    );
+  }
+
   return model.timeTableCellDateWiseModel.findAll({
     attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
-    where: {
-      [Op.and]: [
-        Sequelize.where(
-          Sequelize.fn('DATE', Sequelize.col('time_table_cell_date_wise.date')),
-          { [Op.gte]: startDate },
-        ),
-        Sequelize.where(
-          Sequelize.fn('DATE', Sequelize.col('time_table_cell_date_wise.date')),
-          { [Op.lte]: endDate },
-        ),
-      ],
-    },
+    where: dateConditions.length > 0 ? { [Op.and]: dateConditions } : {},
     include: [
       {
         model: model.timeTableCellTeachersDateWiseModel,
@@ -1046,6 +1053,12 @@ export async function getMappedLessonRows({
                 as: 'lessonSubject',
                 attributes: ['subjectId', 'subjectName', 'subjectCode'],
                 required: false,
+              },
+              {
+                model: model.lectureWindowModel,
+                as: 'lectureWindow',
+                required: false,
+                attributes: ['lectureWindowId', 'name'],
               },
             ],
           },
