@@ -1746,11 +1746,8 @@ examScheduleModel.hasMany(teacherExamAssignmentModel, { foreignKey: "examSchedul
 teacherExamAssignmentModel.belongsTo(acedmicYearModel, { foreignKey: "academicYearId", as: "acedmicYear" });
 acedmicYearModel.hasMany(teacherExamAssignmentModel, { foreignKey: "academicYearId", as: "examAssignmentsYear" });
 
-teacherExamAssignmentModel.belongsTo(userModel, { foreignKey: "userId", as: "user" });
-userModel.hasMany(teacherExamAssignmentModel, { foreignKey: "userId", as: "examAssignments" });
-
-teacherExamAssignmentModel.belongsTo(employeeModel, { foreignKey: "userId", targetKey: "userId", as: "teacherEmployee" });
-employeeModel.hasMany(teacherExamAssignmentModel, { foreignKey: "userId", sourceKey: "userId", as: "examAssignmentsEmployee" });
+teacherExamAssignmentModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "teacherEmployee" });
+employeeModel.hasMany(teacherExamAssignmentModel, { foreignKey: "employeeId", as: "examAssignmentsEmployee" });
 
 teacherSubstituteModel.belongsTo(userModel, { foreignKey: "userId", as: "user" });
 userModel.hasMany(teacherSubstituteModel, { foreignKey: "userId", as: "teacherSubstitutes" });

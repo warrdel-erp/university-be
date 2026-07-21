@@ -130,6 +130,9 @@ function mapLessonPlanSummary(row) {
 
   return {
     lessonMappingId: plain.lessonMappingId,
+    timeTableCellDateWiseId: plain.timeTableCellDateWiseId != null
+      ? Number(plain.timeTableCellDateWiseId)
+      : null,
     lessonId: lessonRow.lessonId || null,
     lessonName: lessonRow.name || null,
     topicId: topic.topicId || plain.topicId || null,
@@ -642,11 +645,11 @@ export async function getMappedLessonProgress({
   lessonId,
   status,
 }) {
-  if (userId == null) {
-    throw Object.assign(new Error('userId is required'), { statusCode: 400 });
+  if (!Number.isFinite(Number(userId))) {
+    throw Object.assign(new Error('A valid userId is required'), { statusCode: 400 });
   }
-  if (subjectId == null) {
-    throw Object.assign(new Error('subjectId is required'), { statusCode: 400 });
+  if (!Number.isFinite(Number(subjectId))) {
+    throw Object.assign(new Error('A valid subjectId is required'), { statusCode: 400 });
   }
 
   const dateWiseRows = await lesson.getTeacherWeekDateWiseCells({
@@ -664,11 +667,28 @@ export async function getMappedLessonProgress({
     }
   }
 
-  const mappingRows = await lesson.getLessonPlanSummariesByDateWiseIds(dateWiseIds);
+  const [mappingRows, attendanceRows] = await Promise.all([
+    lesson.getLessonPlanSummariesByDateWiseIds(dateWiseIds),
+    lesson.getDateWiseIdsWithAttendance(dateWiseIds),
+  ]);
+
+  const attendanceTakenIds = new Set();
+  for (const row of attendanceRows) {
+    const id = row.get ? row.get('timeTableCellDateWiseId') : row.timeTableCellDateWiseId;
+    if (id != null) {
+      attendanceTakenIds.add(Number(id));
+    }
+  }
 
   const lessonPlan = [];
   for (const row of mappingRows) {
     const plan = mapLessonPlanSummary(row);
+
+    // Attendance taken for this dated class => class completed.
+    plan.attendanceTaken = attendanceTakenIds.has(plan.timeTableCellDateWiseId);
+    if (plan.attendanceTaken) {
+      plan.status = 'complete';
+    }
 
     if (lessonId != null && plan.lessonId !== Number(lessonId)) {
       continue;

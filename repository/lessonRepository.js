@@ -831,6 +831,24 @@ export async function getTeacherWeekDateWiseCells({
     );
   }
 
+  const courseIdNum = Number(courseId);
+  const sessionIdNum = Number(sessionId);
+  const hasCourseId = Number.isFinite(courseIdNum);
+  const hasSessionId = Number.isFinite(sessionIdNum);
+
+  const routineWhere = { isPublish: true };
+  if (hasCourseId) {
+    routineWhere.courseId = courseIdNum;
+  }
+
+  const sectionWhere = { ...buildScope(model.classSectionModel) };
+  if (hasSessionId) {
+    sectionWhere.sessionId = sessionIdNum;
+  }
+  if (hasCourseId) {
+    sectionWhere.courseId = courseIdNum;
+  }
+
   return model.timeTableCellDateWiseModel.findAll({
     attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
     where: dateConditions.length > 0 ? { [Op.and]: dateConditions } : {},
@@ -879,10 +897,7 @@ export async function getTeacherWeekDateWiseCells({
             model: model.timeTableRoutineModel,
             as: 'timeTableRoutine',
             required: true,
-            where: {
-              courseId: Number(courseId),
-              isPublish: true,
-            },
+            where: routineWhere,
             attributes: [
               'timeTableRoutineId',
               'startingDate',
@@ -896,11 +911,7 @@ export async function getTeacherWeekDateWiseCells({
               timeTableRoutineClassSectionInclude({
                 termRequired: true,
                 sectionRequired: true,
-                sectionWhere: {
-                  sessionId: Number(sessionId),
-                  courseId: Number(courseId),
-                  ...buildScope(model.classSectionModel),
-                },
+                sectionWhere,
                 termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
                 sectionAttributes: ['classSectionsId', 'section', 'year', 'sessionId', 'courseId'],
               }),
@@ -910,6 +921,28 @@ export async function getTeacherWeekDateWiseCells({
       },
     ],
     order: [['date', 'ASC'], ['timeTableCellDateWiseId', 'ASC']],
+  });
+}
+
+/**
+ * Date-wise cell ids that already have at least one attendance row (= class taken).
+ */
+export async function getDateWiseIdsWithAttendance(timeTableCellDateWiseIds) {
+  if (!timeTableCellDateWiseIds || timeTableCellDateWiseIds.length === 0) {
+    return [];
+  }
+
+  const ids = [];
+  for (const id of timeTableCellDateWiseIds) {
+    ids.push(Number(id));
+  }
+
+  return scoped(model.attendanceModel).findAll({
+    attributes: ['timeTableCellDateWiseId'],
+    where: {
+      timeTableCellDateWiseId: { [Op.in]: ids },
+    },
+    group: ['timeTableCellDateWiseId'],
   });
 }
 
