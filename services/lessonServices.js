@@ -151,16 +151,10 @@ function buildLessonPlanLookup(rows) {
   for (const row of rows || []) {
     const plain = row.get ? row.get({ plain: true }) : row;
     const dateWiseId = Number(plain.timeTableCellDateWiseId);
-    if (!dateWiseId) {
+    if (!dateWiseId || lookup.has(dateWiseId)) {
       continue;
     }
-
-    let plans = lookup.get(dateWiseId);
-    if (!plans) {
-      plans = [];
-      lookup.set(dateWiseId, plans);
-    }
-    plans.push(mapLessonPlanSummary(plain));
+    lookup.set(dateWiseId, mapLessonPlanSummary(plain));
   }
   return lookup;
 }
@@ -202,10 +196,9 @@ function enrichPublishedRoutines(routines, week, dateWiseLookup, lessonPlanLooku
           item.userId = viewerTeacher?.userId != null
             ? Number(viewerTeacher.userId)
             : Number(userId);
-          const plans = dateWiseId != null
-            ? lessonPlanLookup.get(Number(dateWiseId))
+          item.lessonPlan = dateWiseId != null
+            ? (lessonPlanLookup.get(Number(dateWiseId)) || null)
             : null;
-          item.lessonPlan = plans && plans.length > 0 ? plans : null;
 
           if (day.timeTableCellId == null && cellId != null) {
             day.timeTableCellId = cellId;

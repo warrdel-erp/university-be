@@ -2503,7 +2503,7 @@
                 }
               ]
             },
-            "description": "**GET /lesson/getRoutineByTeacher**\n\nRequired: `userId`, `courseId`, `sessionId`, `subjectId`.\nOptional: `date` (YYYY-MM-DD) — returns that calendar week (Mon–Sun).\n\n- **Published routines only**\n- Full week grid (day-wise)\n- One week of dated schedule items for that teacher\n- `teacherType`: Primary | Secondary\n- Response `week` includes `previousWeekDate` / `nextWeekDate` for navigation (pass as next `date`)\n- `scheduleItems[].lessonPlan`: array of `{ lessonMappingId, lessonId, lessonName, topicId, topicName, subTopics, subTopicName, lectureWindowId, lectureWindowName, note, lectureUrl, file, status, completeDate }` when mapped via `/lesson/mapping`\n\nUse `scheduleItems[].timeTableCellDateWiseId` for mapping."
+            "description": "**GET /lesson/getRoutineByTeacher**\n\nRequired: `userId`, `courseId`, `sessionId`, `subjectId`.\nOptional: `date` (YYYY-MM-DD) — returns that calendar week (Mon–Sun).\n\n- **Published routines only**\n- Full week grid (day-wise)\n- One week of dated schedule items for that teacher\n- `teacherType`: Primary | Secondary\n- Response `week` includes `previousWeekDate` / `nextWeekDate` for navigation (pass as next `date`)\n- `scheduleItems[].lessonPlan`: one object `{ lessonMappingId, lessonId, lessonName, topicId, topicName, subTopics, subTopicName, lectureWindowId, lectureWindowName, note, lectureUrl, file, status, completeDate }` per `timeTableCellDateWiseId`, or `null`\n\nUse `scheduleItems[].timeTableCellDateWiseId` for mapping."
           },
           "response": [],
           "event": [
