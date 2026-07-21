@@ -286,6 +286,26 @@ async function destroyCellGraphByCellIds(mappingIds, transaction) {
     dateWiseIds.push(row.timeTableCellDateWiseId);
   }
 
+  // Dependents with ON DELETE RESTRICT must go before date-wise / week cells.
+  if (dateWiseIds.length > 0) {
+    await model.attendanceModel.destroy({
+      where: { timeTableCellDateWiseId: { [Op.in]: dateWiseIds } },
+      transaction,
+      force: true,
+    });
+    await model.lessonMappingModel.destroy({
+      where: { timeTableCellDateWiseId: { [Op.in]: dateWiseIds } },
+      transaction,
+      force: true,
+    });
+  }
+
+  await model.lessonMappingModel.destroy({
+    where: { timeTableCellId: { [Op.in]: numericIds } },
+    transaction,
+    force: true,
+  });
+
   if (dateWiseIds.length > 0) {
     await model.timeTableCellTeachersDateWiseModel.destroy({
       where: { timeTableCellDateWiseId: { [Op.in]: dateWiseIds } },

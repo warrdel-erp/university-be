@@ -947,9 +947,8 @@ export async function deleteTimeTableRoutine(timeTableRoutineId) {
   if (!routine) {
     throw new Error('Routine not found');
   }
-  if (routine.isPublish) {
-    throw new Error('Published routine cannot be deleted');
-  }
+
+  // Allow delete (draft or published) only before startingDate.
   assertRoutineEditable(routine.startingDate);
 
   const transaction = await sequelize.transaction();
