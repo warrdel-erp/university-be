@@ -2,6 +2,209 @@ import * as lesson from "../repository/lessonRepository.js";
 import * as lectureWindowRepository from "../repository/lectureWindowRepository.js";
 import sequelize from '../database/sequelizeConfig.js';
 import { resolveSourcePeriodByDateWiseId } from '../utility/attendancePlacement.js';
+import * as timeTableCreateServices from './timeTableCreateServices.js';
+
+const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+function toDateOnlyString(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getCurrentWeekRange(anchorDate) {
+  const base = new Date(`${anchorDate}T00:00:00`);
+  const day = base.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+
+  const monday = new Date(base);
+  monday.setDate(base.getDate() + mondayOffset);
+
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+
+  const dayDates = {};
+  for (let i = 0; i < WEEK_DAYS.length; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    dayDates[WEEK_DAYS[i]] = toDateOnlyString(d);
+  }
+
+  return {
+    startDate: toDateOnlyString(monday),
+    endDate: toDateOnlyString(sunday),
+    anchorDate,
+    dayDates,
+  };
+}
+
+function formatDateKey(value) {
+  if (value == null) return null;
+  if (typeof value === 'string') {
+    return value.slice(0, 10);
+  }
+  return toDateOnlyString(new Date(value));
+}
+
+function resolveViewerTeacher(teachers, userId) {
+  for (const teacher of teachers || []) {
+    if (Number(teacher.userId) === Number(userId)) {
+      return teacher;
+    }
+  }
+  return teachers?.[0] || null;
+}
+
+function mapDateWiseRow(row, userId) {
+  const plain = row.get ? row.get({ plain: true }) : row;
+  const cell = plain.timeTableCell || {};
+  const routine = cell.timeTableRoutine || {};
+  const termRow = routine.timeTableClassSectionTerm || {};
+  const section = termRow.classSection || {};
+  const viewerTeacher = resolveViewerTeacher(plain.timeTableCellTeachersDateWise, userId);
+
+  return {
+    timeTableCellDateWiseId: plain.timeTableCellDateWiseId,
+    timeTableCellId: Number(plain.timeTableCellId),
+    date: formatDateKey(plain.date),
+    day: cell.day || null,
+    period: cell.period || null,
+    timeTableCreationId: cell.timeTableCreationId || null,
+    periodName: cell.timeTablecreation?.periodName || null,
+    startTime: cell.timeTablecreation?.startTime || null,
+    endTime: cell.timeTablecreation?.endTime || null,
+    subjectId: cell.subjectId || cell.timeTableSubject?.subjectId || null,
+    subjectName: cell.timeTableSubject?.subjectName || null,
+    timeTableType: cell.timeTableType || null,
+    teacherType: viewerTeacher?.teacherType || null,
+    isAttendence: viewerTeacher?.isAttendence ?? null,
+    userId: viewerTeacher?.userId != null ? Number(viewerTeacher.userId) : Number(userId),
+    classRoomSectionId: plain.classRoomSectionId ?? null,
+    roomNumber: plain.classRoom?.roomNumber ?? null,
+    timeTableRoutineId: cell.timeTableRoutineId || routine.timeTableRoutineId || null,
+    classSectionTermId: routine.classSectionTermId ?? termRow.classSectionTermId ?? null,
+    classSectionsId: termRow.classSectionsId ?? section.classSectionsId ?? null,
+    year: section.year ?? null,
+    section: section.section ?? null,
+    term: termRow.term ?? null,
+  };
+}
+
+function buildDateWiseLookup(dateWiseCells) {
+  const lookup = new Map();
+  for (const item of dateWiseCells) {
+    if (!item.timeTableCellId || !item.date) continue;
+    lookup.set(`${item.timeTableCellId}|${item.date}`, item);
+  }
+  return lookup;
+}
+
+function enrichPublishedRoutines(routines, week, dateWiseLookup, userId) {
+  const published = [];
+
+  for (const routine of routines || []) {
+    if (!routine.isPublished) {
+      continue;
+    }
+
+    for (const period of routine.periods || []) {
+      for (const day of period.days || []) {
+        const dayDate = week.dayDates[day.name] || null;
+        day.date = dayDate;
+        day.timeTableCellId = null;
+        day.timeTableCellDateWiseId = null;
+        day.teacherType = null;
+
+        for (const item of day.scheduleItems || []) {
+          const viewerTeacher = resolveViewerTeacher(item.teachers, userId);
+          const cellId = viewerTeacher?.timeTableCellId != null
+            ? Number(viewerTeacher.timeTableCellId)
+            : null;
+
+          let dateWiseId = null;
+          let matched = null;
+          if (cellId != null && dayDate != null) {
+            matched = dateWiseLookup.get(`${cellId}|${dayDate}`);
+            if (matched) {
+              dateWiseId = matched.timeTableCellDateWiseId;
+            }
+          }
+
+          item.timeTableCellId = cellId;
+          item.timeTableCellDateWiseId = dateWiseId;
+          item.teacherType = viewerTeacher?.teacherType || null;
+          item.userId = viewerTeacher?.userId != null
+            ? Number(viewerTeacher.userId)
+            : Number(userId);
+          item.dateWise = matched;
+
+          if (day.timeTableCellId == null && cellId != null) {
+            day.timeTableCellId = cellId;
+            day.timeTableCellDateWiseId = dateWiseId;
+            day.teacherType = viewerTeacher?.teacherType || null;
+          }
+        }
+      }
+    }
+
+    published.push(routine);
+  }
+
+  return published;
+}
+
+export async function getRoutineByTeacherForLesson(userId, courseId, sessionId, subjectId, date) {
+  if (subjectId == null) {
+    throw new Error('subjectId is required');
+  }
+
+  const week = getCurrentWeekRange(date || toDateOnlyString(new Date()));
+
+  const [result, dateWiseRows] = await Promise.all([
+    timeTableCreateServices.getRoutineByTeacherAndAcademicYear(
+      userId,
+      courseId,
+      sessionId,
+      subjectId,
+    ),
+    lesson.getTeacherWeekDateWiseCells({
+      userId,
+      courseId,
+      sessionId,
+      subjectId,
+      startDate: week.startDate,
+      endDate: week.endDate,
+    }),
+  ]);
+
+  const dateWiseCells = [];
+  for (const row of dateWiseRows) {
+    dateWiseCells.push(mapDateWiseRow(row, userId));
+  }
+
+  const dateWiseLookup = buildDateWiseLookup(dateWiseCells);
+  const routines = enrichPublishedRoutines(
+    result.routines || [],
+    week,
+    dateWiseLookup,
+    userId,
+  );
+
+  return {
+    employee: result.employee,
+    course: result.course,
+    session: result.session,
+    classSections: result.classSections,
+    week: {
+      startDate: week.startDate,
+      endDate: week.endDate,
+      anchorDate: week.anchorDate,
+    },
+    routines,
+    dateWiseCells,
+  };
+}
 
 export async function addLesson(data, createdBy, updatedBy) {
     const window = await lectureWindowRepository.getLectureWindowById(

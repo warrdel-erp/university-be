@@ -197,3 +197,21 @@ export async function linkLessonsToWindow(req, res) {
         return ErrorResponse(res, statusCode, error.message || "Internal Server Error");
     }
 };
+
+export async function getRoutineByTeacher(req, res) {
+    try {
+        const { userId, courseId, sessionId, subjectId, date } = req.query;
+        const result = await lesson.getRoutineByTeacherForLesson(
+            Number(userId),
+            Number(courseId),
+            Number(sessionId),
+            Number(subjectId),
+            date,
+        );
+        return SuccessResponse(res, 200, "Teacher lesson routine fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getRoutineByTeacher:", error);
+        const status = /required/i.test(error.message) ? 400 : 500;
+        return ErrorResponse(res, status, error.message || "Internal Server Error");
+    }
+};

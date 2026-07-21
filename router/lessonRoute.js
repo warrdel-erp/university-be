@@ -17,6 +17,7 @@ import {
     getEmployeeSubjectAndLesson,
     getSimpleLessonList,
     linkLessonsToWindow,
+    getRoutineByTeacher,
 } from "../controllers/lessonController.js";
 
 import { PERMISSIONS } from '../const/permissions.js';
@@ -30,9 +31,19 @@ const positiveIntegerId = z.coerce
     .int('id must be an integer')
     .positive('id must be greater than 0');
 
+const optionalPositiveId = z.preprocess(
+    (val) => (val === '' || val == null ? undefined : val),
+    positiveIntegerId.optional(),
+);
+
 const dateOnly = z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD');
+
+const optionalDateOnly = z.preprocess(
+    (val) => (val === '' || val == null ? undefined : val),
+    dateOnly.optional(),
+);
 
 const linkLessonQuerySchema = z.object({
     lessonId: positiveIntegerId,
@@ -68,6 +79,14 @@ const addMappingBodySchema = z.object({
     })).optional(),
 }).passthrough();
 
+const getRoutineByTeacherSchema = z.object({
+    userId: positiveIntegerId,
+    courseId: positiveIntegerId,
+    sessionId: positiveIntegerId,
+    subjectId: positiveIntegerId,
+    date: optionalDateOnly,
+});
+
 // ---------------------------------------------------------------------------
 // 1. Lesson plan — CRUD / list
 // ---------------------------------------------------------------------------
@@ -76,6 +95,13 @@ router.get('/', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, nul
 router.get('/simple', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getSimpleLessonList);
 router.get('/single', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getSingleLessonDetails);
 router.get('/employee', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getEmployeeSubjectAndLesson);
+router.get(
+    '/getRoutineByTeacher',
+    userAuth,
+    checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null),
+    validate({ query: getRoutineByTeacherSchema }),
+    getRoutineByTeacher,
+);
 
 // ---------------------------------------------------------------------------
 // 2. Topics
@@ -112,5 +138,7 @@ router.post(
     validate({ query: linkLessonQuerySchema, body: linkLessonBodySchema }),
     linkLessonsToWindow,
 );
+
+
 
 export default router;

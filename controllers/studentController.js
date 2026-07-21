@@ -431,14 +431,19 @@ export const getStudentTimeTable = async (req, res) => {
 
 export async function getStudentsByClassSection(req, res) {
     try {
-        const { timeTableCellDateWiseId } = req.query;
+        const { timeTableCellDateWiseId, groupPeriods, date, academicYearId } = req.query;
 
         const result = await studentService.getStudentsByClassSection({
             timeTableCellDateWiseId,
+            groupPeriods,
+            date,
+            academicYearId,
         });
 
         let count = 0;
-        if (Array.isArray(result.periods)) {
+        if (Array.isArray(result.periods) && Array.isArray(result.students)) {
+            count = result.students.length;
+        } else if (Array.isArray(result.periods)) {
             for (const block of result.periods) {
                 count += block.students.length;
             }

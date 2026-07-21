@@ -151,6 +151,7 @@ const dateWiseIdList = z.preprocess(
 const classSectionStudentsQuerySchema = z.object({
   timeTableCellDateWiseId: dateWiseIdList,
   academicYearId: optionalPositiveIntegerId,
+  date: optionalDateField,
   groupPeriods: z.union([z.boolean(), z.string()]).optional(),
 }).passthrough();
 

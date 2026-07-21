@@ -1,7 +1,10 @@
 import * as model from "../models/index.js";
-import { Op } from "sequelize";
+import { Op, Sequelize } from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
-import { classSectionTermsInclude } from "../utility/classSectionIncludes.js";
+import {
+  classSectionTermsInclude,
+  timeTableRoutineClassSectionInclude,
+} from "../utility/classSectionIncludes.js";
 import { buildTermName } from "../utility/courseTerms.js";
 
 const lectureWindowInclude = {
@@ -797,4 +800,108 @@ export async function getSimpleLessonList(whereClause) {
     console.error("Error fetching simple lesson list:", error);
     throw error;
   }
+}
+
+/**
+ * One week of published date-wise classes for a teacher + subject + course + session.
+ */
+export async function getTeacherWeekDateWiseCells({
+  userId,
+  courseId,
+  sessionId,
+  subjectId,
+  startDate,
+  endDate,
+}) {
+  return model.timeTableCellDateWiseModel.findAll({
+    attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
+    where: {
+      [Op.and]: [
+        Sequelize.where(
+          Sequelize.fn('DATE', Sequelize.col('time_table_cell_date_wise.date')),
+          { [Op.gte]: startDate },
+        ),
+        Sequelize.where(
+          Sequelize.fn('DATE', Sequelize.col('time_table_cell_date_wise.date')),
+          { [Op.lte]: endDate },
+        ),
+      ],
+    },
+    include: [
+      {
+        model: model.timeTableCellTeachersDateWiseModel,
+        as: 'timeTableCellTeachersDateWise',
+        required: true,
+        where: { userId: Number(userId) },
+        attributes: ['userId', 'teacherType', 'isAttendence'],
+      },
+      {
+        model: model.classRoomModel,
+        as: 'classRoom',
+        required: false,
+        attributes: ['classRoomSectionId', 'roomNumber'],
+      },
+      {
+        model: model.timeTableCellModel,
+        as: 'timeTableCell',
+        required: true,
+        where: { subjectId: Number(subjectId) },
+        attributes: [
+          'timeTableCellId',
+          'timeTableRoutineId',
+          'timeTableCreationId',
+          'day',
+          'period',
+          'subjectId',
+          'timeTableType',
+        ],
+        include: [
+          {
+            model: model.subjectModel,
+            as: 'timeTableSubject',
+            attributes: ['subjectId', 'subjectName'],
+            required: false,
+          },
+          {
+            model: model.timeTableStructurePeriodsModel,
+            as: 'timeTablecreation',
+            attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime'],
+            required: false,
+          },
+          {
+            model: model.timeTableRoutineModel,
+            as: 'timeTableRoutine',
+            required: true,
+            where: {
+              courseId: Number(courseId),
+              isPublish: true,
+            },
+            attributes: [
+              'timeTableRoutineId',
+              'startingDate',
+              'endingDate',
+              'isPublish',
+              'timeTableType',
+              'classSectionTermId',
+              'courseId',
+            ],
+            include: [
+              timeTableRoutineClassSectionInclude({
+                termRequired: true,
+                sectionRequired: true,
+                sectionWhere: {
+                  sessionId: Number(sessionId),
+                  courseId: Number(courseId),
+                  ...buildScope(model.classSectionModel),
+                },
+                termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
+                sectionAttributes: ['classSectionsId', 'section', 'year', 'sessionId', 'courseId'],
+              }),
+            ],
+          },
+        ],
+      },
+    ],
+    order: [['date', 'ASC'], ['timeTableCellDateWiseId', 'ASC']],
+  });
 }

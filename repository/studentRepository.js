@@ -2422,12 +2422,12 @@ export async function getStudentsByClassSection(classSectionTermId, timeTableCel
                         academicYearId: academicYearId,
                         ...buildScope(model.classSectionModel),
                     },
-                    sectionAttributes: ["classSectionsId", "section"],
+                    sectionAttributes: ["classSectionsId", "section", "year"],
                 }),
                 {
                     model: model.courseModel,
                     as: "course",
-                    attributes: ["courseName"],
+                    attributes: ["courseId", "courseName", "courseCode"],
                 },
                 {
                     model: model.attendanceModel,
@@ -2441,9 +2441,9 @@ export async function getStudentsByClassSection(classSectionTermId, timeTableCel
                         "timeTableCellDateWiseId",
                         "timeTableCellId",
                     ],
-                    where: {
-                        timeTableCellDateWiseId: Number(timeTableCellDateWiseId),
-                    },
+                    where: Array.isArray(timeTableCellDateWiseId)
+                        ? { timeTableCellDateWiseId: { [Op.in]: timeTableCellDateWiseId.map(Number) } }
+                        : { timeTableCellDateWiseId: Number(timeTableCellDateWiseId) },
                     required: false,
                 },
             ],
