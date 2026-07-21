@@ -2449,7 +2449,7 @@
     },
     {
       "name": "⑤ /lesson — mapping uses timeTableCellDateWiseId",
-      "description": "Step ⑤ — lesson plan APIs. Period key = **`timeTableCellDateWiseId`**.\n\n| # | Method | Path | Notes |\n|---|--------|------|-------|\n| 1 | GET | `/lesson/getRoutineByTeacher` | Published week grid + **one week** date-wise cells; `teacherType` Primary/Secondary |\n| 1 | GET | `/lesson/employee` | Subjects + lessons by `userId` |\n| 2 | POST | `/lesson` | Create lesson (`lectureWindowId` required) |\n| 2 | GET | `/lesson` | List lessons |\n| 2 | GET | `/lesson/simple` | Simple list |\n| 2 | GET | `/lesson/single` | One lesson |\n| 2 | POST | `/lesson/link` | Link lesson → lecture window |\n| 3 | POST | `/lesson/topic` | Add topic |\n| 4 | POST | `/lesson/mapping` | Map topic → `timeTableCellDateWiseId` |\n| 4 | POST | `/lesson/mapping/copy` | Copy mapping to other date-wise cells |\n| 4 | GET | `/lesson/mapping` | List mappings |\n| 4 | PATCH | `/lesson` | Set `completeDate` on mapping |\n| 4 | PATCH | `/lesson/mapping/:lessonMappingId` | Update mapping fields |\n| 4 | DELETE | `/lesson/mapping/:lessonMappingId` | Delete mapping |\n\nFlow: `getRoutineByTeacher` → capture `dateWise.timeTableCellDateWiseId` → `POST /lesson/mapping`.",
+      "description": "Step ⑤ — lesson plan APIs. Period key = **`timeTableCellDateWiseId`**.\n\n| # | Method | Path | Notes |\n|---|--------|------|-------|\n| 1 | GET | `/lesson/getRoutineByTeacher` | Published week grid + **one week** date-wise cells; `teacherType` Primary/Secondary |\n| 1 | GET | `/lesson/mapped` | Progress table: lesson/topic/subtopic + class date (`timeTableCellDateWiseId`) |\n| 1 | GET | `/lesson/employee` | Subjects + lessons by `userId` |\n| 2 | POST | `/lesson` | Create lesson (`lectureWindowId` required) |\n| 2 | GET | `/lesson` | List lessons |\n| 2 | GET | `/lesson/simple` | Simple list |\n| 2 | GET | `/lesson/single` | One lesson |\n| 2 | POST | `/lesson/link` | Link lesson → lecture window |\n| 3 | POST | `/lesson/topic` | Add topic |\n| 4 | POST | `/lesson/mapping` | Map topic → `timeTableCellDateWiseId` |\n| 4 | POST | `/lesson/mapping/copy` | Copy mapping to other date-wise cells |\n| 4 | GET | `/lesson/mapping` | List mappings |\n| 4 | PATCH | `/lesson` | Set `completeDate` on mapping |\n| 4 | PATCH | `/lesson/mapping/:lessonMappingId` | Update mapping fields |\n| 4 | DELETE | `/lesson/mapping/:lessonMappingId` | Delete mapping |\n\nFlow: `getRoutineByTeacher` → capture `dateWise.timeTableCellDateWiseId` → `POST /lesson/mapping`.",
       "item": [
         {
           "name": "GET getRoutineByTeacher (week + date-wise)",
@@ -2467,7 +2467,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/lesson/getRoutineByTeacher?userId={{timetable_userId}}&courseId={{timetable_courseId}}&sessionId={{timetable_sessionId}}&subjectId={{timetable_subjectId}}",
+              "raw": "{{baseurl}}/lesson/getRoutineByTeacher?userId={{timetable_userId}}&courseId={{timetable_courseId}}&sessionId={{timetable_sessionId}}&subjectId={{timetable_subjectId}}&date=2026-07-21&week=current",
               "host": [
                 "{{baseurl}}"
               ],
@@ -2499,12 +2499,16 @@
                 {
                   "key": "date",
                   "value": "2026-07-21",
-                  "disabled": true,
-                  "description": "Optional — week anchor YYYY-MM-DD"
+                  "description": "Optional — week anchor YYYY-MM-DD (default today)"
+                },
+                {
+                  "key": "week",
+                  "value": "current",
+                  "description": "Optional — current | next | previous (relative to date)"
                 }
               ]
             },
-            "description": "**GET /lesson/getRoutineByTeacher**\n\nRequired: `userId`, `courseId`, `sessionId`, `subjectId`.\nOptional: `date` (YYYY-MM-DD) to pick week (default today).\n\n- **Published routines only**\n- Full week grid (day-wise)\n- **One week** of `dateWiseCells` for that teacher\n- `teacherType`: Primary | Secondary on schedule items + date-wise rows\n\nUse `scheduleItems[].dateWise.timeTableCellDateWiseId` or `dateWiseCells[]` for mapping."
+            "description": "**GET /lesson/getRoutineByTeacher**\n\nRequired: `userId`, `courseId`, `sessionId`, `subjectId`.\nOptional: `date` (YYYY-MM-DD), `week` (`current` | `next` | `previous`).\n\n- **Published routines only**\n- Full week grid (day-wise)\n- **One week** of `dateWiseCells` for that teacher\n- `teacherType`: Primary | Secondary\n- Response `week.previousWeekDate` / `week.nextWeekDate` for navigation\n\nExamples:\n- Current: `?date=2026-07-21&week=current`\n- Next: `?date=2026-07-21&week=next`\n- Previous: `?date=2026-07-21&week=previous`\n\nUse `scheduleItems[].dateWise.timeTableCellDateWiseId` or `dateWiseCells[]` for mapping."
           },
           "response": [],
           "event": [
@@ -2528,6 +2532,69 @@
               }
             }
           ]
+        },
+        {
+          "name": "GET mapped progress (table)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/lesson/mapped?userId={{timetable_userId}}&subjectId={{timetable_subjectId}}&courseId={{timetable_courseId}}&sessionId={{timetable_sessionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lesson",
+                "mapped"
+              ],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{timetable_userId}}",
+                  "description": "Required — teacher userId"
+                },
+                {
+                  "key": "subjectId",
+                  "value": "{{timetable_subjectId}}",
+                  "description": "Required"
+                },
+                {
+                  "key": "courseId",
+                  "value": "{{timetable_courseId}}",
+                  "description": "Optional"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{timetable_sessionId}}",
+                  "description": "Optional"
+                },
+                {
+                  "key": "lessonId",
+                  "value": "{{timetable_lessonId}}",
+                  "disabled": true,
+                  "description": "Optional"
+                },
+                {
+                  "key": "status",
+                  "value": "inComplete",
+                  "disabled": true,
+                  "description": "Optional filter"
+                }
+              ]
+            },
+            "description": "**GET /lesson/mapped** — progress table rows.\n\nColumns: Progress `completed/total`, Lesson, Topic, Sub Topic, Completed Date, Upcoming Date, Status, Action.\n\nEach row includes class date via **`timeTableCellDateWiseId`** / `classDate`.\n\nRequired: `userId`, `subjectId`. Optional: `courseId`, `sessionId`, `lessonId`, `status`."
+          },
+          "response": []
         },
         {
           "name": "GET employee subjects + lessons",

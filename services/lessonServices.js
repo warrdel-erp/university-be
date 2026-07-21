@@ -39,6 +39,35 @@ function getCurrentWeekRange(anchorDate) {
   };
 }
 
+function shiftDateByDays(dateStr, days) {
+  const d = new Date(`${dateStr}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return toDateOnlyString(d);
+}
+
+/**
+ * @param {string} date - week anchor YYYY-MM-DD
+ * @param {'current'|'next'|'previous'} weekNav
+ */
+function resolveWeekRange(date, weekNav = 'current') {
+  const baseAnchor = date || toDateOnlyString(new Date());
+  let shiftedAnchor = baseAnchor;
+
+  if (weekNav === 'next') {
+    shiftedAnchor = shiftDateByDays(baseAnchor, 7);
+  } else if (weekNav === 'previous') {
+    shiftedAnchor = shiftDateByDays(baseAnchor, -7);
+  }
+
+  const week = getCurrentWeekRange(shiftedAnchor);
+  return {
+    ...week,
+    week: weekNav,
+    previousWeekDate: shiftDateByDays(week.startDate, -7),
+    nextWeekDate: shiftDateByDays(week.startDate, 7),
+  };
+}
+
 function formatDateKey(value) {
   if (value == null) return null;
   if (typeof value === 'string') {
@@ -154,12 +183,12 @@ function enrichPublishedRoutines(routines, week, dateWiseLookup, userId) {
   return published;
 }
 
-export async function getRoutineByTeacherForLesson(userId, courseId, sessionId, subjectId, date) {
+export async function getRoutineByTeacherForLesson(userId, courseId, sessionId, subjectId, date, weekNav = 'current') {
   if (subjectId == null) {
     throw new Error('subjectId is required');
   }
 
-  const week = getCurrentWeekRange(date || toDateOnlyString(new Date()));
+  const week = resolveWeekRange(date, weekNav || 'current');
 
   const [result, dateWiseRows] = await Promise.all([
     timeTableCreateServices.getRoutineByTeacherAndAcademicYear(
@@ -197,9 +226,12 @@ export async function getRoutineByTeacherForLesson(userId, courseId, sessionId, 
     session: result.session,
     classSections: result.classSections,
     week: {
+      week: week.week,
       startDate: week.startDate,
       endDate: week.endDate,
       anchorDate: week.anchorDate,
+      previousWeekDate: week.previousWeekDate,
+      nextWeekDate: week.nextWeekDate,
     },
     routines,
     dateWiseCells,
@@ -556,4 +588,136 @@ export async function linkLessonsToWindow(lectureWindowId, lessonIds, updatedBy,
 
 export async function getLectureWindowById(lectureWindowId, academicYearId) {
     return lectureWindowRepository.getLectureWindowById(lectureWindowId, academicYearId);
+}
+
+function formatMappedDate(value) {
+  if (value == null) return null;
+  if (typeof value === 'string') return value.slice(0, 10);
+  return toDateOnlyString(new Date(value));
+}
+
+function isCompletedStatus(status) {
+  if (status == null) return false;
+  const normalized = String(status).toLowerCase();
+  return normalized === 'complete' || normalized === 'completed';
+}
+
+/**
+ * Progress table rows:
+ * Lesson | Topic | Sub Topic | Completed Date | Upcoming Date | Status | Action
+ * + class date via timeTableCellDateWiseId
+ */
+export async function getMappedLessonProgress({
+  userId,
+  subjectId,
+  courseId,
+  sessionId,
+  lessonId,
+  status,
+}) {
+  if (userId == null) {
+    throw Object.assign(new Error('userId is required'), { statusCode: 400 });
+  }
+  if (subjectId == null) {
+    throw Object.assign(new Error('subjectId is required'), { statusCode: 400 });
+  }
+
+  const today = toDateOnlyString(new Date());
+  const rowsRaw = await lesson.getMappedLessonRows({
+    userId,
+    subjectId,
+    courseId,
+    sessionId,
+    lessonId,
+    status,
+  });
+
+  const rows = [];
+  let completed = 0;
+
+  for (const row of rowsRaw) {
+    const plain = row.get ? row.get({ plain: true }) : row;
+    const topic = plain.mappingTopic || {};
+    const lessonRow = topic.lessonTopic || {};
+    const dateWise = plain.timeTableCellDateWise || {};
+    const cell = dateWise.timeTableCell || {};
+    const routine = cell.timeTableRoutine || {};
+    const termRow = routine.timeTableClassSectionTerm || {};
+    const section = termRow.classSection || {};
+    const viewerTeacher = resolveViewerTeacher(dateWise.timeTableCellTeachersDateWise, userId);
+
+    const classDate = formatMappedDate(dateWise.date || plain.date);
+    const completedDate = formatMappedDate(plain.completeDate);
+    const done = isCompletedStatus(plain.status);
+    if (done) completed += 1;
+
+    let upcomingDate = null;
+    if (!done && classDate != null && classDate >= today) {
+      upcomingDate = classDate;
+    }
+
+    const subTopics = [];
+    for (const sub of topic.subTopic || []) {
+      subTopics.push({
+        subTopicId: sub.subTopicId,
+        name: sub.name,
+        description: sub.description || null,
+      });
+    }
+
+    rows.push({
+      lessonMappingId: plain.lessonMappingId,
+      lesson: {
+        lessonId: lessonRow.lessonId,
+        name: lessonRow.name,
+        description: lessonRow.description || null,
+        lectureWindowId: lessonRow.lectureWindowId || null,
+      },
+      topic: {
+        topicId: topic.topicId,
+        name: topic.name,
+        description: topic.description || null,
+      },
+      subTopics,
+      subTopicNames: subTopics.map((s) => s.name).join(', '),
+      completedDate: done ? completedDate : null,
+      upcomingDate,
+      status: plain.status,
+      note: plain.note || null,
+      lectureUrl: plain.lectureUrl || null,
+      classDate,
+      timeTableCellDateWiseId: dateWise.timeTableCellDateWiseId || plain.timeTableCellDateWiseId,
+      timeTableCellId: cell.timeTableCellId || plain.timeTableCellId,
+      day: cell.day || null,
+      period: cell.period || null,
+      periodName: cell.timeTablecreation?.periodName || null,
+      startTime: cell.timeTablecreation?.startTime || null,
+      endTime: cell.timeTablecreation?.endTime || null,
+      teacherType: viewerTeacher?.teacherType || null,
+      roomNumber: dateWise.classRoom?.roomNumber || null,
+      classSection: {
+        classSectionTermId: routine.classSectionTermId ?? termRow.classSectionTermId ?? null,
+        classSectionsId: termRow.classSectionsId ?? section.classSectionsId ?? null,
+        year: section.year ?? null,
+        section: section.section ?? null,
+        term: termRow.term ?? null,
+      },
+      subject: lessonRow.lessonSubject
+        ? {
+            subjectId: lessonRow.lessonSubject.subjectId,
+            subjectName: lessonRow.lessonSubject.subjectName,
+            subjectCode: lessonRow.lessonSubject.subjectCode || null,
+          }
+        : null,
+    });
+  }
+
+  return {
+    progress: {
+      completed,
+      total: rows.length,
+      label: `${completed}/${rows.length}`,
+    },
+    rows,
+  };
 }

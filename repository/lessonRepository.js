@@ -905,3 +905,164 @@ export async function getTeacherWeekDateWiseCells({
     order: [['date', 'ASC'], ['timeTableCellDateWiseId', 'ASC']],
   });
 }
+
+/**
+ * Lesson mappings for progress table — filtered by teacher + subject (+ optional course/session/lesson).
+ */
+export async function getMappedLessonRows({
+  userId,
+  subjectId,
+  courseId,
+  sessionId,
+  lessonId,
+  status,
+}) {
+  const lessonWhere = {
+    ...buildScope(model.lessonModel),
+  };
+  if (subjectId != null) {
+    lessonWhere.subjectId = Number(subjectId);
+  }
+  if (lessonId != null) {
+    lessonWhere.lessonId = Number(lessonId);
+  }
+
+  const mappingWhere = {};
+  if (status != null && status !== '') {
+    mappingWhere.status = status;
+  }
+
+  const routineWhere = {
+    ...buildScope(model.timeTableRoutineModel),
+  };
+  if (courseId != null) {
+    routineWhere.courseId = Number(courseId);
+  }
+
+  const sectionWhere = {
+    ...buildScope(model.classSectionModel),
+  };
+  if (sessionId != null) {
+    sectionWhere.sessionId = Number(sessionId);
+  }
+  if (courseId != null) {
+    sectionWhere.courseId = Number(courseId);
+  }
+
+  return scoped(model.lessonMappingModel).findAll({
+    attributes: [
+      'lessonMappingId',
+      'topicId',
+      'timeTableCellDateWiseId',
+      'timeTableCellId',
+      'date',
+      'completeDate',
+      'note',
+      'lectureUrl',
+      'file',
+      'status',
+    ],
+    where: mappingWhere,
+    include: [
+      {
+        model: model.topicModel,
+        as: 'mappingTopic',
+        required: true,
+        attributes: ['topicId', 'name', 'description', 'lessonId'],
+        include: [
+          {
+            model: model.lessonModel,
+            as: 'lessonTopic',
+            required: true,
+            attributes: ['lessonId', 'name', 'description', 'subjectId', 'sessionId', 'userId', 'lectureWindowId'],
+            where: lessonWhere,
+            include: [
+              {
+                model: model.subjectModel,
+                as: 'lessonSubject',
+                attributes: ['subjectId', 'subjectName', 'subjectCode'],
+                required: false,
+              },
+            ],
+          },
+          {
+            model: model.subTopicModel,
+            as: 'subTopic',
+            required: false,
+            attributes: ['subTopicId', 'name', 'description', 'topicId'],
+          },
+        ],
+      },
+      {
+        model: model.timeTableCellDateWiseModel,
+        as: 'timeTableCellDateWise',
+        required: true,
+        attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
+        include: [
+          {
+            model: model.timeTableCellTeachersDateWiseModel,
+            as: 'timeTableCellTeachersDateWise',
+            required: true,
+            where: { userId: Number(userId) },
+            attributes: ['userId', 'teacherType', 'isAttendence'],
+          },
+          {
+            model: model.classRoomModel,
+            as: 'classRoom',
+            required: false,
+            attributes: ['classRoomSectionId', 'roomNumber'],
+          },
+          {
+            model: model.timeTableCellModel,
+            as: 'timeTableCell',
+            required: true,
+            attributes: [
+              'timeTableCellId',
+              'day',
+              'period',
+              'timeTableType',
+              'subjectId',
+              'timeTableCreationId',
+              'timeTableRoutineId',
+            ],
+            include: [
+              {
+                model: model.timeTableStructurePeriodsModel,
+                as: 'timeTablecreation',
+                attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime'],
+                required: false,
+              },
+              {
+                model: model.timeTableRoutineModel,
+                as: 'timeTableRoutine',
+                required: true,
+                where: routineWhere,
+                attributes: [
+                  'timeTableRoutineId',
+                  'classSectionTermId',
+                  'startingDate',
+                  'endingDate',
+                  'courseId',
+                  'isPublish',
+                ],
+                include: [
+                  timeTableRoutineClassSectionInclude({
+                    termRequired: true,
+                    sectionRequired: true,
+                    sectionWhere,
+                    termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
+                    sectionAttributes: ['classSectionsId', 'section', 'year', 'sessionId', 'courseId'],
+                  }),
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    order: [
+      ['date', 'ASC'],
+      ['lessonMappingId', 'ASC'],
+    ],
+  });
+}

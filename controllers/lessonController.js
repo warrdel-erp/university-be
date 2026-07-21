@@ -200,18 +200,38 @@ export async function linkLessonsToWindow(req, res) {
 
 export async function getRoutineByTeacher(req, res) {
     try {
-        const { userId, courseId, sessionId, subjectId, date } = req.query;
+        const { userId, courseId, sessionId, subjectId, date, week } = req.query;
         const result = await lesson.getRoutineByTeacherForLesson(
             Number(userId),
             Number(courseId),
             Number(sessionId),
             Number(subjectId),
             date,
+            week || 'current',
         );
         return SuccessResponse(res, 200, "Teacher lesson routine fetched successfully", result);
     } catch (error) {
         console.error("Error in getRoutineByTeacher:", error);
         const status = /required/i.test(error.message) ? 400 : 500;
         return ErrorResponse(res, status, error.message || "Internal Server Error");
+    }
+};
+
+export async function getMappedLessonProgress(req, res) {
+    try {
+        const { userId, subjectId, courseId, sessionId, lessonId, status } = req.query;
+        const result = await lesson.getMappedLessonProgress({
+            userId: Number(userId),
+            subjectId: Number(subjectId),
+            courseId: courseId != null ? Number(courseId) : undefined,
+            sessionId: sessionId != null ? Number(sessionId) : undefined,
+            lessonId: lessonId != null ? Number(lessonId) : undefined,
+            status,
+        });
+        return SuccessResponse(res, 200, "Mapped lesson progress fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getMappedLessonProgress:", error);
+        const statusCode = error.statusCode || (/required/i.test(error.message) ? 400 : 500);
+        return ErrorResponse(res, statusCode, error.message || "Internal Server Error");
     }
 };

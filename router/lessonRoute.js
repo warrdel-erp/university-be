@@ -18,6 +18,7 @@ import {
     getSimpleLessonList,
     linkLessonsToWindow,
     getRoutineByTeacher,
+    getMappedLessonProgress,
 } from "../controllers/lessonController.js";
 
 import { PERMISSIONS } from '../const/permissions.js';
@@ -85,6 +86,22 @@ const getRoutineByTeacherSchema = z.object({
     sessionId: positiveIntegerId,
     subjectId: positiveIntegerId,
     date: optionalDateOnly,
+    week: z.preprocess(
+        (val) => (val === '' || val == null ? undefined : val),
+        z.enum(['current', 'next', 'previous']).optional(),
+    ),
+});
+
+const mappedProgressQuerySchema = z.object({
+    userId: positiveIntegerId,
+    subjectId: positiveIntegerId,
+    courseId: optionalPositiveId,
+    sessionId: optionalPositiveId,
+    lessonId: optionalPositiveId,
+    status: z.preprocess(
+        (val) => (val === '' || val == null ? undefined : val),
+        z.string().optional(),
+    ),
 });
 
 // ---------------------------------------------------------------------------
@@ -101,6 +118,13 @@ router.get(
     checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null),
     validate({ query: getRoutineByTeacherSchema }),
     getRoutineByTeacher,
+);
+router.get(
+    '/mapped',
+    userAuth,
+    checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null),
+    validate({ query: mappedProgressQuerySchema }),
+    getMappedLessonProgress,
 );
 
 // ---------------------------------------------------------------------------
