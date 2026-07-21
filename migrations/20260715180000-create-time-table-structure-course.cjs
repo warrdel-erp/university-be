@@ -151,30 +151,30 @@ module.exports = {
           ? 'COALESCE(r.course_id, s.course_id)'
           : 'r.course_id';
 
-        const sessionFromTerm = `
-          (
-            SELECT cs.session_id
-            FROM class_section_term cst
-            INNER JOIN class_sections cs ON cs.class_sections_id = cst.class_sections_id
-            WHERE cst.class_section_term_id = r.class_section_term_id
-            LIMIT 1
-          )
+        // Resolve session via JOIN (not correlated subquery) so ONLY_FULL_GROUP_BY
+        // does not treat r.class_section_term_id as a non-grouped SELECT expression.
+        const sessionJoin = `
+          LEFT JOIN class_section_term cst
+            ON cst.class_section_term_id = r.class_section_term_id
+          LEFT JOIN class_sections cs_term
+            ON cs_term.class_sections_id = cst.class_sections_id
+          ${
+            hasRoutineClassSectionsId
+              ? `
+          LEFT JOIN class_sections cs_routine
+            ON cs_routine.class_sections_id = r.class_sections_id
+          `
+              : ''
+          }
         `;
 
-        const sessionFromRoutineSection = hasRoutineClassSectionsId
-          ? `
-          (
-            SELECT cs2.session_id
-            FROM class_sections cs2
-            WHERE cs2.class_sections_id = r.class_sections_id
-            LIMIT 1
-          )
-          `
-          : 'NULL';
-
         const sessionExpr = hasStructureSession
-          ? `COALESCE(${sessionFromTerm}, ${sessionFromRoutineSection}, s.session_id)`
-          : `COALESCE(${sessionFromTerm}, ${sessionFromRoutineSection})`;
+          ? hasRoutineClassSectionsId
+            ? 'COALESCE(cs_term.session_id, cs_routine.session_id, s.session_id)'
+            : 'COALESCE(cs_term.session_id, s.session_id)'
+          : hasRoutineClassSectionsId
+            ? 'COALESCE(cs_term.session_id, cs_routine.session_id)'
+            : 'cs_term.session_id';
 
         const startExpr = hasStructureDates
           ? 'COALESCE(s.starting_date, DATE(r.starting_date))'
@@ -219,6 +219,7 @@ module.exports = {
           INNER JOIN time_table_routine r
             ON r.time_table_name_id = s.time_table_name_id
            ${deletedFilter}
+          ${sessionJoin}
           WHERE ${courseExpr} IS NOT NULL
             AND ${sessionExpr} IS NOT NULL
             AND ${startExpr} IS NOT NULL
