@@ -167,7 +167,7 @@ const lessonOptionAttributes = [
     'description',
     'lectureWindowId',
     'subjectId',
-    'employeeId',
+    'userId',
     'sessionId',
 ];
 

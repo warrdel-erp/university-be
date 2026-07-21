@@ -2709,47 +2709,74 @@ function formatStudentTimetable(allData) {
   return { formatted };
 }
 
+async function buildClassSectionStudentsBlock(dateWiseId) {
+  const period = await resolveSourcePeriodByDateWiseId(Number(dateWiseId));
+
+  const classSectionTermId = period.classSectionTermId;
+  if (!classSectionTermId) {
+    const error = new Error(
+      "classSectionTermId could not be resolved from timeTableCellDateWiseId",
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const students = await studentRepository.getStudentsByClassSection(
+    classSectionTermId,
+    period.timeTableCellDateWiseId,
+  );
+
+  const cell = period.timeTableCell || {};
+  return {
+    classSectionTermId: Number(classSectionTermId),
+    timeTableCellDateWiseId: period.timeTableCellDateWiseId,
+    timeTableCellId: period.timeTableCellId,
+    date: period.date,
+    students: toPlainRows(students),
+    period: {
+      timeTableCellDateWiseId: period.timeTableCellDateWiseId,
+      timeTableCellId: period.timeTableCellId,
+      date: period.date,
+      day: cell.day,
+      period: cell.period,
+      timeTableType: cell.timeTableType,
+      timeTableSubject: cell.timeTableSubject || null,
+    },
+  };
+}
+
 export async function getStudentsByClassSection({
   timeTableCellDateWiseId,
 }) {
   try {
-    const period = await resolveSourcePeriodByDateWiseId(
-      Number(timeTableCellDateWiseId),
-    );
+    const rawIds = Array.isArray(timeTableCellDateWiseId)
+      ? timeTableCellDateWiseId
+      : [timeTableCellDateWiseId];
 
-    const classSectionTermId = period.classSectionTermId;
-    if (!classSectionTermId) {
-      const error = new Error(
-        "classSectionTermId could not be resolved from timeTableCellDateWiseId",
-      );
+    const uniqueIds = [];
+    for (const id of rawIds) {
+      const num = Number(id);
+      if (num && !uniqueIds.includes(num)) {
+        uniqueIds.push(num);
+      }
+    }
+
+    if (!uniqueIds.length) {
+      const error = new Error("timeTableCellDateWiseId is required");
       error.statusCode = 400;
       throw error;
     }
 
-    const students = await studentRepository.getStudentsByClassSection(
-      classSectionTermId,
-      period.timeTableCellDateWiseId,
-    );
+    const periods = [];
+    for (const dateWiseId of uniqueIds) {
+      periods.push(await buildClassSectionStudentsBlock(dateWiseId));
+    }
 
-    const cell = period.timeTableCell || {};
-    const response = {
-      classSectionTermId: Number(classSectionTermId),
-      timeTableCellDateWiseId: period.timeTableCellDateWiseId,
-      timeTableCellId: period.timeTableCellId,
-      date: period.date,
-      students: toPlainRows(students),
-      period: {
-        timeTableCellDateWiseId: period.timeTableCellDateWiseId,
-        timeTableCellId: period.timeTableCellId,
-        date: period.date,
-        day: cell.day,
-        period: cell.period,
-        timeTableType: cell.timeTableType,
-        timeTableSubject: cell.timeTableSubject || null,
-      },
-    };
+    if (periods.length === 1) {
+      return periods[0];
+    }
 
-    return response;
+    return { periods };
   } catch (error) {
     console.error("Service Error:", error);
     throw error;

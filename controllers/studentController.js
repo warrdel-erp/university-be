@@ -437,11 +437,18 @@ export async function getStudentsByClassSection(req, res) {
             timeTableCellDateWiseId,
         });
 
-        const students = result.students ?? [];
+        let count = 0;
+        if (Array.isArray(result.periods)) {
+            for (const block of result.periods) {
+                count += block.students.length;
+            }
+        } else {
+            count = result.students.length;
+        }
 
         return res.status(200).json({
             success: true,
-            count: students.length,
+            count,
             data: result,
         });
     } catch (error) {
