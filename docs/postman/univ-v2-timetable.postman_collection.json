@@ -2503,7 +2503,7 @@
                 }
               ]
             },
-            "description": "**GET /lesson/getRoutineByTeacher**\n\nRequired: `userId`, `courseId`, `sessionId`, `subjectId`.\nOptional: `date` (YYYY-MM-DD) — returns that calendar week (Mon–Sun).\n\n- **Published routines only**\n- Full week grid (day-wise)\n- **One week** of `dateWiseCells` for that teacher\n- `teacherType`: Primary | Secondary\n\nUse `scheduleItems[].dateWise.timeTableCellDateWiseId` or `dateWiseCells[]` for mapping."
+            "description": "**GET /lesson/getRoutineByTeacher**\n\nRequired: `userId`, `courseId`, `sessionId`, `subjectId`.\nOptional: `date` (YYYY-MM-DD) — returns that calendar week (Mon–Sun).\n\n- **Published routines only**\n- Full week grid (day-wise)\n- **One week** of `dateWiseCells` for that teacher\n- `teacherType`: Primary | Secondary\n- Response `week` includes `previousWeekDate` / `nextWeekDate` for navigation (pass as next `date`)\n\nUse `scheduleItems[].dateWise.timeTableCellDateWiseId` or `dateWiseCells[]` for mapping."
           },
           "response": [],
           "event": [

@@ -31,11 +31,21 @@ function getCurrentWeekRange(anchorDate) {
     dayDates[WEEK_DAYS[i]] = toDateOnlyString(d);
   }
 
+  const startDate = toDateOnlyString(monday);
+  const endDate = toDateOnlyString(sunday);
+
+  const previousMonday = new Date(monday);
+  previousMonday.setDate(monday.getDate() - 7);
+  const nextMonday = new Date(monday);
+  nextMonday.setDate(monday.getDate() + 7);
+
   return {
-    startDate: toDateOnlyString(monday),
-    endDate: toDateOnlyString(sunday),
+    startDate,
+    endDate,
     anchorDate,
     dayDates,
+    previousWeekDate: toDateOnlyString(previousMonday),
+    nextWeekDate: toDateOnlyString(nextMonday),
   };
 }
 
@@ -197,9 +207,12 @@ export async function getRoutineByTeacherForLesson(userId, courseId, sessionId, 
     session: result.session,
     classSections: result.classSections,
     week: {
+      week: 'current',
       startDate: week.startDate,
       endDate: week.endDate,
       anchorDate: week.anchorDate,
+      previousWeekDate: week.previousWeekDate,
+      nextWeekDate: week.nextWeekDate,
     },
     routines,
     dateWiseCells,
