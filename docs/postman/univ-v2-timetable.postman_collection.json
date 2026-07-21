@@ -2467,7 +2467,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/lesson/getRoutineByTeacher?userId={{timetable_userId}}&courseId={{timetable_courseId}}&sessionId={{timetable_sessionId}}&subjectId={{timetable_subjectId}}&date=2026-07-21&week=current",
+              "raw": "{{baseurl}}/lesson/getRoutineByTeacher?userId={{timetable_userId}}&courseId={{timetable_courseId}}&sessionId={{timetable_sessionId}}&subjectId={{timetable_subjectId}}&date=2026-07-21",
               "host": [
                 "{{baseurl}}"
               ],
@@ -2499,16 +2499,11 @@
                 {
                   "key": "date",
                   "value": "2026-07-21",
-                  "description": "Optional — week anchor YYYY-MM-DD (default today)"
-                },
-                {
-                  "key": "week",
-                  "value": "current",
-                  "description": "Optional — current | next | previous (relative to date)"
+                  "description": "Optional — any date in the week (Mon–Sun). Default today."
                 }
               ]
             },
-            "description": "**GET /lesson/getRoutineByTeacher**\n\nRequired: `userId`, `courseId`, `sessionId`, `subjectId`.\nOptional: `date` (YYYY-MM-DD), `week` (`current` | `next` | `previous`).\n\n- **Published routines only**\n- Full week grid (day-wise)\n- **One week** of `dateWiseCells` for that teacher\n- `teacherType`: Primary | Secondary\n- Response `week.previousWeekDate` / `week.nextWeekDate` for navigation\n\nExamples:\n- Current: `?date=2026-07-21&week=current`\n- Next: `?date=2026-07-21&week=next`\n- Previous: `?date=2026-07-21&week=previous`\n\nUse `scheduleItems[].dateWise.timeTableCellDateWiseId` or `dateWiseCells[]` for mapping."
+            "description": "**GET /lesson/getRoutineByTeacher**\n\nRequired: `userId`, `courseId`, `sessionId`, `subjectId`.\nOptional: `date` (YYYY-MM-DD) — returns that calendar week (Mon–Sun).\n\n- **Published routines only**\n- Full week grid (day-wise)\n- **One week** of `dateWiseCells` for that teacher\n- `teacherType`: Primary | Secondary\n\nUse `scheduleItems[].dateWise.timeTableCellDateWiseId` or `dateWiseCells[]` for mapping."
           },
           "response": [],
           "event": [

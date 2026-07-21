@@ -200,14 +200,13 @@ export async function linkLessonsToWindow(req, res) {
 
 export async function getRoutineByTeacher(req, res) {
     try {
-        const { userId, courseId, sessionId, subjectId, date, week } = req.query;
+        const { userId, courseId, sessionId, subjectId, date } = req.query;
         const result = await lesson.getRoutineByTeacherForLesson(
             Number(userId),
             Number(courseId),
             Number(sessionId),
             Number(subjectId),
             date,
-            week || 'current',
         );
         return SuccessResponse(res, 200, "Teacher lesson routine fetched successfully", result);
     } catch (error) {

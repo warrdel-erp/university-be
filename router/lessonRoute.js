@@ -86,10 +86,6 @@ const getRoutineByTeacherSchema = z.object({
     sessionId: positiveIntegerId,
     subjectId: positiveIntegerId,
     date: optionalDateOnly,
-    week: z.preprocess(
-        (val) => (val === '' || val == null ? undefined : val),
-        z.enum(['current', 'next', 'previous']).optional(),
-    ),
 });
 
 const mappedProgressQuerySchema = z.object({

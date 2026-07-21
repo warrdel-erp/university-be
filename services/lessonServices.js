@@ -39,35 +39,6 @@ function getCurrentWeekRange(anchorDate) {
   };
 }
 
-function shiftDateByDays(dateStr, days) {
-  const d = new Date(`${dateStr}T00:00:00`);
-  d.setDate(d.getDate() + days);
-  return toDateOnlyString(d);
-}
-
-/**
- * @param {string} date - week anchor YYYY-MM-DD
- * @param {'current'|'next'|'previous'} weekNav
- */
-function resolveWeekRange(date, weekNav = 'current') {
-  const baseAnchor = date || toDateOnlyString(new Date());
-  let shiftedAnchor = baseAnchor;
-
-  if (weekNav === 'next') {
-    shiftedAnchor = shiftDateByDays(baseAnchor, 7);
-  } else if (weekNav === 'previous') {
-    shiftedAnchor = shiftDateByDays(baseAnchor, -7);
-  }
-
-  const week = getCurrentWeekRange(shiftedAnchor);
-  return {
-    ...week,
-    week: weekNav,
-    previousWeekDate: shiftDateByDays(week.startDate, -7),
-    nextWeekDate: shiftDateByDays(week.startDate, 7),
-  };
-}
-
 function formatDateKey(value) {
   if (value == null) return null;
   if (typeof value === 'string') {
@@ -183,12 +154,12 @@ function enrichPublishedRoutines(routines, week, dateWiseLookup, userId) {
   return published;
 }
 
-export async function getRoutineByTeacherForLesson(userId, courseId, sessionId, subjectId, date, weekNav = 'current') {
+export async function getRoutineByTeacherForLesson(userId, courseId, sessionId, subjectId, date) {
   if (subjectId == null) {
     throw new Error('subjectId is required');
   }
 
-  const week = resolveWeekRange(date, weekNav || 'current');
+  const week = getCurrentWeekRange(date || toDateOnlyString(new Date()));
 
   const [result, dateWiseRows] = await Promise.all([
     timeTableCreateServices.getRoutineByTeacherAndAcademicYear(
@@ -226,12 +197,9 @@ export async function getRoutineByTeacherForLesson(userId, courseId, sessionId, 
     session: result.session,
     classSections: result.classSections,
     week: {
-      week: week.week,
       startDate: week.startDate,
       endDate: week.endDate,
       anchorDate: week.anchorDate,
-      previousWeekDate: week.previousWeekDate,
-      nextWeekDate: week.nextWeekDate,
     },
     routines,
     dateWiseCells,
