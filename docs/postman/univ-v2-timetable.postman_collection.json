@@ -2503,7 +2503,7 @@
                 }
               ]
             },
-            "description": "**GET /lesson/getRoutineByTeacher**\n\nRequired: `userId`, `courseId`, `sessionId`, `subjectId`.\nOptional: `date` (YYYY-MM-DD) — returns that calendar week (Mon–Sun).\n\n- **Published routines only**\n- Full week grid (day-wise)\n- **One week** of `dateWiseCells` for that teacher\n- `teacherType`: Primary | Secondary\n- Response `week` includes `previousWeekDate` / `nextWeekDate` for navigation (pass as next `date`)\n\nUse `scheduleItems[].dateWise.timeTableCellDateWiseId` or `dateWiseCells[]` for mapping."
+            "description": "**GET /lesson/getRoutineByTeacher**\n\nRequired: `userId`, `courseId`, `sessionId`, `subjectId`.\nOptional: `date` (YYYY-MM-DD) — returns that calendar week (Mon–Sun).\n\n- **Published routines only**\n- Full week grid (day-wise)\n- One week of dated schedule items for that teacher\n- `teacherType`: Primary | Secondary\n- Response `week` includes `previousWeekDate` / `nextWeekDate` for navigation (pass as next `date`)\n\nUse `scheduleItems[].dateWise.timeTableCellDateWiseId` for mapping."
           },
           "response": [],
           "event": [
@@ -2515,7 +2515,22 @@
                   "try {",
                   "  const res = pm.response.json();",
                   "  const data = res.data || res;",
-                  "  const row = (data.dateWiseCells && data.dateWiseCells[0]) || null;",
+                  "  let row = null;",
+                  "  for (const routine of data.routines || []) {",
+                  "    for (const period of routine.periods || []) {",
+                  "      for (const day of period.days || []) {",
+                  "        for (const item of day.scheduleItems || []) {",
+                  "          if (item.dateWise && item.dateWise.timeTableCellDateWiseId) {",
+                  "            row = item.dateWise;",
+                  "            break;",
+                  "          }",
+                  "        }",
+                  "        if (row) break;",
+                  "      }",
+                  "      if (row) break;",
+                  "    }",
+                  "    if (row) break;",
+                  "  }",
                   "  if (row && row.timeTableCellDateWiseId) {",
                   "    pm.collectionVariables.set('timetable_timeTableCellDateWiseId', String(row.timeTableCellDateWiseId));",
                   "  }",

@@ -215,7 +215,6 @@ export async function getRoutineByTeacherForLesson(userId, courseId, sessionId, 
       nextWeekDate: week.nextWeekDate,
     },
     routines,
-    dateWiseCells,
   };
 }
 
