@@ -110,7 +110,62 @@ function buildDateWiseLookup(dateWiseCells) {
   return lookup;
 }
 
-function enrichPublishedRoutines(routines, week, dateWiseLookup, userId) {
+function mapLessonPlanSummary(row) {
+  const plain = row.get ? row.get({ plain: true }) : row;
+  const topic = plain.mappingTopic || {};
+  const lessonRow = topic.lessonTopic || {};
+  const window = lessonRow.lectureWindow || {};
+
+  const subTopics = [];
+  const subTopicNames = [];
+  for (const sub of topic.subTopic || []) {
+    subTopics.push({
+      subTopicId: sub.subTopicId,
+      name: sub.name || null,
+    });
+    if (sub.name) {
+      subTopicNames.push(sub.name);
+    }
+  }
+
+  return {
+    lessonMappingId: plain.lessonMappingId,
+    lessonId: lessonRow.lessonId || null,
+    lessonName: lessonRow.name || null,
+    topicId: topic.topicId || plain.topicId || null,
+    topicName: topic.name || null,
+    subTopics,
+    subTopicName: subTopicNames.length > 0 ? subTopicNames.join(', ') : null,
+    lectureWindowId: lessonRow.lectureWindowId || window.lectureWindowId || null,
+    lectureWindowName: window.name || null,
+    note: plain.note || null,
+    lectureUrl: plain.lectureUrl || null,
+    file: plain.file || null,
+    status: plain.status || null,
+    completeDate: plain.completeDate || null,
+  };
+}
+
+function buildLessonPlanLookup(rows) {
+  const lookup = new Map();
+  for (const row of rows || []) {
+    const plain = row.get ? row.get({ plain: true }) : row;
+    const dateWiseId = Number(plain.timeTableCellDateWiseId);
+    if (!dateWiseId) {
+      continue;
+    }
+
+    let plans = lookup.get(dateWiseId);
+    if (!plans) {
+      plans = [];
+      lookup.set(dateWiseId, plans);
+    }
+    plans.push(mapLessonPlanSummary(plain));
+  }
+  return lookup;
+}
+
+function enrichPublishedRoutines(routines, week, dateWiseLookup, lessonPlanLookup, userId) {
   const published = [];
 
   for (const routine of routines || []) {
@@ -147,7 +202,10 @@ function enrichPublishedRoutines(routines, week, dateWiseLookup, userId) {
           item.userId = viewerTeacher?.userId != null
             ? Number(viewerTeacher.userId)
             : Number(userId);
-          item.dateWise = matched;
+          const plans = dateWiseId != null
+            ? lessonPlanLookup.get(Number(dateWiseId))
+            : null;
+          item.lessonPlan = plans && plans.length > 0 ? plans : null;
 
           if (day.timeTableCellId == null && cellId != null) {
             day.timeTableCellId = cellId;
@@ -189,15 +247,23 @@ export async function getRoutineByTeacherForLesson(userId, courseId, sessionId, 
   ]);
 
   const dateWiseCells = [];
+  const dateWiseIds = [];
   for (const row of dateWiseRows) {
-    dateWiseCells.push(mapDateWiseRow(row, userId));
+    const mapped = mapDateWiseRow(row, userId);
+    dateWiseCells.push(mapped);
+    if (mapped.timeTableCellDateWiseId != null) {
+      dateWiseIds.push(mapped.timeTableCellDateWiseId);
+    }
   }
 
+  const lessonPlanRows = await lesson.getLessonPlanSummariesByDateWiseIds(dateWiseIds);
   const dateWiseLookup = buildDateWiseLookup(dateWiseCells);
+  const lessonPlanLookup = buildLessonPlanLookup(lessonPlanRows);
   const routines = enrichPublishedRoutines(
     result.routines || [],
     week,
     dateWiseLookup,
+    lessonPlanLookup,
     userId,
   );
 

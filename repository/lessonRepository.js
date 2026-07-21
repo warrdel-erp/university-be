@@ -907,6 +907,70 @@ export async function getTeacherWeekDateWiseCells({
 }
 
 /**
+ * Compact lesson/topic/subtopic/window names for date-wise cells.
+ */
+export async function getLessonPlanSummariesByDateWiseIds(timeTableCellDateWiseIds) {
+  if (!timeTableCellDateWiseIds || timeTableCellDateWiseIds.length === 0) {
+    return [];
+  }
+
+  const ids = [];
+  for (const id of timeTableCellDateWiseIds) {
+    ids.push(Number(id));
+  }
+
+  return scoped(model.lessonMappingModel).findAll({
+    attributes: [
+      'lessonMappingId',
+      'topicId',
+      'timeTableCellDateWiseId',
+      'timeTableCellId',
+      'date',
+      'completeDate',
+      'note',
+      'lectureUrl',
+      'file',
+      'status',
+    ],
+    where: {
+      timeTableCellDateWiseId: { [Op.in]: ids },
+    },
+    include: [
+      {
+        model: model.topicModel,
+        as: 'mappingTopic',
+        required: true,
+        attributes: ['topicId', 'name', 'lessonId'],
+        include: [
+          {
+            model: model.lessonModel,
+            as: 'lessonTopic',
+            required: true,
+            attributes: ['lessonId', 'name', 'lectureWindowId'],
+            where: buildScope(model.lessonModel),
+            include: [
+              {
+                model: model.lectureWindowModel,
+                as: 'lectureWindow',
+                required: false,
+                attributes: ['lectureWindowId', 'name'],
+              },
+            ],
+          },
+          {
+            model: model.subTopicModel,
+            as: 'subTopic',
+            required: false,
+            attributes: ['subTopicId', 'name'],
+          },
+        ],
+      },
+    ],
+    order: [['lessonMappingId', 'ASC']],
+  });
+}
+
+/**
  * Lesson mappings for progress table — filtered by teacher + subject (+ optional course/session/lesson).
  */
 export async function getMappedLessonRows({
