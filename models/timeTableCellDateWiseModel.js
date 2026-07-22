@@ -5,8 +5,11 @@ import timeTableCellModel from './timeTableCellModel.js';
 import classRoomModel from './classRoomModel.js';
 
 /**
- * Actual calendar-day instance of a week cell.
- * Links back with timeTableCellId (week cell PK).
+ * Calendar-day instance of a week cell (links to timeTableCellId).
+ * One period on a given date can have multiple rows when multiple week cells
+ * share that slot — each row has its own timeTableCellDateWiseId.
+ * Published edits use PATCH /dateWiseCells per row id (teacher via timeTableCellTeachersDateWiseId).
+ * Teachers: time_table_cell_teachers_date_wise (not on this table).
  */
 const timeTableCellDateWiseModel = sequelize.define(
   'time_table_cell_date_wise',

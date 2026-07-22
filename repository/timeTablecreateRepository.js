@@ -2493,48 +2493,67 @@ export async function getDateWiseCellForUpdateRepository(timeTableCellDateWiseId
   });
 }
 
-export async function updateDateWiseCellTeacherRepository(
+export async function updateDateWiseCellTeacherByIdRepository(
   timeTableCellDateWiseId,
+  timeTableCellTeachersDateWiseId,
   userId,
   updatedBy,
   options = {},
 ) {
-  const teachers = await model.timeTableCellTeachersDateWiseModel.findAll({
-    where: { timeTableCellDateWiseId: Number(timeTableCellDateWiseId) },
-    attributes: ['timeTableCellTeachersDateWiseId', 'teacherType'],
+  const teacher = await model.timeTableCellTeachersDateWiseModel.findOne({
+    where: {
+      timeTableCellTeachersDateWiseId: Number(timeTableCellTeachersDateWiseId),
+      timeTableCellDateWiseId: Number(timeTableCellDateWiseId),
+    },
+    attributes: ['timeTableCellTeachersDateWiseId'],
     transaction: options.transaction,
   });
-
-  let targetTeacherId = null;
-  for (const teacher of teachers) {
-    if (String(teacher.teacherType || '').toLowerCase() === 'primary') {
-      targetTeacherId = teacher.timeTableCellTeachersDateWiseId;
-      break;
-    }
-  }
-  if (targetTeacherId == null && teachers[0]) {
-    targetTeacherId = teachers[0].timeTableCellTeachersDateWiseId;
+  if (!teacher) {
+    throw new Error('Date-wise teacher row not found for this cell');
   }
 
-  if (targetTeacherId != null) {
-    await model.timeTableCellTeachersDateWiseModel.update(
-      { userId: Number(userId), updatedBy },
-      {
-        where: { timeTableCellTeachersDateWiseId: targetTeacherId },
-        transaction: options.transaction,
-      },
+  await model.timeTableCellTeachersDateWiseModel.update(
+    { userId: Number(userId), updatedBy },
+    {
+      where: { timeTableCellTeachersDateWiseId: Number(timeTableCellTeachersDateWiseId) },
+      transaction: options.transaction,
+    },
+  );
+}
+
+export async function updateDateWiseCellRepository(
+  timeTableCellDateWiseId,
+  payload,
+  updatedBy,
+  options = {},
+) {
+  if (payload.userId != null) {
+    await updateDateWiseCellTeacherByIdRepository(
+      timeTableCellDateWiseId,
+      payload.timeTableCellTeachersDateWiseId,
+      payload.userId,
+      updatedBy,
+      options,
     );
-    return;
   }
 
-  await model.timeTableCellTeachersDateWiseModel.create({
-    timeTableCellDateWiseId: Number(timeTableCellDateWiseId),
-    userId: Number(userId),
-    teacherType: 'Primary',
-    isAttendence: true,
-    createdBy: updatedBy,
-    updatedBy,
-  }, { transaction: options.transaction });
+  if (payload.subjectId !== undefined || payload.electiveSubjectId !== undefined) {
+    await updateDateWiseCellSubjectRepository(
+      timeTableCellDateWiseId,
+      payload,
+      updatedBy,
+      options,
+    );
+  }
+
+  if (payload.classRoomSectionId != null) {
+    await updateDateWiseCellRoomRepository(
+      timeTableCellDateWiseId,
+      payload.classRoomSectionId,
+      updatedBy,
+      options,
+    );
+  }
 }
 
 export async function updateDateWiseCellSubjectRepository(
