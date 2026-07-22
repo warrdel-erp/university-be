@@ -146,7 +146,10 @@ function dateWiseScheduleIncludes({ sessionId, academicYearId } = {}) {
           model: model.timeTableStructurePeriodsModel,
           as: 'timeTablecreation',
           required: true,
-          attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime'],
+          attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime', 'isBreak'],
+          where: {
+            [Op.or]: [{ isBreak: false }, { isBreak: { [Op.is]: null } }],
+          },
         },
         {
           model: model.teacherSubjectMappingModel,
@@ -365,6 +368,18 @@ export async function getUniqueClassSectionSubjectsForEmployee(userId, academicY
   return schedules;
 }
 
+function nonBreakPeriodInclude() {
+  return {
+    model: model.timeTableStructurePeriodsModel,
+    as: 'timeTablecreation',
+    required: true,
+    attributes: [],
+    where: {
+      [Op.or]: [{ isBreak: false }, { isBreak: { [Op.is]: null } }],
+    },
+  };
+}
+
 export async function countEmployeeDateWiseSchedules(userId, academicYearId, currentDate) {
   const pastCount = await model.timeTableCellDateWiseModel.count({
     where: { date: { [Op.lt]: currentDate } },
@@ -393,6 +408,7 @@ export async function countEmployeeDateWiseSchedules(userId, academicYearId, cur
               ...buildScope(model.timeTableRoutineModel),
             },
           },
+          nonBreakPeriodInclude(),
         ],
       },
     ],
@@ -425,6 +441,7 @@ export async function countEmployeeDateWiseSchedules(userId, academicYearId, cur
               ...buildScope(model.timeTableRoutineModel),
             },
           },
+          nonBreakPeriodInclude(),
         ],
       },
     ],

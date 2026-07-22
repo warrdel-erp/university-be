@@ -1059,7 +1059,16 @@ export async function getTeacherWeekDateWiseCells({
         model: model.timeTableCellModel,
         as: 'timeTableCell',
         required: true,
-        where: { subjectId: Number(subjectId) },
+        ...(subjectId != null
+          ? {
+            where: {
+              [Op.or]: [
+                { subjectId: Number(subjectId) },
+                { '$timeTableTeacherSubject.employeeSubject.subject_id$': Number(subjectId) },
+              ],
+            },
+          }
+          : {}),
         attributes: [
           'timeTableCellId',
           'timeTableRoutineId',
@@ -1070,6 +1079,20 @@ export async function getTeacherWeekDateWiseCells({
           'timeTableType',
         ],
         include: [
+          {
+            model: model.teacherSubjectMappingModel,
+            as: 'timeTableTeacherSubject',
+            attributes: ['teacherSubjectMappingId'],
+            required: false,
+            include: [
+              {
+                model: model.subjectModel,
+                as: 'employeeSubject',
+                attributes: ['subjectId', 'subjectName'],
+                required: false,
+              },
+            ],
+          },
           {
             model: model.subjectModel,
             as: 'timeTableSubject',

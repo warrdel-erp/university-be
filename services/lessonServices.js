@@ -180,9 +180,11 @@ function enrichPublishedRoutines(routines, week, dateWiseLookup, lessonPlanLooku
 
         for (const item of day.scheduleItems || []) {
           const viewerTeacher = resolveViewerTeacher(item.teachers, userId);
-          const cellId = viewerTeacher?.timeTableCellId != null
-            ? Number(viewerTeacher.timeTableCellId)
-            : null;
+          const cellId = item.timeTableCellId != null
+            ? Number(item.timeTableCellId)
+            : (viewerTeacher?.timeTableCellId != null
+              ? Number(viewerTeacher.timeTableCellId)
+              : null);
 
           let dateWiseId = null;
           let matched = null;
@@ -202,12 +204,6 @@ function enrichPublishedRoutines(routines, week, dateWiseLookup, lessonPlanLooku
           item.lessonPlan = dateWiseId != null
             ? (lessonPlanLookup.get(Number(dateWiseId)) || null)
             : null;
-
-          if (day.timeTableCellId == null && cellId != null) {
-            day.timeTableCellId = cellId;
-            day.timeTableCellDateWiseId = dateWiseId;
-            day.teacherType = viewerTeacher?.teacherType || null;
-          }
         }
       }
     }

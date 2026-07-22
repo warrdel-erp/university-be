@@ -1821,6 +1821,7 @@ function routineCellTeachersInclude({ userId, required = false } = {}) {
     as: 'timeTableCellTeachers',
     attributes: ['timeTableCellTeacherId', 'userId', 'teacherType', 'isAttendence'],
     required,
+    separate: true,
     include: [
       {
         model: model.employeeModel,
@@ -1836,20 +1837,52 @@ function routineCellTeachersInclude({ userId, required = false } = {}) {
   return include;
 }
 
-function routineCellsInclude({ userId, subjectId, required = false } = {}) {
-  const cellWhere = {};
-  if (subjectId != null) {
-    cellWhere.subjectId = Number(subjectId);
+function buildCellSubjectWhere(subjectId) {
+  if (subjectId == null) {
+    return {};
   }
+  const subjectIdNum = Number(subjectId);
+  return {
+    [Op.or]: [
+      { subjectId: subjectIdNum },
+      { '$timeTableTeacherSubject.employeeSubject.subject_id$': subjectIdNum },
+    ],
+  };
+}
+
+function routineCellsInclude({ userId, subjectId, required = false } = {}) {
+  const cellWhere = buildCellSubjectWhere(subjectId);
 
   return {
     model: model.timeTableCellModel,
     as: 'timeTableCells',
     required,
+    separate: true,
+    order: [['period', 'ASC'], ['day', 'ASC'], ['timeTableCellId', 'ASC']],
     attributes: ROUTINE_CELL_ATTRIBUTES,
     ...(Object.keys(cellWhere).length > 0 ? { where: cellWhere } : {}),
     include: [
       routineCellTeachersInclude({ userId, required: userId != null }),
+      {
+        model: model.teacherSubjectMappingModel,
+        as: 'timeTableTeacherSubject',
+        attributes: ['teacherSubjectMappingId'],
+        required: false,
+        include: [
+          {
+            model: model.employeeModel,
+            as: 'teacherEmployeeData',
+            attributes: ['employeeId', 'userId', 'employeeName', 'pickColor'],
+            required: false,
+          },
+          {
+            model: model.subjectModel,
+            as: 'employeeSubject',
+            attributes: ['subjectId', 'subjectName'],
+            required: false,
+          },
+        ],
+      },
       {
         model: model.subjectModel,
         as: 'timeTableSubject',
