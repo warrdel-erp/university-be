@@ -39,6 +39,16 @@ const timeTableCellDateWiseModel = sequelize.define(
         key: 'class_room_section_id',
       },
     },
+    subjectId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'subject_id',
+    },
+    electiveSubjectId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'elective_subject_id',
+    },
     createdAt: {
       type: DataTypes.DATE,
       allowNull: false,

@@ -8,7 +8,8 @@ import {
     addtimeTableCreate, cloneTimeTableRoutine, gettimeTableCreateDetails, getSingletimeTableCreateDetails, addtimeTableMapping, getTimeTableMappingDetail, getSingletimeTableMappingDetail, getTimeTableCellData
     , updatetimeTableCreate, getTimeTableElective, publishTimeTable, updateSimpleTeacherMappingController
     , deletetimeTableMapping, ClassSubjectCount, changeTimeTableCreate, getTimeTableByCourseAndSection, getRoutineByClassSectionId, getRoutineByTeacherAndAcademicYear
-    , deleteTimeTableRoutine
+    , deleteTimeTableRoutine, getDateWiseCellsBySection, updateDateWiseCellTeacherController
+    , updateDateWiseCellSubjectController, updateDateWiseCellRoomController
 } from '../controllers/timeTableCreateController.js';
 
 const router = Router();
@@ -235,6 +236,32 @@ const classSubjectCountQuerySchema = z.object({
     classSectionTermId: positiveIntegerId,
 });
 
+const getDateWiseCellsQuerySchema = z.object({
+    courseId: positiveIntegerId,
+    sessionId: positiveIntegerId,
+    classSectionTermId: positiveIntegerId,
+    date: z.string().optional(),
+});
+
+const updateDateWiseTeacherSchema = z.object({
+    timeTableCellDateWiseId: positiveIntegerId,
+    userId: positiveIntegerId,
+});
+
+const updateDateWiseSubjectSchema = z.object({
+    timeTableCellDateWiseId: positiveIntegerId,
+    subjectId: optionalPositiveId,
+    electiveSubjectId: optionalPositiveId,
+}).refine(
+    (body) => body.subjectId != null || body.electiveSubjectId != null,
+    { message: 'subjectId or electiveSubjectId is required', path: ['subjectId'] },
+);
+
+const updateDateWiseRoomSchema = z.object({
+    timeTableCellDateWiseId: positiveIntegerId,
+    classRoomSectionId: positiveIntegerId,
+});
+
 // ---------------------------------------------------------------------------
 // 1. Read / bootstrap — structure selection and routine lookup
 // ---------------------------------------------------------------------------
@@ -245,6 +272,11 @@ router.get('/create', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.v
     getTimeTableByCourseAndSection);
 router.get('/getRoutine', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ query: getRoutineSchema }), getRoutineByClassSectionId);
 router.get('/getRoutineByTeacher', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ query: getRoutineByTeacherSchema }), getRoutineByTeacherAndAcademicYear);
+
+router.get('/dateWiseCells', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ query: getDateWiseCellsQuerySchema }), getDateWiseCellsBySection);
+router.patch('/dateWiseCells/teacher', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_EDIT_ROUTINE.value, null), validate({ body: updateDateWiseTeacherSchema }), updateDateWiseCellTeacherController);
+router.patch('/dateWiseCells/subject', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_EDIT_ROUTINE.value, null), validate({ body: updateDateWiseSubjectSchema }), updateDateWiseCellSubjectController);
+router.patch('/dateWiseCells/room', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_EDIT_ROUTINE.value, null), validate({ body: updateDateWiseRoomSchema }), updateDateWiseCellRoomController);
 
 // ---------------------------------------------------------------------------
 // 2. Routine lifecycle — create / update / clone / publish

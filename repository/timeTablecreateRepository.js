@@ -1,4 +1,4 @@
-import { Op } from 'sequelize';
+import { Op, Sequelize } from 'sequelize';
 import * as model from '../models/index.js';
 import { buildScope, scoped } from '../utility/scoped.js';
 import { classSectionTermsInclude, studentClassSectionTermWithSectionInclude, timeTableRoutineClassSectionInclude, stripRoutinePersistPayload, routineStructureInclude } from '../utility/classSectionIncludes.js';
@@ -1589,6 +1589,9 @@ export async function getRoutineCellsForPublishRepository(timeTableRoutineId, op
       'day',
       'classRoomSectionId',
       'timeTableRoutineId',
+      'subjectId',
+      'electiveSubjectId',
+      'timeTableType',
     ],
     include: [
       {
@@ -2178,6 +2181,407 @@ export async function getClassSectionWithCourseRepository(classSectionsId) {
   });
 }
 
+
+function sectionDraftCellsInclude() {
+  const base = routineCellsInclude();
+  base.include.push({
+    model: model.timeTableStructurePeriodsModel,
+    as: 'timeTablecreation',
+    required: true,
+    attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime', 'isBreak'],
+    where: {
+      [Op.or]: [{ isBreak: false }, { isBreak: { [Op.is]: null } }],
+    },
+  });
+  return base;
+}
+
+function buildDateWiseCellNestedIncludes(courseId, sessionId, classSectionTermId, routineWhere) {
+  const courseIdNum = Number(courseId);
+  const sessionIdNum = Number(sessionId);
+  const classSectionTermIdNum = Number(classSectionTermId);
+
+  return [
+    {
+      model: model.timeTableCellTeachersDateWiseModel,
+      as: 'timeTableCellTeachersDateWise',
+      required: false,
+      separate: true,
+      attributes: ['timeTableCellTeachersDateWiseId', 'userId', 'teacherType', 'isAttendence'],
+      include: [
+        {
+          model: model.employeeModel,
+          as: 'employeeDetails',
+          attributes: ['userId', 'employeeId', 'employeeName', 'employeeCode', 'pickColor'],
+          required: false,
+        },
+      ],
+    },
+    {
+      model: model.classRoomModel,
+      as: 'classRoom',
+      attributes: ['classRoomSectionId', 'roomNumber'],
+      required: false,
+    },
+    {
+      model: model.timeTableCellModel,
+      as: 'timeTableCell',
+      required: true,
+      attributes: [
+        'timeTableCellId',
+        'timeTableRoutineId',
+        'timeTableCreationId',
+        'day',
+        'period',
+        'timeTableType',
+        'isSameTeacher',
+        'subjectId',
+        'electiveSubjectId',
+        'teacherSubjectMappingId',
+        'classRoomSectionId',
+      ],
+      include: [
+        {
+          model: model.timeTableRoutineModel,
+          as: 'timeTableRoutine',
+          required: true,
+          attributes: [
+            'timeTableRoutineId',
+            'startingDate',
+            'endingDate',
+            'classSectionTermId',
+            'courseId',
+            'isPublish',
+            'timeTableType',
+          ],
+          where: {
+            courseId: courseIdNum,
+            classSectionTermId: classSectionTermIdNum,
+            ...routineWhere,
+            ...buildScope(model.timeTableRoutineModel),
+          },
+          include: [
+            timeTableRoutineClassSectionInclude({
+              termRequired: true,
+              sectionRequired: true,
+              sectionWhere: {
+                courseId: courseIdNum,
+                sessionId: sessionIdNum,
+                ...buildScope(model.classSectionModel),
+              },
+              termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
+              sectionAttributes: ['classSectionsId', 'year', 'section', 'courseId', 'sessionId'],
+            }),
+          ],
+        },
+        {
+          model: model.timeTableStructurePeriodsModel,
+          as: 'timeTablecreation',
+          required: true,
+          attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime', 'isBreak'],
+          where: {
+            [Op.or]: [{ isBreak: false }, { isBreak: { [Op.is]: null } }],
+          },
+        },
+        {
+          model: model.teacherSubjectMappingModel,
+          as: 'timeTableTeacherSubject',
+          attributes: ['teacherSubjectMappingId'],
+          required: false,
+          include: [
+            {
+              model: model.subjectModel,
+              as: 'employeeSubject',
+              attributes: ['subjectId', 'subjectName', 'subjectCode'],
+              required: false,
+            },
+          ],
+        },
+        {
+          model: model.subjectModel,
+          as: 'timeTableSubject',
+          attributes: ['subjectId', 'subjectName', 'subjectCode'],
+          required: false,
+        },
+        {
+          model: model.electiveSubjectModel,
+          as: 'timeTableElective',
+          attributes: ['electiveSubjectId', 'electiveSubjectName', 'electiveSubjectCode'],
+          required: false,
+        },
+        {
+          model: model.classRoomModel,
+          as: 'classRoom',
+          attributes: ['classRoomSectionId', 'roomNumber'],
+          required: false,
+        },
+      ],
+    },
+  ];
+}
+
+export async function getPublishedDateWiseCellsBySectionRepository(
+  courseId,
+  sessionId,
+  classSectionTermId,
+  startDate,
+  endDate,
+) {
+  const dateConditions = [
+    Sequelize.where(
+      Sequelize.fn('DATE', Sequelize.col('time_table_cell_date_wise.date')),
+      { [Op.gte]: startDate },
+    ),
+    Sequelize.where(
+      Sequelize.fn('DATE', Sequelize.col('time_table_cell_date_wise.date')),
+      { [Op.lte]: endDate },
+    ),
+  ];
+
+  return model.timeTableCellDateWiseModel.findAll({
+    attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
+    where: { [Op.and]: dateConditions },
+    include: buildDateWiseCellNestedIncludes(
+      courseId,
+      sessionId,
+      classSectionTermId,
+      { is_publish: true },
+    ),
+    order: [['date', 'ASC'], ['timeTableCellDateWiseId', 'ASC']],
+  });
+}
+
+export async function getDraftRoutinesWithCellsBySectionRepository(
+  courseId,
+  sessionId,
+  classSectionTermId,
+) {
+  const courseIdNum = Number(courseId);
+  const sessionIdNum = Number(sessionId);
+  const classSectionTermIdNum = Number(classSectionTermId);
+
+  return scoped(model.timeTableRoutineModel).findAll({
+    where: {
+      courseId: courseIdNum,
+      classSectionTermId: classSectionTermIdNum,
+      is_publish: false,
+    },
+    attributes: [
+      'timeTableRoutineId',
+      'startingDate',
+      'endingDate',
+      'classSectionTermId',
+      'courseId',
+      'isPublish',
+      'timeTableType',
+      'timetableStructureCourseMapperId',
+    ],
+    include: [
+      sectionDraftCellsInclude(),
+      timeTableRoutineClassSectionInclude({
+        termRequired: true,
+        sectionRequired: true,
+        sectionWhere: {
+          courseId: courseIdNum,
+          sessionId: sessionIdNum,
+          ...buildScope(model.classSectionModel),
+        },
+        termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
+        sectionAttributes: ['classSectionsId', 'year', 'section', 'courseId', 'sessionId'],
+      }),
+    ],
+    order: [['timeTableRoutineId', 'ASC']],
+  });
+}
+
+export async function getPublishedDateWiseCellsForRoutineInWeekRepository(
+  timeTableRoutineId,
+  startDate,
+  endDate,
+) {
+  const dateConditions = [
+    Sequelize.where(
+      Sequelize.fn('DATE', Sequelize.col('time_table_cell_date_wise.date')),
+      { [Op.gte]: startDate },
+    ),
+    Sequelize.where(
+      Sequelize.fn('DATE', Sequelize.col('time_table_cell_date_wise.date')),
+      { [Op.lte]: endDate },
+    ),
+  ];
+
+  return model.timeTableCellDateWiseModel.findAll({
+    attributes: [
+      'timeTableCellDateWiseId',
+      'timeTableCellId',
+      'date',
+      'classRoomSectionId',
+      'subjectId',
+      'electiveSubjectId',
+    ],
+    where: { [Op.and]: dateConditions },
+    include: [
+      {
+        model: model.timeTableCellTeachersDateWiseModel,
+        as: 'timeTableCellTeachersDateWise',
+        required: false,
+        separate: true,
+        attributes: ['timeTableCellTeachersDateWiseId', 'userId', 'teacherType', 'isAttendence'],
+        include: [
+          {
+            model: model.employeeModel,
+            as: 'employeeDetails',
+            attributes: ['userId', 'employeeId', 'employeeName', 'employeeCode', 'pickColor'],
+            required: false,
+          },
+        ],
+      },
+      {
+        model: model.classRoomModel,
+        as: 'classRoom',
+        attributes: ['classRoomSectionId', 'roomNumber'],
+        required: false,
+      },
+      {
+        model: model.timeTableCellModel,
+        as: 'timeTableCell',
+        required: true,
+        attributes: ['timeTableCellId', 'day', 'period', 'timeTableCreationId'],
+        where: { timeTableRoutineId: Number(timeTableRoutineId) },
+      },
+    ],
+    order: [['date', 'ASC'], ['timeTableCellDateWiseId', 'ASC']],
+  });
+}
+
+export async function getDateWiseCellForUpdateRepository(timeTableCellDateWiseId, options = {}) {
+  return model.timeTableCellDateWiseModel.findOne({
+    where: { timeTableCellDateWiseId: Number(timeTableCellDateWiseId) },
+    attributes: [
+      'timeTableCellDateWiseId',
+      'timeTableCellId',
+      'date',
+      'classRoomSectionId',
+      'subjectId',
+      'electiveSubjectId',
+    ],
+    include: [
+      {
+        model: model.timeTableCellModel,
+        as: 'timeTableCell',
+        required: true,
+        attributes: ['timeTableCellId', 'timeTableRoutineId'],
+        include: [
+          {
+            model: model.timeTableRoutineModel,
+            as: 'timeTableRoutine',
+            required: true,
+            attributes: ['timeTableRoutineId', 'isPublish', 'classSectionTermId'],
+            where: buildScope(model.timeTableRoutineModel),
+          },
+        ],
+      },
+      {
+        model: model.timeTableCellTeachersDateWiseModel,
+        as: 'timeTableCellTeachersDateWise',
+        required: false,
+        separate: true,
+        attributes: ['timeTableCellTeachersDateWiseId', 'userId', 'teacherType', 'isAttendence'],
+      },
+    ],
+    transaction: options.transaction,
+  });
+}
+
+export async function updateDateWiseCellTeacherRepository(
+  timeTableCellDateWiseId,
+  userId,
+  updatedBy,
+  options = {},
+) {
+  const teachers = await model.timeTableCellTeachersDateWiseModel.findAll({
+    where: { timeTableCellDateWiseId: Number(timeTableCellDateWiseId) },
+    attributes: ['timeTableCellTeachersDateWiseId', 'teacherType'],
+    transaction: options.transaction,
+  });
+
+  let targetTeacherId = null;
+  for (const teacher of teachers) {
+    if (String(teacher.teacherType || '').toLowerCase() === 'primary') {
+      targetTeacherId = teacher.timeTableCellTeachersDateWiseId;
+      break;
+    }
+  }
+  if (targetTeacherId == null && teachers[0]) {
+    targetTeacherId = teachers[0].timeTableCellTeachersDateWiseId;
+  }
+
+  if (targetTeacherId != null) {
+    await model.timeTableCellTeachersDateWiseModel.update(
+      { userId: Number(userId), updatedBy },
+      {
+        where: { timeTableCellTeachersDateWiseId: targetTeacherId },
+        transaction: options.transaction,
+      },
+    );
+    return;
+  }
+
+  await model.timeTableCellTeachersDateWiseModel.create({
+    timeTableCellDateWiseId: Number(timeTableCellDateWiseId),
+    userId: Number(userId),
+    teacherType: 'Primary',
+    isAttendence: true,
+    createdBy: updatedBy,
+    updatedBy,
+  }, { transaction: options.transaction });
+}
+
+export async function updateDateWiseCellSubjectRepository(
+  timeTableCellDateWiseId,
+  payload,
+  updatedBy,
+  options = {},
+) {
+  const updateData = { updatedBy };
+  if (payload.subjectId !== undefined) {
+    updateData.subjectId = payload.subjectId;
+  }
+  if (payload.electiveSubjectId !== undefined) {
+    updateData.electiveSubjectId = payload.electiveSubjectId;
+  }
+
+  await model.timeTableCellDateWiseModel.update(updateData, {
+    where: { timeTableCellDateWiseId: Number(timeTableCellDateWiseId) },
+    transaction: options.transaction,
+  });
+}
+
+export async function updateDateWiseCellRoomRepository(
+  timeTableCellDateWiseId,
+  classRoomSectionId,
+  updatedBy,
+  options = {},
+) {
+  await model.timeTableCellDateWiseModel.update(
+    { classRoomSectionId: Number(classRoomSectionId), updatedBy },
+    {
+      where: { timeTableCellDateWiseId: Number(timeTableCellDateWiseId) },
+      transaction: options.transaction,
+    },
+  );
+}
+
+/** @deprecated use getPublishedDateWiseCellsBySectionRepository */
+export async function getDateWiseCellsBySectionRepository(courseId, sessionId, classSectionTermId) {
+  return getPublishedDateWiseCellsBySectionRepository(
+    courseId,
+    sessionId,
+    classSectionTermId,
+    '1970-01-01',
+    '2999-12-31',
+  );
+}
 
 export async function getPeriodsForStructures(timeTableNameIds) {
   return await model.timeTableStructurePeriodsModel.findAll({

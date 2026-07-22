@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-timetable0001",
     "name": "univ-v2-timetable",
-    "description": "Schedule date-wise redesign — full integration collection.\n\n**Docs:** `docs/AFFECTED_APIS_SCHEDULE_DATEWISE_REDESIGN.md` · `docs/SCHEDULE_DATEWISE_API_URLS.md`\n\n## ID legend\n| Use | Field | Do not use |\n|-----|-------|------------|\n| Week grid / mapping | `timeTableCellId` | `timeTableMappingId` |\n| Day / attendance / lesson / roster | `timeTableCellDateWiseId` | mapping id + date |\n| Lecture window teacher | `userId` | `employeeId` on `lecture_window` |\n\n## Integration order\n1. `① /timeTable` — structure + courseMapping\n2. `② /timeTableCreate` — cells + publish (creates date-wise rows)\n3. `③ /employee` — schedule → capture `timeTableCellDateWiseId`\n4. `④ /attendance` — mark with date-wise id\n5. `⑤ /lesson` — `getRoutineByTeacher` (published + week date-wise) then map with date-wise id\n5b. `⑤b /lecture + /options` — lecture window `userId`; options accept `userId` or `employeeId`\n6. `⑥ /student` — roster + week timetable\n\n## Smoke chain\n```\nGET  /timeTable/\nPOST /timeTableCreate/\nPOST /timeTableCreate/mapping\nPATCH /timeTableCreate/publish?timeTableRoutineId=\nGET  /employee/schedule?userId=\nPOST /attendance/\nPOST /lesson/mapping\nGET  /student/classSectionStudents?timeTableCellDateWiseId=\n```\n\nSet `baseurl` + `token` before calling. Run backfill migrations on existing DB before testing GETs.",
+    "description": "Schedule date-wise redesign — full integration collection.\n\n**Docs:** `docs/AFFECTED_APIS_SCHEDULE_DATEWISE_REDESIGN.md` · `docs/SCHEDULE_DATEWISE_API_URLS.md`\n\n## ID legend\n| Use | Field | Do not use |\n|-----|-------|------------|\n| Week grid / mapping | `timeTableCellId` | `timeTableMappingId` |\n| Day / attendance / lesson / roster | `timeTableCellDateWiseId` | mapping id + date |\n| Lecture window teacher | `userId` | `employeeId` on `lecture_window` |\n\n## Integration order\n1. `① /timeTable` — structure + courseMapping\n2. `② /timeTableCreate` — cells + publish (creates date-wise rows)\n3. `③ /employee` — schedule → capture `timeTableCellDateWiseId`\n4. `④ /attendance` — mark with date-wise id\n5. `⑤ /lesson` — `getRoutineByTeacher` (published + week date-wise) then map with date-wise id\n5b. `⑤b /lecture + /options` — lecture window `userId`; options accept `userId` or `employeeId`\n6. `⑥ /student` — roster + week timetable\n\n## Smoke chain\n```\nGET  /timeTable/\nPOST /timeTableCreate/\nPOST /timeTableCreate/mapping\nPATCH /timeTableCreate/publish?timeTableRoutineId=\nGET  /timeTableCreate/dateWiseCells?courseId=&sessionId=&classSectionTermId=\nPATCH /timeTableCreate/dateWiseCells/teacher\nGET  /employee/schedule?userId=\nPOST /attendance/\nPOST /lesson/mapping\nGET  /student/classSectionStudents?timeTableCellDateWiseId=\n```\n\nSet `baseurl` + `token` before calling. Run backfill migrations on existing DB before testing GETs.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -675,7 +675,7 @@
     },
     {
       "name": "② /timeTableCreate — week cells + publish",
-      "description": "Step ② — week template uses **`timeTableCellId`**. Publish creates **`time_table_cell_date_wise`** rows.\n\n| # | Method | Path | Key |\n|---|--------|------|-----|\n| 1 | GET | `/timeTableCreate/` | List routines |\n| 1 | GET | `/timeTableCreate/single` | Routines by course |\n| 1 | GET | `/timeTableCreate/create` | Bootstrap UI |\n| 1 | GET | `/timeTableCreate/getRoutine` | Week grid |\n| 1 | GET | `/timeTableCreate/getRoutineByTeacher` | Teacher grid (`userId`) |\n| 2 | POST | `/timeTableCreate/` | Create routine |\n| 2 | PATCH | `/timeTableCreate/create` | Update routine or periods |\n| 2 | DELETE | `/timeTableCreate/` | Delete routine before start (draft or published); cascades cells + date-wise |\n| 2 | POST | `/timeTableCreate/clone` | Clone routine + cells |\n| 2 | PATCH | `/timeTableCreate/publish` | **Creates date-wise instances** |\n| 3 | POST | `/timeTableCreate/mapping` | Returns `timeTableCellId` |\n| 3 | GET | `/timeTableCreate/mapping` | List cells (body: `timeTableRoutineId`) |\n| 3 | GET | `/timeTableCreate/single/mapping` | By course |\n| 3 | PATCH | `/timeTableCreate/mapping` | `timeTableCellId` + type |\n| 3 | PATCH | `/timeTableCreate/mapping/update-create` | Teachers array |\n| 3 | DELETE | `/timeTableCreate/mapping` | Query: `timeTableCellId` |\n| 4 | GET | `/timeTableCreate/cellData` | `mappingData[].timeTableCellId` |\n| 4 | GET | `/timeTableCreate/elective` | Elective grid |\n| 4 | GET | `/timeTableCreate/subjectCount` | Subject counts |",
+      "description": "Step ② — week template uses **`timeTableCellId`**. Publish creates **`time_table_cell_date_wise`** rows.\n\n| # | Method | Path | Key |\n|---|--------|------|-----|\n| 1 | GET | `/timeTableCreate/` | List routines |\n| 1 | GET | `/timeTableCreate/single` | Routines by course |\n| 1 | GET | `/timeTableCreate/create` | Bootstrap UI |\n| 1 | GET | `/timeTableCreate/getRoutine` | Week grid |\n| 1 | GET | `/timeTableCreate/getRoutineByTeacher` | Teacher grid (`userId`) |\n| 1 | GET | `/timeTableCreate/dateWiseCells` | Section week grid + date-wise (`timeTableCellDateWiseId`) |\n| 2 | POST | `/timeTableCreate/` | Create routine |\n| 2 | PATCH | `/timeTableCreate/create` | Update routine or periods |\n| 2 | DELETE | `/timeTableCreate/` | Delete routine before start (draft or published); cascades cells + date-wise |\n| 2 | POST | `/timeTableCreate/clone` | Clone routine + cells |\n| 2 | PATCH | `/timeTableCreate/publish` | **Creates date-wise instances** |\n| 2 | PATCH | `/timeTableCreate/dateWiseCells/teacher` | Published edit — Primary teacher on date-wise row |\n| 2 | PATCH | `/timeTableCreate/dateWiseCells/subject` | Published edit — subject / elective on date-wise row |\n| 2 | PATCH | `/timeTableCreate/dateWiseCells/room` | Published edit — room on date-wise row |\n| 3 | POST | `/timeTableCreate/mapping` | Returns `timeTableCellId` |\n| 3 | GET | `/timeTableCreate/mapping` | List cells (body: `timeTableRoutineId`) |\n| 3 | GET | `/timeTableCreate/single/mapping` | By course |\n| 3 | PATCH | `/timeTableCreate/mapping` | `timeTableCellId` + type |\n| 3 | PATCH | `/timeTableCreate/mapping/update-create` | Teachers array |\n| 3 | DELETE | `/timeTableCreate/mapping` | Query: `timeTableCellId` |\n| 4 | GET | `/timeTableCreate/cellData` | `mappingData[].timeTableCellId` |\n| 4 | GET | `/timeTableCreate/elective` | Elective grid |\n| 4 | GET | `/timeTableCreate/subjectCount` | Subject counts |",
       "item": [
         {
           "name": "get all routines",
@@ -888,6 +888,82 @@
           "response": []
         },
         {
+          "name": "get date-wise cells (section week)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/timeTableCreate/dateWiseCells?courseId={{timetable_courseId}}&sessionId={{timetable_sessionId}}&classSectionTermId={{classSectionTermId}}&date=2026-07-21",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTableCreate",
+                "dateWiseCells"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "{{timetable_courseId}}",
+                  "description": "Required"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{timetable_sessionId}}",
+                  "description": "Required"
+                },
+                {
+                  "key": "classSectionTermId",
+                  "value": "{{classSectionTermId}}",
+                  "description": "Required"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-07-21",
+                  "description": "Optional YYYY-MM-DD — calendar week anchor (defaults today, clamped to routine range)"
+                }
+              ]
+            },
+            "description": "**GET /timeTableCreate/dateWiseCells**\n\nSection-specific published (or draft) routine as a **7-day period grid** enriched with date-wise data.\n\n### Query\n| Name | Required | Notes |\n|------|----------|-------|\n| `courseId` | yes | Course id |\n| `sessionId` | yes | Session id |\n| `classSectionTermId` | yes | Section-term id |\n| `date` | no | Week anchor; defaults to today |\n\n### Response\n- `routine` — one routine for the section (`periods[] → days[] → scheduleItems[]`)\n- Each `scheduleItem` includes `timeTableCellId`, `timeTableCellDateWiseId`, `date`, `userId`, `subjectId`, `electiveSubjectId`, `classRoomSectionId`, `teachers[]`, `room`\n- Days outside routine `startingDate`–`endingDate` have `isWithinRoutine: false`\n- `week` — navigation **after** `routine`:\n\n```json\n\"week\": {\n  \"week\": \"current\",\n  \"startDate\": \"2026-07-20\",\n  \"endDate\": \"2026-07-26\",\n  \"anchorDate\": \"2026-07-21\",\n  \"previousWeekDate\": \"2026-07-13\",\n  \"nextWeekDate\": \"2026-07-27\"\n}\n```\n\n`previousWeekDate` / `nextWeekDate` are `null` at the first/last week of the routine. Pass them as the next `date` query to paginate."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const routine = res.data && res.data.routine;",
+                  "  if (!routine || !routine.periods) return;",
+                  "  for (const period of routine.periods) {",
+                  "    for (const day of period.days || []) {",
+                  "      for (const item of day.scheduleItems || []) {",
+                  "        if (item.timeTableCellDateWiseId) {",
+                  "          pm.collectionVariables.set('timetable_timeTableCellDateWiseId', String(item.timeTableCellDateWiseId));",
+                  "          return;",
+                  "        }",
+                  "      }",
+                  "    }",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "create routine",
           "request": {
             "auth": {
@@ -1065,7 +1141,142 @@
                 }
               ]
             },
-            "description": "**PATCH /timeTableCreate/publish?timeTableRoutineId=**\n\nSets `isPublish: true` and **creates `time_table_cell_date_wise` + teacher rows** for each working day in the routine window.\n\nAfter publish, call `GET /employee/schedule` to obtain **`timeTableCellDateWiseId`** per period."
+            "description": "**PATCH /timeTableCreate/publish?timeTableRoutineId=**\n\nSets `isPublish: true` and **creates `time_table_cell_date_wise` + `time_table_cell_teachers_date_wise` rows** for each working day in the routine window.\n\nSnapshot on publish: `subjectId`, `electiveSubjectId`, `classRoomSectionId` on date-wise cell; teachers in teachers_date_wise table.\n\nAfter publish, use `GET /timeTableCreate/dateWiseCells` or `GET /employee/schedule` to obtain **`timeTableCellDateWiseId`** per period."
+          },
+          "response": []
+        },
+        {
+          "name": "patch date-wise teacher (published)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/timeTableCreate/dateWiseCells/teacher",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTableCreate",
+                "dateWiseCells",
+                "teacher"
+              ],
+              "query": []
+            },
+            "description": "**PATCH /timeTableCreate/dateWiseCells/teacher**\n\nUpdates **Primary** teacher on a published date-wise instance only. Does **not** change the week template (`time_table_cell`).\n\n```json\n{\n  \"timeTableCellDateWiseId\": {{timetable_timeTableCellDateWiseId}},\n  \"userId\": {{timetable_userId}}\n}\n```\n\nWrites to `time_table_cell_teachers_date_wise` (updates Primary row or creates one).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timeTableCellDateWiseId\": {{timetable_timeTableCellDateWiseId}},\n  \"userId\": {{timetable_userId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "patch date-wise subject (published)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/timeTableCreate/dateWiseCells/subject",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTableCreate",
+                "dateWiseCells",
+                "subject"
+              ],
+              "query": []
+            },
+            "description": "**PATCH /timeTableCreate/dateWiseCells/subject**\n\nUpdates subject on a published date-wise cell only.\n\nAt least one of `subjectId` or `electiveSubjectId` is required.\n\n```json\n{\n  \"timeTableCellDateWiseId\": {{timetable_timeTableCellDateWiseId}},\n  \"subjectId\": {{timetable_subjectId}}\n}\n```",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timeTableCellDateWiseId\": {{timetable_timeTableCellDateWiseId}},\n  \"subjectId\": {{timetable_subjectId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "patch date-wise room (published)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/timeTableCreate/dateWiseCells/room",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTableCreate",
+                "dateWiseCells",
+                "room"
+              ],
+              "query": []
+            },
+            "description": "**PATCH /timeTableCreate/dateWiseCells/room**\n\nUpdates room on a published date-wise cell only.\n\n```json\n{\n  \"timeTableCellDateWiseId\": {{timetable_timeTableCellDateWiseId}},\n  \"classRoomSectionId\": 1\n}\n```",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timeTableCellDateWiseId\": {{timetable_timeTableCellDateWiseId}},\n  \"classRoomSectionId\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           },
           "response": []
         },

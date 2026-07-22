@@ -2712,6 +2712,8 @@ export async function publishTimeTableService(timeTableRoutineId) {
         timeTableCellId: item.cell.timeTableCellId,
         date: item.date,
         classRoomSectionId: item.cell.classRoomSectionId,
+        subjectId: item.cell.subjectId,
+        electiveSubjectId: item.cell.electiveSubjectId,
         createdBy: actorId,
         updatedBy: actorId,
       });
@@ -3581,4 +3583,503 @@ export async function getRoutineByTeacherAndAcademicYear(userId, courseId, sessi
   }
 
   return { ...common, routines: formattedRoutines };
+}
+
+function resolveDateWiseCellSubject(cell) {
+  if (cell.timeTableType === 'elective' && cell.timeTableElective) {
+    return {
+      subjectId: cell.timeTableElective.electiveSubjectId,
+      subjectName: cell.timeTableElective.electiveSubjectName,
+      subjectCode: cell.timeTableElective.electiveSubjectCode,
+    };
+  }
+
+  if (cell.isSameTeacher === true && cell.timeTableTeacherSubject?.employeeSubject) {
+    const mappedSubject = cell.timeTableTeacherSubject.employeeSubject;
+    return {
+      subjectId: mappedSubject.subjectId,
+      subjectName: mappedSubject.subjectName,
+      subjectCode: mappedSubject.subjectCode,
+    };
+  }
+
+  const subject = cell.timeTableSubject;
+  return {
+    subjectId: subject?.subjectId ?? null,
+    subjectName: subject?.subjectName ?? null,
+    subjectCode: subject?.subjectCode ?? null,
+  };
+}
+
+function getSectionWeekRange(date, routineStart, routineEnd) {
+  let anchorDate = toDateOnlyString(date || new Date());
+  if (routineStart && anchorDate < routineStart) {
+    anchorDate = routineStart;
+  }
+  if (routineEnd && anchorDate > routineEnd) {
+    anchorDate = routineEnd;
+  }
+
+  const base = new Date(`${anchorDate}T00:00:00`);
+  const day = base.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+
+  const monday = new Date(base);
+  monday.setDate(base.getDate() + mondayOffset);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+
+  const startDate = toDateOnlyString(monday);
+  const endDate = toDateOnlyString(sunday);
+
+  const previousMonday = new Date(monday);
+  previousMonday.setDate(monday.getDate() - 7);
+  const nextMonday = new Date(monday);
+  nextMonday.setDate(monday.getDate() + 7);
+
+  const previousSunday = new Date(previousMonday);
+  previousSunday.setDate(previousMonday.getDate() + 6);
+
+  let previousWeekDate = toDateOnlyString(previousMonday);
+  let nextWeekDate = toDateOnlyString(nextMonday);
+
+  if (routineStart && toDateOnlyString(previousSunday) < routineStart) {
+    previousWeekDate = null;
+  }
+  if (routineEnd && toDateOnlyString(nextMonday) > routineEnd) {
+    nextWeekDate = null;
+  }
+
+  return {
+    week: 'current',
+    startDate,
+    endDate,
+    anchorDate,
+    previousWeekDate,
+    nextWeekDate,
+  };
+}
+
+function buildDayDatesFromWeekStart(weekStartDate) {
+  const dayDates = {};
+  const monday = new Date(`${weekStartDate}T00:00:00`);
+  for (let i = 0; i < DAYS.length; i++) {
+    const current = new Date(monday);
+    current.setDate(monday.getDate() + i);
+    dayDates[DAYS[i]] = toDateOnlyString(current);
+  }
+  return dayDates;
+}
+
+function getOverlappingDateRange(weekStart, weekEnd, rangeStart, rangeEnd) {
+  if (!rangeStart || !rangeEnd) {
+    return { startDate: weekStart, endDate: weekEnd };
+  }
+
+  const startDate = weekStart > rangeStart ? weekStart : rangeStart;
+  const endDate = weekEnd < rangeEnd ? weekEnd : rangeEnd;
+  if (startDate > endDate) {
+    return null;
+  }
+  return { startDate, endDate };
+}
+
+function isDateWithinRange(date, rangeStart, rangeEnd) {
+  if (!date || !rangeStart || !rangeEnd) {
+    return true;
+  }
+  return date >= rangeStart && date <= rangeEnd;
+}
+
+function pickSectionRoutineForDate(routines, anchorDate) {
+  let publishedMatch = null;
+  let draftMatch = null;
+
+  for (const routine of routines) {
+    const plain = routine.get ? routine.get({ plain: true }) : routine;
+    const routineStart = toDateOnlyString(plain.startingDate);
+    const routineEnd = toDateOnlyString(plain.endingDate);
+    if (!routineStart || !routineEnd) {
+      continue;
+    }
+    if (anchorDate < routineStart || anchorDate > routineEnd) {
+      continue;
+    }
+    if (plain.isPublish && !publishedMatch) {
+      publishedMatch = routine;
+      continue;
+    }
+    if (!plain.isPublish && !draftMatch) {
+      draftMatch = routine;
+    }
+  }
+
+  if (publishedMatch || draftMatch) {
+    return publishedMatch || draftMatch;
+  }
+
+  const week = getSectionWeekRange(anchorDate);
+  return pickSectionRoutineForWeek(routines, week);
+}
+
+function routineOverlapsWeek(routine, week) {
+  const routineStart = toDateOnlyString(routine.startingDate);
+  const routineEnd = toDateOnlyString(routine.endingDate);
+  if (!routineStart || !routineEnd) {
+    return false;
+  }
+  return routineStart <= week.endDate && routineEnd >= week.startDate;
+}
+
+function pickSectionRoutineForWeek(routines, week) {
+  let publishedMatch = null;
+  let draftMatch = null;
+
+  for (const routine of routines) {
+    const plain = routine.get ? routine.get({ plain: true }) : routine;
+    if (!routineOverlapsWeek(plain, week)) {
+      continue;
+    }
+    if (plain.isPublish && !publishedMatch) {
+      publishedMatch = routine;
+      continue;
+    }
+    if (!plain.isPublish && !draftMatch) {
+      draftMatch = routine;
+    }
+  }
+
+  return publishedMatch || draftMatch || null;
+}
+
+function buildRoutinePeriodGrid(routine, electiveCells, classSection) {
+  const plainRoutine = routine.get ? routine.get({ plain: true }) : routine;
+  const mapping = plainRoutine.structureCourseMapping;
+  const timeTableCreateName = mapping.timeTableStructure;
+  const periods = timeTableCreateName.timeTableName || [];
+  const normalCells = plainRoutine.timeTableCells || [];
+  const daysList = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const weekOffList = parseWeekOffList(timeTableCreateName.weekOff);
+  const weekOffLower = [];
+  for (const day of weekOffList) {
+    weekOffLower.push(String(day).toLowerCase());
+  }
+
+  const formattedPeriods = [];
+  for (const period of periods) {
+    const formattedDays = [];
+    for (const daysName of daysList) {
+      if (weekOffLower.includes(daysName.toLowerCase())) {
+        formattedDays.push({ name: daysName, isDayOff: true });
+        continue;
+      }
+
+      if (period.isBreak) {
+        formattedDays.push({ name: daysName, isBreak: true });
+        continue;
+      }
+
+      const periodNormalCells = collectPeriodCells(normalCells, period, daysName);
+      const periodElectiveCells = collectPeriodCells(electiveCells, period, daysName);
+
+      let isOverriding = false;
+      for (const cell of periodNormalCells) {
+        if (cell.isOverridingSyblingElectives === true) {
+          isOverriding = true;
+          break;
+        }
+      }
+
+      const scheduleItems = formatNormalCellsAsScheduleItems(periodNormalCells);
+      if (!isOverriding) {
+        const electiveItems = formatElectiveCellsAsScheduleItems(periodElectiveCells);
+        for (const item of electiveItems) {
+          scheduleItems.push(item);
+        }
+      }
+
+      formattedDays.push({
+        name: daysName,
+        scheduleItems,
+      });
+    }
+
+    formattedPeriods.push({
+      timeTableCreationId: period.timeTableCreationId,
+      name: period.periodName,
+      startTime: period.startTime,
+      endTime: period.endTime,
+      days: formattedDays,
+    });
+  }
+
+  return {
+    timeTableRoutineId: plainRoutine.timeTableRoutineId,
+    timetableStructureCourseMapperId: plainRoutine.timetableStructureCourseMapperId,
+    timeTableNameId: mapping.timeTableNameId,
+    name: timeTableCreateName.name || 'N/A',
+    isPublished: Boolean(plainRoutine.isPublish),
+    isDraft: !plainRoutine.isPublish,
+    startDate: plainRoutine.startingDate,
+    endDate: plainRoutine.endingDate,
+    year: classSection?.year != null ? Number(classSection.year) : null,
+    classSection: mapRoutineClassSection(classSection),
+    periods: formattedPeriods,
+  };
+}
+
+function buildDateWiseLookup(rows) {
+  const lookup = new Map();
+  for (const row of rows) {
+    const plain = row.get ? row.get({ plain: true }) : row;
+    const dateKey = toDateOnlyString(plain.date);
+    lookup.set(`${plain.timeTableCellId}|${dateKey}`, plain);
+  }
+  return lookup;
+}
+
+function mapDateWiseTeachersForItem(plainRow) {
+  const teachers = [];
+  for (const teacher of plainRow.timeTableCellTeachersDateWise || []) {
+    teachers.push({
+      timeTableCellTeachersDateWiseId: teacher.timeTableCellTeachersDateWiseId,
+      userId: teacher.userId,
+      teacherType: teacher.teacherType,
+      isAttendence: teacher.isAttendence,
+      employeeName: teacher.employeeDetails?.employeeName ?? null,
+      employeeCode: teacher.employeeDetails?.employeeCode ?? null,
+      pickColor: teacher.employeeDetails?.pickColor ?? null,
+    });
+  }
+  return teachers;
+}
+
+function resolvePrimaryTeacherUserId(teachers) {
+  for (const teacher of teachers || []) {
+    if (String(teacher.teacherType || '').toLowerCase() === 'primary') {
+      return Number(teacher.userId);
+    }
+  }
+  if (teachers?.[0]?.userId != null) {
+    return Number(teachers[0].userId);
+  }
+  return null;
+}
+
+function enrichRoutineScheduleWithDateWise(routine, week, dateWiseLookup, routineStart, routineEnd) {
+  const dayDates = buildDayDatesFromWeekStart(week.startDate);
+  for (const period of routine.periods || []) {
+    for (const day of period.days || []) {
+      const dayDate = dayDates[day.name] || null;
+      day.date = dayDate;
+      day.isWithinRoutine = isDateWithinRange(dayDate, routineStart, routineEnd);
+
+      if (!day.isWithinRoutine) {
+        for (const item of day.scheduleItems || []) {
+          item.date = dayDate;
+          item.timeTableCellDateWiseId = null;
+        }
+        continue;
+      }
+
+      for (const item of day.scheduleItems || []) {
+        const cellId = item.timeTableCellId != null ? Number(item.timeTableCellId) : null;
+        let matched = null;
+        if (cellId != null && dayDate != null) {
+          matched = dateWiseLookup.get(`${cellId}|${dayDate}`);
+        }
+
+        item.date = dayDate;
+        item.timeTableCellDateWiseId = matched?.timeTableCellDateWiseId ?? null;
+        item.subjectId = matched?.subjectId ?? item.subject?.subjectId ?? item.subject?.electiveSubjectId ?? null;
+        item.electiveSubjectId = matched?.electiveSubjectId ?? item.subject?.electiveSubjectId ?? null;
+        item.userId = matched
+          ? resolvePrimaryTeacherUserId(matched.timeTableCellTeachersDateWise)
+          : (item.teachers?.[0]?.userId ?? null);
+        item.classRoomSectionId = matched?.classRoomSectionId
+          ?? item.room?.classRoomSectionId
+          ?? null;
+
+        if (matched) {
+          item.teachers = mapDateWiseTeachersForItem(matched);
+          if (matched.classRoom) {
+            item.room = {
+              classRoomSectionId: matched.classRoomSectionId ?? matched.classRoom.classRoomSectionId ?? null,
+              name: matched.classRoom.roomNumber ?? null,
+            };
+          }
+        }
+      }
+    }
+  }
+}
+
+export async function getDateWiseCellsBySection(
+  courseId,
+  sessionId,
+  classSectionTermId,
+  options = {},
+) {
+  const anchorDate = toDateOnlyString(options.date || new Date());
+  const placement = await resolveRoutinePlacement({ classSectionTermId });
+  const scope = routineScopeWhere(placement.classSectionTermId);
+
+  const termRow = await findClassSectionTermById(placement.classSectionTermId);
+  let classSection = null;
+  let section = null;
+  if (termRow) {
+    const plain = termRow.get ? termRow.get({ plain: true }) : termRow;
+    classSection = plain.classSection ?? null;
+    section = classSection?.section ?? null;
+  }
+
+  const routines = await timeTableCreateRepository.getNormalRoutinesBySectionScopeRepository(scope);
+  const selectedRoutine = pickSectionRoutineForDate(routines, anchorDate);
+
+  const common = {
+    courseId: Number(courseId),
+    sessionId: Number(sessionId),
+    classSectionTermId: Number(classSectionTermId),
+    section,
+    term: placement.term != null ? Number(placement.term) : null,
+    year: classSection?.year != null ? Number(classSection.year) : null,
+  };
+
+  if (!selectedRoutine) {
+    return {
+      ...common,
+      routine: null,
+      week: getSectionWeekRange(anchorDate),
+    };
+  }
+
+  const plainSelected = selectedRoutine.get({ plain: true });
+  const routineStart = toDateOnlyString(plainSelected.startingDate);
+  const routineEnd = toDateOnlyString(plainSelected.endingDate);
+  const week = getSectionWeekRange(anchorDate, routineStart, routineEnd);
+  const mapping = plainSelected.structureCourseMapping;
+  const timeTableNameId = mapping.timeTableNameId;
+
+  let electiveCells = [];
+  if (timeTableNameId != null) {
+    const electiveRoutines = await timeTableCreateRepository.getElectiveRoutinesByTableNamesRepository(
+      [timeTableNameId],
+    );
+    for (const electiveRoutine of electiveRoutines) {
+      const cells = electiveRoutine.timeTableCells || [];
+      for (const cell of cells) {
+        electiveCells.push(cell);
+      }
+    }
+  }
+
+  const routine = buildRoutinePeriodGrid(selectedRoutine, electiveCells, classSection);
+
+  if (routine.isPublished) {
+    const dateRange = getOverlappingDateRange(
+      week.startDate,
+      week.endDate,
+      routineStart,
+      routineEnd,
+    );
+    let dateWiseRows = [];
+    if (dateRange) {
+      dateWiseRows = await timeTableCreateRepository.getPublishedDateWiseCellsForRoutineInWeekRepository(
+        routine.timeTableRoutineId,
+        dateRange.startDate,
+        dateRange.endDate,
+      );
+    }
+    const dateWiseLookup = buildDateWiseLookup(dateWiseRows);
+    enrichRoutineScheduleWithDateWise(routine, week, dateWiseLookup, routineStart, routineEnd);
+  } else {
+    enrichRoutineScheduleWithDateWise(routine, week, new Map(), routineStart, routineEnd);
+  }
+
+  return {
+    ...common,
+    routine,
+    week,
+  };
+}
+
+async function assertPublishedDateWiseCell(timeTableCellDateWiseId, transaction) {
+  const row = await timeTableCreateRepository.getDateWiseCellForUpdateRepository(
+    timeTableCellDateWiseId,
+    { transaction },
+  );
+  if (!row) {
+    throw new Error('Date-wise cell not found');
+  }
+
+  const plain = row.get({ plain: true });
+  const routine = plain.timeTableCell?.timeTableRoutine;
+  if (!routine?.isPublish) {
+    throw new Error('Updates are allowed only for published routines');
+  }
+
+  return plain;
+}
+
+export async function updateDateWiseCellTeacher(timeTableCellDateWiseId, userId, updatedBy) {
+  const transaction = await sequelize.transaction();
+  try {
+    await assertPublishedDateWiseCell(timeTableCellDateWiseId, transaction);
+    await timeTableCreateRepository.updateDateWiseCellTeacherRepository(
+      timeTableCellDateWiseId,
+      userId,
+      updatedBy,
+      { transaction },
+    );
+    await transaction.commit();
+    return { timeTableCellDateWiseId: Number(timeTableCellDateWiseId), userId: Number(userId) };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+export async function updateDateWiseCellSubject(timeTableCellDateWiseId, payload, updatedBy) {
+  const transaction = await sequelize.transaction();
+  try {
+    await assertPublishedDateWiseCell(timeTableCellDateWiseId, transaction);
+    await timeTableCreateRepository.updateDateWiseCellSubjectRepository(
+      timeTableCellDateWiseId,
+      payload,
+      updatedBy,
+      { transaction },
+    );
+    await transaction.commit();
+    return {
+      timeTableCellDateWiseId: Number(timeTableCellDateWiseId),
+      subjectId: payload.subjectId != null ? Number(payload.subjectId) : undefined,
+      electiveSubjectId: payload.electiveSubjectId != null
+        ? Number(payload.electiveSubjectId)
+        : undefined,
+    };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+export async function updateDateWiseCellRoom(timeTableCellDateWiseId, classRoomSectionId, updatedBy) {
+  const transaction = await sequelize.transaction();
+  try {
+    await assertPublishedDateWiseCell(timeTableCellDateWiseId, transaction);
+    await timeTableCreateRepository.updateDateWiseCellRoomRepository(
+      timeTableCellDateWiseId,
+      classRoomSectionId,
+      updatedBy,
+      { transaction },
+    );
+    await transaction.commit();
+    return {
+      timeTableCellDateWiseId: Number(timeTableCellDateWiseId),
+      classRoomSectionId: Number(classRoomSectionId),
+    };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
 }

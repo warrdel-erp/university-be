@@ -271,3 +271,70 @@ export const getRoutineByTeacherAndAcademicYear = async (req, res) => {
         return ErrorResponse(res, 500, error.message || 'Internal Server Error');
     }
 };
+
+export const getDateWiseCellsBySection = async (req, res) => {
+    const { courseId, sessionId, classSectionTermId, date } = req.query;
+    try {
+        const result = await timeTableCreateServices.getDateWiseCellsBySection(
+            courseId,
+            sessionId,
+            classSectionTermId,
+            { date },
+        );
+        return SuccessResponse(res, 200, 'Date-wise cells fetched successfully', result);
+    } catch (error) {
+        console.error('Error in getting date-wise cells:', error);
+        return ErrorResponse(res, 500, error.message || 'Internal Server Error');
+    }
+};
+
+export const updateDateWiseCellTeacherController = async (req, res) => {
+    const { timeTableCellDateWiseId, userId } = req.body;
+    const updatedBy = req.user.userId;
+    try {
+        const result = await timeTableCreateServices.updateDateWiseCellTeacher(
+            timeTableCellDateWiseId,
+            userId,
+            updatedBy,
+        );
+        return SuccessResponse(res, 200, 'Date-wise teacher updated successfully', result);
+    } catch (error) {
+        console.error('Error in updating date-wise teacher:', error);
+        const statusCode = /not found|published/i.test(error.message || '') ? 400 : 500;
+        return ErrorResponse(res, statusCode, error.message || 'Internal Server Error');
+    }
+};
+
+export const updateDateWiseCellSubjectController = async (req, res) => {
+    const { timeTableCellDateWiseId, subjectId, electiveSubjectId } = req.body;
+    const updatedBy = req.user.userId;
+    try {
+        const result = await timeTableCreateServices.updateDateWiseCellSubject(
+            timeTableCellDateWiseId,
+            { subjectId, electiveSubjectId },
+            updatedBy,
+        );
+        return SuccessResponse(res, 200, 'Date-wise subject updated successfully', result);
+    } catch (error) {
+        console.error('Error in updating date-wise subject:', error);
+        const statusCode = /not found|published/i.test(error.message || '') ? 400 : 500;
+        return ErrorResponse(res, statusCode, error.message || 'Internal Server Error');
+    }
+};
+
+export const updateDateWiseCellRoomController = async (req, res) => {
+    const { timeTableCellDateWiseId, classRoomSectionId } = req.body;
+    const updatedBy = req.user.userId;
+    try {
+        const result = await timeTableCreateServices.updateDateWiseCellRoom(
+            timeTableCellDateWiseId,
+            classRoomSectionId,
+            updatedBy,
+        );
+        return SuccessResponse(res, 200, 'Date-wise room updated successfully', result);
+    } catch (error) {
+        console.error('Error in updating date-wise room:', error);
+        const statusCode = /not found|published/i.test(error.message || '') ? 400 : 500;
+        return ErrorResponse(res, statusCode, error.message || 'Internal Server Error');
+    }
+};
