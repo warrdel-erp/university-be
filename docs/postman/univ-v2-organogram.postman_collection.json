@@ -38,7 +38,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"departmentStructureId\": {{departmentStructureId}},\n  \"positionName\": \"Head of Department\",\n  \"positionCode\": \"HOD-CSE\",\n  \"employmentCategory\": \"Academic\",\n  \"reportsToOrgPositionId\": null,\n  \"reportingType\": \"Direct\",\n  \"isVacant\": true,\n  \"sortOrder\": 1\n}",
+              "raw": "{\n  \"departmentStructureId\": {{departmentStructureId}},\n  \"positionName\": \"Head of Department\",\n  \"positionCode\": \"HOD-CSE\",\n  \"employmentCategory\": \"Academic\",\n  \"reportsToOrgPositionId\": null,\n  \"reportingType\": \"Direct\",\n  \"isVacant\": true,\n  \"sortOrder\": 1,\n  \"level\": 1\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -46,7 +46,7 @@
               "host": ["{{baseurl}}"],
               "path": ["org", ""]
             },
-            "description": "**POST /org/**\n\nRequired: `departmentStructureId`, `positionName`, `employmentCategory`.\n\n`employmentCategory`: `Academic` | `Administrative` | `Support` | `Executive` | `Leadership`.\n\nDefault `isVacant`: true."
+            "description": "**POST /org/**\n\nRequired: `departmentStructureId`, `positionName`, `employmentCategory`, `level`.\n\n`employmentCategory`: `Academic` | `Administrative` | `Support` | `Executive` | `Leadership`.\n\nDefault `isVacant`: true."
           },
           "response": []
         },
@@ -105,7 +105,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"orgPositionId\": {{orgPositionId}},\n  \"positionName\": \"Head of Department\",\n  \"positionCode\": \"HOD-CSE\",\n  \"employmentCategory\": \"Academic\",\n  \"reportingType\": \"Direct\",\n  \"sortOrder\": 1\n}",
+              "raw": "{\n  \"orgPositionId\": {{orgPositionId}},\n  \"positionName\": \"Head of Department\",\n  \"positionCode\": \"HOD-CSE\",\n  \"employmentCategory\": \"Academic\",\n  \"reportingType\": \"Direct\",\n  \"sortOrder\": 1,\n  \"level\": 1\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {

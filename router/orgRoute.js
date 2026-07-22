@@ -64,6 +64,7 @@ const addPositionSchema = z.object({
     reportingType: z.string().optional().nullable(),
     isVacant: z.boolean().optional(),
     sortOrder: z.coerce.number().int().optional(),
+    level: z.coerce.number().int().positive('level must be greater than 0'),
 });
 
 const updatePositionSchema = z.object({
@@ -75,6 +76,7 @@ const updatePositionSchema = z.object({
     reportsToOrgPositionId: optionalNullablePositiveIntegerId,
     reportingType: z.string().optional().nullable(),
     sortOrder: z.coerce.number().int().optional(),
+    level: z.coerce.number().int().positive('level must be greater than 0').optional(),
 });
 
 const positionIdQuerySchema = z.object({

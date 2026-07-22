@@ -64,6 +64,11 @@ const orgPositionModel = sequelize.define(
             defaultValue: 0,
             field: 'sort_order'
         },
+        level: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'level'
+        },
         universityId: {
             type: DataTypes.INTEGER,
             allowNull: false,

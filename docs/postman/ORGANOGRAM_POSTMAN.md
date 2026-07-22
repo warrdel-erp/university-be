@@ -35,7 +35,7 @@
 
 | Method | Path | Body / query |
 |--------|------|----------------|
-| `POST` | `/org/` | `departmentStructureId`, `positionName`, `employmentCategory` (+ optional code, reportsTo, reportingType, isVacant, sortOrder) |
+| `POST` | `/org/` | `departmentStructureId`, `positionName`, `employmentCategory`, `level` (+ optional code, reportsTo, reportingType, isVacant, sortOrder) |
 | `GET` | `/org/` | Optional: `departmentStructureId`, `employmentCategory`, `isVacant` |
 | `GET` | `/org/single` | `orgPositionId` |
 | `PATCH` | `/org/` | `orgPositionId` + fields to update (not `isVacant`) |
@@ -71,7 +71,8 @@
   "reportsToOrgPositionId": null,
   "reportingType": "Direct",
   "isVacant": true,
-  "sortOrder": 1
+  "sortOrder": 1,
+  "level": 1
 }
 ```
 

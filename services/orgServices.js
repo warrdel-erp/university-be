@@ -42,6 +42,7 @@ export async function addOrgPosition(body, createdBy, updatedBy) {
         reportingType: body.reportingType ?? null,
         isVacant,
         sortOrder: body.sortOrder != null ? Number(body.sortOrder) : 0,
+        level: Number(body.level),
         createdBy,
         updatedBy,
     });
@@ -90,6 +91,10 @@ export async function updateOrgPosition(orgPositionId, body, updatedBy) {
 
     if (rest.sortOrder != null) {
         rest.sortOrder = Number(rest.sortOrder);
+    }
+
+    if (rest.level != null) {
+        rest.level = Number(rest.level);
     }
 
     rest.updatedBy = updatedBy;
