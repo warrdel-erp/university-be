@@ -94,6 +94,8 @@ import subAccountModel from "./subAccountModel.js";
 import departmentModel from "./departmentModel.js";
 import staffModel from "./staffModel.js";
 import departmentStructureModel from "./departmentStructureModel.js";
+import orgPositionModel from "./orgPositionModel.js";
+import orgPositionHeadModel from "./orgPositionHeadModel.js";
 import syllabusDetailsModel from "./syllabusDetailsModel.js";
 import syllabusModel from "./syllabusModel.js";
 import sessionModel from "./sessionModel.js";
@@ -1058,6 +1060,42 @@ subAccountModel.hasMany(departmentStructureModel, {
   as: "parentAccounts",
 });
 
+orgPositionModel.belongsTo(departmentStructureModel, {
+  foreignKey: "department_structure_id",
+  as: "departmentStructure",
+});
+departmentStructureModel.hasMany(orgPositionModel, {
+  foreignKey: "department_structure_id",
+  as: "orgPositions",
+});
+
+orgPositionModel.belongsTo(orgPositionModel, {
+  foreignKey: "reports_to_org_position_id",
+  as: "reportsToPosition",
+});
+orgPositionModel.hasMany(orgPositionModel, {
+  foreignKey: "reports_to_org_position_id",
+  as: "directReports",
+});
+
+orgPositionHeadModel.belongsTo(orgPositionModel, {
+  foreignKey: "org_position_id",
+  as: "position",
+});
+orgPositionModel.hasMany(orgPositionHeadModel, {
+  foreignKey: "org_position_id",
+  as: "heads",
+});
+
+orgPositionHeadModel.belongsTo(userModel, {
+  foreignKey: "user_id",
+  as: "assignee",
+});
+userModel.hasMany(orgPositionHeadModel, {
+  foreignKey: "user_id",
+  as: "orgHeads",
+});
+
 syllabusModel.hasMany(syllabusDetailsModel, { foreignKey: "syllabus_id", as: "syllabusDetails" });
 syllabusDetailsModel.belongsTo(syllabusModel, { foreignKey: "syllabus_id", as: "syllabus" });
 
@@ -1814,6 +1852,8 @@ export {
   departmentModel,
   staffModel,
   departmentStructureModel,
+  orgPositionModel,
+  orgPositionHeadModel,
   syllabusDetailsModel,
   syllabusModel,
   sessionModel,

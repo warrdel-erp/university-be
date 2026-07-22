@@ -59,6 +59,7 @@ import subAccount from "./router/subAccountRoute.js"; // this is department
 import department from "./router/departmentRoute.js"; // this is sub_account
 import staff from "./router/staffRoute.js";
 import departmentStructure from "./router/departmentStructureRoute.js";
+import org from "./router/orgRoute.js";
 import syllabus from "./router/syllabusRoute.js";
 import session from "./router/sessionRoute.js";
 import po from "./router/poRoute.js";
@@ -148,6 +149,7 @@ app.use("/subAccount", subAccount); // this is department
 app.use("/department", department); // this is sub_account
 app.use("/staff", staff);
 app.use("/departmentStructure", departmentStructure);
+app.use("/org", org);
 app.use("/assetCategory", assetCategory);
 app.use("/asset", asset);
 app.use("/assetIssue", assetIssue);
