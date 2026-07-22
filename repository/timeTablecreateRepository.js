@@ -1837,21 +1837,32 @@ function routineCellTeachersInclude({ userId, required = false } = {}) {
   return include;
 }
 
-function buildCellSubjectWhere(subjectId) {
+async function buildCellSubjectWhere(subjectId) {
   if (subjectId == null) {
     return {};
   }
+
   const subjectIdNum = Number(subjectId);
-  return {
-    [Op.or]: [
-      { subjectId: subjectIdNum },
-      { '$timeTableTeacherSubject.employeeSubject.subject_id$': subjectIdNum },
-    ],
-  };
+  const mappingRows = await model.teacherSubjectMappingModel.findAll({
+    where: { subjectId: subjectIdNum },
+    attributes: ['teacherSubjectMappingId'],
+  });
+
+  const mappingIds = [];
+  for (const row of mappingRows) {
+    mappingIds.push(Number(row.teacherSubjectMappingId));
+  }
+
+  const orConditions = [{ subjectId: subjectIdNum }];
+  if (mappingIds.length > 0) {
+    orConditions.push({ teacherSubjectMappingId: { [Op.in]: mappingIds } });
+  }
+
+  return { [Op.or]: orConditions };
 }
 
-function routineCellsInclude({ userId, subjectId, required = false } = {}) {
-  const cellWhere = buildCellSubjectWhere(subjectId);
+function routineCellsInclude({ userId, cellSubjectWhere, required = false } = {}) {
+  const cellWhere = cellSubjectWhere || {};
 
   return {
     model: model.timeTableCellModel,
@@ -2030,6 +2041,8 @@ async function fetchTeacherRoutineContext(userId, courseId, sessionId) {
 }
 
 async function fetchNormalRoutinesForTeacher(userId, courseId, sessionId, subjectId) {
+  const cellSubjectWhere = await buildCellSubjectWhere(subjectId);
+
   return scoped(model.timeTableRoutineModel).findAll({
     where: {
       courseId,
@@ -2049,7 +2062,7 @@ async function fetchNormalRoutinesForTeacher(userId, courseId, sessionId, subjec
       teacherRoutineStructureInclude,
       routineCellsInclude({
         userId,
-        subjectId,
+        cellSubjectWhere,
         required: true,
       }),
       teacherClassSectionInclude(courseId, sessionId),

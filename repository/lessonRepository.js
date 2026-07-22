@@ -991,6 +991,30 @@ export async function getSimpleLessonList(whereClause) {
   }
 }
 
+async function buildLessonCellSubjectWhere(subjectId) {
+  if (subjectId == null) {
+    return {};
+  }
+
+  const subjectIdNum = Number(subjectId);
+  const mappingRows = await model.teacherSubjectMappingModel.findAll({
+    where: { subjectId: subjectIdNum },
+    attributes: ['teacherSubjectMappingId'],
+  });
+
+  const mappingIds = [];
+  for (const row of mappingRows) {
+    mappingIds.push(Number(row.teacherSubjectMappingId));
+  }
+
+  const orConditions = [{ subjectId: subjectIdNum }];
+  if (mappingIds.length > 0) {
+    orConditions.push({ teacherSubjectMappingId: { [Op.in]: mappingIds } });
+  }
+
+  return { [Op.or]: orConditions };
+}
+
 /**
  * One week of published date-wise classes for a teacher + subject + course + session.
  */
@@ -1038,6 +1062,10 @@ export async function getTeacherWeekDateWiseCells({
     sectionWhere.courseId = courseIdNum;
   }
 
+  const cellSubjectWhere = subjectId != null
+    ? await buildLessonCellSubjectWhere(subjectId)
+    : {};
+
   return model.timeTableCellDateWiseModel.findAll({
     attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
     where: dateConditions.length > 0 ? { [Op.and]: dateConditions } : {},
@@ -1059,16 +1087,7 @@ export async function getTeacherWeekDateWiseCells({
         model: model.timeTableCellModel,
         as: 'timeTableCell',
         required: true,
-        ...(subjectId != null
-          ? {
-            where: {
-              [Op.or]: [
-                { subjectId: Number(subjectId) },
-                { '$timeTableTeacherSubject.employeeSubject.subject_id$': Number(subjectId) },
-              ],
-            },
-          }
-          : {}),
+        ...(subjectId != null ? { where: cellSubjectWhere } : {}),
         attributes: [
           'timeTableCellId',
           'timeTableRoutineId',
