@@ -2993,6 +2993,19 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
   }
   const electiveRoutines = await timeTableCreateRepository.getElectiveRoutinesByTableNamesRepository(timeTableNameIds);
 
+  const allCellsForLookup = [];
+  for (const routine of normalRoutines) {
+    for (const cell of routine.timeTableCells || []) {
+      allCellsForLookup.push(cell);
+    }
+  }
+  for (const routine of electiveRoutines) {
+    for (const cell of routine.timeTableCells || []) {
+      allCellsForLookup.push(cell);
+    }
+  }
+  const employeeByUserId = await buildEmployeeLookupMap(allCellsForLookup);
+
   const daysList = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const structuresById = new Map();
 
@@ -3069,10 +3082,10 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
           }
         }
 
-        const scheduleItems = formatNormalCellsAsScheduleItems(periodNormalCells);
+        const scheduleItems = formatNormalCellsAsScheduleItems(periodNormalCells, employeeByUserId);
 
         if (!isOverriding) {
-          const electiveItems = formatElectiveCellsAsScheduleItems(periodElectiveCells);
+          const electiveItems = formatElectiveCellsAsScheduleItems(periodElectiveCells, employeeByUserId);
           for (const item of electiveItems) {
             scheduleItems.push(item);
           }
@@ -3182,36 +3195,89 @@ function buildEmptyPeriodGrid(periods, weekOffList) {
   return formattedPeriods;
 }
 
-function mapCellTeachers(cell) {
-  const teachers = cell.timeTableCellTeachers || [];
+function collectTeacherUserIdsFromCells(cells) {
+  const userIds = new Set();
+
+  for (const cell of cells) {
+    const plain = cell.get ? cell.get({ plain: true }) : cell;
+    for (const teacher of plain.timeTableCellTeachers || []) {
+      if (teacher.userId != null) {
+        userIds.add(Number(teacher.userId));
+      }
+    }
+
+    const mappingEmployee = plain.timeTableTeacherSubject?.teacherEmployeeData;
+    if (mappingEmployee?.userId != null) {
+      userIds.add(Number(mappingEmployee.userId));
+    }
+  }
+
+  return userIds;
+}
+
+async function buildEmployeeLookupMap(cells) {
+  const userIds = [...collectTeacherUserIdsFromCells(cells)];
+  if (!userIds.length) {
+    return new Map();
+  }
+
+  const rows = await timeTableCreateRepository.getEmployeesByUserIdsRepository(userIds);
+  const lookup = new Map();
+  for (const row of rows) {
+    const plain = row.get ? row.get({ plain: true }) : row;
+    lookup.set(Number(plain.userId), plain);
+  }
+  return lookup;
+}
+
+function resolveTeacherEmployeeForCell(teacherRow, plainCell, employeeByUserId) {
+  if (teacherRow.employeeDetails?.employeeName) {
+    return teacherRow.employeeDetails;
+  }
+
+  const mappingEmployee = plainCell.timeTableTeacherSubject?.teacherEmployeeData;
+  if (mappingEmployee && Number(mappingEmployee.userId) === Number(teacherRow.userId)) {
+    return mappingEmployee;
+  }
+
+  if (employeeByUserId && teacherRow.userId != null) {
+    return employeeByUserId.get(Number(teacherRow.userId)) ?? null;
+  }
+
+  return teacherRow.employeeDetails ?? null;
+}
+
+function mapCellTeachers(cell, employeeByUserId) {
+  const plainCell = cell.get ? cell.get({ plain: true }) : cell;
+  const teachers = plainCell.timeTableCellTeachers || [];
   const mapped = [];
 
   for (const teacherRow of teachers) {
-    const employee = teacherRow.employeeDetails;
+    const employee = resolveTeacherEmployeeForCell(teacherRow, plainCell, employeeByUserId);
     mapped.push({
-      employeeId: employee ? employee.employeeId : null,
+      employeeId: employee?.employeeId ?? null,
       userId: teacherRow.userId,
-      name: employee ? employee.employeeName : 'N/A',
-      color: employee ? employee.pickColor : undefined,
-      timeTableCellId: cell.timeTableCellId,
+      name: employee?.employeeName ?? 'N/A',
+      color: employee?.pickColor,
+      timeTableCellId: plainCell.timeTableCellId,
       timeTableCellTeacherId: teacherRow.timeTableCellTeacherId,
       teacherType: teacherRow.teacherType,
       isAttendence: teacherRow.isAttendence,
     });
   }
 
-  if (mapped.length === 0 && cell.isSameTeacher === true) {
-    const employee = cell.timeTableTeacherSubject?.teacherEmployeeData;
+  if (mapped.length === 0 && plainCell.isSameTeacher === true) {
+    const employee = plainCell.timeTableTeacherSubject?.teacherEmployeeData;
     if (employee) {
       mapped.push({
         employeeId: employee.employeeId ?? null,
         userId: employee.userId ?? null,
         name: employee.employeeName ?? 'N/A',
         color: employee.pickColor,
-        timeTableCellId: cell.timeTableCellId,
+        timeTableCellId: plainCell.timeTableCellId,
         timeTableCellTeacherId: null,
         teacherType: 'Primary',
-        isAttendence: cell.isAttendence ?? true,
+        isAttendence: plainCell.isAttendence ?? true,
       });
     }
   }
@@ -3219,7 +3285,7 @@ function mapCellTeachers(cell) {
   return mapped;
 }
 
-function formatNormalCellsAsScheduleItems(periodNormalCells) {
+function formatNormalCellsAsScheduleItems(periodNormalCells, employeeByUserId) {
   const scheduleItems = [];
 
   for (const cell of periodNormalCells) {
@@ -3232,7 +3298,7 @@ function formatNormalCellsAsScheduleItems(periodNormalCells) {
       period: cell.period,
       type: 'normal',
       isOverridingSyblingElectives: cell.isOverridingSyblingElectives,
-      teachers: mapCellTeachers(cell),
+      teachers: mapCellTeachers(cell, employeeByUserId),
       subject,
       room: { classRoomSectionId: roomId, name: roomName },
     });
@@ -3241,7 +3307,7 @@ function formatNormalCellsAsScheduleItems(periodNormalCells) {
   return scheduleItems;
 }
 
-function formatElectiveCellsAsScheduleItems(periodElectiveCells) {
+function formatElectiveCellsAsScheduleItems(periodElectiveCells, employeeByUserId) {
   const scheduleItems = [];
 
   for (const cell of periodElectiveCells) {
@@ -3255,7 +3321,7 @@ function formatElectiveCellsAsScheduleItems(periodElectiveCells) {
       timeTableCellId: cell.timeTableCellId,
       period: cell.period,
       type: 'elective',
-      teachers: mapCellTeachers(cell),
+      teachers: mapCellTeachers(cell, employeeByUserId),
       subject: { electiveSubjectId: subjectId, name: subjectName },
       room: { classRoomSectionId: roomId, name: roomName },
     });
@@ -3264,7 +3330,7 @@ function formatElectiveCellsAsScheduleItems(periodElectiveCells) {
   return scheduleItems;
 }
 
-function formatElectiveRoutinePeriods(periods, cells, weekOffList) {
+function formatElectiveRoutinePeriods(periods, cells, weekOffList, employeeByUserId) {
   const daysList = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const weekOffLower = [];
   for (const day of weekOffList) {
@@ -3295,7 +3361,7 @@ function formatElectiveRoutinePeriods(periods, cells, weekOffList) {
 
       formattedDays.push({
         name: daysName,
-        scheduleItems: formatElectiveCellsAsScheduleItems(periodElectiveCells),
+        scheduleItems: formatElectiveCellsAsScheduleItems(periodElectiveCells, employeeByUserId),
       });
     }
 
@@ -3324,6 +3390,14 @@ async function getElectiveRoutineGridByCourseId(courseId) {
 
   const electiveRoutines =
     await timeTableCreateRepository.getElectiveRoutinesByCourseIdRepository(courseIdNum);
+
+  const allCells = [];
+  for (const routine of electiveRoutines) {
+    for (const cell of routine.timeTableCells || []) {
+      allCells.push(cell);
+    }
+  }
+  const employeeByUserId = await buildEmployeeLookupMap(allCells);
 
   const structuresById = new Map();
 
@@ -3356,7 +3430,7 @@ async function getElectiveRoutineGridByCourseId(courseId) {
       startDate: routine.startingDate,
       endDate: routine.endingDate,
       year: null,
-      periods: formatElectiveRoutinePeriods(periods, cells, weekOffList),
+      periods: formatElectiveRoutinePeriods(periods, cells, weekOffList, employeeByUserId),
     });
   }
 
@@ -3498,6 +3572,17 @@ export async function getRoutineByTeacherAndAcademicYear(userId, courseId, sessi
     return { ...common, routines: [] };
   }
 
+  const allCellsForLookup = [];
+  for (const row of routineRows) {
+    for (const cell of row.routine.timeTableCells || []) {
+      allCellsForLookup.push(cell);
+    }
+    for (const cell of row.electiveCells || []) {
+      allCellsForLookup.push(cell);
+    }
+  }
+  const employeeByUserId = await buildEmployeeLookupMap(allCellsForLookup);
+
   const daysList = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const formattedRoutines = [];
 
@@ -3547,10 +3632,10 @@ export async function getRoutineByTeacherAndAcademicYear(userId, courseId, sessi
           }
         }
 
-        const scheduleItems = formatNormalCellsAsScheduleItems(periodNormalCells);
+        const scheduleItems = formatNormalCellsAsScheduleItems(periodNormalCells, employeeByUserId);
 
         if (!isOverriding) {
-          const electiveItems = formatElectiveCellsAsScheduleItems(periodElectiveCells);
+          const electiveItems = formatElectiveCellsAsScheduleItems(periodElectiveCells, employeeByUserId);
           for (const item of electiveItems) {
             scheduleItems.push(item);
           }
@@ -3794,7 +3879,7 @@ function pickSectionRoutineForWeek(routines, week, anchorDate) {
   return pool[0];
 }
 
-function buildRoutinePeriodGrid(routine, electiveCells, classSection) {
+function buildRoutinePeriodGrid(routine, electiveCells, classSection, employeeByUserId) {
   const plainRoutine = routine.get ? routine.get({ plain: true }) : routine;
   const mapping = plainRoutine.structureCourseMapping;
   const timeTableCreateName = mapping.timeTableStructure;
@@ -3832,9 +3917,9 @@ function buildRoutinePeriodGrid(routine, electiveCells, classSection) {
         }
       }
 
-      const scheduleItems = formatNormalCellsAsScheduleItems(periodNormalCells);
+      const scheduleItems = formatNormalCellsAsScheduleItems(periodNormalCells, employeeByUserId);
       if (!isOverriding) {
-        const electiveItems = formatElectiveCellsAsScheduleItems(periodElectiveCells);
+        const electiveItems = formatElectiveCellsAsScheduleItems(periodElectiveCells, employeeByUserId);
         for (const item of electiveItems) {
           scheduleItems.push(item);
         }
@@ -4042,7 +4127,9 @@ export async function getDateWiseCellsBySection(
     }
   }
 
-  const routine = buildRoutinePeriodGrid(selectedRoutine, electiveCells, classSection);
+  const allCellsForLookup = [...(selectedRoutine.timeTableCells || []), ...electiveCells];
+  const employeeByUserId = await buildEmployeeLookupMap(allCellsForLookup);
+  const routine = buildRoutinePeriodGrid(selectedRoutine, electiveCells, classSection, employeeByUserId);
 
   if (routine.isPublished) {
     const dateRange = getOverlappingDateRange(

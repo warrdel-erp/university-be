@@ -1829,7 +1829,8 @@ function routineCellTeachersInclude({ userId, required = false } = {}) {
       {
         model: model.employeeModel,
         as: 'employeeDetails',
-        attributes: ['employeeId', 'userId', 'employeeName', 'pickColor'],
+        attributes: ['employeeId', 'userId', 'employeeName', 'employeeCode', 'pickColor'],
+        where: buildScope(model.employeeModel),
         required: false,
       },
     ],
@@ -1886,7 +1887,8 @@ function routineCellsInclude({ userId, cellSubjectWhere, required = false } = {}
           {
             model: model.employeeModel,
             as: 'teacherEmployeeData',
-            attributes: ['employeeId', 'userId', 'employeeName', 'pickColor'],
+            attributes: ['employeeId', 'userId', 'employeeName', 'employeeCode', 'pickColor'],
+            where: buildScope(model.employeeModel),
             required: false,
           },
           {
@@ -2490,6 +2492,17 @@ export async function getDateWiseCellForUpdateRepository(timeTableCellDateWiseId
       },
     ],
     transaction: options.transaction,
+  });
+}
+
+export async function getEmployeesByUserIdsRepository(userIds) {
+  if (!userIds.length) {
+    return [];
+  }
+
+  return scoped(model.employeeModel).findAll({
+    where: { userId: { [Op.in]: userIds } },
+    attributes: ['employeeId', 'userId', 'employeeName', 'employeeCode', 'pickColor'],
   });
 }
 
