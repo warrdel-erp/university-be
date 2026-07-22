@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "b2c3d4e5-f6a7-8901-bcde-organogram0001",
     "name": "univ-v2-organogram",
-    "description": "Organogram (org) APIs — positions on `department_structure` + heads (`user_id`).\n\n## Flow\n1. Ensure `departmentStructureId` exists (`/departmentStructure`)\n2. `POST /org/` — create position (can be vacant)\n3. `POST /org/head` — assign user as PRIMARY/ACTING\n4. List / update / markVacant / delete as needed\n\nSet `baseurl` + `token`. Permissions reuse DEPARTMENT_* .\n\nSee also: `docs/ORGANOGRAM_NAMING_CONVENTION.md` and `docs/postman/ORGANOGRAM_POSTMAN.md`.",
+    "description": "Organogram (org) APIs — positions on `department_structure` + heads (`user_id`).\n\n## Flow\n1. `POST /departmentStructure/` — create structure (`subAccountId` + `parentAccountId` may be null for root)\n2. `POST /org/` — create position (can be vacant)\n3. `POST /org/head` — assign user as PRIMARY/ACTING\n4. List / update / markVacant / delete as needed\n\nSet `baseurl` + `token`. Permissions reuse DEPARTMENT_* .\n\nSee also: `docs/ORGANOGRAM_NAMING_CONVENTION.md` and `docs/postman/ORGANOGRAM_POSTMAN.md`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -279,6 +279,86 @@
       "description": "Helpers — not org routes, but needed for IDs.",
       "item": [
         {
+          "name": "create department structure (root)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const row = res.departmentStructure;",
+                  "  if (row && row.departmentStructureId) {",
+                  "    pm.collectionVariables.set('departmentStructureId', String(row.departmentStructureId));",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountId\": {{accountId}},\n  \"subAccountId\": null,\n  \"parentAccountId\": null\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseurl}}/departmentStructure/",
+              "host": ["{{baseurl}}"],
+              "path": ["departmentStructure", ""]
+            },
+            "description": "**POST /departmentStructure/**\n\nRequired: `accountId`.\n\n`subAccountId` and `parentAccountId` may both be `null` for a top-level root node.\n\nChild / self-parent example:\n```json\n{\n  \"accountId\": 1,\n  \"subAccountId\": 5,\n  \"parentAccountId\": 5\n}\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "create department structure (self-parent)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const row = res.departmentStructure;",
+                  "  if (row && row.departmentStructureId) {",
+                  "    pm.collectionVariables.set('departmentStructureId', String(row.departmentStructureId));",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountId\": {{accountId}},\n  \"subAccountId\": {{subAccountId}},\n  \"parentAccountId\": {{subAccountId}}\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseurl}}/departmentStructure/",
+              "host": ["{{baseurl}}"],
+              "path": ["departmentStructure", ""]
+            },
+            "description": "**POST /departmentStructure/**\n\nSelf-parent root: set `parentAccountId` equal to `subAccountId`."
+          },
+          "response": []
+        },
+        {
           "name": "list department structure",
           "request": {
             "auth": {
@@ -302,6 +382,8 @@
   "variable": [
     { "key": "baseurl", "value": "http://localhost:8080", "type": "string" },
     { "key": "token", "value": "", "type": "string" },
+    { "key": "accountId", "value": "1", "type": "string" },
+    { "key": "subAccountId", "value": "5", "type": "string" },
     { "key": "departmentStructureId", "value": "1", "type": "string" },
     { "key": "orgPositionId", "value": "", "type": "string" },
     { "key": "orgPositionHeadId", "value": "", "type": "string" },

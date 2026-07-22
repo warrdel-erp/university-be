@@ -3,6 +3,11 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
+    const table = await queryInterface.describeTable('org_position');
+    if (table.level) {
+      return;
+    }
+
     await queryInterface.addColumn('org_position', 'level', {
       type: Sequelize.INTEGER,
       allowNull: false,
@@ -11,6 +16,11 @@ module.exports = {
   },
 
   async down(queryInterface) {
+    const table = await queryInterface.describeTable('org_position');
+    if (!table.level) {
+      return;
+    }
+
     await queryInterface.removeColumn('org_position', 'level');
   },
 };

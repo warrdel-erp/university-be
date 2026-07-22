@@ -25,7 +25,7 @@ const departmentStructureModel = sequelize.define(
         },
         subAccountId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'sub_account_id',
                 references: {
                     model: subAccount,
@@ -34,7 +34,7 @@ const departmentStructureModel = sequelize.define(
         },
         parentAccountId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'parent_account_id',
                 references: {
                     model: subAccount,

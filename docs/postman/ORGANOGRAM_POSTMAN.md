@@ -15,17 +15,33 @@
 | # | Method | Path | Purpose | Save |
 |---|--------|------|---------|------|
 | 0 | — | Login + tenant defaults | Get JWT | `token` |
-| 1 | `GET` | `/departmentStructure/` | Pick structure node | `departmentStructureId` |
-| 2 | `POST` | `/org/` | Create position (vacant OK) | `orgPositionId` |
-| 3 | `GET` | `/org/single?orgPositionId=` | Verify position | — |
-| 4 | `POST` | `/org/head` | Assign user as head | `orgPositionHeadId` |
-| 5 | `GET` | `/org/head?orgPositionId=` | List heads | — |
-| 6 | `GET` | `/org/` | List positions (+ heads) | — |
-| 7 | `PATCH` | `/org/` | Update position fields | — |
-| 8 | `PATCH` | `/org/head` | Update holder / status / dates | — |
-| 9 | `POST` | `/org/markVacant` | Clear ACTIVE heads, vacant | — |
-| 10 | `DELETE` | `/org/head?orgPositionHeadId=` | Remove one head | — |
-| 11 | `DELETE` | `/org/?orgPositionId=` | Soft-delete position + heads | — |
+| 1 | `POST` | `/departmentStructure/` | Create structure (root: `subAccountId` + `parentAccountId` may be `null`) | `departmentStructureId` |
+| 2 | `GET` | `/departmentStructure/` | List / pick structure node | `departmentStructureId` |
+| 3 | `POST` | `/org/` | Create position (vacant OK) | `orgPositionId` |
+| 4 | `GET` | `/org/single?orgPositionId=` | Verify position | — |
+| 5 | `POST` | `/org/head` | Assign user as head | `orgPositionHeadId` |
+| 6 | `GET` | `/org/head?orgPositionId=` | List heads | — |
+| 7 | `GET` | `/org/` | List positions (+ heads) | — |
+| 8 | `PATCH` | `/org/` | Update position fields | — |
+| 9 | `PATCH` | `/org/head` | Update holder / status / dates | — |
+| 10 | `POST` | `/org/markVacant` | Clear ACTIVE heads, vacant | — |
+| 11 | `DELETE` | `/org/head?orgPositionHeadId=` | Remove one head | — |
+| 12 | `DELETE` | `/org/?orgPositionId=` | Soft-delete position + heads | — |
+
+### Department structure
+
+| Method | Path | Body |
+|--------|------|------|
+| `POST` | `/departmentStructure/` | Required: `accountId`. `subAccountId` and `parentAccountId` may both be `null` (top root). Self-parent: set both to the same id. |
+| `GET` | `/departmentStructure/` | — |
+
+```json
+{
+  "accountId": 1,
+  "subAccountId": null,
+  "parentAccountId": null
+}
+```
 
 ---
 

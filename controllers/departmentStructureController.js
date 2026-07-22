@@ -5,10 +5,16 @@ export async function addDepartmentStructure(req, res) {
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if (!(accountId && subAccountId && parentAccountId)) {
-            return res.status(400).send('accountId,subAccountId and parentAccountId is required');
+        if (!accountId) {
+            return res.status(400).send('accountId is required');
         }
-        const departmentStructure = await departmentStructureCreation.addDepartmentStructure(req.body, createdBy, updatedBy);
+        const payload = {
+            ...req.body,
+            accountId: Number(accountId),
+            subAccountId: subAccountId == null ? null : Number(subAccountId),
+            parentAccountId: parentAccountId == null ? null : Number(parentAccountId),
+        };
+        const departmentStructure = await departmentStructureCreation.addDepartmentStructure(payload, createdBy, updatedBy);
         res.status(201).json({ message: "Data added successfully", departmentStructure });
     } catch (error) {
         res.status(500).json({ error: error.message });
