@@ -38,7 +38,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"departmentStructureId\": {{departmentStructureId}},\n  \"positionName\": \"Head of Department\",\n  \"positionCode\": \"HOD-CSE\",\n  \"employmentCategory\": \"Academic\",\n  \"reportsToOrgPositionId\": null,\n  \"reportingType\": \"Direct\",\n  \"isVacant\": true,\n  \"sortOrder\": 1,\n  \"level\": 1\n}",
+              "raw": "{\n  \"departmentStructureId\": {{departmentStructureId}},\n  \"subAccountId\": {{subAccountId}},\n  \"positionName\": \"Head of Department\",\n  \"positionCode\": \"HOD-CSE\",\n  \"employmentCategory\": \"Academic\",\n  \"reportsToOrgPositionId\": null,\n  \"reportingType\": \"Direct\",\n  \"isVacant\": true,\n  \"sortOrder\": 1,\n  \"level\": 1\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -46,7 +46,7 @@
               "host": ["{{baseurl}}"],
               "path": ["org", ""]
             },
-            "description": "**POST /org/**\n\nRequired: `departmentStructureId`, `positionName`, `employmentCategory`, `level`.\n\n`employmentCategory`: `Academic` | `Administrative` | `Support` | `Executive` | `Leadership`.\n\nDefault `isVacant`: true."
+            "description": "**POST /org/**\n\nRequired: `departmentStructureId`, `positionName`, `employmentCategory`, `level`.\n\nOptional: `subAccountId` (department this position belongs to, e.g. HOD of CSE).\n\n`employmentCategory`: `Academic` | `Administrative` | `Support` | `Executive` | `Leadership`.\n\nDefault `isVacant`: true."
           },
           "response": []
         },
@@ -60,16 +60,17 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/org/?departmentStructureId={{departmentStructureId}}&employmentCategory=Academic&isVacant=true",
+              "raw": "{{baseurl}}/org/?departmentStructureId={{departmentStructureId}}&subAccountId={{subAccountId}}&employmentCategory=Academic&isVacant=true",
               "host": ["{{baseurl}}"],
               "path": ["org", ""],
               "query": [
                 { "key": "departmentStructureId", "value": "{{departmentStructureId}}", "description": "optional" },
+                { "key": "subAccountId", "value": "{{subAccountId}}", "description": "optional — filter by department" },
                 { "key": "employmentCategory", "value": "Academic", "description": "optional" },
                 { "key": "isVacant", "value": "true", "description": "optional true|false" }
               ]
             },
-            "description": "**GET /org/**\n\nOptional filters: `departmentStructureId`, `employmentCategory`, `isVacant`.\n\nIncludes structure, reportsTo, and heads."
+            "description": "**GET /org/**\n\nOptional filters: `departmentStructureId`, `subAccountId`, `employmentCategory`, `isVacant`.\n\nIncludes structure, subAccount, reportsTo, and heads."
           },
           "response": []
         },
@@ -105,7 +106,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"orgPositionId\": {{orgPositionId}},\n  \"positionName\": \"Head of Department\",\n  \"positionCode\": \"HOD-CSE\",\n  \"employmentCategory\": \"Academic\",\n  \"reportingType\": \"Direct\",\n  \"sortOrder\": 1,\n  \"level\": 1\n}",
+              "raw": "{\n  \"orgPositionId\": {{orgPositionId}},\n  \"subAccountId\": {{subAccountId}},\n  \"positionName\": \"Head of Department\",\n  \"positionCode\": \"HOD-CSE\",\n  \"employmentCategory\": \"Academic\",\n  \"reportingType\": \"Direct\",\n  \"sortOrder\": 1,\n  \"level\": 1\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {

@@ -81,7 +81,7 @@ API layer files use the **feature** name `org*`. Model files match the **DB tabl
 
 | Entity | Keys |
 |---|---|
-| Position | `orgPositionId`, `departmentStructureId`, `positionName`, `positionCode`, `employmentCategory`, `reportsToOrgPositionId`, `reportingType`, `isVacant`, `sortOrder`, `level` |
+| Position | `orgPositionId`, `departmentStructureId`, `subAccountId`, `positionName`, `positionCode`, `employmentCategory`, `reportsToOrgPositionId`, `reportingType`, `isVacant`, `sortOrder`, `level` |
 | Head | `orgPositionHeadId`, `orgPositionId`, `userId`, `holderType` (`PRIMARY` \| `ACTING`), `status` (`ACTIVE` \| `INACTIVE`), `joiningDate`, `endDate` |
 
 ## Future rename checklist (`sub_account` ↔ `department`)

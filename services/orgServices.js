@@ -28,10 +28,20 @@ export async function addOrgPosition(body, createdBy, updatedBy) {
         }
     }
 
+    let subAccountId = null;
+    if (body.subAccountId != null) {
+        const subAccount = await orgRepository.subAccountExists(body.subAccountId);
+        if (!subAccount) {
+            throw new Error('subAccountId not found');
+        }
+        subAccountId = Number(body.subAccountId);
+    }
+
     const isVacant = body.isVacant === undefined ? true : Boolean(body.isVacant);
 
     return orgRepository.addOrgPosition({
         departmentStructureId: Number(body.departmentStructureId),
+        subAccountId,
         positionName: body.positionName,
         positionCode: body.positionCode ?? null,
         employmentCategory: body.employmentCategory,
@@ -75,6 +85,18 @@ export async function updateOrgPosition(orgPositionId, body, updatedBy) {
             throw new Error('departmentStructure not found');
         }
         rest.departmentStructureId = Number(rest.departmentStructureId);
+    }
+
+    if (rest.subAccountId !== undefined) {
+        if (rest.subAccountId == null) {
+            rest.subAccountId = null;
+        } else {
+            const subAccount = await orgRepository.subAccountExists(rest.subAccountId);
+            if (!subAccount) {
+                throw new Error('subAccountId not found');
+            }
+            rest.subAccountId = Number(rest.subAccountId);
+        }
     }
 
     if (rest.reportsToOrgPositionId !== undefined) {

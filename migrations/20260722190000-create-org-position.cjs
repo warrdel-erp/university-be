@@ -36,6 +36,13 @@ module.exports = {
             onUpdate: 'CASCADE',
             onDelete: 'RESTRICT',
           },
+          sub_account_id: {
+            type: Sequelize.INTEGER,
+            allowNull: true,
+            references: { model: 'sub_account', key: 'sub_account_id' },
+            onUpdate: 'CASCADE',
+            onDelete: 'SET NULL',
+          },
           position_name: {
             type: Sequelize.STRING,
             allowNull: false,
@@ -126,6 +133,15 @@ module.exports = {
     ) {
       await queryInterface.addIndex('org_position', ['department_structure_id', 'position_code'], {
         name: 'idx_org_position_structure_code',
+      });
+    }
+
+    if (
+      (await tableExists(queryInterface, 'org_position')) &&
+      !(await indexExists(queryInterface, 'org_position', 'idx_org_position_sub_account'))
+    ) {
+      await queryInterface.addIndex('org_position', ['sub_account_id'], {
+        name: 'idx_org_position_sub_account',
       });
     }
 

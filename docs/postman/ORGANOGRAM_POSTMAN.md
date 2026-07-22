@@ -51,8 +51,8 @@
 
 | Method | Path | Body / query |
 |--------|------|----------------|
-| `POST` | `/org/` | `departmentStructureId`, `positionName`, `employmentCategory`, `level` (+ optional code, reportsTo, reportingType, isVacant, sortOrder) |
-| `GET` | `/org/` | Optional: `departmentStructureId`, `employmentCategory`, `isVacant` |
+| `POST` | `/org/` | `departmentStructureId`, `positionName`, `employmentCategory`, `level` (+ optional `subAccountId`, code, reportsTo, reportingType, isVacant, sortOrder) |
+| `GET` | `/org/` | Optional: `departmentStructureId`, `subAccountId`, `employmentCategory`, `isVacant` |
 | `GET` | `/org/single` | `orgPositionId` |
 | `PATCH` | `/org/` | `orgPositionId` + fields to update (not `isVacant`) |
 | `POST` | `/org/markVacant` | `{ "orgPositionId": 1 }` |
@@ -81,6 +81,7 @@
 ```json
 {
   "departmentStructureId": 12,
+  "subAccountId": 5,
   "positionName": "Head of Department",
   "positionCode": "HOD-CSE",
   "employmentCategory": "Academic",

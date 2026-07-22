@@ -1069,6 +1069,15 @@ departmentStructureModel.hasMany(orgPositionModel, {
   as: "orgPositions",
 });
 
+orgPositionModel.belongsTo(subAccountModel, {
+  foreignKey: "sub_account_id",
+  as: "subAccount",
+});
+subAccountModel.hasMany(orgPositionModel, {
+  foreignKey: "sub_account_id",
+  as: "orgPositions",
+});
+
 orgPositionModel.belongsTo(orgPositionModel, {
   foreignKey: "reports_to_org_position_id",
   as: "reportsToPosition",

@@ -33,6 +33,12 @@ const positionListInclude = [
         ],
     },
     {
+        model: model.subAccountModel,
+        as: 'subAccount',
+        attributes: { exclude: excludeMeta },
+        required: false,
+    },
+    {
         model: model.orgPositionModel,
         as: 'reportsToPosition',
         attributes: ['orgPositionId', 'positionName', 'positionCode'],
@@ -55,6 +61,9 @@ export async function getOrgPositions(filters = {}) {
     const where = {};
     if (filters.departmentStructureId != null) {
         where.departmentStructureId = Number(filters.departmentStructureId);
+    }
+    if (filters.subAccountId != null) {
+        where.subAccountId = Number(filters.subAccountId);
     }
     if (filters.employmentCategory) {
         where.employmentCategory = filters.employmentCategory;
@@ -266,6 +275,13 @@ export async function departmentStructureExists(departmentStructureId) {
     return scoped(model.departmentStructureModel).findOne({
         attributes: ['departmentStructureId'],
         where: { departmentStructureId: Number(departmentStructureId) },
+    });
+}
+
+export async function subAccountExists(subAccountId) {
+    return scoped(model.subAccountModel).findOne({
+        attributes: ['subAccountId'],
+        where: { subAccountId: Number(subAccountId) },
     });
 }
 
