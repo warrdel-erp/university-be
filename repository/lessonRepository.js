@@ -197,6 +197,195 @@ export async function addTopic(data) {
   }
 }
 
+export async function getTopicById(topicId, transaction) {
+  return scoped(model.topicModel).findOne({
+    where: { topicId: Number(topicId) },
+    attributes: ['topicId', 'lessonId', 'name', 'description'],
+    transaction,
+  });
+}
+
+export async function countTopicMappings(topicId, transaction) {
+  return scoped(model.lessonMappingModel).count({
+    where: { topicId: Number(topicId) },
+    transaction,
+  });
+}
+
+export async function countCompletedTopicMappings(topicId, transaction) {
+  return scoped(model.lessonMappingModel).count({
+    where: {
+      topicId: Number(topicId),
+      [Op.or]: [
+        { status: { [Op.in]: ['complete', 'completed', 'Complete', 'Completed'] } },
+        { completeDate: { [Op.ne]: null } },
+      ],
+    },
+    transaction,
+  });
+}
+
+export async function countTopicSubTopics(topicId, transaction) {
+  return scoped(model.subTopicModel).count({
+    where: { topicId: Number(topicId) },
+    transaction,
+  });
+}
+
+export async function countLessonTopics(lessonId, transaction) {
+  return scoped(model.topicModel).count({
+    where: { lessonId: Number(lessonId) },
+    transaction,
+  });
+}
+
+export async function countLessonMappings(lessonId, transaction) {
+  return scoped(model.lessonMappingModel).count({
+    where: {},
+    include: [
+      {
+        model: model.topicModel,
+        as: 'mappingTopic',
+        required: true,
+        attributes: [],
+        where: {
+          lessonId: Number(lessonId),
+          ...buildScope(model.topicModel),
+        },
+      },
+    ],
+    transaction,
+  });
+}
+
+export async function countCompletedLessonMappings(lessonId, transaction) {
+  return scoped(model.lessonMappingModel).count({
+    where: {
+      [Op.or]: [
+        { status: { [Op.in]: ['complete', 'completed', 'Complete', 'Completed'] } },
+        { completeDate: { [Op.ne]: null } },
+      ],
+    },
+    include: [
+      {
+        model: model.topicModel,
+        as: 'mappingTopic',
+        required: true,
+        attributes: [],
+        where: {
+          lessonId: Number(lessonId),
+          ...buildScope(model.topicModel),
+        },
+      },
+    ],
+    transaction,
+  });
+}
+
+export async function updateTopic(topicId, data, transaction) {
+  const existing = await getTopicById(topicId, transaction);
+  if (!existing) {
+    return null;
+  }
+  await scoped(model.topicModel).update(data, {
+    where: { topicId: Number(topicId) },
+    transaction,
+  });
+  return getTopicById(topicId, transaction);
+}
+
+export async function deleteTopic(topicId, transaction) {
+  const existing = await getTopicById(topicId, transaction);
+  if (!existing) {
+    return 0;
+  }
+
+  const mappingCount = await countTopicMappings(topicId, transaction);
+  if (mappingCount > 0) {
+    const completedCount = await countCompletedTopicMappings(topicId, transaction);
+    const error = new Error(
+      completedCount > 0
+        ? `Topic cannot be deleted because ${completedCount} completed lesson mapping(s) exist`
+        : `Topic cannot be deleted because ${mappingCount} lesson mapping(s) exist`,
+    );
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const subTopicCount = await countTopicSubTopics(topicId, transaction);
+  if (subTopicCount > 0) {
+    const error = new Error(
+      `Topic cannot be deleted because ${subTopicCount} sub-topic(s) exist`,
+    );
+    error.statusCode = 409;
+    throw error;
+  }
+
+  return scoped(model.topicModel).destroy({
+    where: { topicId: Number(topicId) },
+    transaction,
+  });
+}
+
+export async function updateLesson(lessonId, data, transaction) {
+  const existing = await scoped(model.lessonModel).findOne({
+    where: { lessonId: Number(lessonId) },
+    attributes: ['lessonId'],
+    transaction,
+  });
+  if (!existing) {
+    return null;
+  }
+  await scoped(model.lessonModel).update(data, {
+    where: { lessonId: Number(lessonId) },
+    transaction,
+  });
+  return scoped(model.lessonModel).findOne({
+    where: { lessonId: Number(lessonId) },
+    attributes: {
+      exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'],
+    },
+    transaction,
+  });
+}
+
+export async function deleteLesson(lessonId, transaction) {
+  const existing = await scoped(model.lessonModel).findOne({
+    where: { lessonId: Number(lessonId) },
+    attributes: ['lessonId'],
+    transaction,
+  });
+  if (!existing) {
+    return 0;
+  }
+
+  const topicCount = await countLessonTopics(lessonId, transaction);
+  if (topicCount > 0) {
+    const error = new Error(
+      `Lesson cannot be deleted because ${topicCount} topic(s) exist`,
+    );
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const mappingCount = await countLessonMappings(lessonId, transaction);
+  if (mappingCount > 0) {
+    const completedCount = await countCompletedLessonMappings(lessonId, transaction);
+    const error = new Error(
+      completedCount > 0
+        ? `Lesson cannot be deleted because ${completedCount} completed lesson mapping(s) exist`
+        : `Lesson cannot be deleted because ${mappingCount} lesson mapping(s) exist`,
+    );
+    error.statusCode = 409;
+    throw error;
+  }
+
+  return scoped(model.lessonModel).destroy({
+    where: { lessonId: Number(lessonId) },
+    transaction,
+  });
+}
+
 export async function addSubTopic(data, transaction) {
   try {
     return await scoped(model.subTopicModel).create(data, { transaction });

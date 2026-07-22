@@ -320,6 +320,94 @@ export async function addTopice(data, createdBy, updatedBy) {
     }
 }
 
+export async function updateTopic(topicId, data, updatedBy) {
+  const payload = { updatedBy };
+  if (data.name !== undefined) {
+    payload.name = data.name;
+  }
+  if (data.description !== undefined) {
+    payload.description = data.description;
+  }
+  if (data.lessonId !== undefined) {
+    payload.lessonId = Number(data.lessonId);
+  }
+
+  const updated = await lesson.updateTopic(topicId, payload);
+  if (!updated) {
+    throw Object.assign(new Error('Topic not found'), { statusCode: 404 });
+  }
+  return updated;
+}
+
+export async function deleteTopic(topicId) {
+  const transaction = await sequelize.transaction();
+  try {
+    const deleted = await lesson.deleteTopic(topicId, transaction);
+    if (!deleted) {
+      throw Object.assign(new Error('Topic not found'), { statusCode: 404 });
+    }
+    await transaction.commit();
+    return true;
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+export async function updateLesson(lessonId, data, updatedBy) {
+  const payload = { updatedBy };
+  if (data.name !== undefined) {
+    payload.name = data.name;
+  }
+  if (data.description !== undefined) {
+    payload.description = data.description;
+  }
+  if (data.subjectId !== undefined) {
+    payload.subjectId = Number(data.subjectId);
+  }
+  if (data.sessionId !== undefined) {
+    payload.sessionId = Number(data.sessionId);
+  }
+  if (data.userId !== undefined) {
+    payload.userId = Number(data.userId);
+  }
+  if (data.lectureWindowId !== undefined) {
+    if (data.lectureWindowId != null) {
+      const window = await lectureWindowRepository.getLectureWindowById(
+        data.lectureWindowId,
+        data.academicYearId,
+      );
+      if (!window) {
+        throw Object.assign(new Error('Lecture window not found'), { statusCode: 404 });
+      }
+      payload.lectureWindowId = window.lectureWindowId;
+    } else {
+      payload.lectureWindowId = null;
+    }
+  }
+
+  const updated = await lesson.updateLesson(lessonId, payload);
+  if (!updated) {
+    throw Object.assign(new Error('Lesson not found'), { statusCode: 404 });
+  }
+  return updated;
+}
+
+export async function deleteLesson(lessonId) {
+  const transaction = await sequelize.transaction();
+  try {
+    const deleted = await lesson.deleteLesson(lessonId, transaction);
+    if (!deleted) {
+      throw Object.assign(new Error('Lesson not found'), { statusCode: 404 });
+    }
+    await transaction.commit();
+    return true;
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
 export async function addMapping(data, createdBy, updatedBy) {
   const transaction = await sequelize.transaction();
 

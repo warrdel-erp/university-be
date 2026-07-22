@@ -2449,7 +2449,7 @@
     },
     {
       "name": "⑤ /lesson — mapping uses timeTableCellDateWiseId",
-      "description": "Step ⑤ — lesson plan APIs. Period key = **`timeTableCellDateWiseId`**.\n\n| # | Method | Path | Notes |\n|---|--------|------|-------|\n| 1 | GET | `/lesson/getRoutineByTeacher` | Published week grid + **one week** date-wise cells; `teacherType` Primary/Secondary |\n| 1 | GET | `/lesson/mapped` | Progress table: lesson/topic/subtopic + class date (`timeTableCellDateWiseId`) |\n| 1 | GET | `/lesson/employee` | Subjects + lessons by `userId` |\n| 2 | POST | `/lesson` | Create lesson (`lectureWindowId` required) |\n| 2 | GET | `/lesson` | List lessons |\n| 2 | GET | `/lesson/simple` | Simple list |\n| 2 | GET | `/lesson/single` | One lesson |\n| 2 | POST | `/lesson/link` | Link lesson → lecture window |\n| 3 | POST | `/lesson/topic` | Add topic |\n| 4 | POST | `/lesson/mapping` | Map topic → `timeTableCellDateWiseId` |\n| 4 | POST | `/lesson/mapping/copy` | Copy mapping to other date-wise cells |\n| 4 | GET | `/lesson/mapping` | List mappings |\n| 4 | PATCH | `/lesson` | Set `completeDate` on mapping |\n| 4 | PATCH | `/lesson/mapping/:lessonMappingId` | Update mapping fields |\n| 4 | DELETE | `/lesson/mapping/:lessonMappingId` | Delete mapping |\n\nFlow: `getRoutineByTeacher` → capture `dateWise.timeTableCellDateWiseId` → `POST /lesson/mapping`.",
+      "description": "Step ⑤ — lesson plan APIs. Period key = **`timeTableCellDateWiseId`**.\n\n| # | Method | Path | Notes |\n|---|--------|------|-------|\n| 1 | GET | `/lesson/getRoutineByTeacher` | Published week grid + **one week** date-wise cells; `teacherType` Primary/Secondary |\n| 1 | GET | `/lesson/mapped` | Progress table: lesson/topic/subtopic + class date (`timeTableCellDateWiseId`) |\n| 1 | GET | `/lesson/employee` | Subjects + lessons by `userId` |\n| 2 | POST | `/lesson` | Create lesson (`lectureWindowId` required) |\n| 2 | GET | `/lesson` | List lessons |\n| 2 | GET | `/lesson/simple` | Simple list |\n| 2 | GET | `/lesson/single` | One lesson |\n| 2 | PATCH | `/lesson/:lessonId` | Update lesson |\n| 2 | DELETE | `/lesson/:lessonId` | Soft-delete lesson if no topics/mappings |\n| 2 | POST | `/lesson/link` | Link lesson → lecture window |\n| 3 | POST | `/lesson/topic` | Add topic |\n| 3 | PATCH | `/lesson/topic/:topicId` | Update topic |\n| 3 | DELETE | `/lesson/topic/:topicId` | Soft-delete topic if no mappings/subtopics |\n| 4 | POST | `/lesson/mapping` | Map topic → `timeTableCellDateWiseId` |\n| 4 | POST | `/lesson/mapping/copy` | Copy mapping to other date-wise cells |\n| 4 | GET | `/lesson/mapping` | List mappings |\n| 4 | PATCH | `/lesson` | Set `completeDate` on mapping |\n| 4 | PATCH | `/lesson/mapping/:lessonMappingId` | Update mapping fields |\n| 4 | DELETE | `/lesson/mapping/:lessonMappingId` | Delete mapping |\n\nFlow: `getRoutineByTeacher` → capture `dateWise.timeTableCellDateWiseId` → `POST /lesson/mapping`.",
       "item": [
         {
           "name": "GET getRoutineByTeacher (week + date-wise)",
@@ -2717,6 +2717,78 @@
           ]
         },
         {
+          "name": "PATCH update lesson",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lesson/{{timetable_lessonId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lesson",
+                "{{timetable_lessonId}}"
+              ]
+            },
+            "description": "**PATCH /lesson/:lessonId**\n\nOptional body: `name`, `description`, `subjectId`, `sessionId`, `userId`, `lectureWindowId`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sample lesson (updated)\",\n  \"description\": \"Updated basics\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE lesson",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/lesson/{{timetable_lessonId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lesson",
+                "{{timetable_lessonId}}"
+              ]
+            },
+            "description": "**DELETE /lesson/:lessonId** — soft-deletes lesson only when no topics or lesson mappings exist. **409** if dependencies exist."
+          },
+          "response": []
+        },
+        {
           "name": "GET list lessons",
           "request": {
             "auth": {
@@ -2921,6 +2993,80 @@
               }
             }
           ]
+        },
+        {
+          "name": "PATCH update topic",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lesson/topic/{{timetable_topicId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lesson",
+                "topic",
+                "{{timetable_topicId}}"
+              ]
+            },
+            "description": "**PATCH /lesson/topic/:topicId**\n\nOptional body: `name`, `description`, `lessonId`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Topic 1 (updated)\",\n  \"description\": \"Updated intro\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE topic",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/lesson/topic/{{timetable_topicId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lesson",
+                "topic",
+                "{{timetable_topicId}}"
+              ]
+            },
+            "description": "**DELETE /lesson/topic/:topicId** — soft-deletes topic only when no lesson mappings or sub-topics exist. **409** if dependencies exist."
+          },
+          "response": []
         },
         {
           "name": "POST mapping",

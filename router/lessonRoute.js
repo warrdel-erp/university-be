@@ -7,7 +7,11 @@ import {
     addLesson,
     getAllLesson,
     getSingleLessonDetails,
+    updateLesson,
+    deleteLesson,
     addTopice,
+    updateTopic,
+    deleteTopic,
     addMapping,
     copyMapping,
     getMapping,
@@ -100,6 +104,29 @@ const mappedProgressQuerySchema = z.object({
     ),
 });
 
+const updateLessonBodySchema = z.object({
+    name: z.string().min(1).optional(),
+    description: z.string().optional().nullable(),
+    subjectId: positiveIntegerId.optional(),
+    sessionId: positiveIntegerId.optional(),
+    userId: positiveIntegerId.optional(),
+    lectureWindowId: positiveIntegerId.optional().nullable(),
+}).strict();
+
+const updateTopicBodySchema = z.object({
+    name: z.string().min(1).optional(),
+    description: z.string().optional().nullable(),
+    lessonId: positiveIntegerId.optional(),
+}).strict();
+
+const lessonIdParamSchema = z.object({
+    lessonId: positiveIntegerId,
+}).strict();
+
+const topicIdParamSchema = z.object({
+    topicId: positiveIntegerId,
+}).strict();
+
 // ---------------------------------------------------------------------------
 // 1. Lesson plan — CRUD / list
 // ---------------------------------------------------------------------------
@@ -127,6 +154,20 @@ router.get(
 // 2. Topics
 // ---------------------------------------------------------------------------
 router.post('/topic', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_ADD.value, null), addTopice);
+router.patch(
+    '/topic/:topicId',
+    userAuth,
+    checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_EDIT.value, null),
+    validate({ params: topicIdParamSchema, body: updateTopicBodySchema }),
+    updateTopic,
+);
+router.delete(
+    '/topic/:topicId',
+    userAuth,
+    checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_DELETE.value, null),
+    validate({ params: topicIdParamSchema }),
+    deleteTopic,
+);
 
 // ---------------------------------------------------------------------------
 // 3. Mapping — period key = timeTableCellDateWiseId
@@ -159,6 +200,22 @@ router.post(
     linkLessonsToWindow,
 );
 
-
+// ---------------------------------------------------------------------------
+// 5. Lesson edit / delete (param routes last so they do not capture named paths)
+// ---------------------------------------------------------------------------
+router.patch(
+    '/:lessonId',
+    userAuth,
+    checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_EDIT.value, null),
+    validate({ params: lessonIdParamSchema, body: updateLessonBodySchema }),
+    updateLesson,
+);
+router.delete(
+    '/:lessonId',
+    userAuth,
+    checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_DELETE.value, null),
+    validate({ params: lessonIdParamSchema }),
+    deleteLesson,
+);
 
 export default router;
