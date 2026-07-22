@@ -62,6 +62,10 @@ export async function getOrgPositions(filters) {
     return orgRepository.getOrgPositions(filters);
 }
 
+export async function getOrgCardsStats() {
+    return orgRepository.getOrgCardsStats();
+}
+
 export async function getOrgPositionById(orgPositionId) {
     return orgRepository.getOrgPositionById(orgPositionId);
 }

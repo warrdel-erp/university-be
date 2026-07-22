@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
     addOrgPosition,
     getAllOrgPositions,
+    getOrgCards,
     getSingleOrgPosition,
     updateOrgPosition,
     deleteOrgPosition,
@@ -123,6 +124,8 @@ router.post(
 );
 
 router.get('/', userAuth, checkAccess(PERMISSIONS.DEPARTMENT.value, null), getAllOrgPositions);
+
+router.get('/cards', userAuth, checkAccess(PERMISSIONS.DEPARTMENT.value, null), getOrgCards);
 
 router.get(
     '/single',

@@ -72,7 +72,7 @@ API layer files use the **feature** name `org*`. Model files match the **DB tabl
 - `/department` — sub-unit CRUD
 - `/departmentStructure` — tree CRUD
 - `/org` — org positions + heads
-  - positions: `POST/GET/PATCH/DELETE /org/`, `GET /org/single`, `POST /org/markVacant`
+  - positions: `POST/GET/PATCH/DELETE /org/`, `GET /org/single`, `GET /org/cards`, `POST /org/markVacant`
   - heads: `POST/GET/PATCH/DELETE /org/head`
 
 **Postman:** [univ-v2-organogram.postman_collection.json](./postman/univ-v2-organogram.postman_collection.json) · [ORGANOGRAM_POSTMAN.md](./postman/ORGANOGRAM_POSTMAN.md)

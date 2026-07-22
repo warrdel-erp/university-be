@@ -18,6 +18,7 @@
 | 1 | `POST` | `/departmentStructure/` | Create structure (root: `subAccountId` + `parentAccountId` may be `null`) | `departmentStructureId` |
 | 2 | `GET` | `/departmentStructure/` | List / pick structure node | `departmentStructureId` |
 | 3 | `POST` | `/org/` | Create position (vacant OK) | `orgPositionId` |
+| 3b | `GET` | `/org/cards` | Summary KPI cards | — |
 | 4 | `GET` | `/org/single?orgPositionId=` | Verify position | — |
 | 5 | `POST` | `/org/head` | Assign user as head | `orgPositionHeadId` |
 | 6 | `GET` | `/org/head?orgPositionId=` | List heads | — |
@@ -51,6 +52,7 @@
 
 | Method | Path | Body / query |
 |--------|------|----------------|
+| `GET` | `/org/cards` | Organogram summary cards (total / filled / vacant / departments / reporting levels) |
 | `POST` | `/org/` | `departmentStructureId`, `positionName`, `employmentCategory`, `level` (+ optional `subAccountId`, code, reportsTo, reportingType, isVacant, sortOrder) |
 | `GET` | `/org/` | Optional: `departmentStructureId`, `subAccountId`, `employmentCategory`, `isVacant` |
 | `GET` | `/org/single` | `orgPositionId` |

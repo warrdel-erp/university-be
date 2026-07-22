@@ -2,6 +2,7 @@ import * as model from '../models/index.js';
 import { scoped } from '../utility/scoped.js';
 import { requestContext } from '../utility/requestContext.js';
 import sequelize from '../database/sequelizeConfig.js';
+import { Op } from 'sequelize';
 
 const excludeMeta = ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'];
 
@@ -55,6 +56,90 @@ const positionListInclude = [
 
 export async function addOrgPosition(data) {
     return scoped(model.orgPositionModel).create(data);
+}
+
+const GROWTH_DAYS = 7;
+
+function calculateGrowthPercent(currentCount, previousCount) {
+    if (previousCount === 0) {
+        if (currentCount > 0) {
+            return 100;
+        }
+        return 0;
+    }
+    return Math.round(((currentCount - previousCount) / previousCount) * 1000) / 10;
+}
+
+function growthCutoffDate() {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - GROWTH_DAYS);
+    return cutoff;
+}
+
+async function countPositions(where = {}) {
+    return scoped(model.orgPositionModel).count({ where });
+}
+
+async function countPositionsCreatedBy(cutoff, where = {}) {
+    return scoped(model.orgPositionModel).count({
+        where: {
+            ...where,
+            createdAt: { [Op.lte]: cutoff },
+        },
+    });
+}
+
+export async function getOrgCardsStats() {
+    const cutoff = growthCutoffDate();
+
+    const [
+        totalPositions,
+        filledPositions,
+        vacantPositions,
+        previousTotal,
+        previousFilled,
+        previousVacant,
+        departments,
+        levelRows,
+    ] = await Promise.all([
+        countPositions(),
+        countPositions({ isVacant: false }),
+        countPositions({ isVacant: true }),
+        countPositionsCreatedBy(cutoff),
+        countPositionsCreatedBy(cutoff, { isVacant: false }),
+        countPositionsCreatedBy(cutoff, { isVacant: true }),
+        scoped(model.subAccountModel).count(),
+        scoped(model.orgPositionModel).findAll({
+            attributes: ['level'],
+            group: ['level'],
+            raw: true,
+        }),
+    ]);
+
+    const reportingLevels = levelRows.length;
+
+    return {
+        totalPositions: {
+            count: totalPositions,
+            changePercent: calculateGrowthPercent(totalPositions, previousTotal),
+        },
+        filledPositions: {
+            count: filledPositions,
+            changePercent: calculateGrowthPercent(filledPositions, previousFilled),
+        },
+        vacantPositions: {
+            count: vacantPositions,
+            changePercent: calculateGrowthPercent(vacantPositions, previousVacant),
+        },
+        departments: {
+            count: departments,
+            changePercent: null,
+        },
+        reportingLevels: {
+            count: reportingLevels,
+            changePercent: null,
+        },
+    };
 }
 
 export async function getOrgPositions(filters = {}) {

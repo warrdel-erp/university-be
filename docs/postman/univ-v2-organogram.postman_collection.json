@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "b2c3d4e5-f6a7-8901-bcde-organogram0001",
     "name": "univ-v2-organogram",
-    "description": "Organogram (org) APIs — positions on `department_structure` + heads (`user_id`).\n\n## Flow\n1. `POST /departmentStructure/` — create structure (`subAccountId` + `parentAccountId` may be null for root)\n2. `POST /org/` — create position (can be vacant)\n3. `POST /org/head` — assign user as PRIMARY/ACTING\n4. List / update / markVacant / delete as needed\n\nSet `baseurl` + `token`. Permissions reuse DEPARTMENT_* .\n\nSee also: `docs/ORGANOGRAM_NAMING_CONVENTION.md` and `docs/postman/ORGANOGRAM_POSTMAN.md`.",
+    "description": "Organogram (org) APIs — positions on `department_structure` + heads (`user_id`).\n\n## Flow\n1. `POST /departmentStructure/` — create structure (`subAccountId` + `parentAccountId` optional/null for root)\n2. `GET /org/cards` — KPI summary\n3. `POST /org/` — create position (can be vacant)\n4. `POST /org/head` — assign user as PRIMARY/ACTING\n5. List / update / markVacant / delete as needed\n\nSet `baseurl` + `token`. Permissions reuse DEPARTMENT_* .\n\nSee also: `docs/ORGANOGRAM_NAMING_CONVENTION.md` and `docs/postman/ORGANOGRAM_POSTMAN.md`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -10,6 +10,24 @@
       "name": "org positions",
       "description": "CRUD for `org_position` under a `departmentStructureId`.",
       "item": [
+        {
+          "name": "summary cards",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/org/cards",
+              "host": ["{{baseurl}}"],
+              "path": ["org", "cards"]
+            },
+            "description": "**GET /org/cards**\n\nNo query/body keys.\n\nReturns:\n- `totalPositions` `{ count, changePercent }`\n- `filledPositions` `{ count, changePercent }`\n- `vacantPositions` `{ count, changePercent }`\n- `departments` `{ count, changePercent }` (`changePercent` always `null`)\n- `reportingLevels` `{ count, changePercent }` (`changePercent` always `null`)"
+          },
+          "response": []
+        },
         {
           "name": "create position",
           "event": [
@@ -46,7 +64,7 @@
               "host": ["{{baseurl}}"],
               "path": ["org", ""]
             },
-            "description": "**POST /org/**\n\nRequired: `departmentStructureId`, `positionName`, `employmentCategory`, `level`.\n\nOptional: `subAccountId` (department this position belongs to, e.g. HOD of CSE).\n\n`employmentCategory`: `Academic` | `Administrative` | `Support` | `Executive` | `Leadership`.\n\nDefault `isVacant`: true."
+            "description": "**POST /org/**\n\n**Required**\n- `departmentStructureId` (int)\n- `positionName` (string)\n- `employmentCategory` — `Academic` | `Administrative` | `Support` | `Executive` | `Leadership`\n- `level` (int ≥ 1)\n\n**Optional**\n- `subAccountId` (int | null) — department this position belongs to (e.g. HOD of CSE)\n- `positionCode` (string | null)\n- `reportsToOrgPositionId` (int | null) — null for top positions\n- `reportingType` (string | null)\n- `isVacant` (boolean) — default `true`\n- `sortOrder` (int) — default `0`"
           },
           "response": []
         },
@@ -64,13 +82,13 @@
               "host": ["{{baseurl}}"],
               "path": ["org", ""],
               "query": [
-                { "key": "departmentStructureId", "value": "{{departmentStructureId}}", "description": "optional" },
-                { "key": "subAccountId", "value": "{{subAccountId}}", "description": "optional — filter by department" },
-                { "key": "employmentCategory", "value": "Academic", "description": "optional" },
-                { "key": "isVacant", "value": "true", "description": "optional true|false" }
+                { "key": "departmentStructureId", "value": "{{departmentStructureId}}", "description": "optional filter" },
+                { "key": "subAccountId", "value": "{{subAccountId}}", "description": "optional filter — department" },
+                { "key": "employmentCategory", "value": "Academic", "description": "optional filter" },
+                { "key": "isVacant", "value": "true", "description": "optional filter — true|false" }
               ]
             },
-            "description": "**GET /org/**\n\nOptional filters: `departmentStructureId`, `subAccountId`, `employmentCategory`, `isVacant`.\n\nIncludes structure, subAccount, reportsTo, and heads."
+            "description": "**GET /org/**\n\n**Required**\n- none\n\n**Optional query**\n- `departmentStructureId` (int)\n- `subAccountId` (int)\n- `employmentCategory` — `Academic` | `Administrative` | `Support` | `Executive` | `Leadership`\n- `isVacant` — `true` | `false`\n\nIncludes structure, subAccount, reportsTo, and heads."
           },
           "response": []
         },
@@ -88,10 +106,10 @@
               "host": ["{{baseurl}}"],
               "path": ["org", "single"],
               "query": [
-                { "key": "orgPositionId", "value": "{{orgPositionId}}" }
+                { "key": "orgPositionId", "value": "{{orgPositionId}}", "description": "required" }
               ]
             },
-            "description": "**GET /org/single?orgPositionId=**"
+            "description": "**GET /org/single**\n\n**Required query**\n- `orgPositionId` (int)\n\n**Optional**\n- none"
           },
           "response": []
         },
@@ -114,7 +132,7 @@
               "host": ["{{baseurl}}"],
               "path": ["org", ""]
             },
-            "description": "**PATCH /org/**\n\nRequired: `orgPositionId`. Do not set `isVacant` here — use markVacant / head flows."
+            "description": "**PATCH /org/**\n\n**Required**\n- `orgPositionId` (int)\n\n**Optional**\n- `departmentStructureId` (int)\n- `subAccountId` (int | null)\n- `positionName` (string)\n- `positionCode` (string | null)\n- `employmentCategory` — `Academic` | `Administrative` | `Support` | `Executive` | `Leadership`\n- `reportsToOrgPositionId` (int | null)\n- `reportingType` (string | null)\n- `sortOrder` (int)\n- `level` (int ≥ 1)\n\nDo **not** send `isVacant` here — use `POST /org/markVacant` or head flows."
           },
           "response": []
         },
@@ -137,7 +155,7 @@
               "host": ["{{baseurl}}"],
               "path": ["org", "markVacant"]
             },
-            "description": "**POST /org/markVacant**\n\nSets ACTIVE heads to INACTIVE and `isVacant = true`."
+            "description": "**POST /org/markVacant**\n\n**Required**\n- `orgPositionId` (int)\n\n**Optional**\n- none\n\nSets ACTIVE heads to INACTIVE and `isVacant = true`."
           },
           "response": []
         },
@@ -155,10 +173,10 @@
               "host": ["{{baseurl}}"],
               "path": ["org", ""],
               "query": [
-                { "key": "orgPositionId", "value": "{{orgPositionId}}" }
+                { "key": "orgPositionId", "value": "{{orgPositionId}}", "description": "required" }
               ]
             },
-            "description": "**DELETE /org/?orgPositionId=**\n\nSoft-deletes position and its heads."
+            "description": "**DELETE /org/**\n\n**Required query**\n- `orgPositionId` (int)\n\n**Optional**\n- none\n\nSoft-deletes position and its heads."
           },
           "response": []
         }
@@ -204,7 +222,7 @@
               "host": ["{{baseurl}}"],
               "path": ["org", "head"]
             },
-            "description": "**POST /org/head**\n\nRequired: `orgPositionId`, `userId`, `holderType` (`PRIMARY` | `ACTING`).\n\nDefault status `ACTIVE` → sets position `isVacant = false`.\nRejects duplicate ACTIVE (position, user)."
+            "description": "**POST /org/head**\n\n**Required**\n- `orgPositionId` (int)\n- `userId` (int)\n- `holderType` — `PRIMARY` | `ACTING`\n\n**Optional**\n- `status` — `ACTIVE` | `INACTIVE` (default `ACTIVE`)\n- `joiningDate` (YYYY-MM-DD | null)\n- `endDate` (YYYY-MM-DD | null)\n\nDefault `ACTIVE` → sets position `isVacant = false`. Rejects duplicate ACTIVE (position, user)."
           },
           "response": []
         },
@@ -222,10 +240,10 @@
               "host": ["{{baseurl}}"],
               "path": ["org", "head"],
               "query": [
-                { "key": "orgPositionId", "value": "{{orgPositionId}}" }
+                { "key": "orgPositionId", "value": "{{orgPositionId}}", "description": "required" }
               ]
             },
-            "description": "**GET /org/head?orgPositionId=**"
+            "description": "**GET /org/head**\n\n**Required query**\n- `orgPositionId` (int)\n\n**Optional**\n- none"
           },
           "response": []
         },
@@ -248,7 +266,7 @@
               "host": ["{{baseurl}}"],
               "path": ["org", "head"]
             },
-            "description": "**PATCH /org/head**\n\nRequired: `orgPositionHeadId`. Recalculates parent `isVacant` after status change."
+            "description": "**PATCH /org/head**\n\n**Required**\n- `orgPositionHeadId` (int)\n\n**Optional**\n- `holderType` — `PRIMARY` | `ACTING`\n- `status` — `ACTIVE` | `INACTIVE`\n- `joiningDate` (YYYY-MM-DD | null)\n- `endDate` (YYYY-MM-DD | null)\n\nRecalculates parent `isVacant` after status change."
           },
           "response": []
         },
@@ -266,10 +284,10 @@
               "host": ["{{baseurl}}"],
               "path": ["org", "head"],
               "query": [
-                { "key": "orgPositionHeadId", "value": "{{orgPositionHeadId}}" }
+                { "key": "orgPositionHeadId", "value": "{{orgPositionHeadId}}", "description": "required" }
               ]
             },
-            "description": "**DELETE /org/head?orgPositionHeadId=**\n\nSoft-delete. If no ACTIVE heads remain → `isVacant = true`."
+            "description": "**DELETE /org/head**\n\n**Required query**\n- `orgPositionHeadId` (int)\n\n**Optional**\n- none\n\nSoft-delete. If no ACTIVE heads remain → `isVacant = true`."
           },
           "response": []
         }
@@ -315,7 +333,7 @@
               "host": ["{{baseurl}}"],
               "path": ["departmentStructure", ""]
             },
-            "description": "**POST /departmentStructure/**\n\nRequired: `accountId`.\n\n`subAccountId` and `parentAccountId` may both be `null` for a top-level root node.\n\nChild / self-parent example:\n```json\n{\n  \"accountId\": 1,\n  \"subAccountId\": 5,\n  \"parentAccountId\": 5\n}\n```"
+            "description": "**POST /departmentStructure/** (top root)\n\n**Required**\n- `accountId` (int)\n\n**Optional**\n- `subAccountId` (int | null) — may be `null` for top root\n- `parentAccountId` (int | null) — may be `null` for top root"
           },
           "response": []
         },
@@ -355,7 +373,7 @@
               "host": ["{{baseurl}}"],
               "path": ["departmentStructure", ""]
             },
-            "description": "**POST /departmentStructure/**\n\nSelf-parent root: set `parentAccountId` equal to `subAccountId`."
+            "description": "**POST /departmentStructure/** (self-parent)\n\n**Required**\n- `accountId` (int)\n\n**Optional**\n- `subAccountId` (int | null)\n- `parentAccountId` (int | null) — set equal to `subAccountId` for self-parent root"
           },
           "response": []
         },
@@ -373,7 +391,7 @@
               "host": ["{{baseurl}}"],
               "path": ["departmentStructure", ""]
             },
-            "description": "Pick a `departmentStructureId` for create position."
+            "description": "**GET /departmentStructure/**\n\n**Required**\n- none\n\n**Optional**\n- none\n\nPick a `departmentStructureId` for create position."
           },
           "response": []
         }

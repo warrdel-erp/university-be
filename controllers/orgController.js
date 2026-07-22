@@ -31,6 +31,15 @@ export async function getAllOrgPositions(req, res) {
     }
 }
 
+export async function getOrgCards(req, res) {
+    try {
+        const cards = await orgServices.getOrgCardsStats();
+        res.status(200).json(cards);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
 export async function getSingleOrgPosition(req, res) {
     try {
         const { orgPositionId } = req.query;
