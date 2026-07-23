@@ -426,7 +426,15 @@ export async function getOrgTreeData() {
             {
                 model: model.userModel,
                 as: 'assignee',
-                attributes: ['userId', 'firstName', 'lastName', 'email', 'profileImage']
+                attributes: ['userId', 'userName', 'email', 'phone', 'status'],
+                include: [
+                    {
+                        model: model.employeeModel,
+                        as: 'employee',
+                        attributes: ['employeeId', 'employeeName'],
+                        required: false
+                    }
+                ]
             }
         ]
     });
@@ -439,13 +447,21 @@ export async function getOrgTreeData() {
             if (!positionHeadsMap.has(posId)) {
                 positionHeadsMap.set(posId, []);
             }
+            const assignee = plainHead.assignee || {};
+            const empName = assignee.employee?.employeeName || assignee.userName;
+
             positionHeadsMap.get(posId).push({
                 orgPositionHeadId: plainHead.orgPositionHeadId,
                 holderType: plainHead.holderType,
                 status: plainHead.status,
                 joiningDate: plainHead.joiningDate,
                 endDate: plainHead.endDate,
-                user: plainHead.assignee
+                user: {
+                    userId: assignee.userId,
+                    name: empName,
+                    email: assignee.email,
+                    phone: assignee.phone
+                }
             });
         }
     }
