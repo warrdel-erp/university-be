@@ -174,3 +174,12 @@ export async function getOrgTree(req, res) {
         return ErrorResponse(res, 500, "Internal Server Error", error.message);
     }
 }
+
+export async function getOrgChart(req, res) {
+    try {
+        const chart = await orgServices.getOrgChart();
+        return SuccessResponse(res, 200, "Organization chart fetched successfully", chart);
+    } catch (error) {
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
+    }
+}

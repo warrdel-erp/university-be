@@ -418,7 +418,39 @@ export async function getOrgTreeData() {
         raw: true
     });
 
-    // 6. Build tree mappings
+    // 6. Fetch all active position heads with user assignee details under active institute
+    const activeHeads = await scoped(model.orgPositionHeadModel).findAll({
+        where: { status: 'ACTIVE' },
+        attributes: ['orgPositionHeadId', 'orgPositionId', 'holderType', 'status', 'joiningDate', 'endDate'],
+        include: [
+            {
+                model: model.userModel,
+                as: 'assignee',
+                attributes: ['userId', 'firstName', 'lastName', 'email', 'profileImage']
+            }
+        ]
+    });
+
+    const positionHeadsMap = new Map();
+    for (const head of activeHeads) {
+        const plainHead = head.get({ plain: true });
+        const posId = plainHead.orgPositionId;
+        if (posId) {
+            if (!positionHeadsMap.has(posId)) {
+                positionHeadsMap.set(posId, []);
+            }
+            positionHeadsMap.get(posId).push({
+                orgPositionHeadId: plainHead.orgPositionHeadId,
+                holderType: plainHead.holderType,
+                status: plainHead.status,
+                joiningDate: plainHead.joiningDate,
+                endDate: plainHead.endDate,
+                user: plainHead.assignee
+            });
+        }
+    }
+
+    // 7. Build tree mappings
     const deptMap = new Map();
     for (const dept of departments) {
         deptMap.set(dept.departmentId, {
@@ -441,7 +473,8 @@ export async function getOrgTreeData() {
                 level: pos.level,
                 employmentCategory: pos.employmentCategory,
                 isVacant: pos.isVacant,
-                sortOrder: pos.sortOrder
+                sortOrder: pos.sortOrder,
+                heads: positionHeadsMap.get(pos.orgPositionId) || []
             });
         }
     }
@@ -513,5 +546,167 @@ export async function getOrgTreeData() {
         instituteId: institute ? institute.instituteId : null,
         instituteName: institute ? institute.instituteName : "University Institute",
         departments: rootDepartments
+    };
+}
+
+export async function getOrgChartData() {
+    // 1. Fetch all departments under active institute
+    const departments = await scoped(model.departmentModel).findAll({
+        attributes: ['departmentId', 'departmentName', 'departmentType'],
+        raw: true
+    });
+
+    // 2. Fetch all structures under active institute
+    const structures = await scoped(model.departmentStructureModel).findAll({
+        attributes: ['departmentStructureId', 'departmentId', 'parentDepartmentId'],
+        raw: true
+    });
+
+    // 3. Fetch all positions under active institute
+    const positions = await scoped(model.orgPositionModel).findAll({
+        attributes: ['orgPositionId', 'positionName', 'positionCode', 'level', 'departmentId'],
+        raw: true
+    });
+
+    const deptMap = new Map();
+    for (const d of departments) {
+        deptMap.set(d.departmentId, d);
+    }
+
+    // Group structures by parentDepartmentId
+    const parentToChildDepts = new Map();
+    for (const s of structures) {
+        const parentId = s.parentDepartmentId ? Number(s.parentDepartmentId) : null;
+        const childId = s.departmentId ? Number(s.departmentId) : null;
+        if (childId) {
+            if (!parentToChildDepts.has(parentId)) {
+                parentToChildDepts.set(parentId, []);
+            }
+            parentToChildDepts.get(parentId).push(childId);
+        }
+    }
+
+    // Group positions by departmentId
+    const deptPositions = new Map();
+    for (const p of positions) {
+        const dId = p.departmentId ? Number(p.departmentId) : null;
+        if (dId) {
+            if (!deptPositions.has(dId)) {
+                deptPositions.set(dId, []);
+            }
+            deptPositions.get(dId).push(p);
+        }
+    }
+
+    // Group positions by level
+    const positionsByLevel = new Map();
+    for (const p of positions) {
+        const lvl = Number(p.level);
+        if (!positionsByLevel.has(lvl)) {
+            positionsByLevel.set(lvl, []);
+        }
+        positionsByLevel.get(lvl).push(p);
+    }
+
+    // Get sorted levels
+    const levels = Array.from(positionsByLevel.keys()).sort((a, b) => a - b);
+
+    // Helper to build department tree node
+    function buildDeptNode(deptId) {
+        const dept = deptMap.get(deptId);
+        if (!dept) return null;
+
+        const children = [];
+        
+        // Add positions in this department
+        const posList = deptPositions.get(deptId) || [];
+        for (const p of posList) {
+            const pNode = buildPositionNode(p);
+            if (pNode) {
+                children.push(pNode);
+            }
+        }
+
+        // Add child departments
+        const childDeptIds = parentToChildDepts.get(deptId) || [];
+        for (const cdId of childDeptIds) {
+            const cdNode = buildDeptNode(cdId);
+            if (cdNode) {
+                children.push(cdNode);
+            }
+        }
+
+        return {
+            name: dept.departmentName,
+            children
+        };
+    }
+
+    // Recursive helper to build position node
+    function buildPositionNode(pos) {
+        const children = [];
+
+        // 1. Find next level positions that report down
+        const currentLevel = Number(pos.level);
+        const nextLevelIndex = levels.indexOf(currentLevel) + 1;
+        if (nextLevelIndex < levels.length) {
+            const nextLvl = levels[nextLevelIndex];
+            const nextPositions = positionsByLevel.get(nextLvl) || [];
+            for (const np of nextPositions) {
+                let reportsTo = false;
+                if (!pos.departmentId) {
+                    reportsTo = true;
+                } else if (np.departmentId === pos.departmentId) {
+                    reportsTo = true;
+                }
+
+                if (reportsTo) {
+                    const npNode = buildPositionNode(np);
+                    if (npNode) {
+                        children.push(npNode);
+                    }
+                }
+            }
+        }
+
+        // 2. If position is mapped to a department, attach its child departments
+        if (pos.departmentId) {
+            const childDeptIds = parentToChildDepts.get(Number(pos.departmentId)) || [];
+            for (const cdId of childDeptIds) {
+                const cdNode = buildDeptNode(cdId);
+                if (cdNode) {
+                    children.push(cdNode);
+                }
+            }
+        }
+
+        const node = {
+            name: pos.positionName
+        };
+        if (children.length > 0) {
+            node.children = children;
+        }
+        return node;
+    }
+
+    // Roots are Level 1 positions
+    const rootPosNodes = [];
+    if (levels.length > 0) {
+        const lowestLvl = levels[0];
+        const roots = positionsByLevel.get(lowestLvl) || [];
+        for (const r of roots) {
+            const rNode = buildPositionNode(r);
+            if (rNode) {
+                rootPosNodes.push(rNode);
+            }
+        }
+    }
+
+    if (rootPosNodes.length === 1) {
+        return rootPosNodes[0];
+    }
+    return {
+        name: "University Organization",
+        children: rootPosNodes
     };
 }

@@ -505,6 +505,24 @@
           "response": []
         },
         {
+          "name": "get organogram chart",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/org/chart",
+              "host": ["{{baseurl}}"],
+              "path": ["org", "chart"]
+            },
+            "description": "**GET /org/chart**\n\nReturns hierarchical position and department tree structure using children notation."
+          },
+          "response": []
+        },
+        {
           "name": "get single position",
           "request": {
             "auth": {

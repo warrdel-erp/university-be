@@ -13,6 +13,7 @@ import {
     updateHead,
     deleteHead,
     getOrgTree,
+    getOrgChart,
 } from '../controllers/orgController.js';
 import userAuth from '../middleware/authUser.js';
 import { checkAccess } from '../middleware/checkAccess.js';
@@ -196,6 +197,13 @@ router.get(
     userAuth,
     checkAccess(PERMISSIONS.DEPARTMENT.value, null),
     getOrgTree,
+);
+
+router.get(
+    '/chart',
+    userAuth,
+    checkAccess(PERMISSIONS.DEPARTMENT.value, null),
+    getOrgChart,
 );
 
 export default router;

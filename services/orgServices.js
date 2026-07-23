@@ -191,3 +191,7 @@ export async function deleteHead(orgPositionHeadId, updatedBy) {
 export async function getOrgTreeData() {
     return orgRepository.getOrgTreeData();
 }
+
+export async function getOrgChart() {
+    return orgRepository.getOrgChartData();
+}
