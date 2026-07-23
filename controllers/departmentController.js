@@ -10,9 +10,9 @@ export async function addDepartment(req, res) {
       createdBy,
       updatedBy,
     );
-    return SuccessResponse(res, "Data added successfully", departmentDetails);
+    return SuccessResponse(res, 200, "Data added successfully", departmentDetails);
   } catch (error) {
-    return ErrorResponse(res, error.message, 500);
+    return ErrorResponse(res, 500, "Internal Server Error", error.message);
   }
 }
 
@@ -21,11 +21,12 @@ export async function getAllDepartment(req, res) {
     const departmentDetails = await DepartmentCreation.getDepartmentDetails();
     return SuccessResponse(
       res,
+      200,
       "Department details fetched successfully",
       departmentDetails,
     );
   } catch (error) {
-    return ErrorResponse(res, error.message, 500);
+    return ErrorResponse(res, 500, "Internal Server Error", error.message);
   }
 }
 
@@ -37,14 +38,15 @@ export async function getSingleDepartmentDetails(req, res) {
     if (departmentDetails) {
       return SuccessResponse(
         res,
+        200,
         "Department details fetched successfully",
         departmentDetails,
       );
     } else {
-      return ErrorResponse(res, "Department details not found", 404);
+      return ErrorResponse(res, 404, "Department details not found");
     }
   } catch (error) {
-    return ErrorResponse(res, error.message, 500);
+    return ErrorResponse(res, 500, "Internal Server Error", error.message);
   }
 }
 
@@ -58,11 +60,11 @@ export async function updateDepartment(req, res) {
       updatedBy,
     );
     if (!updated) {
-      return ErrorResponse(res, "Department details not found", 404);
+      return ErrorResponse(res, 404, "Department details not found");
     }
-    return SuccessResponse(res, "Department details updated successfully");
+    return SuccessResponse(res, 200, "Department details updated successfully");
   } catch (error) {
-    return ErrorResponse(res, error.message, 500);
+    return ErrorResponse(res, 500, "Internal Server Error", error.message);
   }
 }
 
@@ -73,13 +75,14 @@ export async function deleteDepartment(req, res) {
     if (deleted) {
       return SuccessResponse(
         res,
+        200,
         `Delete successful for departmentDetails ID ${departmentId}`,
       );
     } else {
-      return ErrorResponse(res, "Department details not found", 404);
+      return ErrorResponse(res, 404, "Department details not found");
     }
   } catch (error) {
-    return ErrorResponse(res, error.message, 500);
+    return ErrorResponse(res, 500, "Internal Server Error", error.message);
   }
 }
 
@@ -95,9 +98,9 @@ export async function getDepartmentByIdEmployee(req, res) {
         departmentDetails,
       );
     } else {
-      return ErrorResponse(res, "Department details not found", 404);
+      return ErrorResponse(res, 404, "Department details not found");
     }
   } catch (error) {
-    return ErrorResponse(res, error.message, 500);
+    return ErrorResponse(res, 500, "Internal Server Error", error.message);
   }
 }
