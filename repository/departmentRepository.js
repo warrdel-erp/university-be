@@ -124,6 +124,22 @@ export async function deleteDepartment(departmentId) {
         return false;
     }
 
+    // Check if department is used in course creation
+    const courseCount = await scoped(model.courseModel).count({
+        where: { departmentId }
+    });
+    if (courseCount > 0) {
+        throw new Error('Department is used in course creation and cannot be deleted');
+    }
+
+    // Check if department is used in jobs
+    const jobCount = await scoped(model.jobModel).count({
+        where: { departmentId }
+    });
+    if (jobCount > 0) {
+        throw new Error('Department is used in jobs and cannot be deleted');
+    }
+
     const deleted = await scoped(model.departmentModel).destroy({ where: { departmentId } });
     return deleted > 0;
 }
