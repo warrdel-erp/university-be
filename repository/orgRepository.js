@@ -538,21 +538,28 @@ export async function getOrgTreeData() {
         return nodes;
     }
 
-    // Get root departments (where parentDepartmentId is null or not in the structures map as a child)
-    const rootDeptIds = parentToChildren.get(null) || [];
-    const rootDepartments = [];
+    // Get root departments (any department that is not mapped as a child under another parent department)
+    const childDeptIds = new Set();
+    for (const struct of structures) {
+        if (struct.parentDepartmentId) {
+            childDeptIds.add(Number(struct.departmentId));
+        }
+    }
 
-    for (const rootId of rootDeptIds) {
-        const deptObj = deptMap.get(rootId);
-        if (deptObj) {
-            rootDepartments.push({
-                departmentId: deptObj.departmentId,
-                departmentName: deptObj.departmentName,
-                departmentCode: deptObj.departmentCode,
-                departmentType: deptObj.departmentType,
-                positions: deptObj.positions,
-                childDepartments: buildSubTree(rootId)
-            });
+    const rootDepartments = [];
+    for (const dept of departments) {
+        if (!childDeptIds.has(Number(dept.departmentId))) {
+            const deptObj = deptMap.get(dept.departmentId);
+            if (deptObj) {
+                rootDepartments.push({
+                    departmentId: deptObj.departmentId,
+                    departmentName: deptObj.departmentName,
+                    departmentCode: deptObj.departmentCode,
+                    departmentType: deptObj.departmentType,
+                    positions: deptObj.positions,
+                    childDepartments: buildSubTree(dept.departmentId)
+                });
+            }
         }
     }
 
