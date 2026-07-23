@@ -634,7 +634,7 @@ export async function getOrgChartData() {
                 {
                     model: model.orgPositionModel,
                     as: 'orgPositions',
-                    attributes: ['orgPositionId', 'positionName', 'level'],
+                    attributes: ['orgPositionId', 'positionName', 'level', 'isVacant'],
                     required: false,
                     include: [
                         {
@@ -714,6 +714,7 @@ export async function getOrgChartData() {
                 orgPositionId: pos.orgPositionId,
                 positionName:  pos.positionName,
                 level:         pos.level,
+                isVacant:      pos.isVacant,
                 users:         users
             });
         }
