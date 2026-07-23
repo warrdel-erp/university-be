@@ -485,42 +485,25 @@ export async function getOrgTreeData() {
 
     // Get root departments (where parentDepartmentId is null or not in the structures map as a child)
     const rootDeptIds = parentToChildren.get(null) || [];
-    const academicParents = [];
-    const adminParents = [];
+    const rootDepartments = [];
 
     for (const rootId of rootDeptIds) {
         const deptObj = deptMap.get(rootId);
         if (deptObj) {
-            const node = {
+            rootDepartments.push({
                 departmentId: deptObj.departmentId,
                 departmentName: deptObj.departmentName,
                 departmentCode: deptObj.departmentCode,
                 departmentType: deptObj.departmentType,
                 positions: deptObj.positions,
                 childDepartments: buildSubTree(rootId)
-            };
-            if (deptObj.departmentType === 'Academic') {
-                academicParents.push(node);
-            } else {
-                adminParents.push(node);
-            }
+            });
         }
     }
 
     return {
         instituteId: institute ? institute.instituteId : null,
         instituteName: institute ? institute.instituteName : "University Institute",
-        categories: [
-            {
-                name: "Academic Departments",
-                type: "Academic",
-                departments: academicParents
-            },
-            {
-                name: "Administrative Departments",
-                type: "Admin",
-                departments: adminParents
-            }
-        ]
+        departments: rootDepartments
     };
 }
