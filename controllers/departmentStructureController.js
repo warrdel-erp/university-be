@@ -1,18 +1,14 @@
 import * as departmentStructureCreation from "../services/departmentStructureServices.js";
 
 export async function addDepartmentStructure(req, res) {
-    const { accountId, subAccountId, parentAccountId } = req.body;
+    const { departmentId, parentDepartmentId } = req.body;
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if (!accountId) {
-            return res.status(400).send('accountId is required');
-        }
         const payload = {
             ...req.body,
-            accountId: Number(accountId),
-            subAccountId: subAccountId == null ? null : Number(subAccountId),
-            parentAccountId: parentAccountId == null ? null : Number(parentAccountId),
+            departmentId: departmentId == null ? null : Number(departmentId),
+            parentDepartmentId: parentDepartmentId == null ? null : Number(parentDepartmentId),
         };
         const departmentStructure = await departmentStructureCreation.addDepartmentStructure(payload, createdBy, updatedBy);
         res.status(201).json({ message: "Data added successfully", departmentStructure });

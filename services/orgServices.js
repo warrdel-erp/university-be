@@ -28,20 +28,20 @@ export async function addOrgPosition(body, createdBy, updatedBy) {
         }
     }
 
-    let subAccountId = null;
-    if (body.subAccountId != null) {
-        const subAccount = await orgRepository.subAccountExists(body.subAccountId);
-        if (!subAccount) {
-            throw new Error('subAccountId not found');
+    let departmentId = null;
+    if (body.departmentId != null) {
+        const department = await orgRepository.departmentExists(body.departmentId);
+        if (!department) {
+            throw new Error('departmentId not found');
         }
-        subAccountId = Number(body.subAccountId);
+        departmentId = Number(body.departmentId);
     }
 
     const isVacant = body.isVacant === undefined ? true : Boolean(body.isVacant);
 
     return orgRepository.addOrgPosition({
         departmentStructureId: Number(body.departmentStructureId),
-        subAccountId,
+        departmentId,
         positionName: body.positionName,
         positionCode: body.positionCode ?? null,
         employmentCategory: body.employmentCategory,
@@ -91,15 +91,15 @@ export async function updateOrgPosition(orgPositionId, body, updatedBy) {
         rest.departmentStructureId = Number(rest.departmentStructureId);
     }
 
-    if (rest.subAccountId !== undefined) {
-        if (rest.subAccountId == null) {
-            rest.subAccountId = null;
+    if (rest.departmentId !== undefined) {
+        if (rest.departmentId == null) {
+            rest.departmentId = null;
         } else {
-            const subAccount = await orgRepository.subAccountExists(rest.subAccountId);
-            if (!subAccount) {
-                throw new Error('subAccountId not found');
+            const department = await orgRepository.departmentExists(rest.departmentId);
+            if (!department) {
+                throw new Error('departmentId not found');
             }
-            rest.subAccountId = Number(rest.subAccountId);
+            rest.departmentId = Number(rest.departmentId);
         }
     }
 

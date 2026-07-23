@@ -14,9 +14,6 @@ export async function addDepartment(req, res) {
         const departmentDetails = await DepartmentCreation.addDepartment(req.body, createdBy, updatedBy);
         res.status(201).json({ message: 'Data added successfully', departmentDetails });
     } catch (error) {
-        if (error.message?.includes('Sub account not found')) {
-            return res.status(404).json({ message: error.message });
-        }
         if (isTenantScopeError(error.message)) {
             return res.status(400).json({ message: error.message });
         }
@@ -63,9 +60,6 @@ export async function updateDepartment(req, res) {
         }
         res.status(200).json({ message: 'departmentDetails update succesfully' });
     } catch (error) {
-        if (error.message?.includes('Sub account not found')) {
-            return res.status(404).json({ message: error.message });
-        }
         if (isTenantScopeError(error.message)) {
             return res.status(400).json({ message: error.message });
         }

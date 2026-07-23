@@ -1,7 +1,7 @@
 import { getCourseByCourseId, updateCourseById, changeCourseStatuss, assertCourseIsActive } from '../repository/courseRepository.js';
 import * as mainRepository from '../repository/mainRepository.js';
 import * as instituteRepository from '../repository/instituteRepository.js';
-import { getSingleSubAccountDetails } from '../repository/subAccountRepository.js';
+import { getSingleDepartmentDetails } from '../repository/departmentRepository.js';
 import sequelize from "../database/sequelizeConfig.js";
 import * as studentRepository from '../repository/studentRepository.js';
 import { resolveProgramTerm, resolveStudentSection } from '../utility/classSectionIncludes.js';
@@ -28,25 +28,31 @@ function resolveTermConfig(term) {
     }
 }
 
+function resolveDepartmentIdFromInput(data) {
+    return (
+        coercePositiveInt(data.departmentId)
+        ?? coercePositiveInt(data.subAccountId)
+    );
+}
+
 function normalizeAddCoursePayload(data) {
     const rootTerm = data.term ?? 'semester';
-    const rootSubAccountId =
-        coercePositiveInt(data.subAccountId) ?? coercePositiveInt(data.departmentId);
+    const rootDepartmentId = resolveDepartmentIdFromInput(data);
     const courses = Array.isArray(data.courses) ? data.courses : [];
 
     return {
         course_levelId: coercePositiveInt(data.course_levelId),
         affiliatedUniversityId: coercePositiveInt(data.affiliatedUniversityId),
         academicYearId: coercePositiveInt(data.academicYearId),
-        subAccountId: rootSubAccountId,
+        departmentId: rootDepartmentId,
         term: rootTerm,
         courses: courses.map((course) => ({
             courseName: course.courseName,
             courseCode: course.courseCode,
-            subAccountId:
-                coercePositiveInt(course.subAccountId)
-                ?? coercePositiveInt(course.departmentId)
-                ?? rootSubAccountId,
+            departmentId:
+                coercePositiveInt(course.departmentId)
+                ?? coercePositiveInt(course.subAccountId)
+                ?? rootDepartmentId,
             courseDuration: course.courseDuration != null && course.courseDuration !== ''
                 ? Number(course.courseDuration)
                 : null,
@@ -56,15 +62,15 @@ function normalizeAddCoursePayload(data) {
     };
 }
 
-async function resolveSubAccountId(subAccountId) {
-    if (subAccountId == null) {
+async function resolveDepartmentId(departmentId) {
+    if (departmentId == null) {
         return null;
     }
-    const subAccount = await getSingleSubAccountDetails(subAccountId);
-    if (!subAccount) {
-        throw new Error('subAccountId not found for this institute');
+    const department = await getSingleDepartmentDetails(departmentId);
+    if (!department) {
+        throw new Error('departmentId not found for this institute');
     }
-    return subAccountId;
+    return departmentId;
 }
 
 export async function getAllCollegesAndCourses() {
@@ -201,8 +207,11 @@ export async function addCourse(data, createdBy) {
                     (course.courseDuration * 12) / termConfig.monthsPerTerm,
                 );
             }
-            if (course.subAccountId != null) {
-                payload.subAccountId = await resolveSubAccountId(course.subAccountId);
+            const courseDepartmentId =
+                coercePositiveInt(course.departmentId)
+                ?? coercePositiveInt(course.subAccountId);
+            if (courseDepartmentId != null) {
+                payload.departmentId = await resolveDepartmentId(courseDepartmentId);
             }
 
             const result = await mainRepository.addCourse(payload, transaction);
@@ -223,7 +232,7 @@ export async function updateCourse(data) {
         courseId,
         courseName,
         courseCode,
-        departmentId,
+        departmentId: departmentIdInput,
         subAccountId: subAccountIdInput,
         affiliatedUniversityId: affiliatedUniversityIdInput,
     } = data;
@@ -242,12 +251,12 @@ export async function updateCourse(data) {
     }
 
     const programId =
-        subAccountIdInput !== undefined
-            ? subAccountIdInput
-            : departmentId;
+        departmentIdInput !== undefined
+            ? departmentIdInput
+            : subAccountIdInput;
 
     if (programId !== undefined) {
-        updateData.subAccountId = programId == null ? null : await resolveSubAccountId(programId);
+        updateData.departmentId = programId == null ? null : await resolveDepartmentId(programId);
     }
 
     if (affiliatedUniversityIdInput !== undefined) {

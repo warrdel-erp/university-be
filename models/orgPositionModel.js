@@ -4,7 +4,7 @@ import users from "./userModel.js";
 import university from "./universityModel.js";
 import institute from "./instituteModel.js";
 import departmentStructure from "./departmentStructureModel.js";
-import subAccount from "./subAccountModel.js";
+import department from "./departmentModel.js";
 
 const orgPositionModel = sequelize.define(
     'org_position',
@@ -24,13 +24,13 @@ const orgPositionModel = sequelize.define(
                 key: 'department_structure_id'
             }
         },
-        subAccountId: {
+        departmentId: {
             type: DataTypes.INTEGER,
             allowNull: true,
-            field: 'sub_account_id',
+            field: 'department_id',
             references: {
-                model: subAccount,
-                key: 'sub_account_id'
+                model: department,
+                key: 'department_id'
             }
         },
         positionName: {

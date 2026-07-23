@@ -27,15 +27,22 @@ const positionListInclude = [
         attributes: { exclude: excludeMeta },
         include: [
             {
-                model: model.subAccountModel,
-                as: 'subAccountDetails',
+                model: model.departmentModel,
+                as: 'department',
                 attributes: { exclude: excludeMeta },
+                required: false,
+            },
+            {
+                model: model.departmentModel,
+                as: 'parentDepartment',
+                attributes: { exclude: excludeMeta },
+                required: false,
             },
         ],
     },
     {
-        model: model.subAccountModel,
-        as: 'subAccount',
+        model: model.departmentModel,
+        as: 'department',
         attributes: { exclude: excludeMeta },
         required: false,
     },
@@ -108,7 +115,7 @@ export async function getOrgCardsStats() {
         countPositionsCreatedBy(cutoff),
         countPositionsCreatedBy(cutoff, { isVacant: false }),
         countPositionsCreatedBy(cutoff, { isVacant: true }),
-        scoped(model.subAccountModel).count(),
+        scoped(model.departmentModel).count(),
         scoped(model.orgPositionModel).findAll({
             attributes: ['level'],
             group: ['level'],
@@ -147,8 +154,8 @@ export async function getOrgPositions(filters = {}) {
     if (filters.departmentStructureId != null) {
         where.departmentStructureId = Number(filters.departmentStructureId);
     }
-    if (filters.subAccountId != null) {
-        where.subAccountId = Number(filters.subAccountId);
+    if (filters.departmentId != null) {
+        where.departmentId = Number(filters.departmentId);
     }
     if (filters.employmentCategory) {
         where.employmentCategory = filters.employmentCategory;
@@ -363,10 +370,10 @@ export async function departmentStructureExists(departmentStructureId) {
     });
 }
 
-export async function subAccountExists(subAccountId) {
-    return scoped(model.subAccountModel).findOne({
-        attributes: ['subAccountId'],
-        where: { subAccountId: Number(subAccountId) },
+export async function departmentExists(departmentId) {
+    return scoped(model.departmentModel).findOne({
+        attributes: ['departmentId'],
+        where: { departmentId: Number(departmentId) },
     });
 }
 

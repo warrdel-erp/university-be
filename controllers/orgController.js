@@ -18,10 +18,10 @@ export async function addOrgPosition(req, res) {
 
 export async function getAllOrgPositions(req, res) {
     try {
-        const { departmentStructureId, subAccountId, employmentCategory, isVacant } = req.query;
+        const { departmentStructureId, departmentId, employmentCategory, isVacant } = req.query;
         const positions = await orgServices.getOrgPositions({
             departmentStructureId,
-            subAccountId,
+            departmentId,
             employmentCategory,
             isVacant,
         });

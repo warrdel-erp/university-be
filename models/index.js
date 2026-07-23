@@ -71,7 +71,6 @@ import userStudentEmployeeModel from "./userStudentEmployeeModel.js";
 import roleModel from "./roleModel.js";
 import rolePermissionMappingModel from "./rolePermissionMappingModel.js";
 import userRolePermissionModel from "./userRolePermissionModel.js";
-import hodDepartmentModel from "./hodDepartmentModel.js";
 import roomTypeModel from "./roomTypeModel.js";
 import dormitoryListModel from "./dormitoryListModel.js";
 import addDormitoryModel from "./addDormitoryModel.js";
@@ -89,8 +88,6 @@ import buildingModel from "./buildingModel.js";
 import governanceBodyModel from "./governanceBodyModel.js";
 import floorModel from "./floorModel.js";
 import headModel from "./headModel.js";
-import accountModel from "./accountModel.js";
-import subAccountModel from "./subAccountModel.js";
 import departmentModel from "./departmentModel.js";
 import staffModel from "./staffModel.js";
 import departmentStructureModel from "./departmentStructureModel.js";
@@ -249,8 +246,8 @@ affiliatedIniversityModel.hasMany(courseModel, { foreignKey: "affiliated_univers
 courseModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "instituted" });
 instituteModel.hasMany(courseModel, { foreignKey: "institute_id", as: "instituted" });
 
-courseModel.belongsTo(subAccountModel, { foreignKey: "sub_account_id", as: "courseProgram" });
-subAccountModel.hasMany(courseModel, { foreignKey: "sub_account_id", as: "programCourses" });
+courseModel.belongsTo(departmentModel, { foreignKey: "department_id", as: "courseProgram" });
+departmentModel.hasMany(courseModel, { foreignKey: "department_id", as: "programCourses" });
 
 employeeCodeMasterType.hasMany(courseModel, { foreignKey: "course_levelId", as: "coursesCodeMaster" });
 courseModel.belongsTo(employeeCodeMasterType, { foreignKey: "course_levelId", as: "courseLevelCourses" });
@@ -918,12 +915,6 @@ userModel.belongsTo(roleModel, { foreignKey: "default_role_id", as: "defaultRole
 roleModel.hasMany(userModel, { foreignKey: "default_role_id", as: "defaultRoleUsers" });
 
 // HOD Departments mapping
-hodDepartmentModel.belongsTo(userModel, { foreignKey: "user_id", as: "user" });
-userModel.hasMany(hodDepartmentModel, { foreignKey: "user_id", as: "hodDepartments" });
-
-hodDepartmentModel.belongsTo(departmentModel, { foreignKey: "department_id", as: "department" });
-departmentModel.hasMany(hodDepartmentModel, { foreignKey: "department_id", as: "hods" });
-
 // dormitory join
 addDormitoryModel.belongsTo(dormitoryListModel, { foreignKey: "add_dormitory_id", as: "dormitoryList" });
 dormitoryListModel.hasMany(addDormitoryModel, { foreignKey: "add_dormitory_id", as: "dormitoryList" });
@@ -1029,35 +1020,28 @@ campusModel.hasMany(headModel, { foreignKey: "campus_id", as: "headCampus" });
 headModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "headInstitute" });
 instituteModel.hasMany(headModel, { foreignKey: "institute_id", as: "headInstitute" });
 
-subAccountModel.belongsTo(accountModel, { foreignKey: "account_id", as: "accountDetail" });
-accountModel.hasMany(subAccountModel, { foreignKey: "account_id", as: "accountDetail" });
-
-departmentModel.belongsTo(subAccountModel, { foreignKey: "sub_account_id", as: "subAccountDetail" });
-subAccountModel.hasMany(departmentModel, { foreignKey: "sub_account_id", as: "subAccountDetail" });
-
 staffModel.belongsTo(departmentModel, { foreignKey: "department_id", as: "staffDepartment" });
 departmentModel.hasMany(staffModel, { foreignKey: "department_id", as: "staffDepartment" });
 
 staffModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "staffEmployee" });
 employeeModel.hasMany(staffModel, { foreignKey: "employeeId", as: "staffEmployee" });
 
-// done
-departmentStructureModel.belongsTo(accountModel, { foreignKey: "account_id", as: "mainAccount" });
-accountModel.hasMany(departmentStructureModel, { foreignKey: "account_id", as: "mainAccount" });
-
-departmentStructureModel.belongsTo(subAccountModel, { foreignKey: "sub_account_id", as: "subAccountDetails" });
-subAccountModel.hasMany(departmentStructureModel, { foreignKey: "sub_account_id", as: "subAccountDetails" });
-
-departmentStructureModel.belongsTo(subAccountModel, {
-  foreignKey: "parentAccountId",
-  sourceKey: "sub_account_id",
+departmentStructureModel.belongsTo(departmentModel, {
+  foreignKey: "department_id",
+  as: "department",
+});
+departmentModel.hasMany(departmentStructureModel, {
+  foreignKey: "department_id",
   as: "departmentStructures",
 });
 
-subAccountModel.hasMany(departmentStructureModel, {
-  foreignKey: "parentAccountId",
-  targetKey: "sub_account_id",
-  as: "parentAccounts",
+departmentStructureModel.belongsTo(departmentModel, {
+  foreignKey: "parent_department_id",
+  as: "parentDepartment",
+});
+departmentModel.hasMany(departmentStructureModel, {
+  foreignKey: "parent_department_id",
+  as: "childDepartmentStructures",
 });
 
 orgPositionModel.belongsTo(departmentStructureModel, {
@@ -1069,12 +1053,12 @@ departmentStructureModel.hasMany(orgPositionModel, {
   as: "orgPositions",
 });
 
-orgPositionModel.belongsTo(subAccountModel, {
-  foreignKey: "sub_account_id",
-  as: "subAccount",
+orgPositionModel.belongsTo(departmentModel, {
+  foreignKey: "department_id",
+  as: "department",
 });
-subAccountModel.hasMany(orgPositionModel, {
-  foreignKey: "sub_account_id",
+departmentModel.hasMany(orgPositionModel, {
+  foreignKey: "department_id",
   as: "orgPositions",
 });
 
@@ -1590,8 +1574,8 @@ jobSettingModel.hasMany(jobModel, { foreignKey: "jobSettingId", as: "jobs" });
 jobModel.belongsTo(userModel, { foreignKey: "userId", as: "user" });
 userModel.hasMany(jobModel, { foreignKey: "userId", as: "jobs" });
 
-jobModel.belongsTo(subAccountModel, { foreignKey: "subAccountId", as: "departmentJobs" });
-subAccountModel.hasMany(jobModel, { foreignKey: "subAccountId", as: "jobsDepartment" });
+jobModel.belongsTo(departmentModel, { foreignKey: "departmentId", as: "departmentJobs" });
+departmentModel.hasMany(jobModel, { foreignKey: "departmentId", as: "jobsDepartment" });
 
 jobModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "subjectJobs" });
 subjectModel.hasMany(jobModel, { foreignKey: "subjectId", as: "jobsSubject" });
@@ -1856,8 +1840,6 @@ export {
   governanceBodyModel,
   floorModel,
   headModel,
-  accountModel,
-  subAccountModel,
   departmentModel,
   staffModel,
   departmentStructureModel,
@@ -1935,7 +1917,6 @@ export {
   studentHallTicketModel,
   s3FileModel,
   pdfSplitJobModel,
-  hodDepartmentModel,
   userModel as users,
 };
 

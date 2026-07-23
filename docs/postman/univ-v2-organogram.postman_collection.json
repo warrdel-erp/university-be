@@ -2,13 +2,288 @@
   "info": {
     "_postman_id": "b2c3d4e5-f6a7-8901-bcde-organogram0001",
     "name": "univ-v2-organogram",
-    "description": "Organogram (org) APIs — positions on `department_structure` + heads (`user_id`).\n\n## Flow\n1. `POST /departmentStructure/` — create structure (`subAccountId` + `parentAccountId` optional/null for root)\n2. `GET /org/cards` — KPI summary\n3. `POST /org/` — create position (can be vacant)\n4. `POST /org/head` — assign user as PRIMARY/ACTING\n5. List / update / markVacant / delete as needed\n\nSet `baseurl` + `token`. Permissions reuse DEPARTMENT_* .\n\nSee also: `docs/ORGANOGRAM_NAMING_CONVENTION.md` and `docs/postman/ORGANOGRAM_POSTMAN.md`.",
+    "description": "Organogram APIs — create flow.\n\n## Create order\n1. `POST /department/` — org unit (flat; no parent on department)\n2. `POST /departmentStructure/` — tree node (`departmentId` + `parentDepartmentId`, both nullable)\n3. `POST /org/` — position seat (`level`, `reportsToOrgPositionId`, optional `departmentId`)\n4. `POST /org/head` — assign person (`userId`, PRIMARY/ACTING)\n5. `GET /org/cards` — KPI summary\n\nReporting is **position → position** (`reportsToOrgPositionId`), not department hierarchy.\n\n**Removed:** `/subAccount`, `accountId`, `subAccountId`, `hod_departments`.\n`department` / `department_structure` use **hard delete**.\n\nSet `baseurl` + `token`. Permissions: DEPARTMENT_*.\n\nDocs: `ORGANOGRAM_NAMING_CONVENTION.md`, `AFFECTED_APIS_DEPARTMENT_CONSOLIDATION.md`, `ORGANOGRAM_POSTMAN.md`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "org positions",
-      "description": "CRUD for `org_position` under a `departmentStructureId`.",
+      "name": "1. department",
+      "description": "Flat org units. No parentDepartmentId on department.",
+      "item": [
+        {
+          "name": "create department",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const row = res.departmentDetails;",
+                  "  if (row && row.departmentId) {",
+                  "    pm.collectionVariables.set('departmentId', String(row.departmentId));",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departmentName\": \"School of Engineering\",\n  \"departmentCode\": \"SOE\",\n  \"alternateName\": null,\n  \"description\": null\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseurl}}/department/",
+              "host": ["{{baseurl}}"],
+              "path": ["department", ""]
+            },
+            "description": "**POST /department/**\n\n**Required**\n- `departmentName` (string)\n\n**Optional**\n- `departmentCode` (string | null)\n- `alternateName` (string | null)\n- `description` (string | null)\n\nHard-delete on DELETE. No `parentDepartmentId`."
+          },
+          "response": []
+        },
+        {
+          "name": "list departments",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/department/",
+              "host": ["{{baseurl}}"],
+              "path": ["department", ""]
+            },
+            "description": "**GET /department/**\n\n**Required**\n- none\n\n**Optional**\n- none"
+          },
+          "response": []
+        },
+        {
+          "name": "get single department",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/department/single?departmentId={{departmentId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["department", "single"],
+              "query": [
+                { "key": "departmentId", "value": "{{departmentId}}", "description": "required" }
+              ]
+            },
+            "description": "**GET /department/single**\n\n**Required query**\n- `departmentId` (int)"
+          },
+          "response": []
+        },
+        {
+          "name": "update department",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departmentId\": {{departmentId}},\n  \"departmentName\": \"School of Engineering\",\n  \"departmentCode\": \"SOE\",\n  \"alternateName\": null,\n  \"description\": null\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseurl}}/department/",
+              "host": ["{{baseurl}}"],
+              "path": ["department", ""]
+            },
+            "description": "**PATCH /department/**\n\n**Required**\n- `departmentId` (int)\n\n**Optional**\n- `departmentName`, `departmentCode`, `alternateName`, `description`"
+          },
+          "response": []
+        },
+        {
+          "name": "delete department",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/department/?departmentId={{departmentId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["department", ""],
+              "query": [
+                { "key": "departmentId", "value": "{{departmentId}}", "description": "required" }
+              ]
+            },
+            "description": "**DELETE /department/**\n\n**Required query**\n- `departmentId` (int)\n\nHard delete."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. department structure",
+      "description": "Tree edges. `parentDepartmentId` = parent department unit (nullable).",
+      "item": [
+        {
+          "name": "create structure (root)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const row = res.departmentStructure;",
+                  "  if (row && row.departmentStructureId) {",
+                  "    pm.collectionVariables.set('departmentStructureId', String(row.departmentStructureId));",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departmentId\": null,\n  \"parentDepartmentId\": null\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseurl}}/departmentStructure/",
+              "host": ["{{baseurl}}"],
+              "path": ["departmentStructure", ""]
+            },
+            "description": "**POST /departmentStructure/** (root)\n\n**Optional**\n- `departmentId` (int | null)\n- `parentDepartmentId` (int | null)\n\nBoth may be `null` for a top root node."
+          },
+          "response": []
+        },
+        {
+          "name": "create structure (with department)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const row = res.departmentStructure;",
+                  "  if (row && row.departmentStructureId) {",
+                  "    pm.collectionVariables.set('departmentStructureId', String(row.departmentStructureId));",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departmentId\": {{departmentId}},\n  \"parentDepartmentId\": null\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseurl}}/departmentStructure/",
+              "host": ["{{baseurl}}"],
+              "path": ["departmentStructure", ""]
+            },
+            "description": "**POST /departmentStructure/**\n\nLink a department to the tree. Set `parentDepartmentId` to another department id for nesting under a parent unit."
+          },
+          "response": []
+        },
+        {
+          "name": "list structure",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/departmentStructure/",
+              "host": ["{{baseurl}}"],
+              "path": ["departmentStructure", ""]
+            },
+            "description": "**GET /departmentStructure/**\n\nPick `departmentStructureId` for create position."
+          },
+          "response": []
+        },
+        {
+          "name": "get single structure",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/departmentStructure/single?departmentStructureId={{departmentStructureId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["departmentStructure", "single"],
+              "query": [
+                { "key": "departmentStructureId", "value": "{{departmentStructureId}}", "description": "required" }
+              ]
+            },
+            "description": "**GET /departmentStructure/single**\n\n**Required query**\n- `departmentStructureId` (int)"
+          },
+          "response": []
+        },
+        {
+          "name": "delete structure",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/departmentStructure/?departmentStructureId={{departmentStructureId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["departmentStructure", ""],
+              "query": [
+                { "key": "departmentStructureId", "value": "{{departmentStructureId}}", "description": "required" }
+              ]
+            },
+            "description": "**DELETE /departmentStructure/**\n\nHard delete."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. org positions",
+      "description": "Seats on the chart. Reporting via `reportsToOrgPositionId`.",
       "item": [
         {
           "name": "summary cards",
@@ -24,12 +299,53 @@
               "host": ["{{baseurl}}"],
               "path": ["org", "cards"]
             },
-            "description": "**GET /org/cards**\n\nNo query/body keys.\n\nReturns:\n- `totalPositions` `{ count, changePercent }`\n- `filledPositions` `{ count, changePercent }`\n- `vacantPositions` `{ count, changePercent }`\n- `departments` `{ count, changePercent }` (`changePercent` always `null`)\n- `reportingLevels` `{ count, changePercent }` (`changePercent` always `null`)"
+            "description": "**GET /org/cards**\n\nNo query/body.\n\nReturns:\n- `totalPositions` `{ count, changePercent }`\n- `filledPositions` `{ count, changePercent }`\n- `vacantPositions` `{ count, changePercent }`\n- `departments` `{ count, changePercent }` (`changePercent` null)\n- `reportingLevels` `{ count, changePercent }` (`changePercent` null)"
           },
           "response": []
         },
         {
-          "name": "create position",
+          "name": "create position (top / Chancellor)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const row = res.orgPosition;",
+                  "  if (row && row.orgPositionId) {",
+                  "    pm.collectionVariables.set('orgPositionId', String(row.orgPositionId));",
+                  "    pm.collectionVariables.set('reportsToOrgPositionId', String(row.orgPositionId));",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departmentStructureId\": {{departmentStructureId}},\n  \"departmentId\": {{departmentId}},\n  \"positionName\": \"Chancellor\",\n  \"positionCode\": \"CHN\",\n  \"employmentCategory\": \"Leadership\",\n  \"reportsToOrgPositionId\": null,\n  \"reportingType\": \"Direct\",\n  \"isVacant\": true,\n  \"sortOrder\": 1,\n  \"level\": 1\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseurl}}/org/",
+              "host": ["{{baseurl}}"],
+              "path": ["org", ""]
+            },
+            "description": "**POST /org/** (top seat)\n\n**Required**\n- `departmentStructureId` (int)\n- `positionName` (string)\n- `employmentCategory` — `Academic` | `Administrative` | `Support` | `Executive` | `Leadership`\n- `level` (int ≥ 1)\n\n**Optional**\n- `departmentId` (int | null)\n- `positionCode` (string | null)\n- `reportsToOrgPositionId` (int | null) — **null for top**\n- `reportingType` (string | null)\n- `isVacant` (boolean) — default `true`\n- `sortOrder` (int) — default `0`\n\nSaves `orgPositionId` as `reportsToOrgPositionId` for the next child create."
+          },
+          "response": []
+        },
+        {
+          "name": "create position (child / reports to)",
           "event": [
             {
               "listen": "test",
@@ -56,7 +372,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"departmentStructureId\": {{departmentStructureId}},\n  \"subAccountId\": {{subAccountId}},\n  \"positionName\": \"Head of Department\",\n  \"positionCode\": \"HOD-CSE\",\n  \"employmentCategory\": \"Academic\",\n  \"reportsToOrgPositionId\": null,\n  \"reportingType\": \"Direct\",\n  \"isVacant\": true,\n  \"sortOrder\": 1,\n  \"level\": 1\n}",
+              "raw": "{\n  \"departmentStructureId\": {{departmentStructureId}},\n  \"departmentId\": {{departmentId}},\n  \"positionName\": \"Vice Chancellor\",\n  \"positionCode\": \"VC\",\n  \"employmentCategory\": \"Leadership\",\n  \"reportsToOrgPositionId\": {{reportsToOrgPositionId}},\n  \"reportingType\": \"Direct\",\n  \"isVacant\": true,\n  \"sortOrder\": 1,\n  \"level\": 2\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -64,7 +380,7 @@
               "host": ["{{baseurl}}"],
               "path": ["org", ""]
             },
-            "description": "**POST /org/**\n\n**Required**\n- `departmentStructureId` (int)\n- `positionName` (string)\n- `employmentCategory` — `Academic` | `Administrative` | `Support` | `Executive` | `Leadership`\n- `level` (int ≥ 1)\n\n**Optional**\n- `subAccountId` (int | null) — department this position belongs to (e.g. HOD of CSE)\n- `positionCode` (string | null)\n- `reportsToOrgPositionId` (int | null) — null for top positions\n- `reportingType` (string | null)\n- `isVacant` (boolean) — default `true`\n- `sortOrder` (int) — default `0`"
+            "description": "**POST /org/** (child seat)\n\nSame required keys as create position.\n\nSet `reportsToOrgPositionId` to parent seat id and `level` = parent level + 1.\n\nRepeat for Dean → HOD → Faculty…"
           },
           "response": []
         },
@@ -78,17 +394,17 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/org/?departmentStructureId={{departmentStructureId}}&subAccountId={{subAccountId}}&employmentCategory=Academic&isVacant=true",
+              "raw": "{{baseurl}}/org/?departmentStructureId={{departmentStructureId}}&departmentId={{departmentId}}&employmentCategory=Leadership&isVacant=true",
               "host": ["{{baseurl}}"],
               "path": ["org", ""],
               "query": [
-                { "key": "departmentStructureId", "value": "{{departmentStructureId}}", "description": "optional filter" },
-                { "key": "subAccountId", "value": "{{subAccountId}}", "description": "optional filter — department" },
-                { "key": "employmentCategory", "value": "Academic", "description": "optional filter" },
-                { "key": "isVacant", "value": "true", "description": "optional filter — true|false" }
+                { "key": "departmentStructureId", "value": "{{departmentStructureId}}", "description": "optional" },
+                { "key": "departmentId", "value": "{{departmentId}}", "description": "optional" },
+                { "key": "employmentCategory", "value": "Leadership", "description": "optional" },
+                { "key": "isVacant", "value": "true", "description": "optional true|false" }
               ]
             },
-            "description": "**GET /org/**\n\n**Required**\n- none\n\n**Optional query**\n- `departmentStructureId` (int)\n- `subAccountId` (int)\n- `employmentCategory` — `Academic` | `Administrative` | `Support` | `Executive` | `Leadership`\n- `isVacant` — `true` | `false`\n\nIncludes structure, subAccount, reportsTo, and heads."
+            "description": "**GET /org/**\n\n**Optional query**\n- `departmentStructureId`, `departmentId`, `employmentCategory`, `isVacant`\n\nIncludes structure, department, reportsTo, heads."
           },
           "response": []
         },
@@ -109,7 +425,7 @@
                 { "key": "orgPositionId", "value": "{{orgPositionId}}", "description": "required" }
               ]
             },
-            "description": "**GET /org/single**\n\n**Required query**\n- `orgPositionId` (int)\n\n**Optional**\n- none"
+            "description": "**GET /org/single**\n\n**Required query**\n- `orgPositionId` (int)"
           },
           "response": []
         },
@@ -124,7 +440,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"orgPositionId\": {{orgPositionId}},\n  \"subAccountId\": {{subAccountId}},\n  \"positionName\": \"Head of Department\",\n  \"positionCode\": \"HOD-CSE\",\n  \"employmentCategory\": \"Academic\",\n  \"reportingType\": \"Direct\",\n  \"sortOrder\": 1,\n  \"level\": 1\n}",
+              "raw": "{\n  \"orgPositionId\": {{orgPositionId}},\n  \"departmentId\": {{departmentId}},\n  \"positionName\": \"Vice Chancellor\",\n  \"positionCode\": \"VC\",\n  \"employmentCategory\": \"Leadership\",\n  \"reportsToOrgPositionId\": {{reportsToOrgPositionId}},\n  \"reportingType\": \"Direct\",\n  \"sortOrder\": 1,\n  \"level\": 2\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -132,7 +448,7 @@
               "host": ["{{baseurl}}"],
               "path": ["org", ""]
             },
-            "description": "**PATCH /org/**\n\n**Required**\n- `orgPositionId` (int)\n\n**Optional**\n- `departmentStructureId` (int)\n- `subAccountId` (int | null)\n- `positionName` (string)\n- `positionCode` (string | null)\n- `employmentCategory` — `Academic` | `Administrative` | `Support` | `Executive` | `Leadership`\n- `reportsToOrgPositionId` (int | null)\n- `reportingType` (string | null)\n- `sortOrder` (int)\n- `level` (int ≥ 1)\n\nDo **not** send `isVacant` here — use `POST /org/markVacant` or head flows."
+            "description": "**PATCH /org/**\n\n**Required**\n- `orgPositionId`\n\n**Optional**\n- `departmentStructureId`, `departmentId`, `positionName`, `positionCode`, `employmentCategory`, `reportsToOrgPositionId`, `reportingType`, `sortOrder`, `level`\n\nDo **not** send `isVacant` — use markVacant / head flows."
           },
           "response": []
         },
@@ -155,7 +471,7 @@
               "host": ["{{baseurl}}"],
               "path": ["org", "markVacant"]
             },
-            "description": "**POST /org/markVacant**\n\n**Required**\n- `orgPositionId` (int)\n\n**Optional**\n- none\n\nSets ACTIVE heads to INACTIVE and `isVacant = true`."
+            "description": "**POST /org/markVacant**\n\n**Required**\n- `orgPositionId`\n\nSets ACTIVE heads → INACTIVE and `isVacant = true`."
           },
           "response": []
         },
@@ -176,15 +492,15 @@
                 { "key": "orgPositionId", "value": "{{orgPositionId}}", "description": "required" }
               ]
             },
-            "description": "**DELETE /org/**\n\n**Required query**\n- `orgPositionId` (int)\n\n**Optional**\n- none\n\nSoft-deletes position and its heads."
+            "description": "**DELETE /org/**\n\n**Required query**\n- `orgPositionId`\n\nSoft-deletes position and its heads."
           },
           "response": []
         }
       ]
     },
     {
-      "name": "org heads",
-      "description": "Assign users to an `org_position` (`org_position_head`).",
+      "name": "4. org heads",
+      "description": "People on seats. ACTIVE head also drives DEPARTMENT RBAC scope via `org_position.departmentId`.",
       "item": [
         {
           "name": "add head",
@@ -214,7 +530,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"orgPositionId\": {{orgPositionId}},\n  \"userId\": {{userId}},\n  \"holderType\": \"PRIMARY\",\n  \"status\": \"ACTIVE\",\n  \"joiningDate\": \"2022-06-15\",\n  \"endDate\": null\n}",
+              "raw": "{\n  \"orgPositionId\": {{orgPositionId}},\n  \"userId\": {{userId}},\n  \"holderType\": \"PRIMARY\",\n  \"status\": \"ACTIVE\",\n  \"joiningDate\": \"2024-01-01\",\n  \"endDate\": null\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -222,7 +538,7 @@
               "host": ["{{baseurl}}"],
               "path": ["org", "head"]
             },
-            "description": "**POST /org/head**\n\n**Required**\n- `orgPositionId` (int)\n- `userId` (int)\n- `holderType` — `PRIMARY` | `ACTING`\n\n**Optional**\n- `status` — `ACTIVE` | `INACTIVE` (default `ACTIVE`)\n- `joiningDate` (YYYY-MM-DD | null)\n- `endDate` (YYYY-MM-DD | null)\n\nDefault `ACTIVE` → sets position `isVacant = false`. Rejects duplicate ACTIVE (position, user)."
+            "description": "**POST /org/head**\n\n**Required**\n- `orgPositionId` (int)\n- `userId` (int)\n- `holderType` — `PRIMARY` | `ACTING`\n\n**Optional**\n- `status` — `ACTIVE` | `INACTIVE` (default `ACTIVE`)\n- `joiningDate` (YYYY-MM-DD | null)\n- `endDate` (YYYY-MM-DD | null)\n\nACTIVE → `isVacant = false`. Rejects duplicate ACTIVE (position, user)."
           },
           "response": []
         },
@@ -243,7 +559,7 @@
                 { "key": "orgPositionId", "value": "{{orgPositionId}}", "description": "required" }
               ]
             },
-            "description": "**GET /org/head**\n\n**Required query**\n- `orgPositionId` (int)\n\n**Optional**\n- none"
+            "description": "**GET /org/head**\n\n**Required query**\n- `orgPositionId`"
           },
           "response": []
         },
@@ -258,7 +574,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"orgPositionHeadId\": {{orgPositionHeadId}},\n  \"holderType\": \"ACTING\",\n  \"status\": \"ACTIVE\",\n  \"joiningDate\": \"2022-06-15\",\n  \"endDate\": null\n}",
+              "raw": "{\n  \"orgPositionHeadId\": {{orgPositionHeadId}},\n  \"holderType\": \"ACTING\",\n  \"status\": \"ACTIVE\",\n  \"joiningDate\": \"2024-01-01\",\n  \"endDate\": null\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -266,7 +582,7 @@
               "host": ["{{baseurl}}"],
               "path": ["org", "head"]
             },
-            "description": "**PATCH /org/head**\n\n**Required**\n- `orgPositionHeadId` (int)\n\n**Optional**\n- `holderType` — `PRIMARY` | `ACTING`\n- `status` — `ACTIVE` | `INACTIVE`\n- `joiningDate` (YYYY-MM-DD | null)\n- `endDate` (YYYY-MM-DD | null)\n\nRecalculates parent `isVacant` after status change."
+            "description": "**PATCH /org/head**\n\n**Required**\n- `orgPositionHeadId`\n\n**Optional**\n- `holderType`, `status`, `joiningDate`, `endDate`\n\nRecalculates parent `isVacant` after status change."
           },
           "response": []
         },
@@ -287,111 +603,7 @@
                 { "key": "orgPositionHeadId", "value": "{{orgPositionHeadId}}", "description": "required" }
               ]
             },
-            "description": "**DELETE /org/head**\n\n**Required query**\n- `orgPositionHeadId` (int)\n\n**Optional**\n- none\n\nSoft-delete. If no ACTIVE heads remain → `isVacant = true`."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "prerequisites (related)",
-      "description": "Helpers — not org routes, but needed for IDs.",
-      "item": [
-        {
-          "name": "create department structure (root)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "try {",
-                  "  const res = pm.response.json();",
-                  "  const row = res.departmentStructure;",
-                  "  if (row && row.departmentStructureId) {",
-                  "    pm.collectionVariables.set('departmentStructureId', String(row.departmentStructureId));",
-                  "  }",
-                  "} catch (e) {}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
-            },
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"accountId\": {{accountId}},\n  \"subAccountId\": null,\n  \"parentAccountId\": null\n}",
-              "options": { "raw": { "language": "json" } }
-            },
-            "url": {
-              "raw": "{{baseurl}}/departmentStructure/",
-              "host": ["{{baseurl}}"],
-              "path": ["departmentStructure", ""]
-            },
-            "description": "**POST /departmentStructure/** (top root)\n\n**Required**\n- `accountId` (int)\n\n**Optional**\n- `subAccountId` (int | null) — may be `null` for top root\n- `parentAccountId` (int | null) — may be `null` for top root"
-          },
-          "response": []
-        },
-        {
-          "name": "create department structure (self-parent)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "try {",
-                  "  const res = pm.response.json();",
-                  "  const row = res.departmentStructure;",
-                  "  if (row && row.departmentStructureId) {",
-                  "    pm.collectionVariables.set('departmentStructureId', String(row.departmentStructureId));",
-                  "  }",
-                  "} catch (e) {}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
-            },
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"accountId\": {{accountId}},\n  \"subAccountId\": {{subAccountId}},\n  \"parentAccountId\": {{subAccountId}}\n}",
-              "options": { "raw": { "language": "json" } }
-            },
-            "url": {
-              "raw": "{{baseurl}}/departmentStructure/",
-              "host": ["{{baseurl}}"],
-              "path": ["departmentStructure", ""]
-            },
-            "description": "**POST /departmentStructure/** (self-parent)\n\n**Required**\n- `accountId` (int)\n\n**Optional**\n- `subAccountId` (int | null)\n- `parentAccountId` (int | null) — set equal to `subAccountId` for self-parent root"
-          },
-          "response": []
-        },
-        {
-          "name": "list department structure",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/departmentStructure/",
-              "host": ["{{baseurl}}"],
-              "path": ["departmentStructure", ""]
-            },
-            "description": "**GET /departmentStructure/**\n\n**Required**\n- none\n\n**Optional**\n- none\n\nPick a `departmentStructureId` for create position."
+            "description": "**DELETE /org/head**\n\n**Required query**\n- `orgPositionHeadId`\n\nSoft-delete. If no ACTIVE heads remain → `isVacant = true`."
           },
           "response": []
         }
@@ -401,10 +613,10 @@
   "variable": [
     { "key": "baseurl", "value": "http://localhost:8080", "type": "string" },
     { "key": "token", "value": "", "type": "string" },
-    { "key": "accountId", "value": "1", "type": "string" },
-    { "key": "subAccountId", "value": "5", "type": "string" },
-    { "key": "departmentStructureId", "value": "1", "type": "string" },
+    { "key": "departmentId", "value": "", "type": "string" },
+    { "key": "departmentStructureId", "value": "", "type": "string" },
     { "key": "orgPositionId", "value": "", "type": "string" },
+    { "key": "reportsToOrgPositionId", "value": "", "type": "string" },
     { "key": "orgPositionHeadId", "value": "", "type": "string" },
     { "key": "userId", "value": "1", "type": "string" }
   ]

@@ -1,21 +1,9 @@
 import * as departmentCreationRepository from '../repository/departmentRepository.js';
-import { getSingleSubAccountDetails } from '../repository/subAccountRepository.js';
 
 export async function addDepartment(departmentData, createdBy, updatedBy) {
-    const subAccount = await getSingleSubAccountDetails(departmentData.subAccountId);
-    if (!subAccount) {
-        throw new Error('Sub account not found for this institute');
-    }
-
     departmentData.createdBy = createdBy;
     departmentData.updatedBy = updatedBy;
-
-    const latest = await departmentCreationRepository.getlatestEntry(departmentData.subAccountId);
-    const departmentOrder = latest
-        ? (latest.departmentOrder ?? latest.dataValues?.departmentOrder) + 1
-        : 1;
-
-    return await departmentCreationRepository.addDepartment({ ...departmentData, departmentOrder });
+    return await departmentCreationRepository.addDepartment(departmentData);
 }
 
 export async function getDepartmentDetails() {
@@ -31,13 +19,6 @@ export async function deleteDepartment(departmentId) {
 }
 
 export async function updateDepartment(departmentId, departmentData, updatedBy) {
-    if (departmentData.subAccountId) {
-        const subAccount = await getSingleSubAccountDetails(departmentData.subAccountId);
-        if (!subAccount) {
-            throw new Error('Sub account not found for this institute');
-        }
-    }
-
     const {
         instituteId: _instituteId,
         universityId: _universityId,

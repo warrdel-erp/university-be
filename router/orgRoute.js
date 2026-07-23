@@ -56,7 +56,7 @@ const optionalDateOnly = z.preprocess(
 
 const addPositionSchema = z.object({
     departmentStructureId: positiveIntegerId,
-    subAccountId: optionalNullablePositiveIntegerId,
+    departmentId: optionalNullablePositiveIntegerId,
     positionName: z
         .string({ required_error: 'positionName is required' })
         .min(1, 'positionName cannot be empty'),
@@ -72,7 +72,7 @@ const addPositionSchema = z.object({
 const updatePositionSchema = z.object({
     orgPositionId: positiveIntegerId,
     departmentStructureId: optionalPositiveIntegerId,
-    subAccountId: optionalNullablePositiveIntegerId,
+    departmentId: optionalNullablePositiveIntegerId,
     positionName: z.string().min(1).optional(),
     positionCode: z.string().optional().nullable(),
     employmentCategory: employmentCategoryEnum.optional(),

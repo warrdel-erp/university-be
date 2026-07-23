@@ -55,8 +55,7 @@ import building from "./router/buildingRoute.js";
 import governanceBody from "./router/governanceBodyRoute.js";
 import floor from "./router/floorRoute.js";
 import head from "./router/headRoute.js";
-import subAccount from "./router/subAccountRoute.js"; // this is department
-import department from "./router/departmentRoute.js"; // this is sub_account
+import department from "./router/departmentRoute.js";
 import staff from "./router/staffRoute.js";
 import departmentStructure from "./router/departmentStructureRoute.js";
 import org from "./router/orgRoute.js";
@@ -145,8 +144,7 @@ app.use("/head", head);
 app.use("/building", building);
 app.use("/governanceBody", governanceBody);
 app.use("/floor", floor);
-app.use("/subAccount", subAccount); // this is department
-app.use("/department", department); // this is sub_account
+app.use("/department", department);
 app.use("/staff", staff);
 app.use("/departmentStructure", departmentStructure);
 app.use("/org", org);

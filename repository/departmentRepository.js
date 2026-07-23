@@ -1,7 +1,14 @@
 import * as model from '../models/index.js';
-import { scoped, buildScope } from '../utility/scoped.js';
+import { scoped } from '../utility/scoped.js';
 
-const excludeMeta = ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'];
+const excludeMeta = ['createdAt', 'updatedAt', 'createdBy', 'updatedBy'];
+
+export async function departmentExists(departmentId) {
+    return scoped(model.departmentModel).findOne({
+        attributes: ['departmentId'],
+        where: { departmentId: Number(departmentId) },
+    });
+}
 
 export async function addDepartment(departmentData) {
     try {
@@ -16,14 +23,7 @@ export async function getDepartmentDetails() {
     try {
         return await scoped(model.departmentModel).findAll({
             attributes: { exclude: excludeMeta },
-            include: [
-                {
-                    model: model.subAccountModel,
-                    as: 'subAccountDetail',
-                    where: { ...buildScope(model.subAccountModel) },
-                    attributes: { exclude: excludeMeta },
-                },
-            ],
+            order: [['departmentId', 'ASC']],
         });
     } catch (error) {
         console.error('Error fetching Department details:', error);
@@ -36,14 +36,6 @@ export async function getSingleDepartmentDetails(departmentId) {
         return await scoped(model.departmentModel).findOne({
             attributes: { exclude: excludeMeta },
             where: { departmentId },
-            include: [
-                {
-                    model: model.subAccountModel,
-                    as: 'subAccountDetail',
-                    where: { ...buildScope(model.subAccountModel) },
-                    attributes: { exclude: excludeMeta },
-                },
-            ],
         });
     } catch (error) {
         console.error('Error fetching Department details:', error);
@@ -80,20 +72,6 @@ export async function updateDepartment(departmentId, departmentData) {
         return true;
     } catch (error) {
         console.error(`Error updating Department creation ${departmentId}:`, error);
-        throw error;
-    }
-}
-
-export async function getlatestEntry(subAccountId) {
-    try {
-        return await scoped(model.departmentModel).findOne({
-            attributes: { exclude: excludeMeta },
-            where: { subAccountId },
-            order: [['department_order', 'DESC']],
-            limit: 1,
-        });
-    } catch (error) {
-        console.error('Error fetching latest entry details:', error);
         throw error;
     }
 }

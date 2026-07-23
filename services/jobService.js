@@ -164,9 +164,9 @@ export async function getFacultyCalendar({ userId, start, end }) {
 }
 
 // DEPARTMENT CALENDAR
-export async function getDepartmentCalendar({ subAccountId, start, end }) {
+export async function getDepartmentCalendar({ departmentId, start, end }) {
   try {
-    return await jobRepository.getDepartmentCalendar(subAccountId, start, end);
+    return await jobRepository.getDepartmentCalendar(departmentId, start, end);
   } catch (error) {
     console.error("Error in getDepartmentCalendar:", error.message);
     throw new Error("Unable to fetch department calendar");

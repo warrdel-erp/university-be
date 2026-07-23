@@ -20,17 +20,23 @@ const positiveIntegerId = z.coerce
     .int('id must be an integer')
     .positive('id must be greater than 0');
 
+const optionalString = z.string().optional().nullable();
+
 const addDepartmentSchema = z.object({
-    subAccountId: positiveIntegerId,
     departmentName: z
         .string({ required_error: 'departmentName is required' })
         .min(1, 'departmentName cannot be empty'),
+    alternateName: optionalString,
+    departmentCode: optionalString,
+    description: optionalString,
 });
 
 const updateDepartmentSchema = z.object({
     departmentId: positiveIntegerId,
     departmentName: z.string().min(1).optional(),
-    subAccountId: positiveIntegerId.optional(),
+    alternateName: optionalString,
+    departmentCode: optionalString,
+    description: optionalString,
 });
 
 const departmentIdQuerySchema = z.object({
