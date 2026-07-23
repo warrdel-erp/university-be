@@ -14,6 +14,7 @@ import {
     deleteHead,
     getOrgTree,
     getOrgChart,
+    getPositionsByDepartment,
 } from '../controllers/orgController.js';
 import userAuth from '../middleware/authUser.js';
 import { checkAccess } from '../middleware/checkAccess.js';
@@ -85,6 +86,10 @@ const updatePositionSchema = z.object({
 
 const positionIdQuerySchema = z.object({
     orgPositionId: positiveIntegerId,
+});
+
+const departmentIdQuerySchema = z.object({
+    departmentId: positiveIntegerId,
 });
 
 const markVacantSchema = z.object({
@@ -204,6 +209,14 @@ router.get(
     userAuth,
     checkAccess(PERMISSIONS.DEPARTMENT.value, null),
     getOrgChart,
+);
+
+router.get(
+    '/department-positions',
+    userAuth,
+    checkAccess(PERMISSIONS.DEPARTMENT.value, null),
+    validate({ query: departmentIdQuerySchema }),
+    getPositionsByDepartment,
 );
 
 export default router;

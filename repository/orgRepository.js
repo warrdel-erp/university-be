@@ -747,3 +747,78 @@ export async function getOrgChartData() {
         children: rootPosNodes
     };
 }
+
+export async function getPositionsByDepartment(departmentId) {
+    const positions = await scoped(model.orgPositionModel).findAll({
+        where: { departmentId: Number(departmentId) },
+        attributes: ['orgPositionId', 'positionName', 'positionCode', 'level', 'employmentCategory', 'isVacant', 'sortOrder', 'departmentId'],
+        order: [['level', 'ASC'], ['sortOrder', 'ASC']]
+    });
+
+    const positionIds = positions.map(p => p.orgPositionId);
+    const headsMap = new Map();
+    if (positionIds.length > 0) {
+        const activeHeads = await scoped(model.orgPositionHeadModel).findAll({
+            where: {
+                orgPositionId: { [Op.in]: positionIds },
+                status: 'ACTIVE'
+            },
+            attributes: ['orgPositionHeadId', 'orgPositionId', 'holderType', 'status', 'joiningDate', 'endDate'],
+            include: [
+                {
+                    model: model.userModel,
+                    as: 'assignee',
+                    attributes: ['userId', 'userName', 'email', 'phone', 'status'],
+                    include: [
+                        {
+                            model: model.employeeModel,
+                            as: 'employee',
+                            attributes: ['employeeId', 'employeeName'],
+                            required: false
+                        }
+                    ]
+                }
+            ]
+        });
+
+        for (const head of activeHeads) {
+            const plainHead = head.get({ plain: true });
+            const posId = plainHead.orgPositionId;
+            if (posId) {
+                if (!headsMap.has(posId)) {
+                    headsMap.set(posId, []);
+                }
+                const assignee = plainHead.assignee || {};
+                const empName = assignee.employee?.employeeName || assignee.userName;
+                headsMap.get(posId).push({
+                    orgPositionHeadId: plainHead.orgPositionHeadId,
+                    holderType: plainHead.holderType,
+                    status: plainHead.status,
+                    joiningDate: plainHead.joiningDate,
+                    endDate: plainHead.endDate,
+                    user: {
+                        userId: assignee.userId,
+                        name: empName,
+                        email: assignee.email,
+                        phone: assignee.phone
+                    }
+                });
+            }
+        }
+    }
+
+    return positions.map(pos => {
+        const plainPos = pos.get({ plain: true });
+        return {
+            orgPositionId: plainPos.orgPositionId,
+            positionName: plainPos.positionName,
+            positionCode: plainPos.positionCode,
+            level: plainPos.level,
+            employmentCategory: plainPos.employmentCategory,
+            isVacant: plainPos.isVacant,
+            sortOrder: plainPos.sortOrder,
+            departmentId: plainPos.departmentId,
+            heads: headsMap.get(plainPos.orgPositionId) || []
+        };
+    });
+}

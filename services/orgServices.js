@@ -195,3 +195,7 @@ export async function getOrgTreeData() {
 export async function getOrgChart() {
     return orgRepository.getOrgChartData();
 }
+
+export async function getPositionsByDepartment(departmentId) {
+    return orgRepository.getPositionsByDepartment(departmentId);
+}

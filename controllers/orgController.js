@@ -183,3 +183,13 @@ export async function getOrgChart(req, res) {
         return ErrorResponse(res, 500, "Internal Server Error", error.message);
     }
 }
+
+export async function getPositionsByDepartment(req, res) {
+    try {
+        const { departmentId } = req.query;
+        const positions = await orgServices.getPositionsByDepartment(departmentId);
+        return SuccessResponse(res, 200, "Positions for department fetched successfully", positions);
+    } catch (error) {
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
+    }
+}

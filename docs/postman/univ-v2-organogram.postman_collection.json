@@ -523,6 +523,27 @@
           "response": []
         },
         {
+          "name": "get department positions",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/org/department-positions?departmentId={{departmentId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["org", "department-positions"],
+              "query": [
+                { "key": "departmentId", "value": "{{departmentId}}", "description": "required" }
+              ]
+            },
+            "description": "**GET /org/department-positions**\n\nReturns a flat list of position objects mapped to a given departmentId."
+          },
+          "response": []
+        },
+        {
           "name": "get single position",
           "request": {
             "auth": {
