@@ -634,7 +634,7 @@ export async function getOrgChartData() {
                 {
                     model: model.orgPositionModel,
                     as: 'orgPositions',
-                    attributes: ['orgPositionId', 'positionName'],
+                    attributes: ['orgPositionId', 'positionName', 'level'],
                     required: false,
                     include: [
                         {
@@ -695,7 +695,7 @@ export async function getOrgChartData() {
     for (const deptRecord of allDepts) {
         const dept = deptRecord.get({ plain: true });
 
-        // Shape positions – only orgPositionId, positionName, users (id + name)
+        // Shape positions – all levels (1, 2, 3...) sorted by level ASC
         const positions = [];
         for (const pos of (dept.orgPositions || [])) {
 
@@ -713,6 +713,7 @@ export async function getOrgChartData() {
             positions.push({
                 orgPositionId: pos.orgPositionId,
                 positionName:  pos.positionName,
+                level:         pos.level,
                 users:         users
             });
         }
