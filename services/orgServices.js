@@ -12,24 +12,8 @@ const HOLDER_TYPES = new Set(['PRIMARY', 'ACTING']);
 const HEAD_STATUSES = new Set(['ACTIVE', 'INACTIVE']);
 
 export async function addOrgPosition(body, createdBy, updatedBy) {
-    let departmentStructureId = null;
-    if (body.departmentStructureId != null) {
-        const structure = await orgRepository.departmentStructureExists(body.departmentStructureId);
-        if (!structure) {
-            throw new Error('departmentStructure not found');
-        }
-        departmentStructureId = Number(body.departmentStructureId);
-    }
-
     if (!EMPLOYMENT_CATEGORIES.has(body.employmentCategory)) {
         throw new Error('Invalid employmentCategory');
-    }
-
-    if (body.reportsToOrgPositionId != null) {
-        const reportsTo = await orgRepository.positionExists(body.reportsToOrgPositionId);
-        if (!reportsTo) {
-            throw new Error('reportsToOrgPositionId not found');
-        }
     }
 
     let departmentId = null;
@@ -44,15 +28,10 @@ export async function addOrgPosition(body, createdBy, updatedBy) {
     const isVacant = body.isVacant === undefined ? true : Boolean(body.isVacant);
 
     return orgRepository.addOrgPosition({
-        departmentStructureId,
         departmentId,
         positionName: body.positionName,
         positionCode: body.positionCode ?? null,
         employmentCategory: body.employmentCategory,
-        reportsToOrgPositionId:
-            body.reportsToOrgPositionId != null
-                ? Number(body.reportsToOrgPositionId)
-                : null,
         reportingType: body.reportingType ?? null,
         isVacant,
         sortOrder: body.sortOrder != null ? Number(body.sortOrder) : 0,
@@ -108,18 +87,6 @@ export async function updateOrgPosition(orgPositionId, body, updatedBy) {
                 throw new Error('departmentId not found');
             }
             rest.departmentId = Number(rest.departmentId);
-        }
-    }
-
-    if (rest.reportsToOrgPositionId !== undefined) {
-        if (rest.reportsToOrgPositionId == null) {
-            rest.reportsToOrgPositionId = null;
-        } else {
-            const reportsTo = await orgRepository.positionExists(rest.reportsToOrgPositionId);
-            if (!reportsTo) {
-                throw new Error('reportsToOrgPositionId not found');
-            }
-            rest.reportsToOrgPositionId = Number(rest.reportsToOrgPositionId);
         }
     }
 
@@ -219,4 +186,8 @@ export async function updateHead(orgPositionHeadId, body, updatedBy) {
 
 export async function deleteHead(orgPositionHeadId, updatedBy) {
     return orgRepository.deleteHead(orgPositionHeadId, updatedBy);
+}
+
+export async function getOrgTreeData() {
+    return orgRepository.getOrgTreeData();
 }

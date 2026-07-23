@@ -3,7 +3,6 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import university from "./universityModel.js";
 import institute from "./instituteModel.js";
-import departmentStructure from "./departmentStructureModel.js";
 import department from "./departmentModel.js";
 
 const orgPositionModel = sequelize.define(
@@ -14,15 +13,6 @@ const orgPositionModel = sequelize.define(
             primaryKey: true,
             autoIncrement: true,
             field: 'org_position_id'
-        },
-        departmentStructureId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'department_structure_id',
-            references: {
-                model: departmentStructure,
-                key: 'department_structure_id'
-            }
         },
         departmentId: {
             type: DataTypes.INTEGER,
@@ -47,15 +37,6 @@ const orgPositionModel = sequelize.define(
             type: DataTypes.STRING,
             allowNull: false,
             field: 'employment_category'
-        },
-        reportsToOrgPositionId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'reports_to_org_position_id',
-            references: {
-                model: 'org_position',
-                key: 'org_position_id'
-            }
         },
         reportingType: {
             type: DataTypes.STRING,

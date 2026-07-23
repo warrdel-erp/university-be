@@ -19,9 +19,8 @@ export async function addOrgPosition(req, res) {
 
 export async function getAllOrgPositions(req, res) {
     try {
-        const { departmentStructureId, departmentId, employmentCategory, isVacant } = req.query;
+        const { departmentId, employmentCategory, isVacant } = req.query;
         const positions = await orgServices.getOrgPositions({
-            departmentStructureId,
             departmentId,
             employmentCategory,
             isVacant,
@@ -162,6 +161,15 @@ export async function deleteHead(req, res) {
             return ErrorResponse(res, 404, "Head not found");
         }
         return SuccessResponse(res, 200, `Delete successful for head ID ${orgPositionHeadId}`);
+    } catch (error) {
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
+    }
+}
+
+export async function getOrgTree(req, res) {
+    try {
+        const tree = await orgServices.getOrgTreeData();
+        return SuccessResponse(res, 200, "Cascading organization tree fetched successfully", tree);
     } catch (error) {
         return ErrorResponse(res, 500, "Internal Server Error", error.message);
     }

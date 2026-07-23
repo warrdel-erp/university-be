@@ -31,6 +31,7 @@ const addDepartmentSchema = z.object({
     departmentCode: optionalString,
     description: optionalString,
     departmentType: z.enum(departmentTypes),
+    parentDepartmentId: positiveIntegerId.optional(),
 });
 
 const updateDepartmentSchema = z.object({

@@ -22,35 +22,26 @@ const assigneeInclude = {
 
 const positionListInclude = [
     {
-        model: model.departmentStructureModel,
-        as: 'departmentStructure',
-        attributes: { exclude: excludeMeta },
-        include: [
-            {
-                model: model.departmentModel,
-                as: 'department',
-                attributes: { exclude: excludeMeta },
-                required: false,
-            },
-            {
-                model: model.departmentModel,
-                as: 'parentDepartment',
-                attributes: { exclude: excludeMeta },
-                required: false,
-            },
-        ],
-    },
-    {
         model: model.departmentModel,
         as: 'department',
         attributes: { exclude: excludeMeta },
         required: false,
-    },
-    {
-        model: model.orgPositionModel,
-        as: 'reportsToPosition',
-        attributes: ['orgPositionId', 'positionName', 'positionCode'],
-        required: false,
+        include: [
+            {
+                model: model.departmentStructureModel,
+                as: 'departmentStructures',
+                attributes: { exclude: excludeMeta },
+                required: false,
+                include: [
+                    {
+                        model: model.departmentModel,
+                        as: 'parentDepartment',
+                        attributes: { exclude: excludeMeta },
+                        required: false,
+                    },
+                ],
+            },
+        ],
     },
     {
         model: model.orgPositionHeadModel,
@@ -152,7 +143,7 @@ export async function getOrgCardsStats() {
 export async function getOrgPositions(filters = {}) {
     const where = {};
     if (filters.departmentStructureId != null) {
-        where.departmentStructureId = Number(filters.departmentStructureId);
+        where['$department.departmentStructures.departmentStructureId$'] = Number(filters.departmentStructureId);
     }
     if (filters.departmentId != null) {
         where.departmentId = Number(filters.departmentId);
@@ -394,4 +385,142 @@ export async function userExists(userId) {
         attributes: ['userId'],
         where,
     });
+}
+
+export async function getOrgTreeData() {
+    // 1. Fetch active institute info
+    const institute = await scoped(model.instituteModel).findOne({
+        attributes: ['instituteId', 'instituteName'],
+        raw: true
+    });
+
+    // 2. Fetch all departments under active institute
+    const departments = await scoped(model.departmentModel).findAll({
+        attributes: ['departmentId', 'departmentName', 'departmentCode', 'departmentType'],
+        raw: true
+    });
+
+    // 3. Fetch all structures under active institute
+    const structures = await scoped(model.departmentStructureModel).findAll({
+        attributes: ['departmentStructureId', 'departmentId', 'parentDepartmentId'],
+        raw: true
+    });
+
+    // 4. Fetch all positions under active institute
+    const positions = await scoped(model.orgPositionModel).findAll({
+        attributes: ['orgPositionId', 'positionName', 'positionCode', 'level', 'employmentCategory', 'isVacant', 'sortOrder', 'departmentId'],
+        raw: true
+    });
+
+    // 5. Build tree mappings
+    const deptMap = new Map();
+    for (const dept of departments) {
+        deptMap.set(dept.departmentId, {
+            departmentId: dept.departmentId,
+            departmentName: dept.departmentName,
+            departmentCode: dept.departmentCode,
+            departmentType: dept.departmentType,
+            positions: [],
+            childDepartments: []
+        });
+    }
+
+    // Group positions by departmentId
+    for (const pos of positions) {
+        if (pos.departmentId && deptMap.has(pos.departmentId)) {
+            deptMap.get(pos.departmentId).positions.push({
+                orgPositionId: pos.orgPositionId,
+                positionName: pos.positionName,
+                positionCode: pos.positionCode,
+                level: pos.level,
+                employmentCategory: pos.employmentCategory,
+                isVacant: pos.isVacant,
+                sortOrder: pos.sortOrder
+            });
+        }
+    }
+
+    // Sort positions by level asc, then sortOrder asc
+    for (const [_, deptObj] of deptMap) {
+        deptObj.positions.sort((a, b) => {
+            if (a.level !== b.level) {
+                return a.level - b.level;
+            }
+            return (a.sortOrder || 0) - (b.sortOrder || 0);
+        });
+    }
+
+    // Group structures by parentDepartmentId
+    const parentToChildren = new Map();
+    for (const struct of structures) {
+        const parentId = struct.parentDepartmentId ? Number(struct.parentDepartmentId) : null;
+        const childId = struct.departmentId ? Number(struct.departmentId) : null;
+        if (childId) {
+            if (!parentToChildren.has(parentId)) {
+                parentToChildren.set(parentId, []);
+            }
+            parentToChildren.get(parentId).push(childId);
+        }
+    }
+
+    // Recursive helper to build sub-department nodes
+    function buildSubTree(parentId) {
+        const childIds = parentToChildren.get(parentId) || [];
+        const nodes = [];
+        for (const childId of childIds) {
+            const deptObj = deptMap.get(childId);
+            if (deptObj) {
+                nodes.push({
+                    departmentId: deptObj.departmentId,
+                    departmentName: deptObj.departmentName,
+                    departmentCode: deptObj.departmentCode,
+                    departmentType: deptObj.departmentType,
+                    positions: deptObj.positions,
+                    childDepartments: buildSubTree(childId)
+                });
+            }
+        }
+        return nodes;
+    }
+
+    // Get root departments (where parentDepartmentId is null or not in the structures map as a child)
+    const rootDeptIds = parentToChildren.get(null) || [];
+    const academicParents = [];
+    const adminParents = [];
+
+    for (const rootId of rootDeptIds) {
+        const deptObj = deptMap.get(rootId);
+        if (deptObj) {
+            const node = {
+                departmentId: deptObj.departmentId,
+                departmentName: deptObj.departmentName,
+                departmentCode: deptObj.departmentCode,
+                departmentType: deptObj.departmentType,
+                positions: deptObj.positions,
+                childDepartments: buildSubTree(rootId)
+            };
+            if (deptObj.departmentType === 'Academic') {
+                academicParents.push(node);
+            } else {
+                adminParents.push(node);
+            }
+        }
+    }
+
+    return {
+        instituteId: institute ? institute.instituteId : null,
+        instituteName: institute ? institute.instituteName : "University Institute",
+        categories: [
+            {
+                name: "Academic Departments",
+                type: "Academic",
+                departments: academicParents
+            },
+            {
+                name: "Administrative Departments",
+                type: "Admin",
+                departments: adminParents
+            }
+        ]
+    };
 }

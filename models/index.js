@@ -1044,15 +1044,6 @@ departmentModel.hasMany(departmentStructureModel, {
   as: "childDepartmentStructures",
 });
 
-orgPositionModel.belongsTo(departmentStructureModel, {
-  foreignKey: "department_structure_id",
-  as: "departmentStructure",
-});
-departmentStructureModel.hasMany(orgPositionModel, {
-  foreignKey: "department_structure_id",
-  as: "orgPositions",
-});
-
 orgPositionModel.belongsTo(departmentModel, {
   foreignKey: "department_id",
   as: "department",
@@ -1060,15 +1051,6 @@ orgPositionModel.belongsTo(departmentModel, {
 departmentModel.hasMany(orgPositionModel, {
   foreignKey: "department_id",
   as: "orgPositions",
-});
-
-orgPositionModel.belongsTo(orgPositionModel, {
-  foreignKey: "reports_to_org_position_id",
-  as: "reportsToPosition",
-});
-orgPositionModel.hasMany(orgPositionModel, {
-  foreignKey: "reports_to_org_position_id",
-  as: "directReports",
 });
 
 orgPositionHeadModel.belongsTo(orgPositionModel, {

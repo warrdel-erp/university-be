@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "b2c3d4e5-f6a7-8901-bcde-organogram0001",
     "name": "univ-v2-organogram",
-    "description": "Organogram APIs — create flow.\n\n## Create order\n1. `POST /department/` — org unit (flat; no parent on department)\n2. `POST /departmentStructure/` — tree node (`departmentId` + `parentDepartmentId`, both nullable)\n3. `POST /org/` — position seat (`level`, `reportsToOrgPositionId`, optional `departmentId`)\n4. `POST /org/head` — assign person (`userId`, PRIMARY/ACTING)\n5. `GET /org/cards` — KPI summary\n\nReporting is **position → position** (`reportsToOrgPositionId`), not department hierarchy.\n\n**Removed:** `/subAccount`, `accountId`, `subAccountId`, `hod_departments`.\n`department` / `department_structure` use **hard delete**.\n\nSet `baseurl` + `token`. Permissions: DEPARTMENT_*.\n\nDocs: `ORGANOGRAM_NAMING_CONVENTION.md`, `AFFECTED_APIS_DEPARTMENT_CONSOLIDATION.md`, `ORGANOGRAM_POSTMAN.md`.",
+    "description": "Organogram APIs — create flow.\n\n## Create order\n1. `POST /department/` — org unit (flat; parentDepartmentId is optional on department creation)\n2. `POST /org/` — position seat (`level`, optional `departmentId`)\n3. `POST /org/head` — assign person (`userId`, PRIMARY/ACTING)\n4. `GET /org/cards` — KPI summary\n\n**Removed:** `/subAccount`, `accountId`, `subAccountId`, `hod_departments`.\n`department` / `department_structure` use **hard delete**.\n\nSet `baseurl` + `token`. Permissions: DEPARTMENT_*.\n\nDocs: `ORGANOGRAM_NAMING_CONVENTION.md`, `AFFECTED_APIS_DEPARTMENT_CONSOLIDATION.md`, `ORGANOGRAM_POSTMAN.md`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -38,7 +38,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"departmentName\": \"School of Engineering\",\n  \"departmentCode\": \"SOE\",\n  \"alternateName\": null,\n  \"description\": null\n}",
+              "raw": "{\n  \"departmentName\": \"School of Engineering\",\n  \"departmentCode\": \"SOE\",\n  \"alternateName\": null,\n  \"description\": null,\n  \"departmentType\": \"Academic\",\n  \"parentDepartmentId\": null\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -46,7 +46,7 @@
               "host": ["{{baseurl}}"],
               "path": ["department", ""]
             },
-            "description": "**POST /department/**\n\n**Required**\n- `departmentName` (string)\n\n**Optional**\n- `departmentCode` (string | null)\n- `alternateName` (string | null)\n- `description` (string | null)\n\nHard-delete on DELETE. No `parentDepartmentId`."
+            "description": "**POST /department/**\n\n**Required**\n- `departmentName` (string)\n- `departmentType` (\"Academic\" | \"Admin\")\n\n**Optional**\n- `departmentCode` (string | null)\n- `alternateName` (string | null)\n- `description` (string | null)\n- `parentDepartmentId` (int | null)\n\nHard-delete on DELETE. Supports optional `parentDepartmentId` on creation to automatically build the structure hierarchy."
           },
           "response": []
         },
@@ -119,7 +119,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"departmentId\": {{departmentId}},\n  \"departmentName\": \"School of Engineering\",\n  \"departmentCode\": \"SOE\",\n  \"alternateName\": null,\n  \"description\": null\n}",
+              "raw": "{\n  \"departmentId\": \"{{departmentId}}\",\n  \"departmentName\": \"School of Engineering\",\n  \"departmentCode\": \"SOE\",\n  \"alternateName\": null,\n  \"description\": null,\n  \"departmentType\": \"Academic\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -127,7 +127,7 @@
               "host": ["{{baseurl}}"],
               "path": ["department", ""]
             },
-            "description": "**PATCH /department/**\n\n**Required**\n- `departmentId` (int)\n\n**Optional**\n- `departmentName`, `departmentCode`, `alternateName`, `description`"
+            "description": "**PATCH /department/**\n\n**Required**\n- `departmentId` (int)\n\n**Optional**\n- `departmentName`, `departmentCode`, `alternateName`, `description`, `departmentType`"
           },
           "response": []
         },
@@ -240,7 +240,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"departmentId\": {{departmentId}},\n  \"parentDepartmentId\": null\n}",
+              "raw": "{\n  \"departmentId\": \"{{departmentId}}\",\n  \"parentDepartmentId\": null\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -316,7 +316,7 @@
     },
     {
       "name": "3. org positions",
-      "description": "Seats on the chart. Reporting via `reportsToOrgPositionId`.",
+      "description": "Seats on the chart.",
       "item": [
         {
           "name": "summary cards",
@@ -346,16 +346,14 @@
                 "exec": [
                   "function requireVar(name) {",
                   "  const value = pm.collectionVariables.get(name);",
-                  "  if (!value) throw new Error(name + ' is not set. Run department + departmentStructure create first.');",
+                  "  if (!value) throw new Error(name + ' is not set. Run department create first.');",
                   "  return Number(value);",
                   "}",
                   "pm.request.body.update(JSON.stringify({",
-                  "  departmentStructureId: requireVar('departmentStructureId'),",
                   "  departmentId: requireVar('departmentId'),",
                   "  positionName: 'Chancellor',",
                   "  positionCode: 'CHN',",
                   "  employmentCategory: 'Leadership',",
-                  "  reportsToOrgPositionId: null,",
                   "  reportingType: 'Direct',",
                   "  isVacant: true,",
                   "  sortOrder: 1,",
@@ -374,7 +372,6 @@
                   "  const row = res.orgPosition;",
                   "  if (row && row.orgPositionId) {",
                   "    pm.collectionVariables.set('orgPositionId', String(row.orgPositionId));",
-                  "    pm.collectionVariables.set('reportsToOrgPositionId', String(row.orgPositionId));",
                   "  }",
                   "} catch (e) {}"
                 ]
@@ -390,7 +387,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"departmentStructureId\": {{departmentStructureId}},\n  \"departmentId\": {{departmentId}},\n  \"positionName\": \"Chancellor\",\n  \"positionCode\": \"CHN\",\n  \"employmentCategory\": \"Leadership\",\n  \"reportsToOrgPositionId\": null,\n  \"reportingType\": \"Direct\",\n  \"isVacant\": true,\n  \"sortOrder\": 1,\n  \"level\": 1\n}",
+              "raw": "{\n  \"departmentId\": \"{{departmentId}}\",\n  \"positionName\": \"Chancellor\",\n  \"positionCode\": \"CHN\",\n  \"employmentCategory\": \"Leadership\",\n  \"reportingType\": \"Direct\",\n  \"isVacant\": true,\n  \"sortOrder\": 1,\n  \"level\": 1\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -398,12 +395,12 @@
               "host": ["{{baseurl}}"],
               "path": ["org", ""]
             },
-            "description": "**POST /org/** (top seat)\n\n**Required**\n- `positionName` (string)\n- `employmentCategory` — `Academic` | `Administrative` | `Support` | `Executive` | `Leadership`\n- `level` (int ≥ 1)\n\n**Optional**\n- `departmentStructureId` (int | null)\n- `departmentId` (int | null)\n- `positionCode` (string | null)\n- `reportsToOrgPositionId` (int | null) — **null for top**\n- `reportingType` (string | null)\n- `isVacant` (boolean) — default `true`\n- `sortOrder` (int) — default `0`\n\nSaves `orgPositionId` as `reportsToOrgPositionId` for the next child create."
+            "description": "**POST /org/** (top seat)\n\n**Required**\n- `positionName` (string)\n- `employmentCategory` — `Academic` | `Administrative` | `Support` | `Executive` | `Leadership`\n- `level` (int ≥ 1)\n\n**Optional**\n- `departmentId` (int | null)\n- `positionCode` (string | null)\n- `reportingType` (string | null)\n- `isVacant` (boolean) — default `true`\n- `sortOrder` (int) — default `0`"
           },
           "response": []
         },
         {
-          "name": "create position (child / reports to)",
+          "name": "create position (second / Vice Chancellor)",
           "event": [
             {
               "listen": "prerequest",
@@ -416,12 +413,10 @@
                   "  return Number(value);",
                   "}",
                   "pm.request.body.update(JSON.stringify({",
-                  "  departmentStructureId: requireVar('departmentStructureId'),",
                   "  departmentId: requireVar('departmentId'),",
                   "  positionName: 'Vice Chancellor',",
                   "  positionCode: 'VC',",
                   "  employmentCategory: 'Leadership',",
-                  "  reportsToOrgPositionId: requireVar('reportsToOrgPositionId'),",
                   "  reportingType: 'Direct',",
                   "  isVacant: true,",
                   "  sortOrder: 1,",
@@ -455,7 +450,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"departmentStructureId\": {{departmentStructureId}},\n  \"departmentId\": {{departmentId}},\n  \"positionName\": \"Vice Chancellor\",\n  \"positionCode\": \"VC\",\n  \"employmentCategory\": \"Leadership\",\n  \"reportsToOrgPositionId\": {{reportsToOrgPositionId}},\n  \"reportingType\": \"Direct\",\n  \"isVacant\": true,\n  \"sortOrder\": 1,\n  \"level\": 2\n}",
+              "raw": "{\n  \"departmentId\": \"{{departmentId}}\",\n  \"positionName\": \"Vice Chancellor\",\n  \"positionCode\": \"VC\",\n  \"employmentCategory\": \"Leadership\",\n  \"reportingType\": \"Direct\",\n  \"isVacant\": true,\n  \"sortOrder\": 1,\n  \"level\": 2\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -463,7 +458,7 @@
               "host": ["{{baseurl}}"],
               "path": ["org", ""]
             },
-            "description": "**POST /org/** (child seat)\n\nSame required keys as create position.\n\nSet `reportsToOrgPositionId` to parent seat id and `level` = parent level + 1.\n\nRepeat for Dean → HOD → Faculty…"
+            "description": "**POST /org/** (second seat)\n\nSame required keys as create top position."
           },
           "response": []
         },
@@ -488,6 +483,24 @@
               ]
             },
             "description": "**GET /org/**\n\n**Optional query**\n- `departmentStructureId`, `departmentId`, `employmentCategory`, `isVacant`\n\nIncludes structure, department, reportsTo, heads."
+          },
+          "response": []
+        },
+        {
+          "name": "get cascading tree",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/org/tree",
+              "host": ["{{baseurl}}"],
+              "path": ["org", "tree"]
+            },
+            "description": "**GET /org/tree**\n\nReturns cascading tree structure:\nInstitute -> Parent Departments (Academic vs Admin categories) -> Child Departments (hierarchical) -> Positions (sorted level-wise)."
           },
           "response": []
         },
@@ -531,7 +544,6 @@
                   "  positionName: 'Vice Chancellor',",
                   "  positionCode: 'VC',",
                   "  employmentCategory: 'Leadership',",
-                  "  reportsToOrgPositionId: requireVar('reportsToOrgPositionId'),",
                   "  reportingType: 'Direct',",
                   "  sortOrder: 1,",
                   "  level: 2,",
@@ -549,7 +561,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"orgPositionId\": {{orgPositionId}},\n  \"departmentId\": {{departmentId}},\n  \"positionName\": \"Vice Chancellor\",\n  \"positionCode\": \"VC\",\n  \"employmentCategory\": \"Leadership\",\n  \"reportsToOrgPositionId\": {{reportsToOrgPositionId}},\n  \"reportingType\": \"Direct\",\n  \"sortOrder\": 1,\n  \"level\": 2\n}",
+              "raw": "{\n  \"orgPositionId\": \"{{orgPositionId}}\",\n  \"departmentId\": \"{{departmentId}}\",\n  \"positionName\": \"Vice Chancellor\",\n  \"positionCode\": \"VC\",\n  \"employmentCategory\": \"Leadership\",\n  \"reportingType\": \"Direct\",\n  \"sortOrder\": 1,\n  \"level\": 2\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -557,7 +569,7 @@
               "host": ["{{baseurl}}"],
               "path": ["org", ""]
             },
-            "description": "**PATCH /org/**\n\n**Required**\n- `orgPositionId`\n\n**Optional**\n- `departmentStructureId`, `departmentId`, `positionName`, `positionCode`, `employmentCategory`, `reportsToOrgPositionId`, `reportingType`, `sortOrder`, `level`\n\nDo **not** send `isVacant` — use markVacant / head flows."
+            "description": "**PATCH /org/**\n\n**Required**\n- `orgPositionId`\n\n**Optional**\n- `departmentId`, `positionName`, `positionCode`, `employmentCategory`, `reportingType`, `sortOrder`, `level`\n\nDo **not** send `isVacant` — use markVacant / head flows."
           },
           "response": []
         },
@@ -585,7 +597,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"orgPositionId\": {{orgPositionId}}\n}",
+              "raw": "{\n  \"orgPositionId\": \"{{orgPositionId}}\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -673,7 +685,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"orgPositionId\": {{orgPositionId}},\n  \"userId\": {{userId}},\n  \"holderType\": \"PRIMARY\",\n  \"status\": \"ACTIVE\",\n  \"joiningDate\": \"2024-01-01\",\n  \"endDate\": null\n}",
+              "raw": "{\n  \"orgPositionId\": \"{{orgPositionId}}\",\n  \"userId\": \"{{userId}}\",\n  \"holderType\": \"PRIMARY\",\n  \"status\": \"ACTIVE\",\n  \"joiningDate\": \"2024-01-01\",\n  \"endDate\": null\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -736,7 +748,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"orgPositionHeadId\": {{orgPositionHeadId}},\n  \"holderType\": \"ACTING\",\n  \"status\": \"ACTIVE\",\n  \"joiningDate\": \"2024-01-01\",\n  \"endDate\": null\n}",
+              "raw": "{\n  \"orgPositionHeadId\": \"{{orgPositionHeadId}}\",\n  \"holderType\": \"ACTING\",\n  \"status\": \"ACTIVE\",\n  \"joiningDate\": \"2024-01-01\",\n  \"endDate\": null\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -778,7 +790,6 @@
     { "key": "departmentId", "value": "", "type": "string" },
     { "key": "departmentStructureId", "value": "", "type": "string" },
     { "key": "orgPositionId", "value": "", "type": "string" },
-    { "key": "reportsToOrgPositionId", "value": "", "type": "string" },
     { "key": "orgPositionHeadId", "value": "", "type": "string" },
     { "key": "userId", "value": "1", "type": "string" }
   ]

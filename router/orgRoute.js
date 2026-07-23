@@ -12,6 +12,7 @@ import {
     getHeads,
     updateHead,
     deleteHead,
+    getOrgTree,
 } from '../controllers/orgController.js';
 import userAuth from '../middleware/authUser.js';
 import { checkAccess } from '../middleware/checkAccess.js';
@@ -25,8 +26,11 @@ const positiveIntegerId = z.coerce
     .int('id must be an integer')
     .positive('id must be greater than 0');
 
-const emptyToUndefined = (val) =>
-    val === '' || val === null || val === undefined ? undefined : val;
+const emptyToUndefined = (val) => {
+    if (val === '' || val === undefined || val === 'undefined') return undefined;
+    if (val === 'null' || val === null) return null;
+    return val;
+};
 
 const optionalPositiveIntegerId = z.preprocess(
     emptyToUndefined,
@@ -55,14 +59,12 @@ const optionalDateOnly = z.preprocess(
 );
 
 const addPositionSchema = z.object({
-    departmentStructureId: optionalNullablePositiveIntegerId,
     departmentId: optionalNullablePositiveIntegerId,
     positionName: z
         .string({ required_error: 'positionName is required' })
         .min(1, 'positionName cannot be empty'),
     positionCode: z.string().optional().nullable(),
     employmentCategory: employmentCategoryEnum,
-    reportsToOrgPositionId: optionalNullablePositiveIntegerId,
     reportingType: z.string().optional().nullable(),
     isVacant: z.boolean().optional(),
     sortOrder: z.coerce.number().int().optional(),
@@ -71,12 +73,10 @@ const addPositionSchema = z.object({
 
 const updatePositionSchema = z.object({
     orgPositionId: positiveIntegerId,
-    departmentStructureId: optionalNullablePositiveIntegerId,
     departmentId: optionalNullablePositiveIntegerId,
     positionName: z.string().min(1).optional(),
     positionCode: z.string().optional().nullable(),
     employmentCategory: employmentCategoryEnum.optional(),
-    reportsToOrgPositionId: optionalNullablePositiveIntegerId,
     reportingType: z.string().optional().nullable(),
     sortOrder: z.coerce.number().int().optional(),
     level: z.coerce.number().int().positive('level must be greater than 0').optional(),
@@ -189,6 +189,13 @@ router.delete(
     checkAccess(PERMISSIONS.DEPARTMENT_DELETE.value, 'org'),
     validate({ query: headIdQuerySchema }),
     deleteHead,
+);
+
+router.get(
+    '/tree',
+    userAuth,
+    checkAccess(PERMISSIONS.DEPARTMENT.value, null),
+    getOrgTree,
 );
 
 export default router;
