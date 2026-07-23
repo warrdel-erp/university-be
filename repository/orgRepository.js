@@ -780,3 +780,65 @@ export async function getOrgChartData() {
     };
 }
 
+export async function getPositionsByDepartment(departmentId) {
+    return scoped(model.orgPositionModel).findAll({
+        where: {
+            departmentId: Number(departmentId)
+        },
+        attributes: [
+            'orgPositionId',
+            'positionName',
+            'positionCode',
+            'level',
+            'employmentCategory',
+            'isVacant',
+            'sortOrder',
+            'departmentId'
+        ],
+        include: [
+            {
+                model: model.orgPositionHeadModel,
+                as: 'heads',
+                required: false,
+                where: {
+                    status: 'ACTIVE'
+                },
+                attributes: [
+                    'orgPositionHeadId',
+                    'holderType',
+                    'status',
+                    'joiningDate',
+                    'endDate'
+                ],
+                include: [
+                    {
+                        model: model.userModel,
+                        as: 'assignee',
+                        attributes: [
+                            'userId',
+                            'userName',
+                            'email',
+                            'phone'
+                        ],
+                        include: [
+                            {
+                                model: model.employeeModel,
+                                as: 'employee',
+                                required: false,
+                                attributes: [
+                                    'employeeId',
+                                    'employeeName'
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        order: [
+            ['level', 'ASC'],
+            ['sortOrder', 'ASC']
+        ]
+    });
+}
+
