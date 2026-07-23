@@ -1,4 +1,5 @@
 import * as orgServices from '../services/orgServices.js';
+import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
 export async function addOrgPosition(req, res) {
     try {
@@ -9,10 +10,10 @@ export async function addOrgPosition(req, res) {
             createdBy,
             updatedBy,
         );
-        res.status(201).json({ message: 'Data added successfully', orgPosition });
+        return SuccessResponse(res, 201, "Data added successfully", orgPosition);
     } catch (error) {
         const status = /not found|Invalid/i.test(error.message) ? 400 : 500;
-        res.status(status).json({ error: error.message });
+        return ErrorResponse(res, status, "Internal Server Error", error.message);
     }
 }
 
@@ -25,18 +26,18 @@ export async function getAllOrgPositions(req, res) {
             employmentCategory,
             isVacant,
         });
-        res.status(200).json(positions);
+        return SuccessResponse(res, 200, "Organization positions fetched successfully", positions);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
     }
 }
 
 export async function getOrgCards(req, res) {
     try {
         const cards = await orgServices.getOrgCardsStats();
-        res.status(200).json(cards);
+        return SuccessResponse(res, 200, "Organization cards fetched successfully", cards);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
     }
 }
 
@@ -47,11 +48,11 @@ export async function getSingleOrgPosition(req, res) {
             orgPositionId,
         );
         if (!orgPosition) {
-            return res.status(404).json({ message: 'orgPosition not found' });
+            return ErrorResponse(res, 404, "Organization position not found");
         }
-        res.status(200).json(orgPosition);
+        return SuccessResponse(res, 200, "Organization position fetched successfully", orgPosition);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
     }
 }
 
@@ -65,12 +66,12 @@ export async function updateOrgPosition(req, res) {
             updatedBy,
         );
         if (!updated) {
-            return res.status(404).json({ message: 'orgPosition not found' });
+            return ErrorResponse(res, 404, "Organization position not found");
         }
-        res.status(200).json({ message: 'orgPosition update succesfully' });
+        return SuccessResponse(res, 200, "Organization position update succesfully");
     } catch (error) {
         const status = /not found|Invalid/i.test(error.message) ? 400 : 500;
-        res.status(status).json({ error: error.message });
+        return ErrorResponse(res, status, "Internal Server Error", error.message);
     }
 }
 
@@ -79,13 +80,11 @@ export async function deleteOrgPosition(req, res) {
         const { orgPositionId } = req.query;
         const deleted = await orgServices.deleteOrgPosition(orgPositionId);
         if (!deleted) {
-            return res.status(404).json({ message: 'orgPosition not found' });
+            return ErrorResponse(res, 404, "Organization position not found");
         }
-        res.status(200).json({
-            message: `Delete successful for orgPosition ID ${orgPositionId}`,
-        });
+        return SuccessResponse(res, 200, `Delete successful for orgPosition ID ${orgPositionId}`);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
     }
 }
 
@@ -97,10 +96,10 @@ export async function markPositionVacant(req, res) {
             orgPositionId,
             updatedBy,
         );
-        res.status(200).json({ message: 'Position marked vacant', orgPosition });
+        return SuccessResponse(res, 200, "Position marked vacant", orgPosition);
     } catch (error) {
         const status = /not found/i.test(error.message) ? 404 : 500;
-        res.status(status).json({ error: error.message });
+        return ErrorResponse(res, status, "Internal Server Error", error.message);
     }
 }
 
@@ -113,10 +112,10 @@ export async function addHead(req, res) {
             createdBy,
             updatedBy,
         );
-        res.status(201).json({ message: 'Data added successfully', head });
+        return SuccessResponse(res, 201, "Data added successfully", head);
     } catch (error) {
         const status = /not found|Invalid|already has/i.test(error.message) ? 400 : 500;
-        res.status(status).json({ error: error.message });
+        return ErrorResponse(res, status, "Internal Server Error", error.message);
     }
 }
 
@@ -126,9 +125,9 @@ export async function getHeads(req, res) {
         const heads = await orgServices.getHeadsByPositionId(
             orgPositionId,
         );
-        res.status(200).json(heads);
+        return SuccessResponse(res, 200, "Heads fetched successfully", heads);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
     }
 }
 
@@ -142,12 +141,12 @@ export async function updateHead(req, res) {
             updatedBy,
         );
         if (!head) {
-            return res.status(404).json({ message: 'head not found' });
+            return ErrorResponse(res, 404, "Head not found");
         }
-        res.status(200).json({ message: 'head update succesfully', head });
+        return SuccessResponse(res, 200, "Head update succesfully", head);
     } catch (error) {
         const status = /Invalid/i.test(error.message) ? 400 : 500;
-        res.status(status).json({ error: error.message });
+        return ErrorResponse(res, status, "Internal Server Error", error.message);
     }
 }
 
@@ -160,12 +159,10 @@ export async function deleteHead(req, res) {
             updatedBy,
         );
         if (!deleted) {
-            return res.status(404).json({ message: 'head not found' });
+            return ErrorResponse(res, 404, "Head not found");
         }
-        res.status(200).json({
-            message: `Delete successful for head ID ${orgPositionHeadId}`,
-        });
+        return SuccessResponse(res, 200, `Delete successful for head ID ${orgPositionHeadId}`);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
     }
 }
