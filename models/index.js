@@ -1023,8 +1023,8 @@ instituteModel.hasMany(headModel, { foreignKey: "institute_id", as: "headInstitu
 staffModel.belongsTo(departmentModel, { foreignKey: "department_id", as: "staffDepartment" });
 departmentModel.hasMany(staffModel, { foreignKey: "department_id", as: "staffDepartment" });
 
-staffModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "staffEmployee" });
-employeeModel.hasMany(staffModel, { foreignKey: "employeeId", as: "staffEmployee" });
+staffModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'staffEmployee' });
+employeeModel.hasMany(staffModel, { foreignKey: 'employee_id', as: 'staffEmployee' });
 
 departmentStructureModel.belongsTo(departmentModel, {
   foreignKey: "department_id",
