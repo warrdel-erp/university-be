@@ -46,7 +46,10 @@ export async function updateStaff(req, res) {
         }
         const updatedBy = req.user.userId;
         const updatedStaff = await StaffCreation.updateStaff(staffId, req.body, updatedBy);
-        res.status(200).json({ message: "Staff update succesfully" });
+        if (!updatedStaff) {
+            return res.status(404).json({ message: 'Staff not found' });
+        }
+        res.status(200).json({ message: 'Staff update succesfully' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
