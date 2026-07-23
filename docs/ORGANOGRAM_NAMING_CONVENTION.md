@@ -1,14 +1,3 @@
-# Org (organogram) & department naming convention
-
-> After consolidation: **`department` is the only org-unit table**. `account` and `sub_account` are removed.
-
-## Locked decisions
-
-- Use **`department`** as the org unit (CSE, Exam Cell, Academics group, etc.).
-- Hierarchy for org chart is via **`org_position.reportsToOrgPositionId`** (and structure `parentDepartmentId` when used).
-- Short prefix **`org`** for organogram tables/APIs.
-- Position holders live in **`org_position_head`** via **`user_id`**.
-- `department` and `department_structure` use **hard delete** (no `paranoid` / `deleted_at`).
 
 ## Current meaning
 
@@ -41,8 +30,3 @@ department
 - `/org` — positions + heads + cards
 - **Removed:** `/subAccount`
 
-## Breaking change doc
-
-See [AFFECTED_APIS_DEPARTMENT_CONSOLIDATION.md](./AFFECTED_APIS_DEPARTMENT_CONSOLIDATION.md).
-
-**Postman:** [univ-v2-organogram.postman_collection.json](./postman/univ-v2-organogram.postman_collection.json)
