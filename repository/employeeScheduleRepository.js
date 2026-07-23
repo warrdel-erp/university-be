@@ -15,17 +15,32 @@ function routineActiveOnDateWhere(currentDate) {
 
 function flattenDateWiseScheduleRow(row, viewerUserId = null) {
   const plain = row.get({ plain: true });
-  const cell = plain.timeTableCell;
-  const teachers = plain.timeTableCellTeachersDateWise || [];
+  const cell = plain.timeTableCell || {};
+  const dateWiseTeachers = plain.timeTableCellTeachersDateWise || [];
+  const weekTeachers = cell.timeTableCellTeachers || [];
 
-  let teacher = teachers[0] || null;
+  const teachers = dateWiseTeachers.length > 0 ? dateWiseTeachers : weekTeachers;
+  let teacher = null;
+
   if (viewerUserId != null) {
-    for (const rowTeacher of teachers) {
-      if (Number(rowTeacher.userId) === Number(viewerUserId)) {
-        teacher = rowTeacher;
+    for (const t of teachers) {
+      if (Number(t.userId) === Number(viewerUserId)) {
+        teacher = t;
         break;
       }
     }
+    if (!teacher && cell.timeTableTeacherSubject && Number(cell.timeTableTeacherSubject.userId) === Number(viewerUserId)) {
+      teacher = {
+        userId: Number(viewerUserId),
+        teacherType: 'Primary',
+        isAttendence: true,
+        employeeDetails: cell.timeTableTeacherSubject.teacherEmployeeData || null,
+      };
+    }
+  }
+
+  if (!teacher && teachers.length > 0) {
+    teacher = teachers[0];
   }
 
   const room = plain.classRoom || cell.classRoom;
@@ -33,24 +48,30 @@ function flattenDateWiseScheduleRow(row, viewerUserId = null) {
   const classSectionTerm = routine?.timeTableClassSectionTerm;
   const classSection = classSectionTerm?.classSection;
 
+  const subjectId = plain.subjectId || cell.subjectId || null;
+  const electiveSubjectId = plain.electiveSubjectId || cell.electiveSubjectId || null;
+  const timeTableSubject = plain.timeTableSubject || cell.timeTableSubject || null;
+  const timeTableElective = plain.timeTableElective || cell.timeTableElective || null;
+
   return {
     timeTableCellDateWiseId: plain.timeTableCellDateWiseId,
     timeTableCellId: plain.timeTableCellId,
     date: plain.date,
-    timeTableType: cell.timeTableType,
+    timeTableType: cell.timeTableType || 'normal',
     day: cell.day,
     period: cell.period,
-    // Primary or Secondary — both get full class details below
-    teacherType: teacher ? teacher.teacherType : null,
-    isAttendence: teacher ? teacher.isAttendence : false,
+    teacherType: teacher ? teacher.teacherType : 'Primary',
+    isAttendence: teacher ? (teacher.isAttendence !== false) : true,
     isSameTeacher: cell.isSameTeacher,
     timeTableNameId: cell.timeTableNameId,
     timeTableCreationId: cell.timeTableCreationId,
     timeTablecreate: routine,
     timeTablecreation: cell.timeTablecreation,
+    subjectId,
+    electiveSubjectId,
     timeTableTeacherSubject: cell.timeTableTeacherSubject,
-    timeTableSubject: cell.timeTableSubject,
-    timeTableElective: cell.timeTableElective,
+    timeTableSubject,
+    timeTableElective,
     classRoom: room ? { roomNumber: room.roomNumber } : null,
     course: routine?.timeTableCourse || null,
     classSectionTermId: routine?.classSectionTermId
@@ -60,6 +81,28 @@ function flattenDateWiseScheduleRow(row, viewerUserId = null) {
     section: classSection?.section ?? null,
     employeeDetails: teacher?.employeeDetails || null,
   };
+}
+
+function isRowForTeacher(row, userId) {
+  if (userId == null) return true;
+  const plain = row.get ? row.get({ plain: true }) : row;
+  const targetId = Number(userId);
+
+  const dateWiseTeachers = plain.timeTableCellTeachersDateWise || [];
+  for (const t of dateWiseTeachers) {
+    if (Number(t.userId) === targetId) return true;
+  }
+
+  const weekTeachers = plain.timeTableCell?.timeTableCellTeachers || [];
+  for (const t of weekTeachers) {
+    if (Number(t.userId) === targetId) return true;
+  }
+
+  if (plain.timeTableCell?.timeTableTeacherSubject && Number(plain.timeTableCell.timeTableTeacherSubject.userId) === targetId) {
+    return true;
+  }
+
+  return false;
 }
 
 function dateWiseScheduleIncludes({ sessionId, academicYearId } = {}) {
@@ -73,7 +116,7 @@ function dateWiseScheduleIncludes({ sessionId, academicYearId } = {}) {
     {
       model: model.timeTableCellTeachersDateWiseModel,
       as: 'timeTableCellTeachersDateWise',
-      required: true,
+      required: false,
       attributes: ['userId', 'teacherType', 'isAttendence'],
       include: [
         {
@@ -120,6 +163,30 @@ function dateWiseScheduleIncludes({ sessionId, academicYearId } = {}) {
       ],
       include: [
         {
+          model: model.timeTableCellTeachersModel,
+          as: 'timeTableCellTeachers',
+          required: false,
+          attributes: ['userId', 'teacherType', 'isAttendence'],
+          include: [
+            {
+              model: model.employeeModel,
+              as: 'employeeDetails',
+              attributes: [
+                'userId',
+                'employeeId',
+                'employeeName',
+                'employeeCode',
+                'pickColor',
+                'department',
+                'employmentType',
+                'employeePhoto',
+                'campusId',
+              ],
+              required: false,
+            },
+          ],
+        },
+        {
           model: model.timeTableRoutineModel,
           as: 'timeTableRoutine',
           required: true,
@@ -154,7 +221,7 @@ function dateWiseScheduleIncludes({ sessionId, academicYearId } = {}) {
         {
           model: model.teacherSubjectMappingModel,
           as: 'timeTableTeacherSubject',
-          attributes: ['teacherSubjectMappingId'],
+          attributes: ['teacherSubjectMappingId', 'userId'],
           required: false,
           include: [
             {
@@ -188,25 +255,8 @@ function dateWiseScheduleIncludes({ sessionId, academicYearId } = {}) {
   ];
 }
 
-function withTeacherFilter(includes, userId) {
-  const result = [];
-  for (const include of includes) {
-    if (include.as === 'timeTableCellTeachersDateWise') {
-      // Match by userId only — Primary and Secondary both return the class
-      result.push({
-        ...include,
-        where: { userId: Number(userId) },
-        required: true,
-      });
-      continue;
-    }
-    result.push(include);
-  }
-  return result;
-}
-
 export async function getTodayClassScheduleForEmployee(userId, currentDate, sessionId) {
-  const includes = withTeacherFilter(dateWiseScheduleIncludes({ sessionId }), userId);
+  const includes = dateWiseScheduleIncludes({ sessionId });
   const cellInclude = includes.find((item) => item.as === 'timeTableCell');
   cellInclude.include = cellInclude.include.map((nested) => {
     if (nested.as !== 'timeTableRoutine') {
@@ -223,14 +273,16 @@ export async function getTodayClassScheduleForEmployee(userId, currentDate, sess
 
   const rows = await model.timeTableCellDateWiseModel.findAll({
     where: { date: currentDate },
-    attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
+    attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId', 'subjectId', 'electiveSubjectId'],
     include: includes,
     order: [['date', 'ASC']],
   });
 
   const result = [];
   for (const row of rows) {
-    result.push(flattenDateWiseScheduleRow(row, userId));
+    if (isRowForTeacher(row, userId)) {
+      result.push(flattenDateWiseScheduleRow(row, userId));
+    }
   }
   return result;
 }
@@ -243,17 +295,16 @@ export async function getPastClassSchedulesForEmployee(
 ) {
   const rows = await model.timeTableCellDateWiseModel.findAll({
     where: { date: { [Op.lt]: currentDate } },
-    attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
-    include: withTeacherFilter(
-      dateWiseScheduleIncludes({ sessionId, academicYearId }),
-      userId,
-    ),
+    attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId', 'subjectId', 'electiveSubjectId'],
+    include: dateWiseScheduleIncludes({ sessionId, academicYearId }),
     order: [['date', 'DESC']],
   });
 
   const result = [];
   for (const row of rows) {
-    result.push(flattenDateWiseScheduleRow(row, userId));
+    if (isRowForTeacher(row, userId)) {
+      result.push(flattenDateWiseScheduleRow(row, userId));
+    }
   }
   return result;
 }
@@ -265,17 +316,16 @@ export async function getUpcomingClassSchedulesForEmployee(
 ) {
   const rows = await model.timeTableCellDateWiseModel.findAll({
     where: { date: { [Op.gte]: currentDate } },
-    attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
-    include: withTeacherFilter(
-      dateWiseScheduleIncludes({ academicYearId }),
-      userId,
-    ),
+    attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId', 'subjectId', 'electiveSubjectId'],
+    include: dateWiseScheduleIncludes({ academicYearId }),
     order: [['date', 'ASC']],
   });
 
   const result = [];
   for (const row of rows) {
-    result.push(flattenDateWiseScheduleRow(row, userId));
+    if (isRowForTeacher(row, userId)) {
+      result.push(flattenDateWiseScheduleRow(row, userId));
+    }
   }
   return result;
 }

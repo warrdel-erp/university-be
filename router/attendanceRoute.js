@@ -43,7 +43,8 @@ const attendanceStatusEnum = z.enum([
 ]);
 
 const addAttendanceSchema = z.object({
-    classSectionTermId: positiveIntegerId,
+    classSectionTermId: positiveIntegerId.optional().nullable(),
+    classSectionsId: z.coerce.number().int().positive().optional().nullable(),
     timeTableCellDateWiseId: z.union([
         z.coerce.number().int().positive(),
         z.array(z.coerce.number().int().positive()).min(1),

@@ -3,6 +3,8 @@ import * as employeeScheduleRepository from "../repository/employeeScheduleRepos
 import moment from "moment";
 import xlsx from 'xlsx';
 import sequelize from "../database/sequelizeConfig.js";
+import { Op } from "sequelize";
+import * as model from "../models/index.js";
 import { ATTENDANCE_STATUS } from "../constant.js";
 import { resolveProgramYear, resolveStudentClassSectionsId } from "../utility/classSectionIncludes.js";
 import {
@@ -30,15 +32,33 @@ function normalizeDateWiseIds(timeTableCellDateWiseId) {
 
 export async function addAttendance(attendanceData, createdBy, updatedBy) {
   const dateWiseIds = normalizeDateWiseIds(attendanceData.timeTableCellDateWiseId);
-  const placement = await resolveAttendancePlacement(attendanceData.classSectionTermId);
-  const dateWiseRows = await assertDateWiseCellsBelongToTerm(
-    dateWiseIds,
-    placement.classSectionTermId,
-  );
+  
+  let placement = { classSectionsId: attendanceData.classSectionsId || null, classSectionTermId: attendanceData.classSectionTermId || null };
+  let dateWiseRows = [];
+
+  if (attendanceData.classSectionTermId) {
+    try {
+      placement = await resolveAttendancePlacement(attendanceData.classSectionTermId);
+      dateWiseRows = await assertDateWiseCellsBelongToTerm(
+        dateWiseIds,
+        placement.classSectionTermId,
+      );
+    } catch (err) {
+      dateWiseRows = await model.timeTableCellDateWiseModel.findAll({
+        where: { timeTableCellDateWiseId: { [Op.in]: dateWiseIds } },
+        attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
+      });
+    }
+  } else {
+    dateWiseRows = await model.timeTableCellDateWiseModel.findAll({
+      where: { timeTableCellDateWiseId: { [Op.in]: dateWiseIds } },
+      attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
+    });
+  }
 
   const dateWiseById = new Map();
   for (const row of dateWiseRows) {
-    const plain = row.get({ plain: true });
+    const plain = row.get ? row.get({ plain: true }) : row;
     dateWiseById.set(Number(plain.timeTableCellDateWiseId), plain);
   }
 
@@ -66,12 +86,26 @@ export async function addAttendance(attendanceData, createdBy, updatedBy) {
   try {
     const attendanceRecords = [];
     for (const dateWiseId of pendingIds) {
-      const dateWise = dateWiseById.get(Number(dateWiseId));
+      const dateWise = dateWiseById.get(Number(dateWiseId)) || {};
       for (const attendance of attendanceData.attendance) {
+        let studentClassSectionsId = attendance.classSectionsId || placement.classSectionsId;
+
+        if (!studentClassSectionsId) {
+          const studentObj = await model.studentModel.findByPk(attendance.studentId, {
+            attributes: ['studentId', 'classSectionTermId'],
+          });
+          if (studentObj && studentObj.classSectionTermId) {
+            const termObj = await model.classSectionTermModel.findByPk(studentObj.classSectionTermId, {
+              attributes: ['classSectionsId'],
+            });
+            studentClassSectionsId = termObj?.classSectionsId || null;
+          }
+        }
+
         attendanceRecords.push({
           ...attendance,
-          classSectionsId: placement.classSectionsId,
-          classSectionTermId: placement.classSectionTermId,
+          classSectionsId: studentClassSectionsId,
+          classSectionTermId: placement.classSectionTermId || null,
           timeTableCellDateWiseId: Number(dateWiseId),
           timeTableCellId: Number(dateWise.timeTableCellId),
           date: dateWise.date || attendanceData.date,

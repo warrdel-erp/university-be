@@ -466,6 +466,34 @@ export async function getStudentsByClassSection(req, res) {
     }
 }
 
+export async function getStudentsByElectiveSubject(req, res) {
+    try {
+        const { timeTableCellDateWiseId, groupPeriods, date, academicYearId } = req.query;
+
+        const result = await studentService.getStudentsByElectiveSubject({
+            timeTableCellDateWiseId,
+            groupPeriods,
+            date,
+            academicYearId,
+        });
+
+        const count = Array.isArray(result.students) ? result.students.length : 0;
+
+        return res.status(200).json({
+            success: true,
+            count,
+            data: result,
+        });
+    } catch (error) {
+        console.error("Controller Error in getStudentsByElectiveSubject:", error);
+
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+}
+
 
 export const getAllAnswerSheets = async (req, res) => {
     try {

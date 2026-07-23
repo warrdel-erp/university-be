@@ -22,6 +22,7 @@ import {
   getBooksIssuedToStudent,
   getStudentTimeTable,
   getStudentsByClassSection,
+  getStudentsByElectiveSubject,
   getAllAnswerSheets,
 } from "../controllers/studentController.js";
 import { checkAccess } from "../middleware/checkAccess.js";
@@ -637,6 +638,13 @@ router.get(
   checkAccess(PERMISSIONS.STUDENT_LIST.value, null),
   validate({ query: classSectionStudentsQuerySchema }),
   getStudentsByClassSection,
+);
+router.get(
+  "/electiveClassStudents",
+  userAuth,
+  checkAccess(PERMISSIONS.STUDENT_LIST.value, null),
+  validate({ query: classSectionStudentsQuerySchema }),
+  getStudentsByElectiveSubject,
 );
 router.get(
   "/getallanswerSheetQrs",

@@ -1,3 +1,4 @@
+import * as model from "../models/index.js";
 import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
 import { getSingleTimeTableById, getTimeTableStructureById, getStructureCourseMappingById, getMappedStructuresForCourseSession } from "../repository/timeTableRepository.js";
 import { getTeacherDetailsByTeacherSubjectId } from "../repository/teacherSubjectMappingRepository.js";
@@ -154,7 +155,13 @@ async function normalizeMappingTeacherInput(data, options = {}) {
   const normalized = { ...data };
 
   if (normalized.userId == null && normalized.employeeId != null) {
-    normalized.userId = Number(normalized.employeeId);
+    const emp = await model.employeeModel.findOne({
+      where: { employeeId: Number(normalized.employeeId) },
+      transaction: options.transaction,
+    });
+    if (emp?.userId != null) {
+      normalized.userId = Number(emp.userId);
+    }
   }
 
   if (

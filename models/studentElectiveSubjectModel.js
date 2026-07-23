@@ -32,13 +32,13 @@ const studentElectiveSubjectModel = sequelize.define(
             }
         },
         createdBy: {
-             type: DataTypes.INTEGER,
-             allowNull: false,
-             field: 'created_by',
-                references: {
-                    model: users,
-                    key: 'user_id'
-                }
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'created_by',
+            references: {
+                model: users,
+                key: 'user_id'
+            }
         },
         createdAt: {
             type: DataTypes.DATE,

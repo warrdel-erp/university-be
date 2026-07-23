@@ -1,4 +1,5 @@
 import sequelize from '../database/sequelizeConfig.js';
+import * as model from '../models/index.js';
 import * as employeeRepository from '../repository/employeeRepository.js';
 import * as employeeAddressRepository from '../repository/employeeAddressRepository.js';
 import * as employeeOfficeRepository from '../repository/employeeOfficeRepository.js';
@@ -1490,6 +1491,30 @@ function resolveScheduleAttendanceFields(schedule, presentMap, markedMap) {
   };
 }
 
+async function fetchElectiveStudentCountMap(schedules) {
+  const electiveSubjectIds = [
+    ...new Set(
+      schedules
+        .map((s) => s.electiveSubjectId || s.timeTableElective?.electiveSubjectId)
+        .filter(Boolean)
+        .map(Number)
+    ),
+  ];
+  const electiveCountMap = new Map();
+  if (electiveSubjectIds.length > 0) {
+    const counts = await model.studentElectiveSubjectModel.findAll({
+      where: { electiveSubjectId: electiveSubjectIds },
+      attributes: ['electiveSubjectId', [sequelize.fn('COUNT', sequelize.col('student_id')), 'count']],
+      group: ['electiveSubjectId'],
+      raw: true,
+    });
+    for (const c of counts) {
+      electiveCountMap.set(Number(c.electiveSubjectId), Number(c.count));
+    }
+  }
+  return electiveCountMap;
+}
+
 async function enrichTodayClassSchedules(schedules) {
   if (!schedules.length) {
     return schedules;
@@ -1498,8 +1523,9 @@ async function enrichTodayClassSchedules(schedules) {
   const { dateWiseIds, resolvedTermIds, uniqueTermIds } =
     collectScheduleQueryParams(schedules);
 
-  const [studentCountMap, markedMap, presentMap] = await Promise.all([
+  const [studentCountMap, electiveCountMap, markedMap, presentMap] = await Promise.all([
     classSectionTermRepository.countStudentsByClassSectionTermIds(uniqueTermIds),
+    fetchElectiveStudentCountMap(schedules),
     attendanceRepository.getAttendanceMarkedMap({ dateWiseIds }),
     attendanceRepository.getAttendanceMap({ dateWiseIds }),
   ]);
@@ -1509,9 +1535,12 @@ async function enrichTodayClassSchedules(schedules) {
     const schedule = schedules[i];
     const classSectionTermId = resolvedTermIds[i];
     const attendanceFields = resolveScheduleAttendanceFields(schedule, presentMap, markedMap);
+    const electiveId = schedule.electiveSubjectId || schedule.timeTableElective?.electiveSubjectId;
 
     let studentCount = 0;
-    if (classSectionTermId) {
+    if (electiveId) {
+      studentCount = electiveCountMap.get(Number(electiveId)) || 0;
+    } else if (classSectionTermId) {
       const count = studentCountMap.get(Number(classSectionTermId));
       if (count != null) {
         studentCount = count;
@@ -1533,21 +1562,39 @@ async function enrichSchedulesWithAttendance(schedules) {
     return schedules;
   }
 
-  const { dateWiseIds } = collectScheduleQueryParams(schedules);
+  const { dateWiseIds, resolvedTermIds, uniqueTermIds } = collectScheduleQueryParams(schedules);
   if (!dateWiseIds.length) {
     return schedules;
   }
 
-  const [markedMap, presentMap] = await Promise.all([
+  const [studentCountMap, electiveCountMap, markedMap, presentMap] = await Promise.all([
+    classSectionTermRepository.countStudentsByClassSectionTermIds(uniqueTermIds),
+    fetchElectiveStudentCountMap(schedules),
     attendanceRepository.getAttendanceMarkedMap({ dateWiseIds }),
     attendanceRepository.getAttendanceMap({ dateWiseIds }),
   ]);
 
   const enriched = [];
-  for (const schedule of schedules) {
+  for (let i = 0; i < schedules.length; i++) {
+    const schedule = schedules[i];
+    const classSectionTermId = resolvedTermIds[i];
+    const attendanceFields = resolveScheduleAttendanceFields(schedule, presentMap, markedMap);
+    const electiveId = schedule.electiveSubjectId || schedule.timeTableElective?.electiveSubjectId;
+
+    let studentCount = 0;
+    if (electiveId) {
+      studentCount = electiveCountMap.get(Number(electiveId)) || 0;
+    } else if (classSectionTermId) {
+      const count = studentCountMap.get(Number(classSectionTermId));
+      if (count != null) {
+        studentCount = count;
+      }
+    }
+
     enriched.push({
       ...schedule,
-      ...resolveScheduleAttendanceFields(schedule, presentMap, markedMap),
+      studentCount,
+      ...attendanceFields,
     });
   }
 

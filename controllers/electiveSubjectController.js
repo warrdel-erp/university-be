@@ -70,3 +70,63 @@ export async function deleteElectiveSubject(req, res) {
         res.status(500).json({ error: error.message });
     }
 }
+
+export async function getMappedStudents(req, res) {
+    try {
+        const { electiveSubjectId, page, limit, search } = req.query;
+        if (!electiveSubjectId) {
+            return res.status(400).json({ message: "electiveSubjectId is required" });
+        }
+        const result = await electiveSubject.getMappedStudents(electiveSubjectId, { page, limit, search });
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+export async function getEligibleStudents(req, res) {
+    try {
+        const { electiveSubjectId, page, limit, search } = req.query;
+        if (!electiveSubjectId) {
+            return res.status(400).json({ message: "electiveSubjectId is required" });
+        }
+        const result = await electiveSubject.getEligibleStudents(electiveSubjectId, { page, limit, search });
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+export async function mapStudents(req, res) {
+    try {
+        const { electiveSubjectId, studentIds } = req.body;
+        const createdBy = req.user.userId;
+
+        if (!electiveSubjectId || !Array.isArray(studentIds) || studentIds.length === 0) {
+            return res.status(400).json({ message: "electiveSubjectId and non-empty studentIds array are required" });
+        }
+
+        const result = await electiveSubject.mapStudents(electiveSubjectId, studentIds, createdBy);
+        res.status(201).json({ message: "Students mapped successfully", result });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+export async function unmapStudent(req, res) {
+    try {
+        const { electiveSubjectId, studentId } = req.query;
+        if (!electiveSubjectId || !studentId) {
+            return res.status(400).json({ message: "electiveSubjectId and studentId are required" });
+        }
+
+        const unmapped = await electiveSubject.unmapStudent(electiveSubjectId, studentId);
+        if (unmapped) {
+            res.status(200).json({ message: "Student unmapped successfully" });
+        } else {
+            res.status(404).json({ message: "Mapping not found" });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
