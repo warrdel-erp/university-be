@@ -550,6 +550,18 @@ export async function getOrgTreeData() {
 }
 
 export async function getOrgChartData() {
+    // 0. Fetch active university info
+    const university = await scoped(model.universityModel).findOne({
+        attributes: ['universityId', 'universityName'],
+        raw: true
+    });
+
+    // 0.5. Fetch active institute info
+    const institute = await scoped(model.instituteModel).findOne({
+        attributes: ['instituteId', 'instituteName'],
+        raw: true
+    });
+
     // 1. Fetch all departments under active institute
     const departments = await scoped(model.departmentModel).findAll({
         attributes: ['departmentId', 'departmentName', 'departmentType'],
@@ -702,11 +714,13 @@ export async function getOrgChartData() {
         }
     }
 
-    if (rootPosNodes.length === 1) {
-        return rootPosNodes[0];
-    }
+    const rootName = university ? university.universityName : "University Organization";
     return {
-        name: "University Organization",
+        universityId: university ? university.universityId : null,
+        universityName: university ? university.universityName : null,
+        instituteId: institute ? institute.instituteId : null,
+        instituteName: institute ? institute.instituteName : null,
+        name: rootName,
         children: rootPosNodes
     };
 }
