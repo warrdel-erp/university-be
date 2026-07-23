@@ -388,31 +388,37 @@ export async function userExists(userId) {
 }
 
 export async function getOrgTreeData() {
-    // 1. Fetch active institute info
+    // 1. Fetch active university info
+    const university = await scoped(model.universityModel).findOne({
+        attributes: ['universityId', 'universityName'],
+        raw: true
+    });
+
+    // 2. Fetch active institute info
     const institute = await scoped(model.instituteModel).findOne({
         attributes: ['instituteId', 'instituteName'],
         raw: true
     });
 
-    // 2. Fetch all departments under active institute
+    // 3. Fetch all departments under active institute
     const departments = await scoped(model.departmentModel).findAll({
         attributes: ['departmentId', 'departmentName', 'departmentCode', 'departmentType'],
         raw: true
     });
 
-    // 3. Fetch all structures under active institute
+    // 4. Fetch all structures under active institute
     const structures = await scoped(model.departmentStructureModel).findAll({
         attributes: ['departmentStructureId', 'departmentId', 'parentDepartmentId'],
         raw: true
     });
 
-    // 4. Fetch all positions under active institute
+    // 5. Fetch all positions under active institute
     const positions = await scoped(model.orgPositionModel).findAll({
         attributes: ['orgPositionId', 'positionName', 'positionCode', 'level', 'employmentCategory', 'isVacant', 'sortOrder', 'departmentId'],
         raw: true
     });
 
-    // 5. Build tree mappings
+    // 6. Build tree mappings
     const deptMap = new Map();
     for (const dept of departments) {
         deptMap.set(dept.departmentId, {
@@ -502,6 +508,8 @@ export async function getOrgTreeData() {
     }
 
     return {
+        universityId: university ? university.universityId : null,
+        universityName: university ? university.universityName : "University",
         instituteId: institute ? institute.instituteId : null,
         instituteName: institute ? institute.instituteName : "University Institute",
         departments: rootDepartments
