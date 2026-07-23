@@ -388,101 +388,88 @@ export async function userExists(userId) {
 }
 
 export async function getOrgTreeData() {
-    // 1. Fetch active university info
-    const university = await scoped(model.universityModel).findOne({
-        attributes: ['universityId', 'universityName'],
-        raw: true
-    });
-
-    // 2. Fetch active institute info
-    const institute = await scoped(model.instituteModel).findOne({
-        attributes: ['instituteId', 'instituteName'],
-        raw: true
-    });
-
-    // 3. Fetch all departments under active institute
-    const departments = await scoped(model.departmentModel).findAll({
-        attributes: ['departmentId', 'departmentName', 'departmentCode', 'departmentType'],
-        raw: true
-    });
-
-    // 4. Fetch all structures under active institute
-    const structures = await scoped(model.departmentStructureModel).findAll({
-        attributes: ['departmentStructureId', 'departmentId', 'parentDepartmentId'],
-        raw: true
-    });
-
-    // 5. Fetch all positions under active institute
-    const positions = await scoped(model.orgPositionModel).findAll({
-        attributes: ['orgPositionId', 'positionName', 'positionCode', 'level', 'employmentCategory', 'isVacant', 'sortOrder', 'departmentId'],
-        raw: true
-    });
-
-    // 6. Fetch all active position heads with user assignee details under active institute
-    const activeHeads = await scoped(model.orgPositionHeadModel).findAll({
-        where: { status: 'ACTIVE' },
-        attributes: ['orgPositionHeadId', 'orgPositionId', 'holderType', 'status', 'joiningDate', 'endDate'],
-        include: [
-            {
-                model: model.userModel,
-                as: 'assignee',
-                attributes: ['userId', 'userName', 'email', 'phone', 'status'],
-                include: [
-                    {
-                        model: model.employeeModel,
-                        as: 'employee',
-                        attributes: ['employeeId', 'employeeName'],
-                        required: false
-                    }
-                ]
-            }
-        ]
-    });
-
-    const positionHeadsMap = new Map();
-    for (const head of activeHeads) {
-        const plainHead = head.get({ plain: true });
-        const posId = plainHead.orgPositionId;
-        if (posId) {
-            if (!positionHeadsMap.has(posId)) {
-                positionHeadsMap.set(posId, []);
-            }
-            const assignee = plainHead.assignee || {};
-            const empName = assignee.employee?.employeeName || assignee.userName;
-
-            positionHeadsMap.get(posId).push({
-                orgPositionHeadId: plainHead.orgPositionHeadId,
-                holderType: plainHead.holderType,
-                status: plainHead.status,
-                joiningDate: plainHead.joiningDate,
-                endDate: plainHead.endDate,
-                user: {
-                    userId: assignee.userId,
-                    name: empName,
-                    email: assignee.email,
-                    phone: assignee.phone
+    // Parallel fetch all required data
+    const [university, institute, departments, structures, activeHeads] = await Promise.all([
+        scoped(model.universityModel).findOne({ attributes: ['universityId', 'universityName'], raw: true }),
+        scoped(model.instituteModel).findOne({ attributes: ['instituteId', 'instituteName'], raw: true }),
+        scoped(model.departmentModel).findAll({
+            attributes: ['departmentId', 'departmentName', 'departmentCode', 'departmentType'],
+            raw: true
+        }),
+        scoped(model.departmentStructureModel).findAll({
+            attributes: ['departmentId', 'parentDepartmentId'],
+            raw: true
+        }),
+        scoped(model.orgPositionHeadModel).findAll({
+            where: { status: 'ACTIVE' },
+            attributes: ['orgPositionHeadId', 'orgPositionId', 'holderType', 'status', 'joiningDate', 'endDate'],
+            include: [
+                {
+                    model: model.userModel,
+                    as: 'assignee',
+                    attributes: ['userId', 'userName', 'email', 'phone'],
+                    include: [
+                        { model: model.employeeModel, as: 'employee', attributes: ['employeeId', 'employeeName'], required: false }
+                    ]
                 }
+            ]
+        })
+    ]);
+
+    // Level-1 positions fetched separately so DB does the level filtering (not JS)
+    const level1Positions = await scoped(model.orgPositionModel).findAll({
+        where: { level: 1 },
+        attributes: ['orgPositionId', 'positionName', 'positionCode', 'level', 'employmentCategory', 'isVacant', 'sortOrder', 'departmentId'],
+        order: [['sortOrder', 'ASC']],
+        raw: true
+    });
+
+    // Single-pass: build positionHeadsMap (positionId -> head[])
+    const positionHeadsMap = activeHeads.reduce((map, head) => {
+        const { orgPositionId, orgPositionHeadId, holderType, status, joiningDate, endDate, assignee } = head.get({ plain: true });
+        if (orgPositionId) {
+            const empName = assignee?.employee?.employeeName || assignee?.userName;
+            (map[orgPositionId] ??= []).push({
+                orgPositionHeadId,
+                holderType,
+                status,
+                joiningDate,
+                endDate,
+                user: { userId: assignee?.userId, name: empName, email: assignee?.email, phone: assignee?.phone }
             });
         }
-    }
+        return map;
+    }, Object.create(null));
 
-    // 7. Build tree mappings
-    const deptMap = new Map();
+    // Single-pass: build deptMap + collect childDeptIds + build parentToChildren
+    const deptMap = Object.create(null);
     for (const dept of departments) {
-        deptMap.set(dept.departmentId, {
+        deptMap[dept.departmentId] = {
             departmentId: dept.departmentId,
             departmentName: dept.departmentName,
             departmentCode: dept.departmentCode,
             departmentType: dept.departmentType,
             positions: [],
             childDepartments: []
-        });
+        };
     }
 
-    // Group positions by departmentId
-    for (const pos of positions) {
-        if (pos.departmentId && deptMap.has(pos.departmentId)) {
-            deptMap.get(pos.departmentId).positions.push({
+    // Single-pass over structures: build parent->children map AND track child IDs
+    const parentToChildren = Object.create(null);
+    const childDeptIds = new Set();
+    for (const { departmentId: childId, parentDepartmentId: parentId } of structures) {
+        if (childId) {
+            childDeptIds.add(Number(childId));
+            const key = parentId ? Number(parentId) : 0;  // use 0 as root sentinel
+            (parentToChildren[key] ??= []).push(Number(childId));
+        }
+    }
+
+    // Single-pass over level-1 positions: push into deptMap directly
+    for (const pos of level1Positions) {
+        const dept = deptMap[pos.departmentId];
+        if (dept) {
+            dept.positions.push({
                 orgPositionId: pos.orgPositionId,
                 positionName: pos.positionName,
                 positionCode: pos.positionCode,
@@ -490,40 +477,17 @@ export async function getOrgTreeData() {
                 employmentCategory: pos.employmentCategory,
                 isVacant: pos.isVacant,
                 sortOrder: pos.sortOrder,
-                heads: positionHeadsMap.get(pos.orgPositionId) || []
+                heads: positionHeadsMap[pos.orgPositionId] || []
             });
         }
     }
 
-    // Sort positions by level asc, then sortOrder asc
-    for (const [_, deptObj] of deptMap) {
-        deptObj.positions.sort((a, b) => {
-            if (a.level !== b.level) {
-                return a.level - b.level;
-            }
-            return (a.sortOrder || 0) - (b.sortOrder || 0);
-        });
-    }
-
-    // Group structures by parentDepartmentId
-    const parentToChildren = new Map();
-    for (const struct of structures) {
-        const parentId = struct.parentDepartmentId ? Number(struct.parentDepartmentId) : null;
-        const childId = struct.departmentId ? Number(struct.departmentId) : null;
-        if (childId) {
-            if (!parentToChildren.has(parentId)) {
-                parentToChildren.set(parentId, []);
-            }
-            parentToChildren.get(parentId).push(childId);
-        }
-    }
-
-    // Recursive helper to build sub-department nodes
+    // Recursive sub-tree builder (reads pre-built parentToChildren plain object)
     function buildSubTree(parentId) {
-        const childIds = parentToChildren.get(parentId) || [];
+        const childIds = parentToChildren[parentId] || [];
         const nodes = [];
         for (const childId of childIds) {
-            const deptObj = deptMap.get(childId);
+            const deptObj = deptMap[childId];
             if (deptObj) {
                 nodes.push({
                     departmentId: deptObj.departmentId,
@@ -538,18 +502,11 @@ export async function getOrgTreeData() {
         return nodes;
     }
 
-    // Get root departments (any department that is not mapped as a child under another parent department)
-    const childDeptIds = new Set();
-    for (const struct of structures) {
-        if (struct.parentDepartmentId) {
-            childDeptIds.add(Number(struct.departmentId));
-        }
-    }
-
+    // Build root departments: any dept not recorded as a child
     const rootDepartments = [];
     for (const dept of departments) {
         if (!childDeptIds.has(Number(dept.departmentId))) {
-            const deptObj = deptMap.get(dept.departmentId);
+            const deptObj = deptMap[dept.departmentId];
             if (deptObj) {
                 rootDepartments.push({
                     departmentId: deptObj.departmentId,
@@ -564,10 +521,10 @@ export async function getOrgTreeData() {
     }
 
     return {
-        universityId: university ? university.universityId : null,
-        universityName: university ? university.universityName : "University",
-        instituteId: institute ? institute.instituteId : null,
-        instituteName: institute ? institute.instituteName : "University Institute",
+        universityId: university.universityId,
+        universityName: university.universityName,
+        instituteId: institute.instituteId,
+        instituteName: institute.instituteName,
         departments: rootDepartments
     };
 }
@@ -746,79 +703,4 @@ export async function getOrgChartData() {
         name: rootName,
         children: rootPosNodes
     };
-}
-
-export async function getPositionsByDepartment(departmentId) {
-    const positions = await scoped(model.orgPositionModel).findAll({
-        where: { departmentId: Number(departmentId) },
-        attributes: ['orgPositionId', 'positionName', 'positionCode', 'level', 'employmentCategory', 'isVacant', 'sortOrder', 'departmentId'],
-        order: [['level', 'ASC'], ['sortOrder', 'ASC']]
-    });
-
-    const positionIds = positions.map(p => p.orgPositionId);
-    const headsMap = new Map();
-    if (positionIds.length > 0) {
-        const activeHeads = await scoped(model.orgPositionHeadModel).findAll({
-            where: {
-                orgPositionId: { [Op.in]: positionIds },
-                status: 'ACTIVE'
-            },
-            attributes: ['orgPositionHeadId', 'orgPositionId', 'holderType', 'status', 'joiningDate', 'endDate'],
-            include: [
-                {
-                    model: model.userModel,
-                    as: 'assignee',
-                    attributes: ['userId', 'userName', 'email', 'phone', 'status'],
-                    include: [
-                        {
-                            model: model.employeeModel,
-                            as: 'employee',
-                            attributes: ['employeeId', 'employeeName'],
-                            required: false
-                        }
-                    ]
-                }
-            ]
-        });
-
-        for (const head of activeHeads) {
-            const plainHead = head.get({ plain: true });
-            const posId = plainHead.orgPositionId;
-            if (posId) {
-                if (!headsMap.has(posId)) {
-                    headsMap.set(posId, []);
-                }
-                const assignee = plainHead.assignee || {};
-                const empName = assignee.employee?.employeeName || assignee.userName;
-                headsMap.get(posId).push({
-                    orgPositionHeadId: plainHead.orgPositionHeadId,
-                    holderType: plainHead.holderType,
-                    status: plainHead.status,
-                    joiningDate: plainHead.joiningDate,
-                    endDate: plainHead.endDate,
-                    user: {
-                        userId: assignee.userId,
-                        name: empName,
-                        email: assignee.email,
-                        phone: assignee.phone
-                    }
-                });
-            }
-        }
-    }
-
-    return positions.map(pos => {
-        const plainPos = pos.get({ plain: true });
-        return {
-            orgPositionId: plainPos.orgPositionId,
-            positionName: plainPos.positionName,
-            positionCode: plainPos.positionCode,
-            level: plainPos.level,
-            employmentCategory: plainPos.employmentCategory,
-            isVacant: plainPos.isVacant,
-            sortOrder: plainPos.sortOrder,
-            departmentId: plainPos.departmentId,
-            heads: headsMap.get(plainPos.orgPositionId) || []
-        };
-    });
 }
