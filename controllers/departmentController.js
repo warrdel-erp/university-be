@@ -1,5 +1,5 @@
 import * as DepartmentCreation from "../services/departmentService.js";
-import { successResponse, errorResponse } from "../utility/response.js";
+import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
 export async function addDepartment(req, res) {
   const createdBy = req.user.userId;
@@ -10,22 +10,22 @@ export async function addDepartment(req, res) {
       createdBy,
       updatedBy,
     );
-    return successResponse(res, "Data added successfully", departmentDetails);
+    return SuccessResponse(res, "Data added successfully", departmentDetails);
   } catch (error) {
-    return errorResponse(res, error.message, 500);
+    return ErrorResponse(res, error.message, 500);
   }
 }
 
 export async function getAllDepartment(req, res) {
   try {
     const departmentDetails = await DepartmentCreation.getDepartmentDetails();
-    return successResponse(
+    return SuccessResponse(
       res,
       "Department details fetched successfully",
       departmentDetails,
     );
   } catch (error) {
-    return errorResponse(res, error.message, 500);
+    return ErrorResponse(res, error.message, 500);
   }
 }
 
@@ -35,16 +35,16 @@ export async function getSingleDepartmentDetails(req, res) {
     const departmentDetails =
       await DepartmentCreation.getSingleDepartmentDetails(departmentId);
     if (departmentDetails) {
-      return successResponse(
+      return SuccessResponse(
         res,
         "Department details fetched successfully",
         departmentDetails,
       );
     } else {
-      return errorResponse(res, "Department details not found", 404);
+      return ErrorResponse(res, "Department details not found", 404);
     }
   } catch (error) {
-    return errorResponse(res, error.message, 500);
+    return ErrorResponse(res, error.message, 500);
   }
 }
 
@@ -58,11 +58,11 @@ export async function updateDepartment(req, res) {
       updatedBy,
     );
     if (!updated) {
-      return errorResponse(res, "Department details not found", 404);
+      return ErrorResponse(res, "Department details not found", 404);
     }
-    return successResponse(res, "Department details updated successfully");
+    return SuccessResponse(res, "Department details updated successfully");
   } catch (error) {
-    return errorResponse(res, error.message, 500);
+    return ErrorResponse(res, error.message, 500);
   }
 }
 
@@ -71,15 +71,15 @@ export async function deleteDepartment(req, res) {
     const { departmentId } = req.query;
     const deleted = await DepartmentCreation.deleteDepartment(departmentId);
     if (deleted) {
-      return successResponse(
+      return SuccessResponse(
         res,
         `Delete successful for departmentDetails ID ${departmentId}`,
       );
     } else {
-      return errorResponse(res, "Department details not found", 404);
+      return ErrorResponse(res, "Department details not found", 404);
     }
   } catch (error) {
-    return errorResponse(res, error.message, 500);
+    return ErrorResponse(res, error.message, 500);
   }
 }
 
@@ -89,15 +89,15 @@ export async function getDepartmentByIdEmployee(req, res) {
     const departmentDetails =
       await DepartmentCreation.getDepartmentByIdEmployee(departmentId);
     if (departmentDetails) {
-      return successResponse(
+      return SuccessResponse(
         res,
         "Department details fetched successfully",
         departmentDetails,
       );
     } else {
-      return errorResponse(res, "Department details not found", 404);
+      return ErrorResponse(res, "Department details not found", 404);
     }
   } catch (error) {
-    return errorResponse(res, error.message, 500);
+    return ErrorResponse(res, error.message, 500);
   }
 }
