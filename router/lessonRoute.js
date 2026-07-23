@@ -30,8 +30,6 @@ import { checkAccess } from '../middleware/checkAccess.js';
 
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
-import { checkAccess } from '../middleware/checkAccess.js';
-import { PERMISSIONS } from '../const/permissions.js';
 
 const positiveIntegerId = z.coerce
     .number()
