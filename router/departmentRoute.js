@@ -30,6 +30,7 @@ const addDepartmentSchema = z.object({
     alternateName: optionalString,
     departmentCode: optionalString,
     description: optionalString,
+    departmentType: z.enum(departmentTypes),
 });
 
 const updateDepartmentSchema = z.object({
@@ -38,6 +39,7 @@ const updateDepartmentSchema = z.object({
     alternateName: optionalString,
     departmentCode: optionalString,
     description: optionalString,
+    departmentType: z.enum(departmentTypes).optional(),
 });
 
 const departmentIdQuerySchema = z.object({
