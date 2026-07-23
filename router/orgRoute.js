@@ -55,7 +55,7 @@ const optionalDateOnly = z.preprocess(
 );
 
 const addPositionSchema = z.object({
-    departmentStructureId: positiveIntegerId,
+    departmentStructureId: optionalNullablePositiveIntegerId,
     departmentId: optionalNullablePositiveIntegerId,
     positionName: z
         .string({ required_error: 'positionName is required' })
@@ -71,7 +71,7 @@ const addPositionSchema = z.object({
 
 const updatePositionSchema = z.object({
     orgPositionId: positiveIntegerId,
-    departmentStructureId: optionalPositiveIntegerId,
+    departmentStructureId: optionalNullablePositiveIntegerId,
     departmentId: optionalNullablePositiveIntegerId,
     positionName: z.string().min(1).optional(),
     positionCode: z.string().optional().nullable(),

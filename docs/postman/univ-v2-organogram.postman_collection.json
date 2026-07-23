@@ -91,6 +91,25 @@
         },
         {
           "name": "update department",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const departmentId = pm.collectionVariables.get('departmentId');",
+                  "if (!departmentId) throw new Error('departmentId is not set. Create a department first.');",
+                  "pm.request.body.update(JSON.stringify({",
+                  "  departmentId: Number(departmentId),",
+                  "  departmentName: 'School of Engineering',",
+                  "  departmentCode: 'SOE',",
+                  "  alternateName: null,",
+                  "  description: null,",
+                  "}, null, 2));"
+                ]
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "bearer",
@@ -182,6 +201,20 @@
         {
           "name": "create structure (with department)",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const departmentId = pm.collectionVariables.get('departmentId');",
+                  "if (!departmentId) throw new Error('departmentId is not set. Create a department first.');",
+                  "pm.request.body.update(JSON.stringify({",
+                  "  departmentId: Number(departmentId),",
+                  "  parentDepartmentId: null,",
+                  "}, null, 2));"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -307,6 +340,31 @@
           "name": "create position (top / Chancellor)",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function requireVar(name) {",
+                  "  const value = pm.collectionVariables.get(name);",
+                  "  if (!value) throw new Error(name + ' is not set. Run department + departmentStructure create first.');",
+                  "  return Number(value);",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({",
+                  "  departmentStructureId: requireVar('departmentStructureId'),",
+                  "  departmentId: requireVar('departmentId'),",
+                  "  positionName: 'Chancellor',",
+                  "  positionCode: 'CHN',",
+                  "  employmentCategory: 'Leadership',",
+                  "  reportsToOrgPositionId: null,",
+                  "  reportingType: 'Direct',",
+                  "  isVacant: true,",
+                  "  sortOrder: 1,",
+                  "  level: 1,",
+                  "}, null, 2));"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
@@ -340,13 +398,38 @@
               "host": ["{{baseurl}}"],
               "path": ["org", ""]
             },
-            "description": "**POST /org/** (top seat)\n\n**Required**\n- `departmentStructureId` (int)\n- `positionName` (string)\n- `employmentCategory` — `Academic` | `Administrative` | `Support` | `Executive` | `Leadership`\n- `level` (int ≥ 1)\n\n**Optional**\n- `departmentId` (int | null)\n- `positionCode` (string | null)\n- `reportsToOrgPositionId` (int | null) — **null for top**\n- `reportingType` (string | null)\n- `isVacant` (boolean) — default `true`\n- `sortOrder` (int) — default `0`\n\nSaves `orgPositionId` as `reportsToOrgPositionId` for the next child create."
+            "description": "**POST /org/** (top seat)\n\n**Required**\n- `positionName` (string)\n- `employmentCategory` — `Academic` | `Administrative` | `Support` | `Executive` | `Leadership`\n- `level` (int ≥ 1)\n\n**Optional**\n- `departmentStructureId` (int | null)\n- `departmentId` (int | null)\n- `positionCode` (string | null)\n- `reportsToOrgPositionId` (int | null) — **null for top**\n- `reportingType` (string | null)\n- `isVacant` (boolean) — default `true`\n- `sortOrder` (int) — default `0`\n\nSaves `orgPositionId` as `reportsToOrgPositionId` for the next child create."
           },
           "response": []
         },
         {
           "name": "create position (child / reports to)",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function requireVar(name) {",
+                  "  const value = pm.collectionVariables.get(name);",
+                  "  if (!value) throw new Error(name + ' is not set. Run create position (top) first.');",
+                  "  return Number(value);",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({",
+                  "  departmentStructureId: requireVar('departmentStructureId'),",
+                  "  departmentId: requireVar('departmentId'),",
+                  "  positionName: 'Vice Chancellor',",
+                  "  positionCode: 'VC',",
+                  "  employmentCategory: 'Leadership',",
+                  "  reportsToOrgPositionId: requireVar('reportsToOrgPositionId'),",
+                  "  reportingType: 'Direct',",
+                  "  isVacant: true,",
+                  "  sortOrder: 1,",
+                  "  level: 2,",
+                  "}, null, 2));"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -431,6 +514,32 @@
         },
         {
           "name": "update position",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function requireVar(name) {",
+                  "  const value = pm.collectionVariables.get(name);",
+                  "  if (!value) throw new Error(name + ' is not set.');",
+                  "  return Number(value);",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({",
+                  "  orgPositionId: requireVar('orgPositionId'),",
+                  "  departmentId: requireVar('departmentId'),",
+                  "  positionName: 'Vice Chancellor',",
+                  "  positionCode: 'VC',",
+                  "  employmentCategory: 'Leadership',",
+                  "  reportsToOrgPositionId: requireVar('reportsToOrgPositionId'),",
+                  "  reportingType: 'Direct',",
+                  "  sortOrder: 1,",
+                  "  level: 2,",
+                  "}, null, 2));"
+                ]
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "bearer",
@@ -454,6 +563,19 @@
         },
         {
           "name": "mark position vacant",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const orgPositionId = pm.collectionVariables.get('orgPositionId');",
+                  "if (!orgPositionId) throw new Error('orgPositionId is not set. Create a position first.');",
+                  "pm.request.body.update(JSON.stringify({ orgPositionId: Number(orgPositionId) }, null, 2));"
+                ]
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "bearer",
@@ -505,6 +627,27 @@
         {
           "name": "add head",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function requireVar(name) {",
+                  "  const value = pm.collectionVariables.get(name);",
+                  "  if (!value) throw new Error(name + ' is not set.');",
+                  "  return Number(value);",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({",
+                  "  orgPositionId: requireVar('orgPositionId'),",
+                  "  userId: requireVar('userId'),",
+                  "  holderType: 'PRIMARY',",
+                  "  status: 'ACTIVE',",
+                  "  joiningDate: '2024-01-01',",
+                  "  endDate: null,",
+                  "}, null, 2));"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -565,6 +708,25 @@
         },
         {
           "name": "update head",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const orgPositionHeadId = pm.collectionVariables.get('orgPositionHeadId');",
+                  "if (!orgPositionHeadId) throw new Error('orgPositionHeadId is not set. Add a head first.');",
+                  "pm.request.body.update(JSON.stringify({",
+                  "  orgPositionHeadId: Number(orgPositionHeadId),",
+                  "  holderType: 'ACTING',",
+                  "  status: 'ACTIVE',",
+                  "  joiningDate: '2024-01-01',",
+                  "  endDate: null,",
+                  "}, null, 2));"
+                ]
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "bearer",

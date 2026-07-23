@@ -17,7 +17,7 @@ const orgPositionModel = sequelize.define(
         },
         departmentStructureId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'department_structure_id',
             references: {
                 model: departmentStructure,

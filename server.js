@@ -114,6 +114,16 @@ app.use((req, res, next) => {
   fileUpload()(req, res, next);
 });
 app.use(json());
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({
+      message: 'Invalid JSON in request body',
+      hint: 'Empty Postman variables produce invalid JSON like "departmentStructureId": , — run create steps in order or set collection variables.',
+      error: err.message,
+    });
+  }
+  next(err);
+});
 app.use(cors());
 app.use(urlencoded({ extended: true }));
 
