@@ -169,7 +169,7 @@ export async function deleteHead(req, res) {
 export async function getOrgTree(req, res) {
     try {
         const tree = await orgServices.getOrgTreeData();
-        return SuccessResponse(res, 200, "Cascading organization tree fetched successfully", tree);
+        return SuccessResponse(res, 200, "Organization tree fetched successfully", tree);
     } catch (error) {
         return ErrorResponse(res, 500, "Internal Server Error", error.message);
     }

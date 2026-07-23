@@ -388,319 +388,395 @@ export async function userExists(userId) {
 }
 
 export async function getOrgTreeData() {
-    // Parallel fetch all required data
-    const [university, institute, departments, structures, activeHeads] = await Promise.all([
-        scoped(model.universityModel).findOne({ attributes: ['universityId', 'universityName'], raw: true }),
-        scoped(model.instituteModel).findOne({ attributes: ['instituteId', 'instituteName'], raw: true }),
+
+    // ─── 1. Fetch all data in parallel ───────────────────────────────────────
+    //
+    //   university  → basic university info
+    //   institute   → basic institute info
+    //   allDepts    → every department + its positions + active position holders (users)
+    //   allStructures → parent–child edges: which department belongs under which parent
+    //
+    const [university, institute, allDepts, allStructures] = await Promise.all([
+
+        // University (name + id only)
+        scoped(model.universityModel).findOne({
+            attributes: ['universityId', 'universityName'],
+            raw: true
+        }),
+
+        // Institute (name + id only)
+        scoped(model.instituteModel).findOne({
+            attributes: ['instituteId', 'instituteName'],
+            raw: true
+        }),
+
+        // Departments with deep join:
+        //   department → orgPositions (sorted) → heads (ACTIVE only) → assignee user → employee
         scoped(model.departmentModel).findAll({
             attributes: ['departmentId', 'departmentName', 'departmentCode', 'departmentType'],
-            raw: true
-        }),
-        scoped(model.departmentStructureModel).findAll({
-            attributes: ['departmentId', 'parentDepartmentId'],
-            raw: true
-        }),
-        scoped(model.orgPositionHeadModel).findAll({
-            where: { status: 'ACTIVE' },
-            attributes: ['orgPositionHeadId', 'orgPositionId', 'holderType', 'status', 'joiningDate', 'endDate'],
+            order: [
+                ['departmentName', 'ASC'],
+                [{ model: model.orgPositionModel, as: 'orgPositions' }, 'level',        'ASC'],
+                [{ model: model.orgPositionModel, as: 'orgPositions' }, 'sortOrder',    'ASC'],
+                [{ model: model.orgPositionModel, as: 'orgPositions' }, 'positionName', 'ASC'],
+            ],
             include: [
                 {
-                    model: model.userModel,
-                    as: 'assignee',
-                    attributes: ['userId', 'userName', 'email', 'phone'],
+                    model: model.orgPositionModel,
+                    as: 'orgPositions',
+                    attributes: ['orgPositionId', 'positionName', 'positionCode', 'level'],
+                    required: false,                         // LEFT JOIN – include depts with no positions
                     include: [
-                        { model: model.employeeModel, as: 'employee', attributes: ['employeeId', 'employeeName'], required: false }
+                        {
+                            model: model.orgPositionHeadModel,
+                            as: 'heads',
+                            where: { status: 'ACTIVE' },    // only currently active holders
+                            attributes: ['orgPositionHeadId'],
+                            required: false,                // LEFT JOIN – include positions with no active holder
+                            include: [
+                                {
+                                    model: model.userModel,
+                                    as: 'assignee',
+                                    attributes: ['userId', 'userName'],
+                                    include: [
+                                        {
+                                            model: model.employeeModel,
+                                            as: 'employee',
+                                            attributes: ['employeeId', 'employeeName'],
+                                            required: false  // user may not have an employee profile
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
                     ]
                 }
             ]
+        }),
+
+        // Department structure edges (child dept → parent dept)
+        // Fetched separately to avoid JOIN multiplication on the main departments query
+        scoped(model.departmentStructureModel).findAll({
+            attributes: ['departmentId', 'parentDepartmentId'],
+            raw: true
         })
     ]);
 
-    // Level-1 positions fetched separately so DB does the level filtering (not JS)
-    const level1Positions = await scoped(model.orgPositionModel).findAll({
-        where: { level: 1 },
-        attributes: ['orgPositionId', 'positionName', 'positionCode', 'level', 'employmentCategory', 'isVacant', 'sortOrder', 'departmentId'],
-        order: [['sortOrder', 'ASC']],
-        raw: true
-    });
+    // ─── 2. Build hierarchy lookup structures ─────────────────────────────────
+    //
+    //   parentChildrenMap  Map<parentId, childId[]>   – parent → its direct children
+    //   childDeptIdSet     Set<childId>               – all dept IDs that have a parent
+    //                                                   (root depts will NOT be in this set)
+    //
+    const parentChildrenMap = new Map();  // Map<Number, Number[]>
+    const childDeptIdSet    = new Set();  // Set<Number>
 
-    // Single-pass: build positionHeadsMap (positionId -> head[])
-    const positionHeadsMap = activeHeads.reduce((map, head) => {
-        const { orgPositionId, orgPositionHeadId, holderType, status, joiningDate, endDate, assignee } = head.get({ plain: true });
-        if (orgPositionId) {
-            const empName = assignee?.employee?.employeeName || assignee?.userName;
-            (map[orgPositionId] ??= []).push({
-                orgPositionHeadId,
-                holderType,
-                status,
-                joiningDate,
-                endDate,
-                user: { userId: assignee?.userId, name: empName, email: assignee?.email, phone: assignee?.phone }
+    for (const structure of allStructures) {
+        // A null/zero parentDepartmentId means this dept is a root – skip it
+        if (!structure.parentDepartmentId) continue;
+
+        const childId  = Number(structure.departmentId);
+        const parentId = Number(structure.parentDepartmentId);
+
+        childDeptIdSet.add(childId);
+
+        if (!parentChildrenMap.has(parentId)) {
+            parentChildrenMap.set(parentId, []);
+        }
+        parentChildrenMap.get(parentId).push(childId);
+    }
+
+    // ─── 3. Build department lookup Map: departmentId → shaped dept node ──────
+    //
+    //   deptNodeMap  Map<deptId, deptNode>
+    //   Each node contains: departmentId, departmentName, departmentCode,
+    //                        positions (shaped), and _type (for category grouping).
+    //
+    const deptNodeMap = new Map();  // Map<Number, Object>
+
+    for (const deptRecord of allDepts) {
+        // Convert Sequelize model instance to a plain JS object for easy property access
+        const dept = deptRecord.get({ plain: true });
+
+        // Shape positions for this department
+        const positions = [];
+        for (const pos of (dept.orgPositions || [])) {
+
+            // Shape users (active holders of this position)
+            const users = [];
+            for (const head of (pos.heads || [])) {
+                const assignee = head.assignee  || {};
+                const employee = assignee.employee || {};
+
+                users.push({
+                    userId:     assignee.userId,
+                    employeeId: employee.employeeId  || null,
+                    name:       employee.employeeName || assignee.userName || null
+                });
+            }
+
+            positions.push({
+                orgPositionId: pos.orgPositionId,
+                positionName:  pos.positionName,
+                positionCode:  pos.positionCode,
+                level:         pos.level,
+                users:         users       // empty array if no active holder
             });
         }
-        return map;
-    }, Object.create(null));
 
-    // Single-pass: build deptMap + collect childDeptIds + build parentToChildren
-    const deptMap = Object.create(null);
-    for (const dept of departments) {
-        deptMap[dept.departmentId] = {
-            departmentId: dept.departmentId,
+        // Store the shaped node (keep _type only for internal category grouping)
+        deptNodeMap.set(dept.departmentId, {
+            _type:          dept.departmentType,   // NOT exposed in response
+            departmentId:   dept.departmentId,
             departmentName: dept.departmentName,
             departmentCode: dept.departmentCode,
-            departmentType: dept.departmentType,
-            positions: [],
-            childDepartments: []
+            positions:      positions
+        });
+    }
+
+    // ─── 4. Reusable recursive function: build one dept node + all its children ─
+    //
+    //   Returns the shaped department object ready for the API response.
+    //   Recursively builds childDepartments from parentChildrenMap.
+    //
+    function buildDeptNode(deptId) {
+        const dept = deptNodeMap.get(deptId);
+        if (!dept) return null;
+
+        // Recursively build each child department
+        const childDepartments = [];
+        const childIds = parentChildrenMap.get(deptId) || [];
+        for (const childId of childIds) {
+            const childNode = buildDeptNode(childId);
+            if (childNode) {
+                childDepartments.push(childNode);
+            }
+        }
+
+        // Return the final shaped dept object (no _type in response)
+        return {
+            departmentId:    dept.departmentId,
+            departmentName:  dept.departmentName,
+            departmentCode:  dept.departmentCode,
+            positions:       dept.positions,
+            childDepartments: childDepartments   // empty array if no children
         };
     }
 
-    // Single-pass over structures: build parent->children map AND track child IDs
-    const parentToChildren = Object.create(null);
-    const childDeptIds = new Set();
-    for (const { departmentId: childId, parentDepartmentId: parentId } of structures) {
-        if (childId) {
-            childDeptIds.add(Number(childId));
-            const key = parentId ? Number(parentId) : 0;  // use 0 as root sentinel
-            (parentToChildren[key] ??= []).push(Number(childId));
+    // ─── 5. Separate root departments into Academic and Admin categories ───────
+    //
+    //   Root department = a dept that is NOT in childDeptIdSet (i.e. has no parent).
+    //   departmentType comparison is case-insensitive.
+    //   Both categories are always returned even if empty.
+    //
+    const academicDepts = [];
+    const adminDepts    = [];
+
+    for (const deptRecord of allDepts) {
+        const deptId = deptRecord.departmentId;
+
+        // Skip departments that are children (they will appear inside childDepartments)
+        if (childDeptIdSet.has(Number(deptId))) continue;
+
+        const node = buildDeptNode(deptId);
+        if (!node) continue;
+
+        const deptType = (deptNodeMap.get(deptId)?._type || '').toLowerCase();
+
+        if (deptType === 'academic') {
+            academicDepts.push(node);
+        } else if (deptType === 'admin') {
+            adminDepts.push(node);
         }
+        // Departments with other types are not exposed in this response
     }
 
-    // Single-pass over level-1 positions: push into deptMap directly
-    for (const pos of level1Positions) {
-        const dept = deptMap[pos.departmentId];
-        if (dept) {
-            dept.positions.push({
-                orgPositionId: pos.orgPositionId,
-                positionName: pos.positionName,
-                positionCode: pos.positionCode,
-                level: pos.level,
-                employmentCategory: pos.employmentCategory,
-                isVacant: pos.isVacant,
-                sortOrder: pos.sortOrder,
-                heads: positionHeadsMap[pos.orgPositionId] || []
-            });
-        }
-    }
-
-    // Recursive sub-tree builder (reads pre-built parentToChildren plain object)
-    function buildSubTree(parentId) {
-        const childIds = parentToChildren[parentId] || [];
-        const nodes = [];
-        for (const childId of childIds) {
-            const deptObj = deptMap[childId];
-            if (deptObj) {
-                nodes.push({
-                    departmentId: deptObj.departmentId,
-                    departmentName: deptObj.departmentName,
-                    departmentCode: deptObj.departmentCode,
-                    departmentType: deptObj.departmentType,
-                    positions: deptObj.positions,
-                    childDepartments: buildSubTree(childId)
-                });
-            }
-        }
-        return nodes;
-    }
-
-    // Build root departments: any dept not recorded as a child
-    const rootDepartments = [];
-    for (const dept of departments) {
-        if (!childDeptIds.has(Number(dept.departmentId))) {
-            const deptObj = deptMap[dept.departmentId];
-            if (deptObj) {
-                rootDepartments.push({
-                    departmentId: deptObj.departmentId,
-                    departmentName: deptObj.departmentName,
-                    departmentCode: deptObj.departmentCode,
-                    departmentType: deptObj.departmentType,
-                    positions: deptObj.positions,
-                    childDepartments: buildSubTree(dept.departmentId)
-                });
-            }
-        }
-    }
-
+    // ─── 6. Return the final response ────────────────────────────────────────
     return {
-        universityId: university.universityId,
+        universityId:   university.universityId,
         universityName: university.universityName,
-        instituteId: institute.instituteId,
-        instituteName: institute.instituteName,
-        departments: rootDepartments
+        institute: {
+            instituteId:   institute.instituteId,
+            instituteName: institute.instituteName,
+            categories: [
+                { categoryName: 'Academic', departments: academicDepts },
+                { categoryName: 'Admin',    departments: adminDepts    }
+            ]
+        }
     };
 }
 
 export async function getOrgChartData() {
-    // 0. Fetch active university info
-    const university = await scoped(model.universityModel).findOne({
-        attributes: ['universityId', 'universityName'],
-        raw: true
-    });
 
-    // 0.5. Fetch active institute info
-    const institute = await scoped(model.instituteModel).findOne({
-        attributes: ['instituteId', 'instituteName'],
-        raw: true
-    });
+    // ─── 1. Fetch all data in parallel ───────────────────────────────────────
+    //   Same parallel pattern as getOrgTreeData, but only id + name fields needed
+    const [university, institute, allDepts, allStructures] = await Promise.all([
 
-    // 1. Fetch all departments under active institute
-    const departments = await scoped(model.departmentModel).findAll({
-        attributes: ['departmentId', 'departmentName', 'departmentType'],
-        raw: true
-    });
+        scoped(model.universityModel).findOne({
+            attributes: ['universityId', 'universityName'],
+            raw: true
+        }),
 
-    // 2. Fetch all structures under active institute
-    const structures = await scoped(model.departmentStructureModel).findAll({
-        attributes: ['departmentStructureId', 'departmentId', 'parentDepartmentId'],
-        raw: true
-    });
+        scoped(model.instituteModel).findOne({
+            attributes: ['instituteId', 'instituteName'],
+            raw: true
+        }),
 
-    // 3. Fetch all positions under active institute
-    const positions = await scoped(model.orgPositionModel).findAll({
-        attributes: ['orgPositionId', 'positionName', 'positionCode', 'level', 'departmentId'],
-        raw: true
-    });
+        // Departments with positions and their active holders (id + name only)
+        scoped(model.departmentModel).findAll({
+            attributes: ['departmentId', 'departmentName', 'departmentType'],
+            order: [
+                ['departmentName', 'ASC'],
+                [{ model: model.orgPositionModel, as: 'orgPositions' }, 'level',     'ASC'],
+                [{ model: model.orgPositionModel, as: 'orgPositions' }, 'sortOrder', 'ASC'],
+            ],
+            include: [
+                {
+                    model: model.orgPositionModel,
+                    as: 'orgPositions',
+                    attributes: ['orgPositionId', 'positionName'],
+                    required: false,
+                    include: [
+                        {
+                            model: model.orgPositionHeadModel,
+                            as: 'heads',
+                            where: { status: 'ACTIVE' },
+                            attributes: ['orgPositionHeadId'],
+                            required: false,
+                            include: [
+                                {
+                                    model: model.userModel,
+                                    as: 'assignee',
+                                    attributes: ['userId', 'userName'],
+                                    include: [
+                                        {
+                                            model: model.employeeModel,
+                                            as: 'employee',
+                                            attributes: ['employeeName'],
+                                            required: false
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }),
 
-    const deptMap = new Map();
-    for (const d of departments) {
-        deptMap.set(d.departmentId, d);
+        // Structure edges (child → parent) – fetched separately to avoid JOIN duplication
+        scoped(model.departmentStructureModel).findAll({
+            attributes: ['departmentId', 'parentDepartmentId'],
+            raw: true
+        })
+    ]);
+
+    // ─── 2. Build hierarchy lookup structures ─────────────────────────────────
+    const parentChildrenMap = new Map();  // Map<parentId, childId[]>
+    const childDeptIdSet    = new Set();  // Set<childId> – O(1) root detection
+
+    for (const structure of allStructures) {
+        if (!structure.parentDepartmentId) continue;
+
+        const childId  = Number(structure.departmentId);
+        const parentId = Number(structure.parentDepartmentId);
+
+        childDeptIdSet.add(childId);
+
+        if (!parentChildrenMap.has(parentId)) {
+            parentChildrenMap.set(parentId, []);
+        }
+        parentChildrenMap.get(parentId).push(childId);
     }
 
-    // Group structures by parentDepartmentId
-    const parentToChildDepts = new Map();
-    for (const s of structures) {
-        const parentId = s.parentDepartmentId ? Number(s.parentDepartmentId) : null;
-        const childId = s.departmentId ? Number(s.departmentId) : null;
-        if (childId) {
-            if (!parentToChildDepts.has(parentId)) {
-                parentToChildDepts.set(parentId, []);
+    // ─── 3. Build department node map (id + name, slim positions) ─────────────
+    const deptNodeMap = new Map();  // Map<deptId, shaped node>
+
+    for (const deptRecord of allDepts) {
+        const dept = deptRecord.get({ plain: true });
+
+        // Shape positions – only orgPositionId, positionName, users (id + name)
+        const positions = [];
+        for (const pos of (dept.orgPositions || [])) {
+
+            const users = [];
+            for (const head of (pos.heads || [])) {
+                const assignee = head.assignee  || {};
+                const employee = assignee.employee || {};
+
+                users.push({
+                    userId: assignee.userId,
+                    name:   employee.employeeName || assignee.userName || null
+                });
             }
-            parentToChildDepts.get(parentId).push(childId);
+
+            positions.push({
+                orgPositionId: pos.orgPositionId,
+                positionName:  pos.positionName,
+                users:         users
+            });
         }
+
+        deptNodeMap.set(dept.departmentId, {
+            _type:          dept.departmentType,  // internal only – not in response
+            departmentId:   dept.departmentId,
+            departmentName: dept.departmentName,
+            positions:      positions
+        });
     }
 
-    // Group positions by departmentId
-    const deptPositions = new Map();
-    for (const p of positions) {
-        const dId = p.departmentId ? Number(p.departmentId) : null;
-        if (dId) {
-            if (!deptPositions.has(dId)) {
-                deptPositions.set(dId, []);
-            }
-            deptPositions.get(dId).push(p);
-        }
-    }
-
-    // Group positions by level
-    const positionsByLevel = new Map();
-    for (const p of positions) {
-        const lvl = Number(p.level);
-        if (!positionsByLevel.has(lvl)) {
-            positionsByLevel.set(lvl, []);
-        }
-        positionsByLevel.get(lvl).push(p);
-    }
-
-    // Get sorted levels
-    const levels = Array.from(positionsByLevel.keys()).sort((a, b) => a - b);
-
-    // Helper to build department tree node
+    // ─── 4. Recursive builder: one dept + its child departments ───────────────
     function buildDeptNode(deptId) {
-        const dept = deptMap.get(deptId);
+        const dept = deptNodeMap.get(deptId);
         if (!dept) return null;
 
-        const children = [];
-        
-        // Add positions in this department
-        const posList = deptPositions.get(deptId) || [];
-        for (const p of posList) {
-            const pNode = buildPositionNode(p);
-            if (pNode) {
-                children.push(pNode);
-            }
-        }
-
-        // Add child departments
-        const childDeptIds = parentToChildDepts.get(deptId) || [];
-        for (const cdId of childDeptIds) {
-            const cdNode = buildDeptNode(cdId);
-            if (cdNode) {
-                children.push(cdNode);
-            }
+        const childDepartments = [];
+        for (const childId of (parentChildrenMap.get(deptId) || [])) {
+            const childNode = buildDeptNode(childId);
+            if (childNode) childDepartments.push(childNode);
         }
 
         return {
-            name: dept.departmentName,
-            children
+            departmentId:    dept.departmentId,
+            departmentName:  dept.departmentName,
+            positions:       dept.positions,
+            childDepartments: childDepartments
         };
     }
 
-    // Recursive helper to build position node
-    function buildPositionNode(pos) {
-        const children = [];
+    // ─── 5. Group root departments into Academic / Admin (case-insensitive) ───
+    const academicDepts = [];
+    const adminDepts    = [];
 
-        // 1. Find next level positions that report down
-        const currentLevel = Number(pos.level);
-        const nextLevelIndex = levels.indexOf(currentLevel) + 1;
-        if (nextLevelIndex < levels.length) {
-            const nextLvl = levels[nextLevelIndex];
-            const nextPositions = positionsByLevel.get(nextLvl) || [];
-            for (const np of nextPositions) {
-                let reportsTo = false;
-                if (!pos.departmentId) {
-                    reportsTo = true;
-                } else if (np.departmentId === pos.departmentId) {
-                    reportsTo = true;
-                }
+    for (const deptRecord of allDepts) {
+        const deptId = deptRecord.departmentId;
 
-                if (reportsTo) {
-                    const npNode = buildPositionNode(np);
-                    if (npNode) {
-                        children.push(npNode);
-                    }
-                }
-            }
-        }
+        if (childDeptIdSet.has(Number(deptId))) continue;  // skip children
 
-        // 2. If position is mapped to a department, attach its child departments
-        if (pos.departmentId) {
-            const childDeptIds = parentToChildDepts.get(Number(pos.departmentId)) || [];
-            for (const cdId of childDeptIds) {
-                const cdNode = buildDeptNode(cdId);
-                if (cdNode) {
-                    children.push(cdNode);
-                }
-            }
-        }
+        const node = buildDeptNode(deptId);
+        if (!node) continue;
 
-        const node = {
-            name: pos.positionName
-        };
-        if (children.length > 0) {
-            node.children = children;
-        }
-        return node;
-    }
+        const deptType = (deptNodeMap.get(deptId)?._type || '').toLowerCase();
 
-    // Roots are Level 1 positions
-    const rootPosNodes = [];
-    if (levels.length > 0) {
-        const lowestLvl = levels[0];
-        const roots = positionsByLevel.get(lowestLvl) || [];
-        for (const r of roots) {
-            const rNode = buildPositionNode(r);
-            if (rNode) {
-                rootPosNodes.push(rNode);
-            }
+        if (deptType === 'academic') {
+            academicDepts.push(node);
+        } else if (deptType === 'admin') {
+            adminDepts.push(node);
         }
     }
 
-    const rootName = university ? university.universityName : "University Organization";
+    // ─── 6. Return final response (mirrors /org/tree, id + name fields only) ──
     return {
-        universityId: university ? university.universityId : null,
-        universityName: university ? university.universityName : null,
-        instituteId: institute ? institute.instituteId : null,
-        instituteName: institute ? institute.instituteName : null,
-        name: rootName,
-        children: rootPosNodes
+        universityId:   university.universityId,
+        universityName: university.universityName,
+        institute: {
+            instituteId:   institute.instituteId,
+            instituteName: institute.instituteName,
+            categories: [
+                { categoryName: 'Academic', departments: academicDepts },
+                { categoryName: 'Admin',    departments: adminDepts    }
+            ]
+        }
     };
 }
+
