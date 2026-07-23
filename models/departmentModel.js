@@ -3,6 +3,7 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import university from "./universityModel.js";
 import institute from "./instituteModel.js";
+import { departmentTypes } from "../constant.js";
 
 const departmentModel = sequelize.define(
     'department',
