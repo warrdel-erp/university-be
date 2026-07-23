@@ -29,7 +29,8 @@ export async function getAllEmployeeNotice(req, res) {
   try {
     const createdBy = req.user.userId;
     const role = req.user.defaultRole;
-    const notices = await notice.getAllEmployeeNotice(createdBy, role);
+    const academicYearId = req.query.academicYearId;
+    const notices = await notice.getAllEmployeeNotice(createdBy, role, academicYearId);
     res.status(200).json(notices);
   } catch (error) {
     const statusCode = /scope/i.test(error.message) ? 400 : 500;

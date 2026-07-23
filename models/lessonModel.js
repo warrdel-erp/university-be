@@ -1,6 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
+import employee from "./employeeModel.js";
 import instituteModel from "./instituteModel.js";
 import subjectModel from "./subjectModel.js";
 import acedmicYearModel from "./acedmicYearModel.js";
@@ -26,14 +27,14 @@ const lessonModel = sequelize.define(
                 model: instituteModel,
                 key: 'institute_id'
             }
-        }, 
-        employeeId: {
+        },
+        userId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'employee_id',
+            field: 'user_id',
             references: {
-                model: employeeModel,
-                key: 'employee_id'
+                model: users,
+                key: 'user_id'
             }
         },
         universityId: {
@@ -44,7 +45,7 @@ const lessonModel = sequelize.define(
                 model: universityModel,
                 key: 'university_id'
             }
-        }, 
+        },
         subjectId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -62,7 +63,7 @@ const lessonModel = sequelize.define(
                 model: acedmicYearModel,
                 key: 'acedmic_year_id'
             }
-        }, 
+        },
         sessionId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -87,7 +88,7 @@ const lessonModel = sequelize.define(
         },
         description: {
             type: DataTypes.STRING,
-            allowNull:true
+            allowNull: true
         },
         createdBy: {
             type: DataTypes.INTEGER,

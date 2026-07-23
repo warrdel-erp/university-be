@@ -1,3 +1,4 @@
+import users from "./userModel.js";
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import userModel from "./userModel.js";
@@ -16,11 +17,11 @@ const userStudentEmployeeModel = sequelize.define(
     employeeId: {
         type: DataTypes.INTEGER,
         allowNull: true,
-        field: 'employee_id',
+        field: 'user_id',
         references: {
-            model: employeeModel,
-            key: 'employee_id'
-        }
+                model: users,
+                key: 'user_id'
+            }
     },
     userId: {
         type: DataTypes.INTEGER,

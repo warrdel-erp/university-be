@@ -1,5 +1,7 @@
 import * as timeTableCreateServices from '../services/timeTableCreateServices.js';
+import * as timeTableServices from '../services/timeTableServices.js';
 import { ErrorResponse, SuccessResponse } from '../utility/response.js';
+
 
 export const addtimeTableCreate = async (req, res) => {
     try {
@@ -11,7 +13,10 @@ export const addtimeTableCreate = async (req, res) => {
     } catch (error) {
         console.error("Error in adding time table create :", error);
         const message = error.message || 'Internal Server Error';
-        const statusCode = /required|not found|does not match|could not be resolved|overlap/i.test(message) ? 400 : 500;
+        const statusCode =
+            /required|not found|does not match|could not be resolved|overlap|conflict|Routine already exists|Teacher conflict|Room conflict|must be inside|within the mapped date range|Map the course to the structure first|Invalid mapperId/i.test(message)
+                ? 400
+                : 500;
         res.status(statusCode).send(message);
     }
 };
@@ -73,11 +78,10 @@ export const getTimeTableByCourseAndSection = async (req, res) => {
             classSectionTermId,
             timeTableType,
         );
-        res.status(200).json(result);
+        SuccessResponse(res, 200, 'Time table fetched successfully', result);
     } catch (error) {
+        ErrorResponse(res, 500, "Internal Server Error");
         console.error("Error fetching timetable:", error);
-        const statusCode = /not found|could not be resolved/.test(error.message) ? 400 : 500;
-        res.status(statusCode).send(error.message || "Internal Server Error");
     }
 };
 
@@ -93,7 +97,7 @@ export const addtimeTableMapping = async (req, res) => {
         );
         res.status(200).send(result);
     } catch (error) {
-        res.status(400).send({
+        res.status(error.statusCode || 400).send({
             success: false,
             message: error.message || "Something went wrong",
         });
@@ -125,19 +129,29 @@ export const getSingletimeTableMappingDetail = async (req, res) => {
 export const changeTimeTableCreate = async (req, res) => {
     const updatedBy = req.user.userId;
     try {
+        if (Array.isArray(req.body)) {
+            const result = await timeTableServices.updateTimeTable(req.body);
+            return SuccessResponse(res, 200, 'Time table updated successfully', result);
+        }
+
         const result = await timeTableCreateServices.changeTimeTableCreate(req.body, updatedBy);
-        res.status(200).send(result);
+        return SuccessResponse(res, 200, 'Routine updated successfully', result);
     } catch (error) {
-        console.error(`Error in updating time table create`, error);
-        res.status(500).send("Internal Server Error");
+        console.error('Error in updating time table create', error);
+        const message = error.message || 'Internal Server Error';
+        const statusCode =
+            /not found|cannot be updated|starting date|overlap|conflict|Routine already exists|Teacher conflict|Room conflict|does not match|required|must be inside|within the mapped date range|Map the course to the structure first|Invalid mapperId/i.test(message)
+                ? 400
+                : 500;
+        return ErrorResponse(res, statusCode, message);
     }
 };
 
 export const updatetimeTableCreate = async (req, res) => {
-    const { timeTableType, timeTableMappingId } = req.body;
+    const { timeTableType, timeTableCellId } = req.body;
     const updatedBy = req.user.userId;
     try {
-        const result = await timeTableCreateServices.updatetimeTableCreate(timeTableMappingId, timeTableType, updatedBy);
+        const result = await timeTableCreateServices.updatetimeTableCreate(timeTableCellId, timeTableType, updatedBy);
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in updating time table type`, error);
@@ -162,15 +176,18 @@ export const updateSimpleTeacherMappingController = async (req, res) => {
 };
 
 export const deletetimeTableMapping = async (req, res) => {
-    const { timeTableMappingId, deleteCombinedGroup } = req.query;
+    const { timeTableCellId, deleteCombinedGroup } = req.query;
     try {
-        const result = await timeTableCreateServices.deletetimeTableMapping(timeTableMappingId, {
+        const result = await timeTableCreateServices.deletetimeTableMapping(timeTableCellId, {
             deleteCombinedGroup: deleteCombinedGroup === true || deleteCombinedGroup === 'true',
         });
-        res.status(200).send(result);
+        return SuccessResponse(res, 200, result.message, result);
     } catch (error) {
-        console.error(`Error in deleting time table mapping Id ${timeTableMappingId}:`, error);
-        res.status(500).send("Internal Server Error");
+        console.error(`Error in deleting time table mapping Id ${timeTableCellId}:`, error);
+        const message = error.message || 'Internal Server Error';
+        const statusCode = error.statusCode
+            || (/not found/i.test(message) ? 404 : /starting date|published routine|cannot edit or delete/i.test(message) ? 400 : 500);
+        return ErrorResponse(res, statusCode, message);
     }
 };
 
@@ -206,6 +223,19 @@ export const publishTimeTable = async (req, res) => {
     }
 };
 
+export const deleteTimeTableRoutine = async (req, res) => {
+    try {
+        const { timeTableRoutineId } = req.query;
+        const result = await timeTableCreateServices.deleteTimeTableRoutine(timeTableRoutineId);
+        return SuccessResponse(res, 200, result.message, result);
+    } catch (error) {
+        console.error(`Error in deleting routine ${req.query.timeTableRoutineId}:`, error);
+        const message = error.message || 'Internal Server Error';
+        const statusCode = /not found/i.test(message) ? 404 : /cannot be deleted|cannot be updated|starting date/i.test(message) ? 400 : 500;
+        return ErrorResponse(res, statusCode, message);
+    }
+};
+
 export const ClassSubjectCount = async (req, res) => {
     try {
         const { classSectionTermId } = req.query;
@@ -220,24 +250,70 @@ export const getRoutineByClassSectionId = async (req, res) => {
     const { classSectionTermId } = req.query;
     try {
         const result = await timeTableCreateServices.getRoutineByClassSectionId(classSectionTermId);
-        res.status(200).send(result);
+        SuccessResponse(res, 200, 'Routine fetched successfully', result);
     } catch (error) {
-        console.error("Error in getting routine by class section id:", error);
-        res.status(500).send({ message: "Internal Server Error", error: error.message });
+        ErrorResponse(res, 500, "Internal Server Error");
     }
 };
 
 export const getRoutineByTeacherAndAcademicYear = async (req, res) => {
-    const { employeeId, courseId, sessionId } = req.query;
+    const { userId, courseId, sessionId, subjectId } = req.query;
     try {
         const result = await timeTableCreateServices.getRoutineByTeacherAndAcademicYear(
-            employeeId,
+            userId,
             courseId,
             sessionId,
+            subjectId,
         );
-        res.status(200).send(result);
+        return SuccessResponse(res, 200, 'Teacher routine fetched successfully', result);
     } catch (error) {
-        console.error("Error in getting routine by teacher and academic year:", error);
-        res.status(500).send("Internal Server Error");
+        console.error('Error in getting routine by teacher and academic year:', error);
+        return ErrorResponse(res, 500, error.message || 'Internal Server Error');
+    }
+};
+
+export const getDateWiseCellsBySection = async (req, res) => {
+    const { courseId, sessionId, classSectionTermId, date } = req.query;
+    try {
+        const result = await timeTableCreateServices.getDateWiseCellsBySection(
+            courseId,
+            sessionId,
+            classSectionTermId,
+            { date },
+        );
+        return SuccessResponse(res, 200, 'Date-wise cells fetched successfully', result);
+    } catch (error) {
+        console.error('Error in getting date-wise cells:', error);
+        return ErrorResponse(res, 500, error.message || 'Internal Server Error');
+    }
+};
+
+export const updateDateWiseCellController = async (req, res) => {
+    const {
+        timeTableCellDateWiseId,
+        timeTableCellTeachersDateWiseId,
+        userId,
+        subjectId,
+        electiveSubjectId,
+        classRoomSectionId,
+    } = req.body;
+    const updatedBy = req.user.userId;
+    try {
+        const result = await timeTableCreateServices.updateDateWiseCell(
+            timeTableCellDateWiseId,
+            {
+                timeTableCellTeachersDateWiseId,
+                userId,
+                subjectId,
+                electiveSubjectId,
+                classRoomSectionId,
+            },
+            updatedBy,
+        );
+        return SuccessResponse(res, 200, 'Date-wise cell updated successfully', result);
+    } catch (error) {
+        console.error('Error in updating date-wise cell:', error);
+        const statusCode = /not found|published/i.test(error.message || '') ? 400 : 500;
+        return ErrorResponse(res, statusCode, error.message || 'Internal Server Error');
     }
 };

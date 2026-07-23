@@ -1,7 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import employee from "./employeeModel.js";
 import users from "./userModel.js";
+import employee from "./employeeModel.js";
 
 const faculityLoadModel = sequelize.define(
     'faculity_load',

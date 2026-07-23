@@ -44,6 +44,7 @@ function formatInventoryForResponse(inv) {
     inventoryId: inv.inventoryId,
     libraryBookId: inv.libraryBookId,
     accessionNumber: inv.accessionNumber ?? null,
+    accessionDate: inv.accessionDate ?? null,
     billNo: inv.billNo ?? null,
     billDate: inv.billDate ?? null,
     itemPrice: inv.itemPrice ?? null,
@@ -53,7 +54,7 @@ function formatInventoryForResponse(inv) {
     libraryRackId: inv.libraryRackId ?? null,
     libraryRowId: inv.libraryRowId ?? null,
     studentId: inv.studentId ?? null,
-    employeeId: inv.employeeId ?? null,
+    userId: inv.userId ?? null,
     issueDate: inv.issueDate ?? null,
     dueDate: inv.dueDate ?? null,
     status: inv.status ?? null,
@@ -208,6 +209,7 @@ function mapInventoryCopiesForList(copies) {
   return copies.map((inv) => ({
     inventoryId: inv.inventoryId,
     accessionNumber: inv.accessionNumber ?? null,
+    accessionDate: inv.accessionDate ?? null,
     billNo: inv.billNo ?? null,
     billDate: inv.billDate ?? null,
     status: inv.status ?? null,
@@ -224,6 +226,7 @@ function mapBooksToAllBookList(enrichedBooks) {
     const firstCopy = copies[0] ?? null;
 
     const accessionNumber = collectUniqueInventoryValues(copies, "accessionNumber");
+    const accessionDate = collectUniqueInventoryValues(copies, "accessionDate");
     const billNo = collectUniqueInventoryValues(copies, "billNo");
     const billDate = collectUniqueInventoryValues(copies, "billDate");
 
@@ -235,6 +238,7 @@ function mapBooksToAllBookList(enrichedBooks) {
       categories: book.categories ?? [],
       subjects: book.subjects ?? [],
       accessionNumber,
+      accessionDate,
       billNo,
       billDate,
       status: firstCopy?.status ?? null,
@@ -660,9 +664,10 @@ async function addBookWithInventoryRecord(bookData, inventoryList, createdBy, up
           libraryRowId: inv.libraryRowId,
           status: inv.status ?? "available",
           studentId: inv.studentId ?? null,
-          employeeId: inv.employeeId ?? null,
+          userId: inv.userId ?? null,
           issueDate: inv.issueDate ?? null,
           dueDate: inv.dueDate ?? null,
+          accessionDate: inv.accessionDate == "" ? null : inv.accessionDate,
           billNo: inv.billNo ??  null,
           billDate: inv.billDate == "" ? null : inv.billDate,
           itemPrice: inv.itemPrice ?? null,
@@ -805,7 +810,7 @@ export async function updateInventory(inventoryId, inventoryData, transaction) {
     inventoryData.status = "available";
     inventoryData.dueDate = null;
     inventoryData.studentId = null;
-    inventoryData.employeeId = null;
+    inventoryData.userId = null;
   }
 
   return await libraryCreationService.updateInventory(inventoryId, inventoryData, transaction);

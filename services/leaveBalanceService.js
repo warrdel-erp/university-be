@@ -8,8 +8,8 @@ export async function addBalance(data) {
   }
 }
 
-export async function getBalancesByEmployee(employeeId) {
-  return await repo.getBalancesByEmployee(employeeId);
+export async function getBalancesByEmployee(userId) {
+  return await repo.getBalancesByEmployee(userId);
 }
 
 export async function updateBalance(balanceId, data) {

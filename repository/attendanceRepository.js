@@ -1,10 +1,10 @@
-import { Op, fn, col, where } from "sequelize";
+import { Op, fn, where } from "sequelize";
 import sequelize from "../database/sequelizeConfig.js";
 import * as model from '../models/index.js';
 import moment from "moment";
 import { ATTENDANCE_PRESENT_STATUSES } from "../constant.js";
 import { buildScope, scoped } from "../utility/scoped.js";
-import { classSectionTermsInclude, studentClassSectionTermWithSectionInclude, timeTableRoutineClassSectionInclude } from "../utility/classSectionIncludes.js";
+import { studentClassSectionTermWithSectionInclude, timeTableRoutineClassSectionInclude } from "../utility/classSectionIncludes.js";
 
 export async function addAttendance(attendanceRecords, options = {}) {
     try {
@@ -15,12 +15,11 @@ export async function addAttendance(attendanceRecords, options = {}) {
     }
 };
 
-export async function checkAttendanceExists(timeTableMappingId, date) {
+export async function checkAttendanceExists(timeTableCellDateWiseId) {
     try {
         const count = await scoped(model.attendanceModel).count({
             where: {
-                timeTableMappingId,
-                date: { [Op.eq]: fn("DATE", date) },
+                timeTableCellDateWiseId: Number(timeTableCellDateWiseId),
             },
         });
         return count > 0;
@@ -30,7 +29,7 @@ export async function checkAttendanceExists(timeTableMappingId, date) {
     }
 };
 
-export async function getAttendanceRowsByMappingAndDate(timeTableMappingId, date) {
+export async function getAttendanceRowsByDateWiseId(timeTableCellDateWiseId) {
     try {
         return await scoped(model.attendanceModel).findAll({
             attributes: [
@@ -40,113 +39,129 @@ export async function getAttendanceRowsByMappingAndDate(timeTableMappingId, date
                 'description',
             ],
             where: {
-                timeTableMappingId: Number(timeTableMappingId),
-                date: { [Op.eq]: fn("DATE", date) },
+                timeTableCellDateWiseId: Number(timeTableCellDateWiseId),
             },
             raw: true,
         });
     } catch (error) {
-        console.error("Error in getAttendanceRowsByMappingAndDate:", error);
+        console.error("Error in getAttendanceRowsByDateWiseId:", error);
         throw error;
     }
 };
 
-export async function getNextPeriodsOnSameDay(timeTableRoutineId, day, afterPeriod) {
+export async function getNextDateWisePeriodsOnSameDay(timeTableRoutineId, date, afterPeriod) {
     try {
-        return await model.classScheduleModel.findAll({
+        return await model.timeTableCellDateWiseModel.findAll({
             where: {
-                timeTableRoutineId: Number(timeTableRoutineId),
-                day,
-                period: { [Op.gt]: Number(afterPeriod) },
-                deletedAt: null,
-                isAttendence: true,
+                date,
             },
             attributes: [
-                'timeTableMappingId',
-                'period',
-                'day',
-                'employeeId',
-                'isSameTeacher',
+                'timeTableCellDateWiseId',
+                'timeTableCellId',
+                'date',
+                'classRoomSectionId',
             ],
             include: [
                 {
-                    model: model.timeTableRoutineModel,
-                    as: 'timeTablecreate',
-                    attributes: ['timeTableRoutineId', 'classSectionTermId', 'startingDate', 'endingDate'],
-                    required: true,
-                    include: [
-                        timeTableRoutineClassSectionInclude({
-                            termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
-                            sectionAttributes: ['classSectionsId', 'year', 'section'],
-                        }),
-                    ],
-                },
-                {
-                    model: model.timeTableStructurePeriodsModel,
-                    as: 'timeTablecreation',
-                    attributes: ['periodName', 'startTime', 'endTime', 'isBreak'],
+                    model: model.timeTableCellModel,
+                    as: 'timeTableCell',
                     required: true,
                     where: {
-                        isBreak: false,
+                        timeTableRoutineId: Number(timeTableRoutineId),
+                        period: { [Op.gt]: Number(afterPeriod) },
+                        isAttendence: true,
                     },
-                },
-                {
-                    model: model.subjectModel,
-                    as: 'timeTableSubject',
-                    attributes: ['subjectId', 'subjectName'],
-                },
-                {
-                    model: model.electiveSubjectModel,
-                    as: 'timeTableElective',
-                    attributes: ['electiveSubjectId', 'electiveSubjectName'],
-                },
-                {
-                    model: model.teacherSubjectMappingModel,
-                    as: 'timeTableTeacherSubject',
-                    attributes: ['teacherSubjectMappingId'],
+                    attributes: [
+                        'timeTableCellId',
+                        'period',
+                        'day',
+                        'isSameTeacher',
+                        'subjectId',
+                        'electiveSubjectId',
+                        'teacherSubjectMappingId',
+                        'timeTableRoutineId',
+                    ],
                     include: [
                         {
+                            model: model.timeTableRoutineModel,
+                            as: 'timeTableRoutine',
+                            attributes: ['timeTableRoutineId', 'classSectionTermId', 'startingDate', 'endingDate'],
+                            required: true,
+                            where: buildScope(model.timeTableRoutineModel),
+                            include: [
+                                timeTableRoutineClassSectionInclude({
+                                    termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
+                                    sectionAttributes: ['classSectionsId', 'year', 'section'],
+                                }),
+                            ],
+                        },
+                        {
+                            model: model.timeTableStructurePeriodsModel,
+                            as: 'timeTablecreation',
+                            attributes: ['periodName', 'startTime', 'endTime', 'isBreak'],
+                            required: true,
+                            where: { isBreak: false },
+                        },
+                        {
                             model: model.subjectModel,
-                            as: 'employeeSubject',
+                            as: 'timeTableSubject',
                             attributes: ['subjectId', 'subjectName'],
+                            required: false,
+                        },
+                        {
+                            model: model.electiveSubjectModel,
+                            as: 'timeTableElective',
+                            attributes: ['electiveSubjectId', 'electiveSubjectName'],
+                            required: false,
+                        },
+                        {
+                            model: model.teacherSubjectMappingModel,
+                            as: 'timeTableTeacherSubject',
+                            attributes: ['teacherSubjectMappingId'],
+                            required: false,
+                            include: [
+                                {
+                                    model: model.subjectModel,
+                                    as: 'employeeSubject',
+                                    attributes: ['subjectId', 'subjectName'],
+                                    required: false,
+                                },
+                            ],
                         },
                     ],
                 },
             ],
-            order: [['period', 'ASC']],
-            raw: true,
-            nest: true,
+            order: [[{ model: model.timeTableCellModel, as: 'timeTableCell' }, 'period', 'ASC']],
         });
     } catch (error) {
-        console.error("Error in getNextPeriodsOnSameDay:", error);
+        console.error("Error in getNextDateWisePeriodsOnSameDay:", error);
         throw error;
     }
 };
 
-export async function getMarkedTimeTableMappingIdsOnDate(mappingIds, date) {
+export async function getMarkedDateWiseIds(dateWiseIds) {
     try {
-        const uniqueIds = [...new Set(mappingIds.map((id) => Number(id)).filter(Boolean))];
+        const uniqueIds = [...new Set(dateWiseIds.map((id) => Number(id)).filter(Boolean))];
         if (!uniqueIds.length) {
             return new Set();
         }
 
         const rows = await scoped(model.attendanceModel).findAll({
-            attributes: ['timeTableMappingId'],
+            attributes: ['timeTableCellDateWiseId'],
             where: {
-                timeTableMappingId: { [Op.in]: uniqueIds },
-                date: { [Op.eq]: fn("DATE", date) },
+                timeTableCellDateWiseId: { [Op.in]: uniqueIds },
             },
             raw: true,
         });
 
         const markedIds = new Set();
         for (const row of rows) {
-            markedIds.add(Number(row.timeTableMappingId));
+            markedIds.add(Number(row.timeTableCellDateWiseId));
         }
 
         return markedIds;
     } catch (error) {
-        console.error("Error in getMarkedTimeTableMappingIdsOnDate:", error);
+        console.error("Error in getMarkedDateWiseIds:", error);
         throw error;
     }
 };
@@ -172,44 +187,66 @@ export async function getAttendanceDetails() {
                     attributes: ["firstName", "middleName", "lastName", "scholarNumber"],
                 },
                 {
-                    model: model.classScheduleModel,
-                    as: 'timeTableMapping',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "teacher_subject_mapping_id", "time_table_routine_id", "time_table_creation_id", "class_room_section_id", "elective_subject_id", "subject_id"] },
+                    model: model.timeTableCellDateWiseModel,
+                    as: 'timeTableCellDateWise',
+                    attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date'],
+                    required: false,
                     include: [
                         {
-                            model: model.employeeModel,
-                            as: 'employeeDetails',
-                            attributes: ["employeeId", "campusId", "instituteId", "employeeCode", "employeeName"],
-                        },
-                        {
-                            model: model.electiveSubjectModel,
-                            as: 'timeTableElective',
-                            attributes: ["electiveSubjectName", "electiveSubjectCode"],
-                        },
-                        {
-                            model: model.subjectModel,
-                            as: 'timeTableSubject',
-                            attributes: ["subjectName", "subjectCode"],
-                        },
-                        {
-                            model: model.timeTableRoutineModel,
-                            as: 'timeTablecreate',
-                            attributes: ['classSectionTermId', 'timeTableType'],
-                        },
-                        {
-                            model: model.teacherSubjectMappingModel,
-                            as: 'timeTableTeacherSubject',
-                            attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "deletedAt", "employee_id", "class_subject_mapper_id"] },
+                            model: model.timeTableCellModel,
+                            as: 'timeTableCell',
+                            attributes: [
+                                'timeTableCellId',
+                                'subjectId',
+                                'electiveSubjectId',
+                                'isSameTeacher',
+                                'day',
+                                'period',
+                            ],
                             include: [
                                 {
-                                    model: model.classSubjectMapperModel,
-                                    as: 'employeeSubject',
-                                    attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "deletedAt", "semester_id", "subject_id"] },
+                                    model: model.timeTableCellTeachersModel,
+                                    as: 'timeTableCellTeachers',
+                                    attributes: ['userId', 'teacherType', 'isAttendence'],
+                                    required: false,
+                                    include: [
+                                        {
+                                            model: model.employeeModel,
+                                            as: 'employeeDetails',
+                                            attributes: ['userId', 'campusId', 'instituteId', 'employeeCode', 'employeeName'],
+                                            required: false,
+                                        },
+                                    ],
+                                },
+                                {
+                                    model: model.electiveSubjectModel,
+                                    as: 'timeTableElective',
+                                    attributes: ['electiveSubjectName', 'electiveSubjectCode'],
+                                    required: false,
+                                },
+                                {
+                                    model: model.subjectModel,
+                                    as: 'timeTableSubject',
+                                    attributes: ['subjectName', 'subjectCode', 'subjectId'],
+                                    required: false,
+                                },
+                                {
+                                    model: model.timeTableRoutineModel,
+                                    as: 'timeTableRoutine',
+                                    attributes: ['classSectionTermId', 'timeTableType'],
+                                    required: false,
+                                },
+                                {
+                                    model: model.teacherSubjectMappingModel,
+                                    as: 'timeTableTeacherSubject',
+                                    attributes: ['teacherSubjectMappingId', 'userId'],
+                                    required: false,
                                     include: [
                                         {
                                             model: model.subjectModel,
-                                            as: 'subjects',
-                                            attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "deletedAt"] },
+                                            as: 'employeeSubject',
+                                            attributes: ['subjectId', 'subjectName', 'subjectCode'],
+                                            required: false,
                                         },
                                     ],
                                 },
@@ -253,7 +290,7 @@ export async function addImportAttendance(attendanceRecords) {
     }
 };
 
-export async function getAttendanceByDate(date, classSectionTermId, employeeId) {
+export async function getAttendanceByDate(date, classSectionTermId, userId) {
     try {
         const attendanceDetails = await scoped(model.attendanceModel).findAll({
             attributes: {
@@ -311,8 +348,8 @@ export async function getAttendanceByDate(date, classSectionTermId, employeeId) 
         });
 
         const employee = await scoped(model.employeeModel).findOne({
-            where: { employeeId },
-            attributes: ['employeeId'],
+            where: { userId },
+            attributes: ['userId'],
         });
 
         const subjectDetail = employee
@@ -326,7 +363,7 @@ export async function getAttendanceByDate(date, classSectionTermId, employeeId) 
                         "updatedBy",
                     ],
                 },
-                where: { employeeId },
+                where: { userId },
                 include: [
                     {
                         model: model.classSubjectMapperModel,
@@ -392,70 +429,99 @@ export async function getTimetable(timeTableRoutineId) {
     });
 }
 
-export async function getAttendanceMap(mappingIds, from, to) {
-    if (!mappingIds.length) {
-        return {};
-    }
-
+export async function getAttendanceMap({ dateWiseIds = [], mappingIds = [], from, to } = {}) {
+    const map = {};
     const dateCol = sequelize.col("date");
 
-    const rows = await scoped(model.attendanceModel).findAll({
-        attributes: [
-            "timeTableMappingId",
-            [fn("DATE", dateCol), "attendanceDate"],
-            [fn("COUNT", sequelize.col("student_id")), "presentCount"],
-        ],
-        where: {
-            timeTableMappingId: mappingIds,
-            attendanceStatus: { [Op.in]: ATTENDANCE_PRESENT_STATUSES },
-            [Op.and]: [
-                where(fn("DATE", dateCol), { [Op.gte]: from }),
-                where(fn("DATE", dateCol), { [Op.lte]: to }),
+    if (dateWiseIds.length) {
+        const rows = await scoped(model.attendanceModel).findAll({
+            attributes: [
+                "timeTableCellDateWiseId",
+                [fn("COUNT", sequelize.col("student_id")), "presentCount"],
             ],
-        },
-        group: ["timeTableMappingId", fn("DATE", dateCol)],
-        raw: true,
-    });
+            where: {
+                timeTableCellDateWiseId: { [Op.in]: dateWiseIds },
+                attendanceStatus: { [Op.in]: ATTENDANCE_PRESENT_STATUSES },
+            },
+            group: ["timeTableCellDateWiseId"],
+            raw: true,
+        });
+        for (const r of rows) {
+            map[`dw:${r.timeTableCellDateWiseId}`] = Number(r.presentCount);
+        }
+    }
 
-    const map = {};
-    for (const r of rows) {
-        const dateKey = moment(r.attendanceDate).format("YYYY-MM-DD");
-        const key = `${r.timeTableMappingId}_${dateKey}`;
-        map[key] = Number(r.presentCount);
+    if (mappingIds.length && from && to) {
+        const rows = await scoped(model.attendanceModel).findAll({
+            attributes: [
+                "timeTableCellId",
+                [fn("DATE", dateCol), "attendanceDate"],
+                [fn("COUNT", sequelize.col("student_id")), "presentCount"],
+            ],
+            where: {
+                timeTableCellId: { [Op.in]: mappingIds },
+                timeTableCellDateWiseId: null,
+                attendanceStatus: { [Op.in]: ATTENDANCE_PRESENT_STATUSES },
+                [Op.and]: [
+                    where(fn("DATE", dateCol), { [Op.gte]: from }),
+                    where(fn("DATE", dateCol), { [Op.lte]: to }),
+                ],
+            },
+            group: ["timeTableCellId", fn("DATE", dateCol)],
+            raw: true,
+        });
+        for (const r of rows) {
+            const dateKey = moment(r.attendanceDate).format("YYYY-MM-DD");
+            map[`m:${r.timeTableCellId}_${dateKey}`] = Number(r.presentCount);
+        }
     }
 
     return map;
 }
 
-export async function getAttendanceMarkedMap(mappingIds, from, to) {
-    if (!mappingIds.length) {
-        return {};
-    }
-
+export async function getAttendanceMarkedMap({ dateWiseIds = [], mappingIds = [], from, to } = {}) {
+    const map = {};
     const dateCol = sequelize.col("date");
 
-    const rows = await scoped(model.attendanceModel).findAll({
-        attributes: [
-            "timeTableMappingId",
-            [fn("DATE", dateCol), "attendanceDate"],
-            [fn("COUNT", sequelize.col("student_id")), "markedCount"],
-        ],
-        where: {
-            timeTableMappingId: mappingIds,
-            [Op.and]: [
-                where(fn("DATE", dateCol), { [Op.gte]: from }),
-                where(fn("DATE", dateCol), { [Op.lte]: to }),
+    if (dateWiseIds.length) {
+        const rows = await scoped(model.attendanceModel).findAll({
+            attributes: [
+                "timeTableCellDateWiseId",
+                [fn("COUNT", sequelize.col("student_id")), "markedCount"],
             ],
-        },
-        group: ["timeTableMappingId", fn("DATE", dateCol)],
-        raw: true,
-    });
+            where: {
+                timeTableCellDateWiseId: { [Op.in]: dateWiseIds },
+            },
+            group: ["timeTableCellDateWiseId"],
+            raw: true,
+        });
+        for (const r of rows) {
+            map[`dw:${r.timeTableCellDateWiseId}`] = Number(r.markedCount);
+        }
+    }
 
-    const map = {};
-    for (const r of rows) {
-        const dateKey = moment(r.attendanceDate).format("YYYY-MM-DD");
-        const key = `${r.timeTableMappingId}_${dateKey}`;
-        map[key] = Number(r.markedCount);
+    if (mappingIds.length && from && to) {
+        const rows = await scoped(model.attendanceModel).findAll({
+            attributes: [
+                "timeTableCellId",
+                [fn("DATE", dateCol), "attendanceDate"],
+                [fn("COUNT", sequelize.col("student_id")), "markedCount"],
+            ],
+            where: {
+                timeTableCellId: { [Op.in]: mappingIds },
+                timeTableCellDateWiseId: null,
+                [Op.and]: [
+                    where(fn("DATE", dateCol), { [Op.gte]: from }),
+                    where(fn("DATE", dateCol), { [Op.lte]: to }),
+                ],
+            },
+            group: ["timeTableCellId", fn("DATE", dateCol)],
+            raw: true,
+        });
+        for (const r of rows) {
+            const dateKey = moment(r.attendanceDate).format("YYYY-MM-DD");
+            map[`m:${r.timeTableCellId}_${dateKey}`] = Number(r.markedCount);
+        }
     }
 
     return map;
@@ -470,61 +536,83 @@ export async function getStudentCount(classSectionsId) {
     });
 };
 
-export async function getTeacherMappings(employeeId) {
-    const employee = await scoped(model.employeeModel).findOne({
-        where: { employeeId },
-        attributes: ['employeeId'],
-    });
-    if (!employee) {
-        return [];
-    }
-
-    return await model.classScheduleModel.findAll({
-        where: {
-            [Op.or]: [
-                { employeeId },
-                { "$timeTableTeacherSubject.employee_id$": employeeId },
-            ],
-        },
+export async function getTeacherDateWiseSessions(userId) {
+    return model.timeTableCellDateWiseModel.findAll({
+        attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
         include: [
             {
-                model: model.teacherSubjectMappingModel,
-                as: "timeTableTeacherSubject",
-                required: false,
-            },
-            {
-                model: model.subjectModel,
-                as: "timeTableSubject",
-                required: false,
-            },
-            {
-                model: model.timeTableRoutineModel,
-                as: "timeTablecreate",
+                model: model.timeTableCellTeachersDateWiseModel,
+                as: 'timeTableCellTeachersDateWise',
                 required: true,
-                where: buildScope(model.timeTableRoutineModel),
+                where: { userId: Number(userId) },
+                attributes: ['userId', 'teacherType', 'isAttendence'],
+            },
+            {
+                model: model.timeTableCellModel,
+                as: 'timeTableCell',
+                required: true,
+                attributes: [
+                    'timeTableCellId',
+                    'period',
+                    'day',
+                    'subjectId',
+                    'electiveSubjectId',
+                    'isSameTeacher',
+                    'timeTableRoutineId',
+                ],
                 include: [
                     {
-                        model: model.classSectionModel,
-                        as: "timeTableClassSection",
+                        model: model.timeTableRoutineModel,
+                        as: 'timeTableRoutine',
+                        required: true,
+                        attributes: [
+                            'timeTableRoutineId',
+                            'classSectionTermId',
+                            'startingDate',
+                            'endingDate',
+                        ],
+                        where: {
+                            is_publish: true,
+                            ...buildScope(model.timeTableRoutineModel),
+                        },
+                        include: [
+                            timeTableRoutineClassSectionInclude({
+                                termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
+                                sectionAttributes: ['classSectionsId', 'year', 'section'],
+                            }),
+                        ],
+                    },
+                    {
+                        model: model.timeTableStructurePeriodsModel,
+                        as: 'timeTablecreation',
+                        required: true,
+                        attributes: ['periodName', 'startTime', 'endTime', 'isBreak'],
+                        where: { isBreak: false },
+                    },
+                    {
+                        model: model.subjectModel,
+                        as: 'timeTableSubject',
+                        attributes: ['subjectId', 'subjectName'],
                         required: false,
-                        include: [classSectionTermsInclude()],
+                    },
+                    {
+                        model: model.electiveSubjectModel,
+                        as: 'timeTableElective',
+                        attributes: ['electiveSubjectId', 'electiveSubjectName'],
+                        required: false,
                     },
                 ],
             },
-            {
-                model: model.timeTableStructurePeriodsModel,
-                as: "timeTablecreation",
-                required: true,
-            },
         ],
+        order: [['date', 'DESC']],
     });
-};
+}
 
-export async function getStudentAttendanceReport(classSectionsId, subjectId, employeeId) {
+export async function getStudentAttendanceReport(classSectionsId, subjectId, userId) {
     try {
         const employee = await scoped(model.employeeModel).findOne({
-            where: { employeeId },
-            attributes: ['employeeId'],
+            where: { userId },
+            attributes: ['userId'],
         });
         if (!employee) {
             return [];
@@ -538,25 +626,35 @@ export async function getStudentAttendanceReport(classSectionsId, subjectId, emp
                     model: model.attendanceModel,
                     as: 'studentAttendance',
                     required: false,
-                    attributes: ['attendanceId', 'date', 'attendanceStatus'],
+                    attributes: ['attendanceId', 'date', 'attendanceStatus', 'timeTableCellDateWiseId'],
                     include: [
                         {
-                            model: model.classScheduleModel,
-                            as: 'timeTableMapping',
+                            model: model.timeTableCellDateWiseModel,
+                            as: 'timeTableCellDateWise',
                             required: true,
-                            where: {
-                                employeeId,
-                                subjectId,
-                            },
-                            attributes: ['timeTableMappingId'],
+                            attributes: ['timeTableCellDateWiseId', 'date'],
                             include: [
                                 {
-                                    model: model.timeTableStructurePeriodsModel,
-                                    as: 'timeTablecreation',
-                                    attributes: ['timeTableCreationId', 'periodName'],
-                                    where: {
-                                        isBreak: false,
-                                    },
+                                    model: model.timeTableCellTeachersDateWiseModel,
+                                    as: 'timeTableCellTeachersDateWise',
+                                    required: true,
+                                    where: { userId: Number(userId) },
+                                    attributes: ['userId'],
+                                },
+                                {
+                                    model: model.timeTableCellModel,
+                                    as: 'timeTableCell',
+                                    required: true,
+                                    where: { subjectId: Number(subjectId) },
+                                    attributes: ['timeTableCellId', 'subjectId', 'period'],
+                                    include: [
+                                        {
+                                            model: model.timeTableStructurePeriodsModel,
+                                            as: 'timeTablecreation',
+                                            attributes: ['timeTableCreationId', 'periodName'],
+                                            where: { isBreak: false },
+                                        },
+                                    ],
                                 },
                             ],
                         },
@@ -569,47 +667,6 @@ export async function getStudentAttendanceReport(classSectionsId, subjectId, emp
         throw error;
     }
 };
-
-export async function getEmployeeScheduleWithRoutine(classSectionTermId, subjectId, employeeId) {
-    try {
-        const employee = await scoped(model.employeeModel).findOne({
-            where: { employeeId },
-            attributes: ['employeeId'],
-        });
-        if (!employee) {
-            return [];
-        }
-
-        return await model.classScheduleModel.findAll({
-            where: {
-                subjectId,
-                employeeId,
-                deletedAt: null,
-            },
-            include: [
-                {
-                    model: model.timeTableRoutineModel,
-                    as: 'timeTablecreate',
-                    attributes: ['timeTableRoutineId', 'startingDate', 'endingDate', 'classSectionTermId'],
-                    required: true,
-                    where: {
-                        classSectionTermId: Number(classSectionTermId),
-                        ...buildScope(model.timeTableRoutineModel),
-                    },
-                },
-                {
-                    model: model.timeTableStructurePeriodsModel,
-                    as: 'timeTablecreation',
-                    attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime'],
-                    required: true,
-                },
-            ],
-        });
-    } catch (error) {
-        console.error("Error in getEmployeeScheduleWithRoutine:", error);
-        throw error;
-    }
-}
 
 export async function getStudentsBatchAttendance(classSectionTermId, filters) {
     try {
@@ -624,11 +681,16 @@ export async function getStudentsBatchAttendance(classSectionTermId, filters) {
                     model: model.attendanceModel,
                     as: 'studentAttendance',
                     required: false,
-                    attributes: ['attendanceId', 'date', 'attendanceStatus', 'timeTableMappingId'],
+                    attributes: [
+                        'attendanceId',
+                        'date',
+                        'attendanceStatus',
+                        'timeTableCellDateWiseId',
+                        'timeTableCellId',
+                    ],
                     where: {
-                        [Op.or]: filters.map(f => ({
-                            date: { [Op.eq]: fn("DATE", f.date) },
-                            timeTableMappingId: f.timeTableMappingId,
+                        [Op.or]: filters.map((f) => ({
+                            timeTableCellDateWiseId: Number(f.timeTableCellDateWiseId),
                         })),
                     },
                 },
@@ -672,7 +734,7 @@ export async function getStudentsByIds(studentIds) {
     }
 }
 
-export async function getDetailsByTerm(classSectionTermId, subjectId, employeeId) {
+export async function getDetailsByTerm(classSectionTermId, subjectId, userId) {
     try {
         const [termDetails, subjectDetails, employeeDetails] = await Promise.all([
             scoped(model.classSectionTermModel).findOne({
@@ -692,7 +754,7 @@ export async function getDetailsByTerm(classSectionTermId, subjectId, employeeId
                 attributes: ['subjectName', 'subjectCode'],
             }),
             scoped(model.employeeModel).findOne({
-                where: { employeeId, deletedAt: null },
+                where: { userId, deletedAt: null },
                 attributes: ['employeeName', 'employeeCode'],
             }),
         ]);

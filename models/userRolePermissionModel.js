@@ -1,11 +1,10 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import role from './roleModel.js';
-import permission from './permissionModel.js';
 import user from './userModel.js';
 
 const userRolePermissionModel = sequelize.define(
-    'user_role_permission',
+    'user_role_permission_scope',
     {
         userRolePermissionId: {
             type: DataTypes.INTEGER,
@@ -15,21 +14,29 @@ const userRolePermissionModel = sequelize.define(
         },
         roleId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'role_id',
             references: {
                 model: role,
                 key: 'role_id'
             }
         },
-        permissionId: {
-            type: DataTypes.INTEGER,
+        permission: {
+            type: DataTypes.STRING,
             allowNull: false,
-            field: 'permission_id',
-            references: {
-                model: permission,
-                key: 'permission_id'
-            }
+            comment: 'Permission key from const/permissions.js (e.g. perm_3pvhh7qk)'
+        },
+        scope: {
+            type: DataTypes.ENUM('OWN', 'CLASS', 'DEPARTMENT', 'INSTITUTE', 'CAMPUS', 'UNIVERSITY'),
+            allowNull: false,
+            defaultValue: 'INSTITUTE',
+            comment: 'Scope level from const/scopes.js'
+        },
+        resourceId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'resource_id',
+            comment: 'The specific ID of the resource (Institute ID, Department ID, etc.) determined by the scope.'
         },
         userId: {
             type: DataTypes.INTEGER,
@@ -59,9 +66,9 @@ const userRolePermissionModel = sequelize.define(
         }
     },
     {
-        tableName: 'user_role_permission',
+        tableName: 'user_role_permission_scope',
         timestamps: true,
-        paranoid: true
+        paranoid: false
     }
 );
 

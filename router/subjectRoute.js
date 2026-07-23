@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { getAllSubjects, setSubjectTerms, getSubjectsWithExamSchedule } from '../controllers/subjectController.js';
 import { getSubjectsWithWeightages } from '../controllers/subjectWeightageController.js';
 import userAuth from '../middleware/authUser.js';
+import { checkAccess } from '../middleware/checkAccess.js';
+import { PERMISSIONS } from '../const/permissions.js';
 import { validate } from '../utility/validation.js';
 
 const router = Router();
@@ -27,10 +29,10 @@ const subjectWeightageListSchema = z.object({
 
 router.get('/', userAuth, validate({ query: getAllSubjectsQuerySchema }), getAllSubjects);
 
-router.post('/addTerms', userAuth, validate({ body: setSubjectTermsSchema }), setSubjectTerms);
+router.post('/addTerms', userAuth, checkAccess(PERMISSIONS.SEMESTER_SUBJECT_MAPPING_ASSIGN.value, null), validate({ body: setSubjectTermsSchema }), setSubjectTerms);
 
 router.get('/withExamSchedule', userAuth, validate({ query: subjectsWithScheduleQuerySchema }), getSubjectsWithExamSchedule);
 
-router.get('/withWeightages', userAuth, validate({ query: subjectWeightageListSchema }), getSubjectsWithWeightages);
+router.get('/withWeightages', userAuth, checkAccess(PERMISSIONS.ASSIGN_WEIGHTAGE.value, null), validate({ query: subjectWeightageListSchema }), getSubjectsWithWeightages);
 
 export default router;

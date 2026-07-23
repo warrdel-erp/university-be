@@ -41,9 +41,9 @@ function assertUniqueInventoryIdsInPayload(inventoryItems) {
 
 function buildMemberInventoryFields(memberId, memberType) {
   if (memberType === "STUDENT") {
-    return { studentId: memberId, employeeId: null };
+    return { studentId: memberId, userId: null };
   }
-  return { studentId: null, employeeId: memberId };
+  return { studentId: null, userId: memberId };
 }
 
 async function assertMemberExists(memberId, memberType, transaction) {

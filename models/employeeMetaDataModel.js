@@ -1,66 +1,66 @@
-import sequelize from "../database/sequelizeConfig.js"
-import { DataTypes } from 'sequelize';
+import sequelize from "../database/sequelizeConfig.js";
+import { DataTypes } from "sequelize";
 import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 import employeeCodeMaster from "./employeeCodeMasterModel.js";
 import employee from "./employeeModel.js";
-import users from "./userModel.js"
+import users from "./userModel.js";
 
 const employeeMetaDataModel = sequelize.define(
-  'employee_meta_data',
+  "employee_meta_data",
   {
     employeeMetaDataId: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
-        field: 'employee_meta_data_id'
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+      field: "employee_meta_data_id",
     },
     types: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        field: 'types',
-        references: {
-            model: employeeCodeMasterType,
-            key: 'employee_code_master_type_id'
-        }
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: "types",
+      references: {
+        model: employeeCodeMasterType,
+        key: "employee_code_master_type_id",
+      },
     },
     codes: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        field: 'codes',
-        references: {
-            model: employeeCodeMaster,
-            key: 'employee_code_master_id'
-        }
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: "codes",
+      references: {
+        model: employeeCodeMaster,
+        key: "employee_code_master_id",
+      },
     },
-    employeeId: { 
-        type: DataTypes.INTEGER,
-        allowNull:false,
-        field: 'employee_id',
-        references:{
-            model :employee,
-            key:'employee_id'
-        }
+    employeeId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: "employee_id",
+      references: {
+        model: employee,
+        key: "employee_id",
+      },
     },
     createdAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
-        field:'created_at',
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
+      field: "created_at",
     },
     updatedAt: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
-        field:'updated_at',
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
+      field: "updated_at",
     },
     createdBy: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        field: 'created_by',
-        references: {
-            model: users,
-            key: 'user_id'
-        }
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: "created_by",
+      references: {
+        model: users,
+        key: "user_id",
+      },
     },
     // updatedBy: {
     //     type: DataTypes.INTEGER,
@@ -72,22 +72,22 @@ const employeeMetaDataModel = sequelize.define(
     //     }
     // },
     deletedAt: {
-        type: DataTypes.DATE,
-        allowNull: true,
-        field: 'deleted_at'
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: "deleted_at",
     },
-},  
-{
-    tableName: 'employee_meta_data',
+  },
+  {
+    tableName: "employee_meta_data",
     timestamps: true,
-    paranoid:true,
+    paranoid: true,
     indexes: [
-        {
-          unique: true,
-          fields: ['employee_id', 'types', 'codes']
-        }
-    ]
-},
+      {
+        unique: true,
+        fields: ["employee_id", "types", "codes"],
+      },
+    ],
+  },
 );
 
 employeeMetaDataModel.scopeConfig = { university: false, institute: false, academicYear: false };

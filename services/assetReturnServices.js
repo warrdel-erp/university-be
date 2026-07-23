@@ -181,7 +181,7 @@ function resolvePayeeDetails(payeeType, payeeId, studentMap, employeeMap) {
 
 async function loadPayeeLookupMaps(paymentRows) {
   const studentIds = [];
-  const employeeIds = [];
+  const userIds = [];
 
   for (const row of paymentRows) {
     const payment = toPlain(row)?.payment;
@@ -191,18 +191,18 @@ async function loadPayeeLookupMaps(paymentRows) {
     if (payment.payeeType === "STUDENT") {
       studentIds.push(payment.payeeId);
     } else {
-      employeeIds.push(payment.payeeId);
+      userIds.push(payment.payeeId);
     }
   }
 
   const [studentRows, employeeRows] = await Promise.all([
     issueRepo.findStudentMemberDetailsByIds([...new Set(studentIds)]),
-    issueRepo.findEmployeeMemberDetailsByIds([...new Set(employeeIds)]),
+    issueRepo.findEmployeeMemberDetailsByIds([...new Set(userIds)]),
   ]);
 
   return {
     studentMap: new Map(studentRows.map((row) => [toPlain(row).studentId, row])),
-    employeeMap: new Map(employeeRows.map((row) => [toPlain(row).employeeId, row])),
+    employeeMap: new Map(employeeRows.map((row) => [toPlain(row).userId, row])),
   };
 }
 

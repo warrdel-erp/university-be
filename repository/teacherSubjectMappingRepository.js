@@ -1,4 +1,4 @@
-import { Op } from 'sequelize';
+import { Op, Sequelize } from 'sequelize';
 import * as model from '../models/index.js';
 import { buildScope, scoped } from '../utility/scoped.js';
 import { getAcademicYearId } from '../utility/requestContext.js';
@@ -14,10 +14,10 @@ export function teacherSubjectWhere(subjectIds) {
     return { subjectId: { [Op.in]: subjectIds } };
 }
 
-async function findEmployeeInInstitute(employeeId) {
+async function findEmployeeInInstitute(userId) {
     return scoped(model.employeeModel).findOne({
-        where: { employeeId },
-        attributes: ['employeeId'],
+        where: { userId },
+        attributes: ['userId'],
     });
 }
 
@@ -94,14 +94,14 @@ function teacherSubjectRowMatchesSearch(row, search) {
 async function findTeacherSubjectMappingInInstitute(teacherSubjectMappingId) {
     return scoped(model.teacherSubjectMappingModel).findOne({
         where: { teacherSubjectMappingId },
-        attributes: ['teacherSubjectMappingId', 'employeeId', 'subjectId'],
+        attributes: ['teacherSubjectMappingId', 'userId', 'subjectId'],
         include: [
             {
                 model: model.employeeModel,
                 as: 'teacherEmployeeData',
                 where: buildScope(model.employeeModel),
                 required: true,
-                attributes: ['employeeId'],
+                attributes: ['userId'],
             },
             {
                 model: model.subjectModel,
@@ -114,18 +114,18 @@ async function findTeacherSubjectMappingInInstitute(teacherSubjectMappingId) {
     });
 }
 
-async function findExistingTeacherSubjectMapping(employeeId, subjectId) {
+async function findExistingTeacherSubjectMapping(userId, subjectId) {
     return scoped(model.teacherSubjectMappingModel).findOne({
-        where: { employeeId, subjectId },
-        attributes: ['teacherSubjectMappingId', 'employeeId', 'subjectId'],
+        where: { userId, subjectId },
+        attributes: ['teacherSubjectMappingId', 'userId', 'subjectId'],
     });
 }
 
 export async function teacherSubjectMapping(data) {
     try {
-        const employee = await findEmployeeInInstitute(data.employeeId);
+        const employee = await findEmployeeInInstitute(data.userId);
         if (!employee) {
-            throw new Error(`Employee ID ${data.employeeId} not found`);
+            throw new Error(`Employee ID ${data.userId} not found`);
         }
 
         const subject = await findSubjectInInstitute(data.subjectId);
@@ -133,7 +133,7 @@ export async function teacherSubjectMapping(data) {
             throw new Error(`Subject ID ${data.subjectId} not found`);
         }
 
-        const existing = await findExistingTeacherSubjectMapping(data.employeeId, data.subjectId);
+        const existing = await findExistingTeacherSubjectMapping(data.userId, data.subjectId);
         if (existing) {
             const error = new Error(
                 `Teacher is already mapped to subject ${data.subjectId}`,
@@ -150,43 +150,96 @@ export async function teacherSubjectMapping(data) {
 }
 
 export async function getTeacherSubjectMapping({
-    employeeId,
+    userId,
     subjectId,
     sessionId,
-    academicYearId = getAcademicYearId(),
     search,
     page = 1,
     limit = 20,
 } = {}) {
     try {
-        const subjectIds = academicYearId != null || sessionId != null
-            ? await resolveSubjectIdsForTeacherFilters({ academicYearId, sessionId })
+        const yearId = getAcademicYearId();
+
+        const subjectIds = yearId != null || sessionId != null
+            ? await resolveSubjectIdsForTeacherFilters({ academicYearId: yearId, sessionId })
             : null;
 
-        const teacherWhere = {
-            ...(employeeId && { employeeId }),
-            ...buildScope(model.employeeModel),
-        };
-
-        const teachers = await scoped(model.employeeModel).findAll({
-            where: teacherWhere,
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+        // All mapped teachers for the year (even if they have no Teacher role row).
+        const mappedUserRows = await scoped(model.teacherSubjectMappingModel).findAll({
+            attributes: ['userId'],
+            where: {
+                ...(userId && { userId }),
+                ...teacherSubjectWhere(subjectIds),
+            },
             include: [
                 {
-                    model: model.userModel,
-                    as: 'user',
+                    model: model.subjectModel,
+                    as: 'employeeSubject',
+                    attributes: [],
+                    where: {
+                        ...(subjectId && { subjectId }),
+                        ...(yearId != null && { academicYearId: yearId }),
+                        ...buildScope(model.subjectModel),
+                    },
+                    required: true,
+                },
+            ],
+        });
+
+        const mappedUserIds = [];
+        for (const row of mappedUserRows) {
+            const id = Number(row.userId);
+            if (!mappedUserIds.includes(id)) {
+                mappedUserIds.push(id);
+            }
+        }
+
+        // Also include employees marked Teacher via employee.role_id (assignment UI).
+        const roleTeacherRows = await scoped(model.employeeModel).findAll({
+            attributes: ['userId'],
+            where: {
+                ...(userId && { userId }),
+                ...buildScope(model.employeeModel),
+            },
+            include: [
+                {
+                    model: model.roleModel,
+                    as: 'employeeRole',
                     attributes: [],
                     required: true,
-                    include: [
-                        {
-                            model: model.userRoleModel,
-                            as: 'userRoles',
-                            attributes: [],
-                            where: { role: ROLES.TEACHER },
-                            required: true,
-                        },
-                    ],
+                    where: Sequelize.where(
+                        Sequelize.fn('UPPER', Sequelize.col('employeeRole.role')),
+                        ROLES.TEACHER,
+                    ),
                 },
+            ],
+        });
+
+        const teacherUserIds = [...mappedUserIds];
+        for (const row of roleTeacherRows) {
+            const id = Number(row.userId);
+            if (!teacherUserIds.includes(id)) {
+                teacherUserIds.push(id);
+            }
+        }
+
+        if (!teacherUserIds.length) {
+            return {
+                result: [],
+                totalCount: 0,
+                page,
+                limit,
+                totalPages: 0,
+            };
+        }
+
+        const teachers = await scoped(model.employeeModel).findAll({
+            where: {
+                userId: { [Op.in]: teacherUserIds },
+                ...buildScope(model.employeeModel),
+            },
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+            include: [
                 {
                     model: model.instituteModel,
                     as: 'employeeInstitute',
@@ -207,11 +260,9 @@ export async function getTeacherSubjectMapping({
             };
         }
 
-        const teacherIds = teachers.map((t) => t.employeeId);
-
         const rows = await scoped(model.teacherSubjectMappingModel).findAll({
             where: {
-                employeeId: teacherIds,
+                userId: teachers.map((t) => t.userId),
                 ...teacherSubjectWhere(subjectIds),
             },
             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
@@ -229,7 +280,7 @@ export async function getTeacherSubjectMapping({
                     attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                     where: {
                         ...(subjectId && { subjectId }),
-                        ...(academicYearId != null && { academicYearId }),
+                        ...(yearId != null && { academicYearId: yearId }),
                         ...buildScope(model.subjectModel),
                     },
                     required: true,
@@ -250,12 +301,12 @@ export async function getTeacherSubjectMapping({
         const groupsByKey = rows.reduce((acc, relation) => {
             const plain = relation.get({ plain: true });
             const courseId = plain?.employeeSubject?.courseId ?? 'none';
-            const empId = plain.employeeId;
+            const empId = plain.userId;
             const key = `${empId}_${courseId}`;
 
             if (!acc[key]) {
                 acc[key] = {
-                    employeeId: empId,
+                    userId: empId,
                     createdBy: plain.createdBy,
                     subjects: [],
                 };
@@ -271,19 +322,19 @@ export async function getTeacherSubjectMapping({
 
         let allGrouped = teachers.flatMap((teacher) => {
             const plainTeacher = teacher.get({ plain: true });
-            const empId = plainTeacher.employeeId;
+            const empId = plainTeacher.userId;
             const empGroupKeys = Object.keys(groupsByKey).filter((k) => k.startsWith(`${empId}_`));
 
             if (!empGroupKeys.length) {
                 return [{
-                    employeeId: empId,
+                    userId: empId,
                     teacherEmployeeData: plainTeacher,
                     employeeSubject: [],
                 }];
             }
 
             return empGroupKeys.map((key) => ({
-                employeeId: empId,
+                userId: empId,
                 createdBy: groupsByKey[key].createdBy,
                 teacherEmployeeData: plainTeacher,
                 employeeSubject: groupsByKey[key].subjects,
@@ -318,10 +369,10 @@ export async function updateTeachersSubjectMapping(teacherSubjectMappingId, info
             throw new Error('Mapping not found');
         }
 
-        if (info.employeeId != null) {
-            const employee = await findEmployeeInInstitute(info.employeeId);
+        if (info.userId != null) {
+            const employee = await findEmployeeInInstitute(info.userId);
             if (!employee) {
-                throw new Error(`Employee ID ${info.employeeId} not found`);
+                throw new Error(`Employee ID ${info.userId} not found`);
             }
         }
 

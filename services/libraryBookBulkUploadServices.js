@@ -22,7 +22,7 @@ const BULK_BOOK_FIELDS = [
 /** Columns written to library_book_inventory table (one row per Excel line). */
 const BULK_INVENTORY_FIELDS = [
   "accessionNumber", "libraryAisleId", "libraryRackId", "libraryRowId", "studentId",
-  "employeeId", "issueDate", "dueDate", "status", "billNo", "billDate",
+  "userId", "issueDate", "dueDate", "status", "billNo", "billDate", "accessionDate",
   "itemPrice", "netPrice", "currency", "condition",
 ];
 
@@ -30,11 +30,11 @@ const BULK_INVENTORY_FIELDS = [
 const BULK_NUMBER_FIELDS = [
   "libraryCreationId", "libraryFloorId", "yearOfPublication", "numberOfPages",
   "classSectionsId", "libraryAisleId", "libraryRackId", "libraryRowId",
-  "studentId", "employeeId", "itemPrice", "netPrice",
+  "studentId", "userId", "itemPrice", "netPrice",
 ];
 
 /** Fields passed through parseCustomDate (supports Excel date serials / strings). */
-const BULK_DATE_FIELDS = ["billDate", "issueDate", "dueDate"];
+const BULK_DATE_FIELDS = ["billDate", "accessionDate", "issueDate", "dueDate"];
 
 /**
  * Excel headers "Aisle", "Rack", "Row" hold location *names*, not IDs.
@@ -110,7 +110,7 @@ const BULK_INVENTORY_FIELD_ALIASES = {
     "scholar number",
     "Scholar Number",
   ],
-  employeeId: [
+  userId: [
     "employeeid",
     "EmployeeId",
     "EMPLOYEEID",
@@ -150,6 +150,13 @@ const BULK_INVENTORY_FIELD_ALIASES = {
     "BILLDATE",
     "bill date",
     "Bill Date",
+  ],
+  accessionDate: [
+    "accessiondate",
+    "AccessionDate",
+    "ACCESSIONDATE",
+    "accession date",
+    "Accession Date",
   ],
   itemPrice: [
     "itemprice",
@@ -805,21 +812,21 @@ async function buildBulkUploadNewBookRecord(
   const subjectId =
     rawSubjectId !== undefined && rawSubjectId !== null
       ? await resolveBulkUploadSubjectIds(
-          rawSubjectId,
-          subjectNameToIdMap,
-          excelRowNumber,
-          transaction,
-        )
+        rawSubjectId,
+        subjectNameToIdMap,
+        excelRowNumber,
+        transaction,
+      )
       : null;
 
   const categoryId =
     rawCategoryId !== undefined && rawCategoryId !== null
       ? await resolveBulkUploadCategoryIds(
-          rawCategoryId,
-          categoryNameToIdMap,
-          excelRowNumber,
-          transaction,
-        )
+        rawCategoryId,
+        categoryNameToIdMap,
+        excelRowNumber,
+        transaction,
+      )
       : null;
 
   return {
@@ -1139,7 +1146,7 @@ function parseAndValidateBulkUploadExcelRows(excelRows) {
       result: {
         status: "error",
         message:
-          "Excel file has no valid data rows. Row 1 must be headers (accessionNumber, title, authors, publisher, billDate, ...) and data from row 2 onward.",
+          "Excel file has no valid data rows. Row 1 must be headers (accessionNumber, title, authors, publisher, accessionDate, billDate, ...) and data from row 2 onward.",
       },
     };
   }

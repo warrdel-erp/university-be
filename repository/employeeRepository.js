@@ -1,4 +1,4 @@
-import { Op, Sequelize } from 'sequelize';
+import { Op } from 'sequelize';
 import * as model from '../models/index.js';
 import { buildScope, scoped } from '../utility/scoped.js';
 import {
@@ -8,8 +8,8 @@ import {
 
 async function assertScopedEmployee(employeeId, options = {}) {
     return scoped(model.employeeModel).findOne({
-        where: { employeeId },
-        attributes: ['employeeId'],
+        where: { userId: employeeId },
+        attributes: ['userId', 'employeeId'],
         transaction: options.transaction,
     });
 }
@@ -17,8 +17,8 @@ async function assertScopedEmployee(employeeId, options = {}) {
 export async function resolveEmployeeIdForAuth({ userId, employeeId } = {}) {
     if (employeeId != null && employeeId !== '') {
         const row = await scoped(model.employeeModel).findOne({
-            where: { employeeId: Number(employeeId) },
-            attributes: ['employeeId', 'userId'],
+            where: { userId: Number(employeeId) },
+            attributes: ['userId'],
         });
         if (!row) {
             return null;
@@ -26,7 +26,7 @@ export async function resolveEmployeeIdForAuth({ userId, employeeId } = {}) {
         if (userId != null && Number(row.userId) !== Number(userId)) {
             return null;
         }
-        return row.employeeId;
+        return row.userId;
     }
 
     if (userId != null && userId !== '') {
@@ -59,7 +59,7 @@ export async function updateEmployee(employeeId, data, transaction) {
 
         const result = await scoped(model.employeeModel).update(
             data,
-            { where: { employeeId }, transaction },
+            { where: { userId: employeeId }, transaction },
         );
         return result;
     } catch (error) {
@@ -72,7 +72,7 @@ export async function getAllEmployee(campusId, instituteId, options = {}) {
     try {
         const { employeeId } = options;
         const whereClause = {
-            ...(employeeId && { employeeId }),
+            ...(employeeId && { userId: employeeId }),
             ...(campusId && { campusId }),
             ...(instituteId && { instituteId }),
         };
@@ -92,14 +92,16 @@ export async function getAllEmployee(campusId, instituteId, options = {}) {
                     required: false,
                     include: [
                         {
-                            model: model.userRoleModel.unscoped(),
-                            as: 'userRoles',
-                            attributes: ["role"],
-                        },
-                        {
-                            model: model.userPermissionModel.unscoped(),
-                            as: 'userPermissions',
-                            attributes: ["permission"],
+                            model: model.userRolePermissionModel.unscoped(),
+                            as: 'userRolePermissions',
+                            attributes: ["roleId", "permission", "scope"],
+                            include: [
+                                {
+                                    model: model.roleModel.unscoped(),
+                                    as: 'userRole',
+                                    attributes: ["role"],
+                                }
+                            ]
                         },
                     ],
                 },
@@ -146,14 +148,16 @@ export async function getSingleEmployeeDetails(employeeId) {
                     attributes: ["universityId", "userId"],
                     include: [
                         {
-                            model: model.userRoleModel.unscoped(),
-                            as: 'userRoles',
-                            attributes: ["role"],
-                        },
-                        {
-                            model: model.userPermissionModel.unscoped(),
-                            as: 'userPermissions',
-                            attributes: ["permission"],
+                            model: model.userRolePermissionModel.unscoped(),
+                            as: 'userRolePermissions',
+                            attributes: ["roleId", "permission", "scope"],
+                            include: [
+                                {
+                                    model: model.roleModel.unscoped(),
+                                    as: 'userRole',
+                                    attributes: ["role"],
+                                }
+                            ]
                         },
                     ],
                 },
@@ -164,14 +168,16 @@ export async function getSingleEmployeeDetails(employeeId) {
                     required: false,
                     include: [
                         {
-                            model: model.userRoleModel.unscoped(),
-                            as: 'userRoles',
-                            attributes: ["role"],
-                        },
-                        {
-                            model: model.userPermissionModel.unscoped(),
-                            as: 'userPermissions',
-                            attributes: ["permission"],
+                            model: model.userRolePermissionModel.unscoped(),
+                            as: 'userRolePermissions',
+                            attributes: ["roleId", "permission", "scope"],
+                            include: [
+                                {
+                                    model: model.roleModel.unscoped(),
+                                    as: 'userRole',
+                                    attributes: ["role"],
+                                }
+                            ]
                         },
                     ],
                 },
@@ -451,7 +457,7 @@ export async function deleteEmployeeDetail(employeeId) {
         await assertEmployeeNotLinked(employeeId);
 
         await scoped(model.employeeModel).destroy({
-            where: { employeeId },
+            where: { userId: employeeId },
             individualHooks: true,
         });
         return { message: 'employee deleted successfully' };
@@ -617,70 +623,86 @@ export async function getTeacherCourses(employeeId) {
     }
 };
 
-export async function getTeacherSubjectsFromSchedule(employeeId) {
+export async function getTeacherSubjectsFromSchedule(userId) {
     try {
-        const employee = await assertScopedEmployee(employeeId);
+        const employee = await assertScopedEmployee(userId);
         if (!employee) {
             return { courses: [], subjects: [] };
         }
 
-        const scopedEmployeeId = Number(employeeId);
-        const routineWhere = buildScope(model.timeTableRoutineModel);
+        const teacherUserId = Number(employee.userId);
 
-        const result = await model.classScheduleModel.findAll({
+        const result = await model.timeTableCellModel.findAll({
+            attributes: [
+                'timeTableCellId',
+                'subjectId',
+                'electiveSubjectId',
+                'teacherSubjectMappingId',
+            ],
             where: {
                 [Op.or]: [
-                    { employeeId: scopedEmployeeId },
-                    Sequelize.literal(`
-                      EXISTS (
-                        SELECT 1
-                        FROM teacher_subject_mapping tsm
-                        WHERE tsm.teacher_subject_mapping_id = class_schedule_item.teacher_subject_mapping_id
-                        AND tsm.employee_id = ${scopedEmployeeId}
-                      )
-                    `),
+                    { '$timeTableCellTeachers.user_id$': teacherUserId },
+                    { '$timeTableTeacherSubject.user_id$': teacherUserId },
                 ],
             },
+            subQuery: false,
             include: [
                 {
-                    model: model.timeTableRoutineModel.unscoped(),
-                    as: 'timeTablecreate',
-                    required: true,
-                    where: routineWhere,
+                    model: model.timeTableCellTeachersModel,
+                    as: 'timeTableCellTeachers',
+                    required: false,
+                    attributes: ['userId'],
                 },
                 {
-                    model: model.subjectModel.unscoped(),
+                    model: model.timeTableRoutineModel,
+                    as: 'timeTableRoutine',
+                    required: true,
+                    where: buildScope(model.timeTableRoutineModel),
+                    attributes: ['timeTableRoutineId'],
+                },
+                {
+                    model: model.subjectModel,
                     as: 'timeTableSubject',
                     required: false,
                     where: buildScope(model.subjectModel),
+                    attributes: ['subjectId', 'subjectName', 'subjectCode'],
                     include: [
                         {
-                            model: model.courseModel.unscoped(),
+                            model: model.courseModel,
                             as: 'courseInfo',
                             attributes: ['courseId', 'courseName', 'courseCode'],
+                            required: false,
                         },
                     ],
                 },
                 {
-                    model: model.electiveSubjectModel.unscoped(),
+                    model: model.electiveSubjectModel,
                     as: 'timeTableElective',
                     required: false,
+                    attributes: [
+                        'electiveSubjectId',
+                        'electiveSubjectName',
+                        'electiveSubjectCode',
+                    ],
                 },
                 {
-                    model: model.teacherSubjectMappingModel.unscoped(),
+                    model: model.teacherSubjectMappingModel,
                     as: 'timeTableTeacherSubject',
                     required: false,
+                    attributes: ['teacherSubjectMappingId', 'userId'],
                     include: [
                         {
-                            model: model.subjectModel.unscoped(),
+                            model: model.subjectModel,
                             as: 'employeeSubject',
                             where: buildScope(model.subjectModel),
                             required: false,
+                            attributes: ['subjectId', 'subjectName', 'subjectCode'],
                             include: [
                                 {
-                                    model: model.courseModel.unscoped(),
+                                    model: model.courseModel,
                                     as: 'courseInfo',
                                     attributes: ['courseId', 'courseName', 'courseCode'],
+                                    required: false,
                                 },
                             ],
                         },
@@ -692,7 +714,8 @@ export async function getTeacherSubjectsFromSchedule(employeeId) {
         const coursesMap = new Map();
         const subjectsMap = new Map();
 
-        result.forEach((item) => {
+        for (const row of result) {
+            const item = row.get({ plain: true });
             let subject = null;
             let course = null;
 
@@ -709,7 +732,7 @@ export async function getTeacherSubjectsFromSchedule(employeeId) {
                     subjectName: item.timeTableElective.electiveSubjectName,
                     subjectCode: item.timeTableElective.electiveSubjectCode,
                 };
-            } else if (item.timeTableTeacherSubject?.employeeSubject) {
+            } else if (item.timeTableTeacherSubject && item.timeTableTeacherSubject.employeeSubject) {
                 const sub = item.timeTableTeacherSubject.employeeSubject;
                 subject = {
                     subjectId: sub.subjectId,
@@ -726,12 +749,18 @@ export async function getTeacherSubjectsFromSchedule(employeeId) {
             if (course && !coursesMap.has(course.courseId)) {
                 coursesMap.set(course.courseId, course);
             }
-        });
+        }
 
-        return {
-            courses: Array.from(coursesMap.values()),
-            subjects: Array.from(subjectsMap.values()),
-        };
+        const courses = [];
+        for (const course of coursesMap.values()) {
+            courses.push(course);
+        }
+        const subjects = [];
+        for (const subject of subjectsMap.values()) {
+            subjects.push(subject);
+        }
+
+        return { courses, subjects };
     } catch (error) {
         console.error('Error in getTeacherSubjectsFromSchedule repository:', error);
         throw error;

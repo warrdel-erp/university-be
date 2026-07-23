@@ -18,7 +18,7 @@ export async function teacherSubjectMappingService(data, createdBy) {
     const subjectIds = [...new Set([].concat(data.subjectId ?? []).map(Number).filter(Boolean))];
 
     for (const subjectId of subjectIds) {
-        results.push(await teacherSubjectMapping({ employeeId: data.employeeId, subjectId, createdBy }));
+        results.push(await teacherSubjectMapping({ userId: data.userId, subjectId, createdBy }));
     }
     return results;
 }
@@ -26,7 +26,7 @@ export async function teacherSubjectMappingService(data, createdBy) {
 export async function teacherSectionMappingService(data, createdBy) {
     const results = [];
     for (const classSectionsId of [].concat(data.classSectionsId ?? [])) {
-        results.push(await teacherSectionMapping({ employeeId: data.employeeId, classSectionsId, createdBy }));
+        results.push(await teacherSectionMapping({ userId: data.userId, classSectionsId, createdBy }));
     }
     return results;
 }
@@ -35,11 +35,11 @@ export async function saveOrUpdateTeacherSubjectMapping(list, userId) {
     const results = [];
 
     for (const item of list) {
-        const { teacherSubjectMappingId, employeeId, subjectId } = item;
+        const { teacherSubjectMappingId, userId, subjectId } = item;
 
         if (teacherSubjectMappingId) {
             const updated = await updateTeachersSubjectMapping(teacherSubjectMappingId, {
-                employeeId,
+                userId,
                 ...(subjectId != null && { subjectId }),
             });
 
@@ -50,7 +50,7 @@ export async function saveOrUpdateTeacherSubjectMapping(list, userId) {
             });
         } else {
             const created = await teacherSubjectMapping({
-                employeeId,
+                userId,
                 subjectId,
                 createdBy: userId,
             });
@@ -70,7 +70,7 @@ export async function updateTeacherSectionMapping(data, teacherSectionMappingId)
     const results = [];
     for (const classSectionsId of [].concat(data.classSectionsId ?? [])) {
         results.push(await updateTeachersSectionMapping(teacherSectionMappingId, {
-            employeeId: data.employeeId,
+            userId: data.userId,
             classSectionsId,
         }));
     }

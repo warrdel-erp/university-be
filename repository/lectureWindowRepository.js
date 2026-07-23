@@ -18,7 +18,8 @@ function buildLectureWindowIncludes(filters = {}) {
     {
       model: model.employeeModel,
       as: "lectureWindowEmployee",
-      attributes: ["employeeId", "employeeName", "employeeCode", "pickColor"],
+      attributes: ["userId", "employeeId", "employeeName", "employeeCode", "pickColor"],
+      required: false,
     },
     {
       model: model.sessionModel,
@@ -57,8 +58,8 @@ export async function getLectureWindows(filters = {}) {
   if (filters.subjectId != null) {
     where.subjectId = Number(filters.subjectId);
   }
-  if (filters.employeeId != null) {
-    where.employeeId = Number(filters.employeeId);
+  if (filters.userId != null) {
+    where.userId = Number(filters.userId);
   }
   if (filters.sessionId != null) {
     where.sessionId = Number(filters.sessionId);

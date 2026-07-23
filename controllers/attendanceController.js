@@ -144,10 +144,10 @@ export const importBulkAttendance = async (req, res) => {
 };
 
 export async function getAttendanceByDate(req, res) {
-  const { date, classSectionTermId, employeeId } = req.query;
+  const { date, classSectionTermId, userId } = req.query;
 
   try {
-    const attendance = await AttendanceCreation.getAttendanceByDate(date, classSectionTermId, employeeId);
+    const attendance = await AttendanceCreation.getAttendanceByDate(date, classSectionTermId, userId);
 
     if (!attendance || attendance.length === 0) {
       return res.status(200).json({ message: "No data available" });
@@ -162,14 +162,14 @@ export async function getAttendanceByDate(req, res) {
 
 export async function getPreviousSessions(req, res) {
   try {
-    const employeeId = req.params.employeeId
+    const userId = req.params.userId
 
-    if (!employeeId) {
-      throw new Error("employeeId is required");
+    if (!userId) {
+      throw new Error("userId is required");
     }
 
     const data = await AttendanceCreation.getPreviousSessions(
-      employeeId,
+      userId,
       req
     );
     return res.status(200).json(data);
@@ -180,12 +180,12 @@ export async function getPreviousSessions(req, res) {
 
 export async function getStudentAttendanceReport(req, res) {
   try {
-    const { classSectionId, subjectId, employeeId } = req.query;
+    const { classSectionId, subjectId, userId } = req.query;
 
     const data = await AttendanceCreation.getStudentAttendanceReport(
       classSectionId,
       subjectId,
-      employeeId
+      userId
     );
 
     return SuccessResponse(res, 200, "Attendance Report Fetched Successfully", data);
@@ -213,12 +213,12 @@ export async function getStudentsBatchAttendance(req, res) {
 
 export async function getEmployeeSectionDates(req, res) {
   try {
-    const { classSectionTermId, subjectId, employeeId } = req.query;
+    const { classSectionTermId, subjectId, userId } = req.query;
 
     const data = await AttendanceCreation.getEmployeeSectionDates(
       classSectionTermId,
       subjectId,
-      employeeId
+      userId
     );
 
     return SuccessResponse(res, 200, "Employee section dates fetched successfully", data);

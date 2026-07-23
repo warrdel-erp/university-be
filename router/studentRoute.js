@@ -22,8 +22,11 @@ import {
   getBooksIssuedToStudent,
   getStudentTimeTable,
   getStudentsByClassSection,
+  getStudentsByElectiveSubject,
   getAllAnswerSheets,
 } from "../controllers/studentController.js";
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
 import { z } from "zod";
@@ -132,10 +135,24 @@ const jsonObjectField = z.preprocess(
 );
 
 
+const dateWiseIdList = z.preprocess(
+  (val) => {
+    if (val === "" || val == null) return undefined;
+    const raw = Array.isArray(val) ? val : String(val).split(",");
+    const ids = [];
+    for (const item of raw) {
+      const trimmed = String(item).trim();
+      if (trimmed !== "") ids.push(trimmed);
+    }
+    return ids;
+  },
+  z.array(positiveIntegerId).min(1, "timeTableCellDateWiseId is required"),
+);
+
 const classSectionStudentsQuerySchema = z.object({
-  timeTableMappingId: positiveIntegerId,
-  date: dateField,
+  timeTableCellDateWiseId: dateWiseIdList,
   academicYearId: optionalPositiveIntegerId,
+  date: optionalDateField,
   groupPeriods: z.union([z.boolean(), z.string()]).optional(),
 }).passthrough();
 
@@ -414,12 +431,14 @@ const mapStudentImportBody = (req, res, next) => {
 router.get(
   "/all",
   userAuth,
+  checkAccess(PERMISSIONS.STUDENT_LIST.value, null),
   validate({ query: getAllStudentsQuerySchema }),
   getAllStudents
 );
 router.get(
   "/",
   userAuth,
+  checkAccess(PERMISSIONS.STUDENT_LIST.value, null),
   validate({ query: studentIdQuerySchema }),
   getSingleStudentDetail
 );
@@ -427,6 +446,7 @@ router.get(
 router.patch(
   "/:studentId",
   userAuth,
+  checkAccess(PERMISSIONS.ADD_STUDENT_EDIT.value, null),
   validate({
     params: updateStudentDetailsParamsSchema,
     body: updateStudentDetailsBodySchema,
@@ -434,7 +454,7 @@ router.patch(
   mapStudentBody,
   updateStudentDetails
 );
-router.delete("/:studentId", userAuth, deleteStudentDetail);
+router.delete("/:studentId", userAuth, checkAccess(PERMISSIONS.ADD_STUDENT_DELETE.value, null), deleteStudentDetail);
 
 const emptyEnrollNumberQuerySchema = z.object({
   page: z.coerce
@@ -496,20 +516,22 @@ const sectionStudentMappingQuerySchema = z.object({
   search: z.string().trim().optional(),
 });
 
-router.post("/studentMapping", userAuth, studentCourseMapping);
+router.post("/studentMapping", userAuth, checkAccess(PERMISSIONS.ADD_STUDENT_MAPPING.value, null), studentCourseMapping);
 router.post(
   "/sectionStudentMapping",
   userAuth,
+  checkAccess(PERMISSIONS.ADD_STUDENT_ADD.value, null),
   validate({ body: sectionStudentMappingBodySchema }),
   sectionStudentMapping,
 );
 router.get(
   "/sectionStudentMapping",
   userAuth,
+  checkAccess(PERMISSIONS.STUDENT_LIST.value, null),
   validate({ query: sectionStudentMappingQuerySchema }),
   getSectionStudentMapping,
 );
-router.post("/electiveSubject", userAuth, addElectiveSubject);
+router.post("/electiveSubject", userAuth, checkAccess(PERMISSIONS.ADD_STUDENT_ADD_ELECTIVE.value, null), addElectiveSubject);
 
 const promotionStudentListQuerySchema = z.object({
   page: z.coerce
@@ -533,6 +555,7 @@ const promotionStudentListQuerySchema = z.object({
 router.get(
   "/promotion/list",
   userAuth,
+  checkAccess(PERMISSIONS.STUDENT_LIST.value, null),
   validate({ query: promotionStudentListQuerySchema }),
   getPromotionStudentList,
 );
@@ -553,6 +576,7 @@ const promotionHistoryQuerySchema = z
 router.get(
   "/promotion/history",
   userAuth,
+  checkAccess(PERMISSIONS.STUDENT_LIST.value, null),
   validate({ query: promotionHistoryQuerySchema }),
   getStudentPromotionHistory,
 );
@@ -570,6 +594,7 @@ const promotionAvailableClassSectionQuerySchema = z.object({
 router.post(
   "/promoteStudent",
   userAuth,
+  checkAccess(PERMISSIONS.ADD_STUDENT_ADD.value, null),
   validate({ body: promoteStudentBodySchema }),
   promoteStudent,
 );
@@ -577,6 +602,7 @@ router.post(
 router.get(
   "/promotion/available-section",
   userAuth,
+  checkAccess(PERMISSIONS.STUDENT_LIST.value, null),
   validate({ query: promotionAvailableClassSectionQuerySchema }),
   getPromotionAvailableSection,
 );
@@ -584,34 +610,46 @@ router.get(
 router.get(
   "/feePlanStudents",
   userAuth,
+  checkAccess(PERMISSIONS.STUDENT_FEE_PLANS.value, null),
   validate({ query: feePlanStudentsQuerySchema }),
   getStudentsByFeePlanList,
 );
 router.get(
   "/feePlanProfiles/all",
   userAuth,
+  checkAccess(PERMISSIONS.STUDENT_LIST.value, null),
   validate({ query: feePlanProfilesAllQuerySchema }),
   getFeePlanInitiate
 );
 router.get(
   "/emptyfeeDetails",
   userAuth,
+  checkAccess(PERMISSIONS.STUDENT_LIST.value, null),
   validate({ query: emptyFeeDetailsQuerySchema }),
   getEmptyFeeDetails
 );
-router.get("/:studentId/studentSubject", userAuth, getStudentSubject);
-router.get("/:studentId/feeDetails", userAuth, getFeeDetailsByStudentId);
-router.get("/issuedBook", userAuth, getBooksIssuedToStudent);
-router.get("/studentTimetable", userAuth, getStudentTimeTable);
+router.get("/:studentId/studentSubject", userAuth, checkAccess(PERMISSIONS.STUDENT_LIST.value, null), getStudentSubject);
+router.get("/:studentId/feeDetails", userAuth, checkAccess(PERMISSIONS.STUDENT_LIST.value, null), getFeeDetailsByStudentId);
+router.get("/issuedBook", userAuth, checkAccess(PERMISSIONS.STUDENT_LIST.value, null), getBooksIssuedToStudent);
+router.get("/studentTimetable", userAuth, checkAccess(PERMISSIONS.STUDENT_LIST.value, null), getStudentTimeTable);
 router.get(
   "/classSectionStudents",
   userAuth,
+  checkAccess(PERMISSIONS.STUDENT_LIST.value, null),
   validate({ query: classSectionStudentsQuerySchema }),
   getStudentsByClassSection,
 );
 router.get(
+  "/electiveClassStudents",
+  userAuth,
+  checkAccess(PERMISSIONS.STUDENT_LIST.value, null),
+  validate({ query: classSectionStudentsQuerySchema }),
+  getStudentsByElectiveSubject,
+);
+router.get(
   "/getallanswerSheetQrs",
   userAuth,
+  checkAccess(PERMISSIONS.STUDENT_LIST.value, null),
   validate({ query: getAllAnswerSheetsQuerySchema }),
   getAllAnswerSheets
 );
@@ -625,6 +663,7 @@ router.get(
 router.post(
   "/",
   userAuth,
+  checkAccess(PERMISSIONS.ADD_STUDENT_ADD.value, null),
   validate({ body: addStudentWithFeePlanProfileBodySchema }),
   mapStudentBody,
   addStudentWithFeePlanProfile

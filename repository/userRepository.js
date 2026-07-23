@@ -41,7 +41,7 @@ export async function getAdminRegisterStudent() {
       where: {
         student_id: { [Op.ne]: null },
       },
-      attributes: ["userStudentEmployeeId", "userId", "studentId", "employeeId"],
+      attributes: ["userStudentEmployeeId", "userId", "studentId", "userId"],
       include: [
         {
           model: model.userModel,
@@ -93,9 +93,9 @@ export async function getAdminRegisterEmployee() {
   try {
     const users = await scoped(model.userStudentEmployeeModel).findAll({
       where: {
-        employee_id: { [Op.ne]: null },
+        userId: { [Op.ne]: null },
       },
-      attributes: ["userStudentEmployeeId", "employeeId", "userId"],
+      attributes: ["userStudentEmployeeId", "userId", "userId"],
       include: [
         {
           model: model.userModel,
@@ -108,10 +108,9 @@ export async function getAdminRegisterEmployee() {
           required: true,
         },
         {
-          model: model.employeeModel,
-          as: "employeeDetails",
+          model: model.users, as: "user",
           required: true,
-          attributes: ["employee_id", "employeeName"],
+          attributes: ["userId", "employeeName"],
           where: buildScope(model.employeeModel),
           include: [
             {
@@ -128,7 +127,7 @@ export async function getAdminRegisterEmployee() {
       userStudentEmployeeId: user.userStudentEmployeeId,
       userId: user.userId,
       userData: user,
-      employeeId: user.employeeId,
+      userId: user.userId,
       roleId: user?.employeeDetails?.employeeRole?.roleId,
       role: user?.employeeDetails?.employeeRole?.role,
     }));
@@ -156,27 +155,42 @@ export async function saveToUserRolePermission(data, transaction) {
 
 export async function getUserRoleAndPermissionsByUserId(userId) {
   try {
-    return scoped(model.userRolePermissionModel).findAll({
-      attributes: ["role_id", "permission_id", "user_id"],
+    // Query all entries from user_role_permission_scope grouped by role
+    const entries = await model.userRolePermissionModel.findAll({
       where: { user_id: userId },
       include: [
-        {
-          model: model.userModel,
-          as: "user",
-          attributes: ["userName", "email", "userId"],
-        },
-        {
-          model: model.roleModel,
-          as: "userRole",
-          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-        },
-        {
-          model: model.permissionModel,
-          as: "userPermission",
-          attributes: ["permissionId", "permission"],
-        },
-      ],
+        { model: model.roleModel, as: 'userRole', attributes: ['roleId', 'role'] }
+      ]
     });
+
+    if (entries.length === 0) {
+      return [];
+    }
+
+    // Group by roleId
+    const roleMap = new Map();
+    for (const entry of entries) {
+      if (!entry.userRole) continue;
+      const roleId = entry.userRole.roleId;
+
+      if (!roleMap.has(roleId)) {
+        roleMap.set(roleId, {
+          user_id: userId,
+          userRole: {
+            roleId: entry.userRole.roleId,
+            role: entry.userRole.role
+          },
+          permissions: []
+        });
+      }
+
+      roleMap.get(roleId).permissions.push({
+        permission: entry.permission,
+        scope: entry.scope
+      });
+    }
+
+    return Array.from(roleMap.values());
   } catch (error) {
     console.error("Error fetching Role Permission details:", error);
     throw error;
@@ -275,11 +289,11 @@ export async function updateStudent(studentId, data, transaction) {
   }
 }
 
-export async function updateEmployee(employeeId, data, transaction) {
+export async function updateEmployee(userId, data, transaction) {
   try {
     const existing = await scoped(model.employeeModel).findOne({
-      attributes: ["employeeId"],
-      where: { employeeId },
+      attributes: ["userId"],
+      where: { userId },
       transaction,
     });
     if (!existing) {
@@ -287,11 +301,11 @@ export async function updateEmployee(employeeId, data, transaction) {
     }
 
     return scoped(model.employeeModel).update(data, {
-      where: { employeeId },
+      where: { userId },
       transaction,
     });
   } catch (error) {
-    console.error(`Error updating employee ${employeeId}:`, error);
+    console.error(`Error updating employee ${userId}:`, error);
     throw error;
   }
 }

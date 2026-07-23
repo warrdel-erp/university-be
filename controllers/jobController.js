@@ -2,7 +2,7 @@ import * as jobService from "../services/jobService.js";
 
 export async function addJob(req, res) {
   try {
-    const required = ["jobTitle", "employeeId", "jobDate", "startTime", "endTime"];
+    const required = ["jobTitle", "userId", "jobDate", "startTime", "endTime"];
     for (const f of required) {
       if (!req.body[f]) {
         return res.status(400).json({ success: false, message: `${f} is required` });
@@ -84,9 +84,9 @@ export async function getCalendarView(req, res) {
 
 export async function getFacultyCalendar(req, res) {
   try {
-    const { employeeId } = req.params;
+    const { userId } = req.params;
     const { start, end } = req.query;
-    const result = await jobService.getFacultyCalendar({ employeeId, start, end });
+    const result = await jobService.getFacultyCalendar({ userId, start, end });
     return res.status(200).json({ success: true, data: result });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -110,7 +110,7 @@ export async function getFilteredJobs(req, res) {
       type = "upcoming",
       jobTypeId,
       subAccountId,
-      employeeId,
+      userId,
       date,
       status,
       page = 1,
@@ -121,7 +121,7 @@ export async function getFilteredJobs(req, res) {
       type,
       jobTypeId,
       subAccountId,
-      employeeId,
+      userId,
       date,
       status,
       page,

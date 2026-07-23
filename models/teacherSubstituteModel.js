@@ -1,7 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import users from "./userModel.js";
-import employee from "./employeeModel.js";
 import university from "./universityModel.js";
 import institute from "./instituteModel.js";
 
@@ -14,31 +13,22 @@ const teacherSubstituteModel = sequelize.define(
             autoIncrement: true,
             field: "teacher_substitute_id",
         },
-        employeeId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: "employee_id",
-            references: {
-                model: employee,
-                key: "employee_id",
-            },
-        },
-        substituteEmployeeId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: "substitute_employee_id",
-            references: {
-                model: employee,
-                key: "employee_id",
-            },
-        },
         userId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: "user_id",
+            field: 'user_id',
             references: {
                 model: users,
-                key: "user_id",
+                key: 'user_id',
+            },
+        },
+        substituteUserId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'substitute_user_id',
+            references: {
+                model: users,
+                key: 'user_id',
             },
         },
         universityId: {
@@ -97,8 +87,8 @@ const teacherSubstituteModel = sequelize.define(
         indexes: [
             {
                 unique: true,
-                fields: ["employee_id", "substitute_employee_id"],
-                name: "uq_teacher_substitute_employee_substitute",
+                fields: ["user_id", "substitute_user_id"],
+                name: "uq_teacher_substitute_user_substitute",
             },
         ],
     }
@@ -107,3 +97,4 @@ const teacherSubstituteModel = sequelize.define(
 teacherSubstituteModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
 export default teacherSubstituteModel;
+

@@ -88,6 +88,10 @@ export async function getTeacherOptions(campusId) {
     return await optionsRepository.getTeacherOptions(campusId);
 }
 
+export async function getTimeTableStructureOptions() {
+    return await optionsRepository.getTimeTableStructureOptions();
+}
+
 export async function getFeePlanOptions(filters) {
     const empty = { courseSessionId: null, profiles: [] };
     const { courseId, sessionId } = filters;
@@ -109,20 +113,26 @@ export async function getFeePlanOptions(filters) {
     };
 }
 
-export async function getLectureWindowOptions(employeeId, subjectId, academicYearId) {
-    const [employee, subject, options] = await Promise.all([
-        optionsRepository.getEmployeeOptionDetail(employeeId),
-        optionsRepository.getSubjectOptionDetail(subjectId),
-        optionsRepository.getLectureWindowOptionRows({
-            employeeId,
-            subjectId,
-            academicYearId,
-        }),
-    ]);
-
+export async function getLectureWindowOptions(userId, employeeId, subjectId, academicYearId, date, sessionId) {
+    const employee = await optionsRepository.getEmployeeOptionDetail({ userId, employeeId });
     if (!employee) {
         throw new Error('Employee not found');
     }
+    if (employee.userId == null) {
+        throw new Error('Employee has no linked userId');
+    }
+
+    const [subject, options] = await Promise.all([
+        optionsRepository.getSubjectOptionDetail(subjectId),
+        optionsRepository.getLectureWindowOptionRows({
+            userId: employee.userId,
+            subjectId,
+            academicYearId,
+            date,
+            sessionId,
+        }),
+    ]);
+
     if (!subject) {
         throw new Error('Subject not found');
     }

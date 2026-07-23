@@ -3,6 +3,8 @@ import { z } from "zod";
 import * as campusController from "../controllers/campusController.js";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 
 const router = Router();
 
@@ -81,9 +83,9 @@ const updateCampusSchema = z
     { message: "At least one field to update is required" }
   );
 
-router.post("/", userAuth, validate({ body: campusItemSchema }), campusController.createCampus);
-router.patch("/", userAuth, validate({ body: updateCampusSchema }), campusController.updateCampus);
-router.get("/hierarchy", userAuth, campusController.getCampusHierarchy);
-router.get("/", userAuth, campusController.listCampuses);
+router.post("/", userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_ADD.value, 'campus'), validate({ body: campusItemSchema }), campusController.createCampus);
+router.patch("/", userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_EDIT.value, 'campus'), validate({ body: updateCampusSchema }), campusController.updateCampus);
+router.get("/hierarchy", userAuth, checkAccess(PERMISSIONS.MASTER_SECTION.value, null), campusController.getCampusHierarchy);
+router.get("/", userAuth, checkAccess(PERMISSIONS.MASTER_SECTION.value, null), campusController.listCampuses);
 
 export default router;

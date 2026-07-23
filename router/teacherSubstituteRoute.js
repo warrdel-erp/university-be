@@ -18,18 +18,18 @@ const positiveIntegerId = z.coerce
     .positive("id must be greater than 0");
 
 const createTeacherSubstituteSchema = z.object({
-    employeeId: positiveIntegerId,
-    substituteEmployeeId: positiveIntegerId,
-    userId: positiveIntegerId.optional(),
+    userId: positiveIntegerId,
+    substituteUserId: positiveIntegerId,
+    universityId: positiveIntegerId.optional(),
 });
 
 const updateTeacherSubstituteSchema = z.object({
     teacherSubstituteId: positiveIntegerId,
-    substituteEmployeeId: positiveIntegerId.optional(),
+    substituteUserId: positiveIntegerId.optional(),
     userId: positiveIntegerId.optional(),
 }).refine(
-    (data) => data.substituteEmployeeId != null || data.userId != null,
-    { message: "At least one of substituteEmployeeId or userId is required" },
+    (data) => data.substituteUserId != null || data.userId != null,
+    { message: "At least one of substituteUserId or userId is required" },
 );
 
 const teacherSubstituteIdQuerySchema = z.object({
@@ -37,7 +37,7 @@ const teacherSubstituteIdQuerySchema = z.object({
 });
 
 const listQuerySchema = z.object({
-    employeeId: positiveIntegerId.optional(),
+    userId: positiveIntegerId.optional(),
 });
 
 router.post("/", userAuth, validate({ body: createTeacherSubstituteSchema }), addTeacherSubstitute);

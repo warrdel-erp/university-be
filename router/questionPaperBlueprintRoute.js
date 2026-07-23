@@ -29,11 +29,14 @@ const getAllBlueprintsQuerySchema = z.object({
     subjectId: z.coerce.number().optional(),
 });
 
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
+
 // Define routes
-router.post("/", userAuth, validate({ body: createBlueprintSchema }), addBlueprint);
+router.post("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, null), validate({ body: createBlueprintSchema }), addBlueprint);
 
-router.get("/", userAuth, validate({ query: getAllBlueprintsQuerySchema }), getAllBlueprints);
+router.get("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER.value, null), validate({ query: getAllBlueprintsQuerySchema }), getAllBlueprints);
 
-router.delete("/:id", userAuth, deleteBlueprint);
+router.delete("/:id", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_DELETE.value, null), deleteBlueprint);
 
 export default router;

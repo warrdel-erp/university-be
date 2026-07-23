@@ -112,10 +112,10 @@ const categoryQuerySchema = z.object({
 });
 
 const bookSchema = z.object({
-  libraryCreationId: z.coerce.number(),
+  libraryCreationId: z.coerce.number().optional().nullable(),
   libraryFloorId: z.coerce.number().optional(),
   bookImage: z.string().optional().nullable(),
-  title: z.string(),
+  title: z.string().min(1),
   subtitle: z.string().optional().nullable(),
   authors: z.string().optional().nullable(),
   publisher: z.string().optional().nullable(),
@@ -142,16 +142,17 @@ const bookSchema = z.object({
 });
 
 const inventoryRowSchema = z.object({
-  accessionNumber: z.string(),
+  accessionNumber: z.string().min(1),
   libraryAisleId: z.coerce.number().optional().nullable(),
   libraryRackId: z.coerce.number().optional().nullable(),
   libraryRowId: z.coerce.number().optional().nullable(),
   studentId: z.coerce.number().optional().nullable(),
-  employeeId: z.coerce.number().optional().nullable(),
+  userId: z.coerce.number().optional().nullable(),
   issueDate: z.string().optional().nullable(),
   dueDate: z.string().optional().nullable(),
   status: z.string().optional(),
   condition: z.string().optional().nullable(),
+  accessionDate: z.string().optional().nullable(),
   billNo: z.string().optional().nullable(),
   billDate: z.string().optional().nullable(),
   itemPrice: z.union([z.string(), z.coerce.number()]).optional().nullable(),
@@ -169,7 +170,7 @@ const updateBookSchema = z.object({
   libraryCreationId: z.coerce.number().optional(),
   libraryFloorId: z.coerce.number().optional(),
   bookImage: z.string().optional().nullable(),
-  title: z.string().optional(),
+  title: z.string().min(1),
   subtitle: z.string().nullable().optional(),
   authors: z.string().nullable().optional(),
   publisher: z.string().nullable().optional(),
@@ -197,16 +198,17 @@ const updateBookSchema = z.object({
 
 const updateInventorySchema = z.object({
   inventoryId: z.coerce.number(),
-  accessionNumber: z.string().optional(),
+  accessionNumber: z.string().min(1),
   libraryAisleId: z.coerce.number().optional().nullable(),
   libraryRackId: z.coerce.number().optional().nullable(),
   libraryRowId: z.coerce.number().optional().nullable(),
   studentId: z.coerce.number().optional().nullable(),
-  employeeId: z.coerce.number().optional().nullable(),
+  userId: z.coerce.number().optional().nullable(),
   issueDate: z.string().optional().nullable(),
   dueDate: z.string().optional().nullable(),
   status: z.string().optional(),
   condition: z.string().optional().nullable(),
+  accessionDate: z.string().optional().nullable(),
   billNo: z.string().optional().nullable(),
   billDate: z.string().optional().nullable(),
   itemPrice: z.union([z.string(), z.coerce.number()]).optional().nullable(),

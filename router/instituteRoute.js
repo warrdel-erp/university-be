@@ -3,6 +3,8 @@ import { z } from "zod";
 import * as instituteController from "../controllers/instituteController.js";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 
 const router = Router();
 
@@ -84,15 +86,16 @@ const updateAffiliatedUniversitySchema = z
     { message: "At least one field to update is required" }
   );
 
-router.post("/", userAuth, validate({ body: instituteSchema }), instituteController.createInstitute);
+router.post("/", userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_ADD.value, "institute"), validate({ body: instituteSchema }), instituteController.createInstitute);
 
-router.patch("/", userAuth, validate({ body: updateInstituteSchema }), instituteController.updateInstitute);
+router.patch("/", userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_EDIT.value, "institute"), validate({ body: updateInstituteSchema }), instituteController.updateInstitute);
 router.patch(
   "/affiliatedUniversity",
   userAuth,
+  checkAccess(PERMISSIONS.MASTER_SECTION_EDIT.value, "institute"),
   validate({ body: updateAffiliatedUniversitySchema }),
   instituteController.updateAffiliatedUniversity
 );
-router.get("/", userAuth, validate({ query: listInstituteSchema }), instituteController.listInstitutes);
+router.get("/", userAuth, checkAccess(PERMISSIONS.MASTER_SECTION.value, null), validate({ query: listInstituteSchema }), instituteController.listInstitutes);
 
 export default router;

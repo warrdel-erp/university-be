@@ -3,14 +3,17 @@ const router =  Router();
 import {addFeePlan,getAllFeePlan,getSingleFeePlanDetails,updateFeePlan,deleteFeePlan} from "../controllers/feePlanController.js";
 import userAuth from "../middleware/authUser.js"
 
-router.post('/', userAuth, addFeePlan);
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 
-router.get('/', userAuth, getAllFeePlan);
+router.post('/', userAuth, checkAccess(PERMISSIONS.FEES_PLAN_ADD.value, null), addFeePlan);
 
-router.get('/single' ,userAuth, getSingleFeePlanDetails);
+router.get('/', userAuth, checkAccess(PERMISSIONS.FEES_PLAN.value, null), getAllFeePlan);
 
-router.patch('/' ,userAuth, updateFeePlan);
+router.get('/single' ,userAuth, checkAccess(PERMISSIONS.FEES_PLAN.value, null), getSingleFeePlanDetails);
 
-router.delete('/' ,userAuth, deleteFeePlan);
+router.patch('/' ,userAuth, checkAccess(PERMISSIONS.FEES_PLAN_EDIT.value, null), updateFeePlan);
+
+router.delete('/' ,userAuth, checkAccess(PERMISSIONS.FEES_PLAN_DELETE.value, null), deleteFeePlan);
 
 export default router;

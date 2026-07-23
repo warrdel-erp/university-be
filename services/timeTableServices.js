@@ -1,18 +1,86 @@
 import * as timeTableRepository from '../repository/timeTableRepository.js';
 import sequelize from '../database/sequelizeConfig.js';
+import { formatQueryDate } from '../utility/helper.js';
+
+function toDateOnlyString(value) {
+    if (value == null || value === '') {
+        return null;
+    }
+    if (typeof value === 'string') {
+        const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+        if (match) {
+            return match[1];
+        }
+    }
+    return formatQueryDate(value);
+}
+
+async function assertNoOverlappingCourseSessionDates({
+    courseId,
+    sessionId,
+    startingDate,
+    endingDate,
+    excludeMapperId = null,
+}) {
+    const start = toDateOnlyString(startingDate);
+    const end = toDateOnlyString(endingDate);
+
+    if (!start || !end) {
+        throw new Error('startingDate and endingDate are required');
+    }
+    if (start > end) {
+        throw new Error('endingDate cannot be before startingDate');
+    }
+
+    const overlap = await timeTableRepository.findOverlappingStructureCourseMapping({
+        courseId,
+        sessionId,
+        startingDate: start,
+        endingDate: end,
+        excludeMapperId,
+    });
+
+    if (overlap) {
+        throw new Error(
+            `Date range overlaps (${toDateOnlyString(overlap.startingDate)} to ${toDateOnlyString(overlap.endingDate)})`,
+        );
+    }
+
+    return { start, end };
+}
+
+function shapeStructureVariantTree(structures) {
+    const byId = new Map();
+    const roots = [];
+
+    for (const row of structures) {
+        const plain = row.get({ plain: true });
+        plain.variants = [];
+        byId.set(plain.timeTableNameId, plain);
+    }
+
+    for (const structure of byId.values()) {
+        const sourceId = structure.sourceTimeTableNameId;
+        if (sourceId != null && byId.has(sourceId)) {
+            byId.get(sourceId).variants.push(structure);
+            continue;
+        }
+        roots.push(structure);
+    }
+
+    return roots;
+}
 
 export async function addTimeTable(data, createdBy, updatedBy) {
     const transaction = await sequelize.transaction();
+
     try {
         const structureItem = {
             name: data.name,
             maximumPeriod: data.maximumPeriod,
-            courseId: data.courseId,
             periodLength: data.periodLength,
             periodGap: data.periodGap,
             startingTime: data.startingTime,
-            startingDate: data.startingDate,
-            endingDate: data.endingDate,
             weekOff: data.weekOff,
             createdBy,
             updatedBy,
@@ -89,16 +157,56 @@ export async function addTimeTable(data, createdBy, updatedBy) {
     }
 }
 
-export async function getAllTimeTableName(courseId) {
-    return await timeTableRepository.getTimeTableStructures({ courseId });
+export async function getTimeTableDetails() {
+    const structures = await timeTableRepository.getTimeTableStructures();
+    return shapeStructureVariantTree(structures);
 }
 
-export async function getTimeTableDetails(courseId) {
-    return await timeTableRepository.getTimeTableStructures({ courseId });
+export async function getAllTimeTableName(query = {}) {
+    return await timeTableRepository.getTimeTableStructures({
+        courseId: query.courseId,
+        sessionId: query.sessionId,
+    });
 }
 
-export async function getSingleTimeTableDetails(courseId) {
-    return await timeTableRepository.getTimeTableStructures({ courseId });
+export async function getSingleTimeTableDetails(timeTableNameId) {
+    const structure = await timeTableRepository.getTimeTableStructureDetailsById(timeTableNameId);
+    if (!structure) {
+        throw new Error('Time table structure not found for this institute and academic year');
+    }
+    return structure;
+}
+
+export async function getStructureMappingPrintData(filters = {}) {
+    const rows = await timeTableRepository.getStructureMappingPrintRows(filters);
+    const result = [];
+
+    for (const row of rows) {
+        const plain = row.get ? row.get({ plain: true }) : row;
+        const structure = plain.timeTableStructure;
+        const course = plain.course;
+        const session = plain.session;
+
+        result.push({
+            timetableStructureCourseMapperId: plain.timetableStructureCourseMapperId,
+            timeTableNameId: plain.timeTableNameId,
+            structureName: structure.name,
+            maximumPeriod: structure.maximumPeriod,
+            periodLength: structure.periodLength,
+            periodGap: structure.periodGap,
+            startingTime: structure.startingTime,
+            weekOff: structure.weekOff,
+            courseId: plain.courseId,
+            courseName: course.courseName,
+            courseCode: course.courseCode,
+            sessionId: plain.sessionId,
+            sessionName: session.sessionName,
+            startingDate: plain.startingDate,
+            endingDate: plain.endingDate,
+        });
+    }
+
+    return result;
 }
 
 export async function updateTimeTable(info) {
@@ -114,16 +222,133 @@ export async function deleteTimeTable(timeTableCreationId) {
     return await timeTableRepository.deleteTimeTable(timeTableCreationId);
 }
 
-export async function deleteTimeTableStructure(timeTableNameId) {
-    return await timeTableRepository.deleteTimeTableStructure(timeTableNameId);
+export async function deleteTimeTableName(timeTableNameId) {
+    return await timeTableRepository.deleteTimeTableName(timeTableNameId);
 }
 
-export async function updateStructureEndingDate(timeTableNameId, endingDate, updatedBy) {
-    return await timeTableRepository.updateStructureEndingDate(
-        timeTableNameId,
-        endingDate,
-        updatedBy,
+export async function deleteStructureCourseMapping(timetableStructureCourseMapperId) {
+    return await timeTableRepository.deleteStructureCourseMappingById(
+        timetableStructureCourseMapperId,
     );
+}
+
+export async function updateStructure(body, updatedBy) {
+    const mapping = await timeTableRepository.getStructureCourseMappingById(
+        body.timetableStructureCourseMapperId,
+    );
+    if (!mapping) {
+        throw new Error('Course mapping not found');
+    }
+
+    const updates = {
+        timeTableNameId: body.timeTableNameId ?? mapping.timeTableNameId,
+        courseId: body.courseId ?? mapping.courseId,
+        sessionId: body.sessionId ?? mapping.sessionId,
+        startingDate: body.startingDate ?? mapping.startingDate,
+        endingDate: body.endingDate ?? mapping.endingDate,
+        updatedBy,
+    };
+
+    const { start, end } = await assertNoOverlappingCourseSessionDates({
+        courseId: updates.courseId,
+        sessionId: updates.sessionId,
+        startingDate: updates.startingDate,
+        endingDate: updates.endingDate,
+        excludeMapperId: mapping.timetableStructureCourseMapperId,
+    });
+    updates.startingDate = start;
+    updates.endingDate = end;
+
+    const structure = await timeTableRepository.getTimeTableStructureById(updates.timeTableNameId);
+    if (!structure) {
+        throw new Error('Time table structure not found for this institute and academic year');
+    }
+
+    if (
+        updates.timeTableNameId !== mapping.timeTableNameId
+        || updates.courseId !== mapping.courseId
+        || updates.sessionId !== mapping.sessionId
+    ) {
+        const existing = await timeTableRepository.getStructureCourseMapping(
+            updates.timeTableNameId,
+            updates.courseId,
+            updates.sessionId,
+        );
+        if (
+            existing
+            && existing.timetableStructureCourseMapperId !== mapping.timetableStructureCourseMapperId
+        ) {
+            throw new Error('Course mapping already exists for this structure, course and session');
+        }
+    }
+
+    if (body.startingDate || body.endingDate) {
+        const bounds = await timeTableRepository.getRoutineDateBoundsForMapper(
+            mapping.timetableStructureCourseMapperId,
+        );
+
+        if (
+            body.startingDate
+            && bounds.minStartingDate
+            && start > toDateOnlyString(bounds.minStartingDate)
+        ) {
+            throw new Error(
+                `startingDate cannot be after the earliest routine startingDate (${toDateOnlyString(bounds.minStartingDate)})`,
+            );
+        }
+
+        if (
+            body.endingDate
+            && bounds.maxEndingDate
+            && end < toDateOnlyString(bounds.maxEndingDate)
+        ) {
+            throw new Error(
+                `endingDate cannot be before the latest routine endingDate (${toDateOnlyString(bounds.maxEndingDate)})`,
+            );
+        }
+    }
+
+    return timeTableRepository.updateStructureCourseMappingById(
+        mapping.timetableStructureCourseMapperId,
+        updates,
+        mapping.courseId,
+    );
+}
+
+export async function addStructureCourseMapping(data, createdBy, updatedBy) {
+    const structure = await timeTableRepository.getTimeTableStructureById(data.timeTableNameId);
+    if (!structure) {
+        throw new Error('Time table structure not found for this institute and academic year');
+    }
+
+    const existing = await timeTableRepository.getStructureCourseMapping(
+        data.timeTableNameId,
+        data.courseId,
+        data.sessionId,
+    );
+    if (existing) {
+        throw new Error('Course mapping already exists for this structure, course and session');
+    }
+
+    const { start, end } = await assertNoOverlappingCourseSessionDates({
+        courseId: data.courseId,
+        sessionId: data.sessionId,
+        startingDate: data.startingDate,
+        endingDate: data.endingDate,
+    });
+
+    return timeTableRepository.addStructureCourseMapping({
+        timeTableNameId: data.timeTableNameId,
+        courseId: data.courseId,
+        sessionId: data.sessionId,
+        universityId: structure.universityId,
+        instituteId: structure.instituteId,
+        academicYearId: structure.academicYearId,
+        startingDate: start,
+        endingDate: end,
+        createdBy,
+        updatedBy,
+    });
 }
 
 function parseTimeString(timeString) {
@@ -139,6 +364,7 @@ function formatTimeString(date) {
 
 export async function addTimeTablePeriod(data, createdBy, updatedBy) {
     const transaction = await sequelize.transaction();
+
     try {
         const timeTableNameId = Number(data.timeTableNameId);
         const structure = await timeTableRepository.findStructureInScope(timeTableNameId, { transaction });
@@ -219,6 +445,72 @@ export async function addTimeTablePeriod(data, createdBy, updatedBy) {
 
         await transaction.commit();
         return periodRow;
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
+    }
+}
+
+export async function cloneTimeTableStructure(sourceTimeTableNameId, name, createdBy, updatedBy) {
+    const transaction = await sequelize.transaction();
+
+    try {
+        const source = await timeTableRepository.getTimeTableStructureDetailsById(sourceTimeTableNameId);
+        if (!source) {
+            throw new Error('Structure not found');
+        }
+
+        const plain = source.get({ plain: true });
+        const sourcePeriods = plain.timeTableName || [];
+        const newName = name && name.trim() ? name.trim() : `Copy of ${plain.name}`;
+
+        const newStructure = await timeTableRepository.addTimeTableName(
+            {
+                name: newName,
+                maximumPeriod: plain.maximumPeriod,
+                periodLength: plain.periodLength,
+                periodGap: plain.periodGap,
+                startingTime: plain.startingTime,
+                weekOff: plain.weekOff,
+                sourceTimeTableNameId: Number(sourceTimeTableNameId),
+                createdBy,
+                updatedBy,
+            },
+            transaction,
+        );
+
+        const newTimeTableNameId = newStructure.timeTableNameId;
+        const timeSlots = [];
+
+        for (const period of sourcePeriods) {
+            timeSlots.push({
+                timeTableNameId: newTimeTableNameId,
+                periodName: period.periodName,
+                startTime: period.startTime,
+                endTime: period.endTime,
+                type: period.type,
+                isCourse: period.isCourse,
+                isBreak: period.isBreak,
+                createdBy,
+                updatedBy,
+            });
+        }
+
+        let periods = [];
+        if (timeSlots.length) {
+            periods = await timeTableRepository.addTimeTable({ timeSlots }, transaction);
+        }
+
+        const result = {
+            timeTableNameId: newTimeTableNameId,
+            name: newName,
+            sourceTimeTableNameId: Number(sourceTimeTableNameId),
+            maximumPeriod: plain.maximumPeriod,
+            periods,
+        };
+
+        await transaction.commit();
+        return result;
     } catch (error) {
         await transaction.rollback();
         throw error;

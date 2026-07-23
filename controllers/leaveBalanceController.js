@@ -1,7 +1,7 @@
 import * as service from "../services/leaveBalanceService.js";
 
 export async function addBalance(req, res) {
-  const requiredFields = ["employeeId", "policyId", "year", "totalAllocated", "remainingLeaves"];
+  const requiredFields = ["userId", "policyId", "year", "totalAllocated", "remainingLeaves"];
   const data = { ...req.body };
 
   try {
@@ -18,7 +18,7 @@ export async function addBalance(req, res) {
 
 export async function getBalancesByEmployee(req, res) {
   try {
-    const balances = await service.getBalancesByEmployee(req.params.employeeId);
+    const balances = await service.getBalancesByEmployee(req.params.userId);
     res.status(200).json(balances);
   } catch (err) {
     res.status(500).json({ error: err.message });

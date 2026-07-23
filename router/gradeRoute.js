@@ -10,10 +10,13 @@ import useAuth from "../middleware/authUser.js";
 
 const router = express.Router();
 
-router.post("/add", useAuth, addGradeScheme);
-router.get("/list", useAuth, getAllGradeSchemes);
-router.get("/:id", useAuth, getSingleGradeScheme);
-router.patch("/update/:id", useAuth, updateGradeScheme);
-router.delete("/delete/:id", useAuth, deleteGradeScheme);
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
+
+router.post("/add", useAuth, checkAccess(PERMISSIONS.GRADING_SETUP_ADD.value, null), addGradeScheme);
+router.get("/list", useAuth, checkAccess(PERMISSIONS.GRADING_SETUP.value, null), getAllGradeSchemes);
+router.get("/:id", useAuth, checkAccess(PERMISSIONS.GRADING_SETUP.value, null), getSingleGradeScheme);
+router.patch("/update/:id", useAuth, checkAccess(PERMISSIONS.GRADING_SETUP_EDIT.value, null), updateGradeScheme);
+// router.delete("/delete/:id", useAuth, checkAccess(PERMISSIONS.GRADING_SETUP_DELETE.value, null), deleteGradeScheme);
 
 export default router;

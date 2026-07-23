@@ -95,6 +95,7 @@ export async function getTeacherDashboard({ employeeId } = {}) {
     error.statusCode = 404;
     throw error;
   }
+  const userId = teacher.userId;
 
   const [
     subjectMappings,
@@ -103,11 +104,11 @@ export async function getTeacherDashboard({ employeeId } = {}) {
     examAssignments,
     upcomingClassRows,
   ] = await Promise.all([
-    dashboardRepository.getTeacherDashboardSubjectMappings(employeeId),
-    dashboardRepository.getTeacherDashboardSectionMappings(employeeId),
-    dashboardRepository.getTeacherDashboardScheduleMappings(employeeId),
-    dashboardRepository.getTeacherDashboardExamAssignments(employeeId),
-    dashboardRepository.getTeacherDashboardUpcomingClasses(employeeId, currentDate),
+    dashboardRepository.getTeacherDashboardSubjectMappings(employeeId, userId),
+    dashboardRepository.getTeacherDashboardSectionMappings(employeeId, userId),
+    dashboardRepository.getTeacherDashboardScheduleMappings(employeeId, userId),
+    dashboardRepository.getTeacherDashboardExamAssignments(employeeId, userId),
+    dashboardRepository.getTeacherDashboardUpcomingClasses(employeeId, userId, currentDate),
   ]);
 
   const ids = collectTeacherDashboardIds(subjectMappings, scheduleMappings, sectionMappings);

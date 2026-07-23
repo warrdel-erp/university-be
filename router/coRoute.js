@@ -5,22 +5,25 @@ import {addCo,
 } from "../controllers/coController.js";
 import userAuth from "../middleware/authUser.js"
 
-router.post('/', userAuth, addCo);
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 
-router.get('/', userAuth, getAllCo);
+router.post('/', userAuth, checkAccess(PERMISSIONS.COURSE_OUTCOME_ADD.value, null), addCo);
 
-router.get('/single' ,userAuth, getSingleCoDetails);
+router.get('/', userAuth, checkAccess(PERMISSIONS.COURSE_OUTCOME.value, null), getAllCo);
 
-router.patch('/' ,userAuth, updateCo);
+router.get('/single' ,userAuth, checkAccess(PERMISSIONS.COURSE_OUTCOME.value, null), getSingleCoDetails);
 
-router.delete('/' ,userAuth, deleteCo);
+router.patch('/' ,userAuth, checkAccess(PERMISSIONS.COURSE_OUTCOME_ADD.value, null), updateCo);
 
-router.post('/weightage', userAuth, addCoWeightage);
+router.delete('/' ,userAuth, checkAccess(PERMISSIONS.COURSE_OUTCOME_ADD.value, null), deleteCo);
 
-router.get('/weightage', userAuth, getAllCoWeightage);
+router.post('/weightage', userAuth, checkAccess(PERMISSIONS.COURSE_OUTCOME_ADD.value, null), addCoWeightage);
 
-router.get('/single/weightage' ,userAuth, getSingleCoDetailsWeightage);
+router.get('/weightage', userAuth, checkAccess(PERMISSIONS.COURSE_OUTCOME.value, null), getAllCoWeightage);
 
-router.patch('/weightage' ,userAuth, updateCoWeightage);
+router.get('/single/weightage' ,userAuth, checkAccess(PERMISSIONS.COURSE_OUTCOME.value, null), getSingleCoDetailsWeightage);
+
+router.patch('/weightage' ,userAuth, checkAccess(PERMISSIONS.COURSE_OUTCOME_ADD.value, null), updateCoWeightage);
 
 export default router;

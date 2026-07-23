@@ -41,7 +41,7 @@ const studentMemberInclude = {
 const teacherMemberInclude = {
   model: model.employeeModel,
   as: "teacherMember",
-  attributes: ["employeeId", "employeeName", "employeeCode", "department"],
+  attributes: ["userId", "employeeName", "employeeCode", "department"],
   required: false,
 };
 
@@ -64,7 +64,7 @@ const paymentPayeeIncludes = [
   {
     model: model.employeeModel,
     as: "employeePayee",
-    attributes: ["employeeId", "employeeName", "employeeCode", "department"],
+    attributes: ["userId", "employeeName", "employeeCode", "department"],
     required: false,
   },
 ];

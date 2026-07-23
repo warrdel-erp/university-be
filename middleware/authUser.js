@@ -1,6 +1,5 @@
 import jwt from "jsonwebtoken";
 import { findEmailByEmail } from "../repository/userRepository.js";
-import { getUserRoleAndPermissionsByUserId } from "../services/userServices.js";
 import {
   requestContext,
   buildRequestContextStore,
@@ -36,64 +35,7 @@ export default async function useAuth(req, res, next) {
 
     req.user = userDetail;
 
-    // Fetch user roles and permissions
-    const userRoleAndPermissions = await getUserRoleAndPermissionsByUserId(
-      req.user.userId,
-    );
-
-    // if (!userRoleAndPermissions?.length) {
-    //     return res.status(403).json({
-    //         message: "User role not assigned",
-    //     });
-    // }
-
-    // const { userRole, permissions } = userRoleAndPermissions[0];
-
-    // const role = userRole.role;
-    // const userPermissions = permissions.map(permission => permission.permission);
-    let role = "";
-    let userPermissions = "";
-    if (userRoleAndPermissions && userRoleAndPermissions.length !== 0) {
-      const { userRole, permissions } = userRoleAndPermissions[0];
-      role = userRole.role;
-      // User's role
-      // User's permissions
-      userPermissions = permissions.map((permission) => permission.permission);
-      // User's permissions
-      // User's permissions
-    } else {
-      role = "Admin";
-      userPermissions = "all";
-    }
-
-    const accessRoute = req.originalUrl.split("?")[0].replace(/\/$/, "");
-    const permissionType = req.method === "GET" ? "R/O" : "R/W";
-
-    // console.log(`>>>>>>>>>>>Access Route: ${accessRoute}`);
-    // console.log(`>>>>>>>>>Role: ${role}`);
-    // console.log(`>>>>>>>>>>User Permissions: ${userPermissions}`);
-
-    // Role-based access check
-    const allowedRolesForRoute = `${accessRoute}-${permissionType}`;
-
-    // console.log(`Allowed Roles and Permissions: ${allowedRolesForRoute}`);
-
-    // For non-GET methods
-    if (req.method !== "GET") {
-      const requiredPermissions = req.requiredPermissions || [];
-
-      // required permissions
-      const hasPermission = requiredPermissions.every((required) =>
-        userPermissions.includes(required),
-      );
-
-      if (!hasPermission) {
-        return res
-          .status(403)
-          .json({ message: "Access denied: Insufficient permissions" });
-      }
-    }
-
+    // Build the request context store with tenant scoping info
     const headerInstituteId = req.headers["x-institute-id"];
     const activeInstituteId = headerInstituteId ?? req.user.defaultInstituteId;
 

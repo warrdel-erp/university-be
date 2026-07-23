@@ -86,7 +86,7 @@ export const login = async (req, res) => {
 // admin register student and employee
 export const adminRegisterStudentAndEmployee = async (req, res) => {
   try {
-    const { role, courseId, classSectionId, employeeId } = req.body;
+    const { role, courseId, classSectionId, userId } = req.body;
 
     if (!role) {
       res.status(400).send("All input is required");
@@ -358,12 +358,30 @@ export const saveUserDefaults = async (req, res) => {
     const { defaultInstituteId, defaultRole, defaultAcademicYearId } = req.body;
 
     if (defaultRole) {
-      const hasRole = await userRoleRepository.checkUserRoleExists(userId, defaultRole);
-      if (!hasRole) {
-        return res.status(400).json({
-          success: false,
-          message: `User does not have the specified role: ${defaultRole}`
+      // Teachers use a static "Teacher" role that is not in user_role_permission_scope,
+      // so skip role existence validation when isTeacher is true.
+      if (!req.user.isTeacher) {
+        const role = await sequelize.models.role.findOne({
+          where: isNaN(Number(defaultRole)) ? { role: defaultRole } : { roleId: defaultRole },
         });
+
+        if (!role) {
+          return res.status(400).json({
+            success: false,
+            message: `Role not found: ${defaultRole}`
+          });
+        }
+
+        const hasRole = await userRoleRepository.checkUserRoleExists(userId, role.roleId);
+        if (!hasRole) {
+          return res.status(400).json({
+            success: false,
+            message: `User does not have the specified role: ${defaultRole}`
+          });
+        }
+
+        // Inject the actual integer roleId into the payload so the repository can update it
+        req.body.defaultRoleId = role.roleId;
       }
     }
 
@@ -407,6 +425,24 @@ export const initialSetup = async (req, res) => {
     res.status(400).json({
       success: false,
       message: error.message || "Failed to complete initial setup"
+    });
+  }
+};
+
+export const getGrantedAccess = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const data = await userService.getGrantedAccess(userId);
+    return res.status(200).json({
+      success: true,
+      message: "Granted access details fetched successfully",
+      data
+    });
+  } catch (error) {
+    console.error("Error in getGrantedAccess controller:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch granted access details"
     });
   }
 };

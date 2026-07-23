@@ -1,29 +1,33 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import user from './userModel.js';
-import { ROLES } from '../const/roles.js';
+import users from "./userModel.js";
+import department from "./departmentModel.js";
 
-const userRoleModel = sequelize.define(
-    'user_roles',
+const hodDepartmentModel = sequelize.define(
+    'hod_departments',
     {
         id: {
             type: DataTypes.INTEGER,
             primaryKey: true,
-            autoIncrement: true,
-            field: 'user_role_id'
+            autoIncrement: true
         },
         userId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'user_id',
             references: {
-                model: user,
+                model: users,
                 key: 'user_id'
             }
         },
-        role: {
-            type: DataTypes.ENUM(...Object.values(ROLES)),
+        departmentId: {
+            type: DataTypes.INTEGER,
             allowNull: false,
+            field: 'department_id',
+            references: {
+                model: department,
+                key: 'department_id'
+            }
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -44,12 +48,12 @@ const userRoleModel = sequelize.define(
         }
     },
     {
-        tableName: 'user_roles',
+        tableName: 'hod_departments',
         timestamps: true,
         paranoid: true
     }
 );
 
-userRoleModel.scopeConfig = { university: false, institute: false, academicYear: false };
+hodDepartmentModel.scopeConfig = { university: false, institute: false, academicYear: false };
 
-export default userRoleModel;
+export default hodDepartmentModel;

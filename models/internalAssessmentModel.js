@@ -3,7 +3,6 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import subjectModel from "./subjectModel.js";
 import examSetupTypeModel from "./examSetupTypeModel.js";
-import employeeModel from "./employeeModel.js";
 
 const internalAssessmentModel = sequelize.define(
     'internal_assessment',
@@ -23,13 +22,13 @@ const internalAssessmentModel = sequelize.define(
                 key: 'subject_id'
             }
         },
-        employeeId: {
+        userId: {
             type: DataTypes.INTEGER,
             allowNull: true,
-            field: 'employee_id',
+            field: 'user_id',
             references: {
-                model: employeeModel,
-                key: 'employee_id'
+                model: users,
+                key: 'user_id'
             }
         },
         term: {

@@ -30,6 +30,7 @@ import * as model from "../models/index.js";
 import { decimalAdd, decimalSum, toMoneyNumber } from "../utility/decimalMoney.js";
 import { FEE_PLAN_PUBLISH_STATUS } from "../constant.js";
 import { getTenantStore } from "../utility/requestContext.js";
+import { Op } from "sequelize";
 import {
   classSectionTermsInclude,
   resolveProgramTerm,
@@ -39,7 +40,9 @@ import {
   resolveStudentClassSectionsId,
   timeTableRoutineClassSectionInclude,
   resolveTimeTableRoutineSection,
+  studentClassSectionTermWithSectionInclude,
 } from "../utility/classSectionIncludes.js";
+import { resolveSourcePeriodByDateWiseId } from "../utility/attendancePlacement.js";
 
 function normalizeAffiliatedUniversityId(value) {
   if (value == null || value === '') return null;
@@ -432,7 +435,9 @@ export async function addStudentWithFeePlanProfile({ info, files, createdBy }) {
 
   const { universityId, sessionId } = info;
 
-  const roleId = await resolveStudentRoleId();
+  // Roles are dynamic — skip role table lookup; studentRegister falls back to
+  // the hardcoded "Student" role string when roleId is null.
+  const roleId = null;
 
   return addStudent(
     info,
@@ -2609,29 +2614,31 @@ function formatStudentTimetable(allData) {
     const course = item.timeTableCourse || {};
     const classSection = resolveTimeTableRoutineSection(item) || {};
 
-    (item.timeTablecreate || []).forEach((period) => {
+    for (const period of item.timeTableCells || []) {
       const {
         day,
-        timeTableMappingId,
+        timeTableCellId,
         isSameTeacher,
         timeTableCreationId,
         timeTablecreation,
         timeTableSubject,
-        employeeDetails,
         timeTableTeacherSubject,
+        timeTableCellTeachers,
       } = period;
 
       const subjectData = isSameTeacher
-        ? timeTableTeacherSubject?.employeeSubject?.subjects
+        ? (timeTableTeacherSubject?.employeeSubject?.subjects
+          ?? timeTableTeacherSubject?.employeeSubject)
         : timeTableSubject;
 
+      const teacherRow = timeTableCellTeachers?.[0];
       const teacherData = isSameTeacher
         ? timeTableTeacherSubject?.teacherEmployeeData
-        : employeeDetails;
+        : teacherRow?.employeeDetails;
 
       const mappingEntry = {
-        timeTableMappingId,
-        employeeId: teacherData?.employeeId,
+        timeTableCellId,
+        userId: teacherData?.userId ?? teacherRow?.userId,
         employeeName: teacherData?.employeeName,
         employeeCode: teacherData?.employeeCode,
         pickColor: teacherData?.pickColor,
@@ -2657,7 +2664,7 @@ function formatStudentTimetable(allData) {
           classSectionTermId: item.classSectionTermId ?? null,
         },
       });
-    });
+    }
   }
 
   const formatted = [];
@@ -2704,67 +2711,171 @@ function formatStudentTimetable(allData) {
   return { formatted };
 }
 
+function isGroupPeriodsEnabled(groupPeriods) {
+  return groupPeriods === true || groupPeriods === 'true' || groupPeriods === '1';
+}
+
+function buildProgramDetails(period, students) {
+  const first = students[0] || {};
+  const termRow = first.studentClassSectionTerm || {};
+  const section = termRow.classSection || {};
+  const course = first.course || {};
+  const subject = period.timeTableSubject || {};
+
+  return {
+    classSectionsId:
+      period.classSectionsId
+      ?? termRow.classSectionsId
+      ?? section.classSectionsId
+      ?? null,
+    year: period.year ?? section.year ?? null,
+    section: period.section ?? section.section ?? null,
+    term: period.term ?? termRow.term ?? null,
+    subjectId: subject.subjectId ?? null,
+    subjectName: subject.subjectName ?? null,
+    courseId: course.courseId ?? null,
+    courseName: course.courseName ?? null,
+    courseCode: course.courseCode ?? null,
+  };
+}
+
+function buildPeriodMeta(period) {
+  const cell = period.timeTableCell || {};
+  return {
+    timeTableCellDateWiseId: period.timeTableCellDateWiseId,
+    timeTableCellId: period.timeTableCellId,
+    date: period.date,
+    day: cell.day ?? period.day,
+    period: cell.period ?? period.period,
+    timeTableType: cell.timeTableType,
+    timeTableSubject: cell.timeTableSubject || period.timeTableSubject || null,
+  };
+}
+
+async function buildClassSectionStudentsBlock(dateWiseId) {
+  const period = await resolveSourcePeriodByDateWiseId(Number(dateWiseId));
+
+  const classSectionTermId = period.classSectionTermId;
+  if (!classSectionTermId) {
+    const error = new Error(
+      "classSectionTermId could not be resolved from timeTableCellDateWiseId",
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const students = toPlainRows(
+    await studentRepository.getStudentsByClassSection(
+      classSectionTermId,
+      period.timeTableCellDateWiseId,
+    ),
+  );
+
+  const programDetails = buildProgramDetails(period, students);
+
+  return {
+    classSectionTermId: Number(classSectionTermId),
+    timeTableCellDateWiseId: period.timeTableCellDateWiseId,
+    timeTableCellId: period.timeTableCellId,
+    date: period.date,
+    ...programDetails,
+    programDetails,
+    students,
+    period: buildPeriodMeta(period),
+  };
+}
+
 export async function getStudentsByClassSection({
-  timeTableMappingId,
-  date,
+  timeTableCellDateWiseId,
+  groupPeriods,
 }) {
   try {
-    const classScheduleItem = await model.classScheduleModel.findByPk(
-      timeTableMappingId,
-      {
-        attributes: ["timeTableMappingId", "day", "timeTableType"],
-        include: [
-          {
-            model: model.timeTableRoutineModel,
-            as: "timeTablecreate",
-            attributes: ["classSectionTermId"],
-            include: [
-              timeTableRoutineClassSectionInclude({
-                sectionAttributes: ["classSectionsId", "section"],
-              }),
-            ],
-          },
-          {
-            model: model.subjectModel,
-            as: "timeTableSubject",
-            attributes: ["subjectId", "subjectName"],
-            include: [
-              {
-                model: model.courseModel,
-                as: "courseInfo",
-                attributes: ["courseId", "courseName", "courseCode"],
-              },
-            ],
-          },
-        ],
-        raw: true,
-        nest: true,
-      },
-    );
+    const rawIds = Array.isArray(timeTableCellDateWiseId)
+      ? timeTableCellDateWiseId
+      : [timeTableCellDateWiseId];
 
-    const classSectionTermId =
-      classScheduleItem?.timeTablecreate?.classSectionTermId ?? null;
+    const uniqueIds = [];
+    for (const id of rawIds) {
+      const num = Number(id);
+      if (num && !uniqueIds.includes(num)) {
+        uniqueIds.push(num);
+      }
+    }
+
+    if (!uniqueIds.length) {
+      const error = new Error("timeTableCellDateWiseId is required");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const group = isGroupPeriodsEnabled(groupPeriods);
+
+    if (uniqueIds.length === 1 || !group) {
+      const periods = [];
+      for (const dateWiseId of uniqueIds) {
+        periods.push(await buildClassSectionStudentsBlock(dateWiseId));
+      }
+
+      if (periods.length === 1) {
+        return periods[0];
+      }
+
+      return { periods };
+    }
+
+    const resolvedPeriods = [];
+    for (const dateWiseId of uniqueIds) {
+      resolvedPeriods.push(await resolveSourcePeriodByDateWiseId(dateWiseId));
+    }
+
+    const classSectionTermId = resolvedPeriods[0].classSectionTermId;
     if (!classSectionTermId) {
       const error = new Error(
-        "classSectionTermId could not be resolved from timeTableMappingId",
+        "classSectionTermId could not be resolved from timeTableCellDateWiseId",
       );
       error.statusCode = 400;
       throw error;
     }
 
-    const students = await studentRepository.getStudentsByClassSection(
-      classSectionTermId,
-      timeTableMappingId,
-      date,
+    for (const period of resolvedPeriods) {
+      if (Number(period.classSectionTermId) !== Number(classSectionTermId)) {
+        const error = new Error(
+          "All timeTableCellDateWiseId values must belong to the same classSectionTermId when groupPeriods=true",
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+
+    const dateWiseIds = [];
+    for (const period of resolvedPeriods) {
+      dateWiseIds.push(period.timeTableCellDateWiseId);
+    }
+
+    const students = toPlainRows(
+      await studentRepository.getStudentsByClassSection(
+        classSectionTermId,
+        dateWiseIds,
+      ),
     );
 
-    const response = {
-      classSectionTermId: Number(classSectionTermId),
-      students: toPlainRows(students),
-      classScheduleItem,
-    };
+    const programDetails = buildProgramDetails(resolvedPeriods[0], students);
+    const periodMetas = [];
+    for (const period of resolvedPeriods) {
+      periodMetas.push(buildPeriodMeta(period));
+    }
 
-    return response;
+    return {
+      classSectionTermId: Number(classSectionTermId),
+      timeTableCellDateWiseId: dateWiseIds,
+      timeTableCellDateWiseIds: dateWiseIds,
+      date: resolvedPeriods[0].date,
+      groupPeriods: true,
+      ...programDetails,
+      programDetails,
+      periods: periodMetas,
+      students,
+    };
   } catch (error) {
     console.error("Service Error:", error);
     throw error;
@@ -2815,4 +2926,166 @@ export async function getAllAnswerSheets(filters) {
   );
 
   return studentsdata.map((student) => toPlainRow(student));
+}
+
+export async function getStudentsByElectiveSubject({
+  timeTableCellDateWiseId,
+  groupPeriods,
+}) {
+  const rawIds = Array.isArray(timeTableCellDateWiseId)
+    ? timeTableCellDateWiseId
+    : [timeTableCellDateWiseId];
+
+  const uniqueIds = [];
+  for (const id of rawIds) {
+    const num = Number(id);
+    if (num && !uniqueIds.includes(num)) {
+      uniqueIds.push(num);
+    }
+  }
+
+  if (!uniqueIds.length) {
+    const error = new Error("timeTableCellDateWiseId is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const cellDateWiseRows = await model.timeTableCellDateWiseModel.findAll({
+    where: { timeTableCellDateWiseId: { [Op.in]: uniqueIds } },
+    include: [
+      {
+        model: model.timeTableCellModel,
+        as: "timeTableCell",
+        include: [
+          {
+            model: model.electiveSubjectModel,
+            as: "timeTableElective",
+            attributes: ["electiveSubjectId", "electiveSubjectName", "electiveSubjectCode"],
+          },
+          {
+            model: model.subjectModel,
+            as: "timeTableSubject",
+            attributes: ["subjectId", "subjectName", "subjectCode"],
+          },
+          {
+            model: model.timeTableRoutineModel,
+            as: "timeTableRoutine",
+            include: [
+              { model: model.courseModel, as: "timeTableCourse", attributes: ["courseId", "courseName", "courseCode"] },
+            ],
+          },
+          {
+            model: model.timeTableStructurePeriodsModel,
+            as: "timeTablecreation",
+            attributes: ["periodName", "startTime", "endTime"],
+          },
+        ],
+      },
+      {
+        model: model.classRoomModel,
+        as: "classRoom",
+        attributes: ["roomNumber"],
+      },
+    ],
+  });
+
+  if (!cellDateWiseRows.length) {
+    const error = new Error("timeTableCellDateWiseId not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const firstRow = cellDateWiseRows[0];
+  const plainFirst = firstRow.get({ plain: true });
+  const cell = plainFirst.timeTableCell || {};
+  const electiveSubjectId = plainFirst.electiveSubjectId || cell.electiveSubjectId;
+
+  if (!electiveSubjectId) {
+    const error = new Error("This class schedule is not for an elective subject");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const electiveSubject = cell.timeTableElective || {};
+  const dateWiseIds = cellDateWiseRows.map((r) => r.timeTableCellDateWiseId);
+
+  const mappings = await model.studentElectiveSubjectModel.findAll({
+    where: { electiveSubjectId: Number(electiveSubjectId) },
+    include: [
+      {
+        model: model.studentModel,
+        as: "student",
+        attributes: [
+          "studentId",
+          "scholarNumber",
+          "enrollNumber",
+          "firstName",
+          "lastName",
+          "classSectionTermId",
+        ],
+        include: [
+          studentClassSectionTermWithSectionInclude({
+            termRequired: false,
+            sectionRequired: false,
+            sectionAttributes: ["classSectionsId", "section", "year"],
+          }),
+          {
+            model: model.courseModel,
+            as: "course",
+            attributes: ["courseId", "courseName", "courseCode"],
+          },
+          {
+            model: model.attendanceModel,
+            as: "studentAttendance",
+            attributes: [
+              "attendanceId",
+              "attendanceStatus",
+              "notes",
+              "description",
+              "date",
+              "timeTableCellDateWiseId",
+              "timeTableCellId",
+            ],
+            where: { timeTableCellDateWiseId: { [Op.in]: dateWiseIds } },
+            required: false,
+          },
+        ],
+      },
+    ],
+  });
+
+  const students = mappings
+    .map((m) => (m.student ? m.student.get({ plain: true }) : null))
+    .filter(Boolean);
+
+  const course = students[0]?.course || cell.timeTableRoutine?.timeTableCourse || {};
+
+  return {
+    classSectionTermId: null,
+    timeTableCellDateWiseId: dateWiseIds,
+    timeTableCellDateWiseIds: dateWiseIds,
+    date: plainFirst.date,
+    day: cell.day,
+    period: cellDateWiseRows.map((r) => r.timeTableCell?.period).filter(Boolean).join(", "),
+    groupPeriods: isGroupPeriodsEnabled(groupPeriods),
+    isElective: true,
+    subjectName: electiveSubject.electiveSubjectName || "Elective Subject",
+    courseName: course.courseName || "-",
+    courseCode: course.courseCode || "-",
+    section: "-",
+    classScheduleItem: {
+      day: cell.day,
+      timeTableType: "elective",
+      electiveSubjectId: Number(electiveSubjectId),
+    },
+    periods: cellDateWiseRows.map((r) => ({
+      timeTableCellDateWiseId: r.timeTableCellDateWiseId,
+      timeTableCellId: r.timeTableCellId,
+      date: r.date,
+      day: r.timeTableCell?.day,
+      period: r.timeTableCell?.period,
+      timeTableType: "elective",
+    })),
+    students,
+  };
 }

@@ -1,12 +1,12 @@
 import * as StaffCreation from "../services/staffServices.js";
 
 export async function addStaff(req, res) {
-    const { departmentId, employeeId } = req.body
+    const { departmentId, userId } = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if (!(departmentId && employeeId)) {
-            return res.status(400).send('departmentId,employeeId is required')
+        if (!(departmentId && userId)) {
+            return res.status(400).send('departmentId,userId is required')
         }
         const Staff = await StaffCreation.addStaff(req.body, createdBy, updatedBy);
         res.status(201).json({ message: "Data added successfully", Staff });

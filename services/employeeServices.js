@@ -1,4 +1,5 @@
 import sequelize from '../database/sequelizeConfig.js';
+import * as model from '../models/index.js';
 import * as employeeRepository from '../repository/employeeRepository.js';
 import * as employeeAddressRepository from '../repository/employeeAddressRepository.js';
 import * as employeeOfficeRepository from '../repository/employeeOfficeRepository.js';
@@ -22,6 +23,7 @@ import * as userRoleService from '../services/userRoleService.js';
 import { getCampusCode, getInstituteCode } from '../repository/collegeRepository.js';
 import * as libraryRepository from '../repository/libraryCreationRepository.js';
 import * as timeTableCreateRepository from '../repository/timeTablecreateRepository.js';
+import * as employeeScheduleRepository from '../repository/employeeScheduleRepository.js';
 import * as attendanceRepository from '../repository/attendanceRepository.js';
 import * as classSectionTermRepository from '../repository/classSectionTermRepository.js';
 import * as evaluationRepository from "../repository/evalutionRepository.js";
@@ -108,16 +110,20 @@ function toPlain(value) {
 }
 
 function mapRoleData(authUser = {}) {
-  const userRoles = authUser?.userRoles || [];
-  const userPermissions = authUser?.userPermissions || [];
+  const userRolePermissions = authUser?.userRolePermissions || [];
+
+  const firstRole = userRolePermissions.find(urp => urp?.userRole?.role)?.userRole?.role || "";
+
+  const permissions = userRolePermissions.map(urp => urp?.permission).filter(Boolean);
+
   return {
-    role: userRoles?.[0]?.role || "",
-    permissions: userPermissions.map((permissionItem) => permissionItem.permission).filter(Boolean)
+    role: firstRole,
+    permissions: [...new Set(permissions)]
   };
 }
 
 async function resolveOfficeEntry(item = {}) {
-  const directOffice = await getEmployeeOfficeDetails(item?.employeeId);
+  const directOffice = await getEmployeeOfficeDetails(item?.userId);
   const directOfficeEntry = toPlain(directOffice) || {};
   const includedOffice = Array.isArray(item?.office) ? (item.office[0] || {}) : (item?.office || {});
   return Object.keys(directOfficeEntry).length > 0 ? directOfficeEntry : includedOffice;
@@ -205,21 +211,31 @@ export async function addEmployee(data, files, createdBy, roleId) {
       mobileNumber: address?.mobileNumber
     }
 
+    // Detect if this is the legacy TEACHER role (string name, not a numeric roleId)
+    const isTeacherRole = String(roleData?.role ?? '').trim().toUpperCase() === 'TEACHER';
+
     const employeeRegisterData = {
       universityId,
-      // roleId: finalRegisterRoleId,
       employeeName: data.employeeName,
-      employeeId: null,
-      instituteId
+      userId: null,
+      instituteId,
+      isTeacher: isTeacherRole,
     }
 
     const userId = await employeeRegister(employeePersonalDetail, employeeRegisterData, transaction);
 
-    // Add user role entry 
-    if (roleData) {
-      await userRoleService.assignRoleToUser(userId, roleData.role, roleData.permissions, transaction);
-    } else {
-      throw new Error("Role data is required")
+    // Add user role entry
+    // Teachers are a special backward-compatibility case: no entry in user_role,
+    // they are identified by isTeacher = true on the users record.
+    if (!isTeacherRole) {
+      if (roleData) {
+        const isNumericRoleId = roleData.role != null && !isNaN(Number(roleData.role));
+        if (isNumericRoleId) {
+          await userRoleService.assignRoleToUser(userId, Number(roleData.role), roleData.permissions, transaction);
+        }
+      } else {
+        throw new Error("Role data is required");
+      }
     }
 
     // Add employee 
@@ -242,7 +258,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
         const file = files[key];
         const s3Response = await uploadFile(file);
         const url = s3Response.Location;
-        const data = { key, url, employeeId, createdBy };
+        const data = { key, url, userId, createdBy };
         await employeeFilesRepository.addEmployeeFiles(data, transaction);
       });
 
@@ -251,6 +267,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
 
     // Add employee address
     const addressDetail = await employeeAddressRepository.addAddress({
+      userId,
       employeeId,
       createdBy,
       ...address
@@ -266,6 +283,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
 
     // Add employee cor-address
     await employeeAddressRepository.addCorsAddress({
+      userId,
       employeeId,
       createdBy,
       ...normalizedCorsAddress
@@ -273,6 +291,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
 
     // Add employee office details
     await employeeOfficeRepository.addOfficeDetails({
+      userId,
       employeeId,
       createdBy,
       ...normalizedOffice
@@ -281,7 +300,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
     // Add employee roles
     // for (const roles of role) {
     //     await employeeRoleRepository.addEmployeeRole({
-    //         employeeId,
+    //         userId,
     //         createdBy,
     //         roles
     //     }, transaction);
@@ -290,7 +309,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
     // Add employee skills
     for (const skill of skills) {
       await employeeSkillRepository.addEmployeeSkill({
-        employeeId,
+        userId,
         createdBy,
         ...skill
       }, transaction);
@@ -300,7 +319,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
     const validDocsForQualification = normalizeDocumentAttachments(documents || []).filter((doc) => doc?.receivedDate);
     for (const document of validDocsForQualification) {
       await employeeQualificationRepository.addEmployeeQualification({
-        employeeId,
+        userId,
         createdBy,
         ...document
       }, transaction);
@@ -316,7 +335,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
       }));
     for (const qualification of validQualificationsForDocuments) {
       await employeeDocumentRepository.addEmployeeDocuments({
-        employeeId,
+        userId,
         createdBy,
         ...qualification
       }, transaction);
@@ -325,7 +344,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
     // Add employee experiences
     for (const experience of experiences) {
       await employeeExperianceRepository.addEmployeeExperiance({
-        employeeId,
+        userId,
         createdBy,
         ...experience
       }, transaction);
@@ -334,7 +353,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
     // Add employee achievements
     for (const achievement of achievements) {
       await employeeAchivementRepository.addEmployeeAchievement({
-        employeeId,
+        userId,
         createdBy,
         ...achievement
       }, transaction);
@@ -343,7 +362,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
     // Add employee wards
     for (const ward of wards) {
       await employeeWardRepository.addEmployeeWard({
-        employeeId,
+        userId,
         createdBy,
         ...ward
       }, transaction);
@@ -352,7 +371,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
     // Add employee activities
     for (const activity of activities) {
       await employeeActivityRepository.addEmployeeActivity({
-        employeeId,
+        userId,
         createdBy,
         ...activity
       }, transaction);
@@ -361,7 +380,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
     // Add employee references
     for (const reference of references) {
       await employeeReferenceRepository.addEmployeeReference({
-        employeeId,
+        userId,
         createdBy,
         ...reference
       }, transaction);
@@ -370,7 +389,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
     // Add employee research
     for (const researchItem of research) {
       await employeeResearchRepository.addEmployeeResearch({
-        employeeId,
+        userId,
         createdBy,
         ...researchItem
       }, transaction);
@@ -379,7 +398,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
     // Add employee long leaves
     for (const longLeave of longLeaves) {
       await employeeLongLeaveRepository.addEmployeeLongLeave({
-        employeeId,
+        userId,
         createdBy,
         ...longLeave
       }, transaction);
@@ -400,7 +419,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
         }
 
         const entries = type.map((types, index) => ({
-          employeeId,
+          userId,
           createdBy,
           types,
           codes: code[index]
@@ -486,17 +505,17 @@ export async function getAllEmployee(campusId, instituteId, auth = {}) {
   const { userId, role, employeeId: authEmployeeId } = auth;
 
   if (isTeacherRole(role)) {
-    const employeeId = await employeeRepository.resolveEmployeeIdForAuth({
+    const resolvedEmployeeId = await employeeRepository.resolveEmployeeIdForAuth({
       userId,
       employeeId: authEmployeeId,
     });
-    if (!employeeId) {
+    if (!resolvedEmployeeId) {
       throw new Error('Employee not found for user');
     }
 
     const [employees, subjectMappings] = await Promise.all([
-      employeeRepository.getAllEmployee(undefined, undefined, { employeeId }),
-      employeeRepository.getTeacherSubject(employeeId, {}),
+      employeeRepository.getAllEmployee(undefined, undefined, { employeeId: resolvedEmployeeId }),
+      employeeRepository.getTeacherSubject(resolvedEmployeeId, {}),
     ]);
 
     const formatted = await Promise.all((employees || []).map(formatEmployeeListItem));
@@ -514,42 +533,44 @@ export async function getAllEmployee(campusId, instituteId, auth = {}) {
   return Promise.all((result || []).map(formatEmployeeListItem));
 };
 
-export async function getSingleEmployeeDetails(employeeId) {
-  const result = await employeeRepository.getSingleEmployeeDetails(employeeId);
+export async function getSingleEmployeeDetails(userId) {
+  const result = await employeeRepository.getSingleEmployeeDetails(userId);
   return Promise.all((result || []).map(async (row) => {
     const item = toPlain(row) || {};
     const authUser = item?.user || item?.userEmployee || {};
+
     const mappedRoleData = mapRoleData(authUser);
+
     const mappedQualification = Array.isArray(item?.qualification) ? item.qualification : [];
     const mappedDocuments = Array.isArray(item?.documents) ? item.documents : [];
     const officeEntry = await resolveOfficeEntry(item);
     const referenceList = (Array.isArray(item?.reference) && item.reference.length > 0)
       ? item.reference
-      : (await getEmployeeReferenceDetails(item?.employeeId))?.map(toPlain) || [];
+      : (await getEmployeeReferenceDetails(item?.userId))?.map(toPlain) || [];
     const skillList = (Array.isArray(item?.skill) && item.skill.length > 0)
       ? item.skill
-      : (await getEmployeeSkillDetails(item?.employeeId))?.map(toPlain) || [];
+      : (await getEmployeeSkillDetails(item?.userId))?.map(toPlain) || [];
     const qualificationList = (Array.isArray(mappedQualification) && mappedQualification.length > 0)
       ? mappedQualification
-      : (await getEmployeeDocumentDetails(item?.employeeId))?.map(toPlain) || [];
+      : (await getEmployeeDocumentDetails(item?.userId))?.map(toPlain) || [];
     const documentList = (Array.isArray(mappedDocuments) && mappedDocuments.length > 0)
       ? mappedDocuments
-      : (await getEmployeeQualificationDetails(item?.employeeId))?.map(toPlain) || [];
+      : (await getEmployeeQualificationDetails(item?.userId))?.map(toPlain) || [];
     const experienceList = (Array.isArray(item?.experiance) && item.experiance.length > 0)
       ? item.experiance
-      : (await getEmployeeExperienceDetails(item?.employeeId))?.map(toPlain) || [];
+      : (await getEmployeeExperienceDetails(item?.userId))?.map(toPlain) || [];
     const achievementList = (Array.isArray(item?.achievements) && item.achievements.length > 0)
       ? item.achievements
-      : (await getEmployeeAchievementDetails(item?.employeeId))?.map(toPlain) || [];
+      : (await getEmployeeAchievementDetails(item?.userId))?.map(toPlain) || [];
     const researchList = (Array.isArray(item?.research) && item.research.length > 0)
       ? item.research
-      : (await getEmployeeResearchList(item?.employeeId))?.map(toPlain) || [];
+      : (await getEmployeeResearchList(item?.userId))?.map(toPlain) || [];
     const activityList = (Array.isArray(item?.activty) && item.activty.length > 0)
       ? item.activty
-      : (await getEmployeeActivityDetails(item?.employeeId))?.map(toPlain) || [];
+      : (await getEmployeeActivityDetails(item?.userId))?.map(toPlain) || [];
     const longLeaveList = (Array.isArray(item?.longLeave) && item.longLeave.length > 0)
       ? item.longLeave
-      : (await getEmployeeLongLeaveDetails(item?.employeeId))?.map(toPlain) || [];
+      : (await getEmployeeLongLeaveDetails(item?.userId))?.map(toPlain) || [];
     const addressEntry = Array.isArray(item?.address) ? (item.address[0] || {}) : (item?.address || {});
     const employment = mapEmployment(item, officeEntry, addressEntry);
     const { office: _officeIgnored, ...itemWithoutOffice } = item;
@@ -576,7 +597,7 @@ export async function getSingleEmployeeDetails(employeeId) {
   }));
 };
 
-export async function deleteEmployeeDetail(employeeId) {
+export async function deleteEmployeeDetail(userId) {
   try {
 
     const [
@@ -595,20 +616,20 @@ export async function deleteEmployeeDetail(employeeId) {
       deleteEmployeeLongLeaves,
       deleteEmployeeMetaData
     ] = await Promise.all([
-      employeeRepository.deleteEmployeeDetail(employeeId),
-      employeeAddressRepository.deleteEmployeeAddress(employeeId),
-      employeeOfficeRepository.deleteEmployeeOffice(employeeId),
-      employeeRoleRepository.deleteEmployeeRole(employeeId),
-      employeeSkillRepository.deleteEmployeeSkill(employeeId),
-      employeeDocumentRepository.deleteEmployeeDocuments(employeeId),
-      employeeQualificationRepository.deleteEmployeeQualification(employeeId),
-      employeeExperianceRepository.deleteEmployeeExperiance(employeeId),
-      employeeAchivementRepository.deleteEmployeeAchievement(employeeId),
-      employeeWardRepository.deleteEmployeeWard(employeeId),
-      employeeActivityRepository.deleteEmployeeActivity(employeeId),
-      employeeReferenceRepository.deleteEmployeeReference(employeeId),
-      employeeLongLeaveRepository.deleteEmployeeLongLeave(employeeId),
-      employeeMetaDataRepository.deleteEmployeeMetaData(employeeId)
+      employeeRepository.deleteEmployeeDetail(userId),
+      employeeAddressRepository.deleteEmployeeAddress(userId),
+      employeeOfficeRepository.deleteEmployeeOffice(userId),
+      employeeRoleRepository.deleteEmployeeRole(userId),
+      employeeSkillRepository.deleteEmployeeSkill(userId),
+      employeeDocumentRepository.deleteEmployeeDocuments(userId),
+      employeeQualificationRepository.deleteEmployeeQualification(userId),
+      employeeExperianceRepository.deleteEmployeeExperiance(userId),
+      employeeAchivementRepository.deleteEmployeeAchievement(userId),
+      employeeWardRepository.deleteEmployeeWard(userId),
+      employeeActivityRepository.deleteEmployeeActivity(userId),
+      employeeReferenceRepository.deleteEmployeeReference(userId),
+      employeeLongLeaveRepository.deleteEmployeeLongLeave(userId),
+      employeeMetaDataRepository.deleteEmployeeMetaData(userId)
     ]);
 
     const results = [
@@ -727,7 +748,6 @@ export async function importEmployeeData(excelData, commonData) {
       const result = await employeeRepository.createEmployeeWithDetails(employeeData, officeData, addressData, transaction);
       const employeeId = result.dataValues.employeeId
 
-
       const employeeRegisterData = {
         instituteId: convertedData.instituteId,
         roleId: convertedData.roleId,
@@ -754,7 +774,7 @@ export async function importEmployeeData(excelData, commonData) {
     return { success: false, error: error.message };
   }
 };
-export async function updateEmployee(employeeId, data, files, updatedBy, createdBy) {
+export async function updateEmployee(userId, data, files, updatedBy, createdBy) {
 
   const transaction = await sequelize.transaction();
   try {
@@ -786,7 +806,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
 
     //  Update main employee table
     const { roleId: _excludedRoleId, ...employeeUpdateData } = data; // roleId is a string ("ADMIN"), not an int FK — exclude it
-    await employeeRepository.updateEmployee(employeeId, {
+    await employeeRepository.updateEmployee(userId, {
       ...employeeUpdateData,
       roleId: null,  // role_id in employee table is always null; role is managed via user_roles table
       updatedBy
@@ -794,7 +814,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
 
     // Sync officialEmailId with user table email
     if (data.officalEmailId) {
-      const employeeDetails = await employeeRepository.getSingleEmployeeDetails(employeeId);
+      const employeeDetails = await employeeRepository.getSingleEmployeeDetails(userId);
       const userId = employeeDetails?.[0]?.userId;
       if (userId) {
         await registerRepository.updateUser(userId, { email: data.officalEmailId }, transaction);
@@ -807,8 +827,8 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
         const file = files[key];
         const s3Response = await uploadFile(file);
         const url = s3Response.Location;
-        const fileData = { key, url, employeeId, updatedBy };
-        await employeeFilesRepository.updateEmployee(employeeId, fileData, transaction);
+        const fileData = { key, url, userId, updatedBy };
+        await employeeFilesRepository.updateEmployee(userId, fileData, transaction);
       });
       await Promise.all(uploadPromises);
     }
@@ -820,14 +840,14 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
         ...address
       };
       const addressUpdateResult = await employeeAddressRepository.updateAddress(
-        employeeId,
+        userId,
         addressPayload,
         transaction
       );
       const updatedAddressCount = Array.isArray(addressUpdateResult) ? (addressUpdateResult[0] || 0) : 0;
       if (updatedAddressCount === 0) {
         await employeeAddressRepository.addAddress({
-          employeeId,
+          userId,
           createdBy,
           ...address
         }, transaction);
@@ -846,14 +866,14 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
         ...normalizedCorsAddress
       };
       const corsUpdateResult = await employeeAddressRepository.updateCorsAddress(
-        employeeId,
+        userId,
         corsAddressPayload,
         transaction
       );
       const updatedCorsCount = Array.isArray(corsUpdateResult) ? (corsUpdateResult[0] || 0) : 0;
       if (updatedCorsCount === 0) {
         await employeeAddressRepository.addCorsAddress({
-          employeeId,
+          userId,
           createdBy,
           ...normalizedCorsAddress
         }, transaction);
@@ -867,7 +887,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
         ...normalizedOffice
       };
 
-      const existingOffice = await employeeOfficeRepository.getEmployeeOfficeByEmployeeId(employeeId);
+      const existingOffice = await employeeOfficeRepository.getEmployeeOfficeByEmployeeId(userId);
 
       if (existingOffice?.employeeOfficeId) {
         await employeeOfficeRepository.updateOfficeDetailsById(
@@ -877,7 +897,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
         );
       } else {
         await employeeOfficeRepository.addOfficeDetails({
-          employeeId,
+          userId,
           createdBy,
           ...normalizedOffice
         }, transaction);
@@ -898,7 +918,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     const hasLongLeaveField = Object.prototype.hasOwnProperty.call(data, 'longLeave');
     if (hasSkillField) {
       await employeeSkillRepository.refreshEmployeeSkills(
-        employeeId,
+        userId,
         skills,
         createdBy,
         updatedBy,
@@ -910,7 +930,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     const validDocsForQualification = normalizeDocumentAttachments(documents || []).filter((doc) => doc?.receivedDate);
     if (hasDocumentsField) {
       await employeeQualificationRepository.refreshEmployeeQualifications(
-        employeeId,
+        userId,
         validDocsForQualification,
         createdBy,
         updatedBy,
@@ -927,7 +947,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
       }));
     if (hasQualificationField) {
       await employeeDocumentRepository.refreshEmployeeDocuments(
-        employeeId,
+        userId,
         validQualificationsForDocuments,
         createdBy,
         updatedBy,
@@ -938,7 +958,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     // Update Experiences
     if (hasExperienceField) {
       await employeeExperianceRepository.refreshEmployeeExperiences(
-        employeeId,
+        userId,
         experiences,
         createdBy,
         updatedBy,
@@ -949,7 +969,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     // Update Achievements
     if (hasAchievementsField) {
       await employeeAchivementRepository.refreshEmployeeAchievements(
-        employeeId,
+        userId,
         achievements,
         createdBy,
         updatedBy,
@@ -960,7 +980,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     // Update Wards
     if (hasWardField) {
       await employeeWardRepository.refreshEmployeeWards(
-        employeeId,
+        userId,
         wards,
         createdBy,
         updatedBy,
@@ -971,7 +991,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     // Update Activities
     if (hasActivityField) {
       await employeeActivityRepository.refreshEmployeeActivities(
-        employeeId,
+        userId,
         activities,
         createdBy,
         updatedBy,
@@ -982,7 +1002,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     // Update References
     if (hasReferenceField) {
       await employeeReferenceRepository.refreshEmployeeReferences(
-        employeeId,
+        userId,
         references,
         createdBy,
         updatedBy,
@@ -993,7 +1013,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     // Update Research
     if (hasResearchField) {
       await employeeResearchRepository.refreshEmployeeResearch(
-        employeeId,
+        userId,
         research,
         createdBy,
         updatedBy,
@@ -1004,7 +1024,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     //  Update Long Leaves
     if (hasLongLeaveField) {
       await employeeLongLeaveRepository.refreshEmployeeLongLeaves(
-        employeeId,
+        userId,
         longLeaves,
         createdBy,
         updatedBy,
@@ -1023,7 +1043,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
         const code = allDropDownDataObject.code;
 
         const entries = type.map((types, index) => ({
-          employeeId,
+          userId,
           createdBy,
           updatedBy,
           types,
@@ -1043,48 +1063,48 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
   }
 };
 
-export async function getEmployeeOfficeDetails(employeeId) {
-  return await employeeOfficeRepository.getEmployeeOfficeByEmployeeId(employeeId);
+export async function getEmployeeOfficeDetails(userId) {
+  return await employeeOfficeRepository.getEmployeeOfficeByEmployeeId(userId);
 }
 
-export async function getEmployeeReferenceDetails(employeeId) {
-  return await employeeReferenceRepository.getEmployeeReferencesByEmployeeId(employeeId);
+export async function getEmployeeReferenceDetails(userId) {
+  return await employeeReferenceRepository.getEmployeeReferencesByEmployeeId(userId);
 }
 
-export async function getEmployeeSkillDetails(employeeId) {
-  return await employeeSkillRepository.getEmployeeSkillsByEmployeeId(employeeId);
+export async function getEmployeeSkillDetails(userId) {
+  return await employeeSkillRepository.getEmployeeSkillsByEmployeeId(userId);
 }
 
-export async function getEmployeeDocumentDetails(employeeId) {
-  return await employeeDocumentRepository.getEmployeeDocumentsByEmployeeId(employeeId);
+export async function getEmployeeDocumentDetails(userId) {
+  return await employeeDocumentRepository.getEmployeeDocumentsByEmployeeId(userId);
 }
 
-export async function getEmployeeQualificationDetails(employeeId) {
-  return await employeeQualificationRepository.getEmployeeQualificationsByEmployeeId(employeeId);
+export async function getEmployeeQualificationDetails(userId) {
+  return await employeeQualificationRepository.getEmployeeQualificationsByEmployeeId(userId);
 }
 
-export async function getEmployeeExperienceDetails(employeeId) {
-  return await employeeExperianceRepository.getEmployeeExperiencesByEmployeeId(employeeId);
+export async function getEmployeeExperienceDetails(userId) {
+  return await employeeExperianceRepository.getEmployeeExperiencesByEmployeeId(userId);
 }
 
-export async function getEmployeeAchievementDetails(employeeId) {
-  return await employeeAchivementRepository.getEmployeeAchievementsByEmployeeId(employeeId);
+export async function getEmployeeAchievementDetails(userId) {
+  return await employeeAchivementRepository.getEmployeeAchievementsByEmployeeId(userId);
 }
 
-export async function getEmployeeResearchList(employeeId) {
-  return await employeeResearchRepository.getEmployeeResearchByEmployeeId(employeeId);
+export async function getEmployeeResearchList(userId) {
+  return await employeeResearchRepository.getEmployeeResearchByEmployeeId(userId);
 }
 
-export async function getEmployeeActivityDetails(employeeId) {
-  return await employeeActivityRepository.getEmployeeActivitiesByEmployeeId(employeeId);
+export async function getEmployeeActivityDetails(userId) {
+  return await employeeActivityRepository.getEmployeeActivitiesByEmployeeId(userId);
 }
 
-export async function getEmployeeLongLeaveDetails(employeeId) {
-  return await employeeLongLeaveRepository.getEmployeeLongLeavesByEmployeeId(employeeId);
+export async function getEmployeeLongLeaveDetails(userId) {
+  return await employeeLongLeaveRepository.getEmployeeLongLeavesByEmployeeId(userId);
 }
 
-export async function getBooksIssuedToEmployee(employeeId) {
-  const rawData = await libraryRepository.getBooksIssuedToEmployee(employeeId);
+export async function getBooksIssuedToEmployee(userId) {
+  const rawData = await libraryRepository.getBooksIssuedToEmployee(userId);
   if (!rawData || rawData.length === 0) {
     return { message: "No issued books found", books: [] };
   }
@@ -1121,36 +1141,38 @@ export async function getBooksIssuedToEmployee(employeeId) {
   };
 };
 
-export async function getTeacherTimeTable(employeeId) {
-
-  const allData = await timeTableCreateRepository.getTeacherTimeTable(employeeId);
+export async function getTeacherTimeTable(userId) {
+  const allData = await employeeScheduleRepository.getTeacherWeekCells(userId);
 
   const allMappings = [];
 
   for (const item of allData) {
+    const plain = item.get({ plain: true });
+    const course = plain.timeTableCourse || {};
+    const classSection = plain.timeTableClassSectionTerm?.classSection
+      || plain.timeTableClassSection
+      || {};
 
-    const course = item.timeTableCourse || {};
-    const classSection = item.timeTableClassSection || {};
-
-    (item.timeTablecreate || []).forEach(period => {
-
+    for (const period of plain.timeTableCells) {
       const {
         day,
-        timeTableMappingId,
+        timeTableCellId,
         isSameTeacher,
         timeTableCreationId,
         timeTableType,
         timeTablecreation,
         timeTableSubject,
-        employeeDetails,
         timeTableTeacherSubject,
-        timeTableElective
+        timeTableElective,
+        timeTableCellTeachers,
       } = period;
 
+      const teacherRow = timeTableCellTeachers[0];
+      const employeeDetails = teacherRow.employeeDetails;
       const sameTeacher = isSameTeacher;
 
       const subjectData = sameTeacher
-        ? timeTableTeacherSubject?.employeeSubject?.subjects
+        ? timeTableTeacherSubject?.employeeSubject
         : timeTableSubject;
 
       const teacherData = sameTeacher
@@ -1158,23 +1180,23 @@ export async function getTeacherTimeTable(employeeId) {
         : employeeDetails;
 
       const mappingEntry = {
-        timeTableMappingId,
-        employeeId: teacherData?.employeeId,
+        timeTableCellId,
+        userId: teacherData?.userId,
         employeeName: teacherData?.employeeName,
         employeeCode: teacherData?.employeeCode,
         pickColor: teacherData?.pickColor,
         timeTableType,
         subject: timeTableElective
           ? {
-            subjectId: timeTableElective?.electiveSubjectId,
-            Name: timeTableElective?.electiveSubjectName,
-            Code: timeTableElective?.electiveSubjectCode
+            subjectId: timeTableElective.electiveSubjectId,
+            Name: timeTableElective.electiveSubjectName,
+            Code: timeTableElective.electiveSubjectCode,
           }
           : {
             subjectId: subjectData?.subjectId,
             Name: subjectData?.subjectName,
-            Code: subjectData?.subjectCode
-          }
+            Code: subjectData?.subjectCode,
+          },
       };
 
       allMappings.push({
@@ -1185,27 +1207,30 @@ export async function getTeacherTimeTable(employeeId) {
         baseMetadata: {
           courseName: course.courseName,
           courseCode: course.courseCode,
-          courseId: item.courseId,
-          class: classSection.year != null ? String(classSection.year) : "",
+          courseId: plain.courseId || course.courseId,
+          class: classSection.year != null ? String(classSection.year) : '',
           section: classSection.section,
-          classSectionsId: item.classSectionsId,
-          startingDate: item.startingDate,
-          endingDate: item.endingDate,
-          timeTableType
-        }
+          classSectionsId: plain.classSectionsId || classSection.classSectionsId,
+          startingDate: plain.startingDate,
+          endingDate: plain.endingDate,
+          timeTableType,
+        },
       });
-
-    });
-
+    }
   }
 
   const finalOutput = [];
 
-  allMappings.forEach(curr => {
-
+  for (const curr of allMappings) {
     const type = curr.mappingEntry.timeTableType;
 
-    let record = finalOutput.find(r => r.timeTableType === type);
+    let record = null;
+    for (const row of finalOutput) {
+      if (row.timeTableType === type) {
+        record = row;
+        break;
+      }
+    }
 
     if (!record) {
       record = {
@@ -1218,18 +1243,30 @@ export async function getTeacherTimeTable(employeeId) {
         classSectionsId: curr.baseMetadata.classSectionsId,
         startingDate: curr.baseMetadata.startingDate,
         endingDate: curr.baseMetadata.endingDate,
-        sectionRoutine: []
+        sectionRoutine: [],
       };
       finalOutput.push(record);
     }
 
-    let dayObj = record.sectionRoutine.find(d => d.day === curr.day);
+    let dayObj = null;
+    for (const dayRow of record.sectionRoutine) {
+      if (dayRow.day === curr.day) {
+        dayObj = dayRow;
+        break;
+      }
+    }
     if (!dayObj) {
       dayObj = { day: curr.day, period: [] };
       record.sectionRoutine.push(dayObj);
     }
 
-    let existPeriod = dayObj.period.find(p => p.timeTableCreationId === curr.timeTableCreationId);
+    let existPeriod = null;
+    for (const periodRow of dayObj.period) {
+      if (periodRow.timeTableCreationId === curr.timeTableCreationId) {
+        existPeriod = periodRow;
+        break;
+      }
+    }
 
     if (!existPeriod) {
       dayObj.period.push({
@@ -1240,24 +1277,22 @@ export async function getTeacherTimeTable(employeeId) {
         periodGap: curr.periodDetails?.periodGap,
         startTime: curr.periodDetails?.startTime,
         endTime: curr.periodDetails?.endTime,
-        mappingData: [curr.mappingEntry]
+        mappingData: [curr.mappingEntry],
       });
     } else {
       existPeriod.mappingData.push(curr.mappingEntry);
     }
-
-  });
+  }
 
   return { formatted: finalOutput };
+}
 
+export async function getTeacherSubject(userId, filters = {}) {
+  return await employeeRepository.getTeacherSubject(userId, filters);
 };
 
-export async function getTeacherSubject(employeeId, filters = {}) {
-  return await employeeRepository.getTeacherSubject(employeeId, filters);
-};
-
-export async function getSubjectEvalution(employeeId) {
-  return await evaluationRepository.getTeacherSubjectEvalution(employeeId);
+export async function getSubjectEvalution(userId) {
+  return await evaluationRepository.getTeacherSubjectEvalution(userId);
 }
 
 
@@ -1297,16 +1332,15 @@ function expandScheduleForExactDate(rawSchedules, currentDate) {
   return results;
 }
 
-export async function getTodayClassSchedule(employeeId, currentDate, sessionId, groupPeriods = false) {
-  const rawSchedules = await timeTableCreateRepository.getTodayClassScheduleForEmployee(
-    Number(employeeId),
+export async function getTodayClassSchedule(userId, currentDate, sessionId, groupPeriods = false) {
+  const rawSchedules = await employeeScheduleRepository.getTodayClassScheduleForEmployee(
+    Number(userId),
     currentDate,
     sessionId,
   );
 
-  const expanded = expandScheduleForExactDate(rawSchedules, currentDate);
   const strippedSchedules = [];
-  for (const schedule of expanded) {
+  for (const schedule of rawSchedules) {
     strippedSchedules.push(stripTeacherFieldsFromSchedule(schedule));
   }
 
@@ -1321,12 +1355,12 @@ export async function getTodayClassSchedule(employeeId, currentDate, sessionId, 
   return schedules;
 }
 
-export async function getTeacherCourses(employeeId) {
-  return await employeeRepository.getTeacherCourses(employeeId);
+export async function getTeacherCourses(userId) {
+  return await employeeRepository.getTeacherCourses(userId);
 }
 
-export async function getTeacherSubjectsFromSchedule(employeeId) {
-  return await employeeRepository.getTeacherSubjectsFromSchedule(employeeId);
+export async function getTeacherSubjectsFromSchedule(userId) {
+  return await employeeScheduleRepository.getTeacherSubjectsFromWeekCells(userId);
 }
 
 function getTeacherDetails(rawSchedules) {
@@ -1337,7 +1371,7 @@ function getTeacherDetails(rawSchedules) {
   }
 
   return {
-    employeeId: employee.employeeId,
+    userId: employee.userId,
     employeeName: employee.employeeName,
     employeeCode: employee.employeeCode,
     pickColor: employee.pickColor,
@@ -1370,11 +1404,11 @@ function stripTeacherFieldsFromSchedule(schedule) {
 }
 
 function getAttendanceStatusKey(schedule) {
-  return `${schedule.timeTableMappingId}_${schedule.date}`;
+  return `dw:${Number(schedule.timeTableCellDateWiseId)}`;
 }
 
 function resolveScheduleClassSectionTermId(schedule) {
-  const routine = schedule.timeTablecreate;
+  const routine = schedule.timeTablecreate || schedule.timeTableRoutine;
   if (!routine) {
     return null;
   }
@@ -1393,15 +1427,15 @@ function resolveScheduleClassSectionTermId(schedule) {
 }
 
 function collectScheduleQueryParams(schedules) {
-  const mappingIdSet = new Set();
+  const dateWiseIdSet = new Set();
   const dates = [];
   const resolvedTermIds = [];
   const uniqueTermIds = [];
   const seenTermIds = new Set();
 
   for (const schedule of schedules) {
-    if (schedule.timeTableMappingId) {
-      mappingIdSet.add(schedule.timeTableMappingId);
+    if (schedule.timeTableCellDateWiseId != null) {
+      dateWiseIdSet.add(Number(schedule.timeTableCellDateWiseId));
     }
     if (schedule.date) {
       dates.push(schedule.date);
@@ -1419,9 +1453,9 @@ function collectScheduleQueryParams(schedules) {
     }
   }
 
-  const mappingIds = [];
-  for (const mappingId of mappingIdSet) {
-    mappingIds.push(mappingId);
+  const dateWiseIds = [];
+  for (const id of dateWiseIdSet) {
+    dateWiseIds.push(id);
   }
 
   let from = '';
@@ -1439,22 +1473,46 @@ function collectScheduleQueryParams(schedules) {
     }
   }
 
-  return { mappingIds, from, to, resolvedTermIds, uniqueTermIds };
+  return { dateWiseIds, from, to, resolvedTermIds, uniqueTermIds };
 }
 
+/**
+ * MARKED / PENDING is keyed only by timeTableCellDateWiseId.
+ * Shared across Primary / Secondary teachers on the same dated period.
+ */
 function resolveScheduleAttendanceFields(schedule, presentMap, markedMap) {
   const key = getAttendanceStatusKey(schedule);
   const presentCount = presentMap[key];
-
-  let attendanceCount = 0;
-  if (presentCount != null) {
-    attendanceCount = presentCount;
-  }
+  const markedCount = markedMap[key];
 
   return {
-    attendanceCount,
-    attendanceStatus: markedMap[key] > 0 ? 'MARKED' : 'PENDING',
+    attendanceCount: presentCount != null ? presentCount : 0,
+    attendanceStatus: markedCount > 0 ? 'MARKED' : 'PENDING',
   };
+}
+
+async function fetchElectiveStudentCountMap(schedules) {
+  const electiveSubjectIds = [
+    ...new Set(
+      schedules
+        .map((s) => s.electiveSubjectId || s.timeTableElective?.electiveSubjectId)
+        .filter(Boolean)
+        .map(Number)
+    ),
+  ];
+  const electiveCountMap = new Map();
+  if (electiveSubjectIds.length > 0) {
+    const counts = await model.studentElectiveSubjectModel.findAll({
+      where: { electiveSubjectId: electiveSubjectIds },
+      attributes: ['electiveSubjectId', [sequelize.fn('COUNT', sequelize.col('student_id')), 'count']],
+      group: ['electiveSubjectId'],
+      raw: true,
+    });
+    for (const c of counts) {
+      electiveCountMap.set(Number(c.electiveSubjectId), Number(c.count));
+    }
+  }
+  return electiveCountMap;
 }
 
 async function enrichTodayClassSchedules(schedules) {
@@ -1462,12 +1520,14 @@ async function enrichTodayClassSchedules(schedules) {
     return schedules;
   }
 
-  const { mappingIds, from, to, resolvedTermIds, uniqueTermIds } = collectScheduleQueryParams(schedules);
+  const { dateWiseIds, resolvedTermIds, uniqueTermIds } =
+    collectScheduleQueryParams(schedules);
 
-  const [studentCountMap, markedMap, presentMap] = await Promise.all([
+  const [studentCountMap, electiveCountMap, markedMap, presentMap] = await Promise.all([
     classSectionTermRepository.countStudentsByClassSectionTermIds(uniqueTermIds),
-    attendanceRepository.getAttendanceMarkedMap(mappingIds, from, to),
-    attendanceRepository.getAttendanceMap(mappingIds, from, to),
+    fetchElectiveStudentCountMap(schedules),
+    attendanceRepository.getAttendanceMarkedMap({ dateWiseIds }),
+    attendanceRepository.getAttendanceMap({ dateWiseIds }),
   ]);
 
   const enriched = [];
@@ -1475,9 +1535,12 @@ async function enrichTodayClassSchedules(schedules) {
     const schedule = schedules[i];
     const classSectionTermId = resolvedTermIds[i];
     const attendanceFields = resolveScheduleAttendanceFields(schedule, presentMap, markedMap);
+    const electiveId = schedule.electiveSubjectId || schedule.timeTableElective?.electiveSubjectId;
 
     let studentCount = 0;
-    if (classSectionTermId) {
+    if (electiveId) {
+      studentCount = electiveCountMap.get(Number(electiveId)) || 0;
+    } else if (classSectionTermId) {
       const count = studentCountMap.get(Number(classSectionTermId));
       if (count != null) {
         studentCount = count;
@@ -1499,21 +1562,39 @@ async function enrichSchedulesWithAttendance(schedules) {
     return schedules;
   }
 
-  const { mappingIds, from, to } = collectScheduleQueryParams(schedules);
-  if (!from) {
+  const { dateWiseIds, resolvedTermIds, uniqueTermIds } = collectScheduleQueryParams(schedules);
+  if (!dateWiseIds.length) {
     return schedules;
   }
 
-  const [markedMap, presentMap] = await Promise.all([
-    attendanceRepository.getAttendanceMarkedMap(mappingIds, from, to),
-    attendanceRepository.getAttendanceMap(mappingIds, from, to),
+  const [studentCountMap, electiveCountMap, markedMap, presentMap] = await Promise.all([
+    classSectionTermRepository.countStudentsByClassSectionTermIds(uniqueTermIds),
+    fetchElectiveStudentCountMap(schedules),
+    attendanceRepository.getAttendanceMarkedMap({ dateWiseIds }),
+    attendanceRepository.getAttendanceMap({ dateWiseIds }),
   ]);
 
   const enriched = [];
-  for (const schedule of schedules) {
+  for (let i = 0; i < schedules.length; i++) {
+    const schedule = schedules[i];
+    const classSectionTermId = resolvedTermIds[i];
+    const attendanceFields = resolveScheduleAttendanceFields(schedule, presentMap, markedMap);
+    const electiveId = schedule.electiveSubjectId || schedule.timeTableElective?.electiveSubjectId;
+
+    let studentCount = 0;
+    if (electiveId) {
+      studentCount = electiveCountMap.get(Number(electiveId)) || 0;
+    } else if (classSectionTermId) {
+      const count = studentCountMap.get(Number(classSectionTermId));
+      if (count != null) {
+        studentCount = count;
+      }
+    }
+
     enriched.push({
       ...schedule,
-      ...resolveScheduleAttendanceFields(schedule, presentMap, markedMap),
+      studentCount,
+      ...attendanceFields,
     });
   }
 
@@ -1553,7 +1634,7 @@ async function applyGroupAttendanceStatus(groups) {
  * Past teacher schedule: expands recurring weekly mappings into dated occurrences
  * strictly before currentDateString, enriches attendance, optionally groups periods.
  *
- * @param {number|string} employeeId
+ * @param {number|string} userOd
  * @param {number} academicYearId
  * @param {string} currentDateString - YYYY-MM-DD cutoff (dates before this only)
  * @param {false|'consecutive'|'sessional'} groupPeriods
@@ -1561,134 +1642,57 @@ async function applyGroupAttendanceStatus(groups) {
  * @returns {Promise<{ teacher: object|null, schedules: object[] }>}
  */
 export async function getPastClassSchedules(
-  employeeId,
+  userId,
   academicYearId,
   currentDateString,
   groupPeriods = false,
   sessionId,
 ) {
-  const rawSchedules = await timeTableCreateRepository.getPastClassSchedulesForEmployee(
-    employeeId,
+  const rawSchedules = await employeeScheduleRepository.getPastClassSchedulesForEmployee(
+    userId,
     academicYearId,
     currentDateString,
     sessionId,
   );
 
-  const daysOfWeek = {
-    'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3,
-    'Thursday': 4, 'Friday': 5, 'Saturday': 6
-  };
-
-  const limitDate = new Date(currentDateString);
-  limitDate.setHours(0, 0, 0, 0);
-
-  const pastClasses = [];
-
-  for (const schedule of rawSchedules) {
-    const routine = schedule.timeTablecreate;
-    if (!routine || !routine.startingDate || !routine.endingDate) continue;
-
-    const start = new Date(routine.startingDate);
-    start.setHours(0, 0, 0, 0);
-
-    const end = new Date(routine.endingDate);
-    end.setHours(0, 0, 0, 0);
-
-    const targetDay = daysOfWeek[schedule.day];
-    if (targetDay === undefined) continue;
-
-    let current = new Date(start);
-    while (current.getDay() !== targetDay) {
-      current.setDate(current.getDate() + 1);
-    }
-
-    while (current <= end && current < limitDate) {
-      const classInstance = JSON.parse(JSON.stringify(schedule));
-      const year = current.getFullYear();
-      const month = String(current.getMonth() + 1).padStart(2, '0');
-      const day = String(current.getDate()).padStart(2, '0');
-
-      classInstance.date = `${year}-${month}-${day}`;
-      pastClasses.push(classInstance);
-
-      current.setDate(current.getDate() + 7);
-    }
-  }
-
-  // Sort by date descending
-  pastClasses.sort((a, b) => new Date(b.date) - new Date(a.date));
-
   const teacher = getTeacherDetails(rawSchedules);
   const schedules = await enrichSchedulesWithAttendance(
-    pastClasses.map(stripTeacherFieldsFromSchedule)
+    rawSchedules.map(stripTeacherFieldsFromSchedule),
   );
 
   if (groupPeriods) {
-    const grouped = applyGroupAttendanceStatus(
-      await groupConsecutivePeriods(schedules, groupPeriods === 'sessional'),
-    );
+    const grouped = await groupConsecutivePeriods(schedules, groupPeriods === 'sessional');
     grouped.sort((a, b) => new Date(b.date) - new Date(a.date));
-    return { teacher, schedules: grouped };
+    return {
+      teacher,
+      schedules: await applyGroupAttendanceStatus(grouped),
+    };
   }
 
   return { teacher, schedules };
 }
 
-export async function getUpcomingClassSchedules(employeeId, academicYearId, currentDateString, groupPeriods = false) {
-  const rawSchedules = await timeTableCreateRepository.getUpcomingClassSchedulesForEmployee(employeeId, academicYearId, currentDateString);
+export async function getUpcomingClassSchedules(userId, academicYearId, currentDateString, groupPeriods = false) {
+  const upcomingClasses = await employeeScheduleRepository.getUpcomingClassSchedulesForEmployee(
+    userId,
+    academicYearId,
+    currentDateString,
+  );
 
-  const daysOfWeek = {
-    'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3,
-    'Thursday': 4, 'Friday': 5, 'Saturday': 6
-  };
-
-  const limitDate = new Date(currentDateString);
-  limitDate.setHours(0, 0, 0, 0);
-
-  const upcomingClasses = [];
-
-  for (const schedule of rawSchedules) {
-    const routine = schedule.timeTablecreate;
-    if (!routine || !routine.startingDate || !routine.endingDate) continue;
-
-    const start = new Date(routine.startingDate);
-    start.setHours(0, 0, 0, 0);
-
-    const end = new Date(routine.endingDate);
-    end.setHours(0, 0, 0, 0);
-
-    const targetDay = daysOfWeek[schedule.day];
-    if (targetDay === undefined) continue;
-
-    let current = new Date(start);
-    while (current.getDay() !== targetDay) {
-      current.setDate(current.getDate() + 1);
-    }
-
-    while (current <= end) {
-      if (current >= limitDate) {
-        const classInstance = JSON.parse(JSON.stringify(schedule));
-        const year = current.getFullYear();
-        const month = String(current.getMonth() + 1).padStart(2, '0');
-        const day = String(current.getDate()).padStart(2, '0');
-
-        classInstance.date = `${year}-${month}-${day}`;
-        upcomingClasses.push(classInstance);
-      }
-      current.setDate(current.getDate() + 7);
-    }
+  const strippedSchedules = [];
+  for (const schedule of upcomingClasses) {
+    strippedSchedules.push(stripTeacherFieldsFromSchedule(schedule));
   }
 
-  // Sort by date ascending for upcoming classes
-  upcomingClasses.sort((a, b) => new Date(a.date) - new Date(b.date));
+  const schedules = await enrichSchedulesWithAttendance(strippedSchedules);
 
   if (groupPeriods) {
-    const grouped = await groupConsecutivePeriods(upcomingClasses, groupPeriods === 'sessional');
+    const grouped = await groupConsecutivePeriods(schedules, groupPeriods === 'sessional');
     grouped.sort((a, b) => new Date(a.date) - new Date(b.date));
-    return grouped;
+    return applyGroupAttendanceStatus(grouped);
   }
 
-  return upcomingClasses;
+  return schedules;
 }
 
 async function groupConsecutivePeriods(classes, sessionalBreak = false) {
@@ -1740,13 +1744,13 @@ async function groupConsecutivePeriods(classes, sessionalBreak = false) {
     // Find the indices of item1 and item2 in the structure periods
     const idx1 = structurePeriods.findIndex(p => p.timeTableCreationId === item1.timeTableCreationId);
     const idx2 = structurePeriods.findIndex(p => p.timeTableCreationId === item2.timeTableCreationId);
-    
+
     // They must be distinct valid periods
     if (idx1 === -1 || idx2 === -1 || idx1 === idx2) return false;
 
     const minIdx = Math.min(idx1, idx2);
     const maxIdx = Math.max(idx1, idx2);
-    
+
     // Check all periods that fall between item1 and item2
     for (let i = minIdx + 1; i < maxIdx; i++) {
       if (!structurePeriods[i].isBreak) {
@@ -1929,58 +1933,35 @@ function getEmployeeDetails(schedules) {
   };
 }
 
-export async function getUniqueClassSectionSubjects(employeeId, academicYearId) {
-  const schedules = await timeTableCreateRepository.getUniqueClassSectionSubjectsForEmployee(employeeId, academicYearId);
+export async function getUniqueClassSectionSubjects(userId, academicYearId) {
+  const schedules = await employeeScheduleRepository.getUniqueClassSectionSubjectsForEmployee(
+    userId,
+    academicYearId,
+  );
 
   return {
     employeeDetails: getEmployeeDetails(schedules),
-    combinations: processScheduleCombinations(schedules)
+    combinations: processScheduleCombinations(schedules),
   };
 }
 
-export async function getSectionCounts(employeeId, academicYearId, currentDateString) {
-  const recurringSchedules = await timeTableCreateRepository.getEmployeeRecurringSchedules(employeeId, academicYearId);
-  const allSchedules = await timeTableCreateRepository.getUniqueClassSectionSubjectsForEmployee(employeeId, academicYearId);
-
-  const referenceDate = new Date(currentDateString);
-  referenceDate.setHours(0, 0, 0, 0);
-
-  let pastCount = 0;
-  let upcomingCount = 0;
-
-  for (const schedule of recurringSchedules) {
-    const routine = schedule.timeTablecreate;
-    if (!routine || !routine.startingDate || !routine.endingDate) continue;
-
-    const start = new Date(routine.startingDate);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(routine.endingDate);
-    end.setHours(0, 0, 0, 0);
-    const dayName = schedule.day;
-
-    if (start < referenceDate) {
-      const pastEndLimit = new Date(referenceDate);
-      pastEndLimit.setDate(pastEndLimit.getDate() - 1);
-      const effectivePastEnd = end < pastEndLimit ? end : pastEndLimit;
-      if (start <= effectivePastEnd) {
-        pastCount += countWeekdayInRange(start, effectivePastEnd, dayName);
-      }
-    }
-
-    if (end >= referenceDate) {
-      const upcomingStartLimit = start > referenceDate ? start : referenceDate;
-      if (upcomingStartLimit <= end) {
-        upcomingCount += countWeekdayInRange(upcomingStartLimit, end, dayName);
-      }
-    }
-  }
+export async function getSectionCounts(userId, academicYearId, currentDateString) {
+  const { pastCount, upcomingCount } = await employeeScheduleRepository.countEmployeeDateWiseSchedules(
+    userId,
+    academicYearId,
+    currentDateString,
+  );
+  const allSchedules = await employeeScheduleRepository.getUniqueClassSectionSubjectsForEmployee(
+    userId,
+    academicYearId,
+  );
 
   const combinations = processScheduleCombinations(allSchedules);
-  const uniqueSubjects = new Set(combinations.map(c => c.subjectId));
+  const uniqueSubjects = new Set(combinations.map((c) => c.subjectId));
 
   return {
     pastCount,
     upcomingCount,
-    uniqueSubjectsCount: uniqueSubjects.size
+    uniqueSubjectsCount: uniqueSubjects.size,
   };
 }

@@ -68,13 +68,13 @@ export async function assignTeacher(data) {
     }
 }
 
-export async function getAssignmentByScheduleAndEmployee(scheduleId, employeeId) {
+export async function getAssignmentByScheduleAndEmployee(scheduleId, userId) {
     try {
         return await model.scheduleAssignModel.findOne({
-            where: { scheduleId, employeeId },
+            where: { scheduleId, userId },
         });
     } catch (error) {
-        console.error('Error fetching assignment by scheduleId and employeeId:', error);
+        console.error('Error fetching assignment by scheduleId and userId:', error);
         throw error;
     }
 }
@@ -100,7 +100,7 @@ export async function getAssignTeacher() {
                     required: false,
                     where: employeeWhere,
                     attributes: [
-                        'employeeId',
+                        'userId',
                         'employeeName',
                         'employeeCode',
                         'department',
@@ -173,7 +173,7 @@ export async function getAllAttendence(page, limit, fromDate, toDate) {
                             model: model.employeeModel,
                             as: 'employeeSchedule',
                             attributes: [
-                                'employeeId',
+                                'userId',
                                 'employeeName',
                                 'employeeCode',
                                 'department',

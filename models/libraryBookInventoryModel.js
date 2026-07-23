@@ -31,6 +31,11 @@ const libraryBookInventoryModel = sequelize.define(
       unique: true,
       field: "accession_number",
     },
+    accessionDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+      field: "accession_date",
+    },
     billNo: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -76,10 +81,10 @@ const libraryBookInventoryModel = sequelize.define(
     employeeId: {
       type: DataTypes.INTEGER,
       allowNull: true,
-      field: "employee_id",
+      field: 'user_id',
       references: {
         model: employeeModel,
-        key: "employee_id",
+        key: 'user_id',
       },
     },
     libraryRackId: {

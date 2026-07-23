@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { z } from "zod";
 import { validate } from "../utility/validation.js";
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 import {
   addExamStructure,
   getAllExamStructure,
@@ -50,11 +52,12 @@ const addExamTypeSchema = z.object({
   isPublish: z.boolean().optional(),
 });
 
-router.post("/examRule", userAuth, addExamStructure);
+router.post("/examRule", userAuth, checkAccess(PERMISSIONS.RULES_SETUP_ADD.value, null), addExamStructure);
 
 router.get(
   "/examRule",
   userAuth,
+  checkAccess(PERMISSIONS.RULES_SETUP.value, null),
   validate({ query: getAllExamStructureQuerySchema }),
   getAllExamStructure,
 );
@@ -62,13 +65,14 @@ router.get(
 router.get(
   "/examRule/single",
   userAuth,
+  checkAccess(PERMISSIONS.RULES_SETUP.value, null),
   validate({ query: getSingleExamStructureQuerySchema }),
   getSingleExamStructure,
 );
 
-router.patch("/examRule", userAuth, updateExamStructure);
+router.patch("/examRule", userAuth, checkAccess(PERMISSIONS.RULES_SETUP_ADD.value, null), updateExamStructure);
 
-router.delete("/examRule", userAuth, deleteExamStructure);
+router.delete("/examRule", userAuth, checkAccess(PERMISSIONS.RULES_SETUP_ADD.value, null), deleteExamStructure);
 
 router.post("/examType", userAuth, validate({ body: addExamTypeSchema }), addExamType);
 

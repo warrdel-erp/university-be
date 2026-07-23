@@ -79,11 +79,19 @@ const teacherUserInclude = [
     required: true,
     include: [
       {
-        model: model.userRoleModel,
-        as: 'userRoles',
+        model: model.userRolePermissionModel,
+        as: 'userRolePermissions',
         attributes: [],
-        where: { role: ROLES.TEACHER },
         required: true,
+        include: [
+          {
+            model: model.roleModel,
+            as: 'userRole',
+            attributes: [],
+            where: { role: ROLES.TEACHER },
+            required: true,
+          },
+        ],
       },
     ],
   },
@@ -726,13 +734,13 @@ export async function getDashboardEvents(currentDate) {
 export async function getTeacherDashboardEmployee(employeeId) {
   return scoped(model.employeeModel).findOne({
     where: { employeeId: Number(employeeId) },
-    attributes: ['employeeId'],
+    attributes: ['employeeId', 'userId'],
   });
 }
 
-export async function getTeacherDashboardSubjectMappings(employeeId) {
+export async function getTeacherDashboardSubjectMappings(employeeId, userId) {
   return scoped(model.teacherSubjectMappingModel).findAll({
-    where: { employeeId: Number(employeeId) },
+    where: { userId: Number(userId) },
     attributes: ['subjectId'],
     include: [
       {
@@ -746,9 +754,9 @@ export async function getTeacherDashboardSubjectMappings(employeeId) {
   });
 }
 
-export async function getTeacherDashboardSectionMappings(employeeId) {
+export async function getTeacherDashboardSectionMappings(employeeId, userId) {
   return scoped(model.teacherSectionMappingModel).findAll({
-    where: { employeeId: Number(employeeId) },
+    where: { userId: Number(userId) },
     attributes: ['classSectionsId'],
     include: [
       {
@@ -770,12 +778,12 @@ export async function getTeacherDashboardSectionMappings(employeeId) {
   });
 }
 
-export async function getTeacherDashboardScheduleMappings(employeeId) {
+export async function getTeacherDashboardScheduleMappings(employeeId, userId) {
   return scoped(model.classScheduleModel).findAll({
     where: {
       [Op.or]: [
-        { employeeId: Number(employeeId) },
-        Sequelize.where(Sequelize.col('timeTableTeacherSubject.employee_id'), Number(employeeId)),
+        { userId: userId ? Number(userId) : null },
+        Sequelize.where(Sequelize.col('timeTableTeacherSubject.user_id'), Number(userId)),
       ],
     },
     attributes: ['subjectId'],
@@ -798,7 +806,7 @@ export async function getTeacherDashboardScheduleMappings(employeeId) {
         model: model.teacherSubjectMappingModel,
         as: 'timeTableTeacherSubject',
         required: false,
-        attributes: ['employeeId', 'subjectId'],
+        attributes: ['userId', 'subjectId'],
         include: [
           {
             model: model.subjectModel,
@@ -852,7 +860,7 @@ export async function countTeacherDashboardStudents(classSectionTermIds, courseI
   return 0;
 }
 
-export async function getTeacherDashboardExamAssignments(employeeId) {
+export async function getTeacherDashboardExamAssignments(employeeId, userId) {
   return scoped(model.teacherExamAssignmentModel).count({
     where: { employeeId: Number(employeeId) },
     include: [
@@ -867,12 +875,12 @@ export async function getTeacherDashboardExamAssignments(employeeId) {
   });
 }
 
-export async function getTeacherDashboardUpcomingClasses(employeeId, currentDate) {
+export async function getTeacherDashboardUpcomingClasses(employeeId, userId, currentDate) {
   return scoped(model.classScheduleModel).count({
     where: {
       [Op.or]: [
-        { employeeId: Number(employeeId) },
-        Sequelize.where(Sequelize.col('timeTableTeacherSubject.employee_id'), Number(employeeId)),
+        { userId: userId ? Number(userId) : null },
+        Sequelize.where(Sequelize.col('timeTableTeacherSubject.user_id'), Number(userId)),
       ],
     },
     include: [

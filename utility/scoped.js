@@ -59,6 +59,8 @@ export const buildScope = (model, options = {}) => {
     return where;
   }
 
+  const permScope = store.permissionScope; // e.g. 'UNIVERSITY', 'CAMPUS', 'INSTITUTE', 'DEPARTMENT', etc.
+
   if (isScoped(config.university, "universityId", attrs)) {
     if (!store.universityId) {
       throw new Error(`Error in university scope ${model.name}`);
@@ -66,11 +68,25 @@ export const buildScope = (model, options = {}) => {
     where.universityId = store.universityId;
   }
 
+  // Campus scope enforcement
+  if (permScope === 'CAMPUS' && "campusId" in attrs) {
+    if (store.campusId) {
+      where.campusId = store.campusId;
+    }
+  }
+
   if (isScoped(config.institute, "instituteId", attrs)) {
-    if (!store.instituteId) {
+    // If user has a higher scope, they don't HAVE to provide an instituteId.
+    // But if they DO provide it (frontend selected institute), we filter by it.
+    const isHigherScope = permScope === 'UNIVERSITY' || permScope === 'CAMPUS';
+    
+    if (!store.instituteId && !isHigherScope) {
       throw new Error(`Error in institute scope ${model.name}`);
     }
-    where.instituteId = store.instituteId;
+
+    if (store.instituteId) {
+      where.instituteId = store.instituteId;
+    }
   }
 
   if (isScoped(config.academicYear, ACADEMIC_YEAR_FIELD, attrs)) {
@@ -85,6 +101,14 @@ export const buildScope = (model, options = {}) => {
       throw new Error(`Error in teacher scope ${model.name}`);
     }
     where["teacherId" in attrs ? "teacherId" : "userId"] = store.userId;
+  }
+
+  if (store.accessFilter) {
+    for (const [key, value] of Object.entries(store.accessFilter)) {
+      if (key in attrs) {
+        where[key] = value;
+      }
+    }
   }
 
   return where;

@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { validate } from '../utility/validation.js';
+import { checkAccess } from '../middleware/checkAccess.js';
+import { PERMISSIONS } from '../const/permissions.js';
 const router = Router();
 import * as subjectWeightageController from '../controllers/subjectWeightageController.js';
 import userAuth from '../middleware/authUser.js';
@@ -14,6 +16,6 @@ const bulkWeightageSchema = z.object({
     }))
 });
 
-router.post('/bulk', userAuth, validate({ body: bulkWeightageSchema }), subjectWeightageController.createWeightageBulk);
+router.post('/bulk', userAuth, checkAccess(PERMISSIONS.ASSIGN_WEIGHTAGE_ADD.value, null), validate({ body: bulkWeightageSchema }), subjectWeightageController.createWeightageBulk);
 
 export default router;

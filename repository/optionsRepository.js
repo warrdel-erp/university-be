@@ -1,5 +1,5 @@
 import * as model from '../models/index.js';
-import { Op } from 'sequelize';
+import { Op, Sequelize } from 'sequelize';
 import { scoped, buildScope } from '../utility/scoped.js';
 import { ROLES } from '../const/roles.js';
 import { classSectionTermsInclude } from '../utility/classSectionIncludes.js';
@@ -93,25 +93,30 @@ export async function getSubjectOptions(courseId, term, academicYearId) {
 
 export async function getTeacherOptions(campusId) {
     return await scoped(model.employeeModel).findAll({
-        attributes: [['employee_name', 'label'], ['employee_id', 'value']],
+        attributes: [
+            ['employee_name', 'label'],
+            [Sequelize.col('user.user_id'), 'value'],
+            ['employee_id', 'employeeId'],
+        ],
         where: {
             ...(campusId && { campusId }),
         },
-        include: [{
-            model: model.userModel,
-            as: 'user',
-            attributes: [],
-            required: true,
-            include: [{
-                model: model.userRoleModel,
-                as: 'userRoles',
+        include: [
+            {
+                model: model.userModel,
+                as: 'user',
                 attributes: [],
-                where: {
-                    role: ROLES.TEACHER,
-                },
                 required: true,
-            }],
-        }],
+                where: { isTeacher: true },
+            },
+        ],
+    });
+}
+
+export async function getTimeTableStructureOptions() {
+    return scoped(model.timeTableStructureModel).findAll({
+        attributes: [['name', 'label'], ['time_table_name_id', 'value']],
+        order: [['name', 'ASC'], ['time_table_name_id', 'ASC']],
     });
 }
 
@@ -152,7 +157,7 @@ const lectureWindowOptionAttributes = [
     'startDate',
     'endDate',
     'subjectId',
-    'employeeId',
+    'userId',
     'sessionId',
 ];
 
@@ -162,16 +167,20 @@ const lessonOptionAttributes = [
     'description',
     'lectureWindowId',
     'subjectId',
-    'employeeId',
+    'userId',
     'sessionId',
 ];
 
-export async function getEmployeeOptionDetail(employeeId) {
+export async function getEmployeeOptionDetail({ userId, employeeId }) {
+    const where = userId != null
+        ? { userId: Number(userId) }
+        : { employeeId: Number(employeeId) };
+
     return scoped(model.employeeModel).findOne({
         raw: true,
         nest: true,
-        where: { employeeId: Number(employeeId) },
-        attributes: ['employeeId', 'employeeName', 'employeeCode', 'pickColor'],
+        where,
+        attributes: ['userId', 'employeeId', 'employeeName', 'employeeCode', 'pickColor'],
     });
 }
 
@@ -187,9 +196,15 @@ export async function getSubjectOptionDetail(subjectId) {
 export async function getLectureWindowOptionRows(filters) {
     const where = {
         academicYearId: Number(filters.academicYearId),
-        employeeId: Number(filters.employeeId),
+        userId: Number(filters.userId),
         subjectId: Number(filters.subjectId),
+        startDate: { [Op.lte]: filters.date },
+        endDate: { [Op.gte]: filters.date },
     };
+
+    if (filters.sessionId != null) {
+        where.sessionId = Number(filters.sessionId);
+    }
 
     return scoped(model.lectureWindowModel).findAll({
         raw: true,
@@ -218,7 +233,7 @@ export async function getLectureWindowOptionDetail(lectureWindowId, academicYear
             {
                 model: model.employeeModel,
                 as: 'lectureWindowEmployee',
-                attributes: ['employeeId', 'employeeName', 'employeeCode', 'pickColor'],
+                attributes: ['userId', 'employeeId', 'employeeName', 'employeeCode', 'pickColor'],
             },
             {
                 model: model.sessionModel,

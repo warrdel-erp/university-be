@@ -5,7 +5,7 @@ import instituteModel from "./instituteModel.js";
 import university from "./universityModel.js";
 import subjectModel from "./subjectModel.js";
 import examSetupTypeModel from "./examSetupTypeModel.js";
-import employeeModel from "./employeeModel.js";
+
 
 const evalutionModel = sequelize.define(
     'evalutions',
@@ -52,13 +52,13 @@ const evalutionModel = sequelize.define(
                 key: 'subject_id'
             }
         },
-        employeeId: {
+        userId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'employee_id',
+            field: 'user_id',
             references: {
-                model: employeeModel,
-                key: 'employee_id'
+                model: users,
+                key: 'user_id'
             }
         },        
         notes: {
