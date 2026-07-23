@@ -862,7 +862,7 @@ export async function countTeacherDashboardStudents(classSectionTermIds, courseI
 
 export async function getTeacherDashboardExamAssignments(employeeId, userId) {
   return scoped(model.teacherExamAssignmentModel).count({
-    where: { userId: Number(userId) },
+    where: { employeeId: Number(employeeId) },
     include: [
       {
         model: model.examScheduleModel,

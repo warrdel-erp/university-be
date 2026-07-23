@@ -8,7 +8,7 @@ import {
     addtimeTableCreate, cloneTimeTableRoutine, gettimeTableCreateDetails, getSingletimeTableCreateDetails, addtimeTableMapping, getTimeTableMappingDetail, getSingletimeTableMappingDetail, getTimeTableCellData
     , updatetimeTableCreate, getTimeTableElective, publishTimeTable, updateSimpleTeacherMappingController
     , deletetimeTableMapping, ClassSubjectCount, changeTimeTableCreate, getTimeTableByCourseAndSection, getRoutineByClassSectionId, getRoutineByTeacherAndAcademicYear
-    , deleteTimeTableRoutine
+    , deleteTimeTableRoutine, getDateWiseCellsBySection, updateDateWiseCellController
 } from '../controllers/timeTableCreateController.js';
 
 const router = Router();
@@ -129,6 +129,7 @@ const mappingBodySchema = z.object({
     timeTableCreationId: optionalPositiveId,
     timeTableNameId: optionalPositiveId,
     userId: optionalPositiveId,
+    employeeId: optionalPositiveId,
     subjectId: optionalPositiveId,
     electiveSubjectId: optionalPositiveId,
     teacherSubjectMappingId: optionalPositiveId,
@@ -145,12 +146,12 @@ const mappingBodySchema = z.object({
     slots: z.array(mappingSlotSchema).min(1).optional(),
     combinedGroupId: z.string().uuid().optional(),
 
-    sourceTimeTableMappingId: optionalPositiveId,
+    sourceTimeTableCellId: optionalPositiveId,
     copyTarget: z.enum(['nextPeriod', 'nextDay']).optional(),
 });
 
 const addTimeTableMappingSchema = mappingBodySchema.superRefine((body, ctx) => {
-    const isCopy = body.sourceTimeTableMappingId != null;
+    const isCopy = body.sourceTimeTableCellId != null;
     const hasSlots = Array.isArray(body.slots) && body.slots.length > 0;
     const hasCell = body.timeTableRoutineId != null
         && body.timeTableCreationId != null
@@ -159,7 +160,7 @@ const addTimeTableMappingSchema = mappingBodySchema.superRefine((body, ctx) => {
     if (isCopy && body.copyTarget == null) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: 'copyTarget is required when sourceTimeTableMappingId is sent (nextPeriod | nextDay)',
+            message: 'copyTarget is required when sourceTimeTableCellId is sent (nextPeriod | nextDay)',
             path: ['copyTarget'],
         });
     }
@@ -167,7 +168,7 @@ const addTimeTableMappingSchema = mappingBodySchema.superRefine((body, ctx) => {
     if (!isCopy && !hasSlots && !hasCell) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: 'Send sourceTimeTableMappingId+copyTarget, slots[], or timeTableRoutineId with timeTableCreationId and period',
+            message: 'Send sourceTimeTableCellId+copyTarget, slots[], or timeTableRoutineId with timeTableCreationId and period',
             path: ['timeTableRoutineId'],
         });
     }
@@ -178,12 +179,13 @@ const getTimeTableMappingBodySchema = z.object({
 });
 
 const updateTimeTableMappingSchema = z.object({
-    timeTableMappingId: positiveIntegerId,
+    timeTableCellId: positiveIntegerId,
     timeTableType: z.enum(['normal', 'elective']),
 });
 
 const updateTeacherMappingItemSchema = z.object({
-    timeTableMappingId: optionalPositiveId,
+    timeTableCellId: optionalPositiveId,
+    timeTableCellTeacherId: optionalPositiveId,
     userId: optionalPositiveId,
     subjectId: optionalPositiveId,
     electiveSubjectId: optionalPositiveId,
@@ -196,9 +198,9 @@ const updateTeacherMappingItemSchema = z.object({
 const updateSimpleTeacherMappingSchema = z
     .array(updateTeacherMappingItemSchema)
     .min(1, 'request body must be a non-empty array')
-    .refine((items) => items[0]?.timeTableMappingId != null, {
-        message: 'Base row must contain timeTableMappingId',
-        path: [0, 'timeTableMappingId'],
+    .refine((items) => items[0]?.timeTableCellId != null, {
+        message: 'Base row must contain timeTableCellId',
+        path: [0, 'timeTableCellId'],
     })
     .refine(
         (items) => items.every((item) => item.isNew !== true || item.userId != null),
@@ -206,7 +208,7 @@ const updateSimpleTeacherMappingSchema = z
     );
 
 const deleteTimeTableMappingQuerySchema = z.object({
-    timeTableMappingId: positiveIntegerId,
+    timeTableCellId: positiveIntegerId,
     deleteCombinedGroup: z
         .preprocess((val) => val === 'true' || val === true, z.boolean())
         .optional(),
@@ -233,6 +235,31 @@ const classSubjectCountQuerySchema = z.object({
     classSectionTermId: positiveIntegerId,
 });
 
+const getDateWiseCellsQuerySchema = z.object({
+    courseId: positiveIntegerId,
+    sessionId: positiveIntegerId,
+    classSectionTermId: positiveIntegerId,
+    date: z.string().optional(),
+});
+
+const updateDateWiseCellSchema = z.object({
+    timeTableCellDateWiseId: positiveIntegerId,
+    timeTableCellTeachersDateWiseId: optionalPositiveId,
+    userId: optionalPositiveId,
+    subjectId: optionalPositiveId,
+    electiveSubjectId: optionalPositiveId,
+    classRoomSectionId: optionalPositiveId,
+}).refine(
+    (body) => body.userId != null
+        || body.subjectId != null
+        || body.electiveSubjectId != null
+        || body.classRoomSectionId != null,
+    { message: 'At least one of userId, subjectId, electiveSubjectId, classRoomSectionId is required' },
+).refine(
+    (body) => (body.userId == null) === (body.timeTableCellTeachersDateWiseId == null),
+    { message: 'userId and timeTableCellTeachersDateWiseId must be sent together', path: ['timeTableCellTeachersDateWiseId'] },
+);
+
 // ---------------------------------------------------------------------------
 // 1. Read / bootstrap — structure selection and routine lookup
 // ---------------------------------------------------------------------------
@@ -243,6 +270,10 @@ router.get('/create', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.v
     getTimeTableByCourseAndSection);
 router.get('/getRoutine', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ query: getRoutineSchema }), getRoutineByClassSectionId);
 router.get('/getRoutineByTeacher', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ query: getRoutineByTeacherSchema }), getRoutineByTeacherAndAcademicYear);
+
+router.get('/dateWiseCells', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ query: getDateWiseCellsQuerySchema }), getDateWiseCellsBySection);
+
+router.patch('/dateWiseCells', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_EDIT_ROUTINE.value, null), validate({ body: updateDateWiseCellSchema }), updateDateWiseCellController);
 
 // ---------------------------------------------------------------------------
 // 2. Routine lifecycle — create / update / clone / publish
@@ -257,6 +288,7 @@ router.patch('/publish', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_EDI
 // 3. Mapping lifecycle — assign timetable cells / teachers
 // ---------------------------------------------------------------------------
 router.post('/mapping', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_CREATE_TIMETABLE.value, null), validate({ body: addTimeTableMappingSchema }), addtimeTableMapping);
+
 router.get('/mapping', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ body: getTimeTableMappingBodySchema }), getTimeTableMappingDetail);
 router.get('/single/mapping', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ query: getSingleQuerySchema }), getSingletimeTableMappingDetail);
 router.patch('/mapping', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_EDIT_ROUTINE.value, null), validate({ body: updateTimeTableMappingSchema }), updatetimeTableCreate);

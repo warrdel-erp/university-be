@@ -542,15 +542,16 @@ export async function updateTimeTable(timeTableCreationId, info) {
 async function findBlockingScheduleForPeriod(timeTableCreationId) {
     const now = new Date();
 
-    return await scoped(model.classScheduleModel).findOne({
+    return await model.timeTableCellModel.findOne({
         where: { timeTableCreationId },
-        attributes: ['timeTableMappingId'],
+        attributes: ['timeTableCellId'],
         include: [{
             model: model.timeTableRoutineModel,
-            as: 'timeTablecreate',
+            as: 'timeTableRoutine',
             required: true,
             attributes: ['timeTableRoutineId'],
             where: {
+                ...buildScope(model.timeTableRoutineModel),
                 [Op.or]: [
                     { isPublish: true },
                     {

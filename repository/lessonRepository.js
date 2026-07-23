@@ -1,7 +1,10 @@
 import * as model from "../models/index.js";
-import { Op } from "sequelize";
+import { Op, Sequelize } from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
-import { classSectionTermsInclude } from "../utility/classSectionIncludes.js";
+import {
+  classSectionTermsInclude,
+  timeTableRoutineClassSectionInclude,
+} from "../utility/classSectionIncludes.js";
 import { buildTermName } from "../utility/courseTerms.js";
 
 const lectureWindowInclude = {
@@ -194,6 +197,195 @@ export async function addTopic(data) {
   }
 }
 
+export async function getTopicById(topicId, transaction) {
+  return scoped(model.topicModel).findOne({
+    where: { topicId: Number(topicId) },
+    attributes: ['topicId', 'lessonId', 'name', 'description'],
+    transaction,
+  });
+}
+
+export async function countTopicMappings(topicId, transaction) {
+  return scoped(model.lessonMappingModel).count({
+    where: { topicId: Number(topicId) },
+    transaction,
+  });
+}
+
+export async function countCompletedTopicMappings(topicId, transaction) {
+  return scoped(model.lessonMappingModel).count({
+    where: {
+      topicId: Number(topicId),
+      [Op.or]: [
+        { status: { [Op.in]: ['complete', 'completed', 'Complete', 'Completed'] } },
+        { completeDate: { [Op.ne]: null } },
+      ],
+    },
+    transaction,
+  });
+}
+
+export async function countTopicSubTopics(topicId, transaction) {
+  return scoped(model.subTopicModel).count({
+    where: { topicId: Number(topicId) },
+    transaction,
+  });
+}
+
+export async function countLessonTopics(lessonId, transaction) {
+  return scoped(model.topicModel).count({
+    where: { lessonId: Number(lessonId) },
+    transaction,
+  });
+}
+
+export async function countLessonMappings(lessonId, transaction) {
+  return scoped(model.lessonMappingModel).count({
+    where: {},
+    include: [
+      {
+        model: model.topicModel,
+        as: 'mappingTopic',
+        required: true,
+        attributes: [],
+        where: {
+          lessonId: Number(lessonId),
+          ...buildScope(model.topicModel),
+        },
+      },
+    ],
+    transaction,
+  });
+}
+
+export async function countCompletedLessonMappings(lessonId, transaction) {
+  return scoped(model.lessonMappingModel).count({
+    where: {
+      [Op.or]: [
+        { status: { [Op.in]: ['complete', 'completed', 'Complete', 'Completed'] } },
+        { completeDate: { [Op.ne]: null } },
+      ],
+    },
+    include: [
+      {
+        model: model.topicModel,
+        as: 'mappingTopic',
+        required: true,
+        attributes: [],
+        where: {
+          lessonId: Number(lessonId),
+          ...buildScope(model.topicModel),
+        },
+      },
+    ],
+    transaction,
+  });
+}
+
+export async function updateTopic(topicId, data, transaction) {
+  const existing = await getTopicById(topicId, transaction);
+  if (!existing) {
+    return null;
+  }
+  await scoped(model.topicModel).update(data, {
+    where: { topicId: Number(topicId) },
+    transaction,
+  });
+  return getTopicById(topicId, transaction);
+}
+
+export async function deleteTopic(topicId, transaction) {
+  const existing = await getTopicById(topicId, transaction);
+  if (!existing) {
+    return 0;
+  }
+
+  const mappingCount = await countTopicMappings(topicId, transaction);
+  if (mappingCount > 0) {
+    const completedCount = await countCompletedTopicMappings(topicId, transaction);
+    const error = new Error(
+      completedCount > 0
+        ? `Topic cannot be deleted because ${completedCount} completed lesson mapping(s) exist`
+        : `Topic cannot be deleted because ${mappingCount} lesson mapping(s) exist`,
+    );
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const subTopicCount = await countTopicSubTopics(topicId, transaction);
+  if (subTopicCount > 0) {
+    const error = new Error(
+      `Topic cannot be deleted because ${subTopicCount} sub-topic(s) exist`,
+    );
+    error.statusCode = 409;
+    throw error;
+  }
+
+  return scoped(model.topicModel).destroy({
+    where: { topicId: Number(topicId) },
+    transaction,
+  });
+}
+
+export async function updateLesson(lessonId, data, transaction) {
+  const existing = await scoped(model.lessonModel).findOne({
+    where: { lessonId: Number(lessonId) },
+    attributes: ['lessonId'],
+    transaction,
+  });
+  if (!existing) {
+    return null;
+  }
+  await scoped(model.lessonModel).update(data, {
+    where: { lessonId: Number(lessonId) },
+    transaction,
+  });
+  return scoped(model.lessonModel).findOne({
+    where: { lessonId: Number(lessonId) },
+    attributes: {
+      exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'],
+    },
+    transaction,
+  });
+}
+
+export async function deleteLesson(lessonId, transaction) {
+  const existing = await scoped(model.lessonModel).findOne({
+    where: { lessonId: Number(lessonId) },
+    attributes: ['lessonId'],
+    transaction,
+  });
+  if (!existing) {
+    return 0;
+  }
+
+  const topicCount = await countLessonTopics(lessonId, transaction);
+  if (topicCount > 0) {
+    const error = new Error(
+      `Lesson cannot be deleted because ${topicCount} topic(s) exist`,
+    );
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const mappingCount = await countLessonMappings(lessonId, transaction);
+  if (mappingCount > 0) {
+    const completedCount = await countCompletedLessonMappings(lessonId, transaction);
+    const error = new Error(
+      completedCount > 0
+        ? `Lesson cannot be deleted because ${completedCount} completed lesson mapping(s) exist`
+        : `Lesson cannot be deleted because ${mappingCount} lesson mapping(s) exist`,
+    );
+    error.statusCode = 409;
+    throw error;
+  }
+
+  return scoped(model.lessonModel).destroy({
+    where: { lessonId: Number(lessonId) },
+    transaction,
+  });
+}
+
 export async function addSubTopic(data, transaction) {
   try {
     return await scoped(model.subTopicModel).create(data, { transaction });
@@ -218,7 +410,8 @@ export async function getLessonMappingById(lessonMappingId, transaction) {
     attributes: [
       "lessonMappingId",
       "topicId",
-      "timeTableMappingId",
+      "timeTableCellDateWiseId",
+      "timeTableCellId",
       "date",
       "completeDate",
       "note",
@@ -230,10 +423,10 @@ export async function getLessonMappingById(lessonMappingId, transaction) {
   });
 }
 
-export async function getClassScheduleById(timeTableMappingId, transaction) {
-  return scoped(model.classScheduleModel).findOne({
-    where: { timeTableMappingId: Number(timeTableMappingId) },
-    attributes: ["timeTableMappingId"],
+export async function getDateWiseCellById(timeTableCellDateWiseId, transaction) {
+  return model.timeTableCellDateWiseModel.findOne({
+    where: { timeTableCellDateWiseId: Number(timeTableCellDateWiseId) },
+    attributes: ["timeTableCellDateWiseId", "timeTableCellId", "date"],
     transaction,
   });
 }
@@ -276,87 +469,84 @@ export async function getMapping(academicYearId) {
           ],
         },
         {
-          model: model.classScheduleModel,
-          as: "timeTableMapping",
-          attributes: {
-            exclude: [
-              "createdAt",
-              "updatedAt",
-              "deletedAt",
-              "createdBy",
-              "updatedBy",
-              "teacher_subject_mapping_id",
-              "time_table_routine_id",
-              "time_table_creation_id",
-              "class_room_section_id",
-              "elective_subject_id",
-              "subject_id",
-            ],
-          },
+          model: model.timeTableCellDateWiseModel,
+          as: "timeTableCellDateWise",
+          required: false,
+          attributes: ["timeTableCellDateWiseId", "timeTableCellId", "date", "classRoomSectionId"],
           include: [
             {
-              model: model.timeTableRoutineModel,
-              as: "timeTablecreate",
+              model: model.timeTableCellModel,
+              as: "timeTableCell",
               required: true,
-              where: buildScope(model.timeTableRoutineModel),
-              attributes: {
-                exclude: [
-                  "createdAt",
-                  "updatedAt",
-                  "deletedAt",
-                  "createdBy",
-                  "updatedBy",
-                  "time_table_name_id",
-                  "course_id",
-                  "campus_id",
-                  "class_sections_id",
-                  "acedmic_year_id",
-                ],
-              },
+              attributes: [
+                "timeTableCellId",
+                "day",
+                "period",
+                "timeTableType",
+                "subjectId",
+                "electiveSubjectId",
+                "teacherSubjectMappingId",
+              ],
               include: [
                 {
-                  model: model.classSectionTermModel,
-                  as: "timeTableClassSectionTerm",
-                  attributes: ["classSectionTermId", "term", "classSectionsId"],
+                  model: model.timeTableRoutineModel,
+                  as: "timeTableRoutine",
+                  required: true,
+                  where: buildScope(model.timeTableRoutineModel),
+                  attributes: [
+                    "timeTableRoutineId",
+                    "classSectionTermId",
+                    "startingDate",
+                    "endingDate",
+                  ],
                   include: [
                     {
-                      model: model.classSectionModel,
-                      as: "classSection",
-                      attributes: ["section", "year", "classSectionsId"],
+                      model: model.classSectionTermModel,
+                      as: "timeTableClassSectionTerm",
+                      attributes: ["classSectionTermId", "term", "classSectionsId"],
+                      include: [
+                        {
+                          model: model.classSectionModel,
+                          as: "classSection",
+                          attributes: ["section", "year", "classSectionsId"],
+                        },
+                      ],
                     },
                   ],
                 },
-              ],
-            },
-            {
-              model: model.timeTableStructurePeriodsModel,
-              as: "timeTablecreation",
-              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            },
-            {
-              model: model.employeeModel, as: "employeeDetails",
-              attributes: ["employeeName", "employeeCode", "pickColor", "userId"],
-            },
-            {
-              model: model.teacherSubjectMappingModel,
-              as: "timeTableTeacherSubject",
-              attributes: {
-                exclude: [
-                  "createdAt",
-                  "updatedAt",
-                  "deletedAt",
-                  "createdBy",
-                  "updated",
-                  "user_id",
-                  "userId",
-                  "class_subject_mapper_id",
-                ],
-              },
-              include: [
                 {
-                  model: model.employeeModel,
-                  as: "teacherEmployeeData",
-                  attributes: ["employeeName", "employeeCode", "pickColor", "userId"],
+                  model: model.timeTableStructurePeriodsModel,
+                  as: "timeTablecreation",
+                  attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                  required: false,
+                },
+                {
+                  model: model.timeTableCellTeachersModel,
+                  as: "timeTableCellTeachers",
+                  required: false,
+                  attributes: ["userId", "teacherType"],
+                  include: [
+                    {
+                      model: model.employeeModel,
+                      as: "employeeDetails",
+                      attributes: ["employeeName", "employeeCode", "pickColor", "userId"],
+                      required: false,
+                    },
+                  ],
+                },
+                {
+                  model: model.teacherSubjectMappingModel,
+                  as: "timeTableTeacherSubject",
+                  required: false,
+                  attributes: ["teacherSubjectMappingId", "userId"],
+                  include: [
+                    {
+                      model: model.employeeModel,
+                      as: "teacherEmployeeData",
+                      attributes: ["employeeName", "employeeCode", "pickColor", "userId"],
+                      required: false,
+                    },
+                  ],
                 },
               ],
             },
@@ -527,17 +717,7 @@ export async function deleteSubTopicsByMapping(mappingId, transaction) {
 
 export async function getEmployeeSubjectAndLesson(userId, courseId, sessionId, subjectSearch, subjectId) {
   try {
-    let parsedEmployeeId = userId != null && userId !== '' ? Number(userId) : null;
-    let actualEmployeeId = null;
-    if (parsedEmployeeId) {
-      const emp = await scoped(model.employeeModel).findOne({
-        attributes: ["employeeId"],
-        where: { userId: parsedEmployeeId }
-      });
-      if (emp) {
-        actualEmployeeId = emp.employeeId;
-      }
-    }
+    const parsedUserId = userId != null && userId !== '' ? Number(userId) : null;
 
     const parsedSessionId = sessionId != null && sessionId !== ''
       ? Number(sessionId)
@@ -545,7 +725,7 @@ export async function getEmployeeSubjectAndLesson(userId, courseId, sessionId, s
     const parsedSubjectId = subjectId != null && subjectId !== '' && subjectId !== 'undefined'
       ? Number(subjectId)
       : null;
-    const hasEmployeeId = Number.isInteger(parsedEmployeeId) && parsedEmployeeId > 0;
+    const hasUserId = Number.isInteger(parsedUserId) && parsedUserId > 0;
     const hasSessionId = Number.isInteger(parsedSessionId) && parsedSessionId > 0;
     const hasSubjectId = Number.isInteger(parsedSubjectId) && parsedSubjectId > 0;
 
@@ -670,10 +850,10 @@ export async function getEmployeeSubjectAndLesson(userId, courseId, sessionId, s
       lectureWindowInclude,
     ];
 
-    if (hasEmployeeId && hasSubjectId) {
+    if (hasUserId && hasSubjectId) {
       const lessons = await scoped(model.lessonModel).findAll({
         where: {
-          userId: parsedEmployeeId,
+          userId: parsedUserId,
           subjectId: parsedSubjectId,
           ...(hasSessionId && { sessionId: parsedSessionId }),
         },
@@ -714,7 +894,7 @@ export async function getEmployeeSubjectAndLesson(userId, courseId, sessionId, s
       const { employeeLesson, lessonSubject } = plainLessons[0];
 
       return [{
-        userId: parsedEmployeeId,
+        userId: parsedUserId,
         subjectId: parsedSubjectId,
         teacherEmployeeData: employeeLesson,
         employeeSubject: {
@@ -745,13 +925,13 @@ export async function getEmployeeSubjectAndLesson(userId, courseId, sessionId, s
     const lessonWhere = {
       ...buildScope(model.lessonModel),
       ...(hasSessionId && { sessionId: parsedSessionId }),
-      ...(hasEmployeeId && parsedEmployeeId && { userId: parsedEmployeeId }),
+      ...(hasUserId && { userId: parsedUserId }),
       ...(hasSubjectId && { subjectId: parsedSubjectId }),
     };
 
     const rows = await scoped(model.teacherSubjectMappingModel).findAll({
       where: {
-        ...(hasEmployeeId && { employeeId: actualEmployeeId }),
+        ...(hasUserId && { userId: parsedUserId }),
         ...(hasSubjectId && { subjectId: parsedSubjectId }),
       },
       attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
@@ -809,4 +989,421 @@ export async function getSimpleLessonList(whereClause) {
     console.error("Error fetching simple lesson list:", error);
     throw error;
   }
+}
+
+async function buildLessonCellSubjectWhere(subjectId) {
+  if (subjectId == null) {
+    return {};
+  }
+
+  const subjectIdNum = Number(subjectId);
+  const mappingRows = await model.teacherSubjectMappingModel.findAll({
+    where: { subjectId: subjectIdNum },
+    attributes: ['teacherSubjectMappingId'],
+  });
+
+  const mappingIds = [];
+  for (const row of mappingRows) {
+    mappingIds.push(Number(row.teacherSubjectMappingId));
+  }
+
+  const orConditions = [{ subjectId: subjectIdNum }];
+  if (mappingIds.length > 0) {
+    orConditions.push({ teacherSubjectMappingId: { [Op.in]: mappingIds } });
+  }
+
+  return { [Op.or]: orConditions };
+}
+
+/**
+ * One week of published date-wise classes for a teacher + subject + course + session.
+ */
+export async function getTeacherWeekDateWiseCells({
+  userId,
+  courseId,
+  sessionId,
+  subjectId,
+  startDate,
+  endDate,
+}) {
+  const dateConditions = [];
+  if (startDate != null) {
+    dateConditions.push(
+      Sequelize.where(
+        Sequelize.fn('DATE', Sequelize.col('time_table_cell_date_wise.date')),
+        { [Op.gte]: startDate },
+      ),
+    );
+  }
+  if (endDate != null) {
+    dateConditions.push(
+      Sequelize.where(
+        Sequelize.fn('DATE', Sequelize.col('time_table_cell_date_wise.date')),
+        { [Op.lte]: endDate },
+      ),
+    );
+  }
+
+  const courseIdNum = Number(courseId);
+  const sessionIdNum = Number(sessionId);
+  const hasCourseId = Number.isFinite(courseIdNum);
+  const hasSessionId = Number.isFinite(sessionIdNum);
+
+  const routineWhere = { isPublish: true };
+  if (hasCourseId) {
+    routineWhere.courseId = courseIdNum;
+  }
+
+  const sectionWhere = { ...buildScope(model.classSectionModel) };
+  if (hasSessionId) {
+    sectionWhere.sessionId = sessionIdNum;
+  }
+  if (hasCourseId) {
+    sectionWhere.courseId = courseIdNum;
+  }
+
+  const cellSubjectWhere = subjectId != null
+    ? await buildLessonCellSubjectWhere(subjectId)
+    : {};
+
+  return model.timeTableCellDateWiseModel.findAll({
+    attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
+    where: dateConditions.length > 0 ? { [Op.and]: dateConditions } : {},
+    include: [
+      {
+        model: model.timeTableCellTeachersDateWiseModel,
+        as: 'timeTableCellTeachersDateWise',
+        required: true,
+        where: { userId: Number(userId) },
+        attributes: ['userId', 'teacherType', 'isAttendence'],
+      },
+      {
+        model: model.classRoomModel,
+        as: 'classRoom',
+        required: false,
+        attributes: ['classRoomSectionId', 'roomNumber'],
+      },
+      {
+        model: model.timeTableCellModel,
+        as: 'timeTableCell',
+        required: true,
+        ...(subjectId != null ? { where: cellSubjectWhere } : {}),
+        attributes: [
+          'timeTableCellId',
+          'timeTableRoutineId',
+          'timeTableCreationId',
+          'day',
+          'period',
+          'subjectId',
+          'timeTableType',
+        ],
+        include: [
+          {
+            model: model.teacherSubjectMappingModel,
+            as: 'timeTableTeacherSubject',
+            attributes: ['teacherSubjectMappingId'],
+            required: false,
+            include: [
+              {
+                model: model.subjectModel,
+                as: 'employeeSubject',
+                attributes: ['subjectId', 'subjectName'],
+                required: false,
+              },
+            ],
+          },
+          {
+            model: model.subjectModel,
+            as: 'timeTableSubject',
+            attributes: ['subjectId', 'subjectName'],
+            required: false,
+          },
+          {
+            model: model.timeTableStructurePeriodsModel,
+            as: 'timeTablecreation',
+            attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime'],
+            required: false,
+          },
+          {
+            model: model.timeTableRoutineModel,
+            as: 'timeTableRoutine',
+            required: true,
+            where: routineWhere,
+            attributes: [
+              'timeTableRoutineId',
+              'startingDate',
+              'endingDate',
+              'isPublish',
+              'timeTableType',
+              'classSectionTermId',
+              'courseId',
+            ],
+            include: [
+              timeTableRoutineClassSectionInclude({
+                termRequired: true,
+                sectionRequired: true,
+                sectionWhere,
+                termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
+                sectionAttributes: ['classSectionsId', 'section', 'year', 'sessionId', 'courseId'],
+              }),
+            ],
+          },
+        ],
+      },
+    ],
+    order: [['date', 'ASC'], ['timeTableCellDateWiseId', 'ASC']],
+  });
+}
+
+/**
+ * Date-wise cell ids that already have at least one attendance row (= class taken).
+ */
+export async function getDateWiseIdsWithAttendance(timeTableCellDateWiseIds) {
+  if (!timeTableCellDateWiseIds || timeTableCellDateWiseIds.length === 0) {
+    return [];
+  }
+
+  const ids = [];
+  for (const id of timeTableCellDateWiseIds) {
+    ids.push(Number(id));
+  }
+
+  return scoped(model.attendanceModel).findAll({
+    attributes: ['timeTableCellDateWiseId'],
+    where: {
+      timeTableCellDateWiseId: { [Op.in]: ids },
+    },
+    group: ['timeTableCellDateWiseId'],
+  });
+}
+
+/**
+ * Compact lesson/topic/subtopic/window names for date-wise cells.
+ */
+export async function getLessonPlanSummariesByDateWiseIds(timeTableCellDateWiseIds) {
+  if (!timeTableCellDateWiseIds || timeTableCellDateWiseIds.length === 0) {
+    return [];
+  }
+
+  const ids = [];
+  for (const id of timeTableCellDateWiseIds) {
+    ids.push(Number(id));
+  }
+
+  return scoped(model.lessonMappingModel).findAll({
+    attributes: [
+      'lessonMappingId',
+      'topicId',
+      'timeTableCellDateWiseId',
+      'timeTableCellId',
+      'date',
+      'completeDate',
+      'note',
+      'lectureUrl',
+      'file',
+      'status',
+    ],
+    where: {
+      timeTableCellDateWiseId: { [Op.in]: ids },
+    },
+    include: [
+      {
+        model: model.topicModel,
+        as: 'mappingTopic',
+        required: true,
+        attributes: ['topicId', 'name', 'lessonId'],
+        include: [
+          {
+            model: model.lessonModel,
+            as: 'lessonTopic',
+            required: true,
+            attributes: ['lessonId', 'name', 'lectureWindowId'],
+            where: buildScope(model.lessonModel),
+            include: [
+              {
+                model: model.lectureWindowModel,
+                as: 'lectureWindow',
+                required: false,
+                attributes: ['lectureWindowId', 'name'],
+              },
+            ],
+          },
+          {
+            model: model.subTopicModel,
+            as: 'subTopic',
+            required: false,
+            attributes: ['subTopicId', 'name'],
+          },
+        ],
+      },
+    ],
+    order: [['lessonMappingId', 'ASC']],
+  });
+}
+
+/**
+ * Lesson mappings for progress table — filtered by teacher + subject (+ optional course/session/lesson).
+ */
+export async function getMappedLessonRows({
+  userId,
+  subjectId,
+  courseId,
+  sessionId,
+  lessonId,
+  status,
+}) {
+  const lessonWhere = {
+    ...buildScope(model.lessonModel),
+  };
+  if (subjectId != null) {
+    lessonWhere.subjectId = Number(subjectId);
+  }
+  if (lessonId != null) {
+    lessonWhere.lessonId = Number(lessonId);
+  }
+
+  const mappingWhere = {};
+  if (status != null && status !== '') {
+    mappingWhere.status = status;
+  }
+
+  const routineWhere = {
+    ...buildScope(model.timeTableRoutineModel),
+  };
+  if (courseId != null) {
+    routineWhere.courseId = Number(courseId);
+  }
+
+  const sectionWhere = {
+    ...buildScope(model.classSectionModel),
+  };
+  if (sessionId != null) {
+    sectionWhere.sessionId = Number(sessionId);
+  }
+  if (courseId != null) {
+    sectionWhere.courseId = Number(courseId);
+  }
+
+  return scoped(model.lessonMappingModel).findAll({
+    attributes: [
+      'lessonMappingId',
+      'topicId',
+      'timeTableCellDateWiseId',
+      'timeTableCellId',
+      'date',
+      'completeDate',
+      'note',
+      'lectureUrl',
+      'file',
+      'status',
+    ],
+    where: mappingWhere,
+    include: [
+      {
+        model: model.topicModel,
+        as: 'mappingTopic',
+        required: true,
+        attributes: ['topicId', 'name', 'description', 'lessonId'],
+        include: [
+          {
+            model: model.lessonModel,
+            as: 'lessonTopic',
+            required: true,
+            attributes: ['lessonId', 'name', 'description', 'subjectId', 'sessionId', 'userId', 'lectureWindowId'],
+            where: lessonWhere,
+            include: [
+              {
+                model: model.subjectModel,
+                as: 'lessonSubject',
+                attributes: ['subjectId', 'subjectName', 'subjectCode'],
+                required: false,
+              },
+              {
+                model: model.lectureWindowModel,
+                as: 'lectureWindow',
+                required: false,
+                attributes: ['lectureWindowId', 'name'],
+              },
+            ],
+          },
+          {
+            model: model.subTopicModel,
+            as: 'subTopic',
+            required: false,
+            attributes: ['subTopicId', 'name', 'description', 'topicId'],
+          },
+        ],
+      },
+      {
+        model: model.timeTableCellDateWiseModel,
+        as: 'timeTableCellDateWise',
+        required: true,
+        attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
+        include: [
+          {
+            model: model.timeTableCellTeachersDateWiseModel,
+            as: 'timeTableCellTeachersDateWise',
+            required: true,
+            where: { userId: Number(userId) },
+            attributes: ['userId', 'teacherType', 'isAttendence'],
+          },
+          {
+            model: model.classRoomModel,
+            as: 'classRoom',
+            required: false,
+            attributes: ['classRoomSectionId', 'roomNumber'],
+          },
+          {
+            model: model.timeTableCellModel,
+            as: 'timeTableCell',
+            required: true,
+            attributes: [
+              'timeTableCellId',
+              'day',
+              'period',
+              'timeTableType',
+              'subjectId',
+              'timeTableCreationId',
+              'timeTableRoutineId',
+            ],
+            include: [
+              {
+                model: model.timeTableStructurePeriodsModel,
+                as: 'timeTablecreation',
+                attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime'],
+                required: false,
+              },
+              {
+                model: model.timeTableRoutineModel,
+                as: 'timeTableRoutine',
+                required: true,
+                where: routineWhere,
+                attributes: [
+                  'timeTableRoutineId',
+                  'classSectionTermId',
+                  'startingDate',
+                  'endingDate',
+                  'courseId',
+                  'isPublish',
+                ],
+                include: [
+                  timeTableRoutineClassSectionInclude({
+                    termRequired: true,
+                    sectionRequired: true,
+                    sectionWhere,
+                    termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
+                    sectionAttributes: ['classSectionsId', 'section', 'year', 'sessionId', 'courseId'],
+                  }),
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    order: [
+      ['date', 'ASC'],
+      ['lessonMappingId', 'ASC'],
+    ],
+  });
 }

@@ -34,7 +34,7 @@
 
   try {
     const [namePart, idsPart] = studentString.split("$");
-    const [studentId, classSectionsId, timeTableMappingId] = idsPart
+    const [studentId, classSectionsId, timeTableCellId] = idsPart
       .replace(/\s+/g, "") // remove spaces if any
       .split(/[%&]/);
 
@@ -42,7 +42,7 @@
       studentName: namePart,
       studentId: parseInt(studentId, 10),
       classSectionsId: parseInt(classSectionsId, 10),
-      timeTableMappingId: parseInt(timeTableMappingId, 10),
+      timeTableCellId: parseInt(timeTableCellId, 10),
     };
   } catch (error) {
     console.error("Error parsing student string:", studentString, error);

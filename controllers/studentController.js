@@ -431,18 +431,29 @@ export const getStudentTimeTable = async (req, res) => {
 
 export async function getStudentsByClassSection(req, res) {
     try {
-        const { timeTableMappingId, date } = req.query;
+        const { timeTableCellDateWiseId, groupPeriods, date, academicYearId } = req.query;
 
         const result = await studentService.getStudentsByClassSection({
-            timeTableMappingId,
+            timeTableCellDateWiseId,
+            groupPeriods,
             date,
+            academicYearId,
         });
 
-        const students = result.students ?? [];
+        let count = 0;
+        if (Array.isArray(result.periods) && Array.isArray(result.students)) {
+            count = result.students.length;
+        } else if (Array.isArray(result.periods)) {
+            for (const block of result.periods) {
+                count += block.students.length;
+            }
+        } else {
+            count = result.students.length;
+        }
 
         return res.status(200).json({
             success: true,
-            count: students.length,
+            count,
             data: result,
         });
     } catch (error) {

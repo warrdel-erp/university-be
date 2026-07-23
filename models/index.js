@@ -49,6 +49,10 @@ import timeTableStructurePeriodsModel from "./timeTableStructurePeriodsModel.js"
 import faculityLoadModel from "./faculityLoadModel.js";
 import timeTableRoutineModel from "./timeTableRoutineModel.js";
 import classScheduleModel from "./classScheduleModel.js";
+import timeTableCellModel from "./timeTableCellModel.js";
+import timeTableCellTeachersModel from "./timeTableCellTeachersModel.js";
+import timeTableCellDateWiseModel from "./timeTableCellDateWiseModel.js";
+import timeTableCellTeachersDateWiseModel from "./timeTableCellTeachersDateWiseModel.js";
 import attendanceModel from "./attendanceModel.js";
 import classRoomModel from "./classRoomModel.js";
 import feeGroupModel from "./feeGroupModel.js";
@@ -674,8 +678,124 @@ classSectionTermModel.hasMany(attendanceModel, { foreignKey: "class_section_term
 attendanceModel.belongsTo(studentModel, { foreignKey: "student_id", as: "studentAttendance" });
 studentModel.hasMany(attendanceModel, { foreignKey: "student_id", as: "studentAttendance" });
 
-attendanceModel.belongsTo(classScheduleModel, { foreignKey: "timeTableMappingId", as: "timeTableMapping" });
-classScheduleModel.hasMany(attendanceModel, { foreignKey: "timeTableMappingId", as: "attendances" });
+attendanceModel.belongsTo(timeTableCellDateWiseModel, {
+  foreignKey: "timeTableCellDateWiseId",
+  as: "timeTableCellDateWise",
+});
+timeTableCellDateWiseModel.hasMany(attendanceModel, {
+  foreignKey: "timeTableCellDateWiseId",
+  as: "attendances",
+});
+
+attendanceModel.belongsTo(timeTableCellModel, {
+  foreignKey: "timeTableCellId",
+  as: "timeTableCell",
+});
+timeTableCellModel.hasMany(attendanceModel, {
+  foreignKey: "timeTableCellId",
+  as: "attendances",
+});
+
+// time_table_cell (week template) — PK timeTableCellId
+timeTableCellModel.belongsTo(timeTableRoutineModel, { foreignKey: "timeTableRoutineId", as: "timeTableRoutine" });
+timeTableRoutineModel.hasMany(timeTableCellModel, { foreignKey: "timeTableRoutineId", as: "timeTableCells" });
+
+timeTableCellModel.belongsTo(timeTableStructurePeriodsModel, {
+  foreignKey: "timeTableCreationId",
+  as: "timeTablecreation",
+});
+timeTableStructurePeriodsModel.hasMany(timeTableCellModel, {
+  foreignKey: "timeTableCreationId",
+  as: "timeTableCells",
+});
+
+timeTableCellModel.belongsTo(timeTableStructureModel, { foreignKey: "timeTableNameId", as: "timeTableStructure" });
+timeTableStructureModel.hasMany(timeTableCellModel, { foreignKey: "timeTableNameId", as: "timeTableCells" });
+
+timeTableCellModel.belongsTo(classRoomModel, { foreignKey: "classRoomSectionId", as: "classRoom" });
+classRoomModel.hasMany(timeTableCellModel, { foreignKey: "classRoomSectionId", as: "timeTableCells" });
+
+timeTableCellModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "timeTableSubject" });
+subjectModel.hasMany(timeTableCellModel, { foreignKey: "subjectId", as: "timeTableCells" });
+
+timeTableCellModel.belongsTo(electiveSubjectModel, { foreignKey: "electiveSubjectId", as: "timeTableElective" });
+electiveSubjectModel.hasMany(timeTableCellModel, { foreignKey: "electiveSubjectId", as: "timeTableCells" });
+
+timeTableCellModel.belongsTo(teacherSubjectMappingModel, {
+  foreignKey: "teacherSubjectMappingId",
+  as: "timeTableTeacherSubject",
+});
+teacherSubjectMappingModel.hasMany(timeTableCellModel, {
+  foreignKey: "teacherSubjectMappingId",
+  as: "timeTableCells",
+});
+
+timeTableCellTeachersModel.belongsTo(timeTableCellModel, {
+  foreignKey: "timeTableCellId",
+  as: "timeTableCell",
+});
+timeTableCellModel.hasMany(timeTableCellTeachersModel, {
+  foreignKey: "timeTableCellId",
+  as: "timeTableCellTeachers",
+});
+
+timeTableCellTeachersModel.belongsTo(userModel, { foreignKey: "userId", as: "user" });
+userModel.hasMany(timeTableCellTeachersModel, { foreignKey: "userId", as: "timeTableCellTeachers" });
+
+timeTableCellTeachersModel.belongsTo(employeeModel, {
+  foreignKey: "userId",
+  targetKey: "userId",
+  as: "employeeDetails",
+});
+employeeModel.hasMany(timeTableCellTeachersModel, {
+  foreignKey: "userId",
+  sourceKey: "userId",
+  as: "timeTableCellTeachers",
+});
+
+timeTableCellDateWiseModel.belongsTo(timeTableCellModel, {
+  foreignKey: "timeTableCellId",
+  as: "timeTableCell",
+});
+timeTableCellModel.hasMany(timeTableCellDateWiseModel, {
+  foreignKey: "timeTableCellId",
+  as: "timeTableCellDateWise",
+});
+
+timeTableCellDateWiseModel.belongsTo(classRoomModel, {
+  foreignKey: "classRoomSectionId",
+  as: "classRoom",
+});
+classRoomModel.hasMany(timeTableCellDateWiseModel, {
+  foreignKey: "classRoomSectionId",
+  as: "timeTableCellDateWise",
+});
+
+timeTableCellTeachersDateWiseModel.belongsTo(timeTableCellDateWiseModel, {
+  foreignKey: "timeTableCellDateWiseId",
+  as: "timeTableCellDateWise",
+});
+timeTableCellDateWiseModel.hasMany(timeTableCellTeachersDateWiseModel, {
+  foreignKey: "timeTableCellDateWiseId",
+  as: "timeTableCellTeachersDateWise",
+});
+
+timeTableCellTeachersDateWiseModel.belongsTo(userModel, { foreignKey: "userId", as: "user" });
+userModel.hasMany(timeTableCellTeachersDateWiseModel, {
+  foreignKey: "userId",
+  as: "timeTableCellTeachersDateWise",
+});
+
+timeTableCellTeachersDateWiseModel.belongsTo(employeeModel, {
+  foreignKey: "userId",
+  targetKey: "userId",
+  as: "employeeDetails",
+});
+employeeModel.hasMany(timeTableCellTeachersDateWiseModel, {
+  foreignKey: "userId",
+  sourceKey: "userId",
+  as: "timeTableCellTeachersDateWise",
+});
 
 //fee (fee Group)
 feeGroupModel.belongsTo(userModel, { foreignKey: "createdBy", as: "userFeeGroup" });
@@ -1131,10 +1251,7 @@ feeInvoiceDetailModel.belongsTo(feeInvoiceModel, {
   as: "feeInvoices",
 });
 
-userModel.hasMany(classScheduleModel, { foreignKey: "userId", as: "timeTableMappings" });
 classScheduleModel.belongsTo(userModel, { foreignKey: "userId", as: "user" });
-
-employeeModel.hasMany(classScheduleModel, { foreignKey: "userId", sourceKey: "userId", as: "employeeTimeTableMappings" });
 classScheduleModel.belongsTo(employeeModel, { foreignKey: "userId", targetKey: "userId", as: "employeeDetails" });
 
 feePlanModel.hasMany(feeNewInvoiceModel, { foreignKey: "fee_plan_id", as: "invoices" });
@@ -1264,8 +1381,8 @@ userModel.hasMany(lessonModel, { foreignKey: "userId", as: "lessons" });
 lectureWindowModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "lectureWindowSubject" });
 subjectModel.hasMany(lectureWindowModel, { foreignKey: "subjectId", as: "lectureWindows" });
 
-lectureWindowModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "lectureWindowEmployee" });
-employeeModel.hasMany(lectureWindowModel, { foreignKey: "employeeId", as: "lectureWindows" });
+lectureWindowModel.belongsTo(employeeModel, { foreignKey: "userId", targetKey: "userId", as: "lectureWindowEmployee" });
+employeeModel.hasMany(lectureWindowModel, { foreignKey: "userId", sourceKey: "userId", as: "lectureWindows" });
 
 lectureWindowModel.belongsTo(sessionModel, { foreignKey: "sessionId", as: "lectureWindowSession" });
 sessionModel.hasMany(lectureWindowModel, { foreignKey: "sessionId", as: "lectureWindows" });
@@ -1289,8 +1406,23 @@ topicModel.hasMany(lessonMappingModel, { foreignKey: "topicId", as: "topicMappin
 subTopicModel.belongsTo(topicModel, { foreignKey: "topicId", as: "topic" });
 topicModel.hasMany(subTopicModel, { foreignKey: "topicId", as: "subTopic" });
 
-lessonMappingModel.belongsTo(classScheduleModel, { foreignKey: "timeTableMappingId", as: "timeTableMapping" });
-classScheduleModel.hasMany(lessonMappingModel, { foreignKey: "timeTableMappingId", as: "timeTableMapping" });
+lessonMappingModel.belongsTo(timeTableCellDateWiseModel, {
+  foreignKey: "timeTableCellDateWiseId",
+  as: "timeTableCellDateWise",
+});
+timeTableCellDateWiseModel.hasMany(lessonMappingModel, {
+  foreignKey: "timeTableCellDateWiseId",
+  as: "lessonMappings",
+});
+
+lessonMappingModel.belongsTo(timeTableCellModel, {
+  foreignKey: "timeTableCellId",
+  as: "timeTableCell",
+});
+timeTableCellModel.hasMany(lessonMappingModel, {
+  foreignKey: "timeTableCellId",
+  as: "lessonMappings",
+});
 
 courseModel.hasMany(examStructureModel, { foreignKey: "courseId", sourceKey: "courseId", as: "examStructuresCourse" });
 examStructureModel.belongsTo(courseModel, { foreignKey: "courseId", targetKey: "courseId", as: "courseExam" });
@@ -1614,11 +1746,8 @@ examScheduleModel.hasMany(teacherExamAssignmentModel, { foreignKey: "examSchedul
 teacherExamAssignmentModel.belongsTo(acedmicYearModel, { foreignKey: "academicYearId", as: "acedmicYear" });
 acedmicYearModel.hasMany(teacherExamAssignmentModel, { foreignKey: "academicYearId", as: "examAssignmentsYear" });
 
-teacherExamAssignmentModel.belongsTo(userModel, { foreignKey: "userId", as: "user" });
-userModel.hasMany(teacherExamAssignmentModel, { foreignKey: "userId", as: "examAssignments" });
-
-teacherExamAssignmentModel.belongsTo(employeeModel, { foreignKey: "userId", targetKey: "userId", as: "teacherEmployee" });
-employeeModel.hasMany(teacherExamAssignmentModel, { foreignKey: "userId", sourceKey: "userId", as: "examAssignmentsEmployee" });
+teacherExamAssignmentModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "teacherEmployee" });
+employeeModel.hasMany(teacherExamAssignmentModel, { foreignKey: "employeeId", as: "examAssignmentsEmployee" });
 
 teacherSubstituteModel.belongsTo(userModel, { foreignKey: "userId", as: "user" });
 userModel.hasMany(teacherSubstituteModel, { foreignKey: "userId", as: "teacherSubstitutes" });
@@ -1770,6 +1899,10 @@ export {
   faculityLoadModel,
   timeTableRoutineModel,
   classScheduleModel,
+  timeTableCellModel,
+  timeTableCellTeachersModel,
+  timeTableCellDateWiseModel,
+  timeTableCellTeachersDateWiseModel,
   attendanceModel,
   classRoomModel,
   feeGroupModel,

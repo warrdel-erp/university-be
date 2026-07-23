@@ -134,10 +134,24 @@ const jsonObjectField = z.preprocess(
 );
 
 
+const dateWiseIdList = z.preprocess(
+  (val) => {
+    if (val === "" || val == null) return undefined;
+    const raw = Array.isArray(val) ? val : String(val).split(",");
+    const ids = [];
+    for (const item of raw) {
+      const trimmed = String(item).trim();
+      if (trimmed !== "") ids.push(trimmed);
+    }
+    return ids;
+  },
+  z.array(positiveIntegerId).min(1, "timeTableCellDateWiseId is required"),
+);
+
 const classSectionStudentsQuerySchema = z.object({
-  timeTableMappingId: positiveIntegerId,
-  date: dateField,
+  timeTableCellDateWiseId: dateWiseIdList,
   academicYearId: optionalPositiveIntegerId,
+  date: optionalDateField,
   groupPeriods: z.union([z.boolean(), z.string()]).optional(),
 }).passthrough();
 
