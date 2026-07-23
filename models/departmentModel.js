@@ -47,6 +47,12 @@ const departmentModel = sequelize.define(
             field: 'department_code',
             allowNull: true,
         },
+        departmentType: {
+            type: DataTypes.ENUM(...departmentTypes),
+            field: 'department_type',
+            allowNull: false,
+            defaultValue: 'Academic',
+        },
         description: {
             type: DataTypes.STRING,
             allowNull: true,
