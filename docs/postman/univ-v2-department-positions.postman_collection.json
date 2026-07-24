@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "c3d4e5f6-a7b8-9012-cdef-deptpositions01",
     "name": "univ-v2-department-positions",
-    "description": "Department + department positions APIs.\n\n## Create order (no `/departmentStructure`)\n1. `POST /department/` — create dept (`parentDepartmentId`) OR insert parent above child (send `departmentId`)\n2. `POST /departmentPosition/` — position seat (`level`, optional `departmentId`)\n3. `POST /departmentPosition/head` — assign person (`userId`, PRIMARY/ACTING)\n4. `GET /departmentPosition/cards` | `/tree` | `/chart`\n\nDepartment hierarchy lives on `department.parentDepartmentId` (replaces removed `department_structure` table).\n\nPre-request scripts build JSON from collection variables.\n\nSet `baseurl` + `token`. Permissions: DEPARTMENT_*.\n\n**Removed:** `/departmentStructure`, `/subAccount`, `departmentStructureId`, `accountId`, `subAccountId`.\n\nDocs: `DEPARTMENT_POSITIONS_NAMING_CONVENTION.md`, `AFFECTED_APIS_DEPARTMENT_CONSOLIDATION.md`, `DEPARTMENT_POSITIONS_POSTMAN.md`.",
+    "description": "Department + department positions APIs.\n\n## Create order (no `/departmentStructure`)\n1. `POST /department/` — create dept (`parentDepartmentId`) OR insert parent above child (send `departmentId`)\n2. `POST /departmentPosition/` — position seat (`level`, optional `departmentId`)\n3. `POST /departmentPosition/head` — assign person (`userId`; status defaults to ACTIVE)\n4. `GET /departmentPosition/cards` | `/tree` | `/chart`\n\nDepartment hierarchy lives on `department.parentDepartmentId` (replaces removed `department_structure` table).\n\nPre-request scripts build JSON from collection variables.\n\nSet `baseurl` + `token`. Permissions: DEPARTMENT_*.\n\n**Removed:** `/departmentStructure`, `/subAccount`, `departmentStructureId`, `accountId`, `subAccountId`.\n\nDocs: `DEPARTMENT_POSITIONS_NAMING_CONVENTION.md`, `AFFECTED_APIS_DEPARTMENT_CONSOLIDATION.md`, `DEPARTMENT_POSITIONS_POSTMAN.md`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -894,7 +894,7 @@
                 "markVacant"
               ]
             },
-            "description": "**POST /departmentPosition/markVacant**\n\n**Required body**\n- `userDepartmentPositionId` (int)\n\nSet collection variable `userDepartmentPositionId` (from add-head test script) before calling.\n\nUnmaps that user assignment (`status` → `INACTIVE`). Sets parent position `isVacant = true` only when no ACTIVE heads remain."
+            "description": "**POST /departmentPosition/markVacant**\n\n**Required body**\n- `userDepartmentPositionId` (int)\n\nSet collection variable `userDepartmentPositionId` (from add-head test script) before calling.\n\nHard-deletes that user assignment. Sets parent position `isVacant = true` only when no ACTIVE heads remain."
           },
           "response": []
         },
@@ -956,8 +956,6 @@
                   "pm.request.body.update(JSON.stringify({",
                   "  departmentPositionId: requireVar('departmentPositionId'),",
                   "  userId: requireVar('userId'),",
-                  "  holderType: 'PRIMARY',",
-                  "  status: 'ACTIVE',",
                   "  joiningDate: '2024-01-01',",
                   "  endDate: null,",
                   "}, null, 2));"
@@ -1000,7 +998,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"departmentPositionId\": \"{{departmentPositionId}}\",\n  \"userId\": \"{{userId}}\",\n  \"holderType\": \"PRIMARY\",\n  \"status\": \"ACTIVE\",\n  \"joiningDate\": \"2024-01-01\",\n  \"endDate\": null\n}",
+              "raw": "{\n  \"departmentPositionId\": \"{{departmentPositionId}}\",\n  \"userId\": \"{{userId}}\",\n  \"joiningDate\": \"2024-01-01\",\n  \"endDate\": null\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1017,7 +1015,7 @@
                 "head"
               ]
             },
-            "description": "**POST /departmentPosition/head**\n\n**Required**\n- `departmentPositionId` (int)\n- `userId` (int)\n- `holderType` — `PRIMARY` | `ACTING`\n\n**Optional**\n- `status` — `ACTIVE` | `INACTIVE` (default `ACTIVE`)\n- `joiningDate` (YYYY-MM-DD | null)\n- `endDate` (YYYY-MM-DD | null)\n\nACTIVE → `isVacant = false`. Rejects duplicate ACTIVE (position, user)."
+            "description": "**POST /departmentPosition/head**\n\n**Required**\n- `departmentPositionId` (int)\n- `userId` (int)\n\n**Optional**\n- `joiningDate` (YYYY-MM-DD | null)\n- `endDate` (YYYY-MM-DD | null)\n\n`status` is always `ACTIVE` (not accepted in payload). Sets `isVacant = false`. Rejects duplicate ACTIVE (position, user)."
           },
           "response": []
         },
@@ -1069,8 +1067,6 @@
                   "if (!userDepartmentPositionId) throw new Error('userDepartmentPositionId is not set. Add a head first.');",
                   "pm.request.body.update(JSON.stringify({",
                   "  userDepartmentPositionId: Number(userDepartmentPositionId),",
-                  "  holderType: 'ACTING',",
-                  "  status: 'ACTIVE',",
                   "  joiningDate: '2024-01-01',",
                   "  endDate: null,",
                   "}, null, 2));"
@@ -1098,7 +1094,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userDepartmentPositionId\": \"{{userDepartmentPositionId}}\",\n  \"holderType\": \"ACTING\",\n  \"status\": \"ACTIVE\",\n  \"joiningDate\": \"2024-01-01\",\n  \"endDate\": null\n}",
+              "raw": "{\n  \"userDepartmentPositionId\": \"{{userDepartmentPositionId}}\",\n  \"joiningDate\": \"2024-01-01\",\n  \"endDate\": null\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1115,7 +1111,7 @@
                 "head"
               ]
             },
-            "description": "**PATCH /departmentPosition/head**\n\n**Required**\n- `userDepartmentPositionId`\n\n**Optional**\n- `holderType`, `status`, `joiningDate`, `endDate`\n\nRecalculates parent `isVacant` after status change."
+            "description": "**PATCH /departmentPosition/head**\n\n**Required**\n- `userDepartmentPositionId`\n\n**Optional**\n- `joiningDate`, `endDate`\n\nDo not send `holderType` or `status`. To remove a head, use markVacant / delete head."
           },
           "response": []
         },
@@ -1151,7 +1147,7 @@
                 }
               ]
             },
-            "description": "**DELETE /departmentPosition/head**\n\n**Required query**\n- `userDepartmentPositionId`\n\nSoft-delete. If no ACTIVE heads remain → `isVacant = true`."
+            "description": "**DELETE /departmentPosition/head**\n\n**Required query**\n- `userDepartmentPositionId`\n\nHard-deletes the head row. If no ACTIVE heads remain → `isVacant = true`."
           },
           "response": []
         }
