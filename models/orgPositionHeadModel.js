@@ -3,16 +3,55 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import university from "./universityModel.js";
 import institute from "./instituteModel.js";
-import { departmentTypes } from "../constant.js";
+import orgPosition from "./orgPositionModel.js";
 
-const departmentModel = sequelize.define(
-    'department',
+const orgPositionHeadModel = sequelize.define(
+    'org_position_head',
     {
-        departmentId: {
+        orgPositionHeadId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'department_id'
+            field: 'org_position_head_id'
+        },
+        orgPositionId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'org_position_id',
+            references: {
+                model: orgPosition,
+                key: 'org_position_id'
+            }
+        },
+        userId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'user_id',
+            references: {
+                model: users,
+                key: 'user_id'
+            }
+        },
+        holderType: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            field: 'holder_type'
+        },
+        status: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            defaultValue: 'ACTIVE',
+            field: 'status'
+        },
+        joiningDate: {
+            type: DataTypes.DATEONLY,
+            allowNull: true,
+            field: 'joining_date'
+        },
+        endDate: {
+            type: DataTypes.DATEONLY,
+            allowNull: true,
+            field: 'end_date'
         },
         universityId: {
             type: DataTypes.INTEGER,
@@ -29,33 +68,8 @@ const departmentModel = sequelize.define(
             field: 'institute_id',
             references: {
                 model: institute,
-                key: 'institute_id',
-            },
-        },
-        departmentName: {
-            type: DataTypes.STRING,
-            field: 'department_name',
-            allowNull: false,
-        },
-        alternateName: {
-            type: DataTypes.STRING,
-            field: 'alternate_name',
-            allowNull: true,
-        },
-        departmentCode: {
-            type: DataTypes.STRING,
-            field: 'department_code',
-            allowNull: true,
-        },
-        departmentType: {
-            type: DataTypes.ENUM(...departmentTypes),
-            field: 'department_type',
-            allowNull: false,
-            defaultValue: 'Academic',
-        },
-        description: {
-            type: DataTypes.STRING,
-            allowNull: true,
+                key: 'institute_id'
+            }
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -87,14 +101,19 @@ const departmentModel = sequelize.define(
             defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
             field: 'updated_at'
         },
+        deletedAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field: 'deleted_at'
+        }
     },
     {
-        tableName: 'department',
+        tableName: 'org_position_head',
         timestamps: true,
-        paranoid: false
+        paranoid: true
     }
 );
 
-departmentModel.scopeConfig = { university: true, institute: true, academicYear: false };
+orgPositionHeadModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
-export default departmentModel;
+export default orgPositionHeadModel;

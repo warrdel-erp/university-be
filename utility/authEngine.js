@@ -59,11 +59,28 @@ export const scopeResolvers = {
   },
 
   [SCOPES.DEPARTMENT]: async (userId) => {
-    // Resolve departmentIds mapped to user/HOD
-    const mappings = await model.hodDepartmentModel.findAll({
-      where: { userId }
+    const heads = await model.orgPositionHeadModel.findAll({
+      where: { userId, status: 'ACTIVE' },
+      attributes: ['orgPositionHeadId', 'orgPositionId'],
+      include: [
+        {
+          model: model.orgPositionModel,
+          as: 'position',
+          attributes: ['orgPositionId', 'departmentId'],
+          required: true,
+          where: { departmentId: { [Op.ne]: null } },
+        },
+      ],
     });
-    return mappings.map(m => m.departmentId);
+
+    const departmentIds = [];
+    for (const head of heads) {
+      const departmentId = head.position.departmentId;
+      if (!departmentIds.includes(departmentId)) {
+        departmentIds.push(departmentId);
+      }
+    }
+    return departmentIds;
   },
 
   [SCOPES.INSTITUTE]: async (userId) => {

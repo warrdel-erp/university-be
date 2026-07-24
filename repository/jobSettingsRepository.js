@@ -37,9 +37,9 @@ export async function getSingleJobType(jobSettingId) {
               attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"],
             },
             {
-              model: model.subAccountModel,
+              model: model.departmentModel,
               as: "departmentJobs",
-              attributes: ["departmentName", "subAccountId", "alternateName", "departmentCode"],
+              attributes: ["departmentName", "departmentId", "alternateName", "departmentCode"],
             },
             {
               model: model.subjectModel,

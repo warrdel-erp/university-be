@@ -195,6 +195,8 @@ export const itCategory = ["INCOME TAX"];
 
 export const buildingTypes = ["Academics", "Residential"];
 
+export const departmentTypes = ["Admin", "Academic"];
+
 export const governanceBodyCategories = [
   "Authority",
   "Board",

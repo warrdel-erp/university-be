@@ -20,5 +20,5 @@ export async function deleteStaff(staffId) {
 
 export async function updateStaff(staffId, staffData, updatedBy) {
     staffData.updatedBy = updatedBy;
-    await StaffCreationService.updateStaff(staffId, staffData);
+    return await StaffCreationService.updateStaff(staffId, staffData);
 }

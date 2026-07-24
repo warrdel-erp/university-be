@@ -2,16 +2,17 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import university from "./universityModel.js";
+import institute from "./instituteModel.js";
 import department from "./departmentModel.js";
 
-const departmentStructureModel = sequelize.define(
-    'department_structure',
+const orgPositionModel = sequelize.define(
+    'org_position',
     {
-        departmentStructureId: {
+        orgPositionId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'department_structure_id'
+            field: 'org_position_id'
         },
         departmentId: {
             type: DataTypes.INTEGER,
@@ -22,14 +23,42 @@ const departmentStructureModel = sequelize.define(
                 key: 'department_id'
             }
         },
-        parentDepartmentId: {
-            type: DataTypes.INTEGER,
+        positionName: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            field: 'position_name'
+        },
+        positionCode: {
+            type: DataTypes.STRING,
             allowNull: true,
-            field: 'parent_department_id',
-            references: {
-                model: department,
-                key: 'department_id'
-            }
+            field: 'position_code'
+        },
+        employmentCategory: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            field: 'employment_category'
+        },
+        reportingType: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'reporting_type'
+        },
+        isVacant: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: true,
+            field: 'is_vacant'
+        },
+        sortOrder: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            defaultValue: 0,
+            field: 'sort_order'
+        },
+        level: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'level'
         },
         universityId: {
             type: DataTypes.INTEGER,
@@ -38,6 +67,15 @@ const departmentStructureModel = sequelize.define(
             references: {
                 model: university,
                 key: 'university_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'institute_id',
+            references: {
+                model: institute,
+                key: 'institute_id'
             }
         },
         createdBy: {
@@ -70,14 +108,19 @@ const departmentStructureModel = sequelize.define(
             defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
             field: 'updated_at'
         },
+        deletedAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field: 'deleted_at'
+        }
     },
     {
-        tableName: 'department_structure',
+        tableName: 'org_position',
         timestamps: true,
-        paranoid: false
+        paranoid: true
     }
 );
 
-departmentStructureModel.scopeConfig = { university: true, institute: true, academicYear: false };
+orgPositionModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
-export default departmentStructureModel;
+export default orgPositionModel;

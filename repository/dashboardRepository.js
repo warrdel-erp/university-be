@@ -115,9 +115,9 @@ export async function getStaffOverviewStats() {
   return getCountWithGrowth(model.staffModel, 'createdAt');
 }
 
-// College department count from scoped sub_account rows.
+// College department count from scoped department rows.
 export async function getDepartmentCount() {
-  const count = await scoped(model.subAccountModel).count();
+  const count = await scoped(model.departmentModel).count();
   return { count };
 }
 

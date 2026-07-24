@@ -1,15 +1,15 @@
 import * as StaffCreation from "../services/staffServices.js";
 
 export async function addStaff(req, res) {
-    const { departmentId, userId } = req.body
+    const { departmentId, userId, employeeId } = req.body;
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if (!(departmentId && userId)) {
-            return res.status(400).send('departmentId,userId is required')
+        if (!departmentId || (!userId && !employeeId)) {
+            return res.status(400).send('departmentId and userId or employeeId is required');
         }
         const Staff = await StaffCreation.addStaff(req.body, createdBy, updatedBy);
-        res.status(201).json({ message: "Data added successfully", Staff });
+        res.status(201).json({ message: 'Data added successfully', Staff });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -46,7 +46,10 @@ export async function updateStaff(req, res) {
         }
         const updatedBy = req.user.userId;
         const updatedStaff = await StaffCreation.updateStaff(staffId, req.body, updatedBy);
-        res.status(200).json({ message: "Staff update succesfully" });
+        if (!updatedStaff) {
+            return res.status(404).json({ message: 'Staff not found' });
+        }
+        res.status(200).json({ message: 'Staff update succesfully' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

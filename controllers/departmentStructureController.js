@@ -1,26 +1,29 @@
 import * as departmentStructureCreation from "../services/departmentStructureServices.js";
+import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
 export async function addDepartmentStructure(req, res) {
-    const { accountId, subAccountId, parentAccountId } = req.body;
+    const { departmentId, parentDepartmentId } = req.body;
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if (!(accountId && subAccountId && parentAccountId)) {
-            return res.status(400).send('accountId,subAccountId and parentAccountId is required');
-        }
-        const departmentStructure = await departmentStructureCreation.addDepartmentStructure(req.body, createdBy, updatedBy);
-        res.status(201).json({ message: "Data added successfully", departmentStructure });
+        const payload = {
+            ...req.body,
+            departmentId: departmentId == null ? null : Number(departmentId),
+            parentDepartmentId: parentDepartmentId == null ? null : Number(parentDepartmentId),
+        };
+        const departmentStructure = await departmentStructureCreation.addDepartmentStructure(payload, createdBy, updatedBy);
+        return SuccessResponse(res, 201, "Data added successfully", departmentStructure);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
     }
 };
 
 export async function getAlldepartmentStructure(req, res) {
     try {
         const departmentStructureDetails = await departmentStructureCreation.getdepartmentStructureDetails();
-        res.status(200).json(departmentStructureDetails);
+        return SuccessResponse(res, 200, "Department structure details fetched successfully", departmentStructureDetails);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
     }
 }
 
@@ -29,12 +32,12 @@ export async function getSingledepartmentStructureDetails(req, res) {
         const { departmentStructureId } = req.query;
         const departmentStructure = await departmentStructureCreation.getSingledepartmentStructureDetails(departmentStructureId);
         if (departmentStructure) {
-            res.status(200).json(departmentStructure);
+            return SuccessResponse(res, 200, "Department structure details fetched successfully", departmentStructure);
         } else {
-            res.status(404).json({ message: "departmentStructure not found" });
+            return ErrorResponse(res, 404, "Department structure not found");
         }
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
     }
 }
 
@@ -42,13 +45,13 @@ export async function updatedepartmentStructure(req, res) {
     try {
         const { departmentStructureId } = req.body;
         if (!departmentStructureId) {
-            return res.status(400).send('departmentStructureId is required');
+            return ErrorResponse(res, 400, "departmentStructureId is required");
         }
         const updatedBy = req.user.userId;
         await departmentStructureCreation.updatedepartmentStructure(departmentStructureId, req.body, updatedBy);
-        res.status(200).json({ message: "departmentStructure update succesfully" });
+        return SuccessResponse(res, 200, "Department structure update succesfully");
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
     }
 }
 
@@ -56,15 +59,15 @@ export async function deletedepartmentStructure(req, res) {
     try {
         const { departmentStructureId } = req.query;
         if (!departmentStructureId) {
-            return res.status(400).json({ message: "departmentStructureId is required" });
+            return ErrorResponse(res, 400, "departmentStructureId is required");
         }
         const deleted = await departmentStructureCreation.deletedepartmentStructure(departmentStructureId);
         if (deleted) {
-            res.status(200).json({ message: `Delete successful for departmentStructure ID ${departmentStructureId}` });
+            return SuccessResponse(res, 200, `Delete successful for departmentStructure ID ${departmentStructureId}`);
         } else {
-            res.status(404).json({ message: "departmentStructure not found" });
+            return ErrorResponse(res, 404, "Department structure not found");
         }
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
     }
 }
