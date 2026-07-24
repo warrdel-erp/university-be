@@ -20,10 +20,6 @@ import userAuth from '../middleware/authUser.js';
 import { validate } from '../utility/validation.js';
 import { checkAccess } from '../middleware/checkAccess.js';
 import { PERMISSIONS } from '../const/permissions.js';
-import {
-    departmentPositionHolderTypes,
-    departmentPositionHeadStatuses,
-} from '../constant.js';
 
 const router = Router();
 
@@ -50,9 +46,6 @@ const employmentCategoryEnum = z.enum([
     'Executive',
     'Leadership',
 ]);
-
-const holderTypeEnum = z.enum(departmentPositionHolderTypes);
-const headStatusEnum = z.enum(departmentPositionHeadStatuses);
 
 const optionalDateOnly = z.preprocess(
     emptyToUndefined,
@@ -96,16 +89,12 @@ const markDepartmentPositionVacantSchema = z.object({
 const addUserDepartmentPositionSchema = z.object({
     departmentPositionId: positiveIntegerId,
     userId: positiveIntegerId,
-    holderType: holderTypeEnum,
-    status: headStatusEnum.optional(),
     joiningDate: optionalDateOnly,
     endDate: optionalDateOnly,
 });
 
 const updateUserDepartmentPositionSchema = z.object({
     userDepartmentPositionId: positiveIntegerId,
-    holderType: holderTypeEnum.optional(),
-    status: headStatusEnum.optional(),
     joiningDate: optionalDateOnly,
     endDate: optionalDateOnly,
 });
@@ -135,6 +124,7 @@ router.patch('/', userAuth, checkAccess(PERMISSIONS.DEPARTMENT_EDIT.value, 'depa
 router.delete('/', userAuth, checkAccess(PERMISSIONS.DEPARTMENT_DELETE.value, 'departmentPosition'), validate({ query: departmentPositionIdQuerySchema }), deleteDepartmentPosition);
 
 router.post('/markVacant', userAuth, checkAccess(PERMISSIONS.DEPARTMENT_EDIT.value, 'departmentPosition'), validate({ body: markDepartmentPositionVacantSchema }), markDepartmentPositionVacant);
+router.delete('/head', userAuth, checkAccess(PERMISSIONS.DEPARTMENT_DELETE.value, 'departmentPosition'), validate({ query: userDepartmentPositionIdQuerySchema }), deleteUserDepartmentPosition);
 
 router.post('/head', userAuth, checkAccess(PERMISSIONS.DEPARTMENT_ADD.value, 'departmentPosition'), validate({ body: addUserDepartmentPositionSchema }), addUserDepartmentPosition);
 
@@ -142,7 +132,6 @@ router.get('/head', userAuth, checkAccess(PERMISSIONS.DEPARTMENT.value, null), v
 
 router.patch('/head', userAuth, checkAccess(PERMISSIONS.DEPARTMENT_EDIT.value, 'departmentPosition'), validate({ body: updateUserDepartmentPositionSchema }), updateUserDepartmentPosition);
 
-router.delete('/head', userAuth, checkAccess(PERMISSIONS.DEPARTMENT_DELETE.value, 'departmentPosition'), validate({ query: userDepartmentPositionIdQuerySchema }), deleteUserDepartmentPosition);
 
 router.get('/tree', userAuth, checkAccess(PERMISSIONS.DEPARTMENT.value, null), getDepartmentPositionTree);
 

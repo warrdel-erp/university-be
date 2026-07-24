@@ -278,18 +278,18 @@ export async function markPositionVacant(userDepartmentPositionId, updatedBy) {
             return null;
         }
 
-        await scoped(model.userDepartmentPositionsModel).update(
-            { status: 'INACTIVE', updatedBy },
-            {
-                where: { userDepartmentPositionId: headId },
-                transaction,
-            },
-        );
+        const departmentPositionId = existing.departmentPositionId;
 
-        const activeCount = await countActiveHeads(existing.departmentPositionId, transaction);
-        await setPositionVacant(existing.departmentPositionId, activeCount === 0, updatedBy, transaction);
+        await scoped(model.userDepartmentPositionsModel).destroy({
+            where: { userDepartmentPositionId: headId },
+            force: true,
+            transaction,
+        });
+
+        const activeCount = await countActiveHeads(departmentPositionId, transaction);
+        await setPositionVacant(departmentPositionId, activeCount === 0, updatedBy, transaction);
         await transaction.commit();
-        return getOrgPositionById(existing.departmentPositionId);
+        return getOrgPositionById(departmentPositionId);
     } catch (error) {
         await transaction.rollback();
         throw error;
@@ -310,10 +310,11 @@ export async function findActiveHead(departmentPositionId, userId) {
 export async function addHead(data) {
     const transaction = await sequelize.transaction();
     try {
-        const head = await scoped(model.userDepartmentPositionsModel).create(data, { transaction });
-        if (data.status === 'ACTIVE') {
-            await setPositionVacant(data.departmentPositionId, false, data.updatedBy, transaction);
-        }
+        const head = await scoped(model.userDepartmentPositionsModel).create(
+            { ...data, status: 'ACTIVE' },
+            { transaction },
+        );
+        await setPositionVacant(data.departmentPositionId, false, data.updatedBy, transaction);
         await transaction.commit();
         return head;
     } catch (error) {
@@ -392,6 +393,7 @@ export async function deleteHead(userDepartmentPositionId, updatedBy) {
 
         const deleted = await scoped(model.userDepartmentPositionsModel).destroy({
             where: { userDepartmentPositionId: headId },
+            force: true,
             transaction,
         });
         if (deleted === 0) {
@@ -870,7 +872,6 @@ export async function getPositionsByDepartment(departmentId) {
                 },
                 attributes: [
                     'userDepartmentPositionId',
-                    'holderType',
                     'status',
                     'joiningDate',
                     'endDate'
