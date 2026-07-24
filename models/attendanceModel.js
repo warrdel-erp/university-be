@@ -4,10 +4,16 @@ import users from "./userModel.js";
 import student from "./studentModel.js";
 import classSection from "./classSectionModel.js";
 import classSectionTermModel from "./classSectionTermModel.js";
-import classScheduleModel from "./classScheduleModel.js";
+import timeTableCellModel from "./timeTableCellModel.js";
+import timeTableCellDateWiseModel from "./timeTableCellDateWiseModel.js";
 import institute from "./instituteModel.js";
 import university from "./universityModel.js";
 
+/**
+ * Student attendance for one dated class period.
+ * Period key: timeTableCellDateWiseId (calendar instance).
+ * timeTableCellId is denormalized week-cell PK (dual-write).
+ */
 const attendanceModel = sequelize.define(
     'attendance',
     {
@@ -44,13 +50,22 @@ const attendanceModel = sequelize.define(
                 key: 'student_id'
             }
         },
-        timeTableMappingId: {
+        timeTableCellDateWiseId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'time_table_cell_date_wise_id',
+            references: {
+                model: timeTableCellDateWiseModel,
+                key: 'time_table_cell_date_wise_id'
+            }
+        },
+        timeTableCellId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'time_table_mapping_id',
+            field: 'time_table_cell_id',
             references: {
-                model: classScheduleModel,
-                key: 'time_table_mapping_id'
+                model: timeTableCellModel,
+                key: 'time_table_cell_id'
             }
         },
         classSectionsId: {

@@ -148,10 +148,10 @@ export const changeTimeTableCreate = async (req, res) => {
 };
 
 export const updatetimeTableCreate = async (req, res) => {
-    const { timeTableType, timeTableMappingId } = req.body;
+    const { timeTableType, timeTableCellId } = req.body;
     const updatedBy = req.user.userId;
     try {
-        const result = await timeTableCreateServices.updatetimeTableCreate(timeTableMappingId, timeTableType, updatedBy);
+        const result = await timeTableCreateServices.updatetimeTableCreate(timeTableCellId, timeTableType, updatedBy);
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in updating time table type`, error);
@@ -176,21 +176,18 @@ export const updateSimpleTeacherMappingController = async (req, res) => {
 };
 
 export const deletetimeTableMapping = async (req, res) => {
-    const { timeTableMappingId, deleteCombinedGroup } = req.query;
+    const { timeTableCellId, deleteCombinedGroup } = req.query;
     try {
-        const result = await timeTableCreateServices.deletetimeTableMapping(timeTableMappingId, {
+        const result = await timeTableCreateServices.deletetimeTableMapping(timeTableCellId, {
             deleteCombinedGroup: deleteCombinedGroup === true || deleteCombinedGroup === 'true',
         });
-        res.status(200).send(result);
+        return SuccessResponse(res, 200, result.message, result);
     } catch (error) {
-        console.error(`Error in deleting time table mapping Id ${timeTableMappingId}:`, error);
+        console.error(`Error in deleting time table mapping Id ${timeTableCellId}:`, error);
         const message = error.message || 'Internal Server Error';
         const statusCode = error.statusCode
-            || (/not found/i.test(message) ? 404 : /starting date/i.test(message) ? 400 : 500);
-        res.status(statusCode).send({
-            success: false,
-            message,
-        });
+            || (/not found/i.test(message) ? 404 : /starting date|published routine|cannot edit or delete/i.test(message) ? 400 : 500);
+        return ErrorResponse(res, statusCode, message);
     }
 };
 
@@ -272,5 +269,51 @@ export const getRoutineByTeacherAndAcademicYear = async (req, res) => {
     } catch (error) {
         console.error('Error in getting routine by teacher and academic year:', error);
         return ErrorResponse(res, 500, error.message || 'Internal Server Error');
+    }
+};
+
+export const getDateWiseCellsBySection = async (req, res) => {
+    const { courseId, sessionId, classSectionTermId, date } = req.query;
+    try {
+        const result = await timeTableCreateServices.getDateWiseCellsBySection(
+            courseId,
+            sessionId,
+            classSectionTermId,
+            { date },
+        );
+        return SuccessResponse(res, 200, 'Date-wise cells fetched successfully', result);
+    } catch (error) {
+        console.error('Error in getting date-wise cells:', error);
+        return ErrorResponse(res, 500, error.message || 'Internal Server Error');
+    }
+};
+
+export const updateDateWiseCellController = async (req, res) => {
+    const {
+        timeTableCellDateWiseId,
+        timeTableCellTeachersDateWiseId,
+        userId,
+        subjectId,
+        electiveSubjectId,
+        classRoomSectionId,
+    } = req.body;
+    const updatedBy = req.user.userId;
+    try {
+        const result = await timeTableCreateServices.updateDateWiseCell(
+            timeTableCellDateWiseId,
+            {
+                timeTableCellTeachersDateWiseId,
+                userId,
+                subjectId,
+                electiveSubjectId,
+                classRoomSectionId,
+            },
+            updatedBy,
+        );
+        return SuccessResponse(res, 200, 'Date-wise cell updated successfully', result);
+    } catch (error) {
+        console.error('Error in updating date-wise cell:', error);
+        const statusCode = /not found|published/i.test(error.message || '') ? 400 : 500;
+        return ErrorResponse(res, statusCode, error.message || 'Internal Server Error');
     }
 };

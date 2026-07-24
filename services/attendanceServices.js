@@ -1,53 +1,82 @@
 import * as attendanceService from "../repository/attendanceRepository.js";
+import * as employeeScheduleRepository from "../repository/employeeScheduleRepository.js";
 import moment from "moment";
-import * as helper from "../utility/helper.js";
 import xlsx from 'xlsx';
 import sequelize from "../database/sequelizeConfig.js";
+import { Op } from "sequelize";
+import * as model from "../models/index.js";
 import { ATTENDANCE_STATUS } from "../constant.js";
 import { resolveProgramYear, resolveStudentClassSectionsId } from "../utility/classSectionIncludes.js";
 import {
-  assertCopyPeriodMappingsMatch,
-  assertMappingsBelongToTerm,
+  assertCopyPeriodDateWiseMatch,
+  assertDateWiseCellsBelongToTerm,
   canCopyPeriodToTarget,
   resolveAttendancePlacement,
-  resolveMappingRoutinePlacement,
-  resolveSourcePeriodByMappingId,
+  resolveDateWiseRoutinePlacement,
+  resolveSourcePeriodByDateWiseId,
 } from "../utility/attendancePlacement.js";
 
 export { ATTENDANCE_STATUS };
 
-function normalizeTimeTableMappingIds(timeTableMappingId) {
-  const mappingIds = Array.isArray(timeTableMappingId)
-    ? timeTableMappingId
-    : [timeTableMappingId];
+function normalizeDateWiseIds(timeTableCellDateWiseId) {
+  const ids = Array.isArray(timeTableCellDateWiseId)
+    ? timeTableCellDateWiseId
+    : [timeTableCellDateWiseId];
 
-  if (!mappingIds.length) {
-    throw new Error('timeTableMappingId is required');
+  if (!ids.length) {
+    throw new Error('timeTableCellDateWiseId is required');
   }
 
-  return mappingIds;
+  return ids.map((id) => Number(id));
 }
 
 export async function addAttendance(attendanceData, createdBy, updatedBy) {
-  const mappingIds = normalizeTimeTableMappingIds(attendanceData.timeTableMappingId);
-  const placement = await resolveAttendancePlacement(attendanceData.classSectionTermId);
-  await assertMappingsBelongToTerm(mappingIds, placement.classSectionTermId);
+  const dateWiseIds = normalizeDateWiseIds(attendanceData.timeTableCellDateWiseId);
+  
+  let placement = { classSectionsId: attendanceData.classSectionsId || null, classSectionTermId: attendanceData.classSectionTermId || null };
+  let dateWiseRows = [];
 
-  const pendingMappingIds = [];
-  const skippedMappingIds = [];
+  if (attendanceData.classSectionTermId) {
+    try {
+      placement = await resolveAttendancePlacement(attendanceData.classSectionTermId);
+      dateWiseRows = await assertDateWiseCellsBelongToTerm(
+        dateWiseIds,
+        placement.classSectionTermId,
+      );
+    } catch (err) {
+      dateWiseRows = await model.timeTableCellDateWiseModel.findAll({
+        where: { timeTableCellDateWiseId: { [Op.in]: dateWiseIds } },
+        attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
+      });
+    }
+  } else {
+    dateWiseRows = await model.timeTableCellDateWiseModel.findAll({
+      where: { timeTableCellDateWiseId: { [Op.in]: dateWiseIds } },
+      attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
+    });
+  }
 
-  for (const mappingId of mappingIds) {
-    const isExists = await attendanceService.checkAttendanceExists(mappingId, attendanceData.date);
+  const dateWiseById = new Map();
+  for (const row of dateWiseRows) {
+    const plain = row.get ? row.get({ plain: true }) : row;
+    dateWiseById.set(Number(plain.timeTableCellDateWiseId), plain);
+  }
+
+  const pendingIds = [];
+  const skippedIds = [];
+
+  for (const dateWiseId of dateWiseIds) {
+    const isExists = await attendanceService.checkAttendanceExists(dateWiseId);
     if (isExists) {
-      skippedMappingIds.push(mappingId);
+      skippedIds.push(dateWiseId);
     } else {
-      pendingMappingIds.push(mappingId);
+      pendingIds.push(dateWiseId);
     }
   }
 
-  if (pendingMappingIds.length === 0) {
+  if (pendingIds.length === 0) {
     throw new Error(
-      mappingIds.length === 1
+      dateWiseIds.length === 1
         ? 'Attendance already marked for this date and period'
         : 'Attendance already marked for all periods on this date'
     );
@@ -55,21 +84,40 @@ export async function addAttendance(attendanceData, createdBy, updatedBy) {
 
   const t = await sequelize.transaction();
   try {
-    const attendanceRecords = pendingMappingIds.flatMap((mappingId) =>
-      attendanceData.attendance.map((attendance) => ({
-        ...attendance,
-        classSectionsId: placement.classSectionsId,
-        classSectionTermId: placement.classSectionTermId,
-        timeTableMappingId: mappingId,
-        date: attendanceData.date,
-        createdBy,
-        updatedBy,
-      }))
-    );
+    const attendanceRecords = [];
+    for (const dateWiseId of pendingIds) {
+      const dateWise = dateWiseById.get(Number(dateWiseId)) || {};
+      for (const attendance of attendanceData.attendance) {
+        let studentClassSectionsId = attendance.classSectionsId || placement.classSectionsId;
+
+        if (!studentClassSectionsId) {
+          const studentObj = await model.studentModel.findByPk(attendance.studentId, {
+            attributes: ['studentId', 'classSectionTermId'],
+          });
+          if (studentObj && studentObj.classSectionTermId) {
+            const termObj = await model.classSectionTermModel.findByPk(studentObj.classSectionTermId, {
+              attributes: ['classSectionsId'],
+            });
+            studentClassSectionsId = termObj?.classSectionsId || null;
+          }
+        }
+
+        attendanceRecords.push({
+          ...attendance,
+          classSectionsId: studentClassSectionsId,
+          classSectionTermId: placement.classSectionTermId || null,
+          timeTableCellDateWiseId: Number(dateWiseId),
+          timeTableCellId: Number(dateWise.timeTableCellId),
+          date: dateWise.date || attendanceData.date,
+          createdBy,
+          updatedBy,
+        });
+      }
+    }
 
     const addedAttendance = await attendanceService.addAttendance(attendanceRecords, { transaction: t });
     await t.commit();
-    return { addedAttendance, markedPeriods: pendingMappingIds, skippedPeriods: skippedMappingIds };
+    return { addedAttendance, markedPeriods: pendingIds, skippedPeriods: skippedIds };
   } catch (error) {
     await t.rollback();
     console.error('Error adding Attendance:', error);
@@ -78,60 +126,67 @@ export async function addAttendance(attendanceData, createdBy, updatedBy) {
 };
 
 export async function copyAttendancePeriod(copyData, createdBy, updatedBy) {
-  const sourceMappingId = Number(copyData.timeTableMappingId);
-  const date = copyData.date;
-  const targetMappingIds = normalizeTimeTableMappingIds(copyData.copyToTimeTableMappingId);
+  const sourceDateWiseId = Number(copyData.timeTableCellDateWiseId);
+  const targetDateWiseIds = normalizeDateWiseIds(copyData.copyToTimeTableCellDateWiseId);
 
-  const sourcePeriod = await resolveSourcePeriodByMappingId(sourceMappingId);
-  const sourcePlacement = await assertCopyPeriodMappingsMatch(
-    sourceMappingId,
-    targetMappingIds,
+  const sourcePeriod = await resolveSourcePeriodByDateWiseId(sourceDateWiseId);
+  const sourcePlacement = await assertCopyPeriodDateWiseMatch(
+    sourceDateWiseId,
+    targetDateWiseIds,
     sourcePeriod.classSectionTermId,
   );
 
+  const date = sourcePeriod.date;
   const allowedCopyToPeriods = await getCopyToPeriodsForSameDay(sourcePeriod, date);
   const allowedTargetIds = new Set();
   for (const period of allowedCopyToPeriods) {
-    allowedTargetIds.add(Number(period.timeTableMappingId));
+    allowedTargetIds.add(Number(period.timeTableCellDateWiseId));
   }
 
-  for (const targetMappingId of targetMappingIds) {
-    if (!allowedTargetIds.has(Number(targetMappingId))) {
+  for (const targetDateWiseId of targetDateWiseIds) {
+    if (!allowedTargetIds.has(Number(targetDateWiseId))) {
       throw new Error(
-        `timeTableMappingId ${targetMappingId} is not a valid copy target for this period on ${date}`,
+        `timeTableCellDateWiseId ${targetDateWiseId} is not a valid copy target for this period on ${date}`,
       );
     }
   }
 
-  const sourceRows = await attendanceService.getAttendanceRowsByMappingAndDate(
-    sourceMappingId,
-    date,
-  );
+  const sourceRows = await attendanceService.getAttendanceRowsByDateWiseId(sourceDateWiseId);
 
   if (!sourceRows.length) {
     throw new Error('No attendance found for the source period');
   }
 
+  const targetRows = await assertDateWiseCellsBelongToTerm(
+    targetDateWiseIds,
+    sourcePeriod.classSectionTermId,
+  );
+  const targetById = new Map();
+  for (const row of targetRows) {
+    const plain = row.get({ plain: true });
+    targetById.set(Number(plain.timeTableCellDateWiseId), plain);
+  }
+
   const pendingTargetIds = [];
   const skippedTargetIds = [];
 
-  for (const targetMappingId of targetMappingIds) {
-    if (targetMappingId === sourceMappingId) {
-      skippedTargetIds.push(targetMappingId);
+  for (const targetDateWiseId of targetDateWiseIds) {
+    if (Number(targetDateWiseId) === sourceDateWiseId) {
+      skippedTargetIds.push(targetDateWiseId);
       continue;
     }
 
-    const isExists = await attendanceService.checkAttendanceExists(targetMappingId, date);
+    const isExists = await attendanceService.checkAttendanceExists(targetDateWiseId);
     if (isExists) {
-      skippedTargetIds.push(targetMappingId);
+      skippedTargetIds.push(targetDateWiseId);
     } else {
-      pendingTargetIds.push(targetMappingId);
+      pendingTargetIds.push(targetDateWiseId);
     }
   }
 
   if (pendingTargetIds.length === 0) {
     throw new Error(
-      targetMappingIds.length === 1
+      targetDateWiseIds.length === 1
         ? 'Attendance already marked for the target period'
         : 'Attendance already marked for all target periods',
     );
@@ -141,7 +196,8 @@ export async function copyAttendancePeriod(copyData, createdBy, updatedBy) {
   try {
     const attendanceRecords = [];
 
-    for (const targetMappingId of pendingTargetIds) {
+    for (const targetDateWiseId of pendingTargetIds) {
+      const target = targetById.get(Number(targetDateWiseId));
       for (const row of sourceRows) {
         attendanceRecords.push({
           studentId: row.studentId,
@@ -150,7 +206,8 @@ export async function copyAttendancePeriod(copyData, createdBy, updatedBy) {
           description: row.description,
           classSectionsId: sourcePlacement.classSectionsId,
           classSectionTermId: sourcePlacement.classSectionTermId,
-          timeTableMappingId: targetMappingId,
+          timeTableCellDateWiseId: Number(targetDateWiseId),
+          timeTableCellId: Number(target.timeTableCellId),
           date,
           createdBy,
           updatedBy,
@@ -164,7 +221,8 @@ export async function copyAttendancePeriod(copyData, createdBy, updatedBy) {
     return {
       addedAttendance,
       copiedFrom: {
-        timeTableMappingId: sourceMappingId,
+        timeTableCellDateWiseId: sourceDateWiseId,
+        timeTableCellId: sourcePeriod.timeTableCellId,
         date,
         studentCount: sourceRows.length,
         classSectionTermId: sourcePlacement.classSectionTermId,
@@ -181,53 +239,25 @@ export async function copyAttendancePeriod(copyData, createdBy, updatedBy) {
   }
 };
 
-function getWeekdayName(dateString) {
-  const weekdayNames = [
-    'Sunday',
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-  ];
-  return weekdayNames[new Date(dateString).getDay()];
-}
-
-function isDateWithinRoutine(dateString, startingDate, endingDate) {
-  if (!startingDate || !endingDate) {
-    return false;
-  }
-
-  const checkDate = new Date(dateString);
-  checkDate.setHours(0, 0, 0, 0);
-
-  const startDate = new Date(startingDate);
-  startDate.setHours(0, 0, 0, 0);
-
-  const endDate = new Date(endingDate);
-  endDate.setHours(0, 0, 0, 0);
-
-  return checkDate >= startDate && checkDate <= endDate;
-}
-
 function getPeriodSubjectInfo(periodItem) {
-  if (periodItem.isSameTeacher && periodItem.timeTableTeacherSubject?.employeeSubject) {
-    const subject = periodItem.timeTableTeacherSubject.employeeSubject;
+  const cell = periodItem.timeTableCell || periodItem;
+
+  if (cell.isSameTeacher && cell.timeTableTeacherSubject?.employeeSubject) {
+    const subject = cell.timeTableTeacherSubject.employeeSubject;
     return { subjectId: subject.subjectId, subjectName: subject.subjectName };
   }
 
-  if (periodItem.timeTableSubject) {
+  if (cell.timeTableSubject) {
     return {
-      subjectId: periodItem.timeTableSubject.subjectId,
-      subjectName: periodItem.timeTableSubject.subjectName,
+      subjectId: cell.timeTableSubject.subjectId,
+      subjectName: cell.timeTableSubject.subjectName,
     };
   }
 
-  if (periodItem.timeTableElective) {
+  if (cell.timeTableElective) {
     return {
-      subjectId: periodItem.timeTableElective.electiveSubjectId,
-      subjectName: periodItem.timeTableElective.electiveSubjectName,
+      subjectId: cell.timeTableElective.electiveSubjectId,
+      subjectName: cell.timeTableElective.electiveSubjectName,
     };
   }
 
@@ -235,14 +265,17 @@ function getPeriodSubjectInfo(periodItem) {
 }
 
 function mapCopyPeriodItem(periodItem) {
-  const subject = getPeriodSubjectInfo(periodItem);
-  const structurePeriod = periodItem.timeTablecreation ?? {};
-  const targetPlacement = resolveMappingRoutinePlacement(periodItem);
+  const plain = periodItem.get ? periodItem.get({ plain: true }) : periodItem;
+  const cell = plain.timeTableCell;
+  const subject = getPeriodSubjectInfo(cell);
+  const structurePeriod = cell.timeTablecreation ?? {};
+  const targetPlacement = resolveDateWiseRoutinePlacement(plain);
 
   return {
-    timeTableMappingId: periodItem.timeTableMappingId,
+    timeTableCellDateWiseId: plain.timeTableCellDateWiseId,
+    timeTableCellId: plain.timeTableCellId,
     classSectionTermId: targetPlacement.classSectionTermId,
-    period: periodItem.period,
+    period: cell.period,
     periodName: structurePeriod.periodName ?? null,
     startTime: structurePeriod.startTime ?? null,
     endTime: structurePeriod.endTime ?? null,
@@ -256,7 +289,8 @@ function mapCurrentPeriod(sourcePeriod, date, isMarked) {
   const structurePeriod = sourcePeriod.timeTablecreation ?? {};
 
   return {
-    timeTableMappingId: sourcePeriod.timeTableMappingId,
+    timeTableCellDateWiseId: sourcePeriod.timeTableCellDateWiseId,
+    timeTableCellId: sourcePeriod.timeTableCellId,
     classSectionTermId: sourcePeriod.classSectionTermId,
     date,
     day: sourcePeriod.day,
@@ -271,18 +305,9 @@ function mapCurrentPeriod(sourcePeriod, date, isMarked) {
 }
 
 async function getCopyToPeriodsForSameDay(sourcePeriod, date) {
-  const calendarDay = getWeekdayName(date);
-  if (calendarDay.toLowerCase() !== String(sourcePeriod.day).toLowerCase()) {
-    return [];
-  }
-
-  if (!isDateWithinRoutine(date, sourcePeriod.startingDate, sourcePeriod.endingDate)) {
-    return [];
-  }
-
-  const laterPeriods = await attendanceService.getNextPeriodsOnSameDay(
+  const laterPeriods = await attendanceService.getNextDateWisePeriodsOnSameDay(
     sourcePeriod.timeTableRoutineId,
-    sourcePeriod.day,
+    date,
     sourcePeriod.period,
   );
 
@@ -292,20 +317,20 @@ async function getCopyToPeriodsForSameDay(sourcePeriod, date) {
 
   const candidateIds = [];
   for (const periodItem of laterPeriods) {
-    candidateIds.push(Number(periodItem.timeTableMappingId));
+    candidateIds.push(Number(periodItem.timeTableCellDateWiseId));
   }
 
-  const markedIds = await attendanceService.getMarkedTimeTableMappingIdsOnDate(candidateIds, date);
+  const markedIds = await attendanceService.getMarkedDateWiseIds(candidateIds);
   const copyToPeriods = [];
 
   for (const periodItem of laterPeriods) {
-    const targetMappingId = Number(periodItem.timeTableMappingId);
-    if (targetMappingId === Number(sourcePeriod.timeTableMappingId)) {
+    const targetDateWiseId = Number(periodItem.timeTableCellDateWiseId);
+    if (targetDateWiseId === Number(sourcePeriod.timeTableCellDateWiseId)) {
       continue;
     }
 
-    const targetPlacement = resolveMappingRoutinePlacement(periodItem);
-    const isMarked = markedIds.has(targetMappingId);
+    const targetPlacement = resolveDateWiseRoutinePlacement(periodItem);
+    const isMarked = markedIds.has(targetDateWiseId);
     const canCopy = canCopyPeriodToTarget(sourcePeriod, targetPlacement) && !isMarked;
 
     if (!canCopy) {
@@ -319,11 +344,11 @@ async function getCopyToPeriodsForSameDay(sourcePeriod, date) {
 }
 
 export async function getCopyAttendanceNextPeriods(query) {
-  const timeTableMappingId = Number(query.timeTableMappingId);
-  const date = query.date;
-  const sourcePeriod = await resolveSourcePeriodByMappingId(timeTableMappingId);
+  const timeTableCellDateWiseId = Number(query.timeTableCellDateWiseId);
+  const sourcePeriod = await resolveSourcePeriodByDateWiseId(timeTableCellDateWiseId);
+  const date = sourcePeriod.date;
 
-  const sourceIsMarked = await attendanceService.checkAttendanceExists(timeTableMappingId, date);
+  const sourceIsMarked = await attendanceService.checkAttendanceExists(timeTableCellDateWiseId);
   if (!sourceIsMarked) {
     throw new Error('No attendance found for the source period');
   }
@@ -347,7 +372,7 @@ export async function getAttendanceDetails() {
   for (const record of result) {
     const {
       attendanceId,
-      timeTableMapping,
+      timeTableCellDateWise,
       classAttendance,
       studentAttendance,
       studentId,
@@ -356,19 +381,30 @@ export async function getAttendanceDetails() {
       description,
       notes
     } = record;
+
+    const cell = timeTableCellDateWise?.timeTableCell;
     const recordDate = new Date(date).toISOString().split('T')[0];
-    const subjectId = timeTableMapping?.isSameTeacher
-      ? timeTableMapping?.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectId
-      : timeTableMapping?.subjectId;
-    const subjectName = timeTableMapping?.isSameTeacher
-      ? timeTableMapping?.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectName
-      : timeTableMapping?.timeTableSubject?.subjectName;
-    const subjectCode = timeTableMapping?.isSameTeacher
-      ? timeTableMapping?.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectCode
-      : timeTableMapping?.timeTableSubject?.subjectCode;
-    const userId = timeTableMapping?.isSameTeacher
-      ? timeTableMapping?.timeTableTeacherSubject?.userId
-      : timeTableMapping.userId;
+
+    let subjectId = null;
+    let subjectName = null;
+    let subjectCode = null;
+    let userId = null;
+
+    if (cell) {
+      subjectId = cell.timeTableSubject?.subjectId || cell.subjectId;
+      subjectName = cell.timeTableSubject?.subjectName;
+      subjectCode = cell.timeTableSubject?.subjectCode;
+      if (cell.isSameTeacher && cell.timeTableTeacherSubject?.employeeSubject) {
+        subjectId = cell.timeTableTeacherSubject.employeeSubject.subjectId;
+        subjectName = cell.timeTableTeacherSubject.employeeSubject.subjectName;
+        subjectCode = cell.timeTableTeacherSubject.employeeSubject.subjectCode;
+      }
+      const teachers = cell.timeTableCellTeachers || [];
+      if (teachers.length) {
+        userId = teachers[0].userId || teachers[0].employeeDetails?.userId;
+      }
+    }
+
     const classSectionsId = classAttendance?.classSectionsId;
     const sectionName = classAttendance?.section;
     const groupKey = `${subjectId}_${userId}_${classSectionsId}_${recordDate}`;
@@ -422,7 +458,7 @@ function parseStudentString(studentString) {
   if (!studentString) return null;
   try {
     const [namePart, idsPart] = studentString.split("$");
-    const [studentId, classSectionsId, timeTableMappingId] = idsPart
+    const [studentId, classSectionsId, timeTableCellDateWiseId] = idsPart
       .replace(/\s+/g, "")
       .split(/[%&]/);
 
@@ -430,7 +466,7 @@ function parseStudentString(studentString) {
       studentName: namePart,
       studentId: Number(studentId),
       classSectionsId: Number(classSectionsId),
-      timeTableMappingId: Number(timeTableMappingId),
+      timeTableCellDateWiseId: Number(timeTableCellDateWiseId),
     };
   } catch (error) {
     console.error(" Error parsing student string:", studentString, error);
@@ -462,7 +498,8 @@ function validateAttendanceRow(attendance) {
   const requiredFields = [
     "studentId",
     "classSectionsId",
-    "timeTableMappingId",
+    "timeTableCellDateWiseId",
+    "timeTableCellId",
     "createdBy",
     "updatedBy",
     "attendanceStatus",
@@ -506,10 +543,15 @@ export async function importAttendanceData(excelData, commonData) {
         const date = parseExcelDate(dateCol);
         if (!date && !status) continue;
 
+        const dateWise = await resolveSourcePeriodByDateWiseId(
+          parsedStudent.timeTableCellDateWiseId,
+        );
+
         const attendanceEntry = {
           studentId: parsedStudent.studentId,
           classSectionsId: parsedStudent.classSectionsId,
-          timeTableMappingId: parsedStudent.timeTableMappingId,
+          timeTableCellDateWiseId: parsedStudent.timeTableCellDateWiseId,
+          timeTableCellId: dateWise.timeTableCellId,
           date,
           attendanceStatus: status,
           ...commonData,
@@ -588,98 +630,74 @@ export async function getAttendanceByDate(date, classSectionTermId, userId) {
 
 
 
-export async function getPreviousSessions(userId, req) {
-  const mappings = await attendanceService.getTeacherMappings(userId);
+export async function getPreviousSessions(userId) {
+  const sessions = await attendanceService.getTeacherDateWiseSessions(userId);
 
-  if (!Array.isArray(mappings) || !mappings.length) {
+  if (!Array.isArray(sessions) || !sessions.length) {
     return { data: [] };
   }
 
-  // Use the first mapping's configuration for dates and week-offs
-  const config = mappings[0].timeTablecreate || mappings[0].timeTablecreation;
+  const today = moment().format('YYYY-MM-DD');
+  const pastSessions = [];
+  for (const session of sessions) {
+    const plain = session.get({ plain: true });
+    if (plain.date < today) {
+      pastSessions.push(plain);
+    }
+  }
 
-  const startDates = mappings
-    .map(m => (m.timeTablecreate?.startingDate || m.timeTablecreation?.startingDate))
-    .filter(d => d && moment(d).isValid())
-    .map(d => moment(d));
-
-  const endDates = mappings
-    .map(m => (m.timeTablecreate?.endingDate || m.timeTablecreation?.endingDate))
-    .filter(d => d && moment(d).isValid())
-    .map(d => moment(d));
-
-  if (!startDates.length || !endDates.length) {
+  if (!pastSessions.length) {
     return { data: [] };
   }
 
-  const startDate = moment.min(startDates);
-  // Cap the search at yesterday to avoid showing today's incomplete data or future dates
-  const endDate = moment.min(
-    moment.max(endDates),
-    moment().subtract(1, "day")
-  );
-
-  if (endDate.isBefore(startDate)) {
-    return { data: [] };
+  const dateWiseIds = [];
+  for (const session of pastSessions) {
+    dateWiseIds.push(Number(session.timeTableCellDateWiseId));
   }
 
-  // Improved Week Off handling to match property names in your includes
-  const rawWeekOff = config?.weekOff || [];
-  const weekOffArray = Array.isArray(rawWeekOff)
-    ? rawWeekOff
-    : (rawWeekOff && typeof rawWeekOff === 'object' ? Object.values(rawWeekOff) : []);
-  const weekOff = weekOffArray.map(d => String(d).toLowerCase());
-
-  const attendanceMap = (await attendanceService.getAttendanceMap(
-    mappings.map(m => m.timeTableMappingId),
-    startDate.format("YYYY-MM-DD"),
-    endDate.format("YYYY-MM-DD")
-  )) || {};
-
+  const markedMap = await attendanceService.getAttendanceMarkedMap({ dateWiseIds }) || {};
+  const presentMap = await attendanceService.getAttendanceMap({ dateWiseIds }) || {};
   const studentCountCache = {};
   const flatData = [];
 
-  for (const map of mappings) {
-    let date = startDate.clone();
-    const sectionId = map.timeTablecreate?.classSectionsId;
-    if (!sectionId) continue;
+  for (const session of pastSessions) {
+    const cell = session.timeTableCell;
+    const routine = cell.timeTableRoutine;
+    const term = routine.timeTableClassSectionTerm;
+    const section = term?.classSection;
+    const sectionId = section?.classSectionsId || term?.classSectionsId;
+    if (!sectionId) {
+      continue;
+    }
 
-    if (!studentCountCache[sectionId]) {
+    if (studentCountCache[sectionId] == null) {
       studentCountCache[sectionId] = await attendanceService.getStudentCount(sectionId);
     }
 
     const totalStudents = studentCountCache[sectionId] || 0;
+    const dwKey = `dw:${session.timeTableCellDateWiseId}`;
+    const presentCount = presentMap[dwKey];
+    const isMarked = (markedMap[dwKey] || 0) > 0;
+    const programYear = resolveProgramYear(section);
+    const subjectName = cell.timeTableSubject?.subjectName
+      || cell.timeTableElective?.electiveSubjectName
+      || 'N/A';
 
-    while (date.isSameOrBefore(endDate)) {
-      const dayName = date.format("dddd");
-      const dateStr = date.format("YYYY-MM-DD");
-
-      if (map.day === dayName && !weekOff.includes(dayName.toLowerCase())) {
-        const key = `${map.timeTableMappingId}_${dateStr}`;
-        const presentCount = attendanceMap[key]; // Do not use ?? 0 yet to check for undefined
-        const timeTableClassSection = map.timeTablecreate?.timeTableClassSection;
-        const programYear = resolveProgramYear(timeTableClassSection);
-
-        flatData.push({
-          date: dateStr,
-          day: dayName,
-          period: map.period,
-          // Check primary subject mapping first, then check teacher-subject mapping
-          subject: map.timeTableSubject?.subjectName ||
-            map.timeTableTeacherSubject?.subject?.subjectName ||
-            "N/A",
-          class: (programYear != null ? `Year ${programYear}` : null)
-            || (timeTableClassSection?.year != null ? String(timeTableClassSection.year) : null)
-            || null,
-          section: timeTableClassSection?.section || null,
-          classSectionsId: sectionId,
-          attendance: `${presentCount ?? 0} / ${totalStudents}`,
-          status: presentCount !== undefined ? "MARKED" : "PENDING",
-          timeTableMappingId: map.timeTableMappingId
-        });
-      }
-      date.add(1, "day");
-    }
+    flatData.push({
+      date: session.date,
+      day: cell.day,
+      period: cell.period,
+      subject: subjectName,
+      class: (programYear != null ? `Year ${programYear}` : null)
+        || (section?.year != null ? String(section.year) : null)
+        || null,
+      section: section?.section || null,
+      classSectionsId: sectionId,
+      attendance: `${presentCount ?? 0} / ${totalStudents}`,
+      status: isMarked ? 'MARKED' : 'PENDING',
+      timeTableCellDateWiseId: session.timeTableCellDateWiseId,
+      timeTableCellId: session.timeTableCellId,
+    });
   }
 
   flatData.sort((a, b) => {
@@ -689,9 +707,9 @@ export async function getPreviousSessions(userId, req) {
   });
 
   return {
-    fromDate: startDate.format("YYYY-MM-DD"),
-    toDate: endDate.format("YYYY-MM-DD"),
-    data: flatData
+    fromDate: flatData.length ? flatData[flatData.length - 1].date : null,
+    toDate: flatData.length ? flatData[0].date : null,
+    data: flatData,
   };
 };
 
@@ -705,56 +723,56 @@ export async function getStudentAttendanceReport(classSectionsId, subjectId, use
 export async function getEmployeeSectionDates(classSectionTermId, subjectId, userId) {
   const placement = await resolveAttendancePlacement(classSectionTermId);
   const [scheduleItems, details] = await Promise.all([
-    attendanceService.getEmployeeScheduleWithRoutine(placement.classSectionTermId, subjectId, userId),
+    employeeScheduleRepository.getEmployeeSectionDateWiseRows(
+      placement.classSectionTermId,
+      subjectId,
+      userId,
+    ),
     attendanceService.getDetailsByTerm(placement.classSectionTermId, subjectId, userId),
   ]);
 
   const dateMap = {};
 
   for (const item of scheduleItems) {
-    const routine = item.timeTablecreate;
-    if (!routine || !routine.startingDate || !routine.endingDate) continue;
+    const plain = item.get({ plain: true });
+    const cell = plain.timeTableCell;
+    const routine = cell.timeTableRoutine;
+    const dateKey = plain.date;
 
-    const targetDay = item.day.toLowerCase();
-    const specificDates = helper.getDatesForDayInRange(routine.startingDate, routine.endingDate, targetDay);
+    if (!dateMap[dateKey]) {
+      dateMap[dateKey] = {
+        date: dateKey,
+        day: cell.day,
+        timeTableRoutineId: routine.timeTableRoutineId,
+        periods: [],
+      };
+    }
 
-    specificDates.forEach(date => {
-      const dateKey = date.toISOString().split('T')[0];
-      if (!dateMap[dateKey]) {
-        dateMap[dateKey] = {
-          date: dateKey,
-          day: item.day,
-          timeTableRoutineId: routine.timeTableRoutineId,
-          periods: []
-        };
-      }
-      dateMap[dateKey].periods.push({
-        timeTableMappingId: item.timeTableMappingId,
-        timeTableCreationId: item.timeTablecreation?.timeTableCreationId,
-        periodName: item.timeTablecreation?.periodName,
-        startTime: item.timeTablecreation?.startTime,
-        endTime: item.timeTablecreation?.endTime
-      });
+    dateMap[dateKey].periods.push({
+      timeTableCellDateWiseId: plain.timeTableCellDateWiseId,
+      timeTableCellId: plain.timeTableCellId,
+      timeTableCreationId: cell.timeTablecreation?.timeTableCreationId,
+      periodName: cell.timeTablecreation?.periodName,
+      startTime: cell.timeTablecreation?.startTime,
+      endTime: cell.timeTablecreation?.endTime,
     });
   }
 
-  // Convert map to array and sort
-  const dates = Object.values(dateMap).map(dayData => {
-    // Sort periods within the day by start time
+  const dates = Object.values(dateMap).map((dayData) => {
     dayData.periods.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
     return dayData;
   }).sort((a, b) => a.date.localeCompare(b.date));
 
   return {
     details,
-    dates
+    dates,
   };
 }
 
 export async function getStudentsBatchAttendance(classSectionTermId, filters) {
   const placement = await resolveAttendancePlacement(classSectionTermId);
-  const mappingIds = filters.map((f) => f.timeTableMappingId);
-  await assertMappingsBelongToTerm(mappingIds, placement.classSectionTermId);
+  const dateWiseIds = filters.map((f) => f.timeTableCellDateWiseId);
+  await assertDateWiseCellsBelongToTerm(dateWiseIds, placement.classSectionTermId);
 
   const students = await attendanceService.getStudentsBatchAttendance(
     placement.classSectionTermId,
@@ -785,8 +803,8 @@ function parseAttendanceExcelHeaders(header1, header2) {
     if (!periodCell || (typeof periodCell !== 'string') || !periodCell.includes("---")) continue;
 
     const mappingIdStr = periodCell.split("---")[1].trim();
-    const timeTableMappingId = parseInt(mappingIdStr);
-    if (isNaN(timeTableMappingId)) continue;
+    const timeTableCellDateWiseId = parseInt(mappingIdStr);
+    if (isNaN(timeTableCellDateWiseId)) continue;
 
     let dateStr = null;
     for (let j = i; j >= 2; j--) {
@@ -801,7 +819,7 @@ function parseAttendanceExcelHeaders(header1, header2) {
     const date = parseExcelDate(dateStr);
     if (!date) throw new Error(`Invalid date format in header at column ${i + 1}: ${dateStr}`);
 
-    colMappings.push({ colIndex: i, date, timeTableMappingId });
+    colMappings.push({ colIndex: i, date, timeTableCellDateWiseId });
   }
   return colMappings;
 }
@@ -837,7 +855,7 @@ function parseAttendanceExcelRows(dataRows, colMappings) {
         studentId,
         studentName: nameStr,
         date: mapping.date,
-        timeTableMappingId: mapping.timeTableMappingId,
+        timeTableCellDateWiseId: mapping.timeTableCellDateWiseId,
         attendanceStatus: status,
         rowIndex: r + 3
       });
@@ -852,6 +870,7 @@ async function prepareFinalAttendanceRecords(rawEntries, studentIds, commonData)
   const studentMap = new Map();
   studentRecords.forEach(s => studentMap.set(s.studentId, s));
 
+  const dateWiseCache = new Map();
   const finalRecords = [];
   for (const entry of rawEntries) {
     const student = studentMap.get(entry.studentId);
@@ -859,12 +878,19 @@ async function prepareFinalAttendanceRecords(rawEntries, studentIds, commonData)
       throw new Error(`Row ${entry.rowIndex}: Student with ID ${entry.studentId} not found in this institute.`);
     }
 
+    let dateWise = dateWiseCache.get(entry.timeTableCellDateWiseId);
+    if (!dateWise) {
+      dateWise = await resolveSourcePeriodByDateWiseId(entry.timeTableCellDateWiseId);
+      dateWiseCache.set(entry.timeTableCellDateWiseId, dateWise);
+    }
+
     const attendanceEntry = {
       studentId: entry.studentId,
       classSectionsId: resolveStudentClassSectionsId(
         typeof student.get === "function" ? student.get({ plain: true }) : student,
       ),
-      timeTableMappingId: entry.timeTableMappingId,
+      timeTableCellDateWiseId: entry.timeTableCellDateWiseId,
+      timeTableCellId: dateWise.timeTableCellId,
       date: entry.date,
       attendanceStatus: entry.attendanceStatus,
       ...commonData,
@@ -873,9 +899,9 @@ async function prepareFinalAttendanceRecords(rawEntries, studentIds, commonData)
     const error = validateAttendanceRow(attendanceEntry);
     if (error) throw new Error(`Row ${entry.rowIndex} (Student ID ${entry.studentId}): ${error}`);
 
-    const isExists = await attendanceService.checkAttendanceExists(attendanceEntry.timeTableMappingId, attendanceEntry.date);
+    const isExists = await attendanceService.checkAttendanceExists(attendanceEntry.timeTableCellDateWiseId);
     if (isExists) {
-      throw new Error(`Row ${entry.rowIndex}: Attendance already marked for Student ID ${entry.studentId} on ${entry.date} for mapping ${entry.timeTableMappingId}`);
+      throw new Error(`Row ${entry.rowIndex}: Attendance already marked for Student ID ${entry.studentId} on ${entry.date} for date-wise ${entry.timeTableCellDateWiseId}`);
     }
 
     finalRecords.push(attendanceEntry);

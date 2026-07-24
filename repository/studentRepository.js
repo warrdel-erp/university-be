@@ -2390,7 +2390,7 @@ export async function getStudentDetailsRepository(studentId) {
     }
 }
 
-export async function getStudentsByClassSection(classSectionTermId, timeTableMappingId, date) {
+export async function getStudentsByClassSection(classSectionTermId, timeTableCellDateWiseId) {
 
     try {
         const academicYearId = getRequestAcademicYearId();
@@ -2422,12 +2422,12 @@ export async function getStudentsByClassSection(classSectionTermId, timeTableMap
                         academicYearId: academicYearId,
                         ...buildScope(model.classSectionModel),
                     },
-                    sectionAttributes: ["classSectionsId", "section"],
+                    sectionAttributes: ["classSectionsId", "section", "year"],
                 }),
                 {
                     model: model.courseModel,
                     as: "course",
-                    attributes: ["courseName"],
+                    attributes: ["courseId", "courseName", "courseCode"],
                 },
                 {
                     model: model.attendanceModel,
@@ -2438,12 +2438,12 @@ export async function getStudentsByClassSection(classSectionTermId, timeTableMap
                         "notes",
                         "description",
                         "date",
-                        "timeTableMappingId",
+                        "timeTableCellDateWiseId",
+                        "timeTableCellId",
                     ],
-                    where: {
-                        timeTableMappingId,
-                        [Op.and]: [Sequelize.where(Sequelize.fn('DATE', Sequelize.col('studentAttendance.date')), date)],
-                    },
+                    where: Array.isArray(timeTableCellDateWiseId)
+                        ? { timeTableCellDateWiseId: { [Op.in]: timeTableCellDateWiseId.map(Number) } }
+                        : { timeTableCellDateWiseId: Number(timeTableCellDateWiseId) },
                     required: false,
                 },
             ],

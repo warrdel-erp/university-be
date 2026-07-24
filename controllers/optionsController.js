@@ -119,14 +119,15 @@ export const getFeePlanOptions = async (req, res) => {
 
 export const getLectureWindowOptions = async (req, res) => {
     try {
-        const { employeeId, subjectId, date, sessionId } = req.query;
+        const { userId, employeeId, subjectId, date, sessionId } = req.query;
         const academicYearId = getAcademicYearId();
         if (!academicYearId) {
             return ErrorResponse(res, 400, "academicYearId not found in user session");
         }
 
         const result = await optionsServices.getLectureWindowOptions(
-            Number(employeeId),
+            userId != null ? Number(userId) : undefined,
+            employeeId != null ? Number(employeeId) : undefined,
             Number(subjectId),
             Number(academicYearId),
             date,
@@ -135,7 +136,9 @@ export const getLectureWindowOptions = async (req, res) => {
         return SuccessResponse(res, 200, "Lecture window options fetched successfully", result);
     } catch (error) {
         console.error("Error in getLectureWindowOptions:", error);
-        const status = error.message?.includes('not found') ? 404 : 500;
+        const status = error.message?.includes('not found') || error.message?.includes('no linked userId')
+            ? 404
+            : 500;
         return ErrorResponse(res, status, error.message || "Internal Server Error");
     }
 };

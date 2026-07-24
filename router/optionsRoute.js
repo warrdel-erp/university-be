@@ -62,13 +62,17 @@ const topicsQuerySchema = z.object({
 });
 
 const lectureWindowsQuerySchema = z.object({
-    employeeId: positiveIntegerId,
+    userId: optionalPositiveIntegerId,
+    employeeId: optionalPositiveIntegerId,
     subjectId: positiveIntegerId,
     date: z
         .string({ required_error: 'date is required' })
         .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD'),
     sessionId: optionalPositiveIntegerId,
-});
+}).refine(
+    (data) => data.userId != null || data.employeeId != null,
+    { message: 'userId or employeeId is required', path: ['userId'] },
+);
 
 const lessonsQuerySchema = z.object({
     lectureWindowId: positiveIntegerId,

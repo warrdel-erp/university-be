@@ -1,4 +1,5 @@
 import sequelize from '../database/sequelizeConfig.js';
+import * as model from '../models/index.js';
 import * as employeeRepository from '../repository/employeeRepository.js';
 import * as employeeAddressRepository from '../repository/employeeAddressRepository.js';
 import * as employeeOfficeRepository from '../repository/employeeOfficeRepository.js';
@@ -22,6 +23,7 @@ import * as userRoleService from '../services/userRoleService.js';
 import { getCampusCode, getInstituteCode } from '../repository/collegeRepository.js';
 import * as libraryRepository from '../repository/libraryCreationRepository.js';
 import * as timeTableCreateRepository from '../repository/timeTablecreateRepository.js';
+import * as employeeScheduleRepository from '../repository/employeeScheduleRepository.js';
 import * as attendanceRepository from '../repository/attendanceRepository.js';
 import * as classSectionTermRepository from '../repository/classSectionTermRepository.js';
 import * as evaluationRepository from "../repository/evalutionRepository.js";
@@ -1140,35 +1142,37 @@ export async function getBooksIssuedToEmployee(userId) {
 };
 
 export async function getTeacherTimeTable(userId) {
-
-  const allData = await timeTableCreateRepository.getTeacherTimeTable(userId);
+  const allData = await employeeScheduleRepository.getTeacherWeekCells(userId);
 
   const allMappings = [];
 
   for (const item of allData) {
+    const plain = item.get({ plain: true });
+    const course = plain.timeTableCourse || {};
+    const classSection = plain.timeTableClassSectionTerm?.classSection
+      || plain.timeTableClassSection
+      || {};
 
-    const course = item.timeTableCourse || {};
-    const classSection = item.timeTableClassSection || {};
-
-    (item.timeTablecreate || []).forEach(period => {
-
+    for (const period of plain.timeTableCells) {
       const {
         day,
-        timeTableMappingId,
+        timeTableCellId,
         isSameTeacher,
         timeTableCreationId,
         timeTableType,
         timeTablecreation,
         timeTableSubject,
-        employeeDetails,
         timeTableTeacherSubject,
-        timeTableElective
+        timeTableElective,
+        timeTableCellTeachers,
       } = period;
 
+      const teacherRow = timeTableCellTeachers[0];
+      const employeeDetails = teacherRow.employeeDetails;
       const sameTeacher = isSameTeacher;
 
       const subjectData = sameTeacher
-        ? timeTableTeacherSubject?.employeeSubject?.subjects
+        ? timeTableTeacherSubject?.employeeSubject
         : timeTableSubject;
 
       const teacherData = sameTeacher
@@ -1176,7 +1180,7 @@ export async function getTeacherTimeTable(userId) {
         : employeeDetails;
 
       const mappingEntry = {
-        timeTableMappingId,
+        timeTableCellId,
         userId: teacherData?.userId,
         employeeName: teacherData?.employeeName,
         employeeCode: teacherData?.employeeCode,
@@ -1184,15 +1188,15 @@ export async function getTeacherTimeTable(userId) {
         timeTableType,
         subject: timeTableElective
           ? {
-            subjectId: timeTableElective?.electiveSubjectId,
-            Name: timeTableElective?.electiveSubjectName,
-            Code: timeTableElective?.electiveSubjectCode
+            subjectId: timeTableElective.electiveSubjectId,
+            Name: timeTableElective.electiveSubjectName,
+            Code: timeTableElective.electiveSubjectCode,
           }
           : {
             subjectId: subjectData?.subjectId,
             Name: subjectData?.subjectName,
-            Code: subjectData?.subjectCode
-          }
+            Code: subjectData?.subjectCode,
+          },
       };
 
       allMappings.push({
@@ -1203,27 +1207,30 @@ export async function getTeacherTimeTable(userId) {
         baseMetadata: {
           courseName: course.courseName,
           courseCode: course.courseCode,
-          courseId: item.courseId,
-          class: classSection.year != null ? String(classSection.year) : "",
+          courseId: plain.courseId || course.courseId,
+          class: classSection.year != null ? String(classSection.year) : '',
           section: classSection.section,
-          classSectionsId: item.classSectionsId,
-          startingDate: item.startingDate,
-          endingDate: item.endingDate,
-          timeTableType
-        }
+          classSectionsId: plain.classSectionsId || classSection.classSectionsId,
+          startingDate: plain.startingDate,
+          endingDate: plain.endingDate,
+          timeTableType,
+        },
       });
-
-    });
-
+    }
   }
 
   const finalOutput = [];
 
-  allMappings.forEach(curr => {
-
+  for (const curr of allMappings) {
     const type = curr.mappingEntry.timeTableType;
 
-    let record = finalOutput.find(r => r.timeTableType === type);
+    let record = null;
+    for (const row of finalOutput) {
+      if (row.timeTableType === type) {
+        record = row;
+        break;
+      }
+    }
 
     if (!record) {
       record = {
@@ -1236,18 +1243,30 @@ export async function getTeacherTimeTable(userId) {
         classSectionsId: curr.baseMetadata.classSectionsId,
         startingDate: curr.baseMetadata.startingDate,
         endingDate: curr.baseMetadata.endingDate,
-        sectionRoutine: []
+        sectionRoutine: [],
       };
       finalOutput.push(record);
     }
 
-    let dayObj = record.sectionRoutine.find(d => d.day === curr.day);
+    let dayObj = null;
+    for (const dayRow of record.sectionRoutine) {
+      if (dayRow.day === curr.day) {
+        dayObj = dayRow;
+        break;
+      }
+    }
     if (!dayObj) {
       dayObj = { day: curr.day, period: [] };
       record.sectionRoutine.push(dayObj);
     }
 
-    let existPeriod = dayObj.period.find(p => p.timeTableCreationId === curr.timeTableCreationId);
+    let existPeriod = null;
+    for (const periodRow of dayObj.period) {
+      if (periodRow.timeTableCreationId === curr.timeTableCreationId) {
+        existPeriod = periodRow;
+        break;
+      }
+    }
 
     if (!existPeriod) {
       dayObj.period.push({
@@ -1258,17 +1277,15 @@ export async function getTeacherTimeTable(userId) {
         periodGap: curr.periodDetails?.periodGap,
         startTime: curr.periodDetails?.startTime,
         endTime: curr.periodDetails?.endTime,
-        mappingData: [curr.mappingEntry]
+        mappingData: [curr.mappingEntry],
       });
     } else {
       existPeriod.mappingData.push(curr.mappingEntry);
     }
-
-  });
+  }
 
   return { formatted: finalOutput };
-
-};
+}
 
 export async function getTeacherSubject(userId, filters = {}) {
   return await employeeRepository.getTeacherSubject(userId, filters);
@@ -1316,15 +1333,14 @@ function expandScheduleForExactDate(rawSchedules, currentDate) {
 }
 
 export async function getTodayClassSchedule(userId, currentDate, sessionId, groupPeriods = false) {
-  const rawSchedules = await timeTableCreateRepository.getTodayClassScheduleForEmployee(
+  const rawSchedules = await employeeScheduleRepository.getTodayClassScheduleForEmployee(
     Number(userId),
     currentDate,
     sessionId,
   );
 
-  const expanded = expandScheduleForExactDate(rawSchedules, currentDate);
   const strippedSchedules = [];
-  for (const schedule of expanded) {
+  for (const schedule of rawSchedules) {
     strippedSchedules.push(stripTeacherFieldsFromSchedule(schedule));
   }
 
@@ -1344,7 +1360,7 @@ export async function getTeacherCourses(userId) {
 }
 
 export async function getTeacherSubjectsFromSchedule(userId) {
-  return await employeeRepository.getTeacherSubjectsFromSchedule(userId);
+  return await employeeScheduleRepository.getTeacherSubjectsFromWeekCells(userId);
 }
 
 function getTeacherDetails(rawSchedules) {
@@ -1388,11 +1404,11 @@ function stripTeacherFieldsFromSchedule(schedule) {
 }
 
 function getAttendanceStatusKey(schedule) {
-  return `${schedule.timeTableMappingId}_${schedule.date}`;
+  return `dw:${Number(schedule.timeTableCellDateWiseId)}`;
 }
 
 function resolveScheduleClassSectionTermId(schedule) {
-  const routine = schedule.timeTablecreate;
+  const routine = schedule.timeTablecreate || schedule.timeTableRoutine;
   if (!routine) {
     return null;
   }
@@ -1411,15 +1427,15 @@ function resolveScheduleClassSectionTermId(schedule) {
 }
 
 function collectScheduleQueryParams(schedules) {
-  const mappingIdSet = new Set();
+  const dateWiseIdSet = new Set();
   const dates = [];
   const resolvedTermIds = [];
   const uniqueTermIds = [];
   const seenTermIds = new Set();
 
   for (const schedule of schedules) {
-    if (schedule.timeTableMappingId) {
-      mappingIdSet.add(schedule.timeTableMappingId);
+    if (schedule.timeTableCellDateWiseId != null) {
+      dateWiseIdSet.add(Number(schedule.timeTableCellDateWiseId));
     }
     if (schedule.date) {
       dates.push(schedule.date);
@@ -1437,9 +1453,9 @@ function collectScheduleQueryParams(schedules) {
     }
   }
 
-  const mappingIds = [];
-  for (const mappingId of mappingIdSet) {
-    mappingIds.push(mappingId);
+  const dateWiseIds = [];
+  for (const id of dateWiseIdSet) {
+    dateWiseIds.push(id);
   }
 
   let from = '';
@@ -1457,22 +1473,46 @@ function collectScheduleQueryParams(schedules) {
     }
   }
 
-  return { mappingIds, from, to, resolvedTermIds, uniqueTermIds };
+  return { dateWiseIds, from, to, resolvedTermIds, uniqueTermIds };
 }
 
+/**
+ * MARKED / PENDING is keyed only by timeTableCellDateWiseId.
+ * Shared across Primary / Secondary teachers on the same dated period.
+ */
 function resolveScheduleAttendanceFields(schedule, presentMap, markedMap) {
   const key = getAttendanceStatusKey(schedule);
   const presentCount = presentMap[key];
-
-  let attendanceCount = 0;
-  if (presentCount != null) {
-    attendanceCount = presentCount;
-  }
+  const markedCount = markedMap[key];
 
   return {
-    attendanceCount,
-    attendanceStatus: markedMap[key] > 0 ? 'MARKED' : 'PENDING',
+    attendanceCount: presentCount != null ? presentCount : 0,
+    attendanceStatus: markedCount > 0 ? 'MARKED' : 'PENDING',
   };
+}
+
+async function fetchElectiveStudentCountMap(schedules) {
+  const electiveSubjectIds = [
+    ...new Set(
+      schedules
+        .map((s) => s.electiveSubjectId || s.timeTableElective?.electiveSubjectId)
+        .filter(Boolean)
+        .map(Number)
+    ),
+  ];
+  const electiveCountMap = new Map();
+  if (electiveSubjectIds.length > 0) {
+    const counts = await model.studentElectiveSubjectModel.findAll({
+      where: { electiveSubjectId: electiveSubjectIds },
+      attributes: ['electiveSubjectId', [sequelize.fn('COUNT', sequelize.col('student_id')), 'count']],
+      group: ['electiveSubjectId'],
+      raw: true,
+    });
+    for (const c of counts) {
+      electiveCountMap.set(Number(c.electiveSubjectId), Number(c.count));
+    }
+  }
+  return electiveCountMap;
 }
 
 async function enrichTodayClassSchedules(schedules) {
@@ -1480,12 +1520,14 @@ async function enrichTodayClassSchedules(schedules) {
     return schedules;
   }
 
-  const { mappingIds, from, to, resolvedTermIds, uniqueTermIds } = collectScheduleQueryParams(schedules);
+  const { dateWiseIds, resolvedTermIds, uniqueTermIds } =
+    collectScheduleQueryParams(schedules);
 
-  const [studentCountMap, markedMap, presentMap] = await Promise.all([
+  const [studentCountMap, electiveCountMap, markedMap, presentMap] = await Promise.all([
     classSectionTermRepository.countStudentsByClassSectionTermIds(uniqueTermIds),
-    attendanceRepository.getAttendanceMarkedMap(mappingIds, from, to),
-    attendanceRepository.getAttendanceMap(mappingIds, from, to),
+    fetchElectiveStudentCountMap(schedules),
+    attendanceRepository.getAttendanceMarkedMap({ dateWiseIds }),
+    attendanceRepository.getAttendanceMap({ dateWiseIds }),
   ]);
 
   const enriched = [];
@@ -1493,9 +1535,12 @@ async function enrichTodayClassSchedules(schedules) {
     const schedule = schedules[i];
     const classSectionTermId = resolvedTermIds[i];
     const attendanceFields = resolveScheduleAttendanceFields(schedule, presentMap, markedMap);
+    const electiveId = schedule.electiveSubjectId || schedule.timeTableElective?.electiveSubjectId;
 
     let studentCount = 0;
-    if (classSectionTermId) {
+    if (electiveId) {
+      studentCount = electiveCountMap.get(Number(electiveId)) || 0;
+    } else if (classSectionTermId) {
       const count = studentCountMap.get(Number(classSectionTermId));
       if (count != null) {
         studentCount = count;
@@ -1517,21 +1562,39 @@ async function enrichSchedulesWithAttendance(schedules) {
     return schedules;
   }
 
-  const { mappingIds, from, to } = collectScheduleQueryParams(schedules);
-  if (!from) {
+  const { dateWiseIds, resolvedTermIds, uniqueTermIds } = collectScheduleQueryParams(schedules);
+  if (!dateWiseIds.length) {
     return schedules;
   }
 
-  const [markedMap, presentMap] = await Promise.all([
-    attendanceRepository.getAttendanceMarkedMap(mappingIds, from, to),
-    attendanceRepository.getAttendanceMap(mappingIds, from, to),
+  const [studentCountMap, electiveCountMap, markedMap, presentMap] = await Promise.all([
+    classSectionTermRepository.countStudentsByClassSectionTermIds(uniqueTermIds),
+    fetchElectiveStudentCountMap(schedules),
+    attendanceRepository.getAttendanceMarkedMap({ dateWiseIds }),
+    attendanceRepository.getAttendanceMap({ dateWiseIds }),
   ]);
 
   const enriched = [];
-  for (const schedule of schedules) {
+  for (let i = 0; i < schedules.length; i++) {
+    const schedule = schedules[i];
+    const classSectionTermId = resolvedTermIds[i];
+    const attendanceFields = resolveScheduleAttendanceFields(schedule, presentMap, markedMap);
+    const electiveId = schedule.electiveSubjectId || schedule.timeTableElective?.electiveSubjectId;
+
+    let studentCount = 0;
+    if (electiveId) {
+      studentCount = electiveCountMap.get(Number(electiveId)) || 0;
+    } else if (classSectionTermId) {
+      const count = studentCountMap.get(Number(classSectionTermId));
+      if (count != null) {
+        studentCount = count;
+      }
+    }
+
     enriched.push({
       ...schedule,
-      ...resolveScheduleAttendanceFields(schedule, presentMap, markedMap),
+      studentCount,
+      ...attendanceFields,
     });
   }
 
@@ -1585,128 +1648,51 @@ export async function getPastClassSchedules(
   groupPeriods = false,
   sessionId,
 ) {
-  const rawSchedules = await timeTableCreateRepository.getPastClassSchedulesForEmployee(
+  const rawSchedules = await employeeScheduleRepository.getPastClassSchedulesForEmployee(
     userId,
     academicYearId,
     currentDateString,
     sessionId,
   );
 
-  const daysOfWeek = {
-    'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3,
-    'Thursday': 4, 'Friday': 5, 'Saturday': 6
-  };
-
-  const limitDate = new Date(currentDateString);
-  limitDate.setHours(0, 0, 0, 0);
-
-  const pastClasses = [];
-
-  for (const schedule of rawSchedules) {
-    const routine = schedule.timeTablecreate;
-    if (!routine || !routine.startingDate || !routine.endingDate) continue;
-
-    const start = new Date(routine.startingDate);
-    start.setHours(0, 0, 0, 0);
-
-    const end = new Date(routine.endingDate);
-    end.setHours(0, 0, 0, 0);
-
-    const targetDay = daysOfWeek[schedule.day];
-    if (targetDay === undefined) continue;
-
-    let current = new Date(start);
-    while (current.getDay() !== targetDay) {
-      current.setDate(current.getDate() + 1);
-    }
-
-    while (current <= end && current < limitDate) {
-      const classInstance = JSON.parse(JSON.stringify(schedule));
-      const year = current.getFullYear();
-      const month = String(current.getMonth() + 1).padStart(2, '0');
-      const day = String(current.getDate()).padStart(2, '0');
-
-      classInstance.date = `${year}-${month}-${day}`;
-      pastClasses.push(classInstance);
-
-      current.setDate(current.getDate() + 7);
-    }
-  }
-
-  // Sort by date descending
-  pastClasses.sort((a, b) => new Date(b.date) - new Date(a.date));
-
   const teacher = getTeacherDetails(rawSchedules);
   const schedules = await enrichSchedulesWithAttendance(
-    pastClasses.map(stripTeacherFieldsFromSchedule)
+    rawSchedules.map(stripTeacherFieldsFromSchedule),
   );
 
   if (groupPeriods) {
-    const grouped = applyGroupAttendanceStatus(
-      await groupConsecutivePeriods(schedules, groupPeriods === 'sessional'),
-    );
+    const grouped = await groupConsecutivePeriods(schedules, groupPeriods === 'sessional');
     grouped.sort((a, b) => new Date(b.date) - new Date(a.date));
-    return { teacher, schedules: grouped };
+    return {
+      teacher,
+      schedules: await applyGroupAttendanceStatus(grouped),
+    };
   }
 
   return { teacher, schedules };
 }
 
 export async function getUpcomingClassSchedules(userId, academicYearId, currentDateString, groupPeriods = false) {
-  const rawSchedules = await timeTableCreateRepository.getUpcomingClassSchedulesForEmployee(userId, academicYearId, currentDateString);
+  const upcomingClasses = await employeeScheduleRepository.getUpcomingClassSchedulesForEmployee(
+    userId,
+    academicYearId,
+    currentDateString,
+  );
 
-  const daysOfWeek = {
-    'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3,
-    'Thursday': 4, 'Friday': 5, 'Saturday': 6
-  };
-
-  const limitDate = new Date(currentDateString);
-  limitDate.setHours(0, 0, 0, 0);
-
-  const upcomingClasses = [];
-
-  for (const schedule of rawSchedules) {
-    const routine = schedule.timeTablecreate;
-    if (!routine || !routine.startingDate || !routine.endingDate) continue;
-
-    const start = new Date(routine.startingDate);
-    start.setHours(0, 0, 0, 0);
-
-    const end = new Date(routine.endingDate);
-    end.setHours(0, 0, 0, 0);
-
-    const targetDay = daysOfWeek[schedule.day];
-    if (targetDay === undefined) continue;
-
-    let current = new Date(start);
-    while (current.getDay() !== targetDay) {
-      current.setDate(current.getDate() + 1);
-    }
-
-    while (current <= end) {
-      if (current >= limitDate) {
-        const classInstance = JSON.parse(JSON.stringify(schedule));
-        const year = current.getFullYear();
-        const month = String(current.getMonth() + 1).padStart(2, '0');
-        const day = String(current.getDate()).padStart(2, '0');
-
-        classInstance.date = `${year}-${month}-${day}`;
-        upcomingClasses.push(classInstance);
-      }
-      current.setDate(current.getDate() + 7);
-    }
+  const strippedSchedules = [];
+  for (const schedule of upcomingClasses) {
+    strippedSchedules.push(stripTeacherFieldsFromSchedule(schedule));
   }
 
-  // Sort by date ascending for upcoming classes
-  upcomingClasses.sort((a, b) => new Date(a.date) - new Date(b.date));
+  const schedules = await enrichSchedulesWithAttendance(strippedSchedules);
 
   if (groupPeriods) {
-    const grouped = await groupConsecutivePeriods(upcomingClasses, groupPeriods === 'sessional');
+    const grouped = await groupConsecutivePeriods(schedules, groupPeriods === 'sessional');
     grouped.sort((a, b) => new Date(a.date) - new Date(b.date));
-    return grouped;
+    return applyGroupAttendanceStatus(grouped);
   }
 
-  return upcomingClasses;
+  return schedules;
 }
 
 async function groupConsecutivePeriods(classes, sessionalBreak = false) {
@@ -1948,57 +1934,34 @@ function getEmployeeDetails(schedules) {
 }
 
 export async function getUniqueClassSectionSubjects(userId, academicYearId) {
-  const schedules = await timeTableCreateRepository.getUniqueClassSectionSubjectsForEmployee(userId, academicYearId);
+  const schedules = await employeeScheduleRepository.getUniqueClassSectionSubjectsForEmployee(
+    userId,
+    academicYearId,
+  );
 
   return {
     employeeDetails: getEmployeeDetails(schedules),
-    combinations: processScheduleCombinations(schedules)
+    combinations: processScheduleCombinations(schedules),
   };
 }
 
 export async function getSectionCounts(userId, academicYearId, currentDateString) {
-  const recurringSchedules = await timeTableCreateRepository.getEmployeeRecurringSchedules(userId, academicYearId);
-  const allSchedules = await timeTableCreateRepository.getUniqueClassSectionSubjectsForEmployee(userId, academicYearId);
-
-  const referenceDate = new Date(currentDateString);
-  referenceDate.setHours(0, 0, 0, 0);
-
-  let pastCount = 0;
-  let upcomingCount = 0;
-
-  for (const schedule of recurringSchedules) {
-    const routine = schedule.timeTablecreate;
-    if (!routine || !routine.startingDate || !routine.endingDate) continue;
-
-    const start = new Date(routine.startingDate);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(routine.endingDate);
-    end.setHours(0, 0, 0, 0);
-    const dayName = schedule.day;
-
-    if (start < referenceDate) {
-      const pastEndLimit = new Date(referenceDate);
-      pastEndLimit.setDate(pastEndLimit.getDate() - 1);
-      const effectivePastEnd = end < pastEndLimit ? end : pastEndLimit;
-      if (start <= effectivePastEnd) {
-        pastCount += countWeekdayInRange(start, effectivePastEnd, dayName);
-      }
-    }
-
-    if (end >= referenceDate) {
-      const upcomingStartLimit = start > referenceDate ? start : referenceDate;
-      if (upcomingStartLimit <= end) {
-        upcomingCount += countWeekdayInRange(upcomingStartLimit, end, dayName);
-      }
-    }
-  }
+  const { pastCount, upcomingCount } = await employeeScheduleRepository.countEmployeeDateWiseSchedules(
+    userId,
+    academicYearId,
+    currentDateString,
+  );
+  const allSchedules = await employeeScheduleRepository.getUniqueClassSectionSubjectsForEmployee(
+    userId,
+    academicYearId,
+  );
 
   const combinations = processScheduleCombinations(allSchedules);
-  const uniqueSubjects = new Set(combinations.map(c => c.subjectId));
+  const uniqueSubjects = new Set(combinations.map((c) => c.subjectId));
 
   return {
     pastCount,
     upcomingCount,
-    uniqueSubjectsCount: uniqueSubjects.size
+    uniqueSubjectsCount: uniqueSubjects.size,
   };
 }

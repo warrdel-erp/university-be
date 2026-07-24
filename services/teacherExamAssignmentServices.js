@@ -1,26 +1,54 @@
 import * as teacherExamAssignmentRepository from "../repository/teacherExamAssignmentRepository.js";
+import * as model from "../models/index.js";
+import { scoped } from "../utility/scoped.js";
+
+async function resolveEmployeeIdFromUserId(userId) {
+  const employee = await scoped(model.employeeModel).findOne({
+    where: { userId: Number(userId) },
+    attributes: ["employeeId", "userId"],
+  });
+  if (!employee) {
+    const error = new Error("Employee not found for the given userId");
+    error.statusCode = 404;
+    throw error;
+  }
+  return Number(employee.employeeId);
+}
 
 export async function assignExam(data) {
-    const existing = await teacherExamAssignmentRepository.findAssignment({
-        examScheduleId: data.examScheduleId,
-        userId: data.userId
-    });
-    if (existing) {
-        const error = new Error("This teacher is already assigned to the selected exam schedule.");
-        error.statusCode = 409;
-        throw error;
-    }
-    return await teacherExamAssignmentRepository.assignExam(data);
+  const employeeId = await resolveEmployeeIdFromUserId(data.userId);
+
+  const existing = await teacherExamAssignmentRepository.findAssignment({
+    examScheduleId: data.examScheduleId,
+    employeeId,
+  });
+  if (existing) {
+    const error = new Error("This teacher is already assigned to the selected exam schedule.");
+    error.statusCode = 409;
+    throw error;
+  }
+
+  return await teacherExamAssignmentRepository.assignExam({
+    examScheduleId: data.examScheduleId,
+    employeeId,
+    deadline: data.deadline,
+    createdBy: data.createdBy,
+    updatedBy: data.updatedBy,
+  });
 }
 
 export async function getAssignments(filters) {
-    const whereClause = {
-        ...(filters.examScheduleId && { examScheduleId: filters.examScheduleId }),
-        ...(filters.userId && { userId: filters.userId }),
-    };
-    return await teacherExamAssignmentRepository.getAssignments(whereClause);
+  const whereClause = {
+    ...(filters.examScheduleId && { examScheduleId: filters.examScheduleId }),
+  };
+
+  if (filters.userId) {
+    whereClause.employeeId = await resolveEmployeeIdFromUserId(filters.userId);
+  }
+
+  return await teacherExamAssignmentRepository.getAssignments(whereClause);
 }
 
 export async function deleteAssignment(teacherExamAssignmentId) {
-    return await teacherExamAssignmentRepository.deleteAssignment(teacherExamAssignmentId);
+  return await teacherExamAssignmentRepository.deleteAssignment(teacherExamAssignmentId);
 }

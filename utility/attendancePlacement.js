@@ -7,7 +7,7 @@ import {
 } from './classSectionIncludes.js';
 
 /**
- * Resolve class_section_term row → placement keys for attendance APIs.
+ * Resolve class_section_term → placement keys for attendance APIs.
  */
 export async function resolveAttendancePlacement(classSectionTermId, options = {}) {
   if (classSectionTermId == null || classSectionTermId === '') {
@@ -37,59 +37,116 @@ export async function resolveAttendancePlacement(classSectionTermId, options = {
   };
 }
 
+function dateWiseCellInclude() {
+  return [
+    {
+      model: model.timeTableCellModel,
+      as: 'timeTableCell',
+      required: true,
+      attributes: [
+        'timeTableCellId',
+        'timeTableRoutineId',
+        'timeTableCreationId',
+        'period',
+        'day',
+        'isSameTeacher',
+        'subjectId',
+        'electiveSubjectId',
+        'teacherSubjectMappingId',
+        'isAttendence',
+      ],
+      include: [
+        {
+          model: model.timeTableRoutineModel,
+          as: 'timeTableRoutine',
+          attributes: ['timeTableRoutineId', 'classSectionTermId', 'startingDate', 'endingDate'],
+          required: true,
+          include: [
+            timeTableRoutineClassSectionInclude({
+              termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
+              sectionAttributes: ['classSectionsId', 'year', 'section'],
+            }),
+          ],
+        },
+        {
+          model: model.timeTableStructurePeriodsModel,
+          as: 'timeTablecreation',
+          attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime', 'isBreak'],
+          required: false,
+        },
+        {
+          model: model.subjectModel,
+          as: 'timeTableSubject',
+          attributes: ['subjectId', 'subjectName'],
+          required: false,
+        },
+        {
+          model: model.electiveSubjectModel,
+          as: 'timeTableElective',
+          attributes: ['electiveSubjectId', 'electiveSubjectName'],
+          required: false,
+        },
+        {
+          model: model.teacherSubjectMappingModel,
+          as: 'timeTableTeacherSubject',
+          attributes: ['teacherSubjectMappingId', 'userId'],
+          required: false,
+          include: [
+            {
+              model: model.subjectModel,
+              as: 'employeeSubject',
+              attributes: ['subjectId', 'subjectName'],
+              required: false,
+            },
+          ],
+        },
+      ],
+    },
+  ];
+}
+
 /**
- * Timetable chain: class_schedule_item → time_table_routine.class_section_term_id
+ * Date-wise cells must belong to the given classSectionTermId.
  */
-export async function assertMappingsBelongToTerm(mappingIds, classSectionTermId, options = {}) {
-  const uniqueIds = [...new Set(mappingIds.map((id) => Number(id)).filter(Boolean))];
+export async function assertDateWiseCellsBelongToTerm(dateWiseIds, classSectionTermId, options = {}) {
+  const uniqueIds = [...new Set(dateWiseIds.map((id) => Number(id)).filter(Boolean))];
   if (!uniqueIds.length) {
-    throw new Error('timeTableMappingId is required');
+    throw new Error('timeTableCellDateWiseId is required');
   }
 
-  const mappings = await model.classScheduleModel.findAll({
-    where: { timeTableMappingId: { [Op.in]: uniqueIds } },
-    attributes: ['timeTableMappingId', 'timeTableRoutineId', 'timeTableCreationId', 'period', 'day'],
-    include: [
-      {
-        model: model.timeTableRoutineModel,
-        as: 'timeTablecreate',
-        attributes: ['timeTableRoutineId', 'classSectionTermId', 'startingDate', 'endingDate'],
-        required: true,
-      },
-      {
-        model: model.timeTableStructurePeriodsModel,
-        as: 'timeTablecreation',
-        attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime', 'isBreak'],
-        required: false,
-      },
-    ],
+  const rows = await model.timeTableCellDateWiseModel.findAll({
+    where: { timeTableCellDateWiseId: { [Op.in]: uniqueIds } },
+    attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
+    include: dateWiseCellInclude(),
     transaction: options.transaction,
   });
 
-  if (mappings.length !== uniqueIds.length) {
-    throw new Error('Invalid timeTableMappingId');
+  if (rows.length !== uniqueIds.length) {
+    throw new Error('Invalid timeTableCellDateWiseId');
   }
 
-  for (const mapping of mappings) {
-    const routine = mapping.timeTablecreate;
+  for (const row of rows) {
+    const plain = row.get({ plain: true });
+    const routine = plain.timeTableCell.timeTableRoutine;
     if (Number(routine.classSectionTermId) !== Number(classSectionTermId)) {
       throw new Error(
-        `timeTableMappingId ${mapping.timeTableMappingId} does not belong to classSectionTermId ${classSectionTermId}`,
+        `timeTableCellDateWiseId ${plain.timeTableCellDateWiseId} does not belong to classSectionTermId ${classSectionTermId}`,
       );
     }
   }
 
-  return mappings;
+  return rows;
 }
 
-export function resolveMappingRoutinePlacement(mapping) {
-  const plain = mapping.get ? mapping.get({ plain: true }) : mapping;
-  const routine = plain.timeTablecreate;
-  const termRow = routine?.timeTableClassSectionTerm ?? null;
+export function resolveDateWiseRoutinePlacement(dateWiseRow) {
+  const plain = dateWiseRow.get ? dateWiseRow.get({ plain: true }) : dateWiseRow;
+  const cell = plain.timeTableCell;
+  const routine = cell.timeTableRoutine;
+  const termRow = routine.timeTableClassSectionTerm ?? null;
   const section = termRow?.classSection ?? resolveTimeTableRoutineSection(routine);
 
   return {
-    classSectionTermId: routine?.classSectionTermId ?? termRow?.classSectionTermId ?? null,
+    classSectionTermId: routine.classSectionTermId ?? termRow?.classSectionTermId ?? null,
     term: termRow?.term ?? null,
     year: section?.year ?? null,
     classSectionsId: section?.classSectionsId ?? termRow?.classSectionsId ?? null,
@@ -97,52 +154,39 @@ export function resolveMappingRoutinePlacement(mapping) {
 }
 
 /**
- * Copy-period guard: source and every target must share the same program term and batch (year).
+ * Copy-period guard: source and targets share the same term and batch (year).
  */
-export async function assertCopyPeriodMappingsMatch(
-  sourceMappingId,
-  targetMappingIds,
+export async function assertCopyPeriodDateWiseMatch(
+  sourceDateWiseId,
+  targetDateWiseIds,
   classSectionTermId,
   options = {},
 ) {
-  const uniqueTargetIds = [...new Set(targetMappingIds.map((id) => Number(id)).filter(Boolean))];
-  const allIds = [...new Set([Number(sourceMappingId), ...uniqueTargetIds])];
+  const uniqueTargetIds = [...new Set(targetDateWiseIds.map((id) => Number(id)).filter(Boolean))];
+  const allIds = [...new Set([Number(sourceDateWiseId), ...uniqueTargetIds])];
 
-  const mappings = await model.classScheduleModel.findAll({
-    where: { timeTableMappingId: { [Op.in]: allIds } },
-    attributes: ['timeTableMappingId'],
-    include: [
-      {
-        model: model.timeTableRoutineModel,
-        as: 'timeTablecreate',
-        attributes: ['timeTableRoutineId', 'classSectionTermId'],
-        required: true,
-        include: [
-          timeTableRoutineClassSectionInclude({
-            termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
-            sectionAttributes: ['classSectionsId', 'year', 'section'],
-          }),
-        ],
-      },
-    ],
+  const rows = await model.timeTableCellDateWiseModel.findAll({
+    where: { timeTableCellDateWiseId: { [Op.in]: allIds } },
+    attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date'],
+    include: dateWiseCellInclude(),
     transaction: options.transaction,
   });
 
-  if (mappings.length !== allIds.length) {
-    throw new Error('Invalid timeTableMappingId');
+  if (rows.length !== allIds.length) {
+    throw new Error('Invalid timeTableCellDateWiseId');
   }
 
   let sourcePlacement = null;
   const targetPlacements = [];
 
-  for (const mapping of mappings) {
-    const placement = resolveMappingRoutinePlacement(mapping);
-    const mappingId = Number(mapping.timeTableMappingId);
+  for (const row of rows) {
+    const placement = resolveDateWiseRoutinePlacement(row);
+    const dateWiseId = Number(row.timeTableCellDateWiseId);
 
-    if (mappingId === Number(sourceMappingId)) {
+    if (dateWiseId === Number(sourceDateWiseId)) {
       sourcePlacement = placement;
     } else {
-      targetPlacements.push({ mappingId, placement });
+      targetPlacements.push({ dateWiseId, placement });
     }
   }
 
@@ -154,10 +198,10 @@ export async function assertCopyPeriodMappingsMatch(
     throw new Error('classSectionTermId does not match the source period');
   }
 
-  for (const { mappingId, placement } of targetPlacements) {
+  for (const { dateWiseId, placement } of targetPlacements) {
     if (Number(placement.classSectionTermId) !== Number(sourcePlacement.classSectionTermId)) {
       throw new Error(
-        `timeTableMappingId ${mappingId} is not in the same term as the source period`,
+        `timeTableCellDateWiseId ${dateWiseId} is not in the same term as the source period`,
       );
     }
 
@@ -167,7 +211,7 @@ export async function assertCopyPeriodMappingsMatch(
       && Number(placement.term) !== Number(sourcePlacement.term)
     ) {
       throw new Error(
-        `timeTableMappingId ${mappingId} is not in the same term as the source period`,
+        `timeTableCellDateWiseId ${dateWiseId} is not in the same term as the source period`,
       );
     }
 
@@ -177,7 +221,7 @@ export async function assertCopyPeriodMappingsMatch(
       && Number(placement.year) !== Number(sourcePlacement.year)
     ) {
       throw new Error(
-        `timeTableMappingId ${mappingId} is not in the same batch as the source period`,
+        `timeTableCellDateWiseId ${dateWiseId} is not in the same batch as the source period`,
       );
     }
   }
@@ -185,62 +229,22 @@ export async function assertCopyPeriodMappingsMatch(
   return sourcePlacement;
 }
 
-export async function resolveSourcePeriodByMappingId(sourceMappingId, options = {}) {
-  const mapping = await model.classScheduleModel.findOne({
-    where: { timeTableMappingId: Number(sourceMappingId) },
-    attributes: ['timeTableMappingId', 'day', 'period', 'timeTableRoutineId', 'isSameTeacher'],
-    include: [
-      {
-        model: model.timeTableRoutineModel,
-        as: 'timeTablecreate',
-        attributes: ['timeTableRoutineId', 'classSectionTermId', 'startingDate', 'endingDate'],
-        required: true,
-        include: [
-          timeTableRoutineClassSectionInclude({
-            termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
-            sectionAttributes: ['classSectionsId', 'year', 'section'],
-          }),
-        ],
-      },
-      {
-        model: model.timeTableStructurePeriodsModel,
-        as: 'timeTablecreation',
-        attributes: ['periodName', 'startTime', 'endTime', 'isBreak'],
-        required: false,
-      },
-      {
-        model: model.subjectModel,
-        as: 'timeTableSubject',
-        attributes: ['subjectId', 'subjectName'],
-      },
-      {
-        model: model.electiveSubjectModel,
-        as: 'timeTableElective',
-        attributes: ['electiveSubjectId', 'electiveSubjectName'],
-      },
-      {
-        model: model.teacherSubjectMappingModel,
-        as: 'timeTableTeacherSubject',
-        attributes: ['teacherSubjectMappingId'],
-        include: [
-          {
-            model: model.subjectModel,
-            as: 'employeeSubject',
-            attributes: ['subjectId', 'subjectName'],
-          },
-        ],
-      },
-    ],
+export async function resolveSourcePeriodByDateWiseId(sourceDateWiseId, options = {}) {
+  const row = await model.timeTableCellDateWiseModel.findOne({
+    where: { timeTableCellDateWiseId: Number(sourceDateWiseId) },
+    attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
+    include: dateWiseCellInclude(),
     transaction: options.transaction,
   });
 
-  if (!mapping) {
-    throw new Error('Invalid timeTableMappingId');
+  if (!row) {
+    throw new Error('Invalid timeTableCellDateWiseId');
   }
 
-  const plain = mapping.get ? mapping.get({ plain: true }) : mapping;
-  const routine = plain.timeTablecreate ?? {};
-  const placement = resolveMappingRoutinePlacement(mapping);
+  const plain = row.get({ plain: true });
+  const cell = plain.timeTableCell;
+  const routine = cell.timeTableRoutine;
+  const placement = resolveDateWiseRoutinePlacement(row);
 
   if (!placement.classSectionTermId) {
     throw new Error('Period could not be resolved to a class section term');
@@ -248,17 +252,21 @@ export async function resolveSourcePeriodByMappingId(sourceMappingId, options = 
 
   return {
     ...placement,
-    timeTableMappingId: Number(sourceMappingId),
-    day: plain.day,
-    period: plain.period,
-    isSameTeacher: plain.isSameTeacher,
-    timeTableRoutineId: plain.timeTableRoutineId ?? routine.timeTableRoutineId,
+    timeTableCellDateWiseId: Number(sourceDateWiseId),
+    timeTableCellId: Number(plain.timeTableCellId),
+    date: plain.date,
+    day: cell.day,
+    period: cell.period,
+    isSameTeacher: cell.isSameTeacher,
+    timeTableRoutineId: cell.timeTableRoutineId ?? routine.timeTableRoutineId,
     startingDate: routine.startingDate,
     endingDate: routine.endingDate,
-    timeTablecreation: plain.timeTablecreation ?? null,
-    timeTableSubject: plain.timeTableSubject ?? null,
-    timeTableElective: plain.timeTableElective ?? null,
-    timeTableTeacherSubject: plain.timeTableTeacherSubject ?? null,
+    timeTablecreation: cell.timeTablecreation ?? null,
+    timeTableSubject: cell.timeTableSubject ?? null,
+    timeTableElective: cell.timeTableElective ?? null,
+    timeTableTeacherSubject: cell.timeTableTeacherSubject ?? null,
+    timeTableCell: cell,
+    timeTableRoutine: routine,
   };
 }
 
