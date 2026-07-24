@@ -14,7 +14,7 @@ const positiveIntegerId = z.coerce
 const addCourseItemSchema = z.object({
     courseName: z.string().min(1, 'courseName is required'),
     courseCode: z.string().min(1, 'courseCode is required'),
-    departmentId: positiveIntegerId.optional(),
+    departmentId: z.union([positiveIntegerId, z.null()]).optional(),
     capacity: z.union([z.string(), z.number()]).optional(),
     courseDuration: z.coerce.number().positive().optional(),
     term: z.string().min(1).optional(),
@@ -22,7 +22,7 @@ const addCourseItemSchema = z.object({
 
 const addCourseSchema = z.object({
     course_levelId: z.coerce.number().int().positive('course_levelId is required'),
-    departmentId: positiveIntegerId.optional(),
+    departmentId: z.union([positiveIntegerId, z.null()]).optional(),
     affiliatedUniversityId: z.coerce.number().int().positive().optional(),
     term: z.string().min(1).optional(),
     courses: z.array(addCourseItemSchema).min(1, 'courses array is required'),
@@ -32,8 +32,8 @@ const updateCourseSchema = z.object({
     courseId: positiveIntegerId,
     courseName: z.string().min(1, 'courseName cannot be empty').optional(),
     courseCode: z.string().min(1, 'courseCode cannot be empty').optional(),
-    departmentId: positiveIntegerId.nullable().optional(),
-    affiliatedUniversityId: positiveIntegerId.nullable().optional(),
+    departmentId: z.union([positiveIntegerId, z.null()]).optional(),
+    affiliatedUniversityId: z.union([positiveIntegerId, z.null()]).optional(),
 }).refine(
     (body) =>
         body.courseName != null
@@ -109,7 +109,9 @@ router.post('/institute', userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_ADD.v
 router.post('/affiliatedUniversity', userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_ADD.value, 'institute'), addAffiliatedUniversity);
 
 router.post('/course', userAuth, checkAccess(PERMISSIONS.COURSES_ADD.value, null), validate({ body: addCourseSchema }), addCourse);
+
 router.patch('/course', userAuth, checkAccess(PERMISSIONS.COURSES_EDIT.value, null), validate({ body: updateCourseSchema }), updateCourse);
+
 router.patch('/course/status', userAuth, checkAccess(PERMISSIONS.COURSES_CHANGE_STATUS.value, null), validate({ body: changeCourseStatusSchema }), changeCourseStatus);
 
 router.post('/specialization', userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_ADD.value, 'specialization'), addSpecialization);
