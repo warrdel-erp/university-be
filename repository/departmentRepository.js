@@ -120,29 +120,52 @@ export async function getSingleDepartmentDetails(departmentId) {
 }
 
 export async function deleteDepartment(departmentId) {
+    const id = Number(departmentId);
+
     const existing = await scoped(model.departmentModel).findOne({
-        where: { departmentId },
+        where: { departmentId: id },
         attributes: ['departmentId'],
     });
     if (!existing) {
         return false;
     }
 
+    const childDepartmentCount = await scoped(model.departmentModel).count({
+        where: { parentDepartmentId: id },
+    });
+    if (childDepartmentCount > 0) {
+        throw new Error('Department has child departments and cannot be deleted');
+    }
+
     const courseCount = await scoped(model.courseModel).count({
-        where: { departmentId },
+        where: { departmentId: id },
     });
     if (courseCount > 0) {
         throw new Error('Department is used in course creation and cannot be deleted');
     }
 
     const jobCount = await scoped(model.jobModel).count({
-        where: { departmentId },
+        where: { departmentId: id },
     });
     if (jobCount > 0) {
         throw new Error('Department is used in jobs and cannot be deleted');
     }
 
-    const deleted = await scoped(model.departmentModel).destroy({ where: { departmentId } });
+    const staffCount = await scoped(model.staffModel).count({
+        where: { departmentId: id },
+    });
+    if (staffCount > 0) {
+        throw new Error('Department is used in staff records and cannot be deleted');
+    }
+
+    const positionCount = await scoped(model.departmentPositionsModel).count({
+        where: { departmentId: id },
+    });
+    if (positionCount > 0) {
+        throw new Error('Department is used in department positions and cannot be deleted');
+    }
+
+    const deleted = await scoped(model.departmentModel).destroy({ where: { departmentId: id } });
     return deleted > 0;
 }
 

@@ -50,6 +50,15 @@ export async function addOrgPosition(data) {
 
 const GROWTH_DAYS = 7;
 
+const CHANGE_PERIODS = new Set(['week', 'month', 'year']);
+
+function resolveChangePeriod(changePeriod) {
+    if (changePeriod && CHANGE_PERIODS.has(changePeriod)) {
+        return changePeriod;
+    }
+    return 'week';
+}
+
 function calculateGrowthPercent(currentCount, previousCount) {
     if (previousCount === 0) {
         if (currentCount > 0) {
@@ -60,8 +69,20 @@ function calculateGrowthPercent(currentCount, previousCount) {
     return Math.round(((currentCount - previousCount) / previousCount) * 1000) / 10;
 }
 
-function growthCutoffDate() {
+function growthCutoffDate(changePeriod) {
     const cutoff = new Date();
+    const period = resolveChangePeriod(changePeriod);
+
+    if (period === 'year') {
+        cutoff.setFullYear(cutoff.getFullYear() - 1);
+        return cutoff;
+    }
+
+    if (period === 'month') {
+        cutoff.setMonth(cutoff.getMonth() - 1);
+        return cutoff;
+    }
+
     cutoff.setDate(cutoff.getDate() - GROWTH_DAYS);
     return cutoff;
 }
@@ -79,8 +100,9 @@ async function countPositionsCreatedBy(cutoff, where = {}) {
     });
 }
 
-export async function getOrgCardsStats() {
-    const cutoff = growthCutoffDate();
+export async function getOrgCardsStats(changePeriod) {
+    const period = resolveChangePeriod(changePeriod);
+    const cutoff = growthCutoffDate(period);
 
     const [
         totalPositions,
@@ -109,6 +131,7 @@ export async function getOrgCardsStats() {
     const reportingLevels = levelRows.length;
 
     return {
+        changePeriod: period,
         totalPositions: {
             count: totalPositions,
             changePercent: calculateGrowthPercent(totalPositions, previousTotal),
@@ -414,7 +437,7 @@ export async function getOrgTreeData() {
                             model: model.userDepartmentPositionsModel,
                             as: 'heads',
                             where: { status: 'ACTIVE' },    // only currently active holders
-                            attributes: ['userDepartmentPositionId'],
+                            attributes: ['userDepartmentPositionId', 'status', 'joiningDate', 'endDate'],
                             required: false,                // LEFT JOIN – include positions with no active holder
                             include: [
                                 {
@@ -488,9 +511,13 @@ export async function getOrgTreeData() {
                 const employee = assignee.employee || {};
 
                 users.push({
+                    userDepartmentPositionId: head.userDepartmentPositionId,
                     userId:     assignee.userId,
                     employeeId: employee.employeeId  || null,
-                    name:       employee.employeeName || assignee.userName || null
+                    name:       employee.employeeName || assignee.userName || null,
+                    status:     head.status,
+                    joiningDate: head.joiningDate,
+                    endDate:     head.endDate
                 });
             }
 

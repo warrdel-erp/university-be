@@ -45,8 +45,8 @@ export async function getOrgPositions(filters) {
     return departmentPositionsRepository.getOrgPositions(filters);
 }
 
-export async function getOrgCardsStats() {
-    return departmentPositionsRepository.getOrgCardsStats();
+export async function getOrgCardsStats(changePeriod) {
+    return departmentPositionsRepository.getOrgCardsStats(changePeriod);
 }
 
 export async function getOrgPositionById(departmentPositionId) {

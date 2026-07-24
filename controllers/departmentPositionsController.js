@@ -33,7 +33,8 @@ export async function getAllDepartmentPositions(req, res) {
 
 export async function getDepartmentPositionCards(req, res) {
     try {
-        const cards = await departmentPositionsService.getOrgCardsStats();
+        const { changePeriod } = req.query;
+        const cards = await departmentPositionsService.getOrgCardsStats(changePeriod);
         return SuccessResponse(res, 200, "Department position cards fetched successfully", cards);
     } catch (error) {
         return ErrorResponse(res, 500, "Internal Server Error", error.message);

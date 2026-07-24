@@ -402,7 +402,7 @@
                 }
               ]
             },
-            "description": "**DELETE /department/**\n\n**Required query**\n- `departmentId` (int)\n\nHard delete."
+            "description": "**DELETE /department/**\n\n**Required query**\n- `departmentId` (int)\n\nHard delete. Allowed only when the department is not referenced by:\n- child departments (`parentDepartmentId`)\n- courses\n- jobs\n- staff\n- department positions\n\nReturns `400` if still in use."
           },
           "response": []
         }
@@ -428,16 +428,23 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/departmentPosition/cards",
+              "raw": "{{baseurl}}/departmentPosition/cards?changePeriod=week",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "departmentPosition",
                 "cards"
+              ],
+              "query": [
+                {
+                  "key": "changePeriod",
+                  "value": "week",
+                  "description": "optional — week (default) | month | year"
+                }
               ]
             },
-            "description": "**GET /departmentPosition/cards**\n\nNo query/body.\n\nReturns:\n- `totalPositions` `{ count, changePercent }`\n- `filledPositions` `{ count, changePercent }`\n- `vacantPositions` `{ count, changePercent }`\n- `departments` `{ count, changePercent }` (`changePercent` null)\n- `reportingLevels` `{ count, changePercent }` (`changePercent` null)"
+            "description": "**GET /departmentPosition/cards**\n\n### Query (optional)\n| Name | Type | Default | Values |\n|------|------|---------|--------|\n| `changePeriod` | string | `week` | `week`, `month`, `year` |\n\nCompares current counts vs baseline:\n- `week` — 7 days ago\n- `month` — same calendar date 1 month ago\n- `year` — same calendar date 1 year ago\n\nReturns:\n- `changePeriod` — period applied\n- `totalPositions` `{ count, changePercent }`\n- `filledPositions` `{ count, changePercent }`\n- `vacantPositions` `{ count, changePercent }`\n- `departments` `{ count, changePercent }` (`changePercent` always `null`)\n- `reportingLevels` `{ count, changePercent }` (`changePercent` always `null`)\n\n### `changePercent`\n\n`((currentCount - previousCount) / previousCount) × 100`\n\n- `previousCount` = positions that existed as of the cutoff (`createdAt <= cutoff`)\n- If `previousCount === 0` and `currentCount > 0` → `100`\n- If both `0` → `0`\n- Rounded to 1 decimal"
           },
           "response": []
         },
@@ -676,7 +683,7 @@
                 "tree"
               ]
             },
-            "description": "**GET /departmentPosition/tree**\n\nReturns cascading hierarchy:\nInstitute -> Parent Departments (Academic vs Admin categories) -> Child Departments (nested via `parentDepartmentId`) -> Positions (level 1 only, sorted by sortOrder)."
+            "description": "**GET /departmentPosition/tree**\n\nReturns cascading hierarchy:\nInstitute -> Parent Departments (Academic vs Admin categories) -> Child Departments (nested via `parentDepartmentId`) -> Positions (level 1 only, sorted by sortOrder).\n\nEach position `users[]` entry includes `userDepartmentPositionId`, `userId`, `employeeId`, `name`, `status`, `joiningDate`, and `endDate`."
           },
           "response": []
         },

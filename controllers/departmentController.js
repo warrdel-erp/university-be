@@ -90,6 +90,9 @@ export async function deleteDepartment(req, res) {
       return ErrorResponse(res, 404, "Department details not found");
     }
   } catch (error) {
+    if (/cannot be deleted|not found/i.test(error.message)) {
+      return ErrorResponse(res, 400, error.message);
+    }
     return ErrorResponse(res, 500, "Internal Server Error", error.message);
   }
 }

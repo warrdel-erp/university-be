@@ -38,10 +38,36 @@ async function getColumnDefinition(queryInterface, tableName, columnName, transa
   if (row.IS_NULLABLE === 'NO') {
     definition += ' NOT NULL';
   }
-  if (row.EXTRA.includes('auto_increment')) {
+  if (String(row.EXTRA).toLowerCase().includes('auto_increment')) {
     definition += ' AUTO_INCREMENT';
   }
   return definition;
+}
+
+async function ensurePrimaryKeyAutoIncrement(queryInterface, tableName, columnName, transaction) {
+  const [rows] = await queryInterface.sequelize.query(
+    `SELECT COLUMN_TYPE, IS_NULLABLE, EXTRA
+     FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = ?
+       AND COLUMN_NAME = ?`,
+    { replacements: [tableName, columnName], transaction },
+  );
+  if (!rows.length || String(rows[0].EXTRA).toLowerCase().includes('auto_increment')) {
+    return;
+  }
+
+  const row = rows[0];
+  let definition = row.COLUMN_TYPE;
+  if (row.IS_NULLABLE === 'NO') {
+    definition += ' NOT NULL';
+  }
+  definition += ' AUTO_INCREMENT';
+
+  await queryInterface.sequelize.query(
+    `ALTER TABLE \`${tableName}\` MODIFY COLUMN \`${columnName}\` ${definition}`,
+    { transaction },
+  );
 }
 
 async function renameColumnInplace(queryInterface, tableName, oldName, newName, transaction) {
@@ -79,6 +105,13 @@ module.exports = {
           queryInterface,
           'user_department_positions',
           'org_position_head_id',
+          'user_department_position_id',
+          transaction,
+        );
+
+        await ensurePrimaryKeyAutoIncrement(
+          queryInterface,
+          'user_department_positions',
           'user_department_position_id',
           transaction,
         );

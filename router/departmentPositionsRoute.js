@@ -114,11 +114,15 @@ const listUserDepartmentPositionQuerySchema = z.object({
     departmentPositionId: positiveIntegerId,
 });
 
+const cardsQuerySchema = z.object({
+    changePeriod: z.preprocess(emptyToUndefined, z.enum(['week', 'month', 'year']).optional()),
+});
+
 router.post('/', userAuth, checkAccess(PERMISSIONS.DEPARTMENT_ADD.value, 'departmentPosition'), validate({ body: addDepartmentPositionSchema }), addDepartmentPosition);
 
 router.get('/', userAuth, checkAccess(PERMISSIONS.DEPARTMENT.value, null), getAllDepartmentPositions);
 
-router.get('/cards', userAuth, checkAccess(PERMISSIONS.DEPARTMENT.value, null), getDepartmentPositionCards);
+router.get('/cards', userAuth, checkAccess(PERMISSIONS.DEPARTMENT.value, null), validate({ query: cardsQuerySchema }), getDepartmentPositionCards);
 
 router.get('/single', userAuth, checkAccess(PERMISSIONS.DEPARTMENT.value, null), validate({ query: departmentPositionIdQuerySchema }), getSingleDepartmentPosition);
 
