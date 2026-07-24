@@ -57,8 +57,7 @@ import floor from "./router/floorRoute.js";
 import head from "./router/headRoute.js";
 import department from "./router/departmentRoute.js";
 import staff from "./router/staffRoute.js";
-import departmentStructure from "./router/departmentStructureRoute.js";
-import org from "./router/orgRoute.js";
+import departmentPositions from "./router/departmentPositionsRoute.js";
 import syllabus from "./router/syllabusRoute.js";
 import session from "./router/sessionRoute.js";
 import po from "./router/poRoute.js";
@@ -118,7 +117,7 @@ app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
     return res.status(400).json({
       message: 'Invalid JSON in request body',
-      hint: 'Empty Postman variables produce invalid JSON like "departmentStructureId": , — run create steps in order or set collection variables.',
+      hint: 'Empty Postman variables produce invalid JSON — run create steps in order or set collection variables.',
       error: err.message,
     });
   }
@@ -155,8 +154,9 @@ app.use("/governanceBody", governanceBody);
 app.use("/floor", floor);
 app.use("/department", department);
 app.use("/staff", staff);
-app.use("/departmentStructure", departmentStructure);
-app.use("/org", org);
+
+app.use("/departmentPosition", departmentPositions);
+
 app.use("/assetCategory", assetCategory);
 app.use("/asset", asset);
 app.use("/assetIssue", assetIssue);

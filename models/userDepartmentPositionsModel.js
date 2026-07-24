@@ -3,62 +3,55 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import university from "./universityModel.js";
 import institute from "./instituteModel.js";
-import department from "./departmentModel.js";
+import departmentPositions from "./departmentPositionsModel.js";
 
-const orgPositionModel = sequelize.define(
-    'org_position',
+const userDepartmentPositionsModel = sequelize.define(
+    'user_department_positions',
     {
-        orgPositionId: {
+        userDepartmentPositionId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'org_position_id'
+            field: 'user_department_position_id'
         },
-        departmentId: {
+        departmentPositionId: {
             type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'department_id',
+            allowNull: false,
+            field: 'department_position_id',
             references: {
-                model: department,
-                key: 'department_id'
+                model: departmentPositions,
+                key: 'department_position_id'
             }
         },
-        positionName: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            field: 'position_name'
-        },
-        positionCode: {
-            type: DataTypes.STRING,
-            allowNull: true,
-            field: 'position_code'
-        },
-        employmentCategory: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            field: 'employment_category'
-        },
-        reportingType: {
-            type: DataTypes.STRING,
-            allowNull: true,
-            field: 'reporting_type'
-        },
-        isVacant: {
-            type: DataTypes.BOOLEAN,
-            allowNull: false,
-            defaultValue: true,
-            field: 'is_vacant'
-        },
-        sortOrder: {
+        userId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            defaultValue: 0,
-            field: 'sort_order'
+            field: 'user_id',
+            references: {
+                model: users,
+                key: 'user_id'
+            }
         },
-        level: {
-            type: DataTypes.INTEGER,
+        holderType: {
+            type: DataTypes.STRING,
             allowNull: false,
-            field: 'level'
+            field: 'holder_type'
+        },
+        status: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            defaultValue: 'ACTIVE',
+            field: 'status'
+        },
+        joiningDate: {
+            type: DataTypes.DATEONLY,
+            allowNull: true,
+            field: 'joining_date'
+        },
+        endDate: {
+            type: DataTypes.DATEONLY,
+            allowNull: true,
+            field: 'end_date'
         },
         universityId: {
             type: DataTypes.INTEGER,
@@ -115,12 +108,12 @@ const orgPositionModel = sequelize.define(
         }
     },
     {
-        tableName: 'org_position',
+        tableName: 'user_department_positions',
         timestamps: true,
         paranoid: true
     }
 );
 
-orgPositionModel.scopeConfig = { university: true, institute: true, academicYear: false };
+userDepartmentPositionsModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
-export default orgPositionModel;
+export default userDepartmentPositionsModel;

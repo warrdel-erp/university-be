@@ -1,9 +1,14 @@
 import * as departmentCreationRepository from '../repository/departmentRepository.js';
 
 export async function addDepartment(departmentData, createdBy, updatedBy) {
-    const { parentDepartmentId, ...rest } = departmentData;
+    const { departmentId, parentDepartmentId, ...rest } = departmentData;
     rest.createdBy = createdBy;
     rest.updatedBy = updatedBy;
+
+    if (departmentId != null) {
+        return await departmentCreationRepository.addParentDepartment(departmentId, rest);
+    }
+
     return await departmentCreationRepository.addDepartment(rest, parentDepartmentId);
 }
 

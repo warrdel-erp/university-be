@@ -340,6 +340,15 @@ export async function createInventory(inventoryData, transaction) {
   return scoped(model.libraryBookInventoryModel).create(inventoryData, { transaction });
 }
 
+export async function findEmployeeIdByUserId(userId, transaction) {
+  const employee = await scoped(model.employeeModel).findOne({
+    where: { userId },
+    attributes: ["employeeId"],
+    transaction,
+  });
+  return employee ? employee.employeeId : null;
+}
+
 function buildBookListWhere(libraryCreationId, filters = {}) {
   const where = { libraryCreationId };
 
@@ -675,7 +684,7 @@ export async function getSingleBookDetails(libraryBookId, transaction) {
           {
             model: model.employeeModel,
             as: "employeeDetailsBook",
-            attributes: ["userId", "employeeCode", "department", "employeeName"],
+            attributes: ["employeeId", "userId", "employeeCode", "department", "employeeName"],
           },
         ],
       },
@@ -836,7 +845,7 @@ export async function getAllIssuedBooks() {
         {
           model: model.employeeModel,
           as: "employeeDetailsBook",
-          attributes: ["userId", "employeeCode", "department", "employeeName"],
+          attributes: ["employeeId", "userId", "employeeCode", "department", "employeeName"],
         },
         {
           model: model.libraryAisleModel,
@@ -919,7 +928,7 @@ export async function getBooksIssuedToStudent(studentId) {
 export async function getBooksIssuedToEmployee(userId) {
   try {
     const result = await model.libraryBookInventoryModel.findAll({
-      where: { userId, status: "issued" },
+      where: { status: "issued" },
 
       attributes: [
         "inventoryId",
@@ -931,7 +940,7 @@ export async function getBooksIssuedToEmployee(userId) {
         "itemPrice",
         "netPrice",
         "currency",
-        "userId",
+        "employeeId",
         "issueDate",
         "dueDate",
         "status",
@@ -962,7 +971,9 @@ export async function getBooksIssuedToEmployee(userId) {
         {
           model: model.employeeModel,
           as: "employeeDetailsBook",
-          attributes: ["userId", "employeeCode", "department", "employeeName"],
+          attributes: ["employeeId", "userId", "employeeCode", "department", "employeeName"],
+          where: { userId },
+          required: true,
         },
       ],
     });

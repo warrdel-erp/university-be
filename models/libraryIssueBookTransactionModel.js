@@ -10,7 +10,7 @@ const libraryIssueBookTransactionModel = sequelize.define(
       autoIncrement: true,
       field: "library_issue_book_transaction_id",
     },
-    // STUDENT → students.student_id; TEACHER → employee.employee_id (see memberType)
+    // STUDENT → students.student_id; TEACHER → employee.user_id (see memberType)
     memberId: {
       type: DataTypes.INTEGER,
       allowNull: false,

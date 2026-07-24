@@ -2,6 +2,7 @@
 
 import * as libraryBookBulkUploadRepository from "../repository/libraryBookBulkUploadRepository.js";
 import * as libraryStructureRepository from "../repository/libraryStructureRepository.js";
+import * as libraryCreationRepository from "../repository/libraryCreationRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 import { parseCustomDate } from "../utility/dateFormat.js";
 import { readLibraryBulkUploadFile } from "../utility/fileHandler.js";
@@ -117,6 +118,10 @@ const BULK_INVENTORY_FIELD_ALIASES = {
     "employee_id",
     "Employee_Id",
     "Employee Id",
+    "userid",
+    "UserId",
+    "user_id",
+    "User Id",
   ],
   issueDate: [
     "issuedate",
@@ -1077,8 +1082,18 @@ async function persistBulkUploadBatchInTransaction({
     const { libraryAisleId, libraryRackId, libraryRowId } =
       await resolveBulkUploadLocationIdsForRow(location, aisleCache, rackCache, rowCache);
 
+    const { userId, ...inventoryFields } = inventory;
+    let employeeId = null;
+    if (userId != null) {
+      employeeId = await libraryCreationRepository.findEmployeeIdByUserId(userId, transaction);
+      if (!employeeId) {
+        throw new Error(`Employee not found for userId ${userId}`);
+      }
+    }
+
     inventoryInsertPayloads.push({
-      ...inventory,
+      ...inventoryFields,
+      employeeId,
       libraryBookId,
       libraryAisleId,
       libraryRackId,

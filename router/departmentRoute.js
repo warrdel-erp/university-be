@@ -21,18 +21,35 @@ const positiveIntegerId = z.coerce
     .int('id must be an integer')
     .positive('id must be greater than 0');
 
+const emptyToUndefined = (val) => {
+    if (val === '' || val === undefined || val === 'undefined') return undefined;
+    if (val === 'null' || val === null) return null;
+    return val;
+};
+
+const optionalNullablePositiveIntegerId = z.preprocess(
+    emptyToUndefined,
+    positiveIntegerId.nullable().optional(),
+);
+
 const optionalString = z.string().optional().nullable();
 
-const addDepartmentSchema = z.object({
-    departmentName: z
-        .string({ required_error: 'departmentName is required' })
-        .min(1, 'departmentName cannot be empty'),
-    alternateName: optionalString,
-    departmentCode: optionalString,
-    description: optionalString,
-    departmentType: z.enum(departmentTypes),
-    parentDepartmentId: positiveIntegerId.optional(),
-});
+const addDepartmentSchema = z
+    .object({
+        departmentId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
+        departmentName: z
+            .string({ required_error: 'departmentName is required' })
+            .min(1, 'departmentName cannot be empty'),
+        alternateName: optionalString,
+        departmentCode: optionalString,
+        description: optionalString,
+        departmentType: z.enum(departmentTypes),
+        parentDepartmentId: optionalNullablePositiveIntegerId,
+    })
+    .refine(
+        (data) => !(data.departmentId != null && data.parentDepartmentId != null),
+        { message: 'Use departmentId (insert parent) or parentDepartmentId (create child), not both' },
+    );
 
 const updateDepartmentSchema = z.object({
     departmentId: positiveIntegerId,
@@ -41,6 +58,7 @@ const updateDepartmentSchema = z.object({
     departmentCode: optionalString,
     description: optionalString,
     departmentType: z.enum(departmentTypes).optional(),
+    parentDepartmentId: optionalNullablePositiveIntegerId,
 });
 
 const departmentIdQuerySchema = z.object({
