@@ -206,7 +206,7 @@ export async function countTeacherMappingsForClassSectionTerm(
 
   const routineScope = buildScope(model.timeTableRoutineModel);
   const timetableTeacherCount = await scoped(model.classScheduleModel).count({
-    where: { employeeId: { [Op.ne]: null } },
+    where: { userId: { [Op.ne]: null } },
     include: [
       {
         model: model.timeTableRoutineModel,

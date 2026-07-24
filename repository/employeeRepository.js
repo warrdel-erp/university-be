@@ -449,7 +449,7 @@ export async function getSingleEmployeeDetails(employeeId) {
 
 async function assertEmployeeNotLinked(employeeId) {
     const subjectLinks = await scoped(model.teacherSubjectMappingModel).count({
-        where: { employeeId },
+        where: { userId: employeeId },
     });
 
     if (subjectLinks > 0) {
@@ -537,7 +537,7 @@ export async function getTeacherSubject(employeeId, filters = {}) {
         return scoped(model.teacherSubjectMappingModel).findAll({
             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
             where: {
-                employeeId,
+                userId: employeeId,
                 ...teacherSubjectWhere(subjectIds),
             },
             include: [
@@ -559,7 +559,7 @@ export async function getTeacherSubject(employeeId, filters = {}) {
                             as: 'subjectAssessments',
                             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                             where: {
-                                employeeId,
+                                userId: employeeId,
                                 ...(term != null && { term }),
                             },
                             required: false,
@@ -598,7 +598,7 @@ export async function getTeacherCourses(employeeId) {
         }
 
         const result = await scoped(model.teacherSubjectMappingModel).findAll({
-            where: { employeeId: Number(employeeId) },
+            where: { userId: Number(employeeId) },
             include: [
                 {
                     model: model.subjectModel.unscoped(),

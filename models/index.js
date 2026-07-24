@@ -1684,6 +1684,17 @@ assessmentEvaluationModel.belongsTo(internalAssessmentModel, {
 studentModel.hasMany(assessmentEvaluationModel, { foreignKey: "studentId", as: "studentresult" });
 assessmentEvaluationModel.belongsTo(studentModel, { foreignKey: "studentId", as: "studentevaluation" });
 
+assessmentEvaluationModel.belongsTo(employeeModel, {
+  foreignKey: "userId",
+  targetKey: "userId",
+  as: "evaluationEmployee",
+});
+employeeModel.hasMany(assessmentEvaluationModel, {
+  foreignKey: "userId",
+  sourceKey: "userId",
+  as: "evaluationEmployee",
+});
+
 jobModel.belongsTo(jobSettingModel, { foreignKey: "jobSettingId", as: "jobType" });
 jobSettingModel.hasMany(jobModel, { foreignKey: "jobSettingId", as: "jobs" });
 
