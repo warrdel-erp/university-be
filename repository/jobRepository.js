@@ -27,9 +27,9 @@ export async function getAllJobs() {
           attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"],
         },
         {
-          model: model.subAccountModel,
+          model: model.departmentModel,
           as: "departmentJobs",
-          attributes: ["departmentName", "subAccountId", "alternateName", "departmentCode"],
+          attributes: ["departmentName", "departmentId", "alternateName", "departmentCode"],
         },
         {
           model: model.subjectModel,
@@ -65,9 +65,9 @@ export async function getSingleJob(jobId) {
           attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"],
         },
         {
-          model: model.subAccountModel,
+          model: model.departmentModel,
           as: "departmentJobs",
-          attributes: ["departmentName", "subAccountId", "alternateName", "departmentCode"],
+          attributes: ["departmentName", "departmentId", "alternateName", "departmentCode"],
         },
         {
           model: model.subjectModel,
@@ -193,9 +193,9 @@ export async function getCalendarJobs(view, date) {
         attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"],
       },
       {
-        model: model.subAccountModel,
+        model: model.departmentModel,
         as: "departmentJobs",
-        attributes: ["departmentName", "subAccountId", "alternateName", "departmentCode"],
+        attributes: ["departmentName", "departmentId", "alternateName", "departmentCode"],
       },
       {
         model: model.subjectModel,
@@ -236,10 +236,10 @@ export async function getFacultyCalendar(userId, start, end) {
   });
 }
 
-export async function getDepartmentCalendar(subAccountId, start, end) {
-  const department = await scoped(model.subAccountModel).findOne({
-    attributes: ["subAccountId"],
-    where: { subAccountId },
+export async function getDepartmentCalendar(departmentId, start, end) {
+  const department = await scoped(model.departmentModel).findOne({
+    attributes: ["departmentId"],
+    where: { departmentId },
   });
   if (!department) {
     return [];
@@ -247,7 +247,7 @@ export async function getDepartmentCalendar(subAccountId, start, end) {
 
   return scoped(model.jobModel).findAll({
     where: {
-      subAccountId,
+      departmentId,
       jobDate: { [Op.between]: [start, end] },
     },
     order: [
@@ -258,11 +258,11 @@ export async function getDepartmentCalendar(subAccountId, start, end) {
 }
 
 export async function getFilteredJobs(filters) {
-  const { type, jobTypeId, subAccountId, userId, date, status, page, limit } = filters;
+  const { type, jobTypeId, departmentId, userId, date, status, page, limit } = filters;
 
   const where = {
     ...(jobTypeId && { jobSettingId: jobTypeId }),
-    ...(subAccountId && { subAccountId }),
+    ...(departmentId && { departmentId }),
     ...(userId && { userId }),
     ...(status && { status }),
     ...(date && { jobDate: date }),
@@ -311,9 +311,9 @@ export async function getFilteredJobs(filters) {
         attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"],
       },
       {
-        model: model.subAccountModel,
+        model: model.departmentModel,
         as: "departmentJobs",
-        attributes: ["departmentName", "subAccountId", "alternateName", "departmentCode"],
+        attributes: ["departmentName", "departmentId", "alternateName", "departmentCode"],
       },
       {
         model: model.subjectModel,
@@ -346,7 +346,7 @@ export async function getJobData(filters, targetDate) {
     },
     include: [
       { model: model.users, as: "user" },
-      { model: model.subAccountModel, as: "departmentJobs" },
+      { model: model.departmentModel, as: "departmentJobs" },
     ],
   });
 }
@@ -354,7 +354,7 @@ export async function getJobData(filters, targetDate) {
 export async function fetchJobs(filters, fromDate, toDate) {
   const where = {
     ...(filters.userId && { userId: filters.userId }),
-    ...(filters.subAccountId && { subAccountId: filters.subAccountId }),
+    ...(filters.departmentId && { departmentId: filters.departmentId }),
     ...(filters.status && { status: filters.status }),
   };
 
@@ -370,7 +370,7 @@ export async function fetchJobs(filters, fromDate, toDate) {
     where,
     include: [
       { model: model.users, as: "user" },
-      { model: model.subAccountModel, as: "departmentJobs" },
+      { model: model.departmentModel, as: "departmentJobs" },
     ],
   });
 

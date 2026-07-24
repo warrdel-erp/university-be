@@ -1,5 +1,24 @@
 import * as model from '../models/index.js';
-import { scoped } from '../utility/scoped.js';
+import { scoped, buildScope } from '../utility/scoped.js';
+
+const excludeMeta = ['createdAt', 'updatedAt', 'createdBy', 'updatedBy'];
+
+const structureDepartmentIncludes = [
+    {
+        model: model.departmentModel,
+        as: 'department',
+        attributes: { exclude: excludeMeta },
+        required: false,
+        where: buildScope(model.departmentModel),
+    },
+    {
+        model: model.departmentModel,
+        as: 'parentDepartment',
+        attributes: { exclude: excludeMeta },
+        required: false,
+        where: buildScope(model.departmentModel),
+    },
+];
 
 export async function addDepartmentStructure(departmentStructureData) {
     try {
@@ -14,20 +33,8 @@ export async function addDepartmentStructure(departmentStructureData) {
 export async function getdepartmentStructureDetails() {
     try {
         const departmentStructure = await scoped(model.departmentStructureModel).findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            include:
-                [
-                    {
-                        model: model.accountModel,
-                        as: "mainAccount",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                    },
-                    {
-                        model: model.subAccountModel,
-                        as: "subAccountDetails",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                    },
-                ]
+            attributes: { exclude: excludeMeta },
+            include: structureDepartmentIncludes,
         });
 
         return departmentStructure;
@@ -41,21 +48,9 @@ export async function getdepartmentStructureDetails() {
 export async function getSingledepartmentStructureDetails(departmentStructureId) {
     try {
         const departmentStructure = await scoped(model.departmentStructureModel).findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+            attributes: { exclude: excludeMeta },
             where: { departmentStructureId },
-            include:
-            [
-                {
-                    model: model.accountModel,
-                    as: "mainAccount",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                },
-                {
-                    model: model.subAccountModel,
-                    as: "subAccountDetails",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                },
-            ]
+            include: structureDepartmentIncludes,
         });
 
         return departmentStructure;

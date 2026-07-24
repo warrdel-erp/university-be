@@ -12,6 +12,7 @@ import userAuth from '../middleware/authUser.js';
 import { validate } from '../utility/validation.js';
 import { checkAccess } from '../middleware/checkAccess.js';
 import { PERMISSIONS } from '../const/permissions.js';
+import { departmentTypes } from '../constant.js';
 
 const router = Router();
 
@@ -20,17 +21,26 @@ const positiveIntegerId = z.coerce
     .int('id must be an integer')
     .positive('id must be greater than 0');
 
+const optionalString = z.string().optional().nullable();
+
 const addDepartmentSchema = z.object({
-    subAccountId: positiveIntegerId,
     departmentName: z
         .string({ required_error: 'departmentName is required' })
         .min(1, 'departmentName cannot be empty'),
+    alternateName: optionalString,
+    departmentCode: optionalString,
+    description: optionalString,
+    departmentType: z.enum(departmentTypes),
+    parentDepartmentId: positiveIntegerId.optional(),
 });
 
 const updateDepartmentSchema = z.object({
     departmentId: positiveIntegerId,
     departmentName: z.string().min(1).optional(),
-    subAccountId: positiveIntegerId.optional(),
+    alternateName: optionalString,
+    departmentCode: optionalString,
+    description: optionalString,
+    departmentType: z.enum(departmentTypes).optional(),
 });
 
 const departmentIdQuerySchema = z.object({

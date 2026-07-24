@@ -26,10 +26,10 @@ const staffModel = sequelize.define(
         employeeId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'user_id',
-                references: {
-                model: users,
-                key: 'user_id'
+            field: 'employee_id',
+            references: {
+                model: employee,
+                key: 'employee_id'
             }
         },
         universityId: {
