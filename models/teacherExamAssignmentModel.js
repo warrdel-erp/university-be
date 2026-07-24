@@ -2,7 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import users from "./userModel.js";
 import examScheduleModel from "./examScheduleModel.js";
-
+import employeeModel from "./employeeModel.js";
 
 const teacherExamAssignmentModel = sequelize.define(
   "teacher_exam_assignment",
@@ -31,13 +31,13 @@ const teacherExamAssignmentModel = sequelize.define(
         key: "exam_schedule_id",
       },
     },
-    userId: {
+    employeeId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      field: "user_id",
+      field: "employee_id",
       references: {
-        model: users,
-        key: "user_id",
+        model: employeeModel,
+        key: "employee_id",
       },
     },
     createdBy: {
@@ -83,8 +83,8 @@ const teacherExamAssignmentModel = sequelize.define(
     indexes: [
       {
         unique: true,
-        fields: ["exam_schedule_id", "user_id"],
-        name: "uq_teacher_exam_assignment_schedule_user",
+        fields: ["exam_schedule_id", "employee_id"],
+        name: "uq_teacher_exam_assignment_schedule_employee",
       },
     ],
   },

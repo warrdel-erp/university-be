@@ -113,12 +113,19 @@ export async function getFeePlanOptions(filters) {
     };
 }
 
-export async function getLectureWindowOptions(employeeId, subjectId, academicYearId, date, sessionId) {
-    const [employee, subject, options] = await Promise.all([
-        optionsRepository.getEmployeeOptionDetail(employeeId),
+export async function getLectureWindowOptions(userId, employeeId, subjectId, academicYearId, date, sessionId) {
+    const employee = await optionsRepository.getEmployeeOptionDetail({ userId, employeeId });
+    if (!employee) {
+        throw new Error('Employee not found');
+    }
+    if (employee.userId == null) {
+        throw new Error('Employee has no linked userId');
+    }
+
+    const [subject, options] = await Promise.all([
         optionsRepository.getSubjectOptionDetail(subjectId),
         optionsRepository.getLectureWindowOptionRows({
-            employeeId,
+            userId: employee.userId,
             subjectId,
             academicYearId,
             date,
@@ -126,9 +133,6 @@ export async function getLectureWindowOptions(employeeId, subjectId, academicYea
         }),
     ]);
 
-    if (!employee) {
-        throw new Error('Employee not found');
-    }
     if (!subject) {
         throw new Error('Subject not found');
     }

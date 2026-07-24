@@ -146,7 +146,6 @@ app.use("/feeTypeCategory", feeTypeCategory);
 app.use("/feeTypeCatalog", feeTypeCatalog);
 app.use("/feePlanProfile", feePlanProfile);
 app.use("/authorization", userPermission);
-app.use("/attendance", attendance);
 app.use("/libraryCreation", libraryCreation);
 app.use("/libraryStructure", libraryStructure);
 app.use("/head", head);
@@ -192,11 +191,17 @@ app.use("/electiveSubject", electiveSubject);
 app.use("/student", student);
 app.use("/employee", employee);
 app.use("/teacher", teacher);
-app.use("/timeTable", timeTable);
+
+// ---------------------------------------------------------------------------
+// Schedule date-wise stack (structure → week cells → date instances → consumers)
+// ---------------------------------------------------------------------------
+app.use("/timeTable", timeTable);                 // structure + courseMapping + periods
+app.use("/timeTableCreate", timeTableCreate);     // week cells + teachers; publish → date-wise
 app.use("/faculityLoad", faculityLoad);
-app.use("/timeTableCreate", timeTableCreate);
-app.use("/lesson", lesson);
+app.use("/attendance", attendance);               // keys: timeTableCellDateWiseId
+app.use("/lesson", lesson);                       // mapping keys: timeTableCellDateWiseId
 app.use("/lecture", lecture);
+
 app.use("/feePlan", feePlan);
 app.use("/studentFeeInvoice", studentFeeInvoice);
 app.use("/studentFeePayment", studentFeePayment);

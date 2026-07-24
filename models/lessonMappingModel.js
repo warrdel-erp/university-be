@@ -3,9 +3,15 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import instituteModel from "./instituteModel.js";
 import topicModel from "./topicModel.js";
-import classScheduleModel from "./classScheduleModel.js";
+import timeTableCellModel from "./timeTableCellModel.js";
+import timeTableCellDateWiseModel from "./timeTableCellDateWiseModel.js";
 import universityModel from "./universityModel.js";
 
+/**
+ * Topic taught in a dated class period.
+ * Period key: timeTableCellDateWiseId.
+ * timeTableCellId is denormalized week-cell PK (dual-write).
+ */
 const lessonMappingModel = sequelize.define(
     'lesson_mapping',
     {
@@ -42,13 +48,22 @@ const lessonMappingModel = sequelize.define(
                 key: 'topic_id'
             }
         },
-        timeTableMappingId: {
+        timeTableCellDateWiseId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'time_table_cell_date_wise_id',
+            references: {
+                model: timeTableCellDateWiseModel,
+                key: 'time_table_cell_date_wise_id'
+            }
+        },
+        timeTableCellId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'time_table_mapping_id',
+            field: 'time_table_cell_id',
             references: {
-                model: classScheduleModel,
-                key: 'time_table_mapping_id'
+                model: timeTableCellModel,
+                key: 'time_table_cell_id'
             }
         },
         date: {

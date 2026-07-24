@@ -26,8 +26,8 @@ const bulkAttendanceReportSchema = z.object({
 const batchAttendanceSchema = z.object({
     classSectionTermId: positiveIntegerId,
     filters: z.array(z.object({
-        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
-        timeTableMappingId: z.number()
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD").optional(),
+        timeTableCellDateWiseId: z.number()
     })).min(1)
 });
 
@@ -43,12 +43,13 @@ const attendanceStatusEnum = z.enum([
 ]);
 
 const addAttendanceSchema = z.object({
-    classSectionTermId: positiveIntegerId,
-    timeTableMappingId: z.union([
+    classSectionTermId: positiveIntegerId.optional().nullable(),
+    classSectionsId: z.coerce.number().int().positive().optional().nullable(),
+    timeTableCellDateWiseId: z.union([
         z.coerce.number().int().positive(),
         z.array(z.coerce.number().int().positive()).min(1),
     ]),
-    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD").optional(),
     attendance: z.array(z.object({
         studentId: z.coerce.number().int().positive(),
         attendanceStatus: attendanceStatusEnum,
@@ -59,17 +60,15 @@ const addAttendanceSchema = z.object({
 });
 
 const copyAttendancePeriodSchema = z.object({
-    timeTableMappingId: positiveIntegerId,
-    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
-    copyToTimeTableMappingId: z.union([
+    timeTableCellDateWiseId: positiveIntegerId,
+    copyToTimeTableCellDateWiseId: z.union([
         z.coerce.number().int().positive(),
         z.array(z.coerce.number().int().positive()).min(1),
     ]),
 });
 
 const copyAttendancePeriodQuerySchema = z.object({
-    timeTableMappingId: positiveIntegerId,
-    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
+    timeTableCellDateWiseId: positiveIntegerId,
 });
 
 const attendanceByDateQuerySchema = z.object({
@@ -78,30 +77,37 @@ const attendanceByDateQuerySchema = z.object({
     userId: positiveIntegerId,
 });
 
+// ---------------------------------------------------------------------------
+// 1. Mark / update — period key = timeTableCellDateWiseId
+// ---------------------------------------------------------------------------
 router.post('/', userAuth, validate({ body: addAttendanceSchema }), addAttendance);
+router.patch('/', userAuth, updateAttendance);
 
-
+// ---------------------------------------------------------------------------
+// 2. Copy period
+// ---------------------------------------------------------------------------
 router.post('/copyPeriod', userAuth, validate({ body: copyAttendancePeriodSchema }), copyAttendancePeriod);
 router.get('/copyPeriod', userAuth, validate({ query: copyAttendancePeriodQuerySchema }), getCopyAttendancePeriod);
 
-
+// ---------------------------------------------------------------------------
+// 3. List / lookup
+// ---------------------------------------------------------------------------
 router.get('/', userAuth, getAttendanceDetails);
-
-router.patch('/', userAuth, updateAttendance);
-
-// @deprecated
-router.post('/import', userAuth, importAttendance);
-
-router.post('/excelImport', userAuth, importBulkAttendance);
-
 router.get('/byDate', userAuth, validate({ query: attendanceByDateQuerySchema }), getAttendanceByDate);
-
 router.get("/previous-sessions/:userId", userAuth, getPreviousSessions);
+router.get('/sectionDates', userAuth, validate({ query: sectionDatesQuerySchema }), getEmployeeSectionDates);
 
+// ---------------------------------------------------------------------------
+// 4. Reports / batch
+// ---------------------------------------------------------------------------
 router.get("/studentAttendance/bulk", userAuth, validate({ query: bulkAttendanceReportSchema }), getStudentAttendanceReport);
-
 router.post('/getStudentAttendance/batch', userAuth, validate({ body: batchAttendanceSchema }), getStudentsBatchAttendance);
 
-router.get('/sectionDates', userAuth, validate({ query: sectionDatesQuerySchema }), getEmployeeSectionDates);
+// ---------------------------------------------------------------------------
+// 5. Import
+// ---------------------------------------------------------------------------
+// @deprecated
+router.post('/import', userAuth, importAttendance);
+router.post('/excelImport', userAuth, importBulkAttendance);
 
 export default router;

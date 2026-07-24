@@ -157,7 +157,7 @@ const lectureWindowOptionAttributes = [
     'startDate',
     'endDate',
     'subjectId',
-    'employeeId',
+    'userId',
     'sessionId',
 ];
 
@@ -167,16 +167,20 @@ const lessonOptionAttributes = [
     'description',
     'lectureWindowId',
     'subjectId',
-    'employeeId',
+    'userId',
     'sessionId',
 ];
 
-export async function getEmployeeOptionDetail(employeeId) {
+export async function getEmployeeOptionDetail({ userId, employeeId }) {
+    const where = userId != null
+        ? { userId: Number(userId) }
+        : { employeeId: Number(employeeId) };
+
     return scoped(model.employeeModel).findOne({
         raw: true,
         nest: true,
-        where: { employeeId: Number(employeeId) },
-        attributes: ['employeeId', 'employeeName', 'employeeCode', 'pickColor'],
+        where,
+        attributes: ['userId', 'employeeId', 'employeeName', 'employeeCode', 'pickColor'],
     });
 }
 
@@ -192,7 +196,7 @@ export async function getSubjectOptionDetail(subjectId) {
 export async function getLectureWindowOptionRows(filters) {
     const where = {
         academicYearId: Number(filters.academicYearId),
-        employeeId: Number(filters.employeeId),
+        userId: Number(filters.userId),
         subjectId: Number(filters.subjectId),
         startDate: { [Op.lte]: filters.date },
         endDate: { [Op.gte]: filters.date },
@@ -229,7 +233,7 @@ export async function getLectureWindowOptionDetail(lectureWindowId, academicYear
             {
                 model: model.employeeModel,
                 as: 'lectureWindowEmployee',
-                attributes: ['employeeId', 'employeeName', 'employeeCode', 'pickColor'],
+                attributes: ['userId', 'employeeId', 'employeeName', 'employeeCode', 'pickColor'],
             },
             {
                 model: model.sessionModel,

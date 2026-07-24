@@ -44,6 +44,18 @@ const teacherSubjectQuerySchema = z.object({
     term: optionalPositiveId,
 }).strict();
 
+// ---------------------------------------------------------------------------
+// 1. Date-wise schedule — time_table_cell_date_wise + teachers
+// ---------------------------------------------------------------------------
+router.get('/schedule', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), validate({ query: scheduleQuerySchema }), getTodayClassSchedule);
+router.get('/pastSchedule', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), validate({ query: scheduleQuerySchema }), getPastClassSchedules);
+router.get('/upcomingSchedule', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getUpcomingClassSchedules);
+router.get('/sectionDates', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), validate({ query: sectionDatesQuerySchema }), getEmployeeSectionDates);
+router.get('/sectionCounts', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getSectionCounts);
+
+// ---------------------------------------------------------------------------
+// 2. Week-cell subjects / courses (time_table_cell + teachers)
+// ---------------------------------------------------------------------------
 router.get(
     '/uniqueClassSectionSubjects',
     userAuth,
@@ -51,40 +63,21 @@ router.get(
     validate({ query: uniqueClassSectionSubjectsQuerySchema }),
     getUniqueClassSectionSubjects,
 );
-
-router.get('/schedule', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), validate({ query: scheduleQuerySchema }), getTodayClassSchedule);
-
-router.get('/sectionDates', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), validate({ query: sectionDatesQuerySchema }), getEmployeeSectionDates);
-
-router.get('/sectionCounts', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getSectionCounts);
-
-router.get('/pastSchedule', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), validate({ query: scheduleQuerySchema }), getPastClassSchedules);
-
-router.get('/upcomingSchedule', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getUpcomingClassSchedules);
-
-router.get('/courses', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getTeacherCourses);
-
 router.get('/coursesFromSchedule', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getTeacherSubjectsFromSchedule);
-
+router.get('/courses', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getTeacherCourses);
+router.get('/cellData', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getTeacherTimeTable);
+router.get('/subject', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), validate({ query: teacherSubjectQuerySchema }), getTeacherSubject);
 router.get('/evaluation', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getSubjectEvalution);
 
-router.get('/cellData', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getTeacherTimeTable);
-
-router.get('/subject', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), validate({ query: teacherSubjectQuerySchema }), getTeacherSubject);
-
+// ---------------------------------------------------------------------------
+// 3. Staff directory CRUD
+// ---------------------------------------------------------------------------
 router.get("/issuedBook", userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getBooksIssuedToEmployee);
-
 router.post('/addEmp', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY_ADD.value, null), addEmployee);
-
 router.get('/', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getAllEmployee);
-
 router.get('/:id', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getSingleEmployeeDetails);
-
 router.patch('/:id', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY_EDIT.value, null), updateEmployee);
-
 router.delete('/:id', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY_DELETE.value, null), deleteEmployeeDetail);
-
 router.post('/import', userAuth, checkAccess(PERMISSIONS.STAFF_PROFILES_IMPORT.value, null), importEmployeeData);
-
 
 export default router;
