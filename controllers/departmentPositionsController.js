@@ -90,13 +90,16 @@ export async function deleteDepartmentPosition(req, res) {
 
 export async function markDepartmentPositionVacant(req, res) {
     try {
-        const { departmentPositionId } = req.body;
+        const { userDepartmentPositionId } = req.body;
         const updatedBy = req.user.userId;
         const departmentPosition = await departmentPositionsService.markPositionVacant(
-            departmentPositionId,
+            userDepartmentPositionId,
             updatedBy,
         );
-        return SuccessResponse(res, 200, "Position marked vacant", departmentPosition);
+        if (!departmentPosition) {
+            return ErrorResponse(res, 404, "User department position not found");
+        }
+        return SuccessResponse(res, 200, "User unmapped from position", departmentPosition);
     } catch (error) {
         const status = /not found/i.test(error.message) ? 404 : 500;
         return ErrorResponse(res, status, "Internal Server Error", error.message);

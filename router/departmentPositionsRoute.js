@@ -86,7 +86,7 @@ const departmentIdQuerySchema = z.object({
 });
 
 const markDepartmentPositionVacantSchema = z.object({
-    departmentPositionId: positiveIntegerId,
+    userDepartmentPositionId: positiveIntegerId,
 });
 
 const addUserDepartmentPositionSchema = z.object({

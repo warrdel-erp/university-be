@@ -39,6 +39,7 @@ const positionListInclude = [
         model: model.userDepartmentPositionsModel,
         as: 'heads',
         attributes: { exclude: excludeMeta },
+        where: { status: 'ACTIVE' },
         required: false,
         include: [assigneeInclude],
     },
@@ -233,23 +234,31 @@ export async function setPositionVacant(departmentPositionId, isVacant, updatedB
     );
 }
 
-export async function markPositionVacant(departmentPositionId, updatedBy) {
-    const positionId = Number(departmentPositionId);
+export async function markPositionVacant(userDepartmentPositionId, updatedBy) {
+    const headId = Number(userDepartmentPositionId);
     const transaction = await sequelize.transaction();
     try {
+        const existing = await scoped(model.userDepartmentPositionsModel).findOne({
+            where: { userDepartmentPositionId: headId },
+            transaction,
+        });
+        if (!existing) {
+            await transaction.rollback();
+            return null;
+        }
+
         await scoped(model.userDepartmentPositionsModel).update(
             { status: 'INACTIVE', updatedBy },
             {
-                where: {
-                    departmentPositionId: positionId,
-                    status: 'ACTIVE',
-                },
+                where: { userDepartmentPositionId: headId },
                 transaction,
             },
         );
-        await setPositionVacant(positionId, true, updatedBy, transaction);
+
+        const activeCount = await countActiveHeads(existing.departmentPositionId, transaction);
+        await setPositionVacant(existing.departmentPositionId, activeCount === 0, updatedBy, transaction);
         await transaction.commit();
-        return getOrgPositionById(positionId);
+        return getOrgPositionById(existing.departmentPositionId);
     } catch (error) {
         await transaction.rollback();
         throw error;
@@ -285,7 +294,10 @@ export async function addHead(data) {
 export async function getHeadsByPositionId(departmentPositionId) {
     return scoped(model.userDepartmentPositionsModel).findAll({
         attributes: { exclude: excludeMeta },
-        where: { departmentPositionId: Number(departmentPositionId) },
+        where: {
+            departmentPositionId: Number(departmentPositionId),
+            status: 'ACTIVE',
+        },
         include: [assigneeInclude],
         order: [['userDepartmentPositionId', 'ASC']],
     });

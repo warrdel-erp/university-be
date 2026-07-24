@@ -94,12 +94,8 @@ export async function deleteOrgPosition(departmentPositionId) {
     return departmentPositionsRepository.deleteOrgPosition(departmentPositionId);
 }
 
-export async function markPositionVacant(departmentPositionId, updatedBy) {
-    const position = await departmentPositionsRepository.positionExists(departmentPositionId);
-    if (!position) {
-        throw new Error('departmentPosition not found');
-    }
-    return departmentPositionsRepository.markPositionVacant(departmentPositionId, updatedBy);
+export async function markPositionVacant(userDepartmentPositionId, updatedBy) {
+    return departmentPositionsRepository.markPositionVacant(userDepartmentPositionId, updatedBy);
 }
 
 export async function addHead(body, createdBy, updatedBy) {

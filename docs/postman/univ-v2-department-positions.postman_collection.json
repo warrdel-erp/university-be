@@ -654,7 +654,7 @@
                 }
               ]
             },
-            "description": "**GET /departmentPosition/**\n\n**Optional query**\n- `departmentId`, `employmentCategory`, `isVacant`\n\nIncludes department and heads."
+            "description": "**GET /departmentPosition/**\n\n**Optional query**\n- `departmentId`, `employmentCategory`, `isVacant`\n\nIncludes department and ACTIVE heads only."
           },
           "response": []
         },
@@ -683,7 +683,7 @@
                 "tree"
               ]
             },
-            "description": "**GET /departmentPosition/tree**\n\nReturns cascading hierarchy:\nInstitute -> Parent Departments (Academic vs Admin categories) -> Child Departments (nested via `parentDepartmentId`) -> Positions (level 1 only, sorted by sortOrder).\n\nEach position `users[]` entry includes `userDepartmentPositionId`, `userId`, `employeeId`, `name`, `status`, `joiningDate`, and `endDate`."
+            "description": "**GET /departmentPosition/tree**\n\nReturns cascading hierarchy:\nInstitute -> Parent Departments (Academic vs Admin categories) -> Child Departments (nested via `parentDepartmentId`) -> Positions (level 1 only, sorted by sortOrder).\n\nEach position `users[]` entry is ACTIVE only and includes `userDepartmentPositionId`, `userId`, `employeeId`, `name`, `status`, `joiningDate`, and `endDate`."
           },
           "response": []
         },
@@ -712,7 +712,7 @@
                 "chart"
               ]
             },
-            "description": "**GET /departmentPosition/chart**\n\nReturns hierarchical department tree with level 1 positions only per department (children notation)."
+            "description": "**GET /departmentPosition/chart**\n\nReturns hierarchical department tree with level 1 positions only per department (children notation). Each position includes ACTIVE users only."
           },
           "response": []
         },
@@ -748,7 +748,7 @@
                 }
               ]
             },
-            "description": "**GET /departmentPosition/departmentPositions**\n\nReturns a flat list of position objects mapped to a given departmentId."
+            "description": "**GET /departmentPosition/departmentPositions**\n\nReturns a flat list of position objects mapped to a given departmentId. Each position includes ACTIVE heads only."
           },
           "response": []
         },
@@ -784,7 +784,7 @@
                 }
               ]
             },
-            "description": "**GET /departmentPosition/single**\n\n**Required query**\n- `departmentPositionId` (int)"
+            "description": "**GET /departmentPosition/single**\n\n**Required query**\n- `departmentPositionId` (int)\n\nIncludes ACTIVE heads only."
           },
           "response": []
         },
@@ -857,19 +857,6 @@
         },
         {
           "name": "mark position vacant",
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const departmentPositionId = pm.collectionVariables.get('departmentPositionId');",
-                  "if (!departmentPositionId) throw new Error('departmentPositionId is not set. Create a position first.');",
-                  "pm.request.body.update(JSON.stringify({ departmentPositionId: Number(departmentPositionId) }, null, 2));"
-                ]
-              }
-            }
-          ],
           "request": {
             "auth": {
               "type": "bearer",
@@ -890,7 +877,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"departmentPositionId\": \"{{departmentPositionId}}\"\n}",
+              "raw": "{\n  \"userDepartmentPositionId\": {{userDepartmentPositionId}}\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -907,7 +894,7 @@
                 "markVacant"
               ]
             },
-            "description": "**POST /departmentPosition/markVacant**\n\n**Required**\n- `departmentPositionId`\n\nSets ACTIVE heads → INACTIVE and `isVacant = true`."
+            "description": "**POST /departmentPosition/markVacant**\n\n**Required body**\n- `userDepartmentPositionId` (int)\n\nSet collection variable `userDepartmentPositionId` (from add-head test script) before calling.\n\nUnmaps that user assignment (`status` → `INACTIVE`). Sets parent position `isVacant = true` only when no ACTIVE heads remain."
           },
           "response": []
         },
@@ -1066,7 +1053,7 @@
                 }
               ]
             },
-            "description": "**GET /departmentPosition/head**\n\n**Required query**\n- `departmentPositionId`"
+            "description": "**GET /departmentPosition/head**\n\n**Required query**\n- `departmentPositionId`\n\nReturns ACTIVE user department positions only."
           },
           "response": []
         },
