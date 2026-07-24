@@ -1746,6 +1746,50 @@ evalutionModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "subjectEv
 userModel.hasMany(evalutionModel, { foreignKey: "userId", as: "evalutions" });
 evalutionModel.belongsTo(userModel, { foreignKey: "userId", as: "user" });
 
+evalutionModel.belongsTo(employeeModel, {
+  foreignKey: "userId",
+  targetKey: "userId",
+  as: "evalutionEmployee",
+});
+employeeModel.hasMany(evalutionModel, {
+  foreignKey: "userId",
+  sourceKey: "userId",
+  as: "evalutionEmployeeRows",
+});
+
+jobModel.belongsTo(employeeModel, {
+  foreignKey: "userId",
+  targetKey: "userId",
+  as: "jobEmployee",
+});
+employeeModel.hasMany(jobModel, {
+  foreignKey: "userId",
+  sourceKey: "userId",
+  as: "jobEmployeeRows",
+});
+
+teacherSubstituteModel.belongsTo(employeeModel, {
+  foreignKey: "userId",
+  targetKey: "userId",
+  as: "employee",
+});
+employeeModel.hasMany(teacherSubstituteModel, {
+  foreignKey: "userId",
+  sourceKey: "userId",
+  as: "teacherSubstituteEmployeeRows",
+});
+
+teacherSubstituteModel.belongsTo(employeeModel, {
+  foreignKey: "substituteUserId",
+  targetKey: "userId",
+  as: "substituteEmployee",
+});
+employeeModel.hasMany(teacherSubstituteModel, {
+  foreignKey: "substituteUserId",
+  sourceKey: "userId",
+  as: "substituteTeacherAssignmentRows",
+});
+
 userModel.hasOne(employeeModel, {
   foreignKey: "userId",
   as: "employee",

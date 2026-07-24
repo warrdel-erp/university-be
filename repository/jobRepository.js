@@ -2,6 +2,47 @@ import * as model from "../models/index.js";
 import { Op, Sequelize } from "sequelize";
 import { scoped } from "../utility/scoped.js";
 
+const jobEmployeeInclude = {
+  model: model.employeeModel,
+  as: "jobEmployee",
+  attributes: ["employeeCode", "departmentId", "employmentType", "employeeName", "pickColor", "userId"],
+  required: false,
+};
+
+function mapJobUserShape(row) {
+  if (!row) {
+    return row;
+  }
+
+  const employee = row.jobEmployee;
+  const userPayload = employee
+    ? {
+        employeeCode: employee.employeeCode,
+        departmentId: employee.departmentId,
+        employmentType: employee.employmentType,
+        employeeName: employee.employeeName,
+        pickColor: employee.pickColor,
+      }
+    : null;
+
+  if (row.setDataValue) {
+    row.setDataValue("user", userPayload);
+    row.setDataValue("jobEmployee", undefined);
+  } else {
+    row.user = userPayload;
+    delete row.jobEmployee;
+  }
+
+  return row;
+}
+
+function mapJobRowsUserShape(rows) {
+  for (const row of rows) {
+    mapJobUserShape(row);
+  }
+  return rows;
+}
+
 export async function addJob(data) {
   try {
     return scoped(model.jobModel).create(data);
@@ -13,7 +54,7 @@ export async function addJob(data) {
 
 export async function getAllJobs() {
   try {
-    return scoped(model.jobModel).findAll({
+    const rows = await scoped(model.jobModel).findAll({
       where: { deletedAt: null },
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       include: [
@@ -22,10 +63,7 @@ export async function getAllJobs() {
           as: "jobType",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
         },
-        {
-          model: model.users, as: "user",
-          attributes: ["employeeCode", "departmentId", "employmentType", "employeeName", "pickColor"],
-        },
+        jobEmployeeInclude,
         {
           model: model.departmentModel,
           as: "departmentJobs",
@@ -43,6 +81,7 @@ export async function getAllJobs() {
         },
       ],
     });
+    return mapJobRowsUserShape(rows);
   } catch (error) {
     console.error("Error in getAllJobs:", error);
     throw new Error("Unable to fetch job list");
@@ -51,7 +90,7 @@ export async function getAllJobs() {
 
 export async function getSingleJob(jobId) {
   try {
-    return scoped(model.jobModel).findOne({
+    const row = await scoped(model.jobModel).findOne({
       where: { jobId, deletedAt: null },
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       include: [
@@ -60,10 +99,7 @@ export async function getSingleJob(jobId) {
           as: "jobType",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
         },
-        {
-          model: model.users, as: "user",
-          attributes: ["employeeCode", "departmentId", "employmentType", "employeeName", "pickColor"],
-        },
+        jobEmployeeInclude,
         {
           model: model.departmentModel,
           as: "departmentJobs",
@@ -81,6 +117,7 @@ export async function getSingleJob(jobId) {
         },
       ],
     });
+    return mapJobUserShape(row);
   } catch (error) {
     console.error("Error in getSingleJob:", error);
     throw new Error("Unable to fetch job details");
@@ -177,7 +214,7 @@ export async function getCalendarJobs(view, date) {
     end = new Date(year, month + 1, 0).toISOString().slice(0, 10);
   }
 
-  return scoped(model.jobModel).findAll({
+  const rows = await scoped(model.jobModel).findAll({
     where: {
       jobDate: { [Op.between]: [start, end] },
     },
@@ -188,10 +225,7 @@ export async function getCalendarJobs(view, date) {
         as: "jobType",
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       },
-      {
-        model: model.users, as: "user",
-        attributes: ["employeeCode", "departmentId", "employmentType", "employeeName", "pickColor"],
-      },
+      jobEmployeeInclude,
       {
         model: model.departmentModel,
         as: "departmentJobs",
@@ -213,6 +247,7 @@ export async function getCalendarJobs(view, date) {
       ["startTime", "ASC"],
     ],
   });
+  return mapJobRowsUserShape(rows);
 }
 
 export async function getFacultyCalendar(userId, start, end) {
@@ -306,10 +341,7 @@ export async function getFilteredJobs(filters) {
         as: "jobType",
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       },
-      {
-        model: model.users, as: "user",
-        attributes: ["employeeCode", "departmentId", "employmentType", "employeeName", "pickColor"],
-      },
+      jobEmployeeInclude,
       {
         model: model.departmentModel,
         as: "departmentJobs",
@@ -333,22 +365,23 @@ export async function getFilteredJobs(filters) {
     totalPages: Math.ceil(jobs.count / limit),
     page: Number(page),
     limit: Number(limit),
-    data: jobs.rows,
+    data: mapJobRowsUserShape(jobs.rows),
   };
 }
 
 export async function getJobData(filters, targetDate) {
-  return scoped(model.jobModel).findAll({
+  const rows = await scoped(model.jobModel).findAll({
     where: {
       jobDate: targetDate.toISOString().slice(0, 10),
       ...(filters.userId && { userId: filters.userId }),
       ...(filters.status && { status: filters.status }),
     },
     include: [
-      { model: model.users, as: "user" },
+      jobEmployeeInclude,
       { model: model.departmentModel, as: "departmentJobs" },
     ],
   });
+  return mapJobRowsUserShape(rows);
 }
 
 export async function fetchJobs(filters, fromDate, toDate) {
@@ -369,7 +402,7 @@ export async function fetchJobs(filters, fromDate, toDate) {
   const jobs = await scoped(model.jobModel).findAll({
     where,
     include: [
-      { model: model.users, as: "user" },
+      jobEmployeeInclude,
       { model: model.departmentModel, as: "departmentJobs" },
     ],
   });
@@ -377,7 +410,7 @@ export async function fetchJobs(filters, fromDate, toDate) {
   return jobs.map((j) => ({
     jobId: j.jobId,
     jobTitle: j.jobTitle,
-    faculty: j.facultyJobs?.employeeName,
+    faculty: j.jobEmployee?.employeeName,
     date: j.jobDate,
     startTime: j.startTime,
     endTime: j.endTime,
