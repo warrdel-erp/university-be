@@ -237,10 +237,10 @@ export async function updateDepartment(departmentId, departmentData) {
     }
 }
 
-export async function employeeDetail(departmentName) {
+export async function employeeDetail(departmentId) {
     try {
         return await scoped(model.employeeModel).findAll({
-            where: { department: departmentName },
+            where: { departmentId: Number(departmentId) },
             attributes: { exclude: excludeMeta },
         });
     } catch (error) {

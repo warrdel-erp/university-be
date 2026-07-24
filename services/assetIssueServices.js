@@ -38,7 +38,7 @@ function buildMemberDetailsFromEmployee(memberId, employeeRow) {
     memberType: "TEACHER",
     memberName: employee?.employeeName ?? null,
     employeeCode: employee?.employeeCode ?? null,
-    department: employee?.department ?? null,
+    departmentId: employee?.departmentId ?? null,
   };
 }
 

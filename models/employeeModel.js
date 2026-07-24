@@ -4,6 +4,8 @@ import campus from './campusModel.js';
 import institute from './instituteModel.js';
 import users from "./userModel.js";
 import role from "./roleModel.js";
+import department from "./departmentModel.js";
+
 const employeeModel = sequelize.define(
     'employee',
     {
@@ -64,9 +66,14 @@ const employeeModel = sequelize.define(
             allowNull: false,
             field: 'employee_Code',
         },
-        department: {
-            type: DataTypes.STRING,
+        departmentId: {
+            type: DataTypes.INTEGER,
             allowNull: true,
+            field: 'department_id',
+            references: {
+                model: department,
+                key: 'department_id',
+            },
         },
         employmentType: {
             type: DataTypes.STRING,

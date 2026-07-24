@@ -15,7 +15,7 @@ function studentMemberAttributes() {
 }
 
 function teacherMemberAttributes() {
-  return ["employeeId", "userId", "employeeName", "employeeCode", "department"];
+  return ["employeeId", "userId", "employeeName", "employeeCode", "departmentId"];
 }
 
 function inventoryListAttributes() {
@@ -675,7 +675,7 @@ export async function getLibraryBookInventoryIssueHistoryByInventoryId(inventory
           {
             model: model.employeeModel,
             as: "teacherMember",
-            attributes: ["employeeId", "userId", "employeeName", "employeeCode", "department"],
+            attributes: ["employeeId", "userId", "employeeName", "employeeCode", "departmentId"],
             required: false,
           },
         ],

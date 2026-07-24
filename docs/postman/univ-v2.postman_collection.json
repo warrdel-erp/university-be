@@ -18263,7 +18263,7 @@
           "id": "eaf1d2c6-c8eb-469d-9bf9-c78bed998743",
           "name": "unique ClassSection Subjects",
           "request": {
-            "description": "**GET /employee/uniqueClassSectionSubjects**\n\n**Query:** `employeeId` (required). Academic year from auth context.\n\n**Response:**\n- `employeeDetails`: `employeeId`, `employeeName`, `employeeCode`, `department`, `employmentType`, `pickColor`, `employeePhoto`, `userId`, `campusId`\n- `combinations[]`: `classSectionTermId`, `year`, `term`, `section`, `courseId`, `courseName`, `subjectId`, `subjectName`, `totalClasses`",
+            "description": "**GET /employee/uniqueClassSectionSubjects**\n\n**Query:** `employeeId` (required). Academic year from auth context.\n\n**Response:**\n- `employeeDetails`: `employeeId`, `employeeName`, `employeeCode`, `departmentId`, `departmentName`, `employmentType`, `pickColor`, `employeePhoto`, `userId`, `campusId`\n- `combinations[]`: `classSectionTermId`, `year`, `term`, `section`, `courseId`, `courseName`, `subjectId`, `subjectName`, `totalClasses`",
             "url": {
               "path": [
                 "employee",

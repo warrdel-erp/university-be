@@ -129,6 +129,12 @@ export async function getAllEmployee(campusId, instituteId, options = {}) {
                         },
                     ],
                 },
+                {
+                    model: model.departmentModel.unscoped(),
+                    as: 'employeeDepartment',
+                    attributes: ['departmentId', 'departmentName'],
+                    required: false,
+                },
             ],
         });
     } catch (error) {
@@ -422,6 +428,12 @@ export async function getSingleEmployeeDetails(employeeId) {
                             ]
                         },
                     ]
+                },
+                {
+                    model: model.departmentModel.unscoped(),
+                    as: 'employeeDepartment',
+                    attributes: ['departmentId', 'departmentName'],
+                    required: false,
                 },
             ],
             where: {
