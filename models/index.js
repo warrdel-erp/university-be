@@ -1103,6 +1103,17 @@ examAttendanceModel.belongsTo(studentModel, { foreignKey: "studentId", as: "stud
 vehicleModel.belongsTo(userModel, { foreignKey: "userId", as: "user" });
 userModel.hasMany(vehicleModel, { foreignKey: "userId", as: "vehicles" });
 
+vehicleModel.belongsTo(employeeModel, {
+  foreignKey: "userId",
+  targetKey: "userId",
+  as: "employee",
+});
+employeeModel.hasMany(vehicleModel, {
+  foreignKey: "userId",
+  sourceKey: "userId",
+  as: "vehicleEmployeeRows",
+});
+
 //assignVehicles
 
 assignVehicleModel.belongsTo(userModel, { foreignKey: "createdBy", as: "assignVehicleUser" });
