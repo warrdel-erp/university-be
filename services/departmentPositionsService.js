@@ -8,9 +8,6 @@ const EMPLOYMENT_CATEGORIES = new Set([
     'Leadership',
 ]);
 
-const HOLDER_TYPES = new Set(['PRIMARY', 'ACTING']);
-const HEAD_STATUSES = new Set(['ACTIVE', 'INACTIVE']);
-
 export async function addOrgPosition(body, createdBy, updatedBy) {
     if (!EMPLOYMENT_CATEGORIES.has(body.employmentCategory)) {
         throw new Error('Invalid employmentCategory');
@@ -109,30 +106,18 @@ export async function addHead(body, createdBy, updatedBy) {
         throw new Error('user not found');
     }
 
-    if (!HOLDER_TYPES.has(body.holderType)) {
-        throw new Error('Invalid holderType');
-    }
-
-    const status = body.status ?? 'ACTIVE';
-    if (!HEAD_STATUSES.has(status)) {
-        throw new Error('Invalid status');
-    }
-
-    if (status === 'ACTIVE') {
-        const duplicate = await departmentPositionsRepository.findActiveHead(
-            body.departmentPositionId,
-            body.userId,
-        );
-        if (duplicate) {
-            throw new Error('User already has an ACTIVE head assignment on this position');
-        }
+    const duplicate = await departmentPositionsRepository.findActiveHead(
+        body.departmentPositionId,
+        body.userId,
+    );
+    if (duplicate) {
+        throw new Error('User already has an ACTIVE head assignment on this position');
     }
 
     return departmentPositionsRepository.addHead({
         departmentPositionId: Number(body.departmentPositionId),
         userId: Number(body.userId),
-        holderType: body.holderType,
-        status,
+        status: 'ACTIVE',
         joiningDate: body.joiningDate ?? null,
         endDate: body.endDate ?? null,
         createdBy,
@@ -151,15 +136,9 @@ export async function updateHead(userDepartmentPositionId, body, updatedBy) {
         userId: _userId,
         universityId: _universityId,
         instituteId: _instituteId,
+        status: _status,
         ...rest
     } = body;
-
-    if (rest.holderType != null && !HOLDER_TYPES.has(rest.holderType)) {
-        throw new Error('Invalid holderType');
-    }
-    if (rest.status != null && !HEAD_STATUSES.has(rest.status)) {
-        throw new Error('Invalid status');
-    }
 
     return departmentPositionsRepository.updateHead(
         userDepartmentPositionId,

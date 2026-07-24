@@ -27,11 +27,6 @@ export async function createExamAttendance(data) {
 }
 
 export async function getAllExamAttendance(academicYearId) {
-    const studentWhere = {
-        ...buildScope(model.studentModel),
-        ...(academicYearId && { academicYearId }),
-    };
-
     return await scoped(model.examAttendanceModel).findAll({
         attributes: {
             exclude: ["createdAt", "updatedAt", "updatedBy", "createdBy"],
@@ -41,14 +36,23 @@ export async function getAllExamAttendance(academicYearId) {
                 model: model.studentModel,
                 as: "students",
                 attributes: ["student_id", "first_name", "last_name", "scholar_number"],
-                where: studentWhere,
+                where: buildScope(model.studentModel),
                 required: false,
             },
             {
                 model: model.examSetupModel,
                 as: "examSetup",
                 attributes: ["exam_setup_id", "exam_type_id", "subject_id"],
-                required: false,
+                required: true,
+                include: [
+                    {
+                        model: model.examTypeModel,
+                        as: "examType",
+                        attributes: ["examTypeId", "academicYearId"],
+                        required: true,
+                        where: { academicYearId: Number(academicYearId) },
+                    },
+                ],
             },
             {
                 model: model.userModel,
