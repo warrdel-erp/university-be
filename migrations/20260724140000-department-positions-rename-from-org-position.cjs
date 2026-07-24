@@ -9,17 +9,6 @@ async function tableExists(queryInterface, tableName, transaction) {
   return tables.length > 0;
 }
 
-async function columnExists(queryInterface, tableName, columnName, transaction) {
-  const [columns] = await queryInterface.sequelize.query(
-    `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-     WHERE TABLE_SCHEMA = DATABASE()
-       AND TABLE_NAME = ?
-       AND COLUMN_NAME = ?`,
-    { replacements: [tableName, columnName], transaction },
-  );
-  return columns.length > 0;
-}
-
 async function indexExists(queryInterface, tableName, indexName, transaction) {
   const indexes = await queryInterface.showIndex(tableName, { transaction });
   return indexes.some((idx) => idx.name === indexName);
@@ -53,15 +42,6 @@ module.exports = {
       }
 
       if (await tableExists(queryInterface, 'department_positions', transaction)) {
-        if (await columnExists(queryInterface, 'department_positions', 'org_position_id', transaction)) {
-          await queryInterface.renameColumn(
-            'department_positions',
-            'org_position_id',
-            'department_position_id',
-            { transaction },
-          );
-        }
-
         await renameIndexIfNeeded(
           queryInterface,
           'department_positions',
@@ -89,10 +69,7 @@ module.exports = {
     const transaction = await queryInterface.sequelize.transaction();
 
     try {
-      if (
-        (await tableExists(queryInterface, 'department_positions', transaction)) &&
-        !(await tableExists(queryInterface, 'org_position', transaction))
-      ) {
+      if (await tableExists(queryInterface, 'department_positions', transaction)) {
         await renameIndexIfNeeded(
           queryInterface,
           'department_positions',
@@ -107,16 +84,12 @@ module.exports = {
           'idx_org_position_tenant',
           transaction,
         );
+      }
 
-        if (await columnExists(queryInterface, 'department_positions', 'department_position_id', transaction)) {
-          await queryInterface.renameColumn(
-            'department_positions',
-            'department_position_id',
-            'org_position_id',
-            { transaction },
-          );
-        }
-
+      if (
+        (await tableExists(queryInterface, 'department_positions', transaction)) &&
+        !(await tableExists(queryInterface, 'org_position', transaction))
+      ) {
         await queryInterface.renameTable('department_positions', 'org_position', { transaction });
       }
 
