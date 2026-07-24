@@ -1,0 +1,1198 @@
+{
+  "info": {
+    "_postman_id": "c3d4e5f6-a7b8-9012-cdef-deptpositions01",
+    "name": "univ-v2-department-positions",
+    "description": "Department + department positions APIs.\n\n## Create order (no `/departmentStructure`)\n1. `POST /department/` — create dept (`parentDepartmentId`) OR insert parent above child (send `departmentId`)\n2. `POST /departmentPosition/` — position seat (`level`, optional `departmentId`)\n3. `POST /departmentPosition/head` — assign person (`userId`, PRIMARY/ACTING)\n4. `GET /departmentPosition/cards` | `/tree` | `/chart`\n\nDepartment hierarchy lives on `department.parentDepartmentId` (replaces removed `department_structure` table).\n\nPre-request scripts build JSON from collection variables.\n\nSet `baseurl` + `token`. Permissions: DEPARTMENT_*.\n\n**Removed:** `/departmentStructure`, `/subAccount`, `departmentStructureId`, `accountId`, `subAccountId`.\n\nDocs: `DEPARTMENT_POSITIONS_NAMING_CONVENTION.md`, `AFFECTED_APIS_DEPARTMENT_CONSOLIDATION.md`, `DEPARTMENT_POSITIONS_POSTMAN.md`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. department",
+      "description": "Org units — hierarchy via `parentDepartmentId` on `department` (replaces removed `/departmentStructure`).\n\n`POST /department/` Payload A: create (`parentDepartmentId`). Payload B: insert parent above child (`departmentId`).",
+      "item": [
+        {
+          "name": "create department (root)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.body.update(JSON.stringify({",
+                  "  departmentName: 'School of Engineering',",
+                  "  departmentCode: 'SOE',",
+                  "  alternateName: null,",
+                  "  description: null,",
+                  "  departmentType: 'Academic',",
+                  "  parentDepartmentId: null,",
+                  "}, null, 2));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const row = res.data;",
+                  "  if (row && row.departmentId) {",
+                  "    pm.collectionVariables.set('departmentId', String(row.departmentId));",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departmentName\": \"School of Engineering\",\n  \"departmentCode\": \"SOE\",\n  \"alternateName\": null,\n  \"description\": null,\n  \"departmentType\": \"Academic\",\n  \"parentDepartmentId\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/department/",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "department",
+                ""
+              ]
+            },
+            "description": "**POST /department/** — Payload A (create root dept)\n\n```json\n{\n  \"departmentName\": \"School of Engineering\",\n  \"departmentCode\": \"SOE\",\n  \"departmentType\": \"Academic\",\n  \"parentDepartmentId\": null\n}\n```\n\n**Required:** `departmentName`, `departmentType`\n**Optional:** `departmentCode`, `alternateName`, `description`, `parentDepartmentId` (null or omit for root)\n**Do not send:** `departmentId`\n\n**Response `data`:** single department object with `parentDepartmentId: null`."
+          },
+          "response": []
+        },
+        {
+          "name": "create parent above child (payload B)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const departmentId = pm.collectionVariables.get('departmentId');",
+                  "if (!departmentId) throw new Error('departmentId is not set. Run create department (root) first.');",
+                  "pm.request.body.update(JSON.stringify({",
+                  "  departmentId: Number(departmentId),",
+                  "  departmentName: 'Faculty of Engineering',",
+                  "  departmentCode: 'FOE',",
+                  "  alternateName: null,",
+                  "  description: null,",
+                  "  departmentType: 'Admin',",
+                  "}, null, 2));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const parent = res.data && res.data.parentDepartment;",
+                  "  if (parent && parent.departmentId) {",
+                  "    pm.collectionVariables.set('parentDepartmentId', String(parent.departmentId));",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departmentId\": \"{{departmentId}}\",\n  \"departmentName\": \"Faculty of Engineering\",\n  \"departmentCode\": \"FOE\",\n  \"alternateName\": null,\n  \"description\": null,\n  \"departmentType\": \"Admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/department/",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "department",
+                ""
+              ]
+            },
+            "description": "**POST /department/** — Payload B (insert parent above existing child)\n\n```json\n{\n  \"departmentId\": 12,\n  \"departmentName\": \"Faculty of Engineering\",\n  \"departmentCode\": \"FOE\",\n  \"departmentType\": \"Admin\"\n}\n```\n\n**Required:** `departmentId` (existing child), `departmentName`, `departmentType`\n**Do not send:** `parentDepartmentId`\n\n**Response `data`:**\n```json\n{\n  \"parentDepartment\": { \"departmentId\": 20, \"parentDepartmentId\": null, ... },\n  \"childDepartment\": { \"departmentId\": 12, \"parentDepartmentId\": 20 }\n}\n```\n\nEffect: `oldParent → newParent → child`."
+          },
+          "response": []
+        },
+        {
+          "name": "create department (under parent)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const parentDepartmentId = pm.collectionVariables.get('parentDepartmentId');",
+                  "if (!parentDepartmentId) throw new Error('parentDepartmentId is not set. Run create parent above child or set the variable.');",
+                  "pm.request.body.update(JSON.stringify({",
+                  "  departmentName: 'Computer Science',",
+                  "  departmentCode: 'CSE',",
+                  "  alternateName: null,",
+                  "  description: null,",
+                  "  departmentType: 'Academic',",
+                  "  parentDepartmentId: Number(parentDepartmentId),",
+                  "}, null, 2));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const row = res.data;",
+                  "  if (row && row.departmentId) {",
+                  "    pm.collectionVariables.set('departmentId', String(row.departmentId));",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departmentName\": \"Computer Science\",\n  \"departmentCode\": \"CSE\",\n  \"alternateName\": null,\n  \"description\": null,\n  \"departmentType\": \"Academic\",\n  \"parentDepartmentId\": \"{{parentDepartmentId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/department/",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "department",
+                ""
+              ]
+            },
+            "description": "**POST /department/** — Payload A (create child dept)\n\n```json\n{\n  \"departmentName\": \"Computer Science\",\n  \"departmentCode\": \"CSE\",\n  \"departmentType\": \"Academic\",\n  \"parentDepartmentId\": 5\n}\n```\n\n**Required:** `departmentName`, `departmentType`, `parentDepartmentId`\n**Do not send:** `departmentId`\n\n**Response `data`:** single department object with `parentDepartmentId` set."
+          },
+          "response": []
+        },
+        {
+          "name": "list departments",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/department/",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "department",
+                ""
+              ]
+            },
+            "description": "**GET /department/**\n\nReturns array in `data` with `parentDepartmentId` and nested `parentDepartment`."
+          },
+          "response": []
+        },
+        {
+          "name": "get single department",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/department/single?departmentId={{departmentId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "department",
+                "single"
+              ],
+              "query": [
+                {
+                  "key": "departmentId",
+                  "value": "{{departmentId}}",
+                  "description": "required"
+                }
+              ]
+            },
+            "description": "**GET /department/single**\n\n**Required query**\n- `departmentId` (int)"
+          },
+          "response": []
+        },
+        {
+          "name": "update department",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const departmentId = pm.collectionVariables.get('departmentId');",
+                  "if (!departmentId) throw new Error('departmentId is not set. Create a department first.');",
+                  "pm.request.body.update(JSON.stringify({",
+                  "  departmentId: Number(departmentId),",
+                  "  departmentName: 'School of Engineering',",
+                  "  departmentCode: 'SOE',",
+                  "  alternateName: null,",
+                  "  description: null,",
+                  "  departmentType: 'Academic',",
+                  "}, null, 2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departmentId\": \"{{departmentId}}\",\n  \"departmentName\": \"School of Engineering\",\n  \"departmentCode\": \"SOE\",\n  \"alternateName\": null,\n  \"description\": null,\n  \"departmentType\": \"Academic\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/department/",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "department",
+                ""
+              ]
+            },
+            "description": "**PATCH /department/**\n\n**Required:** `departmentId`\n\n**Optional:** `departmentName`, `departmentCode`, `alternateName`, `description`, `departmentType`, `parentDepartmentId` (int | null)"
+          },
+          "response": []
+        },
+        {
+          "name": "delete department",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/department/?departmentId={{departmentId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "department",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "departmentId",
+                  "value": "{{departmentId}}",
+                  "description": "required"
+                }
+              ]
+            },
+            "description": "**DELETE /department/**\n\n**Required query**\n- `departmentId` (int)\n\nHard delete. Allowed only when the department is not referenced by:\n- child departments (`parentDepartmentId`)\n- courses\n- jobs\n- staff\n- department positions\n\nReturns `400` if still in use."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. department positions",
+      "description": "Seats on the chart.",
+      "item": [
+        {
+          "name": "summary cards",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/departmentPosition/cards?changePeriod=week",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "departmentPosition",
+                "cards"
+              ],
+              "query": [
+                {
+                  "key": "changePeriod",
+                  "value": "week",
+                  "description": "optional — week (default) | month | year"
+                }
+              ]
+            },
+            "description": "**GET /departmentPosition/cards**\n\n### Query (optional)\n| Name | Type | Default | Values |\n|------|------|---------|--------|\n| `changePeriod` | string | `week` | `week`, `month`, `year` |\n\nCompares current counts vs baseline:\n- `week` — 7 days ago\n- `month` — same calendar date 1 month ago\n- `year` — same calendar date 1 year ago\n\nReturns:\n- `changePeriod` — period applied\n- `totalPositions` `{ count, changePercent }`\n- `filledPositions` `{ count, changePercent }`\n- `vacantPositions` `{ count, changePercent }`\n- `departments` `{ count, changePercent }` (`changePercent` always `null`)\n- `reportingLevels` `{ count, changePercent }` (`changePercent` always `null`)\n\n### `changePercent`\n\n`((currentCount - previousCount) / previousCount) × 100`\n\n- `previousCount` = positions that existed as of the cutoff (`createdAt <= cutoff`)\n- If `previousCount === 0` and `currentCount > 0` → `100`\n- If both `0` → `0`\n- Rounded to 1 decimal"
+          },
+          "response": []
+        },
+        {
+          "name": "create position (top / Chancellor)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function requireVar(name) {",
+                  "  const value = pm.collectionVariables.get(name);",
+                  "  if (!value) throw new Error(name + ' is not set. Run department create first.');",
+                  "  return Number(value);",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({",
+                  "  departmentId: requireVar('departmentId'),",
+                  "  positionName: 'Chancellor',",
+                  "  positionCode: 'CHN',",
+                  "  employmentCategory: 'Leadership',",
+                  "  reportingType: 'Direct',",
+                  "  isVacant: true,",
+                  "  level: 1,",
+                  "}, null, 2));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const row = res.data;",
+                  "  if (row && row.departmentPositionId) {",
+                  "    pm.collectionVariables.set('departmentPositionId', String(row.departmentPositionId));",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departmentId\": \"{{departmentId}}\",\n  \"positionName\": \"Chancellor\",\n  \"positionCode\": \"CHN\",\n  \"employmentCategory\": \"Leadership\",\n  \"reportingType\": \"Direct\",\n  \"isVacant\": true,\n  \"level\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/departmentPosition/",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "departmentPosition",
+                ""
+              ]
+            },
+            "description": "**POST /departmentPosition/** (top seat)\n\n**Required**\n- `positionName` (string)\n- `employmentCategory` — `Academic` | `Administrative` | `Support` | `Executive` | `Leadership`\n- `level` (int ≥ 1)\n\n**Optional**\n- `departmentId` (int | null)\n- `positionCode` (string | null)\n- `reportingType` (string | null)\n- `isVacant` (boolean) — default `true`"
+          },
+          "response": []
+        },
+        {
+          "name": "create position (second / Vice Chancellor)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function requireVar(name) {",
+                  "  const value = pm.collectionVariables.get(name);",
+                  "  if (!value) throw new Error(name + ' is not set. Run create position (top) first.');",
+                  "  return Number(value);",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({",
+                  "  departmentId: requireVar('departmentId'),",
+                  "  positionName: 'Vice Chancellor',",
+                  "  positionCode: 'VC',",
+                  "  employmentCategory: 'Leadership',",
+                  "  reportingType: 'Direct',",
+                  "  isVacant: true,",
+                  "  level: 2,",
+                  "}, null, 2));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const row = res.data;",
+                  "  if (row && row.departmentPositionId) {",
+                  "    pm.collectionVariables.set('departmentPositionId', String(row.departmentPositionId));",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departmentId\": \"{{departmentId}}\",\n  \"positionName\": \"Vice Chancellor\",\n  \"positionCode\": \"VC\",\n  \"employmentCategory\": \"Leadership\",\n  \"reportingType\": \"Direct\",\n  \"isVacant\": true,\n  \"level\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/departmentPosition/",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "departmentPosition",
+                ""
+              ]
+            },
+            "description": "**POST /departmentPosition/** (second seat)\n\nSame required keys as create top position."
+          },
+          "response": []
+        },
+        {
+          "name": "list positions",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/departmentPosition/?departmentId={{departmentId}}&employmentCategory=Leadership&isVacant=true",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "departmentPosition",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "departmentId",
+                  "value": "{{departmentId}}",
+                  "description": "optional"
+                },
+                {
+                  "key": "employmentCategory",
+                  "value": "Leadership",
+                  "description": "optional"
+                },
+                {
+                  "key": "isVacant",
+                  "value": "true",
+                  "description": "optional true|false"
+                }
+              ]
+            },
+            "description": "**GET /departmentPosition/**\n\n**Optional query**\n- `departmentId`, `employmentCategory`, `isVacant`\n\nIncludes department and ACTIVE heads only."
+          },
+          "response": []
+        },
+        {
+          "name": "get cascading tree",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/departmentPosition/tree",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "departmentPosition",
+                "tree"
+              ]
+            },
+            "description": "**GET /departmentPosition/tree**\n\nReturns cascading hierarchy:\nInstitute -> Parent Departments (Academic vs Admin categories) -> Child Departments (nested via `parentDepartmentId`) -> Positions (level 1 only, sorted by sortOrder).\n\nEach position `users[]` entry is ACTIVE only and includes `userDepartmentPositionId`, `userId`, `employeeId`, `name`, `status`, `joiningDate`, and `endDate`."
+          },
+          "response": []
+        },
+        {
+          "name": "get position chart",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/departmentPosition/chart",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "departmentPosition",
+                "chart"
+              ]
+            },
+            "description": "**GET /departmentPosition/chart**\n\nReturns hierarchical department tree with level 1 positions only per department (children notation). Each position includes ACTIVE users only."
+          },
+          "response": []
+        },
+        {
+          "name": "get department positions",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/departmentPosition/departmentPositions?departmentId={{departmentId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "departmentPosition",
+                "departmentPositions"
+              ],
+              "query": [
+                {
+                  "key": "departmentId",
+                  "value": "{{departmentId}}",
+                  "description": "required"
+                }
+              ]
+            },
+            "description": "**GET /departmentPosition/departmentPositions**\n\nReturns a flat list of position objects mapped to a given departmentId. Each position includes ACTIVE heads only."
+          },
+          "response": []
+        },
+        {
+          "name": "get single position",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/departmentPosition/single?departmentPositionId={{departmentPositionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "departmentPosition",
+                "single"
+              ],
+              "query": [
+                {
+                  "key": "departmentPositionId",
+                  "value": "{{departmentPositionId}}",
+                  "description": "required"
+                }
+              ]
+            },
+            "description": "**GET /departmentPosition/single**\n\n**Required query**\n- `departmentPositionId` (int)\n\nIncludes ACTIVE heads only."
+          },
+          "response": []
+        },
+        {
+          "name": "update position",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function requireVar(name) {",
+                  "  const value = pm.collectionVariables.get(name);",
+                  "  if (!value) throw new Error(name + ' is not set.');",
+                  "  return Number(value);",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({",
+                  "  departmentPositionId: requireVar('departmentPositionId'),",
+                  "  departmentId: requireVar('departmentId'),",
+                  "  positionName: 'Vice Chancellor',",
+                  "  positionCode: 'VC',",
+                  "  employmentCategory: 'Leadership',",
+                  "  reportingType: 'Direct',",
+                  "  level: 2,",
+                  "}, null, 2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departmentPositionId\": \"{{departmentPositionId}}\",\n  \"departmentId\": \"{{departmentId}}\",\n  \"positionName\": \"Vice Chancellor\",\n  \"positionCode\": \"VC\",\n  \"employmentCategory\": \"Leadership\",\n  \"reportingType\": \"Direct\",\n  \"level\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/departmentPosition/",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "departmentPosition",
+                ""
+              ]
+            },
+            "description": "**PATCH /departmentPosition/**\n\n**Required**\n- `departmentPositionId`\n\n**Optional**\n- `departmentId`, `positionName`, `positionCode`, `employmentCategory`, `reportingType`, `level`\n\nDo **not** send `isVacant` — use markVacant / head flows."
+          },
+          "response": []
+        },
+        {
+          "name": "mark position vacant",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userDepartmentPositionId\": {{userDepartmentPositionId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/departmentPosition/markVacant",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "departmentPosition",
+                "markVacant"
+              ]
+            },
+            "description": "**POST /departmentPosition/markVacant**\n\n**Required body**\n- `userDepartmentPositionId` (int)\n\nSet collection variable `userDepartmentPositionId` (from add-head test script) before calling.\n\nUnmaps that user assignment (`status` → `INACTIVE`). Sets parent position `isVacant = true` only when no ACTIVE heads remain."
+          },
+          "response": []
+        },
+        {
+          "name": "delete position",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/departmentPosition/?departmentPositionId={{departmentPositionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "departmentPosition",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "departmentPositionId",
+                  "value": "{{departmentPositionId}}",
+                  "description": "required"
+                }
+              ]
+            },
+            "description": "**DELETE /departmentPosition/**\n\n**Required query**\n- `departmentPositionId`\n\nSoft-deletes position and its heads."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. user department positions",
+      "description": "People on seats. ACTIVE head also drives DEPARTMENT RBAC scope via `department_positions.departmentId`.",
+      "item": [
+        {
+          "name": "add head",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "function requireVar(name) {",
+                  "  const value = pm.collectionVariables.get(name);",
+                  "  if (!value) throw new Error(name + ' is not set.');",
+                  "  return Number(value);",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({",
+                  "  departmentPositionId: requireVar('departmentPositionId'),",
+                  "  userId: requireVar('userId'),",
+                  "  holderType: 'PRIMARY',",
+                  "  status: 'ACTIVE',",
+                  "  joiningDate: '2024-01-01',",
+                  "  endDate: null,",
+                  "}, null, 2));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const row = res.data;",
+                  "  if (row && row.userDepartmentPositionId) {",
+                  "    pm.collectionVariables.set('userDepartmentPositionId', String(row.userDepartmentPositionId));",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departmentPositionId\": \"{{departmentPositionId}}\",\n  \"userId\": \"{{userId}}\",\n  \"holderType\": \"PRIMARY\",\n  \"status\": \"ACTIVE\",\n  \"joiningDate\": \"2024-01-01\",\n  \"endDate\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/departmentPosition/head",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "departmentPosition",
+                "head"
+              ]
+            },
+            "description": "**POST /departmentPosition/head**\n\n**Required**\n- `departmentPositionId` (int)\n- `userId` (int)\n- `holderType` — `PRIMARY` | `ACTING`\n\n**Optional**\n- `status` — `ACTIVE` | `INACTIVE` (default `ACTIVE`)\n- `joiningDate` (YYYY-MM-DD | null)\n- `endDate` (YYYY-MM-DD | null)\n\nACTIVE → `isVacant = false`. Rejects duplicate ACTIVE (position, user)."
+          },
+          "response": []
+        },
+        {
+          "name": "list heads",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/departmentPosition/head?departmentPositionId={{departmentPositionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "departmentPosition",
+                "head"
+              ],
+              "query": [
+                {
+                  "key": "departmentPositionId",
+                  "value": "{{departmentPositionId}}",
+                  "description": "required"
+                }
+              ]
+            },
+            "description": "**GET /departmentPosition/head**\n\n**Required query**\n- `departmentPositionId`\n\nReturns ACTIVE user department positions only."
+          },
+          "response": []
+        },
+        {
+          "name": "update head",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const userDepartmentPositionId = pm.collectionVariables.get('userDepartmentPositionId');",
+                  "if (!userDepartmentPositionId) throw new Error('userDepartmentPositionId is not set. Add a head first.');",
+                  "pm.request.body.update(JSON.stringify({",
+                  "  userDepartmentPositionId: Number(userDepartmentPositionId),",
+                  "  holderType: 'ACTING',",
+                  "  status: 'ACTIVE',",
+                  "  joiningDate: '2024-01-01',",
+                  "  endDate: null,",
+                  "}, null, 2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userDepartmentPositionId\": \"{{userDepartmentPositionId}}\",\n  \"holderType\": \"ACTING\",\n  \"status\": \"ACTIVE\",\n  \"joiningDate\": \"2024-01-01\",\n  \"endDate\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/departmentPosition/head",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "departmentPosition",
+                "head"
+              ]
+            },
+            "description": "**PATCH /departmentPosition/head**\n\n**Required**\n- `userDepartmentPositionId`\n\n**Optional**\n- `holderType`, `status`, `joiningDate`, `endDate`\n\nRecalculates parent `isVacant` after status change."
+          },
+          "response": []
+        },
+        {
+          "name": "delete head",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/departmentPosition/head?userDepartmentPositionId={{userDepartmentPositionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "departmentPosition",
+                "head"
+              ],
+              "query": [
+                {
+                  "key": "userDepartmentPositionId",
+                  "value": "{{userDepartmentPositionId}}",
+                  "description": "required"
+                }
+              ]
+            },
+            "description": "**DELETE /departmentPosition/head**\n\n**Required query**\n- `userDepartmentPositionId`\n\nSoft-delete. If no ACTIVE heads remain → `isVacant = true`."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseurl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "departmentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "parentDepartmentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "departmentPositionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userDepartmentPositionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "1",
+      "type": "string"
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 ---
+globs: docs/postman/univ-v2.postman_collection.json,docs/postman/univ-v2-department-positions.postman_collection.json
 globs: docs/postman/univ-v2.postman_collection.json, docs/postman/univ-v2-timetable.postman_collection.json
 alwaysApply: false
 ---

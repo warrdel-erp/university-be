@@ -10,6 +10,25 @@ const httpError = (message, statusCode = 400) => {
   return error;
 };
 
+async function mapInventoryUserIdToEmployeeId(inventoryData, transaction) {
+  if (!("userId" in inventoryData)) {
+    return inventoryData;
+  }
+
+  const { userId, ...rest } = inventoryData;
+
+  if (userId == null) {
+    return { ...rest, employeeId: null };
+  }
+
+  const employeeId = await libraryCreationService.findEmployeeIdByUserId(userId, transaction);
+  if (!employeeId) {
+    throw httpError("Employee not found for the given userId", 404);
+  }
+
+  return { ...rest, employeeId };
+}
+
 function parseIdArray(value) {
   const toValidIds = (nums) =>
     nums.map(Number).filter((n) => !Number.isNaN(n) && n > 0);
@@ -54,7 +73,9 @@ function formatInventoryForResponse(inv) {
     libraryRackId: inv.libraryRackId ?? null,
     libraryRowId: inv.libraryRowId ?? null,
     studentId: inv.studentId ?? null,
-    userId: inv.userId ?? null,
+    userId: inv.employeeDetailsBook
+      ? inv.employeeDetailsBook.userId
+      : null,
     issueDate: inv.issueDate ?? null,
     dueDate: inv.dueDate ?? null,
     status: inv.status ?? null,
@@ -655,7 +676,7 @@ async function addBookWithInventoryRecord(bookData, inventoryList, createdBy, up
         }
       }
 
-      await libraryCreationService.createInventory(
+      await createInventory(
         {
           libraryBookId: bookId,
           accessionNumber: accessionNumber ?? null,
@@ -813,11 +834,13 @@ export async function updateInventory(inventoryId, inventoryData, transaction) {
     inventoryData.userId = null;
   }
 
-  return await libraryCreationService.updateInventory(inventoryId, inventoryData, transaction);
+  const mapped = await mapInventoryUserIdToEmployeeId(inventoryData, transaction);
+  return await libraryCreationService.updateInventory(inventoryId, mapped, transaction);
 }
 
 export async function createInventory(inventoryData, transaction) {
-  return await libraryCreationService.createInventory(inventoryData, transaction);
+  const mapped = await mapInventoryUserIdToEmployeeId(inventoryData, transaction);
+  return await libraryCreationService.createInventory(mapped, transaction);
 }
 
 export async function deleteBook(libraryBookId) {
@@ -873,7 +896,7 @@ async function upsertInventoryRows(inventory, libraryBookId, userId, transaction
       continue;
     }
 
-    const created = await libraryCreationService.createInventory(
+    const created = await createInventory(
       {
         ...inv,
         libraryBookId: inv.libraryBookId ?? libraryBookId,

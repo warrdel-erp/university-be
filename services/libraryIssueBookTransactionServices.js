@@ -39,11 +39,17 @@ function assertUniqueInventoryIdsInPayload(inventoryItems) {
   }
 }
 
-function buildMemberInventoryFields(memberId, memberType) {
+async function buildMemberInventoryFields(memberId, memberType, transaction) {
   if (memberType === "STUDENT") {
-    return { studentId: memberId, userId: null };
+    return { studentId: memberId, employeeId: null };
   }
-  return { studentId: null, userId: memberId };
+
+  const employeeId = await repo.findEmployeeIdByUserId(memberId, transaction);
+  if (!employeeId) {
+    throw httpError("Teacher not found", 404);
+  }
+
+  return { studentId: null, employeeId };
 }
 
 async function assertMemberExists(memberId, memberType, transaction) {
@@ -88,7 +94,7 @@ async function issueInventoryCopies(
       status: "issued",
       issueDate,
       dueDate,
-      ...buildMemberInventoryFields(memberId, memberType),
+      ...(await buildMemberInventoryFields(memberId, memberType, transaction)),
     },
     transaction,
   );

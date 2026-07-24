@@ -53,6 +53,15 @@ const departmentModel = sequelize.define(
             allowNull: false,
             defaultValue: 'Academic',
         },
+        parentDepartmentId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'parent_department_id',
+            references: {
+                model: 'department',
+                key: 'department_id',
+            },
+        },
         description: {
             type: DataTypes.STRING,
             allowNull: true,

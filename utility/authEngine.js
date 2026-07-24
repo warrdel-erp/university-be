@@ -59,14 +59,14 @@ export const scopeResolvers = {
   },
 
   [SCOPES.DEPARTMENT]: async (userId) => {
-    const heads = await model.orgPositionHeadModel.findAll({
+    const heads = await model.userDepartmentPositionsModel.findAll({
       where: { userId, status: 'ACTIVE' },
-      attributes: ['orgPositionHeadId', 'orgPositionId'],
+      attributes: ['userDepartmentPositionId', 'departmentPositionId'],
       include: [
         {
-          model: model.orgPositionModel,
+          model: model.departmentPositionsModel,
           as: 'position',
-          attributes: ['orgPositionId', 'departmentId'],
+          attributes: ['departmentPositionId', 'departmentId'],
           required: true,
           where: { departmentId: { [Op.ne]: null } },
         },
