@@ -4,6 +4,10 @@ import users from "./userModel.js";
 import university from "./universityModel.js";
 import institute from "./instituteModel.js";
 import departmentPositions from "./departmentPositionsModel.js";
+import {
+    departmentPositionHolderTypes,
+    departmentPositionHeadStatuses,
+} from "../constant.js";
 
 const userDepartmentPositionsModel = sequelize.define(
     'user_department_positions',
@@ -33,12 +37,12 @@ const userDepartmentPositionsModel = sequelize.define(
             }
         },
         holderType: {
-            type: DataTypes.STRING,
+            type: DataTypes.ENUM(...departmentPositionHolderTypes),
             allowNull: false,
             field: 'holder_type'
         },
         status: {
-            type: DataTypes.STRING,
+            type: DataTypes.ENUM(...departmentPositionHeadStatuses),
             allowNull: false,
             defaultValue: 'ACTIVE',
             field: 'status'

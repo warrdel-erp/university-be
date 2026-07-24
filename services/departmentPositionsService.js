@@ -1,4 +1,8 @@
 import * as departmentPositionsRepository from '../repository/departmentPositionsRepository.js';
+import {
+    departmentPositionHolderTypes,
+    departmentPositionHeadStatuses,
+} from '../constant.js';
 
 const EMPLOYMENT_CATEGORIES = new Set([
     'Academic',
@@ -8,8 +12,8 @@ const EMPLOYMENT_CATEGORIES = new Set([
     'Leadership',
 ]);
 
-const HOLDER_TYPES = new Set(['PRIMARY', 'ACTING']);
-const HEAD_STATUSES = new Set(['ACTIVE', 'INACTIVE']);
+const HOLDER_TYPES = new Set(departmentPositionHolderTypes);
+const HEAD_STATUSES = new Set(departmentPositionHeadStatuses);
 
 export async function addOrgPosition(body, createdBy, updatedBy) {
     if (!EMPLOYMENT_CATEGORIES.has(body.employmentCategory)) {

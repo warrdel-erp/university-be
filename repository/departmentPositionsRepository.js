@@ -3,6 +3,12 @@ import { scoped } from '../utility/scoped.js';
 import { requestContext } from '../utility/requestContext.js';
 import sequelize from '../database/sequelizeConfig.js';
 import { Op } from 'sequelize';
+import {
+    decimalSubtract,
+    decimalDivide,
+    decimalMultiply,
+    decimalMax,
+} from '../utility/decimalMoney.js';
 
 const excludeMeta = ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'];
 
@@ -62,12 +68,13 @@ function resolveChangePeriod(changePeriod) {
 
 function calculateGrowthPercent(currentCount, previousCount) {
     if (previousCount === 0) {
-        if (currentCount > 0) {
-            return 100;
-        }
-        return 0;
+        return currentCount > 0 ? 100 : 0;
     }
-    return Math.round(((currentCount - previousCount) / previousCount) * 1000) / 10;
+
+    const delta = decimalSubtract(currentCount, previousCount);
+    const ratio = decimalDivide(delta, previousCount);
+    const percent = decimalMultiply(ratio, 100);
+    return decimalMax(percent, 0);
 }
 
 function growthCutoffDate(changePeriod) {
@@ -101,6 +108,26 @@ async function countPositionsCreatedBy(cutoff, where = {}) {
     });
 }
 
+async function countDepartmentsCreatedBy(cutoff) {
+    return scoped(model.departmentModel).count({
+        where: {
+            createdAt: { [Op.lte]: cutoff },
+        },
+    });
+}
+
+async function countReportingLevelsCreatedBy(cutoff) {
+    const rows = await scoped(model.departmentPositionsModel).findAll({
+        attributes: ['level'],
+        where: {
+            createdAt: { [Op.lte]: cutoff },
+        },
+        group: ['level'],
+        raw: true,
+    });
+    return rows.length;
+}
+
 export async function getOrgCardsStats(changePeriod) {
     const period = resolveChangePeriod(changePeriod);
     const cutoff = growthCutoffDate(period);
@@ -113,7 +140,9 @@ export async function getOrgCardsStats(changePeriod) {
         previousFilled,
         previousVacant,
         departments,
+        previousDepartments,
         levelRows,
+        previousReportingLevels,
     ] = await Promise.all([
         countPositions(),
         countPositions({ isVacant: false }),
@@ -122,11 +151,13 @@ export async function getOrgCardsStats(changePeriod) {
         countPositionsCreatedBy(cutoff, { isVacant: false }),
         countPositionsCreatedBy(cutoff, { isVacant: true }),
         scoped(model.departmentModel).count(),
+        countDepartmentsCreatedBy(cutoff),
         scoped(model.departmentPositionsModel).findAll({
             attributes: ['level'],
             group: ['level'],
             raw: true,
         }),
+        countReportingLevelsCreatedBy(cutoff),
     ]);
 
     const reportingLevels = levelRows.length;
@@ -147,11 +178,11 @@ export async function getOrgCardsStats(changePeriod) {
         },
         departments: {
             count: departments,
-            changePercent: null,
+            changePercent: calculateGrowthPercent(departments, previousDepartments),
         },
         reportingLevels: {
             count: reportingLevels,
-            changePercent: null,
+            changePercent: calculateGrowthPercent(reportingLevels, previousReportingLevels),
         },
     };
 }

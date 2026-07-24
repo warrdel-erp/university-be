@@ -20,6 +20,10 @@ import userAuth from '../middleware/authUser.js';
 import { validate } from '../utility/validation.js';
 import { checkAccess } from '../middleware/checkAccess.js';
 import { PERMISSIONS } from '../const/permissions.js';
+import {
+    departmentPositionHolderTypes,
+    departmentPositionHeadStatuses,
+} from '../constant.js';
 
 const router = Router();
 
@@ -47,8 +51,8 @@ const employmentCategoryEnum = z.enum([
     'Leadership',
 ]);
 
-const holderTypeEnum = z.enum(['PRIMARY', 'ACTING']);
-const headStatusEnum = z.enum(['ACTIVE', 'INACTIVE']);
+const holderTypeEnum = z.enum(departmentPositionHolderTypes);
+const headStatusEnum = z.enum(departmentPositionHeadStatuses);
 
 const optionalDateOnly = z.preprocess(
     emptyToUndefined,
