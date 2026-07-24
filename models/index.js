@@ -1555,13 +1555,14 @@ libraryIssueBookTransactionModel.belongsTo(studentModel, {
 
 employeeModel.hasMany(libraryIssueBookTransactionModel, {
   foreignKey: "memberId",
+  sourceKey: "userId",
   scope: { memberType: "TEACHER" },
   constraints: false,
   as: "libraryIssueBookTransactions",
 });
 libraryIssueBookTransactionModel.belongsTo(employeeModel, {
   foreignKey: "memberId",
-  targetKey: "employeeId",
+  targetKey: "userId",
   constraints: false,
   as: "teacherMember",
 });
@@ -1648,8 +1649,16 @@ libraryBookInventoryModel.belongsTo(libraryRowModel, { foreignKey: "library_row_
 studentModel.hasMany(libraryBookInventoryModel, { foreignKey: "student_id", as: "studentIssuedBooks" });
 libraryBookInventoryModel.belongsTo(studentModel, { foreignKey: "student_id", as: "studentDetailsBook" });
 
-employeeModel.hasMany(libraryBookInventoryModel, { foreignKey: "employeeId", as: "employeeIssuedBooks" });
-libraryBookInventoryModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "employeeDetailsBook" });
+employeeModel.hasMany(libraryBookInventoryModel, {
+  foreignKey: "employeeId",
+  sourceKey: "employeeId",
+  as: "employeeIssuedBooks",
+});
+libraryBookInventoryModel.belongsTo(employeeModel, {
+  foreignKey: "employeeId",
+  targetKey: "employeeId",
+  as: "employeeDetailsBook",
+});
 
 syllabusDetailsModel.hasMany(classSubjectMapperModel, { foreignKey: "subjectId", as: "classSubjects" });
 classSubjectMapperModel.belongsTo(syllabusDetailsModel, { foreignKey: "subjectId", as: "subjectDetails" });
