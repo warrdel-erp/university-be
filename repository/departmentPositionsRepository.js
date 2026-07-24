@@ -610,10 +610,9 @@ export async function getOrgTreeData() {
         };
     }
 
-    // ─── 5. Build roots ordered by departmentId (25, 26→57, 56) ───────────────
+    // ─── 5. Separate root departments into Academic and Admin categories ───────
     const academicDepts = [];
     const adminDepts = [];
-    const rootDepartments = [];
 
     for (const deptRecord of allDepts) {
         const deptId = deptRecord.departmentId;
@@ -624,17 +623,11 @@ export async function getOrgTreeData() {
         if (!node) continue;
 
         const deptType = (deptNodeMap.get(deptId)._type || '').toLowerCase();
-        const typedNode = {
-            ...node,
-            departmentType: deptNodeMap.get(deptId)._type,
-        };
-
-        rootDepartments.push(typedNode);
 
         if (deptType === 'academic') {
-            academicDepts.push(typedNode);
+            academicDepts.push(node);
         } else if (deptType === 'admin') {
-            adminDepts.push(typedNode);
+            adminDepts.push(node);
         }
     }
 
@@ -645,7 +638,6 @@ export async function getOrgTreeData() {
         institute: {
             instituteId:   institute.instituteId,
             instituteName: institute.instituteName,
-            departments: rootDepartments,
             categories: [
                 { categoryName: 'Academic', departments: academicDepts },
                 { categoryName: 'Admin',    departments: adminDepts    },
@@ -786,10 +778,9 @@ export async function getOrgChartData() {
         };
     }
 
-    // ─── 5. Build roots ordered by departmentId ───────────────────────────────
+    // ─── 5. Group root departments into Academic / Admin ─────────────────────
     const academicDepts = [];
     const adminDepts = [];
-    const rootDepartments = [];
 
     for (const deptRecord of allDepts) {
         const deptId = deptRecord.departmentId;
@@ -800,17 +791,11 @@ export async function getOrgChartData() {
         if (!node) continue;
 
         const deptType = (deptNodeMap.get(deptId)._type || '').toLowerCase();
-        const typedNode = {
-            ...node,
-            departmentType: deptNodeMap.get(deptId)._type,
-        };
-
-        rootDepartments.push(typedNode);
 
         if (deptType === 'academic') {
-            academicDepts.push(typedNode);
+            academicDepts.push(node);
         } else if (deptType === 'admin') {
-            adminDepts.push(typedNode);
+            adminDepts.push(node);
         }
     }
 
@@ -821,7 +806,6 @@ export async function getOrgChartData() {
         institute: {
             instituteId:   institute.instituteId,
             instituteName: institute.instituteName,
-            departments: rootDepartments,
             categories: [
                 { categoryName: 'Academic', departments: academicDepts },
                 { categoryName: 'Admin',    departments: adminDepts    },
