@@ -10,22 +10,17 @@
 | `PATCH` | `/department/` |
 | `DELETE` | `/department/?departmentId=` |
 | `GET` | `/department/byId?departmentId=` |
-| `POST` | `/departmentStructure/` |
-| `GET` | `/departmentStructure/` |
-| `GET` | `/departmentStructure/single?departmentStructureId=` |
-| `PATCH` | `/departmentStructure/` |
-| `DELETE` | `/departmentStructure/?departmentStructureId=` |
-| `GET` | `/org/cards` |
-| `POST` | `/org/` |
-| `GET` | `/org/` |
-| `GET` | `/org/single?orgPositionId=` |
-| `PATCH` | `/org/` |
-| `POST` | `/org/markVacant` |
-| `DELETE` | `/org/?orgPositionId=` |
-| `POST` | `/org/head` |
-| `GET` | `/org/head?orgPositionId=` |
-| `PATCH` | `/org/head` |
-| `DELETE` | `/org/head?orgPositionHeadId=` |
+| `GET` | `/departmentPosition/cards` |
+| `POST` | `/departmentPosition/` |
+| `GET` | `/departmentPosition/` |
+| `GET` | `/departmentPosition/single?departmentPositionId=` |
+| `PATCH` | `/departmentPosition/` |
+| `POST` | `/departmentPosition/markVacant` |
+| `DELETE` | `/departmentPosition/?departmentPositionId=` |
+| `POST` | `/departmentPosition/head` |
+| `GET` | `/departmentPosition/head?departmentPositionId=` |
+| `PATCH` | `/departmentPosition/head` |
+| `DELETE` | `/departmentPosition/head?userDepartmentPositionId=` |
 
 ---
 
@@ -43,15 +38,16 @@
 
 
 | `GET /department/roots` | removed — use `GET /department/` |
-| `POST /departmentStructure/` with `accountId`, `subAccountId`, `parentAccountId` | `POST /departmentStructure/` with `departmentId`, `parentDepartmentId` |
-| `POST /org/` with `subAccountId` | `POST /org/` with `departmentId` |
-| `GET /org/?subAccountId=` | `GET /org/?departmentId=` |
-| `PATCH /org/` with `subAccountId` | `PATCH /org/` with `departmentId` |
+| `POST /departmentStructure/` | removed — use `POST /department/` with `parentDepartmentId` |
+| `GET /departmentStructure/` | removed — use `GET /department/` |
+| `POST /departmentPosition/` with `subAccountId` | `POST /departmentPosition/` with `departmentId` |
+| `GET /departmentPosition/?subAccountId=` | `GET /departmentPosition/?departmentId=` |
+| `PATCH /departmentPosition/` with `subAccountId` | `PATCH /departmentPosition/` with `departmentId` |
 | `GET /calendar/department/:subAccountId` (jobs) | `GET /calendar/department/:departmentId` |
 | Course / intake body `subAccountId` | `departmentId` (legacy `subAccountId` alias may still work) |
 
 
-| `hod_departments` / HOD RBAC table | `POST /org/head` on position with `departmentId` |
+| `hod_departments` / HOD RBAC table | `POST /departmentPosition/head` on position with `departmentId` |
 
 ---
 
@@ -61,6 +57,5 @@
 |---|---|
 | `subAccountId` | `departmentId` |
 | `accountId` | removed (use `departmentId`) |
-| `parentAccountId` (structure) | `parentDepartmentId` |
-| `parentDepartmentId` (on `/department`) | removed |
+| `parentAccountId` (structure) | `parentDepartmentId` on `department` |
 | `departmentOrder` | removed |

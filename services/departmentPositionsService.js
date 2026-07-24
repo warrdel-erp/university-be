@@ -1,4 +1,4 @@
-import * as orgRepository from '../repository/orgRepository.js';
+import * as departmentPositionsRepository from '../repository/departmentPositionsRepository.js';
 
 const EMPLOYMENT_CATEGORIES = new Set([
     'Academic',
@@ -18,7 +18,7 @@ export async function addOrgPosition(body, createdBy, updatedBy) {
 
     let departmentId = null;
     if (body.departmentId != null) {
-        const department = await orgRepository.departmentExists(body.departmentId);
+        const department = await departmentPositionsRepository.departmentExists(body.departmentId);
         if (!department) {
             throw new Error('departmentId not found');
         }
@@ -27,7 +27,7 @@ export async function addOrgPosition(body, createdBy, updatedBy) {
 
     const isVacant = body.isVacant === undefined ? true : Boolean(body.isVacant);
 
-    return orgRepository.addOrgPosition({
+    return departmentPositionsRepository.addOrgPosition({
         departmentId,
         positionName: body.positionName,
         positionCode: body.positionCode ?? null,
@@ -42,20 +42,20 @@ export async function addOrgPosition(body, createdBy, updatedBy) {
 }
 
 export async function getOrgPositions(filters) {
-    return orgRepository.getOrgPositions(filters);
+    return departmentPositionsRepository.getOrgPositions(filters);
 }
 
 export async function getOrgCardsStats() {
-    return orgRepository.getOrgCardsStats();
+    return departmentPositionsRepository.getOrgCardsStats();
 }
 
-export async function getOrgPositionById(orgPositionId) {
-    return orgRepository.getOrgPositionById(orgPositionId);
+export async function getOrgPositionById(departmentPositionId) {
+    return departmentPositionsRepository.getOrgPositionById(departmentPositionId);
 }
 
-export async function updateOrgPosition(orgPositionId, body, updatedBy) {
+export async function updateOrgPosition(departmentPositionId, body, updatedBy) {
     const {
-        orgPositionId: _id,
+        departmentPositionId: _id,
         isVacant: _isVacant,
         universityId: _universityId,
         instituteId: _instituteId,
@@ -66,23 +66,11 @@ export async function updateOrgPosition(orgPositionId, body, updatedBy) {
         throw new Error('Invalid employmentCategory');
     }
 
-    if (rest.departmentStructureId !== undefined) {
-        if (rest.departmentStructureId == null) {
-            rest.departmentStructureId = null;
-        } else {
-            const structure = await orgRepository.departmentStructureExists(rest.departmentStructureId);
-            if (!structure) {
-                throw new Error('departmentStructure not found');
-            }
-            rest.departmentStructureId = Number(rest.departmentStructureId);
-        }
-    }
-
     if (rest.departmentId !== undefined) {
         if (rest.departmentId == null) {
             rest.departmentId = null;
         } else {
-            const department = await orgRepository.departmentExists(rest.departmentId);
+            const department = await departmentPositionsRepository.departmentExists(rest.departmentId);
             if (!department) {
                 throw new Error('departmentId not found');
             }
@@ -99,28 +87,28 @@ export async function updateOrgPosition(orgPositionId, body, updatedBy) {
     }
 
     rest.updatedBy = updatedBy;
-    return orgRepository.updateOrgPosition(orgPositionId, rest);
+    return departmentPositionsRepository.updateOrgPosition(departmentPositionId, rest);
 }
 
-export async function deleteOrgPosition(orgPositionId) {
-    return orgRepository.deleteOrgPosition(orgPositionId);
+export async function deleteOrgPosition(departmentPositionId) {
+    return departmentPositionsRepository.deleteOrgPosition(departmentPositionId);
 }
 
-export async function markPositionVacant(orgPositionId, updatedBy) {
-    const position = await orgRepository.positionExists(orgPositionId);
+export async function markPositionVacant(departmentPositionId, updatedBy) {
+    const position = await departmentPositionsRepository.positionExists(departmentPositionId);
     if (!position) {
-        throw new Error('orgPosition not found');
+        throw new Error('departmentPosition not found');
     }
-    return orgRepository.markPositionVacant(orgPositionId, updatedBy);
+    return departmentPositionsRepository.markPositionVacant(departmentPositionId, updatedBy);
 }
 
 export async function addHead(body, createdBy, updatedBy) {
-    const position = await orgRepository.positionExists(body.orgPositionId);
+    const position = await departmentPositionsRepository.positionExists(body.departmentPositionId);
     if (!position) {
-        throw new Error('orgPosition not found');
+        throw new Error('departmentPosition not found');
     }
 
-    const user = await orgRepository.userExists(body.userId);
+    const user = await departmentPositionsRepository.userExists(body.userId);
     if (!user) {
         throw new Error('user not found');
     }
@@ -135,8 +123,8 @@ export async function addHead(body, createdBy, updatedBy) {
     }
 
     if (status === 'ACTIVE') {
-        const duplicate = await orgRepository.findActiveHead(
-            body.orgPositionId,
+        const duplicate = await departmentPositionsRepository.findActiveHead(
+            body.departmentPositionId,
             body.userId,
         );
         if (duplicate) {
@@ -144,8 +132,8 @@ export async function addHead(body, createdBy, updatedBy) {
         }
     }
 
-    return orgRepository.addHead({
-        orgPositionId: Number(body.orgPositionId),
+    return departmentPositionsRepository.addHead({
+        departmentPositionId: Number(body.departmentPositionId),
         userId: Number(body.userId),
         holderType: body.holderType,
         status,
@@ -156,14 +144,14 @@ export async function addHead(body, createdBy, updatedBy) {
     });
 }
 
-export async function getHeadsByPositionId(orgPositionId) {
-    return orgRepository.getHeadsByPositionId(orgPositionId);
+export async function getHeadsByPositionId(departmentPositionId) {
+    return departmentPositionsRepository.getHeadsByPositionId(departmentPositionId);
 }
 
-export async function updateHead(orgPositionHeadId, body, updatedBy) {
+export async function updateHead(userDepartmentPositionId, body, updatedBy) {
     const {
-        orgPositionHeadId: _id,
-        orgPositionId: _positionId,
+        userDepartmentPositionId: _id,
+        departmentPositionId: _positionId,
         userId: _userId,
         universityId: _universityId,
         instituteId: _instituteId,
@@ -177,25 +165,25 @@ export async function updateHead(orgPositionHeadId, body, updatedBy) {
         throw new Error('Invalid status');
     }
 
-    return orgRepository.updateHead(
-        orgPositionHeadId,
+    return departmentPositionsRepository.updateHead(
+        userDepartmentPositionId,
         rest,
         updatedBy,
     );
 }
 
-export async function deleteHead(orgPositionHeadId, updatedBy) {
-    return orgRepository.deleteHead(orgPositionHeadId, updatedBy);
+export async function deleteHead(userDepartmentPositionId, updatedBy) {
+    return departmentPositionsRepository.deleteHead(userDepartmentPositionId, updatedBy);
 }
 
 export async function getOrgTreeData() {
-    return orgRepository.getOrgTreeData();
+    return departmentPositionsRepository.getOrgTreeData();
 }
 
 export async function getOrgChart() {
-    return orgRepository.getOrgChartData();
+    return departmentPositionsRepository.getOrgChartData();
 }
 
 export async function getPositionsByDepartment(departmentId) {
-    return orgRepository.getPositionsByDepartment(departmentId);
+    return departmentPositionsRepository.getPositionsByDepartment(departmentId);
 }

@@ -90,9 +90,8 @@ import floorModel from "./floorModel.js";
 import headModel from "./headModel.js";
 import departmentModel from "./departmentModel.js";
 import staffModel from "./staffModel.js";
-import departmentStructureModel from "./departmentStructureModel.js";
-import orgPositionModel from "./orgPositionModel.js";
-import orgPositionHeadModel from "./orgPositionHeadModel.js";
+import departmentPositionsModel from "./departmentPositionsModel.js";
+import userDepartmentPositionsModel from "./userDepartmentPositionsModel.js";
 import syllabusDetailsModel from "./syllabusDetailsModel.js";
 import syllabusModel from "./syllabusModel.js";
 import sessionModel from "./sessionModel.js";
@@ -1026,47 +1025,38 @@ departmentModel.hasMany(staffModel, { foreignKey: "department_id", as: "staffDep
 staffModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'staffEmployee' });
 employeeModel.hasMany(staffModel, { foreignKey: 'employee_id', as: 'staffEmployee' });
 
-departmentStructureModel.belongsTo(departmentModel, {
-  foreignKey: "department_id",
-  as: "department",
-});
-departmentModel.hasMany(departmentStructureModel, {
-  foreignKey: "department_id",
-  as: "departmentStructures",
-});
-
-departmentStructureModel.belongsTo(departmentModel, {
+departmentModel.belongsTo(departmentModel, {
   foreignKey: "parent_department_id",
   as: "parentDepartment",
 });
-departmentModel.hasMany(departmentStructureModel, {
+departmentModel.hasMany(departmentModel, {
   foreignKey: "parent_department_id",
-  as: "childDepartmentStructures",
+  as: "childDepartments",
 });
 
-orgPositionModel.belongsTo(departmentModel, {
+departmentPositionsModel.belongsTo(departmentModel, {
   foreignKey: "department_id",
   as: "department",
 });
-departmentModel.hasMany(orgPositionModel, {
+departmentModel.hasMany(departmentPositionsModel, {
   foreignKey: "department_id",
   as: "orgPositions",
 });
 
-orgPositionHeadModel.belongsTo(orgPositionModel, {
-  foreignKey: "org_position_id",
+userDepartmentPositionsModel.belongsTo(departmentPositionsModel, {
+  foreignKey: "department_position_id",
   as: "position",
 });
-orgPositionModel.hasMany(orgPositionHeadModel, {
-  foreignKey: "org_position_id",
+departmentPositionsModel.hasMany(userDepartmentPositionsModel, {
+  foreignKey: "department_position_id",
   as: "heads",
 });
 
-orgPositionHeadModel.belongsTo(userModel, {
+userDepartmentPositionsModel.belongsTo(userModel, {
   foreignKey: "user_id",
   as: "assignee",
 });
-userModel.hasMany(orgPositionHeadModel, {
+userModel.hasMany(userDepartmentPositionsModel, {
   foreignKey: "user_id",
   as: "orgHeads",
 });
@@ -1824,9 +1814,8 @@ export {
   headModel,
   departmentModel,
   staffModel,
-  departmentStructureModel,
-  orgPositionModel,
-  orgPositionHeadModel,
+  departmentPositionsModel,
+  userDepartmentPositionsModel,
   syllabusDetailsModel,
   syllabusModel,
   sessionModel,

@@ -28,23 +28,15 @@ const positionListInclude = [
         required: false,
         include: [
             {
-                model: model.departmentStructureModel,
-                as: 'departmentStructures',
-                attributes: { exclude: excludeMeta },
+                model: model.departmentModel,
+                as: 'parentDepartment',
+                attributes: ['departmentId', 'departmentName', 'departmentCode', 'departmentType'],
                 required: false,
-                include: [
-                    {
-                        model: model.departmentModel,
-                        as: 'parentDepartment',
-                        attributes: { exclude: excludeMeta },
-                        required: false,
-                    },
-                ],
             },
         ],
     },
     {
-        model: model.orgPositionHeadModel,
+        model: model.userDepartmentPositionsModel,
         as: 'heads',
         attributes: { exclude: excludeMeta },
         required: false,
@@ -53,7 +45,7 @@ const positionListInclude = [
 ];
 
 export async function addOrgPosition(data) {
-    return scoped(model.orgPositionModel).create(data);
+    return scoped(model.departmentPositionsModel).create(data);
 }
 
 const GROWTH_DAYS = 7;
@@ -75,11 +67,11 @@ function growthCutoffDate() {
 }
 
 async function countPositions(where = {}) {
-    return scoped(model.orgPositionModel).count({ where });
+    return scoped(model.departmentPositionsModel).count({ where });
 }
 
 async function countPositionsCreatedBy(cutoff, where = {}) {
-    return scoped(model.orgPositionModel).count({
+    return scoped(model.departmentPositionsModel).count({
         where: {
             ...where,
             createdAt: { [Op.lte]: cutoff },
@@ -107,7 +99,7 @@ export async function getOrgCardsStats() {
         countPositionsCreatedBy(cutoff, { isVacant: false }),
         countPositionsCreatedBy(cutoff, { isVacant: true }),
         scoped(model.departmentModel).count(),
-        scoped(model.orgPositionModel).findAll({
+        scoped(model.departmentPositionsModel).findAll({
             attributes: ['level'],
             group: ['level'],
             raw: true,
@@ -142,9 +134,6 @@ export async function getOrgCardsStats() {
 
 export async function getOrgPositions(filters = {}) {
     const where = {};
-    if (filters.departmentStructureId != null) {
-        where['$department.departmentStructures.departmentStructureId$'] = Number(filters.departmentStructureId);
-    }
     if (filters.departmentId != null) {
         where.departmentId = Number(filters.departmentId);
     }
@@ -155,42 +144,42 @@ export async function getOrgPositions(filters = {}) {
         where.isVacant = filters.isVacant === true || filters.isVacant === 'true';
     }
 
-    return scoped(model.orgPositionModel).findAll({
+    return scoped(model.departmentPositionsModel).findAll({
         attributes: { exclude: excludeMeta },
         where,
         include: positionListInclude,
         order: [
             ['sortOrder', 'ASC'],
-            ['orgPositionId', 'ASC'],
+            ['departmentPositionId', 'ASC'],
         ],
     });
 }
 
-export async function getOrgPositionById(orgPositionId) {
-    return scoped(model.orgPositionModel).findOne({
+export async function getOrgPositionById(departmentPositionId) {
+    return scoped(model.departmentPositionsModel).findOne({
         attributes: { exclude: excludeMeta },
-        where: { orgPositionId: Number(orgPositionId) },
+        where: { departmentPositionId: Number(departmentPositionId) },
         include: positionListInclude,
     });
 }
 
-export async function updateOrgPosition(orgPositionId, data) {
-    const [count] = await scoped(model.orgPositionModel).update(data, {
-        where: { orgPositionId: Number(orgPositionId) },
+export async function updateOrgPosition(departmentPositionId, data) {
+    const [count] = await scoped(model.departmentPositionsModel).update(data, {
+        where: { departmentPositionId: Number(departmentPositionId) },
     });
     return count > 0;
 }
 
-export async function deleteOrgPosition(orgPositionId) {
-    const positionId = Number(orgPositionId);
+export async function deleteOrgPosition(departmentPositionId) {
+    const positionId = Number(departmentPositionId);
     const transaction = await sequelize.transaction();
     try {
-        await scoped(model.orgPositionHeadModel).destroy({
-            where: { orgPositionId: positionId },
+        await scoped(model.userDepartmentPositionsModel).destroy({
+            where: { departmentPositionId: positionId },
             transaction,
         });
-        const deleted = await scoped(model.orgPositionModel).destroy({
-            where: { orgPositionId: positionId },
+        const deleted = await scoped(model.departmentPositionsModel).destroy({
+            where: { departmentPositionId: positionId },
             transaction,
         });
         await transaction.commit();
@@ -201,35 +190,35 @@ export async function deleteOrgPosition(orgPositionId) {
     }
 }
 
-export async function countActiveHeads(orgPositionId, transaction) {
-    return scoped(model.orgPositionHeadModel).count({
+export async function countActiveHeads(departmentPositionId, transaction) {
+    return scoped(model.userDepartmentPositionsModel).count({
         where: {
-            orgPositionId: Number(orgPositionId),
+            departmentPositionId: Number(departmentPositionId),
             status: 'ACTIVE',
         },
         transaction,
     });
 }
 
-export async function setPositionVacant(orgPositionId, isVacant, updatedBy, transaction) {
-    await scoped(model.orgPositionModel).update(
+export async function setPositionVacant(departmentPositionId, isVacant, updatedBy, transaction) {
+    await scoped(model.departmentPositionsModel).update(
         { isVacant, updatedBy },
         {
-            where: { orgPositionId: Number(orgPositionId) },
+            where: { departmentPositionId: Number(departmentPositionId) },
             transaction,
         },
     );
 }
 
-export async function markPositionVacant(orgPositionId, updatedBy) {
-    const positionId = Number(orgPositionId);
+export async function markPositionVacant(departmentPositionId, updatedBy) {
+    const positionId = Number(departmentPositionId);
     const transaction = await sequelize.transaction();
     try {
-        await scoped(model.orgPositionHeadModel).update(
+        await scoped(model.userDepartmentPositionsModel).update(
             { status: 'INACTIVE', updatedBy },
             {
                 where: {
-                    orgPositionId: positionId,
+                    departmentPositionId: positionId,
                     status: 'ACTIVE',
                 },
                 transaction,
@@ -244,11 +233,11 @@ export async function markPositionVacant(orgPositionId, updatedBy) {
     }
 }
 
-export async function findActiveHead(orgPositionId, userId) {
-    return scoped(model.orgPositionHeadModel).findOne({
+export async function findActiveHead(departmentPositionId, userId) {
+    return scoped(model.userDepartmentPositionsModel).findOne({
         attributes: { exclude: excludeMeta },
         where: {
-            orgPositionId: Number(orgPositionId),
+            departmentPositionId: Number(departmentPositionId),
             userId: Number(userId),
             status: 'ACTIVE',
         },
@@ -258,9 +247,9 @@ export async function findActiveHead(orgPositionId, userId) {
 export async function addHead(data) {
     const transaction = await sequelize.transaction();
     try {
-        const head = await scoped(model.orgPositionHeadModel).create(data, { transaction });
+        const head = await scoped(model.userDepartmentPositionsModel).create(data, { transaction });
         if (data.status === 'ACTIVE') {
-            await setPositionVacant(data.orgPositionId, false, data.updatedBy, transaction);
+            await setPositionVacant(data.departmentPositionId, false, data.updatedBy, transaction);
         }
         await transaction.commit();
         return head;
@@ -270,29 +259,29 @@ export async function addHead(data) {
     }
 }
 
-export async function getHeadsByPositionId(orgPositionId) {
-    return scoped(model.orgPositionHeadModel).findAll({
+export async function getHeadsByPositionId(departmentPositionId) {
+    return scoped(model.userDepartmentPositionsModel).findAll({
         attributes: { exclude: excludeMeta },
-        where: { orgPositionId: Number(orgPositionId) },
+        where: { departmentPositionId: Number(departmentPositionId) },
         include: [assigneeInclude],
-        order: [['orgPositionHeadId', 'ASC']],
+        order: [['userDepartmentPositionId', 'ASC']],
     });
 }
 
-export async function getHeadById(orgPositionHeadId) {
-    return scoped(model.orgPositionHeadModel).findOne({
+export async function getHeadById(userDepartmentPositionId) {
+    return scoped(model.userDepartmentPositionsModel).findOne({
         attributes: { exclude: excludeMeta },
-        where: { orgPositionHeadId: Number(orgPositionHeadId) },
+        where: { userDepartmentPositionId: Number(userDepartmentPositionId) },
         include: [assigneeInclude],
     });
 }
 
-export async function updateHead(orgPositionHeadId, data, updatedBy) {
-    const headId = Number(orgPositionHeadId);
+export async function updateHead(userDepartmentPositionId, data, updatedBy) {
+    const headId = Number(userDepartmentPositionId);
     const transaction = await sequelize.transaction();
     try {
-        const existing = await scoped(model.orgPositionHeadModel).findOne({
-            where: { orgPositionHeadId: headId },
+        const existing = await scoped(model.userDepartmentPositionsModel).findOne({
+            where: { userDepartmentPositionId: headId },
             transaction,
         });
         if (!existing) {
@@ -300,10 +289,10 @@ export async function updateHead(orgPositionHeadId, data, updatedBy) {
             return null;
         }
 
-        const [count] = await scoped(model.orgPositionHeadModel).update(
+        const [count] = await scoped(model.userDepartmentPositionsModel).update(
             { ...data, updatedBy },
             {
-                where: { orgPositionHeadId: headId },
+                where: { userDepartmentPositionId: headId },
                 transaction,
             },
         );
@@ -312,8 +301,8 @@ export async function updateHead(orgPositionHeadId, data, updatedBy) {
             return null;
         }
 
-        const activeCount = await countActiveHeads(existing.orgPositionId, transaction);
-        await setPositionVacant(existing.orgPositionId, activeCount === 0, updatedBy, transaction);
+        const activeCount = await countActiveHeads(existing.departmentPositionId, transaction);
+        await setPositionVacant(existing.departmentPositionId, activeCount === 0, updatedBy, transaction);
         await transaction.commit();
         return getHeadById(headId);
     } catch (error) {
@@ -322,12 +311,12 @@ export async function updateHead(orgPositionHeadId, data, updatedBy) {
     }
 }
 
-export async function deleteHead(orgPositionHeadId, updatedBy) {
-    const headId = Number(orgPositionHeadId);
+export async function deleteHead(userDepartmentPositionId, updatedBy) {
+    const headId = Number(userDepartmentPositionId);
     const transaction = await sequelize.transaction();
     try {
-        const existing = await scoped(model.orgPositionHeadModel).findOne({
-            where: { orgPositionHeadId: headId },
+        const existing = await scoped(model.userDepartmentPositionsModel).findOne({
+            where: { userDepartmentPositionId: headId },
             transaction,
         });
         if (!existing) {
@@ -335,8 +324,8 @@ export async function deleteHead(orgPositionHeadId, updatedBy) {
             return false;
         }
 
-        const deleted = await scoped(model.orgPositionHeadModel).destroy({
-            where: { orgPositionHeadId: headId },
+        const deleted = await scoped(model.userDepartmentPositionsModel).destroy({
+            where: { userDepartmentPositionId: headId },
             transaction,
         });
         if (deleted === 0) {
@@ -344,21 +333,14 @@ export async function deleteHead(orgPositionHeadId, updatedBy) {
             return false;
         }
 
-        const activeCount = await countActiveHeads(existing.orgPositionId, transaction);
-        await setPositionVacant(existing.orgPositionId, activeCount === 0, updatedBy, transaction);
+        const activeCount = await countActiveHeads(existing.departmentPositionId, transaction);
+        await setPositionVacant(existing.departmentPositionId, activeCount === 0, updatedBy, transaction);
         await transaction.commit();
         return true;
     } catch (error) {
         await transaction.rollback();
         throw error;
     }
-}
-
-export async function departmentStructureExists(departmentStructureId) {
-    return scoped(model.departmentStructureModel).findOne({
-        attributes: ['departmentStructureId'],
-        where: { departmentStructureId: Number(departmentStructureId) },
-    });
 }
 
 export async function departmentExists(departmentId) {
@@ -368,10 +350,10 @@ export async function departmentExists(departmentId) {
     });
 }
 
-export async function positionExists(orgPositionId) {
-    return scoped(model.orgPositionModel).findOne({
-        attributes: ['orgPositionId'],
-        where: { orgPositionId: Number(orgPositionId) },
+export async function positionExists(departmentPositionId) {
+    return scoped(model.departmentPositionsModel).findOne({
+        attributes: ['departmentPositionId'],
+        where: { departmentPositionId: Number(departmentPositionId) },
     });
 }
 
@@ -396,7 +378,7 @@ export async function getOrgTreeData() {
     //   allDepts    → every department + its positions + active position holders (users)
     //   allStructures → parent–child edges: which department belongs under which parent
     //
-    const [university, institute, allDepts, allStructures] = await Promise.all([
+    const [university, institute, allDepts, allDeptParents] = await Promise.all([
 
         // University (name + id only)
         scoped(model.universityModel).findOne({
@@ -416,22 +398,23 @@ export async function getOrgTreeData() {
             attributes: ['departmentId', 'departmentName', 'departmentCode', 'departmentType'],
             order: [
                 ['departmentName', 'ASC'],
-                [{ model: model.orgPositionModel, as: 'orgPositions' }, 'level',        'ASC'],
-                [{ model: model.orgPositionModel, as: 'orgPositions' }, 'sortOrder',    'ASC'],
-                [{ model: model.orgPositionModel, as: 'orgPositions' }, 'positionName', 'ASC'],
+                [{ model: model.departmentPositionsModel, as: 'orgPositions' }, 'level',        'ASC'],
+                [{ model: model.departmentPositionsModel, as: 'orgPositions' }, 'sortOrder',    'ASC'],
+                [{ model: model.departmentPositionsModel, as: 'orgPositions' }, 'positionName', 'ASC'],
             ],
             include: [
                 {
-                    model: model.orgPositionModel,
+                    model: model.departmentPositionsModel,
                     as: 'orgPositions',
-                    attributes: ['orgPositionId', 'positionName', 'positionCode', 'level'],
-                    required: false,                         // LEFT JOIN – include depts with no positions
+                    attributes: ['departmentPositionId', 'positionName', 'positionCode', 'level'],
+                    where: { level: 1 },
+                    required: false,
                     include: [
                         {
-                            model: model.orgPositionHeadModel,
+                            model: model.userDepartmentPositionsModel,
                             as: 'heads',
                             where: { status: 'ACTIVE' },    // only currently active holders
-                            attributes: ['orgPositionHeadId'],
+                            attributes: ['userDepartmentPositionId'],
                             required: false,                // LEFT JOIN – include positions with no active holder
                             include: [
                                 {
@@ -456,27 +439,20 @@ export async function getOrgTreeData() {
 
         // Department structure edges (child dept → parent dept)
         // Fetched separately to avoid JOIN multiplication on the main departments query
-        scoped(model.departmentStructureModel).findAll({
+        scoped(model.departmentModel).findAll({
             attributes: ['departmentId', 'parentDepartmentId'],
-            raw: true
-        })
+            raw: true,
+        }),
     ]);
 
-    // ─── 2. Build hierarchy lookup structures ─────────────────────────────────
-    //
-    //   parentChildrenMap  Map<parentId, childId[]>   – parent → its direct children
-    //   childDeptIdSet     Set<childId>               – all dept IDs that have a parent
-    //                                                   (root depts will NOT be in this set)
-    //
-    const parentChildrenMap = new Map();  // Map<Number, Number[]>
-    const childDeptIdSet    = new Set();  // Set<Number>
+    const parentChildrenMap = new Map();
+    const childDeptIdSet = new Set();
 
-    for (const structure of allStructures) {
-        // A null/zero parentDepartmentId means this dept is a root – skip it
-        if (!structure.parentDepartmentId) continue;
+    for (const dept of allDeptParents) {
+        if (!dept.parentDepartmentId) continue;
 
-        const childId  = Number(structure.departmentId);
-        const parentId = Number(structure.parentDepartmentId);
+        const childId = Number(dept.departmentId);
+        const parentId = Number(dept.parentDepartmentId);
 
         childDeptIdSet.add(childId);
 
@@ -498,9 +474,12 @@ export async function getOrgTreeData() {
         // Convert Sequelize model instance to a plain JS object for easy property access
         const dept = deptRecord.get({ plain: true });
 
-        // Shape positions for this department
+        // Shape positions for this department (level 1 only)
         const positions = [];
         for (const pos of (dept.orgPositions || [])) {
+            if (Number(pos.level) !== 1) {
+                continue;
+            }
 
             // Shape users (active holders of this position)
             const users = [];
@@ -516,7 +495,7 @@ export async function getOrgTreeData() {
             }
 
             positions.push({
-                orgPositionId: pos.orgPositionId,
+                departmentPositionId: pos.departmentPositionId,
                 positionName:  pos.positionName,
                 positionCode:  pos.positionCode,
                 level:         pos.level,
@@ -610,7 +589,7 @@ export async function getOrgChartData() {
 
     // ─── 1. Fetch all data in parallel ───────────────────────────────────────
     //   Same parallel pattern as getOrgTreeData, but only id + name fields needed
-    const [university, institute, allDepts, allStructures] = await Promise.all([
+    const [university, institute, allDepts, allDeptParents] = await Promise.all([
 
         scoped(model.universityModel).findOne({
             attributes: ['universityId', 'universityName'],
@@ -627,21 +606,22 @@ export async function getOrgChartData() {
             attributes: ['departmentId', 'departmentName', 'departmentType'],
             order: [
                 ['departmentName', 'ASC'],
-                [{ model: model.orgPositionModel, as: 'orgPositions' }, 'level',     'ASC'],
-                [{ model: model.orgPositionModel, as: 'orgPositions' }, 'sortOrder', 'ASC'],
+                [{ model: model.departmentPositionsModel, as: 'orgPositions' }, 'level',     'ASC'],
+                [{ model: model.departmentPositionsModel, as: 'orgPositions' }, 'sortOrder', 'ASC'],
             ],
             include: [
                 {
-                    model: model.orgPositionModel,
+                    model: model.departmentPositionsModel,
                     as: 'orgPositions',
-                    attributes: ['orgPositionId', 'positionName', 'level', 'isVacant'],
+                    attributes: ['departmentPositionId', 'positionName', 'level', 'isVacant'],
+                    where: { level: 1 },
                     required: false,
                     include: [
                         {
-                            model: model.orgPositionHeadModel,
+                            model: model.userDepartmentPositionsModel,
                             as: 'heads',
                             where: { status: 'ACTIVE' },
-                            attributes: ['orgPositionHeadId'],
+                            attributes: ['userDepartmentPositionId'],
                             required: false,
                             include: [
                                 {
@@ -664,22 +644,20 @@ export async function getOrgChartData() {
             ]
         }),
 
-        // Structure edges (child → parent) – fetched separately to avoid JOIN duplication
-        scoped(model.departmentStructureModel).findAll({
+        scoped(model.departmentModel).findAll({
             attributes: ['departmentId', 'parentDepartmentId'],
-            raw: true
-        })
+            raw: true,
+        }),
     ]);
 
-    // ─── 2. Build hierarchy lookup structures ─────────────────────────────────
-    const parentChildrenMap = new Map();  // Map<parentId, childId[]>
-    const childDeptIdSet    = new Set();  // Set<childId> – O(1) root detection
+    const parentChildrenMap = new Map();
+    const childDeptIdSet = new Set();
 
-    for (const structure of allStructures) {
-        if (!structure.parentDepartmentId) continue;
+    for (const dept of allDeptParents) {
+        if (!dept.parentDepartmentId) continue;
 
-        const childId  = Number(structure.departmentId);
-        const parentId = Number(structure.parentDepartmentId);
+        const childId = Number(dept.departmentId);
+        const parentId = Number(dept.parentDepartmentId);
 
         childDeptIdSet.add(childId);
 
@@ -695,9 +673,12 @@ export async function getOrgChartData() {
     for (const deptRecord of allDepts) {
         const dept = deptRecord.get({ plain: true });
 
-        // Shape positions – all levels (1, 2, 3...) sorted by level ASC
+        // Shape positions — level 1 only
         const positions = [];
         for (const pos of (dept.orgPositions || [])) {
+            if (Number(pos.level) !== 1) {
+                continue;
+            }
 
             const users = [];
             for (const head of (pos.heads || [])) {
@@ -711,7 +692,7 @@ export async function getOrgChartData() {
             }
 
             positions.push({
-                orgPositionId: pos.orgPositionId,
+                departmentPositionId: pos.departmentPositionId,
                 positionName:  pos.positionName,
                 level:         pos.level,
                 isVacant:      pos.isVacant,
@@ -783,12 +764,12 @@ export async function getOrgChartData() {
 }
 
 export async function getPositionsByDepartment(departmentId) {
-    return scoped(model.orgPositionModel).findAll({
+    return scoped(model.departmentPositionsModel).findAll({
         where: {
             departmentId: Number(departmentId)
         },
         attributes: [
-            'orgPositionId',
+            'departmentPositionId',
             'positionName',
             'positionCode',
             'level',
@@ -799,14 +780,14 @@ export async function getPositionsByDepartment(departmentId) {
         ],
         include: [
             {
-                model: model.orgPositionHeadModel,
+                model: model.userDepartmentPositionsModel,
                 as: 'heads',
                 required: false,
                 where: {
                     status: 'ACTIVE'
                 },
                 attributes: [
-                    'orgPositionHeadId',
+                    'userDepartmentPositionId',
                     'holderType',
                     'status',
                     'joiningDate',

@@ -5,14 +5,22 @@ export async function addDepartment(req, res) {
   const createdBy = req.user.userId;
   const updatedBy = req.user.userId;
   try {
-    const departmentDetails = await DepartmentCreation.addDepartment(
+    const result = await DepartmentCreation.addDepartment(
       req.body,
       createdBy,
       updatedBy,
     );
-    return SuccessResponse(res, 200, "Data added successfully", departmentDetails);
+
+    if (req.body.departmentId != null) {
+      return SuccessResponse(res, 200, 'Parent department created successfully', result);
+    }
+
+    return SuccessResponse(res, 200, 'Data added successfully', result);
   } catch (error) {
-    return ErrorResponse(res, 500, "Internal Server Error", error.message);
+    if (error.message === 'Department not found') {
+      return ErrorResponse(res, 404, error.message);
+    }
+    return ErrorResponse(res, 500, 'Internal Server Error', error.message);
   }
 }
 
