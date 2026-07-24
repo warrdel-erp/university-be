@@ -1199,7 +1199,7 @@ export async function getTimeTableMappingDetail(timeTableRoutineId) {
       {
         model: model.teacherSubjectMappingModel,
         as: 'timeTableTeacherSubject',
-        attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updated', 'employee_id', 'subject_id'] },
+        attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updated', 'subject_id'] },
         include: [
           {
             model: model.employeeModel,
@@ -1330,7 +1330,7 @@ export async function getTimeTableCellData(courseId, classSectionTermId) {
           {
             model: model.teacherSubjectMappingModel,
             as: 'timeTableTeacherSubject',
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updated", "employee_id", "subject_id"] },
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updated", "subject_id"] },
             include: [
               {
                 model: model.employeeModel,

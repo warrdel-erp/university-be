@@ -10,14 +10,9 @@ async function resolveSubstituteEmployee(substituteUserId, universityId, transac
         throw new Error("Substitute employee not found");
     }
 
-    const resolvedUniversityId = universityId ?? substituteEmployee.universityId;
-    if (Number(resolvedUniversityId) !== Number(substituteEmployee.universityId)) {
-        throw new Error("universityId does not match substitute employee");
-    }
-
     return {
         substituteUserId,
-        universityId: resolvedUniversityId,
+        universityId,
     };
 }
 

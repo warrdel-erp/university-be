@@ -6,9 +6,9 @@ import {
     teacherSubjectWhere,
 } from './teacherSubjectMappingRepository.js';
 
-async function assertScopedEmployee(employeeId, options = {}) {
+async function assertScopedEmployee(userId, options = {}) {
     return scoped(model.employeeModel).findOne({
-        where: { userId: employeeId },
+        where: { userId: Number(userId) },
         attributes: ['userId', 'employeeId'],
         transaction: options.transaction,
     });
@@ -59,7 +59,7 @@ export async function updateEmployee(employeeId, data, transaction) {
 
         const result = await scoped(model.employeeModel).update(
             data,
-            { where: { userId: employeeId }, transaction },
+            { where: { userId: existing.userId }, transaction },
         );
         return result;
     } catch (error) {
@@ -447,9 +447,9 @@ export async function getSingleEmployeeDetails(employeeId) {
     };
 };
 
-async function assertEmployeeNotLinked(employeeId) {
+async function assertEmployeeNotLinked(userId) {
     const subjectLinks = await scoped(model.teacherSubjectMappingModel).count({
-        where: { employeeId },
+        where: { userId: Number(userId) },
     });
 
     if (subjectLinks > 0) {
@@ -466,10 +466,10 @@ export async function deleteEmployeeDetail(employeeId) {
             throw new Error('Employee not found');
         }
 
-        await assertEmployeeNotLinked(employeeId);
+        await assertEmployeeNotLinked(existing.userId);
 
         await scoped(model.employeeModel).destroy({
-            where: { userId: employeeId },
+            where: { userId: existing.userId },
             individualHooks: true,
         });
         return { message: 'employee deleted successfully' };
@@ -537,7 +537,7 @@ export async function getTeacherSubject(employeeId, filters = {}) {
         return scoped(model.teacherSubjectMappingModel).findAll({
             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
             where: {
-                employeeId,
+                userId: employee.userId,
                 ...teacherSubjectWhere(subjectIds),
             },
             include: [
@@ -559,7 +559,7 @@ export async function getTeacherSubject(employeeId, filters = {}) {
                             as: 'subjectAssessments',
                             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                             where: {
-                                employeeId,
+                                userId: employee.userId,
                                 ...(term != null && { term }),
                             },
                             required: false,
@@ -598,7 +598,7 @@ export async function getTeacherCourses(employeeId) {
         }
 
         const result = await scoped(model.teacherSubjectMappingModel).findAll({
-            where: { employeeId: Number(employeeId) },
+            where: { userId: Number(employee.userId) },
             include: [
                 {
                     model: model.subjectModel.unscoped(),
