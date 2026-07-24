@@ -404,6 +404,45 @@ export async function userExists(userId) {
     });
 }
 
+function buildDepartmentHierarchyMaps(departments) {
+    const existingDeptIds = new Set();
+    for (const dept of departments) {
+        existingDeptIds.add(Number(dept.departmentId));
+    }
+
+    const parentChildrenMap = new Map();
+    const childDeptIdSet = new Set();
+
+    for (const dept of departments) {
+        if (dept.parentDepartmentId == null) {
+            continue;
+        }
+
+        const childId = Number(dept.departmentId);
+        const parentId = Number(dept.parentDepartmentId);
+
+        // Self-parent or missing parent → keep as root
+        if (parentId === childId || !existingDeptIds.has(parentId)) {
+            continue;
+        }
+
+        childDeptIdSet.add(childId);
+
+        let children = parentChildrenMap.get(parentId);
+        if (!children) {
+            children = [];
+            parentChildrenMap.set(parentId, children);
+        }
+        children.push(childId);
+    }
+
+    for (const children of parentChildrenMap.values()) {
+        children.sort((a, b) => a - b);
+    }
+
+    return { parentChildrenMap, childDeptIdSet };
+}
+
 export async function getOrgTreeData() {
 
     // ─── 1. Fetch all data in parallel ───────────────────────────────────────
@@ -432,7 +471,7 @@ export async function getOrgTreeData() {
         scoped(model.departmentModel).findAll({
             attributes: ['departmentId', 'departmentName', 'departmentCode', 'departmentType'],
             order: [
-                ['departmentName', 'ASC'],
+                ['departmentId', 'ASC'],
                 [{ model: model.departmentPositionsModel, as: 'orgPositions' }, 'level',        'ASC'],
                 [{ model: model.departmentPositionsModel, as: 'orgPositions' }, 'sortOrder',    'ASC'],
                 [{ model: model.departmentPositionsModel, as: 'orgPositions' }, 'positionName', 'ASC'],
@@ -476,26 +515,12 @@ export async function getOrgTreeData() {
         // Fetched separately to avoid JOIN multiplication on the main departments query
         scoped(model.departmentModel).findAll({
             attributes: ['departmentId', 'parentDepartmentId'],
+            order: [['departmentId', 'ASC']],
             raw: true,
         }),
     ]);
 
-    const parentChildrenMap = new Map();
-    const childDeptIdSet = new Set();
-
-    for (const dept of allDeptParents) {
-        if (!dept.parentDepartmentId) continue;
-
-        const childId = Number(dept.departmentId);
-        const parentId = Number(dept.parentDepartmentId);
-
-        childDeptIdSet.add(childId);
-
-        if (!parentChildrenMap.has(parentId)) {
-            parentChildrenMap.set(parentId, []);
-        }
-        parentChildrenMap.get(parentId).push(childId);
-    }
+    const { parentChildrenMap, childDeptIdSet } = buildDepartmentHierarchyMaps(allDeptParents);
 
     // ─── 3. Build department lookup Map: departmentId → shaped dept node ──────
     //
@@ -557,15 +582,19 @@ export async function getOrgTreeData() {
     //   Returns the shaped department object ready for the API response.
     //   Recursively builds childDepartments from parentChildrenMap.
     //
-    function buildDeptNode(deptId) {
+    function buildDeptNode(deptId, visited) {
+        if (visited.has(deptId)) return null;
+
         const dept = deptNodeMap.get(deptId);
         if (!dept) return null;
+
+        visited.add(deptId);
 
         // Recursively build each child department
         const childDepartments = [];
         const childIds = parentChildrenMap.get(deptId) || [];
         for (const childId of childIds) {
-            const childNode = buildDeptNode(childId);
+            const childNode = buildDeptNode(childId, visited);
             if (childNode) {
                 childDepartments.push(childNode);
             }
@@ -581,32 +610,32 @@ export async function getOrgTreeData() {
         };
     }
 
-    // ─── 5. Separate root departments into Academic and Admin categories ───────
-    //
-    //   Root department = a dept that is NOT in childDeptIdSet (i.e. has no parent).
-    //   departmentType comparison is case-insensitive.
-    //   Both categories are always returned even if empty.
-    //
+    // ─── 5. Build roots ordered by departmentId (25, 26→57, 56) ───────────────
     const academicDepts = [];
-    const adminDepts    = [];
+    const adminDepts = [];
+    const rootDepartments = [];
 
     for (const deptRecord of allDepts) {
         const deptId = deptRecord.departmentId;
 
-        // Skip departments that are children (they will appear inside childDepartments)
         if (childDeptIdSet.has(Number(deptId))) continue;
 
-        const node = buildDeptNode(deptId);
+        const node = buildDeptNode(deptId, new Set());
         if (!node) continue;
 
-        const deptType = (deptNodeMap.get(deptId)?._type || '').toLowerCase();
+        const deptType = (deptNodeMap.get(deptId)._type || '').toLowerCase();
+        const typedNode = {
+            ...node,
+            departmentType: deptNodeMap.get(deptId)._type,
+        };
+
+        rootDepartments.push(typedNode);
 
         if (deptType === 'academic') {
-            academicDepts.push(node);
+            academicDepts.push(typedNode);
         } else if (deptType === 'admin') {
-            adminDepts.push(node);
+            adminDepts.push(typedNode);
         }
-        // Departments with other types are not exposed in this response
     }
 
     // ─── 6. Return the final response ────────────────────────────────────────
@@ -616,11 +645,12 @@ export async function getOrgTreeData() {
         institute: {
             instituteId:   institute.instituteId,
             instituteName: institute.instituteName,
+            departments: rootDepartments,
             categories: [
                 { categoryName: 'Academic', departments: academicDepts },
-                { categoryName: 'Admin',    departments: adminDepts    }
-            ]
-        }
+                { categoryName: 'Admin',    departments: adminDepts    },
+            ],
+        },
     };
 }
 
@@ -644,7 +674,7 @@ export async function getOrgChartData() {
         scoped(model.departmentModel).findAll({
             attributes: ['departmentId', 'departmentName', 'departmentType'],
             order: [
-                ['departmentName', 'ASC'],
+                ['departmentId', 'ASC'],
                 [{ model: model.departmentPositionsModel, as: 'orgPositions' }, 'level',     'ASC'],
                 [{ model: model.departmentPositionsModel, as: 'orgPositions' }, 'sortOrder', 'ASC'],
             ],
@@ -685,26 +715,12 @@ export async function getOrgChartData() {
 
         scoped(model.departmentModel).findAll({
             attributes: ['departmentId', 'parentDepartmentId'],
+            order: [['departmentId', 'ASC']],
             raw: true,
         }),
     ]);
 
-    const parentChildrenMap = new Map();
-    const childDeptIdSet = new Set();
-
-    for (const dept of allDeptParents) {
-        if (!dept.parentDepartmentId) continue;
-
-        const childId = Number(dept.departmentId);
-        const parentId = Number(dept.parentDepartmentId);
-
-        childDeptIdSet.add(childId);
-
-        if (!parentChildrenMap.has(parentId)) {
-            parentChildrenMap.set(parentId, []);
-        }
-        parentChildrenMap.get(parentId).push(childId);
-    }
+    const { parentChildrenMap, childDeptIdSet } = buildDepartmentHierarchyMaps(allDeptParents);
 
     // ─── 3. Build department node map (id + name, slim positions) ─────────────
     const deptNodeMap = new Map();  // Map<deptId, shaped node>
@@ -748,13 +764,17 @@ export async function getOrgChartData() {
     }
 
     // ─── 4. Recursive builder: one dept + its child departments ───────────────
-    function buildDeptNode(deptId) {
+    function buildDeptNode(deptId, visited) {
+        if (visited.has(deptId)) return null;
+
         const dept = deptNodeMap.get(deptId);
         if (!dept) return null;
 
+        visited.add(deptId);
+
         const childDepartments = [];
         for (const childId of (parentChildrenMap.get(deptId) || [])) {
-            const childNode = buildDeptNode(childId);
+            const childNode = buildDeptNode(childId, visited);
             if (childNode) childDepartments.push(childNode);
         }
 
@@ -766,39 +786,47 @@ export async function getOrgChartData() {
         };
     }
 
-    // ─── 5. Group root departments into Academic / Admin (case-insensitive) ───
+    // ─── 5. Build roots ordered by departmentId ───────────────────────────────
     const academicDepts = [];
-    const adminDepts    = [];
+    const adminDepts = [];
+    const rootDepartments = [];
 
     for (const deptRecord of allDepts) {
         const deptId = deptRecord.departmentId;
 
-        if (childDeptIdSet.has(Number(deptId))) continue;  // skip children
+        if (childDeptIdSet.has(Number(deptId))) continue;
 
-        const node = buildDeptNode(deptId);
+        const node = buildDeptNode(deptId, new Set());
         if (!node) continue;
 
-        const deptType = (deptNodeMap.get(deptId)?._type || '').toLowerCase();
+        const deptType = (deptNodeMap.get(deptId)._type || '').toLowerCase();
+        const typedNode = {
+            ...node,
+            departmentType: deptNodeMap.get(deptId)._type,
+        };
+
+        rootDepartments.push(typedNode);
 
         if (deptType === 'academic') {
-            academicDepts.push(node);
+            academicDepts.push(typedNode);
         } else if (deptType === 'admin') {
-            adminDepts.push(node);
+            adminDepts.push(typedNode);
         }
     }
 
-    // ─── 6. Return final response (mirrors /org/tree, id + name fields only) ──
+    // ─── 6. Return final response ────────────────────────────────────────────
     return {
         universityId:   university.universityId,
         universityName: university.universityName,
         institute: {
             instituteId:   institute.instituteId,
             instituteName: institute.instituteName,
+            departments: rootDepartments,
             categories: [
                 { categoryName: 'Academic', departments: academicDepts },
-                { categoryName: 'Admin',    departments: adminDepts    }
-            ]
-        }
+                { categoryName: 'Admin',    departments: adminDepts    },
+            ],
+        },
     };
 }
 
