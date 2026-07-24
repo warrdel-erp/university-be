@@ -24,7 +24,7 @@ export async function getAllJobs() {
         },
         {
           model: model.users, as: "user",
-          attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"],
+          attributes: ["employeeCode", "departmentId", "employmentType", "employeeName", "pickColor"],
         },
         {
           model: model.departmentModel,
@@ -62,7 +62,7 @@ export async function getSingleJob(jobId) {
         },
         {
           model: model.users, as: "user",
-          attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"],
+          attributes: ["employeeCode", "departmentId", "employmentType", "employeeName", "pickColor"],
         },
         {
           model: model.departmentModel,
@@ -190,7 +190,7 @@ export async function getCalendarJobs(view, date) {
       },
       {
         model: model.users, as: "user",
-        attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"],
+        attributes: ["employeeCode", "departmentId", "employmentType", "employeeName", "pickColor"],
       },
       {
         model: model.departmentModel,
@@ -308,7 +308,7 @@ export async function getFilteredJobs(filters) {
       },
       {
         model: model.users, as: "user",
-        attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"],
+        attributes: ["employeeCode", "departmentId", "employmentType", "employeeName", "pickColor"],
       },
       {
         model: model.departmentModel,
@@ -441,7 +441,7 @@ export async function fetchTimetableAsJobs(filters, fromDate, toDate) {
             date: d,
             startTime: l.startTime,
             endTime: l.endTime,
-            department: l.employeeDetails?.department,
+            departmentId: l.employeeDetails?.departmentId ?? null,
             status: "Active",
             type: "Lecture",
           });

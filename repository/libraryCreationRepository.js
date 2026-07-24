@@ -684,7 +684,7 @@ export async function getSingleBookDetails(libraryBookId, transaction) {
           {
             model: model.employeeModel,
             as: "employeeDetailsBook",
-            attributes: ["employeeId", "userId", "employeeCode", "department", "employeeName"],
+            attributes: ["employeeId", "userId", "employeeCode", "departmentId", "employeeName"],
           },
         ],
       },
@@ -845,7 +845,7 @@ export async function getAllIssuedBooks() {
         {
           model: model.employeeModel,
           as: "employeeDetailsBook",
-          attributes: ["employeeId", "userId", "employeeCode", "department", "employeeName"],
+          attributes: ["employeeId", "userId", "employeeCode", "departmentId", "employeeName"],
         },
         {
           model: model.libraryAisleModel,
@@ -971,7 +971,7 @@ export async function getBooksIssuedToEmployee(userId) {
         {
           model: model.employeeModel,
           as: "employeeDetailsBook",
-          attributes: ["employeeId", "userId", "employeeCode", "department", "employeeName"],
+          attributes: ["employeeId", "userId", "employeeCode", "departmentId", "employeeName"],
           where: { userId },
           required: true,
         },

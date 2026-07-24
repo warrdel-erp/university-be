@@ -128,7 +128,7 @@ function dateWiseScheduleIncludes({ sessionId, academicYearId } = {}) {
             'employeeName',
             'employeeCode',
             'pickColor',
-            'department',
+            'departmentId',
             'employmentType',
             'employeePhoto',
             'campusId',
@@ -177,7 +177,7 @@ function dateWiseScheduleIncludes({ sessionId, academicYearId } = {}) {
                 'employeeName',
                 'employeeCode',
                 'pickColor',
-                'department',
+                'departmentId',
                 'employmentType',
                 'employeePhoto',
                 'campusId',
@@ -339,11 +339,19 @@ export async function getUniqueClassSectionSubjectsForEmployee(userId, academicY
       'instituteId',
       'employeeName',
       'employeeCode',
-      'department',
+      'departmentId',
       'employmentType',
       'pickColor',
       'employeePhoto',
       'campusId',
+    ],
+    include: [
+      {
+        model: model.departmentModel,
+        as: 'employeeDepartment',
+        attributes: ['departmentId', 'departmentName'],
+        required: false,
+      },
     ],
   });
   if (!employee) {

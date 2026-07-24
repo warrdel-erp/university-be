@@ -2305,7 +2305,7 @@ export async function getClassSectionRecord(courseId, classSectionId) {
                 {
                     model: model.employeeModel,
                     as: 'employeeData',
-                    attributes: ['employeeId', 'employeeName', 'fatherName', 'motherName', 'employeeCode', 'department', 'employmentType', 'dateOfBirth', 'pickColor'],
+                    attributes: ['employeeId', 'employeeName', 'fatherName', 'motherName', 'employeeCode', 'departmentId', 'employmentType', 'dateOfBirth', 'pickColor'],
                     where: buildScope(model.employeeModel),
                     required: true,
                     include: [

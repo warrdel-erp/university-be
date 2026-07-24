@@ -74,7 +74,7 @@ const studentMemberInclude = {
 const teacherMemberInclude = {
   model: model.employeeModel,
   as: "teacherMember",
-  attributes: ["userId", "employeeName", "employeeCode", "department"],
+  attributes: ["userId", "employeeName", "employeeCode", "departmentId"],
   required: false,
 };
 
@@ -97,7 +97,7 @@ const paymentPayeeIncludes = [
   {
     model: model.employeeModel,
     as: "employeePayee",
-    attributes: ["userId", "employeeName", "employeeCode", "department"],
+    attributes: ["userId", "employeeName", "employeeCode", "departmentId"],
     required: false,
   },
 ];
@@ -528,7 +528,7 @@ export async function findTeacherById(userId, options = {}) {
 
 export async function findEmployeeMemberDetailsById(userId, options = {}) {
   return scoped(model.employeeModel).findOne({
-    attributes: ["userId", "employeeName", "employeeCode", "department"],
+    attributes: ["userId", "employeeName", "employeeCode", "departmentId"],
     where: { userId },
     transaction: options.transaction,
   });
@@ -553,7 +553,7 @@ export async function findStudentMemberDetailsByIds(studentIds, options = {}) {
 export async function findEmployeeMemberDetailsByIds(userIds, options = {}) {
   if (!userIds.length) return [];
   return scoped(model.employeeModel).findAll({
-    attributes: ["userId", "employeeName", "employeeCode", "department"],
+    attributes: ["userId", "employeeName", "employeeCode", "departmentId"],
     where: { userId: userIds },
     transaction: options.transaction,
   });

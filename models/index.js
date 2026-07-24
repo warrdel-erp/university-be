@@ -476,6 +476,9 @@ roleModel.hasMany(employeeModel, { foreignKey: "role_id", as: "employeeRole" });
 employeeModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "employeeInstitute" });
 instituteModel.hasMany(employeeModel, { foreignKey: "institute_id", as: "employeeInstitute" });
 
+employeeModel.belongsTo(departmentModel, { foreignKey: "departmentId", as: "employeeDepartment" });
+departmentModel.hasMany(employeeModel, { foreignKey: "departmentId", as: "employeeDepartment" });
+
 teacherSectionMappingModel.belongsTo(classSectionModel, { foreignKey: "class_sections_id", as: "employeeSection" });
 classSectionModel.hasMany(teacherSectionMappingModel, { foreignKey: "class_sections_id", as: "employeeSection" });
 

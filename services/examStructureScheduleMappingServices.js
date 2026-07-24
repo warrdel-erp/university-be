@@ -148,7 +148,7 @@ export async function getExamStructureSchedule(examSetupTypeId) {
             userId: ts.teacherEmployeeData?.userId || null,
             employeeName: ts.teacherEmployeeData?.employeeName || null,
             employeeCode: ts.teacherEmployeeData?.employeeCode || null,
-            department: ts.teacherEmployeeData?.department || null,
+            departmentId: ts.teacherEmployeeData?.departmentId || null,
             employmentType: ts.teacherEmployeeData?.employmentType || null,
           },
         }));

@@ -109,7 +109,7 @@ const resourceScopeFields = {
   },
   employee: {
     OWN: 'userId',
-    DEPARTMENT: 'department',
+    DEPARTMENT: 'departmentId',
     INSTITUTE: 'instituteId',
     CAMPUS: 'campusId'
   },
@@ -180,7 +180,7 @@ export async function getAccessFilter(user, permissionKey, resource, activeRoleI
     if (scope === SCOPES.DEPARTMENT) {
       // Find all employees belonging to these departments
       const employees = await model.employeeModel.findAll({
-        where: { department: { [Op.in]: targets } },
+        where: { departmentId: { [Op.in]: targets } },
         attributes: ['userId']
       });
       const userIds = employees.map(e => e.userId);

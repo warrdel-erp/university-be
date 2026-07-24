@@ -23,7 +23,7 @@ export async function getEvaluationDetails(examSetupTypeId) {
       include: [
         {
           model: model.users, as: "user",
-          attributes: ["userId", "employeeName", "employeeCode", "department"],
+          attributes: ["userId", "employeeName", "employeeCode", "departmentId"],
           where: buildScope(model.employeeModel),
           required: false,
         },
@@ -61,7 +61,7 @@ export async function getSingleEvaluationDetails(evalutionId) {
       include: [
         {
           model: model.users, as: "user",
-          attributes: ["userId", "employeeName", "employeeCode", "department"],
+          attributes: ["userId", "employeeName", "employeeCode", "departmentId"],
           where: buildScope(model.employeeModel),
           required: false,
         },
@@ -99,7 +99,7 @@ export async function getTeacherSubjectEvalution(userId) {
       include: [
         {
           model: model.users, as: "user",
-          attributes: ["userId", "employeeName", "employeeCode", "department"],
+          attributes: ["userId", "employeeName", "employeeCode", "departmentId"],
           where: buildScope(model.employeeModel),
           required: true,
         },
