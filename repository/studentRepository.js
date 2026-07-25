@@ -34,11 +34,15 @@ async function assertScopedStudent(studentId, options = {}) {
     });
 }
 
-function buildStudentListWhere(search, courseId) {
+function buildStudentListWhere(search, courseId, sessionId) {
     const where = {};
 
-    if (courseId) {
-        where.courseId = courseId;
+    if (courseId != null) {
+        where.courseId = Number(courseId);
+    }
+
+    if (sessionId != null) {
+        where.sessionId = Number(sessionId);
     }
 
     if (search) {
@@ -56,6 +60,100 @@ function buildStudentListWhere(search, courseId) {
     }
 
     return where;
+}
+
+/**
+ * Placement studentIds: history status=current when present, else classSectionTerm FK.
+ * Returns null when no placement filters are set.
+ */
+async function resolvePlacementStudentIds({ classSectionsId, year, term }) {
+    if (classSectionsId == null && year == null && term == null) {
+        return null;
+    }
+
+    const historyWhere = { status: 'current' };
+    if (classSectionsId != null) {
+        historyWhere.classSectionsId = Number(classSectionsId);
+    }
+
+    const historyInclude = [];
+    if (year != null) {
+        historyInclude.push({
+            model: model.classSectionModel,
+            as: 'classSection',
+            attributes: [],
+            required: true,
+            where: { year: Number(year) },
+        });
+    }
+    if (term != null) {
+        historyInclude.push({
+            model: model.classSectionTermModel,
+            as: 'classSectionTerm',
+            attributes: [],
+            required: true,
+            where: { term: Number(term) },
+        });
+    }
+
+    const historyMatchedRows = await model.studentClassSectionsHistoryModel.findAll({
+        attributes: ['studentId'],
+        where: historyWhere,
+        include: historyInclude,
+        raw: true,
+    });
+
+    const historyMatchedIds = [];
+    for (const row of historyMatchedRows) {
+        historyMatchedIds.push(Number(row.studentId));
+    }
+
+    const currentHistoryRows = await model.studentClassSectionsHistoryModel.findAll({
+        attributes: ['studentId'],
+        where: { status: 'current' },
+        raw: true,
+    });
+
+    const studentsWithCurrentHistory = new Set();
+    for (const row of currentHistoryRows) {
+        studentsWithCurrentHistory.add(Number(row.studentId));
+    }
+
+    const fkRows = await scoped(model.studentModel).findAll({
+        attributes: ['studentId'],
+        include: [
+            studentClassSectionTermWithSectionInclude({
+                classSectionsId: classSectionsId != null ? Number(classSectionsId) : undefined,
+                term: term != null ? Number(term) : undefined,
+                sectionWhere: year != null ? { year: Number(year) } : undefined,
+                termRequired: true,
+                sectionRequired: year != null,
+                includeSectionTerms: false,
+            }),
+        ],
+        raw: true,
+    });
+
+    const placementIds = [];
+    const seen = new Set();
+
+    for (const id of historyMatchedIds) {
+        if (!seen.has(id)) {
+            seen.add(id);
+            placementIds.push(id);
+        }
+    }
+
+    for (const row of fkRows) {
+        const id = Number(row.studentId);
+        if (studentsWithCurrentHistory.has(id) || seen.has(id)) {
+            continue;
+        }
+        seen.add(id);
+        placementIds.push(id);
+    }
+
+    return placementIds;
 }
 
 const studentSessionAttrs = ['sessionId', 'sessionName', 'academicYearId'];
@@ -214,8 +312,17 @@ export async function getAllStudents({
     limit,
     search,
     courseId,
+    sessionId,
+    classSectionsId,
+    year,
+    term,
+    academicYearId,
 }) {
     try {
+        const resolvedAcademicYearId = academicYearId != null
+            ? Number(academicYearId)
+            : getRequestAcademicYearId();
+
         const baseInclude = [
             {
                 model: model.userModel,
@@ -243,7 +350,7 @@ export async function getAllStudents({
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "courseId", "course_levelId", "courseCode"] },
             },
             studentClassSectionInclude,
-            studentSessionWithAcademicYearInclude(),
+            studentSessionWithAcademicYearInclude({ academicYearId: resolvedAcademicYearId }),
             {
                 model: model.specializationModel,
                 as: "specialization",
@@ -298,13 +405,33 @@ export async function getAllStudents({
             },
         ];
 
-        const whereCondition = buildStudentListWhere(search, courseId);
+        const whereCondition = buildStudentListWhere(search, courseId, sessionId);
 
-        // Only the course join is needed to evaluate the search filter; the heavy
-        // hasMany includes are excluded here so pagination and count stay accurate.
-        const filterInclude = search
-            ? [{ model: model.courseModel, as: "course", attributes: [] }]
-            : [];
+        const placementStudentIds = await resolvePlacementStudentIds({
+            classSectionsId,
+            year,
+            term,
+        });
+        if (placementStudentIds != null) {
+            if (placementStudentIds.length === 0) {
+                return {
+                    result: [],
+                    totalCount: 0,
+                    page,
+                    limit,
+                    totalPages: 0,
+                };
+            }
+            whereCondition.studentId = { [Op.in]: placementStudentIds };
+        }
+
+        // Filters needed for accurate ID pagination + count (not only hydrate).
+        const filterInclude = [
+            studentSessionWithAcademicYearInclude({ academicYearId: resolvedAcademicYearId }),
+        ];
+        if (search) {
+            filterInclude.push({ model: model.courseModel, as: "course", attributes: [] });
+        }
 
         const offset = (page - 1) * limit;
 
@@ -319,7 +446,10 @@ export async function getAllStudents({
             subQuery: false,
             raw: true,
         });
-        const studentIds = idRows.map((row) => row.studentId);
+        const studentIds = [];
+        for (const row of idRows) {
+            studentIds.push(row.studentId);
+        }
 
         // Step 2: hydrate full rows for the paged IDs (no row-collapsing from joins).
         let result = [];
@@ -330,7 +460,9 @@ export async function getAllStudents({
                 include: baseInclude,
                 order: [["studentId", "DESC"]],
             });
-            result = rows.map((row) => row.get({ plain: true }));
+            for (const row of rows) {
+                result.push(row.get({ plain: true }));
+            }
         }
 
         // Step 3: total count of matching students for pagination.

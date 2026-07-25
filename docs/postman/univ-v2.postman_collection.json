@@ -13454,7 +13454,7 @@
               "id": "3084c25b-c5ee-4057-b2c2-3a39f380b541",
               "name": "2 get all students (list)",
               "request": {
-                "description": "**GET /student/all**\n\nQuery: `search` (default `all`), `page` (default 1), `limit` (default 10), optional `courseId`.\n\nAcademic year is derived from `studentSession.sessionAcedmic` (not stored on `students`).\n\nUses auth `universityId` + `defaultInstituteId`.\n\nTest script sets `student_id` from first row when present.",
+                "description": "**GET /student/all**\n\nPaginated student list.\n\n**Query**\n| Key | Required | Notes |\n|-----|----------|-------|\n| `page` | no | default 1 |\n| `limit` | no | default 10, max 100 |\n| `search` | no | name / scholar / enroll / father / course name |\n| `courseId` | no | |\n| `sessionId` | no | admission session (`students.sessionId`) |\n| `academicYearId` | no | admission year via session; default = auth academic year |\n| `classSectionsId` | no | placement section (shared across terms) |\n| `year` | no | `class_sections.year` |\n| `term` | no | `class_section_term.term` |\n\n**Placement:** history `status=current` when present; else `students.classSectionTermId` → class_section_term → class_sections.\n\nUses auth `universityId` + `defaultInstituteId`.\n\nTest script sets `student_id` from first row when present.",
                 "url": {
                   "path": [
                     "student",
@@ -13466,11 +13466,11 @@
                   "query": [
                     {
                       "description": {
-                        "content": "Search term or 'all'",
+                        "content": "Search term",
                         "type": "text/plain"
                       },
                       "key": "search",
-                      "value": "all"
+                      "value": ""
                     },
                     {
                       "key": "page",
@@ -13478,7 +13478,61 @@
                     },
                     {
                       "key": "limit",
-                      "value": "20"
+                      "value": "10"
+                    },
+                    {
+                      "disabled": true,
+                      "description": {
+                        "content": "Optional course filter",
+                        "type": "text/plain"
+                      },
+                      "key": "courseId",
+                      "value": "35"
+                    },
+                    {
+                      "disabled": true,
+                      "description": {
+                        "content": "Optional admission session",
+                        "type": "text/plain"
+                      },
+                      "key": "sessionId",
+                      "value": "6"
+                    },
+                    {
+                      "disabled": true,
+                      "description": {
+                        "content": "Optional admission academic year (via session)",
+                        "type": "text/plain"
+                      },
+                      "key": "academicYearId",
+                      "value": "1"
+                    },
+                    {
+                      "disabled": true,
+                      "description": {
+                        "content": "Optional class section (shared across terms)",
+                        "type": "text/plain"
+                      },
+                      "key": "classSectionsId",
+                      "value": "10"
+                    },
+                    {
+                      "disabled": true,
+                      "description": {
+                        "content": "Optional class_sections.year",
+                        "type": "text/plain"
+                      },
+                      "key": "year",
+                      "value": "1"
+                    },
+                    {
+                      "disabled": true,
+                      "description": {
+                        "content": "Optional class_section_term.term",
+                        "type": "text/plain"
+                      },
+                      "key": "term",
+                      "value": "1"
                     }
                   ],
                   "variable": []
