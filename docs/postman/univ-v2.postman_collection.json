@@ -8555,7 +8555,7 @@
           "id": "a6bd786e-b15b-4600-9a25-261301db455b",
           "name": "subjects",
           "request": {
-            "description": "**GET /options/subjects**\n\nSubject dropdown (`label` / `value`).\n\n**Query:** `courseId`, `term` (required for typical use). Optional `sessionId` when you need session-scoped academic year.\n\nFilters by user `universityId` and `defaultInstituteId` from token.",
+            "description": "**GET /options/subjects**\n\nSubject dropdown (`label` / `value`).\n\n**With `userId`:** subjects for `courseId` (and session academic year via `sessionId`) that exist in `teacher_subject_mapping` for that teacher.\n\nExample: `/options/subjects?courseId=35&sessionId=6&userId=56`\n1. Validates course↔session mapping\n2. Loads subjectIds from `teacher_subject_mapping` where `userId=56`\n3. Returns those subjects filtered by `courseId=35` (+ session academic year)\n\n**Without `userId`:** subjects for course/term/year not yet in `class_subject_mapper`.\n\nOptional: `term`, `sessionId` (resolves academic year + validates course mapping).\n\nTenant from token (`universityId` / `instituteId` / academic year).",
             "url": {
               "path": [
                 "options",
@@ -8567,28 +8567,36 @@
               "query": [
                 {
                   "description": {
-                    "content": "Term / semester filter on subject",
-                    "type": "text/plain"
-                  },
-                  "key": "term",
-                  "value": "200"
-                },
-                {
-                  "description": {
-                    "content": "Course PK",
+                    "content": "Course PK — with userId, limits to subjects of this course",
                     "type": "text/plain"
                   },
                   "key": "courseId",
-                  "value": "34"
+                  "value": "35"
                 },
                 {
-                  "disabled": true,
                   "description": {
                     "content": "Optional — session academic year + course mapping validation",
                     "type": "text/plain"
                   },
                   "key": "sessionId",
                   "value": "6"
+                },
+                {
+                  "description": {
+                    "content": "Optional — only subjects mapped to this teacher in teacher_subject_mapping",
+                    "type": "text/plain"
+                  },
+                  "key": "userId",
+                  "value": "56"
+                },
+                {
+                  "disabled": true,
+                  "description": {
+                    "content": "Term / semester filter on subject",
+                    "type": "text/plain"
+                  },
+                  "key": "term",
+                  "value": "200"
                 }
               ],
               "variable": []
@@ -8613,6 +8621,7 @@
           "id": "085f4a5d-8c91-44b4-8921-987cb8eb4c69",
           "name": "teachers",
           "request": {
+            "description": "**GET /options/teachers**\n\nTeacher dropdown (`label` = employee name, `value` = `userId`, plus `employeeId`).\n\n**Optional query**\n| Key | Notes |\n|-----|-------|\n| `campusId` | Filter by campus |\n| `subjectId` | Only teachers mapped to this subject in `teacher_subject_mapping` |\n\nExample: `/options/teachers?subjectId=114`",
             "url": {
               "path": [
                 "options",
@@ -8621,7 +8630,25 @@
               "host": [
                 "{{baseurl}}"
               ],
-              "query": [],
+              "query": [
+                {
+                  "disabled": true,
+                  "description": {
+                    "content": "Optional — campus filter",
+                    "type": "text/plain"
+                  },
+                  "key": "campusId",
+                  "value": "1"
+                },
+                {
+                  "description": {
+                    "content": "Optional — teachers mapped to this subject via teacher_subject_mapping",
+                    "type": "text/plain"
+                  },
+                  "key": "subjectId",
+                  "value": "114"
+                }
+              ],
               "variable": []
             },
             "method": "GET",

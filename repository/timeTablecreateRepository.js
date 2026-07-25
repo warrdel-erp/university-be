@@ -1998,15 +1998,21 @@ const teacherRoutineStructureInclude = routineStructureInclude({
   structureWhere: buildScope(model.timeTableStructureModel),
 });
 
-const teacherClassSectionInclude = (courseId, sessionId) =>
-  timeTableRoutineClassSectionInclude({
+const teacherClassSectionInclude = (courseId, sessionId) => {
+  const sectionWhere = {
+    ...buildScope(model.classSectionModel),
+  };
+  if (courseId != null) {
+    sectionWhere.courseId = courseId;
+  }
+  if (sessionId != null) {
+    sectionWhere.sessionId = sessionId;
+  }
+
+  return timeTableRoutineClassSectionInclude({
     termRequired: true,
     sectionRequired: true,
-    sectionWhere: {
-      courseId,
-      sessionId,
-      ...buildScope(model.classSectionModel),
-    },
+    sectionWhere,
     sectionAttributes: ['classSectionsId', 'section', 'year', 'sessionId', 'courseId'],
     sectionNestedIncludes: [
       {
@@ -2019,40 +2025,60 @@ const teacherClassSectionInclude = (courseId, sessionId) =>
       classSectionTermsInclude(),
     ],
   });
+};
 
 async function fetchTeacherRoutineContext(userId, courseId, sessionId) {
+  const classSectionWhere = {};
+  if (courseId != null) {
+    classSectionWhere.courseId = courseId;
+  }
+  if (sessionId != null) {
+    classSectionWhere.sessionId = sessionId;
+  }
+
   return Promise.all([
-    scoped(model.employeeModel).findOne({
-      where: { userId },
-      attributes: ['userId', 'employeeId', 'employeeName', 'employeeCode', 'pickColor'],
-    }),
-    scoped(model.courseModel).findOne({
-      where: { courseId },
-      attributes: ['courseId', 'courseName', 'courseCode'],
-    }),
-    scoped(model.sessionModel).findOne({
-      where: { sessionId },
-      attributes: ['sessionId', 'sessionName', 'startingDate', 'endingDate', 'academicYearId'],
-    }),
-    scoped(model.classSectionModel).findAll({
-      where: { courseId, sessionId },
-      attributes: ['classSectionsId', 'section', 'year', 'courseId', 'sessionId'],
-      include: [
-        classSectionTermsInclude(),
-      ],
-      order: [['year', 'ASC'], ['section', 'ASC']],
-    }),
+    userId != null
+      ? scoped(model.employeeModel).findOne({
+        where: { userId },
+        attributes: ['userId', 'employeeId', 'employeeName', 'employeeCode', 'pickColor'],
+      })
+      : Promise.resolve(null),
+    courseId != null
+      ? scoped(model.courseModel).findOne({
+        where: { courseId },
+        attributes: ['courseId', 'courseName', 'courseCode'],
+      })
+      : Promise.resolve(null),
+    sessionId != null
+      ? scoped(model.sessionModel).findOne({
+        where: { sessionId },
+        attributes: ['sessionId', 'sessionName', 'startingDate', 'endingDate', 'academicYearId'],
+      })
+      : Promise.resolve(null),
+    courseId != null && sessionId != null
+      ? scoped(model.classSectionModel).findAll({
+        where: classSectionWhere,
+        attributes: ['classSectionsId', 'section', 'year', 'courseId', 'sessionId'],
+        include: [
+          classSectionTermsInclude(),
+        ],
+        order: [['year', 'ASC'], ['section', 'ASC']],
+      })
+      : Promise.resolve([]),
   ]);
 }
 
 async function fetchNormalRoutinesForTeacher(userId, courseId, sessionId, subjectId) {
   const cellSubjectWhere = await buildCellSubjectWhere(subjectId);
+  const routineWhere = {
+    timeTableType: 'normal',
+  };
+  if (courseId != null) {
+    routineWhere.courseId = courseId;
+  }
 
   return scoped(model.timeTableRoutineModel).findAll({
-    where: {
-      courseId,
-      timeTableType: 'normal',
-    },
+    where: routineWhere,
     attributes: [
       'timeTableRoutineId',
       'timetableStructureCourseMapperId',
@@ -2086,11 +2112,15 @@ async function fetchElectiveCellsForTeacher(
     return new Map();
   }
 
+  const electiveWhere = {
+    timeTableType: 'elective',
+  };
+  if (courseId != null) {
+    electiveWhere.courseId = courseId;
+  }
+
   const electiveRoutines = await scoped(model.timeTableRoutineModel).findAll({
-    where: {
-      courseId,
-      timeTableType: 'elective',
-    },
+    where: electiveWhere,
     attributes: ['timeTableRoutineId', 'timetableStructureCourseMapperId'],
     include: [
       {
