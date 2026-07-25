@@ -632,7 +632,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/departmentPosition/?departmentId={{departmentId}}&employmentCategory=Leadership&isVacant=true&publishStatus=DRAFT",
+              "raw": "{{baseurl}}/departmentPosition/?departmentId={{departmentId}}&employmentCategory=Leadership&isVacant=true&isLevelHead=true&publishStatus=DRAFT",
               "host": [
                 "{{baseurl}}"
               ],
@@ -657,13 +657,18 @@
                   "description": "optional boolean"
                 },
                 {
+                  "key": "isLevelHead",
+                  "value": "true",
+                  "description": "optional boolean"
+                },
+                {
                   "key": "publishStatus",
                   "value": "DRAFT",
                   "description": "optional — DRAFT | PUBLISHED"
                 }
               ]
             },
-            "description": "**GET /departmentPosition/**\n\nBearer Token Required.\n\n**Optional query**\n| Name | Type | Values |\n|------|------|--------|\n| `departmentId` | int | |\n| `employmentCategory` | string | Academic, Administrative, Support, Executive, Leadership |\n| `isVacant` | boolean | |\n| `publishStatus` | string | `DRAFT`, `PUBLISHED` |\n\nIncludes department and ACTIVE heads only. Admin list can return DRAFT + PUBLISHED."
+            "description": "**GET /departmentPosition/**\n\nBearer Token Required.\n\n**Optional query**\n| Name | Type | Values |\n|------|------|--------|\n| `departmentId` | int | |\n| `employmentCategory` | string | Academic, Administrative, Support, Executive, Leadership |\n| `isVacant` | boolean | |\n| `isLevelHead` | boolean | |\n| `publishStatus` | string | `DRAFT`, `PUBLISHED` |\n\nIncludes department and ACTIVE heads only. Admin list can return DRAFT + PUBLISHED. Response includes `isLevelHead` and `publishStatus`."
           },
           "response": []
         },
@@ -692,7 +697,7 @@
                 "tree"
               ]
             },
-            "description": "**GET /departmentPosition/tree**\n\nBearer Token Required.\n\nReturns cascading hierarchy:\nInstitute -> Parent Departments (Academic vs Admin categories) -> Child Departments (nested via `parentDepartmentId`) -> Positions (level 1 **and** `publishStatus=PUBLISHED` only, sorted by sortOrder).\n\nEach position `users[]` entry is ACTIVE only and includes `userDepartmentPositionId`, `userId`, `employeeId`, `name`, `status`, `joiningDate`, and `endDate`.\n\nDRAFT positions are excluded."
+            "description": "**GET /departmentPosition/tree**\n\nBearer Token Required.\n\nReturns cascading hierarchy:\nInstitute -> Parent Departments (Academic vs Admin categories) -> Child Departments (nested via `parentDepartmentId`) -> Positions (level 1 **and** `publishStatus=PUBLISHED` only, sorted by sortOrder).\n\nEach position includes `isLevelHead`, `publishStatus`, and `users[]` (ACTIVE only: `userDepartmentPositionId`, `userId`, `employeeId`, `name`, `status`, `joiningDate`, `endDate`).\n\nDRAFT positions are excluded."
           },
           "response": []
         },
@@ -721,7 +726,7 @@
                 "chart"
               ]
             },
-            "description": "**GET /departmentPosition/chart**\n\nBearer Token Required.\n\nReturns hierarchical department tree with level 1 **PUBLISHED** positions only per department (children notation). Each position includes ACTIVE users only. DRAFT positions are excluded."
+            "description": "**GET /departmentPosition/chart**\n\nBearer Token Required.\n\nReturns hierarchical department tree with level 1 **PUBLISHED** positions only per department (children notation). Each position includes `isLevelHead`, `publishStatus`, `isVacant`, and ACTIVE users only. DRAFT positions are excluded."
           },
           "response": []
         },
@@ -757,7 +762,7 @@
                 }
               ]
             },
-            "description": "**GET /departmentPosition/departmentPositions**\n\nBearer Token Required.\n\n**Required query**\n- `departmentId` (int)\n\nReturns a flat list of **PUBLISHED** position objects for that department. Each position includes ACTIVE heads only."
+            "description": "**GET /departmentPosition/departmentPositions**\n\nBearer Token Required.\n\n**Required query**\n- `departmentId` (int)\n\nReturns a flat list of **PUBLISHED** position objects for that department. Each position includes `isLevelHead`, `publishStatus`, and ACTIVE heads only."
           },
           "response": []
         },

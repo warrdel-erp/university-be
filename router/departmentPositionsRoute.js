@@ -88,6 +88,12 @@ const listDepartmentPositionsQuerySchema = z.object({
         if (normalized === 'false' || normalized === false) return false;
         return undefined;
     }, z.boolean().optional()),
+    isLevelHead: z.preprocess((val) => {
+        const normalized = emptyToUndefined(val);
+        if (normalized === 'true' || normalized === true) return true;
+        if (normalized === 'false' || normalized === false) return false;
+        return undefined;
+    }, z.boolean().optional()),
     publishStatus: publishStatusEnum.optional(),
 });
 

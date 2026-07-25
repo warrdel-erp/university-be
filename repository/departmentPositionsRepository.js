@@ -319,6 +319,9 @@ export async function getOrgPositions(filters = {}) {
     if (filters.isVacant !== undefined) {
         where.isVacant = filters.isVacant;
     }
+    if (filters.isLevelHead !== undefined) {
+        where.isLevelHead = filters.isLevelHead;
+    }
     if (filters.publishStatus) {
         where.publishStatus = filters.publishStatus;
     }
@@ -738,7 +741,7 @@ export async function getOrgTreeData() {
                 {
                     model: model.departmentPositionsModel,
                     as: 'orgPositions',
-                    attributes: ['departmentPositionId', 'positionName', 'positionCode', 'level', 'publishStatus'],
+                    attributes: ['departmentPositionId', 'positionName', 'positionCode', 'level', 'isLevelHead', 'publishStatus'],
                     where: { level: 1, publishStatus: 'PUBLISHED' },
                     required: false,
                     include: [
@@ -821,6 +824,8 @@ export async function getOrgTreeData() {
                 positionName:  pos.positionName,
                 positionCode:  pos.positionCode,
                 level:         pos.level,
+                isLevelHead:   pos.isLevelHead,
+                publishStatus: pos.publishStatus,
                 users:         users       // empty array if no active holder
             });
         }
@@ -932,7 +937,7 @@ export async function getOrgChartData() {
                 {
                     model: model.departmentPositionsModel,
                     as: 'orgPositions',
-                    attributes: ['departmentPositionId', 'positionName', 'level', 'isVacant', 'publishStatus'],
+                    attributes: ['departmentPositionId', 'positionName', 'level', 'isVacant', 'isLevelHead', 'publishStatus'],
                     where: { level: 1, publishStatus: 'PUBLISHED' },
                     required: false,
                     include: [
@@ -1001,6 +1006,8 @@ export async function getOrgChartData() {
                 positionName:  pos.positionName,
                 level:         pos.level,
                 isVacant:      pos.isVacant,
+                isLevelHead:   pos.isLevelHead,
+                publishStatus: pos.publishStatus,
                 users:         users
             });
         }
@@ -1085,6 +1092,7 @@ export async function getPositionsByDepartment(departmentId) {
             'level',
             'employmentCategory',
             'isVacant',
+            'isLevelHead',
             'publishStatus',
             'sortOrder',
             'departmentId'
