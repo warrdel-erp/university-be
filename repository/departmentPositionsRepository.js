@@ -52,7 +52,128 @@ const positionListInclude = [
 ];
 
 export async function addOrgPosition(data) {
-    return scoped(model.departmentPositionsModel).create(data);
+    const transaction = await sequelize.transaction();
+    try {
+        let isLevelHead = data.isLevelHead === true;
+
+        if (data.departmentId != null) {
+            const sameLevelCount = await countPositionsAtLevel(
+                data.departmentId,
+                data.level,
+                null,
+                transaction,
+            );
+            if (sameLevelCount === 0) {
+                isLevelHead = true;
+            }
+        }
+
+        if (isLevelHead && data.departmentId != null) {
+            await clearLevelHeadFlag(
+                data.departmentId,
+                data.level,
+                null,
+                data.updatedBy,
+                transaction,
+            );
+        }
+
+        const position = await scoped(model.departmentPositionsModel).create(
+            { ...data, isLevelHead },
+            { transaction },
+        );
+        await transaction.commit();
+        return getOrgPositionById(position.departmentPositionId);
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
+    }
+}
+
+export async function countPositionsAtLevel(departmentId, level, excludePositionId, transaction) {
+    const where = {
+        departmentId: Number(departmentId),
+        level: Number(level),
+    };
+    if (excludePositionId != null) {
+        where.departmentPositionId = { [Op.ne]: Number(excludePositionId) };
+    }
+
+    return scoped(model.departmentPositionsModel).count({ where, transaction });
+}
+
+export async function clearLevelHeadFlag(departmentId, level, excludePositionId, updatedBy, transaction) {
+    const where = {
+        departmentId: Number(departmentId),
+        level: Number(level),
+        isLevelHead: true,
+    };
+    if (excludePositionId != null) {
+        where.departmentPositionId = { [Op.ne]: Number(excludePositionId) };
+    }
+
+    await scoped(model.departmentPositionsModel).update(
+        { isLevelHead: false, updatedBy },
+        { where, transaction },
+    );
+}
+
+export async function ensureSolePositionIsLevelHead(departmentId, level, updatedBy, transaction) {
+    if (departmentId == null) {
+        return;
+    }
+
+    const positions = await scoped(model.departmentPositionsModel).findAll({
+        attributes: ['departmentPositionId', 'isLevelHead'],
+        where: {
+            departmentId: Number(departmentId),
+            level: Number(level),
+        },
+        order: [['departmentPositionId', 'ASC']],
+        transaction,
+    });
+
+    if (positions.length === 0) {
+        return;
+    }
+
+    if (positions.length === 1) {
+        if (!positions[0].isLevelHead) {
+            await scoped(model.departmentPositionsModel).update(
+                { isLevelHead: true, updatedBy },
+                {
+                    where: { departmentPositionId: positions[0].departmentPositionId },
+                    transaction,
+                },
+            );
+        }
+        return;
+    }
+
+    let hasLevelHead = false;
+    for (const position of positions) {
+        if (position.isLevelHead) {
+            hasLevelHead = true;
+            break;
+        }
+    }
+
+    if (!hasLevelHead) {
+        await scoped(model.departmentPositionsModel).update(
+            { isLevelHead: true, updatedBy },
+            {
+                where: { departmentPositionId: positions[0].departmentPositionId },
+                transaction,
+            },
+        );
+        await clearLevelHeadFlag(
+            departmentId,
+            level,
+            positions[0].departmentPositionId,
+            updatedBy,
+            transaction,
+        );
+    }
 }
 
 const GROWTH_DAYS = 7;
@@ -195,8 +316,11 @@ export async function getOrgPositions(filters = {}) {
     if (filters.employmentCategory) {
         where.employmentCategory = filters.employmentCategory;
     }
-    if (filters.isVacant !== undefined && filters.isVacant !== null && filters.isVacant !== '') {
-        where.isVacant = filters.isVacant === true || filters.isVacant === 'true';
+    if (filters.isVacant !== undefined) {
+        where.isVacant = filters.isVacant;
+    }
+    if (filters.publishStatus) {
+        where.publishStatus = filters.publishStatus;
     }
 
     return scoped(model.departmentPositionsModel).findAll({
@@ -218,17 +342,113 @@ export async function getOrgPositionById(departmentPositionId) {
     });
 }
 
-export async function updateOrgPosition(departmentPositionId, data) {
-    const [count] = await scoped(model.departmentPositionsModel).update(data, {
-        where: { departmentPositionId: Number(departmentPositionId) },
-    });
-    return count > 0;
+export async function updateOrgPosition(departmentPositionId, data, options = {}) {
+    const positionId = Number(departmentPositionId);
+    const transaction = options.transaction || await sequelize.transaction();
+    const ownsTransaction = !options.transaction;
+
+    try {
+        const existing = await scoped(model.departmentPositionsModel).findOne({
+            attributes: ['departmentPositionId', 'departmentId', 'level', 'isLevelHead'],
+            where: { departmentPositionId: positionId },
+            transaction,
+        });
+        if (!existing) {
+            if (ownsTransaction) {
+                await transaction.rollback();
+            }
+            return false;
+        }
+
+        const nextDepartmentId = data.departmentId !== undefined
+            ? data.departmentId
+            : existing.departmentId;
+        const nextLevel = data.level != null ? data.level : existing.level;
+
+        if (data.isLevelHead === false && nextDepartmentId != null) {
+            const sameLevelCount = await countPositionsAtLevel(
+                nextDepartmentId,
+                nextLevel,
+                null,
+                transaction,
+            );
+            if (sameLevelCount <= 1) {
+                data.isLevelHead = true;
+            }
+        }
+
+        if (data.isLevelHead === true && nextDepartmentId != null) {
+            await clearLevelHeadFlag(
+                nextDepartmentId,
+                nextLevel,
+                positionId,
+                data.updatedBy,
+                transaction,
+            );
+        }
+
+        const payload = { ...data };
+        delete payload._levelHeadDepartmentId;
+        delete payload._levelHeadLevel;
+
+        const [count] = await scoped(model.departmentPositionsModel).update(payload, {
+            where: { departmentPositionId: positionId },
+            transaction,
+        });
+
+        const oldDepartmentId = existing.departmentId;
+        const oldLevel = existing.level;
+        const departmentChanged =
+            data.departmentId !== undefined
+            && Number(data.departmentId) !== Number(oldDepartmentId);
+        const levelChanged =
+            data.level != null
+            && Number(data.level) !== Number(oldLevel);
+
+        if (oldDepartmentId != null && (departmentChanged || levelChanged)) {
+            await ensureSolePositionIsLevelHead(
+                oldDepartmentId,
+                oldLevel,
+                data.updatedBy,
+                transaction,
+            );
+        }
+
+        if (nextDepartmentId != null) {
+            await ensureSolePositionIsLevelHead(
+                nextDepartmentId,
+                nextLevel,
+                data.updatedBy,
+                transaction,
+            );
+        }
+
+        if (ownsTransaction) {
+            await transaction.commit();
+        }
+        return count > 0;
+    } catch (error) {
+        if (ownsTransaction) {
+            await transaction.rollback();
+        }
+        throw error;
+    }
 }
 
-export async function deleteOrgPosition(departmentPositionId) {
+export async function deleteOrgPosition(departmentPositionId, updatedBy) {
     const positionId = Number(departmentPositionId);
     const transaction = await sequelize.transaction();
     try {
+        const existing = await scoped(model.departmentPositionsModel).findOne({
+            attributes: ['departmentPositionId', 'departmentId', 'level'],
+            where: { departmentPositionId: positionId },
+            transaction,
+        });
+        if (!existing) {
+            await transaction.rollback();
+            return false;
+        }
+
         await scoped(model.userDepartmentPositionsModel).destroy({
             where: { departmentPositionId: positionId },
             transaction,
@@ -237,6 +457,16 @@ export async function deleteOrgPosition(departmentPositionId) {
             where: { departmentPositionId: positionId },
             transaction,
         });
+
+        if (existing.departmentId != null) {
+            await ensureSolePositionIsLevelHead(
+                existing.departmentId,
+                existing.level,
+                updatedBy,
+                transaction,
+            );
+        }
+
         await transaction.commit();
         return deleted > 0;
     } catch (error) {
@@ -265,38 +495,7 @@ export async function setPositionVacant(departmentPositionId, isVacant, updatedB
     );
 }
 
-export async function markPositionVacant(userDepartmentPositionId, updatedBy) {
-    const headId = Number(userDepartmentPositionId);
-    const transaction = await sequelize.transaction();
-    try {
-        const existing = await scoped(model.userDepartmentPositionsModel).findOne({
-            where: { userDepartmentPositionId: headId },
-            transaction,
-        });
-        if (!existing) {
-            await transaction.rollback();
-            return null;
-        }
-
-        const departmentPositionId = existing.departmentPositionId;
-
-        await scoped(model.userDepartmentPositionsModel).destroy({
-            where: { userDepartmentPositionId: headId },
-            force: true,
-            transaction,
-        });
-
-        const activeCount = await countActiveHeads(departmentPositionId, transaction);
-        await setPositionVacant(departmentPositionId, activeCount === 0, updatedBy, transaction);
-        await transaction.commit();
-        return getOrgPositionById(departmentPositionId);
-    } catch (error) {
-        await transaction.rollback();
-        throw error;
-    }
-}
-
-export async function findActiveHead(departmentPositionId, userId) {
+export async function findActiveHead(departmentPositionId, userId, transaction) {
     return scoped(model.userDepartmentPositionsModel).findOne({
         attributes: { exclude: excludeMeta },
         where: {
@@ -304,6 +503,7 @@ export async function findActiveHead(departmentPositionId, userId) {
             userId: Number(userId),
             status: 'ACTIVE',
         },
+        transaction,
     });
 }
 
@@ -338,7 +538,10 @@ export async function getHeadsByPositionId(departmentPositionId) {
 export async function getHeadById(userDepartmentPositionId) {
     return scoped(model.userDepartmentPositionsModel).findOne({
         attributes: { exclude: excludeMeta },
-        where: { userDepartmentPositionId: Number(userDepartmentPositionId) },
+        where: {
+            userDepartmentPositionId: Number(userDepartmentPositionId),
+            status: 'ACTIVE',
+        },
         include: [assigneeInclude],
     });
 }
@@ -348,7 +551,10 @@ export async function updateHead(userDepartmentPositionId, data, updatedBy) {
     const transaction = await sequelize.transaction();
     try {
         const existing = await scoped(model.userDepartmentPositionsModel).findOne({
-            where: { userDepartmentPositionId: headId },
+            where: {
+                userDepartmentPositionId: headId,
+                status: 'ACTIVE',
+            },
             transaction,
         });
         if (!existing) {
@@ -359,7 +565,10 @@ export async function updateHead(userDepartmentPositionId, data, updatedBy) {
         const [count] = await scoped(model.userDepartmentPositionsModel).update(
             { ...data, updatedBy },
             {
-                where: { userDepartmentPositionId: headId },
+                where: {
+                    userDepartmentPositionId: headId,
+                    status: 'ACTIVE',
+                },
                 transaction,
             },
         );
@@ -378,12 +587,15 @@ export async function updateHead(userDepartmentPositionId, data, updatedBy) {
     }
 }
 
-export async function deleteHead(userDepartmentPositionId, updatedBy) {
+export async function deleteHead(userDepartmentPositionId, updatedBy, endDate) {
     const headId = Number(userDepartmentPositionId);
     const transaction = await sequelize.transaction();
     try {
         const existing = await scoped(model.userDepartmentPositionsModel).findOne({
-            where: { userDepartmentPositionId: headId },
+            where: {
+                userDepartmentPositionId: headId,
+                status: 'ACTIVE',
+            },
             transaction,
         });
         if (!existing) {
@@ -391,12 +603,25 @@ export async function deleteHead(userDepartmentPositionId, updatedBy) {
             return false;
         }
 
-        const deleted = await scoped(model.userDepartmentPositionsModel).destroy({
-            where: { userDepartmentPositionId: headId },
-            force: true,
-            transaction,
-        });
-        if (deleted === 0) {
+        const updateData = {
+            status: 'INACTIVE',
+            updatedBy,
+        };
+        if (endDate !== undefined) {
+            updateData.endDate = endDate;
+        }
+
+        const [count] = await scoped(model.userDepartmentPositionsModel).update(
+            updateData,
+            {
+                where: {
+                    userDepartmentPositionId: headId,
+                    status: 'ACTIVE',
+                },
+                transaction,
+            },
+        );
+        if (count === 0) {
             await transaction.rollback();
             return false;
         }
@@ -420,7 +645,7 @@ export async function departmentExists(departmentId) {
 
 export async function positionExists(departmentPositionId) {
     return scoped(model.departmentPositionsModel).findOne({
-        attributes: ['departmentPositionId'],
+        attributes: ['departmentPositionId', 'departmentId', 'level', 'isLevelHead'],
         where: { departmentPositionId: Number(departmentPositionId) },
     });
 }
@@ -513,8 +738,8 @@ export async function getOrgTreeData() {
                 {
                     model: model.departmentPositionsModel,
                     as: 'orgPositions',
-                    attributes: ['departmentPositionId', 'positionName', 'positionCode', 'level'],
-                    where: { level: 1 },
+                    attributes: ['departmentPositionId', 'positionName', 'positionCode', 'level', 'publishStatus'],
+                    where: { level: 1, publishStatus: 'PUBLISHED' },
                     required: false,
                     include: [
                         {
@@ -707,8 +932,8 @@ export async function getOrgChartData() {
                 {
                     model: model.departmentPositionsModel,
                     as: 'orgPositions',
-                    attributes: ['departmentPositionId', 'positionName', 'level', 'isVacant'],
-                    where: { level: 1 },
+                    attributes: ['departmentPositionId', 'positionName', 'level', 'isVacant', 'publishStatus'],
+                    where: { level: 1, publishStatus: 'PUBLISHED' },
                     required: false,
                     include: [
                         {
@@ -850,7 +1075,8 @@ export async function getOrgChartData() {
 export async function getPositionsByDepartment(departmentId) {
     return scoped(model.departmentPositionsModel).findAll({
         where: {
-            departmentId: Number(departmentId)
+            departmentId: Number(departmentId),
+            publishStatus: 'PUBLISHED',
         },
         attributes: [
             'departmentPositionId',
@@ -859,6 +1085,7 @@ export async function getPositionsByDepartment(departmentId) {
             'level',
             'employmentCategory',
             'isVacant',
+            'publishStatus',
             'sortOrder',
             'departmentId'
         ],

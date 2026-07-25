@@ -1,4 +1,3 @@
-
 ## Create order (folders in collection)
 
 | # | Folder | Method | Path |
@@ -9,6 +8,8 @@
 | 2 | department positions | `GET` | `/departmentPosition/cards`, `/departmentPosition/tree`, `/departmentPosition/chart`, `/departmentPosition/departmentPositions` |
 
 **Removed folder:** `2. department structure` — hierarchy is on `department.parentDepartmentId` only.
+
+**Removed API:** `POST /departmentPosition/markVacant` — use `DELETE /departmentPosition/head` (sets `INACTIVE`).
 
 ---
 
@@ -63,7 +64,18 @@ Same endpoint `POST /department/` — when `departmentId` is sent, creates paren
   "departmentId": 12,
   "positionName": "Chancellor",
   "employmentCategory": "Leadership",
-  "level": 1
+  "level": 1,
+  "isLevelHead": true,
+  "publishStatus": "DRAFT"
+}
+```
+
+### Publish / promote level-head
+```json
+{
+  "departmentPositionId": 2,
+  "publishStatus": "PUBLISHED",
+  "isLevelHead": true
 }
 ```
 
@@ -72,11 +84,25 @@ Same endpoint `POST /department/` — when `departmentId` is sent, creates paren
 {
   "departmentPositionId": 2,
   "userId": 44,
-  "holderType": "PRIMARY",
-  "status": "ACTIVE"
+  "joiningDate": "2024-01-01",
+  "endDate": null
 }
 ```
 
+`status` is always `ACTIVE` on create (not accepted in payload).
+
+### Relieve head (`DELETE /head`)
+```
+DELETE /departmentPosition/head?userDepartmentPositionId=9&endDate=2026-07-25
+```
+
+Sets `status=INACTIVE` and optional relieving `endDate`. INACTIVE rows are hidden from GETs.
+
 **Response shape:** `{ success, message, data }` — test scripts read `res.data`.
 
-**Removed:** `/subAccount`, `/departmentStructure`, `accountId`, `subAccountId`, `departmentStructureId`, `hod_departments`.
+**Enums**
+- `employmentCategory`: Academic | Administrative | Support | Executive | Leadership
+- `publishStatus`: DRAFT | PUBLISHED
+- head `status`: ACTIVE | INACTIVE
+
+**Removed:** `/subAccount`, `/departmentStructure`, `accountId`, `subAccountId`, `departmentStructureId`, `hod_departments`, `POST /markVacant`, head `holderType`.
