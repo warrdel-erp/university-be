@@ -1083,7 +1083,6 @@ export async function getPositionsByDepartment(departmentId) {
     return scoped(model.departmentPositionsModel).findAll({
         where: {
             departmentId: Number(departmentId),
-            publishStatus: 'PUBLISHED',
         },
         attributes: [
             'departmentPositionId',

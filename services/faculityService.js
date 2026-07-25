@@ -9,7 +9,7 @@ function formatFaculityLoad(row) {
   return {
     ...rest,
     userId: employee?.userId || rest.userId, // map employee's userId back to the root level
-    definedLoad: rest.definedLoad ?? null,
+    definedLoad: rest.definedLoad == null ? null : Math.trunc(Number(rest.definedLoad)),
     currentLoad: toMoneyNumber(rest.currentLoad),
     ...(employee ? { employee } : {}),
     ...(employeeFaculity ? { employeeFaculity } : {}),
@@ -18,6 +18,14 @@ function formatFaculityLoad(row) {
 
 function normalizeLoadWritePayload(data) {
   const payload = { ...data };
+
+  if ("definedLoad" in payload && payload.definedLoad != null) {
+    const definedLoad = Number(payload.definedLoad);
+    if (!Number.isFinite(definedLoad) || Math.trunc(definedLoad) !== definedLoad) {
+      throw new Error("Invalid definedLoad");
+    }
+    payload.definedLoad = Math.trunc(definedLoad);
+  }
 
   if ("currentLoad" in payload) {
     const parsed = parseMoneyInput(payload.currentLoad);
@@ -55,7 +63,9 @@ export async function updateFaculityLoad(faculityLoadId, info, updatedBy) {
     return faculityLoadRepository.updateFaculityLoad(faculityLoadId, payload);
   } catch (error) {
     console.error("Error updating faculity load:", error);
-    throw error.message === "Invalid currentLoad" ? error : new Error("Failed to update time table");
+    throw error.message === "Invalid currentLoad" || error.message === "Invalid definedLoad"
+      ? error
+      : new Error("Failed to update time table");
   }
 }
 

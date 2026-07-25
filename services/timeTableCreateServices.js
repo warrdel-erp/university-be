@@ -1,15 +1,10 @@
 import * as model from "../models/index.js";
 import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
-import { getSingleTimeTableById, getTimeTableStructureById, getStructureCourseMappingById, getMappedStructuresForCourseSession } from "../repository/timeTableRepository.js";
+import { getTimeTableStructureById, getStructureCourseMappingById, getMappedStructuresForCourseSession } from "../repository/timeTableRepository.js";
 import { getTeacherDetailsByTeacherSubjectId } from "../repository/teacherSubjectMappingRepository.js";
-import {
-  getSingleFaculityLoadDetails,
-  updateFaculityLoad,
-  updateFaculityLoadByEmployeeId,
-} from "../repository/faculityLoadRepository.js";
+import { recomputeFaculityCurrentLoadHours } from "../repository/faculityLoadRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 import { getHolidayStartEndDate } from "../repository/holidayRepository.js";
-import { decimalAdd, decimalSubtract, toMoneyNumber } from "../utility/decimalMoney.js";
 import { resolveProgramTerm, resolveTimeTableRoutineSection, stripRoutinePersistPayload } from "../utility/classSectionIncludes.js";
 import {
   findClassSectionTermById,
@@ -623,36 +618,23 @@ async function assertNoSlotConflicts({
   }
 }
 
-async function addFacultyLoadForEmployee(userId, periodLength, transaction) {
-  if (!userId || periodLength <= 0) {
+async function recomputeFacultyLoadForUser(userId, transaction) {
+  if (!userId) {
     return;
   }
-
-  const facultyLoad = await getSingleFaculityLoadDetails(userId);
-  const existingLoad = toMoneyNumber(
-    facultyLoad?.[0]?.dataValues?.currentLoad ?? facultyLoad?.[0]?.currentLoad,
-  );
-  await updateFaculityLoadByEmployeeId(
-    userId,
-    { currentLoad: decimalAdd(existingLoad, periodLength) },
-    transaction,
-  );
+  await recomputeFaculityCurrentLoadHours(Number(userId), transaction);
 }
 
-async function subtractFacultyLoadForEmployee(employeeId, periodLength, transaction) {
-  if (!employeeId || periodLength <= 0) {
-    return;
+async function recomputeFacultyLoadForUsers(userIds, transaction) {
+  const seen = new Set();
+  for (const userId of userIds) {
+    const id = Number(userId);
+    if (!id || seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    await recomputeFaculityCurrentLoadHours(id, transaction);
   }
-
-  const facultyLoad = await getSingleFaculityLoadDetails(employeeId);
-  const existingLoad = toMoneyNumber(
-    facultyLoad?.[0]?.dataValues?.currentLoad ?? facultyLoad?.[0]?.currentLoad,
-  );
-  await updateFaculityLoadByEmployeeId(
-    employeeId,
-    { currentLoad: Math.max(0, decimalSubtract(existingLoad, periodLength)) },
-    transaction,
-  );
 }
 
 
@@ -981,12 +963,6 @@ export async function deletetimeTableMapping(timeTableCellId, options = {}) {
 
     assertMappingDeletable(routine);
 
-    const periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(
-      schedule.timeTableCreationId,
-      { transaction },
-    );
-    const periodLength = toMoneyNumber(periodInfo?.timeTableName?.periodLength ?? 0);
-
     const mappingIds = [Number(timeTableCellId)];
     if (options.deleteCombinedGroup && schedule.combinedGroupId) {
       const siblings = await timeTableCreateRepository.getMappingsByCombinedGroupIdRepository(
@@ -1009,9 +985,11 @@ export async function deletetimeTableMapping(timeTableCellId, options = {}) {
       transaction,
     });
 
+    const teacherUserIds = [];
     for (const teacher of teachers) {
-      await subtractFacultyLoadForEmployee(teacher.userId, periodLength, transaction);
+      teacherUserIds.push(teacher.userId);
     }
+    await recomputeFacultyLoadForUsers(teacherUserIds, transaction);
 
     await transaction.commit();
     return {
@@ -1055,7 +1033,6 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
         throw new Error(`Invalid timeTableCreationId: ${firstPayload.timeTableCreationId}`);
       }
 
-      const periodLength = toMoneyNumber(periodInfo.timeTableName?.periodLength ?? 0);
       const conflictOptions = {
         allowedClassSectionTermIds: [Number(routine.classSectionTermId)],
         excludeCombinedGroupId: null,
@@ -1123,15 +1100,17 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
         }));
       }
 
+      const loadUserIds = [];
       for (const payload of copyPayloads) {
         const teacherList = Array.isArray(payload.teachers) ? payload.teachers : [];
         if (teacherList.length === 0 && payload.userId != null) {
           teacherList.push({ userId: payload.userId });
         }
         for (const teacher of teacherList) {
-          await addFacultyLoadForEmployee(teacher.userId, periodLength, transaction);
+          loadUserIds.push(teacher.userId);
         }
       }
+      await recomputeFacultyLoadForUsers(loadUserIds, transaction);
 
       await transaction.commit();
       return {
@@ -1194,7 +1173,6 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
       excludeCombinedGroupId: existingCombinedGroupId || null,
     };
 
-    let totalPeriodLength = 0;
     const createdMappings = [];
 
     for (const slot of slots) {
@@ -1202,11 +1180,6 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
       if (!periodInfo) {
         throw new Error(`Invalid timeTableCreationId: ${slot.timeTableCreationId}`);
       }
-
-      totalPeriodLength = decimalAdd(
-        totalPeriodLength,
-        toMoneyNumber(periodInfo.timeTableName?.periodLength ?? 0),
-      );
 
       await assertNoSlotConflicts({
         userId,
@@ -1249,7 +1222,16 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
       }
     }
 
-    await addFacultyLoadForEmployee(userId, totalPeriodLength, transaction);
+    const loadUserIds = [];
+    if (Array.isArray(payload.teachers)) {
+      for (const teacher of payload.teachers) {
+        loadUserIds.push(teacher.userId);
+      }
+    }
+    if (userId != null) {
+      loadUserIds.push(userId);
+    }
+    await recomputeFacultyLoadForUsers(loadUserIds, transaction);
 
     await transaction.commit();
 
@@ -1440,6 +1422,7 @@ export async function cloneTimeTableRoutine(
 
     const newRoutine = await timeTableCreateRepository.addTimeTableCreate(newRoutineData, transaction);
     const newRoutineId = newRoutine.timeTableRoutineId;
+    const cloneLoadUserIds = [];
 
     for (const cell of previousCells) {
       const row = {
@@ -1465,12 +1448,12 @@ export async function cloneTimeTableRoutine(
 
       await timeTableCreateRepository.addtimeTableMapping(row, transaction);
 
-      const periodInfo = periodInfoByCreationId.get(Number(cell.timeTableCreationId));
-      const periodLength = toMoneyNumber(periodInfo?.timeTableName?.periodLength ?? 0);
       for (const teacher of row.teachers) {
-        await addFacultyLoadForEmployee(teacher.userId, periodLength, transaction);
+        cloneLoadUserIds.push(teacher.userId);
       }
     }
+
+    await recomputeFacultyLoadForUsers(cloneLoadUserIds, transaction);
 
     await transaction.commit();
     return newRoutine;
@@ -1656,7 +1639,6 @@ function hasTeacherSlotUpdate(item) {
 async function assignTeacherToMappingCell({
   baseMappingId,
   item,
-  periodLength,
   createdBy,
   updatedBy,
   transaction,
@@ -1665,8 +1647,6 @@ async function assignTeacherToMappingCell({
   if (Object.keys(cellPatch).length > 1) {
     await timeTableCreateRepository.updateMapping(baseMappingId, cellPatch, transaction);
   }
-
-  await addFacultyLoadForEmployee(item.userId, periodLength, transaction);
 
   await timeTableCreateRepository.addCellTeacherRepository({
     timeTableCellId: baseMappingId,
@@ -1688,6 +1668,8 @@ async function assignTeacherToMappingCell({
     },
     { transaction },
   );
+
+  await recomputeFacultyLoadForUser(item.userId, transaction);
 }
 
 export async function updateSimpleTeacherMapping(mappingArray, createdBy, updatedBy) {
@@ -1711,14 +1693,6 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
     const { startingDate, endingDate } = routineInfo;
 
     assertMappingRoutineEditable(routineInfo);
-
-    const ttCreationData = await getSingleTimeTableById(baseRow.timeTableCreationId);
-
-    if (!ttCreationData || !ttCreationData[0]) {
-      throw new Error(`No timetable found for ID ${baseRow.timeTableCreationId}`);
-    }
-
-    const periodLength = toMoneyNumber(ttCreationData[0].dataValues.periodLength);
 
     const periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(baseRow.timeTableCreationId);
     if (!periodInfo) {
@@ -1788,8 +1762,6 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           }
         }
 
-        await addFacultyLoadForEmployee(item.userId, periodLength, transaction);
-
         const cellPatch = buildMappingCellPatch(item, updatedBy);
         if (Object.keys(cellPatch).length > 1) {
           await timeTableCreateRepository.updateMapping(baseMappingId, cellPatch, transaction);
@@ -1818,6 +1790,8 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           },
           { transaction },
         );
+
+        await recomputeFacultyLoadForUser(item.userId, transaction);
         continue;
       }
 
@@ -1843,7 +1817,6 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
         await assignTeacherToMappingCell({
           baseMappingId,
           item,
-          periodLength,
           createdBy,
           updatedBy,
           transaction,
@@ -1859,8 +1832,6 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
 
       if (item.userId != null && Number(teacherPlain.userId) !== Number(item.userId)) {
         const previousUserId = Number(teacherPlain.userId);
-        await subtractFacultyLoadForEmployee(previousUserId, periodLength, transaction);
-        await addFacultyLoadForEmployee(item.userId, periodLength, transaction);
         await timeTableCreateRepository.updateCellTeacherRepository(
           teacherPlain.timeTableCellTeacherId,
           {
@@ -1875,6 +1846,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           Number(item.userId),
           { transaction, updatedBy },
         );
+        await recomputeFacultyLoadForUsers([previousUserId, item.userId], transaction);
         teacherPlain.userId = Number(item.userId);
       }
 
