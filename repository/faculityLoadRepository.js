@@ -1,6 +1,5 @@
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
-import { decimalAdd, decimalDivide, toMoneyNumber } from "../utility/decimalMoney.js";
 
 export async function addFaculityLoad(data) {
   try {
@@ -147,7 +146,8 @@ export async function updateFaculityLoadByEmployeeId(userId, info, transaction) 
 }
 
 /**
- * Recompute current_load in hours: SUM(structure.period_length minutes) / 60
+ * Recompute current_load as integer hours from load distribution:
+ * ROUND(SUM(structure.period_length minutes) / 60)
  * for all week-template cell teacher rows for this userId.
  */
 export async function recomputeFaculityCurrentLoadHours(userId, transaction) {
@@ -199,11 +199,11 @@ export async function recomputeFaculityCurrentLoadHours(userId, transaction) {
   let totalMinutes = 0;
   for (const row of teacherRows) {
     const plain = row.get({ plain: true });
-    const periodLength = plain.timeTableCell.timeTablecreation.timeTableName.periodLength;
-    totalMinutes = decimalAdd(totalMinutes, toMoneyNumber(periodLength));
+    const periodLength = Number(plain.timeTableCell.timeTablecreation.timeTableName.periodLength);
+    totalMinutes += periodLength;
   }
 
-  const hours = decimalDivide(totalMinutes, 60);
+  const hours = Math.round(totalMinutes / 60);
 
   return scoped(model.faculityLoadModel).update(
     { currentLoad: hours },
