@@ -57,7 +57,6 @@ router.post('/setup', validate({ body: initialSetupSchema }), initialSetup);
 
 // for giving full access to existing user by userId
 router.post('/giveFullAccess', validate({ body: giveFullAccessSchema }), giveFullAccess);
-router.post('/give-full-access', validate({ body: giveFullAccessSchema }), giveFullAccess);
 
 // for login
 router.post("/login", login);
