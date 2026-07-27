@@ -183,3 +183,13 @@ export const getTopicOptions = async (req, res) => {
         return ErrorResponse(res, status, error.message || "Internal Server Error");
     }
 };
+
+export const getStudentFilterOptions = async (req, res) => {
+    try {
+        const result = await optionsServices.getStudentFilterOptions(req.query);
+        return SuccessResponse(res, 200, "Student filter options fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getStudentFilterOptions:", error);
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
+    }
+};

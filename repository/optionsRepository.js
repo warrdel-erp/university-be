@@ -341,3 +341,123 @@ export async function getTopicOptionRows(lessonId) {
         order: [['topicId', 'ASC']],
     });
 }
+
+function idListWhere(ids) {
+    if (ids == null) {
+        return undefined;
+    }
+    if (ids.length === 1) {
+        return ids[0];
+    }
+    return { [Op.in]: ids };
+}
+
+/** Sessions for cascading student filters; optional courseIds via session_course_mapping. */
+export async function getSessionOptions(courseIds) {
+    if (courseIds != null) {
+        const mappings = await scoped(model.sessionCouseMappingModel).findAll({
+            attributes: ['sessionId'],
+            where: { courseId: idListWhere(courseIds) },
+        });
+
+        const sessionIds = [];
+        const seen = new Set();
+        for (const row of mappings) {
+            const sessionId = Number(row.sessionId);
+            if (seen.has(sessionId)) {
+                continue;
+            }
+            seen.add(sessionId);
+            sessionIds.push(sessionId);
+        }
+
+        if (sessionIds.length === 0) {
+            return [];
+        }
+
+        return scoped(model.sessionModel).findAll({
+            attributes: [['session_name', 'label'], ['session_id', 'value']],
+            where: { sessionId: { [Op.in]: sessionIds } },
+            order: [['session_name', 'ASC']],
+        });
+    }
+
+    return scoped(model.sessionModel).findAll({
+        attributes: [['session_name', 'label'], ['session_id', 'value']],
+        order: [['session_name', 'ASC']],
+    });
+}
+
+/** Course metadata used to build year / term option lists. */
+export async function getCoursesMeta(courseIds) {
+    const where = {};
+    const courseIdFilter = idListWhere(courseIds);
+    if (courseIdFilter != null) {
+        where.courseId = courseIdFilter;
+    }
+
+    return scoped(model.courseModel).findAll({
+        attributes: ['courseId', 'courseDuration', 'totalTerms', 'termType'],
+        where,
+        order: [['courseId', 'ASC']],
+    });
+}
+
+/** Distinct program years from class_sections matching parent filters. */
+export async function getDistinctClassSectionYears({ courseIds, sessionIds } = {}) {
+    const where = {};
+    const courseIdFilter = idListWhere(courseIds);
+    const sessionIdFilter = idListWhere(sessionIds);
+    if (courseIdFilter != null) {
+        where.courseId = courseIdFilter;
+    }
+    if (sessionIdFilter != null) {
+        where.sessionId = sessionIdFilter;
+    }
+
+    return scoped(model.classSectionModel).findAll({
+        attributes: ['year'],
+        where,
+        group: ['year'],
+        order: [['year', 'ASC']],
+        raw: true,
+    });
+}
+
+/**
+ * Class section options for cascading student filters (multi-id parents).
+ * Requires at least one courseId (same contract as /options/classSections).
+ */
+export async function getClassSectionFilterOptions({
+    courseIds,
+    sessionIds,
+    year,
+    term,
+} = {}) {
+    if (courseIds == null) {
+        return [];
+    }
+
+    const where = {
+        courseId: idListWhere(courseIds),
+    };
+    const sessionIdFilter = idListWhere(sessionIds);
+    const yearFilter = idListWhere(year);
+    if (sessionIdFilter != null) {
+        where.sessionId = sessionIdFilter;
+    }
+    if (yearFilter != null) {
+        where.year = yearFilter;
+    }
+
+    return scoped(model.classSectionModel).findAll({
+        attributes: [
+            ['section', 'label'],
+            ['class_sections_id', 'value'],
+            'year',
+        ],
+        where,
+        include: [classSectionTermsInclude({ term, required: term != null })],
+        order: [['year', 'ASC'], ['section', 'ASC']],
+    });
+}

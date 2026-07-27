@@ -102,4 +102,4 @@ Sets `status=INACTIVE` and optional relieving `endDate`. INACTIVE rows are hidde
 - `employmentCategory`: Academic | Administrative | Support | Executive | Leadership
 - head `status`: ACTIVE | INACTIVE
 
-**Removed:** `/subAccount`, `/departmentStructure`, `accountId`, `subAccountId`, `departmentStructureId`, `hod_departments`, `POST /markVacant`, head `holderType`, `publishStatus`.
+**Removed:** `/subAccount`, `/departmentStructure`, `accountId`, `subAccountId`, `departmentStructureId`, `hod_departments`, `POST /markVacant`, head `holderType`, `publishStatus`, `isVacant`.

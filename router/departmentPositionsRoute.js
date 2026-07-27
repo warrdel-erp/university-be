@@ -59,7 +59,6 @@ const addDepartmentPositionSchema = z.object({
     positionCode: z.string().optional().nullable(),
     employmentCategory: employmentCategoryEnum,
     reportingType: z.string().optional().nullable(),
-    isVacant: z.boolean().optional(),
     isLevelHead: z.boolean().optional(),
     level: z.coerce.number().int().positive('level must be greater than 0'),
 });
@@ -78,12 +77,6 @@ const updateDepartmentPositionSchema = z.object({
 const listDepartmentPositionsQuerySchema = z.object({
     departmentId: optionalNullablePositiveIntegerId,
     employmentCategory: employmentCategoryEnum.optional(),
-    isVacant: z.preprocess((val) => {
-        const normalized = emptyToUndefined(val);
-        if (normalized === 'true' || normalized === true) return true;
-        if (normalized === 'false' || normalized === false) return false;
-        return undefined;
-    }, z.boolean().optional()),
     isLevelHead: z.preprocess((val) => {
         const normalized = emptyToUndefined(val);
         if (normalized === 'true' || normalized === true) return true;

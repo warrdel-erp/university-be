@@ -80,6 +80,42 @@ const lessonsQuerySchema = z.object({
     lectureWindowId: positiveIntegerId,
 });
 
+/** Single id or list: `4`, `4,5`, `?courseIds=4&courseIds=5`, `[4,5]` */
+const optionalPositiveIntegerIdList = z.preprocess((val) => {
+    if (val === undefined || val === null || val === '' || val === 'undefined') {
+        return undefined;
+    }
+    const rawItems = Array.isArray(val) ? val : String(val).split(',');
+    const ids = [];
+    for (const item of rawItems) {
+        if (item === '' || item == null) {
+            continue;
+        }
+        ids.push(item);
+    }
+    return ids.length > 0 ? ids : undefined;
+}, z.array(positiveIntegerId).min(1).optional());
+
+const studentFilterOptionsQuerySchema = z
+    .object({
+        courseIds: optionalPositiveIntegerIdList,
+        courseId: optionalPositiveIntegerIdList,
+        sessionIds: optionalPositiveIntegerIdList,
+        sessionId: optionalPositiveIntegerIdList,
+        year: optionalPositiveIntegerIdList,
+        classSectionsIds: optionalPositiveIntegerIdList,
+        classSectionsId: optionalPositiveIntegerIdList,
+        term: optionalPositiveIntegerIdList,
+        terms: optionalPositiveIntegerIdList,
+    })
+    .transform((data) => ({
+        courseIds: data.courseIds ?? data.courseId,
+        sessionIds: data.sessionIds ?? data.sessionId,
+        year: data.year,
+        classSectionsIds: data.classSectionsIds ?? data.classSectionsId,
+        term: data.terms ?? data.term,
+    }));
+
 router.get('/affiliatedUniversity', userAuth, optionsController.getAffiliatedUniversityOptions);
 
 router.get(
@@ -163,6 +199,13 @@ router.get(
     userAuth,
     validate({ query: topicsQuerySchema }),
     optionsController.getTopicOptions,
+);
+
+router.get(
+    '/studentFilters',
+    userAuth,
+    validate({ query: studentFilterOptionsQuerySchema }),
+    optionsController.getStudentFilterOptions,
 );
 
 export default router;
