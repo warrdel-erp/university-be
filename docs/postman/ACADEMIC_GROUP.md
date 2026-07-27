@@ -73,7 +73,7 @@ Run in order. Save IDs into collection variables.
 | Method | Path | Purpose |
 |--------|------|---------|
 | `POST` | `/academicGroup/scope` | Create scope |
-| `GET` | `/academicGroup/scope/all` | Scope list (`academicGroupScopeId`, `title`) |
+| `GET` | `/academicGroup/scope/all` | All scopes with course/session names + full fields |
 | `GET` | `/academicGroup/scope/single?academicGroupScopeId=` | Scope detail (+ linked group if any) |
 | `PATCH` | `/academicGroup/scope` | Update scope |
 | `DELETE` | `/academicGroup/scope?academicGroupScopeId=` | Soft-delete scope (cascades group + members) |

@@ -194,7 +194,7 @@
                 { "key": "search", "value": "", "disabled": true }
               ]
             },
-            "description": "**GET /academicGroup/scope/all**\n\nReturns scopes as `{ academicGroupScopeId, title }` for dropdowns.\n\nOptional: `search` (title contains)."
+            "description": "**GET /academicGroup/scope/all**\n\nFull scope rows for the tenant:\n- all scope keys (`groupType`, `title`, `selectionScope`, `courseId`, `sessionId`, `term`, `academicContextType`, `contextSubjectId`, `activityName`, …)\n- nested `course` (`courseId`, `courseName`)\n- nested `session` (`sessionId`, `sessionName`)\n- nested `contextSubject` when set\n- nested `group` when created\n\nOptional: `search` (title contains)."
           },
           "response": []
         },

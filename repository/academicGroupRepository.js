@@ -89,7 +89,7 @@ export async function getScopeById(academicGroupScopeId) {
     });
 }
 
-/** Dropdown list: title + academicGroupScopeId only. */
+/** Full scope list with course / session / subject names and linked group. */
 export async function getAllScopes({ search } = {}) {
     const where = {};
     if (search) {
@@ -98,7 +98,34 @@ export async function getAllScopes({ search } = {}) {
 
     return scoped(model.academicGroupScopeModel).findAll({
         where,
-        attributes: ['academicGroupScopeId', 'title'],
+        attributes: scopeListAttributes,
+        include: [
+            {
+                model: model.courseModel,
+                as: 'course',
+                attributes: ['courseId', 'courseName'],
+                required: false,
+            },
+            {
+                model: model.sessionModel,
+                as: 'session',
+                attributes: ['sessionId', 'sessionName'],
+                required: false,
+            },
+            {
+                model: model.subjectModel,
+                as: 'contextSubject',
+                attributes: ['subjectId', 'subjectName'],
+                required: false,
+            },
+            {
+                model: model.academicGroupModel,
+                as: 'group',
+                attributes: groupListAttributes,
+                required: false,
+                where: buildScope(model.academicGroupModel),
+            },
+        ],
         order: [['title', 'ASC'], ['academicGroupScopeId', 'ASC']],
     });
 }
