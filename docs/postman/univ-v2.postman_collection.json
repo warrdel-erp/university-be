@@ -8993,7 +8993,7 @@
           "id": "ag-req-005-get-all",
           "name": "GET all",
           "request": {
-            "description": "**GET /academicGroup/all** — paginated list with scope names + nested `users[].user.employee` and `students[].student` print fields.\n\nOptional: `page`, `limit`, `search`, `courseId`, `sessionId`, `term`, `groupType`, `publishStatus`.",
+            "description": "**GET /academicGroup/all** — paginated list with scope names, nested `users[].user.employee`, `students[].student`, and `print` (flattened faculty/students + memberCount).\n\nOptional: `page`, `limit`, `search`, `courseId`, `sessionId`, `term`, `groupType`, `publishStatus`.",
             "url": {
               "path": ["academicGroup", "all"],
               "host": ["{{baseurl}}"],
@@ -9019,7 +9019,7 @@
           "id": "ag-req-006-get-single",
           "name": "GET single",
           "request": {
-            "description": "**GET /academicGroup/single?academicGroupId=** — group + scope + users + students with print fields (`user`/`employee`, `student`).",
+            "description": "**GET /academicGroup/single?academicGroupId=** — same shape as `/all` for one group: nested users/students + `print` summary.",
             "url": {
               "path": ["academicGroup", "single"],
               "host": ["{{baseurl}}"],

@@ -3,6 +3,98 @@ import { Op } from 'sequelize';
 import * as academicGroupRepository from '../repository/academicGroupRepository.js';
 import * as studentRepository from '../repository/studentRepository.js';
 
+function asPlain(row) {
+    if (row == null) {
+        return null;
+    }
+    return typeof row.toJSON === 'function' ? row.toJSON() : row;
+}
+
+function studentDisplayName(student) {
+    if (student == null) {
+        return null;
+    }
+    const parts = [student.firstName, student.middleName, student.lastName].filter(
+        (part) => part != null && String(part).trim() !== '',
+    );
+    return parts.length > 0 ? parts.join(' ') : null;
+}
+
+/** Flattened keys for list cards / print sheets. */
+function buildGroupPrint(groupPlain) {
+    const scope = groupPlain.scope || {};
+    const users = Array.isArray(groupPlain.users) ? groupPlain.users : [];
+    const students = Array.isArray(groupPlain.students) ? groupPlain.students : [];
+
+    const faculty = [];
+    for (const row of users) {
+        const user = row.user || {};
+        const employee = user.employee || {};
+        faculty.push({
+            userId: row.userId,
+            role: row.role,
+            userName: user.userName ?? null,
+            email: user.email ?? null,
+            phone: user.phone ?? null,
+            employeeId: employee.employeeId ?? null,
+            employeeName: employee.employeeName ?? null,
+            employeeCode: employee.employeeCode ?? null,
+        });
+    }
+
+    const studentRows = [];
+    for (const row of students) {
+        const student = row.student || {};
+        studentRows.push({
+            studentId: row.studentId,
+            studentName: studentDisplayName(student),
+            enrollNumber: student.enrollNumber ?? null,
+            scholarNumber: student.scholarNumber ?? null,
+            email: student.email ?? null,
+            phoneNumber: student.phoneNumber ?? null,
+            mobileNumber: student.mobileNumber ?? null,
+            currentClass: student.currentClass ?? null,
+        });
+    }
+
+    return {
+        academicGroupId: groupPlain.academicGroupId,
+        groupName: groupPlain.groupName,
+        groupCode: groupPlain.groupCode,
+        capacity: groupPlain.capacity,
+        publishStatus: groupPlain.publishStatus,
+        memberCount: studentRows.length,
+        remainingCapacity:
+            groupPlain.capacity == null
+                ? null
+                : Math.max(0, Number(groupPlain.capacity) - studentRows.length),
+        groupType: scope.groupType ?? null,
+        title: scope.title ?? null,
+        selectionScope: scope.selectionScope ?? null,
+        term: scope.term ?? null,
+        academicContextType: scope.academicContextType ?? null,
+        activityName: scope.activityName ?? null,
+        courseId: scope.courseId ?? null,
+        courseName: scope.course?.courseName ?? null,
+        courseCode: scope.course?.courseCode ?? null,
+        sessionId: scope.sessionId ?? null,
+        sessionName: scope.session?.sessionName ?? null,
+        subjectId: scope.contextSubjectId ?? null,
+        subjectName: scope.contextSubject?.subjectName ?? null,
+        faculty,
+        students: studentRows,
+    };
+}
+
+function withGroupPrint(row) {
+    const plain = asPlain(row);
+    if (plain == null) {
+        return null;
+    }
+    plain.print = buildGroupPrint(plain);
+    return plain;
+}
+
 function normalizeScopeFields(body) {
     const selectionScope = body.selectionScope;
     const academicContextType = body.academicContextType;
@@ -238,15 +330,20 @@ export async function createGroup(body, createdBy, updatedBy) {
 }
 
 export async function getGroupById(academicGroupId) {
-    return academicGroupRepository.getGroupById(academicGroupId);
+    const row = await academicGroupRepository.getGroupById(academicGroupId);
+    return withGroupPrint(row);
 }
 
 export async function getAllGroups(filters) {
     const { rows, count } = await academicGroupRepository.getAllGroups(filters);
     const page = Number(filters.page) || 1;
     const limit = Number(filters.limit) || 10;
+    const result = [];
+    for (const row of rows) {
+        result.push(withGroupPrint(row));
+    }
     return {
-        result: rows,
+        result,
         totalCount: count,
         page,
         limit,
