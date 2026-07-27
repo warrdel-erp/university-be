@@ -89,6 +89,20 @@ export async function getScopeById(academicGroupScopeId) {
     });
 }
 
+/** Dropdown list: title + academicGroupScopeId only. */
+export async function getAllScopes({ search } = {}) {
+    const where = {};
+    if (search) {
+        where.title = { [Op.like]: `%${search}%` };
+    }
+
+    return scoped(model.academicGroupScopeModel).findAll({
+        where,
+        attributes: ['academicGroupScopeId', 'title'],
+        order: [['title', 'ASC'], ['academicGroupScopeId', 'ASC']],
+    });
+}
+
 export async function updateScope(academicGroupScopeId, payload, transaction) {
     const [count] = await scoped(model.academicGroupScopeModel).update(payload, {
         where: { academicGroupScopeId: Number(academicGroupScopeId) },

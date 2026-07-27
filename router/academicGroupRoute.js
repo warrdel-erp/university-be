@@ -71,6 +71,10 @@ const scopeIdQuerySchema = z.object({
     academicGroupScopeId: positiveIntegerId,
 });
 
+const listScopesQuerySchema = z.object({
+    search: optionalString,
+});
+
 const createGroupSchema = z.object({
     academicGroupScopeId: positiveIntegerId,
     groupName: z.string({ required_error: 'groupName is required' }).trim().min(1),
@@ -177,6 +181,13 @@ router.post(
     userAuth,
     validate({ body: createScopeSchema }),
     academicGroupController.createScope,
+);
+
+router.get(
+    '/scope/all',
+    userAuth,
+    validate({ query: listScopesQuerySchema }),
+    academicGroupController.getAllScopes,
 );
 
 router.get(

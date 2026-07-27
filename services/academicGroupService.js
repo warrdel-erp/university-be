@@ -91,6 +91,10 @@ export async function getScopeById(academicGroupScopeId) {
     return academicGroupRepository.getScopeById(academicGroupScopeId);
 }
 
+export async function getAllScopes(filters) {
+    return academicGroupRepository.getAllScopes(filters);
+}
+
 export async function updateScope(academicGroupScopeId, body, updatedBy) {
     const existing = await academicGroupRepository.getScopeById(academicGroupScopeId);
     if (!existing) {

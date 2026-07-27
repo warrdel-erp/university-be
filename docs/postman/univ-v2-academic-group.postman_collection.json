@@ -178,6 +178,27 @@
           "response": []
         },
         {
+          "name": "GET scope/all",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/academicGroup/scope/all",
+              "host": ["{{baseurl}}"],
+              "path": ["academicGroup", "scope", "all"],
+              "query": [
+                { "key": "search", "value": "", "disabled": true }
+              ]
+            },
+            "description": "**GET /academicGroup/scope/all**\n\nReturns scopes as `{ academicGroupScopeId, title }` for dropdowns.\n\nOptional: `search` (title contains)."
+          },
+          "response": []
+        },
+        {
           "name": "GET scope/single",
           "request": {
             "auth": {

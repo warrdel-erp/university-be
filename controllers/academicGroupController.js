@@ -34,6 +34,16 @@ export async function getScopeSingle(req, res) {
     }
 }
 
+export async function getAllScopes(req, res) {
+    try {
+        const result = await academicGroupService.getAllScopes(req.query);
+        return SuccessResponse(res, 200, 'Academic group scopes fetched successfully', result);
+    } catch (error) {
+        console.error('Error in getAllScopes:', error);
+        return ErrorResponse(res, 500, 'Internal Server Error', error.message);
+    }
+}
+
 export async function updateScope(req, res) {
     try {
         const { academicGroupScopeId } = req.body;
