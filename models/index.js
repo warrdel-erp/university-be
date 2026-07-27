@@ -1200,74 +1200,74 @@ userModel.hasMany(userDepartmentPositionsModel, {
 });
 
 academicGroupScopeModel.belongsTo(courseModel, {
-  foreignKey: "course_id",
+  foreignKey: "courseId",
   as: "course",
 });
 courseModel.hasMany(academicGroupScopeModel, {
-  foreignKey: "course_id",
+  foreignKey: "courseId",
   as: "academicGroupScopes",
 });
 
 academicGroupScopeModel.belongsTo(subjectModel, {
-  foreignKey: "context_subject_id",
+  foreignKey: "contextSubjectId",
   as: "contextSubject",
 });
 subjectModel.hasMany(academicGroupScopeModel, {
-  foreignKey: "context_subject_id",
+  foreignKey: "contextSubjectId",
   as: "academicGroupScopesContext",
 });
 
 academicGroupScopeModel.belongsTo(sessionModel, {
-  foreignKey: "session_id",
+  foreignKey: "sessionId",
   as: "session",
 });
 sessionModel.hasMany(academicGroupScopeModel, {
-  foreignKey: "session_id",
+  foreignKey: "sessionId",
   as: "academicGroupScopes",
 });
 
 academicGroupModel.belongsTo(academicGroupScopeModel, {
-  foreignKey: "academic_group_scope_id",
+  foreignKey: "academicGroupScopeId",
   as: "scope",
 });
 academicGroupScopeModel.hasOne(academicGroupModel, {
-  foreignKey: "academic_group_scope_id",
+  foreignKey: "academicGroupScopeId",
   as: "group",
 });
 
 academicGroupUserModel.belongsTo(academicGroupModel, {
-  foreignKey: "academic_group_id",
+  foreignKey: "academicGroupId",
   as: "group",
 });
 academicGroupModel.hasMany(academicGroupUserModel, {
-  foreignKey: "academic_group_id",
+  foreignKey: "academicGroupId",
   as: "users",
 });
 
 academicGroupUserModel.belongsTo(userModel, {
-  foreignKey: "user_id",
+  foreignKey: "userId",
   as: "user",
 });
 userModel.hasMany(academicGroupUserModel, {
-  foreignKey: "user_id",
+  foreignKey: "userId",
   as: "academicGroupUsers",
 });
 
 academicGroupStudentModel.belongsTo(academicGroupModel, {
-  foreignKey: "academic_group_id",
+  foreignKey: "academicGroupId",
   as: "group",
 });
 academicGroupModel.hasMany(academicGroupStudentModel, {
-  foreignKey: "academic_group_id",
+  foreignKey: "academicGroupId",
   as: "students",
 });
 
 academicGroupStudentModel.belongsTo(studentModel, {
-  foreignKey: "student_id",
+  foreignKey: "studentId",
   as: "student",
 });
 studentModel.hasMany(academicGroupStudentModel, {
-  foreignKey: "student_id",
+  foreignKey: "studentId",
   as: "academicGroupStudents",
 });
 
