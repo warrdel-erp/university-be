@@ -237,7 +237,7 @@ export async function getScopeById(academicGroupScopeId) {
             },
             {
                 model: model.academicGroupModel,
-                as: 'group',
+                as: 'groups',
                 attributes: groupListAttributes,
                 required: false,
                 where: buildScope(model.academicGroupModel),
@@ -246,7 +246,7 @@ export async function getScopeById(academicGroupScopeId) {
     });
 }
 
-/** Full scope list with course / session / subject names and linked group. */
+/** Full scope list with course / session / subject names and linked groups. */
 export async function getAllScopes({ search } = {}) {
     const where = {};
     if (search) {
@@ -277,7 +277,7 @@ export async function getAllScopes({ search } = {}) {
             },
             {
                 model: model.academicGroupModel,
-                as: 'group',
+                as: 'groups',
                 attributes: groupListAttributes,
                 required: false,
                 where: buildScope(model.academicGroupModel),
@@ -313,8 +313,8 @@ export async function softDeleteScope(academicGroupScopeId, updatedBy, transacti
     return true;
 }
 
-export async function findGroupByScopeId(academicGroupScopeId, transaction) {
-    return scoped(model.academicGroupModel).findOne({
+export async function findGroupsByScopeId(academicGroupScopeId, transaction) {
+    return scoped(model.academicGroupModel).findAll({
         where: { academicGroupScopeId: Number(academicGroupScopeId) },
         attributes: groupListAttributes,
         transaction,

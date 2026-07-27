@@ -240,8 +240,11 @@ export async function deleteScope(academicGroupScopeId, updatedBy) {
 
     const transaction = await sequelize.transaction();
     try {
-        const group = await academicGroupRepository.findGroupByScopeId(academicGroupScopeId, transaction);
-        if (group) {
+        const groups = await academicGroupRepository.findGroupsByScopeId(
+            academicGroupScopeId,
+            transaction,
+        );
+        for (const group of groups) {
             await academicGroupRepository.softDeleteGroupUsersByGroupId(
                 group.academicGroupId,
                 updatedBy,
@@ -277,11 +280,6 @@ export async function createGroup(body, createdBy, updatedBy) {
     const scope = await academicGroupRepository.getScopeById(academicGroupScopeId);
     if (!scope) {
         throw new Error('academicGroupScopeId not found');
-    }
-
-    const existingGroup = await academicGroupRepository.findGroupByScopeId(academicGroupScopeId);
-    if (existingGroup) {
-        throw new Error('Scope already has a group');
     }
 
     const publishStatus = body.publishStatus ?? 'draft';

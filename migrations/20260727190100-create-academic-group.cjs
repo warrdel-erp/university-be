@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Creates academic_group (wizard step 2). One group per scope (unique academic_group_scope_id).
+ * Creates academic_group (wizard step 2). Multiple groups may share one academic_group_scope_id.
  */
 
 async function tableExists(queryInterface, tableName) {
@@ -31,7 +31,6 @@ module.exports = {
           academic_group_scope_id: {
             type: Sequelize.INTEGER,
             allowNull: false,
-            unique: true,
             references: { model: 'academic_group_scope', key: 'academic_group_scope_id' },
             onUpdate: 'CASCADE',
             onDelete: 'RESTRICT',
@@ -105,6 +104,15 @@ module.exports = {
         },
         { charset: 'latin1', collate: 'latin1_swedish_ci' },
       );
+    }
+
+    if (
+      (await tableExists(queryInterface, 'academic_group')) &&
+      !(await indexExists(queryInterface, 'academic_group', 'idx_academic_group_scope_id'))
+    ) {
+      await queryInterface.addIndex('academic_group', ['academic_group_scope_id'], {
+        name: 'idx_academic_group_scope_id',
+      });
     }
 
     if (

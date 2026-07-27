@@ -8918,7 +8918,7 @@
           "id": "ag-req-002-post-group",
           "name": "2 POST group",
           "request": {
-            "description": "**POST /academicGroup** — Step 2. Links to `academicGroupScopeId` (1:1). Auto-generates `groupCode` if blank. Default `publishStatus: draft`.",
+            "description": "**POST /academicGroup** — Step 2. Links to `academicGroupScopeId` (many groups per scope). Auto-generates `groupCode` if blank. Default `publishStatus: draft`.",
             "url": {
               "path": ["academicGroup"],
               "host": ["{{baseurl}}"],
@@ -9040,7 +9040,7 @@
           "id": "ag-req-007a-get-scope-all",
           "name": "GET scope/all",
           "request": {
-            "description": "**GET /academicGroup/scope/all**\n\nFull scope list with all keys + nested `course` (`courseName`), `session` (`sessionName`), `contextSubject`, and linked `group`.\n\nOptional: `search` (title contains).",
+            "description": "**GET /academicGroup/scope/all**\n\nFull scope list with all keys + nested `course` (`courseName`), `session` (`sessionName`), `contextSubject`, and linked `groups[]`.\n\nOptional: `search` (title contains).",
             "url": {
               "path": ["academicGroup", "scope", "all"],
               "host": ["{{baseurl}}"],
@@ -9281,7 +9281,7 @@
           "id": "ag-req-015-delete-scope",
           "name": "DELETE scope",
           "request": {
-            "description": "**DELETE /academicGroup/scope?academicGroupScopeId=** — cascades soft-delete of linked group and members.",
+            "description": "**DELETE /academicGroup/scope?academicGroupScopeId=** — cascades soft-delete of all linked groups and members.",
             "url": {
               "path": ["academicGroup", "scope"],
               "host": ["{{baseurl}}"],

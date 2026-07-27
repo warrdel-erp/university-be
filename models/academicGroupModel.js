@@ -19,7 +19,6 @@ const academicGroupModel = sequelize.define(
         academicGroupScopeId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            unique: true,
             field: 'academic_group_scope_id',
             references: {
                 model: academicGroupScope,

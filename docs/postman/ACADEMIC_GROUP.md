@@ -18,7 +18,7 @@ Formation-only APIs for reusable student groups (teaching / activity).
 | Table | Purpose |
 |-------|---------|
 | `academic_group_scope` | Step 1 — group type, title, program/session/term, academic context |
-| `academic_group` | Step 2 — name, code, capacity, draft/published (1:1 with scope) |
+| `academic_group` | Step 2 — name, code, capacity, draft/published (**many groups per scope**) |
 | `academic_group_user` | Step 3 — faculty `userId` + `role` |
 | `academic_group_student` | Step 4 — student members |
 
@@ -73,11 +73,11 @@ Run in order. Save IDs into collection variables.
 | Method | Path | Purpose |
 |--------|------|---------|
 | `POST` | `/academicGroup/scope` | Create scope |
-| `GET` | `/academicGroup/scope/all` | All scopes with course/session names + full fields |
-| `GET` | `/academicGroup/scope/single?academicGroupScopeId=` | Scope detail (+ linked group if any) |
+| `GET` | `/academicGroup/scope/all` | All scopes with course/session names + `groups[]` |
+| `GET` | `/academicGroup/scope/single?academicGroupScopeId=` | Scope detail (+ linked `groups[]`) |
 | `PATCH` | `/academicGroup/scope` | Update scope |
-| `DELETE` | `/academicGroup/scope?academicGroupScopeId=` | Soft-delete scope (cascades group + members) |
-| `POST` | `/academicGroup` | Create group for a scope |
+| `DELETE` | `/academicGroup/scope?academicGroupScopeId=` | Soft-delete scope (cascades **all** groups + members) |
+| `POST` | `/academicGroup` | Create group for a scope (reuse same `academicGroupScopeId`) |
 | `GET` | `/academicGroup/all` | Paginated list + scope names + faculty/student print fields |
 | `GET` | `/academicGroup/single?academicGroupId=` | Group + scope + users + students (print fields) |
 | `PATCH` | `/academicGroup` | Update name / code / capacity / status |
@@ -159,7 +159,7 @@ With subject context:
   "publishStatus": "draft"
 }
 ```
-Omit `groupCode` to auto-generate. Rejects if scope already has a group.
+Omit `groupCode` to auto-generate. Multiple groups may share the same `academicGroupScopeId`.
 
 ### 3. Add faculty
 ```json
@@ -216,10 +216,10 @@ Or `{ "academicGroupStudentId": 1 }`
 ## Business rules (short)
 
 1. Scope first, then group, then users, then students.
-2. One group per scope (`academic_group_scope_id` unique).
+2. Multiple groups per scope (`academic_group_scope_id` is non-unique).
 3. Soft deletes everywhere (`deleted_at`).
 4. Delete group → soft-deletes its users and students.
-5. Delete scope → cascades soft-delete of linked group + members.
+5. Delete scope → cascades soft-delete of all linked groups + members.
 6. Publish only from `draft`.
 7. **No duplicate `studentId` in the same group** (unique DB index; re-add after delete restores the soft-deleted row).
 8. **No duplicate `userId` in the same group** (unique DB index; same restore behavior).

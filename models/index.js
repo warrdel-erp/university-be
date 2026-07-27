@@ -1230,9 +1230,9 @@ academicGroupModel.belongsTo(academicGroupScopeModel, {
   foreignKey: "academicGroupScopeId",
   as: "scope",
 });
-academicGroupScopeModel.hasOne(academicGroupModel, {
+academicGroupScopeModel.hasMany(academicGroupModel, {
   foreignKey: "academicGroupScopeId",
-  as: "group",
+  as: "groups",
 });
 
 academicGroupUserModel.belongsTo(academicGroupModel, {

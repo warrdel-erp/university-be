@@ -199,7 +199,7 @@
                 }
               ]
             },
-            "description": "**GET /academicGroup/scope/all**\n\nFull scope list for the tenant (all keys + nested names):\n- scope fields: `academicGroupScopeId`, `groupType`, `title`, `selectionScope`, `courseId`, `sessionId`, `term`, `academicContextType`, `contextSubjectId`, `activityName`, tenant/audit fields\n- `course`: `{ courseId, courseName }`\n- `session`: `{ sessionId, sessionName }`\n- `contextSubject`: `{ subjectId, subjectName }` when set\n- `group`: linked academic group when created\n\nOptional query: `search` (title contains)."
+            "description": "**GET /academicGroup/scope/all**\n\nFull scope list for the tenant (all keys + nested names):\n- scope fields: `academicGroupScopeId`, `groupType`, `title`, `selectionScope`, `courseId`, `sessionId`, `term`, `academicContextType`, `contextSubjectId`, `activityName`, tenant/audit fields\n- `course`: `{ courseId, courseName }`\n- `session`: `{ sessionId, sessionName }`\n- `contextSubject`: `{ subjectId, subjectName }` when set\n- `groups[]`: linked academic groups for this scope\n\nOptional query: `search` (title contains)."
           },
           "response": [
             {
@@ -217,7 +217,7 @@
               "code": 200,
               "_postman_previewlanguage": "json",
               "header": [{ "key": "Content-Type", "value": "application/json" }],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Academic group scopes fetched successfully\",\n  \"data\": [\n    {\n      \"academicGroupScopeId\": 1,\n      \"groupType\": \"teaching\",\n      \"title\": \"Dissertation\",\n      \"selectionScope\": \"program_specific\",\n      \"courseId\": 34,\n      \"sessionId\": 6,\n      \"term\": 10,\n      \"academicContextType\": \"activity\",\n      \"contextSubjectId\": null,\n      \"activityName\": \"Design Thinking Workshop\",\n      \"universityId\": 1,\n      \"instituteId\": 12,\n      \"academicYearId\": 76,\n      \"course\": { \"courseId\": 34, \"courseName\": \"B.Arch\" },\n      \"session\": { \"sessionId\": 6, \"sessionName\": \"2025-26\" },\n      \"contextSubject\": null,\n      \"group\": {\n        \"academicGroupId\": 1,\n        \"academicGroupScopeId\": 1,\n        \"groupName\": \"Dissertation Group 1\",\n        \"groupCode\": \"DIS-G1\",\n        \"capacity\": 10,\n        \"publishStatus\": \"draft\"\n      }\n    }\n  ]\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"Academic group scopes fetched successfully\",\n  \"data\": [\n    {\n      \"academicGroupScopeId\": 1,\n      \"groupType\": \"teaching\",\n      \"title\": \"Dissertation\",\n      \"selectionScope\": \"program_specific\",\n      \"courseId\": 34,\n      \"sessionId\": 6,\n      \"term\": 10,\n      \"academicContextType\": \"activity\",\n      \"contextSubjectId\": null,\n      \"activityName\": \"Design Thinking Workshop\",\n      \"universityId\": 1,\n      \"instituteId\": 12,\n      \"academicYearId\": 76,\n      \"course\": { \"courseId\": 34, \"courseName\": \"B.Arch\" },\n      \"session\": { \"sessionId\": 6, \"sessionName\": \"2025-26\" },\n      \"contextSubject\": null,\n      \"groups\": [\n        {\n          \"academicGroupId\": 1,\n          \"academicGroupScopeId\": 1,\n          \"groupName\": \"Dissertation Group 1\",\n          \"groupCode\": \"DIS-G1\",\n          \"capacity\": 10,\n          \"publishStatus\": \"draft\"\n        }\n      ]\n    }\n  ]\n}"
             }
           ]
         },
@@ -276,7 +276,7 @@
               "path": ["academicGroup", "scope"],
               "query": [{ "key": "academicGroupScopeId", "value": "{{academicGroupScopeId}}" }]
             },
-            "description": "Cascades soft-delete of linked group + users + students."
+            "description": "Cascades soft-delete of all linked groups + users + students."
           },
           "response": []
         }
@@ -284,7 +284,7 @@
     },
     {
       "name": "2. group",
-      "description": "Step 2 — create group linked to scope (1:1).",
+      "description": "Step 2 — create group linked to scope (many groups per scope).",
       "item": [
         {
           "name": "POST group",
@@ -325,7 +325,7 @@
               "host": ["{{baseurl}}"],
               "path": ["academicGroup"]
             },
-            "description": "Omit `groupCode` to auto-generate. Rejects if scope already has a group."
+            "description": "Omit `groupCode` to auto-generate. Same `academicGroupScopeId` may create multiple groups."
           },
           "response": []
         },
