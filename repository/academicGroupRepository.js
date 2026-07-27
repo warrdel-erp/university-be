@@ -314,6 +314,42 @@ export async function getMemberStudentIds(academicGroupId) {
     return studentIds;
 }
 
+/** Active + soft-deleted memberships for constraint checks / restore. */
+export async function findGroupStudentsIncludingDeleted(academicGroupId, studentIds, transaction) {
+    return model.academicGroupStudentModel.findAll({
+        where: {
+            academicGroupId: Number(academicGroupId),
+            studentId: { [Op.in]: studentIds },
+            ...buildScope(model.academicGroupStudentModel),
+        },
+        attributes: ['academicGroupStudentId', 'studentId', 'deletedAt'],
+        paranoid: false,
+        transaction,
+    });
+}
+
+export async function restoreGroupStudent(academicGroupStudentId, updatedBy, transaction) {
+    await model.academicGroupStudentModel.restore({
+        where: {
+            academicGroupStudentId: Number(academicGroupStudentId),
+            ...buildScope(model.academicGroupStudentModel),
+        },
+        transaction,
+    });
+    await model.academicGroupStudentModel.update(
+        { updatedBy },
+        {
+            where: { academicGroupStudentId: Number(academicGroupStudentId) },
+            transaction,
+        },
+    );
+    return scoped(model.academicGroupStudentModel).findOne({
+        where: { academicGroupStudentId: Number(academicGroupStudentId) },
+        attributes: studentListAttributes,
+        transaction,
+    });
+}
+
 export async function findExistingGroupStudents(academicGroupId, studentIds, transaction) {
     return scoped(model.academicGroupStudentModel).findAll({
         where: {
@@ -350,6 +386,42 @@ export async function softDeleteGroupStudents(where, updatedBy, transaction) {
     );
     return scoped(model.academicGroupStudentModel).destroy({
         where,
+        transaction,
+    });
+}
+
+/** Active + soft-deleted faculty rows for constraint checks / restore. */
+export async function findGroupUsersIncludingDeleted(academicGroupId, userIds, transaction) {
+    return model.academicGroupUserModel.findAll({
+        where: {
+            academicGroupId: Number(academicGroupId),
+            userId: { [Op.in]: userIds },
+            ...buildScope(model.academicGroupUserModel),
+        },
+        attributes: ['academicGroupUserId', 'userId', 'role', 'deletedAt'],
+        paranoid: false,
+        transaction,
+    });
+}
+
+export async function restoreGroupUser(academicGroupUserId, payload, transaction) {
+    await model.academicGroupUserModel.restore({
+        where: {
+            academicGroupUserId: Number(academicGroupUserId),
+            ...buildScope(model.academicGroupUserModel),
+        },
+        transaction,
+    });
+    await model.academicGroupUserModel.update(
+        payload,
+        {
+            where: { academicGroupUserId: Number(academicGroupUserId) },
+            transaction,
+        },
+    );
+    return scoped(model.academicGroupUserModel).findOne({
+        where: { academicGroupUserId: Number(academicGroupUserId) },
+        attributes: userListAttributes,
         transaction,
     });
 }
@@ -424,6 +496,20 @@ export async function studentExists(studentId) {
     return scoped(model.studentModel).findOne({
         where: { studentId: Number(studentId) },
         attributes: ['studentId'],
+    });
+}
+
+export async function studentExistsInScope(studentId, { courseId, sessionId } = {}) {
+    const where = { studentId: Number(studentId) };
+    if (courseId != null) {
+        where.courseId = Number(courseId);
+    }
+    if (sessionId != null) {
+        where.sessionId = Number(sessionId);
+    }
+    return scoped(model.studentModel).findOne({
+        where,
+        attributes: ['studentId', 'courseId', 'sessionId'],
     });
 }
 

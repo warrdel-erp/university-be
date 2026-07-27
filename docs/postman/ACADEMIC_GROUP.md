@@ -208,4 +208,9 @@ Or `{ "academicGroupStudentId": 1 }`
 4. Delete group → soft-deletes its users and students.
 5. Delete scope → cascades soft-delete of linked group + members.
 6. Publish only from `draft`.
-7. Out of scope for this module: timetable / classroom routine for groups, cross-program multi-course UI.
+7. **No duplicate `studentId` in the same group** (unique DB index; re-add after delete restores the soft-deleted row).
+8. **No duplicate `userId` in the same group** (unique DB index; same restore behavior).
+9. At most one `primary_faculty` per group.
+10. `capacity` enforced when set.
+11. For `program_specific`, students must match scope `courseId` + `sessionId`.
+12. Out of scope for this module: timetable / classroom routine for groups, cross-program multi-course UI.

@@ -349,32 +349,59 @@ export async function addUsers(body, createdBy, updatedBy) {
         throw new Error('academicGroupId not found');
     }
 
-    const users = normalizeUsersPayload(body);
-    const userIds = [];
+    const usersRaw = normalizeUsersPayload(body);
+    const users = [];
+    const seenUserIds = new Set();
     let primaryCount = 0;
-    for (const row of users) {
-        userIds.push(Number(row.userId));
+
+    for (const row of usersRaw) {
+        const userId = Number(row.userId);
+        if (seenUserIds.has(userId)) {
+            throw new Error(`Duplicate userId in request: ${userId}`);
+        }
+        seenUserIds.add(userId);
         if (row.role === 'primary_faculty') {
             primaryCount += 1;
         }
+        users.push({ userId, role: row.role });
+    }
+
+    if (users.length === 0) {
+        throw new Error('users are required');
     }
     if (primaryCount > 1) {
         throw new Error('Only one primary_faculty is allowed per request');
     }
 
+    const userIds = [];
     for (const row of users) {
+        userIds.push(row.userId);
         const user = await academicGroupRepository.userExists(row.userId);
         if (!user) {
             throw new Error(`userId not found: ${row.userId}`);
         }
     }
 
-    const existingRows = await academicGroupRepository.findExistingGroupUsers(
+    const existingRows = await academicGroupRepository.findGroupUsersIncludingDeleted(
         academicGroupId,
         userIds,
     );
-    if (existingRows.length > 0) {
-        throw new Error('One or more users are already assigned to this group');
+
+    const activeUserIds = [];
+    const deletedByUserId = new Map();
+    for (const row of existingRows) {
+        const userId = Number(row.userId);
+        if (row.deletedAt == null) {
+            activeUserIds.push(userId);
+        } else if (!deletedByUserId.has(userId)) {
+            deletedByUserId.set(userId, row);
+        }
+    }
+
+    if (activeUserIds.length > 0) {
+        throw new Error(
+            `userId already assigned to this group (no duplicate userId): ${activeUserIds.join(', ')}`,
+        );
     }
 
     if (primaryCount === 1) {
@@ -384,18 +411,44 @@ export async function addUsers(body, createdBy, updatedBy) {
         }
     }
 
-    const rows = [];
-    for (const row of users) {
-        rows.push({
-            academicGroupId,
-            userId: Number(row.userId),
-            role: row.role,
-            createdBy,
-            updatedBy,
-        });
-    }
+    const transaction = await sequelize.transaction();
+    try {
+        const results = [];
+        const toCreate = [];
 
-    return academicGroupRepository.bulkCreateGroupUsers(rows);
+        for (const row of users) {
+            const deleted = deletedByUserId.get(row.userId);
+            if (deleted) {
+                const restored = await academicGroupRepository.restoreGroupUser(
+                    deleted.academicGroupUserId,
+                    { role: row.role, updatedBy },
+                    transaction,
+                );
+                results.push(restored);
+            } else {
+                toCreate.push({
+                    academicGroupId,
+                    userId: row.userId,
+                    role: row.role,
+                    createdBy,
+                    updatedBy,
+                });
+            }
+        }
+
+        if (toCreate.length > 0) {
+            const created = await academicGroupRepository.bulkCreateGroupUsers(toCreate, transaction);
+            for (const row of created) {
+                results.push(row);
+            }
+        }
+
+        await transaction.commit();
+        return results;
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
+    }
 }
 
 export async function updateUser(academicGroupUserId, body, updatedBy) {
@@ -409,7 +462,10 @@ export async function updateUser(academicGroupUserId, body, updatedBy) {
         const existingPrimary = await academicGroupRepository.findPrimaryFaculty(
             existing.academicGroupId,
         );
-        if (existingPrimary) {
+        if (
+            existingPrimary &&
+            Number(existingPrimary.academicGroupUserId) !== Number(academicGroupUserId)
+        ) {
             throw new Error('Group already has a primary_faculty');
         }
     }
@@ -442,12 +498,15 @@ export async function addStudents(body, createdBy, updatedBy) {
         throw new Error('academicGroupId not found');
     }
 
+    const plain = typeof group.get === 'function' ? group.get({ plain: true }) : group;
+    const scope = plain.scope;
+
     const studentIds = [];
     const seen = new Set();
     for (const studentId of body.studentIds) {
         const id = Number(studentId);
         if (seen.has(id)) {
-            continue;
+            throw new Error(`Duplicate studentId in request: ${id}`);
         }
         seen.add(id);
         studentIds.push(id);
@@ -458,38 +517,91 @@ export async function addStudents(body, createdBy, updatedBy) {
     }
 
     for (const studentId of studentIds) {
-        const student = await academicGroupRepository.studentExists(studentId);
+        const student = scope != null && scope.selectionScope === 'program_specific'
+            ? await academicGroupRepository.studentExistsInScope(studentId, {
+                courseId: scope.courseId,
+                sessionId: scope.sessionId,
+            })
+            : await academicGroupRepository.studentExists(studentId);
+
         if (!student) {
-            throw new Error(`studentId not found: ${studentId}`);
+            throw new Error(
+                scope != null && scope.selectionScope === 'program_specific'
+                    ? `studentId ${studentId} not found in group course/session scope`
+                    : `studentId not found: ${studentId}`,
+            );
         }
     }
 
-    const existingRows = await academicGroupRepository.findExistingGroupStudents(
+    const existingRows = await academicGroupRepository.findGroupStudentsIncludingDeleted(
         academicGroupId,
         studentIds,
     );
-    if (existingRows.length > 0) {
-        throw new Error('One or more students are already assigned to this group');
+
+    const activeStudentIds = [];
+    const deletedByStudentId = new Map();
+    for (const row of existingRows) {
+        const studentId = Number(row.studentId);
+        if (row.deletedAt == null) {
+            activeStudentIds.push(studentId);
+        } else if (!deletedByStudentId.has(studentId)) {
+            deletedByStudentId.set(studentId, row);
+        }
     }
 
-    if (group.capacity != null) {
+    if (activeStudentIds.length > 0) {
+        throw new Error(
+            `studentId already assigned to this group (no duplicate studentId): ${activeStudentIds.join(', ')}`,
+        );
+    }
+
+    if (plain.capacity != null) {
         const currentCount = await academicGroupRepository.countGroupStudents(academicGroupId);
-        if (currentCount + studentIds.length > Number(group.capacity)) {
+        if (currentCount + studentIds.length > Number(plain.capacity)) {
             throw new Error('Adding students would exceed group capacity');
         }
     }
 
-    const rows = [];
-    for (const studentId of studentIds) {
-        rows.push({
-            academicGroupId,
-            studentId,
-            createdBy,
-            updatedBy,
-        });
-    }
+    const transaction = await sequelize.transaction();
+    try {
+        const results = [];
+        const toCreate = [];
 
-    return academicGroupRepository.bulkCreateGroupStudents(rows);
+        for (const studentId of studentIds) {
+            const deleted = deletedByStudentId.get(studentId);
+            if (deleted) {
+                const restored = await academicGroupRepository.restoreGroupStudent(
+                    deleted.academicGroupStudentId,
+                    updatedBy,
+                    transaction,
+                );
+                results.push(restored);
+            } else {
+                toCreate.push({
+                    academicGroupId,
+                    studentId,
+                    createdBy,
+                    updatedBy,
+                });
+            }
+        }
+
+        if (toCreate.length > 0) {
+            const created = await academicGroupRepository.bulkCreateGroupStudents(
+                toCreate,
+                transaction,
+            );
+            for (const row of created) {
+                results.push(row);
+            }
+        }
+
+        await transaction.commit();
+        return results;
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
+    }
 }
 
 /**
