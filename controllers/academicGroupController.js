@@ -210,6 +210,17 @@ export async function addStudents(req, res) {
     }
 }
 
+export async function getAvailableStudents(req, res) {
+    try {
+        const { academicGroupId, ...filters } = req.query;
+        const result = await academicGroupService.getAvailableStudents(academicGroupId, filters);
+        return SuccessResponse(res, 200, 'Available students fetched successfully', result);
+    } catch (error) {
+        console.error('Error in getAvailableStudents:', error);
+        return ErrorResponse(res, statusFromError(error), error.message || 'Internal Server Error');
+    }
+}
+
 export async function deleteStudents(req, res) {
     try {
         const updatedBy = req.user.userId;

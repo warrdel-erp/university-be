@@ -301,6 +301,19 @@ export async function countGroupStudents(academicGroupId, transaction) {
     });
 }
 
+export async function getMemberStudentIds(academicGroupId) {
+    const rows = await scoped(model.academicGroupStudentModel).findAll({
+        where: { academicGroupId: Number(academicGroupId) },
+        attributes: ['studentId'],
+        raw: true,
+    });
+    const studentIds = [];
+    for (const row of rows) {
+        studentIds.push(Number(row.studentId));
+    }
+    return studentIds;
+}
+
 export async function findExistingGroupStudents(academicGroupId, studentIds, transaction) {
     return scoped(model.academicGroupStudentModel).findAll({
         where: {

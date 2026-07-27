@@ -317,6 +317,7 @@ export async function getAllStudents({
     year,
     term,
     academicYearId,
+    excludeStudentIds,
 }) {
     try {
         const resolvedAcademicYearId = academicYearId != null
@@ -423,6 +424,48 @@ export async function getAllStudents({
                 };
             }
             whereCondition.studentId = { [Op.in]: placementStudentIds };
+        }
+
+        if (excludeStudentIds != null && excludeStudentIds.length > 0) {
+            const excludeSet = new Set();
+            for (const id of excludeStudentIds) {
+                excludeSet.add(Number(id));
+            }
+
+            if (whereCondition.studentId != null && whereCondition.studentId[Op.in]) {
+                const nextIds = [];
+                for (const id of whereCondition.studentId[Op.in]) {
+                    if (!excludeSet.has(Number(id))) {
+                        nextIds.push(id);
+                    }
+                }
+                if (nextIds.length === 0) {
+                    return {
+                        result: [],
+                        totalCount: 0,
+                        page,
+                        limit,
+                        totalPages: 0,
+                    };
+                }
+                whereCondition.studentId = { [Op.in]: nextIds };
+            } else if (whereCondition.studentId != null) {
+                if (excludeSet.has(Number(whereCondition.studentId))) {
+                    return {
+                        result: [],
+                        totalCount: 0,
+                        page,
+                        limit,
+                        totalPages: 0,
+                    };
+                }
+            } else {
+                const excluded = [];
+                for (const id of excludeSet) {
+                    excluded.push(id);
+                }
+                whereCondition.studentId = { [Op.notIn]: excluded };
+            }
         }
 
         // Filters needed for accurate ID pagination + count (not only hydrate).

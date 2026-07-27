@@ -149,6 +149,19 @@ const addStudentsSchema = z.object({
     studentIds: z.array(positiveIntegerId).min(1),
 });
 
+const availableStudentsQuerySchema = z.object({
+    academicGroupId: positiveIntegerId,
+    page: z.coerce.number().int().min(1).optional().default(1),
+    limit: z.coerce.number().int().min(1).max(100).optional().default(10),
+    search: optionalString,
+    courseId: optionalPositiveIntegerId,
+    sessionId: optionalPositiveIntegerId,
+    classSectionsId: optionalPositiveIntegerId,
+    year: optionalPositiveIntegerId,
+    term: optionalPositiveIntegerId,
+    academicYearId: optionalPositiveIntegerId,
+});
+
 const deleteStudentsSchema = z.union([
     z.object({
         academicGroupStudentId: positiveIntegerId,
@@ -255,6 +268,13 @@ router.post(
     userAuth,
     validate({ body: addStudentsSchema }),
     academicGroupController.addStudents,
+);
+
+router.get(
+    '/availableStudents',
+    userAuth,
+    validate({ query: availableStudentsQuerySchema }),
+    academicGroupController.getAvailableStudents,
 );
 
 router.delete(

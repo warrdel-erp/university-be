@@ -514,6 +514,32 @@
       "description": "Step 4 — assign students. Enforces capacity when set.",
       "item": [
         {
+          "name": "GET availableStudents",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/academicGroup/availableStudents?academicGroupId={{academicGroupId}}&page=1&limit=20",
+              "host": ["{{baseurl}}"],
+              "path": ["academicGroup", "availableStudents"],
+              "query": [
+                { "key": "academicGroupId", "value": "{{academicGroupId}}" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "classSectionsId", "value": "", "disabled": true },
+                { "key": "year", "value": "", "disabled": true }
+              ]
+            },
+            "description": "**GET /academicGroup/availableStudents**\n\nStudents matching group scope (course/session/term) who are **not already in this group**.\n\nAlso returns `capacity`, `memberCount`, `remainingCapacity`."
+          },
+          "response": []
+        },
+        {
           "name": "POST student",
           "event": [
             {

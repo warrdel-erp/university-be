@@ -1,6 +1,7 @@
 import sequelize from '../database/sequelizeConfig.js';
 import { Op } from 'sequelize';
 import * as academicGroupRepository from '../repository/academicGroupRepository.js';
+import * as studentRepository from '../repository/studentRepository.js';
 
 function normalizeScopeFields(body) {
     const selectionScope = body.selectionScope;
@@ -489,6 +490,49 @@ export async function addStudents(body, createdBy, updatedBy) {
     }
 
     return academicGroupRepository.bulkCreateGroupStudents(rows);
+}
+
+/**
+ * Students matching group scope (course/session/term) who are not already in this group.
+ */
+export async function getAvailableStudents(academicGroupId, filters) {
+    const group = await academicGroupRepository.getGroupById(academicGroupId);
+    if (!group) {
+        throw new Error('academicGroupId not found');
+    }
+
+    const plain = typeof group.get === 'function' ? group.get({ plain: true }) : group;
+    const scope = plain.scope;
+    if (!scope) {
+        throw new Error('Group scope not found');
+    }
+
+    const memberStudentIds = await academicGroupRepository.getMemberStudentIds(academicGroupId);
+    const memberCount = memberStudentIds.length;
+
+    const list = await studentRepository.getAllStudents({
+        page: filters.page,
+        limit: filters.limit,
+        search: filters.search,
+        courseId: filters.courseId != null ? filters.courseId : scope.courseId,
+        sessionId: filters.sessionId != null ? filters.sessionId : scope.sessionId,
+        classSectionsId: filters.classSectionsId,
+        year: filters.year,
+        term: filters.term != null ? filters.term : scope.term,
+        academicYearId: filters.academicYearId,
+        excludeStudentIds: memberStudentIds,
+    });
+
+    const capacity = plain.capacity != null ? Number(plain.capacity) : null;
+    const remainingCapacity = capacity == null ? null : Math.max(capacity - memberCount, 0);
+
+    return {
+        ...list,
+        academicGroupId: Number(academicGroupId),
+        capacity,
+        memberCount,
+        remainingCapacity,
+    };
 }
 
 export async function deleteStudents(body, updatedBy) {

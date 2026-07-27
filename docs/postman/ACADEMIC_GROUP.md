@@ -86,10 +86,23 @@ Run in order. Save IDs into collection variables.
 | `PATCH` | `/academicGroup/user` | Change role |
 | `DELETE` | `/academicGroup/user` | Soft-remove faculty (body) |
 | `POST` | `/academicGroup/student` | Add students |
+| `GET` | `/academicGroup/availableStudents` | Students matching scope, **not already in this group** |
 | `DELETE` | `/academicGroup/student` | Soft-remove students (body) |
 
 ### List filters (`GET /all`)
 `page`, `limit`, `search`, `courseId`, `sessionId`, `term`, `groupType`, `publishStatus`
+
+### Available students (`GET /availableStudents`)
+Required: `academicGroupId`  
+Optional: `page`, `limit`, `search`, `classSectionsId`, `year`, `term`, `courseId`, `sessionId`, `academicYearId`  
+
+Defaults course/session/term from the group's scope. Excludes members already in that group.
+
+**Response `data` extras:** `capacity`, `memberCount`, `remainingCapacity` (+ standard `result`, `totalCount`, `page`, `limit`, `totalPages`).
+
+```
+GET {{baseurl}}/academicGroup/availableStudents?academicGroupId=1&page=1&limit=20&search=
+```
 
 ---
 
