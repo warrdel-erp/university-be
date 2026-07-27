@@ -78,8 +78,8 @@ Run in order. Save IDs into collection variables.
 | `PATCH` | `/academicGroup/scope` | Update scope |
 | `DELETE` | `/academicGroup/scope?academicGroupScopeId=` | Soft-delete scope (cascades group + members) |
 | `POST` | `/academicGroup` | Create group for a scope |
-| `GET` | `/academicGroup/all` | Paginated list |
-| `GET` | `/academicGroup/single?academicGroupId=` | Group + scope + users + students |
+| `GET` | `/academicGroup/all` | Paginated list + scope names + faculty/student print fields |
+| `GET` | `/academicGroup/single?academicGroupId=` | Group + scope + users + students (print fields) |
 | `PATCH` | `/academicGroup` | Update name / code / capacity / status |
 | `PATCH` | `/academicGroup/publish` | Set `published` |
 | `DELETE` | `/academicGroup?academicGroupId=` | Soft-delete group + members |
@@ -93,6 +93,14 @@ Run in order. Save IDs into collection variables.
 
 ### List filters (`GET /all`)
 `page`, `limit`, `search`, `courseId`, `sessionId`, `term`, `groupType`, `publishStatus`
+
+Each row includes:
+- `scope` — full scope + `course` / `session` / `contextSubject` names
+- `users[]` — membership + `role` + nested `user` (identity/contact) + `employee` (`employeeId`, `employeeName`, `employeeCode`, dept/campus basics)
+- `students[]` — membership + nested `student` (name, enroll/scholar, contact, placement/status basics)
+- `print` — flattened keys for UI/print: group header, course/session/subject names, `faculty[]`, `students[]` (name + enroll/scholar + contact), `memberCount`, `remainingCapacity`
+
+`GET /single` returns the same shape for one group.
 
 ### Available students (`GET /availableStudents`)
 Required: `academicGroupId`  

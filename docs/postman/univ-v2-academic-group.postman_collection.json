@@ -352,7 +352,8 @@
                 { "key": "publishStatus", "value": "draft", "disabled": true },
                 { "key": "search", "value": "", "disabled": true }
               ]
-            }
+            },
+            "description": "**GET /academicGroup/all**\n\nPaginated groups with:\n- `scope` + course/session/subject names\n- `users[]` → nested `user` + `employee` (full basic user details)\n- `students[]` → nested `student` (identity/contact/placement)\n- `print` → flattened print keys (group header, faculty[], students[], memberCount)\n\nOptional: `page`, `limit`, `search`, `courseId`, `sessionId`, `term`, `groupType`, `publishStatus`."
           },
           "response": []
         },
@@ -371,7 +372,7 @@
               "path": ["academicGroup", "single"],
               "query": [{ "key": "academicGroupId", "value": "{{academicGroupId}}" }]
             },
-            "description": "Returns group + scope + users + students."
+            "description": "**GET /academicGroup/single?academicGroupId=**\n\nSame shape as `/all` for one group: nested `users`/`students` + `print` summary."
           },
           "response": []
         },

@@ -51,6 +51,163 @@ const studentListAttributes = [
     'updatedAt',
 ];
 
+/** User fields safe to expose (no password). */
+const userDetailAttributes = [
+    'userId',
+    'universityId',
+    'defaultInstituteId',
+    'defaultRoleId',
+    'defaultAcademicYearId',
+    'userName',
+    'uniqueId',
+    'status',
+    'phone',
+    'email',
+    'isTeacher',
+    'createdAt',
+    'updatedAt',
+];
+
+/** Employee basics nested under faculty user. */
+const employeeDetailAttributes = [
+    'employeeId',
+    'userId',
+    'employeeCode',
+    'employeeName',
+    'departmentId',
+    'employmentType',
+    'campusId',
+    'instituteId',
+    'roleId',
+];
+
+/**
+ * Student identity / contact / placement fields for list + print.
+ * Omits bank / identity-document fields.
+ */
+const studentDetailAttributes = [
+    'studentId',
+    'userId',
+    'universityId',
+    'campusId',
+    'instituteId',
+    'courseLevelId',
+    'courseId',
+    'specializationId',
+    'sessionId',
+    'classSectionTermId',
+    'scholarNumber',
+    'enrollNumber',
+    'firstName',
+    'middleName',
+    'lastName',
+    'fatherName',
+    'motherName',
+    'birthDate',
+    'admisssionDate',
+    'enrollDate',
+    'studentAdmissionStatus',
+    'currentClass',
+    'phoneNumber',
+    'mobileNumber',
+    'email',
+    'parentEmail',
+    'parentNumber',
+    'studentStatus',
+    'documentStatus',
+    'feeStatus',
+    'createdAt',
+    'updatedAt',
+];
+
+function scopeNameIncludes() {
+    return [
+        {
+            model: model.courseModel,
+            as: 'course',
+            attributes: ['courseId', 'courseName', 'courseCode'],
+            required: false,
+        },
+        {
+            model: model.sessionModel,
+            as: 'session',
+            attributes: ['sessionId', 'sessionName'],
+            required: false,
+        },
+        {
+            model: model.subjectModel,
+            as: 'contextSubject',
+            attributes: ['subjectId', 'subjectName'],
+            required: false,
+        },
+    ];
+}
+
+function groupUserIncludes() {
+    return [
+        {
+            model: model.userModel,
+            as: 'user',
+            attributes: userDetailAttributes,
+            required: false,
+            include: [
+                {
+                    model: model.employeeModel,
+                    as: 'employee',
+                    attributes: employeeDetailAttributes,
+                    required: false,
+                },
+            ],
+        },
+    ];
+}
+
+function groupStudentIncludes() {
+    return [
+        {
+            model: model.studentModel,
+            as: 'student',
+            attributes: studentDetailAttributes,
+            required: false,
+        },
+    ];
+}
+
+function scopeDetailInclude() {
+    return {
+        model: model.academicGroupScopeModel,
+        as: 'scope',
+        attributes: scopeListAttributes,
+        required: true,
+        where: buildScope(model.academicGroupScopeModel),
+        include: scopeNameIncludes(),
+    };
+}
+
+function groupUsersPrintInclude(options = {}) {
+    return {
+        model: model.academicGroupUserModel,
+        as: 'users',
+        attributes: userListAttributes,
+        required: false,
+        where: buildScope(model.academicGroupUserModel),
+        separate: options.separate === true,
+        include: groupUserIncludes(),
+    };
+}
+
+function groupStudentsPrintInclude(options = {}) {
+    return {
+        model: model.academicGroupStudentModel,
+        as: 'students',
+        attributes: studentListAttributes,
+        required: false,
+        where: buildScope(model.academicGroupStudentModel),
+        separate: options.separate === true,
+        include: groupStudentIncludes(),
+    };
+}
+
 export async function createScope(payload, transaction) {
     return scoped(model.academicGroupScopeModel).create(payload, { transaction });
 }
@@ -172,72 +329,7 @@ export async function getGroupById(academicGroupId) {
     return scoped(model.academicGroupModel).findOne({
         where: { academicGroupId: Number(academicGroupId) },
         attributes: groupListAttributes,
-        include: [
-            {
-                model: model.academicGroupScopeModel,
-                as: 'scope',
-                attributes: scopeListAttributes,
-                required: true,
-                where: buildScope(model.academicGroupScopeModel),
-                include: [
-                    {
-                        model: model.courseModel,
-                        as: 'course',
-                        attributes: ['courseId', 'courseName'],
-                        required: false,
-                    },
-                    {
-                        model: model.sessionModel,
-                        as: 'session',
-                        attributes: ['sessionId', 'sessionName'],
-                        required: false,
-                    },
-                    {
-                        model: model.subjectModel,
-                        as: 'contextSubject',
-                        attributes: ['subjectId', 'subjectName'],
-                        required: false,
-                    },
-                ],
-            },
-            {
-                model: model.academicGroupUserModel,
-                as: 'users',
-                attributes: userListAttributes,
-                required: false,
-                where: buildScope(model.academicGroupUserModel),
-                include: [
-                    {
-                        model: model.userModel,
-                        as: 'user',
-                        attributes: ['userId', 'userName', 'email'],
-                        required: false,
-                    },
-                ],
-            },
-            {
-                model: model.academicGroupStudentModel,
-                as: 'students',
-                attributes: studentListAttributes,
-                required: false,
-                where: buildScope(model.academicGroupStudentModel),
-                include: [
-                    {
-                        model: model.studentModel,
-                        as: 'student',
-                        attributes: [
-                            'studentId',
-                            'firstName',
-                            'middleName',
-                            'lastName',
-                            'enrollNumber',
-                            'scholarNumber',
-                        ],
-                        required: false,
-                    },
-                ],
-            },
-        ],
+        include: [scopeDetailInclude(), groupUsersPrintInclude(), groupStudentsPrintInclude()],
     });
 }
 
@@ -316,17 +408,16 @@ export async function getAllGroups({
 
     const offset = (Number(page) - 1) * Number(limit);
 
+    const scopeInclude = scopeDetailInclude();
+    scopeInclude.where = scopeWhere;
+
     return scoped(model.academicGroupModel).findAndCountAll({
         where,
         attributes: groupListAttributes,
         include: [
-            {
-                model: model.academicGroupScopeModel,
-                as: 'scope',
-                attributes: scopeListAttributes,
-                required: true,
-                where: scopeWhere,
-            },
+            scopeInclude,
+            groupUsersPrintInclude({ separate: true }),
+            groupStudentsPrintInclude({ separate: true }),
         ],
         order: [['academicGroupId', 'DESC']],
         limit: Number(limit),
@@ -633,22 +724,7 @@ export async function getGroupUsersByAcademicGroupId(academicGroupId) {
     return scoped(model.academicGroupUserModel).findAll({
         where: { academicGroupId: Number(academicGroupId) },
         attributes: userListAttributes,
-        include: [
-            {
-                model: model.userModel,
-                as: 'user',
-                attributes: ['userId', 'userName', 'email'],
-                required: true,
-                include: [
-                    {
-                        model: model.employeeModel,
-                        as: 'employee',
-                        attributes: ['employeeId', 'employeeName'],
-                        required: false,
-                    },
-                ],
-            },
-        ],
+        include: groupUserIncludes(),
         order: [['academicGroupUserId', 'ASC']],
     });
 }
