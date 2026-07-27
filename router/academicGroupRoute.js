@@ -36,6 +36,22 @@ const optionalString = z.preprocess(
     z.string().trim().optional(),
 );
 
+/** Single id or list: `4`, `4,5`, repeated query keys */
+const optionalPositiveIntegerIdList = z.preprocess((val) => {
+    if (val === undefined || val === null || val === '' || val === 'undefined') {
+        return undefined;
+    }
+    const rawItems = Array.isArray(val) ? val : String(val).split(',');
+    const ids = [];
+    for (const item of rawItems) {
+        if (item === '' || item == null) {
+            continue;
+        }
+        ids.push(item);
+    }
+    return ids.length > 0 ? ids : undefined;
+}, z.array(positiveIntegerId).min(1).optional());
+
 const groupTypeEnum = z.enum(ACADEMIC_GROUP_TYPES);
 const selectionScopeEnum = z.enum(ACADEMIC_GROUP_SELECTION_SCOPES);
 const contextTypeEnum = z.enum(ACADEMIC_GROUP_CONTEXT_TYPES);
@@ -158,11 +174,10 @@ const availableStudentsQuerySchema = z.object({
     page: z.coerce.number().int().min(1).optional().default(1),
     limit: z.coerce.number().int().min(1).max(100).optional().default(10),
     search: optionalString,
-    courseId: optionalPositiveIntegerId,
-    sessionId: optionalPositiveIntegerId,
     classSectionsId: optionalPositiveIntegerId,
     year: optionalPositiveIntegerId,
-    term: optionalPositiveIntegerId,
+    /** One or many terms, e.g. `1` or `1,2,3,4,5`. Default = scope.term, else all terms on course/session sections. */
+    term: optionalPositiveIntegerIdList,
     academicYearId: optionalPositiveIntegerId,
 });
 
@@ -258,6 +273,13 @@ router.post(
     userAuth,
     validate({ body: addUsersSchema }),
     academicGroupController.addUsers,
+);
+
+router.get(
+    '/user',
+    userAuth,
+    validate({ query: groupIdQuerySchema }),
+    academicGroupController.getGroupUsers,
 );
 
 router.patch(

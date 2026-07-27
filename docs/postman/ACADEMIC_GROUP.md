@@ -84,6 +84,7 @@ Run in order. Save IDs into collection variables.
 | `PATCH` | `/academicGroup/publish` | Set `published` |
 | `DELETE` | `/academicGroup?academicGroupId=` | Soft-delete group + members |
 | `POST` | `/academicGroup/user` | Add faculty |
+| `GET` | `/academicGroup/user?academicGroupId=` | Faculty list for group |
 | `PATCH` | `/academicGroup/user` | Change role |
 | `DELETE` | `/academicGroup/user` | Soft-remove faculty (body) |
 | `POST` | `/academicGroup/student` | Add students |
@@ -95,14 +96,17 @@ Run in order. Save IDs into collection variables.
 
 ### Available students (`GET /availableStudents`)
 Required: `academicGroupId`  
-Optional: `page`, `limit`, `search`, `classSectionsId`, `year`, `term`, `courseId`, `sessionId`, `academicYearId`  
+Optional: `page`, `limit`, `search`, `classSectionsId`, `year`, `term` (`1` or `1,2,3,4,5`), `academicYearId`
 
-Defaults course/session/term from the group's scope. Excludes members already in that group.
+1. Loads scope → `courseId`, `sessionId` (and default `term` from scope when query `term` omitted)
+2. Finds `class_sections` for that course+session, then `class_section_term` for related terms
+3. Returns students placed on those class-section terms
+4. **Excludes** anyone already in `academic_group_student` for this group
 
-**Response `data` extras:** `capacity`, `memberCount`, `remainingCapacity` (+ standard `result`, `totalCount`, `page`, `limit`, `totalPages`).
+**Response `data` extras:** `courseId`, `sessionId`, `terms`, `capacity`, `memberCount`, `remainingCapacity`
 
 ```
-GET {{baseurl}}/academicGroup/availableStudents?academicGroupId=1&page=1&limit=20&search=
+GET {{baseurl}}/academicGroup/availableStudents?academicGroupId=1&page=1&limit=20&term=1,2,3,4,5
 ```
 
 ---

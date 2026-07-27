@@ -175,6 +175,17 @@ export async function addUsers(req, res) {
     }
 }
 
+export async function getGroupUsers(req, res) {
+    try {
+        const { academicGroupId } = req.query;
+        const result = await academicGroupService.getGroupUsers(academicGroupId);
+        return SuccessResponse(res, 200, 'Academic group faculty fetched successfully', result);
+    } catch (error) {
+        console.error('Error in getGroupUsers:', error);
+        return ErrorResponse(res, statusFromError(error), error.message || 'Internal Server Error');
+    }
+}
+
 export async function updateUser(req, res) {
     try {
         const { academicGroupUserId } = req.body;

@@ -318,6 +318,7 @@ export async function getAllStudents({
     term,
     academicYearId,
     excludeStudentIds,
+    includeStudentIds,
 }) {
     try {
         const resolvedAcademicYearId = academicYearId != null
@@ -465,6 +466,75 @@ export async function getAllStudents({
                     excluded.push(id);
                 }
                 whereCondition.studentId = { [Op.notIn]: excluded };
+            }
+        }
+
+        if (includeStudentIds != null) {
+            if (includeStudentIds.length === 0) {
+                return {
+                    result: [],
+                    totalCount: 0,
+                    page,
+                    limit,
+                    totalPages: 0,
+                };
+            }
+
+            const includeSet = new Set();
+            for (const id of includeStudentIds) {
+                includeSet.add(Number(id));
+            }
+
+            if (whereCondition.studentId != null && whereCondition.studentId[Op.in]) {
+                const nextIds = [];
+                for (const id of whereCondition.studentId[Op.in]) {
+                    if (includeSet.has(Number(id))) {
+                        nextIds.push(id);
+                    }
+                }
+                if (nextIds.length === 0) {
+                    return {
+                        result: [],
+                        totalCount: 0,
+                        page,
+                        limit,
+                        totalPages: 0,
+                    };
+                }
+                whereCondition.studentId = { [Op.in]: nextIds };
+            } else if (whereCondition.studentId != null && whereCondition.studentId[Op.notIn]) {
+                const nextIds = [];
+                for (const id of includeSet) {
+                    if (!whereCondition.studentId[Op.notIn].includes(id)) {
+                        nextIds.push(id);
+                    }
+                }
+                if (nextIds.length === 0) {
+                    return {
+                        result: [],
+                        totalCount: 0,
+                        page,
+                        limit,
+                        totalPages: 0,
+                    };
+                }
+                whereCondition.studentId = { [Op.in]: nextIds };
+            } else if (whereCondition.studentId != null) {
+                if (!includeSet.has(Number(whereCondition.studentId))) {
+                    return {
+                        result: [],
+                        totalCount: 0,
+                        page,
+                        limit,
+                        totalPages: 0,
+                    };
+                }
+            } else {
+                const included = [];
+                for (const id of includeSet) {
+                    included.push(id);
+                }
+                whereCondition.studentId = { [Op.in]: included };
             }
         }
 

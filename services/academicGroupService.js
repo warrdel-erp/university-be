@@ -346,6 +346,15 @@ function normalizeUsersPayload(body) {
     throw new Error('users array or userId with role is required');
 }
 
+export async function getGroupUsers(academicGroupId) {
+    const group = await academicGroupRepository.getGroupById(academicGroupId);
+    if (!group) {
+        throw new Error('academicGroupId not found');
+    }
+
+    return academicGroupRepository.getGroupUsersByAcademicGroupId(academicGroupId);
+}
+
 export async function addUsers(body, createdBy, updatedBy) {
     const academicGroupId = Number(body.academicGroupId);
     const group = await academicGroupRepository.getGroupById(academicGroupId);
@@ -609,7 +618,8 @@ export async function addStudents(body, createdBy, updatedBy) {
 }
 
 /**
- * Students matching group scope (course/session/term) who are not already in this group.
+ * Students for group scope course+session, placed on class_sections for related terms,
+ * excluding anyone already in academic_group_student for this group.
  */
 export async function getAvailableStudents(academicGroupId, filters) {
     const group = await academicGroupRepository.getGroupById(academicGroupId);
@@ -622,21 +632,35 @@ export async function getAvailableStudents(academicGroupId, filters) {
     if (!scope) {
         throw new Error('Group scope not found');
     }
+    if (scope.courseId == null || scope.sessionId == null) {
+        throw new Error('Group scope requires courseId and sessionId');
+    }
+
+    let terms = filters.term;
+    if (terms == null && scope.term != null) {
+        terms = [Number(scope.term)];
+    }
 
     const memberStudentIds = await academicGroupRepository.getMemberStudentIds(academicGroupId);
     const memberCount = memberStudentIds.length;
+
+    const eligibleStudentIds = await academicGroupRepository.resolveEligibleStudentIds({
+        courseId: Number(scope.courseId),
+        sessionId: Number(scope.sessionId),
+        terms,
+        classSectionsId: filters.classSectionsId,
+        year: filters.year,
+        excludeStudentIds: memberStudentIds,
+    });
 
     const list = await studentRepository.getAllStudents({
         page: filters.page,
         limit: filters.limit,
         search: filters.search,
-        courseId: filters.courseId != null ? filters.courseId : scope.courseId,
-        sessionId: filters.sessionId != null ? filters.sessionId : scope.sessionId,
-        classSectionsId: filters.classSectionsId,
-        year: filters.year,
-        term: filters.term != null ? filters.term : scope.term,
+        courseId: Number(scope.courseId),
+        sessionId: Number(scope.sessionId),
         academicYearId: filters.academicYearId,
-        excludeStudentIds: memberStudentIds,
+        includeStudentIds: eligibleStudentIds,
     });
 
     const capacity = plain.capacity != null ? Number(plain.capacity) : null;
@@ -645,6 +669,9 @@ export async function getAvailableStudents(academicGroupId, filters) {
     return {
         ...list,
         academicGroupId: Number(academicGroupId),
+        courseId: Number(scope.courseId),
+        sessionId: Number(scope.sessionId),
+        terms: terms ?? null,
         capacity,
         memberCount,
         remainingCapacity,

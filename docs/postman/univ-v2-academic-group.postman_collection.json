@@ -187,16 +187,39 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/academicGroup/scope/all",
+              "raw": "{{baseurl}}/academicGroup/scope/all?search=",
               "host": ["{{baseurl}}"],
               "path": ["academicGroup", "scope", "all"],
               "query": [
-                { "key": "search", "value": "", "disabled": true }
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "optional — filter by title",
+                  "disabled": true
+                }
               ]
             },
-            "description": "**GET /academicGroup/scope/all**\n\nFull scope rows for the tenant:\n- all scope keys (`groupType`, `title`, `selectionScope`, `courseId`, `sessionId`, `term`, `academicContextType`, `contextSubjectId`, `activityName`, …)\n- nested `course` (`courseId`, `courseName`)\n- nested `session` (`sessionId`, `sessionName`)\n- nested `contextSubject` when set\n- nested `group` when created\n\nOptional: `search` (title contains)."
+            "description": "**GET /academicGroup/scope/all**\n\nFull scope list for the tenant (all keys + nested names):\n- scope fields: `academicGroupScopeId`, `groupType`, `title`, `selectionScope`, `courseId`, `sessionId`, `term`, `academicContextType`, `contextSubjectId`, `activityName`, tenant/audit fields\n- `course`: `{ courseId, courseName }`\n- `session`: `{ sessionId, sessionName }`\n- `contextSubject`: `{ subjectId, subjectName }` when set\n- `group`: linked academic group when created\n\nOptional query: `search` (title contains)."
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 — scopes with course/session names",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/academicGroup/scope/all",
+                  "host": ["{{baseurl}}"],
+                  "path": ["academicGroup", "scope", "all"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Academic group scopes fetched successfully\",\n  \"data\": [\n    {\n      \"academicGroupScopeId\": 1,\n      \"groupType\": \"teaching\",\n      \"title\": \"Dissertation\",\n      \"selectionScope\": \"program_specific\",\n      \"courseId\": 34,\n      \"sessionId\": 6,\n      \"term\": 10,\n      \"academicContextType\": \"activity\",\n      \"contextSubjectId\": null,\n      \"activityName\": \"Design Thinking Workshop\",\n      \"universityId\": 1,\n      \"instituteId\": 12,\n      \"academicYearId\": 76,\n      \"course\": { \"courseId\": 34, \"courseName\": \"B.Arch\" },\n      \"session\": { \"sessionId\": 6, \"sessionName\": \"2025-26\" },\n      \"contextSubject\": null,\n      \"group\": {\n        \"academicGroupId\": 1,\n        \"academicGroupScopeId\": 1,\n        \"groupName\": \"Dissertation Group 1\",\n        \"groupCode\": \"DIS-G1\",\n        \"capacity\": 10,\n        \"publishStatus\": \"draft\"\n      }\n    }\n  ]\n}"
+            }
+          ]
         },
         {
           "name": "GET scope/single",
@@ -423,6 +446,25 @@
       "description": "Step 3 — assign faculty with role. At most one `primary_faculty` per group.",
       "item": [
         {
+          "name": "GET user (faculty by group)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/academicGroup/user?academicGroupId={{academicGroupId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["academicGroup", "user"],
+              "query": [{ "key": "academicGroupId", "value": "{{academicGroupId}}" }]
+            },
+            "description": "**GET /academicGroup/user?academicGroupId=**\n\nFaculty for the group: `academicGroupUserId`, `userId`, `role`, nested `user` (`userName`, `email`) + `employee` (`employeeId`, `employeeName`)."
+          },
+          "response": []
+        },
+        {
           "name": "POST user (bulk)",
           "event": [
             {
@@ -544,19 +586,20 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/academicGroup/availableStudents?academicGroupId={{academicGroupId}}&page=1&limit=20",
+              "raw": "{{baseurl}}/academicGroup/availableStudents?academicGroupId={{academicGroupId}}&page=1&limit=20&term=1,2,3,4,5",
               "host": ["{{baseurl}}"],
               "path": ["academicGroup", "availableStudents"],
               "query": [
                 { "key": "academicGroupId", "value": "{{academicGroupId}}" },
                 { "key": "page", "value": "1" },
                 { "key": "limit", "value": "20" },
+                { "key": "term", "value": "1,2,3,4,5", "description": "optional — class_section_term numbers; default scope.term or all terms for course/session sections" },
                 { "key": "search", "value": "", "disabled": true },
                 { "key": "classSectionsId", "value": "", "disabled": true },
                 { "key": "year", "value": "", "disabled": true }
               ]
             },
-            "description": "**GET /academicGroup/availableStudents**\n\nStudents matching group scope (course/session/term) who are **not already in this group**.\n\nAlso returns `capacity`, `memberCount`, `remainingCapacity`."
+            "description": "**GET /academicGroup/availableStudents**\n\n1. From `academicGroupId` → scope `courseId` + `sessionId`\n2. Find class sections for that course/session\n3. Filter by `class_section_term` (`term=1,2,3,4,5` or scope term / all)\n4. Return placed students **not** already in `academic_group_student`\n\nAlso returns `capacity`, `memberCount`, `remainingCapacity`, `courseId`, `sessionId`, `terms`."
           },
           "response": []
         },

@@ -355,6 +355,134 @@ export async function getMemberStudentIds(academicGroupId) {
     return studentIds;
 }
 
+/**
+ * Students placed on class_sections for course+session whose class_section_term
+ * matches the given terms (or all terms when terms omitted).
+ * Excludes studentIds already in the academic group (caller passes exclude list).
+ */
+export async function resolveEligibleStudentIds({
+    courseId,
+    sessionId,
+    terms,
+    classSectionsId,
+    year,
+    excludeStudentIds,
+}) {
+    const sectionWhere = {
+        courseId: Number(courseId),
+        sessionId: Number(sessionId),
+        ...buildScope(model.classSectionModel),
+    };
+    if (classSectionsId != null) {
+        sectionWhere.classSectionsId = Number(classSectionsId);
+    }
+    if (year != null) {
+        sectionWhere.year = Number(year);
+    }
+
+    const termWhere = {};
+    if (terms != null && terms.length > 0) {
+        if (terms.length === 1) {
+            termWhere.term = Number(terms[0]);
+        } else {
+            const termList = [];
+            for (const t of terms) {
+                termList.push(Number(t));
+            }
+            termWhere.term = { [Op.in]: termList };
+        }
+    }
+
+    const termRows = await scoped(model.classSectionTermModel).findAll({
+        attributes: ['classSectionTermId', 'classSectionsId', 'term'],
+        where: termWhere,
+        include: [
+            {
+                model: model.classSectionModel,
+                as: 'classSection',
+                attributes: ['classSectionsId'],
+                required: true,
+                where: sectionWhere,
+            },
+        ],
+    });
+
+    const classSectionTermIds = [];
+    const classSectionsIds = [];
+    const seenSection = new Set();
+    for (const row of termRows) {
+        classSectionTermIds.push(Number(row.classSectionTermId));
+        const sectionId = Number(row.classSectionsId);
+        if (!seenSection.has(sectionId)) {
+            seenSection.add(sectionId);
+            classSectionsIds.push(sectionId);
+        }
+    }
+
+    if (classSectionTermIds.length === 0) {
+        return [];
+    }
+
+    const historyRows = await model.studentClassSectionsHistoryModel.findAll({
+        attributes: ['studentId'],
+        where: {
+            status: 'current',
+            classSectionsId: { [Op.in]: classSectionsIds },
+            classSectionTermId: { [Op.in]: classSectionTermIds },
+        },
+        raw: true,
+    });
+
+    const currentHistoryRows = await model.studentClassSectionsHistoryModel.findAll({
+        attributes: ['studentId'],
+        where: { status: 'current' },
+        raw: true,
+    });
+    const studentsWithCurrentHistory = new Set();
+    for (const row of currentHistoryRows) {
+        studentsWithCurrentHistory.add(Number(row.studentId));
+    }
+
+    const fkRows = await scoped(model.studentModel).findAll({
+        attributes: ['studentId'],
+        where: {
+            courseId: Number(courseId),
+            sessionId: Number(sessionId),
+            classSectionTermId: { [Op.in]: classSectionTermIds },
+        },
+        raw: true,
+    });
+
+    const eligible = [];
+    const seen = new Set();
+    const excludeSet = new Set();
+    if (excludeStudentIds != null) {
+        for (const id of excludeStudentIds) {
+            excludeSet.add(Number(id));
+        }
+    }
+
+    for (const row of historyRows) {
+        const id = Number(row.studentId);
+        if (seen.has(id) || excludeSet.has(id)) {
+            continue;
+        }
+        seen.add(id);
+        eligible.push(id);
+    }
+
+    for (const row of fkRows) {
+        const id = Number(row.studentId);
+        if (studentsWithCurrentHistory.has(id) || seen.has(id) || excludeSet.has(id)) {
+            continue;
+        }
+        seen.add(id);
+        eligible.push(id);
+    }
+
+    return eligible;
+}
+
 /** Active + soft-deleted memberships for constraint checks / restore. */
 export async function findGroupStudentsIncludingDeleted(academicGroupId, studentIds, transaction) {
     return model.academicGroupStudentModel.findAll({
@@ -497,6 +625,31 @@ export async function getGroupUserById(academicGroupUserId) {
     return scoped(model.academicGroupUserModel).findOne({
         where: { academicGroupUserId: Number(academicGroupUserId) },
         attributes: userListAttributes,
+    });
+}
+
+/** Faculty list for a group with user + employee details. */
+export async function getGroupUsersByAcademicGroupId(academicGroupId) {
+    return scoped(model.academicGroupUserModel).findAll({
+        where: { academicGroupId: Number(academicGroupId) },
+        attributes: userListAttributes,
+        include: [
+            {
+                model: model.userModel,
+                as: 'user',
+                attributes: ['userId', 'userName', 'email'],
+                required: true,
+                include: [
+                    {
+                        model: model.employeeModel,
+                        as: 'employee',
+                        attributes: ['employeeId', 'employeeName'],
+                        required: false,
+                    },
+                ],
+            },
+        ],
+        order: [['academicGroupUserId', 'ASC']],
     });
 }
 

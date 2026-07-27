@@ -9037,6 +9037,34 @@
           "event": []
         },
         {
+          "id": "ag-req-007a-get-scope-all",
+          "name": "GET scope/all",
+          "request": {
+            "description": "**GET /academicGroup/scope/all**\n\nFull scope list with all keys + nested `course` (`courseName`), `session` (`sessionName`), `contextSubject`, and linked `group`.\n\nOptional: `search` (title contains).",
+            "url": {
+              "path": ["academicGroup", "scope", "all"],
+              "host": ["{{baseurl}}"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true,
+                  "description": "optional — filter by title"
+                }
+              ],
+              "variable": []
+            },
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "type": "string", "value": "{{token}}", "key": "token" }]
+            },
+            "header": []
+          },
+          "response": [],
+          "event": []
+        },
+        {
           "id": "ag-req-007-get-scope-single",
           "name": "GET scope/single",
           "request": {
@@ -9045,6 +9073,32 @@
               "path": ["academicGroup", "scope", "single"],
               "host": ["{{baseurl}}"],
               "query": [{ "key": "academicGroupScopeId", "value": "{{academicGroupScopeId}}" }],
+              "variable": []
+            },
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "type": "string", "value": "{{token}}", "key": "token" }]
+            },
+            "header": []
+          },
+          "response": [],
+          "event": []
+        },
+        {
+          "id": "ag-req-007b-get-available-students",
+          "name": "GET availableStudents",
+          "request": {
+            "description": "**GET /academicGroup/availableStudents?academicGroupId=**\n\nStudents matching scope who are not already in this group. Also returns `capacity`, `memberCount`, `remainingCapacity`.",
+            "url": {
+              "path": ["academicGroup", "availableStudents"],
+              "host": ["{{baseurl}}"],
+              "query": [
+                { "key": "academicGroupId", "value": "{{academicGroupId}}" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "search", "value": "", "disabled": true }
+              ],
               "variable": []
             },
             "method": "GET",
