@@ -19,11 +19,12 @@ export async function addDepartmentPosition(req, res) {
 
 export async function getAllDepartmentPositions(req, res) {
     try {
-        const { departmentId, employmentCategory, isVacant } = req.query;
+        const { departmentId, employmentCategory, isVacant, publishStatus } = req.query;
         const positions = await departmentPositionsService.getOrgPositions({
             departmentId,
             employmentCategory,
             isVacant,
+            publishStatus,
         });
         return SuccessResponse(res, 200, "Department positions fetched successfully", positions);
     } catch (error) {
@@ -78,31 +79,17 @@ export async function updateDepartmentPosition(req, res) {
 export async function deleteDepartmentPosition(req, res) {
     try {
         const { departmentPositionId } = req.query;
-        const deleted = await departmentPositionsService.deleteOrgPosition(departmentPositionId);
+        const updatedBy = req.user.userId;
+        const deleted = await departmentPositionsService.deleteOrgPosition(
+            departmentPositionId,
+            updatedBy,
+        );
         if (!deleted) {
             return ErrorResponse(res, 404, "Department position not found");
         }
         return SuccessResponse(res, 200, `Delete successful for departmentPosition ID ${departmentPositionId}`);
     } catch (error) {
         return ErrorResponse(res, 500, "Internal Server Error", error.message);
-    }
-}
-
-export async function markDepartmentPositionVacant(req, res) {
-    try {
-        const { userDepartmentPositionId } = req.body;
-        const updatedBy = req.user.userId;
-        const departmentPosition = await departmentPositionsService.markPositionVacant(
-            userDepartmentPositionId,
-            updatedBy,
-        );
-        if (!departmentPosition) {
-            return ErrorResponse(res, 404, "User department position not found");
-        }
-        return SuccessResponse(res, 200, "User unmapped from position", departmentPosition);
-    } catch (error) {
-        const status = /not found/i.test(error.message) ? 404 : 500;
-        return ErrorResponse(res, status, "Internal Server Error", error.message);
     }
 }
 
@@ -155,16 +142,17 @@ export async function updateUserDepartmentPosition(req, res) {
 
 export async function deleteUserDepartmentPosition(req, res) {
     try {
-        const { userDepartmentPositionId } = req.query;
+        const { userDepartmentPositionId, endDate } = req.query;
         const updatedBy = req.user.userId;
-        const deleted = await departmentPositionsService.deleteHead(
+        const inactivated = await departmentPositionsService.deleteHead(
             userDepartmentPositionId,
             updatedBy,
+            endDate,
         );
-        if (!deleted) {
+        if (!inactivated) {
             return ErrorResponse(res, 404, "User department position not found");
         }
-        return SuccessResponse(res, 200, `Delete successful for userDepartmentPosition ID ${userDepartmentPositionId}`);
+        return SuccessResponse(res, 200, "User department position marked inactive");
     } catch (error) {
         return ErrorResponse(res, 500, "Internal Server Error", error.message);
     }

@@ -197,7 +197,9 @@ export const buildingTypes = ["Academics", "Residential"];
 
 export const departmentTypes = ["Admin", "Academic"];
 
-export const departmentPositionHeadStatuses = ["ACTIVE"];
+export const departmentPositionHeadStatuses = ["ACTIVE", "INACTIVE"];
+
+export const departmentPositionPublishStatuses = ["DRAFT", "PUBLISHED"];
 
 export const governanceBodyCategories = [
   "Authority",

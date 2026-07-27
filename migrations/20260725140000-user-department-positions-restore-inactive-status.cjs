@@ -1,0 +1,53 @@
+'use strict';
+
+const TABLE = 'user_department_positions';
+
+async function tableExists(queryInterface, tableName) {
+  const tables = await queryInterface.showAllTables();
+  const normalized = tables.map((t) => (typeof t === 'string' ? t : t.tableName || t.name || String(t)));
+  return normalized.some((name) => name.toLowerCase() === tableName.toLowerCase());
+}
+
+async function columnExists(queryInterface, tableName, columnName) {
+  const table = await queryInterface.describeTable(tableName);
+  return Boolean(table[columnName]);
+}
+
+/** @type {import('sequelize-cli').Migration} */
+module.exports = {
+  async up(queryInterface) {
+    if (!(await tableExists(queryInterface, TABLE))) {
+      return;
+    }
+
+    if (!(await columnExists(queryInterface, TABLE, 'status'))) {
+      return;
+    }
+
+    await queryInterface.sequelize.query(`
+      ALTER TABLE \`${TABLE}\`
+      MODIFY COLUMN status ENUM('ACTIVE', 'INACTIVE') NOT NULL DEFAULT 'ACTIVE'
+    `);
+  },
+
+  async down(queryInterface) {
+    if (!(await tableExists(queryInterface, TABLE))) {
+      return;
+    }
+
+    if (!(await columnExists(queryInterface, TABLE, 'status'))) {
+      return;
+    }
+
+    await queryInterface.sequelize.query(`
+      UPDATE \`${TABLE}\`
+      SET status = 'ACTIVE'
+      WHERE status = 'INACTIVE'
+    `);
+
+    await queryInterface.sequelize.query(`
+      ALTER TABLE \`${TABLE}\`
+      MODIFY COLUMN status ENUM('ACTIVE') NOT NULL DEFAULT 'ACTIVE'
+    `);
+  },
+};

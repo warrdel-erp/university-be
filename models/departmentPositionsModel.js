@@ -4,6 +4,7 @@ import users from "./userModel.js";
 import university from "./universityModel.js";
 import institute from "./instituteModel.js";
 import department from "./departmentModel.js";
+import { departmentPositionPublishStatuses } from "../constant.js";
 
 const departmentPositionsModel = sequelize.define(
     'department_positions',
@@ -48,6 +49,18 @@ const departmentPositionsModel = sequelize.define(
             allowNull: false,
             defaultValue: true,
             field: 'is_vacant'
+        },
+        isLevelHead: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+            field: 'is_level_head'
+        },
+        publishStatus: {
+            type: DataTypes.ENUM(...departmentPositionPublishStatuses),
+            allowNull: false,
+            defaultValue: 'DRAFT',
+            field: 'publish_status'
         },
         sortOrder: {
             type: DataTypes.INTEGER,
