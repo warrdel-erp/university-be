@@ -319,8 +319,8 @@ export async function getOrgPositions(filters = {}) {
     if (filters.isVacant !== undefined) {
         where.isVacant = filters.isVacant;
     }
-    if (filters.publishStatus) {
-        where.publishStatus = filters.publishStatus;
+    if (filters.isLevelHead !== undefined) {
+        where.isLevelHead = filters.isLevelHead;
     }
 
     return scoped(model.departmentPositionsModel).findAll({
@@ -738,8 +738,8 @@ export async function getOrgTreeData() {
                 {
                     model: model.departmentPositionsModel,
                     as: 'orgPositions',
-                    attributes: ['departmentPositionId', 'positionName', 'positionCode', 'level', 'publishStatus'],
-                    where: { level: 1, publishStatus: 'PUBLISHED' },
+                    attributes: ['departmentPositionId', 'positionName', 'positionCode', 'level', 'isLevelHead'],
+                    where: { level: 1 },
                     required: false,
                     include: [
                         {
@@ -821,6 +821,7 @@ export async function getOrgTreeData() {
                 positionName:  pos.positionName,
                 positionCode:  pos.positionCode,
                 level:         pos.level,
+                isLevelHead:   pos.isLevelHead,
                 users:         users       // empty array if no active holder
             });
         }
@@ -932,8 +933,8 @@ export async function getOrgChartData() {
                 {
                     model: model.departmentPositionsModel,
                     as: 'orgPositions',
-                    attributes: ['departmentPositionId', 'positionName', 'level', 'isVacant', 'publishStatus'],
-                    where: { level: 1, publishStatus: 'PUBLISHED' },
+                    attributes: ['departmentPositionId', 'positionName', 'level', 'isVacant', 'isLevelHead'],
+                    where: { level: 1 },
                     required: false,
                     include: [
                         {
@@ -1001,6 +1002,7 @@ export async function getOrgChartData() {
                 positionName:  pos.positionName,
                 level:         pos.level,
                 isVacant:      pos.isVacant,
+                isLevelHead:   pos.isLevelHead,
                 users:         users
             });
         }
@@ -1076,7 +1078,6 @@ export async function getPositionsByDepartment(departmentId) {
     return scoped(model.departmentPositionsModel).findAll({
         where: {
             departmentId: Number(departmentId),
-            publishStatus: 'PUBLISHED',
         },
         attributes: [
             'departmentPositionId',
@@ -1085,7 +1086,7 @@ export async function getPositionsByDepartment(departmentId) {
             'level',
             'employmentCategory',
             'isVacant',
-            'publishStatus',
+            'isLevelHead',
             'sortOrder',
             'departmentId'
         ],

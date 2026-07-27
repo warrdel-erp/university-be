@@ -2599,31 +2599,31 @@
                 {
                   "key": "userId",
                   "value": "{{timetable_userId}}",
-                  "description": "Required — teacher userId"
+                  "description": "Optional — teacher filter; at least one of userId / subjectId / courseId+sessionId required"
                 },
                 {
                   "key": "courseId",
                   "value": "{{timetable_courseId}}",
-                  "description": "Required"
+                  "description": "Optional — must pair with sessionId"
                 },
                 {
                   "key": "sessionId",
                   "value": "{{timetable_sessionId}}",
-                  "description": "Required"
+                  "description": "Optional — must pair with courseId"
                 },
                 {
                   "key": "subjectId",
                   "value": "{{timetable_subjectId}}",
-                  "description": "Required"
+                  "description": "Optional — subject filter on cells (works without userId)"
                 },
                 {
                   "key": "date",
                   "value": "2026-07-21",
-                  "description": "Optional — any date in the week (Mon–Sun). Default today."
+                  "description": "Optional YYYY-MM-DD week anchor; empty ignored"
                 }
               ]
             },
-            "description": "**GET /lesson/getRoutineByTeacher**\n\nRequired: `userId`, `courseId`, `sessionId`, `subjectId`.\nOptional: `date` (YYYY-MM-DD) — returns that calendar week (Mon–Sun).\n\n- **Published routines only**\n- Full week grid (day-wise)\n- One week of dated schedule items for that teacher\n- `teacherType`: Primary | Secondary\n- Response `week` includes `previousWeekDate` / `nextWeekDate` for navigation (pass as next `date`)\n- `scheduleItems[].lessonPlan`: one object `{ lessonMappingId, lessonId, lessonName, topicId, topicName, subTopics, subTopicName, lectureWindowId, lectureWindowName, note, lectureUrl, file, status, completeDate }` per `timeTableCellDateWiseId`, or `null`\n\nUse `scheduleItems[].timeTableCellDateWiseId` for mapping."
+            "description": "**GET /lesson/getRoutineByTeacher**\n\n**At least one filter required:** `userId` | `subjectId` | `courseId`+`sessionId`\n\n**Optional filters** (all can be combined)\n- `userId` — teacher filter (structure / routine / cell-date)\n- `subjectId` — subject filter on cells (works without `userId`)\n- `courseId` + `sessionId` — must be sent together (or both omitted)\n- `date` (YYYY-MM-DD) — week containing that date (Mon–Sun); empty/`date=` ignored\n\nExamples:\n- `?userId=56` — all cells for that teacher\n- `?subjectId=114` — all cells for that subject (any teacher)\n- `?userId=56&subjectId=114` — teacher + subject\n- `?courseId=34&sessionId=6` — course/session structure filter\n- `?userId=56&courseId=34&sessionId=6&subjectId=114&date=2026-07-21` — full filter set\n\n- **Published routines only**\n- Full week grid (day-wise)\n- One week of dated schedule items matching filters\n- `teacherType`: Primary | Secondary\n- Response `week` includes `previousWeekDate` / `nextWeekDate` for navigation (pass as next `date`)\n- `scheduleItems[].lessonPlan`: one object `{ lessonMappingId, lessonId, lessonName, topicId, topicName, subTopics, subTopicName, lectureWindowId, lectureWindowName, note, lectureUrl, file, status, completeDate }` per `timeTableCellDateWiseId`, or `null`\n\nUse `scheduleItems[].timeTableCellDateWiseId` for mapping."
           },
           "response": [],
           "event": [

@@ -23,7 +23,6 @@ export async function addOrgPosition(body, createdBy, updatedBy) {
         reportingType: body.reportingType ?? null,
         isVacant: body.isVacant === undefined ? true : body.isVacant,
         isLevelHead,
-        publishStatus: body.publishStatus ?? 'DRAFT',
         sortOrder: body.sortOrder ?? 0,
         level: body.level,
         createdBy,

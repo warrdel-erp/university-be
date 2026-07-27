@@ -46,8 +46,6 @@ const employmentCategoryEnum = z.enum([
     'Leadership',
 ]);
 
-const publishStatusEnum = z.enum(['DRAFT', 'PUBLISHED']);
-
 const optionalDateOnly = z.preprocess(
     emptyToUndefined,
     z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD').optional().nullable(),
@@ -63,7 +61,6 @@ const addDepartmentPositionSchema = z.object({
     reportingType: z.string().optional().nullable(),
     isVacant: z.boolean().optional(),
     isLevelHead: z.boolean().optional(),
-    publishStatus: publishStatusEnum.optional(),
     level: z.coerce.number().int().positive('level must be greater than 0'),
 });
 
@@ -75,7 +72,6 @@ const updateDepartmentPositionSchema = z.object({
     employmentCategory: employmentCategoryEnum.optional(),
     reportingType: z.string().optional().nullable(),
     isLevelHead: z.boolean().optional(),
-    publishStatus: publishStatusEnum.optional(),
     level: z.coerce.number().int().positive('level must be greater than 0').optional(),
 });
 
@@ -88,7 +84,12 @@ const listDepartmentPositionsQuerySchema = z.object({
         if (normalized === 'false' || normalized === false) return false;
         return undefined;
     }, z.boolean().optional()),
-    publishStatus: publishStatusEnum.optional(),
+    isLevelHead: z.preprocess((val) => {
+        const normalized = emptyToUndefined(val);
+        if (normalized === 'true' || normalized === true) return true;
+        if (normalized === 'false' || normalized === false) return false;
+        return undefined;
+    }, z.boolean().optional()),
 });
 
 const departmentPositionIdQuerySchema = z.object({

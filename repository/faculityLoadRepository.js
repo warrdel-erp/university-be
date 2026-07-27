@@ -144,3 +144,72 @@ export async function updateFaculityLoadByEmployeeId(userId, info, transaction) 
     throw error;
   }
 }
+
+/**
+ * Recompute current_load as integer hours from load distribution:
+ * ROUND(SUM(structure.period_length minutes) / 60)
+ * for all week-template cell teacher rows for this userId.
+ */
+export async function recomputeFaculityCurrentLoadHours(userId, transaction) {
+  const userIdNum = Number(userId);
+  if (!Number.isFinite(userIdNum) || userIdNum <= 0) {
+    return [0];
+  }
+
+  const employee = await scoped(model.employeeModel).findOne({
+    attributes: ["employeeId", "userId"],
+    where: { userId: userIdNum },
+    transaction,
+  });
+  if (!employee) {
+    return [0];
+  }
+
+  const teacherRows = await model.timeTableCellTeachersModel.findAll({
+    attributes: ["timeTableCellTeacherId"],
+    where: { userId: userIdNum },
+    include: [
+      {
+        model: model.timeTableCellModel,
+        as: "timeTableCell",
+        required: true,
+        attributes: ["timeTableCellId"],
+        include: [
+          {
+            model: model.timeTableStructurePeriodsModel,
+            as: "timeTablecreation",
+            required: true,
+            attributes: ["timeTableCreationId"],
+            include: [
+              {
+                model: model.timeTableStructureModel,
+                as: "timeTableName",
+                required: true,
+                attributes: ["periodLength"],
+                where: buildScope(model.timeTableStructureModel),
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    transaction,
+  });
+
+  let totalMinutes = 0;
+  for (const row of teacherRows) {
+    const plain = row.get({ plain: true });
+    const periodLength = Number(plain.timeTableCell.timeTablecreation.timeTableName.periodLength);
+    totalMinutes += periodLength;
+  }
+
+  const hours = Math.round(totalMinutes / 60);
+
+  return scoped(model.faculityLoadModel).update(
+    { currentLoad: hours },
+    {
+      where: { employeeId: employee.employeeId },
+      transaction,
+    },
+  );
+}

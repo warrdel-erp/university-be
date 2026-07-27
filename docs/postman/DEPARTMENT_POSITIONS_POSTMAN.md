@@ -65,16 +65,14 @@ Same endpoint `POST /department/` — when `departmentId` is sent, creates paren
   "positionName": "Chancellor",
   "employmentCategory": "Leadership",
   "level": 1,
-  "isLevelHead": true,
-  "publishStatus": "DRAFT"
+  "isLevelHead": true
 }
 ```
 
-### Publish / promote level-head
+### Update level-head
 ```json
 {
   "departmentPositionId": 2,
-  "publishStatus": "PUBLISHED",
   "isLevelHead": true
 }
 ```
@@ -102,7 +100,6 @@ Sets `status=INACTIVE` and optional relieving `endDate`. INACTIVE rows are hidde
 
 **Enums**
 - `employmentCategory`: Academic | Administrative | Support | Executive | Leadership
-- `publishStatus`: DRAFT | PUBLISHED
 - head `status`: ACTIVE | INACTIVE
 
-**Removed:** `/subAccount`, `/departmentStructure`, `accountId`, `subAccountId`, `departmentStructureId`, `hod_departments`, `POST /markVacant`, head `holderType`.
+**Removed:** `/subAccount`, `/departmentStructure`, `accountId`, `subAccountId`, `departmentStructureId`, `hod_departments`, `POST /markVacant`, head `holderType`, `publishStatus`.

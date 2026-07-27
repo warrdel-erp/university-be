@@ -19,12 +19,12 @@ export async function addDepartmentPosition(req, res) {
 
 export async function getAllDepartmentPositions(req, res) {
     try {
-        const { departmentId, employmentCategory, isVacant, publishStatus } = req.query;
+        const { departmentId, employmentCategory, isVacant, isLevelHead } = req.query;
         const positions = await departmentPositionsService.getOrgPositions({
             departmentId,
             employmentCategory,
             isVacant,
-            publishStatus,
+            isLevelHead,
         });
         return SuccessResponse(res, 200, "Department positions fetched successfully", positions);
     } catch (error) {

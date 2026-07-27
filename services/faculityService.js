@@ -1,5 +1,4 @@
 import * as faculityLoadRepository from "../repository/faculityLoadRepository.js";
-import { parseMoneyInput, toMoneyNumber } from "../utility/decimalMoney.js";
 
 function formatFaculityLoad(row) {
   const plain = row?.get ? row.get({ plain: true }) : row;
@@ -9,8 +8,8 @@ function formatFaculityLoad(row) {
   return {
     ...rest,
     userId: employee?.userId || rest.userId, // map employee's userId back to the root level
-    definedLoad: rest.definedLoad ?? null,
-    currentLoad: toMoneyNumber(rest.currentLoad),
+    definedLoad: rest.definedLoad == null ? null : Math.trunc(Number(rest.definedLoad)),
+    currentLoad: rest.currentLoad == null ? 0 : Math.round(Number(rest.currentLoad)),
     ...(employee ? { employee } : {}),
     ...(employeeFaculity ? { employeeFaculity } : {}),
   };
@@ -19,11 +18,23 @@ function formatFaculityLoad(row) {
 function normalizeLoadWritePayload(data) {
   const payload = { ...data };
 
+  if ("definedLoad" in payload && payload.definedLoad != null) {
+    const definedLoad = Number(payload.definedLoad);
+    if (!Number.isFinite(definedLoad) || Math.trunc(definedLoad) !== definedLoad) {
+      throw new Error("Invalid definedLoad");
+    }
+    payload.definedLoad = Math.trunc(definedLoad);
+  }
+
   if ("currentLoad" in payload) {
-    const parsed = parseMoneyInput(payload.currentLoad);
-    payload.currentLoad = parsed == null ? 0 : parsed;
-    if (Number.isNaN(payload.currentLoad)) {
-      throw new Error("Invalid currentLoad");
+    if (payload.currentLoad == null || payload.currentLoad === "") {
+      payload.currentLoad = 0;
+    } else {
+      const currentLoad = Number(payload.currentLoad);
+      if (!Number.isFinite(currentLoad) || Math.trunc(currentLoad) !== currentLoad) {
+        throw new Error("Invalid currentLoad");
+      }
+      payload.currentLoad = Math.trunc(currentLoad);
     }
   }
 
@@ -55,7 +66,9 @@ export async function updateFaculityLoad(faculityLoadId, info, updatedBy) {
     return faculityLoadRepository.updateFaculityLoad(faculityLoadId, payload);
   } catch (error) {
     console.error("Error updating faculity load:", error);
-    throw error.message === "Invalid currentLoad" ? error : new Error("Failed to update time table");
+    throw error.message === "Invalid currentLoad" || error.message === "Invalid definedLoad"
+      ? error
+      : new Error("Failed to update time table");
   }
 }
 

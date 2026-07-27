@@ -1016,7 +1016,8 @@ async function buildLessonCellSubjectWhere(subjectId) {
 }
 
 /**
- * One week of published date-wise classes for a teacher + subject + course + session.
+ * One week of published date-wise classes.
+ * Optional filters: userId, subjectId, courseId, sessionId (any combination).
  */
 export async function getTeacherWeekDateWiseCells({
   userId,
@@ -1073,8 +1074,8 @@ export async function getTeacherWeekDateWiseCells({
       {
         model: model.timeTableCellTeachersDateWiseModel,
         as: 'timeTableCellTeachersDateWise',
-        required: true,
-        where: { userId: Number(userId) },
+        required: userId != null,
+        ...(userId != null ? { where: { userId: Number(userId) } } : {}),
         attributes: ['userId', 'teacherType', 'isAttendence'],
       },
       {

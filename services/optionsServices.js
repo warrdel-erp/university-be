@@ -53,26 +53,26 @@ export async function getSpecializationOptions(courseId) {
     return await optionsRepository.getSpecializationOptions(courseId);
 }
 
-export async function getSubjectOptions(courseId, term, academicYearId, sessionId) {
+export async function getSubjectOptions(courseId, term, academicYearId, sessionId, userId) {
     let resolvedAcademicYearId = academicYearId;
 
-    if (sessionId) {
+    if (sessionId != null) {
         const session = await scoped(model.sessionModel).findOne({
-            where: { sessionId },
-            attributes: ["academicYearId"],
+            where: { sessionId: Number(sessionId) },
+            attributes: ['sessionId', 'academicYearId'],
         });
         if (!session) {
-            throw new Error("Session not found");
+            throw new Error('Session not found');
         }
         resolvedAcademicYearId = session.academicYearId;
 
-        if (courseId) {
+        if (courseId != null) {
             const mapping = await optionsRepository.findSessionCourseMappingByCourseAndSession(
                 Number(courseId),
                 Number(sessionId),
             );
             if (!mapping) {
-                throw new Error("Session is not mapped to this course");
+                throw new Error('Session is not mapped to this course');
             }
         }
     }
@@ -81,11 +81,12 @@ export async function getSubjectOptions(courseId, term, academicYearId, sessionI
         courseId,
         term,
         resolvedAcademicYearId,
+        userId,
     );
 }
 
-export async function getTeacherOptions(campusId) {
-    return await optionsRepository.getTeacherOptions(campusId);
+export async function getTeacherOptions(campusId, subjectId) {
+    return await optionsRepository.getTeacherOptions(campusId, subjectId);
 }
 
 export async function getTimeTableStructureOptions() {
