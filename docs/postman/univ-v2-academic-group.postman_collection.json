@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a9b8c7d6-e5f4-3210-abcd-academicgroup01",
     "name": "univ-v2-academic-group",
-    "description": "Academic Group formation APIs (stepwise wizard).\n\n**Docs:** `docs/postman/ACADEMIC_GROUP.md`\n\n## Create order\n1. `POST /academicGroup/scope` → `academicGroupScopeId`\n2. `POST /academicGroup` → `academicGroupId`\n3. `POST /academicGroup/user` → faculty\n4. `POST /academicGroup/student` → students\n\nThen PATCH/GET/DELETE as needed.\n\n## Pickers\n- `GET /options/studentFilters`\n- `GET /student/all`\n- `GET /options/teachers`\n\nSet `baseurl` + `token`. Tenant from `saveUserDefaults`.\n\n**Note:** when `academicContextType` is `course`, send `contextSubjectId` (subject FK), not a course id.",
+    "description": "Academic Group formation APIs (stepwise wizard).\n\n**Docs:** `docs/postman/ACADEMIC_GROUP.md`\n\n## Create order\n1. `POST /academicGroup/scope` → `academicGroupScopeId`\n2. `POST /academicGroup` → `academicGroupId`\n3. `POST /academicGroup/user` → faculty\n4. `POST /academicGroup/student` → students\n\nThen PATCH/GET/DELETE as needed.\n\n## Pickers\n- `GET /options/studentFilters`\n- `GET /academicGroup/availableStudents`\n- `GET /academicGroup/availableUsers`\n- `GET /options/teachers`\n\nSet `baseurl` + `token`. Tenant from `saveUserDefaults`.\n\n**Note:** when `academicContextType` is `course`, send `contextSubjectId` (subject FK), not a course id.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -447,6 +447,32 @@
       "description": "Step 3 — assign faculty with role. At most one `primary_faculty` per group.",
       "item": [
         {
+          "name": "GET availableUsers",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/academicGroup/availableUsers?academicGroupId={{academicGroupId}}&page=1&limit=20",
+              "host": ["{{baseurl}}"],
+              "path": ["academicGroup", "availableUsers"],
+              "query": [
+                { "key": "academicGroupId", "value": "{{academicGroupId}}" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "campusId", "value": "", "disabled": true },
+                { "key": "subjectId", "value": "", "disabled": true }
+              ]
+            },
+            "description": "**GET /academicGroup/availableUsers**\n\nLean available faculty units only.\n\nExcludes:\n- `userId` already in `academic_group_user`\n- `userId` of students already in `academic_group_student`\n\n**Assign key:** `userId` → `POST /academicGroup/user` `{ users: [{ userId, role }] }`\n\n**result[]:** `userId`, `employeeId`, `employeeName`, `employeeCode`, `userName`, `email`, `phone`\n\nOptional: `page`, `limit`, `search`, `campusId`, `subjectId`."
+          },
+          "response": []
+        },
+        {
           "name": "GET user (faculty by group)",
           "request": {
             "auth": {
@@ -600,7 +626,7 @@
                 { "key": "year", "value": "", "disabled": true }
               ]
             },
-            "description": "**GET /academicGroup/availableStudents**\n\n1. From `academicGroupId` → scope `courseId` + `sessionId`\n2. Find class sections for that course/session\n3. Filter by `class_section_term` (`term=1,2,3,4,5` or scope term / all)\n4. Return placed students **not** already in `academic_group_student`\n\nAlso returns `capacity`, `memberCount`, `remainingCapacity`, `courseId`, `sessionId`, `terms`."
+            "description": "**GET /academicGroup/availableStudents**\n\nLean available student units only (not full student payloads).\n\n1. Scope `courseId` + `sessionId`\n2. Class-section terms (`term=` or scope term)\n3. Exclude members already in `academic_group_student` / faculty `userId`s\n\n**Assign key:** `studentId` → `POST /academicGroup/student` `{ studentIds: [...] }`\n\n**result[]:** `studentId`, `userId`, `studentName`, `scholarNumber`, `enrollNumber`, `courseName`, …\n\nAlso: `capacity`, `memberCount`, `remainingCapacity`."
           },
           "response": []
         },

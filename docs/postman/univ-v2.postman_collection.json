@@ -9089,7 +9089,7 @@
           "id": "ag-req-007b-get-available-students",
           "name": "GET availableStudents",
           "request": {
-            "description": "**GET /academicGroup/availableStudents?academicGroupId=**\n\nStudents matching scope who are not already in this group. Also returns `capacity`, `memberCount`, `remainingCapacity`.",
+            "description": "**GET /academicGroup/availableStudents?academicGroupId=**\n\nLean available student units only. Assign with `studentId`. Excludes existing members. Returns `capacity`, `memberCount`, `remainingCapacity`.",
             "url": {
               "path": ["academicGroup", "availableStudents"],
               "host": ["{{baseurl}}"],
@@ -9098,6 +9098,34 @@
                 { "key": "page", "value": "1" },
                 { "key": "limit", "value": "20" },
                 { "key": "search", "value": "", "disabled": true }
+              ],
+              "variable": []
+            },
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "type": "string", "value": "{{token}}", "key": "token" }]
+            },
+            "header": []
+          },
+          "response": [],
+          "event": []
+        },
+        {
+          "id": "ag-req-007c-get-available-users",
+          "name": "GET availableUsers",
+          "request": {
+            "description": "**GET /academicGroup/availableUsers?academicGroupId=**\n\nLean available faculty units only. Assign with `userId`. Excludes existing faculty and student-linked userIds. Optional: `page`, `limit`, `search`, `campusId`, `subjectId`.",
+            "url": {
+              "path": ["academicGroup", "availableUsers"],
+              "host": ["{{baseurl}}"],
+              "query": [
+                { "key": "academicGroupId", "value": "{{academicGroupId}}" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "campusId", "value": "", "disabled": true },
+                { "key": "subjectId", "value": "", "disabled": true }
               ],
               "variable": []
             },

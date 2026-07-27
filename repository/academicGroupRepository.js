@@ -1,4 +1,4 @@
-import { Op } from 'sequelize';
+import { Op, Sequelize } from 'sequelize';
 import * as model from '../models/index.js';
 import { scoped, buildScope } from '../utility/scoped.js';
 
@@ -217,24 +217,7 @@ export async function getScopeById(academicGroupScopeId) {
         where: { academicGroupScopeId: Number(academicGroupScopeId) },
         attributes: scopeListAttributes,
         include: [
-            {
-                model: model.courseModel,
-                as: 'course',
-                attributes: ['courseId', 'courseName'],
-                required: false,
-            },
-            {
-                model: model.sessionModel,
-                as: 'session',
-                attributes: ['sessionId', 'sessionName'],
-                required: false,
-            },
-            {
-                model: model.subjectModel,
-                as: 'contextSubject',
-                attributes: ['subjectId', 'subjectName'],
-                required: false,
-            },
+            ...scopeNameIncludes(),
             {
                 model: model.academicGroupModel,
                 as: 'groups',
@@ -257,24 +240,7 @@ export async function getAllScopes({ search } = {}) {
         where,
         attributes: scopeListAttributes,
         include: [
-            {
-                model: model.courseModel,
-                as: 'course',
-                attributes: ['courseId', 'courseName'],
-                required: false,
-            },
-            {
-                model: model.sessionModel,
-                as: 'session',
-                attributes: ['sessionId', 'sessionName'],
-                required: false,
-            },
-            {
-                model: model.subjectModel,
-                as: 'contextSubject',
-                attributes: ['subjectId', 'subjectName'],
-                required: false,
-            },
+            ...scopeNameIncludes(),
             {
                 model: model.academicGroupModel,
                 as: 'groups',
@@ -330,6 +296,15 @@ export async function getGroupById(academicGroupId) {
         where: { academicGroupId: Number(academicGroupId) },
         attributes: groupListAttributes,
         include: [scopeDetailInclude(), groupUsersPrintInclude(), groupStudentsPrintInclude()],
+    });
+}
+
+/** Group + scope only (no users/students). For pickers and write guards. */
+export async function getGroupWithScope(academicGroupId) {
+    return scoped(model.academicGroupModel).findOne({
+        where: { academicGroupId: Number(academicGroupId) },
+        attributes: groupListAttributes,
+        include: [scopeDetailInclude()],
     });
 }
 
@@ -446,10 +421,266 @@ export async function getMemberStudentIds(academicGroupId) {
     return studentIds;
 }
 
+export async function getMemberUserIds(academicGroupId) {
+    const rows = await scoped(model.academicGroupUserModel).findAll({
+        where: { academicGroupId: Number(academicGroupId) },
+        attributes: ['userId'],
+        raw: true,
+    });
+    const userIds = [];
+    for (const row of rows) {
+        userIds.push(Number(row.userId));
+    }
+    return userIds;
+}
+
 /**
- * Students placed on class_sections for course+session whose class_section_term
- * matches the given terms (or all terms when terms omitted).
- * Excludes studentIds already in the academic group (caller passes exclude list).
+ * studentIds to hide from availableStudents:
+ * - already in academic_group_student
+ * - student.userId already in academic_group_user
+ */
+export async function getExcludedStudentIdsForPicker(academicGroupId) {
+    const groupId = Number(academicGroupId);
+
+    const memberRows = await scoped(model.academicGroupStudentModel).findAll({
+        where: { academicGroupId: groupId },
+        attributes: ['studentId'],
+        raw: true,
+    });
+
+    const facultyRows = await scoped(model.academicGroupUserModel).findAll({
+        where: { academicGroupId: groupId },
+        attributes: ['userId'],
+        raw: true,
+    });
+
+    const memberStudentIds = [];
+    const excludeIds = [];
+    const seen = new Set();
+    for (const row of memberRows) {
+        const id = Number(row.studentId);
+        memberStudentIds.push(id);
+        if (seen.has(id)) {
+            continue;
+        }
+        seen.add(id);
+        excludeIds.push(id);
+    }
+
+    const facultyUserIds = [];
+    for (const row of facultyRows) {
+        facultyUserIds.push(Number(row.userId));
+    }
+
+    if (facultyUserIds.length > 0) {
+        const linkedRows = await scoped(model.studentModel).findAll({
+            attributes: ['studentId'],
+            where: { userId: { [Op.in]: facultyUserIds } },
+            raw: true,
+        });
+        for (const row of linkedRows) {
+            const id = Number(row.studentId);
+            if (seen.has(id)) {
+                continue;
+            }
+            seen.add(id);
+            excludeIds.push(id);
+        }
+    }
+
+    return { memberStudentIds, excludeStudentIds: excludeIds };
+}
+
+/**
+ * userIds to hide from availableUsers:
+ * - already in academic_group_user
+ * - userId of students already in academic_group_student (join)
+ */
+export async function getExcludedUserIdsForPicker(academicGroupId) {
+    const groupId = Number(academicGroupId);
+
+    const memberRows = await scoped(model.academicGroupUserModel).findAll({
+        where: { academicGroupId: groupId },
+        attributes: ['userId'],
+        raw: true,
+    });
+
+    const studentLinkedRows = await scoped(model.academicGroupStudentModel).findAll({
+        where: { academicGroupId: groupId },
+        attributes: ['academicGroupStudentId'],
+        include: [
+            {
+                model: model.studentModel,
+                as: 'student',
+                attributes: ['userId'],
+                required: true,
+                where: { userId: { [Op.ne]: null } },
+            },
+        ],
+    });
+
+    const excludeIds = [];
+    const seen = new Set();
+    const memberUserIds = [];
+    for (const row of memberRows) {
+        const id = Number(row.userId);
+        memberUserIds.push(id);
+        if (seen.has(id)) {
+            continue;
+        }
+        seen.add(id);
+        excludeIds.push(id);
+    }
+    for (const row of studentLinkedRows) {
+        const id = Number(row.student.userId);
+        if (seen.has(id)) {
+            continue;
+        }
+        seen.add(id);
+        excludeIds.push(id);
+    }
+
+    return { memberUserIds, excludeUserIds: excludeIds };
+}
+
+/**
+ * Teachers available to assign: isTeacher employees, excluding already-used userIds.
+ * subjectId filters via teacherSubjectMapping join.
+ */
+export async function findAvailableUsers({
+    page = 1,
+    limit = 10,
+    search,
+    campusId,
+    subjectId,
+    excludeUserIds,
+}) {
+    const employeeWhere = {};
+    if (campusId != null) {
+        employeeWhere.campusId = Number(campusId);
+    }
+    if (excludeUserIds != null && excludeUserIds.length > 0) {
+        const excluded = [];
+        for (const id of excludeUserIds) {
+            excluded.push(Number(id));
+        }
+        employeeWhere.userId = { [Op.notIn]: excluded };
+    }
+
+    if (search) {
+        const like = `%${search}%`;
+        employeeWhere[Op.or] = [
+            { employeeName: { [Op.like]: like } },
+            { employeeCode: { [Op.like]: like } },
+            { '$user.userName$': { [Op.like]: like } },
+            { '$user.email$': { [Op.like]: like } },
+        ];
+    }
+
+    const include = [
+        {
+            model: model.userModel,
+            as: 'user',
+            attributes: ['userId', 'userName', 'email', 'phone'],
+            required: true,
+            where: { isTeacher: true },
+        },
+    ];
+
+    if (subjectId != null) {
+        include.push({
+            model: model.teacherSubjectMappingModel,
+            as: 'teacherEmployeeData',
+            attributes: [],
+            required: true,
+            where: {
+                subjectId: Number(subjectId),
+                ...buildScope(model.teacherSubjectMappingModel),
+            },
+        });
+    }
+
+    const offset = (Number(page) - 1) * Number(limit);
+
+    return scoped(model.employeeModel).findAndCountAll({
+        where: employeeWhere,
+        attributes: ['employeeId', 'userId', 'employeeCode', 'employeeName'],
+        include,
+        order: [['employeeName', 'ASC'], ['employeeId', 'ASC']],
+        limit: Number(limit),
+        offset,
+        distinct: true,
+        subQuery: false,
+    });
+}
+
+/**
+ * Lean student picker rows for availableStudents (not full student payload).
+ */
+export async function findAvailableStudentUnits({
+    page = 1,
+    limit = 20,
+    search,
+    includeStudentIds,
+}) {
+    if (includeStudentIds == null || includeStudentIds.length === 0) {
+        return { rows: [], count: 0 };
+    }
+
+    const ids = [];
+    for (const id of includeStudentIds) {
+        ids.push(Number(id));
+    }
+
+    const where = {
+        studentId: { [Op.in]: ids },
+    };
+
+    if (search) {
+        const like = `%${search}%`;
+        where[Op.or] = [
+            { firstName: { [Op.like]: like } },
+            { middleName: { [Op.like]: like } },
+            { lastName: { [Op.like]: like } },
+            { scholarNumber: { [Op.like]: like } },
+            { enrollNumber: { [Op.like]: like } },
+        ];
+    }
+
+    const offset = (Number(page) - 1) * Number(limit);
+
+    return scoped(model.studentModel).findAndCountAll({
+        where,
+        attributes: [
+            'studentId',
+            'userId',
+            'firstName',
+            'middleName',
+            'lastName',
+            'scholarNumber',
+            'enrollNumber',
+            'courseId',
+            'email',
+            'phoneNumber',
+        ],
+        include: [
+            {
+                model: model.courseModel,
+                as: 'course',
+                attributes: ['courseId', 'courseName', 'courseCode'],
+                required: false,
+            },
+        ],
+        order: [['firstName', 'ASC'], ['studentId', 'ASC']],
+        limit: Number(limit),
+        offset,
+        distinct: true,
+    });
+}
+
+/**
+ * Eligible studentIds for a course/session (+ optional terms/section/year).
+ * Uses history placement join + FK placement without any current history (LEFT JOIN null).
  */
 export async function resolveEligibleStudentIds({
     courseId,
@@ -485,7 +716,7 @@ export async function resolveEligibleStudentIds({
     }
 
     const termRows = await scoped(model.classSectionTermModel).findAll({
-        attributes: ['classSectionTermId', 'classSectionsId', 'term'],
+        attributes: ['classSectionTermId', 'classSectionsId'],
         where: termWhere,
         include: [
             {
@@ -496,6 +727,7 @@ export async function resolveEligibleStudentIds({
                 where: sectionWhere,
             },
         ],
+        raw: true,
     });
 
     const classSectionTermIds = [];
@@ -514,6 +746,13 @@ export async function resolveEligibleStudentIds({
         return [];
     }
 
+    const excludeSet = new Set();
+    if (excludeStudentIds != null) {
+        for (const id of excludeStudentIds) {
+            excludeSet.add(Number(id));
+        }
+    }
+
     const historyRows = await model.studentClassSectionsHistoryModel.findAll({
         attributes: ['studentId'],
         where: {
@@ -524,34 +763,30 @@ export async function resolveEligibleStudentIds({
         raw: true,
     });
 
-    const currentHistoryRows = await model.studentClassSectionsHistoryModel.findAll({
-        attributes: ['studentId'],
-        where: { status: 'current' },
-        raw: true,
-    });
-    const studentsWithCurrentHistory = new Set();
-    for (const row of currentHistoryRows) {
-        studentsWithCurrentHistory.add(Number(row.studentId));
-    }
-
+    // FK-placed students that do not already have any current history row
     const fkRows = await scoped(model.studentModel).findAll({
         attributes: ['studentId'],
         where: {
             courseId: Number(courseId),
             sessionId: Number(sessionId),
             classSectionTermId: { [Op.in]: classSectionTermIds },
+            [Op.and]: [Sequelize.where(Sequelize.col('sectionHistory.id'), Op.is, null)],
         },
+        include: [
+            {
+                model: model.studentClassSectionsHistoryModel,
+                as: 'sectionHistory',
+                attributes: [],
+                required: false,
+                where: { status: 'current' },
+            },
+        ],
         raw: true,
+        subQuery: false,
     });
 
     const eligible = [];
     const seen = new Set();
-    const excludeSet = new Set();
-    if (excludeStudentIds != null) {
-        for (const id of excludeStudentIds) {
-            excludeSet.add(Number(id));
-        }
-    }
 
     for (const row of historyRows) {
         const id = Number(row.studentId);
@@ -564,7 +799,7 @@ export async function resolveEligibleStudentIds({
 
     for (const row of fkRows) {
         const id = Number(row.studentId);
-        if (studentsWithCurrentHistory.has(id) || seen.has(id) || excludeSet.has(id)) {
+        if (seen.has(id) || excludeSet.has(id)) {
             continue;
         }
         seen.add(id);

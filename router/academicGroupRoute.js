@@ -181,6 +181,15 @@ const availableStudentsQuerySchema = z.object({
     academicYearId: optionalPositiveIntegerId,
 });
 
+const availableUsersQuerySchema = z.object({
+    academicGroupId: positiveIntegerId,
+    page: z.coerce.number().int().min(1).optional().default(1),
+    limit: z.coerce.number().int().min(1).max(100).optional().default(10),
+    search: optionalString,
+    campusId: optionalPositiveIntegerId,
+    subjectId: optionalPositiveIntegerId,
+});
+
 const deleteStudentsSchema = z.union([
     z.object({
         academicGroupStudentId: positiveIntegerId,
@@ -308,6 +317,13 @@ router.get(
     userAuth,
     validate({ query: availableStudentsQuerySchema }),
     academicGroupController.getAvailableStudents,
+);
+
+router.get(
+    '/availableUsers',
+    userAuth,
+    validate({ query: availableUsersQuerySchema }),
+    academicGroupController.getAvailableUsers,
 );
 
 router.delete(

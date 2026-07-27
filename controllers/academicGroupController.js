@@ -242,6 +242,17 @@ export async function getAvailableStudents(req, res) {
     }
 }
 
+export async function getAvailableUsers(req, res) {
+    try {
+        const { academicGroupId, ...filters } = req.query;
+        const result = await academicGroupService.getAvailableUsers(academicGroupId, filters);
+        return SuccessResponse(res, 200, 'Available users fetched successfully', result);
+    } catch (error) {
+        console.error('Error in getAvailableUsers:', error);
+        return ErrorResponse(res, statusFromError(error), error.message || 'Internal Server Error');
+    }
+}
+
 export async function deleteStudents(req, res) {
     try {
         const updatedBy = req.user.userId;
