@@ -96,6 +96,10 @@ import departmentModel from "./departmentModel.js";
 import staffModel from "./staffModel.js";
 import departmentPositionsModel from "./departmentPositionsModel.js";
 import userDepartmentPositionsModel from "./userDepartmentPositionsModel.js";
+import academicGroupScopeModel from "./academicGroupScopeModel.js";
+import academicGroupModel from "./academicGroupModel.js";
+import academicGroupUserModel from "./academicGroupUserModel.js";
+import academicGroupStudentModel from "./academicGroupStudentModel.js";
 import syllabusDetailsModel from "./syllabusDetailsModel.js";
 import syllabusModel from "./syllabusModel.js";
 import sessionModel from "./sessionModel.js";
@@ -1195,6 +1199,78 @@ userModel.hasMany(userDepartmentPositionsModel, {
   as: "orgHeads",
 });
 
+academicGroupScopeModel.belongsTo(courseModel, {
+  foreignKey: "course_id",
+  as: "course",
+});
+courseModel.hasMany(academicGroupScopeModel, {
+  foreignKey: "course_id",
+  as: "academicGroupScopes",
+});
+
+academicGroupScopeModel.belongsTo(subjectModel, {
+  foreignKey: "context_subject_id",
+  as: "contextSubject",
+});
+subjectModel.hasMany(academicGroupScopeModel, {
+  foreignKey: "context_subject_id",
+  as: "academicGroupScopesContext",
+});
+
+academicGroupScopeModel.belongsTo(sessionModel, {
+  foreignKey: "session_id",
+  as: "session",
+});
+sessionModel.hasMany(academicGroupScopeModel, {
+  foreignKey: "session_id",
+  as: "academicGroupScopes",
+});
+
+academicGroupModel.belongsTo(academicGroupScopeModel, {
+  foreignKey: "academic_group_scope_id",
+  as: "scope",
+});
+academicGroupScopeModel.hasOne(academicGroupModel, {
+  foreignKey: "academic_group_scope_id",
+  as: "group",
+});
+
+academicGroupUserModel.belongsTo(academicGroupModel, {
+  foreignKey: "academic_group_id",
+  as: "group",
+});
+academicGroupModel.hasMany(academicGroupUserModel, {
+  foreignKey: "academic_group_id",
+  as: "users",
+});
+
+academicGroupUserModel.belongsTo(userModel, {
+  foreignKey: "user_id",
+  as: "user",
+});
+userModel.hasMany(academicGroupUserModel, {
+  foreignKey: "user_id",
+  as: "academicGroupUsers",
+});
+
+academicGroupStudentModel.belongsTo(academicGroupModel, {
+  foreignKey: "academic_group_id",
+  as: "group",
+});
+academicGroupModel.hasMany(academicGroupStudentModel, {
+  foreignKey: "academic_group_id",
+  as: "students",
+});
+
+academicGroupStudentModel.belongsTo(studentModel, {
+  foreignKey: "student_id",
+  as: "student",
+});
+studentModel.hasMany(academicGroupStudentModel, {
+  foreignKey: "student_id",
+  as: "academicGroupStudents",
+});
+
 syllabusModel.hasMany(syllabusDetailsModel, { foreignKey: "syllabus_id", as: "syllabusDetails" });
 syllabusDetailsModel.belongsTo(syllabusModel, { foreignKey: "syllabus_id", as: "syllabus" });
 
@@ -2027,6 +2103,10 @@ export {
   staffModel,
   departmentPositionsModel,
   userDepartmentPositionsModel,
+  academicGroupScopeModel,
+  academicGroupModel,
+  academicGroupUserModel,
+  academicGroupStudentModel,
   syllabusDetailsModel,
   syllabusModel,
   sessionModel,

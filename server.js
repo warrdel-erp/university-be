@@ -100,6 +100,7 @@ import examSetupType from "./router/examSetupTypeRoute.js";
 import examSchedule from "./router/examScheduleRoute.js";
 import studentHallTicket from "./router/studentHallTicketRoute.js";
 import options from "./router/optionsRoute.js";
+import academicGroup from "./router/academicGroupRoute.js";
 import subjectWeightage from "./router/subjectWeightageRoute.js";
 import libraryIssueBookTransaction from "./router/libraryIssueBookTransactionRoute.js";
 
@@ -186,6 +187,7 @@ app.use("/examSetup", examSetup);
 app.use("/examAttendance", examAttendance);
 app.use("/studentHallTicket", studentHallTicket);
 app.use("/options", options);
+app.use("/academicGroup", academicGroup);
 app.use("/subjectWeightage", subjectWeightage);
 app.use("/electiveSubject", electiveSubject);
 app.use("/student", student);
