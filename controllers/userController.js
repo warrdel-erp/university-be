@@ -451,5 +451,19 @@ export const getGrantedAccess = async (req, res) => {
   }
 };
 
+export const giveFullAccess = async (req, res) => {
+  try {
+    const result = await userService.giveFullAccess(req.body);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in giveFullAccess controller:", error);
+    res.status(400).json({
+      success: false,
+      message: error.message || "Failed to grant full access"
+    });
+  }
+};
+
+
 
 
