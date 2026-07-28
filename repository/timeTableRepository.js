@@ -821,3 +821,37 @@ export async function getTimetableListPrintRows(filters = {}) {
         ],
     });
 }
+
+export async function getProgramsOverviewRows(filters = {}) {
+    const where = buildScope(model.courseModel, { scopeConfig: { academicYear: false } });
+    
+    if (filters.instituteId) where.instituteId = filters.instituteId;
+    
+    return await model.courseModel.findAll({
+        where,
+        attributes: ['courseId', 'courseName', 'courseCode'],
+        include: [
+            {
+                model: model.classSectionModel,
+                as: 'courseSection',
+                required: false,
+                attributes: ['classSectionsId'],
+                where: buildScope(model.classSectionModel),
+            },
+            {
+                model: model.academicGroupScopeModel,
+                as: 'academicGroupScopes',
+                required: false,
+                attributes: ['academicGroupScopeId'],
+                where: buildScope(model.academicGroupScopeModel),
+            },
+            {
+                model: model.timeTableRoutineModel,
+                as: 'timeTableCourse',
+                required: false,
+                attributes: ['timeTableRoutineId', 'isPublish'],
+                where: buildScope(model.timeTableRoutineModel),
+            }
+        ]
+    });
+}

@@ -120,3 +120,18 @@ export const getSubjectOptions = async (req, res) => {
 };
 
 
+
+export const getProgramsOverview = async (req, res) => {
+    try {
+        const data = await timeTableServices.getProgramsOverviewData(req.query, req.requestContext);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Programs overview fetched successfully.',
+            data,
+        });
+    } catch (error) {
+        console.error("Error in getProgramsOverview:", error);
+        return res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+};

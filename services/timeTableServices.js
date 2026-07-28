@@ -667,3 +667,57 @@ export async function getTimetableListPrintData(filters = {}) {
 
     return result;
 }
+
+export async function getProgramsOverviewData(query, reqContext) {
+    const filters = {};
+    if (query.instituteId) {
+        filters.instituteId = query.instituteId;
+    }
+
+    const rows = await timeTableRepository.getProgramsOverviewRows(filters);
+
+    const result = rows.map((courseRow) => {
+        const plain = courseRow.get({ plain: true });
+
+        // Calculate metrics
+        let sectionsCount = 0;
+        if (plain.courseSection) {
+            sectionsCount = plain.courseSection.length;
+        }
+
+        let academicGroupsCount = 0;
+        if (plain.academicGroupScopes) {
+            academicGroupsCount = plain.academicGroupScopes.length;
+        }
+
+        let totalRoutines = 0;
+        let publishedRoutines = 0;
+        let draftRoutines = 0;
+        let inProgressRoutines = 0; // Defaulting to 0 unless further defined
+
+        if (plain.timeTableCourse) {
+            totalRoutines = plain.timeTableCourse.length;
+            for (const routine of plain.timeTableCourse) {
+                if (routine.isPublish) {
+                    publishedRoutines++;
+                } else {
+                    draftRoutines++;
+                }
+            }
+        }
+
+        return {
+            courseId: plain.courseId,
+            courseName: plain.courseName,
+            courseCode: plain.courseCode,
+            sectionsCount,
+            academicGroupsCount,
+            totalRoutines,
+            publishedRoutines,
+            draftRoutines,
+            inProgressRoutines,
+        };
+    });
+
+    return result;
+}

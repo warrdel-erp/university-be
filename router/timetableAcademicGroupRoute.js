@@ -14,6 +14,7 @@ import {
     getCascadingGroupRoutines,
     getGroupRoutinesWrappedInStructure,
     getSubjectOptions,
+    getProgramsOverview,
 } from '../controllers/timetableAcademicGroupController.js';
 
 
@@ -130,6 +131,14 @@ router.get(
     checkAccess(PERMISSIONS.TIME_TABLE_SETUP.value, null),
     validate({ query: getStructureScopeMappingsQuerySchema }),
     getTimetableList,
+);
+
+router.get(
+    '/programsOverview',
+    userAuth,
+    checkAccess(PERMISSIONS.TIME_TABLE_SETUP.value, null),
+    validate({ query: getStructureScopeMappingsQuerySchema }),
+    getProgramsOverview,
 );
 
 router.get(
