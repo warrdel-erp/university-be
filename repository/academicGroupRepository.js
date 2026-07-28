@@ -287,6 +287,14 @@ export async function getScopeById(academicGroupScopeId) {
                 include: [
                     groupUsersPrintInclude({ separate: true }),
                     groupStudentsPrintInclude({ separate: true }),
+                    {
+                        model: model.timeTableRoutineModel,
+                        as: 'timeTableRoutines',
+                        attributes: ['timeTableRoutineId'],
+                        required: false,
+                        where: buildScope(model.timeTableRoutineModel),
+                        separate: true,
+                    },
                 ],
             },
         ],
@@ -302,11 +310,13 @@ export async function getScopeById(academicGroupScopeId) {
         plain.groups = plain.groups.map((group) => {
             const users = group.users || [];
             const students = group.students || [];
+            const routines = group.timeTableRoutines || [];
 
             return {
                 ...group,
                 studentCount: students.length,
                 facultyCount: users.length,
+                routineCount: routines.length,
             };
         });
     }
