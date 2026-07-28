@@ -317,3 +317,18 @@ export const updateDateWiseCellController = async (req, res) => {
         return ErrorResponse(res, statusCode, error.message || 'Internal Server Error');
     }
 };
+
+export const getCascadingGroupRoutines = async (req, res) => {
+    try {
+        const { academicGroupScopeId, academicGroupId, sessionId } = req.query;
+        const result = await timeTableCreateServices.getCascadingGroupRoutinesService({
+            academicGroupScopeId,
+            academicGroupId,
+            sessionId,
+        });
+        return SuccessResponse(res, 200, 'Cascading group routines fetched successfully', result);
+    } catch (error) {
+        console.error('Error in getting cascading group routines:', error);
+        return ErrorResponse(res, 500, error.message || 'Internal Server Error');
+    }
+};

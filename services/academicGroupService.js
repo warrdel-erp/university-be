@@ -1,6 +1,7 @@
 import sequelize from '../database/sequelizeConfig.js';
 import { Op } from 'sequelize';
 import * as academicGroupRepository from '../repository/academicGroupRepository.js';
+import * as studentRepository from '../repository/studentRepository.js';
 
 function asPlain(row) {
     if (row == null) {
@@ -714,10 +715,9 @@ export async function addStudents(body, createdBy, updatedBy) {
 /**
  * Students for group scope course+session, placed on class_sections for related terms,
  * excluding anyone already in academic_group_student or whose userId is in academic_group_user.
- * Returns lean picker units (studentId is the assign key).
  */
 export async function getAvailableStudents(academicGroupId, filters) {
-    const group = await academicGroupRepository.getGroupWithScope(academicGroupId);
+    const group = await academicGroupRepository.getGroupById(academicGroupId);
     if (!group) {
         throw new Error('academicGroupId not found');
     }
@@ -736,8 +736,30 @@ export async function getAvailableStudents(academicGroupId, filters) {
         terms = [Number(scope.term)];
     }
 
-    const { memberStudentIds, excludeStudentIds } =
-        await academicGroupRepository.getExcludedStudentIdsForPicker(academicGroupId);
+    const memberStudentIds = await academicGroupRepository.getMemberStudentIds(academicGroupId);
+    const studentIdsLinkedToMemberUsers =
+        await academicGroupRepository.getStudentIdsForMemberUsers(academicGroupId);
+
+    const excludeStudentIds = [];
+    const seenExclude = new Set();
+    for (const id of memberStudentIds) {
+        const n = Number(id);
+        if (seenExclude.has(n)) {
+            continue;
+        }
+        seenExclude.add(n);
+        excludeStudentIds.push(n);
+    }
+    for (const id of studentIdsLinkedToMemberUsers) {
+        const n = Number(id);
+        if (seenExclude.has(n)) {
+            continue;
+        }
+        seenExclude.add(n);
+        excludeStudentIds.push(n);
+    }
+
+    const memberCount = memberStudentIds.length;
 
     const eligibleStudentIds = await academicGroupRepository.resolveEligibleStudentIds({
         courseId: Number(scope.courseId),
@@ -748,46 +770,21 @@ export async function getAvailableStudents(academicGroupId, filters) {
         excludeStudentIds,
     });
 
-    const page = Number(filters.page) || 1;
-    const limit = Number(filters.limit) || 20;
-
-    const { rows, count } = await academicGroupRepository.findAvailableStudentUnits({
-        page,
-        limit,
+    const list = await studentRepository.getAllStudents({
+        page: filters.page,
+        limit: filters.limit,
         search: filters.search,
+        courseId: Number(scope.courseId),
+        sessionId: Number(scope.sessionId),
+        academicYearId: filters.academicYearId,
         includeStudentIds: eligibleStudentIds,
     });
 
-    const result = [];
-    for (const row of rows) {
-        const student = typeof row.get === 'function' ? row.get({ plain: true }) : row;
-        result.push({
-            studentId: Number(student.studentId),
-            userId: student.userId != null ? Number(student.userId) : null,
-            studentName: studentDisplayName(student),
-            firstName: student.firstName ?? null,
-            middleName: student.middleName ?? null,
-            lastName: student.lastName ?? null,
-            scholarNumber: student.scholarNumber ?? null,
-            enrollNumber: student.enrollNumber ?? null,
-            courseId: student.courseId != null ? Number(student.courseId) : null,
-            courseName: student.course?.courseName ?? null,
-            courseCode: student.course?.courseCode ?? null,
-            email: student.email ?? null,
-            phoneNumber: student.phoneNumber ?? null,
-        });
-    }
-
-    const memberCount = memberStudentIds.length;
     const capacity = plain.capacity != null ? Number(plain.capacity) : null;
     const remainingCapacity = capacity == null ? null : Math.max(capacity - memberCount, 0);
 
     return {
-        result,
-        totalCount: count,
-        page,
-        limit,
-        totalPages: Math.ceil(count / limit) || 0,
+        ...list,
         academicGroupId: Number(academicGroupId),
         courseId: Number(scope.courseId),
         sessionId: Number(scope.sessionId),
@@ -801,46 +798,50 @@ export async function getAvailableStudents(academicGroupId, filters) {
 /**
  * Teachers available to assign to the group.
  * Excludes userIds already in academic_group_user and userIds of students already in the group.
- * Returns lean picker units (userId is the assign key).
  */
 export async function getAvailableUsers(academicGroupId, filters) {
-    const group = await academicGroupRepository.getGroupWithScope(academicGroupId);
+    const group = await academicGroupRepository.getGroupById(academicGroupId);
     if (!group) {
         throw new Error('academicGroupId not found');
     }
 
-    const { memberUserIds, excludeUserIds } =
-        await academicGroupRepository.getExcludedUserIdsForPicker(academicGroupId);
+    const memberUserIds = await academicGroupRepository.getMemberUserIds(academicGroupId);
+    const userIdsOfMemberStudents =
+        await academicGroupRepository.getUserIdsForMemberStudents(academicGroupId);
 
-    const page = Number(filters.page) || 1;
-    const limit = Number(filters.limit) || 20;
+    const excludeUserIds = [];
+    const seenExclude = new Set();
+    for (const id of memberUserIds) {
+        const n = Number(id);
+        if (seenExclude.has(n)) {
+            continue;
+        }
+        seenExclude.add(n);
+        excludeUserIds.push(n);
+    }
+    for (const id of userIdsOfMemberStudents) {
+        const n = Number(id);
+        if (seenExclude.has(n)) {
+            continue;
+        }
+        seenExclude.add(n);
+        excludeUserIds.push(n);
+    }
 
     const { rows, count } = await academicGroupRepository.findAvailableUsers({
-        page,
-        limit,
+        page: filters.page,
+        limit: filters.limit,
         search: filters.search,
         campusId: filters.campusId,
         subjectId: filters.subjectId,
         excludeUserIds,
     });
 
-    const result = [];
-    for (const row of rows) {
-        const employee = typeof row.get === 'function' ? row.get({ plain: true }) : row;
-        const user = employee.user || {};
-        result.push({
-            userId: Number(employee.userId),
-            employeeId: employee.employeeId != null ? Number(employee.employeeId) : null,
-            employeeName: employee.employeeName ?? null,
-            employeeCode: employee.employeeCode ?? null,
-            userName: user.userName ?? null,
-            email: user.email ?? null,
-            phone: user.phone ?? null,
-        });
-    }
+    const page = Number(filters.page) || 1;
+    const limit = Number(filters.limit) || 10;
 
     return {
-        result,
+        result: rows,
         totalCount: count,
         page,
         limit,

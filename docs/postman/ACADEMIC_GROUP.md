@@ -109,14 +109,10 @@ Optional: `page`, `limit`, `search`, `classSectionsId`, `year`, `term` (`1` or `
 
 1. Loads scope → `courseId`, `sessionId` (and default `term` from scope when query `term` omitted)
 2. Finds `class_sections` for that course+session, then `class_section_term` for related terms
-3. Returns **lean available units only** (not full student payloads)
+3. Returns students placed on those class-section terms
 4. **Excludes** anyone already in `academic_group_student` for this group, and any student whose `userId` is already in `academic_group_user`
 
-**Assign key:** `studentId` (send in `POST /academicGroup/student` as `studentIds[]`)
-
-**`result[]` unit:** `studentId`, `userId`, `studentName`, `firstName`, `middleName`, `lastName`, `scholarNumber`, `enrollNumber`, `courseId`, `courseName`, `courseCode`, `email`, `phoneNumber`
-
-**Extras:** `courseId`, `sessionId`, `terms`, `capacity`, `memberCount`, `remainingCapacity`, `totalCount`, `page`, `limit`, `totalPages`
+**Response `data` extras:** `courseId`, `sessionId`, `terms`, `capacity`, `memberCount`, `remainingCapacity`
 
 ```
 GET {{baseurl}}/academicGroup/availableStudents?academicGroupId=1&page=1&limit=20&term=1,2,3,4,5
@@ -126,15 +122,11 @@ GET {{baseurl}}/academicGroup/availableStudents?academicGroupId=1&page=1&limit=2
 Required: `academicGroupId`  
 Optional: `page`, `limit`, `search`, `campusId`, `subjectId`
 
-1. Lists teachers (`employee` + `user` where `isTeacher`) as **lean available units only**
+1. Lists teachers (`employee` + `user` where `isTeacher`)
 2. **Excludes** `userId`s already in `academic_group_user` for this group
 3. **Excludes** `userId`s of students already in `academic_group_student` for this group
 
-**Assign key:** `userId` (send in `POST /academicGroup/user` as `users[].userId`)
-
-**`result[]` unit:** `userId`, `employeeId`, `employeeName`, `employeeCode`, `userName`, `email`, `phone`
-
-**Extras:** `totalCount`, `page`, `limit`, `totalPages`, `academicGroupId`, `facultyMemberCount`
+**Response:** `result[]`, `totalCount`, `page`, `limit`, `totalPages`, `academicGroupId`, `facultyMemberCount`
 
 ```
 GET {{baseurl}}/academicGroup/availableUsers?academicGroupId=1&page=1&limit=20&search=

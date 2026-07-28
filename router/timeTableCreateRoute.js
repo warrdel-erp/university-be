@@ -76,6 +76,7 @@ const getTimeTableByCourseAndSectionQuerySchema = z.object({
 const addTimeTableCreateSchema = z.object({
     timetableStructureCourseMapperId: positiveIntegerId,
     classSectionTermId: optionalPositiveId,
+    academicGroupId: optionalPositiveId,
     courseId: optionalPositiveId,
     campusId: optionalPositiveId,
     timeTableType: z.enum(['normal', 'elective']).optional(),
@@ -84,8 +85,8 @@ const addTimeTableCreateSchema = z.object({
     timeTableRoutineId: optionalPositiveId,
     previousDate: z.string().optional(),
 }).refine(
-    (data) => data.timeTableType === 'elective' || data.classSectionTermId != null,
-    { message: 'classSectionTermId is required', path: ['classSectionTermId'] },
+    (data) => data.timeTableType === 'elective' || data.classSectionTermId != null || data.academicGroupId != null,
+    { message: 'Either classSectionTermId or academicGroupId is required', path: ['classSectionTermId'] },
 ).refine(
     (data) => new Date(data.endingDate) >= new Date(data.startingDate),
     { message: 'endingDate cannot be before startingDate', path: ['endingDate'] },

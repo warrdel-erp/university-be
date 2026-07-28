@@ -693,8 +693,8 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
       throw new Error('Invalid mapperId. Map the course to the structure first');
     }
 
-    if (timeTableType === 'normal' && (data.classSectionTermId == null || data.classSectionTermId === '')) {
-      throw new Error('classSectionTermId is required');
+    if (timeTableType === 'normal' && (data.classSectionTermId == null || data.classSectionTermId === '') && (data.academicGroupId == null || data.academicGroupId === '')) {
+      throw new Error('Either classSectionTermId or academicGroupId is required');
     }
 
     let placement = { ...data };
@@ -702,8 +702,8 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
       placement = await resolveRoutinePlacement(data, { transaction });
     }
 
-    if (timeTableType === 'normal' && !placement.classSectionTermId) {
-      throw new Error('classSectionTermId is required');
+    if (timeTableType === 'normal' && !placement.classSectionTermId && !placement.academicGroupId) {
+      throw new Error('Either classSectionTermId or academicGroupId is required');
     }
 
     if (placement.classSectionTermId) {
@@ -715,19 +715,23 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
       if (!section) {
         throw new Error('class section not found for classSectionTermId');
       }
-      if (Number(section.courseId) !== Number(courseMapping.courseId)) {
+      if (courseMapping.courseId && Number(section.courseId) !== Number(courseMapping.courseId)) {
         throw new Error('classSectionTermId course does not match structure course mapping');
       }
       if (Number(section.sessionId) !== Number(courseMapping.sessionId)) {
         throw new Error('classSectionTermId session does not match structure course mapping');
       }
       placement.courseId = section.courseId;
+    } else if (placement.academicGroupId) {
+      const groupRow = await timeTableCreateRepository.findAcademicGroupById(placement.academicGroupId, { transaction });
+      if (!groupRow) {
+        throw new Error('academicGroupId not found');
+      }
+      if (courseMapping.courseId) {
+        placement.courseId = courseMapping.courseId;
+      }
     } else if (!placement.courseId) {
       placement.courseId = courseMapping.courseId;
-    }
-
-    if (!placement.courseId) {
-      throw new Error('courseId is required — resolve from classSectionTermId or course mapping');
     }
 
     delete placement.term;
@@ -751,19 +755,20 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
     placement.timetableStructureCourseMapperId = courseMapping.timetableStructureCourseMapperId;
 
     if (
-      placement.classSectionTermId
+      (placement.classSectionTermId || placement.academicGroupId)
       && placement.startingDate
       && placement.endingDate
     ) {
       const overlap = await timeTableCreateRepository.checkRoutineOverlapRepository({
         classSectionTermId: placement.classSectionTermId,
+        academicGroupId: placement.academicGroupId,
         startingDate: placement.startingDate,
         endingDate: placement.endingDate,
         excludeRoutineId: placement.timeTableRoutineId,
       });
 
       if (overlap) {
-        throw new Error('Routine already exists for this section in the selected date range');
+        throw new Error('Routine already exists for this section or group in the selected date range');
       }
     }
 
@@ -4189,4 +4194,59 @@ export async function updateDateWiseCell(timeTableCellDateWiseId, payload, updat
     await transaction.rollback();
     throw error;
   }
+}
+
+export async function getCascadingGroupRoutinesService({ academicGroupScopeId, academicGroupId, sessionId }) {
+  const scopes = await timeTableCreateRepository.getCascadingGroupRoutinesRepository({
+    academicGroupScopeId,
+    academicGroupId,
+    sessionId,
+  });
+
+  return scopes.map((scope) => {
+    const scopeData = scope.get({ plain: true });
+    const mappedStructures = (scopeData.timeTableStructureCourses || []).map((m) => ({
+      timetableStructureCourseMapperId: m.timetableStructureCourseMapperId,
+      timeTableNameId: m.timeTableNameId,
+      startingDate: m.startingDate,
+      endingDate: m.endingDate,
+      structureName: m.timeTableStructure ? m.timeTableStructure.name : null,
+      structureDetails: m.timeTableStructure || null,
+    }));
+
+    const groups = (scopeData.groups || []).map((grp) => ({
+      academicGroupId: grp.academicGroupId,
+      academicGroupScopeId: grp.academicGroupScopeId,
+      title: grp.groupName,
+      groupName: grp.groupName,
+      groupCode: grp.groupCode,
+      capacity: grp.capacity,
+      publishStatus: grp.publishStatus,
+      routines: (grp.timeTableRoutines || []).map((rt) => ({
+        timeTableRoutineId: rt.timeTableRoutineId,
+        timetableStructureCourseMapperId: rt.timetableStructureCourseMapperId,
+        academicGroupId: rt.academicGroupId,
+        courseId: rt.courseId,
+        academicYearId: rt.academicYearId,
+        isPublish: rt.isPublish,
+        campusId: rt.campusId,
+        timeTableType: rt.timeTableType,
+        startingDate: rt.startingDate,
+        endingDate: rt.endingDate,
+        schedules: rt.timeTablecreate || [],
+      })),
+    }));
+
+    return {
+      academicGroupScopeId: scopeData.academicGroupScopeId,
+      title: scopeData.title,
+      groupType: scopeData.groupType,
+      selectionScope: scopeData.selectionScope,
+      courseId: scopeData.courseId,
+      sessionId: scopeData.sessionId,
+      term: scopeData.term,
+      mappedStructures,
+      groups,
+    };
+  });
 }

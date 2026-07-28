@@ -91,6 +91,7 @@ export async function getStructureCourseMappingById(timetableStructureCourseMapp
             'timetableStructureCourseMapperId',
             'timeTableNameId',
             'courseId',
+            'academicGroupScopeId',
             'universityId',
             'instituteId',
             'academicYearId',
@@ -114,6 +115,30 @@ export async function getStructureCourseMapping(timeTableNameId, courseId, sessi
             'timetableStructureCourseMapperId',
             'timeTableNameId',
             'courseId',
+            'academicGroupScopeId',
+            'universityId',
+            'instituteId',
+            'academicYearId',
+            'sessionId',
+            'startingDate',
+            'endingDate',
+        ],
+        transaction: options.transaction,
+    });
+}
+
+export async function getStructureScopeMapping(timeTableNameId, academicGroupScopeId, sessionId, options = {}) {
+    return await scoped(model.timeTableStructureCourseModel).findOne({
+        where: {
+            timeTableNameId,
+            academicGroupScopeId,
+            sessionId,
+        },
+        attributes: [
+            'timetableStructureCourseMapperId',
+            'timeTableNameId',
+            'courseId',
+            'academicGroupScopeId',
             'universityId',
             'instituteId',
             'academicYearId',
@@ -127,17 +152,26 @@ export async function getStructureCourseMapping(timeTableNameId, courseId, sessi
 
 export async function findOverlappingStructureCourseMapping({
     courseId,
+    academicGroupScopeId,
     sessionId,
     startingDate,
     endingDate,
     excludeMapperId = null,
 }, options = {}) {
     const where = {
-        courseId: Number(courseId),
-        sessionId: Number(sessionId),
         startingDate: { [Op.lte]: endingDate },
         endingDate: { [Op.gte]: startingDate },
     };
+
+    if (academicGroupScopeId != null) {
+        where.academicGroupScopeId = Number(academicGroupScopeId);
+    } else if (courseId != null) {
+        where.courseId = Number(courseId);
+    }
+
+    if (sessionId != null) {
+        where.sessionId = Number(sessionId);
+    }
 
     if (excludeMapperId != null) {
         where.timetableStructureCourseMapperId = { [Op.ne]: Number(excludeMapperId) };
@@ -149,6 +183,7 @@ export async function findOverlappingStructureCourseMapping({
             'timetableStructureCourseMapperId',
             'timeTableNameId',
             'courseId',
+            'academicGroupScopeId',
             'sessionId',
             'startingDate',
             'endingDate',
@@ -391,6 +426,9 @@ export async function getStructureMappingPrintRows(filters = {}) {
     if (filters.courseId != null) {
         where.courseId = Number(filters.courseId);
     }
+    if (filters.academicGroupScopeId != null) {
+        where.academicGroupScopeId = Number(filters.academicGroupScopeId);
+    }
     if (filters.sessionId != null) {
         where.sessionId = Number(filters.sessionId);
     }
@@ -401,6 +439,7 @@ export async function getStructureMappingPrintRows(filters = {}) {
             'timetableStructureCourseMapperId',
             'timeTableNameId',
             'courseId',
+            'academicGroupScopeId',
             'sessionId',
             'startingDate',
             'endingDate',
@@ -409,7 +448,7 @@ export async function getStructureMappingPrintRows(filters = {}) {
             {
                 model: model.timeTableStructureModel,
                 as: 'timeTableStructure',
-                required: true,
+                required: false,
                 attributes: [
                     'timeTableNameId',
                     'name',
@@ -424,20 +463,25 @@ export async function getStructureMappingPrintRows(filters = {}) {
             {
                 model: model.courseModel,
                 as: 'course',
-                required: true,
+                required: false,
                 attributes: ['courseId', 'courseName', 'courseCode'],
+            },
+            {
+                model: model.academicGroupScopeModel,
+                as: 'academicGroupScope',
+                required: false,
+                attributes: ['academicGroupScopeId', 'title', 'groupType', 'selectionScope'],
             },
             {
                 model: model.sessionModel,
                 as: 'session',
-                required: true,
+                required: false,
                 attributes: ['sessionId', 'sessionName'],
             },
         ],
         order: [
             ['timeTableNameId', 'ASC'],
-            ['courseId', 'ASC'],
-            ['sessionId', 'ASC'],
+            ['timetableStructureCourseMapperId', 'ASC'],
         ],
     });
 }

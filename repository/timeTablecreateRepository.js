@@ -924,23 +924,29 @@ export async function getFullRoutineDetailsRepository(timeTableRoutineId, option
 
 export async function checkRoutineOverlapRepository({
   classSectionTermId,
+  academicGroupId,
   startingDate,
   endingDate,
   excludeRoutineId,
 }, options = {}) {
-  if (classSectionTermId == null) {
+  const where = {
+    ...(excludeRoutineId && { timeTableRoutineId: { [Op.ne]: excludeRoutineId } }),
+    [Op.and]: [
+      { startingDate: { [Op.lte]: endingDate } },
+      { endingDate: { [Op.gte]: startingDate } },
+    ],
+  };
+
+  if (academicGroupId != null) {
+    where.academicGroupId = Number(academicGroupId);
+  } else if (classSectionTermId != null) {
+    where.classSectionTermId = Number(classSectionTermId);
+  } else {
     return null;
   }
 
   return await scoped(model.timeTableRoutineModel).findOne({
-    where: {
-      classSectionTermId: Number(classSectionTermId),
-      ...(excludeRoutineId && { timeTableRoutineId: { [Op.ne]: excludeRoutineId } }),
-      [Op.and]: [
-        { startingDate: { [Op.lte]: endingDate } },
-        { endingDate: { [Op.gte]: startingDate } },
-      ],
-    },
+    where,
     transaction: options.transaction,
   });
 }
@@ -2661,4 +2667,102 @@ export async function getPeriodsForStructures(timeTableNameIds) {
     order: [['timeTableNameId', 'ASC'], ['timeTableCreationId', 'ASC']],
     raw: true
   });
+}
+
+export async function findAcademicGroupById(academicGroupId, options = {}) {
+  return await scoped(model.academicGroupModel).findByPk(Number(academicGroupId), {
+    transaction: options.transaction,
+  });
+}
+
+export async function getCascadingGroupRoutinesRepository({
+  academicGroupScopeId,
+  academicGroupId,
+  sessionId,
+}, options = {}) {
+  const scopeWhere = buildScope(model.academicGroupScopeModel);
+  if (academicGroupScopeId) {
+    scopeWhere.academicGroupScopeId = Number(academicGroupScopeId);
+  }
+  if (sessionId) {
+    scopeWhere.sessionId = Number(sessionId);
+  }
+
+  const groupWhere = buildScope(model.academicGroupModel);
+  if (academicGroupId) {
+    groupWhere.academicGroupId = Number(academicGroupId);
+  }
+
+  const scopes = await model.academicGroupScopeModel.findAll({
+    where: scopeWhere,
+    attributes: ['academicGroupScopeId', 'groupType', 'title', 'selectionScope', 'courseId', 'sessionId', 'term'],
+    include: [
+      {
+        model: model.timeTableStructureCourseModel,
+        as: 'timeTableStructureCourses',
+        attributes: ['timetableStructureCourseMapperId', 'timeTableNameId', 'academicGroupScopeId', 'startingDate', 'endingDate'],
+        required: false,
+        include: [
+          {
+            model: model.timeTableStructureModel,
+            as: 'timeTableStructure',
+            attributes: ['timeTableNameId', 'name', 'maximumPeriod', 'periodLength', 'periodGap', 'startingTime', 'weekOff'],
+            required: false,
+          },
+        ],
+      },
+      {
+        model: model.academicGroupModel,
+        as: 'groups',
+        where: groupWhere,
+        required: false,
+        attributes: ['academicGroupId', 'academicGroupScopeId', 'groupName', 'groupCode', 'capacity', 'publishStatus'],
+        include: [
+          {
+            model: model.timeTableRoutineModel,
+            as: 'timeTableRoutines',
+            where: buildScope(model.timeTableRoutineModel),
+            required: false,
+            attributes: ['timeTableRoutineId', 'timetableStructureCourseMapperId', 'academicGroupId', 'courseId', 'academicYearId', 'isPublish', 'campusId', 'timeTableType', 'startingDate', 'endingDate'],
+            include: [
+              {
+                model: model.classScheduleModel,
+                as: 'timeTablecreate',
+                required: false,
+                attributes: ['timeTableCellId', 'timeTableRoutineId', 'dayName', 'period', 'teacherSubjectMappingId', 'roomNo'],
+                include: [
+                  {
+                    model: model.teacherSubjectMappingModel,
+                    as: 'timeTableTeacherSubject',
+                    required: false,
+                    include: [
+                      {
+                        model: model.subjectModel,
+                        as: 'employeeSubject',
+                        attributes: ['subjectId', 'subjectName', 'subjectCode'],
+                        required: false,
+                      },
+                      {
+                        model: model.employeeModel,
+                        as: 'teacherEmployeeData',
+                        attributes: ['employeeName', 'employeeCode', 'employeeId'],
+                        required: false,
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    order: [
+      ['title', 'ASC'],
+      [{ model: model.academicGroupModel, as: 'groups' }, 'groupName', 'ASC'],
+    ],
+    transaction: options.transaction,
+  });
+
+  return scopes;
 }

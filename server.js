@@ -101,6 +101,7 @@ import examSchedule from "./router/examScheduleRoute.js";
 import studentHallTicket from "./router/studentHallTicketRoute.js";
 import options from "./router/optionsRoute.js";
 import academicGroup from "./router/academicGroupRoute.js";
+import timetableAcademicGroup from "./router/timetableAcademicGroupRoute.js";
 import subjectWeightage from "./router/subjectWeightageRoute.js";
 import libraryIssueBookTransaction from "./router/libraryIssueBookTransactionRoute.js";
 
@@ -199,6 +200,7 @@ app.use("/teacher", teacher);
 // ---------------------------------------------------------------------------
 app.use("/timeTable", timeTable);                 // structure + courseMapping + periods
 app.use("/timeTableCreate", timeTableCreate);     // week cells + teachers; publish → date-wise
+app.use("/timetableAcademicGroup", timetableAcademicGroup);
 app.use("/faculityLoad", faculityLoad);
 app.use("/attendance", attendance);               // keys: timeTableCellDateWiseId
 app.use("/lesson", lesson);                       // mapping keys: timeTableCellDateWiseId

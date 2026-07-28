@@ -1,4 +1,5 @@
 import * as timeTableRepository from '../repository/timeTableRepository.js';
+import * as academicGroupRepository from '../repository/academicGroupRepository.js';
 import sequelize from '../database/sequelizeConfig.js';
 import { formatQueryDate } from '../utility/helper.js';
 
@@ -17,6 +18,7 @@ function toDateOnlyString(value) {
 
 async function assertNoOverlappingCourseSessionDates({
     courseId,
+    academicGroupScopeId,
     sessionId,
     startingDate,
     endingDate,
@@ -34,6 +36,7 @@ async function assertNoOverlappingCourseSessionDates({
 
     const overlap = await timeTableRepository.findOverlappingStructureCourseMapping({
         courseId,
+        academicGroupScopeId,
         sessionId,
         startingDate: start,
         endingDate: end,
@@ -186,21 +189,27 @@ export async function getStructureMappingPrintData(filters = {}) {
         const structure = plain.timeTableStructure;
         const course = plain.course;
         const session = plain.session;
+        const academicGroupScope = plain.academicGroupScope;
+
+        const scopeCourse = academicGroupScope ? academicGroupScope.course : null;
+        const scopeSession = academicGroupScope ? academicGroupScope.session : null;
 
         result.push({
             timetableStructureCourseMapperId: plain.timetableStructureCourseMapperId,
             timeTableNameId: plain.timeTableNameId,
-            structureName: structure.name,
-            maximumPeriod: structure.maximumPeriod,
-            periodLength: structure.periodLength,
-            periodGap: structure.periodGap,
-            startingTime: structure.startingTime,
-            weekOff: structure.weekOff,
-            courseId: plain.courseId,
-            courseName: course.courseName,
-            courseCode: course.courseCode,
-            sessionId: plain.sessionId,
-            sessionName: session.sessionName,
+            structureName: structure ? structure.name : null,
+            maximumPeriod: structure ? structure.maximumPeriod : null,
+            periodLength: structure ? structure.periodLength : null,
+            periodGap: structure ? structure.periodGap : null,
+            startingTime: structure ? structure.startingTime : null,
+            weekOff: structure ? structure.weekOff : null,
+            courseId: plain.courseId || (scopeCourse ? scopeCourse.courseId : null),
+            courseName: course ? course.courseName : (scopeCourse ? scopeCourse.courseName : null),
+            courseCode: course ? course.courseCode : (scopeCourse ? scopeCourse.courseCode : null),
+            academicGroupScopeId: plain.academicGroupScopeId || null,
+            academicGroupScopeTitle: academicGroupScope ? academicGroupScope.title : null,
+            sessionId: plain.sessionId || (scopeSession ? scopeSession.sessionId : null),
+            sessionName: session ? session.sessionName : (scopeSession ? scopeSession.sessionName : null),
             startingDate: plain.startingDate,
             endingDate: plain.endingDate,
         });
@@ -321,31 +330,74 @@ export async function addStructureCourseMapping(data, createdBy, updatedBy) {
         throw new Error('Time table structure not found for this institute and academic year');
     }
 
-    const existing = await timeTableRepository.getStructureCourseMapping(
-        data.timeTableNameId,
-        data.courseId,
-        data.sessionId,
-    );
-    if (existing) {
-        throw new Error('Course mapping already exists for this structure, course and session');
+    const isScopeMapping = Boolean(data.academicGroupScopeId);
+    const isCourseMapping = Boolean(data.courseId);
+
+    if (isScopeMapping && isCourseMapping) {
+        throw new Error('Structure mapping can be for either courseId or academicGroupScopeId, not both');
     }
 
-    const { start, end } = await assertNoOverlappingCourseSessionDates({
-        courseId: data.courseId,
-        sessionId: data.sessionId,
+    let targetCourseId = null;
+    let targetScopeId = null;
+    let targetSessionId = data.sessionId;
+
+    if (isScopeMapping) {
+        const scope = await academicGroupRepository.getScopeById(data.academicGroupScopeId);
+        if (!scope) {
+            throw new Error('academicGroupScopeId not found');
+        }
+        targetScopeId = Number(data.academicGroupScopeId);
+        if (targetSessionId == null && scope.sessionId) {
+            targetSessionId = scope.sessionId;
+        }
+    } else if (isCourseMapping) {
+        targetCourseId = Number(data.courseId);
+    } else {
+        throw new Error('Either courseId or academicGroupScopeId must be provided');
+    }
+
+    if (targetSessionId == null) {
+        throw new Error('sessionId is required');
+    }
+
+    if (isScopeMapping) {
+        const existingScopeMapping = await timeTableRepository.getStructureScopeMapping(
+            data.timeTableNameId,
+            targetScopeId,
+            targetSessionId,
+        );
+        if (existingScopeMapping) {
+            throw new Error('Group scope mapping already exists for this structure and session');
+        }
+    } else {
+        const existingCourseMapping = await timeTableRepository.getStructureCourseMapping(
+            data.timeTableNameId,
+            targetCourseId,
+            targetSessionId,
+        );
+        if (existingCourseMapping) {
+            throw new Error('Course mapping already exists for this structure, course and session');
+        }
+    }
+
+    const res = await assertNoOverlappingCourseSessionDates({
+        academicGroupScopeId: targetScopeId,
+        courseId: targetCourseId,
+        sessionId: targetSessionId,
         startingDate: data.startingDate,
         endingDate: data.endingDate,
     });
 
     return timeTableRepository.addStructureCourseMapping({
         timeTableNameId: data.timeTableNameId,
-        courseId: data.courseId,
-        sessionId: data.sessionId,
+        courseId: targetCourseId,
+        academicGroupScopeId: targetScopeId,
+        sessionId: targetSessionId,
         universityId: structure.universityId,
         instituteId: structure.instituteId,
         academicYearId: structure.academicYearId,
-        startingDate: start,
-        endingDate: end,
+        startingDate: res.start,
+        endingDate: res.end,
         createdBy,
         updatedBy,
     });

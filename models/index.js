@@ -586,6 +586,15 @@ sessionModel.hasMany(timeTableStructureCourseModel, {
   as: "timeTableStructureCourses",
 });
 
+timeTableStructureCourseModel.belongsTo(academicGroupScopeModel, {
+  foreignKey: "academic_group_scope_id",
+  as: "academicGroupScope",
+});
+academicGroupScopeModel.hasMany(timeTableStructureCourseModel, {
+  foreignKey: "academic_group_scope_id",
+  as: "timeTableStructureCourses",
+});
+
 timeTableRoutineModel.belongsTo(timeTableStructureCourseModel, {
   foreignKey: "timetable_structure_course_mapper_id",
   as: "structureCourseMapping",
@@ -597,6 +606,9 @@ timeTableStructureCourseModel.hasMany(timeTableRoutineModel, {
 
 timeTableRoutineModel.belongsTo(courseModel, { foreignKey: "course_id", as: "timeTableCourse" });
 courseModel.hasMany(timeTableRoutineModel, { foreignKey: "course_id", as: "timeTableCourse" });
+
+timeTableRoutineModel.belongsTo(academicGroupModel, { foreignKey: "academic_group_id", as: "academicGroup" });
+academicGroupModel.hasMany(timeTableRoutineModel, { foreignKey: "academic_group_id", as: "timeTableRoutines" });
 
 timeTableRoutineModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "timeTableCampus" });
 campusModel.hasMany(timeTableRoutineModel, { foreignKey: "campus_id", as: "timeTableCampus" });
