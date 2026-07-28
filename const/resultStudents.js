@@ -3117,12 +3117,13 @@ export const data = [
     },
     {
         "rollNo": "25EAAAR001",
+        "name": "AANYA JAIN",
         "dob": "2007-09-19",
         "statusOfResult": "PASS",
         "sgpa": "7.68",
+        "resultGrade": "B",
         "subjects": [
             {
-                "Name": "AANYA JAIN",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "21",
                 "C MARKS2": "42",
@@ -3137,10 +3138,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -3157,10 +3158,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -3177,10 +3178,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -3197,10 +3198,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -3217,10 +3218,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -3237,10 +3238,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -3257,10 +3258,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -3277,10 +3278,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -3294,19 +3295,19 @@ export const data = [
                 "GRADE POINT": "9",
                 "TOT E CREDIT (Sub)": "9",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "192",
-                "SEMESTER GRADE": "B"
+                "G TOT EARN CREDIT (Sem)": "192"
             }
         ]
     },
     {
         "rollNo": "25EAAAR002",
+        "name": "ABHISHEK JAIN",
         "dob": "2007-01-19",
         "statusOfResult": "FAIL",
         "sgpa": "0.00",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "ABHISHEK JAIN",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "5",
                 "C MARKS2": "23",
@@ -3321,10 +3322,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -3341,10 +3342,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -3361,10 +3362,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -3381,10 +3382,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -3401,10 +3402,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -3421,10 +3422,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -3441,10 +3442,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -3461,10 +3462,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -3478,19 +3479,19 @@ export const data = [
                 "GRADE POINT": "0",
                 "TOT E CREDIT (Sub)": "0",
                 "TOT CRD ERND (Sem)": "0",
-                "G TOT EARN CREDIT (Sem)": "0",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "0"
             }
         ]
     },
     {
         "rollNo": "25EAAAR004",
+        "name": "ANIL ROAT",
         "dob": "2006-07-14",
         "statusOfResult": "FAIL",
         "sgpa": "5.92",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "ANIL ROAT",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "18",
                 "C MARKS2": "36",
@@ -3505,10 +3506,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -3525,10 +3526,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -3545,10 +3546,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -3565,10 +3566,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -3585,10 +3586,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -3605,10 +3606,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -3625,10 +3626,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -3645,10 +3646,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -3662,19 +3663,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "23",
-                "G TOT EARN CREDIT (Sem)": "148",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "148"
             }
         ]
     },
     {
         "rollNo": "25EAAAR005",
+        "name": "ANKIT MODI",
         "dob": "2006-03-10",
         "statusOfResult": "PASS",
         "sgpa": "7.80",
+        "resultGrade": "B",
         "subjects": [
             {
-                "Name": "ANKIT MODI",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "20",
                 "C MARKS2": "33",
@@ -3689,10 +3690,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -3709,10 +3710,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -3729,10 +3730,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -3749,10 +3750,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -3769,10 +3770,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -3789,10 +3790,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -3809,10 +3810,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -3829,10 +3830,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -3846,19 +3847,19 @@ export const data = [
                 "GRADE POINT": "9",
                 "TOT E CREDIT (Sub)": "9",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "195",
-                "SEMESTER GRADE": "B"
+                "G TOT EARN CREDIT (Sem)": "195"
             }
         ]
     },
     {
         "rollNo": "25EAAAR006",
+        "name": "ANUJ SHARMA",
         "dob": "2009-03-01",
         "statusOfResult": "PASS",
         "sgpa": "7.52",
+        "resultGrade": "B",
         "subjects": [
             {
-                "Name": "ANUJ SHARMA",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "19",
                 "C MARKS2": "45",
@@ -3873,10 +3874,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -3893,10 +3894,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -3913,10 +3914,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -3933,10 +3934,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -3953,10 +3954,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -3973,10 +3974,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -3993,10 +3994,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -4013,10 +4014,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -4030,19 +4031,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "188",
-                "SEMESTER GRADE": "B"
+                "G TOT EARN CREDIT (Sem)": "188"
             }
         ]
     },
     {
         "rollNo": "25EAAAR007",
+        "name": "APOORVA KHANDELWAL",
         "dob": "2009-03-17",
         "statusOfResult": "PASS",
         "sgpa": "6.60",
+        "resultGrade": "C",
         "subjects": [
             {
-                "Name": "APOORVA KHANDELWAL",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "18",
                 "C MARKS2": "30",
@@ -4057,10 +4058,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -4077,10 +4078,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -4097,10 +4098,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -4117,10 +4118,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -4137,10 +4138,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -4157,10 +4158,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -4177,10 +4178,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -4197,10 +4198,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -4214,19 +4215,19 @@ export const data = [
                 "GRADE POINT": "9",
                 "TOT E CREDIT (Sub)": "9",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "165",
-                "SEMESTER GRADE": "C"
+                "G TOT EARN CREDIT (Sem)": "165"
             }
         ]
     },
     {
         "rollNo": "25EAAAR008",
+        "name": "ARCHITA JAIN",
         "dob": "2006-01-30",
         "statusOfResult": "PASS",
         "sgpa": "8.06",
+        "resultGrade": "B+",
         "subjects": [
             {
-                "Name": "ARCHITA JAIN",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "24",
                 "C MARKS2": "48",
@@ -4241,10 +4242,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -4261,10 +4262,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -4281,10 +4282,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -4301,10 +4302,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -4321,10 +4322,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -4341,10 +4342,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -4361,10 +4362,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -4381,10 +4382,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -4398,19 +4399,19 @@ export const data = [
                 "GRADE POINT": "8.5",
                 "TOT E CREDIT (Sub)": "8.5",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "201.5",
-                "SEMESTER GRADE": "B+"
+                "G TOT EARN CREDIT (Sem)": "201.5"
             }
         ]
     },
     {
         "rollNo": "25EAAAR009",
+        "name": "ARNAV GHIYA",
         "dob": "2007-10-27",
         "statusOfResult": "PASS",
         "sgpa": "7.14",
+        "resultGrade": "C+",
         "subjects": [
             {
-                "Name": "ARNAV GHIYA",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "21",
                 "C MARKS2": "40",
@@ -4425,10 +4426,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -4445,10 +4446,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -4465,10 +4466,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -4485,10 +4486,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -4505,10 +4506,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -4525,10 +4526,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -4545,10 +4546,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -4565,10 +4566,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -4582,19 +4583,19 @@ export const data = [
                 "GRADE POINT": "8.5",
                 "TOT E CREDIT (Sub)": "8.5",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "178.5",
-                "SEMESTER GRADE": "C+"
+                "G TOT EARN CREDIT (Sem)": "178.5"
             }
         ]
     },
     {
         "rollNo": "25EAAAR010",
+        "name": "AYAN ABBASI",
         "dob": "2005-07-04",
         "statusOfResult": "FAIL",
         "sgpa": "6.08",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "AYAN ABBASI",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "14",
                 "C MARKS2": "31",
@@ -4609,10 +4610,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -4629,10 +4630,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -4649,10 +4650,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -4669,10 +4670,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -4689,10 +4690,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -4709,10 +4710,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -4729,10 +4730,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -4749,10 +4750,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -4766,19 +4767,19 @@ export const data = [
                 "GRADE POINT": "7",
                 "TOT E CREDIT (Sub)": "7",
                 "TOT CRD ERND (Sem)": "23",
-                "G TOT EARN CREDIT (Sem)": "152",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "152"
             }
         ]
     },
     {
         "rollNo": "25EAAAR011",
+        "name": "BAJIYA ALKESH MOHANLAL",
         "dob": "2006-11-30",
         "statusOfResult": "PASS",
         "sgpa": "7.48",
+        "resultGrade": "C+",
         "subjects": [
             {
-                "Name": "BAJIYA ALKESH MOHANLAL",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "19",
                 "C MARKS2": "38",
@@ -4793,10 +4794,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -4813,10 +4814,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -4833,10 +4834,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -4853,10 +4854,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -4873,10 +4874,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -4893,10 +4894,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -4913,10 +4914,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -4933,10 +4934,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -4950,19 +4951,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "187",
-                "SEMESTER GRADE": "C+"
+                "G TOT EARN CREDIT (Sem)": "187"
             }
         ]
     },
     {
         "rollNo": "25EAAAR012",
+        "name": "BHAVYA MITTAL",
         "dob": "2007-02-28",
         "statusOfResult": "FAIL",
         "sgpa": "7.56",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "BHAVYA MITTAL",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "26",
                 "C MARKS2": "41",
@@ -4977,10 +4978,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -4997,10 +4998,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -5017,10 +5018,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -5037,10 +5038,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -5057,10 +5058,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -5077,10 +5078,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -5097,10 +5098,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -5117,10 +5118,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -5134,19 +5135,19 @@ export const data = [
                 "GRADE POINT": "9",
                 "TOT E CREDIT (Sub)": "9",
                 "TOT CRD ERND (Sem)": "23",
-                "G TOT EARN CREDIT (Sem)": "189",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "189"
             }
         ]
     },
     {
         "rollNo": "25EAAAR013",
+        "name": "BHAVYA SINGH GURJAR",
         "dob": "2006-11-07",
         "statusOfResult": "PASS",
         "sgpa": "6.76",
+        "resultGrade": "C",
         "subjects": [
             {
-                "Name": "BHAVYA SINGH GURJAR",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "22",
                 "C MARKS2": "36",
@@ -5161,10 +5162,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -5181,10 +5182,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -5201,10 +5202,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -5221,10 +5222,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -5241,10 +5242,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -5261,10 +5262,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -5281,10 +5282,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -5301,10 +5302,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -5318,19 +5319,19 @@ export const data = [
                 "GRADE POINT": "9",
                 "TOT E CREDIT (Sub)": "9",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "169",
-                "SEMESTER GRADE": "C"
+                "G TOT EARN CREDIT (Sem)": "169"
             }
         ]
     },
     {
         "rollNo": "25EAAAR014",
+        "name": "BHAVYANSH DHAKAR",
         "dob": "2007-07-28",
         "statusOfResult": "PASS",
         "sgpa": "9.40",
+        "resultGrade": "A+",
         "subjects": [
             {
-                "Name": "BHAVYANSH DHAKAR",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "24",
                 "C MARKS2": "55",
@@ -5345,10 +5346,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -5365,10 +5366,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -5385,10 +5386,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -5405,10 +5406,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -5425,10 +5426,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -5445,10 +5446,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -5465,10 +5466,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -5485,10 +5486,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -5502,19 +5503,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "235",
-                "SEMESTER GRADE": "A+"
+                "G TOT EARN CREDIT (Sem)": "235"
             }
         ]
     },
     {
         "rollNo": "25EAAAR015",
+        "name": "CHAHAT BAJAJ",
         "dob": "2007-07-16",
         "statusOfResult": "PASS",
         "sgpa": "6.88",
+        "resultGrade": "C",
         "subjects": [
             {
-                "Name": "CHAHAT BAJAJ",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "19",
                 "C MARKS2": "34",
@@ -5529,10 +5530,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -5549,10 +5550,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -5569,10 +5570,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -5589,10 +5590,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -5609,10 +5610,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -5629,10 +5630,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -5649,10 +5650,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -5669,10 +5670,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -5686,19 +5687,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "172",
-                "SEMESTER GRADE": "C"
+                "G TOT EARN CREDIT (Sem)": "172"
             }
         ]
     },
     {
         "rollNo": "25EAAAR016",
+        "name": "CHARUL SETHI",
         "dob": "2007-09-28",
         "statusOfResult": "PASS",
         "sgpa": "8.40",
+        "resultGrade": "B+",
         "subjects": [
             {
-                "Name": "CHARUL SETHI",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "26",
                 "C MARKS2": "51",
@@ -5713,10 +5714,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -5733,10 +5734,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -5753,10 +5754,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -5773,10 +5774,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -5793,10 +5794,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -5813,10 +5814,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -5833,10 +5834,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -5853,10 +5854,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -5870,19 +5871,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "210",
-                "SEMESTER GRADE": "B+"
+                "G TOT EARN CREDIT (Sem)": "210"
             }
         ]
     },
     {
         "rollNo": "25EAAAR017",
+        "name": "CHARVI JAIN",
         "dob": "2006-09-18",
         "statusOfResult": "PASS",
         "sgpa": "7.10",
+        "resultGrade": "C+",
         "subjects": [
             {
-                "Name": "CHARVI JAIN",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "24",
                 "C MARKS2": "43",
@@ -5897,10 +5898,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -5917,10 +5918,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -5937,10 +5938,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -5957,10 +5958,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -5977,10 +5978,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -5997,10 +5998,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -6017,10 +6018,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -6037,10 +6038,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -6054,19 +6055,19 @@ export const data = [
                 "GRADE POINT": "8.5",
                 "TOT E CREDIT (Sub)": "8.5",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "177.5",
-                "SEMESTER GRADE": "C+"
+                "G TOT EARN CREDIT (Sem)": "177.5"
             }
         ]
     },
     {
         "rollNo": "25EAAAR018",
+        "name": "DHRUV PAREEK",
         "dob": "2007-10-18",
         "statusOfResult": "PASS",
         "sgpa": "7.72",
+        "resultGrade": "B",
         "subjects": [
             {
-                "Name": "DHRUV PAREEK",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "21",
                 "C MARKS2": "48",
@@ -6081,10 +6082,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -6101,10 +6102,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -6121,10 +6122,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -6141,10 +6142,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -6161,10 +6162,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -6181,10 +6182,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -6201,10 +6202,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -6221,10 +6222,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -6238,19 +6239,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "193",
-                "SEMESTER GRADE": "B"
+                "G TOT EARN CREDIT (Sem)": "193"
             }
         ]
     },
     {
         "rollNo": "25EAAAR019",
+        "name": "DIPAKSHI AGARWAL",
         "dob": "2007-02-11",
         "statusOfResult": "PASS",
         "sgpa": "8.00",
+        "resultGrade": "B+",
         "subjects": [
             {
-                "Name": "DIPAKSHI AGARWAL",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "23",
                 "C MARKS2": "53",
@@ -6265,10 +6266,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -6285,10 +6286,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -6305,10 +6306,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -6325,10 +6326,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -6345,10 +6346,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -6365,10 +6366,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -6385,10 +6386,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -6405,10 +6406,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -6422,19 +6423,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "200",
-                "SEMESTER GRADE": "B+"
+                "G TOT EARN CREDIT (Sem)": "200"
             }
         ]
     },
     {
         "rollNo": "25EAAAR020",
+        "name": "DRISHTI RAWAT",
         "dob": "2007-10-19",
         "statusOfResult": "PASS",
         "sgpa": "6.64",
+        "resultGrade": "C",
         "subjects": [
             {
-                "Name": "DRISHTI RAWAT",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "15",
                 "C MARKS2": "43",
@@ -6449,10 +6450,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -6469,10 +6470,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -6489,10 +6490,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -6509,10 +6510,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -6529,10 +6530,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -6549,10 +6550,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -6569,10 +6570,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -6589,10 +6590,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -6606,19 +6607,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "166",
-                "SEMESTER GRADE": "C"
+                "G TOT EARN CREDIT (Sem)": "166"
             }
         ]
     },
     {
         "rollNo": "25EAAAR021",
+        "name": "GARGI MATHUR",
         "dob": "2007-08-04",
         "statusOfResult": "PASS",
         "sgpa": "7.16",
+        "resultGrade": "C+",
         "subjects": [
             {
-                "Name": "GARGI MATHUR",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "19",
                 "C MARKS2": "46",
@@ -6633,10 +6634,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -6653,10 +6654,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -6673,10 +6674,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -6693,10 +6694,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -6713,10 +6714,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -6733,10 +6734,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -6753,10 +6754,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -6773,10 +6774,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -6790,19 +6791,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "179",
-                "SEMESTER GRADE": "C+"
+                "G TOT EARN CREDIT (Sem)": "179"
             }
         ]
     },
     {
         "rollNo": "25EAAAR022",
+        "name": "GAURI AGRAWAL",
         "dob": "2007-07-11",
         "statusOfResult": "PASS",
         "sgpa": "8.64",
+        "resultGrade": "A",
         "subjects": [
             {
-                "Name": "GAURI AGRAWAL",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "23",
                 "C MARKS2": "59",
@@ -6817,10 +6818,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -6837,10 +6838,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -6857,10 +6858,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -6877,10 +6878,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -6897,10 +6898,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -6917,10 +6918,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -6937,10 +6938,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -6957,10 +6958,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -6974,19 +6975,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "216",
-                "SEMESTER GRADE": "A"
+                "G TOT EARN CREDIT (Sem)": "216"
             }
         ]
     },
     {
         "rollNo": "25EAAAR023",
+        "name": "GAURI KHANDELWAL",
         "dob": "2007-12-29",
         "statusOfResult": "FAIL",
         "sgpa": "0.40",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "GAURI KHANDELWAL",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "4",
                 "C MARKS2": "1",
@@ -7001,10 +7002,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -7021,10 +7022,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -7041,10 +7042,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -7061,10 +7062,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -7081,10 +7082,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -7101,10 +7102,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -7121,10 +7122,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -7141,10 +7142,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -7158,19 +7159,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "1",
-                "G TOT EARN CREDIT (Sem)": "10",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "10"
             }
         ]
     },
     {
         "rollNo": "25EAAAR024",
+        "name": "GAZAL JAIN",
         "dob": "2007-07-31",
         "statusOfResult": "PASS",
         "sgpa": "8.84",
+        "resultGrade": "A",
         "subjects": [
             {
-                "Name": "GAZAL JAIN",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "22",
                 "C MARKS2": "53",
@@ -7185,10 +7186,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -7205,10 +7206,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -7225,10 +7226,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -7245,10 +7246,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -7265,10 +7266,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -7285,10 +7286,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -7305,10 +7306,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -7325,10 +7326,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -7342,19 +7343,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "221",
-                "SEMESTER GRADE": "A"
+                "G TOT EARN CREDIT (Sem)": "221"
             }
         ]
     },
     {
         "rollNo": "25EAAAR025",
+        "name": "HARDIK KUMAWAT",
         "dob": "2006-10-15",
         "statusOfResult": "FAIL",
         "sgpa": "7.24",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "HARDIK KUMAWAT",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "20",
                 "C MARKS2": "33",
@@ -7369,10 +7370,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -7389,10 +7390,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -7409,10 +7410,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -7429,10 +7430,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -7449,10 +7450,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -7469,10 +7470,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -7489,10 +7490,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -7509,10 +7510,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -7526,19 +7527,19 @@ export const data = [
                 "GRADE POINT": "7",
                 "TOT E CREDIT (Sub)": "7",
                 "TOT CRD ERND (Sem)": "23",
-                "G TOT EARN CREDIT (Sem)": "181",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "181"
             }
         ]
     },
     {
         "rollNo": "25EAAAR026",
+        "name": "HARDIKA CHHABA",
         "dob": "2007-07-09",
         "statusOfResult": "PASS",
         "sgpa": "7.96",
+        "resultGrade": "B",
         "subjects": [
             {
-                "Name": "HARDIKA CHHABA",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "24",
                 "C MARKS2": "42",
@@ -7553,10 +7554,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -7573,10 +7574,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -7593,10 +7594,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -7613,10 +7614,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -7633,10 +7634,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -7653,10 +7654,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -7673,10 +7674,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -7693,10 +7694,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -7710,19 +7711,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "199",
-                "SEMESTER GRADE": "B"
+                "G TOT EARN CREDIT (Sem)": "199"
             }
         ]
     },
     {
         "rollNo": "25EAAAR027",
+        "name": "HARSH DANGI",
         "dob": "2006-11-02",
         "statusOfResult": "PASS",
         "sgpa": "7.60",
+        "resultGrade": "B",
         "subjects": [
             {
-                "Name": "HARSH DANGI",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "21",
                 "C MARKS2": "32",
@@ -7737,10 +7738,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -7757,10 +7758,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -7777,10 +7778,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -7797,10 +7798,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -7817,10 +7818,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -7837,10 +7838,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -7857,10 +7858,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -7877,10 +7878,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -7894,19 +7895,19 @@ export const data = [
                 "GRADE POINT": "9",
                 "TOT E CREDIT (Sub)": "9",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "190",
-                "SEMESTER GRADE": "B"
+                "G TOT EARN CREDIT (Sem)": "190"
             }
         ]
     },
     {
         "rollNo": "25EAAAR028",
+        "name": "HARSHIKA SUTHAR",
         "dob": "2007-09-09",
         "statusOfResult": "FAIL",
         "sgpa": "6.44",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "HARSHIKA SUTHAR",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "19",
                 "C MARKS2": "44",
@@ -7921,10 +7922,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -7941,10 +7942,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -7961,10 +7962,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -7981,10 +7982,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -8001,10 +8002,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -8021,10 +8022,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -8041,10 +8042,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -8061,10 +8062,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -8078,19 +8079,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "23",
-                "G TOT EARN CREDIT (Sem)": "161",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "161"
             }
         ]
     },
     {
         "rollNo": "25EAAAR029",
+        "name": "HEMANT SHARMA",
         "dob": "2006-09-18",
         "statusOfResult": "FAIL",
         "sgpa": "5.12",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "HEMANT SHARMA",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "18",
                 "C MARKS2": "42",
@@ -8105,10 +8106,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -8125,10 +8126,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -8145,10 +8146,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -8165,10 +8166,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -8185,10 +8186,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -8205,10 +8206,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -8225,10 +8226,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -8245,10 +8246,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -8262,19 +8263,19 @@ export const data = [
                 "GRADE POINT": "6",
                 "TOT E CREDIT (Sub)": "6",
                 "TOT CRD ERND (Sem)": "21",
-                "G TOT EARN CREDIT (Sem)": "128",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "128"
             }
         ]
     },
     {
         "rollNo": "25EAAAR030",
+        "name": "HIMANSHU KUMAR KHATRI",
         "dob": "2006-08-12",
         "statusOfResult": "FAIL",
         "sgpa": "4.52",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "HIMANSHU KUMAR KHATRI",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "17",
                 "C MARKS2": "29",
@@ -8289,10 +8290,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -8309,10 +8310,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -8329,10 +8330,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -8349,10 +8350,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -8369,10 +8370,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -8389,10 +8390,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -8409,10 +8410,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -8429,10 +8430,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -8446,19 +8447,19 @@ export const data = [
                 "GRADE POINT": "9",
                 "TOT E CREDIT (Sub)": "9",
                 "TOT CRD ERND (Sem)": "19",
-                "G TOT EARN CREDIT (Sem)": "113",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "113"
             }
         ]
     },
     {
         "rollNo": "25EAAAR031",
+        "name": "HIRDYANSHI RATHORE",
         "dob": "2006-07-04",
         "statusOfResult": "PASS",
         "sgpa": "7.24",
+        "resultGrade": "C+",
         "subjects": [
             {
-                "Name": "HIRDYANSHI RATHORE",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "26",
                 "C MARKS2": "57",
@@ -8473,10 +8474,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -8493,10 +8494,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -8513,10 +8514,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -8533,10 +8534,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -8553,10 +8554,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -8573,10 +8574,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -8593,10 +8594,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -8613,10 +8614,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -8630,19 +8631,19 @@ export const data = [
                 "GRADE POINT": "9",
                 "TOT E CREDIT (Sub)": "9",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "181",
-                "SEMESTER GRADE": "C+"
+                "G TOT EARN CREDIT (Sem)": "181"
             }
         ]
     },
     {
         "rollNo": "25EAAAR032",
+        "name": "HITESH SITLANI",
         "dob": "2005-10-26",
         "statusOfResult": "FAIL",
         "sgpa": "5.20",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "HITESH SITLANI",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "19",
                 "C MARKS2": "18",
@@ -8657,10 +8658,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -8677,10 +8678,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -8697,10 +8698,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -8717,10 +8718,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -8737,10 +8738,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -8757,10 +8758,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -8777,10 +8778,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -8797,10 +8798,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -8814,19 +8815,19 @@ export const data = [
                 "GRADE POINT": "9",
                 "TOT E CREDIT (Sub)": "9",
                 "TOT CRD ERND (Sem)": "21",
-                "G TOT EARN CREDIT (Sem)": "130",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "130"
             }
         ]
     },
     {
         "rollNo": "25EAAAR033",
+        "name": "JAIVARDHAN SINGH GEHLOT",
         "dob": "2003-10-31",
         "statusOfResult": "FAIL",
         "sgpa": "3.88",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "JAIVARDHAN SINGH GEHLOT",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "18",
                 "C MARKS2": "39",
@@ -8841,10 +8842,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -8861,10 +8862,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -8881,10 +8882,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -8901,10 +8902,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -8921,10 +8922,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -8941,10 +8942,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -8961,10 +8962,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -8981,10 +8982,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -8998,19 +8999,19 @@ export const data = [
                 "GRADE POINT": "9",
                 "TOT E CREDIT (Sub)": "9",
                 "TOT CRD ERND (Sem)": "13",
-                "G TOT EARN CREDIT (Sem)": "97",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "97"
             }
         ]
     },
     {
         "rollNo": "25EAAAR034",
+        "name": "JITEN MALAV",
         "dob": "2006-11-25",
         "statusOfResult": "FAIL",
         "sgpa": "5.04",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "JITEN MALAV",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "15",
                 "C MARKS2": "49",
@@ -9025,10 +9026,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -9045,10 +9046,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -9065,10 +9066,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -9085,10 +9086,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -9105,10 +9106,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -9125,10 +9126,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -9145,10 +9146,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -9165,10 +9166,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -9182,19 +9183,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "19",
-                "G TOT EARN CREDIT (Sem)": "126",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "126"
             }
         ]
     },
     {
         "rollNo": "25EAAAR035",
+        "name": "KASHISH SHARMA",
         "dob": "2007-06-15",
         "statusOfResult": "PASS",
         "sgpa": "8.44",
+        "resultGrade": "B+",
         "subjects": [
             {
-                "Name": "KASHISH SHARMA",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "23",
                 "C MARKS2": "40",
@@ -9209,10 +9210,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -9229,10 +9230,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -9249,10 +9250,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -9269,10 +9270,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -9289,10 +9290,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -9309,10 +9310,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -9329,10 +9330,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -9349,10 +9350,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -9366,19 +9367,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "211",
-                "SEMESTER GRADE": "B+"
+                "G TOT EARN CREDIT (Sem)": "211"
             }
         ]
     },
     {
         "rollNo": "25EAAAR037",
+        "name": "LAKSHITA MARWAL",
         "dob": "2006-08-10",
         "statusOfResult": "FAIL",
         "sgpa": "2.72",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "LAKSHITA MARWAL",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "6",
                 "C MARKS2": "20",
@@ -9393,10 +9394,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -9413,10 +9414,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -9433,10 +9434,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -9453,10 +9454,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -9473,10 +9474,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -9493,10 +9494,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -9513,10 +9514,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -9533,10 +9534,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -9550,19 +9551,19 @@ export const data = [
                 "GRADE POINT": "6",
                 "TOT E CREDIT (Sub)": "6",
                 "TOT CRD ERND (Sem)": "11",
-                "G TOT EARN CREDIT (Sem)": "68",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "68"
             }
         ]
     },
     {
         "rollNo": "25EAAAR038",
+        "name": "LAWANYA SOOTRAKAR",
         "dob": "2006-08-10",
         "statusOfResult": "FAIL",
         "sgpa": "4.32",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "LAWANYA SOOTRAKAR",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "14",
                 "C MARKS2": "40",
@@ -9577,10 +9578,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -9597,10 +9598,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -9617,10 +9618,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -9637,10 +9638,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -9657,10 +9658,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -9677,10 +9678,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -9697,10 +9698,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -9717,10 +9718,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -9734,19 +9735,19 @@ export const data = [
                 "GRADE POINT": "6",
                 "TOT E CREDIT (Sub)": "6",
                 "TOT CRD ERND (Sem)": "17",
-                "G TOT EARN CREDIT (Sem)": "108",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "108"
             }
         ]
     },
     {
         "rollNo": "25EAAAR039",
+        "name": "MAANVI PAREEK",
         "dob": "2007-03-11",
         "statusOfResult": "FAIL",
         "sgpa": "4.48",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "MAANVI PAREEK",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "20",
                 "C MARKS2": "34",
@@ -9761,10 +9762,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -9781,10 +9782,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -9801,10 +9802,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -9821,10 +9822,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -9841,10 +9842,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -9861,10 +9862,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -9881,10 +9882,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -9901,10 +9902,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -9918,19 +9919,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "17",
-                "G TOT EARN CREDIT (Sem)": "112",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "112"
             }
         ]
     },
     {
         "rollNo": "25EAAAR040",
+        "name": "MAHI SINGHAL",
         "dob": "2006-08-10",
         "statusOfResult": "PASS",
         "sgpa": "7.52",
+        "resultGrade": "B",
         "subjects": [
             {
-                "Name": "MAHI SINGHAL",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "23",
                 "C MARKS2": "32",
@@ -9945,10 +9946,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -9965,10 +9966,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -9985,10 +9986,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -10005,10 +10006,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -10025,10 +10026,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -10045,10 +10046,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -10065,10 +10066,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -10085,10 +10086,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -10102,19 +10103,19 @@ export const data = [
                 "GRADE POINT": "9",
                 "TOT E CREDIT (Sub)": "9",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "188",
-                "SEMESTER GRADE": "B"
+                "G TOT EARN CREDIT (Sem)": "188"
             }
         ]
     },
     {
         "rollNo": "25EAAAR041",
+        "name": "MANISHA KUMAWAT",
         "dob": "2006-09-17",
         "statusOfResult": "PASS",
         "sgpa": "7.44",
+        "resultGrade": "C+",
         "subjects": [
             {
-                "Name": "MANISHA KUMAWAT",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "23",
                 "C MARKS2": "40",
@@ -10129,10 +10130,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -10149,10 +10150,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -10169,10 +10170,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -10189,10 +10190,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -10209,10 +10210,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -10229,10 +10230,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -10249,10 +10250,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -10269,10 +10270,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -10286,19 +10287,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "186",
-                "SEMESTER GRADE": "C+"
+                "G TOT EARN CREDIT (Sem)": "186"
             }
         ]
     },
     {
         "rollNo": "25EAAAR043",
+        "name": "MEDHYA VERMA",
         "dob": "2007-05-24",
         "statusOfResult": "FAIL",
         "sgpa": "6.40",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "MEDHYA VERMA",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "18",
                 "C MARKS2": "43",
@@ -10313,10 +10314,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -10333,10 +10334,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -10353,10 +10354,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -10373,10 +10374,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -10393,10 +10394,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -10413,10 +10414,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -10433,10 +10434,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -10453,10 +10454,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -10470,19 +10471,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "23",
-                "G TOT EARN CREDIT (Sem)": "160",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "160"
             }
         ]
     },
     {
         "rollNo": "25EAAAR044",
+        "name": "MEGHA YADAV",
         "dob": "2008-03-20",
         "statusOfResult": "FAIL",
         "sgpa": "7.32",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "MEGHA YADAV",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "25",
                 "C MARKS2": "44",
@@ -10497,10 +10498,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -10517,10 +10518,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -10537,10 +10538,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -10557,10 +10558,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -10577,10 +10578,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -10597,10 +10598,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -10617,10 +10618,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -10637,10 +10638,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -10654,19 +10655,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "23",
-                "G TOT EARN CREDIT (Sem)": "183",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "183"
             }
         ]
     },
     {
         "rollNo": "25EAAAR045",
+        "name": "MRIDUL VYAS",
         "dob": "2007-12-29",
         "statusOfResult": "FAIL",
         "sgpa": "4.72",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "MRIDUL VYAS",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "14",
                 "C MARKS2": "34",
@@ -10681,10 +10682,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -10701,10 +10702,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -10721,10 +10722,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -10741,10 +10742,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -10761,10 +10762,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -10781,10 +10782,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -10801,10 +10802,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -10821,10 +10822,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -10838,19 +10839,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "19",
-                "G TOT EARN CREDIT (Sem)": "118",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "118"
             }
         ]
     },
     {
         "rollNo": "25EAAAR046",
+        "name": "NAITIK MAJUMDAR",
         "dob": "2006-10-06",
         "statusOfResult": "PASS",
         "sgpa": "7.48",
+        "resultGrade": "C+",
         "subjects": [
             {
-                "Name": "NAITIK MAJUMDAR",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "23",
                 "C MARKS2": "41",
@@ -10865,10 +10866,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -10885,10 +10886,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -10905,10 +10906,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -10925,10 +10926,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -10945,10 +10946,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -10965,10 +10966,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -10985,10 +10986,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -11005,10 +11006,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -11022,19 +11023,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "187",
-                "SEMESTER GRADE": "C+"
+                "G TOT EARN CREDIT (Sem)": "187"
             }
         ]
     },
     {
         "rollNo": "25EAAAR047",
+        "name": "NAMAN SHARMA",
         "dob": "2006-07-12",
         "statusOfResult": "PASS",
         "sgpa": "7.80",
+        "resultGrade": "B",
         "subjects": [
             {
-                "Name": "NAMAN SHARMA",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "23",
                 "C MARKS2": "54",
@@ -11049,10 +11050,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -11069,10 +11070,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -11089,10 +11090,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -11109,10 +11110,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -11129,10 +11130,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -11149,10 +11150,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -11169,10 +11170,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -11189,10 +11190,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -11206,19 +11207,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "195",
-                "SEMESTER GRADE": "B"
+                "G TOT EARN CREDIT (Sem)": "195"
             }
         ]
     },
     {
         "rollNo": "25EAAAR048",
+        "name": "NARENDRA JANGIR",
         "dob": "2005-04-27",
         "statusOfResult": "PASS",
         "sgpa": "7.96",
+        "resultGrade": "B",
         "subjects": [
             {
-                "Name": "NARENDRA JANGIR",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "26",
                 "C MARKS2": "46",
@@ -11233,10 +11234,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -11253,10 +11254,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -11273,10 +11274,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -11293,10 +11294,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -11313,10 +11314,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -11333,10 +11334,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -11353,10 +11354,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -11373,10 +11374,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -11390,19 +11391,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "199",
-                "SEMESTER GRADE": "B"
+                "G TOT EARN CREDIT (Sem)": "199"
             }
         ]
     },
     {
         "rollNo": "25EAAAR049",
+        "name": "OJASVI BAIJAL",
         "dob": "2006-08-03",
         "statusOfResult": "FAIL",
         "sgpa": "6.96",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "OJASVI BAIJAL",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "23",
                 "C MARKS2": "33",
@@ -11417,10 +11418,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -11437,10 +11438,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -11457,10 +11458,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -11477,10 +11478,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -11497,10 +11498,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -11517,10 +11518,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -11537,10 +11538,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -11557,10 +11558,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -11574,19 +11575,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "23",
-                "G TOT EARN CREDIT (Sem)": "174",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "174"
             }
         ]
     },
     {
         "rollNo": "25EAAAR051",
+        "name": "PARIDHI DANGI",
         "dob": "2007-10-01",
         "statusOfResult": "PASS",
         "sgpa": "7.16",
+        "resultGrade": "C+",
         "subjects": [
             {
-                "Name": "PARIDHI DANGI",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "25",
                 "C MARKS2": "43",
@@ -11601,10 +11602,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -11621,10 +11622,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -11641,10 +11642,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -11661,10 +11662,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -11681,10 +11682,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -11701,10 +11702,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -11721,10 +11722,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -11741,10 +11742,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -11758,19 +11759,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "179",
-                "SEMESTER GRADE": "C+"
+                "G TOT EARN CREDIT (Sem)": "179"
             }
         ]
     },
     {
         "rollNo": "25EAAAR052",
+        "name": "PARTH KUMAR",
         "dob": "2008-01-07",
         "statusOfResult": "PASS",
         "sgpa": "8.56",
+        "resultGrade": "A",
         "subjects": [
             {
-                "Name": "PARTH KUMAR",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "25",
                 "C MARKS2": "41",
@@ -11785,10 +11786,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -11805,10 +11806,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -11825,10 +11826,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -11845,10 +11846,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -11865,10 +11866,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -11885,10 +11886,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -11905,10 +11906,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -11925,10 +11926,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -11942,19 +11943,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "214",
-                "SEMESTER GRADE": "A"
+                "G TOT EARN CREDIT (Sem)": "214"
             }
         ]
     },
     {
         "rollNo": "25EAAAR054",
+        "name": "PRANJAL KUMAWAT",
         "dob": "2006-12-04",
         "statusOfResult": "FAIL",
         "sgpa": "6.40",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "PRANJAL KUMAWAT",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "21",
                 "C MARKS2": "26",
@@ -11969,10 +11970,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -11989,10 +11990,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -12009,10 +12010,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -12029,10 +12030,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -12049,10 +12050,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -12069,10 +12070,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -12089,10 +12090,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -12109,10 +12110,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -12126,19 +12127,19 @@ export const data = [
                 "GRADE POINT": "9",
                 "TOT E CREDIT (Sub)": "9",
                 "TOT CRD ERND (Sem)": "23",
-                "G TOT EARN CREDIT (Sem)": "160",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "160"
             }
         ]
     },
     {
         "rollNo": "25EAAAR055",
+        "name": "PRATHA SINGH",
         "dob": "2006-08-07",
         "statusOfResult": "FAIL",
         "sgpa": "6.84",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "PRATHA SINGH",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "21",
                 "C MARKS2": "44",
@@ -12153,10 +12154,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -12173,10 +12174,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -12193,10 +12194,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -12213,10 +12214,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -12233,10 +12234,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -12253,10 +12254,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -12273,10 +12274,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -12293,10 +12294,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -12310,19 +12311,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "23",
-                "G TOT EARN CREDIT (Sem)": "171",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "171"
             }
         ]
     },
     {
         "rollNo": "25EAAAR056",
+        "name": "PUNIT CHAUHAN",
         "dob": "2006-11-16",
         "statusOfResult": "FAIL",
         "sgpa": "6.68",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "PUNIT CHAUHAN",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "21",
                 "C MARKS2": "34",
@@ -12337,10 +12338,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -12357,10 +12358,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -12377,10 +12378,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -12397,10 +12398,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -12417,10 +12418,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -12437,10 +12438,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -12457,10 +12458,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -12477,10 +12478,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -12494,19 +12495,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "23",
-                "G TOT EARN CREDIT (Sem)": "167",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "167"
             }
         ]
     },
     {
         "rollNo": "25EAAAR057",
+        "name": "RAGHUVEER RAMAWAT",
         "dob": "2007-03-05",
         "statusOfResult": "PASS",
         "sgpa": "7.48",
+        "resultGrade": "C+",
         "subjects": [
             {
-                "Name": "RAGHUVEER RAMAWAT",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "24",
                 "C MARKS2": "45",
@@ -12521,10 +12522,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -12541,10 +12542,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -12561,10 +12562,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -12581,10 +12582,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -12601,10 +12602,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -12621,10 +12622,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -12641,10 +12642,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -12661,10 +12662,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -12678,19 +12679,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "187",
-                "SEMESTER GRADE": "C+"
+                "G TOT EARN CREDIT (Sem)": "187"
             }
         ]
     },
     {
         "rollNo": "25EAAAR058",
+        "name": "RAHUL ROAT",
         "dob": "2007-03-14",
         "statusOfResult": "FAIL",
         "sgpa": "5.72",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "RAHUL ROAT",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "19",
                 "C MARKS2": "26",
@@ -12705,10 +12706,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -12725,10 +12726,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -12745,10 +12746,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -12765,10 +12766,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -12785,10 +12786,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -12805,10 +12806,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -12825,10 +12826,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -12845,10 +12846,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -12862,19 +12863,19 @@ export const data = [
                 "GRADE POINT": "9",
                 "TOT E CREDIT (Sub)": "9",
                 "TOT CRD ERND (Sem)": "21",
-                "G TOT EARN CREDIT (Sem)": "143",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "143"
             }
         ]
     },
     {
         "rollNo": "25EAAAR059",
+        "name": "RAVI JANGIR",
         "dob": "2007-12-05",
         "statusOfResult": "FAIL",
         "sgpa": "6.56",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "RAVI JANGIR",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "20",
                 "C MARKS2": "34",
@@ -12889,10 +12890,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -12909,10 +12910,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -12929,10 +12930,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -12949,10 +12950,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -12969,10 +12970,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -12989,10 +12990,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -13009,10 +13010,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -13029,10 +13030,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -13046,19 +13047,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "23",
-                "G TOT EARN CREDIT (Sem)": "164",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "164"
             }
         ]
     },
     {
         "rollNo": "25EAAAR060",
+        "name": "RIYA JANGID",
         "dob": "2007-09-02",
         "statusOfResult": "FAIL",
         "sgpa": "7.60",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "RIYA JANGID",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "24",
                 "C MARKS2": "41",
@@ -13073,10 +13074,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -13093,10 +13094,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -13113,10 +13114,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -13133,10 +13134,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -13153,10 +13154,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -13173,10 +13174,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -13193,10 +13194,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -13213,10 +13214,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -13230,19 +13231,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "23",
-                "G TOT EARN CREDIT (Sem)": "190",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "190"
             }
         ]
     },
     {
         "rollNo": "25EAAAR061",
+        "name": "SAAVYA DHIMAN",
         "dob": "2007-05-07",
         "statusOfResult": "PASS",
         "sgpa": "8.12",
+        "resultGrade": "B+",
         "subjects": [
             {
-                "Name": "SAAVYA DHIMAN",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "22",
                 "C MARKS2": "47",
@@ -13257,10 +13258,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -13277,10 +13278,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -13297,10 +13298,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -13317,10 +13318,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -13337,10 +13338,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -13357,10 +13358,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -13377,10 +13378,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -13397,10 +13398,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -13414,19 +13415,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "203",
-                "SEMESTER GRADE": "B+"
+                "G TOT EARN CREDIT (Sem)": "203"
             }
         ]
     },
     {
         "rollNo": "25EAAAR062",
+        "name": "SAMARTH GOYAL",
         "dob": "2007-09-25",
         "statusOfResult": "PASS",
         "sgpa": "8.32",
+        "resultGrade": "B+",
         "subjects": [
             {
-                "Name": "SAMARTH GOYAL",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "23",
                 "C MARKS2": "55",
@@ -13441,10 +13442,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -13461,10 +13462,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -13481,10 +13482,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -13501,10 +13502,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -13521,10 +13522,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -13541,10 +13542,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -13561,10 +13562,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -13581,10 +13582,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -13598,19 +13599,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "208",
-                "SEMESTER GRADE": "B+"
+                "G TOT EARN CREDIT (Sem)": "208"
             }
         ]
     },
     {
         "rollNo": "25EAAAR063",
+        "name": "SAMRIDDHI AGGARWAL",
         "dob": "2007-10-12",
         "statusOfResult": "PASS",
         "sgpa": "7.32",
+        "resultGrade": "C+",
         "subjects": [
             {
-                "Name": "SAMRIDDHI AGGARWAL",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "21",
                 "C MARKS2": "42",
@@ -13625,10 +13626,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -13645,10 +13646,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -13665,10 +13666,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -13685,10 +13686,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -13705,10 +13706,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -13725,10 +13726,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -13745,10 +13746,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -13765,10 +13766,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -13782,19 +13783,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "183",
-                "SEMESTER GRADE": "C+"
+                "G TOT EARN CREDIT (Sem)": "183"
             }
         ]
     },
     {
         "rollNo": "25EAAAR064",
+        "name": "SANO CHETRI",
         "dob": "2006-09-15",
         "statusOfResult": "PASS",
         "sgpa": "7.00",
+        "resultGrade": "C+",
         "subjects": [
             {
-                "Name": "SANO CHETRI",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "23",
                 "C MARKS2": "38",
@@ -13809,10 +13810,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -13829,10 +13830,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -13849,10 +13850,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -13869,10 +13870,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -13889,10 +13890,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -13909,10 +13910,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -13929,10 +13930,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -13949,10 +13950,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -13966,19 +13967,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "175",
-                "SEMESTER GRADE": "C+"
+                "G TOT EARN CREDIT (Sem)": "175"
             }
         ]
     },
     {
         "rollNo": "25EAAAR065",
+        "name": "SANYAM BAISLA",
         "dob": "2008-02-18",
         "statusOfResult": "FAIL",
         "sgpa": "4.96",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "SANYAM BAISLA",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "19",
                 "C MARKS2": "19",
@@ -13993,10 +13994,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -14013,10 +14014,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -14033,10 +14034,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -14053,10 +14054,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -14073,10 +14074,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -14093,10 +14094,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -14113,10 +14114,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -14133,10 +14134,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -14150,19 +14151,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "17",
-                "G TOT EARN CREDIT (Sem)": "124",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "124"
             }
         ]
     },
     {
         "rollNo": "25EAAAR066",
+        "name": "SATYAM KUSHWAHA",
         "dob": "2006-02-10",
         "statusOfResult": "PASS",
         "sgpa": "8.16",
+        "resultGrade": "B+",
         "subjects": [
             {
-                "Name": "SATYAM KUSHWAHA",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "26",
                 "C MARKS2": "39",
@@ -14177,10 +14178,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -14197,10 +14198,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -14217,10 +14218,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -14237,10 +14238,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -14257,10 +14258,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -14277,10 +14278,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -14297,10 +14298,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -14317,10 +14318,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -14334,19 +14335,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "204",
-                "SEMESTER GRADE": "B+"
+                "G TOT EARN CREDIT (Sem)": "204"
             }
         ]
     },
     {
         "rollNo": "25EAAAR067",
+        "name": "SHRAVYA SINGH",
         "dob": "2007-10-16",
         "statusOfResult": "PASS",
         "sgpa": "7.84",
+        "resultGrade": "B",
         "subjects": [
             {
-                "Name": "SHRAVYA SINGH",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "18",
                 "C MARKS2": "39",
@@ -14361,10 +14362,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -14381,10 +14382,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -14401,10 +14402,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -14421,10 +14422,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -14441,10 +14442,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -14461,10 +14462,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -14481,10 +14482,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -14501,10 +14502,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -14518,19 +14519,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "196",
-                "SEMESTER GRADE": "B"
+                "G TOT EARN CREDIT (Sem)": "196"
             }
         ]
     },
     {
         "rollNo": "25EAAAR068",
+        "name": "SHREYA KUMAWAT",
         "dob": "2007-05-01",
         "statusOfResult": "FAIL",
         "sgpa": "6.80",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "SHREYA KUMAWAT",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "19",
                 "C MARKS2": "37",
@@ -14545,10 +14546,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -14565,10 +14566,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -14585,10 +14586,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -14605,10 +14606,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -14625,10 +14626,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -14645,10 +14646,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -14665,10 +14666,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -14685,10 +14686,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -14702,19 +14703,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "23",
-                "G TOT EARN CREDIT (Sem)": "170",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "170"
             }
         ]
     },
     {
         "rollNo": "25EAAAR069",
+        "name": "SIDDHANT SARASWAT",
         "dob": "2007-09-09",
         "statusOfResult": "PASS",
         "sgpa": "8.00",
+        "resultGrade": "B+",
         "subjects": [
             {
-                "Name": "SIDDHANT SARASWAT",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "24",
                 "C MARKS2": "45",
@@ -14729,10 +14730,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -14749,10 +14750,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -14769,10 +14770,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -14789,10 +14790,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -14809,10 +14810,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -14829,10 +14830,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -14849,10 +14850,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -14869,10 +14870,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -14886,19 +14887,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "200",
-                "SEMESTER GRADE": "B+"
+                "G TOT EARN CREDIT (Sem)": "200"
             }
         ]
     },
     {
         "rollNo": "25EAAAR070",
+        "name": "SIDDHI UDAWAT",
         "dob": "2007-02-28",
         "statusOfResult": "PASS",
         "sgpa": "8.08",
+        "resultGrade": "B+",
         "subjects": [
             {
-                "Name": "SIDDHI UDAWAT",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "26",
                 "C MARKS2": "45",
@@ -14913,10 +14914,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -14933,10 +14934,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -14953,10 +14954,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -14973,10 +14974,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -14993,10 +14994,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -15013,10 +15014,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -15033,10 +15034,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -15053,10 +15054,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -15070,19 +15071,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "202",
-                "SEMESTER GRADE": "B+"
+                "G TOT EARN CREDIT (Sem)": "202"
             }
         ]
     },
     {
         "rollNo": "25EAAAR071",
+        "name": "SIMRANJEET SINGH",
         "dob": "2007-10-21",
         "statusOfResult": "PASS",
         "sgpa": "7.92",
+        "resultGrade": "B",
         "subjects": [
             {
-                "Name": "SIMRANJEET SINGH",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "22",
                 "C MARKS2": "44",
@@ -15097,10 +15098,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -15117,10 +15118,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -15137,10 +15138,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -15157,10 +15158,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -15177,10 +15178,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -15197,10 +15198,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -15217,10 +15218,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -15237,10 +15238,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -15254,19 +15255,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "198",
-                "SEMESTER GRADE": "B"
+                "G TOT EARN CREDIT (Sem)": "198"
             }
         ]
     },
     {
         "rollNo": "25EAAAR072",
+        "name": "SNIGDHA BHARGAVA",
         "dob": "2007-07-12",
         "statusOfResult": "PASS",
         "sgpa": "6.96",
+        "resultGrade": "C",
         "subjects": [
             {
-                "Name": "SNIGDHA BHARGAVA",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "23",
                 "C MARKS2": "44",
@@ -15281,10 +15282,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -15301,10 +15302,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -15321,10 +15322,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -15341,10 +15342,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -15361,10 +15362,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -15381,10 +15382,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -15401,10 +15402,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -15421,10 +15422,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -15438,19 +15439,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "174",
-                "SEMESTER GRADE": "C"
+                "G TOT EARN CREDIT (Sem)": "174"
             }
         ]
     },
     {
         "rollNo": "25EAAAR073",
+        "name": "SUDIKSHA PAINULY",
         "dob": "2006-10-09",
         "statusOfResult": "PASS",
         "sgpa": "8.32",
+        "resultGrade": "B+",
         "subjects": [
             {
-                "Name": "SUDIKSHA PAINULY",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "25",
                 "C MARKS2": "43",
@@ -15465,10 +15466,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -15485,10 +15486,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -15505,10 +15506,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -15525,10 +15526,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -15545,10 +15546,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -15565,10 +15566,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -15585,10 +15586,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -15605,10 +15606,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -15622,19 +15623,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "208",
-                "SEMESTER GRADE": "B+"
+                "G TOT EARN CREDIT (Sem)": "208"
             }
         ]
     },
     {
         "rollNo": "25EAAAR074",
+        "name": "SUR SANTWANI",
         "dob": "2006-12-25",
         "statusOfResult": "PASS",
         "sgpa": "9.80",
+        "resultGrade": "A+",
         "subjects": [
             {
-                "Name": "SUR SANTWANI",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "28",
                 "C MARKS2": "61",
@@ -15649,10 +15650,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -15669,10 +15670,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -15689,10 +15690,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -15709,10 +15710,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -15729,10 +15730,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -15749,10 +15750,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -15769,10 +15770,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -15789,10 +15790,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -15806,19 +15807,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "245",
-                "SEMESTER GRADE": "A+"
+                "G TOT EARN CREDIT (Sem)": "245"
             }
         ]
     },
     {
         "rollNo": "25EAAAR075",
+        "name": "TANISHK JAIN",
         "dob": "2006-02-20",
         "statusOfResult": "PASS",
         "sgpa": "6.80",
+        "resultGrade": "C",
         "subjects": [
             {
-                "Name": "TANISHK JAIN",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "16",
                 "C MARKS2": "47",
@@ -15833,10 +15834,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -15853,10 +15854,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -15873,10 +15874,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -15893,10 +15894,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -15913,10 +15914,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -15933,10 +15934,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -15953,10 +15954,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -15973,10 +15974,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -15990,19 +15991,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "170",
-                "SEMESTER GRADE": "C"
+                "G TOT EARN CREDIT (Sem)": "170"
             }
         ]
     },
     {
         "rollNo": "25EAAAR076",
+        "name": "UNNATI TIBREWAL",
         "dob": "2007-01-02",
         "statusOfResult": "PASS",
         "sgpa": "9.28",
+        "resultGrade": "A+",
         "subjects": [
             {
-                "Name": "UNNATI TIBREWAL",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "26",
                 "C MARKS2": "46",
@@ -16017,10 +16018,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -16037,10 +16038,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -16057,10 +16058,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -16077,10 +16078,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -16097,10 +16098,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -16117,10 +16118,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -16137,10 +16138,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -16157,10 +16158,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -16174,19 +16175,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "232",
-                "SEMESTER GRADE": "A+"
+                "G TOT EARN CREDIT (Sem)": "232"
             }
         ]
     },
     {
         "rollNo": "25EAAAR077",
+        "name": "URJA FAUJDAR",
         "dob": "2007-01-26",
         "statusOfResult": "PASS",
         "sgpa": "7.44",
+        "resultGrade": "C+",
         "subjects": [
             {
-                "Name": "URJA FAUJDAR",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "19",
                 "C MARKS2": "43",
@@ -16201,10 +16202,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -16221,10 +16222,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -16241,10 +16242,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -16261,10 +16262,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -16281,10 +16282,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -16301,10 +16302,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -16321,10 +16322,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -16341,10 +16342,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -16358,19 +16359,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "186",
-                "SEMESTER GRADE": "C+"
+                "G TOT EARN CREDIT (Sem)": "186"
             }
         ]
     },
     {
         "rollNo": "25EAAAR078",
+        "name": "VAIDHYEE RAMCHANDANI",
         "dob": "2007-03-24",
         "statusOfResult": "FAIL",
         "sgpa": "3.72",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "VAIDHYEE RAMCHANDANI",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "17",
                 "C MARKS2": "33",
@@ -16385,10 +16386,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -16405,10 +16406,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -16425,10 +16426,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -16445,10 +16446,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -16465,10 +16466,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -16485,10 +16486,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -16505,10 +16506,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -16525,10 +16526,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -16542,19 +16543,19 @@ export const data = [
                 "GRADE POINT": "9",
                 "TOT E CREDIT (Sub)": "9",
                 "TOT CRD ERND (Sem)": "15",
-                "G TOT EARN CREDIT (Sem)": "93",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "93"
             }
         ]
     },
     {
         "rollNo": "25EAAAR079",
+        "name": "VAISHNAVI VISHWAKARMA",
         "dob": "2007-06-30",
         "statusOfResult": "PASS",
         "sgpa": "7.68",
+        "resultGrade": "B",
         "subjects": [
             {
-                "Name": "VAISHNAVI VISHWAKARMA",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "22",
                 "C MARKS2": "35",
@@ -16569,10 +16570,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -16589,10 +16590,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -16609,10 +16610,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -16629,10 +16630,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -16649,10 +16650,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -16669,10 +16670,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -16689,10 +16690,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -16709,10 +16710,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -16726,19 +16727,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "192",
-                "SEMESTER GRADE": "B"
+                "G TOT EARN CREDIT (Sem)": "192"
             }
         ]
     },
     {
         "rollNo": "25EAAAR080",
+        "name": "VIDHI GARG",
         "dob": "2007-11-25",
         "statusOfResult": "PASS",
         "sgpa": "8.52",
+        "resultGrade": "A",
         "subjects": [
             {
-                "Name": "VIDHI GARG",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "24",
                 "C MARKS2": "47",
@@ -16753,10 +16754,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -16773,10 +16774,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -16793,10 +16794,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -16813,10 +16814,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -16833,10 +16834,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -16853,10 +16854,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -16873,10 +16874,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -16893,10 +16894,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -16910,19 +16911,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "213",
-                "SEMESTER GRADE": "A"
+                "G TOT EARN CREDIT (Sem)": "213"
             }
         ]
     },
     {
         "rollNo": "25EAAAR081",
+        "name": "VIRENDRA KUMAR CHOUDHARY",
         "dob": "2005-07-09",
         "statusOfResult": "FAIL",
         "sgpa": "8.32",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "VIRENDRA KUMAR CHOUDHARY",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "24",
                 "C MARKS2": "35",
@@ -16937,10 +16938,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -16957,10 +16958,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -16977,10 +16978,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -16997,10 +16998,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -17017,10 +17018,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -17037,10 +17038,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -17057,10 +17058,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -17077,10 +17078,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -17094,19 +17095,19 @@ export const data = [
                 "GRADE POINT": "10",
                 "TOT E CREDIT (Sub)": "10",
                 "TOT CRD ERND (Sem)": "23",
-                "G TOT EARN CREDIT (Sem)": "208",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "208"
             }
         ]
     },
     {
         "rollNo": "25EAAAR082",
+        "name": "YATIKA JAIN",
         "dob": "2007-12-11",
         "statusOfResult": "PASS",
         "sgpa": "8.00",
+        "resultGrade": "B+",
         "subjects": [
             {
-                "Name": "YATIKA JAIN",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "16",
                 "C MARKS2": "50",
@@ -17121,10 +17122,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -17141,10 +17142,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -17161,10 +17162,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -17181,10 +17182,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -17201,10 +17202,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -17221,10 +17222,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -17241,10 +17242,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -17261,10 +17262,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -17278,19 +17279,19 @@ export const data = [
                 "GRADE POINT": "9",
                 "TOT E CREDIT (Sub)": "9",
                 "TOT CRD ERND (Sem)": "25",
-                "G TOT EARN CREDIT (Sem)": "200",
-                "SEMESTER GRADE": "B+"
+                "G TOT EARN CREDIT (Sem)": "200"
             }
         ]
     },
     {
         "rollNo": "25EAAAR083",
+        "name": "YUVRAJ PALIWAL",
         "dob": "2007-06-29",
         "statusOfResult": "FAIL",
         "sgpa": "5.00",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "YUVRAJ PALIWAL",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "8",
                 "C MARKS2": "23",
@@ -17305,10 +17306,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -17325,10 +17326,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -17345,10 +17346,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -17365,10 +17366,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -17385,10 +17386,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -17405,10 +17406,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -17425,10 +17426,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -17445,10 +17446,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -17462,19 +17463,19 @@ export const data = [
                 "GRADE POINT": "6",
                 "TOT E CREDIT (Sub)": "6",
                 "TOT CRD ERND (Sem)": "19",
-                "G TOT EARN CREDIT (Sem)": "125",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "125"
             }
         ]
     },
     {
         "rollNo": "25EAAAR084",
+        "name": "ZAYDAN KHAN",
         "dob": "2007-07-26",
         "statusOfResult": "FAIL",
         "sgpa": "4.20",
+        "resultGrade": "**",
         "subjects": [
             {
-                "Name": "ZAYDAN KHAN",
                 "SUB CODE": "2AR1",
                 "C MARKS 1": "14",
                 "C MARKS2": "17",
@@ -17489,10 +17490,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR2",
@@ -17509,10 +17510,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR3",
@@ -17529,10 +17530,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR4",
@@ -17549,10 +17550,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR5",
@@ -17569,10 +17570,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR6",
@@ -17589,10 +17590,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR7",
@@ -17609,10 +17610,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "2AR8",
@@ -17629,10 +17630,10 @@ export const data = [
                 "G TOT EARN CREDIT (Sem)": "",
                 "SGPA": "",
                 "STATUS OF RESULT": "",
-                "SEMESTER GRADE": ""
+                "Result Grade": ""
             },
             {
-                "Name": "",
+                "NAME": "",
                 "DOB": "",
                 "ROLL NO": "",
                 "SUB CODE": "FEC02",
@@ -17646,8 +17647,7 @@ export const data = [
                 "GRADE POINT": "9",
                 "TOT E CREDIT (Sub)": "9",
                 "TOT CRD ERND (Sem)": "17",
-                "G TOT EARN CREDIT (Sem)": "105",
-                "SEMESTER GRADE": "**"
+                "G TOT EARN CREDIT (Sem)": "105"
             }
         ]
     }
