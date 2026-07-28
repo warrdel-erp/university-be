@@ -92,6 +92,20 @@ Run in order. Save IDs into collection variables.
 | `GET` | `/academicGroup/availableStudents` | Students matching scope, not already in this group (or as faculty) |
 | `DELETE` | `/academicGroup/student` | Soft-remove students (body) |
 
+### Timetable Academic Group APIs
+| Method | Path | Purpose |
+|--------|------|---------|
+| `POST` | `/timetableAcademicGroup/mapping` | Map structure to scope |
+| `GET` | `/timetableAcademicGroup/mapping` | Filtered structure-scope course mappings |
+| `GET` | `/timetableAcademicGroup/allMappings` | All structure-scope course mappings |
+| `DELETE` | `/timetableAcademicGroup/mapping` | Delete structure-scope course mapping |
+| `POST` | `/timetableAcademicGroup/routine` | Create routine for academic group |
+| `GET` | `/timetableAcademicGroup/cascadingGroupRoutines` | Cascading scope -> group -> routines |
+| `GET` | `/timetableAcademicGroup/groupRoutinesWrappedInStructure` | Routines wrapped in structure |
+| `DELETE` | `/timetableAcademicGroup/routine` | Delete routine for academic group |
+| `GET` | `/timetableAcademicGroup/subjectOptions` | Options list of subjects (`[{ subjectId, name }]`) filtered by `classSectionTermId` or `academicGroupId` |
+
+
 ### List filters (`GET /all`)
 `page`, `limit`, `search`, `courseId`, `sessionId`, `term`, `groupType`, `publishStatus`
 

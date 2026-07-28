@@ -103,3 +103,18 @@ export const getGroupRoutinesWrappedInStructure = async (req, res) => {
     }
 };
 
+export const getSubjectOptions = async (req, res) => {
+    try {
+        const { classSectionTermId, academicGroupId } = req.query;
+        const result = await academicGroupScopeService.getSubjectOptionsService({
+            classSectionTermId,
+            academicGroupId,
+        });
+        return SuccessResponse(res, 200, 'Subject options fetched successfully', result);
+    } catch (error) {
+        console.error('Error in getting subject options:', error);
+        return ErrorResponse(res, 500, error.message || 'Internal Server Error');
+    }
+};
+
+

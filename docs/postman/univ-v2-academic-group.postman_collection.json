@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a9b8c7d6-e5f4-3210-abcd-academicgroup01",
     "name": "univ-v2-academic-group",
-    "description": "Academic Group formation and Timetable Academic Group APIs (stepwise wizard).\n\n**Docs:** `docs/postman/ACADEMIC_GROUP.md`\n\n## Academic Group Formation Order\n1. `POST /academicGroup/scope` -> `academicGroupScopeId`\n2. `POST /academicGroup` -> `academicGroupId`\n3. `POST /academicGroup/user` -> faculty\n4. `POST /academicGroup/student` -> students\n\n## Timetable Academic Group Mapping & Routines Order\n1. `POST /timetableAcademicGroup/mapping` -> map structure (`timeTableNameId`) to `academicGroupScopeId` (`timetableStructureCourseMapperId`)\n2. `GET /timetableAcademicGroup/mapping` -> get filtered structure-scope course mappings\n3. `GET /timetableAcademicGroup/allMappings` -> get whole list of all structure-scope course mappings\n4. `POST /timetableAcademicGroup/routine` -> create routine for `academicGroupId` under structure mapping (`timeTableRoutineId`)\n5. `GET /timetableAcademicGroup/groupRoutinesWrappedInStructure` -> get all routines wrapped in structure for `academicGroupId`\n6. `GET /timetableAcademicGroup/cascadingGroupRoutines` -> get cascading scope -> group -> routines hierarchy\n\nSet `baseurl` + `token`. Tenant from `saveUserDefaults`.",
+    "description": "Academic Group formation and Timetable Academic Group APIs (stepwise wizard).\n\n**Docs:** `docs/postman/ACADEMIC_GROUP.md`\n\n## Academic Group Formation Order\n1. `POST /academicGroup/scope` -> `academicGroupScopeId`\n2. `POST /academicGroup` -> `academicGroupId`\n3. `POST /academicGroup/user` -> faculty\n4. `POST /academicGroup/student` -> students\n\n## Timetable Academic Group Mapping & Routines Order\n1. `POST /timetableAcademicGroup/mapping` -> map structure (`timeTableNameId`) to `academicGroupScopeId` (`timetableStructureCourseMapperId`)\n2. `GET /timetableAcademicGroup/mapping` -> get filtered structure-scope course mappings\n3. `GET /timetableAcademicGroup/allMappings` -> get whole list of all structure-scope course mappings\n4. `POST /timetableAcademicGroup/routine` -> create routine for `academicGroupId` under structure mapping (`timeTableRoutineId`)\n5. `GET /timetableAcademicGroup/groupRoutinesWrappedInStructure` -> get all routines wrapped in structure for `academicGroupId`\n6. `GET /timetableAcademicGroup/cascadingGroupRoutines` -> get cascading scope -> group -> routines hierarchy\n7. `GET /timetableAcademicGroup/subjectOptions` -> get subject options list (`[{ subjectId, name }]`) filtered by `classSectionTermId` or `academicGroupId`\n\nSet `baseurl` + `token`. Tenant from `saveUserDefaults`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -65,6 +65,10 @@
     {
       "key": "studentId",
       "value": "101"
+    },
+    {
+      "key": "classSectionTermId",
+      "value": "12"
     }
   ],
   "item": [
@@ -1939,8 +1943,82 @@
               "body": "{\n  \"success\": true,\n  \"message\": \"Academic group routine deleted successfully\",\n  \"data\": null\n}"
             }
           ]
+        },
+        {
+          "name": "GET timetableAcademicGroup/subjectOptions",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/timetableAcademicGroup/subjectOptions?classSectionTermId={{classSectionTermId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timetableAcademicGroup",
+                "subjectOptions"
+              ],
+              "query": [
+                {
+                  "key": "classSectionTermId",
+                  "value": "{{classSectionTermId}}"
+                },
+                {
+                  "key": "academicGroupId",
+                  "value": "{{academicGroupId}}",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**GET /timetableAcademicGroup/subjectOptions**\n\nReturns subject options (`[{ subjectId, name }]`) filtered by `classSectionTermId` or `academicGroupId`."
+          },
+          "response": [
+            {
+              "name": "200 \u2014 Subject options fetched",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timetableAcademicGroup/subjectOptions?classSectionTermId=12",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timetableAcademicGroup",
+                    "subjectOptions"
+                  ],
+                  "query": [
+                    {
+                      "key": "classSectionTermId",
+                      "value": "12"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Subject options fetched successfully\",\n  \"data\": [\n    {\n      \"subjectId\": 4,\n      \"name\": \"Data Structures\"\n    },\n    {\n      \"subjectId\": 10,\n      \"name\": \"Algorithms\"\n    }\n  ]\n}"
+            }
+          ]
         }
       ]
     }
   ]
-}
+}

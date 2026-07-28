@@ -1,5 +1,6 @@
 import * as model from '../models/index.js';
-import { buildScope } from '../utility/scoped.js';
+import { buildScope, scoped } from '../utility/scoped.js';
+import { Op } from 'sequelize';
 
 export async function getCascadingGroupRoutinesRepository({
   academicGroupScopeId,
@@ -295,4 +296,121 @@ export async function getGroupRoutinesWrappedInStructureRepository({ academicGro
 
   return group;
 }
+
+export async function getSubjectOptionsRepository({ classSectionTermId, academicGroupId }, options = {}) {
+  const subjectIds = new Set();
+  const directSubjectWheres = [];
+
+  if (classSectionTermId != null) {
+    const mapperRows = await scoped(model.subjectMapperModel).findAll({
+      where: { classSectionTermId: Number(classSectionTermId) },
+      attributes: ['subjectId'],
+      raw: true,
+      transaction: options.transaction,
+    });
+
+    for (const row of mapperRows) {
+      if (row.subjectId) {
+        subjectIds.add(Number(row.subjectId));
+      }
+    }
+
+    const termRow = await scoped(model.classSectionTermModel).findOne({
+      where: { classSectionTermId: Number(classSectionTermId) },
+      attributes: ['classSectionTermId', 'term', 'classSectionsId'],
+      include: [
+        {
+          model: model.classSectionModel,
+          as: 'classSection',
+          attributes: ['courseId'],
+          required: false,
+        },
+      ],
+      transaction: options.transaction,
+    });
+
+    if (termRow) {
+      const plainTerm = termRow.get ? termRow.get({ plain: true }) : termRow;
+      const termVal = plainTerm.term;
+      const courseIdVal = plainTerm.classSection?.courseId;
+
+      if (courseIdVal != null && termVal != null) {
+        directSubjectWheres.push({
+          courseId: Number(courseIdVal),
+          term: Number(termVal),
+        });
+      } else if (courseIdVal != null) {
+        directSubjectWheres.push({
+          courseId: Number(courseIdVal),
+        });
+      }
+    }
+  }
+
+  if (academicGroupId != null) {
+    const groupRow = await scoped(model.academicGroupModel).findOne({
+      where: { academicGroupId: Number(academicGroupId) },
+      attributes: ['academicGroupId', 'academicGroupScopeId'],
+      include: [
+        {
+          model: model.academicGroupScopeModel,
+          as: 'scope',
+          attributes: ['academicGroupScopeId', 'courseId', 'term', 'contextSubjectId'],
+          required: false,
+        },
+      ],
+      transaction: options.transaction,
+    });
+
+    if (groupRow) {
+      const plainGroup = groupRow.get ? groupRow.get({ plain: true }) : groupRow;
+      const scope = plainGroup.scope || plainGroup.academicGroupScope;
+
+      if (scope && scope.courseId != null) {
+        const scopeWhere = {
+          courseId: Number(scope.courseId),
+        };
+        if (scope.term != null) {
+          scopeWhere.term = Number(scope.term);
+        }
+        directSubjectWheres.push(scopeWhere);
+
+        if (scope.contextSubjectId != null) {
+          subjectIds.add(Number(scope.contextSubjectId));
+        }
+      }
+    }
+  }
+
+  const finalSubjectWheres = [];
+
+  if (subjectIds.size > 0) {
+    finalSubjectWheres.push({
+      subjectId: { [Op.in]: Array.from(subjectIds) },
+    });
+  }
+
+  for (const w of directSubjectWheres) {
+    finalSubjectWheres.push(w);
+  }
+
+  if (finalSubjectWheres.length === 0) {
+    return [];
+  }
+
+  const subjects = await scoped(model.subjectModel).findAll({
+    where: {
+      [Op.or]: finalSubjectWheres,
+    },
+    attributes: ['subjectId', 'subjectName'],
+    order: [['subjectName', 'ASC']],
+    transaction: options.transaction,
+  });
+
+  return subjects.map((s) => ({
+    subjectId: s.subjectId,
+    name: s.subjectName,
+  }));
+}
+
 

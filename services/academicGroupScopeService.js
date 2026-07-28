@@ -215,3 +215,11 @@ export async function getGroupRoutinesWrappedInStructureService({ academicGroupI
   };
 }
 
+export async function getSubjectOptionsService({ classSectionTermId, academicGroupId }) {
+  return await academicGroupScopeRepository.getSubjectOptionsRepository({
+    classSectionTermId,
+    academicGroupId,
+  });
+}
+
+
