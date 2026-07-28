@@ -815,45 +815,7 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
       );
     }
 
-    const createdRoutineId = result?.timeTableRoutineId || result?.dataValues?.timeTableRoutineId;
-    if (createdRoutineId && courseMapping.timeTableNameId) {
-      const periods = await model.timeTableStructurePeriodsModel.findAll({
-        where: { timeTableNameId: courseMapping.timeTableNameId },
-        order: [['timeTableCreationId', 'ASC']],
-        transaction,
-      });
-
-      const structure = await model.timeTableStructureModel.findByPk(courseMapping.timeTableNameId, { transaction });
-      const weekOffList = parseWeekOffList(structure?.weekOff);
-      const weekOffLower = weekOffList.map((d) => String(d).toLowerCase());
-
-      const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-      const workingDays = allDays.filter((d) => !weekOffLower.includes(d.toLowerCase()));
-
-      const cellPayloads = [];
-      for (const dayName of workingDays) {
-        let periodIdx = 1;
-        for (const p of periods) {
-          cellPayloads.push({
-            timeTableNameId: courseMapping.timeTableNameId,
-            timeTableRoutineId: createdRoutineId,
-            timeTableCreationId: p.timeTableCreationId,
-            day: dayName,
-            period: periodIdx,
-            timeTableType: placement.timeTableType || 'normal',
-            isAttendence: true,
-            isSameTeacher: true,
-            createdBy,
-            updatedBy,
-          });
-          periodIdx += 1;
-        }
-      }
-
-      if (cellPayloads.length > 0) {
-        await model.timeTableCellModel.bulkCreate(cellPayloads, { transaction, ignoreDuplicates: true });
-      }
-    }
+    // Cell generation is deferred. It will be generated when a class is mapped via addtimeTableMapping
 
     await transaction.commit();
     return result;
