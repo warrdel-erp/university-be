@@ -734,6 +734,16 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
       placement.courseId = courseMapping.courseId;
     }
 
+    if (!placement.campusId) {
+      const instId = courseMapping.instituteId || data.instituteId;
+      if (instId) {
+        const inst = await model.instituteModel.findByPk(instId, { transaction });
+        if (inst?.campusId) {
+          placement.campusId = inst.campusId;
+        }
+      }
+    }
+
     delete placement.term;
     delete placement.classSectionId;
     delete placement.classSectionsId;
