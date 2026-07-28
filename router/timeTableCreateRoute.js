@@ -7,7 +7,7 @@ import { validate } from '../utility/validation.js';
 import {
     addtimeTableCreate, cloneTimeTableRoutine, gettimeTableCreateDetails, getSingletimeTableCreateDetails, addtimeTableMapping, getTimeTableMappingDetail, getSingletimeTableMappingDetail, getTimeTableCellData
     , updatetimeTableCreate, getTimeTableElective, publishTimeTable, updateSimpleTeacherMappingController
-    , deletetimeTableMapping, ClassSubjectCount, changeTimeTableCreate, getTimeTableByCourseAndSection, getRoutineByClassSectionId, getRoutineByTeacherAndAcademicYear
+    , deletetimeTableMapping, ClassSubjectCount, changeTimeTableCreate, getTimeTableByCourseAndSection, getRoutineByClassSectionId, getRoutineByAcademicGroupId, getRoutineByTeacherAndAcademicYear
     , deleteTimeTableRoutine, getDateWiseCellsBySection, updateDateWiseCellController
 } from '../controllers/timeTableCreateController.js';
 
@@ -25,6 +25,10 @@ const optionalPositiveId = z.preprocess(
 
 const getRoutineSchema = z.object({
     classSectionTermId: positiveIntegerId,
+});
+
+const getRoutineByAcademicGroupSchema = z.object({
+    academicGroupId: positiveIntegerId,
 });
 
 const getRoutineByTeacherSchema = z.object({
@@ -270,6 +274,8 @@ router.get('/single', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.v
 router.get('/create', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ query: getTimeTableByCourseAndSectionQuerySchema }),
     getTimeTableByCourseAndSection);
 router.get('/getRoutine', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ query: getRoutineSchema }), getRoutineByClassSectionId);
+router.get('/getRoutineByAcademicGroup', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ query: getRoutineByAcademicGroupSchema }), getRoutineByAcademicGroupId);
+router.get('/getRoutineByAcademicGroupId', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ query: getRoutineByAcademicGroupSchema }), getRoutineByAcademicGroupId);
 router.get('/getRoutineByTeacher', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ query: getRoutineByTeacherSchema }), getRoutineByTeacherAndAcademicYear);
 
 router.get('/dateWiseCells', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ query: getDateWiseCellsQuerySchema }), getDateWiseCellsBySection);

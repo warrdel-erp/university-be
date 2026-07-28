@@ -486,12 +486,17 @@ export async function getStructureMappingPrintRows(filters = {}) {
     });
 }
 
-export async function getMappedStructuresForCourseSession(courseId, sessionId) {
-    const where = {
-        courseId: Number(courseId),
-    };
-    if (sessionId != null) {
-        where.sessionId = Number(sessionId);
+export async function getMappedStructuresForCourseSession(courseId, sessionId, academicGroupScopeId = null) {
+    const where = {};
+    if (academicGroupScopeId != null) {
+        where.academicGroupScopeId = Number(academicGroupScopeId);
+    } else if (courseId != null) {
+        where.courseId = Number(courseId);
+        if (sessionId != null) {
+            where.sessionId = Number(sessionId);
+        }
+    } else {
+        return [];
     }
 
     return await scoped(model.timeTableStructureCourseModel).findAll({
@@ -500,6 +505,7 @@ export async function getMappedStructuresForCourseSession(courseId, sessionId) {
             'timetableStructureCourseMapperId',
             'timeTableNameId',
             'courseId',
+            'academicGroupScopeId',
             'sessionId',
             'startingDate',
             'endingDate',
@@ -538,13 +544,13 @@ export async function getMappedStructuresForCourseSession(courseId, sessionId) {
             {
                 model: model.courseModel,
                 as: 'course',
-                required: true,
+                required: false,
                 attributes: ['courseId', 'courseName', 'courseCode'],
             },
             {
                 model: model.sessionModel,
                 as: 'session',
-                required: true,
+                required: false,
                 attributes: ['sessionId', 'sessionName'],
             },
         ],

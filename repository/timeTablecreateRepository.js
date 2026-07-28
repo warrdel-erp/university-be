@@ -1931,11 +1931,12 @@ export async function getNormalRoutinesBySectionScopeRepository(scope = {}) {
   const where = {
     timeTableType: 'normal',
     ...(scope.classSectionTermId != null && { classSectionTermId: Number(scope.classSectionTermId) }),
+    ...(scope.academicGroupId != null && { academicGroupId: Number(scope.academicGroupId) }),
   };
 
   return await scoped(model.timeTableRoutineModel).findAll({
     where,
-    attributes: ['timeTableRoutineId', 'timetableStructureCourseMapperId', 'startingDate', 'endingDate', 'isPublish', 'timeTableType', 'classSectionTermId'],
+    attributes: ['timeTableRoutineId', 'timetableStructureCourseMapperId', 'startingDate', 'endingDate', 'isPublish', 'timeTableType', 'classSectionTermId', 'academicGroupId'],
     include: [
       routineStructureInclude(),
       routineCellsInclude(),

@@ -257,6 +257,18 @@ export const getRoutineByClassSectionId = async (req, res) => {
     }
 };
 
+export const getRoutineByAcademicGroupId = async (req, res) => {
+    const { academicGroupId } = req.query;
+    try {
+        const result = await timeTableCreateServices.getRoutineByAcademicGroupId(academicGroupId);
+        SuccessResponse(res, 200, 'Routine fetched successfully', result);
+    } catch (error) {
+        console.error('Error in getting routine by academic group ID:', error);
+        ErrorResponse(res, 500, error.message || "Internal Server Error");
+    }
+};
+
+
 export const getRoutineByTeacherAndAcademicYear = async (req, res) => {
     const { userId, courseId, sessionId, subjectId } = req.query;
     try {

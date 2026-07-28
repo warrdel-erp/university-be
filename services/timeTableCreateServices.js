@@ -1,5 +1,6 @@
 import * as model from "../models/index.js";
 import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
+import * as academicGroupRepository from "../repository/academicGroupRepository.js";
 import { getTimeTableStructureById, getStructureCourseMappingById, getMappedStructuresForCourseSession } from "../repository/timeTableRepository.js";
 import { getTeacherDetailsByTeacherSubjectId } from "../repository/teacherSubjectMappingRepository.js";
 import { recomputeFaculityCurrentLoadHours } from "../repository/faculityLoadRepository.js";
@@ -3181,6 +3182,189 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
   return { ...placementMeta, structures, classSection };
 }
 
+export async function getRoutineByAcademicGroupId(academicGroupId) {
+  const groupRow = await academicGroupRepository.getGroupWithScope(academicGroupId);
+  const plainGroup = groupRow ? (groupRow.get ? groupRow.get({ plain: true }) : groupRow) : null;
+  const scope = plainGroup?.scope || {};
+
+  const courseId = scope?.courseId != null ? Number(scope.courseId) : null;
+  const sessionId = scope?.sessionId != null ? Number(scope.sessionId) : null;
+
+  const placementMeta = {
+    academicGroupId: Number(academicGroupId),
+    groupName: plainGroup?.groupName ?? null,
+    groupCode: plainGroup?.groupCode ?? null,
+    academicGroupScopeId: plainGroup?.academicGroupScopeId ?? null,
+    courseId,
+    sessionId,
+  };
+
+  const routineScope = { academicGroupId: Number(academicGroupId) };
+
+  const normalRoutines =
+    await timeTableCreateRepository.getNormalRoutinesBySectionScopeRepository(routineScope);
+
+  if (!normalRoutines || !normalRoutines.length) {
+    const structures = await buildMappedStructuresWithoutRoutines(
+      courseId,
+      sessionId,
+      null,
+      plainGroup?.academicGroupScopeId,
+    );
+    return { ...placementMeta, structures, group: plainGroup };
+  }
+
+  const timeTableNameIds = [];
+  for (const r of normalRoutines) {
+    timeTableNameIds.push(r.structureCourseMapping.timeTableNameId);
+  }
+  const electiveRoutines = await timeTableCreateRepository.getElectiveRoutinesByTableNamesRepository(timeTableNameIds);
+
+  const allCellsForLookup = [];
+  for (const routine of normalRoutines) {
+    for (const cell of routine.timeTableCells || []) {
+      allCellsForLookup.push(cell);
+    }
+  }
+  for (const routine of electiveRoutines) {
+    for (const cell of routine.timeTableCells || []) {
+      allCellsForLookup.push(cell);
+    }
+  }
+  const employeeByUserId = await buildEmployeeLookupMap(allCellsForLookup);
+
+  const daysList = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const structuresById = new Map();
+
+  for (const routine of normalRoutines) {
+    const mapping = routine.structureCourseMapping;
+    const timeTableNameId = mapping.timeTableNameId;
+    const timeTableCreateName = mapping.timeTableStructure;
+    const periods = timeTableCreateName.timeTableName || [];
+    const normalCells = routine.timeTableCells || [];
+
+    const matchingElectives = [];
+    for (const er of electiveRoutines) {
+      if (er.structureCourseMapping.timeTableNameId === timeTableNameId) {
+        matchingElectives.push(er);
+      }
+    }
+    const electiveCells = [];
+    for (const er of matchingElectives) {
+      const cells = er.timeTableCells || [];
+      for (const cell of cells) {
+        electiveCells.push(cell);
+      }
+    }
+
+    const weekOffList = parseWeekOffList(timeTableCreateName.weekOff);
+    const weekOffLower = [];
+    for (const day of weekOffList) {
+      weekOffLower.push(String(day).toLowerCase());
+    }
+
+    if (!structuresById.has(timeTableNameId)) {
+      structuresById.set(timeTableNameId, {
+        timeTableNameId,
+        name: timeTableCreateName.name || 'N/A',
+        weekOff: weekOffList,
+        timetableStructureCourseMapperId: mapping.timetableStructureCourseMapperId,
+        courseId: mapping.courseId != null ? Number(mapping.courseId) : courseId,
+        sessionId: mapping.sessionId != null ? Number(mapping.sessionId) : sessionId,
+        startingDate: mapping.startingDate ?? null,
+        endingDate: mapping.endingDate ?? null,
+        routines: [],
+      });
+    }
+
+    const formattedPeriods = [];
+    for (const period of periods) {
+      const formattedDays = [];
+      for (const daysName of daysList) {
+        if (weekOffLower.includes(daysName.toLowerCase())) {
+          formattedDays.push({
+            name: daysName,
+            isDayOff: true,
+          });
+          continue;
+        }
+
+        if (period.isBreak) {
+          formattedDays.push({
+            name: daysName,
+            isBreak: true,
+          });
+          continue;
+        }
+
+        const periodNormalCells = collectPeriodCells(normalCells, period, daysName);
+        const periodElectiveCells = collectPeriodCells(electiveCells, period, daysName);
+
+        let isOverriding = false;
+        for (const cell of periodNormalCells) {
+          if (cell.isOverridingSyblingElectives === true) {
+            isOverriding = true;
+            break;
+          }
+        }
+
+        const scheduleItems = formatNormalCellsAsScheduleItems(periodNormalCells, employeeByUserId);
+
+        if (!isOverriding) {
+          const electiveItems = formatElectiveCellsAsScheduleItems(periodElectiveCells, employeeByUserId);
+          for (const item of electiveItems) {
+            scheduleItems.push(item);
+          }
+        }
+
+        formattedDays.push({
+          name: daysName,
+          scheduleItems,
+        });
+      }
+
+      formattedPeriods.push({
+        timeTableCreationId: period.timeTableCreationId,
+        name: period.periodName,
+        startTime: period.startTime,
+        endTime: period.endTime,
+        days: formattedDays,
+      });
+    }
+
+    structuresById.get(timeTableNameId).routines.push({
+      timeTableRoutineId: routine.timeTableRoutineId,
+      timetableStructureCourseMapperId: routine.timetableStructureCourseMapperId,
+      isPublished: routine.isPublish,
+      startDate: routine.startingDate,
+      endDate: routine.endingDate,
+      year: null,
+      periods: formattedPeriods,
+    });
+  }
+
+  if ((courseId != null && sessionId != null) || plainGroup?.academicGroupScopeId != null) {
+    const mappedWithoutRoutine = await buildMappedStructuresWithoutRoutines(
+      courseId,
+      sessionId,
+      null,
+      plainGroup?.academicGroupScopeId,
+    );
+    for (const mapped of mappedWithoutRoutine) {
+      if (!structuresById.has(mapped.timeTableNameId)) {
+        structuresById.set(mapped.timeTableNameId, mapped);
+      }
+    }
+  }
+
+  const structures = [];
+  for (const structure of structuresById.values()) {
+    structures.push(structure);
+  }
+
+  return { ...placementMeta, structures, group: plainGroup };
+}
+
 function parseWeekOffList(weekOffRaw) {
   let weekOffList = [];
   try {
@@ -3495,19 +3679,19 @@ async function getElectiveRoutineGridByCourseId(courseId) {
   };
 }
 
-async function buildMappedStructuresWithoutRoutines(courseId, sessionId, classSection) {
-  if (courseId == null) {
+async function buildMappedStructuresWithoutRoutines(courseId, sessionId, classSection, academicGroupScopeId = null) {
+  if (courseId == null && academicGroupScopeId == null) {
     return [];
   }
 
-  const rows = await getMappedStructuresForCourseSession(courseId, sessionId);
+  const rows = await getMappedStructuresForCourseSession(courseId, sessionId, academicGroupScopeId);
   const structures = [];
 
   for (const row of rows) {
     const plain = row.get ? row.get({ plain: true }) : row;
     const structure = plain.timeTableStructure;
-    const course = plain.course;
-    const session = plain.session;
+    const course = plain.course || {};
+    const session = plain.session || {};
     const weekOffList = parseWeekOffList(structure.weekOff);
     const periodRows = structure.timeTableName || [];
 
@@ -3517,10 +3701,10 @@ async function buildMappedStructuresWithoutRoutines(courseId, sessionId, classSe
       weekOff: weekOffList,
       timetableStructureCourseMapperId: plain.timetableStructureCourseMapperId,
       courseId: plain.courseId,
-      courseName: course.courseName,
-      courseCode: course.courseCode,
+      courseName: course.courseName || null,
+      courseCode: course.courseCode || null,
       sessionId: plain.sessionId,
-      sessionName: session.sessionName,
+      sessionName: session.sessionName || null,
       startingDate: plain.startingDate,
       endingDate: plain.endingDate,
       year: classSection?.year != null ? Number(classSection.year) : null,
