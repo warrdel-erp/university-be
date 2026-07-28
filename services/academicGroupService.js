@@ -72,6 +72,8 @@ function buildGroupPrint(groupPlain) {
         title: scope.title ?? null,
         selectionScope: scope.selectionScope ?? null,
         term: scope.term ?? null,
+        termType: scope.termType ?? scope.course?.termType ?? null,
+        structure: scope.structure ?? [],
         academicContextType: scope.academicContextType ?? null,
         activityName: scope.activityName ?? null,
         courseId: scope.courseId ?? null,
@@ -90,6 +92,9 @@ function withGroupPrint(row) {
     const plain = asPlain(row);
     if (plain == null) {
         return null;
+    }
+    if (plain.scope) {
+        plain.scope = academicGroupRepository.formatScopePlain(plain.scope);
     }
     plain.print = buildGroupPrint(plain);
     return plain;

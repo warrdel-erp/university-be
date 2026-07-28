@@ -125,7 +125,7 @@ function scopeNameIncludes() {
         {
             model: model.courseModel,
             as: 'course',
-            attributes: ['courseId', 'courseName', 'courseCode'],
+            attributes: ['courseId', 'courseName', 'courseCode', 'termType'],
             required: false,
         },
         {
@@ -140,7 +140,67 @@ function scopeNameIncludes() {
             attributes: ['subjectId', 'subjectName'],
             required: false,
         },
+        {
+            model: model.timeTableStructureCourseModel,
+            as: 'timeTableStructureCourses',
+            attributes: [
+                'timetableStructureCourseMapperId',
+                'timeTableNameId',
+                'courseId',
+                'academicGroupScopeId',
+                'sessionId',
+                'startingDate',
+                'endingDate',
+            ],
+            required: false,
+            where: buildScope(model.timeTableStructureCourseModel),
+            include: [
+                {
+                    model: model.timeTableStructureModel,
+                    as: 'timeTableStructure',
+                    attributes: [
+                        'timeTableNameId',
+                        'name',
+                        'maximumPeriod',
+                        'periodLength',
+                        'periodGap',
+                        'startingTime',
+                        'weekOff',
+                    ],
+                    required: false,
+                },
+            ],
+        },
     ];
+}
+
+export function formatScopePlain(plain) {
+    if (!plain) {
+        return null;
+    }
+
+    const termType = plain.course?.termType ?? null;
+
+    const timeTableStructureCourses = plain.timeTableStructureCourses || [];
+    const structure = timeTableStructureCourses.map((m) => ({
+        timetableStructureCourseMapperId: m.timetableStructureCourseMapperId,
+        timeTableNameId: m.timeTableNameId,
+        startingDate: m.startingDate,
+        endingDate: m.endingDate,
+        name: m.timeTableStructure?.name ?? null,
+        maximumPeriod: m.timeTableStructure?.maximumPeriod ?? null,
+        periodLength: m.timeTableStructure?.periodLength ?? null,
+        periodGap: m.timeTableStructure?.periodGap ?? null,
+        startingTime: m.timeTableStructure?.startingTime ?? null,
+        weekOff: m.timeTableStructure?.weekOff ?? null,
+        timeTableStructure: m.timeTableStructure || null,
+    }));
+
+    return {
+        ...plain,
+        termType,
+        structure,
+    };
 }
 
 function groupUserIncludes() {
@@ -251,7 +311,7 @@ export async function getScopeById(academicGroupScopeId) {
         });
     }
 
-    return plain;
+    return formatScopePlain(plain);
 }
 
 /** Full scope list with course / session / subject names and linked groups. */
@@ -295,7 +355,7 @@ export async function getAllScopes({ search } = {}) {
                 };
             });
         }
-        return plain;
+        return formatScopePlain(plain);
     });
 }
 

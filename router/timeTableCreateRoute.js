@@ -280,6 +280,8 @@ router.patch('/dateWiseCells', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TAB
 // 2. Routine lifecycle — create / update / clone / publish
 // ---------------------------------------------------------------------------
 router.post('/', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_CREATE_TIMETABLE.value, null), validate({ body: addTimeTableCreateSchema }), addtimeTableCreate);
+
+
 router.patch('/create', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_EDIT_ROUTINE.value, null), validate({ body: patchTimeTableCreateSchema }), changeTimeTableCreate);
 router.delete('/', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_DELETE_ROUTINE.value, null), validate({ query: deleteTimeTableRoutineQuerySchema }), deleteTimeTableRoutine);
 router.post('/clone', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_CREATE_TIMETABLE.value, null), validate({ body: cloneRoutineSchema }), cloneTimeTableRoutine);

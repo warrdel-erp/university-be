@@ -750,6 +750,13 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
     delete placement.sessionId;
     delete placement.timeTableNameId;
 
+    if (!placement.startingDate && courseMapping.startingDate) {
+      placement.startingDate = courseMapping.startingDate;
+    }
+    if (!placement.endingDate && courseMapping.endingDate) {
+      placement.endingDate = courseMapping.endingDate;
+    }
+
     if (placement.startingDate && placement.endingDate) {
       assertRoutineDatesWithinStructure(
         courseMapping,
@@ -759,7 +766,7 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
       placement.startingDate = toDateOnlyString(placement.startingDate);
       placement.endingDate = toDateOnlyString(placement.endingDate);
     } else {
-      throw new Error('startingDate and endingDate are required');
+      throw new Error('startingDate and endingDate are required or must be defined on structure course mapping');
     }
 
     placement.timetableStructureCourseMapperId = courseMapping.timetableStructureCourseMapperId;
@@ -807,8 +814,49 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
       );
     }
 
+    const createdRoutineId = result?.timeTableRoutineId || result?.dataValues?.timeTableRoutineId;
+    if (createdRoutineId && courseMapping.timeTableNameId) {
+      const periods = await model.timeTableStructurePeriodsModel.findAll({
+        where: { timeTableNameId: courseMapping.timeTableNameId },
+        order: [['timeTableCreationId', 'ASC']],
+        transaction,
+      });
+
+      const structure = await model.timeTableStructureModel.findByPk(courseMapping.timeTableNameId, { transaction });
+      const weekOffList = parseWeekOffList(structure?.weekOff);
+      const weekOffLower = weekOffList.map((d) => String(d).toLowerCase());
+
+      const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      const workingDays = allDays.filter((d) => !weekOffLower.includes(d.toLowerCase()));
+
+      const cellPayloads = [];
+      for (const dayName of workingDays) {
+        let periodIdx = 1;
+        for (const p of periods) {
+          cellPayloads.push({
+            timeTableNameId: courseMapping.timeTableNameId,
+            timeTableRoutineId: createdRoutineId,
+            timeTableCreationId: p.timeTableCreationId,
+            day: dayName,
+            period: periodIdx,
+            timeTableType: placement.timeTableType || 'normal',
+            isAttendence: true,
+            isSameTeacher: true,
+            createdBy,
+            updatedBy,
+          });
+          periodIdx += 1;
+        }
+      }
+
+      if (cellPayloads.length > 0) {
+        await model.timeTableCellModel.bulkCreate(cellPayloads, { transaction, ignoreDuplicates: true });
+      }
+    }
+
     await transaction.commit();
     return result;
+
   } catch (error) {
     await transaction.rollback();
     throw error;
