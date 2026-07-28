@@ -12,7 +12,6 @@ import {
     addAcademicGroupRoutine,
     getCascadingGroupRoutines,
     getGroupRoutinesWrappedInStructure,
-    deleteAcademicGroupRoutine,
     getSubjectOptions,
 } from '../controllers/timetableAcademicGroupController.js';
 
@@ -83,10 +82,6 @@ const getCascadingGroupRoutinesQuerySchema = z.object({
     academicGroupScopeId: optionalPositiveId,
     academicGroupId: optionalPositiveId,
     sessionId: optionalPositiveId,
-});
-
-const deleteAcademicGroupRoutineQuerySchema = z.object({
-    timeTableRoutineId: positiveIntegerId,
 });
 
 const getGroupRoutinesWrappedInStructureQuerySchema = z.object({
@@ -204,14 +199,7 @@ router.get(
     getGroupRoutinesWrappedInStructure,
 );
 
-router.delete(
-    '/routine',
 
-    userAuth,
-    checkAccess(PERMISSIONS.CREATE_TIME_TABLE_DELETE_ROUTINE.value, null),
-    validate({ query: deleteAcademicGroupRoutineQuerySchema }),
-    deleteAcademicGroupRoutine,
-);
 
 // ---------------------------------------------------------------------------
 // 3. Subject Options API

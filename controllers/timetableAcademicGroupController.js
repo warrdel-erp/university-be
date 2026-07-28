@@ -78,16 +78,6 @@ export const getCascadingGroupRoutines = async (req, res) => {
     }
 };
 
-export const deleteAcademicGroupRoutine = async (req, res) => {
-    try {
-        const { timeTableRoutineId } = req.query;
-        const result = await timeTableCreateServices.deleteTimeTableRoutine(timeTableRoutineId);
-        return SuccessResponse(res, 200, result.message || 'Academic group routine deleted successfully', result);
-    } catch (error) {
-        console.error('Error in deleting academic group routine:', error);
-        return ErrorResponse(res, 400, error.message || 'Internal Server Error');
-    }
-};
 
 export const getGroupRoutinesWrappedInStructure = async (req, res) => {
     try {
