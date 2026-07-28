@@ -117,3 +117,8 @@
 1. elective student mapping.
 2. error in elective subject time table creation.
 3. build error
+
+---
+
+1. error in results.
+2. BE url change
