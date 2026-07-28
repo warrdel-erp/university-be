@@ -218,6 +218,11 @@ export async function getStructureMappingPrintData(filters = {}) {
     return result;
 }
 
+export async function getAllStructureScopeMappings(filters = {}) {
+    return await getStructureMappingPrintData(filters);
+}
+
+
 export async function updateTimeTable(info) {
     const results = [];
     for (const item of info) {

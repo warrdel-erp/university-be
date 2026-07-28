@@ -1,5 +1,6 @@
 import * as timeTableCreateServices from '../services/timeTableCreateServices.js';
 import * as timeTableServices from '../services/timeTableServices.js';
+import * as academicGroupScopeService from '../services/academicGroupScopeService.js';
 import { ErrorResponse, SuccessResponse } from '../utility/response.js';
 
 
@@ -321,7 +322,7 @@ export const updateDateWiseCellController = async (req, res) => {
 export const getCascadingGroupRoutines = async (req, res) => {
     try {
         const { academicGroupScopeId, academicGroupId, sessionId } = req.query;
-        const result = await timeTableCreateServices.getCascadingGroupRoutinesService({
+        const result = await academicGroupScopeService.getCascadingGroupRoutinesService({
             academicGroupScopeId,
             academicGroupId,
             sessionId,

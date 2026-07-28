@@ -7,11 +7,15 @@ import { validate } from '../utility/validation.js';
 import {
     addStructureScopeMapping,
     getStructureScopeMappings,
+    getAllStructureScopeMappings,
     deleteStructureScopeMapping,
     addAcademicGroupRoutine,
     getCascadingGroupRoutines,
+    getGroupRoutinesWrappedInStructure,
     deleteAcademicGroupRoutine,
 } from '../controllers/timetableAcademicGroupController.js';
+
+
 
 const router = Router();
 
@@ -83,6 +87,12 @@ const deleteAcademicGroupRoutineQuerySchema = z.object({
     timeTableRoutineId: positiveIntegerId,
 });
 
+const getGroupRoutinesWrappedInStructureQuerySchema = z.object({
+    academicGroupId: positiveIntegerId,
+    sessionId: optionalPositiveId,
+});
+
+
 // ---------------------------------------------------------------------------
 // 1. Structure → Scope Mapping APIs
 // ---------------------------------------------------------------------------
@@ -101,6 +111,31 @@ router.get(
     validate({ query: getStructureScopeMappingsQuerySchema }),
     getStructureScopeMappings,
 );
+
+router.get(
+    '/allMappings',
+    userAuth,
+    checkAccess(PERMISSIONS.TIME_TABLE_SETUP.value, null),
+    validate({ query: getStructureScopeMappingsQuerySchema }),
+    getAllStructureScopeMappings,
+);
+
+router.get(
+    '/mappings',
+    userAuth,
+    checkAccess(PERMISSIONS.TIME_TABLE_SETUP.value, null),
+    validate({ query: getStructureScopeMappingsQuerySchema }),
+    getAllStructureScopeMappings,
+);
+
+router.get(
+    '/allScopeMappings',
+    userAuth,
+    checkAccess(PERMISSIONS.TIME_TABLE_SETUP.value, null),
+    validate({ query: getStructureScopeMappingsQuerySchema }),
+    getAllStructureScopeMappings,
+);
+
 
 router.delete(
     '/mapping',
@@ -122,7 +157,7 @@ router.post(
 );
 
 router.get(
-    '/cascading-routines',
+    '/cascadingRoutine',
     userAuth,
     checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null),
     validate({ query: getCascadingGroupRoutinesQuerySchema }),
@@ -130,15 +165,40 @@ router.get(
 );
 
 router.get(
-    '/cascading-group-routines',
+    '/cascadingGroupRoutines',
     userAuth,
     checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null),
     validate({ query: getCascadingGroupRoutinesQuerySchema }),
     getCascadingGroupRoutines,
 );
 
+router.get(
+    '/groupRoutinesWrappedInStructure',
+    userAuth,
+    checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null),
+    validate({ query: getGroupRoutinesWrappedInStructureQuerySchema }),
+    getGroupRoutinesWrappedInStructure,
+);
+
+router.get(
+    '/routinesWrappedInStructure',
+    userAuth,
+    checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null),
+    validate({ query: getGroupRoutinesWrappedInStructureQuerySchema }),
+    getGroupRoutinesWrappedInStructure,
+);
+
+router.get(
+    '/groupRoutinesStructure',
+    userAuth,
+    checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null),
+    validate({ query: getGroupRoutinesWrappedInStructureQuerySchema }),
+    getGroupRoutinesWrappedInStructure,
+);
+
 router.delete(
     '/routine',
+
     userAuth,
     checkAccess(PERMISSIONS.CREATE_TIME_TABLE_DELETE_ROUTINE.value, null),
     validate({ query: deleteAcademicGroupRoutineQuerySchema }),

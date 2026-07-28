@@ -1,5 +1,6 @@
 import * as timeTableServices from '../services/timeTableServices.js';
 import * as timeTableCreateServices from '../services/timeTableCreateServices.js';
+import * as academicGroupScopeService from '../services/academicGroupScopeService.js';
 import { ErrorResponse, SuccessResponse } from '../utility/response.js';
 
 export const addStructureScopeMapping = async (req, res) => {
@@ -25,6 +26,18 @@ export const getStructureScopeMappings = async (req, res) => {
         return ErrorResponse(res, 500, error.message || 'Internal Server Error');
     }
 };
+
+export const getAllStructureScopeMappings = async (req, res) => {
+    try {
+        const filters = req.query;
+        const result = await timeTableServices.getAllStructureScopeMappings(filters);
+        return SuccessResponse(res, 200, 'All structure scope mappings fetched successfully', result);
+    } catch (error) {
+        console.error('Error in getting all structure scope mappings:', error);
+        return ErrorResponse(res, 500, error.message || 'Internal Server Error');
+    }
+};
+
 
 export const deleteStructureScopeMapping = async (req, res) => {
     try {
@@ -53,7 +66,7 @@ export const addAcademicGroupRoutine = async (req, res) => {
 export const getCascadingGroupRoutines = async (req, res) => {
     try {
         const { academicGroupScopeId, academicGroupId, sessionId } = req.query;
-        const result = await timeTableCreateServices.getCascadingGroupRoutinesService({
+        const result = await academicGroupScopeService.getCascadingGroupRoutinesService({
             academicGroupScopeId,
             academicGroupId,
             sessionId,
@@ -75,3 +88,18 @@ export const deleteAcademicGroupRoutine = async (req, res) => {
         return ErrorResponse(res, 400, error.message || 'Internal Server Error');
     }
 };
+
+export const getGroupRoutinesWrappedInStructure = async (req, res) => {
+    try {
+        const { academicGroupId, sessionId } = req.query;
+        const result = await academicGroupScopeService.getGroupRoutinesWrappedInStructureService({
+            academicGroupId,
+            sessionId,
+        });
+        return SuccessResponse(res, 200, 'Group routines wrapped in structure fetched successfully', result);
+    } catch (error) {
+        console.error('Error in getting group routines wrapped in structure:', error);
+        return ErrorResponse(res, 500, error.message || 'Internal Server Error');
+    }
+};
+

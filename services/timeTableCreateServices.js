@@ -4206,57 +4206,6 @@ export async function updateDateWiseCell(timeTableCellDateWiseId, payload, updat
   }
 }
 
-export async function getCascadingGroupRoutinesService({ academicGroupScopeId, academicGroupId, sessionId }) {
-  const scopes = await timeTableCreateRepository.getCascadingGroupRoutinesRepository({
-    academicGroupScopeId,
-    academicGroupId,
-    sessionId,
-  });
+import { getCascadingGroupRoutinesService } from './academicGroupScopeService.js';
+export { getCascadingGroupRoutinesService };
 
-  return scopes.map((scope) => {
-    const scopeData = scope.get({ plain: true });
-    const mappedStructures = (scopeData.timeTableStructureCourses || []).map((m) => ({
-      timetableStructureCourseMapperId: m.timetableStructureCourseMapperId,
-      timeTableNameId: m.timeTableNameId,
-      startingDate: m.startingDate,
-      endingDate: m.endingDate,
-      structureName: m.timeTableStructure ? m.timeTableStructure.name : null,
-      structureDetails: m.timeTableStructure || null,
-    }));
-
-    const groups = (scopeData.groups || []).map((grp) => ({
-      academicGroupId: grp.academicGroupId,
-      academicGroupScopeId: grp.academicGroupScopeId,
-      title: grp.groupName,
-      groupName: grp.groupName,
-      groupCode: grp.groupCode,
-      capacity: grp.capacity,
-      publishStatus: grp.publishStatus,
-      routines: (grp.timeTableRoutines || []).map((rt) => ({
-        timeTableRoutineId: rt.timeTableRoutineId,
-        timetableStructureCourseMapperId: rt.timetableStructureCourseMapperId,
-        academicGroupId: rt.academicGroupId,
-        courseId: rt.courseId,
-        academicYearId: rt.academicYearId,
-        isPublish: rt.isPublish,
-        campusId: rt.campusId,
-        timeTableType: rt.timeTableType,
-        startingDate: rt.startingDate,
-        endingDate: rt.endingDate,
-        schedules: rt.timeTablecreate || [],
-      })),
-    }));
-
-    return {
-      academicGroupScopeId: scopeData.academicGroupScopeId,
-      title: scopeData.title,
-      groupType: scopeData.groupType,
-      selectionScope: scopeData.selectionScope,
-      courseId: scopeData.courseId,
-      sessionId: scopeData.sessionId,
-      term: scopeData.term,
-      mappedStructures,
-      groups,
-    };
-  });
-}
