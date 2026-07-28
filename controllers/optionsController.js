@@ -70,13 +70,14 @@ export const getSpecializationOptions = async (req, res) => {
 
 export async function getSubjectOptions(req, res) {
     try {
-        const { courseId, term, sessionId } = req.query;
+        const { courseId, term, sessionId, userId } = req.query;
         const academicYearId = getAcademicYearId();
         const result = await optionsServices.getSubjectOptions(
             courseId,
             term,
             academicYearId,
             sessionId,
+            userId,
         );
         return SuccessResponse(res, 200, "Subject options fetched successfully", result);
     } catch (error) {
@@ -88,8 +89,8 @@ export async function getSubjectOptions(req, res) {
 
 export const getTeacherOptions = async (req, res) => {
     try {
-        const { campusId } = req.query;
-        const result = await optionsServices.getTeacherOptions(campusId);
+        const { campusId, subjectId } = req.query;
+        const result = await optionsServices.getTeacherOptions(campusId, subjectId);
         return SuccessResponse(res, 200, "Teacher options fetched successfully", result);
     } catch (error) {
         console.error("Error in getTeacherOptions:", error);

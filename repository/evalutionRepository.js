@@ -1,6 +1,40 @@
 import * as model from '../models/index.js';
 import { buildScope, scoped } from '../utility/scoped.js';
 
+const evaluationEmployeeInclude = (required = false) => ({
+  model: model.employeeModel,
+  as: "evalutionEmployee",
+  attributes: ["userId", "employeeName", "employeeCode", "departmentId"],
+  where: buildScope(model.employeeModel),
+  required,
+});
+
+function mapEvaluationUserShape(row) {
+  if (!row) {
+    return row;
+  }
+
+  const employee = row.evalutionEmployee;
+  const userPayload = employee
+    ? {
+        userId: employee.userId,
+        employeeName: employee.employeeName,
+        employeeCode: employee.employeeCode,
+        departmentId: employee.departmentId,
+      }
+    : null;
+
+  if (row.setDataValue) {
+    row.setDataValue("user", userPayload);
+    row.setDataValue("evalutionEmployee", undefined);
+  } else {
+    row.user = userPayload;
+    delete row.evalutionEmployee;
+  }
+
+  return row;
+}
+
 export async function addEvaluation(evaluationData) {
   try {
     const result = await scoped(model.evalutionModel).bulkCreate(evaluationData);
@@ -21,12 +55,7 @@ export async function getEvaluationDetails(examSetupTypeId) {
         exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
       },
       include: [
-        {
-          model: model.users, as: "user",
-          attributes: ["userId", "employeeName", "employeeCode", "department"],
-          where: buildScope(model.employeeModel),
-          required: false,
-        },
+        evaluationEmployeeInclude(),
         {
           model: model.subjectModel,
           as: "subjectEvalution",
@@ -43,6 +72,10 @@ export async function getEvaluationDetails(examSetupTypeId) {
         },
       ],
     });
+
+    for (const row of Evaluations) {
+      mapEvaluationUserShape(row);
+    }
 
     return Evaluations;
   } catch (error) {
@@ -59,12 +92,7 @@ export async function getSingleEvaluationDetails(evalutionId) {
         exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
       },
       include: [
-        {
-          model: model.users, as: "user",
-          attributes: ["userId", "employeeName", "employeeCode", "department"],
-          where: buildScope(model.employeeModel),
-          required: false,
-        },
+        evaluationEmployeeInclude(),
         {
           model: model.subjectModel,
           as: "subjectEvalution",
@@ -82,7 +110,7 @@ export async function getSingleEvaluationDetails(evalutionId) {
       ],
     });
 
-    return Evaluation;
+    return mapEvaluationUserShape(Evaluation);
   } catch (error) {
     console.error("Error fetching Evaluation details:", error);
     throw error;
@@ -97,12 +125,7 @@ export async function getTeacherSubjectEvalution(userId) {
         exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
       },
       include: [
-        {
-          model: model.users, as: "user",
-          attributes: ["userId", "employeeName", "employeeCode", "department"],
-          where: buildScope(model.employeeModel),
-          required: true,
-        },
+        evaluationEmployeeInclude(true),
         {
           model: model.subjectModel,
           as: "subjectEvalution",
@@ -120,7 +143,7 @@ export async function getTeacherSubjectEvalution(userId) {
       ],
     });
 
-    return Evaluation;
+    return mapEvaluationUserShape(Evaluation);
   } catch (error) {
     console.error("Error fetching Evaluation details:", error);
     throw error;

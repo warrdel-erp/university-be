@@ -41,6 +41,5 @@ export async function getDepartmentByIdEmployee(departmentId) {
         return null;
     }
 
-    const departmentName = department.departmentName ?? department.dataValues?.departmentName;
-    return await departmentCreationRepository.employeeDetail(departmentName);
+    return await departmentCreationRepository.employeeDetail(departmentId);
 }

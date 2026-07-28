@@ -1,6 +1,7 @@
 import * as model from '../models/index.js';
 import { scoped } from '../utility/scoped.js';
 import sequelize from '../database/sequelizeConfig.js';
+import { Op } from 'sequelize';
 
 const excludeMeta = ['createdAt', 'updatedAt', 'createdBy', 'updatedBy'];
 
@@ -10,6 +11,40 @@ const parentDepartmentInclude = {
     attributes: ['departmentId', 'departmentName', 'departmentCode', 'departmentType'],
     required: false,
 };
+
+async function assertDepartmentDeletable(departmentId, transaction) {
+    const courseCount = await scoped(model.courseModel).count({
+        where: { departmentId },
+        transaction,
+    });
+    if (courseCount > 0) {
+        throw new Error('Department is used in course creation and cannot be deleted');
+    }
+
+    const jobCount = await scoped(model.jobModel).count({
+        where: { departmentId },
+        transaction,
+    });
+    if (jobCount > 0) {
+        throw new Error('Department is used in jobs and cannot be deleted');
+    }
+
+    const staffCount = await scoped(model.staffModel).count({
+        where: { departmentId },
+        transaction,
+    });
+    if (staffCount > 0) {
+        throw new Error('Department is used in staff records and cannot be deleted');
+    }
+
+    const positionCount = await scoped(model.departmentPositionsModel).count({
+        where: { departmentId },
+        transaction,
+    });
+    if (positionCount > 0) {
+        throw new Error('Department is used in department positions and cannot be deleted');
+    }
+}
 
 export async function departmentExists(departmentId) {
     return scoped(model.departmentModel).findOne({
@@ -60,9 +95,7 @@ export async function addParentDepartment(childDepartmentId, departmentData) {
             throw new Error('Department not found');
         }
 
-        const previousParentDepartmentId = childDepartment.parentDepartmentId ?? null;
-
-        departmentData.parentDepartmentId = previousParentDepartmentId;
+        departmentData.parentDepartmentId = childDepartment.parentDepartmentId ?? null;
 
         const parentDepartment = await scoped(model.departmentModel).create(departmentData, { transaction });
 
@@ -119,54 +152,54 @@ export async function getSingleDepartmentDetails(departmentId) {
     }
 }
 
-export async function deleteDepartment(departmentId) {
+export async function deleteDepartment(departmentId, transaction) {
     const id = Number(departmentId);
+    const ownsTransaction = !transaction;
+    const txn = transaction || await sequelize.transaction();
 
-    const existing = await scoped(model.departmentModel).findOne({
-        where: { departmentId: id },
-        attributes: ['departmentId'],
-    });
-    if (!existing) {
-        return false;
+    try {
+        const existing = await scoped(model.departmentModel).findOne({
+            where: { departmentId: id },
+            attributes: ['departmentId'],
+            transaction: txn,
+        });
+        if (!existing) {
+            if (ownsTransaction) {
+                await txn.rollback();
+            }
+            return false;
+        }
+
+        const children = await scoped(model.departmentModel).findAll({
+            where: {
+                parentDepartmentId: id,
+                departmentId: { [Op.ne]: id },
+            },
+            attributes: ['departmentId'],
+            transaction: txn,
+        });
+
+        for (const child of children) {
+            await deleteDepartment(child.departmentId, txn);
+        }
+
+        await assertDepartmentDeletable(id, txn);
+
+        const deleted = await scoped(model.departmentModel).destroy({
+            where: { departmentId: id },
+            transaction: txn,
+        });
+
+        if (ownsTransaction) {
+            await txn.commit();
+        }
+        return deleted > 0;
+    } catch (error) {
+        if (ownsTransaction) {
+            await txn.rollback();
+        }
+        throw error;
     }
-
-    const childDepartmentCount = await scoped(model.departmentModel).count({
-        where: { parentDepartmentId: id },
-    });
-    if (childDepartmentCount > 0) {
-        throw new Error('Department has child departments and cannot be deleted');
-    }
-
-    const courseCount = await scoped(model.courseModel).count({
-        where: { departmentId: id },
-    });
-    if (courseCount > 0) {
-        throw new Error('Department is used in course creation and cannot be deleted');
-    }
-
-    const jobCount = await scoped(model.jobModel).count({
-        where: { departmentId: id },
-    });
-    if (jobCount > 0) {
-        throw new Error('Department is used in jobs and cannot be deleted');
-    }
-
-    const staffCount = await scoped(model.staffModel).count({
-        where: { departmentId: id },
-    });
-    if (staffCount > 0) {
-        throw new Error('Department is used in staff records and cannot be deleted');
-    }
-
-    const positionCount = await scoped(model.departmentPositionsModel).count({
-        where: { departmentId: id },
-    });
-    if (positionCount > 0) {
-        throw new Error('Department is used in department positions and cannot be deleted');
-    }
-
-    const deleted = await scoped(model.departmentModel).destroy({ where: { departmentId: id } });
-    return deleted > 0;
 }
 
 export async function updateDepartment(departmentId, departmentData) {
@@ -180,9 +213,14 @@ export async function updateDepartment(departmentId, departmentData) {
         }
 
         if (departmentData.parentDepartmentId != null) {
+            const parentId = Number(departmentData.parentDepartmentId);
+            if (parentId === Number(departmentId)) {
+                throw new Error('Department cannot be its own parent');
+            }
+
             const parentDepartment = await scoped(model.departmentModel).findOne({
                 attributes: ['departmentId'],
-                where: { departmentId: Number(departmentData.parentDepartmentId) },
+                where: { departmentId: parentId },
             });
             if (!parentDepartment) {
                 throw new Error('Parent department not found');
@@ -199,10 +237,10 @@ export async function updateDepartment(departmentId, departmentData) {
     }
 }
 
-export async function employeeDetail(departmentName) {
+export async function employeeDetail(departmentId) {
     try {
         return await scoped(model.employeeModel).findAll({
-            where: { department: departmentName },
+            where: { departmentId: Number(departmentId) },
             attributes: { exclude: excludeMeta },
         });
     } catch (error) {

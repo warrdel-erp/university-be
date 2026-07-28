@@ -549,7 +549,7 @@ export async function getClassSectionRecord(courseId, classSectionId) {
             userId: t.employeeData?.userId,
             employeeName: t.employeeData?.employeeName,
             employeeCode: t.employeeData?.employeeCode,
-            department: t.employeeData?.department,
+            departmentId: t.employeeData?.departmentId ?? null,
             dateOfBirth: t.employeeData?.dateOfBirth,
             subjects: t.employeeData?.teacherEmployeeData?.map((sub) => ({
                 subjectName: sub.employeeSubject?.subjects?.subjectName,

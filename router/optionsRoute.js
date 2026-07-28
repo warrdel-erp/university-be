@@ -46,10 +46,12 @@ const subjectsQuerySchema = z.object({
     courseId: optionalPositiveIntegerId,
     term: optionalPositiveIntegerId,
     sessionId: optionalPositiveIntegerId,
+    userId: optionalPositiveIntegerId,
 });
 
 const teachersQuerySchema = z.object({
     campusId: optionalPositiveIntegerId,
+    subjectId: optionalPositiveIntegerId,
 });
 
 const feePlansQuerySchema = z.object({

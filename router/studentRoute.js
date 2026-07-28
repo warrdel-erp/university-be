@@ -348,6 +348,11 @@ const getAllStudentsQuerySchema = z.object({
     .default(10),
   search: z.string().trim().optional(),
   courseId: positiveIntegerId.optional(),
+  sessionId: positiveIntegerId.optional(),
+  classSectionsId: positiveIntegerId.optional(),
+  year: positiveIntegerId.optional(),
+  term: positiveIntegerId.optional(),
+  academicYearId: positiveIntegerId.optional(),
 });
 
 const mapStudentBody = (req, res, next) => {

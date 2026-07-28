@@ -506,7 +506,14 @@ async function assignNewRolesAndPermissions(userId, transaction) {
 
 async function seedLegacyRoleAndPermissions(userId, universityId, instituteId, transaction) {
   // 1. Find or create the CLIENT_ADMIN role
-  const clientAdminRole = await model.roleModel.create({ role: "CLIENT_ADMIN", instituteId: instituteId }, { transaction });
+  let clientAdminRole = await model.roleModel.findOne({
+    where: { role: "CLIENT_ADMIN", instituteId },
+    transaction
+  });
+
+  if (!clientAdminRole) {
+    clientAdminRole = await model.roleModel.create({ role: "CLIENT_ADMIN", instituteId: instituteId }, { transaction });
+  }
 
   // 2. Build full permission template for CLIENT_ADMIN
   //    MASTER_SECTION gets UNIVERSITY scope; all other permissions get INSTITUTE scope
@@ -825,4 +832,115 @@ export async function getGrantedAccess(userId) {
     academicYears,
     roles
   };
+}
+
+export async function giveFullAccess(info) {
+  const { userId, instituteId: overrideInstituteId } = info;
+
+  if (!userId) {
+    throw new Error("userId is required");
+  }
+
+  const user = await model.userModel.findByPk(userId);
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const universityId = user.universityId;
+  let instituteId = overrideInstituteId || user.defaultInstituteId;
+
+  if (!instituteId) {
+    const institute = await model.instituteModel.findOne({
+      where: { universityId }
+    });
+    if (institute) {
+      instituteId = institute.instituteId;
+    } else {
+      throw new Error("No institute found for this user's university");
+    }
+  }
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    // 1. Find or create the CLIENT_ADMIN role
+    let clientAdminRole = await model.roleModel.findOne({
+      where: { role: "CLIENT_ADMIN", instituteId },
+      transaction
+    });
+
+    if (!clientAdminRole) {
+      clientAdminRole = await model.roleModel.create(
+        { role: "CLIENT_ADMIN", instituteId },
+        { transaction }
+      );
+    }
+
+    const roleId = clientAdminRole.roleId;
+
+    // 2. Build full permission template for CLIENT_ADMIN
+    const rolePermissionRows = [];
+    for (const [key, valueObj] of Object.entries(PERMISSIONS)) {
+      const isMasterSection =
+        valueObj.value === PERMISSIONS.MASTER_SECTION.value ||
+        valueObj.parentPermission === "MASTER_SECTION";
+      rolePermissionRows.push({
+        roleId,
+        permission: valueObj.value,
+        scope: isMasterSection ? SCOPES.UNIVERSITY : SCOPES.INSTITUTE,
+        resourceId: isMasterSection ? universityId : instituteId
+      });
+    }
+
+    // 3. Sync role_permissions template
+    await model.rolePermissionMappingModel.destroy({ where: { roleId }, transaction });
+    await model.rolePermissionMappingModel.bulkCreate(rolePermissionRows, { transaction });
+
+    // 4. Clear existing user permissions in user_role_permission_scope for this user
+    await model.userRolePermissionModel.destroy({
+      where: { userId },
+      transaction
+    });
+
+    // 5. Assign CLIENT_ADMIN role to user
+    await userRoleService.assignRoleToUser(userId, roleId, [], transaction);
+
+    // 6. Explicitly insert UNIVERSITY-scoped perm_access_inst with real roleId
+    await model.userRolePermissionModel.create(
+      {
+        userId,
+        roleId,
+        permission: PERMISSIONS.ACCESS_INSTITUTE.value,
+        scope: SCOPES.UNIVERSITY,
+        resourceId: universityId
+      },
+      { transaction }
+    );
+
+    // 7. Update user defaultRoleId and defaultInstituteId
+    await user.update(
+      {
+        defaultRoleId: roleId,
+        defaultInstituteId: instituteId
+      },
+      { transaction }
+    );
+
+    await transaction.commit();
+
+    return {
+      success: true,
+      message: "Full access granted successfully",
+      data: {
+        userId,
+        roleId,
+        universityId,
+        instituteId
+      }
+    };
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error in giveFullAccess service:", error);
+    throw error;
+  }
 }

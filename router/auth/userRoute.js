@@ -1,7 +1,7 @@
 import { Router } from "express";
 const router = Router();
 
-import { login, register, adminRegisterStudentAndEmployee, getAdminRegisterStudentAndEmployee, changePassword, changeStatus, sendLink, forgotPassword, forgotChangePassword, getAllUsers, getMyDetails, saveUserDefaults, initialSetup, getGrantedAccess } from "../../controllers/userController.js";
+import { login, register, adminRegisterStudentAndEmployee, getAdminRegisterStudentAndEmployee, changePassword, changeStatus, sendLink, forgotPassword, forgotChangePassword, getAllUsers, getMyDetails, saveUserDefaults, initialSetup, getGrantedAccess, giveFullAccess } from "../../controllers/userController.js";
 import useAuth from "../../middleware/authUser.js";
 import { z } from "zod";
 import { validate } from "../../utility/validation.js";
@@ -42,6 +42,11 @@ const initialSetupSchema = z.object({
     endingDate: z.string().optional()
 });
 
+const giveFullAccessSchema = z.object({
+    userId: z.coerce.number({ required_error: "userId is required" }),
+    instituteId: z.coerce.number().optional()
+});
+
 // Endpoints -------------------------------
 
 // for first time register
@@ -49,6 +54,9 @@ router.post('/register', register)
 
 // for initial setup of new client
 router.post('/setup', validate({ body: initialSetupSchema }), initialSetup);
+
+// for giving full access to existing user by userId
+router.post('/giveFullAccess', validate({ body: giveFullAccessSchema }), giveFullAccess);
 
 // for login
 router.post("/login", login);

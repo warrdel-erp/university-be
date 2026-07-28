@@ -1,4 +1,5 @@
 import * as examAttendanceRepository from "../repository/examAttendanceRepository.js";
+import { getAcademicYearId } from "../utility/requestContext.js";
 
 export async function addExamAttendance(data, createdBy, updatedBy) {
     const { examSetupId, studentId, attendanceStatus } = data;
@@ -18,7 +19,14 @@ export async function addExamAttendance(data, createdBy, updatedBy) {
 
 export async function getAllExamAttendance(academicYearId) {
     try {
-        return await examAttendanceRepository.getAllExamAttendance(academicYearId);
+        const resolvedAcademicYearId =
+            academicYearId != null ? Number(academicYearId) : getAcademicYearId();
+
+        if (!resolvedAcademicYearId) {
+            throw new Error("Active academic year not found");
+        }
+
+        return await examAttendanceRepository.getAllExamAttendance(resolvedAcademicYearId);
     } catch (error) {
         throw new Error(`Error fetching exam attendance records: ${error.message}`);
     }

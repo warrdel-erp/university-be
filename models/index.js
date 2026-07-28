@@ -476,6 +476,9 @@ roleModel.hasMany(employeeModel, { foreignKey: "role_id", as: "employeeRole" });
 employeeModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "employeeInstitute" });
 instituteModel.hasMany(employeeModel, { foreignKey: "institute_id", as: "employeeInstitute" });
 
+employeeModel.belongsTo(departmentModel, { foreignKey: "departmentId", as: "employeeDepartment" });
+departmentModel.hasMany(employeeModel, { foreignKey: "departmentId", as: "employeeDepartment" });
+
 teacherSectionMappingModel.belongsTo(classSectionModel, { foreignKey: "class_sections_id", as: "employeeSection" });
 classSectionModel.hasMany(teacherSectionMappingModel, { foreignKey: "class_sections_id", as: "employeeSection" });
 
@@ -1100,6 +1103,17 @@ examAttendanceModel.belongsTo(studentModel, { foreignKey: "studentId", as: "stud
 vehicleModel.belongsTo(userModel, { foreignKey: "userId", as: "user" });
 userModel.hasMany(vehicleModel, { foreignKey: "userId", as: "vehicles" });
 
+vehicleModel.belongsTo(employeeModel, {
+  foreignKey: "userId",
+  targetKey: "userId",
+  as: "employee",
+});
+employeeModel.hasMany(vehicleModel, {
+  foreignKey: "userId",
+  sourceKey: "userId",
+  as: "vehicleEmployeeRows",
+});
+
 //assignVehicles
 
 assignVehicleModel.belongsTo(userModel, { foreignKey: "createdBy", as: "assignVehicleUser" });
@@ -1681,6 +1695,17 @@ assessmentEvaluationModel.belongsTo(internalAssessmentModel, {
 studentModel.hasMany(assessmentEvaluationModel, { foreignKey: "studentId", as: "studentresult" });
 assessmentEvaluationModel.belongsTo(studentModel, { foreignKey: "studentId", as: "studentevaluation" });
 
+assessmentEvaluationModel.belongsTo(employeeModel, {
+  foreignKey: "userId",
+  targetKey: "userId",
+  as: "evaluationEmployee",
+});
+employeeModel.hasMany(assessmentEvaluationModel, {
+  foreignKey: "userId",
+  sourceKey: "userId",
+  as: "evaluationEmployee",
+});
+
 jobModel.belongsTo(jobSettingModel, { foreignKey: "jobSettingId", as: "jobType" });
 jobSettingModel.hasMany(jobModel, { foreignKey: "jobSettingId", as: "jobs" });
 
@@ -1731,6 +1756,50 @@ evalutionModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "subjectEv
 
 userModel.hasMany(evalutionModel, { foreignKey: "userId", as: "evalutions" });
 evalutionModel.belongsTo(userModel, { foreignKey: "userId", as: "user" });
+
+evalutionModel.belongsTo(employeeModel, {
+  foreignKey: "userId",
+  targetKey: "userId",
+  as: "evalutionEmployee",
+});
+employeeModel.hasMany(evalutionModel, {
+  foreignKey: "userId",
+  sourceKey: "userId",
+  as: "evalutionEmployeeRows",
+});
+
+jobModel.belongsTo(employeeModel, {
+  foreignKey: "userId",
+  targetKey: "userId",
+  as: "jobEmployee",
+});
+employeeModel.hasMany(jobModel, {
+  foreignKey: "userId",
+  sourceKey: "userId",
+  as: "jobEmployeeRows",
+});
+
+teacherSubstituteModel.belongsTo(employeeModel, {
+  foreignKey: "userId",
+  targetKey: "userId",
+  as: "employee",
+});
+employeeModel.hasMany(teacherSubstituteModel, {
+  foreignKey: "userId",
+  sourceKey: "userId",
+  as: "teacherSubstituteEmployeeRows",
+});
+
+teacherSubstituteModel.belongsTo(employeeModel, {
+  foreignKey: "substituteUserId",
+  targetKey: "userId",
+  as: "substituteEmployee",
+});
+employeeModel.hasMany(teacherSubstituteModel, {
+  foreignKey: "substituteUserId",
+  sourceKey: "userId",
+  as: "substituteTeacherAssignmentRows",
+});
 
 userModel.hasOne(employeeModel, {
   foreignKey: "userId",

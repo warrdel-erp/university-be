@@ -7,7 +7,6 @@ import {
     getSingleDepartmentPosition,
     updateDepartmentPosition,
     deleteDepartmentPosition,
-    markDepartmentPositionVacant,
     addUserDepartmentPosition,
     getUserDepartmentPositions,
     updateUserDepartmentPosition,
@@ -47,9 +46,6 @@ const employmentCategoryEnum = z.enum([
     'Leadership',
 ]);
 
-const holderTypeEnum = z.enum(['PRIMARY', 'ACTING']);
-const headStatusEnum = z.enum(['ACTIVE', 'INACTIVE']);
-
 const optionalDateOnly = z.preprocess(
     emptyToUndefined,
     z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD').optional().nullable(),
@@ -64,6 +60,7 @@ const addDepartmentPositionSchema = z.object({
     employmentCategory: employmentCategoryEnum,
     reportingType: z.string().optional().nullable(),
     isVacant: z.boolean().optional(),
+    isLevelHead: z.boolean().optional(),
     level: z.coerce.number().int().positive('level must be greater than 0'),
 });
 
@@ -74,7 +71,25 @@ const updateDepartmentPositionSchema = z.object({
     positionCode: z.string().optional().nullable(),
     employmentCategory: employmentCategoryEnum.optional(),
     reportingType: z.string().optional().nullable(),
+    isLevelHead: z.boolean().optional(),
     level: z.coerce.number().int().positive('level must be greater than 0').optional(),
+});
+
+const listDepartmentPositionsQuerySchema = z.object({
+    departmentId: optionalNullablePositiveIntegerId,
+    employmentCategory: employmentCategoryEnum.optional(),
+    isVacant: z.preprocess((val) => {
+        const normalized = emptyToUndefined(val);
+        if (normalized === 'true' || normalized === true) return true;
+        if (normalized === 'false' || normalized === false) return false;
+        return undefined;
+    }, z.boolean().optional()),
+    isLevelHead: z.preprocess((val) => {
+        const normalized = emptyToUndefined(val);
+        if (normalized === 'true' || normalized === true) return true;
+        if (normalized === 'false' || normalized === false) return false;
+        return undefined;
+    }, z.boolean().optional()),
 });
 
 const departmentPositionIdQuerySchema = z.object({
@@ -85,29 +100,22 @@ const departmentIdQuerySchema = z.object({
     departmentId: positiveIntegerId,
 });
 
-const markDepartmentPositionVacantSchema = z.object({
-    userDepartmentPositionId: positiveIntegerId,
-});
-
 const addUserDepartmentPositionSchema = z.object({
     departmentPositionId: positiveIntegerId,
     userId: positiveIntegerId,
-    holderType: holderTypeEnum,
-    status: headStatusEnum.optional(),
     joiningDate: optionalDateOnly,
     endDate: optionalDateOnly,
 });
 
 const updateUserDepartmentPositionSchema = z.object({
     userDepartmentPositionId: positiveIntegerId,
-    holderType: holderTypeEnum.optional(),
-    status: headStatusEnum.optional(),
     joiningDate: optionalDateOnly,
     endDate: optionalDateOnly,
 });
 
-const userDepartmentPositionIdQuerySchema = z.object({
+const deleteUserDepartmentPositionQuerySchema = z.object({
     userDepartmentPositionId: positiveIntegerId,
+    endDate: optionalDateOnly,
 });
 
 const listUserDepartmentPositionQuerySchema = z.object({
@@ -120,7 +128,7 @@ const cardsQuerySchema = z.object({
 
 router.post('/', userAuth, checkAccess(PERMISSIONS.DEPARTMENT_ADD.value, 'departmentPosition'), validate({ body: addDepartmentPositionSchema }), addDepartmentPosition);
 
-router.get('/', userAuth, checkAccess(PERMISSIONS.DEPARTMENT.value, null), getAllDepartmentPositions);
+router.get('/', userAuth, checkAccess(PERMISSIONS.DEPARTMENT.value, null), validate({ query: listDepartmentPositionsQuerySchema }), getAllDepartmentPositions);
 
 router.get('/cards', userAuth, checkAccess(PERMISSIONS.DEPARTMENT.value, null), validate({ query: cardsQuerySchema }), getDepartmentPositionCards);
 
@@ -130,7 +138,7 @@ router.patch('/', userAuth, checkAccess(PERMISSIONS.DEPARTMENT_EDIT.value, 'depa
 
 router.delete('/', userAuth, checkAccess(PERMISSIONS.DEPARTMENT_DELETE.value, 'departmentPosition'), validate({ query: departmentPositionIdQuerySchema }), deleteDepartmentPosition);
 
-router.post('/markVacant', userAuth, checkAccess(PERMISSIONS.DEPARTMENT_EDIT.value, 'departmentPosition'), validate({ body: markDepartmentPositionVacantSchema }), markDepartmentPositionVacant);
+router.delete('/head', userAuth, checkAccess(PERMISSIONS.DEPARTMENT_DELETE.value, 'departmentPosition'), validate({ query: deleteUserDepartmentPositionQuerySchema }), deleteUserDepartmentPosition);
 
 router.post('/head', userAuth, checkAccess(PERMISSIONS.DEPARTMENT_ADD.value, 'departmentPosition'), validate({ body: addUserDepartmentPositionSchema }), addUserDepartmentPosition);
 
@@ -138,7 +146,6 @@ router.get('/head', userAuth, checkAccess(PERMISSIONS.DEPARTMENT.value, null), v
 
 router.patch('/head', userAuth, checkAccess(PERMISSIONS.DEPARTMENT_EDIT.value, 'departmentPosition'), validate({ body: updateUserDepartmentPositionSchema }), updateUserDepartmentPosition);
 
-router.delete('/head', userAuth, checkAccess(PERMISSIONS.DEPARTMENT_DELETE.value, 'departmentPosition'), validate({ query: userDepartmentPositionIdQuerySchema }), deleteUserDepartmentPosition);
 
 router.get('/tree', userAuth, checkAccess(PERMISSIONS.DEPARTMENT.value, null), getDepartmentPositionTree);
 

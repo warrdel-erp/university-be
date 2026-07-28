@@ -155,7 +155,7 @@ async function findStudentsForAssessmentTerm({
     return [];
   }
 
-  return scoped(model.studentModel).findAll({
+  const rows = await scoped(model.studentModel).findAll({
     attributes: [
       "studentId",
       "scholarNumber",
@@ -178,7 +178,7 @@ async function findStudentsForAssessmentTerm({
         attributes: [
           "assessmentEvalutionId",
           "subjectId",
-          "employeeId",
+          "userId",
           "examAssessmentId",
           "studentId",
           "status",
@@ -188,9 +188,35 @@ async function findStudentsForAssessmentTerm({
         ],
         required: false,
         where: { examAssessmentId: Number(examAssessmentId) },
+        include: [
+          {
+            model: model.employeeModel,
+            as: "evaluationEmployee",
+            attributes: ["employeeId", "userId"],
+            required: false,
+          },
+        ],
       },
     ],
   });
+
+  // Keep FE key employeeId as real employee.employeeId (linked via employee.userId)
+  for (const row of rows) {
+    const results = row.studentresult || [];
+    for (const result of results) {
+      const plain = result.get ? result.get({ plain: true }) : result;
+      const employeeId = plain.evaluationEmployee?.employeeId ?? null;
+      if (result.setDataValue) {
+        result.setDataValue("employeeId", employeeId);
+        result.setDataValue("evaluationEmployee", undefined);
+      } else {
+        result.employeeId = employeeId;
+        delete result.evaluationEmployee;
+      }
+    }
+  }
+
+  return rows;
 }
 
 export async function addInternalAssessment(data) {

@@ -58,6 +58,9 @@ function formatDateKey(value) {
 }
 
 function resolveViewerTeacher(teachers, userId) {
+  if (userId == null) {
+    return teachers?.[0] || null;
+  }
   for (const teacher of teachers || []) {
     if (Number(teacher.userId) === Number(userId)) {
       return teacher;
@@ -89,7 +92,9 @@ function mapDateWiseRow(row, userId) {
     timeTableType: cell.timeTableType || null,
     teacherType: viewerTeacher?.teacherType || null,
     isAttendence: viewerTeacher?.isAttendence ?? null,
-    userId: viewerTeacher?.userId != null ? Number(viewerTeacher.userId) : Number(userId),
+    userId: viewerTeacher?.userId != null
+      ? Number(viewerTeacher.userId)
+      : (userId != null ? Number(userId) : null),
     classRoomSectionId: plain.classRoomSectionId ?? null,
     roomNumber: plain.classRoom?.roomNumber ?? null,
     timeTableRoutineId: cell.timeTableRoutineId || routine.timeTableRoutineId || null,
@@ -200,7 +205,7 @@ function enrichPublishedRoutines(routines, week, dateWiseLookup, lessonPlanLooku
           item.teacherType = viewerTeacher?.teacherType || null;
           item.userId = viewerTeacher?.userId != null
             ? Number(viewerTeacher.userId)
-            : Number(userId);
+            : (userId != null ? Number(userId) : null);
           item.lessonPlan = dateWiseId != null
             ? (lessonPlanLookup.get(Number(dateWiseId)) || null)
             : null;
@@ -215,10 +220,6 @@ function enrichPublishedRoutines(routines, week, dateWiseLookup, lessonPlanLooku
 }
 
 export async function getRoutineByTeacherForLesson(userId, courseId, sessionId, subjectId, date) {
-  if (subjectId == null) {
-    throw new Error('subjectId is required');
-  }
-
   const week = getCurrentWeekRange(date || toDateOnlyString(new Date()));
 
   const [result, dateWiseRows] = await Promise.all([

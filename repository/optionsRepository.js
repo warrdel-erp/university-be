@@ -56,12 +56,37 @@ export async function getSpecializationOptions(courseId) {
     });
 }
 
-export async function getSubjectOptions(courseId, term, academicYearId) {
+export async function getSubjectOptions(courseId, term, academicYearId, userId) {
     const subjectWhere = {
-        ...(courseId && { courseId: Number(courseId) }),
-        ...(term && { term: Number(term) }),
-        ...(academicYearId && { academicYearId: Number(academicYearId) }),
+        ...(courseId != null && { courseId: Number(courseId) }),
+        ...(term != null && { term: Number(term) }),
+        ...(academicYearId != null && { academicYearId: Number(academicYearId) }),
     };
+
+    // Teacher dropdown: subjects of course (+ session year) mapped to userId
+    if (userId != null) {
+        const mappingRows = await scoped(model.teacherSubjectMappingModel).findAll({
+            attributes: ['subjectId'],
+            where: { userId: Number(userId) },
+        });
+
+        const mappedSubjectIds = [];
+        for (const row of mappingRows) {
+            mappedSubjectIds.push(Number(row.subjectId));
+        }
+        if (mappedSubjectIds.length === 0) {
+            return [];
+        }
+
+        return scoped(model.subjectModel).findAll({
+            attributes: [['subject_name', 'label'], ['subject_id', 'value']],
+            where: {
+                ...subjectWhere,
+                subjectId: { [Op.in]: mappedSubjectIds },
+            },
+            order: [['subject_name', 'ASC']],
+        });
+    }
 
     const mappedRows = await scoped(model.classSubjectMapperModel).findAll({
         attributes: ['subjectId'],
@@ -77,30 +102,52 @@ export async function getSubjectOptions(courseId, term, academicYearId) {
         }],
     });
 
-    const mappedSubjectIds = [...new Set(mappedRows.map((row) => row.subjectId))];
+    const classMappedSubjectIds = [];
+    for (const row of mappedRows) {
+        classMappedSubjectIds.push(Number(row.subjectId));
+    }
+    const uniqueClassMappedIds = [...new Set(classMappedSubjectIds)];
 
     return scoped(model.subjectModel).findAll({
         attributes: [['subject_name', 'label'], ['subject_id', 'value']],
         where: {
             ...subjectWhere,
-            ...(mappedSubjectIds.length > 0 && {
-                subjectId: { [Op.notIn]: mappedSubjectIds },
+            ...(uniqueClassMappedIds.length > 0 && {
+                subjectId: { [Op.notIn]: uniqueClassMappedIds },
             }),
         },
         order: [['subject_name', 'ASC']],
     });
 }
 
-export async function getTeacherOptions(campusId) {
+export async function getTeacherOptions(campusId, subjectId) {
+    const employeeWhere = {
+        ...(campusId != null && { campusId: Number(campusId) }),
+    };
+
+    if (subjectId != null) {
+        const mappingRows = await scoped(model.teacherSubjectMappingModel).findAll({
+            attributes: ['userId'],
+            where: { subjectId: Number(subjectId) },
+        });
+
+        const userIds = [];
+        for (const row of mappingRows) {
+            userIds.push(Number(row.userId));
+        }
+        if (userIds.length === 0) {
+            return [];
+        }
+        employeeWhere.userId = { [Op.in]: userIds };
+    }
+
     return await scoped(model.employeeModel).findAll({
         attributes: [
             ['employee_name', 'label'],
             [Sequelize.col('user.user_id'), 'value'],
             ['employee_id', 'employeeId'],
         ],
-        where: {
-            ...(campusId && { campusId }),
-        },
+        where: employeeWhere,
         include: [
             {
                 model: model.userModel,

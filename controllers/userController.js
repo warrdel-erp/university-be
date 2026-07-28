@@ -361,9 +361,13 @@ export const saveUserDefaults = async (req, res) => {
       // Teachers use a static "Teacher" role that is not in user_role_permission_scope,
       // so skip role existence validation when isTeacher is true.
       if (!req.user.isTeacher) {
-        const role = await sequelize.models.role.findOne({
-          where: isNaN(Number(defaultRole)) ? { role: defaultRole } : { roleId: defaultRole },
-        });
+        // Roles are per-institute (e.g. CLIENT_ADMIN can exist for institute 12 and 18).
+        // Resolve by role name + defaultInstituteId so we do not pick the wrong roleId.
+        const roleWhere = isNaN(Number(defaultRole))
+          ? { role: defaultRole, instituteId: Number(defaultInstituteId) }
+          : { roleId: Number(defaultRole) };
+
+        const role = await sequelize.models.role.findOne({ where: roleWhere });
 
         if (!role) {
           return res.status(400).json({
@@ -446,6 +450,20 @@ export const getGrantedAccess = async (req, res) => {
     });
   }
 };
+
+export const giveFullAccess = async (req, res) => {
+  try {
+    const result = await userService.giveFullAccess(req.body);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in giveFullAccess controller:", error);
+    res.status(400).json({
+      success: false,
+      message: error.message || "Failed to grant full access"
+    });
+  }
+};
+
 
 
 

@@ -131,7 +131,8 @@ async function resolveOfficeEntry(item = {}) {
 
 function mapEmployment(item = {}, officeEntry = {}, addressEntry = {}) {
   return {
-    department: item?.department || "",
+    departmentId: item?.departmentId ?? null,
+    departmentName: item?.employeeDepartment?.departmentName || "",
     employmentType: item?.employmentType || "",
     joiningDate: officeEntry?.joiningDate || "",
     noticePeriod: officeEntry?.noticePeriod ?? "",
@@ -243,6 +244,10 @@ export async function addEmployee(data, files, createdBy, roleId) {
     data.userId = userId;
     data.roleId = null;
     data.employeeCode = await generateEmployeeNumber(data.campusId, data.instituteId)
+    delete data.department;
+    if (data.departmentId != null) {
+      data.departmentId = Number(data.departmentId);
+    }
     const employee = await employeeRepository.addEmployee(data, transaction);
     const employeeId = employee.dataValues.employeeId;
 
@@ -485,7 +490,8 @@ async function formatEmployeeListItem(row) {
     employeeCode: item?.employeeCode,
     employeeName: item?.employeeName || "",
     dateOfBirth: item?.dateOfBirth || "",
-    department: item?.department || "",
+    departmentId: item?.departmentId ?? null,
+    departmentName: item?.employeeDepartment?.departmentName || "",
     employmentType: item?.employmentType || "",
     pickColor: item?.pickColor || "",
     campusId: item?.campusId,
@@ -673,7 +679,7 @@ function validateEmployeeRow(employee) {
     "instituteId",
     "roleId",
     "createdBy",
-    "department",
+    "departmentId",
     "employmentType",
   ];
 
@@ -711,7 +717,7 @@ export async function importEmployeeData(excelData, commonData) {
         employmentType: convertedData.employmentType,
         dateOfBirth: convertedData.dateOfBirth,
         fatherName: convertedData.fatherName,
-        department: convertedData.department,
+        departmentId: convertedData.departmentId != null ? Number(convertedData.departmentId) : null,
         motherName: convertedData.motherName,
         pickColor: convertedData.pickColor,
         campusId: convertedData.campusId,
@@ -805,7 +811,14 @@ export async function updateEmployee(userId, data, files, updatedBy, createdBy) 
     const allDropDownData = typeof data.allDropDownData === 'string' && data.allDropDownData ? JSON.parse(data.allDropDownData) : data.allDropDownData || { type: [], code: [] };
 
     //  Update main employee table
-    const { roleId: _excludedRoleId, ...employeeUpdateData } = data; // roleId is a string ("ADMIN"), not an int FK — exclude it
+    const {
+      roleId: _excludedRoleId,
+      department: _legacyDepartment,
+      ...employeeUpdateData
+    } = data; // roleId is a string ("ADMIN"), not an int FK — exclude it
+    if (employeeUpdateData.departmentId != null) {
+      employeeUpdateData.departmentId = Number(employeeUpdateData.departmentId);
+    }
     await employeeRepository.updateEmployee(userId, {
       ...employeeUpdateData,
       roleId: null,  // role_id in employee table is always null; role is managed via user_roles table
@@ -1927,7 +1940,8 @@ function getEmployeeDetails(schedules) {
     employeeId: employee.employeeId,
     employeeName: employee.employeeName,
     employmentType: employee.employmentType,
-    department: employee.department,
+    departmentId: employee.departmentId ?? null,
+    departmentName: employee.employeeDepartment?.departmentName || employee.departmentName || "",
     totalClasses: schedules.reduce((acc, schedule) => acc + schedule.totalClasses, 0),
     totalUniqueSubjects: schedules.length
   };

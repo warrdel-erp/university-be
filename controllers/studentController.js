@@ -18,7 +18,17 @@ export const addStudentWithFeePlanProfile = async (req, res) => {
 
 // 2. get all student
 export const getAllStudents = async (req, res) => {
-    const { page, limit, search, courseId } = req.query;
+    const {
+        page,
+        limit,
+        search,
+        courseId,
+        sessionId,
+        classSectionsId,
+        year,
+        term,
+        academicYearId,
+    } = req.query;
 
     try {
         const result = await studentService.getAllStudents({
@@ -26,6 +36,11 @@ export const getAllStudents = async (req, res) => {
             limit,
             search,
             courseId,
+            sessionId,
+            classSectionsId,
+            year,
+            term,
+            academicYearId,
         });
         return res.status(200).send(result);
     } catch (error) {

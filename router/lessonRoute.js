@@ -84,13 +84,33 @@ const addMappingBodySchema = z.object({
     })).optional(),
 }).passthrough();
 
-const getRoutineByTeacherSchema = z.object({
-    userId: positiveIntegerId,
-    courseId: positiveIntegerId,
-    sessionId: positiveIntegerId,
-    subjectId: positiveIntegerId,
-    date: optionalDateOnly,
-});
+const getRoutineByTeacherSchema = z
+    .object({
+        userId: optionalPositiveId,
+        courseId: optionalPositiveId,
+        sessionId: optionalPositiveId,
+        subjectId: optionalPositiveId,
+        date: optionalDateOnly,
+    })
+    .refine(
+        (data) =>
+            (data.courseId == null && data.sessionId == null)
+            || (data.courseId != null && data.sessionId != null),
+        {
+            message: 'courseId and sessionId must be sent together',
+            path: ['courseId'],
+        },
+    )
+    .refine(
+        (data) =>
+            data.userId != null
+            || data.subjectId != null
+            || data.courseId != null,
+        {
+            message: 'Provide at least one filter: userId, subjectId, or courseId+sessionId',
+            path: ['userId'],
+        },
+    );
 
 const mappedProgressQuerySchema = z.object({
     userId: positiveIntegerId,
