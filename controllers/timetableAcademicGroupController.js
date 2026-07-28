@@ -38,6 +38,18 @@ export const getAllStructureScopeMappings = async (req, res) => {
     }
 };
 
+export const getTimetableList = async (req, res) => {
+    try {
+        const filters = req.query;
+        const result = await timeTableServices.getTimetableListPrintData(filters);
+        return SuccessResponse(res, 200, 'Timetable list fetched successfully', result);
+    } catch (error) {
+        console.error('Error in getting timetable list:', error);
+        return ErrorResponse(res, 500, error.message || 'Internal Server Error');
+    }
+};
+
+
 
 export const deleteStructureScopeMapping = async (req, res) => {
     try {

@@ -681,3 +681,143 @@ export async function deleteTimeTableName(timeTableNameId) {
         throw error;
     }
 }
+
+export async function getTimetableListPrintRows(filters = {}) {
+    const where = {};
+    if (filters.timetableStructureCourseMapperId != null) {
+        where.timetableStructureCourseMapperId = Number(filters.timetableStructureCourseMapperId);
+    }
+    if (filters.timeTableNameId != null) {
+        where.timeTableNameId = Number(filters.timeTableNameId);
+    }
+    if (filters.courseId != null) {
+        where.courseId = Number(filters.courseId);
+    }
+    if (filters.academicGroupScopeId != null) {
+        where.academicGroupScopeId = Number(filters.academicGroupScopeId);
+    }
+    if (filters.sessionId != null) {
+        where.sessionId = Number(filters.sessionId);
+    }
+
+    return await scoped(model.timeTableStructureCourseModel).findAll({
+        where,
+        attributes: [
+            'timetableStructureCourseMapperId',
+            'timeTableNameId',
+            'courseId',
+            'academicGroupScopeId',
+            'sessionId',
+            'startingDate',
+            'endingDate',
+        ],
+        include: [
+            {
+                model: model.timeTableRoutineModel,
+                as: 'routines',
+                required: false,
+                attributes: ['timeTableRoutineId', 'isPublish'],
+                where: buildScope(model.timeTableRoutineModel),
+                separate: true,
+            },
+            {
+                model: model.timeTableStructureModel,
+                as: 'timeTableStructure',
+                required: false,
+                attributes: [
+                    'timeTableNameId',
+                    'name',
+                    'maximumPeriod',
+                    'periodLength',
+                    'periodGap',
+                    'startingTime',
+                    'weekOff',
+                ],
+                where: buildScope(model.timeTableStructureModel),
+            },
+            {
+                model: model.courseModel,
+                as: 'course',
+                required: false,
+                attributes: ['courseId', 'courseName', 'courseCode'],
+                include: [
+                    {
+                        model: model.classSectionModel,
+                        as: 'courseSection',
+                        required: false,
+                        attributes: ['classSectionsId'],
+                        where: buildScope(model.classSectionModel),
+                        separate: true,
+                        include: [
+                            {
+                                model: model.classSectionTermModel,
+                                as: 'classSectionTerms',
+                                required: false,
+                                attributes: ['classSectionTermId'],
+                                where: buildScope(model.classSectionTermModel),
+                                include: [
+                                    {
+                                        model: model.classStudentMapperModel,
+                                        as: 'studentTermPlacement',
+                                        required: false,
+                                        attributes: ['classStudentMapperId'],
+                                        where: buildScope(model.classStudentMapperModel),
+                                    },
+                                ],
+                            },
+                            {
+                                model: model.teacherSectionMappingModel,
+                                as: 'employeeSection',
+                                required: false,
+                                attributes: ['teacherSectionMappingId', 'userId'],
+                                where: buildScope(model.teacherSectionMappingModel),
+                            },
+                        ],
+                    },
+                ],
+            },
+            {
+                model: model.academicGroupScopeModel,
+                as: 'academicGroupScope',
+                required: false,
+                attributes: ['academicGroupScopeId', 'title', 'groupType', 'selectionScope'],
+                include: [
+                    {
+                        model: model.academicGroupModel,
+                        as: 'groups',
+                        required: false,
+                        attributes: ['academicGroupId'],
+                        where: buildScope(model.academicGroupModel),
+                        separate: true,
+                        include: [
+                            {
+                                model: model.academicGroupUserModel,
+                                as: 'users',
+                                required: false,
+                                attributes: ['academicGroupUserId'],
+                                where: buildScope(model.academicGroupUserModel),
+                            },
+                            {
+                                model: model.academicGroupStudentModel,
+                                as: 'students',
+                                required: false,
+                                attributes: ['academicGroupStudentId'],
+                                where: buildScope(model.academicGroupStudentModel),
+                            },
+                        ],
+                    },
+                ],
+            },
+            {
+                model: model.sessionModel,
+                as: 'session',
+                required: false,
+                attributes: ['sessionId', 'sessionName'],
+            },
+        ],
+        order: [
+            ['timeTableNameId', 'ASC'],
+            ['timetableStructureCourseMapperId', 'ASC'],
+        ],
+    });
+}

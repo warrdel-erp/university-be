@@ -8,6 +8,7 @@ import {
     addStructureScopeMapping,
     getStructureScopeMappings,
     getAllStructureScopeMappings,
+    getTimetableList,
     deleteStructureScopeMapping,
     addAcademicGroupRoutine,
     getCascadingGroupRoutines,
@@ -121,6 +122,14 @@ router.get(
     checkAccess(PERMISSIONS.TIME_TABLE_SETUP.value, null),
     validate({ query: getStructureScopeMappingsQuerySchema }),
     getAllStructureScopeMappings,
+);
+
+router.get(
+    '/list',
+    userAuth,
+    checkAccess(PERMISSIONS.TIME_TABLE_SETUP.value, null),
+    validate({ query: getStructureScopeMappingsQuerySchema }),
+    getTimetableList,
 );
 
 router.get(
