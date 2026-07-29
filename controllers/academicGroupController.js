@@ -135,7 +135,7 @@ export async function updateGroup(req, res) {
 
 export async function publishGroup(req, res) {
     try {
-        const { academicGroupId } = req.body;
+        const { academicGroupId } = req.query;
         const updatedBy = req.user.userId;
         const updated = await academicGroupService.publishGroup(academicGroupId, updatedBy);
         if (!updated) {

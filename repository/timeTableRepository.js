@@ -683,143 +683,110 @@ export async function deleteTimeTableName(timeTableNameId) {
 }
 
 export async function getTimetableListPrintRows(filters = {}) {
-    const where = {};
-    if (filters.timetableStructureCourseMapperId != null) {
-        where.timetableStructureCourseMapperId = Number(filters.timetableStructureCourseMapperId);
-    }
+    const where = {
+        classSectionTermId: { [Op.not]: null }
+    };
+    
+    // Optional filters if passed
     if (filters.timeTableNameId != null) {
-        where.timeTableNameId = Number(filters.timeTableNameId);
+        where['$structureCourseMapping.time_table_name_id$'] = Number(filters.timeTableNameId);
     }
     if (filters.courseId != null) {
         where.courseId = Number(filters.courseId);
     }
-    if (filters.academicGroupScopeId != null) {
-        where.academicGroupScopeId = Number(filters.academicGroupScopeId);
-    }
     if (filters.sessionId != null) {
-        where.sessionId = Number(filters.sessionId);
+        where['$structureCourseMapping.session_id$'] = Number(filters.sessionId);
     }
 
-    return await scoped(model.timeTableStructureCourseModel).findAll({
-        where,
+    const rows = await model.timeTableRoutineModel.findAll({
         attributes: [
-            'timetableStructureCourseMapperId',
-            'timeTableNameId',
+            [sequelize.fn('MAX', sequelize.col('structureCourseMapping.time_table_name_id')), 'timeTableNameId'],
             'courseId',
-            'academicGroupScopeId',
-            'sessionId',
-            'startingDate',
-            'endingDate',
+            [sequelize.col('timeTableCourse.course_name'), 'courseName'],
+            [sequelize.col('timeTableCourse.course_code'), 'courseCode'],
+            [sequelize.col('structureCourseMapping.session_id'), 'sessionId'],
+            [sequelize.col('structureCourseMapping.session.session_name'), 'sessionName'],
+            'classSectionTermId',
+            [sequelize.col('timeTableClassSectionTerm.term'), 'term'],
+            [sequelize.col('timeTableCourse.term_type'), 'termType'],
+            [sequelize.col('timeTableClassSectionTerm.classSection.class_sections_id'), 'classSectionId'],
+            [sequelize.col('timeTableClassSectionTerm.classSection.section'), 'classSection'],
+            [sequelize.fn('MIN', sequelize.col('time_table_routine.starting_date')), 'startingDate'],
+            [sequelize.fn('MAX', sequelize.col('time_table_routine.ending_date')), 'endingDate'],
+            [
+                sequelize.literal(`(
+                    SELECT COUNT(DISTINCT csm.student_id)
+                    FROM class_student_mapper AS csm
+                    WHERE csm.class_section_term_id = time_table_routine.class_section_term_id
+                    
+                )`),
+                'totalStudent'
+            ],
+            [
+                sequelize.literal(`(
+                    SELECT COUNT(DISTINCT tsm.user_id)
+                    FROM teacher_section_mapping AS tsm
+                    INNER JOIN class_section_term AS cst2 ON cst2.class_sections_id = tsm.class_sections_id
+                    WHERE cst2.class_section_term_id = time_table_routine.class_section_term_id
+                    
+                )`),
+                'facultyCount'
+            ]
         ],
+        where,
         include: [
             {
-                model: model.timeTableRoutineModel,
-                as: 'routines',
-                required: false,
-                attributes: ['timeTableRoutineId', 'isPublish'],
-                where: buildScope(model.timeTableRoutineModel),
-                separate: true,
-            },
-            {
-                model: model.timeTableStructureModel,
-                as: 'timeTableStructure',
-                required: false,
-                attributes: [
-                    'timeTableNameId',
-                    'name',
-                    'maximumPeriod',
-                    'periodLength',
-                    'periodGap',
-                    'startingTime',
-                    'weekOff',
-                ],
-                where: buildScope(model.timeTableStructureModel),
+                model: model.timeTableStructureCourseModel,
+                as: 'structureCourseMapping',
+                attributes: [],
+                required: true,
+                include: [
+                    {
+                        model: model.sessionModel,
+                        as: 'session',
+                        attributes: [],
+                        required: true
+                    }
+                ]
             },
             {
                 model: model.courseModel,
-                as: 'course',
-                required: false,
-                attributes: ['courseId', 'courseName', 'courseCode'],
+                as: 'timeTableCourse',
+                attributes: [],
+                required: true
+            },
+            {
+                model: model.classSectionTermModel,
+                as: 'timeTableClassSectionTerm',
+                attributes: [],
+                required: true,
                 include: [
                     {
                         model: model.classSectionModel,
-                        as: 'courseSection',
-                        required: false,
-                        attributes: ['classSectionsId'],
-                        where: buildScope(model.classSectionModel),
-                        separate: true,
-                        include: [
-                            {
-                                model: model.classSectionTermModel,
-                                as: 'classSectionTerms',
-                                required: false,
-                                attributes: ['classSectionTermId'],
-                                where: buildScope(model.classSectionTermModel),
-                                include: [
-                                    {
-                                        model: model.classStudentMapperModel,
-                                        as: 'studentTermPlacement',
-                                        required: false,
-                                        attributes: ['classStudentMapperId'],
-                                        where: buildScope(model.classStudentMapperModel),
-                                    },
-                                ],
-                            },
-                            {
-                                model: model.teacherSectionMappingModel,
-                                as: 'employeeSection',
-                                required: false,
-                                attributes: ['teacherSectionMappingId', 'userId'],
-                                where: buildScope(model.teacherSectionMappingModel),
-                            },
-                        ],
-                    },
-                ],
-            },
-            {
-                model: model.academicGroupScopeModel,
-                as: 'academicGroupScope',
-                required: false,
-                attributes: ['academicGroupScopeId', 'title', 'groupType', 'selectionScope'],
-                include: [
-                    {
-                        model: model.academicGroupModel,
-                        as: 'groups',
-                        required: false,
-                        attributes: ['academicGroupId'],
-                        where: buildScope(model.academicGroupModel),
-                        separate: true,
-                        include: [
-                            {
-                                model: model.academicGroupUserModel,
-                                as: 'users',
-                                required: false,
-                                attributes: ['academicGroupUserId'],
-                                where: buildScope(model.academicGroupUserModel),
-                            },
-                            {
-                                model: model.academicGroupStudentModel,
-                                as: 'students',
-                                required: false,
-                                attributes: ['academicGroupStudentId'],
-                                where: buildScope(model.academicGroupStudentModel),
-                            },
-                        ],
-                    },
-                ],
-            },
-            {
-                model: model.sessionModel,
-                as: 'session',
-                required: false,
-                attributes: ['sessionId', 'sessionName'],
-            },
+                        as: 'classSection',
+                        attributes: [],
+                        required: true
+                    }
+                ]
+            }
         ],
+        group: [
+            'structureCourseMapping.session_id',
+            'structureCourseMapping->session.session_id',
+            'timeTableCourse.course_id',
+            'timeTableClassSectionTerm.class_section_term_id',
+            'timeTableClassSectionTerm->classSection.class_sections_id',
+            'time_table_routine.course_id',
+            'time_table_routine.class_section_term_id'
+        ],
+        raw: true,
         order: [
-            ['timeTableNameId', 'ASC'],
-            ['timetableStructureCourseMapperId', 'ASC'],
-        ],
+            [sequelize.fn('MAX', sequelize.col('structureCourseMapping.time_table_name_id')), 'ASC'],
+            ['courseId', 'ASC'],
+        ]
     });
+
+    return rows;
 }
 
 export async function getProgramsOverviewRows(filters = {}) {

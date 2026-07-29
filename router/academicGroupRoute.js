@@ -266,7 +266,7 @@ router.patch(
 router.patch(
     '/publish',
     userAuth,
-    validate({ body: publishGroupSchema }),
+    validate({ query: publishGroupSchema }),
     academicGroupController.publishGroup,
 );
 
