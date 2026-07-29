@@ -786,7 +786,109 @@ export async function getTimetableListPrintRows(filters = {}) {
         ]
     });
 
-    return rows;
+    const academicWhere = {
+        academicGroupId: { [Op.not]: null }
+    };
+    
+    // Optional filters if passed
+    if (filters.timeTableNameId != null) {
+        academicWhere['$structureCourseMapping.time_table_name_id$'] = Number(filters.timeTableNameId);
+    }
+    if (filters.courseId != null) {
+        academicWhere.courseId = Number(filters.courseId);
+    }
+    if (filters.sessionId != null) {
+        academicWhere['$structureCourseMapping.session_id$'] = Number(filters.sessionId);
+    }
+
+    const academicRows = await scoped(model.timeTableRoutineModel).findAll({
+        attributes: [
+            [sequelize.fn('MAX', sequelize.col('structureCourseMapping.time_table_name_id')), 'timeTableNameId'],
+            'courseId',
+            [sequelize.col('timeTableCourse.course_name'), 'courseName'],
+            [sequelize.col('timeTableCourse.course_code'), 'courseCode'],
+            [sequelize.col('structureCourseMapping.session_id'), 'sessionId'],
+            [sequelize.col('structureCourseMapping.session.session_name'), 'sessionName'],
+            'academicGroupId',
+            [sequelize.col('academicGroup->scope.term'), 'term'],
+            [sequelize.col('timeTableCourse.term_type'), 'termType'],
+            [sequelize.literal('NULL'), 'classSectionId'],
+            [sequelize.literal('NULL'), 'classSection'],
+            [sequelize.col('academicGroup.group_name'), 'academicGroupTitle'],
+            [sequelize.col('academicGroup->scope.title'), 'scopeTitle'],
+            [sequelize.fn('MIN', sequelize.col('time_table_routine.starting_date')), 'startingDate'],
+            [sequelize.fn('MAX', sequelize.col('time_table_routine.ending_date')), 'endingDate'],
+            [
+                sequelize.literal(`(
+                    SELECT COUNT(DISTINCT ags.student_id)
+                    FROM academic_group_student AS ags
+                    WHERE ags.academic_group_id = time_table_routine.academic_group_id
+                )`),
+                'totalStudent'
+            ],
+            [
+                sequelize.literal(`(
+                    SELECT COUNT(DISTINCT agu.user_id)
+                    FROM academic_group_user AS agu
+                    WHERE agu.academic_group_id = time_table_routine.academic_group_id
+                )`),
+                'facultyCount'
+            ]
+        ],
+        where: academicWhere,
+        include: [
+            {
+                model: model.timeTableStructureCourseModel,
+                as: 'structureCourseMapping',
+                attributes: [],
+                required: true,
+                include: [
+                    {
+                        model: model.sessionModel,
+                        as: 'session',
+                        attributes: [],
+                        required: true
+                    }
+                ]
+            },
+            {
+                model: model.courseModel,
+                as: 'timeTableCourse',
+                attributes: [],
+                required: true
+            },
+            {
+                model: model.academicGroupModel,
+                as: 'academicGroup',
+                attributes: [],
+                required: true,
+                include: [
+                    {
+                        model: model.academicGroupScopeModel,
+                        as: 'scope',
+                        attributes: [],
+                        required: true
+                    }
+                ]
+            }
+        ],
+        group: [
+            'structureCourseMapping.session_id',
+            'structureCourseMapping->session.session_id',
+            'timeTableCourse.course_id',
+            'academicGroup.academic_group_id',
+            'academicGroup->scope.academic_group_scope_id',
+            'time_table_routine.course_id',
+            'time_table_routine.academic_group_id'
+        ],
+        raw: true,
+        order: [
+            [sequelize.fn('MAX', sequelize.col('structureCourseMapping.time_table_name_id')), 'ASC'],
+            ['courseId', 'ASC'],
+        ]
+    });
+
+    return [...rows, ...academicRows];
 }
 
 export async function getProgramsOverviewRows(filters = {}) {
