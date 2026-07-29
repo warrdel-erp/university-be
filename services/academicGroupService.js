@@ -464,26 +464,20 @@ export async function addUsers(body, createdBy, updatedBy) {
 
     const usersRaw = normalizeUsersPayload(body);
     const users = [];
-    const seenUserIds = new Set();
-    let primaryCount = 0;
+    const seenUserRoles = new Set();
 
     for (const row of usersRaw) {
         const userId = Number(row.userId);
-        if (seenUserIds.has(userId)) {
-            throw new Error(`Duplicate userId in request: ${userId}`);
+        const userRoleKey = `${userId}_${row.role}`;
+        if (seenUserRoles.has(userRoleKey)) {
+            throw new Error(`Duplicate userId and role in request: ${userId} with ${row.role}`);
         }
-        seenUserIds.add(userId);
-        if (row.role === 'primary_faculty') {
-            primaryCount += 1;
-        }
+        seenUserRoles.add(userRoleKey);
         users.push({ userId, role: row.role });
     }
 
     if (users.length === 0) {
         throw new Error('users are required');
-    }
-    if (primaryCount > 1) {
-        throw new Error('Only one primary_faculty is allowed per request');
     }
 
     const userIds = [];
@@ -500,27 +494,22 @@ export async function addUsers(body, createdBy, updatedBy) {
         userIds,
     );
 
-    const activeUserIds = [];
-    const deletedByUserId = new Map();
+    const activeUserRoles = [];
+    const deletedByUserRole = new Map();
     for (const row of existingRows) {
         const userId = Number(row.userId);
+        const userRoleKey = `${userId}_${row.role}`;
         if (row.deletedAt == null) {
-            activeUserIds.push(userId);
-        } else if (!deletedByUserId.has(userId)) {
-            deletedByUserId.set(userId, row);
+            activeUserRoles.push(userRoleKey);
+        } else if (!deletedByUserRole.has(userRoleKey)) {
+            deletedByUserRole.set(userRoleKey, row);
         }
     }
 
-    if (activeUserIds.length > 0) {
-        throw new Error(
-            `userId already assigned to this group (no duplicate userId): ${activeUserIds.join(', ')}`,
-        );
-    }
-
-    if (primaryCount === 1) {
-        const existingPrimary = await academicGroupRepository.findPrimaryFaculty(academicGroupId);
-        if (existingPrimary) {
-            throw new Error('Group already has a primary_faculty');
+    for (const row of users) {
+        const userRoleKey = `${row.userId}_${row.role}`;
+        if (activeUserRoles.includes(userRoleKey)) {
+            throw new Error(`User ${row.userId} is already assigned to this group with role ${row.role}`);
         }
     }
 
@@ -530,7 +519,8 @@ export async function addUsers(body, createdBy, updatedBy) {
         const toCreate = [];
 
         for (const row of users) {
-            const deleted = deletedByUserId.get(row.userId);
+            const userRoleKey = `${row.userId}_${row.role}`;
+            const deleted = deletedByUserRole.get(userRoleKey);
             if (deleted) {
                 const restored = await academicGroupRepository.restoreGroupUser(
                     deleted.academicGroupUserId,
@@ -571,17 +561,6 @@ export async function updateUser(academicGroupUserId, body, updatedBy) {
     }
 
     const nextRole = body.role ?? existing.role;
-    if (nextRole === 'primary_faculty' && existing.role !== 'primary_faculty') {
-        const existingPrimary = await academicGroupRepository.findPrimaryFaculty(
-            existing.academicGroupId,
-        );
-        if (
-            existingPrimary &&
-            Number(existingPrimary.academicGroupUserId) !== Number(academicGroupUserId)
-        ) {
-            throw new Error('Group already has a primary_faculty');
-        }
-    }
 
     return academicGroupRepository.updateGroupUser(academicGroupUserId, {
         role: nextRole,
