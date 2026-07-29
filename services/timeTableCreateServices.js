@@ -4341,6 +4341,7 @@ export async function getDateWiseCellsBySection(
     return {
       ...common,
       routine: null,
+      routines,
       week,
     };
   }
@@ -4392,6 +4393,7 @@ export async function getDateWiseCellsBySection(
   return {
     ...common,
     routine,
+    routines,
     week,
   };
 }
