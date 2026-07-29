@@ -1052,7 +1052,10 @@ export async function getTeacherWeekDateWiseCells({
 
   const routineWhere = { isPublish: true };
   if (hasCourseId) {
-    routineWhere.courseId = courseIdNum;
+    routineWhere[Op.or] = [
+      { courseId: courseIdNum },
+      { academicGroupId: { [Op.not]: null } }
+    ];
   }
 
   const sectionWhere = { ...buildScope(model.classSectionModel) };
@@ -1141,8 +1144,8 @@ export async function getTeacherWeekDateWiseCells({
             ],
             include: [
               timeTableRoutineClassSectionInclude({
-                termRequired: true,
-                sectionRequired: true,
+                termRequired: false,
+                sectionRequired: false,
                 sectionWhere,
                 termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
                 sectionAttributes: ['classSectionsId', 'section', 'year', 'sessionId', 'courseId'],

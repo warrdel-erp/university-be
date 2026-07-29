@@ -1873,6 +1873,7 @@ async function buildCellSubjectWhere(subjectId) {
 
 function routineCellsInclude({ userId, cellSubjectWhere, required = false } = {}) {
   const cellWhere = cellSubjectWhere || {};
+  const hasWhere = Object.keys(cellWhere).length > 0 || Object.getOwnPropertySymbols(cellWhere).length > 0;
 
   return {
     model: model.timeTableCellModel,
@@ -1881,7 +1882,7 @@ function routineCellsInclude({ userId, cellSubjectWhere, required = false } = {}
     separate: true,
     order: [['period', 'ASC'], ['day', 'ASC'], ['timeTableCellId', 'ASC']],
     attributes: ROUTINE_CELL_ATTRIBUTES,
-    ...(Object.keys(cellWhere).length > 0 ? { where: cellWhere } : {}),
+    ...(hasWhere ? { where: cellWhere } : {}),
     include: [
       routineCellTeachersInclude({ userId, required: userId != null }),
       {
