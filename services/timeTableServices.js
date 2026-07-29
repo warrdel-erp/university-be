@@ -653,6 +653,7 @@ export async function getTimetableListPrintData(filters = {}) {
             courseCode: course ? course.courseCode : (scopeCourse ? scopeCourse.courseCode : null),
             academicGroupScopeId: plain.academicGroupScopeId || null,
             academicGroupScopeTitle: academicGroupScope ? academicGroupScope.title : null,
+            title: academicGroupScope ? academicGroupScope.title : null,
             sessionId: plain.sessionId || (scopeSession ? scopeSession.sessionId : null),
             sessionName: session ? session.sessionName : (scopeSession ? scopeSession.sessionName : null),
             startingDate: plain.startingDate,
