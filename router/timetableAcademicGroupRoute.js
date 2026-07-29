@@ -51,6 +51,9 @@ const getStructureScopeMappingsQuerySchema = z.object({
     academicGroupScopeId: optionalPositiveId,
     courseId: optionalPositiveId,
     sessionId: optionalPositiveId,
+    page: optionalPositiveId,
+    limit: optionalPositiveId,
+    search: z.string().optional(),
 });
 
 const deleteStructureScopeMappingQuerySchema = z.object({

@@ -731,7 +731,12 @@ export async function getTimetableListPrintRows(filters = {}) {
                     
                 )`),
                 'facultyCount'
-            ]
+            ],
+            [sequelize.fn('COUNT', sequelize.col('time_table_routine.time_table_routine_id')), 'routinesCount'],
+            [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.is_publish = 0 OR time_table_routine.is_publish IS NULL THEN 1 ELSE 0 END) AS SIGNED)'), 'draftRoutine'],
+            [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.is_publish = 1 THEN 1 ELSE 0 END) AS SIGNED)'), 'publishedRoutine'],
+            [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.starting_date <= CURRENT_DATE() THEN 1 ELSE 0 END) AS SIGNED)'), 'completedRunningRoutine'],
+            [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.starting_date > CURRENT_DATE() THEN 1 ELSE 0 END) AS SIGNED)'), 'upcomingRoutine']
         ],
         where,
         include: [
@@ -833,7 +838,12 @@ export async function getTimetableListPrintRows(filters = {}) {
                     WHERE agu.academic_group_id = time_table_routine.academic_group_id
                 )`),
                 'facultyCount'
-            ]
+            ],
+            [sequelize.fn('COUNT', sequelize.col('time_table_routine.time_table_routine_id')), 'routinesCount'],
+            [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.is_publish = 0 OR time_table_routine.is_publish IS NULL THEN 1 ELSE 0 END) AS SIGNED)'), 'draftRoutine'],
+            [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.is_publish = 1 THEN 1 ELSE 0 END) AS SIGNED)'), 'publishedRoutine'],
+            [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.starting_date <= CURRENT_DATE() THEN 1 ELSE 0 END) AS SIGNED)'), 'completedRunningRoutine'],
+            [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.starting_date > CURRENT_DATE() THEN 1 ELSE 0 END) AS SIGNED)'), 'upcomingRoutine']
         ],
         where: academicWhere,
         include: [
@@ -888,7 +898,33 @@ export async function getTimetableListPrintRows(filters = {}) {
         ]
     });
 
-    return [...rows, ...academicRows];
+    let combinedRows = [...rows, ...academicRows];
+
+    if (filters.search) {
+        const searchLower = filters.search.toLowerCase();
+        combinedRows = combinedRows.filter(row => 
+            (row.academicGroupTitle && row.academicGroupTitle.toLowerCase().includes(searchLower)) ||
+            (row.classSection && row.classSection.toLowerCase().includes(searchLower))
+        );
+    }
+
+    if (filters.page && filters.limit) {
+        const page = parseInt(filters.page, 10);
+        const limit = parseInt(filters.limit, 10);
+        const startIndex = (page - 1) * limit;
+        const paginatedRows = combinedRows.slice(startIndex, startIndex + limit);
+        return {
+            data: paginatedRows,
+            total: combinedRows.length,
+            page,
+            limit
+        };
+    }
+
+    return {
+        data: combinedRows,
+        total: combinedRows.length
+    };
 }
 
 export async function getProgramsOverviewRows(filters = {}) {
