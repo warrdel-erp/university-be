@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { getAllSubjects, setSubjectTerms, getSubjectsWithExamSchedule } from '../controllers/subjectController.js';
+import { getAllSubjects, setSubjectTerms, getSubjectsWithExamSchedule, deleteSubject } from '../controllers/subjectController.js';
 import { getSubjectsWithWeightages } from '../controllers/subjectWeightageController.js';
 import userAuth from '../middleware/authUser.js';
 import { checkAccess } from '../middleware/checkAccess.js';
@@ -27,6 +27,10 @@ const subjectWeightageListSchema = z.object({
     term: z.coerce.number({ required_error: "term is required" }).int().positive(),
 });
 
+const deleteSubjectQuerySchema = z.object({
+    subjectId: z.coerce.number({ required_error: "subjectId is required" }).int().positive(),
+});
+
 router.get('/', userAuth, validate({ query: getAllSubjectsQuerySchema }), getAllSubjects);
 
 router.post('/addTerms', userAuth, checkAccess(PERMISSIONS.SEMESTER_SUBJECT_MAPPING_ASSIGN.value, null), validate({ body: setSubjectTermsSchema }), setSubjectTerms);
@@ -34,5 +38,7 @@ router.post('/addTerms', userAuth, checkAccess(PERMISSIONS.SEMESTER_SUBJECT_MAPP
 router.get('/withExamSchedule', userAuth, validate({ query: subjectsWithScheduleQuerySchema }), getSubjectsWithExamSchedule);
 
 router.get('/withWeightages', userAuth, checkAccess(PERMISSIONS.ASSIGN_WEIGHTAGE.value, null), validate({ query: subjectWeightageListSchema }), getSubjectsWithWeightages);
+
+router.delete('/', userAuth, validate({ query: deleteSubjectQuerySchema }), deleteSubject);
 
 export default router;

@@ -17,3 +17,12 @@ export async function setSubjectTerms(termsArray) {
     throw error;
   }
 }
+
+export async function deleteSubject(subjectId) {
+  try {
+    return await subjectRepository.deleteSubject(subjectId);
+  } catch (error) {
+    console.error('Error in deleteSubject service:', error);
+    throw error;
+  }
+}
