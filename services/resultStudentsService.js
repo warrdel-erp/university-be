@@ -25,7 +25,6 @@ const formateData = (fileData) => {
                 dob: parseCustomDate(row["DOB"])
             }
 
-            console.log(row["DOB"])
             currentRollNo = row["ROLL NO"]
             delete row["ROLL NO"]
             delete row["NAME"]
@@ -39,14 +38,16 @@ const formateData = (fileData) => {
             students[currentRollNo] = {
                 ...currentStudent,
                 statusOfResult: row['STATUS OF RESULT'],
-                totCrdErnd: row['TOT CRD ERND'],
-                gTotEarnCredit: row['G TOT EARN CREDIT'],
+                totCrdErnd: row['TOT CRD ERND (Sem)'] ?? row['TOT CRD ERND'],
+                gTotEarnCredit: row['G TOT EARN CREDIT (Sem)'] ?? row['G TOT EARN CREDIT'],
                 sgpa: row['SGPA'],
                 resultGrade: row['Result Grade'],
             }
 
             delete row['STATUS OF RESULT']
+            delete row['TOT CRD ERND (Sem)']
             delete row['TOT CRD ERND']
+            delete row['G TOT EARN CREDIT (Sem)']
             delete row['G TOT EARN CREDIT']
             delete row['SGPA']
             delete row['Result Grade']
