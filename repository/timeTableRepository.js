@@ -698,7 +698,7 @@ export async function getTimetableListPrintRows(filters = {}) {
         where['$structureCourseMapping.session_id$'] = Number(filters.sessionId);
     }
 
-    const rows = await model.timeTableRoutineModel.findAll({
+    const rows = await scoped(model.timeTableRoutineModel).findAll({
         attributes: [
             [sequelize.fn('MAX', sequelize.col('structureCourseMapping.time_table_name_id')), 'timeTableNameId'],
             'courseId',
