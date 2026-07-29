@@ -2777,6 +2777,7 @@ async function buildClassSectionStudentsBlock(dateWiseId) {
   return {
     classSectionTermId: classSectionTermId ? Number(classSectionTermId) : null,
     academicGroupId: academicGroupId ? Number(academicGroupId) : null,
+    academicGroup: period.academicGroup ?? null,
     timeTableCellDateWiseId: period.timeTableCellDateWiseId,
     timeTableCellId: period.timeTableCellId,
     date: period.date,
@@ -2878,6 +2879,7 @@ export async function getStudentsByClassSection({
     return {
       classSectionTermId: classSectionTermId ? Number(classSectionTermId) : null,
       academicGroupId: academicGroupId ? Number(academicGroupId) : null,
+      academicGroup: resolvedPeriods[0].academicGroup ?? null,
       timeTableCellDateWiseId: dateWiseIds,
       timeTableCellDateWiseIds: dateWiseIds,
       date: resolvedPeriods[0].date,

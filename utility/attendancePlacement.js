@@ -66,6 +66,20 @@ function dateWiseCellInclude() {
               termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
               sectionAttributes: ['classSectionsId', 'year', 'section'],
             }),
+            {
+              model: model.academicGroupModel,
+              as: 'academicGroup',
+              attributes: ['academicGroupId', 'groupName', 'academicGroupScopeId', 'groupCode'],
+              required: false,
+              include: [
+                {
+                  model: model.academicGroupScopeModel,
+                  as: 'scope',
+                  attributes: ['academicGroupScopeId', 'title', 'academicContextType', 'courseId', 'sessionId', 'term'],
+                  required: false,
+                },
+              ],
+            },
           ],
         },
         {
@@ -271,6 +285,7 @@ export async function resolveSourcePeriodByDateWiseId(sourceDateWiseId, options 
     timeTableCell: cell,
     timeTableRoutine: routine,
     academicGroupId: routine.academicGroupId ?? null,
+    academicGroup: routine.academicGroup ?? null,
   };
 }
 
