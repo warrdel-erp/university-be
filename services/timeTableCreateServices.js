@@ -3780,8 +3780,25 @@ export async function getRoutineByTeacherAndAcademicYear(userId, courseId, sessi
     const mapping = routine.structureCourseMapping;
     const timeTableCreateName = mapping.timeTableStructure;
     const periods = timeTableCreateName.timeTableName || [];
-    const normalCells = routine.timeTableCells || [];
+    
+    // Filter cells down to only those matching the requested userId
+    const normalCells = (routine.timeTableCells || []).filter(cell => 
+      cell.timeTableCellTeachers && cell.timeTableCellTeachers.length > 0
+    );
+    const filteredElectiveCells = (electiveCells || []).filter(cell => 
+      cell.timeTableCellTeachers && cell.timeTableCellTeachers.length > 0
+    );
+
+    if (!normalCells.length && !filteredElectiveCells.length) {
+      continue;
+    }
+
     const classSection = mapRoutineClassSection(resolveTimeTableRoutineSection(routine));
+    
+    if (routine.classSectionTermId != null && !classSection.classSectionsId) {
+      continue;
+    }
+    
     const weekOffList = parseWeekOffList(timeTableCreateName.weekOff);
     const weekOffLower = [];
     for (const day of weekOffList) {
@@ -3810,7 +3827,7 @@ export async function getRoutineByTeacherAndAcademicYear(userId, courseId, sessi
 
         const periodNormalCells = collectPeriodCells(normalCells, period, daysName);
 
-        const periodElectiveCells = collectPeriodCells(electiveCells, period, daysName);
+        const periodElectiveCells = collectPeriodCells(filteredElectiveCells, period, daysName);
 
         let isOverriding = false;
         for (const cell of periodNormalCells) {
@@ -3844,6 +3861,23 @@ export async function getRoutineByTeacherAndAcademicYear(userId, courseId, sessi
       });
     }
 
+    let academicGroup = null;
+    if (routine.academicGroup) {
+      const scope = routine.academicGroup.scope || {};
+      academicGroup = {
+        academicGroupId: routine.academicGroup.academicGroupId,
+        groupName: routine.academicGroup.groupName,
+        groupCode: routine.academicGroup.groupCode,
+        academicGroupScopeId: scope.academicGroupScopeId || null,
+        courseId: scope.courseId || null,
+        courseName: scope.course?.courseName || null,
+        sessionId: scope.sessionId || null,
+        sessionName: scope.session?.sessionName || null,
+        term: scope.term || null,
+        classSectionTermId: scope.classSectionTermId || null,
+      };
+    }
+
     formattedRoutines.push({
       timeTableRoutineId: routine.timeTableRoutineId,
       isPublished: routine.isPublish,
@@ -3852,6 +3886,7 @@ export async function getRoutineByTeacherAndAcademicYear(userId, courseId, sessi
       startDate: routine.startingDate,
       endDate: routine.endingDate,
       classSection,
+      academicGroup,
       periods: formattedPeriods,
     });
   }

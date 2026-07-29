@@ -2017,8 +2017,8 @@ const teacherClassSectionInclude = (courseId, sessionId) => {
   }
 
   return timeTableRoutineClassSectionInclude({
-    termRequired: true,
-    sectionRequired: true,
+    termRequired: false,
+    sectionRequired: false,
     sectionWhere,
     sectionAttributes: ['classSectionsId', 'section', 'year', 'sessionId', 'courseId'],
     sectionNestedIncludes: [
@@ -2081,7 +2081,10 @@ async function fetchNormalRoutinesForTeacher(userId, courseId, sessionId, subjec
     timeTableType: 'normal',
   };
   if (courseId != null) {
-    routineWhere.courseId = courseId;
+    routineWhere[Op.or] = [
+      { courseId: courseId },
+      { academicGroupId: { [Op.not]: null } }
+    ];
   }
 
   return scoped(model.timeTableRoutineModel).findAll({
@@ -2094,6 +2097,7 @@ async function fetchNormalRoutinesForTeacher(userId, courseId, sessionId, subjec
       'isPublish',
       'timeTableType',
       'classSectionTermId',
+      'academicGroupId',
       'courseId',
     ],
     include: [
@@ -2104,6 +2108,34 @@ async function fetchNormalRoutinesForTeacher(userId, courseId, sessionId, subjec
         required: true,
       }),
       teacherClassSectionInclude(courseId, sessionId),
+      {
+        model: model.academicGroupModel,
+        as: 'academicGroup',
+        required: false,
+        attributes: ['academicGroupId', 'groupName', 'groupCode'],
+        include: [
+          {
+            model: model.academicGroupScopeModel,
+            as: 'scope',
+            required: false,
+            attributes: ['academicGroupScopeId', 'courseId', 'sessionId', 'term', 'classSectionTermId'],
+            include: [
+              {
+                model: model.courseModel,
+                as: 'course',
+                required: false,
+                attributes: ['courseId', 'courseName', 'courseCode'],
+              },
+              {
+                model: model.sessionModel,
+                as: 'session',
+                required: false,
+                attributes: ['sessionId', 'sessionName'],
+              },
+            ],
+          }
+        ]
+      }
     ],
     order: [['timeTableRoutineId', 'ASC']],
   });
@@ -2123,12 +2155,15 @@ async function fetchElectiveCellsForTeacher(
     timeTableType: 'elective',
   };
   if (courseId != null) {
-    electiveWhere.courseId = courseId;
+    electiveWhere[Op.or] = [
+      { courseId: courseId },
+      { academicGroupId: { [Op.not]: null } }
+    ];
   }
 
   const electiveRoutines = await scoped(model.timeTableRoutineModel).findAll({
     where: electiveWhere,
-    attributes: ['timeTableRoutineId', 'timetableStructureCourseMapperId'],
+    attributes: ['timeTableRoutineId', 'timetableStructureCourseMapperId', 'academicGroupId'],
     include: [
       {
         model: model.timeTableStructureCourseModel,
@@ -2141,6 +2176,34 @@ async function fetchElectiveCellsForTeacher(
       },
       routineCellsInclude({ userId, required: true }),
       teacherClassSectionInclude(courseId, sessionId),
+      {
+        model: model.academicGroupModel,
+        as: 'academicGroup',
+        required: false,
+        attributes: ['academicGroupId', 'groupName', 'groupCode'],
+        include: [
+          {
+            model: model.academicGroupScopeModel,
+            as: 'scope',
+            required: false,
+            attributes: ['academicGroupScopeId', 'courseId', 'sessionId', 'term', 'classSectionTermId'],
+            include: [
+              {
+                model: model.courseModel,
+                as: 'course',
+                required: false,
+                attributes: ['courseId', 'courseName', 'courseCode'],
+              },
+              {
+                model: model.sessionModel,
+                as: 'session',
+                required: false,
+                attributes: ['sessionId', 'sessionName'],
+              },
+            ],
+          }
+        ]
+      }
     ],
   });
 
