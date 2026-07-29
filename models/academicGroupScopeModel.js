@@ -12,6 +12,7 @@ import {
     ACADEMIC_GROUP_TYPES,
     ACADEMIC_GROUP_SELECTION_SCOPES,
     ACADEMIC_GROUP_CONTEXT_TYPES,
+    ACADEMIC_GROUP_PUBLISH_STATUSES,
 } from "../constant.js";
 
 const academicGroupScopeModel = sequelize.define(
@@ -37,6 +38,12 @@ const academicGroupScopeModel = sequelize.define(
             type: DataTypes.ENUM(...ACADEMIC_GROUP_SELECTION_SCOPES),
             allowNull: false,
             field: 'selection_scope',
+        },
+        publishStatus: {
+            type: DataTypes.ENUM(...ACADEMIC_GROUP_PUBLISH_STATUSES),
+            allowNull: false,
+            defaultValue: 'draft',
+            field: 'publish_status',
         },
         courseId: {
             type: DataTypes.INTEGER,

@@ -141,6 +141,7 @@ function normalizeScopeFields(body) {
         academicContextType,
         contextSubjectId,
         activityName,
+        publishStatus: body.publishStatus,
     };
 }
 
@@ -218,6 +219,7 @@ export async function updateScope(academicGroupScopeId, body, updatedBy) {
         academicContextType: body.academicContextType ?? existing.academicContextType,
         contextSubjectId: body.contextSubjectId !== undefined ? body.contextSubjectId : existing.contextSubjectId,
         activityName: body.activityName !== undefined ? body.activityName : existing.activityName,
+        publishStatus: body.publishStatus ?? existing.publishStatus,
     };
 
     const fields = normalizeScopeFields(merged);
@@ -388,9 +390,6 @@ export async function updateGroup(academicGroupId, body, updatedBy) {
     if (body.capacity !== undefined) {
         payload.capacity = body.capacity;
     }
-    if (body.publishStatus != null) {
-        payload.publishStatus = body.publishStatus;
-    }
     if (body.groupCode !== undefined) {
         const nextCode = body.groupCode == null || String(body.groupCode).trim() === ''
             ? null
@@ -407,19 +406,16 @@ export async function updateGroup(academicGroupId, body, updatedBy) {
     return academicGroupRepository.updateGroup(academicGroupId, payload);
 }
 
-export async function publishGroup(academicGroupId, updatedBy) {
-    const existing = await academicGroupRepository.getGroupWithScope(academicGroupId);
+export async function publishScope(academicGroupScopeId, updatedBy) {
+    const existing = await academicGroupRepository.getScopeSingle(academicGroupScopeId);
     if (!existing) {
         return false;
     }
     if (existing.publishStatus === 'published') {
-        throw new Error('Group is already published');
-    }
-    if (!existing.groupName) {
-        throw new Error('groupName is required to publish');
+        throw new Error('Scope is already published');
     }
 
-    return academicGroupRepository.updateGroup(academicGroupId, {
+    return academicGroupRepository.updateScope(academicGroupScopeId, {
         publishStatus: 'published',
         updatedBy,
     });

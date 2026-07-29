@@ -40,12 +40,7 @@ const academicGroupModel = sequelize.define(
             allowNull: true,
             field: 'capacity',
         },
-        publishStatus: {
-            type: DataTypes.ENUM(...ACADEMIC_GROUP_PUBLISH_STATUSES),
-            allowNull: false,
-            defaultValue: 'draft',
-            field: 'publish_status',
-        },
+
         universityId: {
             type: DataTypes.INTEGER,
             allowNull: false,

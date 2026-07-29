@@ -1933,7 +1933,13 @@ export async function getNormalRoutinesBySectionScopeRepository(scope = {}) {
     timeTableType: 'normal',
     ...(scope.classSectionTermId != null && { classSectionTermId: Number(scope.classSectionTermId) }),
     ...(scope.academicGroupId != null && { academicGroupId: Number(scope.academicGroupId) }),
+    ...(scope.courseId != null && { courseId: Number(scope.courseId) }),
+    ...(scope.sessionId != null && { '$structureCourseMapping.session_id$': Number(scope.sessionId) }),
   };
+  
+  if (scope.classSectionTermId == null && scope.courseId != null && scope.sessionId != null) {
+      where.academicGroupId = { [Op.not]: null };
+  }
 
   return await scoped(model.timeTableRoutineModel).findAll({
     where,

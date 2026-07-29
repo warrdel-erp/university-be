@@ -243,7 +243,7 @@ const classSubjectCountQuerySchema = z.object({
 const getDateWiseCellsQuerySchema = z.object({
     courseId: positiveIntegerId,
     sessionId: positiveIntegerId,
-    classSectionTermId: positiveIntegerId,
+    classSectionTermId: positiveIntegerId.optional(),
     date: z.string().optional(),
 });
 

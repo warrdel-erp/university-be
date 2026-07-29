@@ -472,9 +472,6 @@ export async function getAllGroups({
     publishStatus,
 }) {
     const where = {};
-    if (publishStatus != null) {
-        where.publishStatus = publishStatus;
-    }
     if (search) {
         const like = `%${search}%`;
         where[Op.or] = [
@@ -486,6 +483,9 @@ export async function getAllGroups({
     const scopeWhere = { ...buildScope(model.academicGroupScopeModel) };
     if (courseId != null) {
         scopeWhere.courseId = Number(courseId);
+    }
+    if (publishStatus != null) {
+        scopeWhere.publishStatus = publishStatus;
     }
     if (sessionId != null) {
         scopeWhere.sessionId = Number(sessionId);

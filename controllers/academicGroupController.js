@@ -133,17 +133,17 @@ export async function updateGroup(req, res) {
     }
 }
 
-export async function publishGroup(req, res) {
+export async function publishScope(req, res) {
     try {
-        const { academicGroupId } = req.query;
+        const { academicGroupScopeId } = req.query;
         const updatedBy = req.user.userId;
-        const updated = await academicGroupService.publishGroup(academicGroupId, updatedBy);
+        const updated = await academicGroupService.publishScope(academicGroupScopeId, updatedBy);
         if (!updated) {
-            return ErrorResponse(res, 404, 'Academic group not found');
+            return ErrorResponse(res, 404, 'Academic group scope not found');
         }
-        return SuccessResponse(res, 200, 'Academic group published successfully');
+        return SuccessResponse(res, 200, 'Academic group scope published successfully');
     } catch (error) {
-        console.error('Error in publishGroup:', error);
+        console.error('Error in publishScope:', error);
         return ErrorResponse(res, statusFromError(error), error.message || 'Internal Server Error');
     }
 }

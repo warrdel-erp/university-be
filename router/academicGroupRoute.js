@@ -68,6 +68,7 @@ const createScopeSchema = z.object({
     academicContextType: contextTypeEnum,
     contextSubjectId: optionalNullablePositiveIntegerId,
     activityName: optionalString.nullable(),
+    publishStatus: publishStatusEnum.optional(),
 });
 
 const updateScopeSchema = z.object({
@@ -81,6 +82,7 @@ const updateScopeSchema = z.object({
     academicContextType: contextTypeEnum.optional(),
     contextSubjectId: optionalNullablePositiveIntegerId,
     activityName: optionalString.nullable(),
+    publishStatus: publishStatusEnum.optional(),
 });
 
 const scopeIdQuerySchema = z.object({
@@ -99,7 +101,6 @@ const createGroupSchema = z.object({
         emptyToUndefined,
         z.coerce.number().int().positive().nullable().optional(),
     ),
-    publishStatus: publishStatusEnum.optional(),
 });
 
 const updateGroupSchema = z.object({
@@ -110,11 +111,10 @@ const updateGroupSchema = z.object({
         emptyToUndefined,
         z.coerce.number().int().positive().nullable().optional(),
     ),
-    publishStatus: publishStatusEnum.optional(),
 });
 
-const publishGroupSchema = z.object({
-    academicGroupId: positiveIntegerId,
+const publishScopeSchema = z.object({
+    academicGroupScopeId: positiveIntegerId,
 });
 
 const groupIdQuerySchema = z.object({
@@ -264,10 +264,10 @@ router.patch(
 );
 
 router.patch(
-    '/publish',
+    '/scope/publish',
     userAuth,
-    validate({ query: publishGroupSchema }),
-    academicGroupController.publishGroup,
+    validate({ query: publishScopeSchema }),
+    academicGroupController.publishScope,
 );
 
 router.delete(

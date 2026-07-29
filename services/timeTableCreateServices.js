@@ -4290,11 +4290,19 @@ export async function getDateWiseCellsBySection(
   options = {},
 ) {
   const anchorDate = toDateOnlyString(options.date || new Date());
-  const placement = await resolveRoutinePlacement({ classSectionTermId });
-  const scope = routineScopeWhere(placement.classSectionTermId);
+  
+  let placement = null;
+  let scope = {};
+  if (classSectionTermId != null) {
+    placement = await resolveRoutinePlacement({ classSectionTermId });
+    scope = routineScopeWhere(placement.classSectionTermId);
+  } else {
+    scope = { courseId: Number(courseId), sessionId: Number(sessionId) };
+  }
 
+  const termId = placement ? placement.classSectionTermId : null;
   const [termRow, courseRow, sessionRow] = await Promise.all([
-    findClassSectionTermById(placement.classSectionTermId),
+    termId ? findClassSectionTermById(termId) : null,
     getCourseByCourseId(Number(courseId)),
     getSessionSummaryById(Number(sessionId)),
   ]);
@@ -4315,11 +4323,11 @@ export async function getDateWiseCellsBySection(
   const common = {
     courseId: Number(courseId),
     sessionId: Number(sessionId),
-    classSectionTermId: Number(classSectionTermId),
+    classSectionTermId: classSectionTermId ? Number(classSectionTermId) : null,
     course,
     session,
     section,
-    term: placement.term != null ? Number(placement.term) : null,
+    term: placement?.term != null ? Number(placement.term) : null,
     year: classSection?.year != null ? Number(classSection.year) : null,
   };
 
