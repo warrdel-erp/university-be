@@ -1551,7 +1551,9 @@ async function enrichTodayClassSchedules(schedules) {
     const electiveId = schedule.electiveSubjectId || schedule.timeTableElective?.electiveSubjectId;
 
     let studentCount = 0;
-    if (electiveId) {
+    if (schedule.academicGroupId && schedule.academicGroupStudentCount != null) {
+      studentCount = schedule.academicGroupStudentCount;
+    } else if (electiveId) {
       studentCount = electiveCountMap.get(Number(electiveId)) || 0;
     } else if (classSectionTermId) {
       const count = studentCountMap.get(Number(classSectionTermId));
@@ -1595,7 +1597,9 @@ async function enrichSchedulesWithAttendance(schedules) {
     const electiveId = schedule.electiveSubjectId || schedule.timeTableElective?.electiveSubjectId;
 
     let studentCount = 0;
-    if (electiveId) {
+    if (schedule.academicGroupId && schedule.academicGroupStudentCount != null) {
+      studentCount = schedule.academicGroupStudentCount;
+    } else if (electiveId) {
       studentCount = electiveCountMap.get(Number(electiveId)) || 0;
     } else if (classSectionTermId) {
       const count = studentCountMap.get(Number(classSectionTermId));
