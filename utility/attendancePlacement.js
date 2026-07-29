@@ -59,7 +59,7 @@ function dateWiseCellInclude() {
         {
           model: model.timeTableRoutineModel,
           as: 'timeTableRoutine',
-          attributes: ['timeTableRoutineId', 'classSectionTermId', 'startingDate', 'endingDate'],
+          attributes: ['timeTableRoutineId', 'classSectionTermId', 'startingDate', 'endingDate', 'academicGroupId'],
           required: true,
           include: [
             timeTableRoutineClassSectionInclude({
@@ -147,6 +147,7 @@ export function resolveDateWiseRoutinePlacement(dateWiseRow) {
 
   return {
     classSectionTermId: routine.classSectionTermId ?? termRow?.classSectionTermId ?? null,
+    academicGroupId: routine.academicGroupId ?? null,
     term: termRow?.term ?? null,
     year: section?.year ?? null,
     classSectionsId: section?.classSectionsId ?? termRow?.classSectionsId ?? null,
@@ -190,16 +191,18 @@ export async function assertCopyPeriodDateWiseMatch(
     }
   }
 
-  if (!sourcePlacement?.classSectionTermId) {
-    throw new Error('Source period could not be resolved to a class section term');
+  if (!sourcePlacement?.classSectionTermId && !sourcePlacement?.academicGroupId) {
+    throw new Error('Source period could not be resolved to a class section term or academic group');
   }
 
-  if (Number(classSectionTermId) !== Number(sourcePlacement.classSectionTermId)) {
+  // NOTE: If using academicGroupId for copy, might need to change classSectionTermId matching. 
+  // For now, keeping existing logic for classSectionTermId match.
+  if (classSectionTermId && Number(classSectionTermId) !== Number(sourcePlacement.classSectionTermId)) {
     throw new Error('classSectionTermId does not match the source period');
   }
 
   for (const { dateWiseId, placement } of targetPlacements) {
-    if (Number(placement.classSectionTermId) !== Number(sourcePlacement.classSectionTermId)) {
+    if (sourcePlacement.classSectionTermId && Number(placement.classSectionTermId) !== Number(sourcePlacement.classSectionTermId)) {
       throw new Error(
         `timeTableCellDateWiseId ${dateWiseId} is not in the same term as the source period`,
       );
@@ -246,8 +249,8 @@ export async function resolveSourcePeriodByDateWiseId(sourceDateWiseId, options 
   const routine = cell.timeTableRoutine;
   const placement = resolveDateWiseRoutinePlacement(row);
 
-  if (!placement.classSectionTermId) {
-    throw new Error('Period could not be resolved to a class section term');
+  if (!placement.classSectionTermId && !placement.academicGroupId) {
+    throw new Error('Period could not be resolved to a class section term or academic group');
   }
 
   return {
@@ -267,6 +270,7 @@ export async function resolveSourcePeriodByDateWiseId(sourceDateWiseId, options 
     timeTableTeacherSubject: cell.timeTableTeacherSubject ?? null,
     timeTableCell: cell,
     timeTableRoutine: routine,
+    academicGroupId: routine.academicGroupId ?? null,
   };
 }
 

@@ -2635,7 +2635,7 @@ export async function getStudentDetailsRepository(studentId) {
     }
 }
 
-export async function getStudentsByClassSection(classSectionTermId, timeTableCellDateWiseId) {
+export async function getStudentsByPlacement(placement, timeTableCellDateWiseId) {
 
     try {
         const academicYearId = getRequestAcademicYearId();
@@ -2643,10 +2643,27 @@ export async function getStudentsByClassSection(classSectionTermId, timeTableCel
             return [];
         }
 
+        const classSectionTermId = placement.classSectionTermId;
+        const academicGroupId = placement.academicGroupId;
+
+        let whereClause = {};
+        let extraIncludes = [];
+
+        if (academicGroupId) {
+            extraIncludes.push({
+                model: model.academicGroupStudentModel,
+                as: 'academicGroupStudents',
+                where: { academicGroupId: Number(academicGroupId) },
+                required: true,
+            });
+        } else if (classSectionTermId) {
+            whereClause.classSectionTermId = Number(classSectionTermId);
+        } else {
+            return [];
+        }
+
         const students = await scoped(model.studentModel).findAll({
-            where: {
-                classSectionTermId: Number(classSectionTermId),
-            },
+            where: whereClause,
             attributes: [
                 "studentId",
                 "scholarNumber",
@@ -2656,13 +2673,14 @@ export async function getStudentsByClassSection(classSectionTermId, timeTableCel
                 "classSectionTermId",
             ],
             include: [
+                ...extraIncludes,
                 studentSessionWithAcademicYearInclude({
                     academicYearId: academicYearId,
                 }),
                 studentClassSectionTermWithSectionInclude({
-                    classSectionTermId: Number(classSectionTermId),
-                    termRequired: true,
-                    sectionRequired: true,
+                    classSectionTermId: classSectionTermId ? Number(classSectionTermId) : undefined,
+                    termRequired: false,
+                    sectionRequired: false,
                     sectionWhere: {
                         academicYearId: academicYearId,
                         ...buildScope(model.classSectionModel),
