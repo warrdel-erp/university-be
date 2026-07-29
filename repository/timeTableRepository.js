@@ -835,14 +835,14 @@ export async function getProgramsOverviewRows(filters = {}) {
                 model: model.classSectionModel,
                 as: 'courseSection',
                 required: false,
-                attributes: ['classSectionsId'],
+                attributes: ['classSectionsId', 'sessionId'],
                 where: buildScope(model.classSectionModel),
             },
             {
                 model: model.academicGroupScopeModel,
                 as: 'academicGroupScopes',
                 required: false,
-                attributes: ['academicGroupScopeId'],
+                attributes: ['academicGroupScopeId', 'sessionId'],
                 where: buildScope(model.academicGroupScopeModel),
             },
             {
@@ -851,6 +851,14 @@ export async function getProgramsOverviewRows(filters = {}) {
                 required: false,
                 attributes: ['timeTableRoutineId', 'isPublish'],
                 where: buildScope(model.timeTableRoutineModel),
+                include: [
+                    {
+                        model: model.timeTableStructureCourseModel,
+                        as: 'structureCourseMapping',
+                        required: false,
+                        attributes: ['sessionId'],
+                    }
+                ]
             }
         ]
     });

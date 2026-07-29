@@ -1,4 +1,5 @@
 import * as timeTableRepository from '../repository/timeTableRepository.js';
+import * as model from '../models/index.js';
 import * as academicGroupRepository from '../repository/academicGroupRepository.js';
 import sequelize from '../database/sequelizeConfig.js';
 import { formatQueryDate } from '../utility/helper.js';
@@ -676,47 +677,118 @@ export async function getProgramsOverviewData(query, reqContext) {
 
     const rows = await timeTableRepository.getProgramsOverviewRows(filters);
 
-    const result = rows.map((courseRow) => {
+    const result = [];
+    const allSessionIds = new Set();
+
+    rows.forEach((courseRow) => {
         const plain = courseRow.get({ plain: true });
 
-        // Calculate metrics
-        let sectionsCount = 0;
         if (plain.courseSection) {
-            sectionsCount = plain.courseSection.length;
+            plain.courseSection.forEach(sec => {
+                if (sec.sessionId) allSessionIds.add(sec.sessionId);
+            });
         }
-
-        let academicGroupsCount = 0;
+        
         if (plain.academicGroupScopes) {
-            academicGroupsCount = plain.academicGroupScopes.length;
+            plain.academicGroupScopes.forEach(scope => {
+                if (scope.sessionId) allSessionIds.add(scope.sessionId);
+            });
+        }
+        
+        if (plain.timeTableCourse) {
+            plain.timeTableCourse.forEach(routine => {
+                if (routine.structureCourseMapping && routine.structureCourseMapping.sessionId) {
+                    allSessionIds.add(routine.structureCourseMapping.sessionId);
+                }
+            });
+        }
+    });
+
+    const sessionMap = {};
+    if (allSessionIds.size > 0) {
+        const sessions = await model.sessionModel.findAll({
+            where: { sessionId: Array.from(allSessionIds) },
+            attributes: ['sessionId', 'sessionName', 'startingDate', 'endingDate'],
+            raw: true
+        });
+        sessions.forEach(s => sessionMap[s.sessionId] = s);
+    }
+
+    rows.forEach((courseRow) => {
+        const plain = courseRow.get({ plain: true });
+
+        const sessionIds = new Set();
+        
+        if (plain.courseSection) {
+            plain.courseSection.forEach(sec => {
+                if (sec.sessionId) sessionIds.add(sec.sessionId);
+            });
+        }
+        
+        if (plain.academicGroupScopes) {
+            plain.academicGroupScopes.forEach(scope => {
+                if (scope.sessionId) sessionIds.add(scope.sessionId);
+            });
+        }
+        
+        if (plain.timeTableCourse) {
+            plain.timeTableCourse.forEach(routine => {
+                if (routine.structureCourseMapping && routine.structureCourseMapping.sessionId) {
+                    sessionIds.add(routine.structureCourseMapping.sessionId);
+                }
+            });
         }
 
-        let totalRoutines = 0;
-        let publishedRoutines = 0;
-        let draftRoutines = 0;
-        let inProgressRoutines = 0; // Defaulting to 0 unless further defined
+        if (sessionIds.size === 0) {
+            sessionIds.add(null);
+        }
 
-        if (plain.timeTableCourse) {
-            totalRoutines = plain.timeTableCourse.length;
-            for (const routine of plain.timeTableCourse) {
-                if (routine.isPublish) {
-                    publishedRoutines++;
-                } else {
-                    draftRoutines++;
+        sessionIds.forEach(sessionId => {
+            let sectionsCount = 0;
+            if (plain.courseSection) {
+                sectionsCount = plain.courseSection.filter(sec => sec.sessionId === sessionId || (!sec.sessionId && !sessionId)).length;
+            }
+
+            let academicGroupsCount = 0;
+            if (plain.academicGroupScopes) {
+                academicGroupsCount = plain.academicGroupScopes.filter(scope => scope.sessionId === sessionId || (!scope.sessionId && !sessionId)).length;
+            }
+
+            let totalRoutines = 0;
+            let publishedRoutines = 0;
+            let draftRoutines = 0;
+            let inProgressRoutines = 0;
+
+            if (plain.timeTableCourse) {
+                const sessionRoutines = plain.timeTableCourse.filter(routine => {
+                    const rSessionId = routine.structureCourseMapping ? routine.structureCourseMapping.sessionId : null;
+                    return rSessionId === sessionId || (!rSessionId && !sessionId);
+                });
+                
+                totalRoutines = sessionRoutines.length;
+                for (const routine of sessionRoutines) {
+                    if (routine.isPublish) {
+                        publishedRoutines++;
+                    } else {
+                        draftRoutines++;
+                    }
                 }
             }
-        }
-
-        return {
-            courseId: plain.courseId,
-            courseName: plain.courseName,
-            courseCode: plain.courseCode,
-            sectionsCount,
-            academicGroupsCount,
-            totalRoutines,
-            publishedRoutines,
-            draftRoutines,
-            inProgressRoutines,
-        };
+            
+            result.push({
+                courseId: plain.courseId,
+                courseName: plain.courseName,
+                courseCode: plain.courseCode,
+                sessionId: sessionId,
+                session: sessionId ? sessionMap[sessionId] || null : null,
+                sectionsCount,
+                academicGroupsCount,
+                totalRoutines,
+                publishedRoutines,
+                draftRoutines,
+                inProgressRoutines,
+            });
+        });
     });
 
     return result;
