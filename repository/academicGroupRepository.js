@@ -1041,3 +1041,21 @@ export async function sessionExists(sessionId) {
         attributes: ['sessionId'],
     });
 }
+
+export async function getClassSectionTermIdForScope(courseId, sessionId, term) {
+    if (!courseId || !sessionId || !term) return null;
+    
+    const classSection = await scoped(model.classSectionModel).findOne({
+        where: { courseId: Number(courseId), sessionId: Number(sessionId) },
+        attributes: ['classSectionsId'],
+    });
+    
+    if (!classSection) return null;
+    
+    const termRow = await scoped(model.classSectionTermModel).findOne({
+        where: { classSectionsId: classSection.classSectionsId, term: Number(term) },
+        attributes: ['classSectionTermId'],
+    });
+    
+    return termRow ? termRow.classSectionTermId : null;
+}

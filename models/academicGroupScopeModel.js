@@ -7,6 +7,7 @@ import acedmicYear from "./acedmicYearModel.js";
 import course from "./courseModel.js";
 import subject from "./subjectModel.js";
 import sessionModel from "./sessionModel.js";
+import classSectionTermModel from "./classSectionTermModel.js";
 import {
     ACADEMIC_GROUP_TYPES,
     ACADEMIC_GROUP_SELECTION_SCOPES,
@@ -59,6 +60,15 @@ const academicGroupScopeModel = sequelize.define(
             type: DataTypes.INTEGER,
             allowNull: true,
             field: 'term',
+        },
+        classSectionTermId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'class_section_term_id',
+            references: {
+                model: classSectionTermModel,
+                key: 'class_section_term_id',
+            },
         },
         academicContextType: {
             type: DataTypes.ENUM(...ACADEMIC_GROUP_CONTEXT_TYPES),

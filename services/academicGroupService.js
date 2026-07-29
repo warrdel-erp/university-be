@@ -177,8 +177,18 @@ export async function createScope(body, createdBy, updatedBy) {
         }
     }
 
+    let classSectionTermId = null;
+    if (fields.courseId != null && fields.sessionId != null && fields.term != null) {
+        classSectionTermId = await academicGroupRepository.getClassSectionTermIdForScope(
+            fields.courseId,
+            fields.sessionId,
+            fields.term
+        );
+    }
+
     return academicGroupRepository.createScope({
         ...fields,
+        classSectionTermId,
         createdBy,
         updatedBy,
     });
@@ -231,8 +241,18 @@ export async function updateScope(academicGroupScopeId, body, updatedBy) {
         }
     }
 
+    let classSectionTermId = null;
+    if (fields.courseId != null && fields.sessionId != null && fields.term != null) {
+        classSectionTermId = await academicGroupRepository.getClassSectionTermIdForScope(
+            fields.courseId,
+            fields.sessionId,
+            fields.term
+        );
+    }
+
     return academicGroupRepository.updateScope(academicGroupScopeId, {
         ...fields,
+        classSectionTermId,
         updatedBy,
     });
 }
