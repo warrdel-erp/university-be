@@ -4306,6 +4306,7 @@ export async function getDateWiseCellsBySection(
     getCourseByCourseId(Number(courseId)),
     getSessionSummaryById(Number(sessionId)),
   ]);
+  
   const { course, session } = mapDateWiseSectionContext(courseRow, sessionRow);
   let classSection = null;
   let section = null;
@@ -4316,6 +4317,11 @@ export async function getDateWiseCellsBySection(
   }
 
   const routines = await timeTableCreateRepository.getNormalRoutinesBySectionScopeRepository(scope);
+  
+  console.log("termRow:", termRow);
+  console.log("courseRow:", courseRow?.courseName);
+  console.log("sessionRow:", sessionRow?.sessionName);
+  console.log("routines length:", routines ? routines.length : 0);
   const { navStart, navEnd } = getSectionRoutineNavigationBounds(routines);
   const week = getSectionWeekRange(anchorDate, navStart, navEnd);
   const selectedRoutine = pickSectionRoutineForWeek(routines, week, anchorDate);
