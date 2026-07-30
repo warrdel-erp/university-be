@@ -736,9 +736,9 @@ export async function getAvailableStudents(academicGroupId, filters) {
         terms = [Number(scope.term)];
     }
 
-    const memberStudentIds = await academicGroupRepository.getMemberStudentIds(academicGroupId);
+    const memberStudentIds = await academicGroupRepository.getMemberStudentIdsByScope(scope.academicGroupScopeId);
     const studentIdsLinkedToMemberUsers =
-        await academicGroupRepository.getStudentIdsForMemberUsers(academicGroupId);
+        await academicGroupRepository.getStudentIdsForMemberUsersByScope(scope.academicGroupScopeId);
 
     const excludeStudentIds = [];
     const seenExclude = new Set();
@@ -759,7 +759,7 @@ export async function getAvailableStudents(academicGroupId, filters) {
         excludeStudentIds.push(n);
     }
 
-    const memberCount = memberStudentIds.length;
+    const memberCount = await academicGroupRepository.countGroupStudents(academicGroupId);
 
     const eligibleStudentIds = await academicGroupRepository.resolveEligibleStudentIds({
         courseId: Number(scope.courseId),
@@ -805,9 +805,15 @@ export async function getAvailableUsers(academicGroupId, filters) {
         throw new Error('academicGroupId not found');
     }
 
-    const memberUserIds = await academicGroupRepository.getMemberUserIds(academicGroupId);
+    const plain = typeof group.get === 'function' ? group.get({ plain: true }) : group;
+    const scope = plain.scope;
+    if (!scope) {
+        throw new Error('Group scope not found');
+    }
+
+    const memberUserIds = await academicGroupRepository.getMemberUserIdsByScope(scope.academicGroupScopeId);
     const userIdsOfMemberStudents =
-        await academicGroupRepository.getUserIdsForMemberStudents(academicGroupId);
+        await academicGroupRepository.getUserIdsForMemberStudentsByScope(scope.academicGroupScopeId);
 
     const excludeUserIds = [];
     const seenExclude = new Set();
