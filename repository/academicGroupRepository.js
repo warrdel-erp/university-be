@@ -325,10 +325,13 @@ export async function getScopeById(academicGroupScopeId) {
 }
 
 /** Full scope list with course / session / subject names and linked groups. */
-export async function getAllScopes({ search } = {}) {
+export async function getAllScopes({ search, publishStatus } = {}) {
     const where = {};
     if (search) {
         where.title = { [Op.like]: `%${search}%` };
+    }
+    if (publishStatus && publishStatus !== 'all') {
+        where.publishStatus = publishStatus;
     }
 
     const scopes = await scoped(model.academicGroupScopeModel).findAll({

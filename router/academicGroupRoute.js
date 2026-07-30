@@ -91,6 +91,10 @@ const scopeIdQuerySchema = z.object({
 
 const listScopesQuerySchema = z.object({
     search: optionalString,
+    publishStatus: z.preprocess(
+        emptyToUndefined,
+        z.enum(['draft', 'published', 'all']).optional(),
+    ),
 });
 
 const createGroupSchema = z.object({
