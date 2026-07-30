@@ -2731,6 +2731,7 @@ function buildProgramDetails(period, students) {
     year: period.year ?? section.year ?? null,
     section: period.section ?? section.section ?? null,
     term: period.term ?? termRow.term ?? null,
+    termType: course.termType ?? null,
     subjectId: subject.subjectId ?? null,
     subjectName: subject.subjectName ?? null,
     courseId: course.courseId ?? null,

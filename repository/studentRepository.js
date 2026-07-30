@@ -2731,7 +2731,7 @@ export async function getStudentsByPlacement(placement, timeTableCellDateWiseId)
                 {
                     model: model.courseModel,
                     as: "course",
-                    attributes: ["courseId", "courseName", "courseCode"],
+                    attributes: ["courseId", "courseName", "courseCode", "termType"],
                 },
                 {
                     model: model.attendanceModel,
