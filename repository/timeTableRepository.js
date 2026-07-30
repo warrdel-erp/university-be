@@ -701,6 +701,14 @@ export async function getTimetableListPrintRows(filters = {}) {
     const rows = await scoped(model.timeTableRoutineModel).findAll({
         attributes: [
             [sequelize.fn('MAX', sequelize.col('structureCourseMapping.time_table_name_id')), 'timeTableNameId'],
+            [
+                sequelize.fn('GROUP_CONCAT', sequelize.literal('DISTINCT `structureCourseMapping->timeTableStructure`.`name` SEPARATOR ", "')),
+                'structureName'
+            ],
+            [
+                sequelize.fn('GROUP_CONCAT', sequelize.literal('DISTINCT CONCAT_WS(" - ", `structureCourseMapping->timeTableStructure`.`name`, `timeTableCourse`.`course_code`) SEPARATOR ", "')),
+                'structure'
+            ],
             'courseId',
             [sequelize.col('timeTableCourse.course_name'), 'courseName'],
             [sequelize.col('timeTableCourse.course_code'), 'courseCode'],
@@ -711,6 +719,11 @@ export async function getTimetableListPrintRows(filters = {}) {
             [sequelize.col('timeTableCourse.term_type'), 'termType'],
             [sequelize.col('timeTableClassSectionTerm.classSection.class_sections_id'), 'classSectionId'],
             [sequelize.col('timeTableClassSectionTerm.classSection.section'), 'classSection'],
+            [sequelize.literal('NULL'), 'academicGroupId'],
+            [sequelize.literal('NULL'), 'academicGroupTitle'],
+            [sequelize.literal('NULL'), 'scopeTitle'],
+            [sequelize.literal('NULL'), 'groupCode'],
+            [sequelize.literal('NULL'), 'scopeCode'],
             [sequelize.fn('MIN', sequelize.col('time_table_routine.starting_date')), 'startingDate'],
             [sequelize.fn('MAX', sequelize.col('time_table_routine.ending_date')), 'endingDate'],
             [
@@ -749,6 +762,12 @@ export async function getTimetableListPrintRows(filters = {}) {
                     {
                         model: model.sessionModel,
                         as: 'session',
+                        attributes: [],
+                        required: true
+                    },
+                    {
+                        model: model.timeTableStructureModel,
+                        as: 'timeTableStructure',
                         attributes: [],
                         required: true
                     }
@@ -809,6 +828,14 @@ export async function getTimetableListPrintRows(filters = {}) {
     const academicRows = await scoped(model.timeTableRoutineModel).findAll({
         attributes: [
             [sequelize.fn('MAX', sequelize.col('structureCourseMapping.time_table_name_id')), 'timeTableNameId'],
+            [
+                sequelize.fn('GROUP_CONCAT', sequelize.literal('DISTINCT `structureCourseMapping->timeTableStructure`.`name` SEPARATOR ", "')),
+                'structureName'
+            ],
+            [
+                sequelize.fn('GROUP_CONCAT', sequelize.literal('DISTINCT CONCAT_WS(" - ", `structureCourseMapping->timeTableStructure`.`name`, `timeTableCourse`.`course_code`, CONCAT("Scope: ", `academicGroup->scope`.`title`), CONCAT("Group: ", `academicGroup`.`group_code`)) SEPARATOR ", "')),
+                'structure'
+            ],
             'courseId',
             [sequelize.col('timeTableCourse.course_name'), 'courseName'],
             [sequelize.col('timeTableCourse.course_code'), 'courseCode'],
@@ -821,6 +848,8 @@ export async function getTimetableListPrintRows(filters = {}) {
             [sequelize.literal('NULL'), 'classSection'],
             [sequelize.col('academicGroup.group_name'), 'academicGroupTitle'],
             [sequelize.col('academicGroup->scope.title'), 'scopeTitle'],
+            [sequelize.col('academicGroup.group_code'), 'groupCode'],
+            [sequelize.col('academicGroup->scope.scope_code'), 'scopeCode'],
             [sequelize.fn('MIN', sequelize.col('time_table_routine.starting_date')), 'startingDate'],
             [sequelize.fn('MAX', sequelize.col('time_table_routine.ending_date')), 'endingDate'],
             [
@@ -856,6 +885,12 @@ export async function getTimetableListPrintRows(filters = {}) {
                     {
                         model: model.sessionModel,
                         as: 'session',
+                        attributes: [],
+                        required: true
+                    },
+                    {
+                        model: model.timeTableStructureModel,
+                        as: 'timeTableStructure',
                         attributes: [],
                         required: true
                     }
