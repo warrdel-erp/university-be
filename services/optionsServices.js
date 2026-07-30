@@ -244,7 +244,7 @@ function buildTermOptionsFromCourses(courses) {
 export async function getStudentFilterOptions(filters) {
     const { courseIds, sessionIds, year, term } = filters;
 
-    const [courses, sessions, coursesMeta, classSectionYearRows, classSections] = await Promise.all([
+    const [courses, sessions, coursesMeta, classSectionYearRows, classSections, structures] = await Promise.all([
         optionsRepository.getCourseOptions(),
         optionsRepository.getSessionOptions(courseIds),
         courseIds != null
@@ -259,6 +259,9 @@ export async function getStudentFilterOptions(filters) {
             year,
             term,
         }),
+        courseIds != null
+            ? optionsRepository.getStructureFilterOptions({ courseIds, sessionIds })
+            : Promise.resolve([]),
     ]);
 
     let years = buildYearOptionsFromDistinctRows(classSectionYearRows);
@@ -276,6 +279,7 @@ export async function getStudentFilterOptions(filters) {
         years,
         classSections,
         terms,
+        structures,
         studentStatuses: STUDENT_STATUS_OPTIONS,
     };
 }
