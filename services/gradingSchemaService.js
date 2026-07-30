@@ -135,9 +135,9 @@ export async function getGradingSchemaGrades(gradingSchemaId) {
   return await gradingSchemaRepo.getGradingSchemaGrades(gradingSchemaId);
 }
 
-export async function getGradingSchemaGradeById(gradingSchemaId, gradingSchemaGradeId) {
+export async function getGradingSchemaGradeById(gradingSchemaGradeId) {
   const grade = await gradingSchemaRepo.getGradingSchemaGradeById(gradingSchemaGradeId);
-  if (!grade || Number(grade.gradingId) !== Number(gradingSchemaId)) {
+  if (!grade) {
     const error = new Error("Grading schema grade not found");
     error.statusCode = 404;
     throw error;
@@ -145,13 +145,13 @@ export async function getGradingSchemaGradeById(gradingSchemaId, gradingSchemaGr
   return grade;
 }
 
-export async function updateGradingSchemaGrade(gradingSchemaId, gradingSchemaGradeId, payload) {
-  await getGradingSchemaGradeById(gradingSchemaId, gradingSchemaGradeId);
+export async function updateGradingSchemaGrade(gradingSchemaGradeId, payload) {
+  await getGradingSchemaGradeById(gradingSchemaGradeId);
   return await gradingSchemaRepo.updateGradingSchemaGrade(gradingSchemaGradeId, payload);
 }
 
-export async function deleteGradingSchemaGrade(gradingSchemaId, gradingSchemaGradeId) {
-  await getGradingSchemaGradeById(gradingSchemaId, gradingSchemaGradeId);
+export async function deleteGradingSchemaGrade(gradingSchemaGradeId) {
+  await getGradingSchemaGradeById(gradingSchemaGradeId);
   await gradingSchemaRepo.deleteGradingSchemaGrade(gradingSchemaGradeId);
   return { message: "Grade deleted successfully" };
 }

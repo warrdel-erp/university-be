@@ -12,7 +12,7 @@ const gradingModel = sequelize.define(
             field: "grading_id",
         },
         universityId: {
-            type: DataTypes.BIGINT,
+            type: DataTypes.INTEGER,
             allowNull: false,
             field: "university_id",
             references: {
@@ -53,12 +53,12 @@ const gradingModel = sequelize.define(
             field: "is_active",
         },
         createdBy: {
-            type: DataTypes.BIGINT,
+            type: DataTypes.INTEGER,
             allowNull: true,
             field: "created_by",
         },
         updatedBy: {
-            type: DataTypes.BIGINT,
+            type: DataTypes.INTEGER,
             allowNull: true,
             field: "updated_by",
         },

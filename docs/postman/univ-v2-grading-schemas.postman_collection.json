@@ -232,14 +232,14 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseurl}}/gradingSchemas/{{gradingSchemaId}}/grades",
+							"raw": "{{baseurl}}/gradingSchemas/grades/{{gradingSchemaId}}",
 							"host": [
 								"{{baseurl}}"
 							],
 							"path": [
 								"gradingSchemas",
-								"{{gradingSchemaId}}",
-								"grades"
+								"grades",
+								"{{gradingSchemaId}}"
 							]
 						}
 					}
@@ -255,13 +255,12 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseurl}}/gradingSchemas/{{gradingSchemaId}}/grades/{{gradingSchemaGradeId}}",
+							"raw": "{{baseurl}}/gradingSchemas/grades/{{gradingSchemaGradeId}}",
 							"host": [
 								"{{baseurl}}"
 							],
 							"path": [
 								"gradingSchemas",
-								"{{gradingSchemaId}}",
 								"grades",
 								"{{gradingSchemaGradeId}}"
 							]
@@ -287,13 +286,12 @@
 							"raw": "{\n  \"grade\": \"B+\",\n  \"minPercentage\": 65.0,\n  \"maxPercentage\": 74.99,\n  \"gradePoint\": 7.5,\n  \"resultLabel\": \"Good\"\n}"
 						},
 						"url": {
-							"raw": "{{baseurl}}/gradingSchemas/{{gradingSchemaId}}/grades/{{gradingSchemaGradeId}}",
+							"raw": "{{baseurl}}/gradingSchemas/grades/{{gradingSchemaGradeId}}",
 							"host": [
 								"{{baseurl}}"
 							],
 							"path": [
 								"gradingSchemas",
-								"{{gradingSchemaId}}",
 								"grades",
 								"{{gradingSchemaGradeId}}"
 							]
@@ -311,13 +309,12 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseurl}}/gradingSchemas/{{gradingSchemaId}}/grades/{{gradingSchemaGradeId}}",
+							"raw": "{{baseurl}}/gradingSchemas/grades/{{gradingSchemaGradeId}}",
 							"host": [
 								"{{baseurl}}"
 							],
 							"path": [
 								"gradingSchemas",
-								"{{gradingSchemaId}}",
 								"grades",
 								"{{gradingSchemaGradeId}}"
 							]
@@ -340,14 +337,14 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseurl}}/gradingSchemas/{{gradingSchemaId}}/publish",
+							"raw": "{{baseurl}}/gradingSchemas/publish/{{gradingSchemaId}}",
 							"host": [
 								"{{baseurl}}"
 							],
 							"path": [
 								"gradingSchemas",
-								"{{gradingSchemaId}}",
-								"publish"
+								"publish",
+								"{{gradingSchemaId}}"
 							]
 						}
 					}
@@ -363,14 +360,14 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseurl}}/gradingSchemas/{{gradingSchemaId}}/draft",
+							"raw": "{{baseurl}}/gradingSchemas/draft/{{gradingSchemaId}}",
 							"host": [
 								"{{baseurl}}"
 							],
 							"path": [
 								"gradingSchemas",
-								"{{gradingSchemaId}}",
-								"draft"
+								"draft",
+								"{{gradingSchemaId}}"
 							]
 						}
 					}

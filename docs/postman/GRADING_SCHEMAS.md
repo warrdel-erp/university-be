@@ -10,18 +10,18 @@ API endpoints for managing Grading Schemas and individual Grade Scales.
 
 | # | Method | Path | Description |
 |---|--------|------|-------------|
-| 1 | `POST` | `/gradingSchemas` | Create a new grading schema with optional grades |
+| 1 | `POST` | `/gradingSchemas` | Create a new grading schema |
 | 2 | `GET` | `/gradingSchemas` | Get paginated list of grading schemas |
 | 3 | `GET` | `/gradingSchemas/:gradingSchemaId` | Get single grading schema by ID |
 | 4 | `PUT` | `/gradingSchemas/:gradingSchemaId` | Update grading schema |
 | 5 | `DELETE` | `/gradingSchemas/:gradingSchemaId` | Delete grading schema |
 | 6 | `POST` | `/gradingSchemas/:gradingSchemaId/grades` | Add a grade to a grading schema |
-| 7 | `GET` | `/gradingSchemas/:gradingSchemaId/grades` | Get all grades of a grading schema |
-| 8 | `GET` | `/gradingSchemas/:gradingSchemaId/grades/:gradingSchemaGradeId` | Get single grade by ID |
-| 9 | `PUT` | `/gradingSchemas/:gradingSchemaId/grades/:gradingSchemaGradeId` | Update single grade |
-| 10 | `DELETE` | `/gradingSchemas/:gradingSchemaId/grades/:gradingSchemaGradeId` | Delete single grade |
-| 11 | `POST` | `/gradingSchemas/:gradingSchemaId/publish` | Set schema status to `PUBLISHED` |
-| 12 | `POST` | `/gradingSchemas/:gradingSchemaId/draft` | Set schema status to `DRAFT` |
+| 7 | `GET` | `/gradingSchemas/grades/:gradingSchemaId` | Get all grades of a grading schema |
+| 8 | `GET` | `/gradingSchemas/grades/:gradingSchemaGradeId` | Get single grade by ID |
+| 9 | `PUT` | `/gradingSchemas/grades/:gradingSchemaGradeId` | Update single grade |
+| 10 | `DELETE` | `/gradingSchemas/grades/:gradingSchemaGradeId` | Delete single grade |
+| 11 | `POST` | `/gradingSchemas/publish/:gradingSchemaId` | Set schema status to `PUBLISHED` |
+| 12 | `POST` | `/gradingSchemas/draft/:gradingSchemaId` | Set schema status to `DRAFT` |
 
 ---
 
@@ -63,7 +63,7 @@ Query Params:
   "gradingCode": "G10_SCALE_V2",
   "gradingMethod": "ABSOLUTE",
   "description": "Updated grading scheme details",
-  "status": "PUBLISHED"
+  "status": "DRAFT"
 }
 ```
 
@@ -82,7 +82,11 @@ Query Params:
 }
 ```
 
-### 5. Update Single Grade (`PUT /gradingSchemas/:gradingSchemaId/grades/:gradingSchemaGradeId`)
+### 5. Get Schema Grades (`GET /gradingSchemas/grades/:gradingSchemaId`)
+
+### 6. Get Grade By ID (`GET /gradingSchemas/grades/:gradingSchemaGradeId`)
+
+### 7. Update Single Grade (`PUT /gradingSchemas/grades/:gradingSchemaGradeId`)
 ```json
 {
   "grade": "B+",
@@ -93,8 +97,8 @@ Query Params:
 }
 ```
 
-### 6. Publish Grading Schema (`POST /gradingSchemas/:gradingSchemaId/publish`)
-*(No request body required)*
+### 8. Delete Single Grade (`DELETE /gradingSchemas/grades/:gradingSchemaGradeId`)
 
-### 7. Save Grading Schema as Draft (`POST /gradingSchemas/:gradingSchemaId/draft`)
-*(No request body required)*
+### 9. Publish Grading Schema (`POST /gradingSchemas/publish/:gradingSchemaId`)
+
+### 10. Save Grading Schema as Draft (`POST /gradingSchemas/draft/:gradingSchemaId`)

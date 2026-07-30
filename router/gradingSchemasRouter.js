@@ -125,21 +125,21 @@ router.post(
 );
 
 router.get(
-  "/:gradingSchemaId/grades",
+  "/grades/:gradingSchemaId",
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
   getGradingSchemaGrades
 );
 
 router.get(
-  "/:gradingSchemaId/grades/:gradingSchemaGradeId",
+  "/grades/:gradingSchemaGradeId",
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
   getGradingSchemaGradeById
 );
 
 router.put(
-  "/:gradingSchemaId/grades/:gradingSchemaGradeId",
+  "/grades/:gradingSchemaGradeId",
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP_EDIT.value, null),
   validate({ body: updateGradingSchemaGradeBody }),
@@ -147,7 +147,7 @@ router.put(
 );
 
 router.delete(
-  "/:gradingSchemaId/grades/:gradingSchemaGradeId",
+  "/grades/:gradingSchemaGradeId",
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
   deleteGradingSchemaGrade
@@ -157,14 +157,14 @@ router.delete(
 // Schema Status Endpoints (Publish / Draft)
 // ---------------------------------------------------------------------------
 router.post(
-  "/:gradingSchemaId/publish",
+  "/publish/:gradingSchemaId",
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP_EDIT.value, null),
   publishGradingSchema
 );
 
 router.post(
-  "/:gradingSchemaId/draft",
+  "/draft/:gradingSchemaId",
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP_EDIT.value, null),
   saveGradingSchemaDraft

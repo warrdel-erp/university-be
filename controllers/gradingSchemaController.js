@@ -96,8 +96,8 @@ export async function getGradingSchemaGrades(req, res) {
 
 export async function getGradingSchemaGradeById(req, res) {
   try {
-    const { gradingSchemaId, gradingSchemaGradeId } = req.params;
-    const result = await gradingSchemaService.getGradingSchemaGradeById(gradingSchemaId, gradingSchemaGradeId);
+    const { gradingSchemaGradeId } = req.params;
+    const result = await gradingSchemaService.getGradingSchemaGradeById(gradingSchemaGradeId);
 
     return SuccessResponse(res, 200, "Grade fetched successfully", result);
   } catch (error) {
@@ -108,9 +108,9 @@ export async function getGradingSchemaGradeById(req, res) {
 
 export async function updateGradingSchemaGrade(req, res) {
   try {
-    const { gradingSchemaId, gradingSchemaGradeId } = req.params;
+    const { gradingSchemaGradeId } = req.params;
     const data = req.body;
-    const result = await gradingSchemaService.updateGradingSchemaGrade(gradingSchemaId, gradingSchemaGradeId, data);
+    const result = await gradingSchemaService.updateGradingSchemaGrade(gradingSchemaGradeId, data);
 
     return SuccessResponse(res, 200, "Grade updated successfully", result);
   } catch (error) {
@@ -121,8 +121,8 @@ export async function updateGradingSchemaGrade(req, res) {
 
 export async function deleteGradingSchemaGrade(req, res) {
   try {
-    const { gradingSchemaId, gradingSchemaGradeId } = req.params;
-    const result = await gradingSchemaService.deleteGradingSchemaGrade(gradingSchemaId, gradingSchemaGradeId);
+    const { gradingSchemaGradeId } = req.params;
+    const result = await gradingSchemaService.deleteGradingSchemaGrade(gradingSchemaGradeId);
 
     return SuccessResponse(res, 200, result.message || "Grade deleted successfully");
   } catch (error) {

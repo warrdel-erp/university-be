@@ -15,7 +15,7 @@ module.exports = {
           allowNull: false,
         },
         university_id: {
-          type: Sequelize.BIGINT,
+          type: Sequelize.INTEGER,
           allowNull: false,
           references: {
             model: 'university',
@@ -51,11 +51,11 @@ module.exports = {
           allowNull: false,
         },
         created_by: {
-          type: Sequelize.BIGINT,
+          type: Sequelize.INTEGER,
           allowNull: true,
         },
         updated_by: {
-          type: Sequelize.BIGINT,
+          type: Sequelize.INTEGER,
           allowNull: true,
         },
         created_at: {
