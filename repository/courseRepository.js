@@ -12,9 +12,12 @@ function omitAcademicYearScope(scopeWhere = {}) {
 
 export async function getCourseByCourseId(courseId) {
   try {
-    return await scoped(model.courseModel).findOne({
+    const scopeWhere = buildScope(model.courseModel);
+    const where = omitAcademicYearScope(scopeWhere);
+    where.courseId = courseId;
+    return await model.courseModel.findOne({
       attributes: ['courseId', 'courseName', 'courseCode', 'universityId', 'instituteId', 'courseDuration', 'isActive', 'termType', 'totalTerms'],
-      where: { courseId },
+      where,
     });
   } catch (error) {
     console.error('Error in getting course details:', error);
@@ -481,8 +484,11 @@ export async function countStudentsByClassSectionIds(classSectionsIds) {
 
 export async function getSessionSummaryById(sessionId) {
   try {
-    return await scoped(model.sessionModel).findOne({
-      where: { sessionId },
+    const scopeWhere = buildScope(model.sessionModel);
+    const where = omitAcademicYearScope(scopeWhere);
+    where.sessionId = sessionId;
+    return await model.sessionModel.findOne({
+      where,
       attributes: ['sessionId', 'sessionName'],
       raw: true,
     });

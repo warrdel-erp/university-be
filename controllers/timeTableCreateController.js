@@ -1,5 +1,6 @@
 import * as timeTableCreateServices from '../services/timeTableCreateServices.js';
 import * as timeTableServices from '../services/timeTableServices.js';
+import * as academicGroupScopeService from '../services/academicGroupScopeService.js';
 import { ErrorResponse, SuccessResponse } from '../utility/response.js';
 
 
@@ -256,6 +257,18 @@ export const getRoutineByClassSectionId = async (req, res) => {
     }
 };
 
+export const getRoutineByAcademicGroupId = async (req, res) => {
+    const { academicGroupId } = req.query;
+    try {
+        const result = await timeTableCreateServices.getRoutineByAcademicGroupId(academicGroupId);
+        SuccessResponse(res, 200, 'Routine fetched successfully', result);
+    } catch (error) {
+        console.error('Error in getting routine by academic group ID:', error);
+        ErrorResponse(res, 500, error.message || "Internal Server Error");
+    }
+};
+
+
 export const getRoutineByTeacherAndAcademicYear = async (req, res) => {
     const { userId, courseId, sessionId, subjectId } = req.query;
     try {
@@ -315,5 +328,20 @@ export const updateDateWiseCellController = async (req, res) => {
         console.error('Error in updating date-wise cell:', error);
         const statusCode = /not found|published/i.test(error.message || '') ? 400 : 500;
         return ErrorResponse(res, statusCode, error.message || 'Internal Server Error');
+    }
+};
+
+export const getCascadingGroupRoutines = async (req, res) => {
+    try {
+        const { academicGroupScopeId, academicGroupId, sessionId } = req.query;
+        const result = await academicGroupScopeService.getCascadingGroupRoutinesService({
+            academicGroupScopeId,
+            academicGroupId,
+            sessionId,
+        });
+        return SuccessResponse(res, 200, 'Cascading group routines fetched successfully', result);
+    } catch (error) {
+        console.error('Error in getting cascading group routines:', error);
+        return ErrorResponse(res, 500, error.message || 'Internal Server Error');
     }
 };

@@ -7,6 +7,7 @@ import acedmicYear from "./acedmicYearModel.js";
 import sessionModel from "./sessionModel.js";
 import courseModel from "./courseModel.js";
 import timeTableStructureModel from "./timeTableStructureModel.js";
+import academicGroupScopeModel from "./academicGroupScopeModel.js";
 
 const timeTableStructureCourseModel = sequelize.define(
   "time_table_structure_course",
@@ -28,11 +29,20 @@ const timeTableStructureCourseModel = sequelize.define(
     },
     courseId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       field: "course_id",
       references: {
         model: courseModel,
         key: "course_id",
+      },
+    },
+    academicGroupScopeId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "academic_group_scope_id",
+      references: {
+        model: academicGroupScopeModel,
+        key: "academic_group_scope_id",
       },
     },
     universityId: {

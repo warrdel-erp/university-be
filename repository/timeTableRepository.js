@@ -91,6 +91,7 @@ export async function getStructureCourseMappingById(timetableStructureCourseMapp
             'timetableStructureCourseMapperId',
             'timeTableNameId',
             'courseId',
+            'academicGroupScopeId',
             'universityId',
             'instituteId',
             'academicYearId',
@@ -114,6 +115,30 @@ export async function getStructureCourseMapping(timeTableNameId, courseId, sessi
             'timetableStructureCourseMapperId',
             'timeTableNameId',
             'courseId',
+            'academicGroupScopeId',
+            'universityId',
+            'instituteId',
+            'academicYearId',
+            'sessionId',
+            'startingDate',
+            'endingDate',
+        ],
+        transaction: options.transaction,
+    });
+}
+
+export async function getStructureScopeMapping(timeTableNameId, academicGroupScopeId, sessionId, options = {}) {
+    return await scoped(model.timeTableStructureCourseModel).findOne({
+        where: {
+            timeTableNameId,
+            academicGroupScopeId,
+            sessionId,
+        },
+        attributes: [
+            'timetableStructureCourseMapperId',
+            'timeTableNameId',
+            'courseId',
+            'academicGroupScopeId',
             'universityId',
             'instituteId',
             'academicYearId',
@@ -127,17 +152,26 @@ export async function getStructureCourseMapping(timeTableNameId, courseId, sessi
 
 export async function findOverlappingStructureCourseMapping({
     courseId,
+    academicGroupScopeId,
     sessionId,
     startingDate,
     endingDate,
     excludeMapperId = null,
 }, options = {}) {
     const where = {
-        courseId: Number(courseId),
-        sessionId: Number(sessionId),
         startingDate: { [Op.lte]: endingDate },
         endingDate: { [Op.gte]: startingDate },
     };
+
+    if (academicGroupScopeId != null) {
+        where.academicGroupScopeId = Number(academicGroupScopeId);
+    } else if (courseId != null) {
+        where.courseId = Number(courseId);
+    }
+
+    if (sessionId != null) {
+        where.sessionId = Number(sessionId);
+    }
 
     if (excludeMapperId != null) {
         where.timetableStructureCourseMapperId = { [Op.ne]: Number(excludeMapperId) };
@@ -149,6 +183,7 @@ export async function findOverlappingStructureCourseMapping({
             'timetableStructureCourseMapperId',
             'timeTableNameId',
             'courseId',
+            'academicGroupScopeId',
             'sessionId',
             'startingDate',
             'endingDate',
@@ -391,6 +426,9 @@ export async function getStructureMappingPrintRows(filters = {}) {
     if (filters.courseId != null) {
         where.courseId = Number(filters.courseId);
     }
+    if (filters.academicGroupScopeId != null) {
+        where.academicGroupScopeId = Number(filters.academicGroupScopeId);
+    }
     if (filters.sessionId != null) {
         where.sessionId = Number(filters.sessionId);
     }
@@ -401,6 +439,7 @@ export async function getStructureMappingPrintRows(filters = {}) {
             'timetableStructureCourseMapperId',
             'timeTableNameId',
             'courseId',
+            'academicGroupScopeId',
             'sessionId',
             'startingDate',
             'endingDate',
@@ -409,7 +448,7 @@ export async function getStructureMappingPrintRows(filters = {}) {
             {
                 model: model.timeTableStructureModel,
                 as: 'timeTableStructure',
-                required: true,
+                required: false,
                 attributes: [
                     'timeTableNameId',
                     'name',
@@ -424,30 +463,40 @@ export async function getStructureMappingPrintRows(filters = {}) {
             {
                 model: model.courseModel,
                 as: 'course',
-                required: true,
+                required: false,
                 attributes: ['courseId', 'courseName', 'courseCode'],
+            },
+            {
+                model: model.academicGroupScopeModel,
+                as: 'academicGroupScope',
+                required: false,
+                attributes: ['academicGroupScopeId', 'title', 'groupType', 'selectionScope'],
             },
             {
                 model: model.sessionModel,
                 as: 'session',
-                required: true,
+                required: false,
                 attributes: ['sessionId', 'sessionName'],
             },
         ],
         order: [
             ['timeTableNameId', 'ASC'],
-            ['courseId', 'ASC'],
-            ['sessionId', 'ASC'],
+            ['timetableStructureCourseMapperId', 'ASC'],
         ],
     });
 }
 
-export async function getMappedStructuresForCourseSession(courseId, sessionId) {
-    const where = {
-        courseId: Number(courseId),
-    };
-    if (sessionId != null) {
-        where.sessionId = Number(sessionId);
+export async function getMappedStructuresForCourseSession(courseId, sessionId, academicGroupScopeId = null) {
+    const where = {};
+    if (academicGroupScopeId != null) {
+        where.academicGroupScopeId = Number(academicGroupScopeId);
+    } else if (courseId != null) {
+        where.courseId = Number(courseId);
+        if (sessionId != null) {
+            where.sessionId = Number(sessionId);
+        }
+    } else {
+        return [];
     }
 
     return await scoped(model.timeTableStructureCourseModel).findAll({
@@ -456,6 +505,7 @@ export async function getMappedStructuresForCourseSession(courseId, sessionId) {
             'timetableStructureCourseMapperId',
             'timeTableNameId',
             'courseId',
+            'academicGroupScopeId',
             'sessionId',
             'startingDate',
             'endingDate',
@@ -494,13 +544,13 @@ export async function getMappedStructuresForCourseSession(courseId, sessionId) {
             {
                 model: model.courseModel,
                 as: 'course',
-                required: true,
+                required: false,
                 attributes: ['courseId', 'courseName', 'courseCode'],
             },
             {
                 model: model.sessionModel,
                 as: 'session',
-                required: true,
+                required: false,
                 attributes: ['sessionId', 'sessionName'],
             },
         ],
@@ -630,4 +680,376 @@ export async function deleteTimeTableName(timeTableNameId) {
         await transaction.rollback();
         throw error;
     }
+}
+
+export async function getTimetableListPrintRows(filters = {}) {
+    const where = {
+        classSectionTermId: { [Op.not]: null }
+    };
+    
+    // Optional filters if passed
+    if (filters.timeTableNameId != null) {
+        where['$structureCourseMapping.time_table_name_id$'] = Number(filters.timeTableNameId);
+    }
+    if (filters.courseId != null) {
+        where.courseId = Number(filters.courseId);
+    }
+    if (filters.sessionId != null) {
+        where['$structureCourseMapping.session_id$'] = Number(filters.sessionId);
+    }
+    // Multi-value filters
+    if (filters.courseIds && filters.courseIds.length > 0) {
+        where.courseId = { [Op.in]: filters.courseIds };
+    }
+    const termValues = filters.term || filters.terms;
+    if (termValues && termValues.length > 0) {
+        where['$timeTableClassSectionTerm.term$'] = { [Op.in]: termValues };
+    }
+    if (filters.timeTableNameIds && filters.timeTableNameIds.length > 0) {
+        where['$structureCourseMapping.time_table_name_id$'] = { [Op.in]: filters.timeTableNameIds };
+    }
+
+    const rows = await scoped(model.timeTableRoutineModel).findAll({
+        attributes: [
+            [sequelize.fn('MAX', sequelize.col('structureCourseMapping.time_table_name_id')), 'timeTableNameId'],
+            [
+                sequelize.fn('GROUP_CONCAT', sequelize.literal('DISTINCT `structureCourseMapping->timeTableStructure`.`name` SEPARATOR ", "')),
+                'structureName'
+            ],
+            [
+                sequelize.fn('GROUP_CONCAT', sequelize.literal('DISTINCT CONCAT_WS(" - ", `structureCourseMapping->timeTableStructure`.`name`, `timeTableCourse`.`course_code`) SEPARATOR ", "')),
+                'structure'
+            ],
+            'courseId',
+            [sequelize.col('timeTableCourse.course_name'), 'courseName'],
+            [sequelize.col('timeTableCourse.course_code'), 'courseCode'],
+            [sequelize.col('structureCourseMapping.session_id'), 'sessionId'],
+            [sequelize.col('structureCourseMapping.session.session_name'), 'sessionName'],
+            'classSectionTermId',
+            [sequelize.col('timeTableClassSectionTerm.term'), 'term'],
+            [sequelize.col('timeTableCourse.term_type'), 'termType'],
+            [sequelize.col('timeTableClassSectionTerm.classSection.class_sections_id'), 'classSectionId'],
+            [sequelize.col('timeTableClassSectionTerm.classSection.section'), 'classSection'],
+            [sequelize.literal('NULL'), 'academicGroupId'],
+            [sequelize.literal('NULL'), 'academicGroupTitle'],
+            [sequelize.literal('NULL'), 'scopeTitle'],
+            [sequelize.literal('NULL'), 'groupCode'],
+            [sequelize.fn('MIN', sequelize.col('time_table_routine.starting_date')), 'startingDate'],
+            [sequelize.fn('MAX', sequelize.col('time_table_routine.ending_date')), 'endingDate'],
+            [
+                sequelize.literal(`(
+                    SELECT COUNT(DISTINCT csm.student_id)
+                    FROM class_student_mapper AS csm
+                    WHERE csm.class_section_term_id = time_table_routine.class_section_term_id
+                    
+                )`),
+                'totalStudent'
+            ],
+            [
+                sequelize.literal(`(
+                    SELECT COUNT(DISTINCT tsm.user_id)
+                    FROM teacher_section_mapping AS tsm
+                    INNER JOIN class_section_term AS cst2 ON cst2.class_sections_id = tsm.class_sections_id
+                    WHERE cst2.class_section_term_id = time_table_routine.class_section_term_id
+                    
+                )`),
+                'facultyCount'
+            ],
+            [sequelize.fn('COUNT', sequelize.col('time_table_routine.time_table_routine_id')), 'routinesCount'],
+            [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.is_publish = 0 OR time_table_routine.is_publish IS NULL THEN 1 ELSE 0 END) AS SIGNED)'), 'draftRoutine'],
+            [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.is_publish = 1 THEN 1 ELSE 0 END) AS SIGNED)'), 'publishedRoutine'],
+            [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.is_publish = 1 AND time_table_routine.starting_date <= CURRENT_DATE() THEN 1 ELSE 0 END) AS SIGNED)'), 'completedRunningRoutine'],
+            [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.is_publish = 1 AND time_table_routine.starting_date > CURRENT_DATE() THEN 1 ELSE 0 END) AS SIGNED)'), 'upcomingRoutine']
+        ],
+        where,
+        include: [
+            {
+                model: model.timeTableStructureCourseModel,
+                as: 'structureCourseMapping',
+                attributes: [],
+                required: true,
+                include: [
+                    {
+                        model: model.sessionModel,
+                        as: 'session',
+                        attributes: [],
+                        required: true
+                    },
+                    {
+                        model: model.timeTableStructureModel,
+                        as: 'timeTableStructure',
+                        attributes: [],
+                        required: true
+                    }
+                ]
+            },
+            {
+                model: model.courseModel,
+                as: 'timeTableCourse',
+                attributes: [],
+                required: true
+            },
+            {
+                model: model.classSectionTermModel,
+                as: 'timeTableClassSectionTerm',
+                attributes: [],
+                required: true,
+                include: [
+                    {
+                        model: model.classSectionModel,
+                        as: 'classSection',
+                        attributes: [],
+                        required: true
+                    }
+                ]
+            }
+        ],
+        group: [
+            'structureCourseMapping.session_id',
+            'structureCourseMapping->session.session_id',
+            'timeTableCourse.course_id',
+            'timeTableClassSectionTerm.class_section_term_id',
+            'timeTableClassSectionTerm->classSection.class_sections_id',
+            'time_table_routine.course_id',
+            'time_table_routine.class_section_term_id'
+        ],
+        raw: true,
+        order: [
+            [sequelize.fn('MAX', sequelize.col('structureCourseMapping.time_table_name_id')), 'ASC'],
+            ['courseId', 'ASC'],
+        ]
+    });
+
+    const academicWhere = {
+        academicGroupId: { [Op.not]: null }
+    };
+    
+    // Optional filters if passed
+    if (filters.timeTableNameId != null) {
+        academicWhere['$structureCourseMapping.time_table_name_id$'] = Number(filters.timeTableNameId);
+    }
+    if (filters.courseId != null) {
+        academicWhere.courseId = Number(filters.courseId);
+    }
+    if (filters.sessionId != null) {
+        academicWhere['$structureCourseMapping.session_id$'] = Number(filters.sessionId);
+    }
+    // Multi-value filters
+    if (filters.courseIds && filters.courseIds.length > 0) {
+        academicWhere.courseId = { [Op.in]: filters.courseIds };
+    }
+    const academicTermValues = filters.term || filters.terms;
+    if (academicTermValues && academicTermValues.length > 0) {
+        academicWhere['$academicGroup->scope.term$'] = { [Op.in]: academicTermValues };
+    }
+    if (filters.timeTableNameIds && filters.timeTableNameIds.length > 0) {
+        academicWhere['$structureCourseMapping.time_table_name_id$'] = { [Op.in]: filters.timeTableNameIds };
+    }
+
+    const academicRows = await scoped(model.timeTableRoutineModel).findAll({
+        attributes: [
+            [sequelize.fn('MAX', sequelize.col('structureCourseMapping.time_table_name_id')), 'timeTableNameId'],
+            [
+                sequelize.fn('GROUP_CONCAT', sequelize.literal('DISTINCT `structureCourseMapping->timeTableStructure`.`name` SEPARATOR ", "')),
+                'structureName'
+            ],
+            [
+                sequelize.fn('GROUP_CONCAT', sequelize.literal('DISTINCT CONCAT_WS(" - ", `structureCourseMapping->timeTableStructure`.`name`, `timeTableCourse`.`course_code`, CONCAT("Scope: ", `academicGroup->scope`.`title`), CONCAT("Group: ", `academicGroup`.`group_code`)) SEPARATOR ", "')),
+                'structure'
+            ],
+            'courseId',
+            [sequelize.col('timeTableCourse.course_name'), 'courseName'],
+            [sequelize.col('timeTableCourse.course_code'), 'courseCode'],
+            [sequelize.col('structureCourseMapping.session_id'), 'sessionId'],
+            [sequelize.col('structureCourseMapping.session.session_name'), 'sessionName'],
+            'academicGroupId',
+            [sequelize.col('academicGroup->scope.term'), 'term'],
+            [sequelize.col('timeTableCourse.term_type'), 'termType'],
+            [sequelize.literal('NULL'), 'classSectionId'],
+            [sequelize.literal('NULL'), 'classSection'],
+            [sequelize.col('academicGroup.group_name'), 'academicGroupTitle'],
+            [sequelize.col('academicGroup->scope.title'), 'scopeTitle'],
+            [sequelize.col('academicGroup.group_code'), 'groupCode'],
+            [sequelize.fn('MIN', sequelize.col('time_table_routine.starting_date')), 'startingDate'],
+            [sequelize.fn('MAX', sequelize.col('time_table_routine.ending_date')), 'endingDate'],
+            [
+                sequelize.literal(`(
+                    SELECT COUNT(DISTINCT ags.student_id)
+                    FROM academic_group_student AS ags
+                    WHERE ags.academic_group_id = time_table_routine.academic_group_id
+                )`),
+                'totalStudent'
+            ],
+            [
+                sequelize.literal(`(
+                    SELECT COUNT(DISTINCT agu.user_id)
+                    FROM academic_group_user AS agu
+                    WHERE agu.academic_group_id = time_table_routine.academic_group_id
+                )`),
+                'facultyCount'
+            ],
+            [sequelize.fn('COUNT', sequelize.col('time_table_routine.time_table_routine_id')), 'routinesCount'],
+            [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.is_publish = 0 OR time_table_routine.is_publish IS NULL THEN 1 ELSE 0 END) AS SIGNED)'), 'draftRoutine'],
+            [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.is_publish = 1 THEN 1 ELSE 0 END) AS SIGNED)'), 'publishedRoutine'],
+            [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.starting_date <= CURRENT_DATE() THEN 1 ELSE 0 END) AS SIGNED)'), 'completedRunningRoutine'],
+            [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.starting_date > CURRENT_DATE() THEN 1 ELSE 0 END) AS SIGNED)'), 'upcomingRoutine']
+        ],
+        where: academicWhere,
+        include: [
+            {
+                model: model.timeTableStructureCourseModel,
+                as: 'structureCourseMapping',
+                attributes: [],
+                required: true,
+                include: [
+                    {
+                        model: model.sessionModel,
+                        as: 'session',
+                        attributes: [],
+                        required: true
+                    },
+                    {
+                        model: model.timeTableStructureModel,
+                        as: 'timeTableStructure',
+                        attributes: [],
+                        required: true
+                    }
+                ]
+            },
+            {
+                model: model.courseModel,
+                as: 'timeTableCourse',
+                attributes: [],
+                required: true
+            },
+            {
+                model: model.academicGroupModel,
+                as: 'academicGroup',
+                attributes: [],
+                required: true,
+                include: [
+                    {
+                        model: model.academicGroupScopeModel,
+                        as: 'scope',
+                        attributes: [],
+                        required: true
+                    }
+                ]
+            }
+        ],
+        group: [
+            'structureCourseMapping.session_id',
+            'structureCourseMapping->session.session_id',
+            'timeTableCourse.course_id',
+            'academicGroup.academic_group_id',
+            'academicGroup->scope.academic_group_scope_id',
+            'time_table_routine.course_id',
+            'time_table_routine.academic_group_id'
+        ],
+        raw: true,
+        order: [
+            [sequelize.fn('MAX', sequelize.col('structureCourseMapping.time_table_name_id')), 'ASC'],
+            ['courseId', 'ASC'],
+        ]
+    });
+
+    let combinedRows = [...rows, ...academicRows].map(row => {
+        let status = "";
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        if (row.routinesCount > 0 && Number(row.publishedRoutine) === Number(row.routinesCount)) {
+            status = "Published";
+        }
+        
+        if (row.startingDate && row.endingDate) {
+            if (todayStr >= row.startingDate && todayStr <= row.endingDate) {
+                status = "In Progress";
+            }
+        }
+        
+        return {
+            ...row,
+            status
+        };
+    });
+
+    // Filter by type: section or academicGroup
+    if (filters.type === 'section') {
+        combinedRows = combinedRows.filter(row => row.classSectionTermId != null);
+    } else if (filters.type === 'academicGroup') {
+        combinedRows = combinedRows.filter(row => row.academicGroupId != null);
+    }
+
+    // Filter by status
+    if (filters.status) {
+        combinedRows = combinedRows.filter(row => row.status === filters.status);
+    }
+
+    if (filters.search) {
+        const searchLower = filters.search.toLowerCase();
+        combinedRows = combinedRows.filter(row => 
+            (row.academicGroupTitle && row.academicGroupTitle.toLowerCase().includes(searchLower)) ||
+            (row.classSection && row.classSection.toLowerCase().includes(searchLower))
+        );
+    }
+
+    if (filters.page && filters.limit) {
+        const page = parseInt(filters.page, 10);
+        const limit = parseInt(filters.limit, 10);
+        const startIndex = (page - 1) * limit;
+        const paginatedRows = combinedRows.slice(startIndex, startIndex + limit);
+        return {
+            data: paginatedRows,
+            total: combinedRows.length,
+            page,
+            limit
+        };
+    }
+
+    return {
+        data: combinedRows,
+        total: combinedRows.length
+    };
+}
+
+export async function getProgramsOverviewRows(filters = {}) {
+    const where = buildScope(model.courseModel, { scopeConfig: { academicYear: false } });
+    
+    if (filters.instituteId) where.instituteId = filters.instituteId;
+    
+    return await model.courseModel.findAll({
+        where,
+        attributes: ['courseId', 'courseName', 'courseCode'],
+        include: [
+            {
+                model: model.classSectionModel,
+                as: 'courseSection',
+                required: false,
+                attributes: ['classSectionsId', 'sessionId'],
+                where: buildScope(model.classSectionModel),
+            },
+            {
+                model: model.academicGroupScopeModel,
+                as: 'academicGroupScopes',
+                required: false,
+                attributes: ['academicGroupScopeId', 'sessionId'],
+                where: buildScope(model.academicGroupScopeModel),
+            },
+            {
+                model: model.timeTableRoutineModel,
+                as: 'timeTableCourse',
+                required: false,
+                attributes: ['timeTableRoutineId', 'isPublish'],
+                where: buildScope(model.timeTableRoutineModel),
+                include: [
+                    {
+                        model: model.timeTableStructureCourseModel,
+                        as: 'structureCourseMapping',
+                        required: false,
+                        attributes: ['sessionId'],
+                    }
+                ]
+            }
+        ]
+    });
 }

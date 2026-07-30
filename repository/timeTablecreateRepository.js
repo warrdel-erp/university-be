@@ -924,23 +924,29 @@ export async function getFullRoutineDetailsRepository(timeTableRoutineId, option
 
 export async function checkRoutineOverlapRepository({
   classSectionTermId,
+  academicGroupId,
   startingDate,
   endingDate,
   excludeRoutineId,
 }, options = {}) {
-  if (classSectionTermId == null) {
+  const where = {
+    ...(excludeRoutineId && { timeTableRoutineId: { [Op.ne]: excludeRoutineId } }),
+    [Op.and]: [
+      { startingDate: { [Op.lte]: endingDate } },
+      { endingDate: { [Op.gte]: startingDate } },
+    ],
+  };
+
+  if (academicGroupId != null) {
+    where.academicGroupId = Number(academicGroupId);
+  } else if (classSectionTermId != null) {
+    where.classSectionTermId = Number(classSectionTermId);
+  } else {
     return null;
   }
 
   return await scoped(model.timeTableRoutineModel).findOne({
-    where: {
-      classSectionTermId: Number(classSectionTermId),
-      ...(excludeRoutineId && { timeTableRoutineId: { [Op.ne]: excludeRoutineId } }),
-      [Op.and]: [
-        { startingDate: { [Op.lte]: endingDate } },
-        { endingDate: { [Op.gte]: startingDate } },
-      ],
-    },
+    where,
     transaction: options.transaction,
   });
 }
@@ -1867,6 +1873,7 @@ async function buildCellSubjectWhere(subjectId) {
 
 function routineCellsInclude({ userId, cellSubjectWhere, required = false } = {}) {
   const cellWhere = cellSubjectWhere || {};
+  const hasWhere = Object.keys(cellWhere).length > 0 || Object.getOwnPropertySymbols(cellWhere).length > 0;
 
   return {
     model: model.timeTableCellModel,
@@ -1875,7 +1882,7 @@ function routineCellsInclude({ userId, cellSubjectWhere, required = false } = {}
     separate: true,
     order: [['period', 'ASC'], ['day', 'ASC'], ['timeTableCellId', 'ASC']],
     attributes: ROUTINE_CELL_ATTRIBUTES,
-    ...(Object.keys(cellWhere).length > 0 ? { where: cellWhere } : {}),
+    ...(hasWhere ? { where: cellWhere } : {}),
     include: [
       routineCellTeachersInclude({ userId, required: userId != null }),
       {
@@ -1925,11 +1932,18 @@ export async function getNormalRoutinesBySectionScopeRepository(scope = {}) {
   const where = {
     timeTableType: 'normal',
     ...(scope.classSectionTermId != null && { classSectionTermId: Number(scope.classSectionTermId) }),
+    ...(scope.academicGroupId != null && { academicGroupId: Number(scope.academicGroupId) }),
+    ...(scope.courseId != null && { courseId: Number(scope.courseId) }),
+    ...(scope.sessionId != null && { '$structureCourseMapping.session_id$': Number(scope.sessionId) }),
   };
+  
+  if (scope.classSectionTermId == null && scope.courseId != null && scope.sessionId != null) {
+      where.academicGroupId = { [Op.not]: null };
+  }
 
   return await scoped(model.timeTableRoutineModel).findAll({
     where,
-    attributes: ['timeTableRoutineId', 'timetableStructureCourseMapperId', 'startingDate', 'endingDate', 'isPublish', 'timeTableType', 'classSectionTermId'],
+    attributes: ['timeTableRoutineId', 'timetableStructureCourseMapperId', 'startingDate', 'endingDate', 'isPublish', 'timeTableType', 'classSectionTermId', 'academicGroupId'],
     include: [
       routineStructureInclude(),
       routineCellsInclude(),
@@ -2010,8 +2024,8 @@ const teacherClassSectionInclude = (courseId, sessionId) => {
   }
 
   return timeTableRoutineClassSectionInclude({
-    termRequired: true,
-    sectionRequired: true,
+    termRequired: false,
+    sectionRequired: false,
     sectionWhere,
     sectionAttributes: ['classSectionsId', 'section', 'year', 'sessionId', 'courseId'],
     sectionNestedIncludes: [
@@ -2074,7 +2088,10 @@ async function fetchNormalRoutinesForTeacher(userId, courseId, sessionId, subjec
     timeTableType: 'normal',
   };
   if (courseId != null) {
-    routineWhere.courseId = courseId;
+    routineWhere[Op.or] = [
+      { courseId: courseId },
+      { academicGroupId: { [Op.not]: null } }
+    ];
   }
 
   return scoped(model.timeTableRoutineModel).findAll({
@@ -2087,6 +2104,7 @@ async function fetchNormalRoutinesForTeacher(userId, courseId, sessionId, subjec
       'isPublish',
       'timeTableType',
       'classSectionTermId',
+      'academicGroupId',
       'courseId',
     ],
     include: [
@@ -2097,6 +2115,34 @@ async function fetchNormalRoutinesForTeacher(userId, courseId, sessionId, subjec
         required: true,
       }),
       teacherClassSectionInclude(courseId, sessionId),
+      {
+        model: model.academicGroupModel,
+        as: 'academicGroup',
+        required: false,
+        attributes: ['academicGroupId', 'groupName', 'groupCode'],
+        include: [
+          {
+            model: model.academicGroupScopeModel,
+            as: 'scope',
+            required: false,
+            attributes: ['academicGroupScopeId', 'courseId', 'sessionId', 'term', 'classSectionTermId'],
+            include: [
+              {
+                model: model.courseModel,
+                as: 'course',
+                required: false,
+                attributes: ['courseId', 'courseName', 'courseCode'],
+              },
+              {
+                model: model.sessionModel,
+                as: 'session',
+                required: false,
+                attributes: ['sessionId', 'sessionName'],
+              },
+            ],
+          }
+        ]
+      }
     ],
     order: [['timeTableRoutineId', 'ASC']],
   });
@@ -2116,12 +2162,15 @@ async function fetchElectiveCellsForTeacher(
     timeTableType: 'elective',
   };
   if (courseId != null) {
-    electiveWhere.courseId = courseId;
+    electiveWhere[Op.or] = [
+      { courseId: courseId },
+      { academicGroupId: { [Op.not]: null } }
+    ];
   }
 
   const electiveRoutines = await scoped(model.timeTableRoutineModel).findAll({
     where: electiveWhere,
-    attributes: ['timeTableRoutineId', 'timetableStructureCourseMapperId'],
+    attributes: ['timeTableRoutineId', 'timetableStructureCourseMapperId', 'academicGroupId'],
     include: [
       {
         model: model.timeTableStructureCourseModel,
@@ -2134,6 +2183,34 @@ async function fetchElectiveCellsForTeacher(
       },
       routineCellsInclude({ userId, required: true }),
       teacherClassSectionInclude(courseId, sessionId),
+      {
+        model: model.academicGroupModel,
+        as: 'academicGroup',
+        required: false,
+        attributes: ['academicGroupId', 'groupName', 'groupCode'],
+        include: [
+          {
+            model: model.academicGroupScopeModel,
+            as: 'scope',
+            required: false,
+            attributes: ['academicGroupScopeId', 'courseId', 'sessionId', 'term', 'classSectionTermId'],
+            include: [
+              {
+                model: model.courseModel,
+                as: 'course',
+                required: false,
+                attributes: ['courseId', 'courseName', 'courseCode'],
+              },
+              {
+                model: model.sessionModel,
+                as: 'session',
+                required: false,
+                attributes: ['sessionId', 'sessionName'],
+              },
+            ],
+          }
+        ]
+      }
     ],
   });
 
@@ -2662,3 +2739,13 @@ export async function getPeriodsForStructures(timeTableNameIds) {
     raw: true
   });
 }
+
+export async function findAcademicGroupById(academicGroupId, options = {}) {
+  return await scoped(model.academicGroupModel).findByPk(Number(academicGroupId), {
+    transaction: options.transaction,
+  });
+}
+
+import { getCascadingGroupRoutinesRepository } from './academicGroupScopeRepository.js';
+export { getCascadingGroupRoutinesRepository };
+

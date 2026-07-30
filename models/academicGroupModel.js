@@ -3,71 +3,52 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import university from "./universityModel.js";
 import institute from "./instituteModel.js";
-import department from "./departmentModel.js";
+import acedmicYear from "./acedmicYearModel.js";
+import academicGroupScope from "./academicGroupScopeModel.js";
+import { ACADEMIC_GROUP_PUBLISH_STATUSES } from "../constant.js";
 
-const departmentPositionsModel = sequelize.define(
-    'department_positions',
+const academicGroupModel = sequelize.define(
+    'academic_group',
     {
-        departmentPositionId: {
+        academicGroupId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'department_position_id'
+            field: 'academic_group_id',
         },
-        departmentId: {
+        academicGroupScopeId: {
             type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'department_id',
+            allowNull: false,
+            field: 'academic_group_scope_id',
             references: {
-                model: department,
-                key: 'department_id'
-            }
+                model: academicGroupScope,
+                key: 'academic_group_scope_id',
+            },
         },
-        positionName: {
+        groupName: {
             type: DataTypes.STRING,
             allowNull: false,
-            field: 'position_name'
+            field: 'group_name',
         },
-        positionCode: {
-            type: DataTypes.STRING,
-            allowNull: true,
-            field: 'position_code'
-        },
-        employmentCategory: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            field: 'employment_category'
-        },
-        reportingType: {
+        groupCode: {
             type: DataTypes.STRING,
             allowNull: true,
-            field: 'reporting_type'
+            field: 'group_code',
         },
-        isLevelHead: {
-            type: DataTypes.BOOLEAN,
-            allowNull: false,
-            defaultValue: false,
-            field: 'is_level_head'
-        },
-        sortOrder: {
+        capacity: {
             type: DataTypes.INTEGER,
-            allowNull: false,
-            defaultValue: 0,
-            field: 'sort_order'
+            allowNull: true,
+            field: 'capacity',
         },
-        level: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'level'
-        },
+
         universityId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'university_id',
             references: {
                 model: university,
-                key: 'university_id'
-            }
+                key: 'university_id',
+            },
         },
         instituteId: {
             type: DataTypes.INTEGER,
@@ -75,8 +56,17 @@ const departmentPositionsModel = sequelize.define(
             field: 'institute_id',
             references: {
                 model: institute,
-                key: 'institute_id'
-            }
+                key: 'institute_id',
+            },
+        },
+        academicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYear,
+                key: 'acedmic_year_id',
+            },
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -84,8 +74,8 @@ const departmentPositionsModel = sequelize.define(
             field: 'created_by',
             references: {
                 model: users,
-                key: 'user_id'
-            }
+                key: 'user_id',
+            },
         },
         updatedBy: {
             type: DataTypes.INTEGER,
@@ -93,34 +83,34 @@ const departmentPositionsModel = sequelize.define(
             field: 'updated_by',
             references: {
                 model: users,
-                key: 'user_id'
-            }
+                key: 'user_id',
+            },
         },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,
             defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
-            field: 'created_at'
+            field: 'created_at',
         },
         updatedAt: {
             type: DataTypes.DATE,
             allowNull: false,
             defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
-            field: 'updated_at'
+            field: 'updated_at',
         },
         deletedAt: {
             type: DataTypes.DATE,
             allowNull: true,
-            field: 'deleted_at'
-        }
+            field: 'deleted_at',
+        },
     },
     {
-        tableName: 'department_positions',
+        tableName: 'academic_group',
         timestamps: true,
-        paranoid: true
-    }
+        paranoid: true,
+    },
 );
 
-departmentPositionsModel.scopeConfig = { university: true, institute: true, academicYear: false };
+academicGroupModel.scopeConfig = { university: true, institute: true, academicYear: true };
 
-export default departmentPositionsModel;
+export default academicGroupModel;

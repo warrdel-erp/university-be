@@ -8521,6 +8521,59 @@
           "event": []
         },
         {
+          "id": "a1c2d3e4-f5b6-7890-abcd-ef1234567890",
+          "name": "student filters (cascading)",
+          "request": {
+            "description": "**GET /options/studentFilters**\n\nCascading multi-select filter options for student list UIs.\n\n**Auth:** Bearer token required.\n\n### Query (all optional; single id or list)\n| Field | Aliases | Notes |\n|-------|---------|-------|\n| `courseIds` | `courseId` | Narrows sessions, years, terms, classSections |\n| `sessionIds` | `sessionId` | Narrows years / classSections |\n| `year` | — | Narrows classSections |\n| `term` / `terms` | — | Narrows classSections via class_section_term |\n| `classSectionsIds` | `classSectionsId` | Accepted for parity with GET /student/all |\n\nList formats: `4`, `4,5`, or repeated query keys.\n\n### Cascade\n1. **courses** — always all tenant courses\n2. **sessions** — all sessions, or mapped to `courseIds` via `session_course_mapping`\n3. **years** — distinct years from class_sections (course/session), else from course duration\n4. **classSections** — requires `courseIds`; filtered by session / year / term\n5. **terms** — from selected courses (`termType` + `totalTerms`)\n6. **studentStatuses** — static `STUDENT_STATUS_OPTIONS`\n\n**200 data:** `{ courses, sessions, years, classSections, terms, studentStatuses }` each as `{ label, value }` (classSections also include `year`).",
+            "url": {
+              "path": [
+                "options",
+                "studentFilters"
+              ],
+              "host": [
+                "{{baseurl}}"
+              ],
+              "query": [
+                {
+                  "key": "courseIds",
+                  "value": "34,35",
+                  "description": "optional — comma-separated or repeated"
+                },
+                {
+                  "key": "sessionIds",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "year",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "term",
+                  "value": "",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            },
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "type": "string",
+                  "value": "{{token}}",
+                  "key": "token"
+                }
+              ]
+            },
+            "header": []
+          },
+          "response": [],
+          "event": []
+        },
+        {
           "id": "5a51ff5b-90e3-408b-b48e-eb8859d4312e",
           "name": "specialization",
           "request": {
@@ -8875,6 +8928,451 @@
                   "key": "token"
                 }
               ]
+            },
+            "header": []
+          },
+          "response": [],
+          "event": []
+        }
+      ],
+      "event": []
+    },
+    {
+      "id": "ag-folder-001-academic-group",
+      "name": "academicGroup",
+      "description": "## Academic Group (stepwise formation)\n\nOrder:\n1. `POST /academicGroup/scope`\n2. `POST /academicGroup`\n3. `POST /academicGroup/user`\n4. `POST /academicGroup/student`\n\nPlus PATCH/DELETE/GET for edit and list.\n\nStudent picker: `GET /student/all` + `GET /options/studentFilters`.\nFaculty picker: `GET /options/teachers`.",
+      "item": [
+        {
+          "id": "ag-req-001-post-scope",
+          "name": "1 POST scope",
+          "request": {
+            "description": "**POST /academicGroup/scope** — Step 1.\n\n`program_specific` requires `courseId`, `sessionId`, `term`.\n\n`academicContextType`: `course` → `contextSubjectId`; `activity` → `activityName`; `none` → neither.",
+            "url": {
+              "path": ["academicGroup", "scope"],
+              "host": ["{{baseurl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "type": "string", "value": "{{token}}", "key": "token" }]
+            },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"groupType\": \"teaching\",\n  \"title\": \"Dissertation\",\n  \"selectionScope\": \"program_specific\",\n  \"courseId\": 34,\n  \"sessionId\": 6,\n  \"term\": 10,\n  \"academicContextType\": \"activity\",\n  \"activityName\": \"Design Thinking Workshop\"\n}"
+            }
+          },
+          "response": [],
+          "event": []
+        },
+        {
+          "id": "ag-req-002-post-group",
+          "name": "2 POST group",
+          "request": {
+            "description": "**POST /academicGroup** — Step 2. Links to `academicGroupScopeId` (many groups per scope). Auto-generates `groupCode` if blank. Default `publishStatus: draft`.",
+            "url": {
+              "path": ["academicGroup"],
+              "host": ["{{baseurl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "type": "string", "value": "{{token}}", "key": "token" }]
+            },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicGroupScopeId\": {{academicGroupScopeId}},\n  \"groupName\": \"Dissertation Group 1\",\n  \"groupCode\": \"DIS-G1\",\n  \"capacity\": 10,\n  \"publishStatus\": \"draft\"\n}"
+            }
+          },
+          "response": [],
+          "event": []
+        },
+        {
+          "id": "ag-req-003-post-user",
+          "name": "3 POST user (faculty)",
+          "request": {
+            "description": "**POST /academicGroup/user** — Step 3.\n\nBody either `{ academicGroupId, userId, role }` or `{ academicGroupId, users: [{ userId, role }] }`.\n\nRoles: `primary_faculty`, `co_faculty`, `supervisor`, `mentor`, `external_faculty`, `evaluator`. At most one `primary_faculty` per group.",
+            "url": {
+              "path": ["academicGroup", "user"],
+              "host": ["{{baseurl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "type": "string", "value": "{{token}}", "key": "token" }]
+            },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicGroupId\": {{academicGroupId}},\n  \"users\": [\n    { \"userId\": 56, \"role\": \"primary_faculty\" },\n    { \"userId\": 57, \"role\": \"co_faculty\" }\n  ]\n}"
+            }
+          },
+          "response": [],
+          "event": []
+        },
+        {
+          "id": "ag-req-004-post-student",
+          "name": "4 POST student",
+          "request": {
+            "description": "**POST /academicGroup/student** — Step 4. Body: `academicGroupId`, `studentIds[]`. Enforces capacity when set.",
+            "url": {
+              "path": ["academicGroup", "student"],
+              "host": ["{{baseurl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "type": "string", "value": "{{token}}", "key": "token" }]
+            },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicGroupId\": {{academicGroupId}},\n  \"studentIds\": [101, 102, 103]\n}"
+            }
+          },
+          "response": [],
+          "event": []
+        },
+        {
+          "id": "ag-req-005-get-all",
+          "name": "GET all",
+          "request": {
+            "description": "**GET /academicGroup/all** — paginated list with scope names, nested `users[].user.employee`, `students[].student`, and `print` (flattened faculty/students + memberCount).\n\nOptional: `page`, `limit`, `search`, `courseId`, `sessionId`, `term`, `groupType`, `publishStatus`.",
+            "url": {
+              "path": ["academicGroup", "all"],
+              "host": ["{{baseurl}}"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "courseId", "value": "", "disabled": true },
+                { "key": "publishStatus", "value": "draft", "disabled": true }
+              ],
+              "variable": []
+            },
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "type": "string", "value": "{{token}}", "key": "token" }]
+            },
+            "header": []
+          },
+          "response": [],
+          "event": []
+        },
+        {
+          "id": "ag-req-006-get-single",
+          "name": "GET single",
+          "request": {
+            "description": "**GET /academicGroup/single?academicGroupId=** — same shape as `/all` for one group: nested users/students + `print` summary.",
+            "url": {
+              "path": ["academicGroup", "single"],
+              "host": ["{{baseurl}}"],
+              "query": [{ "key": "academicGroupId", "value": "{{academicGroupId}}" }],
+              "variable": []
+            },
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "type": "string", "value": "{{token}}", "key": "token" }]
+            },
+            "header": []
+          },
+          "response": [],
+          "event": []
+        },
+        {
+          "id": "ag-req-007a-get-scope-all",
+          "name": "GET scope/all",
+          "request": {
+            "description": "**GET /academicGroup/scope/all**\n\nFull scope list with all keys + nested `course` (`courseName`), `session` (`sessionName`), `contextSubject`, and linked `groups[]`.\n\nOptional: `search` (title contains).",
+            "url": {
+              "path": ["academicGroup", "scope", "all"],
+              "host": ["{{baseurl}}"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true,
+                  "description": "optional — filter by title"
+                }
+              ],
+              "variable": []
+            },
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "type": "string", "value": "{{token}}", "key": "token" }]
+            },
+            "header": []
+          },
+          "response": [],
+          "event": []
+        },
+        {
+          "id": "ag-req-007-get-scope-single",
+          "name": "GET scope/single",
+          "request": {
+            "description": "**GET /academicGroup/scope/single?academicGroupScopeId=**",
+            "url": {
+              "path": ["academicGroup", "scope", "single"],
+              "host": ["{{baseurl}}"],
+              "query": [{ "key": "academicGroupScopeId", "value": "{{academicGroupScopeId}}" }],
+              "variable": []
+            },
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "type": "string", "value": "{{token}}", "key": "token" }]
+            },
+            "header": []
+          },
+          "response": [],
+          "event": []
+        },
+        {
+          "id": "ag-req-007b-get-available-students",
+          "name": "GET availableStudents",
+          "request": {
+            "description": "**GET /academicGroup/availableStudents?academicGroupId=**\n\nLean available student units only. Assign with `studentId`. Excludes existing members. Returns `capacity`, `memberCount`, `remainingCapacity`.",
+            "url": {
+              "path": ["academicGroup", "availableStudents"],
+              "host": ["{{baseurl}}"],
+              "query": [
+                { "key": "academicGroupId", "value": "{{academicGroupId}}" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "search", "value": "", "disabled": true }
+              ],
+              "variable": []
+            },
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "type": "string", "value": "{{token}}", "key": "token" }]
+            },
+            "header": []
+          },
+          "response": [],
+          "event": []
+        },
+        {
+          "id": "ag-req-007c-get-available-users",
+          "name": "GET availableUsers",
+          "request": {
+            "description": "**GET /academicGroup/availableUsers?academicGroupId=**\n\nLean available faculty units only. Assign with `userId`. Excludes existing faculty and student-linked userIds. Optional: `page`, `limit`, `search`, `campusId`, `subjectId`.",
+            "url": {
+              "path": ["academicGroup", "availableUsers"],
+              "host": ["{{baseurl}}"],
+              "query": [
+                { "key": "academicGroupId", "value": "{{academicGroupId}}" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "campusId", "value": "", "disabled": true },
+                { "key": "subjectId", "value": "", "disabled": true }
+              ],
+              "variable": []
+            },
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "type": "string", "value": "{{token}}", "key": "token" }]
+            },
+            "header": []
+          },
+          "response": [],
+          "event": []
+        },
+        {
+          "id": "ag-req-008-patch-scope",
+          "name": "PATCH scope",
+          "request": {
+            "url": {
+              "path": ["academicGroup", "scope"],
+              "host": ["{{baseurl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "type": "string", "value": "{{token}}", "key": "token" }]
+            },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicGroupScopeId\": {{academicGroupScopeId}},\n  \"title\": \"Dissertation Updated\"\n}"
+            }
+          },
+          "response": [],
+          "event": []
+        },
+        {
+          "id": "ag-req-009-patch-group",
+          "name": "PATCH group",
+          "request": {
+            "url": {
+              "path": ["academicGroup"],
+              "host": ["{{baseurl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "type": "string", "value": "{{token}}", "key": "token" }]
+            },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicGroupId\": {{academicGroupId}},\n  \"groupName\": \"Dissertation Group 1A\",\n  \"capacity\": 12\n}"
+            }
+          },
+          "response": [],
+          "event": []
+        },
+        {
+          "id": "ag-req-010-patch-publish",
+          "name": "PATCH publish",
+          "request": {
+            "description": "**PATCH /academicGroup/publish** — sets `publishStatus` to `published`.",
+            "url": {
+              "path": ["academicGroup", "publish"],
+              "host": ["{{baseurl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "type": "string", "value": "{{token}}", "key": "token" }]
+            },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicGroupId\": {{academicGroupId}}\n}"
+            }
+          },
+          "response": [],
+          "event": []
+        },
+        {
+          "id": "ag-req-011-patch-user",
+          "name": "PATCH user",
+          "request": {
+            "url": {
+              "path": ["academicGroup", "user"],
+              "host": ["{{baseurl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "type": "string", "value": "{{token}}", "key": "token" }]
+            },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicGroupUserId\": {{academicGroupUserId}},\n  \"role\": \"mentor\"\n}"
+            }
+          },
+          "response": [],
+          "event": []
+        },
+        {
+          "id": "ag-req-012-delete-user",
+          "name": "DELETE user",
+          "request": {
+            "url": {
+              "path": ["academicGroup", "user"],
+              "host": ["{{baseurl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "type": "string", "value": "{{token}}", "key": "token" }]
+            },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicGroupUserId\": {{academicGroupUserId}}\n}"
+            }
+          },
+          "response": [],
+          "event": []
+        },
+        {
+          "id": "ag-req-013-delete-student",
+          "name": "DELETE student",
+          "request": {
+            "url": {
+              "path": ["academicGroup", "student"],
+              "host": ["{{baseurl}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "type": "string", "value": "{{token}}", "key": "token" }]
+            },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicGroupId\": {{academicGroupId}},\n  \"studentIds\": [101]\n}"
+            }
+          },
+          "response": [],
+          "event": []
+        },
+        {
+          "id": "ag-req-014-delete-group",
+          "name": "DELETE group",
+          "request": {
+            "description": "**DELETE /academicGroup?academicGroupId=** — soft-deletes group + users + students.",
+            "url": {
+              "path": ["academicGroup"],
+              "host": ["{{baseurl}}"],
+              "query": [{ "key": "academicGroupId", "value": "{{academicGroupId}}" }],
+              "variable": []
+            },
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "type": "string", "value": "{{token}}", "key": "token" }]
+            },
+            "header": []
+          },
+          "response": [],
+          "event": []
+        },
+        {
+          "id": "ag-req-015-delete-scope",
+          "name": "DELETE scope",
+          "request": {
+            "description": "**DELETE /academicGroup/scope?academicGroupScopeId=** — cascades soft-delete of all linked groups and members.",
+            "url": {
+              "path": ["academicGroup", "scope"],
+              "host": ["{{baseurl}}"],
+              "query": [{ "key": "academicGroupScopeId", "value": "{{academicGroupScopeId}}" }],
+              "variable": []
+            },
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "type": "string", "value": "{{token}}", "key": "token" }]
             },
             "header": []
           },
@@ -13454,7 +13952,7 @@
               "id": "3084c25b-c5ee-4057-b2c2-3a39f380b541",
               "name": "2 get all students (list)",
               "request": {
-                "description": "**GET /student/all**\n\nPaginated student list.\n\n**Query**\n| Key | Required | Notes |\n|-----|----------|-------|\n| `page` | no | default 1 |\n| `limit` | no | default 10, max 100 |\n| `search` | no | name / scholar / enroll / father / course name |\n| `courseId` | no | |\n| `sessionId` | no | admission session (`students.sessionId`) |\n| `academicYearId` | no | admission year via session; default = auth academic year |\n| `classSectionsId` | no | placement section (shared across terms) |\n| `year` | no | `class_sections.year` |\n| `term` | no | `class_section_term.term` |\n\n**Placement:** history `status=current` when present; else `students.classSectionTermId` → class_section_term → class_sections.\n\nUses auth `universityId` + `defaultInstituteId`.\n\nTest script sets `student_id` from first row when present.",
+                "description": "**GET /student/all**\n\nPaginated student list.\n\n**Query**\n| Key | Required | Notes |\n|-----|----------|-------|\n| `page` | no | default 1 |\n| `limit` | no | default 10, max 100 |\n| `search` | no | name / scholar / enroll / father / course name |\n| `courseId` | no | single or multiple (`courseId=4&courseId=5` or `courseId=4,5`) — OR match |\n| `sessionId` | no | single or multiple — admission session (`students.sessionId`) |\n| `academicYearId` | no | single or multiple — admission year via session; default = auth academic year |\n| `classSectionsId` | no | single or multiple — placement section |\n| `year` | no | single or multiple — `class_sections.year` |\n| `term` | no | single or multiple — `class_section_term.term` |\n\n**Placement:** history `status=current` when present; else `students.classSectionTermId` → class_section_term → class_sections.\n\nUses auth `universityId` + `defaultInstituteId`.\n\nTest script sets `student_id` from first row when present.",
                 "url": {
                   "path": [
                     "student",

@@ -312,3 +312,17 @@ export const ATTENDANCE_PRESENT_STATUSES = [
 
 /** Excluded from present/absent calculations */
 export const ATTENDANCE_IGNORED_STATUSES = ["Holiday"];
+
+/** Academic group formation enums */
+export const ACADEMIC_GROUP_TYPES = ["teaching", "activity"];
+export const ACADEMIC_GROUP_SELECTION_SCOPES = ["program_specific", "cross_program"];
+export const ACADEMIC_GROUP_CONTEXT_TYPES = ["course", "activity", "none"];
+export const ACADEMIC_GROUP_PUBLISH_STATUSES = ["draft", "published"];
+export const ACADEMIC_GROUP_USER_ROLES = [
+  "primary_faculty",
+  "co_faculty",
+  "supervisor",
+  "mentor",
+  "external_faculty",
+  "evaluator",
+];
