@@ -358,6 +358,8 @@ export async function getAllStudents({
     year,
     term,
     academicYearId,
+    excludeStudentIds,
+    includeStudentIds,
 }) {
     try {
         const resolvedAcademicYearId = academicYearId != null
@@ -464,6 +466,117 @@ export async function getAllStudents({
                 };
             }
             whereCondition.studentId = { [Op.in]: placementStudentIds };
+        }
+
+        if (excludeStudentIds != null && excludeStudentIds.length > 0) {
+            const excludeSet = new Set();
+            for (const id of excludeStudentIds) {
+                excludeSet.add(Number(id));
+            }
+
+            if (whereCondition.studentId != null && whereCondition.studentId[Op.in]) {
+                const nextIds = [];
+                for (const id of whereCondition.studentId[Op.in]) {
+                    if (!excludeSet.has(Number(id))) {
+                        nextIds.push(id);
+                    }
+                }
+                if (nextIds.length === 0) {
+                    return {
+                        result: [],
+                        totalCount: 0,
+                        page,
+                        limit,
+                        totalPages: 0,
+                    };
+                }
+                whereCondition.studentId = { [Op.in]: nextIds };
+            } else if (whereCondition.studentId != null) {
+                if (excludeSet.has(Number(whereCondition.studentId))) {
+                    return {
+                        result: [],
+                        totalCount: 0,
+                        page,
+                        limit,
+                        totalPages: 0,
+                    };
+                }
+            } else {
+                const excluded = [];
+                for (const id of excludeSet) {
+                    excluded.push(id);
+                }
+                whereCondition.studentId = { [Op.notIn]: excluded };
+            }
+        }
+
+        if (includeStudentIds != null) {
+            if (includeStudentIds.length === 0) {
+                return {
+                    result: [],
+                    totalCount: 0,
+                    page,
+                    limit,
+                    totalPages: 0,
+                };
+            }
+
+            const includeSet = new Set();
+            for (const id of includeStudentIds) {
+                includeSet.add(Number(id));
+            }
+
+            if (whereCondition.studentId != null && whereCondition.studentId[Op.in]) {
+                const nextIds = [];
+                for (const id of whereCondition.studentId[Op.in]) {
+                    if (includeSet.has(Number(id))) {
+                        nextIds.push(id);
+                    }
+                }
+                if (nextIds.length === 0) {
+                    return {
+                        result: [],
+                        totalCount: 0,
+                        page,
+                        limit,
+                        totalPages: 0,
+                    };
+                }
+                whereCondition.studentId = { [Op.in]: nextIds };
+            } else if (whereCondition.studentId != null && whereCondition.studentId[Op.notIn]) {
+                const nextIds = [];
+                for (const id of includeSet) {
+                    if (!whereCondition.studentId[Op.notIn].includes(id)) {
+                        nextIds.push(id);
+                    }
+                }
+                if (nextIds.length === 0) {
+                    return {
+                        result: [],
+                        totalCount: 0,
+                        page,
+                        limit,
+                        totalPages: 0,
+                    };
+                }
+                whereCondition.studentId = { [Op.in]: nextIds };
+            } else if (whereCondition.studentId != null) {
+                if (!includeSet.has(Number(whereCondition.studentId))) {
+                    return {
+                        result: [],
+                        totalCount: 0,
+                        page,
+                        limit,
+                        totalPages: 0,
+                    };
+                }
+            } else {
+                const included = [];
+                for (const id of includeSet) {
+                    included.push(id);
+                }
+                whereCondition.studentId = { [Op.in]: included };
+            }
         }
 
         // Filters needed for accurate ID pagination + count (not only hydrate).
@@ -2563,7 +2676,7 @@ export async function getStudentDetailsRepository(studentId) {
     }
 }
 
-export async function getStudentsByClassSection(classSectionTermId, timeTableCellDateWiseId) {
+export async function getStudentsByPlacement(placement, timeTableCellDateWiseId) {
 
     try {
         const academicYearId = getRequestAcademicYearId();
@@ -2571,10 +2684,27 @@ export async function getStudentsByClassSection(classSectionTermId, timeTableCel
             return [];
         }
 
+        const classSectionTermId = placement.classSectionTermId;
+        const academicGroupId = placement.academicGroupId;
+
+        let whereClause = {};
+        let extraIncludes = [];
+
+        if (academicGroupId) {
+            extraIncludes.push({
+                model: model.academicGroupStudentModel,
+                as: 'academicGroupStudents',
+                where: { academicGroupId: Number(academicGroupId) },
+                required: true,
+            });
+        } else if (classSectionTermId) {
+            whereClause.classSectionTermId = Number(classSectionTermId);
+        } else {
+            return [];
+        }
+
         const students = await scoped(model.studentModel).findAll({
-            where: {
-                classSectionTermId: Number(classSectionTermId),
-            },
+            where: whereClause,
             attributes: [
                 "studentId",
                 "scholarNumber",
@@ -2584,13 +2714,14 @@ export async function getStudentsByClassSection(classSectionTermId, timeTableCel
                 "classSectionTermId",
             ],
             include: [
+                ...extraIncludes,
                 studentSessionWithAcademicYearInclude({
                     academicYearId: academicYearId,
                 }),
                 studentClassSectionTermWithSectionInclude({
-                    classSectionTermId: Number(classSectionTermId),
-                    termRequired: true,
-                    sectionRequired: true,
+                    classSectionTermId: classSectionTermId ? Number(classSectionTermId) : undefined,
+                    termRequired: false,
+                    sectionRequired: false,
                     sectionWhere: {
                         academicYearId: academicYearId,
                         ...buildScope(model.classSectionModel),

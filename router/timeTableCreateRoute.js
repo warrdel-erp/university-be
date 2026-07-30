@@ -7,7 +7,7 @@ import { validate } from '../utility/validation.js';
 import {
     addtimeTableCreate, cloneTimeTableRoutine, gettimeTableCreateDetails, getSingletimeTableCreateDetails, addtimeTableMapping, getTimeTableMappingDetail, getSingletimeTableMappingDetail, getTimeTableCellData
     , updatetimeTableCreate, getTimeTableElective, publishTimeTable, updateSimpleTeacherMappingController
-    , deletetimeTableMapping, ClassSubjectCount, changeTimeTableCreate, getTimeTableByCourseAndSection, getRoutineByClassSectionId, getRoutineByTeacherAndAcademicYear
+    , deletetimeTableMapping, ClassSubjectCount, changeTimeTableCreate, getTimeTableByCourseAndSection, getRoutineByClassSectionId, getRoutineByAcademicGroupId, getRoutineByTeacherAndAcademicYear
     , deleteTimeTableRoutine, getDateWiseCellsBySection, updateDateWiseCellController
 } from '../controllers/timeTableCreateController.js';
 
@@ -25,6 +25,10 @@ const optionalPositiveId = z.preprocess(
 
 const getRoutineSchema = z.object({
     classSectionTermId: positiveIntegerId,
+});
+
+const getRoutineByAcademicGroupSchema = z.object({
+    academicGroupId: positiveIntegerId,
 });
 
 const getRoutineByTeacherSchema = z.object({
@@ -76,18 +80,19 @@ const getTimeTableByCourseAndSectionQuerySchema = z.object({
 const addTimeTableCreateSchema = z.object({
     timetableStructureCourseMapperId: positiveIntegerId,
     classSectionTermId: optionalPositiveId,
+    academicGroupId: optionalPositiveId,
     courseId: optionalPositiveId,
     campusId: optionalPositiveId,
     timeTableType: z.enum(['normal', 'elective']).optional(),
-    startingDate: z.string().min(1, 'startingDate is required'),
-    endingDate: z.string().min(1, 'endingDate is required'),
+    startingDate: z.string().optional(),
+    endingDate: z.string().optional(),
     timeTableRoutineId: optionalPositiveId,
     previousDate: z.string().optional(),
 }).refine(
-    (data) => data.timeTableType === 'elective' || data.classSectionTermId != null,
-    { message: 'classSectionTermId is required', path: ['classSectionTermId'] },
+    (data) => data.timeTableType === 'elective' || data.classSectionTermId != null || data.academicGroupId != null,
+    { message: 'Either classSectionTermId or academicGroupId is required', path: ['classSectionTermId'] },
 ).refine(
-    (data) => new Date(data.endingDate) >= new Date(data.startingDate),
+    (data) => !data.startingDate || !data.endingDate || new Date(data.endingDate) >= new Date(data.startingDate),
     { message: 'endingDate cannot be before startingDate', path: ['endingDate'] },
 );
 
@@ -238,7 +243,7 @@ const classSubjectCountQuerySchema = z.object({
 const getDateWiseCellsQuerySchema = z.object({
     courseId: positiveIntegerId,
     sessionId: positiveIntegerId,
-    classSectionTermId: positiveIntegerId,
+    classSectionTermId: positiveIntegerId.optional(),
     date: z.string().optional(),
 });
 
@@ -269,6 +274,8 @@ router.get('/single', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.v
 router.get('/create', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ query: getTimeTableByCourseAndSectionQuerySchema }),
     getTimeTableByCourseAndSection);
 router.get('/getRoutine', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ query: getRoutineSchema }), getRoutineByClassSectionId);
+router.get('/getRoutineByAcademicGroup', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ query: getRoutineByAcademicGroupSchema }), getRoutineByAcademicGroupId);
+
 router.get('/getRoutineByTeacher', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ query: getRoutineByTeacherSchema }), getRoutineByTeacherAndAcademicYear);
 
 router.get('/dateWiseCells', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null), validate({ query: getDateWiseCellsQuerySchema }), getDateWiseCellsBySection);
@@ -279,6 +286,8 @@ router.patch('/dateWiseCells', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TAB
 // 2. Routine lifecycle — create / update / clone / publish
 // ---------------------------------------------------------------------------
 router.post('/', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_CREATE_TIMETABLE.value, null), validate({ body: addTimeTableCreateSchema }), addtimeTableCreate);
+
+
 router.patch('/create', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_EDIT_ROUTINE.value, null), validate({ body: patchTimeTableCreateSchema }), changeTimeTableCreate);
 router.delete('/', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_DELETE_ROUTINE.value, null), validate({ query: deleteTimeTableRoutineQuerySchema }), deleteTimeTableRoutine);
 router.post('/clone', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_CREATE_TIMETABLE.value, null), validate({ body: cloneRoutineSchema }), cloneTimeTableRoutine);

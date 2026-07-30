@@ -1,0 +1,2024 @@
+{
+  "info": {
+    "_postman_id": "a9b8c7d6-e5f4-3210-abcd-academicgroup01",
+    "name": "univ-v2-academic-group",
+    "description": "Academic Group formation and Timetable Academic Group APIs (stepwise wizard).\n\n**Docs:** `docs/postman/ACADEMIC_GROUP.md`\n\n## Academic Group Formation Order\n1. `POST /academicGroup/scope` -> `academicGroupScopeId`\n2. `POST /academicGroup` -> `academicGroupId`\n3. `POST /academicGroup/user` -> faculty\n4. `POST /academicGroup/student` -> students\n\n## Timetable Academic Group Mapping & Routines Order\n1. `POST /timetableAcademicGroup/mapping` -> map structure (`timeTableNameId`) to `academicGroupScopeId` (`timetableStructureCourseMapperId`)\n2. `GET /timetableAcademicGroup/mapping` -> get filtered structure-scope course mappings\n3. `GET /timetableAcademicGroup/allMappings` -> get whole list of all structure-scope course mappings\n4. `POST /timetableAcademicGroup/routine` -> create routine for `academicGroupId` under structure mapping (`timeTableRoutineId`)\n5. `GET /timetableAcademicGroup/groupRoutinesWrappedInStructure` -> get all routines wrapped in structure for `academicGroupId`\n6. `GET /timetableAcademicGroup/cascadingGroupRoutines` -> get cascading scope -> group -> routines hierarchy\n7. `GET /timetableAcademicGroup/subjectOptions` -> get subject options list (`[{ subjectId, name }]`) filtered by `classSectionTermId` or `academicGroupId`\n\nSet `baseurl` + `token`. Tenant from `saveUserDefaults`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseurl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "academicGroupScopeId",
+      "value": ""
+    },
+    {
+      "key": "academicGroupId",
+      "value": ""
+    },
+    {
+      "key": "academicGroupUserId",
+      "value": ""
+    },
+    {
+      "key": "academicGroupStudentId",
+      "value": ""
+    },
+    {
+      "key": "timeTableNameId",
+      "value": ""
+    },
+    {
+      "key": "timetableStructureCourseMapperId",
+      "value": ""
+    },
+    {
+      "key": "timeTableRoutineId",
+      "value": ""
+    },
+    {
+      "key": "courseId",
+      "value": "34"
+    },
+    {
+      "key": "sessionId",
+      "value": "6"
+    },
+    {
+      "key": "term",
+      "value": "10"
+    },
+    {
+      "key": "contextSubjectId",
+      "value": "114"
+    },
+    {
+      "key": "userId",
+      "value": "56"
+    },
+    {
+      "key": "studentId",
+      "value": "101"
+    },
+    {
+      "key": "classSectionTermId",
+      "value": "12"
+    }
+  ],
+  "item": [
+    {
+      "name": "0. pickers",
+      "description": "Optional helpers before assigning faculty/students.",
+      "item": [
+        {
+          "name": "GET options/studentFilters",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/options/studentFilters?courseIds={{courseId}}&sessionIds={{sessionId}}&term={{term}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "options",
+                "studentFilters"
+              ],
+              "query": [
+                {
+                  "key": "courseIds",
+                  "value": "{{courseId}}"
+                },
+                {
+                  "key": "sessionIds",
+                  "value": "{{sessionId}}"
+                },
+                {
+                  "key": "term",
+                  "value": "{{term}}"
+                }
+              ]
+            },
+            "description": "Cascading filter options for student picker."
+          },
+          "response": []
+        },
+        {
+          "name": "GET student/all",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/student/all?page=1&limit=20&courseId={{courseId}}&sessionId={{sessionId}}&term={{term}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "all"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "courseId",
+                  "value": "{{courseId}}"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}"
+                },
+                {
+                  "key": "term",
+                  "value": "{{term}}"
+                }
+              ]
+            },
+            "description": "Student list for Step 4 assignment."
+          },
+          "response": []
+        },
+        {
+          "name": "GET options/teachers",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/options/teachers",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "options",
+                "teachers"
+              ],
+              "query": []
+            },
+            "description": "Faculty picker for Step 3 (`value` = userId)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "1. scope",
+      "description": "Step 1 \u2014 create / read / update / delete `academic_group_scope`.",
+      "item": [
+        {
+          "name": "POST scope (activity context)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const row = res.data;",
+                  "  if (row && row.academicGroupScopeId) {",
+                  "    pm.collectionVariables.set('academicGroupScopeId', String(row.academicGroupScopeId));",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"groupType\": \"teaching\",\n  \"title\": \"Dissertation\",\n  \"selectionScope\": \"program_specific\",\n  \"courseId\": {{courseId}},\n  \"sessionId\": {{sessionId}},\n  \"term\": {{term}},\n  \"academicContextType\": \"activity\",\n  \"activityName\": \"Design Thinking Workshop\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicGroup/scope",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicGroup",
+                "scope"
+              ]
+            },
+            "description": "**POST /academicGroup/scope**\n\n`program_specific` requires `courseId`, `sessionId`, `term`.\n\nSaves `academicGroupScopeId`."
+          },
+          "response": []
+        },
+        {
+          "name": "POST scope (course / subject context)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const row = res.data;",
+                  "  if (row && row.academicGroupScopeId) {",
+                  "    pm.collectionVariables.set('academicGroupScopeId', String(row.academicGroupScopeId));",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"groupType\": \"teaching\",\n  \"title\": \"Dissertation\",\n  \"selectionScope\": \"program_specific\",\n  \"courseId\": {{courseId}},\n  \"sessionId\": {{sessionId}},\n  \"term\": {{term}},\n  \"academicContextType\": \"course\",\n  \"contextSubjectId\": {{contextSubjectId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicGroup/scope",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicGroup",
+                "scope"
+              ]
+            },
+            "description": "**POST /academicGroup/scope** with `academicContextType: course` -> requires `contextSubjectId`."
+          },
+          "response": []
+        },
+        {
+          "name": "GET scope/all",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/academicGroup/scope/all?search=",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicGroup",
+                "scope",
+                "all"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "optional \u2014 filter by title",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**GET /academicGroup/scope/all**\n\nFull scope list for the tenant (all keys + nested names):\n- scope fields: `academicGroupScopeId`, `groupType`, `title`, `selectionScope`, `courseId`, `sessionId`, `term`, `academicContextType`, `contextSubjectId`, `activityName`, tenant/audit fields\n- `course`: `{ courseId, courseName }`\n- `session`: `{ sessionId, sessionName }`\n- `contextSubject`: `{ subjectId, subjectName }` when set\n- `groups[]`: linked academic groups for this scope\n\nOptional query: `search` (title contains)."
+          },
+          "response": [
+            {
+              "name": "200 \u2014 scopes with course/session names",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/academicGroup/scope/all",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "academicGroup",
+                    "scope",
+                    "all"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Academic group scopes fetched successfully\",\n  \"data\": [\n    {\n      \"academicGroupScopeId\": 1,\n      \"groupType\": \"teaching\",\n      \"title\": \"Dissertation\",\n      \"selectionScope\": \"program_specific\",\n      \"courseId\": 34,\n      \"sessionId\": 6,\n      \"term\": 10,\n      \"academicContextType\": \"activity\",\n      \"contextSubjectId\": null,\n      \"activityName\": \"Design Thinking Workshop\",\n      \"universityId\": 1,\n      \"instituteId\": 12,\n      \"academicYearId\": 76,\n      \"course\": {\n        \"courseId\": 34,\n        \"courseName\": \"B.Arch\"\n      },\n      \"session\": {\n        \"sessionId\": 6,\n        \"sessionName\": \"2025-26\"\n      },\n      \"contextSubject\": null,\n      \"groups\": [\n        {\n          \"academicGroupId\": 1,\n          \"academicGroupScopeId\": 1,\n          \"groupName\": \"Dissertation Group 1\",\n          \"groupCode\": \"DIS-G1\",\n          \"capacity\": 10,\n          \"publishStatus\": \"draft\"\n        }\n      ]\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET scope/single",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/academicGroup/scope/single?academicGroupScopeId={{academicGroupScopeId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicGroup",
+                "scope",
+                "single"
+              ],
+              "query": [
+                {
+                  "key": "academicGroupScopeId",
+                  "value": "{{academicGroupScopeId}}"
+                }
+              ]
+            },
+            "description": "**GET /academicGroup/scope/single**\n\nReturns single academicGroupScope details along with all nested groups, `studentCount`, `facultyCount`, and complete group/user/student attributes."
+          },
+          "response": [
+            {
+              "name": "200 \u2014 scope single with group details and counts",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/academicGroup/scope/single?academicGroupScopeId={{academicGroupScopeId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "academicGroup",
+                    "scope",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "academicGroupScopeId",
+                      "value": "{{academicGroupScopeId}}"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Academic group scope fetched successfully\",\n  \"data\": {\n    \"academicGroupScopeId\": 1,\n    \"groupType\": \"teaching\",\n    \"title\": \"Dissertation\",\n    \"selectionScope\": \"program_specific\",\n    \"courseId\": 34,\n    \"sessionId\": 6,\n    \"term\": 10,\n    \"academicContextType\": \"activity\",\n    \"contextSubjectId\": null,\n    \"activityName\": \"Design Thinking Workshop\",\n    \"universityId\": 1,\n    \"instituteId\": 12,\n    \"academicYearId\": 76,\n    \"course\": {\n      \"courseId\": 34,\n      \"courseName\": \"B.Arch\"\n    },\n    \"session\": {\n      \"sessionId\": 6,\n      \"sessionName\": \"2025-26\"\n    },\n    \"contextSubject\": null,\n    \"groups\": [\n      {\n        \"academicGroupId\": 1,\n        \"academicGroupScopeId\": 1,\n        \"groupName\": \"Dissertation Group 1\",\n        \"groupCode\": \"DIS-G1\",\n        \"capacity\": 10,\n        \"publishStatus\": \"draft\",\n        \"studentCount\": 8,\n        \"facultyCount\": 2,\n        \"users\": [],\n        \"students\": []\n      }\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "PATCH scope",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicGroupScopeId\": {{academicGroupScopeId}},\n  \"title\": \"Dissertation Updated\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicGroup/scope",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicGroup",
+                "scope"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE scope",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/academicGroup/scope?academicGroupScopeId={{academicGroupScopeId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicGroup",
+                "scope"
+              ],
+              "query": [
+                {
+                  "key": "academicGroupScopeId",
+                  "value": "{{academicGroupScopeId}}"
+                }
+              ]
+            },
+            "description": "Cascades soft-delete of all linked groups + users + students."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. group",
+      "description": "Step 2 \u2014 create group linked to scope (many groups per scope).",
+      "item": [
+        {
+          "name": "POST group",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const row = res.data;",
+                  "  if (row && row.academicGroupId) {",
+                  "    pm.collectionVariables.set('academicGroupId', String(row.academicGroupId));",
+                  "  }",
+                  "  if (row && row.academicGroupScopeId) {",
+                  "    pm.collectionVariables.set('academicGroupScopeId', String(row.academicGroupScopeId));",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicGroupScopeId\": {{academicGroupScopeId}},\n  \"groupName\": \"Dissertation Group 1\",\n  \"groupCode\": \"DIS-G1\",\n  \"capacity\": 10,\n  \"publishStatus\": \"draft\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicGroup",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicGroup"
+              ]
+            },
+            "description": "Omit `groupCode` to auto-generate. Same `academicGroupScopeId` may create multiple groups."
+          },
+          "response": []
+        },
+        {
+          "name": "GET all",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/academicGroup/all?page=1&limit=10",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicGroup",
+                "all"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "courseId",
+                  "value": "{{courseId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "term",
+                  "value": "{{term}}",
+                  "disabled": true
+                },
+                {
+                  "key": "groupType",
+                  "value": "teaching",
+                  "disabled": true
+                },
+                {
+                  "key": "publishStatus",
+                  "value": "draft",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**GET /academicGroup/all**\n\nPaginated groups list."
+          },
+          "response": []
+        },
+        {
+          "name": "GET single",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/academicGroup/single?academicGroupId={{academicGroupId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicGroup",
+                "single"
+              ],
+              "query": [
+                {
+                  "key": "academicGroupId",
+                  "value": "{{academicGroupId}}"
+                }
+              ]
+            },
+            "description": "**GET /academicGroup/single?academicGroupId=**"
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH group",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicGroupId\": {{academicGroupId}},\n  \"groupName\": \"Dissertation Group 1A\",\n  \"capacity\": 12\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicGroup",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicGroup"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH publish",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicGroupId\": {{academicGroupId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicGroup/publish",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicGroup",
+                "publish"
+              ]
+            },
+            "description": "Sets `publishStatus` to `published` (from draft only)."
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE group",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/academicGroup?academicGroupId={{academicGroupId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicGroup"
+              ],
+              "query": [
+                {
+                  "key": "academicGroupId",
+                  "value": "{{academicGroupId}}"
+                }
+              ]
+            },
+            "description": "Soft-deletes group + users + students."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. user (faculty)",
+      "description": "Step 3 \u2014 assign faculty with role. At most one `primary_faculty` per group.",
+      "item": [
+        {
+          "name": "GET availableUsers",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/academicGroup/availableUsers?academicGroupId={{academicGroupId}}&page=1&limit=20",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicGroup",
+                "availableUsers"
+              ],
+              "query": [
+                {
+                  "key": "academicGroupId",
+                  "value": "{{academicGroupId}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "campusId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "subjectId",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**GET /academicGroup/availableUsers**\n\nTeachers available to assign."
+          },
+          "response": []
+        },
+        {
+          "name": "GET user (faculty by group)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/academicGroup/user?academicGroupId={{academicGroupId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicGroup",
+                "user"
+              ],
+              "query": [
+                {
+                  "key": "academicGroupId",
+                  "value": "{{academicGroupId}}"
+                }
+              ]
+            },
+            "description": "**GET /academicGroup/user?academicGroupId=**"
+          },
+          "response": []
+        },
+        {
+          "name": "POST user (bulk)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const rows = res.data;",
+                  "  if (Array.isArray(rows) && rows[0] && rows[0].academicGroupUserId) {",
+                  "    pm.collectionVariables.set('academicGroupUserId', String(rows[0].academicGroupUserId));",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicGroupId\": {{academicGroupId}},\n  \"users\": [\n    { \"userId\": {{userId}}, \"role\": \"primary_faculty\" }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicGroup/user",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicGroup",
+                "user"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST user (single)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicGroupId\": {{academicGroupId}},\n  \"userId\": {{userId}},\n  \"role\": \"co_faculty\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicGroup/user",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicGroup",
+                "user"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH user",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicGroupUserId\": {{academicGroupUserId}},\n  \"role\": \"mentor\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicGroup/user",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicGroup",
+                "user"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE user",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicGroupUserId\": {{academicGroupUserId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicGroup/user",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicGroup",
+                "user"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. student",
+      "description": "Step 4 \u2014 assign students. Enforces capacity when set.",
+      "item": [
+        {
+          "name": "GET availableStudents",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/academicGroup/availableStudents?academicGroupId={{academicGroupId}}&page=1&limit=20&term=1,2,3,4,5",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicGroup",
+                "availableStudents"
+              ],
+              "query": [
+                {
+                  "key": "academicGroupId",
+                  "value": "{{academicGroupId}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "term",
+                  "value": "1,2,3,4,5",
+                  "description": "optional \u2014 class_section_term numbers"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "classSectionsId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "year",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**GET /academicGroup/availableStudents**"
+          },
+          "response": []
+        },
+        {
+          "name": "POST student",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const rows = res.data;",
+                  "  if (Array.isArray(rows) && rows[0] && rows[0].academicGroupStudentId) {",
+                  "    pm.collectionVariables.set('academicGroupStudentId', String(rows[0].academicGroupStudentId));",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicGroupId\": {{academicGroupId}},\n  \"studentIds\": [{{studentId}}]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicGroup/student",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicGroup",
+                "student"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE student",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicGroupId\": {{academicGroupId}},\n  \"studentIds\": [{{studentId}}]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicGroup/student",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicGroup",
+                "student"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. timetable academic group",
+      "description": "Timetable structure mapping with academicGroupScope & creating routines for academicGroupId.",
+      "item": [
+        {
+          "name": "POST timetableAcademicGroup/mapping",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const row = res.data;",
+                  "  if (row && row.timetableStructureCourseMapperId) {",
+                  "    pm.collectionVariables.set('timetableStructureCourseMapperId', String(row.timetableStructureCourseMapperId));",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timeTableNameId\": {{timeTableNameId}},\n  \"academicGroupScopeId\": {{academicGroupScopeId}},\n  \"startingDate\": \"2026-08-01\",\n  \"endingDate\": \"2026-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/timetableAcademicGroup/mapping",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timetableAcademicGroup",
+                "mapping"
+              ]
+            },
+            "description": "**POST /timetableAcademicGroup/mapping**\n\nMaps existing `timeTableNameId` (structure) with `academicGroupScopeId`. Automatically resolves `courseId` and `sessionId` from `academic_group_scope` if omitted."
+          },
+          "response": [
+            {
+              "name": "200 \u2014 Structure scope mapping added",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"timeTableNameId\": 5,\n  \"academicGroupScopeId\": 1,\n  \"startingDate\": \"2026-08-01\",\n  \"endingDate\": \"2026-12-31\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseurl}}/timetableAcademicGroup/mapping",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timetableAcademicGroup",
+                    "mapping"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Structure group scope mapping added successfully\",\n  \"data\": {\n    \"timetableStructureCourseMapperId\": 8,\n    \"timeTableNameId\": 5,\n    \"academicGroupScopeId\": 1,\n    \"courseId\": 34,\n    \"sessionId\": 6,\n    \"startingDate\": \"2026-08-01\",\n    \"endingDate\": \"2026-12-31\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET timetableAcademicGroup/mapping",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/timetableAcademicGroup/mapping?academicGroupScopeId={{academicGroupScopeId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timetableAcademicGroup",
+                "mapping"
+              ],
+              "query": [
+                {
+                  "key": "academicGroupScopeId",
+                  "value": "{{academicGroupScopeId}}"
+                },
+                {
+                  "key": "timeTableNameId",
+                  "value": "{{timeTableNameId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "timetableStructureCourseMapperId",
+                  "value": "{{timetableStructureCourseMapperId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "courseId",
+                  "value": "{{courseId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**GET /timetableAcademicGroup/mapping**\n\nReturns filtered list of structure mappings including `academicGroupScopeTitle` and structure details."
+          },
+          "response": [
+            {
+              "name": "200 \u2014 Structure scope mappings fetched",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timetableAcademicGroup/mapping?academicGroupScopeId=1",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timetableAcademicGroup",
+                    "mapping"
+                  ],
+                  "query": [
+                    {
+                      "key": "academicGroupScopeId",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Structure scope mappings fetched successfully\",\n  \"data\": [\n    {\n      \"timetableStructureCourseMapperId\": 8,\n      \"timeTableNameId\": 5,\n      \"structureName\": \"Standard 6-Period Structure\",\n      \"maximumPeriod\": 6,\n      \"periodLength\": 50,\n      \"periodGap\": 10,\n      \"startingTime\": \"09:00 AM\",\n      \"weekOff\": \"Sunday\",\n      \"courseId\": 34,\n      \"courseName\": \"B.Arch\",\n      \"courseCode\": \"BARCH\",\n      \"academicGroupScopeId\": 1,\n      \"academicGroupScopeTitle\": \"Dissertation\",\n      \"sessionId\": 6,\n      \"sessionName\": \"2025-26\",\n      \"startingDate\": \"2026-08-01\",\n      \"endingDate\": \"2026-12-31\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET timetableAcademicGroup/allMappings",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/timetableAcademicGroup/allMappings",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timetableAcademicGroup",
+                "allMappings"
+              ],
+              "query": [
+                {
+                  "key": "academicGroupScopeId",
+                  "value": "{{academicGroupScopeId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "timeTableNameId",
+                  "value": "{{timeTableNameId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "courseId",
+                  "value": "{{courseId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**GET /timetableAcademicGroup/allMappings** (Aliases: `/mappings`, `/allScopeMappings`)\n\nReturns the complete list of all `timeTableStructureCourseModel` mappings with full structure and scope metadata."
+          },
+          "response": [
+            {
+              "name": "200 \u2014 All structure scope mappings fetched",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timetableAcademicGroup/allMappings",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timetableAcademicGroup",
+                    "allMappings"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"All structure scope mappings fetched successfully\",\n  \"data\": [\n    {\n      \"timetableStructureCourseMapperId\": 8,\n      \"timeTableNameId\": 5,\n      \"structureName\": \"Standard 6-Period Structure\",\n      \"maximumPeriod\": 6,\n      \"periodLength\": 50,\n      \"periodGap\": 10,\n      \"startingTime\": \"09:00 AM\",\n      \"weekOff\": \"Sunday\",\n      \"courseId\": 34,\n      \"courseName\": \"B.Arch\",\n      \"courseCode\": \"BARCH\",\n      \"academicGroupScopeId\": 1,\n      \"academicGroupScopeTitle\": \"Dissertation\",\n      \"sessionId\": 6,\n      \"sessionName\": \"2025-26\",\n      \"startingDate\": \"2026-08-01\",\n      \"endingDate\": \"2026-12-31\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "DELETE timetableAcademicGroup/mapping",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/timetableAcademicGroup/mapping?timetableStructureCourseMapperId={{timetableStructureCourseMapperId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timetableAcademicGroup",
+                "mapping"
+              ],
+              "query": [
+                {
+                  "key": "timetableStructureCourseMapperId",
+                  "value": "{{timetableStructureCourseMapperId}}"
+                }
+              ]
+            },
+            "description": "**DELETE /timetableAcademicGroup/mapping**\n\nDeletes structure mapping by mapper ID."
+          },
+          "response": [
+            {
+              "name": "200 \u2014 Structure scope mapping deleted",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timetableAcademicGroup/mapping?timetableStructureCourseMapperId=8",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timetableAcademicGroup",
+                    "mapping"
+                  ],
+                  "query": [
+                    {
+                      "key": "timetableStructureCourseMapperId",
+                      "value": "8"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Structure scope mapping deleted successfully\",\n  \"data\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST timetableAcademicGroup/routine",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const res = pm.response.json();",
+                  "  const row = res.data || res;",
+                  "  if (row && row.timeTableRoutineId) {",
+                  "    pm.collectionVariables.set('timeTableRoutineId', String(row.timeTableRoutineId));",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timetableStructureCourseMapperId\": {{timetableStructureCourseMapperId}},\n  \"academicGroupId\": {{academicGroupId}},\n  \"startingDate\": \"2026-08-01\",\n  \"endingDate\": \"2026-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/timetableAcademicGroup/routine",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timetableAcademicGroup",
+                "routine"
+              ]
+            },
+            "description": "**POST /timetableAcademicGroup/routine**\n\nCreates a routine for `academicGroupId` + `timetableStructureCourseMapperId`."
+          },
+          "response": [
+            {
+              "name": "200 \u2014 Academic group routine created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"timetableStructureCourseMapperId\": 8,\n  \"academicGroupId\": 1,\n  \"startingDate\": \"2026-08-01\",\n  \"endingDate\": \"2026-12-31\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseurl}}/timetableAcademicGroup/routine",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timetableAcademicGroup",
+                    "routine"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Academic group routine created successfully\",\n  \"data\": {\n    \"timeTableRoutineId\": 15,\n    \"timetableStructureCourseMapperId\": 8,\n    \"academicGroupId\": 1,\n    \"startingDate\": \"2026-08-01\",\n    \"endingDate\": \"2026-12-31\",\n    \"isPublish\": false\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET timetableAcademicGroup/cascadingGroupRoutines",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/timetableAcademicGroup/cascadingGroupRoutines?academicGroupScopeId={{academicGroupScopeId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timetableAcademicGroup",
+                "cascadingGroupRoutines"
+              ],
+              "query": [
+                {
+                  "key": "academicGroupScopeId",
+                  "value": "{{academicGroupScopeId}}"
+                },
+                {
+                  "key": "academicGroupId",
+                  "value": "{{academicGroupId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**GET /timetableAcademicGroup/cascadingGroupRoutines** (Alias: `/cascadingRoutine`)\n\nReturns cascading hierarchy: `academicGroupScope.title` -> `academicGroup.title` -> `routines[]`."
+          },
+          "response": [
+            {
+              "name": "200 \u2014 Cascading group routines fetched",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timetableAcademicGroup/cascadingGroupRoutines?academicGroupScopeId=1",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timetableAcademicGroup",
+                    "cascadingGroupRoutines"
+                  ],
+                  "query": [
+                    {
+                      "key": "academicGroupScopeId",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Cascading group routines fetched successfully\",\n  \"data\": [\n    {\n      \"academicGroupScopeId\": 1,\n      \"title\": \"Dissertation\",\n      \"mappedStructures\": [\n        {\n          \"timetableStructureCourseMapperId\": 8,\n          \"timeTableNameId\": 5,\n          \"structureName\": \"Standard 6-Period Structure\",\n          \"startingDate\": \"2026-08-01\",\n          \"endingDate\": \"2026-12-31\"\n        }\n      ],\n      \"groups\": [\n        {\n          \"academicGroupId\": 1,\n          \"groupName\": \"Dissertation Group 1\",\n          \"title\": \"Dissertation Group 1\",\n          \"routines\": [\n            {\n              \"timeTableRoutineId\": 15,\n              \"timetableStructureCourseMapperId\": 8,\n              \"academicGroupId\": 1,\n              \"schedules\": []\n            }\n          ]\n        }\n      ]\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET timetableAcademicGroup/groupRoutinesWrappedInStructure",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/timetableAcademicGroup/groupRoutinesWrappedInStructure?academicGroupId={{academicGroupId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timetableAcademicGroup",
+                "groupRoutinesWrappedInStructure"
+              ],
+              "query": [
+                {
+                  "key": "academicGroupId",
+                  "value": "{{academicGroupId}}"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**GET /timetableAcademicGroup/groupRoutinesWrappedInStructure** (Aliases: `/routinesWrappedInStructure`, `/groupRoutinesStructure`)\n\nReturns all routines wrapped in structure details for a given `academicGroupId`."
+          },
+          "response": [
+            {
+              "name": "200 \u2014 Group routines wrapped in structure fetched",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timetableAcademicGroup/groupRoutinesWrappedInStructure?academicGroupId=1",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timetableAcademicGroup",
+                    "groupRoutinesWrappedInStructure"
+                  ],
+                  "query": [
+                    {
+                      "key": "academicGroupId",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Group routines wrapped in structure fetched successfully\",\n  \"data\": {\n    \"academicGroupId\": 1,\n    \"groupName\": \"Dissertation Group 1\",\n    \"groupCode\": \"DIS-G1\",\n    \"capacity\": 10,\n    \"publishStatus\": \"draft\",\n    \"academicGroupScopeId\": 1,\n    \"scopeTitle\": \"Dissertation\",\n    \"course\": {\n      \"courseId\": 34,\n      \"courseName\": \"B.Arch\"\n    },\n    \"session\": {\n      \"sessionId\": 6,\n      \"sessionName\": \"2025-26\"\n    },\n    \"structures\": [\n      {\n        \"timetableStructureCourseMapperId\": 8,\n        \"timeTableNameId\": 5,\n        \"structureName\": \"Standard 6-Period Structure\",\n        \"maximumPeriod\": 6,\n        \"periodLength\": 50,\n        \"periodGap\": 10,\n        \"startingTime\": \"09:00 AM\",\n        \"weekOff\": \"Sunday\",\n        \"startingDate\": \"2026-08-01\",\n        \"endingDate\": \"2026-12-31\",\n        \"timeSlots\": [\n          {\n            \"timeTableCreationId\": 101,\n            \"periodName\": \"Period1\",\n            \"startTime\": \"09:00 AM\",\n            \"endTime\": \"09:50 AM\"\n          }\n        ],\n        \"routines\": [\n          {\n            \"timeTableRoutineId\": 15,\n            \"timetableStructureCourseMapperId\": 8,\n            \"academicGroupId\": 1,\n            \"isPublish\": false,\n            \"startingDate\": \"2026-08-01\",\n            \"endingDate\": \"2026-12-31\",\n            \"schedules\": [\n              {\n                \"timeTableCellId\": 201,\n                \"day\": \"Monday\",\n                \"period\": \"Period1\",\n                \"subjectId\": 4,\n                \"subjectName\": \"Data Structures\",\n                \"roomNo\": \"101-A\",\n                \"teachers\": [\n                  {\n                    \"employeeId\": 12,\n                    \"employeeName\": \"Dr. Smith\",\n                    \"employeeCode\": \"EMP012\"\n                  }\n                ]\n              }\n            ]\n          }\n        ]\n      }\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "DELETE timetableAcademicGroup/routine",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/timetableAcademicGroup/routine?timeTableRoutineId={{timeTableRoutineId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timetableAcademicGroup",
+                "routine"
+              ],
+              "query": [
+                {
+                  "key": "timeTableRoutineId",
+                  "value": "{{timeTableRoutineId}}"
+                }
+              ]
+            },
+            "description": "**DELETE /timetableAcademicGroup/routine**\n\nDeletes group routine by routine ID."
+          },
+          "response": [
+            {
+              "name": "200 \u2014 Academic group routine deleted",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timetableAcademicGroup/routine?timeTableRoutineId=15",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timetableAcademicGroup",
+                    "routine"
+                  ],
+                  "query": [
+                    {
+                      "key": "timeTableRoutineId",
+                      "value": "15"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Academic group routine deleted successfully\",\n  \"data\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET timetableAcademicGroup/subjectOptions",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/timetableAcademicGroup/subjectOptions?classSectionTermId={{classSectionTermId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timetableAcademicGroup",
+                "subjectOptions"
+              ],
+              "query": [
+                {
+                  "key": "classSectionTermId",
+                  "value": "{{classSectionTermId}}"
+                },
+                {
+                  "key": "academicGroupId",
+                  "value": "{{academicGroupId}}",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**GET /timetableAcademicGroup/subjectOptions**\n\nReturns subject options (`[{ subjectId, name }]`) filtered by `classSectionTermId` or `academicGroupId`."
+          },
+          "response": [
+            {
+              "name": "200 \u2014 Subject options fetched",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timetableAcademicGroup/subjectOptions?classSectionTermId=12",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timetableAcademicGroup",
+                    "subjectOptions"
+                  ],
+                  "query": [
+                    {
+                      "key": "classSectionTermId",
+                      "value": "12"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Subject options fetched successfully\",\n  \"data\": [\n    {\n      \"subjectId\": 4,\n      \"name\": \"Data Structures\"\n    },\n    {\n      \"subjectId\": 10,\n      \"name\": \"Algorithms\"\n    }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

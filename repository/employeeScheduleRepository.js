@@ -80,6 +80,9 @@ function flattenDateWiseScheduleRow(row, viewerUserId = null) {
     year: classSection?.year ?? null,
     section: classSection?.section ?? null,
     employeeDetails: teacher?.employeeDetails || null,
+    academicGroupId: routine?.academicGroupId || null,
+    academicGroupTitle: routine?.academicGroup?.scope?.title || null,
+    academicGroupStudentCount: routine?.academicGroup?.students?.length || 0,
   };
 }
 
@@ -190,9 +193,29 @@ function dateWiseScheduleIncludes({ sessionId, academicYearId } = {}) {
           model: model.timeTableRoutineModel,
           as: 'timeTableRoutine',
           required: true,
-          attributes: ['timeTableRoutineId', 'startingDate', 'endingDate', 'classSectionTermId'],
+          attributes: ['timeTableRoutineId', 'startingDate', 'endingDate', 'classSectionTermId', 'academicGroupId', 'timetableStructureCourseMapperId'],
           where: routineWhere,
           include: [
+            {
+              model: model.academicGroupModel,
+              as: 'academicGroup',
+              attributes: ['academicGroupId', 'groupName'],
+              required: false,
+              include: [
+                {
+                  model: model.academicGroupStudentModel,
+                  as: 'students',
+                  attributes: ['academicGroupStudentId'],
+                  required: false,
+                },
+                {
+                  model: model.academicGroupScopeModel,
+                  as: 'scope',
+                  attributes: ['academicGroupScopeId', 'title'],
+                  required: false,
+                },
+              ]
+            },
             {
               model: model.courseModel,
               as: 'timeTableCourse',

@@ -96,6 +96,10 @@ import departmentModel from "./departmentModel.js";
 import staffModel from "./staffModel.js";
 import departmentPositionsModel from "./departmentPositionsModel.js";
 import userDepartmentPositionsModel from "./userDepartmentPositionsModel.js";
+import academicGroupScopeModel from "./academicGroupScopeModel.js";
+import academicGroupModel from "./academicGroupModel.js";
+import academicGroupUserModel from "./academicGroupUserModel.js";
+import academicGroupStudentModel from "./academicGroupStudentModel.js";
 import syllabusDetailsModel from "./syllabusDetailsModel.js";
 import syllabusModel from "./syllabusModel.js";
 import sessionModel from "./sessionModel.js";
@@ -582,6 +586,15 @@ sessionModel.hasMany(timeTableStructureCourseModel, {
   as: "timeTableStructureCourses",
 });
 
+timeTableStructureCourseModel.belongsTo(academicGroupScopeModel, {
+  foreignKey: "academic_group_scope_id",
+  as: "academicGroupScope",
+});
+academicGroupScopeModel.hasMany(timeTableStructureCourseModel, {
+  foreignKey: "academic_group_scope_id",
+  as: "timeTableStructureCourses",
+});
+
 timeTableRoutineModel.belongsTo(timeTableStructureCourseModel, {
   foreignKey: "timetable_structure_course_mapper_id",
   as: "structureCourseMapping",
@@ -593,6 +606,9 @@ timeTableStructureCourseModel.hasMany(timeTableRoutineModel, {
 
 timeTableRoutineModel.belongsTo(courseModel, { foreignKey: "course_id", as: "timeTableCourse" });
 courseModel.hasMany(timeTableRoutineModel, { foreignKey: "course_id", as: "timeTableCourse" });
+
+timeTableRoutineModel.belongsTo(academicGroupModel, { foreignKey: "academic_group_id", as: "academicGroup" });
+academicGroupModel.hasMany(timeTableRoutineModel, { foreignKey: "academic_group_id", as: "timeTableRoutines" });
 
 timeTableRoutineModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "timeTableCampus" });
 campusModel.hasMany(timeTableRoutineModel, { foreignKey: "campus_id", as: "timeTableCampus" });
@@ -1193,6 +1209,78 @@ userDepartmentPositionsModel.belongsTo(userModel, {
 userModel.hasMany(userDepartmentPositionsModel, {
   foreignKey: "user_id",
   as: "orgHeads",
+});
+
+academicGroupScopeModel.belongsTo(courseModel, {
+  foreignKey: "courseId",
+  as: "course",
+});
+courseModel.hasMany(academicGroupScopeModel, {
+  foreignKey: "courseId",
+  as: "academicGroupScopes",
+});
+
+academicGroupScopeModel.belongsTo(subjectModel, {
+  foreignKey: "contextSubjectId",
+  as: "contextSubject",
+});
+subjectModel.hasMany(academicGroupScopeModel, {
+  foreignKey: "contextSubjectId",
+  as: "academicGroupScopesContext",
+});
+
+academicGroupScopeModel.belongsTo(sessionModel, {
+  foreignKey: "sessionId",
+  as: "session",
+});
+sessionModel.hasMany(academicGroupScopeModel, {
+  foreignKey: "sessionId",
+  as: "academicGroupScopes",
+});
+
+academicGroupModel.belongsTo(academicGroupScopeModel, {
+  foreignKey: "academicGroupScopeId",
+  as: "scope",
+});
+academicGroupScopeModel.hasMany(academicGroupModel, {
+  foreignKey: "academicGroupScopeId",
+  as: "groups",
+});
+
+academicGroupUserModel.belongsTo(academicGroupModel, {
+  foreignKey: "academicGroupId",
+  as: "group",
+});
+academicGroupModel.hasMany(academicGroupUserModel, {
+  foreignKey: "academicGroupId",
+  as: "users",
+});
+
+academicGroupUserModel.belongsTo(userModel, {
+  foreignKey: "userId",
+  as: "user",
+});
+userModel.hasMany(academicGroupUserModel, {
+  foreignKey: "userId",
+  as: "academicGroupUsers",
+});
+
+academicGroupStudentModel.belongsTo(academicGroupModel, {
+  foreignKey: "academicGroupId",
+  as: "group",
+});
+academicGroupModel.hasMany(academicGroupStudentModel, {
+  foreignKey: "academicGroupId",
+  as: "students",
+});
+
+academicGroupStudentModel.belongsTo(studentModel, {
+  foreignKey: "studentId",
+  as: "student",
+});
+studentModel.hasMany(academicGroupStudentModel, {
+  foreignKey: "studentId",
+  as: "academicGroupStudents",
 });
 
 syllabusModel.hasMany(syllabusDetailsModel, { foreignKey: "syllabus_id", as: "syllabusDetails" });
@@ -2027,6 +2115,10 @@ export {
   staffModel,
   departmentPositionsModel,
   userDepartmentPositionsModel,
+  academicGroupScopeModel,
+  academicGroupModel,
+  academicGroupUserModel,
+  academicGroupStudentModel,
   syllabusDetailsModel,
   syllabusModel,
   sessionModel,

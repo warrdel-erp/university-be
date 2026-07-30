@@ -159,3 +159,24 @@ export async function getSubjectById(id) {
     throw error;
   }
 }
+
+export async function deleteSubject(subjectId) {
+  try {
+    const mappingsCount = await scoped(model.teacherSubjectMappingModel).count({
+      where: { subjectId: Number(subjectId) }
+    });
+
+    if (mappingsCount > 0) {
+      const error = new Error('Cannot delete subject. It is currently assigned to a teacher.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    return await scoped(model.subjectModel).destroy({
+      where: { subjectId: Number(subjectId) }
+    });
+  } catch (error) {
+    console.error('Error deleting subject:', error);
+    throw error;
+  }
+}

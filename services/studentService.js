@@ -2756,17 +2756,18 @@ async function buildClassSectionStudentsBlock(dateWiseId) {
   const period = await resolveSourcePeriodByDateWiseId(Number(dateWiseId));
 
   const classSectionTermId = period.classSectionTermId;
-  if (!classSectionTermId) {
+  const academicGroupId = period.academicGroupId;
+  if (!classSectionTermId && !academicGroupId) {
     const error = new Error(
-      "classSectionTermId could not be resolved from timeTableCellDateWiseId",
+      "classSectionTermId or academicGroupId could not be resolved from timeTableCellDateWiseId",
     );
     error.statusCode = 400;
     throw error;
   }
 
   const students = toPlainRows(
-    await studentRepository.getStudentsByClassSection(
-      classSectionTermId,
+    await studentRepository.getStudentsByPlacement(
+      period,
       period.timeTableCellDateWiseId,
     ),
   );
@@ -2774,7 +2775,9 @@ async function buildClassSectionStudentsBlock(dateWiseId) {
   const programDetails = buildProgramDetails(period, students);
 
   return {
-    classSectionTermId: Number(classSectionTermId),
+    classSectionTermId: classSectionTermId ? Number(classSectionTermId) : null,
+    academicGroupId: academicGroupId ? Number(academicGroupId) : null,
+    academicGroup: period.academicGroup ?? null,
     timeTableCellDateWiseId: period.timeTableCellDateWiseId,
     timeTableCellId: period.timeTableCellId,
     date: period.date,
@@ -2829,18 +2832,26 @@ export async function getStudentsByClassSection({
     }
 
     const classSectionTermId = resolvedPeriods[0].classSectionTermId;
-    if (!classSectionTermId) {
+    const academicGroupId = resolvedPeriods[0].academicGroupId;
+    if (!classSectionTermId && !academicGroupId) {
       const error = new Error(
-        "classSectionTermId could not be resolved from timeTableCellDateWiseId",
+        "classSectionTermId or academicGroupId could not be resolved from timeTableCellDateWiseId",
       );
       error.statusCode = 400;
       throw error;
     }
 
     for (const period of resolvedPeriods) {
-      if (Number(period.classSectionTermId) !== Number(classSectionTermId)) {
+      if (classSectionTermId && Number(period.classSectionTermId) !== Number(classSectionTermId)) {
         const error = new Error(
           "All timeTableCellDateWiseId values must belong to the same classSectionTermId when groupPeriods=true",
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+      if (academicGroupId && Number(period.academicGroupId) !== Number(academicGroupId)) {
+        const error = new Error(
+          "All timeTableCellDateWiseId values must belong to the same academicGroupId when groupPeriods=true",
         );
         error.statusCode = 400;
         throw error;
@@ -2853,8 +2864,8 @@ export async function getStudentsByClassSection({
     }
 
     const students = toPlainRows(
-      await studentRepository.getStudentsByClassSection(
-        classSectionTermId,
+      await studentRepository.getStudentsByPlacement(
+        resolvedPeriods[0],
         dateWiseIds,
       ),
     );
@@ -2866,7 +2877,9 @@ export async function getStudentsByClassSection({
     }
 
     return {
-      classSectionTermId: Number(classSectionTermId),
+      classSectionTermId: classSectionTermId ? Number(classSectionTermId) : null,
+      academicGroupId: academicGroupId ? Number(academicGroupId) : null,
+      academicGroup: resolvedPeriods[0].academicGroup ?? null,
       timeTableCellDateWiseId: dateWiseIds,
       timeTableCellDateWiseIds: dateWiseIds,
       date: resolvedPeriods[0].date,

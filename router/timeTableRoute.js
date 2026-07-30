@@ -108,6 +108,7 @@ const getStructureMappingPrintQuerySchema = z.object({
     timetableStructureCourseMapperId: optionalPositiveId,
     timeTableNameId: optionalPositiveId,
     courseId: optionalPositiveId,
+    academicGroupScopeId: optionalPositiveId,
     sessionId: optionalPositiveId,
 });
 

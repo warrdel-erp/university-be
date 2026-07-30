@@ -44,3 +44,25 @@ export const getSubjectsWithExamSchedule = async (req, res) => {
     return ErrorResponse(res, 500, error.message);
   }
 };
+
+export const deleteSubject = async (req, res) => {
+  try {
+    const { subjectId } = req.query; // assuming passed as query param or req.params if you change route
+    
+    if (!subjectId) {
+      return ErrorResponse(res, 400, 'subjectId is required');
+    }
+
+    const result = await subjectService.deleteSubject(subjectId);
+    
+    if (result) {
+      return SuccessResponse(res, 200, 'Subject deleted successfully', result);
+    } else {
+      return ErrorResponse(res, 404, 'Subject not found or could not be deleted');
+    }
+  } catch (error) {
+    console.error('Error in deleteSubject controller:', error);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(res, statusCode, error.message);
+  }
+};
