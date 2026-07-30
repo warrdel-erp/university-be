@@ -1,6 +1,8 @@
 import * as optionsRepository from '../repository/optionsRepository.js';
 import * as model from '../models/index.js';
 import { scoped } from '../utility/scoped.js';
+import { STUDENT_STATUS_OPTIONS } from '../constant.js';
+import { buildCourseTermOptions } from '../utility/courseTerms.js';
 
 export async function getAffiliatedUniversityOptions() {
     return await optionsRepository.getAffiliatedUniversityOptions();
@@ -173,5 +175,107 @@ export async function getTopicOptions(lessonId, academicYearId) {
     return {
         selected: { lesson },
         options,
+    };
+}
+
+function buildYearOptionsFromCourses(courses) {
+    let maxDuration = 0;
+    for (const course of courses) {
+        const duration = Number(course.courseDuration) || 0;
+        if (duration > maxDuration) {
+            maxDuration = duration;
+        }
+    }
+
+    const options = [];
+    for (let year = 1; year <= maxDuration; year++) {
+        options.push({
+            label: `Year ${year}`,
+            value: year,
+        });
+    }
+    return options;
+}
+
+function buildYearOptionsFromDistinctRows(rows) {
+    const options = [];
+    for (const row of rows) {
+        const year = Number(row.year);
+        if (!Number.isFinite(year) || year <= 0) {
+            continue;
+        }
+        options.push({
+            label: `Year ${year}`,
+            value: year,
+        });
+    }
+    return options;
+}
+
+function buildTermOptionsFromCourses(courses) {
+    const byValue = new Map();
+    for (const course of courses) {
+        const plain = typeof course.get === 'function' ? course.get({ plain: true }) : course;
+        const termOptions = buildCourseTermOptions(plain);
+        for (const opt of termOptions) {
+            if (byValue.has(opt.term)) {
+                continue;
+            }
+            byValue.set(opt.term, {
+                label: opt.termName,
+                value: opt.term,
+            });
+        }
+    }
+
+    const options = [];
+    for (const opt of byValue.values()) {
+        options.push(opt);
+    }
+    options.sort((a, b) => a.value - b.value);
+    return options;
+}
+
+/**
+ * Cascading student filter options for multi-select parents.
+ * courseIds → sessions / years / terms / classSections
+ * sessionIds + year + term further narrow classSections.
+ */
+export async function getStudentFilterOptions(filters) {
+    const { courseIds, sessionIds, year, term } = filters;
+
+    const [courses, sessions, coursesMeta, classSectionYearRows, classSections] = await Promise.all([
+        optionsRepository.getCourseOptions(),
+        optionsRepository.getSessionOptions(courseIds),
+        courseIds != null
+            ? optionsRepository.getCoursesMeta(courseIds)
+            : Promise.resolve([]),
+        courseIds != null || sessionIds != null
+            ? optionsRepository.getDistinctClassSectionYears({ courseIds, sessionIds })
+            : Promise.resolve([]),
+        optionsRepository.getClassSectionFilterOptions({
+            courseIds,
+            sessionIds,
+            year,
+            term,
+        }),
+    ]);
+
+    let years = buildYearOptionsFromDistinctRows(classSectionYearRows);
+    if (years.length === 0 && coursesMeta.length > 0) {
+        years = buildYearOptionsFromCourses(coursesMeta);
+    }
+
+    const terms = courseIds != null
+        ? buildTermOptionsFromCourses(coursesMeta)
+        : [];
+
+    return {
+        courses,
+        sessions,
+        years,
+        classSections,
+        terms,
+        studentStatuses: STUDENT_STATUS_OPTIONS,
     };
 }

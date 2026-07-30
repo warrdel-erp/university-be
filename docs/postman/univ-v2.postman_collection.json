@@ -8521,6 +8521,59 @@
           "event": []
         },
         {
+          "id": "a1c2d3e4-f5b6-7890-abcd-ef1234567890",
+          "name": "student filters (cascading)",
+          "request": {
+            "description": "**GET /options/studentFilters**\n\nCascading multi-select filter options for student list UIs.\n\n**Auth:** Bearer token required.\n\n### Query (all optional; single id or list)\n| Field | Aliases | Notes |\n|-------|---------|-------|\n| `courseIds` | `courseId` | Narrows sessions, years, terms, classSections |\n| `sessionIds` | `sessionId` | Narrows years / classSections |\n| `year` | — | Narrows classSections |\n| `term` / `terms` | — | Narrows classSections via class_section_term |\n| `classSectionsIds` | `classSectionsId` | Accepted for parity with GET /student/all |\n\nList formats: `4`, `4,5`, or repeated query keys.\n\n### Cascade\n1. **courses** — always all tenant courses\n2. **sessions** — all sessions, or mapped to `courseIds` via `session_course_mapping`\n3. **years** — distinct years from class_sections (course/session), else from course duration\n4. **classSections** — requires `courseIds`; filtered by session / year / term\n5. **terms** — from selected courses (`termType` + `totalTerms`)\n6. **studentStatuses** — static `STUDENT_STATUS_OPTIONS`\n\n**200 data:** `{ courses, sessions, years, classSections, terms, studentStatuses }` each as `{ label, value }` (classSections also include `year`).",
+            "url": {
+              "path": [
+                "options",
+                "studentFilters"
+              ],
+              "host": [
+                "{{baseurl}}"
+              ],
+              "query": [
+                {
+                  "key": "courseIds",
+                  "value": "34,35",
+                  "description": "optional — comma-separated or repeated"
+                },
+                {
+                  "key": "sessionIds",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "year",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "term",
+                  "value": "",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            },
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "type": "string",
+                  "value": "{{token}}",
+                  "key": "token"
+                }
+              ]
+            },
+            "header": []
+          },
+          "response": [],
+          "event": []
+        },
+        {
           "id": "5a51ff5b-90e3-408b-b48e-eb8859d4312e",
           "name": "specialization",
           "request": {
@@ -13454,7 +13507,7 @@
               "id": "3084c25b-c5ee-4057-b2c2-3a39f380b541",
               "name": "2 get all students (list)",
               "request": {
-                "description": "**GET /student/all**\n\nPaginated student list.\n\n**Query**\n| Key | Required | Notes |\n|-----|----------|-------|\n| `page` | no | default 1 |\n| `limit` | no | default 10, max 100 |\n| `search` | no | name / scholar / enroll / father / course name |\n| `courseId` | no | |\n| `sessionId` | no | admission session (`students.sessionId`) |\n| `academicYearId` | no | admission year via session; default = auth academic year |\n| `classSectionsId` | no | placement section (shared across terms) |\n| `year` | no | `class_sections.year` |\n| `term` | no | `class_section_term.term` |\n\n**Placement:** history `status=current` when present; else `students.classSectionTermId` → class_section_term → class_sections.\n\nUses auth `universityId` + `defaultInstituteId`.\n\nTest script sets `student_id` from first row when present.",
+                "description": "**GET /student/all**\n\nPaginated student list.\n\n**Query**\n| Key | Required | Notes |\n|-----|----------|-------|\n| `page` | no | default 1 |\n| `limit` | no | default 10, max 100 |\n| `search` | no | name / scholar / enroll / father / course name |\n| `courseId` | no | single or multiple (`courseId=4&courseId=5` or `courseId=4,5`) — OR match |\n| `sessionId` | no | single or multiple — admission session (`students.sessionId`) |\n| `academicYearId` | no | single or multiple — admission year via session; default = auth academic year |\n| `classSectionsId` | no | single or multiple — placement section |\n| `year` | no | single or multiple — `class_sections.year` |\n| `term` | no | single or multiple — `class_section_term.term` |\n\n**Placement:** history `status=current` when present; else `students.classSectionTermId` → class_section_term → class_sections.\n\nUses auth `universityId` + `defaultInstituteId`.\n\nTest script sets `student_id` from first row when present.",
                 "url": {
                   "path": [
                     "student",

@@ -21,7 +21,6 @@ export async function addOrgPosition(body, createdBy, updatedBy) {
         positionCode: body.positionCode ?? null,
         employmentCategory: body.employmentCategory,
         reportingType: body.reportingType ?? null,
-        isVacant: body.isVacant === undefined ? true : body.isVacant,
         isLevelHead,
         sortOrder: body.sortOrder ?? 0,
         level: body.level,
@@ -45,7 +44,6 @@ export async function getOrgPositionById(departmentPositionId) {
 export async function updateOrgPosition(departmentPositionId, body, updatedBy) {
     const {
         departmentPositionId: _id,
-        isVacant: _isVacant,
         universityId: _universityId,
         instituteId: _instituteId,
         ...rest

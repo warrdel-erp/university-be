@@ -65,6 +65,22 @@ const optionalPositiveIntegerId = z.preprocess(
   positiveIntegerId.optional(),
 );
 
+/** Single id or list: `4`, `4,5`, `?courseId=4&courseId=5`, `[4,5]` */
+const optionalPositiveIntegerIdList = z.preprocess((val) => {
+  if (val === undefined || val === null || val === "" || val === "undefined") {
+    return undefined;
+  }
+  const rawItems = Array.isArray(val) ? val : String(val).split(",");
+  const ids = [];
+  for (const item of rawItems) {
+    if (item === "" || item == null) {
+      continue;
+    }
+    ids.push(item);
+  }
+  return ids.length > 0 ? ids : undefined;
+}, z.array(positiveIntegerId).min(1).optional());
+
 const optionalString = z.preprocess(
   emptyToUndefined,
   z.string().trim().optional(),
@@ -347,12 +363,12 @@ const getAllStudentsQuerySchema = z.object({
     .optional()
     .default(10),
   search: z.string().trim().optional(),
-  courseId: positiveIntegerId.optional(),
-  sessionId: positiveIntegerId.optional(),
-  classSectionsId: positiveIntegerId.optional(),
-  year: positiveIntegerId.optional(),
-  term: positiveIntegerId.optional(),
-  academicYearId: positiveIntegerId.optional(),
+  courseId: optionalPositiveIntegerIdList,
+  sessionId: optionalPositiveIntegerIdList,
+  classSectionsId: optionalPositiveIntegerIdList,
+  year: optionalPositiveIntegerIdList,
+  term: optionalPositiveIntegerIdList,
+  academicYearId: optionalPositiveIntegerIdList,
 });
 
 const mapStudentBody = (req, res, next) => {

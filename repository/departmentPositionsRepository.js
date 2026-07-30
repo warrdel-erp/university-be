@@ -220,12 +220,35 @@ async function countPositions(where = {}) {
     return scoped(model.departmentPositionsModel).count({ where });
 }
 
+async function countFilledPositions(where = {}) {
+    return scoped(model.departmentPositionsModel).count({
+        where,
+        include: [
+            {
+                model: model.userDepartmentPositionsModel,
+                as: 'heads',
+                required: true,
+                where: { status: 'ACTIVE' },
+                attributes: [],
+            },
+        ],
+        distinct: true,
+        col: 'departmentPositionId',
+    });
+}
+
 async function countPositionsCreatedBy(cutoff, where = {}) {
     return scoped(model.departmentPositionsModel).count({
         where: {
             ...where,
             createdAt: { [Op.lte]: cutoff },
         },
+    });
+}
+
+async function countFilledPositionsCreatedBy(cutoff) {
+    return countFilledPositions({
+        createdAt: { [Op.lte]: cutoff },
     });
 }
 
@@ -256,21 +279,17 @@ export async function getOrgCardsStats(changePeriod) {
     const [
         totalPositions,
         filledPositions,
-        vacantPositions,
         previousTotal,
         previousFilled,
-        previousVacant,
         departments,
         previousDepartments,
         levelRows,
         previousReportingLevels,
     ] = await Promise.all([
         countPositions(),
-        countPositions({ isVacant: false }),
-        countPositions({ isVacant: true }),
+        countFilledPositions(),
         countPositionsCreatedBy(cutoff),
-        countPositionsCreatedBy(cutoff, { isVacant: false }),
-        countPositionsCreatedBy(cutoff, { isVacant: true }),
+        countFilledPositionsCreatedBy(cutoff),
         scoped(model.departmentModel).count(),
         countDepartmentsCreatedBy(cutoff),
         scoped(model.departmentPositionsModel).findAll({
@@ -281,6 +300,8 @@ export async function getOrgCardsStats(changePeriod) {
         countReportingLevelsCreatedBy(cutoff),
     ]);
 
+    const vacantPositions = totalPositions - filledPositions;
+    const previousVacant = previousTotal - previousFilled;
     const reportingLevels = levelRows.length;
 
     return {
@@ -315,9 +336,6 @@ export async function getOrgPositions(filters = {}) {
     }
     if (filters.employmentCategory) {
         where.employmentCategory = filters.employmentCategory;
-    }
-    if (filters.isVacant !== undefined) {
-        where.isVacant = filters.isVacant;
     }
     if (filters.isLevelHead !== undefined) {
         where.isLevelHead = filters.isLevelHead;
@@ -475,26 +493,6 @@ export async function deleteOrgPosition(departmentPositionId, updatedBy) {
     }
 }
 
-export async function countActiveHeads(departmentPositionId, transaction) {
-    return scoped(model.userDepartmentPositionsModel).count({
-        where: {
-            departmentPositionId: Number(departmentPositionId),
-            status: 'ACTIVE',
-        },
-        transaction,
-    });
-}
-
-export async function setPositionVacant(departmentPositionId, isVacant, updatedBy, transaction) {
-    await scoped(model.departmentPositionsModel).update(
-        { isVacant, updatedBy },
-        {
-            where: { departmentPositionId: Number(departmentPositionId) },
-            transaction,
-        },
-    );
-}
-
 export async function findActiveHead(departmentPositionId, userId, transaction) {
     return scoped(model.userDepartmentPositionsModel).findOne({
         attributes: { exclude: excludeMeta },
@@ -508,19 +506,10 @@ export async function findActiveHead(departmentPositionId, userId, transaction) 
 }
 
 export async function addHead(data) {
-    const transaction = await sequelize.transaction();
-    try {
-        const head = await scoped(model.userDepartmentPositionsModel).create(
-            { ...data, status: 'ACTIVE' },
-            { transaction },
-        );
-        await setPositionVacant(data.departmentPositionId, false, data.updatedBy, transaction);
-        await transaction.commit();
-        return head;
-    } catch (error) {
-        await transaction.rollback();
-        throw error;
-    }
+    return scoped(model.userDepartmentPositionsModel).create({
+        ...data,
+        status: 'ACTIVE',
+    });
 }
 
 export async function getHeadsByPositionId(departmentPositionId) {
@@ -577,8 +566,6 @@ export async function updateHead(userDepartmentPositionId, data, updatedBy) {
             return null;
         }
 
-        const activeCount = await countActiveHeads(existing.departmentPositionId, transaction);
-        await setPositionVacant(existing.departmentPositionId, activeCount === 0, updatedBy, transaction);
         await transaction.commit();
         return getHeadById(headId);
     } catch (error) {
@@ -626,8 +613,6 @@ export async function deleteHead(userDepartmentPositionId, updatedBy, endDate) {
             return false;
         }
 
-        const activeCount = await countActiveHeads(existing.departmentPositionId, transaction);
-        await setPositionVacant(existing.departmentPositionId, activeCount === 0, updatedBy, transaction);
         await transaction.commit();
         return true;
     } catch (error) {
@@ -933,7 +918,7 @@ export async function getOrgChartData() {
                 {
                     model: model.departmentPositionsModel,
                     as: 'orgPositions',
-                    attributes: ['departmentPositionId', 'positionName', 'level', 'isVacant', 'isLevelHead'],
+                    attributes: ['departmentPositionId', 'positionName', 'level', 'isLevelHead'],
                     where: { level: 1 },
                     required: false,
                     include: [
@@ -1001,7 +986,6 @@ export async function getOrgChartData() {
                 departmentPositionId: pos.departmentPositionId,
                 positionName:  pos.positionName,
                 level:         pos.level,
-                isVacant:      pos.isVacant,
                 isLevelHead:   pos.isLevelHead,
                 users:         users
             });
@@ -1085,7 +1069,6 @@ export async function getPositionsByDepartment(departmentId) {
             'positionCode',
             'level',
             'employmentCategory',
-            'isVacant',
             'isLevelHead',
             'sortOrder',
             'departmentId'

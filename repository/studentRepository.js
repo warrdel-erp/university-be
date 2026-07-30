@@ -34,15 +34,46 @@ async function assertScopedStudent(studentId, options = {}) {
     });
 }
 
+function toIdList(value) {
+    if (value == null) {
+        return null;
+    }
+    if (Array.isArray(value)) {
+        const ids = [];
+        for (const item of value) {
+            const n = Number(item);
+            if (Number.isFinite(n)) {
+                ids.push(n);
+            }
+        }
+        return ids.length > 0 ? ids : null;
+    }
+    const n = Number(value);
+    return Number.isFinite(n) ? [n] : null;
+}
+
+function whereEqualOrIn(value) {
+    const ids = toIdList(value);
+    if (ids == null) {
+        return undefined;
+    }
+    if (ids.length === 1) {
+        return ids[0];
+    }
+    return { [Op.in]: ids };
+}
+
 function buildStudentListWhere(search, courseId, sessionId) {
     const where = {};
 
-    if (courseId != null) {
-        where.courseId = Number(courseId);
+    const courseFilter = whereEqualOrIn(courseId);
+    if (courseFilter !== undefined) {
+        where.courseId = courseFilter;
     }
 
-    if (sessionId != null) {
-        where.sessionId = Number(sessionId);
+    const sessionFilter = whereEqualOrIn(sessionId);
+    if (sessionFilter !== undefined) {
+        where.sessionId = sessionFilter;
     }
 
     if (search) {
@@ -65,34 +96,39 @@ function buildStudentListWhere(search, courseId, sessionId) {
 /**
  * Placement studentIds: history status=current when present, else classSectionTerm FK.
  * Returns null when no placement filters are set.
+ * Filters accept a single id or id list.
  */
 async function resolvePlacementStudentIds({ classSectionsId, year, term }) {
     if (classSectionsId == null && year == null && term == null) {
         return null;
     }
 
+    const classSectionsIdFilter = whereEqualOrIn(classSectionsId);
+    const yearFilter = whereEqualOrIn(year);
+    const termFilter = whereEqualOrIn(term);
+
     const historyWhere = { status: 'current' };
-    if (classSectionsId != null) {
-        historyWhere.classSectionsId = Number(classSectionsId);
+    if (classSectionsIdFilter !== undefined) {
+        historyWhere.classSectionsId = classSectionsIdFilter;
     }
 
     const historyInclude = [];
-    if (year != null) {
+    if (yearFilter !== undefined) {
         historyInclude.push({
             model: model.classSectionModel,
             as: 'classSection',
             attributes: [],
             required: true,
-            where: { year: Number(year) },
+            where: { year: yearFilter },
         });
     }
-    if (term != null) {
+    if (termFilter !== undefined) {
         historyInclude.push({
             model: model.classSectionTermModel,
             as: 'classSectionTerm',
             attributes: [],
             required: true,
-            where: { term: Number(term) },
+            where: { term: termFilter },
         });
     }
 
@@ -123,11 +159,11 @@ async function resolvePlacementStudentIds({ classSectionsId, year, term }) {
         attributes: ['studentId'],
         include: [
             studentClassSectionTermWithSectionInclude({
-                classSectionsId: classSectionsId != null ? Number(classSectionsId) : undefined,
-                term: term != null ? Number(term) : undefined,
-                sectionWhere: year != null ? { year: Number(year) } : undefined,
+                classSectionsId: classSectionsIdFilter !== undefined ? classSectionsId : undefined,
+                term: termFilter !== undefined ? term : undefined,
+                sectionWhere: yearFilter !== undefined ? { year: yearFilter } : undefined,
                 termRequired: true,
-                sectionRequired: year != null,
+                sectionRequired: yearFilter !== undefined,
                 includeSectionTerms: false,
             }),
         ],
@@ -184,7 +220,12 @@ function studentSessionWithAcademicYearInclude(options = {}) {
 
     if (academicYearId != null) {
         include.required = true;
-        include.where = { academicYearId: academicYearId };
+        const academicYearFilter = Array.isArray(academicYearId)
+            ? (academicYearId.length === 1
+                ? Number(academicYearId[0])
+                : { [Op.in]: academicYearId.map(Number) })
+            : Number(academicYearId);
+        include.where = { academicYearId: academicYearFilter };
         const scope = buildScope(model.sessionModel);
         if (scope.universityId != null) {
             include.where.universityId = scope.universityId;
@@ -320,7 +361,7 @@ export async function getAllStudents({
 }) {
     try {
         const resolvedAcademicYearId = academicYearId != null
-            ? Number(academicYearId)
+            ? academicYearId
             : getRequestAcademicYearId();
 
         const baseInclude = [

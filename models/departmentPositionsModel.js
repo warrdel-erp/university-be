@@ -43,12 +43,6 @@ const departmentPositionsModel = sequelize.define(
             allowNull: true,
             field: 'reporting_type'
         },
-        isVacant: {
-            type: DataTypes.BOOLEAN,
-            allowNull: false,
-            defaultValue: true,
-            field: 'is_vacant'
-        },
         isLevelHead: {
             type: DataTypes.BOOLEAN,
             allowNull: false,

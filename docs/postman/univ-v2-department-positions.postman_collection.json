@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "c3d4e5f6-a7b8-9012-cdef-deptpositions01",
     "name": "univ-v2-department-positions",
-    "description": "Department + department positions APIs.\n\n## Create order (no `/departmentStructure`)\n1. `POST /department/` — create dept (`parentDepartmentId`) OR insert parent above child (send `departmentId`)\n2. `POST /departmentPosition/` — position seat (`level`, optional `departmentId`, `isLevelHead`)\n3. `POST /departmentPosition/head` — assign person (`userId`; status defaults to ACTIVE)\n4. `GET /departmentPosition/cards` | `/tree` | `/chart`\n\nDepartment hierarchy lives on `department.parentDepartmentId` (replaces removed `department_structure` table).\n\nPre-request scripts build JSON from collection variables.\n\nSet `baseurl` + `token`. Permissions: DEPARTMENT_*.\n\n**Removed:** `/departmentStructure`, `/subAccount`, `departmentStructureId`, `accountId`, `subAccountId`, `POST /departmentPosition/markVacant`.\n\n**Changelog**\n- `isLevelHead` — one level-head position per `(departmentId, level)`; sole position at a level defaults to level-head\n- Removed `publishStatus` (column + API filters)\n- `DELETE /head` — sets holder `status=INACTIVE` (optional `endDate` relieving date); not hard-delete\n\nDocs: `DEPARTMENT_POSITIONS_NAMING_CONVENTION.md`, `AFFECTED_APIS_DEPARTMENT_CONSOLIDATION.md`, `DEPARTMENT_POSITIONS_POSTMAN.md`.",
+    "description": "Department + department positions APIs.\n\n## Create order (no `/departmentStructure`)\n1. `POST /department/` — create dept (`parentDepartmentId`) OR insert parent above child (send `departmentId`)\n2. `POST /departmentPosition/` — position seat (`level`, optional `departmentId`, `isLevelHead`)\n3. `POST /departmentPosition/head` — assign person (`userId`; status defaults to ACTIVE)\n4. `GET /departmentPosition/cards` | `/tree` | `/chart`\n\nDepartment hierarchy lives on `department.parentDepartmentId` (replaces removed `department_structure` table).\n\nPre-request scripts build JSON from collection variables.\n\nSet `baseurl` + `token`. Permissions: DEPARTMENT_*.\n\n**Removed:** `isVacant`; `/departmentStructure`, `/subAccount`, `departmentStructureId`, `accountId`, `subAccountId`, `POST /departmentPosition/markVacant`.\n\n**Changelog**\n- `isLevelHead` — one level-head position per `(departmentId, level)`; sole position at a level defaults to level-head\n- Removed `publishStatus` (column + API filters)\n- `DELETE /head` — sets holder `status=INACTIVE` (optional `endDate` relieving date); not hard-delete\n\nDocs: `DEPARTMENT_POSITIONS_NAMING_CONVENTION.md`, `AFFECTED_APIS_DEPARTMENT_CONSOLIDATION.md`, `DEPARTMENT_POSITIONS_POSTMAN.md`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -467,7 +467,6 @@
                   "  positionCode: 'CHN',",
                   "  employmentCategory: 'Leadership',",
                   "  reportingType: 'Direct',",
-                  "  isVacant: true,",
                   "  isLevelHead: true,",
                   "  level: 1,",
                   "}, null, 2));"
@@ -510,7 +509,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"departmentId\": \"{{departmentId}}\",\n  \"positionName\": \"Chancellor\",\n  \"positionCode\": \"CHN\",\n  \"employmentCategory\": \"Leadership\",\n  \"reportingType\": \"Direct\",\n  \"isVacant\": true,\n  \"isLevelHead\": true\n  \"level\": 1\n}",
+              "raw": "{\n  \"departmentId\": \"{{departmentId}}\",\n  \"positionName\": \"Chancellor\",\n  \"positionCode\": \"CHN\",\n  \"employmentCategory\": \"Leadership\",\n  \"reportingType\": \"Direct\"\n  \"isLevelHead\": true\n  \"level\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -527,7 +526,7 @@
                 ""
               ]
             },
-            "description": "**POST /departmentPosition/** (top seat)\n\nBearer Token Required.\n\n**Required**\n- `positionName` (string)\n- `employmentCategory` — `Academic` | `Administrative` | `Support` | `Executive` | `Leadership`\n- `level` (int ≥ 1)\n\n**Optional**\n- `departmentId` (int | null)\n- `positionCode` (string | null)\n- `reportingType` (string | null)\n- `isVacant` (boolean) — default `true`\n- `isLevelHead` (boolean) — default `false`; first position at `(departmentId, level)` is forced `true`\n- \n\n**Business rules**\n- At most one `isLevelHead=true` per `(departmentId, level)`\n- `isLevelHead=true` requires `departmentId`\n- Holders (`/head`) are independent of `isLevelHead`"
+            "description": "**POST /departmentPosition/** (top seat)\n\nBearer Token Required.\n\n**Required**\n- `positionName` (string)\n- `employmentCategory` — `Academic` | `Administrative` | `Support` | `Executive` | `Leadership`\n- `level` (int ≥ 1)\n\n**Optional**\n- `departmentId` (int | null)\n- `positionCode` (string | null)\n- `reportingType` (string | null)\n- `isLevelHead` (boolean) — default `false`; first position at `(departmentId, level)` is forced `true`\n- \n\n**Business rules**\n- At most one `isLevelHead=true` per `(departmentId, level)`\n- `isLevelHead=true` requires `departmentId`\n- Holders (`/head`) are independent of `isLevelHead`"
           },
           "response": []
         },
@@ -550,7 +549,6 @@
                   "  positionCode: 'VC',",
                   "  employmentCategory: 'Leadership',",
                   "  reportingType: 'Direct',",
-                  "  isVacant: true,",
                   "  isLevelHead: false,",
                   "  level: 2,",
                   "}, null, 2));"
@@ -593,7 +591,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"departmentId\": \"{{departmentId}}\",\n  \"positionName\": \"Vice Chancellor\",\n  \"positionCode\": \"VC\",\n  \"employmentCategory\": \"Leadership\",\n  \"reportingType\": \"Direct\",\n  \"isVacant\": true,\n  \"isLevelHead\": false\n  \"level\": 2\n}",
+              "raw": "{\n  \"departmentId\": \"{{departmentId}}\",\n  \"positionName\": \"Vice Chancellor\",\n  \"positionCode\": \"VC\",\n  \"employmentCategory\": \"Leadership\",\n  \"reportingType\": \"Direct\"\n  \"isLevelHead\": false\n  \"level\": 2\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -630,7 +628,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/departmentPosition/?departmentId={{departmentId}}&employmentCategory=Leadership&isVacant=true&isLevelHead=true",
+              "raw": "{{baseurl}}/departmentPosition/?departmentId={{departmentId}}&employmentCategory=Leadership&isLevelHead=true",
               "host": [
                 "{{baseurl}}"
               ],
@@ -650,18 +648,13 @@
                   "description": "optional — Academic | Administrative | Support | Executive | Leadership"
                 },
                 {
-                  "key": "isVacant",
-                  "value": "true",
-                  "description": "optional boolean"
-                },
-                {
                   "key": "isLevelHead",
                   "value": "true",
                   "description": "optional boolean"
                 }
               ]
             },
-            "description": "**GET /departmentPosition/**\n\nBearer Token Required.\n\n**Optional query**\n| Name | Type | Values |\n|------|------|--------|\n| `departmentId` | int | |\n| `employmentCategory` | string | Academic, Administrative, Support, Executive, Leadership |\n| `isVacant` | boolean | |\n| `isLevelHead` | boolean | |\n\nIncludes department and ACTIVE heads only. Response includes `isLevelHead`."
+            "description": "**GET /departmentPosition/**\n\nBearer Token Required.\n\n**Optional query**\n| Name | Type | Values |\n|------|------|--------|\n| `departmentId` | int | |\n| `employmentCategory` | string | Academic, Administrative, Support, Executive, Leadership |\n| `isLevelHead` | boolean | |\n\nIncludes department and ACTIVE heads only. Response includes `isLevelHead`."
           },
           "response": []
         },
@@ -719,7 +712,7 @@
                 "chart"
               ]
             },
-            "description": "**GET /departmentPosition/chart**\n\nBearer Token Required.\n\nReturns hierarchical department tree with level 1 positions per department (children notation). Each position includes `isLevelHead`, `isVacant`, and ACTIVE users only. "
+            "description": "**GET /departmentPosition/chart**\n\nBearer Token Required.\n\nReturns hierarchical department tree with level 1 positions per department (children notation). Each position includes `isLevelHead`, and ACTIVE users only. "
           },
           "response": []
         },
@@ -859,7 +852,7 @@
                 ""
               ]
             },
-            "description": "**PATCH /departmentPosition/**\n\nBearer Token Required.\n\n**Required**\n- `departmentPositionId`\n\n**Optional**\n- `departmentId`, `positionName`, `positionCode`, `employmentCategory`, `reportingType`, `level`\n- `isLevelHead` (boolean)\n- \n\nDo **not** send `isVacant` — vacancy is driven by ACTIVE heads (`POST/DELETE /head`).\n\n**Business rules**\n- Setting `isLevelHead=true` clears the flag on other same-level positions in that department\n- Sole remaining position at a level stays / becomes level-head"
+            "description": "**PATCH /departmentPosition/**\n\nBearer Token Required.\n\n**Required**\n- `departmentPositionId`\n\n**Optional**\n- `departmentId`, `positionName`, `positionCode`, `employmentCategory`, `reportingType`, `level`\n- `isLevelHead` (boolean)\n- \n\n**Business rules**\n- Setting `isLevelHead=true` clears the flag on other same-level positions in that department\n- Sole remaining position at a level stays / becomes level-head"
           },
           "response": []
         },
@@ -980,7 +973,7 @@
                 "head"
               ]
             },
-            "description": "**POST /departmentPosition/head**\n\n**Required**\n- `departmentPositionId` (int)\n- `userId` (int)\n\n**Optional**\n- `joiningDate` (YYYY-MM-DD | null)\n- `endDate` (YYYY-MM-DD | null)\n\n`status` is always `ACTIVE` (not accepted in payload). Sets `isVacant = false`. Rejects duplicate ACTIVE (position, user)."
+            "description": "**POST /departmentPosition/head**\n\n**Required**\n- `departmentPositionId` (int)\n- `userId` (int)\n\n**Optional**\n- `joiningDate` (YYYY-MM-DD | null)\n- `endDate` (YYYY-MM-DD | null)\n\n`status` is always `ACTIVE` (not accepted in payload). Rejects duplicate ACTIVE (position, user)."
           },
           "response": []
         },
@@ -1117,7 +1110,7 @@
                 }
               ]
             },
-            "description": "**DELETE /departmentPosition/head**\n\nBearer Token Required.\n\n**Required query**\n- `userDepartmentPositionId` (int)\n\n**Optional query**\n- `endDate` (YYYY-MM-DD) — relieving date written on the row\n\nSets holder `status=INACTIVE` (row kept). INACTIVE holders are excluded from GET list/includes and cannot be PATCH-updated. If no ACTIVE heads remain → position `isVacant=true`.\n\n**Removed:** hard-delete and `POST /markVacant`."
+            "description": "**DELETE /departmentPosition/head**\n\nBearer Token Required.\n\n**Required query**\n- `userDepartmentPositionId` (int)\n\n**Optional query**\n- `endDate` (YYYY-MM-DD) — relieving date written on the row\n\nSets holder `status=INACTIVE` (row kept). INACTIVE holders are excluded from GET list/includes and cannot be PATCH-updated.\n\n**Removed:** hard-delete and `POST /markVacant`."
           },
           "response": []
         }

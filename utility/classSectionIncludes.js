@@ -1,22 +1,51 @@
 import * as model from '../models/index.js';
+import { Op } from 'sequelize';
 import { termsForYear } from './courseTerms.js';
 
 /**
+ * Normalize a single id or id list for Sequelize where clauses.
+ * @returns {number | { [typeof Op.in]: number[] } | undefined}
+ */
+function normalizeIdFilter(value) {
+    if (value == null) {
+        return undefined;
+    }
+    if (Array.isArray(value)) {
+        const ids = [];
+        for (const item of value) {
+            const n = Number(item);
+            if (Number.isFinite(n)) {
+                ids.push(n);
+            }
+        }
+        if (ids.length === 0) {
+            return undefined;
+        }
+        if (ids.length === 1) {
+            return ids[0];
+        }
+        return { [Op.in]: ids };
+    }
+    const n = Number(value);
+    return Number.isFinite(n) ? n : undefined;
+}
+
+/**
  * Standard include for class_section_term rows on a class section.
- * @param {{ term?: number, required?: boolean }} options
+ * @param {{ term?: number | number[], required?: boolean }} options
  */
 export function classSectionTermsInclude({ term, required = false } = {}) {
-    const termNum = term != null ? Number(term) : null;
+    const termFilter = normalizeIdFilter(term);
 
     const include = {
         model: model.classSectionTermModel,
         as: 'classSectionTerms',
         attributes: ['classSectionTermId', 'term', 'classSectionsId'],
-        required: Boolean(required && termNum != null),
+        required: Boolean(required && termFilter != null),
     };
 
-    if (termNum != null) {
-        include.where = { term: termNum };
+    if (termFilter != null) {
+        include.where = { term: termFilter };
     }
 
     return include;
@@ -38,14 +67,18 @@ export function studentClassSectionTermWithSectionInclude({
     includeSectionTerms = true,
 } = {}) {
     const termWhere = {};
-    if (classSectionTermId != null && Number.isFinite(Number(classSectionTermId))) {
-        termWhere.classSectionTermId = Number(classSectionTermId);
+    const classSectionTermIdFilter = normalizeIdFilter(classSectionTermId);
+    const termFilter = normalizeIdFilter(term);
+    const classSectionsIdFilter = normalizeIdFilter(classSectionsId);
+
+    if (classSectionTermIdFilter != null) {
+        termWhere.classSectionTermId = classSectionTermIdFilter;
     }
-    if (term != null && Number.isFinite(Number(term))) {
-        termWhere.term = Number(term);
+    if (termFilter != null) {
+        termWhere.term = termFilter;
     }
-    if (classSectionsId != null && Number.isFinite(Number(classSectionsId))) {
-        termWhere.classSectionsId = Number(classSectionsId);
+    if (classSectionsIdFilter != null) {
+        termWhere.classSectionsId = classSectionsIdFilter;
     }
 
     const include = {
