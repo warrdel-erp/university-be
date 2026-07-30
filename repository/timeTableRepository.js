@@ -701,8 +701,9 @@ export async function getTimetableListPrintRows(filters = {}) {
     if (filters.courseIds && filters.courseIds.length > 0) {
         where.courseId = { [Op.in]: filters.courseIds };
     }
-    if (filters.terms && filters.terms.length > 0) {
-        where['$timeTableClassSectionTerm.term$'] = { [Op.in]: filters.terms };
+    const termValues = filters.term || filters.terms;
+    if (termValues && termValues.length > 0) {
+        where['$timeTableClassSectionTerm.term$'] = { [Op.in]: termValues };
     }
     if (filters.timeTableNameIds && filters.timeTableNameIds.length > 0) {
         where['$structureCourseMapping.time_table_name_id$'] = { [Op.in]: filters.timeTableNameIds };
@@ -733,7 +734,6 @@ export async function getTimetableListPrintRows(filters = {}) {
             [sequelize.literal('NULL'), 'academicGroupTitle'],
             [sequelize.literal('NULL'), 'scopeTitle'],
             [sequelize.literal('NULL'), 'groupCode'],
-            [sequelize.literal('NULL'), 'scopeCode'],
             [sequelize.fn('MIN', sequelize.col('time_table_routine.starting_date')), 'startingDate'],
             [sequelize.fn('MAX', sequelize.col('time_table_routine.ending_date')), 'endingDate'],
             [
@@ -838,8 +838,9 @@ export async function getTimetableListPrintRows(filters = {}) {
     if (filters.courseIds && filters.courseIds.length > 0) {
         academicWhere.courseId = { [Op.in]: filters.courseIds };
     }
-    if (filters.terms && filters.terms.length > 0) {
-        academicWhere['$academicGroup->scope.term$'] = { [Op.in]: filters.terms };
+    const academicTermValues = filters.term || filters.terms;
+    if (academicTermValues && academicTermValues.length > 0) {
+        academicWhere['$academicGroup->scope.term$'] = { [Op.in]: academicTermValues };
     }
     if (filters.timeTableNameIds && filters.timeTableNameIds.length > 0) {
         academicWhere['$structureCourseMapping.time_table_name_id$'] = { [Op.in]: filters.timeTableNameIds };
@@ -869,7 +870,6 @@ export async function getTimetableListPrintRows(filters = {}) {
             [sequelize.col('academicGroup.group_name'), 'academicGroupTitle'],
             [sequelize.col('academicGroup->scope.title'), 'scopeTitle'],
             [sequelize.col('academicGroup.group_code'), 'groupCode'],
-            [sequelize.col('academicGroup->scope.scope_code'), 'scopeCode'],
             [sequelize.fn('MIN', sequelize.col('time_table_routine.starting_date')), 'startingDate'],
             [sequelize.fn('MAX', sequelize.col('time_table_routine.ending_date')), 'endingDate'],
             [

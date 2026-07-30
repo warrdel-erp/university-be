@@ -63,6 +63,7 @@ const getStructureScopeMappingsQuerySchema = z.object({
     limit: optionalPositiveId,
     search: z.string().optional(),
     courseIds: optionalCommaSeparatedIds,
+    term: optionalCommaSeparatedIds,
     terms: optionalCommaSeparatedIds,
     timeTableNameIds: optionalCommaSeparatedIds,
     type: z.preprocess(
