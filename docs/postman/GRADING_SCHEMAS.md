@@ -44,42 +44,7 @@ API endpoints for managing Grading Schemas and individual Grade Scales.
   "gradingMethod": "ABSOLUTE",
   "description": "Standard absolute grading scheme for undergraduate programs.",
   "status": "DRAFT",
-  "isActive": true,
-  "grades": [
-    {
-      "grade": "O",
-      "minPercentage": 90.0,
-      "maxPercentage": 100.0,
-      "gradePoint": 10.0,
-      "resultLabel": "Outstanding",
-      "remarks": "Excellent work",
-      "sortOrder": 1,
-      "isPass": true,
-      "isActive": true
-    },
-    {
-      "grade": "A+",
-      "minPercentage": 80.0,
-      "maxPercentage": 89.99,
-      "gradePoint": 9.0,
-      "resultLabel": "Excellent",
-      "remarks": "Very good performance",
-      "sortOrder": 2,
-      "isPass": true,
-      "isActive": true
-    },
-    {
-      "grade": "F",
-      "minPercentage": 0.0,
-      "maxPercentage": 39.99,
-      "gradePoint": 0.0,
-      "resultLabel": "Fail",
-      "remarks": "Needs improvement",
-      "sortOrder": 3,
-      "isPass": false,
-      "isActive": true
-    }
-  ]
+  "isActive": true
 }
 ```
 

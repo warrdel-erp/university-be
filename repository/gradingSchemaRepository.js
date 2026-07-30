@@ -13,17 +13,8 @@ export async function findGradingSchemaByCode(gradingCode, universityId, exclude
   return await scoped(model.gradingModel).findOne({ where });
 }
 
-export async function createGradingSchema(data, grades = [], options = {}) {
+export async function createGradingSchema(data, options = {}) {
   const newGrading = await scoped(model.gradingModel).create(data, options);
-
-  if (grades && grades.length > 0) {
-    const gradesData = grades.map((g) => ({
-      ...g,
-      gradingId: newGrading.gradingId,
-    }));
-    await model.gradingGradeModel.bulkCreate(gradesData, options);
-  }
-
   return await getGradingSchemaById(newGrading.gradingId, options);
 }
 
@@ -85,26 +76,11 @@ export async function getGradingSchemaById(gradingSchemaId, options = {}) {
   });
 }
 
-export async function updateGradingSchema(gradingSchemaId, data, grades = null, options = {}) {
+export async function updateGradingSchema(gradingSchemaId, data, options = {}) {
   await scoped(model.gradingModel).update(data, {
     where: { gradingId: Number(gradingSchemaId) },
     transaction: options.transaction,
   });
-
-  if (grades !== null && Array.isArray(grades)) {
-    await model.gradingGradeModel.destroy({
-      where: { gradingId: Number(gradingSchemaId) },
-      transaction: options.transaction,
-    });
-
-    if (grades.length > 0) {
-      const gradesData = grades.map((g) => ({
-        ...g,
-        gradingId: Number(gradingSchemaId),
-      }));
-      await model.gradingGradeModel.bulkCreate(gradesData, options);
-    }
-  }
 
   return await getGradingSchemaById(gradingSchemaId, options);
 }

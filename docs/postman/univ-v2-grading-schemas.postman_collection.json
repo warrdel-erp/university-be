@@ -25,7 +25,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"gradingName\": \"Standard 10-Point Grading Scale\",\n  \"gradingCode\": \"G10_SCALE\",\n  \"gradingMethod\": \"ABSOLUTE\",\n  \"description\": \"Standard absolute grading scheme for undergraduate programs.\",\n  \"status\": \"DRAFT\",\n  \"isActive\": true,\n  \"grades\": [\n    {\n      \"grade\": \"O\",\n      \"minPercentage\": 90.0,\n      \"maxPercentage\": 100.0,\n      \"gradePoint\": 10.0,\n      \"resultLabel\": \"Outstanding\",\n      \"remarks\": \"Excellent work\",\n      \"sortOrder\": 1,\n      \"isPass\": true,\n      \"isActive\": true\n    },\n    {\n      \"grade\": \"A+\",\n      \"minPercentage\": 80.0,\n      \"maxPercentage\": 89.99,\n      \"gradePoint\": 9.0,\n      \"resultLabel\": \"Excellent\",\n      \"remarks\": \"Very good performance\",\n      \"sortOrder\": 2,\n      \"isPass\": true,\n      \"isActive\": true\n    },\n    {\n      \"grade\": \"F\",\n      \"minPercentage\": 0.0,\n      \"maxPercentage\": 39.99,\n      \"gradePoint\": 0.0,\n      \"resultLabel\": \"Fail\",\n      \"remarks\": \"Needs improvement\",\n      \"sortOrder\": 3,\n      \"isPass\": false,\n      \"isActive\": true\n    }\n  ]\n}"
+							"raw": "{\n  \"gradingName\": \"Standard 10-Point Grading Scale\",\n  \"gradingCode\": \"G10_SCALE\",\n  \"gradingMethod\": \"ABSOLUTE\",\n  \"description\": \"Standard absolute grading scheme for undergraduate programs.\",\n  \"status\": \"DRAFT\",\n  \"isActive\": true\n}"
 						},
 						"url": {
 							"raw": "{{baseurl}}/gradingSchemas",

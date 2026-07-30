@@ -41,7 +41,6 @@ export const createGradingSchemaBody = z.object({
   description: z.string().max(500).optional().nullable(),
   status: z.enum(["DRAFT", "PUBLISHED"]).optional().default("DRAFT"),
   isActive: z.boolean().optional().default(true),
-  grades: z.array(gradingGradeSchema).optional().default([]),
 });
 
 export const updateGradingSchemaBody = z.object({
@@ -51,7 +50,6 @@ export const updateGradingSchemaBody = z.object({
   description: z.string().max(500).optional().nullable(),
   status: z.enum(["DRAFT", "PUBLISHED"]).optional(),
   isActive: z.boolean().optional(),
-  grades: z.array(gradingGradeSchema).optional(),
 });
 
 export const updateGradingSchemaGradeBody = z.object({

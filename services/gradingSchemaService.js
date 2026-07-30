@@ -30,8 +30,7 @@ export async function createGradingSchema(payload, user) {
       updatedBy: user?.userId || null,
     };
 
-    const grades = payload.grades || [];
-    const createdGrading = await gradingSchemaRepo.createGradingSchema(gradingData, grades, { transaction: t });
+    const createdGrading = await gradingSchemaRepo.createGradingSchema(gradingData, { transaction: t });
 
     await t.commit();
     return createdGrading;
@@ -87,9 +86,7 @@ export async function updateGradingSchema(gradingSchemaId, payload, user) {
     if (payload.status !== undefined) updateData.status = payload.status;
     if (payload.isActive !== undefined) updateData.isActive = payload.isActive;
 
-    const grades = payload.grades !== undefined ? payload.grades : null;
-
-    const updatedSchema = await gradingSchemaRepo.updateGradingSchema(gradingSchemaId, updateData, grades, { transaction: t });
+    const updatedSchema = await gradingSchemaRepo.updateGradingSchema(gradingSchemaId, updateData, { transaction: t });
 
     await t.commit();
     return updatedSchema;
