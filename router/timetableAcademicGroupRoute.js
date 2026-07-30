@@ -45,6 +45,14 @@ const addStructureScopeMappingSchema = z
         { message: 'endingDate cannot be before startingDate', path: ['endingDate'] },
     );
 
+const optionalCommaSeparatedIds = z.preprocess(
+    (val) => {
+        if (val === '' || val == null) return undefined;
+        return String(val).split(',').map(Number);
+    },
+    z.array(z.number().int().positive()).optional(),
+);
+
 const getStructureScopeMappingsQuerySchema = z.object({
     timetableStructureCourseMapperId: optionalPositiveId,
     timeTableNameId: optionalPositiveId,
@@ -54,6 +62,17 @@ const getStructureScopeMappingsQuerySchema = z.object({
     page: optionalPositiveId,
     limit: optionalPositiveId,
     search: z.string().optional(),
+    courseIds: optionalCommaSeparatedIds,
+    terms: optionalCommaSeparatedIds,
+    timeTableNameIds: optionalCommaSeparatedIds,
+    type: z.preprocess(
+        (val) => (val === '' || val == null ? undefined : val),
+        z.enum(['section', 'academicGroup']).optional(),
+    ),
+    status: z.preprocess(
+        (val) => (val === '' || val == null ? undefined : val),
+        z.enum(['In Progress', 'Published']).optional(),
+    ),
 });
 
 const deleteStructureScopeMappingQuerySchema = z.object({

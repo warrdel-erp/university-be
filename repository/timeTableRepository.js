@@ -697,6 +697,16 @@ export async function getTimetableListPrintRows(filters = {}) {
     if (filters.sessionId != null) {
         where['$structureCourseMapping.session_id$'] = Number(filters.sessionId);
     }
+    // Multi-value filters
+    if (filters.courseIds && filters.courseIds.length > 0) {
+        where.courseId = { [Op.in]: filters.courseIds };
+    }
+    if (filters.terms && filters.terms.length > 0) {
+        where['$timeTableClassSectionTerm.term$'] = { [Op.in]: filters.terms };
+    }
+    if (filters.timeTableNameIds && filters.timeTableNameIds.length > 0) {
+        where['$structureCourseMapping.time_table_name_id$'] = { [Op.in]: filters.timeTableNameIds };
+    }
 
     const rows = await scoped(model.timeTableRoutineModel).findAll({
         attributes: [
@@ -748,8 +758,8 @@ export async function getTimetableListPrintRows(filters = {}) {
             [sequelize.fn('COUNT', sequelize.col('time_table_routine.time_table_routine_id')), 'routinesCount'],
             [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.is_publish = 0 OR time_table_routine.is_publish IS NULL THEN 1 ELSE 0 END) AS SIGNED)'), 'draftRoutine'],
             [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.is_publish = 1 THEN 1 ELSE 0 END) AS SIGNED)'), 'publishedRoutine'],
-            [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.starting_date <= CURRENT_DATE() THEN 1 ELSE 0 END) AS SIGNED)'), 'completedRunningRoutine'],
-            [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.starting_date > CURRENT_DATE() THEN 1 ELSE 0 END) AS SIGNED)'), 'upcomingRoutine']
+            [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.is_publish = 1 AND time_table_routine.starting_date <= CURRENT_DATE() THEN 1 ELSE 0 END) AS SIGNED)'), 'completedRunningRoutine'],
+            [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.is_publish = 1 AND time_table_routine.starting_date > CURRENT_DATE() THEN 1 ELSE 0 END) AS SIGNED)'), 'upcomingRoutine']
         ],
         where,
         include: [
@@ -823,6 +833,16 @@ export async function getTimetableListPrintRows(filters = {}) {
     }
     if (filters.sessionId != null) {
         academicWhere['$structureCourseMapping.session_id$'] = Number(filters.sessionId);
+    }
+    // Multi-value filters
+    if (filters.courseIds && filters.courseIds.length > 0) {
+        academicWhere.courseId = { [Op.in]: filters.courseIds };
+    }
+    if (filters.terms && filters.terms.length > 0) {
+        academicWhere['$academicGroup->scope.term$'] = { [Op.in]: filters.terms };
+    }
+    if (filters.timeTableNameIds && filters.timeTableNameIds.length > 0) {
+        academicWhere['$structureCourseMapping.time_table_name_id$'] = { [Op.in]: filters.timeTableNameIds };
     }
 
     const academicRows = await scoped(model.timeTableRoutineModel).findAll({
@@ -933,7 +953,37 @@ export async function getTimetableListPrintRows(filters = {}) {
         ]
     });
 
-    let combinedRows = [...rows, ...academicRows];
+    let combinedRows = [...rows, ...academicRows].map(row => {
+        let status = "";
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        if (row.routinesCount > 0 && Number(row.publishedRoutine) === Number(row.routinesCount)) {
+            status = "Published";
+        }
+        
+        if (row.startingDate && row.endingDate) {
+            if (todayStr >= row.startingDate && todayStr <= row.endingDate) {
+                status = "In Progress";
+            }
+        }
+        
+        return {
+            ...row,
+            status
+        };
+    });
+
+    // Filter by type: section or academicGroup
+    if (filters.type === 'section') {
+        combinedRows = combinedRows.filter(row => row.classSectionTermId != null);
+    } else if (filters.type === 'academicGroup') {
+        combinedRows = combinedRows.filter(row => row.academicGroupId != null);
+    }
+
+    // Filter by status
+    if (filters.status) {
+        combinedRows = combinedRows.filter(row => row.status === filters.status);
+    }
 
     if (filters.search) {
         const searchLower = filters.search.toLowerCase();
