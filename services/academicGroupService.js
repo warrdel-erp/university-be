@@ -407,7 +407,7 @@ export async function updateGroup(academicGroupId, body, updatedBy) {
 }
 
 export async function publishScope(academicGroupScopeId, updatedBy) {
-    const existing = await academicGroupRepository.getScopeSingle(academicGroupScopeId);
+    const existing = await academicGroupRepository.getScopeById(academicGroupScopeId);
     if (!existing) {
         return false;
     }
