@@ -40,6 +40,12 @@ export async function resolveAttendancePlacement(classSectionTermId, options = {
 function dateWiseCellInclude() {
   return [
     {
+      model: model.timeTableCellTeachersDateWiseModel,
+      as: 'timeTableCellTeachersDateWise',
+      attributes: ['timeTableCellTeachersDateWiseId', 'userId', 'teacherType'],
+      required: false,
+    },
+    {
       model: model.timeTableCellModel,
       as: 'timeTableCell',
       required: true,
@@ -56,6 +62,12 @@ function dateWiseCellInclude() {
         'isAttendence',
       ],
       include: [
+        {
+          model: model.timeTableCellTeachersModel,
+          as: 'timeTableCellTeachers',
+          attributes: ['timeTableCellTeacherId', 'userId', 'teacherType'],
+          required: false,
+        },
         {
           model: model.timeTableRoutineModel,
           as: 'timeTableRoutine',
@@ -75,8 +87,24 @@ function dateWiseCellInclude() {
                 {
                   model: model.academicGroupScopeModel,
                   as: 'scope',
-                  attributes: ['academicGroupScopeId', 'title', 'academicContextType', 'courseId', 'sessionId', 'term'],
+                  attributes: ['academicGroupScopeId', 'title', 'academicContextType', 'courseId', 'sessionId', 'term', 'classSectionTermId'],
                   required: false,
+                  include: [
+                    {
+                      model: model.classSectionTermModel,
+                      as: 'classSectionTerm',
+                      attributes: ['classSectionTermId', 'term', 'classSectionsId'],
+                      required: false,
+                      include: [
+                        {
+                          model: model.classSectionModel,
+                          as: 'classSection',
+                          attributes: ['classSectionsId', 'year', 'section'],
+                          required: false,
+                        },
+                      ],
+                    },
+                  ],
                 },
               ],
             },
@@ -119,6 +147,32 @@ function dateWiseCellInclude() {
   ];
 }
 
+export function getPeriodTeacherUserId(periodItem) {
+  if (!periodItem) return null;
+  const plain = periodItem.get ? periodItem.get({ plain: true }) : periodItem;
+  const cell = plain.timeTableCell || plain;
+
+  const dateWiseTeachers = plain.timeTableCellTeachersDateWise || [];
+  if (dateWiseTeachers.length > 0) {
+    const primary = dateWiseTeachers.find((t) => String(t.teacherType || '').toLowerCase() === 'primary');
+    if (primary && primary.userId != null) return Number(primary.userId);
+    if (dateWiseTeachers[0]?.userId != null) return Number(dateWiseTeachers[0].userId);
+  }
+
+  const cellTeachers = cell.timeTableCellTeachers || [];
+  if (cellTeachers.length > 0) {
+    const primary = cellTeachers.find((t) => String(t.teacherType || '').toLowerCase() === 'primary');
+    if (primary && primary.userId != null) return Number(primary.userId);
+    if (cellTeachers[0]?.userId != null) return Number(cellTeachers[0].userId);
+  }
+
+  if (cell.timeTableTeacherSubject && cell.timeTableTeacherSubject.userId != null) {
+    return Number(cell.timeTableTeacherSubject.userId);
+  }
+
+  return null;
+}
+
 /**
  * Date-wise cells must belong to the given classSectionTermId.
  */
@@ -141,8 +195,8 @@ export async function assertDateWiseCellsBelongToTerm(dateWiseIds, classSectionT
 
   for (const row of rows) {
     const plain = row.get({ plain: true });
-    const routine = plain.timeTableCell.timeTableRoutine;
-    if (Number(routine.classSectionTermId) !== Number(classSectionTermId)) {
+    const placement = resolveDateWiseRoutinePlacement(row);
+    if (placement.classSectionTermId && Number(placement.classSectionTermId) !== Number(classSectionTermId)) {
       throw new Error(
         `timeTableCellDateWiseId ${plain.timeTableCellDateWiseId} does not belong to classSectionTermId ${classSectionTermId}`,
       );
@@ -156,13 +210,20 @@ export function resolveDateWiseRoutinePlacement(dateWiseRow) {
   const plain = dateWiseRow.get ? dateWiseRow.get({ plain: true }) : dateWiseRow;
   const cell = plain.timeTableCell;
   const routine = cell.timeTableRoutine;
-  const termRow = routine.timeTableClassSectionTerm ?? null;
+
+  const scopeClassSectionTerm = routine.academicGroup?.scope?.classSectionTerm ?? null;
+  const sectionTermRow = routine.timeTableClassSectionTerm ?? null;
+  const termRow = scopeClassSectionTerm ?? sectionTermRow ?? null;
   const section = termRow?.classSection ?? resolveTimeTableRoutineSection(routine);
 
+  const resolvedClassSectionTermId = routine.academicGroupId != null
+    ? (routine.academicGroup?.scope?.classSectionTermId ?? scopeClassSectionTerm?.classSectionTermId ?? routine.classSectionTermId ?? null)
+    : (routine.classSectionTermId ?? sectionTermRow?.classSectionTermId ?? null);
+
   return {
-    classSectionTermId: routine.classSectionTermId ?? termRow?.classSectionTermId ?? null,
+    classSectionTermId: resolvedClassSectionTermId,
     academicGroupId: routine.academicGroupId ?? null,
-    term: termRow?.term ?? null,
+    term: routine.academicGroup?.scope?.term ?? termRow?.term ?? null,
     year: section?.year ?? null,
     classSectionsId: section?.classSectionsId ?? termRow?.classSectionsId ?? null,
   };
