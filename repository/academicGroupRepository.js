@@ -325,10 +325,13 @@ export async function getScopeById(academicGroupScopeId) {
 }
 
 /** Full scope list with course / session / subject names and linked groups. */
-export async function getAllScopes({ search } = {}) {
+export async function getAllScopes({ search, publishStatus } = {}) {
     const where = {};
     if (search) {
         where.title = { [Op.like]: `%${search}%` };
+    }
+    if (publishStatus && publishStatus !== 'all') {
+        where.publishStatus = publishStatus;
     }
 
     const scopes = await scoped(model.academicGroupScopeModel).findAll({
@@ -524,38 +527,43 @@ export async function countGroupStudents(academicGroupId, transaction) {
     });
 }
 
-export async function getMemberStudentIds(academicGroupId) {
+export async function getMemberStudentIdsByScope(academicGroupScopeId) {
+    if (!academicGroupScopeId) return [];
+    
     const rows = await scoped(model.academicGroupStudentModel).findAll({
-        where: { academicGroupId: Number(academicGroupId) },
+        include: [{
+            model: model.academicGroupModel,
+            as: 'group',
+            where: { academicGroupScopeId: Number(academicGroupScopeId) },
+            attributes: [],
+            required: true
+        }],
         attributes: ['studentId'],
         raw: true,
     });
-    const studentIds = [];
-    for (const row of rows) {
-        studentIds.push(Number(row.studentId));
-    }
-    return studentIds;
+    return rows.map(r => Number(r.studentId));
 }
 
-export async function getMemberUserIds(academicGroupId) {
+export async function getMemberUserIdsByScope(academicGroupScopeId) {
+    if (!academicGroupScopeId) return [];
+
     const rows = await scoped(model.academicGroupUserModel).findAll({
-        where: { academicGroupId: Number(academicGroupId) },
+        include: [{
+            model: model.academicGroupModel,
+            as: 'group',
+            where: { academicGroupScopeId: Number(academicGroupScopeId) },
+            attributes: [],
+            required: true
+        }],
         attributes: ['userId'],
         raw: true,
     });
-    const userIds = [];
-    for (const row of rows) {
-        userIds.push(Number(row.userId));
-    }
-    return userIds;
+    return rows.map(r => Number(r.userId));
 }
 
-/** userIds for students already assigned to this group (non-null student.userId). */
-export async function getUserIdsForMemberStudents(academicGroupId) {
-    const memberStudentIds = await getMemberStudentIds(academicGroupId);
-    if (memberStudentIds.length === 0) {
-        return [];
-    }
+export async function getUserIdsForMemberStudentsByScope(academicGroupScopeId) {
+    const memberStudentIds = await getMemberStudentIdsByScope(academicGroupScopeId);
+    if (memberStudentIds.length === 0) return [];
 
     const rows = await scoped(model.studentModel).findAll({
         where: {
@@ -565,30 +573,19 @@ export async function getUserIdsForMemberStudents(academicGroupId) {
         attributes: ['userId'],
         raw: true,
     });
-    const userIds = [];
-    for (const row of rows) {
-        userIds.push(Number(row.userId));
-    }
-    return userIds;
+    return rows.map(r => Number(r.userId));
 }
 
-/** studentIds whose userId is already assigned as faculty on this group. */
-export async function getStudentIdsForMemberUsers(academicGroupId) {
-    const memberUserIds = await getMemberUserIds(academicGroupId);
-    if (memberUserIds.length === 0) {
-        return [];
-    }
+export async function getStudentIdsForMemberUsersByScope(academicGroupScopeId) {
+    const memberUserIds = await getMemberUserIdsByScope(academicGroupScopeId);
+    if (memberUserIds.length === 0) return [];
 
     const rows = await scoped(model.studentModel).findAll({
         where: { userId: { [Op.in]: memberUserIds } },
         attributes: ['studentId'],
         raw: true,
     });
-    const studentIds = [];
-    for (const row of rows) {
-        studentIds.push(Number(row.studentId));
-    }
-    return studentIds;
+    return rows.map(r => Number(r.studentId));
 }
 
 /**

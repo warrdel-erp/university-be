@@ -461,3 +461,52 @@ export async function getClassSectionFilterOptions({
         order: [['year', 'ASC'], ['section', 'ASC']],
     });
 }
+
+/**
+ * Structure options for student filters using timeTableStructureCourseModel.
+ * Only fetched when courseIds is provided (related to courseId + sessionId).
+ */
+export async function getStructureFilterOptions({ courseIds, sessionIds } = {}) {
+    if (courseIds == null) {
+        return [];
+    }
+
+    const where = {
+        courseId: idListWhere(courseIds),
+    };
+    const sessionIdFilter = idListWhere(sessionIds);
+    if (sessionIdFilter != null) {
+        where.sessionId = sessionIdFilter;
+    }
+
+    const rows = await scoped(model.timeTableStructureCourseModel).findAll({
+        where: {
+            ...where,
+            ...buildScope(model.timeTableStructureCourseModel),
+        },
+        include: [{
+            model: model.timeTableStructureModel,
+            as: 'timeTableStructure',
+            attributes: ['timeTableNameId', 'name'],
+            required: false,
+        }],
+        order: [['timeTableNameId', 'ASC']],
+    });
+
+    const structures = [];
+    const seen = new Set();
+
+    for (const row of rows) {
+        const timeTableNameId = row.timeTableNameId;
+        if (!timeTableNameId || seen.has(timeTableNameId)) continue;
+        seen.add(timeTableNameId);
+
+        const name = row.timeTableStructure ? row.timeTableStructure.name : `Structure ${timeTableNameId}`;
+        structures.push({
+            label: name,
+            value: timeTableNameId,
+        });
+    }
+
+    return structures;
+}

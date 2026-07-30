@@ -697,10 +697,29 @@ export async function getTimetableListPrintRows(filters = {}) {
     if (filters.sessionId != null) {
         where['$structureCourseMapping.session_id$'] = Number(filters.sessionId);
     }
+    // Multi-value filters
+    if (filters.courseIds && filters.courseIds.length > 0) {
+        where.courseId = { [Op.in]: filters.courseIds };
+    }
+    const termValues = filters.term || filters.terms;
+    if (termValues && termValues.length > 0) {
+        where['$timeTableClassSectionTerm.term$'] = { [Op.in]: termValues };
+    }
+    if (filters.timeTableNameIds && filters.timeTableNameIds.length > 0) {
+        where['$structureCourseMapping.time_table_name_id$'] = { [Op.in]: filters.timeTableNameIds };
+    }
 
     const rows = await scoped(model.timeTableRoutineModel).findAll({
         attributes: [
             [sequelize.fn('MAX', sequelize.col('structureCourseMapping.time_table_name_id')), 'timeTableNameId'],
+            [
+                sequelize.fn('GROUP_CONCAT', sequelize.literal('DISTINCT `structureCourseMapping->timeTableStructure`.`name` SEPARATOR ", "')),
+                'structureName'
+            ],
+            [
+                sequelize.fn('GROUP_CONCAT', sequelize.literal('DISTINCT CONCAT_WS(" - ", `structureCourseMapping->timeTableStructure`.`name`, `timeTableCourse`.`course_code`) SEPARATOR ", "')),
+                'structure'
+            ],
             'courseId',
             [sequelize.col('timeTableCourse.course_name'), 'courseName'],
             [sequelize.col('timeTableCourse.course_code'), 'courseCode'],
@@ -711,6 +730,10 @@ export async function getTimetableListPrintRows(filters = {}) {
             [sequelize.col('timeTableCourse.term_type'), 'termType'],
             [sequelize.col('timeTableClassSectionTerm.classSection.class_sections_id'), 'classSectionId'],
             [sequelize.col('timeTableClassSectionTerm.classSection.section'), 'classSection'],
+            [sequelize.literal('NULL'), 'academicGroupId'],
+            [sequelize.literal('NULL'), 'academicGroupTitle'],
+            [sequelize.literal('NULL'), 'scopeTitle'],
+            [sequelize.literal('NULL'), 'groupCode'],
             [sequelize.fn('MIN', sequelize.col('time_table_routine.starting_date')), 'startingDate'],
             [sequelize.fn('MAX', sequelize.col('time_table_routine.ending_date')), 'endingDate'],
             [
@@ -735,8 +758,8 @@ export async function getTimetableListPrintRows(filters = {}) {
             [sequelize.fn('COUNT', sequelize.col('time_table_routine.time_table_routine_id')), 'routinesCount'],
             [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.is_publish = 0 OR time_table_routine.is_publish IS NULL THEN 1 ELSE 0 END) AS SIGNED)'), 'draftRoutine'],
             [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.is_publish = 1 THEN 1 ELSE 0 END) AS SIGNED)'), 'publishedRoutine'],
-            [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.starting_date <= CURRENT_DATE() THEN 1 ELSE 0 END) AS SIGNED)'), 'completedRunningRoutine'],
-            [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.starting_date > CURRENT_DATE() THEN 1 ELSE 0 END) AS SIGNED)'), 'upcomingRoutine']
+            [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.is_publish = 1 AND time_table_routine.starting_date <= CURRENT_DATE() THEN 1 ELSE 0 END) AS SIGNED)'), 'completedRunningRoutine'],
+            [sequelize.literal('CAST(SUM(CASE WHEN time_table_routine.is_publish = 1 AND time_table_routine.starting_date > CURRENT_DATE() THEN 1 ELSE 0 END) AS SIGNED)'), 'upcomingRoutine']
         ],
         where,
         include: [
@@ -749,6 +772,12 @@ export async function getTimetableListPrintRows(filters = {}) {
                     {
                         model: model.sessionModel,
                         as: 'session',
+                        attributes: [],
+                        required: true
+                    },
+                    {
+                        model: model.timeTableStructureModel,
+                        as: 'timeTableStructure',
                         attributes: [],
                         required: true
                     }
@@ -805,10 +834,29 @@ export async function getTimetableListPrintRows(filters = {}) {
     if (filters.sessionId != null) {
         academicWhere['$structureCourseMapping.session_id$'] = Number(filters.sessionId);
     }
+    // Multi-value filters
+    if (filters.courseIds && filters.courseIds.length > 0) {
+        academicWhere.courseId = { [Op.in]: filters.courseIds };
+    }
+    const academicTermValues = filters.term || filters.terms;
+    if (academicTermValues && academicTermValues.length > 0) {
+        academicWhere['$academicGroup->scope.term$'] = { [Op.in]: academicTermValues };
+    }
+    if (filters.timeTableNameIds && filters.timeTableNameIds.length > 0) {
+        academicWhere['$structureCourseMapping.time_table_name_id$'] = { [Op.in]: filters.timeTableNameIds };
+    }
 
     const academicRows = await scoped(model.timeTableRoutineModel).findAll({
         attributes: [
             [sequelize.fn('MAX', sequelize.col('structureCourseMapping.time_table_name_id')), 'timeTableNameId'],
+            [
+                sequelize.fn('GROUP_CONCAT', sequelize.literal('DISTINCT `structureCourseMapping->timeTableStructure`.`name` SEPARATOR ", "')),
+                'structureName'
+            ],
+            [
+                sequelize.fn('GROUP_CONCAT', sequelize.literal('DISTINCT CONCAT_WS(" - ", `structureCourseMapping->timeTableStructure`.`name`, `timeTableCourse`.`course_code`, CONCAT("Scope: ", `academicGroup->scope`.`title`), CONCAT("Group: ", `academicGroup`.`group_code`)) SEPARATOR ", "')),
+                'structure'
+            ],
             'courseId',
             [sequelize.col('timeTableCourse.course_name'), 'courseName'],
             [sequelize.col('timeTableCourse.course_code'), 'courseCode'],
@@ -821,6 +869,7 @@ export async function getTimetableListPrintRows(filters = {}) {
             [sequelize.literal('NULL'), 'classSection'],
             [sequelize.col('academicGroup.group_name'), 'academicGroupTitle'],
             [sequelize.col('academicGroup->scope.title'), 'scopeTitle'],
+            [sequelize.col('academicGroup.group_code'), 'groupCode'],
             [sequelize.fn('MIN', sequelize.col('time_table_routine.starting_date')), 'startingDate'],
             [sequelize.fn('MAX', sequelize.col('time_table_routine.ending_date')), 'endingDate'],
             [
@@ -856,6 +905,12 @@ export async function getTimetableListPrintRows(filters = {}) {
                     {
                         model: model.sessionModel,
                         as: 'session',
+                        attributes: [],
+                        required: true
+                    },
+                    {
+                        model: model.timeTableStructureModel,
+                        as: 'timeTableStructure',
                         attributes: [],
                         required: true
                     }
@@ -898,7 +953,37 @@ export async function getTimetableListPrintRows(filters = {}) {
         ]
     });
 
-    let combinedRows = [...rows, ...academicRows];
+    let combinedRows = [...rows, ...academicRows].map(row => {
+        let status = "";
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        if (row.routinesCount > 0 && Number(row.publishedRoutine) === Number(row.routinesCount)) {
+            status = "Published";
+        }
+        
+        if (row.startingDate && row.endingDate) {
+            if (todayStr >= row.startingDate && todayStr <= row.endingDate) {
+                status = "In Progress";
+            }
+        }
+        
+        return {
+            ...row,
+            status
+        };
+    });
+
+    // Filter by type: section or academicGroup
+    if (filters.type === 'section') {
+        combinedRows = combinedRows.filter(row => row.classSectionTermId != null);
+    } else if (filters.type === 'academicGroup') {
+        combinedRows = combinedRows.filter(row => row.academicGroupId != null);
+    }
+
+    // Filter by status
+    if (filters.status) {
+        combinedRows = combinedRows.filter(row => row.status === filters.status);
+    }
 
     if (filters.search) {
         const searchLower = filters.search.toLowerCase();
