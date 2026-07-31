@@ -36,6 +36,14 @@ module.exports = {
           type: Sequelize.ENUM('ABSOLUTE', 'RELATIVE'),
           allowNull: false,
         },
+        maximum_marks: {
+          type: Sequelize.DECIMAL(6, 2),
+          allowNull: true,
+        },
+        minimum_passing_marks: {
+          type: Sequelize.DECIMAL(6, 2),
+          allowNull: true,
+        },
         description: {
           type: Sequelize.STRING(500),
           allowNull: true,

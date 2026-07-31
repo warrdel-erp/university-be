@@ -25,7 +25,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"gradingName\": \"Standard 10-Point Grading Scale\",\n  \"gradingCode\": \"G10_SCALE\",\n  \"gradingMethod\": \"ABSOLUTE\",\n  \"description\": \"Standard absolute grading scheme for undergraduate programs.\",\n  \"status\": \"DRAFT\",\n  \"isActive\": true\n}"
+							"raw": "{\n  \"gradingName\": \"Standard 10-Point Grading Scale\",\n  \"gradingCode\": \"G10_SCALE\",\n  \"gradingMethod\": \"ABSOLUTE\",\n  \"maximumMarks\": 100,\n  \"minimumPassingMarks\": 40,\n  \"description\": \"Standard absolute grading scheme for undergraduate programs.\",\n  \"status\": \"DRAFT\",\n  \"isActive\": true\n}"
 						},
 						"url": {
 							"raw": "{{baseurl}}/gradingSchemas",
@@ -134,7 +134,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"gradingName\": \"Updated 10-Point Scale\",\n  \"gradingCode\": \"G10_SCALE_V2\",\n  \"gradingMethod\": \"ABSOLUTE\",\n  \"description\": \"Updated grading scheme details\",\n  \"status\": \"DRAFT\"\n}"
+							"raw": "{\n  \"gradingName\": \"Updated 10-Point Scale\",\n  \"gradingCode\": \"G10_SCALE_V2\",\n  \"gradingMethod\": \"ABSOLUTE\",\n  \"maximumMarks\": 100,\n  \"minimumPassingMarks\": 35,\n  \"description\": \"Updated grading scheme details\",\n  \"status\": \"DRAFT\"\n}"
 						},
 						"url": {
 							"raw": "{{baseurl}}/gradingSchemas/{{gradingSchemaId}}",
