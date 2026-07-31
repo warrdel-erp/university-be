@@ -2753,7 +2753,40 @@ function buildPeriodMeta(period) {
   };
 }
 
-async function buildClassSectionStudentsBlock(dateWiseId) {
+export function parseAttendanceStatus(val) {
+  if (!val) return null;
+  let items = [];
+  if (Array.isArray(val)) {
+    items = val.flatMap((v) => (typeof v === "string" ? v.split(",") : [v]));
+  } else if (typeof val === "string") {
+    items = val.split(",");
+  }
+
+  const allowedStatuses = [
+    "Present",
+    "Absent",
+    "Medical Leave",
+    "Duty Leave",
+    "Sports Leave",
+    "NCC Leave",
+    "Approved Leave",
+    "Holiday",
+  ];
+
+  const allowedMap = {};
+  for (const status of allowedStatuses) {
+    allowedMap[status.toLowerCase()] = status;
+  }
+
+  const cleaned = items
+    .map((v) => (v != null ? String(v).trim().toLowerCase() : ""))
+    .filter((v) => allowedMap[v])
+    .map((v) => allowedMap[v]);
+
+  return cleaned.length > 0 ? Array.from(new Set(cleaned)) : null;
+}
+
+async function buildClassSectionStudentsBlock(dateWiseId, options = {}) {
   const period = await resolveSourcePeriodByDateWiseId(Number(dateWiseId));
 
   const classSectionTermId = period.classSectionTermId;
@@ -2770,6 +2803,7 @@ async function buildClassSectionStudentsBlock(dateWiseId) {
     await studentRepository.getStudentsByPlacement(
       period,
       period.timeTableCellDateWiseId,
+      options,
     ),
   );
 
@@ -2792,8 +2826,12 @@ async function buildClassSectionStudentsBlock(dateWiseId) {
 export async function getStudentsByClassSection({
   timeTableCellDateWiseId,
   groupPeriods,
+  attendanceStatus,
 }) {
   try {
+    const normalizedAttendanceStatus = parseAttendanceStatus(attendanceStatus);
+    const options = { attendanceStatus: normalizedAttendanceStatus };
+
     const rawIds = Array.isArray(timeTableCellDateWiseId)
       ? timeTableCellDateWiseId
       : [timeTableCellDateWiseId];
@@ -2817,7 +2855,7 @@ export async function getStudentsByClassSection({
     if (uniqueIds.length === 1 || !group) {
       const periods = [];
       for (const dateWiseId of uniqueIds) {
-        periods.push(await buildClassSectionStudentsBlock(dateWiseId));
+        periods.push(await buildClassSectionStudentsBlock(dateWiseId, options));
       }
 
       if (periods.length === 1) {
@@ -2868,6 +2906,7 @@ export async function getStudentsByClassSection({
       await studentRepository.getStudentsByPlacement(
         resolvedPeriods[0],
         dateWiseIds,
+        options,
       ),
     );
 
@@ -2945,7 +2984,10 @@ export async function getAllAnswerSheets(filters) {
 export async function getStudentsByElectiveSubject({
   timeTableCellDateWiseId,
   groupPeriods,
+  attendanceStatus,
 }) {
+  const normalizedAttendanceStatus = parseAttendanceStatus(attendanceStatus);
+
   const rawIds = Array.isArray(timeTableCellDateWiseId)
     ? timeTableCellDateWiseId
     : [timeTableCellDateWiseId];
@@ -3023,6 +3065,11 @@ export async function getStudentsByElectiveSubject({
   const electiveSubject = cell.timeTableElective || {};
   const dateWiseIds = cellDateWiseRows.map((r) => r.timeTableCellDateWiseId);
 
+  const attendanceWhere = { timeTableCellDateWiseId: { [Op.in]: dateWiseIds } };
+  if (normalizedAttendanceStatus && normalizedAttendanceStatus.length > 0) {
+    attendanceWhere.attendanceStatus = { [Op.in]: normalizedAttendanceStatus };
+  }
+
   const mappings = await model.studentElectiveSubjectModel.findAll({
     where: { electiveSubjectId: Number(electiveSubjectId) },
     include: [
@@ -3060,8 +3107,8 @@ export async function getStudentsByElectiveSubject({
               "timeTableCellDateWiseId",
               "timeTableCellId",
             ],
-            where: { timeTableCellDateWiseId: { [Op.in]: dateWiseIds } },
-            required: false,
+            where: attendanceWhere,
+            required: normalizedAttendanceStatus && normalizedAttendanceStatus.length > 0 ? true : false,
           },
         ],
       },

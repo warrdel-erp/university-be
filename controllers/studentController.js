@@ -446,13 +446,14 @@ export const getStudentTimeTable = async (req, res) => {
 
 export async function getStudentsByClassSection(req, res) {
     try {
-        const { timeTableCellDateWiseId, groupPeriods, date, academicYearId } = req.query;
+        const { timeTableCellDateWiseId, groupPeriods, date, academicYearId, attendanceStatus } = req.query;
 
         const result = await studentService.getStudentsByClassSection({
             timeTableCellDateWiseId,
             groupPeriods,
             date,
             academicYearId,
+            attendanceStatus,
         });
 
         let count = 0;
@@ -463,7 +464,7 @@ export async function getStudentsByClassSection(req, res) {
                 count += block.students.length;
             }
         } else {
-            count = result.students.length;
+            count = result.students?.length || 0;
         }
 
         return res.status(200).json({
@@ -483,13 +484,14 @@ export async function getStudentsByClassSection(req, res) {
 
 export async function getStudentsByElectiveSubject(req, res) {
     try {
-        const { timeTableCellDateWiseId, groupPeriods, date, academicYearId } = req.query;
+        const { timeTableCellDateWiseId, groupPeriods, date, academicYearId, attendanceStatus } = req.query;
 
         const result = await studentService.getStudentsByElectiveSubject({
             timeTableCellDateWiseId,
             groupPeriods,
             date,
             academicYearId,
+            attendanceStatus,
         });
 
         const count = Array.isArray(result.students) ? result.students.length : 0;
