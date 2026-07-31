@@ -766,7 +766,7 @@
           }
         },
         {
-          "name": "5.3 Get All Exam Setup Types (or Single by Query)",
+          "name": "5.3 Get All Exam Setup Types (with Pagination & Search)",
           "request": {
             "method": "GET",
             "header": [
@@ -776,7 +776,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examStructure/examType/all?examSetupTypeId={{examSetupTypeId}}",
+              "raw": "{{baseurl}}/examStructure/examType/all?search=Mid&page=1&limit=10&courseId=35&sessionId=18",
               "host": [
                 "{{baseurl}}"
               ],
@@ -787,8 +787,24 @@
               ],
               "query": [
                 {
-                  "key": "examSetupTypeId",
-                  "value": "{{examSetupTypeId}}"
+                  "key": "search",
+                  "value": "Mid"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "courseId",
+                  "value": "35"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "18"
                 }
               ]
             }

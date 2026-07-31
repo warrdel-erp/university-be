@@ -93,7 +93,7 @@ export async function addExamType(req, res) {
 
 export async function getDetailByExamType(req, res) {
   try {
-    const { examSetupTypeId, courseId, sessionId, termNumber } = req.query;
+    const { examSetupTypeId, courseId, sessionId, termNumber, search, page = 1, limit = 10 } = req.query;
 
     if (examSetupTypeId) {
       const examDetails = await examStructureServices.getDetailByExamType(examSetupTypeId);
@@ -103,36 +103,44 @@ export async function getDetailByExamType(req, res) {
       return SuccessResponse(res, 200, "Exam Type not found", null);
     }
 
-    const examDetails = await examStructureServices.getSingleExamType(
+    const result = await examStructureServices.getAllExamTypes(
       courseId,
       sessionId,
       undefined,
       termNumber ?? null,
+      { search, page, limit }
     );
 
-    if (examDetails?.length) {
-      return SuccessResponse(res, 200, "Exam Type fetched successfully", examDetails);
-    }
-    return SuccessResponse(res, 200, "Exam Type not found", []);
+    return SuccessResponse(
+      res,
+      200,
+      result.data?.length ? "Exam Type fetched successfully" : "Exam Type not found",
+      result.data ?? [],
+      result.meta
+    );
   } catch (error) {
     return ErrorResponse(res, 500, error.message);
   }
 }
 
-export async function getSingleExamType(req, res) {
+export async function getAllExamTypes(req, res) {
   try {
-    const { courseId, sessionId, termNumber } = req.query;
-    const examDetails = await examStructureServices.getSingleExamType(
+    const { courseId, sessionId, termNumber, search, page = 1, limit = 10 } = req.query;
+    const result = await examStructureServices.getAllExamTypes(
       courseId,
       sessionId,
       undefined,
       termNumber ?? null,
+      { search, page, limit }
     );
 
-    if (examDetails?.length) {
-      return SuccessResponse(res, 200, "Exam Type fetched successfully", examDetails);
-    }
-    return SuccessResponse(res, 200, "Exam Type not found", []);
+    return SuccessResponse(
+      res,
+      200,
+      result.data?.length ? "Exam Types fetched successfully" : "Exam Types not found",
+      result.data ?? [],
+      result.meta
+    );
   } catch (error) {
     return ErrorResponse(res, 500, error.message);
   }

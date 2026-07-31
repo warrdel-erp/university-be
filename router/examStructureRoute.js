@@ -5,7 +5,7 @@ import { ASSESSMENT_CATEGORIES } from "../constant.js";
 import {
   addExamType,
   getDetailByExamType,
-  getSingleExamType,
+  getAllExamTypes,
   updateExamType,
   deleteExamType,
 } from "../controllers/examStructureController.js";
@@ -29,6 +29,9 @@ const getallExamTypeQuerySchema = z.object({
   courseId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
   sessionId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
   termNumber: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
+  search: z.string().optional(),
+  page: z.union([z.string(), z.number()]).optional(),
+  limit: z.union([z.string(), z.number()]).optional(),
 });
 
 const addExamTypeSchema = z.object({
@@ -57,7 +60,7 @@ router.post("/examType", userAuth, validate({ body: addExamTypeSchema }), addExa
 
 router.get("/examType", userAuth, validate({ query: getDetailByExamTypeQuerySchema }), getDetailByExamType);
 
-router.get("/examType/all", userAuth, validate({ query: getallExamTypeQuerySchema }), getSingleExamType);
+router.get("/examType/all", userAuth, validate({ query: getallExamTypeQuerySchema }), getAllExamTypes);
 
 router.patch("/examType", userAuth, validate({ body: updateExamTypeSchema }), updateExamType);
 

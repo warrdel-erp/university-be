@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 
@@ -52,12 +53,21 @@ export async function getDetailByExamType(examSetupTypeId) {
   }
 };
 
-export async function getSingleExamType(courseId, sessionId, academicYearId, termNumber) {
+export async function getAllExamTypes(courseId, sessionId, academicYearId, termNumber, options = {}) {
   try {
     const yearId = resolveAcademicYearId(academicYearId);
     const where = {};
     if (courseId) where.courseId = Number(courseId);
     if (sessionId) where.sessionId = Number(sessionId);
+
+    if (options.search) {
+      where[Op.or] = [
+        { examName: { [Op.like]: `%${options.search}%` } },
+        { examCode: { [Op.like]: `%${options.search}%` } },
+        { examCategory: { [Op.like]: `%${options.search}%` } },
+        { examSubcategory: { [Op.like]: `%${options.search}%` } },
+      ];
+    }
 
     const termWhere = {};
     if (yearId) termWhere.academicYearId = yearId;
@@ -81,7 +91,7 @@ export async function getSingleExamType(courseId, sessionId, academicYearId, ter
       ],
     };
 
-    return await scoped(model.examSetupTypeModel).findAll({
+    const queryOptions = {
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       where,
       include: [
@@ -101,7 +111,32 @@ export async function getSingleExamType(courseId, sessionId, academicYearId, ter
       ],
       subQuery: false,
       distinct: true,
-    });
+    };
+
+    if (options.page && options.limit) {
+      const page = Math.max(1, parseInt(options.page, 10));
+      const limit = Math.max(1, parseInt(options.limit, 10));
+      queryOptions.offset = (page - 1) * limit;
+      queryOptions.limit = limit;
+
+      const { count, rows } = await scoped(model.examSetupTypeModel).findAndCountAll(queryOptions);
+      return {
+        rows,
+        total: count,
+        page,
+        limit,
+        totalPages: Math.ceil(count / limit) || 1,
+      };
+    }
+
+    const rows = await scoped(model.examSetupTypeModel).findAll(queryOptions);
+    return {
+      rows,
+      total: rows.length,
+      page: 1,
+      limit: rows.length || 10,
+      totalPages: 1,
+    };
   } catch (error) {
     console.error("Error fetching exam type details:", error.message);
     throw error;
