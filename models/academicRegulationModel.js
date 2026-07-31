@@ -4,6 +4,8 @@ import users from "./userModel.js";
 import instituteModel from "./instituteModel.js";
 import university from "./universityModel.js";
 import courseModel from "./courseModel.js";
+import sessionModel from "./sessionModel.js";
+import acedmicYearModel from "./acedmicYearModel.js";
 import gradingModel from "./gradingModel.js";
 
 const academicRegulationModel = sequelize.define(
@@ -72,6 +74,36 @@ const academicRegulationModel = sequelize.define(
             references: {
                 model: gradingModel,
                 key: 'grading_id'
+            }
+        },
+        // Direct linked Course ID (1-to-1 connection)
+        courseId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'course_id',
+            references: {
+                model: courseModel,
+                key: 'course_id'
+            }
+        },
+        // Direct linked Session ID (1-to-1 connection)
+        sessionId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'session_id',
+            references: {
+                model: sessionModel,
+                key: 'session_id'
+            }
+        },
+        // Linked Academic Year ID in which this regulation was created/applicable
+        academicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYearModel,
+                key: 'acedmic_year_id'
             }
         },
 

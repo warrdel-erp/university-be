@@ -54,6 +54,9 @@ export const createAcademicRegulationBody = z.object({
   effectiveFrom: z.string().optional().nullable(),
   effectiveUntil: z.string().optional().nullable(),
   gradingSchemeId: z.coerce.number().int().positive().optional().nullable(),
+  courseId: z.coerce.number().int().positive().optional().nullable(),
+  sessionId: z.coerce.number().int().positive().optional().nullable(),
+  academicYearId: z.coerce.number().int().positive().optional().nullable(),
 
   // ==========================================
   // STEP 2: EVALUATION PATTERN & WEIGHTAGE
@@ -191,6 +194,9 @@ export const updateAcademicRegulationBody = z.object({
   effectiveFrom: z.string().optional().nullable(),
   effectiveUntil: z.string().optional().nullable(),
   gradingSchemeId: z.coerce.number().int().positive().optional().nullable(),
+  courseId: z.coerce.number().int().positive().optional().nullable(),
+  sessionId: z.coerce.number().int().positive().optional().nullable(),
+  academicYearId: z.coerce.number().int().positive().optional().nullable(),
 
   // ==========================================
   // STEP 2: EVALUATION PATTERN & WEIGHTAGE
@@ -320,6 +326,7 @@ export const listAcademicRegulationQuery = z.object({
   search: z.string().optional(),
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
   courseId: z.union([z.string(), z.number()]).optional(),
+  academicYearId: z.union([z.string(), z.number()]).optional(),
   academicYearRange: z.string().optional(),
   page: z.union([z.string(), z.number()]).optional(),
   limit: z.union([z.string(), z.number()]).optional(),

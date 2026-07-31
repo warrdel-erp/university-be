@@ -6,6 +6,8 @@ export async function createAcademicRegulation(payload, user) {
     const regulationData = {
       ...payload,
       courseId: payload.courseId ? Number(payload.courseId) : null,
+      sessionId: payload.sessionId ? Number(payload.sessionId) : null,
+      academicYearId: payload.academicYearId ? Number(payload.academicYearId) : (user?.academicYearId || null),
       gradingSchemeId: payload.gradingSchemeId ? Number(payload.gradingSchemeId) : null,
       status: payload.status || "DRAFT",
       isActive: payload.isActive !== undefined ? payload.isActive : true,
@@ -61,6 +63,8 @@ export async function updateAcademicRegulation(academicRegulationId, payload, us
     if (payload.regulationCode !== undefined) updateData.regulationCode = payload.regulationCode;
     if (payload.description !== undefined) updateData.description = payload.description;
     if (payload.courseId !== undefined) updateData.courseId = payload.courseId ? Number(payload.courseId) : null;
+    if (payload.sessionId !== undefined) updateData.sessionId = payload.sessionId ? Number(payload.sessionId) : null;
+    if (payload.academicYearId !== undefined) updateData.academicYearId = payload.academicYearId ? Number(payload.academicYearId) : null;
     if (payload.academicYearRange !== undefined) updateData.academicYearRange = payload.academicYearRange;
     if (payload.applicableBatch !== undefined) updateData.applicableBatch = payload.applicableBatch;
     if (payload.effectiveFrom !== undefined) updateData.effectiveFrom = payload.effectiveFrom;

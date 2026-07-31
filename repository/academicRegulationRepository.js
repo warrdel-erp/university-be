@@ -22,7 +22,7 @@ export async function createAcademicRegulation(data, options = {}) {
   return await getAcademicRegulationById(record.academicRegulationId, options);
 }
 
-export async function getAcademicRegulations({ search, status, courseId, academicYearRange, page = 1, limit = 10 }) {
+export async function getAcademicRegulations({ search, status, courseId, academicYearId, academicYearRange, page = 1, limit = 10 }) {
   const pageNum = Math.max(1, Number(page) || 1);
   const limitNum = Math.max(1, Number(limit) || 10);
   const offset = (pageNum - 1) * limitNum;
@@ -33,6 +33,9 @@ export async function getAcademicRegulations({ search, status, courseId, academi
   }
   if (courseId) {
     where.courseId = Number(courseId);
+  }
+  if (academicYearId) {
+    where.academicYearId = Number(academicYearId);
   }
   if (academicYearRange) {
     where.academicYearRange = academicYearRange;
@@ -51,6 +54,24 @@ export async function getAcademicRegulations({ search, status, courseId, academi
         model: model.gradingModel,
         as: "gradingScheme",
         attributes: ["gradingId", "gradingName", "gradingCode", "gradingMethod"],
+        required: false,
+      },
+      {
+        model: model.courseModel,
+        as: "course",
+        attributes: ["courseId", "courseName", "courseCode"],
+        required: false,
+      },
+      {
+        model: model.sessionModel,
+        as: "session",
+        attributes: ["sessionId", "sessionName"],
+        required: false,
+      },
+      {
+        model: model.acedmicYearModel,
+        as: "academicYear",
+        attributes: ["academicYearId", "yearTitle", "startingDate", "endingDate"],
         required: false,
       },
       {
@@ -92,6 +113,24 @@ export async function getAcademicRegulationById(academicRegulationId, options = 
         model: model.gradingModel,
         as: "gradingScheme",
         attributes: ["gradingId", "gradingName", "gradingCode", "gradingMethod"],
+        required: false,
+      },
+      {
+        model: model.courseModel,
+        as: "course",
+        attributes: ["courseId", "courseName", "courseCode"],
+        required: false,
+      },
+      {
+        model: model.sessionModel,
+        as: "session",
+        attributes: ["sessionId", "sessionName"],
+        required: false,
+      },
+      {
+        model: model.acedmicYearModel,
+        as: "academicYear",
+        attributes: ["academicYearId", "yearTitle", "startingDate", "endingDate"],
         required: false,
       },
       {
