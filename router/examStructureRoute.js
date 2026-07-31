@@ -20,9 +20,6 @@ const positiveIntegerId = z.coerce.number().int().positive();
 
 const getDetailByExamTypeQuerySchema = z.object({
   examSetupTypeId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
-  courseId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
-  sessionId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
-  termNumber: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
 });
 
 const getallExamTypeQuerySchema = z.object({
