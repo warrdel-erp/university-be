@@ -19,12 +19,15 @@ const emptyToUndefined = (val) =>
 const positiveIntegerId = z.coerce.number().int().positive();
 
 const getDetailByExamTypeQuerySchema = z.object({
-  examSetupTypeId: positiveIntegerId,
+  examSetupTypeId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
+  courseId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
+  sessionId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
+  termNumber: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
 });
 
 const getallExamTypeQuerySchema = z.object({
-  courseId: positiveIntegerId,
-  sessionId: positiveIntegerId,
+  courseId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
+  sessionId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
   termNumber: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
 });
 
@@ -56,7 +59,7 @@ router.post("/examType", userAuth, validate({ body: addExamTypeSchema }), addExa
 
 router.get("/examType", userAuth, validate({ query: getDetailByExamTypeQuerySchema }), getDetailByExamType);
 
-router.get("/examType", userAuth, validate({ query: getallExamTypeQuerySchema }), getSingleExamType);
+router.get("/examType/single", userAuth, validate({ query: getallExamTypeQuerySchema }), getSingleExamType);
 
 router.patch("/examType", userAuth, validate({ body: updateExamTypeSchema }), updateExamType);
 

@@ -40,14 +40,10 @@ const academicRegulationModel = sequelize.define(
                 key: 'course_id'
             }
         },
-        academicYearId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'acedmic_year_id',
-            references: {
-                model: acedmicYear,
-                key: 'acedmic_year_id'
-            }
+        academicYearRange: {
+            type: DataTypes.STRING(50),
+            allowNull: true,
+            field: 'academic_year_range'
         },
         applicableBatch: {
             type: DataTypes.STRING(50),
@@ -152,6 +148,6 @@ const academicRegulationModel = sequelize.define(
     }
 );
 
-academicRegulationModel.scopeConfig = { university: true, institute: true, academicYear: true };
+academicRegulationModel.scopeConfig = { university: true, institute: true };
 
 export default academicRegulationModel;

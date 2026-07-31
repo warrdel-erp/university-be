@@ -15,13 +15,11 @@ import {
 const router = express.Router();
 
 export const createAcademicRegulationBody = z.object({
-  universityId: z.coerce.number().int().positive().optional(),
-  instituteId: z.coerce.number().int().positive().optional(),
-  academicYearId: z.coerce.number().int().positive().optional(),
   regulationCode: z.string().min(1).max(50),
   regulationName: z.string().min(1).max(150),
   description: z.string().max(500).optional().nullable(),
   courseId: z.coerce.number().int().positive().optional().nullable(),
+  academicYearRange: z.string().max(50).optional().nullable(),
   applicableBatch: z.string().max(50).optional().nullable(),
   effectiveFrom: z.string().optional().nullable(),
   effectiveUntil: z.string().optional().nullable(),
@@ -35,7 +33,7 @@ export const updateAcademicRegulationBody = z.object({
   regulationName: z.string().min(1).max(150).optional(),
   description: z.string().max(500).optional().nullable(),
   courseId: z.coerce.number().int().positive().optional().nullable(),
-  academicYearId: z.coerce.number().int().positive().optional(),
+  academicYearRange: z.string().max(50).optional().nullable(),
   applicableBatch: z.string().max(50).optional().nullable(),
   effectiveFrom: z.string().optional().nullable(),
   effectiveUntil: z.string().optional().nullable(),
@@ -62,26 +60,10 @@ router.post(
 );
 
 router.get(
-  "/",
-  useAuth,
-  checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
-  validate({ query: listAcademicRegulationQuery }),
-  getAcademicRegulations
-);
-
-router.get(
   "/:academicRegulationId",
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
   getAcademicRegulationById
-);
-
-router.put(
-  "/:academicRegulationId",
-  useAuth,
-  checkAccess(PERMISSIONS.GRADING_SETUP_EDIT.value, null),
-  validate({ body: updateAcademicRegulationBody }),
-  updateAcademicRegulation
 );
 
 router.patch(
