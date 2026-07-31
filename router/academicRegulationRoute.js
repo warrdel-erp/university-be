@@ -3,7 +3,7 @@ import { z } from "zod";
 import useAuth from "../middleware/authUser.js";
 import { checkAccess } from "../middleware/checkAccess.js";
 import { PERMISSIONS } from "../const/permissions.js";
-import { EVALUATION_PATTERNS, MANDATORY_COMPONENTS, TIE_BREAKING_METHODS, GRACE_APPLICABLE_TO, PROMOTION_METHODS, IMPROVEMENT_MARKS_CONSIDERED } from "../const/academicRegulation.js";
+import { EVALUATION_PATTERNS, MANDATORY_COMPONENTS, TIE_BREAKING_METHODS, GRACE_APPLICABLE_TO, PROMOTION_METHODS, IMPROVEMENT_MARKS_CONSIDERED } from "../constant.js";
 import { validate } from "../utility/validation.js";
 import {
   createAcademicRegulation,
@@ -325,6 +325,14 @@ router.post(
   checkAccess(PERMISSIONS.GRADING_SETUP_ADD.value, null),
   validate({ body: createAcademicRegulationBody }),
   createAcademicRegulation
+);
+
+router.get(
+  "/",
+  useAuth,
+  checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
+  validate({ query: listAcademicRegulationQuery }),
+  getAcademicRegulations
 );
 
 router.get(

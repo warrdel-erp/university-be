@@ -384,3 +384,43 @@ export const ASSESSMENT_SUB_CATEGORIES = [
   "Seminar Participation",
   "Classroom Activity",
 ];
+
+export const EVALUATION_PATTERNS = [
+  "INTERNAL_EXTERNAL",
+  "INTERNAL_ONLY",
+  "EXTERNAL_ONLY",
+];
+
+export const MANDATORY_COMPONENTS = [
+  "THEORY",
+  "PRACTICAL",
+  "VIVA",
+  "PROJECT",
+  "INTERNSHIP",
+];
+
+export const TIE_BREAKING_METHODS = [
+  "HIGHER_CGPA",
+  "HIGHER_SGPA",
+  "HIGHER_INTERNAL_MARKS",
+  "HIGHER_EXTERNAL_MARKS",
+  "ALPHABETICAL",
+  "RANDOM",
+];
+
+export const GRACE_APPLICABLE_TO = [
+  "OVERALL",
+  "EXTERNAL",
+  "INTERNAL",
+];
+
+export const PROMOTION_METHODS = [
+  "YEAR_WISE",
+  "SEMESTER_WISE",
+  "TERM_WISE",
+];
+
+export const IMPROVEMENT_MARKS_CONSIDERED = [
+  "HIGHEST",
+  "LATEST",
+];
