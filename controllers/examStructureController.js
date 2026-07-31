@@ -83,8 +83,7 @@ export async function addExamType(req, res) {
   try {
     const examStructure = await examStructureServices.addExamType(
       req.body,
-      req.user.userId,
-      req.user.userId,
+      req.user,
     );
     return SuccessResponse(res, 201, "Exam setup type created successfully", examStructure);
   } catch (error) {
@@ -94,10 +93,24 @@ export async function addExamType(req, res) {
 
 export async function getDetailByExamType(req, res) {
   try {
-    const { examSetupTypeId } = req.query;
-    const examDetails = await examStructureServices.getDetailByExamType(examSetupTypeId);
+    const { examSetupTypeId, courseId, sessionId, termNumber } = req.query;
 
-    if (examDetails) {
+    if (examSetupTypeId) {
+      const examDetails = await examStructureServices.getDetailByExamType(examSetupTypeId);
+      if (examDetails) {
+        return SuccessResponse(res, 200, "Exam Type fetched successfully", examDetails);
+      }
+      return SuccessResponse(res, 200, "Exam Type not found", null);
+    }
+
+    const examDetails = await examStructureServices.getSingleExamType(
+      courseId,
+      sessionId,
+      undefined,
+      termNumber ?? null,
+    );
+
+    if (examDetails?.length) {
       return SuccessResponse(res, 200, "Exam Type fetched successfully", examDetails);
     }
     return SuccessResponse(res, 200, "Exam Type not found", []);

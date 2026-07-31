@@ -25,11 +25,20 @@ export async function updateExamStructure(examStructureId, examDetail, updatedBy
     await examStructureRepository.updateExamStructure(examStructureId, examDetail);
 };
 
-export async function addExamType(examDetail, createdBy, updatedBy) {
+export async function addExamType(examDetail, user) {
     const payload = { ...examDetail };
     delete payload.scheduledBy;
-    payload.createdBy = createdBy;
-    payload.updatedBy = updatedBy;
+    
+    if (typeof user === 'object' && user !== null) {
+        payload.createdBy = user.userId || payload.createdBy;
+        payload.updatedBy = user.userId || payload.updatedBy;
+        payload.universityId = user.universityId || payload.universityId;
+        payload.instituteId = user.instituteId || payload.instituteId;
+    } else {
+        payload.createdBy = user;
+        payload.updatedBy = user;
+    }
+
     return await examStructureRepository.addExamType(payload);
 };
 

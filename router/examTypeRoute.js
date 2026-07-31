@@ -15,7 +15,7 @@ export const addExamTypeBodySchema = z.object({
   universityId: z.number().int().positive().optional(),
   examName: z.string().min(1).max(100),
   assessmentCode: z.string().min(1).max(30),
-  assessmentCategory: z.enum(ASSESSMENT_CATEGORIES),
+  assessmentCategory: z.string().min(1).max(100),
   assessmentSubCategory: z.string().min(1).max(100),
   description: z.string().max(500).optional().nullable(),
   averagePassingMark: z.number().optional().nullable(),
@@ -31,7 +31,7 @@ export const updateExamTypeBodySchema = z.object({
 
   examName: z.string().min(1).max(100).optional(),
   assessmentCode: z.string().min(1).max(30).optional(),
-  assessmentCategory: z.enum(ASSESSMENT_CATEGORIES).optional(),
+  assessmentCategory: z.string().min(1).max(100).optional(),
   assessmentSubCategory: z.string().min(1).max(100).optional(),
   description: z.string().max(500).optional().nullable(),
   averagePassingMark: z.number().optional().nullable(),

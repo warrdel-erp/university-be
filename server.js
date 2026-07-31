@@ -184,7 +184,9 @@ app.use("/teacherSubstitute", teacherSubstitute);
 app.use("/questionPaperBlueprint", questionPaperBlueprint);
 app.use("/examSetupTypeTerm", examSetupTypeTerm);
 app.use("/examSchedule", examSchedule);
+
 app.use("/examStructure", examStructure);
+
 app.use("/examScheduleMapping", examScheduleMapping);
 app.use("/internalAssessment", internalAssessment);
 app.use("/examType", examType);

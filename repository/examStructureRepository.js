@@ -5,128 +5,15 @@ function resolveAcademicYearId(explicit) {
   if (explicit != null && explicit !== "") {
     return Number(explicit);
   }
-  return buildScope(model.examStructureModel).academicYearId;
+  return buildScope(model.examSetupTypeModel).academicYearId;
 }
-
-export async function addExamStructure(examDetail) {
-  try {
-    const result = await scoped(model.examStructureModel).create(examDetail);
-    return result;
-  } catch (error) {
-    console.error("Error adding exam Structure:", error);
-    throw error;
-  }
-};
-
-export async function getExamStructure(academicYearId) {
-  try {
-    const yearId = resolveAcademicYearId(academicYearId);
-    const result = await scoped(model.examStructureModel).findAll({
-      attributes: {
-        exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"],
-      },
-      where: {
-        ...(yearId && { academicYearId: yearId }),
-      },
-      include: [
-        {
-          model: model.courseModel,
-          as: "courseExam",
-          exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"],
-        },
-        {
-          model: model.sessionModel,
-          as: "sessionExam",
-          exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"],
-        },
-      ],
-    });
-    return result;
-  } catch (error) {
-    console.error("Error fetching exam Structures:", error);
-    throw error;
-  }
-};
-
-export async function getSingleExamStructure(courseId, sessionId, academicYearId) {
-  try {
-    const yearId = resolveAcademicYearId(academicYearId);
-    const result = await scoped(model.examStructureModel).findOne({
-      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-      where: { courseId, sessionId, academicYearId: yearId },
-      include: [
-        {
-          model: model.courseModel,
-          as: "courseExam",
-          exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"],
-        },
-        {
-          model: model.sessionModel,
-          as: "sessionExam",
-          exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"],
-        },
-      ],
-    });
-
-    return result;
-  } catch (error) {
-    console.error("Error fetching exam Structure:", error);
-    throw error;
-  }
-};
-
-export async function deleteExamStructure(examStructureId) {
-  try {
-    const existing = await scoped(model.examStructureModel).findOne({
-      where: { examStructureId },
-      attributes: ['examStructureId'],
-    });
-    if (!existing) {
-      return false;
-    }
-    const deleted = await scoped(model.examStructureModel).destroy({ where: { examStructureId } });
-    return deleted > 0;
-  } catch (error) {
-    console.error("Error deleting exam Structure:", error);
-    throw error;
-  }
-};
-
-export async function updateExamStructure(examStructureId, examDetail) {
-  try {
-    const existing = await scoped(model.examStructureModel).findOne({
-      where: { examStructureId },
-      attributes: ['examStructureId'],
-    });
-    if (!existing) {
-      return [0];
-    }
-    const result = await scoped(model.examStructureModel).update(examDetail, {
-      where: { examStructureId },
-    });
-    return result;
-  } catch (error) {
-    console.error("Error updating exam Structure:", error);
-    throw error;
-  }
-};
 
 export async function addExamType(examDetail) {
   try {
-    const existingStructure = await scoped(model.examStructureModel).findOne({
-      where: { examStructureId: examDetail.examStructureId },
-      attributes: ["examStructureId"],
-    });
-    if (!existingStructure) {
-      const error = new Error("Exam structure not found");
-      error.statusCode = 404;
-      throw error;
-    }
-
     const result = await scoped(model.examSetupTypeModel).create(examDetail);
     return result;
   } catch (error) {
-    console.error("Error adding exam Structure setup type:", error);
+    console.error("Error adding exam setup type:", error);
     throw error;
   }
 };
@@ -138,34 +25,29 @@ export async function getDetailByExamType(examSetupTypeId) {
       where: { examSetupTypeId },
       include: [
         {
-          model: model.examStructureModel,
-          as: "examStructure",
+          model: model.courseModel,
+          as: "course",
+          attributes: ["courseId", "courseName"],
+          required: false,
+        },
+        {
+          model: model.sessionModel,
+          as: "session",
+          attributes: ["sessionId", "sessionName"],
+          required: false,
+        },
+        {
+          model: model.examSetupTypeTermModel,
+          as: "examSetupTypeTerms",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-          required: true,
-          include: [
-            {
-              model: model.courseModel,
-              as: "courseExam",
-              attributes: ["courseId", "courseName", "capacity"],
-            },
-            {
-              model: model.sessionModel,
-              as: "sessionExam",
-              attributes: ["sessionId", "sessionName"],
-            },
-            {
-              model: model.acedmicYearModel,
-              as: "acedmicExam",
-              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            },
-          ],
+          required: false,
         },
       ],
     });
 
     return result;
   } catch (error) {
-    console.error("Error fetching exam structure details:", error.message);
+    console.error("Error fetching exam type details:", error.message);
     throw error;
   }
 };
@@ -173,21 +55,20 @@ export async function getDetailByExamType(examSetupTypeId) {
 export async function getSingleExamType(courseId, sessionId, academicYearId, termNumber) {
   try {
     const yearId = resolveAcademicYearId(academicYearId);
-    const structureWhere = {
-      courseId,
-      sessionId,
-      academicYearId: yearId,
-    };
+    const where = {};
+    if (courseId) where.courseId = Number(courseId);
+    if (sessionId) where.sessionId = Number(sessionId);
+
+    const termWhere = {};
+    if (yearId) termWhere.academicYearId = yearId;
+    if (courseId) termWhere.courseId = Number(courseId);
+    if (termNumber != null) termWhere.term = Number(termNumber);
 
     const termInclude = {
       model: model.examSetupTypeTermModel,
       as: "examSetupTypeTerms",
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-      where: {
-        academicYearId: yearId,
-        courseId,
-        ...(termNumber != null && { term: termNumber }),
-      },
+      where: termWhere,
       required: termNumber != null,
       include: [
         {
@@ -202,30 +83,19 @@ export async function getSingleExamType(courseId, sessionId, academicYearId, ter
 
     return await scoped(model.examSetupTypeModel).findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      where,
       include: [
         {
-          model: model.examStructureModel,
-          as: "examStructure",
-          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-          where: structureWhere,
-          required: true,
-          include: [
-            {
-              model: model.courseModel,
-              as: "courseExam",
-              attributes: ["courseId", "courseName", "capacity"],
-            },
-            {
-              model: model.sessionModel,
-              as: "sessionExam",
-              attributes: ["sessionId", "sessionName"],
-            },
-            {
-              model: model.acedmicYearModel,
-              as: "acedmicExam",
-              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            },
-          ],
+          model: model.courseModel,
+          as: "course",
+          attributes: ["courseId", "courseName"],
+          required: false,
+        },
+        {
+          model: model.sessionModel,
+          as: "session",
+          attributes: ["sessionId", "sessionName"],
+          required: false,
         },
         termInclude,
       ],
@@ -233,7 +103,7 @@ export async function getSingleExamType(courseId, sessionId, academicYearId, ter
       distinct: true,
     });
   } catch (error) {
-    console.error("Error fetching exam structure details:", error.message);
+    console.error("Error fetching exam type details:", error.message);
     throw error;
   }
 };
