@@ -6,6 +6,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { Op } from "sequelize";
 import * as model from "../models/index.js";
 import { ATTENDANCE_STATUS } from "../constant.js";
+import { decimalDivide, decimalMultiply } from "../utility/decimalMoney.js";
 import { resolveProgramYear, resolveStudentClassSectionsId } from "../utility/classSectionIncludes.js";
 import {
   assertCopyPeriodDateWiseMatch,
@@ -803,17 +804,99 @@ export async function getEmployeeSectionDates(classSectionTermId, subjectId, use
   };
 }
 
-export async function getStudentsBatchAttendance(classSectionTermId, filters) {
-  const placement = await resolveAttendancePlacement(classSectionTermId);
-  const dateWiseIds = filters.map((f) => f.timeTableCellDateWiseId);
-  await assertDateWiseCellsBelongToTerm(dateWiseIds, placement.classSectionTermId);
+const LEAVE_STATUS_SET = new Set(["Approved Leave", "Duty Leave", "Sports Leave", "NCC Leave"]);
 
-  const students = await attendanceService.getStudentsBatchAttendance(
+export async function getStudentsBatchAttendance(classSectionTermId, filters = []) {
+  const placement = await resolveAttendancePlacement(classSectionTermId);
+
+  const dateWiseIds = [];
+  const templateAttendance = {};
+  if (Array.isArray(filters)) {
+    for (let i = 0; i < filters.length; i++) {
+      const id = Number(filters[i]?.timeTableCellDateWiseId);
+      if (id) {
+        dateWiseIds.push(id);
+        templateAttendance[id] = null;
+      }
+    }
+  }
+
+  if (dateWiseIds.length > 0) {
+    await assertDateWiseCellsBelongToTerm(dateWiseIds, placement.classSectionTermId);
+  }
+
+  const rawStudents = await attendanceService.getStudentsBatchAttendance(
     placement.classSectionTermId,
     filters,
   );
 
-  return students;
+  const len = rawStudents.length;
+  const students = new Array(len);
+
+  for (let i = 0; i < len; i++) {
+    const row = rawStudents[i];
+    const s = row.get ? row.get({ plain: true }) : row;
+    const records = s.studentAttendance || [];
+
+    const attendance = { ...templateAttendance };
+    let present = 0;
+    let absent = 0;
+    let leave = 0;
+    let medical = 0;
+    let holiday = 0;
+
+    const rLen = records.length;
+    for (let j = 0; j < rLen; j++) {
+      const rec = records[j];
+      const cellId = rec.timeTableCellDateWiseId;
+      const status = rec.attendanceStatus;
+
+      if (cellId && status) {
+        attendance[cellId] = status.toUpperCase();
+
+        if (status === "Present") {
+          present++;
+        } else if (status === "Absent") {
+          absent++;
+        } else if (status === "Medical Leave") {
+          medical++;
+        } else if (status === "Holiday") {
+          holiday++;
+        } else if (LEAVE_STATUS_SET.has(status)) {
+          leave++;
+        }
+      }
+    }
+
+    const totalEvaluated = present + absent + medical + leave;
+    const attended = present + leave + medical;
+    const percentage = totalEvaluated > 0
+      ? decimalDivide(decimalMultiply(attended, 100), totalEvaluated)
+      : 0;
+
+    let studentName = s.firstName || '';
+    if (s.middleName) studentName += ' ' + s.middleName;
+    if (s.lastName) studentName += ' ' + s.lastName;
+
+    students[i] = {
+      studentId: s.studentId,
+      studentName,
+      scholarNumber: s.scholarNumber,
+      enrollNumber: s.enrollNumber ?? null,
+      summary: {
+        present,
+        leave,
+        absent,
+        medical,
+        holiday,
+        percentage,
+      },
+      attendance,
+      studentAttendance: records,
+    };
+  }
+
+  return { students };
 }
 
 /* ----------------  Extract Student ID from Name ---------------- */
