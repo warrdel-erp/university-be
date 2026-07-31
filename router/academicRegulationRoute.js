@@ -3,7 +3,7 @@ import { z } from "zod";
 import useAuth from "../middleware/authUser.js";
 import { checkAccess } from "../middleware/checkAccess.js";
 import { PERMISSIONS } from "../const/permissions.js";
-import { EVALUATION_PATTERNS, MANDATORY_COMPONENTS, TIE_BREAKING_METHODS, GRACE_APPLICABLE_TO } from "../const/academicRegulation.js";
+import { EVALUATION_PATTERNS, MANDATORY_COMPONENTS, TIE_BREAKING_METHODS, GRACE_APPLICABLE_TO, PROMOTION_METHODS, IMPROVEMENT_MARKS_CONSIDERED } from "../const/academicRegulation.js";
 import { validate } from "../utility/validation.js";
 import {
   createAcademicRegulation,
@@ -79,6 +79,40 @@ export const createAcademicRegulationBody = z.object({
   publishAutomatically: z.boolean().optional().default(false),
   approvalRequired: z.boolean().optional().default(true),
 
+  // ==========================================
+  // STEP 6: CREDIT REQUIREMENTS
+  // ==========================================
+  totalCredits: z.coerce.number().int().optional().nullable(),
+  coreCredits: z.coerce.number().int().optional().nullable(),
+  electiveCredits: z.coerce.number().int().optional().nullable(),
+  openElectiveCredits: z.coerce.number().int().optional().nullable(),
+  internshipCredits: z.coerce.number().int().optional().nullable(),
+  projectCredits: z.coerce.number().int().optional().nullable(),
+
+  // ==========================================
+  // STEP 7: PROMOTION & ATKT RULES
+  // ==========================================
+  isAtktEnabled: z.boolean().optional().default(true),
+  maximumAtktSubjects: z.coerce.number().int().optional().nullable(),
+  isCarryForwardEnabled: z.boolean().optional().default(true),
+  maximumCarryForwardSubjects: z.coerce.number().int().optional().nullable(),
+  promotionMethod: z.enum(PROMOTION_METHODS).optional().nullable(),
+
+  // ==========================================
+  // STEP 8: IMPROVEMENT RULES
+  // ==========================================
+  isImprovementAllowed: z.boolean().optional().default(false),
+  maximumImprovementAttempts: z.coerce.number().int().optional().nullable(),
+  improvementMarksConsidered: z.enum(IMPROVEMENT_MARKS_CONSIDERED).optional().nullable(),
+
+  // ==========================================
+  // STEP 9: BACKLOG & SUPPLEMENTARY RULES
+  // ==========================================
+  isBacklogAllowed: z.boolean().optional().default(true),
+  maximumBacklogAttempts: z.coerce.number().int().optional().nullable(),
+  isSupplementaryAllowed: z.boolean().optional().default(true),
+  backlogValidityYears: z.coerce.number().int().optional().nullable(),
+
   // STATUS & AUDIT
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional().default("DRAFT"),
   isActive: z.boolean().optional().default(true),
@@ -147,6 +181,40 @@ export const updateAcademicRegulationBody = z.object({
   allowResultRevision: z.boolean().optional(),
   publishAutomatically: z.boolean().optional(),
   approvalRequired: z.boolean().optional(),
+
+  // ==========================================
+  // STEP 6: CREDIT REQUIREMENTS
+  // ==========================================
+  totalCredits: z.coerce.number().int().optional().nullable(),
+  coreCredits: z.coerce.number().int().optional().nullable(),
+  electiveCredits: z.coerce.number().int().optional().nullable(),
+  openElectiveCredits: z.coerce.number().int().optional().nullable(),
+  internshipCredits: z.coerce.number().int().optional().nullable(),
+  projectCredits: z.coerce.number().int().optional().nullable(),
+
+  // ==========================================
+  // STEP 7: PROMOTION & ATKT RULES
+  // ==========================================
+  isAtktEnabled: z.boolean().optional(),
+  maximumAtktSubjects: z.coerce.number().int().optional().nullable(),
+  isCarryForwardEnabled: z.boolean().optional(),
+  maximumCarryForwardSubjects: z.coerce.number().int().optional().nullable(),
+  promotionMethod: z.enum(PROMOTION_METHODS).optional().nullable(),
+
+  // ==========================================
+  // STEP 8: IMPROVEMENT RULES
+  // ==========================================
+  isImprovementAllowed: z.boolean().optional(),
+  maximumImprovementAttempts: z.coerce.number().int().optional().nullable(),
+  improvementMarksConsidered: z.enum(IMPROVEMENT_MARKS_CONSIDERED).optional().nullable(),
+
+  // ==========================================
+  // STEP 9: BACKLOG & SUPPLEMENTARY RULES
+  // ==========================================
+  isBacklogAllowed: z.boolean().optional(),
+  maximumBacklogAttempts: z.coerce.number().int().optional().nullable(),
+  isSupplementaryAllowed: z.boolean().optional(),
+  backlogValidityYears: z.coerce.number().int().optional().nullable(),
 
   // STATUS & AUDIT
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),

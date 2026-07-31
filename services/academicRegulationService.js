@@ -100,6 +100,24 @@ export async function updateAcademicRegulation(academicRegulationId, payload, us
     if (payload.allowResultRevision !== undefined) updateData.allowResultRevision = payload.allowResultRevision;
     if (payload.publishAutomatically !== undefined) updateData.publishAutomatically = payload.publishAutomatically;
     if (payload.approvalRequired !== undefined) updateData.approvalRequired = payload.approvalRequired;
+    if (payload.totalCredits !== undefined) updateData.totalCredits = payload.totalCredits;
+    if (payload.coreCredits !== undefined) updateData.coreCredits = payload.coreCredits;
+    if (payload.electiveCredits !== undefined) updateData.electiveCredits = payload.electiveCredits;
+    if (payload.openElectiveCredits !== undefined) updateData.openElectiveCredits = payload.openElectiveCredits;
+    if (payload.internshipCredits !== undefined) updateData.internshipCredits = payload.internshipCredits;
+    if (payload.projectCredits !== undefined) updateData.projectCredits = payload.projectCredits;
+    if (payload.isAtktEnabled !== undefined) updateData.isAtktEnabled = payload.isAtktEnabled;
+    if (payload.maximumAtktSubjects !== undefined) updateData.maximumAtktSubjects = payload.maximumAtktSubjects;
+    if (payload.isCarryForwardEnabled !== undefined) updateData.isCarryForwardEnabled = payload.isCarryForwardEnabled;
+    if (payload.maximumCarryForwardSubjects !== undefined) updateData.maximumCarryForwardSubjects = payload.maximumCarryForwardSubjects;
+    if (payload.promotionMethod !== undefined) updateData.promotionMethod = payload.promotionMethod;
+    if (payload.isImprovementAllowed !== undefined) updateData.isImprovementAllowed = payload.isImprovementAllowed;
+    if (payload.maximumImprovementAttempts !== undefined) updateData.maximumImprovementAttempts = payload.maximumImprovementAttempts;
+    if (payload.improvementMarksConsidered !== undefined) updateData.improvementMarksConsidered = payload.improvementMarksConsidered;
+    if (payload.isBacklogAllowed !== undefined) updateData.isBacklogAllowed = payload.isBacklogAllowed;
+    if (payload.maximumBacklogAttempts !== undefined) updateData.maximumBacklogAttempts = payload.maximumBacklogAttempts;
+    if (payload.isSupplementaryAllowed !== undefined) updateData.isSupplementaryAllowed = payload.isSupplementaryAllowed;
+    if (payload.backlogValidityYears !== undefined) updateData.backlogValidityYears = payload.backlogValidityYears;
     if (payload.status !== undefined) updateData.status = payload.status;
     if (payload.isActive !== undefined) updateData.isActive = payload.isActive;
 

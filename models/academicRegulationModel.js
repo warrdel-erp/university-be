@@ -321,6 +321,135 @@ const academicRegulationModel = sequelize.define(
         },
 
         // ==========================================
+        // STEP 6: CREDIT REQUIREMENTS
+        // ==========================================
+        // Total credits required to complete the degree/program
+        totalCredits: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'total_credits'
+        },
+        // Core course mandatory credits requirement
+        coreCredits: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'core_credits'
+        },
+        // Elective course credits requirement
+        electiveCredits: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'elective_credits'
+        },
+        // Open elective course credits requirement
+        openElectiveCredits: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'open_elective_credits'
+        },
+        // Mandatory internship credits
+        internshipCredits: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'internship_credits'
+        },
+        // Mandatory project / dissertation credits
+        projectCredits: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'project_credits'
+        },
+
+        // ==========================================
+        // STEP 7: PROMOTION & ATKT RULES
+        // ==========================================
+        // Flag to enable Allowed To Keep Term (ATKT) system
+        isAtktEnabled: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: true,
+            field: 'is_atkt_enabled'
+        },
+        // Maximum allowed failing subjects under ATKT to qualify for promotion
+        maximumAtktSubjects: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'maximum_atkt_subjects'
+        },
+        // Flag enabling carry forward of backlog subjects to next term
+        isCarryForwardEnabled: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: true,
+            field: 'is_carry_forward_enabled'
+        },
+        // Maximum allowed subjects permitted for carry forward
+        maximumCarryForwardSubjects: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'maximum_carry_forward_subjects'
+        },
+        // Academic promotion evaluation method: YEAR_WISE | SEMESTER_WISE | TERM_WISE
+        promotionMethod: {
+            type: DataTypes.ENUM('YEAR_WISE', 'SEMESTER_WISE', 'TERM_WISE'),
+            allowNull: true,
+            field: 'promotion_method'
+        },
+
+        // ==========================================
+        // STEP 8: IMPROVEMENT RULES
+        // ==========================================
+        // Flag allowing grade/marks improvement re-examinations
+        isImprovementAllowed: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: false,
+            field: 'is_improvement_allowed'
+        },
+        // Maximum allowed re-examination attempts for improvement
+        maximumImprovementAttempts: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'maximum_improvement_attempts'
+        },
+        // Criteria for considering marks after improvement attempt: HIGHEST | LATEST
+        improvementMarksConsidered: {
+            type: DataTypes.ENUM('HIGHEST', 'LATEST'),
+            allowNull: true,
+            field: 'improvement_marks_considered'
+        },
+
+        // ==========================================
+        // STEP 9: BACKLOG & SUPPLEMENTARY RULES
+        // ==========================================
+        // Flag allowing backlog examination attempts for failed subjects
+        isBacklogAllowed: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: true,
+            field: 'is_backlog_allowed'
+        },
+        // Maximum allowed backlog examination attempts per subject
+        maximumBacklogAttempts: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'maximum_backlog_attempts'
+        },
+        // Flag permitting supplementary/re-sit exams in same academic session
+        isSupplementaryAllowed: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: true,
+            field: 'is_supplementary_allowed'
+        },
+        // Validity period in years within which backlogs must be cleared
+        backlogValidityYears: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'backlog_validity_years'
+        },
+
+        // ==========================================
         // SYSTEM AUDIT & STATUS CONTROL
         // ==========================================
         // Version number (increments by +0.1 on updates: 1.0 -> 1.1)

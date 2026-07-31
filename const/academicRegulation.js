@@ -26,3 +26,14 @@ export const GRACE_APPLICABLE_TO = [
   "EXTERNAL",
   "INTERNAL",
 ];
+
+export const PROMOTION_METHODS = [
+  "YEAR_WISE",
+  "SEMESTER_WISE",
+  "TERM_WISE",
+];
+
+export const IMPROVEMENT_MARKS_CONSIDERED = [
+  "HIGHEST",
+  "LATEST",
+];

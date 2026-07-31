@@ -512,7 +512,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"isModerationEnabled\": true,\n  \"isScalingEnabled\": false,\n  \"isNormalizationEnabled\": false,\n  \"isGraceMarksEnabled\": true,\n  \"maximumGraceMarks\": 5,\n  \"graceApplicableTo\": \"OVERALL\",\n  \"allowWithheldResult\": true,\n  \"resultFreeze\": true,\n  \"allowResultRevision\": false,\n  \"publishAutomatically\": false,\n  \"approvalRequired\": true,\n  \"status\": \"PUBLISHED\"\n}"
+              "raw": "{\n  \"isModerationEnabled\": true,\n  \"isScalingEnabled\": false,\n  \"isNormalizationEnabled\": false,\n  \"isGraceMarksEnabled\": true,\n  \"maximumGraceMarks\": 5,\n  \"graceApplicableTo\": \"OVERALL\",\n  \"allowWithheldResult\": true,\n  \"resultFreeze\": true,\n  \"allowResultRevision\": false,\n  \"publishAutomatically\": false,\n  \"approvalRequired\": true\n}"
             },
             "url": {
               "raw": "{{baseurl}}/academicRegulation/{{academicRegulationId}}",
@@ -527,7 +527,127 @@
           }
         },
         {
-          "name": "4.6 Get Single Academic Regulation",
+          "name": "4.6 Update Academic Regulation (Step 6: Credit Requirements)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"totalCredits\": 160,\n  \"coreCredits\": 100,\n  \"electiveCredits\": 30,\n  \"openElectiveCredits\": 14,\n  \"internshipCredits\": 6,\n  \"projectCredits\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicRegulation/{{academicRegulationId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicRegulation",
+                "{{academicRegulationId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.7 Update Academic Regulation (Step 7: Promotion & ATKT Rules)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isAtktEnabled\": true,\n  \"maximumAtktSubjects\": 4,\n  \"isCarryForwardEnabled\": true,\n  \"maximumCarryForwardSubjects\": 4,\n  \"promotionMethod\": \"SEMESTER_WISE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicRegulation/{{academicRegulationId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicRegulation",
+                "{{academicRegulationId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.8 Update Academic Regulation (Step 8: Improvement Rules)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isImprovementAllowed\": true,\n  \"maximumImprovementAttempts\": 2,\n  \"improvementMarksConsidered\": \"HIGHEST\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicRegulation/{{academicRegulationId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicRegulation",
+                "{{academicRegulationId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.9 Update Academic Regulation (Step 9: Backlog & Supplementary Rules)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isBacklogAllowed\": true,\n  \"maximumBacklogAttempts\": 3,\n  \"isSupplementaryAllowed\": true,\n  \"backlogValidityYears\": 5,\n  \"status\": \"PUBLISHED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicRegulation/{{academicRegulationId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicRegulation",
+                "{{academicRegulationId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.10 Get Single Academic Regulation",
           "request": {
             "method": "GET",
             "header": [
@@ -549,7 +669,7 @@
           }
         },
         {
-          "name": "4.7 Delete Academic Regulation",
+          "name": "4.11 Delete Academic Regulation",
           "request": {
             "method": "DELETE",
             "header": [
@@ -591,7 +711,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"examName\": \"Mid Term Assessment\",\n  \"examCode\": \"MID_2026\",\n  \"examCategory\": \"EXAMINATION\",\n  \"examSubcategory\": \"Mid Term\",\n  \"examDescription\": \"Mid term examination for semester 1\",\n  \"courseId\": 35,\n  \"sessionId\": 18,\n  \"maximumAssessment\": 50\n}"
+              "raw": "{\n  \"examName\": \"Mid Term Assessment\",\n  \"examCode\": \"MID_2026\",\n  \"examCategory\": \"EXAMINATION\",\n  \"examSubcategory\": \"Mid Term\",\n  \"examDescription\": \"Mid term examination for semester 1\",\n  \"courseId\": 35,\n  \"sessionId\": 18\n}"
             },
             "url": {
               "raw": "{{baseurl}}/examStructure/examType",
@@ -606,7 +726,7 @@
           }
         },
         {
-          "name": "5.2 Get Detail By Exam Type ID",
+          "name": "5.2 Get List Exam Setup Types",
           "request": {
             "method": "GET",
             "header": [
@@ -616,7 +736,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examStructure/examType?examSetupTypeId={{examSetupTypeId}}",
+              "raw": "{{baseurl}}/examStructure/examType?search=Mid&status=true&page=1&limit=10",
               "host": [
                 "{{baseurl}}"
               ],
@@ -626,15 +746,27 @@
               ],
               "query": [
                 {
-                  "key": "examSetupTypeId",
-                  "value": "{{examSetupTypeId}}"
+                  "key": "search",
+                  "value": "Mid"
+                },
+                {
+                  "key": "status",
+                  "value": "true"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
                 }
               ]
             }
           }
         },
         {
-          "name": "5.3 Get Single Exam Type By Course & Session",
+          "name": "5.3 Get All Exam Setup Types (or Single by Query)",
           "request": {
             "method": "GET",
             "header": [
@@ -644,23 +776,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examStructure/examType/single?courseId=35&sessionId=18",
+              "raw": "{{baseurl}}/examStructure/examType/all?examSetupTypeId={{examSetupTypeId}}",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "examStructure",
                 "examType",
-                "single"
+                "all"
               ],
               "query": [
                 {
-                  "key": "courseId",
-                  "value": "35"
-                },
-                {
-                  "key": "sessionId",
-                  "value": "18"
+                  "key": "examSetupTypeId",
+                  "value": "{{examSetupTypeId}}"
                 }
               ]
             }
@@ -682,7 +810,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"examSetupTypeId\": \"{{examSetupTypeId}}\",\n  \"examName\": \"Updated Mid Term Assessment\",\n  \"maximumAssessment\": 60\n}"
+              "raw": "{\n  \"examSetupTypeId\": {{examSetupTypeId}},\n  \"examName\": \"Updated Mid Term Assessment\",\n  \"examDescription\": \"Updated description\"\n}"
             },
             "url": {
               "raw": "{{baseurl}}/examStructure/examType",
