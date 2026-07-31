@@ -19,7 +19,7 @@ export const addExamTypeBodySchema = z.object({
   assessmentSubCategory: z.string().min(1).max(100),
   description: z.string().max(500).optional().nullable(),
   averagePassingMark: z.number().optional().nullable(),
-  isAveragePassingMark: z.boolean().optional().default(false),
+  isAveragePassingMark: z.boolean().optional().nullable(),
 });
 
 export const updateExamTypeBodySchema = z.object({
@@ -35,7 +35,7 @@ export const updateExamTypeBodySchema = z.object({
   assessmentSubCategory: z.string().min(1).max(100).optional(),
   description: z.string().max(500).optional().nullable(),
   averagePassingMark: z.number().optional().nullable(),
-  isAveragePassingMark: z.boolean().optional(),
+  isAveragePassingMark: z.boolean().optional().nullable(),
 });
 
 router.post('/', userAuth, checkAccess(PERMISSIONS.EXAM_TYPES_ADD.value, null), validate({ body: addExamTypeBodySchema }), addExamType);

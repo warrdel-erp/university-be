@@ -79,7 +79,8 @@ const examTypeModel = sequelize.define(
         },
         isAveragePassingMark: {
             type: DataTypes.BOOLEAN,
-            allowNull: false,
+            allowNull: true,
+            defaultValue: false,
             field: 'is_average_passing_mark'
         },
         createdBy: {
