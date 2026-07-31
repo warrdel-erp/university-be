@@ -39,7 +39,6 @@ const addExamTypeSchema = z.object({
   examDescription: z.string().max(500).optional().nullable(),
   courseId: z.coerce.number().int().positive().optional().nullable(),
   sessionId: z.coerce.number().int().positive().optional().nullable(),
-  maximumAssessment: z.coerce.number().int().optional().nullable(),
 });
 
 const updateExamTypeSchema = z.object({
@@ -51,7 +50,6 @@ const updateExamTypeSchema = z.object({
   examDescription: z.string().max(500).optional().nullable(),
   courseId: z.coerce.number().int().positive().optional().nullable(),
   sessionId: z.coerce.number().int().positive().optional().nullable(),
-  maximumAssessment: z.coerce.number().int().optional().nullable(),
 });
 
 //Table of examType

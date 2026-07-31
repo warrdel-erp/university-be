@@ -33,11 +33,6 @@ const examSetupTypeModel = sequelize.define(
                 key: 'institute_id'
             }
         },
-        maximumAssessment: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'maximum_assessment'
-        },
         examName: {
             type: DataTypes.STRING(100),
             field: 'exam_name',
