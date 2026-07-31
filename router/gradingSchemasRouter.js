@@ -117,7 +117,7 @@ router.delete(
 // Grades Endpoints
 // ---------------------------------------------------------------------------
 router.post(
-  "/:gradingSchemaId/grades",
+  "/grades/:gradingSchemaId",
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP_ADD.value, null),
   validate({ body: gradingGradeSchema }),

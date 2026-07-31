@@ -194,14 +194,14 @@
 							"raw": "{\n  \"grade\": \"B+\",\n  \"minPercentage\": 70.0,\n  \"maxPercentage\": 79.99,\n  \"gradePoint\": 8.0,\n  \"resultLabel\": \"Very Good\",\n  \"remarks\": \"Above average\",\n  \"sortOrder\": 4,\n  \"isPass\": true,\n  \"isActive\": true\n}"
 						},
 						"url": {
-							"raw": "{{baseurl}}/gradingSchemas/{{gradingSchemaId}}/grades",
+							"raw": "{{baseurl}}/gradingSchemas/grades/{{gradingSchemaId}}",
 							"host": [
 								"{{baseurl}}"
 							],
 							"path": [
 								"gradingSchemas",
-								"{{gradingSchemaId}}",
-								"grades"
+								"grades",
+								"{{gradingSchemaId}}"
 							]
 						}
 					},

@@ -15,7 +15,7 @@ API endpoints for managing Grading Schemas and individual Grade Scales.
 | 3 | `GET` | `/gradingSchemas/:gradingSchemaId` | Get single grading schema by ID |
 | 4 | `PUT` | `/gradingSchemas/:gradingSchemaId` | Update grading schema |
 | 5 | `DELETE` | `/gradingSchemas/:gradingSchemaId` | Delete grading schema |
-| 6 | `POST` | `/gradingSchemas/:gradingSchemaId/grades` | Add a grade to a grading schema |
+| 6 | `POST` | `/gradingSchemas/grades/:gradingSchemaId` | Add a grade to a grading schema |
 | 7 | `GET` | `/gradingSchemas/grades/:gradingSchemaId` | Get all grades of a grading schema |
 | 8 | `GET` | `/gradingSchemas/grades/:gradingSchemaGradeId` | Get single grade by ID |
 | 9 | `PUT` | `/gradingSchemas/grades/:gradingSchemaGradeId` | Update single grade |
