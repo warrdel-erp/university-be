@@ -11,6 +11,7 @@ import {
   assertCopyPeriodDateWiseMatch,
   assertDateWiseCellsBelongToTerm,
   canCopyPeriodToTarget,
+  getPeriodTeacherUserId,
   resolveAttendancePlacement,
   resolveDateWiseRoutinePlacement,
   resolveSourcePeriodByDateWiseId,
@@ -192,6 +193,30 @@ export async function copyAttendancePeriod(copyData, createdBy, updatedBy) {
     );
   }
 
+  const studentIds = [...new Set(sourceRows.map((r) => r.studentId))];
+  const studentSectionMap = new Map();
+  if (studentIds.length > 0) {
+    const students = await model.studentModel.findAll({
+      where: { studentId: { [Op.in]: studentIds } },
+      attributes: ['studentId', 'classSectionTermId'],
+      include: [
+        {
+          model: model.classSectionTermModel,
+          as: 'studentClassSectionTerm',
+          attributes: ['classSectionTermId', 'classSectionsId'],
+          required: false,
+        },
+      ],
+    });
+    for (const s of students) {
+      const plainS = s.get({ plain: true });
+      const sectionId = plainS.studentClassSectionTerm?.classSectionsId || null;
+      if (sectionId) {
+        studentSectionMap.set(plainS.studentId, sectionId);
+      }
+    }
+  }
+
   const t = await sequelize.transaction();
   try {
     const attendanceRecords = [];
@@ -199,13 +224,14 @@ export async function copyAttendancePeriod(copyData, createdBy, updatedBy) {
     for (const targetDateWiseId of pendingTargetIds) {
       const target = targetById.get(Number(targetDateWiseId));
       for (const row of sourceRows) {
+        const resolvedClassSectionsId = row.classSectionsId || sourcePlacement.classSectionsId || studentSectionMap.get(row.studentId) || null;
         attendanceRecords.push({
           studentId: row.studentId,
           attendanceStatus: row.attendanceStatus,
           notes: row.notes,
           description: row.description,
-          classSectionsId: sourcePlacement.classSectionsId,
-          classSectionTermId: sourcePlacement.classSectionTermId,
+          classSectionsId: resolvedClassSectionsId,
+          classSectionTermId: sourcePlacement.classSectionTermId || null,
           timeTableCellDateWiseId: Number(targetDateWiseId),
           timeTableCellId: Number(target.timeTableCellId),
           date,
@@ -281,6 +307,7 @@ function mapCopyPeriodItem(periodItem) {
     endTime: structurePeriod.endTime ?? null,
     subjectId: subject.subjectId,
     subjectName: subject.subjectName,
+    userId: getPeriodTeacherUserId(plain),
   };
 }
 
@@ -300,6 +327,7 @@ function mapCurrentPeriod(sourcePeriod, date, isMarked) {
     endTime: structurePeriod.endTime ?? null,
     subjectId: subject.subjectId,
     subjectName: subject.subjectName,
+    userId: getPeriodTeacherUserId(sourcePeriod),
     isMarked,
   };
 }
@@ -322,10 +350,16 @@ async function getCopyToPeriodsForSameDay(sourcePeriod, date) {
 
   const markedIds = await attendanceService.getMarkedDateWiseIds(candidateIds);
   const copyToPeriods = [];
+  const sourceUserId = getPeriodTeacherUserId(sourcePeriod);
 
   for (const periodItem of laterPeriods) {
     const targetDateWiseId = Number(periodItem.timeTableCellDateWiseId);
     if (targetDateWiseId === Number(sourcePeriod.timeTableCellDateWiseId)) {
+      continue;
+    }
+
+    const targetUserId = getPeriodTeacherUserId(periodItem);
+    if (sourceUserId != null && targetUserId != null && sourceUserId !== targetUserId) {
       continue;
     }
 

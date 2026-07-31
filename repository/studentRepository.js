@@ -2676,7 +2676,7 @@ export async function getStudentDetailsRepository(studentId) {
     }
 }
 
-export async function getStudentsByPlacement(placement, timeTableCellDateWiseId) {
+export async function getStudentsByPlacement(placement, timeTableCellDateWiseId, options = {}) {
 
     try {
         const academicYearId = getRequestAcademicYearId();
@@ -2701,6 +2701,18 @@ export async function getStudentsByPlacement(placement, timeTableCellDateWiseId)
             whereClause.classSectionTermId = Number(classSectionTermId);
         } else {
             return [];
+        }
+
+        const attendanceStatus = options?.attendanceStatus && options.attendanceStatus.length > 0
+            ? options.attendanceStatus
+            : null;
+
+        const attendanceWhere = Array.isArray(timeTableCellDateWiseId)
+            ? { timeTableCellDateWiseId: { [Op.in]: timeTableCellDateWiseId.map(Number) } }
+            : { timeTableCellDateWiseId: Number(timeTableCellDateWiseId) };
+
+        if (attendanceStatus) {
+            attendanceWhere.attendanceStatus = { [Op.in]: attendanceStatus };
         }
 
         const students = await scoped(model.studentModel).findAll({
@@ -2731,7 +2743,7 @@ export async function getStudentsByPlacement(placement, timeTableCellDateWiseId)
                 {
                     model: model.courseModel,
                     as: "course",
-                    attributes: ["courseId", "courseName", "courseCode"],
+                    attributes: ["courseId", "courseName", "courseCode", "termType"],
                 },
                 {
                     model: model.attendanceModel,
@@ -2745,10 +2757,8 @@ export async function getStudentsByPlacement(placement, timeTableCellDateWiseId)
                         "timeTableCellDateWiseId",
                         "timeTableCellId",
                     ],
-                    where: Array.isArray(timeTableCellDateWiseId)
-                        ? { timeTableCellDateWiseId: { [Op.in]: timeTableCellDateWiseId.map(Number) } }
-                        : { timeTableCellDateWiseId: Number(timeTableCellDateWiseId) },
-                    required: false,
+                    where: attendanceWhere,
+                    required: attendanceStatus ? true : false,
                 },
             ],
         });

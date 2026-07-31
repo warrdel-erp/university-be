@@ -1238,6 +1238,15 @@ sessionModel.hasMany(academicGroupScopeModel, {
   as: "academicGroupScopes",
 });
 
+academicGroupScopeModel.belongsTo(classSectionTermModel, {
+  foreignKey: "classSectionTermId",
+  as: "classSectionTerm",
+});
+classSectionTermModel.hasMany(academicGroupScopeModel, {
+  foreignKey: "classSectionTermId",
+  as: "academicGroupScopes",
+});
+
 academicGroupModel.belongsTo(academicGroupScopeModel, {
   foreignKey: "academicGroupScopeId",
   as: "scope",

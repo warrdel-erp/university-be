@@ -37,6 +37,7 @@ export async function getAttendanceRowsByDateWiseId(timeTableCellDateWiseId) {
                 'attendanceStatus',
                 'notes',
                 'description',
+                'classSectionsId',
             ],
             where: {
                 timeTableCellDateWiseId: Number(timeTableCellDateWiseId),
@@ -63,6 +64,12 @@ export async function getNextDateWisePeriodsOnSameDay(timeTableRoutineId, date, 
             ],
             include: [
                 {
+                    model: model.timeTableCellTeachersDateWiseModel,
+                    as: 'timeTableCellTeachersDateWise',
+                    attributes: ['timeTableCellTeachersDateWiseId', 'userId', 'teacherType'],
+                    required: false,
+                },
+                {
                     model: model.timeTableCellModel,
                     as: 'timeTableCell',
                     required: true,
@@ -82,6 +89,12 @@ export async function getNextDateWisePeriodsOnSameDay(timeTableRoutineId, date, 
                         'timeTableRoutineId',
                     ],
                     include: [
+                        {
+                            model: model.timeTableCellTeachersModel,
+                            as: 'timeTableCellTeachers',
+                            attributes: ['timeTableCellTeacherId', 'userId', 'teacherType'],
+                            required: false,
+                        },
                         {
                             model: model.timeTableRoutineModel,
                             as: 'timeTableRoutine',
@@ -117,7 +130,7 @@ export async function getNextDateWisePeriodsOnSameDay(timeTableRoutineId, date, 
                         {
                             model: model.teacherSubjectMappingModel,
                             as: 'timeTableTeacherSubject',
-                            attributes: ['teacherSubjectMappingId'],
+                            attributes: ['teacherSubjectMappingId', 'userId'],
                             required: false,
                             include: [
                                 {

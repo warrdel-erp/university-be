@@ -30,6 +30,7 @@ const addEmployeeCodeSchema = z.object({
 const getCodesTypesQuerySchema = z.object({
     employeeCodeMasterId: z.coerce.number().int().positive().optional(),
     key: z.string().optional(),
+    search: z.string().optional(),
 });
 
 const updateCodeMasterTypeSchema = z.object({
