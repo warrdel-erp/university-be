@@ -57,7 +57,7 @@ router.post("/examType", userAuth, validate({ body: addExamTypeSchema }), addExa
 
 router.get("/examType", userAuth, validate({ query: getDetailByExamTypeQuerySchema }), getDetailByExamType);
 
-router.get("/examType/single", userAuth, validate({ query: getallExamTypeQuerySchema }), getSingleExamType);
+router.get("/examType/all", userAuth, validate({ query: getallExamTypeQuerySchema }), getSingleExamType);
 
 router.patch("/examType", userAuth, validate({ body: updateExamTypeSchema }), updateExamType);
 
