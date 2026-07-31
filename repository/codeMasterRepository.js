@@ -169,7 +169,7 @@ export async function addEmployeeCode(data) {
   }
 }
 
-export async function getEmployeeCodesTypes(employeeCodeMasterId, key) {
+export async function getEmployeeCodesTypes(employeeCodeMasterId, key, search) {
   try {
     const categoryWhere = {
       ...(employeeCodeMasterId &&
@@ -201,10 +201,22 @@ export async function getEmployeeCodesTypes(employeeCodeMasterId, key) {
       return plain.employeeCodeMasterId;
     });
 
+    const codeTypeWhere = {
+      employeeCodeMasterId: { [Op.in]: categoryIds },
+    };
+
+    if (search && String(search).trim()) {
+      const term = `%${String(search).trim()}%`;
+      codeTypeWhere[Op.or] = [
+        { code: { [Op.like]: term } },
+        { description: { [Op.like]: term } },
+      ];
+    }
+
     const codeTypes = await scoped(model.employeeCodeMasterType).findAll({
       attributes: { exclude: excludeTypeMeta },
 
-      where: { employeeCodeMasterId: { [Op.in]: categoryIds } },
+      where: codeTypeWhere,
 
       order: [
         ["employeeCodeMasterId", "ASC"],

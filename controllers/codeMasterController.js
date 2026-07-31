@@ -23,9 +23,9 @@ export const addEmployeeCode = async (req, res) => {
 };
 
 export const getEmployeeCodesTypes = async (req, res) => {
-    const { employeeCodeMasterId, key } = req.query;
+    const { employeeCodeMasterId, key, search } = req.query;
     try {
-        const result = await codeMasterServices.getEmployeeCodesTypes(employeeCodeMasterId, key);
+        const result = await codeMasterServices.getEmployeeCodesTypes(employeeCodeMasterId, key, search);
         res.status(200).send(result);
     } catch (error) {
         console.error('Error in getting employee code and types:', error);

@@ -18,8 +18,8 @@ export async function addEmployeeCode(data, createdBy) {
     });
 }
 
-export async function getEmployeeCodesTypes(employeeCodeMasterId, key) {
-    return codeMasterRepository.getEmployeeCodesTypes(employeeCodeMasterId, key);
+export async function getEmployeeCodesTypes(employeeCodeMasterId, key, search) {
+    return codeMasterRepository.getEmployeeCodesTypes(employeeCodeMasterId, key, search);
 }
 
 export async function updateCodeMasterType(employeeCodeMasterTypeId, info) {
