@@ -101,6 +101,8 @@ import academicGroupModel from "./academicGroupModel.js";
 import academicGroupUserModel from "./academicGroupUserModel.js";
 import academicGroupStudentModel from "./academicGroupStudentModel.js";
 import academicRegulationModel from "./academicRegulationModel.js";
+import academicRegulationClassificationModel from "./academicRegulationClassificationModel.js";
+import academicRegulationCourseMappingModel from "./academicRegulationCourseMappingModel.js";
 import syllabusDetailsModel from "./syllabusDetailsModel.js";
 import syllabusModel from "./syllabusModel.js";
 import sessionModel from "./sessionModel.js";
@@ -1992,13 +1994,21 @@ universityModel.hasMany(studentHallTicketModel, { foreignKey: "university_id", a
 
 s3FileModel.belongsTo(userModel, { foreignKey: "createdBy", as: "creator" });
 userModel.hasMany(s3FileModel, { foreignKey: "createdBy", as: "s3Files" });
-academicRegulationModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
 academicRegulationModel.belongsTo(gradingModel, { foreignKey: 'gradingSchemeId', as: 'gradingScheme' });
 academicRegulationModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'creator' });
 academicRegulationModel.belongsTo(userModel, { foreignKey: 'updatedBy', as: 'updater' });
+academicRegulationModel.hasMany(academicRegulationClassificationModel, { foreignKey: 'academicRegulationId', as: 'classifications' });
+academicRegulationClassificationModel.belongsTo(academicRegulationModel, { foreignKey: 'academicRegulationId', as: 'academicRegulation' });
+
+academicRegulationModel.hasMany(academicRegulationCourseMappingModel, { foreignKey: 'academicRegulationId', as: 'courseMappings' });
+academicRegulationCourseMappingModel.belongsTo(academicRegulationModel, { foreignKey: 'academicRegulationId', as: 'academicRegulation' });
+academicRegulationCourseMappingModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
+academicRegulationCourseMappingModel.belongsTo(sessionModel, { foreignKey: 'sessionId', as: 'session' });
 
 export {
   academicRegulationModel,
+  academicRegulationClassificationModel,
+  academicRegulationCourseMappingModel,
   settingModel,
   universityModel,
   campusModel,

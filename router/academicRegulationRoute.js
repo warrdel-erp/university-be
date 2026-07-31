@@ -11,9 +11,30 @@ import {
   getAcademicRegulationById,
   updateAcademicRegulation,
   deleteAcademicRegulation,
+  createCourseMapping,
+  getCourseMappings,
+  deleteCourseMapping,
 } from "../controllers/academicRegulationController.js";
 
 const router = express.Router();
+
+const classificationItemSchema = z.object({
+  classificationName: z.string().min(1).max(100),
+  minimumCgpa: z.coerce.number().optional().nullable(),
+  minimumPercentage: z.coerce.number().optional().nullable(),
+  sortOrder: z.coerce.number().int().optional().nullable(),
+});
+
+const courseMappingItemSchema = z.object({
+  courseId: z.coerce.number().int().positive(),
+  sessionId: z.coerce.number().int().positive(),
+});
+
+export const createCourseMappingBody = z.object({
+  academicRegulationId: z.coerce.number().int().positive(),
+  courseId: z.coerce.number().int().positive(),
+  sessionId: z.coerce.number().int().positive(),
+});
 
 export const createAcademicRegulationBody = z.object({
   // ==========================================
@@ -22,7 +43,6 @@ export const createAcademicRegulationBody = z.object({
   regulationCode: z.string().min(1).max(50),
   regulationName: z.string().min(1).max(150),
   description: z.string().max(500).optional().nullable(),
-  courseId: z.coerce.number().int().positive().optional().nullable(),
   academicYearRange: z.string().max(50).optional().nullable(),
   applicableBatch: z.string().max(50).optional().nullable(),
   effectiveFrom: z.string().optional().nullable(),
@@ -113,6 +133,41 @@ export const createAcademicRegulationBody = z.object({
   isSupplementaryAllowed: z.boolean().optional().default(true),
   backlogValidityYears: z.coerce.number().int().optional().nullable(),
 
+  // ==========================================
+  // STEP 10: GRADUATION & DEGREE COMPLETION REQUIREMENTS
+  // ==========================================
+  totalCreditsRequired: z.coerce.number().int().optional().nullable(),
+  minimumCgpa: z.coerce.number().optional().nullable(),
+  isInternshipMandatory: z.boolean().optional().default(false),
+  isProjectMandatory: z.boolean().optional().default(false),
+  isCapstoneMandatory: z.boolean().optional().default(false),
+  isExitExaminationRequired: z.boolean().optional().default(false),
+  isNoActiveBacklogsRequired: z.boolean().optional().default(true),
+  isNoPendingFeesRequired: z.boolean().optional().default(true),
+  isNoDisciplinaryHoldRequired: z.boolean().optional().default(true),
+  minimumDegreeAttendancePercentage: z.coerce.number().optional().nullable(),
+
+  // ==========================================
+  // STEP 11: DEGREE CLASSIFICATIONS
+  // ==========================================
+  classifications: z.array(classificationItemSchema).optional().nullable(),
+
+  // ==========================================
+  // STEP 12: CERTIFICATES & TRANSCRIPT GENERATION RULES
+  // ==========================================
+  marksheetTemplateId: z.coerce.number().int().optional().nullable(),
+  transcriptTemplateId: z.coerce.number().int().optional().nullable(),
+  degreeCertificateTemplateId: z.coerce.number().int().optional().nullable(),
+  provisionalCertificateTemplateId: z.coerce.number().int().optional().nullable(),
+  isGenerateTranscriptAutomatically: z.boolean().optional().default(false),
+  isGenerateMarksheetAutomatically: z.boolean().optional().default(false),
+  isDigitalSignatureRequired: z.boolean().optional().default(true),
+  isQrVerificationEnabled: z.boolean().optional().default(true),
+  marksheetPrefix: z.string().max(50).optional().nullable(),
+  transcriptPrefix: z.string().max(50).optional().nullable(),
+  degreePrefix: z.string().max(50).optional().nullable(),
+  isAutoNumberingEnabled: z.boolean().optional().default(true),
+
   // STATUS & AUDIT
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional().default("DRAFT"),
   isActive: z.boolean().optional().default(true),
@@ -125,7 +180,6 @@ export const updateAcademicRegulationBody = z.object({
   regulationCode: z.string().min(1).max(50).optional(),
   regulationName: z.string().min(1).max(150).optional(),
   description: z.string().max(500).optional().nullable(),
-  courseId: z.coerce.number().int().positive().optional().nullable(),
   academicYearRange: z.string().max(50).optional().nullable(),
   applicableBatch: z.string().max(50).optional().nullable(),
   effectiveFrom: z.string().optional().nullable(),
@@ -216,6 +270,41 @@ export const updateAcademicRegulationBody = z.object({
   isSupplementaryAllowed: z.boolean().optional(),
   backlogValidityYears: z.coerce.number().int().optional().nullable(),
 
+  // ==========================================
+  // STEP 10: GRADUATION & DEGREE COMPLETION REQUIREMENTS
+  // ==========================================
+  totalCreditsRequired: z.coerce.number().int().optional().nullable(),
+  minimumCgpa: z.coerce.number().optional().nullable(),
+  isInternshipMandatory: z.boolean().optional(),
+  isProjectMandatory: z.boolean().optional(),
+  isCapstoneMandatory: z.boolean().optional(),
+  isExitExaminationRequired: z.boolean().optional(),
+  isNoActiveBacklogsRequired: z.boolean().optional(),
+  isNoPendingFeesRequired: z.boolean().optional(),
+  isNoDisciplinaryHoldRequired: z.boolean().optional(),
+  minimumDegreeAttendancePercentage: z.coerce.number().optional().nullable(),
+
+  // ==========================================
+  // STEP 11: DEGREE CLASSIFICATIONS
+  // ==========================================
+  classifications: z.array(classificationItemSchema).optional().nullable(),
+
+  // ==========================================
+  // STEP 12: CERTIFICATES & TRANSCRIPT GENERATION RULES
+  // ==========================================
+  marksheetTemplateId: z.coerce.number().int().optional().nullable(),
+  transcriptTemplateId: z.coerce.number().int().optional().nullable(),
+  degreeCertificateTemplateId: z.coerce.number().int().optional().nullable(),
+  provisionalCertificateTemplateId: z.coerce.number().int().optional().nullable(),
+  isGenerateTranscriptAutomatically: z.boolean().optional(),
+  isGenerateMarksheetAutomatically: z.boolean().optional(),
+  isDigitalSignatureRequired: z.boolean().optional(),
+  isQrVerificationEnabled: z.boolean().optional(),
+  marksheetPrefix: z.string().max(50).optional().nullable(),
+  transcriptPrefix: z.string().max(50).optional().nullable(),
+  degreePrefix: z.string().max(50).optional().nullable(),
+  isAutoNumberingEnabled: z.boolean().optional(),
+
   // STATUS & AUDIT
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
   isActive: z.boolean().optional(),
@@ -258,6 +347,29 @@ router.delete(
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
   deleteAcademicRegulation
+);
+
+// Course + Session Mapping Endpoints
+router.post(
+  "/courseRegulationMapping",
+  useAuth,
+  checkAccess(PERMISSIONS.GRADING_SETUP_EDIT.value, null),
+  validate({ body: createCourseMappingBody }),
+  createCourseMapping
+);
+
+router.get(
+  "/courseRegulationMapping/:academicRegulationId",
+  useAuth,
+  checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
+  getCourseMappings
+);
+
+router.delete(
+  "/courseRegulationMapping/:academicRegulationCourseMappingId",
+  useAuth,
+  checkAccess(PERMISSIONS.GRADING_SETUP_EDIT.value, null),
+  deleteCourseMapping
 );
 
 export default router;

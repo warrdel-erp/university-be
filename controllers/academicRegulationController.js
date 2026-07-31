@@ -69,3 +69,40 @@ export async function deleteAcademicRegulation(req, res) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to delete academic regulation");
   }
 }
+
+export async function createCourseMapping(req, res) {
+  try {
+    const { academicRegulationId, courseId, sessionId } = req.body;
+    const result = await academicRegulationService.createCourseMapping({
+      academicRegulationId,
+      courseId,
+      sessionId,
+    });
+    return SuccessResponse(res, 201, "Course mapping created successfully", result);
+  } catch (error) {
+    console.error("Error in createCourseMapping:", error.message);
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to create course mapping");
+  }
+}
+
+export async function getCourseMappings(req, res) {
+  try {
+    const { academicRegulationId } = req.params;
+    const result = await academicRegulationService.getCourseMappings(academicRegulationId);
+    return SuccessResponse(res, 200, "Course mappings fetched successfully", result);
+  } catch (error) {
+    console.error("Error in getCourseMappings:", error.message);
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to fetch course mappings");
+  }
+}
+
+export async function deleteCourseMapping(req, res) {
+  try {
+    const { academicRegulationCourseMappingId } = req.params;
+    const result = await academicRegulationService.deleteCourseMapping(academicRegulationCourseMappingId);
+    return SuccessResponse(res, 200, result.message || "Course mapping deleted successfully");
+  } catch (error) {
+    console.error("Error in deleteCourseMapping:", error.message);
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to delete course mapping");
+  }
+}

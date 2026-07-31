@@ -40,16 +40,6 @@ const academicRegulationModel = sequelize.define(
             allowNull: true,
             field: 'description'
         },
-        // Specific course/program ID if course-scoped, null if institute-wide
-        courseId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'course_id',
-            references: {
-                model: courseModel,
-                key: 'course_id'
-            }
-        },
         // Academic year range string (e.g. "2024-2029", "2026-2030")
         academicYearRange: {
             type: DataTypes.STRING(50),
@@ -450,6 +440,158 @@ const academicRegulationModel = sequelize.define(
         },
 
         // ==========================================
+        // STEP 10: GRADUATION & DEGREE COMPLETION REQUIREMENTS
+        // ==========================================
+        // Total cumulative credits required to qualify for degree award
+        totalCreditsRequired: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'total_credits_required'
+        },
+        // Minimum cumulative GPA required to be awarded the degree (e.g. 5.00)
+        minimumCgpa: {
+            type: DataTypes.DECIMAL(3, 2),
+            allowNull: true,
+            field: 'minimum_cgpa'
+        },
+        // Mandatory completion flag for internship program
+        isInternshipMandatory: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: false,
+            field: 'is_internship_mandatory'
+        },
+        // Mandatory completion flag for major degree project
+        isProjectMandatory: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: false,
+            field: 'is_project_mandatory'
+        },
+        // Mandatory completion flag for capstone project/thesis
+        isCapstoneMandatory: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: false,
+            field: 'is_capstone_mandatory'
+        },
+        // Mandatory requirement to clear comprehensive exit examination
+        isExitExaminationRequired: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: false,
+            field: 'is_exit_examination_required'
+        },
+        // Requirement for zero active failing backlog subjects at degree award time
+        isNoActiveBacklogsRequired: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: true,
+            field: 'is_no_active_backlogs_required'
+        },
+        // Requirement for complete clearance of university fee dues
+        isNoPendingFeesRequired: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: true,
+            field: 'is_no_pending_fees_required'
+        },
+        // Requirement for clean disciplinary record without active holds
+        isNoDisciplinaryHoldRequired: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: true,
+            field: 'is_no_disciplinary_hold_required'
+        },
+        // Minimum overall program attendance percentage required for degree (e.g. 75.00)
+        minimumDegreeAttendancePercentage: {
+            type: DataTypes.DECIMAL(5, 2),
+            allowNull: true,
+            field: 'minimum_degree_attendance_percentage'
+        },
+
+        // ==========================================
+        // STEP 12: CERTIFICATES & TRANSCRIPT GENERATION RULES
+        // ==========================================
+        // ID referencing Marksheet template
+        marksheetTemplateId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'marksheet_template_id'
+        },
+        // ID referencing Official Transcript template
+        transcriptTemplateId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'transcript_template_id'
+        },
+        // ID referencing Final Degree Certificate template
+        degreeCertificateTemplateId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'degree_certificate_template_id'
+        },
+        // ID referencing Provisional Degree Certificate template
+        provisionalCertificateTemplateId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'provisional_certificate_template_id'
+        },
+        // Flag to auto-generate transcript upon degree qualification
+        isGenerateTranscriptAutomatically: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: false,
+            field: 'is_generate_transcript_automatically'
+        },
+        // Flag to auto-generate marksheet upon semester result publication
+        isGenerateMarksheetAutomatically: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: false,
+            field: 'is_generate_marksheet_automatically'
+        },
+        // Flag requiring cryptographic digital signature on documents
+        isDigitalSignatureRequired: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: true,
+            field: 'is_digital_signature_required'
+        },
+        // Flag enabling QR code verification link/barcode on certificates
+        isQrVerificationEnabled: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: true,
+            field: 'is_qr_verification_enabled'
+        },
+        // Serial/document number prefix string for marksheets (e.g. "MS-2026-")
+        marksheetPrefix: {
+            type: DataTypes.STRING(50),
+            allowNull: true,
+            field: 'marksheet_prefix'
+        },
+        // Serial/document number prefix string for transcripts (e.g. "TR-2026-")
+        transcriptPrefix: {
+            type: DataTypes.STRING(50),
+            allowNull: true,
+            field: 'transcript_prefix'
+        },
+        // Serial/document number prefix string for degree certificates (e.g. "DG-2026-")
+        degreePrefix: {
+            type: DataTypes.STRING(50),
+            allowNull: true,
+            field: 'degree_prefix'
+        },
+        // Flag enabling automatic sequential document numbering
+        isAutoNumberingEnabled: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: true,
+            field: 'is_auto_numbering_enabled'
+        },
+
+        // ==========================================
         // SYSTEM AUDIT & STATUS CONTROL
         // ==========================================
         // Version number (increments by +0.1 on updates: 1.0 -> 1.1)
@@ -534,7 +676,7 @@ const academicRegulationModel = sequelize.define(
     {
         tableName: 'academic_regulation',
         timestamps: true,
-        paranoid: true
+        paranoid: false
     }
 );
 

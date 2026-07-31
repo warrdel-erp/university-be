@@ -632,7 +632,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"isBacklogAllowed\": true,\n  \"maximumBacklogAttempts\": 3,\n  \"isSupplementaryAllowed\": true,\n  \"backlogValidityYears\": 5,\n  \"status\": \"PUBLISHED\"\n}"
+              "raw": "{\n  \"isBacklogAllowed\": true,\n  \"maximumBacklogAttempts\": 3,\n  \"isSupplementaryAllowed\": true,\n  \"backlogValidityYears\": 5\n}"
             },
             "url": {
               "raw": "{{baseurl}}/academicRegulation/{{academicRegulationId}}",
@@ -647,7 +647,203 @@
           }
         },
         {
-          "name": "4.10 Get Single Academic Regulation",
+          "name": "4.10 Update Academic Regulation (Step 10: Graduation & Degree Completion Requirements)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"totalCreditsRequired\": 160,\n  \"minimumCgpa\": 5.00,\n  \"isInternshipMandatory\": true,\n  \"isProjectMandatory\": true,\n  \"isCapstoneMandatory\": false,\n  \"isExitExaminationRequired\": false,\n  \"isNoActiveBacklogsRequired\": true,\n  \"isNoPendingFeesRequired\": true,\n  \"isNoDisciplinaryHoldRequired\": true,\n  \"minimumDegreeAttendancePercentage\": 75.00\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicRegulation/{{academicRegulationId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicRegulation",
+                "{{academicRegulationId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.11 Update Academic Regulation (Step 11: Degree Classifications)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"classifications\": [\n    {\n      \"classificationName\": \"First Class with Distinction\",\n      \"minimumCgpa\": 8.00,\n      \"minimumPercentage\": 85.00,\n      \"sortOrder\": 1\n    },\n    {\n      \"classificationName\": \"First Class\",\n      \"minimumCgpa\": 6.50,\n      \"minimumPercentage\": 70.00,\n      \"sortOrder\": 2\n    },\n    {\n      \"classificationName\": \"Second Class\",\n      \"minimumCgpa\": 5.50,\n      \"minimumPercentage\": 60.00,\n      \"sortOrder\": 3\n    },\n    {\n      \"classificationName\": \"Pass Class\",\n      \"minimumCgpa\": 5.00,\n      \"minimumPercentage\": 50.00,\n      \"sortOrder\": 4\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicRegulation/{{academicRegulationId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicRegulation",
+                "{{academicRegulationId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.12 Update Academic Regulation (Step 12: Certificates & Transcript Generation Rules)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"marksheetTemplateId\": 1,\n  \"transcriptTemplateId\": 2,\n  \"degreeCertificateTemplateId\": 3,\n  \"provisionalCertificateTemplateId\": 4,\n  \"isGenerateTranscriptAutomatically\": false,\n  \"isGenerateMarksheetAutomatically\": false,\n  \"isDigitalSignatureRequired\": true,\n  \"isQrVerificationEnabled\": true,\n  \"marksheetPrefix\": \"MS-2026-\",\n  \"transcriptPrefix\": \"TR-2026-\",\n  \"degreePrefix\": \"DG-2026-\",\n  \"isAutoNumberingEnabled\": true,\n  \"status\": \"PUBLISHED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicRegulation/{{academicRegulationId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicRegulation",
+                "{{academicRegulationId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.13 Update Academic Regulation (Master Payload - All 12 Steps in 1 Call)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"regulationCode\": \"REG-2026-CS\",\n  \"regulationName\": \"Computer Science Academic Regulation 2026\",\n  \"description\": \"Comprehensive regulation for B.Tech CS 2026 Batch\",\n  \"academicYearRange\": \"2026-2030\",\n  \"applicableBatch\": \"2026\",\n  \"effectiveFrom\": \"2026-07-01\",\n  \"effectiveUntil\": \"2030-06-30\",\n  \"gradingSchemeId\": 1,\n  \"evaluationPattern\": \"WEIGHTAGE_BASED\",\n  \"internalWeightage\": 40,\n  \"externalWeightage\": 60,\n  \"maximumInternalMarks\": 40,\n  \"maximumExternalMarks\": 60,\n  \"isInternalAssessmentMandatory\": true,\n  \"isExternalAssessmentMandatory\": true,\n  \"minimumAttendance\": 75,\n  \"isAssessmentCompletionRequired\": true,\n  \"isPracticalCompletionRequired\": true,\n  \"isProjectSubmissionRequired\": true,\n  \"isInternshipCompletionRequired\": false,\n  \"minimumOverallMarks\": 40,\n  \"minimumOverallPercentage\": 40,\n  \"minimumInternalMarks\": 16,\n  \"minimumExternalMarks\": 24,\n  \"mandatoryComponents\": [\"THEORY\", \"PRACTICAL\"],\n  \"calculateSGPA\": true,\n  \"calculateCGPA\": true,\n  \"calculatePercentage\": false,\n  \"generateClass\": true,\n  \"generateRank\": false,\n  \"tieBreakingMethod\": \"HIGHER_EXTERNAL_MARKS\",\n  \"isModerationEnabled\": true,\n  \"isScalingEnabled\": false,\n  \"isNormalizationEnabled\": false,\n  \"isGraceMarksEnabled\": true,\n  \"maximumGraceMarks\": 5,\n  \"graceApplicableTo\": \"OVERALL\",\n  \"allowWithheldResult\": true,\n  \"resultFreeze\": true,\n  \"allowResultRevision\": false,\n  \"publishAutomatically\": false,\n  \"approvalRequired\": true,\n  \"totalCredits\": 160,\n  \"coreCredits\": 100,\n  \"electiveCredits\": 30,\n  \"openElectiveCredits\": 15,\n  \"internshipCredits\": 5,\n  \"projectCredits\": 10,\n  \"isAtktEnabled\": true,\n  \"maximumAtktSubjects\": 3,\n  \"isCarryForwardEnabled\": true,\n  \"maximumCarryForwardSubjects\": 3,\n  \"promotionMethod\": \"YEAR_WISE\",\n  \"isImprovementAllowed\": true,\n  \"maximumImprovementAttempts\": 2,\n  \"improvementMarksConsidered\": \"HIGHEST\",\n  \"isBacklogAllowed\": true,\n  \"maximumBacklogAttempts\": 3,\n  \"isSupplementaryAllowed\": true,\n  \"backlogValidityYears\": 5,\n  \"totalCreditsRequired\": 160,\n  \"minimumCgpa\": 5,\n  \"isInternshipMandatory\": true,\n  \"isProjectMandatory\": true,\n  \"isCapstoneMandatory\": false,\n  \"isExitExaminationRequired\": false,\n  \"isNoActiveBacklogsRequired\": true,\n  \"isNoPendingFeesRequired\": true,\n  \"isNoDisciplinaryHoldRequired\": true,\n  \"minimumDegreeAttendancePercentage\": 75,\n  \"classifications\": [\n    {\n      \"classificationName\": \"First Class with Distinction\",\n      \"minimumCgpa\": 8,\n      \"minimumPercentage\": 85,\n      \"sortOrder\": 1\n    },\n    {\n      \"classificationName\": \"First Class\",\n      \"minimumCgpa\": 6.5,\n      \"minimumPercentage\": 70,\n      \"sortOrder\": 2\n    },\n    {\n      \"classificationName\": \"Second Class\",\n      \"minimumCgpa\": 5.5,\n      \"minimumPercentage\": 60,\n      \"sortOrder\": 3\n    },\n    {\n      \"classificationName\": \"Pass Class\",\n      \"minimumCgpa\": 5,\n      \"minimumPercentage\": 50,\n      \"sortOrder\": 4\n    }\n  ],\n  \"marksheetTemplateId\": 1,\n  \"transcriptTemplateId\": 2,\n  \"degreeCertificateTemplateId\": 3,\n  \"provisionalCertificateTemplateId\": 4,\n  \"isGenerateTranscriptAutomatically\": false,\n  \"isGenerateMarksheetAutomatically\": false,\n  \"isDigitalSignatureRequired\": true,\n  \"isQrVerificationEnabled\": true,\n  \"marksheetPrefix\": \"MS-2026-\",\n  \"transcriptPrefix\": \"TR-2026-\",\n  \"degreePrefix\": \"DG-2026-\",\n  \"isAutoNumberingEnabled\": true,\n  \"status\": \"PUBLISHED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicRegulation/{{academicRegulationId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicRegulation",
+                "{{academicRegulationId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.14 Map Course & Session to Academic Regulation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicRegulationId\": {{academicRegulationId}},\n  \"courseId\": 35,\n  \"sessionId\": 18\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicRegulation/courseRegulationMapping",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicRegulation",
+                "courseRegulationMapping"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.15 Get Mapped Courses for Academic Regulation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/academicRegulation/courseRegulationMapping/{{academicRegulationId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicRegulation",
+                "courseRegulationMapping",
+                "{{academicRegulationId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.16 Delete Course & Session Mapping",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/academicRegulation/courseRegulationMapping/1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicRegulation",
+                "courseRegulationMapping",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.17 Get Single Academic Regulation",
           "request": {
             "method": "GET",
             "header": [
@@ -669,7 +865,34 @@
           }
         },
         {
-          "name": "4.11 Delete Academic Regulation",
+          "name": "4.18 Get All Academic Regulations (Paginated & Filtered)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/academicRegulation?page=1&limit=10&status=PUBLISHED&search=2026",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicRegulation"
+              ],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "status", "value": "PUBLISHED" },
+                { "key": "search", "value": "2026" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.19 Delete Academic Regulation",
           "request": {
             "method": "DELETE",
             "header": [
@@ -869,7 +1092,7 @@
   "variable": [
     {
       "key": "baseurl",
-      "value": "http://localhost:5000",
+      "value": "http://localhost:8080",
       "type": "string"
     },
     {

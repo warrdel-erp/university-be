@@ -48,15 +48,24 @@ export async function getAcademicRegulations({ search, status, courseId, academi
     where,
     include: [
       {
-        model: model.courseModel,
-        as: "course",
-        attributes: ["courseId", "courseName", "courseCode"],
-        required: false,
-      },
-      {
         model: model.gradingModel,
         as: "gradingScheme",
         attributes: ["gradingId", "gradingName", "gradingCode", "gradingMethod"],
+        required: false,
+      },
+      {
+        model: model.academicRegulationClassificationModel,
+        as: "classifications",
+        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+        required: false,
+      },
+      {
+        model: model.academicRegulationCourseMappingModel,
+        as: "courseMappings",
+        include: [
+          { model: model.courseModel, as: "course", attributes: ["courseId", "courseName", "courseCode"] },
+          { model: model.sessionModel, as: "session", attributes: ["sessionId", "sessionName"] },
+        ],
         required: false,
       },
     ],
@@ -80,15 +89,24 @@ export async function getAcademicRegulationById(academicRegulationId, options = 
     where: { academicRegulationId: Number(academicRegulationId) },
     include: [
       {
-        model: model.courseModel,
-        as: "course",
-        attributes: ["courseId", "courseName", "courseCode"],
-        required: false,
-      },
-      {
         model: model.gradingModel,
         as: "gradingScheme",
         attributes: ["gradingId", "gradingName", "gradingCode", "gradingMethod"],
+        required: false,
+      },
+      {
+        model: model.academicRegulationClassificationModel,
+        as: "classifications",
+        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+        required: false,
+      },
+      {
+        model: model.academicRegulationCourseMappingModel,
+        as: "courseMappings",
+        include: [
+          { model: model.courseModel, as: "course", attributes: ["courseId", "courseName", "courseCode"] },
+          { model: model.sessionModel, as: "session", attributes: ["sessionId", "sessionName"] },
+        ],
         required: false,
       },
     ],
@@ -97,6 +115,8 @@ export async function getAcademicRegulationById(academicRegulationId, options = 
 }
 
 export async function updateAcademicRegulation(academicRegulationId, data, options = {}) {
+  const { classifications, courseMappings, ...updatePayload } = data;
+
   const existing = await scoped(model.academicRegulationModel).findOne({
     where: { academicRegulationId: Number(academicRegulationId) },
     transaction: options.transaction,
@@ -109,16 +129,60 @@ export async function updateAcademicRegulation(academicRegulationId, data, optio
   const currentVersion = Number(existing.version) || 1.0;
   const nextVersion = decimalAdd(currentVersion, 0.1);
 
-  await scoped(model.academicRegulationModel).update(
-    {
-      ...data,
-      version: nextVersion,
-    },
-    {
+  if (Object.keys(updatePayload).length > 0) {
+    await scoped(model.academicRegulationModel).update(
+      {
+        ...updatePayload,
+        version: nextVersion,
+      },
+      {
+        where: { academicRegulationId: Number(academicRegulationId) },
+        transaction: options.transaction,
+      }
+    );
+  }
+
+  if (Array.isArray(classifications)) {
+    await scoped(model.academicRegulationClassificationModel).destroy({
       where: { academicRegulationId: Number(academicRegulationId) },
       transaction: options.transaction,
+    });
+
+    if (classifications.length > 0) {
+      const recordsToCreate = classifications.map((item, index) => ({
+        ...item,
+        academicRegulationId: Number(academicRegulationId),
+        sortOrder: item.sortOrder ?? index + 1,
+      }));
+
+      await Promise.all(
+        recordsToCreate.map((item) =>
+          scoped(model.academicRegulationClassificationModel).create(item, { transaction: options.transaction })
+        )
+      );
     }
-  );
+  }
+
+  if (Array.isArray(courseMappings)) {
+    await scoped(model.academicRegulationCourseMappingModel).destroy({
+      where: { academicRegulationId: Number(academicRegulationId) },
+      transaction: options.transaction,
+    });
+
+    if (courseMappings.length > 0) {
+      const mappingsToCreate = courseMappings.map((item) => ({
+        academicRegulationId: Number(academicRegulationId),
+        courseId: Number(item.courseId),
+        sessionId: Number(item.sessionId),
+      }));
+
+      await Promise.all(
+        mappingsToCreate.map((item) =>
+          scoped(model.academicRegulationCourseMappingModel).create(item, { transaction: options.transaction })
+        )
+      );
+    }
+  }
 
   return await getAcademicRegulationById(academicRegulationId, options);
 }
@@ -126,6 +190,36 @@ export async function updateAcademicRegulation(academicRegulationId, data, optio
 export async function deleteAcademicRegulation(academicRegulationId, options = {}) {
   return await scoped(model.academicRegulationModel).destroy({
     where: { academicRegulationId: Number(academicRegulationId) },
+    transaction: options.transaction,
+  });
+}
+
+export async function createCourseMapping(data, options = {}) {
+  const record = await scoped(model.academicRegulationCourseMappingModel).create(data, options);
+  return await scoped(model.academicRegulationCourseMappingModel).findOne({
+    where: { academicRegulationCourseMappingId: record.academicRegulationCourseMappingId },
+    include: [
+      { model: model.courseModel, as: "course", attributes: ["courseId", "courseName", "courseCode"] },
+      { model: model.sessionModel, as: "session", attributes: ["sessionId", "sessionName"] },
+    ],
+    transaction: options.transaction,
+  });
+}
+
+export async function getCourseMappingsByRegulationId(academicRegulationId, options = {}) {
+  return await scoped(model.academicRegulationCourseMappingModel).findAll({
+    where: { academicRegulationId: Number(academicRegulationId) },
+    include: [
+      { model: model.courseModel, as: "course", attributes: ["courseId", "courseName", "courseCode"] },
+      { model: model.sessionModel, as: "session", attributes: ["sessionId", "sessionName"] },
+    ],
+    transaction: options.transaction,
+  });
+}
+
+export async function deleteCourseMapping(academicRegulationCourseMappingId, options = {}) {
+  return await scoped(model.academicRegulationCourseMappingModel).destroy({
+    where: { academicRegulationCourseMappingId: Number(academicRegulationCourseMappingId) },
     transaction: options.transaction,
   });
 }

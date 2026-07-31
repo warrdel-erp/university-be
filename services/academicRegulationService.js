@@ -118,6 +118,29 @@ export async function updateAcademicRegulation(academicRegulationId, payload, us
     if (payload.maximumBacklogAttempts !== undefined) updateData.maximumBacklogAttempts = payload.maximumBacklogAttempts;
     if (payload.isSupplementaryAllowed !== undefined) updateData.isSupplementaryAllowed = payload.isSupplementaryAllowed;
     if (payload.backlogValidityYears !== undefined) updateData.backlogValidityYears = payload.backlogValidityYears;
+    if (payload.totalCreditsRequired !== undefined) updateData.totalCreditsRequired = payload.totalCreditsRequired;
+    if (payload.minimumCgpa !== undefined) updateData.minimumCgpa = payload.minimumCgpa;
+    if (payload.isInternshipMandatory !== undefined) updateData.isInternshipMandatory = payload.isInternshipMandatory;
+    if (payload.isProjectMandatory !== undefined) updateData.isProjectMandatory = payload.isProjectMandatory;
+    if (payload.isCapstoneMandatory !== undefined) updateData.isCapstoneMandatory = payload.isCapstoneMandatory;
+    if (payload.isExitExaminationRequired !== undefined) updateData.isExitExaminationRequired = payload.isExitExaminationRequired;
+    if (payload.isNoActiveBacklogsRequired !== undefined) updateData.isNoActiveBacklogsRequired = payload.isNoActiveBacklogsRequired;
+    if (payload.isNoPendingFeesRequired !== undefined) updateData.isNoPendingFeesRequired = payload.isNoPendingFeesRequired;
+    if (payload.isNoDisciplinaryHoldRequired !== undefined) updateData.isNoDisciplinaryHoldRequired = payload.isNoDisciplinaryHoldRequired;
+    if (payload.minimumDegreeAttendancePercentage !== undefined) updateData.minimumDegreeAttendancePercentage = payload.minimumDegreeAttendancePercentage;
+    if (payload.classifications !== undefined) updateData.classifications = payload.classifications;
+    if (payload.marksheetTemplateId !== undefined) updateData.marksheetTemplateId = payload.marksheetTemplateId;
+    if (payload.transcriptTemplateId !== undefined) updateData.transcriptTemplateId = payload.transcriptTemplateId;
+    if (payload.degreeCertificateTemplateId !== undefined) updateData.degreeCertificateTemplateId = payload.degreeCertificateTemplateId;
+    if (payload.provisionalCertificateTemplateId !== undefined) updateData.provisionalCertificateTemplateId = payload.provisionalCertificateTemplateId;
+    if (payload.isGenerateTranscriptAutomatically !== undefined) updateData.isGenerateTranscriptAutomatically = payload.isGenerateTranscriptAutomatically;
+    if (payload.isGenerateMarksheetAutomatically !== undefined) updateData.isGenerateMarksheetAutomatically = payload.isGenerateMarksheetAutomatically;
+    if (payload.isDigitalSignatureRequired !== undefined) updateData.isDigitalSignatureRequired = payload.isDigitalSignatureRequired;
+    if (payload.isQrVerificationEnabled !== undefined) updateData.isQrVerificationEnabled = payload.isQrVerificationEnabled;
+    if (payload.marksheetPrefix !== undefined) updateData.marksheetPrefix = payload.marksheetPrefix;
+    if (payload.transcriptPrefix !== undefined) updateData.transcriptPrefix = payload.transcriptPrefix;
+    if (payload.degreePrefix !== undefined) updateData.degreePrefix = payload.degreePrefix;
+    if (payload.isAutoNumberingEnabled !== undefined) updateData.isAutoNumberingEnabled = payload.isAutoNumberingEnabled;
     if (payload.status !== undefined) updateData.status = payload.status;
     if (payload.isActive !== undefined) updateData.isActive = payload.isActive;
 
@@ -135,5 +158,35 @@ export async function deleteAcademicRegulation(academicRegulationId) {
     }
     await academicRegulationRepo.deleteAcademicRegulation(academicRegulationId, { transaction: t });
     return { message: "Academic regulation deleted successfully" };
+  });
+}
+
+export async function createCourseMapping({ academicRegulationId, courseId, sessionId }) {
+  return await sequelize.transaction(async (t) => {
+    const existingRegulation = await academicRegulationRepo.getAcademicRegulationById(academicRegulationId, { transaction: t });
+    if (!existingRegulation) {
+      const error = new Error("Academic regulation not found");
+      error.statusCode = 404;
+      throw error;
+    }
+    return await academicRegulationRepo.createCourseMapping(
+      {
+        academicRegulationId: Number(academicRegulationId),
+        courseId: Number(courseId),
+        sessionId: Number(sessionId),
+      },
+      { transaction: t }
+    );
+  });
+}
+
+export async function getCourseMappings(academicRegulationId) {
+  return await academicRegulationRepo.getCourseMappingsByRegulationId(academicRegulationId);
+}
+
+export async function deleteCourseMapping(academicRegulationCourseMappingId) {
+  return await sequelize.transaction(async (t) => {
+    await academicRegulationRepo.deleteCourseMapping(academicRegulationCourseMappingId, { transaction: t });
+    return { message: "Course mapping deleted successfully" };
   });
 }
