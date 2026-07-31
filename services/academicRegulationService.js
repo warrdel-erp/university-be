@@ -89,6 +89,17 @@ export async function updateAcademicRegulation(academicRegulationId, payload, us
     if (payload.generateClass !== undefined) updateData.generateClass = payload.generateClass;
     if (payload.generateRank !== undefined) updateData.generateRank = payload.generateRank;
     if (payload.tieBreakingMethod !== undefined) updateData.tieBreakingMethod = payload.tieBreakingMethod;
+    if (payload.isModerationEnabled !== undefined) updateData.isModerationEnabled = payload.isModerationEnabled;
+    if (payload.isScalingEnabled !== undefined) updateData.isScalingEnabled = payload.isScalingEnabled;
+    if (payload.isNormalizationEnabled !== undefined) updateData.isNormalizationEnabled = payload.isNormalizationEnabled;
+    if (payload.isGraceMarksEnabled !== undefined) updateData.isGraceMarksEnabled = payload.isGraceMarksEnabled;
+    if (payload.maximumGraceMarks !== undefined) updateData.maximumGraceMarks = payload.maximumGraceMarks;
+    if (payload.graceApplicableTo !== undefined) updateData.graceApplicableTo = payload.graceApplicableTo;
+    if (payload.allowWithheldResult !== undefined) updateData.allowWithheldResult = payload.allowWithheldResult;
+    if (payload.resultFreeze !== undefined) updateData.resultFreeze = payload.resultFreeze;
+    if (payload.allowResultRevision !== undefined) updateData.allowResultRevision = payload.allowResultRevision;
+    if (payload.publishAutomatically !== undefined) updateData.publishAutomatically = payload.publishAutomatically;
+    if (payload.approvalRequired !== undefined) updateData.approvalRequired = payload.approvalRequired;
     if (payload.status !== undefined) updateData.status = payload.status;
     if (payload.isActive !== undefined) updateData.isActive = payload.isActive;
 

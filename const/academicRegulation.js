@@ -20,3 +20,9 @@ export const TIE_BREAKING_METHODS = [
   "ALPHABETICAL",
   "RANDOM",
 ];
+
+export const GRACE_APPLICABLE_TO = [
+  "OVERALL",
+  "EXTERNAL",
+  "INTERNAL",
+];
