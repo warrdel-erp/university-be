@@ -71,9 +71,15 @@ function dateWiseCellInclude() {
         {
           model: model.timeTableRoutineModel,
           as: 'timeTableRoutine',
-          attributes: ['timeTableRoutineId', 'classSectionTermId', 'startingDate', 'endingDate', 'academicGroupId'],
+          attributes: ['timeTableRoutineId', 'classSectionTermId', 'startingDate', 'endingDate', 'academicGroupId', 'courseId'],
           required: true,
           include: [
+            {
+              model: model.courseModel,
+              as: 'timeTableCourse',
+              attributes: ['courseId', 'courseName', 'courseCode', 'termType'],
+              required: false,
+            },
             timeTableRoutineClassSectionInclude({
               termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
               sectionAttributes: ['classSectionsId', 'year', 'section'],
@@ -90,6 +96,12 @@ function dateWiseCellInclude() {
                   attributes: ['academicGroupScopeId', 'title', 'academicContextType', 'courseId', 'sessionId', 'term', 'classSectionTermId'],
                   required: false,
                   include: [
+                    {
+                      model: model.courseModel,
+                      as: 'course',
+                      attributes: ['courseId', 'courseName', 'courseCode', 'termType'],
+                      required: false,
+                    },
                     {
                       model: model.classSectionTermModel,
                       as: 'classSectionTerm',

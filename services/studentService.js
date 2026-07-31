@@ -2715,22 +2715,45 @@ function isGroupPeriodsEnabled(groupPeriods) {
   return groupPeriods === true || groupPeriods === 'true' || groupPeriods === '1';
 }
 
-function buildProgramDetails(period, students) {
-  const first = students[0] || {};
-  const termRow = first.studentClassSectionTerm || {};
+function buildProgramDetails(period, students = []) {
+  const studentWithCourse = students.find((s) => s.course && (s.course.courseName || s.course.courseId));
+  const studentWithTerm = students.find((s) => s.studentClassSectionTerm);
+
+  const termRow = studentWithTerm?.studentClassSectionTerm || {};
   const section = termRow.classSection || {};
-  const course = first.course || {};
-  const subject = period.timeTableSubject || {};
+
+  const cell = period.timeTableCell || {};
+  const routine = period.timeTableRoutine || cell.timeTableRoutine || {};
+  const academicGroupScope = period.academicGroup?.scope || routine.academicGroup?.scope || {};
+
+  const course =
+    studentWithCourse?.course
+    || routine.timeTableCourse
+    || academicGroupScope.course
+    || period.timeTableCourse
+    || period.course
+    || {};
+
+  const subject = period.timeTableSubject || cell.timeTableSubject || {};
+
+  const scopeClassSectionTerm = academicGroupScope.classSectionTerm || {};
+  const scopeSection = scopeClassSectionTerm.classSection || {};
+  const routineTermRow = routine.timeTableClassSectionTerm || {};
+  const routineSection = routineTermRow.classSection || {};
 
   return {
     classSectionsId:
       period.classSectionsId
       ?? termRow.classSectionsId
       ?? section.classSectionsId
+      ?? scopeClassSectionTerm.classSectionsId
+      ?? scopeSection.classSectionsId
+      ?? routineTermRow.classSectionsId
+      ?? routineSection.classSectionsId
       ?? null,
-    year: period.year ?? section.year ?? null,
-    section: period.section ?? section.section ?? null,
-    term: period.term ?? termRow.term ?? null,
+    year: period.year ?? section.year ?? scopeSection.year ?? routineSection.year ?? null,
+    section: period.section ?? section.section ?? scopeSection.section ?? routineSection.section ?? null,
+    term: period.term ?? termRow.term ?? academicGroupScope.term ?? scopeClassSectionTerm.term ?? routineTermRow.term ?? null,
     termType: course.termType ?? null,
     subjectId: subject.subjectId ?? null,
     subjectName: subject.subjectName ?? null,
