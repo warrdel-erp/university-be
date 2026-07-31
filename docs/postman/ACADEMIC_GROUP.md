@@ -256,3 +256,16 @@ Or `{ "academicGroupStudentId": 1 }`
 10. `capacity` enforced when set.
 11. For `program_specific`, students must match scope `courseId` + `sessionId`.
 12. Out of scope for this module: timetable / classroom routine for groups, cross-program multi-course UI.
+
+---
+
+## Exam Types APIs
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `POST` | `/examType` | Create exam type (`examName`, `assessmentCode`, `assessmentCategory`, `assessmentSubCategory`, `description`, `averagePassingMark`, `isAveragePassingMark`) |
+| `GET` | `/examType` | Get exam types list (`academicYearId`) |
+| `GET` | `/examType/single` | Get single exam type details (`examTypeId`) |
+| `PATCH` | `/examType` | Update exam type record by `examTypeId` |
+| `DELETE` | `/examType` | Soft delete exam type (`examTypeId`) |
+

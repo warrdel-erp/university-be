@@ -326,3 +326,61 @@ export const ACADEMIC_GROUP_USER_ROLES = [
   "external_faculty",
   "evaluator",
 ];
+
+/** Assessment Category Constants */
+export const ASSESSMENT_CATEGORIES = [
+  "EXAMINATION",
+  "CONTINUOUS_ASSESSMENT",
+  "PRACTICAL_EVALUATION",
+  "PROJECT_RESEARCH_EVALUATION",
+  "PARTICIPATION_ENGAGEMENT",
+];
+
+export const ASSESSMENT_CATEGORY_DETAILS = {
+  EXAMINATION: {
+    category: "Examination",
+    purpose: "Scheduled formal assessments",
+    subCategories: ["Mid Term", "End Term", "Supplementary Exam"],
+  },
+  CONTINUOUS_ASSESSMENT: {
+    category: "Continuous Assessment",
+    purpose: "Ongoing academic evaluation",
+    subCategories: ["Assignment", "Quiz", "Presentation", "Test"],
+  },
+  PRACTICAL_EVALUATION: {
+    category: "Practical Evaluation",
+    purpose: "Hands-on skill evaluation",
+    subCategories: ["Lab", "Practical", "Studio Work", "Viva"],
+  },
+  PROJECT_RESEARCH_EVALUATION: {
+    category: "Project & Research Evaluation",
+    purpose: "Long-duration academic work",
+    subCategories: ["Dissertation", "Thesis", "Capstone Project", "Internship"],
+  },
+  PARTICIPATION_ENGAGEMENT: {
+    category: "Participation & Engagement",
+    purpose: "Non-exam contribution",
+    subCategories: ["Attendance", "Seminar Participation", "Classroom Activity"],
+  },
+};
+
+export const ASSESSMENT_SUB_CATEGORIES = [
+  "Mid Term",
+  "End Term",
+  "Supplementary Exam",
+  "Assignment",
+  "Quiz",
+  "Presentation",
+  "Test",
+  "Lab",
+  "Practical",
+  "Studio Work",
+  "Viva",
+  "Dissertation",
+  "Thesis",
+  "Capstone Project",
+  "Internship",
+  "Attendance",
+  "Seminar Participation",
+  "Classroom Activity",
+];

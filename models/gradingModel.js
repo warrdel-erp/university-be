@@ -35,6 +35,16 @@ const gradingModel = sequelize.define(
             allowNull: false,
             field: "grading_method",
         },
+        maximumMarks: {
+            type: DataTypes.DECIMAL(6, 2),
+            allowNull: true,
+            field: "maximum_marks",
+        },
+        minimumPassingMarks: {
+            type: DataTypes.DECIMAL(6, 2),
+            allowNull: true,
+            field: "minimum_passing_marks",
+        },
         description: {
             type: DataTypes.STRING(500),
             allowNull: true,

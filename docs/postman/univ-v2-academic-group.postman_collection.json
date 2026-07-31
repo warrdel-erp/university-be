@@ -69,6 +69,14 @@
     {
       "key": "classSectionTermId",
       "value": "12"
+    },
+    {
+      "key": "examTypeId",
+      "value": "1"
+    },
+    {
+      "key": "academicRegulationId",
+      "value": "1"
     }
   ],
   "item": [
@@ -204,7 +212,7 @@
     },
     {
       "name": "1. scope",
-      "description": "Step 1 \u2014 create / read / update / delete `academic_group_scope`.",
+      "description": "Step 1 — create / read / update / delete `academic_group_scope`.",
       "item": [
         {
           "name": "POST scope (activity context)",
@@ -355,7 +363,7 @@
                 {
                   "key": "search",
                   "value": "",
-                  "description": "optional \u2014 filter by title",
+                  "description": "optional — filter by title",
                   "disabled": true
                 }
               ]
@@ -364,7 +372,7 @@
           },
           "response": [
             {
-              "name": "200 \u2014 scopes with course/session names",
+              "name": "200 — scopes with course/session names",
               "originalRequest": {
                 "method": "GET",
                 "header": [],
@@ -429,7 +437,7 @@
           },
           "response": [
             {
-              "name": "200 \u2014 scope single with group details and counts",
+              "name": "200 — scope single with group details and counts",
               "originalRequest": {
                 "method": "GET",
                 "header": [],
@@ -545,7 +553,7 @@
     },
     {
       "name": "2. group",
-      "description": "Step 2 \u2014 create group linked to scope (many groups per scope).",
+      "description": "Step 2 — create group linked to scope (many groups per scope).",
       "item": [
         {
           "name": "POST group",
@@ -835,7 +843,7 @@
     },
     {
       "name": "3. user (faculty)",
-      "description": "Step 3 \u2014 assign faculty with role. At most one `primary_faculty` per group.",
+      "description": "Step 3 — assign faculty with role. At most one `primary_faculty` per group.",
       "item": [
         {
           "name": "GET availableUsers",
@@ -1119,7 +1127,7 @@
     },
     {
       "name": "4. student",
-      "description": "Step 4 \u2014 assign students. Enforces capacity when set.",
+      "description": "Step 4 — assign students. Enforces capacity when set.",
       "item": [
         {
           "name": "GET availableStudents",
@@ -1161,7 +1169,7 @@
                 {
                   "key": "term",
                   "value": "1,2,3,4,5",
-                  "description": "optional \u2014 class_section_term numbers"
+                  "description": "optional — class_section_term numbers"
                 },
                 {
                   "key": "search",
@@ -1351,7 +1359,7 @@
           },
           "response": [
             {
-              "name": "200 \u2014 Structure scope mapping added",
+              "name": "200 — Structure scope mapping added",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -1443,7 +1451,7 @@
           },
           "response": [
             {
-              "name": "200 \u2014 Structure scope mappings fetched",
+              "name": "200 — Structure scope mappings fetched",
               "originalRequest": {
                 "method": "GET",
                 "header": [],
@@ -1528,7 +1536,7 @@
           },
           "response": [
             {
-              "name": "200 \u2014 All structure scope mappings fetched",
+              "name": "200 — All structure scope mappings fetched",
               "originalRequest": {
                 "method": "GET",
                 "header": [],
@@ -1591,7 +1599,7 @@
           },
           "response": [
             {
-              "name": "200 \u2014 Structure scope mapping deleted",
+              "name": "200 — Structure scope mapping deleted",
               "originalRequest": {
                 "method": "DELETE",
                 "header": [],
@@ -1685,7 +1693,7 @@
           },
           "response": [
             {
-              "name": "200 \u2014 Academic group routine created",
+              "name": "200 — Academic group routine created",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -1767,7 +1775,7 @@
           },
           "response": [
             {
-              "name": "200 \u2014 Cascading group routines fetched",
+              "name": "200 — Cascading group routines fetched",
               "originalRequest": {
                 "method": "GET",
                 "header": [],
@@ -1841,7 +1849,7 @@
           },
           "response": [
             {
-              "name": "200 \u2014 Group routines wrapped in structure fetched",
+              "name": "200 — Group routines wrapped in structure fetched",
               "originalRequest": {
                 "method": "GET",
                 "header": [],
@@ -1910,7 +1918,7 @@
           },
           "response": [
             {
-              "name": "200 \u2014 Academic group routine deleted",
+              "name": "200 — Academic group routine deleted",
               "originalRequest": {
                 "method": "DELETE",
                 "header": [],
@@ -1984,7 +1992,7 @@
           },
           "response": [
             {
-              "name": "200 \u2014 Subject options fetched",
+              "name": "200 — Subject options fetched",
               "originalRequest": {
                 "method": "GET",
                 "header": [],
@@ -2019,6 +2027,600 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Exam Types",
+      "item": [
+        {
+          "name": "1. POST /examType — Add Exam Type",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicYearId\": 60,\n  \"examName\": \"Mid Term Exam 2026\",\n  \"assessmentCode\": \"MID_TERM\",\n  \"assessmentCategory\": \"EXAMINATION\",\n  \"assessmentSubCategory\": \"Mid Term\",\n  \"description\": \"Mid Term Assessment for Academic Year 2026\",\n  \"averagePassingMark\": 40,\n  \"isAveragePassingMark\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/examType",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examType"
+              ]
+            },
+            "description": "**POST /examType**\n\nCreates a new exam type record with assessment code, category, sub-category, and description."
+          },
+          "response": [
+            {
+              "name": "201 — Exam Type Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"academicYearId\": 60,\n  \"examName\": \"Mid Term Exam 2026\",\n  \"assessmentCode\": \"MID_TERM\",\n  \"assessmentCategory\": \"EXAMINATION\",\n  \"assessmentSubCategory\": \"Mid Term\",\n  \"description\": \"Mid Term Assessment for Academic Year 2026\",\n  \"averagePassingMark\": 40,\n  \"isAveragePassingMark\": true\n}"
+                },
+                "url": {
+                  "raw": "{{baseurl}}/examType",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "examType"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"message\": \"Data added successfully\",\n  \"examType\": {\n    \"examTypeId\": 1,\n    \"academicYearId\": 60,\n    \"instituteId\": 12,\n    \"universityId\": 4,\n    \"examName\": \"Mid Term Exam 2026\",\n    \"assessmentCode\": \"MID_TERM\",\n    \"assessmentCategory\": \"EXAMINATION\",\n    \"assessmentSubCategory\": \"Mid Term\",\n    \"description\": \"Mid Term Assessment for Academic Year 2026\",\n    \"averagePassingMark\": 40,\n    \"isAveragePassingMark\": true,\n    \"createdBy\": 10,\n    \"updatedBy\": 10,\n    \"createdAt\": \"2026-07-31T12:00:00.000Z\",\n    \"updatedAt\": \"2026-07-31T12:00:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "2. GET /examType — Get All Exam Types",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/examType?academicYearId=60",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examType"
+              ],
+              "query": [
+                {
+                  "key": "academicYearId",
+                  "value": "60"
+                }
+              ]
+            },
+            "description": "**GET /examType**\n\nReturns list of all exam types filtered by academicYearId."
+          },
+          "response": [
+            {
+              "name": "200 — Exam Types Fetched",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/examType?academicYearId=60",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "examType"
+                  ],
+                  "query": [
+                    {
+                      "key": "academicYearId",
+                      "value": "60"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "[\n  {\n    \"examTypeId\": 1,\n    \"academicYearId\": 60,\n    \"instituteId\": 12,\n    \"universityId\": 4,\n    \"examName\": \"Mid Term Exam 2026\",\n    \"assessmentCode\": \"MID_TERM\",\n    \"assessmentCategory\": \"EXAMINATION\",\n    \"assessmentSubCategory\": \"Mid Term\",\n    \"description\": \"Mid Term Assessment for Academic Year 2026\",\n    \"averagePassingMark\": 40,\n    \"isAveragePassingMark\": true,\n    \"createdBy\": 10,\n    \"updatedBy\": 10\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "3. GET /examType/single — Get Single Exam Type",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/examType/single?examTypeId=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examType",
+                "single"
+              ],
+              "query": [
+                {
+                  "key": "examTypeId",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "**GET /examType/single**\n\nReturns details of a single exam type by examTypeId."
+          },
+          "response": [
+            {
+              "name": "200 — Exam Type Fetched",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/examType/single?examTypeId=1",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "examType",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "examTypeId",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"examTypeId\": 1,\n  \"academicYearId\": 60,\n  \"instituteId\": 12,\n  \"universityId\": 4,\n  \"examName\": \"Mid Term Exam 2026\",\n  \"assessmentCode\": \"MID_TERM\",\n  \"assessmentCategory\": \"EXAMINATION\",\n  \"assessmentSubCategory\": \"Mid Term\",\n  \"description\": \"Mid Term Assessment for Academic Year 2026\",\n  \"averagePassingMark\": 40,\n  \"isAveragePassingMark\": true\n}"
+            }
+          ]
+        },
+        {
+          "name": "4. PATCH /examType — Update Exam Type",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examTypeId\": 1,\n  \"examName\": \"Mid Term Exam 2026 Updated\",\n  \"assessmentCode\": \"MID_TERM_UPDATED\",\n  \"assessmentCategory\": \"EXAMINATION\",\n  \"assessmentSubCategory\": \"Mid Term\",\n  \"description\": \"Updated Mid Term Assessment Description\",\n  \"averagePassingMark\": 45,\n  \"isAveragePassingMark\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/examType",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examType"
+              ]
+            },
+            "description": "**PATCH /examType**\n\nUpdates an existing exam type record by examTypeId."
+          },
+          "response": [
+            {
+              "name": "200 — Exam Type Updated",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"examTypeId\": 1,\n  \"examName\": \"Mid Term Exam 2026 Updated\",\n  \"assessmentCode\": \"MID_TERM_UPDATED\",\n  \"assessmentCategory\": \"EXAMINATION\",\n  \"assessmentSubCategory\": \"Mid Term\",\n  \"description\": \"Updated Mid Term Assessment Description\",\n  \"averagePassingMark\": 45,\n  \"isAveragePassingMark\": true\n}"
+                },
+                "url": {
+                  "raw": "{{baseurl}}/examType",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "examType"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"message\": \"examDetails update succesfully\",\n  \"examDetails\": [\n    1\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "5. DELETE /examType — Delete Exam Type",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/examType?examTypeId=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examType"
+              ],
+              "query": [
+                {
+                  "key": "examTypeId",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "**DELETE /examType**\n\nDeletes an exam type by examTypeId."
+          },
+          "response": [
+            {
+              "name": "200 — Exam Type Deleted",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/examType?examTypeId=1",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "examType"
+                  ],
+                  "query": [
+                    {
+                      "key": "examTypeId",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"message\": \"Delete successful for examDetails ID 1\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Academic Regulation",
+      "item": [
+        {
+          "name": "1. POST /academicRegulation — Create Academic Regulation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"regulationCode\": \"AR-2026-BCH\",\n  \"regulationName\": \"Academic Regulation 2026 B.Tech\",\n  \"description\": \"Standard Academic Regulation for Batch 2026\",\n  \"courseId\": 34,\n  \"academicYearId\": 60,\n  \"applicableBatch\": \"2026-2030\",\n  \"effectiveFrom\": \"2026-07-01\",\n  \"effectiveUntil\": \"2030-06-30\",\n  \"gradingSchemeId\": 1,\n  \"status\": \"DRAFT\",\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicRegulation",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicRegulation"
+              ]
+            },
+            "description": "**POST /academicRegulation**\n\nCreates a new academic regulation record with initial version 1.0."
+          },
+          "response": [
+            {
+              "name": "201 — Academic Regulation Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"regulationCode\": \"AR-2026-BCH\",\n  \"regulationName\": \"Academic Regulation 2026 B.Tech\",\n  \"description\": \"Standard Academic Regulation for Batch 2026\",\n  \"courseId\": 34,\n  \"academicYearId\": 60,\n  \"applicableBatch\": \"2026-2030\",\n  \"effectiveFrom\": \"2026-07-01\",\n  \"effectiveUntil\": \"2030-06-30\",\n  \"gradingSchemeId\": 1,\n  \"status\": \"DRAFT\",\n  \"isActive\": true\n}"
+                },
+                "url": {
+                  "raw": "{{baseurl}}/academicRegulation",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "academicRegulation"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Academic regulation created successfully\",\n  \"data\": {\n    \"academicRegulationId\": 1,\n    \"regulationCode\": \"AR-2026-BCH\",\n    \"regulationName\": \"Academic Regulation 2026 B.Tech\",\n    \"description\": \"Standard Academic Regulation for Batch 2026\",\n    \"courseId\": 34,\n    \"academicYearId\": 60,\n    \"applicableBatch\": \"2026-2030\",\n    \"effectiveFrom\": \"2026-07-01\",\n    \"effectiveUntil\": \"2030-06-30\",\n    \"gradingSchemeId\": 1,\n    \"version\": 1,\n    \"status\": \"DRAFT\",\n    \"isActive\": true,\n    \"instituteId\": 12,\n    \"universityId\": 4,\n    \"createdBy\": 10,\n    \"updatedBy\": 10,\n    \"createdAt\": \"2026-07-31T12:00:00.000Z\",\n    \"updatedAt\": \"2026-07-31T12:00:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "2. GET /academicRegulation — List Academic Regulations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/academicRegulation?search=AR-2026&courseId=34&page=1&limit=10",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicRegulation"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "AR-2026"
+                },
+                {
+                  "key": "courseId",
+                  "value": "34"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "**GET /academicRegulation**\n\nReturns paginated list of academic regulations."
+          },
+          "response": [
+            {
+              "name": "200 — Regulations List Fetched",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/academicRegulation?search=AR-2026&courseId=34&page=1&limit=10",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "academicRegulation"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Academic regulations fetched successfully\",\n  \"data\": [\n    {\n      \"academicRegulationId\": 1,\n      \"regulationCode\": \"AR-2026-BCH\",\n      \"regulationName\": \"Academic Regulation 2026 B.Tech\",\n      \"courseId\": 34,\n      \"version\": 1,\n      \"status\": \"DRAFT\",\n      \"isActive\": true\n    }\n  ],\n  \"meta\": {\n    \"page\": 1,\n    \"limit\": 10,\n    \"total\": 1\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "3. GET /academicRegulation/:academicRegulationId — Get Single Regulation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/academicRegulation/1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicRegulation",
+                "1"
+              ]
+            },
+            "description": "**GET /academicRegulation/:academicRegulationId**\n\nReturns single academic regulation details."
+          },
+          "response": [
+            {
+              "name": "200 — Single Regulation Fetched",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/academicRegulation/1",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "academicRegulation",
+                    "1"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Academic regulation fetched successfully\",\n  \"data\": {\n    \"academicRegulationId\": 1,\n    \"regulationCode\": \"AR-2026-BCH\",\n    \"regulationName\": \"Academic Regulation 2026 B.Tech\",\n    \"courseId\": 34,\n    \"version\": 1,\n    \"status\": \"DRAFT\",\n    \"isActive\": true\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "4. PUT /academicRegulation/:academicRegulationId — Update Academic Regulation (version +0.1)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"regulationName\": \"Academic Regulation 2026 B.Tech Updated\",\n  \"courseId\": 34,\n  \"status\": \"PUBLISHED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicRegulation/1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicRegulation",
+                "1"
+              ]
+            },
+            "description": "**PUT /academicRegulation/:academicRegulationId**\n\nUpdates academic regulation record and increments version by +0.1 (e.g. 1.0 -> 1.1)."
+          },
+          "response": [
+            {
+              "name": "200 — Academic Regulation Updated (version incremented)",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"regulationName\": \"Academic Regulation 2026 B.Tech Updated\",\n  \"courseId\": 34,\n  \"status\": \"PUBLISHED\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseurl}}/academicRegulation/1",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "academicRegulation",
+                    "1"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Academic regulation updated successfully\",\n  \"data\": {\n    \"academicRegulationId\": 1,\n    \"regulationCode\": \"AR-2026-BCH\",\n    \"regulationName\": \"Academic Regulation 2026 B.Tech Updated\",\n    \"courseId\": 34,\n    \"version\": 1.1,\n    \"status\": \"PUBLISHED\",\n    \"isActive\": true\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "5. DELETE /academicRegulation/:academicRegulationId — Delete Academic Regulation",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/academicRegulation/1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicRegulation",
+                "1"
+              ]
+            },
+            "description": "**DELETE /academicRegulation/:academicRegulationId**\n\nSoft deletes academic regulation record."
+          },
+          "response": [
+            {
+              "name": "200 — Academic Regulation Deleted",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/academicRegulation/1",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "academicRegulation",
+                    "1"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Academic regulation deleted successfully\"\n}"
+            }
+          ]
+        }
+      ]
     }
   ]
-}
+}

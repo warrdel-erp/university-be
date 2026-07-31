@@ -1,18 +1,51 @@
-import { Router } from 'express'
-const router = Router();
+import { Router } from 'express';
+import { z } from 'zod';
 import { addExamType, getAllExamType, getSingleExamType, updateExamType, deleteExamType } from "../controllers/examTypeController.js";
-import userAuth from "../middleware/authUser.js"
-
+import userAuth from "../middleware/authUser.js";
 import { checkAccess } from "../middleware/checkAccess.js";
 import { PERMISSIONS } from "../const/permissions.js";
+import { validate } from "../utility/validation.js";
+import { ASSESSMENT_CATEGORIES } from "../constant.js";
 
-router.post('/', userAuth, checkAccess(PERMISSIONS.EXAM_TYPES_ADD.value, null), addExamType);
+const router = Router();
+
+export const addExamTypeBodySchema = z.object({
+  academicYearId: z.number().int().positive().optional(),
+  instituteId: z.number().int().positive().optional(),
+  universityId: z.number().int().positive().optional(),
+  examName: z.string().min(1).max(100),
+  assessmentCode: z.string().min(1).max(30),
+  assessmentCategory: z.enum(ASSESSMENT_CATEGORIES),
+  assessmentSubCategory: z.string().min(1).max(100),
+  description: z.string().max(500).optional().nullable(),
+  averagePassingMark: z.number().optional().nullable(),
+  isAveragePassingMark: z.boolean().optional().default(false),
+});
+
+export const updateExamTypeBodySchema = z.object({
+  examTypeId: z.coerce.number().int().positive(),
+  
+  academicYearId: z.number().int().positive().optional(),
+  instituteId: z.number().int().positive().optional(),
+  universityId: z.number().int().positive().optional(),
+
+  examName: z.string().min(1).max(100).optional(),
+  assessmentCode: z.string().min(1).max(30).optional(),
+  assessmentCategory: z.enum(ASSESSMENT_CATEGORIES).optional(),
+  assessmentSubCategory: z.string().min(1).max(100).optional(),
+  description: z.string().max(500).optional().nullable(),
+  averagePassingMark: z.number().optional().nullable(),
+  isAveragePassingMark: z.boolean().optional(),
+});
+
+router.post('/', userAuth, checkAccess(PERMISSIONS.EXAM_TYPES_ADD.value, null), validate({ body: addExamTypeBodySchema }), addExamType);
 
 router.get('/', userAuth, checkAccess(PERMISSIONS.EXAM_TYPES.value, null), getAllExamType);
 
 router.get('/single', userAuth, checkAccess(PERMISSIONS.EXAM_TYPES.value, null), getSingleExamType);
 
-router.patch('/', userAuth, checkAccess(PERMISSIONS.EXAM_TYPES_EDIT.value, null), updateExamType);
+router.patch('/', userAuth, checkAccess(PERMISSIONS.EXAM_TYPES_EDIT.value, null), validate({ body: updateExamTypeBodySchema }), updateExamType);
+router.put('/', userAuth, checkAccess(PERMISSIONS.EXAM_TYPES_EDIT.value, null), validate({ body: updateExamTypeBodySchema }), updateExamType);
 
 router.delete('/', userAuth, checkAccess(PERMISSIONS.EXAM_TYPES_DELETE.value, null), deleteExamType);
 
