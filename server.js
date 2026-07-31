@@ -81,7 +81,7 @@ import libraryStructure from "./router/libraryStructureRoute.js";
 import internalAssessment from "./router/internalAssessmentRoute.js";
 import jobSetting from "./router/jobSettingsRoutes.js";
 import jobs from "./router/jobRoutes.js";
-import grade from "./router/gradeRoute.js";
+import gradingSchemas from "./router/gradingSchemasRouter.js";
 import credit from "./router/creditRoute.js";
 import evalution from "./router/evalutionRoute.js";
 import terms from "./router/termsRoute.js";
@@ -141,7 +141,9 @@ app.use("/course", course);
 app.use("/questionPaper", questionPaper);
 app.use("/questionBank", questionBank);
 app.use("/examSetupType", examSetupType);
-app.use("/grade", grade);
+
+app.use("/gradingSchemas", gradingSchemas);
+
 app.use("/credit", credit);
 app.use("/evalution", evalution);
 app.use("/feeTypeCategory", feeTypeCategory);
