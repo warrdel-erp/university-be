@@ -378,7 +378,7 @@
       "name": "4. Academic Regulation",
       "item": [
         {
-          "name": "4.1 Create Academic Regulation",
+          "name": "4.1 Create Academic Regulation (Step 1: General Info)",
           "request": {
             "method": "POST",
             "header": [
@@ -393,7 +393,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"regulationCode\": \"REG_2026_CS\",\n  \"regulationName\": \"Computer Science Academic Regulation 2026\",\n  \"description\": \"Regulation policy covering course requirements and grading schemes.\",\n  \"courseId\": 35,\n  \"academicYearId\": 1,\n  \"applicableBatch\": \"2026-2030\",\n  \"effectiveFrom\": \"2026-08-01\",\n  \"effectiveUntil\": \"2030-07-31\",\n  \"gradingSchemeId\": \"{{gradingSchemaId}}\",\n  \"status\": \"DRAFT\",\n  \"isActive\": true\n}"
+              "raw": "{\n  \"regulationCode\": \"REG_2026_CS\",\n  \"regulationName\": \"Computer Science Academic Regulation 2026\",\n  \"description\": \"Regulation policy covering course requirements and grading schemes.\",\n  \"courseId\": 35,\n  \"academicYearRange\": \"2026-2030\",\n  \"applicableBatch\": \"2026-2030\",\n  \"effectiveFrom\": \"2026-08-01\",\n  \"effectiveUntil\": \"2030-07-31\",\n  \"gradingSchemeId\": 1,\n  \"status\": \"DRAFT\",\n  \"isActive\": true\n}"
             },
             "url": {
               "raw": "{{baseurl}}/academicRegulation",
@@ -407,66 +407,7 @@
           }
         },
         {
-          "name": "4.2 Get All Academic Regulations",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/academicRegulation?courseId=35&status=DRAFT",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicRegulation"
-              ],
-              "query": [
-                {
-                  "key": "courseId",
-                  "value": "35"
-                },
-                {
-                  "key": "status",
-                  "value": "DRAFT"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "4.3 Get Single Academic Regulation",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/academicRegulation/single?academicRegulationId={{academicRegulationId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicRegulation",
-                "single"
-              ],
-              "query": [
-                {
-                  "key": "academicRegulationId",
-                  "value": "{{academicRegulationId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "4.4 Update Academic Regulation",
+          "name": "4.2 Update Academic Regulation (Step 2: Evaluation Pattern)",
           "request": {
             "method": "PATCH",
             "header": [
@@ -481,21 +422,104 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"academicRegulationId\": \"{{academicRegulationId}}\",\n  \"regulationName\": \"Computer Science Academic Regulation 2026 Updated\",\n  \"status\": \"PUBLISHED\"\n}"
+              "raw": "{\n  \"evaluationPattern\": \"INTERNAL_EXTERNAL\",\n  \"internalWeightage\": 40,\n  \"externalWeightage\": 60,\n  \"maximumInternalMarks\": 40,\n  \"maximumExternalMarks\": 60,\n  \"isInternalAssessmentMandatory\": true,\n  \"isExternalAssessmentMandatory\": true\n}"
             },
             "url": {
-              "raw": "{{baseurl}}/academicRegulation",
+              "raw": "{{baseurl}}/academicRegulation/{{academicRegulationId}}",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
-                "academicRegulation"
+                "academicRegulation",
+                "{{academicRegulationId}}"
               ]
             }
           }
         },
         {
-          "name": "4.5 Delete Academic Regulation",
+          "name": "4.3 Update Academic Regulation (Step 3: Passing & Eligibility Rules)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"minimumAttendance\": 75,\n  \"isAssessmentCompletionRequired\": true,\n  \"isPracticalCompletionRequired\": true,\n  \"isProjectSubmissionRequired\": true,\n  \"isInternshipCompletionRequired\": false,\n  \"minimumOverallMarks\": 40,\n  \"minimumOverallPercentage\": 40,\n  \"minimumInternalMarks\": 16,\n  \"minimumExternalMarks\": 24,\n  \"mandatoryComponents\": [\n    \"THEORY\",\n    \"PRACTICAL\",\n    \"VIVA\",\n    \"PROJECT\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicRegulation/{{academicRegulationId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicRegulation",
+                "{{academicRegulationId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.4 Update Academic Regulation (Step 4: GPA & Ranking Rules)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"calculateSGPA\": true,\n  \"calculateCGPA\": true,\n  \"calculatePercentage\": false,\n  \"generateClass\": true,\n  \"generateRank\": false,\n  \"tieBreakingMethod\": \"HIGHER_CGPA\",\n  \"status\": \"PUBLISHED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicRegulation/{{academicRegulationId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicRegulation",
+                "{{academicRegulationId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.5 Get Single Academic Regulation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/academicRegulation/{{academicRegulationId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "academicRegulation",
+                "{{academicRegulationId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.6 Delete Academic Regulation",
           "request": {
             "method": "DELETE",
             "header": [

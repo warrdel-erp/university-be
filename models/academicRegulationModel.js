@@ -69,6 +69,126 @@ const academicRegulationModel = sequelize.define(
                 key: 'grading_id'
             }
         },
+        evaluationPattern: {
+            type: DataTypes.ENUM('INTERNAL_EXTERNAL', 'INTERNAL_ONLY', 'EXTERNAL_ONLY'),
+            allowNull: true,
+            field: 'evaluation_pattern'
+        },
+        internalWeightage: {
+            type: DataTypes.DECIMAL(5, 2),
+            allowNull: true,
+            field: 'internal_weightage'
+        },
+        externalWeightage: {
+            type: DataTypes.DECIMAL(5, 2),
+            allowNull: true,
+            field: 'external_weightage'
+        },
+        maximumInternalMarks: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'maximum_internal_marks'
+        },
+        maximumExternalMarks: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'maximum_external_marks'
+        },
+        isInternalAssessmentMandatory: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            field: 'is_internal_assessment_mandatory'
+        },
+        isExternalAssessmentMandatory: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            field: 'is_external_assessment_mandatory'
+        },
+        minimumAttendance: {
+            type: DataTypes.DECIMAL(5, 2),
+            allowNull: true,
+            field: 'minimum_attendance'
+        },
+        isAssessmentCompletionRequired: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            field: 'is_assessment_completion_required'
+        },
+        isPracticalCompletionRequired: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            field: 'is_practical_completion_required'
+        },
+        isProjectSubmissionRequired: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            field: 'is_project_submission_required'
+        },
+        isInternshipCompletionRequired: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            field: 'is_internship_completion_required'
+        },
+        minimumOverallMarks: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'minimum_overall_marks'
+        },
+        minimumOverallPercentage: {
+            type: DataTypes.DECIMAL(5, 2),
+            allowNull: true,
+            field: 'minimum_overall_percentage'
+        },
+        minimumInternalMarks: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'minimum_internal_marks'
+        },
+        minimumExternalMarks: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'minimum_external_marks'
+        },
+        mandatoryComponents: {
+            type: DataTypes.JSON,
+            allowNull: true,
+            field: 'mandatory_components'
+        },
+        calculateSGPA: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: true,
+            field: 'calculate_sgpa'
+        },
+        calculateCGPA: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: true,
+            field: 'calculate_cgpa'
+        },
+        calculatePercentage: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: false,
+            field: 'calculate_percentage'
+        },
+        generateClass: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: true,
+            field: 'generate_class'
+        },
+        generateRank: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: false,
+            field: 'generate_rank'
+        },
+        tieBreakingMethod: {
+            type: DataTypes.ENUM('HIGHER_CGPA', 'HIGHER_SGPA', 'HIGHER_INTERNAL_MARKS', 'HIGHER_EXTERNAL_MARKS', 'ALPHABETICAL', 'RANDOM'),
+            allowNull: true,
+            field: 'tie_breaking_method'
+        },
         version: {
             type: DataTypes.DECIMAL(3, 1),
             allowNull: false,
