@@ -797,7 +797,7 @@
           }
         },
         {
-          "name": "4.15 Get Mapped Courses for Academic Regulation",
+          "name": "4.15 Get Course Regulation Mappings (Filtered by Course, Session, Regulation, or All)",
           "request": {
             "method": "GET",
             "header": [
@@ -807,14 +807,18 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/academicRegulation/courseRegulationMapping/{{academicRegulationId}}",
+              "raw": "{{baseurl}}/academicRegulation/courseRegulationMapping?academicRegulationId={{academicRegulationId}}&courseId=35&sessionId=18",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "academicRegulation",
-                "courseRegulationMapping",
-                "{{academicRegulationId}}"
+                "courseRegulationMapping"
+              ],
+              "query": [
+                { "key": "academicRegulationId", "value": "{{academicRegulationId}}" },
+                { "key": "courseId", "value": "35" },
+                { "key": "sessionId", "value": "18" }
               ]
             }
           }

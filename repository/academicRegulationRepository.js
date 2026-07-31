@@ -206,13 +206,30 @@ export async function createCourseMapping(data, options = {}) {
   });
 }
 
-export async function getCourseMappingsByRegulationId(academicRegulationId, options = {}) {
+export async function getCourseMappings(filters = {}, options = {}) {
+  const where = {};
+  if (filters.academicRegulationId) {
+    where.academicRegulationId = Number(filters.academicRegulationId);
+  }
+  if (filters.courseId) {
+    where.courseId = Number(filters.courseId);
+  }
+  if (filters.sessionId) {
+    where.sessionId = Number(filters.sessionId);
+  }
+
   return await scoped(model.academicRegulationCourseMappingModel).findAll({
-    where: { academicRegulationId: Number(academicRegulationId) },
+    where,
     include: [
+      {
+        model: model.academicRegulationModel,
+        as: "academicRegulation",
+        attributes: ["academicRegulationId", "regulationCode", "regulationName", "status"],
+      },
       { model: model.courseModel, as: "course", attributes: ["courseId", "courseName", "courseCode"] },
       { model: model.sessionModel, as: "session", attributes: ["sessionId", "sessionName"] },
     ],
+    order: [["academicRegulationCourseMappingId", "DESC"]],
     transaction: options.transaction,
   });
 }

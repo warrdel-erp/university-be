@@ -18,6 +18,11 @@ import {
 
 const router = express.Router();
 
+const emptyToUndefined = (val) =>
+  val === "" || val === null || val === undefined ? undefined : val;
+
+const positiveIntegerId = z.coerce.number().int().positive();
+
 const classificationItemSchema = z.object({
   classificationName: z.string().min(1).max(100),
   minimumCgpa: z.coerce.number().optional().nullable(),
@@ -25,9 +30,10 @@ const classificationItemSchema = z.object({
   sortOrder: z.coerce.number().int().optional().nullable(),
 });
 
-const courseMappingItemSchema = z.object({
-  courseId: z.coerce.number().int().positive(),
-  sessionId: z.coerce.number().int().positive(),
+export const getCourseMappingsQuerySchema = z.object({
+  academicRegulationId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
+  courseId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
+  sessionId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
 });
 
 export const createCourseMappingBody = z.object({
@@ -367,9 +373,10 @@ router.post(
 );
 
 router.get(
-  "/courseRegulationMapping/:academicRegulationId",
+  "/courseRegulationMapping/:academicRegulationId?",
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
+  validate({ query: getCourseMappingsQuerySchema }),
   getCourseMappings
 );
 

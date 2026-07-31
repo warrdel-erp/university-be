@@ -87,8 +87,11 @@ export async function createCourseMapping(req, res) {
 
 export async function getCourseMappings(req, res) {
   try {
-    const { academicRegulationId } = req.params;
-    const result = await academicRegulationService.getCourseMappings(academicRegulationId);
+    const filters = {
+      ...req.query,
+      ...(req.params.academicRegulationId && { academicRegulationId: req.params.academicRegulationId }),
+    };
+    const result = await academicRegulationService.getCourseMappings(filters);
     return SuccessResponse(res, 200, "Course mappings fetched successfully", result);
   } catch (error) {
     console.error("Error in getCourseMappings:", error.message);

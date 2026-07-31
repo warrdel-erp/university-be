@@ -180,8 +180,8 @@ export async function createCourseMapping({ academicRegulationId, courseId, sess
   });
 }
 
-export async function getCourseMappings(academicRegulationId) {
-  return await academicRegulationRepo.getCourseMappingsByRegulationId(academicRegulationId);
+export async function getCourseMappings(filters = {}) {
+  return await academicRegulationRepo.getCourseMappings(filters);
 }
 
 export async function deleteCourseMapping(academicRegulationCourseMappingId) {
