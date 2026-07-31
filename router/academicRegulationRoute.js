@@ -46,7 +46,7 @@ export const listAcademicRegulationQuery = z.object({
   search: z.string().optional(),
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
   courseId: z.union([z.string(), z.number()]).optional(),
-  academicYearId: z.union([z.string(), z.number()]).optional(),
+  academicYearRange: z.string().optional(),
   page: z.union([z.string(), z.number()]).optional(),
   limit: z.union([z.string(), z.number()]).optional(),
 });
