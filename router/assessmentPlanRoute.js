@@ -132,7 +132,6 @@ router.get(
   "/stats",
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
-  validate({ query: statsQuerySchema }),
   getAssessmentPlanStats
 );
 

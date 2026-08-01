@@ -437,51 +437,38 @@ export async function getCourseAssessmentPlanOverview({
   };
 }
 
-export async function getAssessmentPlanStats({
-  courseId,
-  sessionId,
-  term,
-}) {
-  const subjectWhere = {};
-  if (courseId) subjectWhere.courseId = Number(courseId);
-  if (term) subjectWhere.term = Number(term);
-
-  const totalSubjects = await scoped(model.subjectModel).count({
-    where: subjectWhere,
-  });
+export async function getAssessmentPlanStats() {
+  const totalSubjects = await scoped(model.subjectModel).count();
 
   const subjects = await scoped(model.subjectModel).findAll({
-    where: subjectWhere,
     attributes: ["subjectId", "courseId", "term"],
   });
 
-  const courseIds = [...new Set(subjects.map((s) => s.courseId).filter(Boolean))];
+  const subjectIds = subjects.map((s) => s.subjectId);
 
-  const planWhere = {};
-  if (courseIds.length > 0) {
-    planWhere.courseId = { [Op.in]: courseIds };
-  }
-  if (sessionId) planWhere.sessionId = Number(sessionId);
-
-  const plans = await scoped(model.assessmentPlanModel).findAll({
-    where: planWhere,
-    attributes: ["assessmentPlanId", "courseId", "status", "isActive"],
+  const mappings = await scoped(model.assessmentPlanSubjectMappingModel).findAll({
+    where: subjectIds.length > 0 ? { subjectId: { [Op.in]: subjectIds } } : {},
+    attributes: ["subjectId", "assessmentPlanId"],
   });
 
-  const coursesWithPlan = new Set(plans.map((p) => p.courseId));
+  const assignedSubjectIds = new Set(mappings.map((m) => m.subjectId));
 
   let assignedSubjects = 0;
   let unassignedSubjects = 0;
 
   for (const subj of subjects) {
-    if (coursesWithPlan.has(subj.courseId)) {
+    if (assignedSubjectIds.has(subj.subjectId)) {
       assignedSubjects++;
     } else {
       unassignedSubjects++;
     }
   }
 
-  const overriddenSubjects = plans.filter((p) => p.status === "Archived" || p.isActive === false).length;
+  const plans = await scoped(model.assessmentPlanModel).findAll({
+    attributes: ["assessmentPlanId", "status", "isActive"],
+  });
+
+  const overriddenSubjects = plans.filter((p) => p.status === "Draft" || p.isActive === false).length;
 
   return {
     totalSubjects,

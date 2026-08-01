@@ -4,16 +4,46 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     const tableExists = await queryInterface.showAllTables().then(tables =>
-      tables.includes('assessment_plan')
+      tables.includes('assessment_plan_subject_mapping')
     );
 
     if (!tableExists) {
-      await queryInterface.createTable('assessment_plan', {
-        assessment_plan_id: {
+      await queryInterface.createTable('assessment_plan_subject_mapping', {
+        assessment_plan_subject_mapping_id: {
           type: Sequelize.INTEGER,
           primaryKey: true,
           autoIncrement: true,
           allowNull: false,
+        },
+        assessment_plan_id: {
+          type: Sequelize.INTEGER,
+          allowNull: false,
+          references: {
+            model: 'assessment_plan',
+            key: 'assessment_plan_id',
+          },
+          onUpdate: 'CASCADE',
+          onDelete: 'CASCADE',
+        },
+        subject_id: {
+          type: Sequelize.INTEGER,
+          allowNull: false,
+          references: {
+            model: 'subject',
+            key: 'subject_id',
+          },
+          onUpdate: 'CASCADE',
+          onDelete: 'CASCADE',
+        },
+        course_id: {
+          type: Sequelize.INTEGER,
+          allowNull: false,
+          references: {
+            model: 'course',
+            key: 'course_id',
+          },
+          onUpdate: 'CASCADE',
+          onDelete: 'CASCADE',
         },
         session_id: {
           type: Sequelize.INTEGER,
@@ -35,62 +65,6 @@ module.exports = {
           onUpdate: 'CASCADE',
           onDelete: 'SET NULL',
         },
-        plan_name: {
-          type: Sequelize.STRING(100),
-          allowNull: false,
-        },
-        plan_code: {
-          type: Sequelize.STRING(50),
-          allowNull: false,
-        },
-        description: {
-          type: Sequelize.STRING(500),
-          allowNull: true,
-        },
-        course_id: {
-          type: Sequelize.INTEGER,
-          allowNull: true,
-          references: {
-            model: 'course',
-            key: 'course_id',
-          },
-          onUpdate: 'CASCADE',
-          onDelete: 'SET NULL',
-        },
-        regulation_id: {
-          type: Sequelize.INTEGER,
-          allowNull: true,
-          references: {
-            model: 'academic_regulation',
-            key: 'academic_regulation_id',
-          },
-          onUpdate: 'CASCADE',
-          onDelete: 'SET NULL',
-        },
-        term: {
-          type: Sequelize.INTEGER,
-          allowNull: true,
-        },
-        grading_id: {
-          type: Sequelize.BIGINT,
-          allowNull: true,
-          references: {
-            model: 'grading',
-            key: 'grading_id',
-          },
-          onUpdate: 'CASCADE',
-          onDelete: 'SET NULL',
-        },
-        status: {
-          type: Sequelize.ENUM('Draft', 'Published'),
-          allowNull: false,
-          defaultValue: 'Draft',
-        },
-        is_active: {
-          type: Sequelize.BOOLEAN,
-          allowNull: false,
-          defaultValue: true,
-        },
         university_id: {
           type: Sequelize.INTEGER,
           allowNull: false,
@@ -99,7 +73,7 @@ module.exports = {
             key: 'university_id',
           },
           onUpdate: 'CASCADE',
-          onDelete: 'RESTRICT',
+          onDelete: 'CASCADE',
         },
         institute_id: {
           type: Sequelize.INTEGER,
@@ -109,7 +83,7 @@ module.exports = {
             key: 'institute_id',
           },
           onUpdate: 'CASCADE',
-          onDelete: 'RESTRICT',
+          onDelete: 'CASCADE',
         },
         created_by: {
           type: Sequelize.INTEGER,
@@ -139,7 +113,7 @@ module.exports = {
         updated_at: {
           type: Sequelize.DATE,
           allowNull: false,
-          defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
+          defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'),
         },
         deleted_at: {
           type: Sequelize.DATE,
@@ -147,21 +121,17 @@ module.exports = {
         },
       });
 
-      // Indexes on FK columns
-      await queryInterface.addIndex('assessment_plan', ['session_id']);
-      await queryInterface.addIndex('assessment_plan', ['acedmic_year_id']);
-      await queryInterface.addIndex('assessment_plan', ['course_id']);
-      await queryInterface.addIndex('assessment_plan', ['regulation_id']);
-      await queryInterface.addIndex('assessment_plan', ['term']);
-      await queryInterface.addIndex('assessment_plan', ['grading_id']);
-      await queryInterface.addIndex('assessment_plan', ['university_id']);
-      await queryInterface.addIndex('assessment_plan', ['institute_id']);
-      await queryInterface.addIndex('assessment_plan', ['created_by']);
-      await queryInterface.addIndex('assessment_plan', ['updated_by']);
+      await queryInterface.addIndex('assessment_plan_subject_mapping', ['assessment_plan_id']);
+      await queryInterface.addIndex('assessment_plan_subject_mapping', ['subject_id']);
+      await queryInterface.addIndex('assessment_plan_subject_mapping', ['course_id']);
+      await queryInterface.addIndex('assessment_plan_subject_mapping', ['session_id']);
+      await queryInterface.addIndex('assessment_plan_subject_mapping', ['acedmic_year_id']);
+      await queryInterface.addIndex('assessment_plan_subject_mapping', ['university_id']);
+      await queryInterface.addIndex('assessment_plan_subject_mapping', ['institute_id']);
     }
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('assessment_plan');
+    await queryInterface.dropTable('assessment_plan_subject_mapping');
   }
 };
