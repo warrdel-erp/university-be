@@ -45,7 +45,7 @@ export async function getAssessmentPlans({
   const limitNum = Math.max(1, Number(limit) || 10);
   const offset = (pageNum - 1) * limitNum;
 
-  const where = {};
+  const where = { isActive: true };
   if (status) {
     where.status = status;
   }
