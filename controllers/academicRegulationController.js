@@ -63,10 +63,10 @@ export async function deleteAcademicRegulation(req, res) {
     const { academicRegulationId } = req.params;
     const result = await academicRegulationService.deleteAcademicRegulation(academicRegulationId);
 
-    return SuccessResponse(res, 200, result.message || "Academic regulation deleted successfully");
+    return SuccessResponse(res, 200, result.message || "Academic regulation status updated successfully", result);
   } catch (error) {
     console.error("Error in deleteAcademicRegulation:", error.message);
-    return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to delete academic regulation");
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to update academic regulation status");
   }
 }
 

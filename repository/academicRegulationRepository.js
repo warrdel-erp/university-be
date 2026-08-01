@@ -227,10 +227,30 @@ export async function updateAcademicRegulation(academicRegulationId, data, optio
 }
 
 export async function deleteAcademicRegulation(academicRegulationId, options = {}) {
-  return await scoped(model.academicRegulationModel).destroy({
+  const existing = await scoped(model.academicRegulationModel).findOne({
     where: { academicRegulationId: Number(academicRegulationId) },
     transaction: options.transaction,
   });
+
+  if (!existing) {
+    return null;
+  }
+
+  const newIsActive = !existing.isActive;
+
+  await scoped(model.academicRegulationModel).update(
+    { isActive: newIsActive },
+    {
+      where: { academicRegulationId: Number(academicRegulationId) },
+      transaction: options.transaction,
+    }
+  );
+
+  return {
+    academicRegulationId: Number(academicRegulationId),
+    isActive: newIsActive,
+    message: `Academic regulation marked as ${newIsActive ? "active" : "inactive"} successfully`,
+  };
 }
 
 export async function createCourseMapping(data, options = {}) {

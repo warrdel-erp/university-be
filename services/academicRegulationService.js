@@ -154,14 +154,13 @@ export async function updateAcademicRegulation(academicRegulationId, payload, us
 
 export async function deleteAcademicRegulation(academicRegulationId) {
   return await sequelize.transaction(async (t) => {
-    const existing = await academicRegulationRepo.getAcademicRegulationById(academicRegulationId, { transaction: t });
-    if (!existing) {
+    const result = await academicRegulationRepo.deleteAcademicRegulation(academicRegulationId, { transaction: t });
+    if (!result) {
       const error = new Error("Academic regulation not found");
       error.statusCode = 404;
       throw error;
     }
-    await academicRegulationRepo.deleteAcademicRegulation(academicRegulationId, { transaction: t });
-    return { message: "Academic regulation deleted successfully" };
+    return result;
   });
 }
 
