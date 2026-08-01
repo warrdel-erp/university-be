@@ -1479,7 +1479,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/assessmentPlan/subjectMapping?assessmentPlanId=&subjectId=&courseId=&sessionId=&page=1&limit=10",
+              "raw": "{{baseurl}}/assessmentPlan/subjectMapping?page=1&limit=10",
               "host": [
                 "{{baseurl}}"
               ],
@@ -1488,10 +1488,6 @@
                 "subjectMapping"
               ],
               "query": [
-                { "key": "assessmentPlanId", "value": "" },
-                { "key": "subjectId", "value": "" },
-                { "key": "courseId", "value": "" },
-                { "key": "sessionId", "value": "" },
                 { "key": "page", "value": "1" },
                 { "key": "limit", "value": "10" }
               ]

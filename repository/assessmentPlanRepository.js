@@ -316,10 +316,19 @@ export async function getCourseAssessmentPlanOverview({
   const limitNum = Math.max(1, Number(limit) || 10);
   const offset = (pageNum - 1) * limitNum;
 
+  const parseId = (val) => {
+    if (val === undefined || val === null || val === "" || val === "undefined" || val === "null" || val === "NaN") return undefined;
+    const num = Number(val);
+    return Number.isInteger(num) && num > 0 ? num : undefined;
+  };
+
   const subjectWhere = {};
-  if (subjectId) subjectWhere.subjectId = Number(subjectId);
-  if (courseId) subjectWhere.courseId = Number(courseId);
-  if (term) subjectWhere.term = Number(term);
+  const parsedSubjectId = parseId(subjectId);
+  const parsedCourseId = parseId(courseId);
+  const parsedTerm = parseId(term);
+  if (parsedSubjectId !== undefined) subjectWhere.subjectId = parsedSubjectId;
+  if (parsedCourseId !== undefined) subjectWhere.courseId = parsedCourseId;
+  if (parsedTerm !== undefined) subjectWhere.term = parsedTerm;
 
   if (search) {
     subjectWhere[Op.or] = [
@@ -329,11 +338,14 @@ export async function getCourseAssessmentPlanOverview({
   }
 
   const mappingWhere = {};
-  if (assessmentPlanId) mappingWhere.assessmentPlanId = Number(assessmentPlanId);
-  if (sessionId) mappingWhere.sessionId = Number(sessionId);
+  const parsedAssessmentPlanId = parseId(assessmentPlanId);
+  const parsedSessionId = parseId(sessionId);
+  if (parsedAssessmentPlanId !== undefined) mappingWhere.assessmentPlanId = parsedAssessmentPlanId;
+  if (parsedSessionId !== undefined) mappingWhere.sessionId = parsedSessionId;
 
   const planWhere = {};
-  if (academicRegulationId) planWhere.regulationId = Number(academicRegulationId);
+  const parsedAcademicRegulationId = parseId(academicRegulationId);
+  if (parsedAcademicRegulationId !== undefined) planWhere.regulationId = parsedAcademicRegulationId;
 
   let mappingRequired = false;
   if (assignmentStatus === "assigned" || Object.keys(mappingWhere).length > 0 || Object.keys(planWhere).length > 0) {
@@ -483,27 +495,14 @@ export async function createAssessmentPlanSubjectMapping(data, options = {}) {
 }
 
 export async function getAssessmentPlanSubjectMappings({
-  assessmentPlanId,
-  subjectId,
-  courseId,
-  sessionId,
-  academicYearId,
   page = 1,
   limit = 10,
-}) {
+} = {}) {
   const pageNum = Math.max(1, Number(page) || 1);
   const limitNum = Math.max(1, Number(limit) || 10);
   const offset = (pageNum - 1) * limitNum;
 
-  const where = {};
-  if (assessmentPlanId) where.assessmentPlanId = Number(assessmentPlanId);
-  if (subjectId) where.subjectId = Number(subjectId);
-  if (courseId) where.courseId = Number(courseId);
-  if (sessionId) where.sessionId = Number(sessionId);
-  if (academicYearId) where.academicYearId = Number(academicYearId);
-
-  const { count, rows } = await scoped(model.assessmentPlanSubjectMappingModel).findAndCountAll({
-    where,
+  const { count, rows } = await model.assessmentPlanSubjectMappingModel.findAndCountAll({
     include: [
       {
         model: model.assessmentPlanModel,

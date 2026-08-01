@@ -201,7 +201,6 @@ router.get(
   "/subjectMapping",
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
-  validate({ query: listSubjectMappingQuery }),
   getAssessmentPlanSubjectMappings
 );
 

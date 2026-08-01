@@ -1,5 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as assessmentPlanRepo from "../repository/assessmentPlanRepository.js";
+import * as model from "../models/index.js";
 
 export async function createAssessmentPlan({ payload, user }) {
   return await sequelize.transaction(async (t) => {
@@ -133,14 +134,41 @@ export async function getAssessmentPlanStats(queryParams) {
 
 export async function createAssessmentPlanSubjectMapping({ payload, user }) {
   return await sequelize.transaction(async (t) => {
+    let sessionId = payload.sessionId ? Number(payload.sessionId) : null;
+
+    // Fallback: If sessionId not specified, check if assessmentPlan has a sessionId
+    if (!sessionId && payload.assessmentPlanId) {
+      const plan = await model.assessmentPlanModel.findByPk(Number(payload.assessmentPlanId), { transaction: t });
+      if (plan && plan.sessionId) {
+        sessionId = Number(plan.sessionId);
+      }
+    }
+
+    // Verify sessionId exists in session table
+    if (sessionId) {
+      const sessionRecord = await model.sessionModel.findByPk(sessionId, { transaction: t });
+      if (!sessionRecord) {
+        sessionId = null;
+      }
+    }
+
+    // Verify academicYearId exists in acedmic_year table
+    let academicYearId = user?.academicYearId ? Number(user.academicYearId) : null;
+    if (academicYearId) {
+      const yearRecord = await model.acedmicYearModel.findByPk(academicYearId, { transaction: t });
+      if (!yearRecord) {
+        academicYearId = null;
+      }
+    }
+
     const data = {
-      assessmentPlanId: payload.assessmentPlanId,
-      subjectId: payload.subjectId,
-      courseId: payload.courseId,
-      sessionId: payload.sessionId || null,
-      academicYearId: user?.academicYearId || null,
-      universityId: user?.universityId,
-      instituteId: user?.instituteId,
+      assessmentPlanId: Number(payload.assessmentPlanId),
+      subjectId: Number(payload.subjectId),
+      courseId: Number(payload.courseId),
+      sessionId: sessionId || null,
+      academicYearId: academicYearId || null,
+      universityId: user?.universityId ? Number(user.universityId) : null,
+      instituteId: user?.instituteId ? Number(user.instituteId) : null,
       createdBy: user?.userId || null,
       updatedBy: user?.userId || null,
     };
