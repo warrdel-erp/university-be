@@ -38,6 +38,8 @@ export const createGradingSchemaBody = z.object({
   gradingName: z.string().min(1).max(100),
   gradingCode: z.string().min(1).max(20),
   gradingMethod: z.enum(["ABSOLUTE", "RELATIVE"]),
+  maximumMarks: z.coerce.number().positive().optional().nullable(),
+  minimumPassingMarks: z.coerce.number().min(0).optional().nullable(),
   description: z.string().max(500).optional().nullable(),
   status: z.enum(["DRAFT", "PUBLISHED"]).optional().default("DRAFT"),
   isActive: z.boolean().optional().default(true),
@@ -47,6 +49,8 @@ export const updateGradingSchemaBody = z.object({
   gradingName: z.string().min(1).max(100).optional(),
   gradingCode: z.string().min(1).max(20).optional(),
   gradingMethod: z.enum(["ABSOLUTE", "RELATIVE"]).optional(),
+  maximumMarks: z.coerce.number().positive().optional().nullable(),
+  minimumPassingMarks: z.coerce.number().min(0).optional().nullable(),
   description: z.string().max(500).optional().nullable(),
   status: z.enum(["DRAFT", "PUBLISHED"]).optional(),
   isActive: z.boolean().optional(),
@@ -99,6 +103,14 @@ router.get(
 );
 
 router.put(
+  "/:gradingSchemaId",
+  useAuth,
+  checkAccess(PERMISSIONS.GRADING_SETUP_EDIT.value, null),
+  validate({ body: updateGradingSchemaBody }),
+  updateGradingSchema
+);
+
+router.patch(
   "/:gradingSchemaId",
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP_EDIT.value, null),

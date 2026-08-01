@@ -23,6 +23,8 @@ export async function createGradingSchema(payload, user) {
       gradingName: payload.gradingName,
       gradingCode: payload.gradingCode,
       gradingMethod: payload.gradingMethod,
+      maximumMarks: payload.maximumMarks !== undefined ? payload.maximumMarks : null,
+      minimumPassingMarks: payload.minimumPassingMarks !== undefined ? payload.minimumPassingMarks : null,
       description: payload.description || null,
       status: payload.status || "DRAFT",
       isActive: payload.isActive !== undefined ? payload.isActive : true,
@@ -82,6 +84,8 @@ export async function updateGradingSchema(gradingSchemaId, payload, user) {
     if (payload.gradingName !== undefined) updateData.gradingName = payload.gradingName;
     if (payload.gradingCode !== undefined) updateData.gradingCode = payload.gradingCode;
     if (payload.gradingMethod !== undefined) updateData.gradingMethod = payload.gradingMethod;
+    if (payload.maximumMarks !== undefined) updateData.maximumMarks = payload.maximumMarks;
+    if (payload.minimumPassingMarks !== undefined) updateData.minimumPassingMarks = payload.minimumPassingMarks;
     if (payload.description !== undefined) updateData.description = payload.description;
     if (payload.status !== undefined) updateData.status = payload.status;
     if (payload.isActive !== undefined) updateData.isActive = payload.isActive;
