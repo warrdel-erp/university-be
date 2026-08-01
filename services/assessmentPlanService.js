@@ -122,3 +122,7 @@ export async function deleteAssessmentPlanComponent(assessmentPlanComponentId) {
     return result;
   });
 }
+
+export async function getCourseAssessmentPlanOverview(queryParams) {
+  return await assessmentPlanRepo.getCourseAssessmentPlanOverview(queryParams);
+}

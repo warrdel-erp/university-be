@@ -2010,6 +2010,10 @@ academicRegulationCourseMappingModel.belongsTo(academicRegulationModel, { foreig
 academicRegulationCourseMappingModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
 academicRegulationCourseMappingModel.belongsTo(sessionModel, { foreignKey: 'sessionId', as: 'session' });
 
+// Subject Associations
+subjectModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
+courseModel.hasMany(subjectModel, { foreignKey: 'courseId', as: 'subjects' });
+
 // Assessment Plan Associations
 assessmentPlanModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
 courseModel.hasMany(assessmentPlanModel, { foreignKey: 'courseId', as: 'assessmentPlans' });

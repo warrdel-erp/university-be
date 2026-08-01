@@ -283,3 +283,90 @@ export async function deleteAssessmentPlanComponent(assessmentPlanComponentId, o
 
   return { message: "Assessment plan component deleted successfully" };
 }
+
+export async function getCourseAssessmentPlanOverview({
+  courseId,
+  sessionId,
+  subjectId,
+  assessmentPlanId,
+  academicRegulationId,
+  term,
+  search,
+  page = 1,
+  limit = 10,
+}) {
+  const pageNum = Math.max(1, Number(page) || 1);
+  const limitNum = Math.max(1, Number(limit) || 10);
+  const offset = (pageNum - 1) * limitNum;
+
+  const where = {};
+  if (assessmentPlanId) where.assessmentPlanId = Number(assessmentPlanId);
+  if (courseId) where.courseId = Number(courseId);
+  if (sessionId) where.sessionId = Number(sessionId);
+  if (academicRegulationId) where.regulationId = Number(academicRegulationId);
+  if (term) where.term = Number(term);
+
+  if (search) {
+    where[Op.or] = [
+      { planName: { [Op.like]: `%${search}%` } },
+      { planCode: { [Op.like]: `%${search}%` } },
+    ];
+  }
+
+  const subjectWhere = {};
+  if (subjectId) subjectWhere.subjectId = Number(subjectId);
+
+  const include = [
+    {
+      model: model.courseModel,
+      as: "course",
+      attributes: ["courseId", "courseName"],
+      required: false,
+      include: [
+        {
+          model: model.subjectModel,
+          as: "subjects",
+          attributes: ["subjectId", "subjectName", "subjectCode", "term"],
+          where: Object.keys(subjectWhere).length > 0 ? subjectWhere : undefined,
+          required: Object.keys(subjectWhere).length > 0,
+        },
+      ],
+    },
+    {
+      model: model.sessionModel,
+      as: "session",
+      attributes: ["sessionId", "sessionName"],
+      required: false,
+    },
+    {
+      model: model.academicRegulationModel,
+      as: "academicRegulation",
+      attributes: [
+        "academicRegulationId",
+        "regulationCode",
+        "regulationName",
+        "evaluationPattern",
+        "internalWeightage",
+        "externalWeightage",
+      ],
+      required: false,
+    },
+  ];
+
+  const { count, rows } = await scoped(model.assessmentPlanModel).findAndCountAll({
+    where,
+    include,
+    distinct: true,
+    order: [["assessmentPlanId", "DESC"]],
+    limit: limitNum,
+    offset,
+  });
+
+  return {
+    totalRecords: count,
+    totalPages: Math.ceil(count / limitNum),
+    currentPage: pageNum,
+    pageSize: limitNum,
+    data: rows,
+  };
+}

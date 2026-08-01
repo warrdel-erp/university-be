@@ -13,9 +13,22 @@ import {
   createAssessmentPlanComponent,
   updateAssessmentPlanComponent,
   deleteAssessmentPlanComponent,
+  getCourseAssessmentPlanOverview,
 } from "../controllers/assessmentPlanController.js";
 
 const router = express.Router();
+
+export const overviewQuerySchema = z.object({
+  courseId: z.union([z.string(), z.number()]).optional(),
+  sessionId: z.union([z.string(), z.number()]).optional(),
+  subjectId: z.union([z.string(), z.number()]).optional(),
+  assessmentPlanId: z.union([z.string(), z.number()]).optional(),
+  academicRegulationId: z.union([z.string(), z.number()]).optional(),
+  term: z.union([z.string(), z.number()]).optional(),
+  search: z.string().optional(),
+  page: z.union([z.string(), z.number()]).optional(),
+  limit: z.union([z.string(), z.number()]).optional(),
+});
 
 export const componentSchema = z.object({
   examSetupTypeId: z.coerce.number().int().positive().optional().nullable(),
@@ -76,6 +89,14 @@ router.get(
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
   validate({ query: listAssessmentPlanQuery }),
   getAssessmentPlans
+);
+
+router.get(
+  "/overview",
+  useAuth,
+  checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
+  validate({ query: overviewQuerySchema }),
+  getCourseAssessmentPlanOverview
 );
 
 router.get(

@@ -1368,6 +1368,39 @@
               ]
             }
           }
+        },
+        {
+          "name": "6.9 Get Course Assessment Plan Overview",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/assessmentPlan/overview?courseId=&sessionId=&subjectId=&assessmentPlanId=&academicRegulationId=&term=&search=&page=1&limit=10",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "assessmentPlan",
+                "overview"
+              ],
+              "query": [
+                { "key": "courseId", "value": "" },
+                { "key": "sessionId", "value": "" },
+                { "key": "subjectId", "value": "" },
+                { "key": "assessmentPlanId", "value": "" },
+                { "key": "academicRegulationId", "value": "" },
+                { "key": "term", "value": "" },
+                { "key": "search", "value": "" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
         }
       ]
     }

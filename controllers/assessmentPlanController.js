@@ -99,3 +99,13 @@ export async function deleteAssessmentPlanComponent(req, res) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to delete assessment plan component");
   }
 }
+
+export async function getCourseAssessmentPlanOverview(req, res) {
+  try {
+    const result = await assessmentPlanService.getCourseAssessmentPlanOverview(req.query);
+    return SuccessResponse(res, 200, "Course assessment plan overview fetched successfully", result);
+  } catch (error) {
+    console.error("Error in getCourseAssessmentPlanOverview:", error.message);
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to fetch course assessment plan overview");
+  }
+}
