@@ -37,79 +37,22 @@ const assessmentPlanComponentModel = sequelize.define(
                 key: 'assessment_plan_id'
             }
         },
-        componentName: {
-            type: DataTypes.STRING(100),
-            allowNull: false,
-            field: 'component_name'
-        },
-        evaluationType: {
-            type: DataTypes.ENUM('Marks', 'Grade'),
-            allowNull: false,
-            defaultValue: 'Marks',
-            field: 'evaluation_type'
-        },
         evaluationBy: {
             type: DataTypes.ENUM('Faculty', 'CoE', 'External'),
             allowNull: false,
             defaultValue: 'Faculty',
             field: 'evaluation_by'
         },
-        componentCategory: {
-            type: DataTypes.ENUM(
-                'Continuous Assessment',
-                'Internal Assessment',
-                'External Examination',
-                'Practical',
-                'Viva',
-                'Project'
-            ),
-            allowNull: false,
-            field: 'component_category'
-        },
-        maxMarks: {
-            type: DataTypes.DECIMAL(8, 2),
-            allowNull: false,
-            field: 'max_marks'
-        },
         weightagePercentage: {
             type: DataTypes.DECIMAL(5, 2),
             allowNull: false,
             field: 'weightage_percentage'
-        },
-        passingMarks: {
-            type: DataTypes.DECIMAL(8, 2),
-            allowNull: true,
-            field: 'passing_marks'
         },
         maxAssessments: {
             type: DataTypes.INTEGER,
             allowNull: false,
             defaultValue: 1,
             field: 'max_assessments'
-        },
-        bestOfRule: {
-            type: DataTypes.ENUM('NONE', 'BEST_1', 'BEST_2', 'AVERAGE', 'HIGHEST'),
-            allowNull: false,
-            defaultValue: 'NONE',
-            field: 'best_of_rule'
-        },
-        displayOrder: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            defaultValue: 1,
-            field: 'display_order'
-        },
-        isMandatory: {
-            type: DataTypes.BOOLEAN,
-            allowNull: false,
-            defaultValue: false,
-            field: 'is_mandatory'
-        },
-        isActive: {
-            type: DataTypes.BOOLEAN,
-            allowNull: false,
-            defaultValue: true,
-            field: 'is_active'
         },
         universityId: {
             type: DataTypes.INTEGER,

@@ -18,26 +18,10 @@ import {
 const router = express.Router();
 
 export const componentSchema = z.object({
-  componentName: z.string().min(1).max(100),
-  evaluationType: z.enum(["Marks", "Grade"]).optional().default("Marks"),
-  evaluationBy: z.enum(["Faculty", "CoE", "External"]).optional().default("Faculty"),
-  componentCategory: z.enum([
-    "Continuous Assessment",
-    "Internal Assessment",
-    "External Examination",
-    "Practical",
-    "Viva",
-    "Project",
-  ]),
-  maxMarks: z.coerce.number().positive(),
-  weightagePercentage: z.coerce.number().nonnegative(),
-  passingMarks: z.coerce.number().optional().nullable(),
-  maxAssessments: z.coerce.number().int().positive().optional().default(1),
-  bestOfRule: z.enum(["NONE", "BEST_1", "BEST_2", "AVERAGE", "HIGHEST"]).optional().default("NONE"),
-  displayOrder: z.coerce.number().int().optional().default(1),
-  isMandatory: z.boolean().optional().default(false),
-  isActive: z.boolean().optional().default(true),
   examSetupTypeId: z.coerce.number().int().positive().optional().nullable(),
+  evaluationBy: z.enum(["Faculty", "CoE", "External"]).optional().default("Faculty"),
+  weightagePercentage: z.coerce.number().nonnegative(),
+  maxAssessments: z.coerce.number().int().positive().optional().default(1),
 });
 
 export const createAssessmentPlanBody = z.object({

@@ -45,67 +45,19 @@ module.exports = {
           onUpdate: 'CASCADE',
           onDelete: 'CASCADE',
         },
-        component_name: {
-          type: Sequelize.STRING(100),
-          allowNull: false,
-        },
-        evaluation_type: {
-          type: Sequelize.ENUM('Marks', 'Grade'),
-          allowNull: false,
-          defaultValue: 'Marks',
-        },
         evaluation_by: {
           type: Sequelize.ENUM('Faculty', 'CoE', 'External'),
           allowNull: false,
           defaultValue: 'Faculty',
         },
-        component_category: {
-          type: Sequelize.ENUM(
-            'Continuous Assessment',
-            'Internal Assessment',
-            'External Examination',
-            'Practical',
-            'Viva',
-            'Project'
-          ),
-          allowNull: false,
-        },
-        max_marks: {
-          type: Sequelize.DECIMAL(8, 2),
-          allowNull: false,
-        },
         weightage_percentage: {
           type: Sequelize.DECIMAL(5, 2),
           allowNull: false,
-        },
-        passing_marks: {
-          type: Sequelize.DECIMAL(8, 2),
-          allowNull: true,
         },
         max_assessments: {
           type: Sequelize.INTEGER,
           allowNull: false,
           defaultValue: 1,
-        },
-        best_of_rule: {
-          type: Sequelize.ENUM('NONE', 'BEST_1', 'BEST_2', 'AVERAGE', 'HIGHEST'),
-          allowNull: false,
-          defaultValue: 'NONE',
-        },
-        display_order: {
-          type: Sequelize.INTEGER,
-          allowNull: false,
-          defaultValue: 1,
-        },
-        is_mandatory: {
-          type: Sequelize.BOOLEAN,
-          allowNull: false,
-          defaultValue: false,
-        },
-        is_active: {
-          type: Sequelize.BOOLEAN,
-          allowNull: false,
-          defaultValue: true,
         },
         university_id: {
           type: Sequelize.INTEGER,

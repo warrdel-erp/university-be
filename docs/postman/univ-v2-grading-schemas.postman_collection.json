@@ -1111,7 +1111,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"planName\": \"B.Tech CSE Assessment Plan 2026\",\n  \"planCode\": \"AP_CSE_2026\",\n  \"description\": \"Comprehensive assessment plan for CSE 1st year\",\n  \"courseId\": 1,\n  \"sessionId\": 1,\n  \"regulationId\": 1,\n  \"term\": 1,\n  \"gradingScheme\": \"10-Point Scale\",\n  \"status\": \"Draft\",\n  \"isActive\": true,\n  \"components\": [\n    {\n      \"componentName\": \"Mid Term Examination\",\n      \"evaluationType\": \"Marks\",\n      \"evaluationBy\": \"Faculty\",\n      \"componentCategory\": \"Internal Assessment\",\n      \"maxMarks\": 30,\n      \"weightagePercentage\": 30,\n      \"passingMarks\": 12,\n      \"maxAssessments\": 1,\n      \"bestOfRule\": \"NONE\",\n      \"displayOrder\": 1,\n      \"isMandatory\": true,\n      \"isActive\": true\n    },\n    {\n      \"componentName\": \"End Semester Examination\",\n      \"evaluationType\": \"Marks\",\n      \"evaluationBy\": \"CoE\",\n      \"componentCategory\": \"External Examination\",\n      \"maxMarks\": 70,\n      \"weightagePercentage\": 70,\n      \"passingMarks\": 28,\n      \"maxAssessments\": 1,\n      \"bestOfRule\": \"NONE\",\n      \"displayOrder\": 2,\n      \"isMandatory\": true,\n      \"isActive\": true\n    }\n  ]\n}"
+              "raw": "{\n  \"planName\": \"B.Tech CSE Assessment Plan 2026\",\n  \"planCode\": \"AP_CSE_2026\",\n  \"description\": \"Comprehensive assessment plan for CSE 1st year\",\n  \"courseId\": 1,\n  \"sessionId\": 1,\n  \"regulationId\": 1,\n  \"term\": 1,\n  \"gradingScheme\": \"10-Point Scale\",\n  \"status\": \"Draft\",\n  \"isActive\": true,\n  \"components\": [\n    {\n      \"examSetupTypeId\": 1,\n      \"evaluationBy\": \"Faculty\",\n      \"weightagePercentage\": 30,\n      \"maxAssessments\": 1\n    },\n    {\n      \"examSetupTypeId\": 2,\n      \"evaluationBy\": \"CoE\",\n      \"weightagePercentage\": 70,\n      \"maxAssessments\": 1\n    }\n  ]\n}"
             },
             "url": {
               "raw": "{{baseurl}}/assessmentPlan",
@@ -1287,7 +1287,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"assessmentPlanId\": {{assessmentPlanId}},\n  \"componentName\": \"Quiz 1\",\n  \"evaluationType\": \"Marks\",\n  \"evaluationBy\": \"Faculty\",\n  \"componentCategory\": \"Continuous Assessment\",\n  \"maxMarks\": 20,\n  \"weightagePercentage\": 10,\n  \"passingMarks\": 8,\n  \"maxAssessments\": 1,\n  \"bestOfRule\": \"NONE\",\n  \"displayOrder\": 3,\n  \"isMandatory\": false,\n  \"isActive\": true\n}"
+              "raw": "{\n  \"assessmentPlanId\": {{assessmentPlanId}},\n  \"examSetupTypeId\": 3,\n  \"evaluationBy\": \"Faculty\",\n  \"weightagePercentage\": 10,\n  \"maxAssessments\": 1\n}"
             },
             "url": {
               "raw": "{{baseurl}}/assessmentPlan/component",
@@ -1331,7 +1331,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"componentName\": \"Quiz 1 Updated\",\n  \"maxMarks\": 25\n}"
+              "raw": "{\n  \"weightagePercentage\": 15\n}"
             },
             "url": {
               "raw": "{{baseurl}}/assessmentPlan/component/{{assessmentPlanComponentId}}",
