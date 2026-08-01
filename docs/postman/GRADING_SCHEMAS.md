@@ -42,6 +42,8 @@ API endpoints for managing Grading Schemas and individual Grade Scales.
   "gradingName": "Standard 10-Point Grading Scale",
   "gradingCode": "G10_SCALE",
   "gradingMethod": "ABSOLUTE",
+  "maximumMarks": 100,
+  "minimumPassingMarks": 40,
   "description": "Standard absolute grading scheme for undergraduate programs.",
   "status": "DRAFT",
   "isActive": true
@@ -62,6 +64,8 @@ Query Params:
   "gradingName": "Updated 10-Point Scale",
   "gradingCode": "G10_SCALE_V2",
   "gradingMethod": "ABSOLUTE",
+  "maximumMarks": 100,
+  "minimumPassingMarks": 35,
   "description": "Updated grading scheme details",
   "status": "DRAFT"
 }
