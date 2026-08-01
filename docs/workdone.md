@@ -121,4 +121,8 @@
 ---
 
 1. error in results.
-2. BE url change
+2. BE url change on server
+
+---
+
+1. permission dependency.
