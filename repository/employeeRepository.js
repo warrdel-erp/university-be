@@ -569,14 +569,6 @@ export async function getTeacherSubject(employeeId, filters = {}) {
                                     as: 'assessmentExamType',
                                     attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                                     required: false,
-                                    include: [
-                                        {
-                                            model: model.examStructureModel,
-                                            as: 'examStructure',
-                                            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
-                                            required: false,
-                                        },
-                                    ],
                                 },
                             ],
                         },
@@ -584,6 +576,7 @@ export async function getTeacherSubject(employeeId, filters = {}) {
                 },
             ],
         });
+
     } catch (error) {
         console.error('Error in getting employee subjects:', error);
         throw error;

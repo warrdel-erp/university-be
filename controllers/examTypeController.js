@@ -1,14 +1,9 @@
 import * as examTypeServices from "../services/examTypeServices.js";
 
 export async function addExamType(req, res) {
-    const { examName } = req.body;
-    const createdBy = req.user.userId;
-    const updatedBy = req.user.userId;
     try {
-        if (!examName) {
-            return res.status(400).send('examName is required');
-        }
-        const examType = await examTypeServices.addExamType(req.body, createdBy, updatedBy);
+        const user = req.user;
+        const examType = await examTypeServices.addExamType(req.body, user);
         res.status(201).json({ message: "Data added successfully", examType });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -16,9 +11,10 @@ export async function addExamType(req, res) {
 }
 
 export async function getAllExamType(req, res) {
-    const { academicYearId } = req.query;
     try {
-        const libraries = await examTypeServices.getExamType(academicYearId);
+        const user = req.user;
+        const academicYearId = req.query.academicYearId || user?.academicYearId;
+        const libraries = await examTypeServices.getExamType(academicYearId, user);
         res.status(200).json(libraries);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -45,8 +41,8 @@ export async function updateExamType(req, res) {
         if (!examTypeId) {
             return res.status(400).send('examTypeId is required');
         }
-        const updatedBy = req.user.userId;
-        const examDetails = await examTypeServices.updateExamType(examTypeId, req.body, updatedBy);
+        const user = req.user;
+        const examDetails = await examTypeServices.updateExamType(examTypeId, req.body, user);
         res.status(200).json({ message: "examDetails update succesfully", examDetails });
     } catch (error) {
         res.status(500).json({ error: error.message });

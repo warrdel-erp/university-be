@@ -82,6 +82,7 @@ import internalAssessment from "./router/internalAssessmentRoute.js";
 import jobSetting from "./router/jobSettingsRoutes.js";
 import jobs from "./router/jobRoutes.js";
 import gradingSchemas from "./router/gradingSchemasRouter.js";
+import academicRegulation from "./router/academicRegulationRoute.js";
 import credit from "./router/creditRoute.js";
 import evalution from "./router/evalutionRoute.js";
 import terms from "./router/termsRoute.js";
@@ -143,6 +144,7 @@ app.use("/questionBank", questionBank);
 app.use("/examSetupType", examSetupType);
 
 app.use("/gradingSchemas", gradingSchemas);
+app.use("/academicRegulation", academicRegulation);
 
 app.use("/credit", credit);
 app.use("/evalution", evalution);
@@ -182,7 +184,9 @@ app.use("/teacherSubstitute", teacherSubstitute);
 app.use("/questionPaperBlueprint", questionPaperBlueprint);
 app.use("/examSetupTypeTerm", examSetupTypeTerm);
 app.use("/examSchedule", examSchedule);
+
 app.use("/examStructure", examStructure);
+
 app.use("/examScheduleMapping", examScheduleMapping);
 app.use("/internalAssessment", internalAssessment);
 app.use("/examType", examType);

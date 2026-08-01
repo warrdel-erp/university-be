@@ -1,27 +1,48 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
+import academicRegulationModel from "./academicRegulationModel.js";
 import users from "./userModel.js";
-import acedmicYear from "./acedmicYearModel.js";
 import instituteModel from "./instituteModel.js";
 import university from "./universityModel.js";
 
-const examTypeModel = sequelize.define(
-    'exam_type',
+const academicRegulationClassificationModel = sequelize.define(
+    'academic_regulation_classification',
     {
-        examTypeId: {
+        academicRegulationClassificationId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'exam_type_id'
+            field: 'academic_regulation_classification_id'
         },
-        academicYearId: {
+        academicRegulationId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'acedmic_year_id',
+            field: 'academic_regulation_id',
             references: {
-                model: acedmicYear,
-                key: 'acedmic_year_id'
+                model: academicRegulationModel,
+                key: 'academic_regulation_id'
             }
+        },
+        classificationName: {
+            type: DataTypes.STRING(100),
+            allowNull: false,
+            field: 'classification_name'
+        },
+        minimumCgpa: {
+            type: DataTypes.DECIMAL(3, 2),
+            allowNull: true,
+            field: 'minimum_cgpa'
+        },
+        minimumPercentage: {
+            type: DataTypes.DECIMAL(5, 2),
+            allowNull: true,
+            field: 'minimum_percentage'
+        },
+        sortOrder: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            defaultValue: 1,
+            field: 'sort_order'
         },
         instituteId: {
             type: DataTypes.INTEGER,
@@ -40,48 +61,6 @@ const examTypeModel = sequelize.define(
                 model: university,
                 key: 'university_id'
             }
-        },
-        examName: {
-            type: DataTypes.STRING,
-            field: 'exam_name',
-            allowNull: false
-        },
-        assessmentCode: {
-            type: DataTypes.STRING(30),
-            allowNull: false,
-            field: 'assessment_code'
-        },
-        assessmentCategory: {
-            type: DataTypes.ENUM(
-                'EXAMINATION',
-                'CONTINUOUS_ASSESSMENT',
-                'PRACTICAL_EVALUATION',
-                'PROJECT_RESEARCH_EVALUATION',
-                'PARTICIPATION_ENGAGEMENT'
-            ),
-            allowNull: false,
-            field: 'assessment_category'
-        },
-        assessmentSubCategory: {
-            type: DataTypes.STRING(100),
-            allowNull: false,
-            field: 'assessment_sub_category'
-        },
-        description: {
-            type: DataTypes.STRING(500),
-            allowNull: true,
-            field: 'description'
-        },
-        averagePassingMark: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'average_passing_mark'
-        },
-        isAveragePassingMark: {
-            type: DataTypes.BOOLEAN,
-            allowNull: true,
-            defaultValue: false,
-            field: 'is_average_passing_mark'
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -120,12 +99,12 @@ const examTypeModel = sequelize.define(
         }
     },
     {
-        tableName: 'exam_type',
+        tableName: 'academic_regulation_classification',
         timestamps: true,
         paranoid: true
     }
 );
 
-examTypeModel.scopeConfig = { university: true, institute: true, academicYear: true };
+academicRegulationClassificationModel.scopeConfig = { university: true, institute: true };
 
-export default examTypeModel;
+export default academicRegulationClassificationModel;

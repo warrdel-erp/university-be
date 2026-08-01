@@ -1,17 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
 import { validate } from "../utility/validation.js";
-import { checkAccess } from "../middleware/checkAccess.js";
-import { PERMISSIONS } from "../const/permissions.js";
+import { ASSESSMENT_CATEGORIES } from "../constant.js";
 import {
-  addExamStructure,
-  getAllExamStructure,
-  getSingleExamStructure,
-  updateExamStructure,
-  deleteExamStructure,
   addExamType,
   getDetailByExamType,
-  getSingleExamType,
+  getAllExamTypes,
   updateExamType,
   deleteExamType,
 } from "../controllers/examStructureController.js";
@@ -24,63 +18,48 @@ const emptyToUndefined = (val) =>
 
 const positiveIntegerId = z.coerce.number().int().positive();
 
-const getAllExamStructureQuerySchema = z.object({});
-
-const getSingleExamStructureQuerySchema = z.object({
-  courseId: positiveIntegerId,
-  sessionId: positiveIntegerId,
-});
-
 const getDetailByExamTypeQuerySchema = z.object({
-  examSetupTypeId: positiveIntegerId,
+  examSetupTypeId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
 });
 
-const getSingleExamTypeQuerySchema = z.object({
-  courseId: positiveIntegerId,
-  sessionId: positiveIntegerId,
+const getallExamTypeQuerySchema = z.object({
+  courseId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
+  sessionId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
   termNumber: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
+  search: z.string().optional(),
+  page: z.union([z.string(), z.number()]).optional(),
+  limit: z.union([z.string(), z.number()]).optional(),
 });
 
 const addExamTypeSchema = z.object({
-  examStructureId: z.coerce
-    .number({ required_error: "examStructureId is required" })
-    .int()
-    .positive(),
-  examType: z.string().optional(),
-  examName: z.string().optional(),
-  maximumAssessment: z.coerce.number().int().optional(),
-  isPublish: z.boolean().optional(),
+  examName: z.string().optional().nullable(),
+  examCode: z.string().optional().nullable(),
+  examCategory: z.enum(ASSESSMENT_CATEGORIES).optional().nullable(),
+  examSubcategory: z.string().optional().nullable(),
+  examDescription: z.string().max(500).optional().nullable(),
+  courseId: z.coerce.number().int().positive().optional().nullable(),
+  sessionId: z.coerce.number().int().positive().optional().nullable(),
 });
 
-router.post("/examRule", userAuth, checkAccess(PERMISSIONS.RULES_SETUP_ADD.value, null), addExamStructure);
+const updateExamTypeSchema = z.object({
+  examSetupTypeId: z.coerce.number().int().positive({ message: "examSetupTypeId is required" }),
+  examName: z.string().optional().nullable(),
+  examCode: z.string().optional().nullable(),
+  examCategory: z.enum(ASSESSMENT_CATEGORIES).optional().nullable(),
+  examSubcategory: z.string().optional().nullable(),
+  examDescription: z.string().max(500).optional().nullable(),
+  courseId: z.coerce.number().int().positive().optional().nullable(),
+  sessionId: z.coerce.number().int().positive().optional().nullable(),
+});
 
-router.get(
-  "/examRule",
-  userAuth,
-  checkAccess(PERMISSIONS.RULES_SETUP.value, null),
-  validate({ query: getAllExamStructureQuerySchema }),
-  getAllExamStructure,
-);
-
-router.get(
-  "/examRule/single",
-  userAuth,
-  checkAccess(PERMISSIONS.RULES_SETUP.value, null),
-  validate({ query: getSingleExamStructureQuerySchema }),
-  getSingleExamStructure,
-);
-
-router.patch("/examRule", userAuth, checkAccess(PERMISSIONS.RULES_SETUP_ADD.value, null), updateExamStructure);
-
-router.delete("/examRule", userAuth, checkAccess(PERMISSIONS.RULES_SETUP_ADD.value, null), deleteExamStructure);
-
+//Table of examType
 router.post("/examType", userAuth, validate({ body: addExamTypeSchema }), addExamType);
 
 router.get("/examType", userAuth, validate({ query: getDetailByExamTypeQuerySchema }), getDetailByExamType);
 
-router.get("/examType/single", userAuth, validate({ query: getSingleExamTypeQuerySchema }), getSingleExamType);
+router.get("/examType/all", userAuth, validate({ query: getallExamTypeQuerySchema }), getAllExamTypes);
 
-router.patch("/examType", userAuth, updateExamType);
+router.patch("/examType", userAuth, validate({ body: updateExamTypeSchema }), updateExamType);
 
 router.delete("/examType/:examSetupTypeId", userAuth, deleteExamType);
 
