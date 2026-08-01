@@ -141,8 +141,8 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
       throw error;
     }
 
-    if (plan.status === "Draft" || !plan.isActive) {
-      const error = new Error("Cannot map an assessment plan in Draft status. Plan must be Active.");
+    if (plan.status !== "Published" || !plan.isActive) {
+      const error = new Error("Cannot map an assessment plan in Draft status. Plan must be Published.");
       error.statusCode = 400;
       throw error;
     }

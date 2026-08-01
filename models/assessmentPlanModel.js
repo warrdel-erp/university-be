@@ -76,7 +76,7 @@ const assessmentPlanModel = sequelize.define(
             }
         },
         status: {
-            type: DataTypes.ENUM('Draft', 'Active', 'Archived', 'Published'),
+            type: DataTypes.ENUM('Draft', 'Published'),
             allowNull: false,
             defaultValue: 'Draft',
             field: 'status'

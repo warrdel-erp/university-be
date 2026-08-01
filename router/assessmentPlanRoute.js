@@ -74,7 +74,7 @@ export const createAssessmentPlanBody = z.object({
   regulationId: z.coerce.number().int().positive().optional().nullable(),
   term: z.coerce.number().int().positive().optional().nullable(),
   gradingId: z.coerce.number().int().positive().optional().nullable(),
-  status: z.enum(["Draft", "Active", "Archived", "Published"]).optional().default("Draft"),
+  status: z.preprocess((val) => (val === "" || val === null ? undefined : val), z.enum(["Draft", "Published"]).optional().default("Draft")),
   isActive: z.boolean().optional().default(true),
   components: z.array(componentSchema).optional(),
 });
@@ -83,7 +83,7 @@ export const updateAssessmentPlanBody = createAssessmentPlanBody.partial();
 
 export const listAssessmentPlanQuery = z.object({
   search: z.string().optional(),
-  status: z.enum(["Draft", "Active", "Archived", "Published"]).optional(),
+  status: z.preprocess((val) => (val === "Draft" || val === "Published" ? val : undefined), z.enum(["Draft", "Published"]).optional()),
   courseId: z.union([z.string(), z.number()]).optional(),
   sessionId: z.union([z.string(), z.number()]).optional(),
   regulationId: z.union([z.string(), z.number()]).optional(),
