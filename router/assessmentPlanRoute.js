@@ -74,7 +74,7 @@ export const createAssessmentPlanBody = z.object({
   regulationId: z.coerce.number().int().positive().optional().nullable(),
   term: z.coerce.number().int().positive().optional().nullable(),
   gradingId: z.coerce.number().int().positive().optional().nullable(),
-  status: z.enum(["Draft", "Active", "Archived"]).optional().default("Draft"),
+  status: z.enum(["Draft", "Active", "Archived", "Published"]).optional().default("Draft"),
   isActive: z.boolean().optional().default(true),
   components: z.array(componentSchema).optional(),
 });
@@ -83,7 +83,7 @@ export const updateAssessmentPlanBody = createAssessmentPlanBody.partial();
 
 export const listAssessmentPlanQuery = z.object({
   search: z.string().optional(),
-  status: z.enum(["Draft", "Active", "Archived"]).optional(),
+  status: z.enum(["Draft", "Active", "Archived", "Published"]).optional(),
   courseId: z.union([z.string(), z.number()]).optional(),
   sessionId: z.union([z.string(), z.number()]).optional(),
   regulationId: z.union([z.string(), z.number()]).optional(),
@@ -134,28 +134,6 @@ router.get(
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
   validate({ query: statsQuerySchema }),
   getAssessmentPlanStats
-);
-
-router.get(
-  "/:assessmentPlanId",
-  useAuth,
-  checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
-  getAssessmentPlanById
-);
-
-router.patch(
-  "/:assessmentPlanId",
-  useAuth,
-  checkAccess(PERMISSIONS.GRADING_SETUP_EDIT.value, null),
-  validate({ body: updateAssessmentPlanBody }),
-  updateAssessmentPlan
-);
-
-router.delete(
-  "/:assessmentPlanId",
-  useAuth,
-  checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
-  deleteAssessmentPlan
 );
 
 // ==========================================
@@ -209,6 +187,32 @@ router.delete(
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
   deleteAssessmentPlanSubjectMapping
+);
+
+// ==========================================
+// ASSESSMENT PLAN BY ID ENDPOINTS (WILDCARD)
+// ==========================================
+
+router.get(
+  "/:assessmentPlanId",
+  useAuth,
+  checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
+  getAssessmentPlanById
+);
+
+router.patch(
+  "/:assessmentPlanId",
+  useAuth,
+  checkAccess(PERMISSIONS.GRADING_SETUP_EDIT.value, null),
+  validate({ body: updateAssessmentPlanBody }),
+  updateAssessmentPlan
+);
+
+router.delete(
+  "/:assessmentPlanId",
+  useAuth,
+  checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
+  deleteAssessmentPlan
 );
 
 export default router;

@@ -134,14 +134,24 @@ export async function getAssessmentPlanStats(queryParams) {
 
 export async function createAssessmentPlanSubjectMapping({ payload, user }) {
   return await sequelize.transaction(async (t) => {
+    const plan = await model.assessmentPlanModel.findByPk(Number(payload.assessmentPlanId), { transaction: t });
+    if (!plan) {
+      const error = new Error("Assessment plan not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (plan.status === "Draft" || !plan.isActive) {
+      const error = new Error("Cannot map an assessment plan in Draft status. Plan must be Active.");
+      error.statusCode = 400;
+      throw error;
+    }
+
     let sessionId = payload.sessionId ? Number(payload.sessionId) : null;
 
     // Fallback: If sessionId not specified, check if assessmentPlan has a sessionId
-    if (!sessionId && payload.assessmentPlanId) {
-      const plan = await model.assessmentPlanModel.findByPk(Number(payload.assessmentPlanId), { transaction: t });
-      if (plan && plan.sessionId) {
-        sessionId = Number(plan.sessionId);
-      }
+    if (!sessionId && plan.sessionId) {
+      sessionId = Number(plan.sessionId);
     }
 
     // Verify sessionId exists in session table

@@ -144,8 +144,12 @@ export async function getAssessmentPlans({
 }
 
 export async function getAssessmentPlanById(assessmentPlanId, options = {}) {
+  const parsedId = Number(assessmentPlanId);
+  if (isNaN(parsedId)) {
+    return null;
+  }
   return await scoped(model.assessmentPlanModel).findOne({
-    where: { assessmentPlanId: Number(assessmentPlanId) },
+    where: { assessmentPlanId: parsedId },
     include: [
       {
         model: model.courseModel,
