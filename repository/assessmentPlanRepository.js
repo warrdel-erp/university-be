@@ -34,6 +34,7 @@ export async function getAssessmentPlans({
   sessionId,
   regulationId,
   academicYearId,
+  gradingId,
   universityId,
   instituteId,
   term,
@@ -59,6 +60,9 @@ export async function getAssessmentPlans({
   }
   if (academicYearId) {
     where.academicYearId = Number(academicYearId);
+  }
+  if (gradingId) {
+    where.gradingId = Number(gradingId);
   }
   if (universityId) {
     where.universityId = Number(universityId);
@@ -101,6 +105,12 @@ export async function getAssessmentPlans({
         model: model.acedmicYearModel,
         as: "academicYear",
         attributes: ["academicYearId", "yearTitle", "startingDate", "endingDate"],
+        required: false,
+      },
+      {
+        model: model.gradingModel,
+        as: "gradingScheme",
+        attributes: ["gradingId", "gradingName", "gradingCode"],
         required: false,
       },
       {
@@ -180,27 +190,31 @@ export async function getAssessmentPlanById(assessmentPlanId, options = {}) {
   });
 }
 
-export async function updateAssessmentPlan(assessmentPlanId, updateData, options = {}) {
-  const { components, ...mainUpdateData } = updateData;
+export async function updateAssessmentPlan(assessmentPlanId, updateData = {}, options = {}) {
+  const planId = typeof assessmentPlanId === "object" ? Number(assessmentPlanId.assessmentPlanId) : Number(assessmentPlanId);
+  const dataPayload = typeof assessmentPlanId === "object" ? (assessmentPlanId.payload || {}) : (updateData || {});
+  const opts = typeof assessmentPlanId === "object" ? (updateData || {}) : options;
+
+  const { components, ...mainUpdateData } = dataPayload;
 
   if (Object.keys(mainUpdateData).length > 0) {
     await scoped(model.assessmentPlanModel).update(mainUpdateData, {
-      where: { assessmentPlanId: Number(assessmentPlanId) },
-      transaction: options.transaction,
+      where: { assessmentPlanId: planId },
+      transaction: opts.transaction,
     });
   }
 
   if (Array.isArray(components)) {
     await scoped(model.assessmentPlanComponentModel).destroy({
-      where: { assessmentPlanId: Number(assessmentPlanId) },
-      transaction: options.transaction,
+      where: { assessmentPlanId: planId },
+      transaction: opts.transaction,
     });
 
     if (components.length > 0) {
-      const existingPlan = await getAssessmentPlanById(assessmentPlanId, options);
+      const existingPlan = await getAssessmentPlanById(planId, opts);
       const componentsToCreate = components.map((comp) => ({
         ...comp,
-        assessmentPlanId: Number(assessmentPlanId),
+        assessmentPlanId: planId,
         academicYearId: comp.academicYearId || existingPlan?.academicYearId || null,
         universityId: existingPlan?.universityId,
         instituteId: existingPlan?.instituteId,
@@ -208,15 +222,13 @@ export async function updateAssessmentPlan(assessmentPlanId, updateData, options
         updatedBy: mainUpdateData.updatedBy || null,
       }));
 
-      await Promise.all(
-        componentsToCreate.map((comp) =>
-          scoped(model.assessmentPlanComponentModel).create(comp, { transaction: options.transaction })
-        )
-      );
+      await scoped(model.assessmentPlanComponentModel).bulkCreate(componentsToCreate, {
+        transaction: opts.transaction,
+      });
     }
   }
 
-  return await getAssessmentPlanById(assessmentPlanId, options);
+  return await getAssessmentPlanById(planId, opts);
 }
 
 export async function deleteAssessmentPlan(assessmentPlanId, options = {}) {
@@ -254,15 +266,19 @@ export async function createAssessmentPlanComponent(componentData, options = {})
   });
 }
 
-export async function updateAssessmentPlanComponent(assessmentPlanComponentId, updateData, options = {}) {
-  await scoped(model.assessmentPlanComponentModel).update(updateData, {
-    where: { assessmentPlanComponentId: Number(assessmentPlanComponentId) },
-    transaction: options.transaction,
+export async function updateAssessmentPlanComponent(assessmentPlanComponentId, updateData = {}, options = {}) {
+  const compId = typeof assessmentPlanComponentId === "object" ? Number(assessmentPlanComponentId.assessmentPlanComponentId) : Number(assessmentPlanComponentId);
+  const dataPayload = typeof assessmentPlanComponentId === "object" ? (assessmentPlanComponentId.payload || {}) : (updateData || {});
+  const opts = typeof assessmentPlanComponentId === "object" ? (updateData || {}) : options;
+
+  await scoped(model.assessmentPlanComponentModel).update(dataPayload, {
+    where: { assessmentPlanComponentId: compId },
+    transaction: opts.transaction,
   });
 
   return await scoped(model.assessmentPlanComponentModel).findOne({
-    where: { assessmentPlanComponentId: Number(assessmentPlanComponentId) },
-    transaction: options.transaction,
+    where: { assessmentPlanComponentId: compId },
+    transaction: opts.transaction,
   });
 }
 
@@ -290,6 +306,7 @@ export async function getCourseAssessmentPlanOverview({
   subjectId,
   assessmentPlanId,
   academicRegulationId,
+  assignmentStatus = "all",
   term,
   search,
   page = 1,
@@ -311,10 +328,21 @@ export async function getCourseAssessmentPlanOverview({
     ];
   }
 
+  const mappingWhere = {};
+  if (assessmentPlanId) mappingWhere.assessmentPlanId = Number(assessmentPlanId);
+  if (sessionId) mappingWhere.sessionId = Number(sessionId);
+
   const planWhere = {};
-  if (assessmentPlanId) planWhere.assessmentPlanId = Number(assessmentPlanId);
-  if (sessionId) planWhere.sessionId = Number(sessionId);
   if (academicRegulationId) planWhere.regulationId = Number(academicRegulationId);
+
+  let mappingRequired = false;
+  if (assignmentStatus === "assigned" || Object.keys(mappingWhere).length > 0 || Object.keys(planWhere).length > 0) {
+    mappingRequired = true;
+  }
+
+  if (assignmentStatus === "unassigned") {
+    subjectWhere["$assessmentPlanMappings.assessment_plan_subject_mapping_id$"] = null;
+  }
 
   const include = [
     {
@@ -324,8 +352,29 @@ export async function getCourseAssessmentPlanOverview({
       required: false,
       include: [
         {
+          model: model.academicRegulationModel,
+          as: "academicRegulations",
+          attributes: [
+            "academicRegulationId",
+            "regulationCode",
+            "regulationName",
+            "evaluationPattern",
+            "internalWeightage",
+            "externalWeightage",
+          ],
+          required: false,
+        },
+      ],
+    },
+    {
+      model: model.assessmentPlanSubjectMappingModel,
+      as: "assessmentPlanMappings",
+      where: Object.keys(mappingWhere).length > 0 ? mappingWhere : undefined,
+      required: mappingRequired,
+      include: [
+        {
           model: model.assessmentPlanModel,
-          as: "assessmentPlans",
+          as: "assessmentPlan",
           where: Object.keys(planWhere).length > 0 ? planWhere : undefined,
           required: Object.keys(planWhere).length > 0,
           include: [
@@ -370,4 +419,151 @@ export async function getCourseAssessmentPlanOverview({
     pageSize: limitNum,
     data: rows,
   };
+}
+
+export async function getAssessmentPlanStats({
+  courseId,
+  sessionId,
+  term,
+}) {
+  const subjectWhere = {};
+  if (courseId) subjectWhere.courseId = Number(courseId);
+  if (term) subjectWhere.term = Number(term);
+
+  const totalSubjects = await scoped(model.subjectModel).count({
+    where: subjectWhere,
+  });
+
+  const subjects = await scoped(model.subjectModel).findAll({
+    where: subjectWhere,
+    attributes: ["subjectId", "courseId", "term"],
+  });
+
+  const courseIds = [...new Set(subjects.map((s) => s.courseId).filter(Boolean))];
+
+  const planWhere = {};
+  if (courseIds.length > 0) {
+    planWhere.courseId = { [Op.in]: courseIds };
+  }
+  if (sessionId) planWhere.sessionId = Number(sessionId);
+
+  const plans = await scoped(model.assessmentPlanModel).findAll({
+    where: planWhere,
+    attributes: ["assessmentPlanId", "courseId", "status", "isActive"],
+  });
+
+  const coursesWithPlan = new Set(plans.map((p) => p.courseId));
+
+  let assignedSubjects = 0;
+  let unassignedSubjects = 0;
+
+  for (const subj of subjects) {
+    if (coursesWithPlan.has(subj.courseId)) {
+      assignedSubjects++;
+    } else {
+      unassignedSubjects++;
+    }
+  }
+
+  const overriddenSubjects = plans.filter((p) => p.status === "Archived" || p.isActive === false).length;
+
+  return {
+    totalSubjects,
+    assignedSubjects,
+    unassignedSubjects,
+    overriddenSubjects,
+    coveragePercentage: totalSubjects > 0 ? Number(((assignedSubjects / totalSubjects) * 100).toFixed(2)) : 0,
+  };
+}
+
+export async function createAssessmentPlanSubjectMapping(data, options = {}) {
+  return await scoped(model.assessmentPlanSubjectMappingModel).create(data, {
+    transaction: options.transaction,
+  });
+}
+
+export async function getAssessmentPlanSubjectMappings({
+  assessmentPlanId,
+  subjectId,
+  courseId,
+  sessionId,
+  academicYearId,
+  page = 1,
+  limit = 10,
+}) {
+  const pageNum = Math.max(1, Number(page) || 1);
+  const limitNum = Math.max(1, Number(limit) || 10);
+  const offset = (pageNum - 1) * limitNum;
+
+  const where = {};
+  if (assessmentPlanId) where.assessmentPlanId = Number(assessmentPlanId);
+  if (subjectId) where.subjectId = Number(subjectId);
+  if (courseId) where.courseId = Number(courseId);
+  if (sessionId) where.sessionId = Number(sessionId);
+  if (academicYearId) where.academicYearId = Number(academicYearId);
+
+  const { count, rows } = await scoped(model.assessmentPlanSubjectMappingModel).findAndCountAll({
+    where,
+    include: [
+      {
+        model: model.assessmentPlanModel,
+        as: "assessmentPlan",
+        attributes: ["assessmentPlanId", "planName", "planCode", "status", "isActive"],
+        required: false,
+      },
+      {
+        model: model.subjectModel,
+        as: "subject",
+        attributes: ["subjectId", "subjectName", "subjectCode", "term"],
+        required: false,
+      },
+      {
+        model: model.courseModel,
+        as: "course",
+        attributes: ["courseId", "courseName"],
+        required: false,
+      },
+      {
+        model: model.sessionModel,
+        as: "session",
+        attributes: ["sessionId", "sessionName"],
+        required: false,
+      },
+      {
+        model: model.acedmicYearModel,
+        as: "academicYear",
+        attributes: ["academicYearId", "yearTitle"],
+        required: false,
+      },
+    ],
+    limit: limitNum,
+    offset,
+    order: [["assessmentPlanSubjectMappingId", "DESC"]],
+  });
+
+  return {
+    totalRecords: count,
+    totalPages: Math.ceil(count / limitNum),
+    currentPage: pageNum,
+    pageSize: limitNum,
+    data: rows,
+  };
+}
+
+export async function deleteAssessmentPlanSubjectMapping(mappingId, options = {}) {
+  const existing = await scoped(model.assessmentPlanSubjectMappingModel).findOne({
+    where: { assessmentPlanSubjectMappingId: Number(mappingId) },
+    transaction: options.transaction,
+  });
+
+  if (!existing) {
+    return null;
+  }
+
+  await scoped(model.assessmentPlanSubjectMappingModel).destroy({
+    where: { assessmentPlanSubjectMappingId: Number(mappingId) },
+    transaction: options.transaction,
+  });
+
+  return { message: "Subject assessment plan mapping deleted successfully" };
 }

@@ -1,14 +1,41 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 
-const assessmentPlanModel = sequelize.define(
-    'assessment_plan',
+const assessmentPlanSubjectMappingModel = sequelize.define(
+    'assessment_plan_subject_mapping',
     {
-        assessmentPlanId: {
+        assessmentPlanSubjectMappingId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'assessment_plan_id'
+            field: 'assessment_plan_subject_mapping_id'
+        },
+        assessmentPlanId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'assessment_plan_id',
+            references: {
+                model: 'assessment_plan',
+                key: 'assessment_plan_id'
+            }
+        },
+        subjectId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'subject_id',
+            references: {
+                model: 'subject',
+                key: 'subject_id'
+            }
+        },
+        courseId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'course_id',
+            references: {
+                model: 'course',
+                key: 'course_id'
+            }
         },
         sessionId: {
             type: DataTypes.INTEGER,
@@ -27,65 +54,6 @@ const assessmentPlanModel = sequelize.define(
                 model: 'acedmic_year',
                 key: 'acedmic_year_id'
             }
-        },
-        planName: {
-            type: DataTypes.STRING(100),
-            allowNull: false,
-            field: 'plan_name'
-        },
-        planCode: {
-            type: DataTypes.STRING(50),
-            allowNull: false,
-            field: 'plan_code'
-        },
-        description: {
-            type: DataTypes.STRING(500),
-            allowNull: true,
-            field: 'description'
-        },
-        courseId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'course_id',
-            references: {
-                model: 'course',
-                key: 'course_id'
-            }
-        },
-        regulationId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'regulation_id',
-            references: {
-                model: 'academic_regulation',
-                key: 'academic_regulation_id'
-            }
-        },
-        term: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'term'
-        },
-        gradingId: {
-            type: DataTypes.BIGINT,
-            allowNull: true,
-            field: 'grading_id',
-            references: {
-                model: 'grading',
-                key: 'grading_id'
-            }
-        },
-        status: {
-            type: DataTypes.ENUM('Draft', 'Active', 'Archived'),
-            allowNull: false,
-            defaultValue: 'Draft',
-            field: 'status'
-        },
-        isActive: {
-            type: DataTypes.BOOLEAN,
-            allowNull: false,
-            defaultValue: true,
-            field: 'is_active'
         },
         universityId: {
             type: DataTypes.INTEGER,
@@ -142,12 +110,12 @@ const assessmentPlanModel = sequelize.define(
         }
     },
     {
-        tableName: 'assessment_plan',
+        tableName: 'assessment_plan_subject_mapping',
         timestamps: true,
         paranoid: true
     }
 );
 
-assessmentPlanModel.scopeConfig = { university: true, institute: true };
+assessmentPlanSubjectMappingModel.scopeConfig = { university: true, institute: true };
 
-export default assessmentPlanModel;
+export default assessmentPlanSubjectMappingModel;

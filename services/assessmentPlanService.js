@@ -126,3 +126,40 @@ export async function deleteAssessmentPlanComponent(assessmentPlanComponentId) {
 export async function getCourseAssessmentPlanOverview(queryParams) {
   return await assessmentPlanRepo.getCourseAssessmentPlanOverview(queryParams);
 }
+
+export async function getAssessmentPlanStats(queryParams) {
+  return await assessmentPlanRepo.getAssessmentPlanStats(queryParams);
+}
+
+export async function createAssessmentPlanSubjectMapping({ payload, user }) {
+  return await sequelize.transaction(async (t) => {
+    const data = {
+      assessmentPlanId: payload.assessmentPlanId,
+      subjectId: payload.subjectId,
+      courseId: payload.courseId,
+      sessionId: payload.sessionId || null,
+      academicYearId: user?.academicYearId || null,
+      universityId: user?.universityId,
+      instituteId: user?.instituteId,
+      createdBy: user?.userId || null,
+      updatedBy: user?.userId || null,
+    };
+    return await assessmentPlanRepo.createAssessmentPlanSubjectMapping(data, { transaction: t });
+  });
+}
+
+export async function getAssessmentPlanSubjectMappings(queryParams) {
+  return await assessmentPlanRepo.getAssessmentPlanSubjectMappings(queryParams);
+}
+
+export async function deleteAssessmentPlanSubjectMapping(mappingId) {
+  return await sequelize.transaction(async (t) => {
+    const result = await assessmentPlanRepo.deleteAssessmentPlanSubjectMapping(mappingId, { transaction: t });
+    if (!result) {
+      const error = new Error("Subject assessment plan mapping not found");
+      error.statusCode = 404;
+      throw error;
+    }
+    return result;
+  });
+}

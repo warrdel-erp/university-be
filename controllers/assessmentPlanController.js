@@ -109,3 +109,47 @@ export async function getCourseAssessmentPlanOverview(req, res) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to fetch course assessment plan overview");
   }
 }
+
+export async function getAssessmentPlanStats(req, res) {
+  try {
+    const result = await assessmentPlanService.getAssessmentPlanStats(req.query);
+    return SuccessResponse(res, 200, "Assessment plan statistics fetched successfully", result);
+  } catch (error) {
+    console.error("Error in getAssessmentPlanStats:", error.message);
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to fetch assessment plan statistics");
+  }
+}
+
+export async function createAssessmentPlanSubjectMapping(req, res) {
+  try {
+    const result = await assessmentPlanService.createAssessmentPlanSubjectMapping({
+      payload: req.body,
+      user: req.user,
+    });
+    return SuccessResponse(res, 201, "Subject assessment plan mapping created successfully", result);
+  } catch (error) {
+    console.error("Error in createAssessmentPlanSubjectMapping:", error.message);
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to create subject assessment plan mapping");
+  }
+}
+
+export async function getAssessmentPlanSubjectMappings(req, res) {
+  try {
+    const result = await assessmentPlanService.getAssessmentPlanSubjectMappings(req.query);
+    return SuccessResponse(res, 200, "Subject assessment plan mappings fetched successfully", result);
+  } catch (error) {
+    console.error("Error in getAssessmentPlanSubjectMappings:", error.message);
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to fetch subject assessment plan mappings");
+  }
+}
+
+export async function deleteAssessmentPlanSubjectMapping(req, res) {
+  try {
+    const { mappingId } = req.params;
+    const result = await assessmentPlanService.deleteAssessmentPlanSubjectMapping(mappingId);
+    return SuccessResponse(res, 200, result.message || "Subject assessment plan mapping deleted successfully", result);
+  } catch (error) {
+    console.error("Error in deleteAssessmentPlanSubjectMapping:", error.message);
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to delete subject assessment plan mapping");
+  }
+}

@@ -14,9 +14,36 @@ import {
   updateAssessmentPlanComponent,
   deleteAssessmentPlanComponent,
   getCourseAssessmentPlanOverview,
+  getAssessmentPlanStats,
+  createAssessmentPlanSubjectMapping,
+  getAssessmentPlanSubjectMappings,
+  deleteAssessmentPlanSubjectMapping,
 } from "../controllers/assessmentPlanController.js";
 
 const router = express.Router();
+
+export const createSubjectMappingBody = z.object({
+  assessmentPlanId: z.coerce.number().int().positive(),
+  subjectId: z.coerce.number().int().positive(),
+  courseId: z.coerce.number().int().positive(),
+  sessionId: z.coerce.number().int().positive().optional().nullable(),
+});
+
+export const listSubjectMappingQuery = z.object({
+  assessmentPlanId: z.union([z.string(), z.number()]).optional(),
+  subjectId: z.union([z.string(), z.number()]).optional(),
+  courseId: z.union([z.string(), z.number()]).optional(),
+  sessionId: z.union([z.string(), z.number()]).optional(),
+  academicYearId: z.union([z.string(), z.number()]).optional(),
+  page: z.union([z.string(), z.number()]).optional(),
+  limit: z.union([z.string(), z.number()]).optional(),
+});
+
+export const statsQuerySchema = z.object({
+  courseId: z.union([z.string(), z.number()]).optional(),
+  sessionId: z.union([z.string(), z.number()]).optional(),
+  term: z.union([z.string(), z.number()]).optional(),
+});
 
 export const overviewQuerySchema = z.object({
   courseId: z.union([z.string(), z.number()]).optional(),
@@ -24,6 +51,7 @@ export const overviewQuerySchema = z.object({
   subjectId: z.union([z.string(), z.number()]).optional(),
   assessmentPlanId: z.union([z.string(), z.number()]).optional(),
   academicRegulationId: z.union([z.string(), z.number()]).optional(),
+  assignmentStatus: z.enum(["assigned", "unassigned", "all"]).optional().default("all"),
   term: z.union([z.string(), z.number()]).optional(),
   search: z.string().optional(),
   page: z.union([z.string(), z.number()]).optional(),
@@ -45,7 +73,7 @@ export const createAssessmentPlanBody = z.object({
   sessionId: z.coerce.number().int().positive().optional().nullable(),
   regulationId: z.coerce.number().int().positive().optional().nullable(),
   term: z.coerce.number().int().positive().optional().nullable(),
-  gradingScheme: z.string().max(50).optional().nullable(),
+  gradingId: z.coerce.number().int().positive().optional().nullable(),
   status: z.enum(["Draft", "Active", "Archived"]).optional().default("Draft"),
   isActive: z.boolean().optional().default(true),
   components: z.array(componentSchema).optional(),
@@ -60,6 +88,7 @@ export const listAssessmentPlanQuery = z.object({
   sessionId: z.union([z.string(), z.number()]).optional(),
   regulationId: z.union([z.string(), z.number()]).optional(),
   academicYearId: z.union([z.string(), z.number()]).optional(),
+  gradingId: z.union([z.string(), z.number()]).optional(),
   term: z.union([z.string(), z.number()]).optional(),
   page: z.union([z.string(), z.number()]).optional(),
   limit: z.union([z.string(), z.number()]).optional(),
@@ -97,6 +126,14 @@ router.get(
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
   validate({ query: overviewQuerySchema }),
   getCourseAssessmentPlanOverview
+);
+
+router.get(
+  "/stats",
+  useAuth,
+  checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
+  validate({ query: statsQuerySchema }),
+  getAssessmentPlanStats
 );
 
 router.get(
@@ -146,6 +183,33 @@ router.delete(
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
   deleteAssessmentPlanComponent
+);
+
+// ==========================================
+// ASSESSMENT PLAN SUBJECT MAPPING ENDPOINTS
+// ==========================================
+
+router.post(
+  "/subjectMapping",
+  useAuth,
+  checkAccess(PERMISSIONS.GRADING_SETUP_ADD.value, null),
+  validate({ body: createSubjectMappingBody }),
+  createAssessmentPlanSubjectMapping
+);
+
+router.get(
+  "/subjectMapping",
+  useAuth,
+  checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
+  validate({ query: listSubjectMappingQuery }),
+  getAssessmentPlanSubjectMappings
+);
+
+router.delete(
+  "/subjectMapping/:mappingId",
+  useAuth,
+  checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
+  deleteAssessmentPlanSubjectMapping
 );
 
 export default router;
