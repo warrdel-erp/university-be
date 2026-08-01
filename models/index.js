@@ -1,4 +1,7 @@
 import settingModel from "./settingModel.js";
+import assessmentPlanModel from "./assessmentPlanModel.js";
+import assessmentPlanComponentModel from "./assessmentPlanComponentModel.js";
+import assessmentPlanSubjectMappingModel from "./assessmentPlanSubjectMappingModel.js";
 import universityModel from "./universityModel.js";
 import campusModel from "./campusModel.js";
 import instituteModel from "./instituteModel.js";
@@ -1996,6 +1999,7 @@ s3FileModel.belongsTo(userModel, { foreignKey: "createdBy", as: "creator" });
 userModel.hasMany(s3FileModel, { foreignKey: "createdBy", as: "s3Files" });
 academicRegulationModel.belongsTo(gradingModel, { foreignKey: 'gradingSchemeId', as: 'gradingScheme' });
 academicRegulationModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
+courseModel.hasMany(academicRegulationModel, { foreignKey: 'courseId', as: 'academicRegulations' });
 academicRegulationModel.belongsTo(sessionModel, { foreignKey: 'sessionId', as: 'session' });
 academicRegulationModel.belongsTo(acedmicYearModel, { foreignKey: 'academicYearId', as: 'academicYear' });
 academicRegulationModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'creator' });
@@ -2008,7 +2012,50 @@ academicRegulationCourseMappingModel.belongsTo(academicRegulationModel, { foreig
 academicRegulationCourseMappingModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
 academicRegulationCourseMappingModel.belongsTo(sessionModel, { foreignKey: 'sessionId', as: 'session' });
 
+// Subject Associations
+subjectModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
+courseModel.hasMany(subjectModel, { foreignKey: 'courseId', as: 'subjects' });
+
+// Assessment Plan Associations
+assessmentPlanModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
+courseModel.hasMany(assessmentPlanModel, { foreignKey: 'courseId', as: 'assessmentPlans' });
+
+assessmentPlanModel.belongsTo(sessionModel, { foreignKey: 'sessionId', as: 'session' });
+sessionModel.hasMany(assessmentPlanModel, { foreignKey: 'sessionId', as: 'assessmentPlans' });
+
+assessmentPlanModel.belongsTo(academicRegulationModel, { foreignKey: 'regulationId', as: 'academicRegulation' });
+academicRegulationModel.hasMany(assessmentPlanModel, { foreignKey: 'regulationId', as: 'assessmentPlans' });
+
+assessmentPlanModel.belongsTo(acedmicYearModel, { foreignKey: 'academicYearId', as: 'academicYear' });
+acedmicYearModel.hasMany(assessmentPlanModel, { foreignKey: 'academicYearId', as: 'assessmentPlans' });
+
+assessmentPlanModel.belongsTo(gradingModel, { foreignKey: 'gradingId', as: 'gradingScheme' });
+gradingModel.hasMany(assessmentPlanModel, { foreignKey: 'gradingId', as: 'assessmentPlans' });
+
+assessmentPlanComponentModel.belongsTo(acedmicYearModel, { foreignKey: 'academicYearId', as: 'academicYear' });
+acedmicYearModel.hasMany(assessmentPlanComponentModel, { foreignKey: 'academicYearId', as: 'assessmentPlanComponents' });
+
+assessmentPlanComponentModel.belongsTo(examSetupTypeModel, { foreignKey: 'examSetupTypeId', as: 'examSetupType' });
+examSetupTypeModel.hasMany(assessmentPlanComponentModel, { foreignKey: 'examSetupTypeId', as: 'assessmentPlanComponents' });
+
+assessmentPlanModel.hasMany(assessmentPlanComponentModel, { foreignKey: 'assessmentPlanId', as: 'components' });
+assessmentPlanComponentModel.belongsTo(assessmentPlanModel, { foreignKey: 'assessmentPlanId', as: 'assessmentPlan' });
+
+// Assessment Plan Subject Mapping Associations
+assessmentPlanSubjectMappingModel.belongsTo(assessmentPlanModel, { foreignKey: 'assessmentPlanId', as: 'assessmentPlan' });
+assessmentPlanModel.hasMany(assessmentPlanSubjectMappingModel, { foreignKey: 'assessmentPlanId', as: 'subjectMappings' });
+
+assessmentPlanSubjectMappingModel.belongsTo(subjectModel, { foreignKey: 'subjectId', as: 'subject' });
+subjectModel.hasMany(assessmentPlanSubjectMappingModel, { foreignKey: 'subjectId', as: 'assessmentPlanMappings' });
+
+assessmentPlanSubjectMappingModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
+assessmentPlanSubjectMappingModel.belongsTo(sessionModel, { foreignKey: 'sessionId', as: 'session' });
+assessmentPlanSubjectMappingModel.belongsTo(acedmicYearModel, { foreignKey: 'academicYearId', as: 'academicYear' });
+
 export {
+  assessmentPlanModel,
+  assessmentPlanComponentModel,
+  assessmentPlanSubjectMappingModel,
   academicRegulationModel,
   academicRegulationClassificationModel,
   academicRegulationCourseMappingModel,

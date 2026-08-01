@@ -1091,6 +1091,433 @@
           }
         }
       ]
+    },
+    {
+      "name": "6. Assessment Plans",
+      "item": [
+        {
+          "name": "6.1 Create Assessment Plan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planName\": \"B.Tech CSE Assessment Plan 2026\",\n  \"planCode\": \"AP_CSE_2026\",\n  \"description\": \"Comprehensive assessment plan for CSE 1st year\",\n  \"courseId\": 1,\n  \"sessionId\": 1,\n  \"regulationId\": 1,\n  \"term\": 1,\n  \"gradingScheme\": \"10-Point Scale\",\n  \"status\": \"Draft\",\n  \"isActive\": true,\n  \"components\": [\n    {\n      \"examSetupTypeId\": 1,\n      \"evaluationBy\": \"Faculty\",\n      \"weightagePercentage\": 30,\n      \"maxAssessments\": 1\n    },\n    {\n      \"examSetupTypeId\": 2,\n      \"evaluationBy\": \"CoE\",\n      \"weightagePercentage\": 70,\n      \"maxAssessments\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/assessmentPlan",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "assessmentPlan"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if (res.success && res.data && res.data.assessmentPlanId) {",
+                  "    pm.collectionVariables.set('assessmentPlanId', res.data.assessmentPlanId);",
+                  "    console.log('Saved assessmentPlanId:', res.data.assessmentPlanId);",
+                  "    if (res.data.components && res.data.components.length > 0) {",
+                  "        pm.collectionVariables.set('assessmentPlanComponentId', res.data.components[0].assessmentPlanComponentId);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.2 Get All Assessment Plans",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/assessmentPlan?search=&status=&courseId=&sessionId=&regulationId=&term=&page=1&limit=10",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "assessmentPlan"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "status",
+                  "value": ""
+                },
+                {
+                  "key": "courseId",
+                  "value": ""
+                },
+                {
+                  "key": "sessionId",
+                  "value": ""
+                },
+                {
+                  "key": "regulationId",
+                  "value": ""
+                },
+                {
+                  "key": "term",
+                  "value": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.3 Get Assessment Plan By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/assessmentPlan/{{assessmentPlanId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "assessmentPlan",
+                "{{assessmentPlanId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.4 Update Assessment Plan",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planName\": \"B.Tech CSE Assessment Plan 2026 Updated\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/assessmentPlan/{{assessmentPlanId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "assessmentPlan",
+                "{{assessmentPlanId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.5 Toggle Active Status (Soft Delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/assessmentPlan/{{assessmentPlanId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "assessmentPlan",
+                "{{assessmentPlanId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.6 Create Assessment Plan Component",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assessmentPlanId\": {{assessmentPlanId}},\n  \"examSetupTypeId\": 3,\n  \"evaluationBy\": \"Faculty\",\n  \"weightagePercentage\": 10,\n  \"maxAssessments\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/assessmentPlan/component",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "assessmentPlan",
+                "component"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if (res.success && res.data && res.data.assessmentPlanComponentId) {",
+                  "    pm.collectionVariables.set('assessmentPlanComponentId', res.data.assessmentPlanComponentId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.7 Update Assessment Plan Component",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weightagePercentage\": 15\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/assessmentPlan/component/{{assessmentPlanComponentId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "assessmentPlan",
+                "component",
+                "{{assessmentPlanComponentId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.8 Delete Assessment Plan Component",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/assessmentPlan/component/{{assessmentPlanComponentId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "assessmentPlan",
+                "component",
+                "{{assessmentPlanComponentId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.9 Get Course Assessment Plan Overview",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/assessmentPlan/overview?courseId=&sessionId=&subjectId=&assessmentPlanId=&academicRegulationId=&assignmentStatus=all&term=&search=&page=1&limit=10",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "assessmentPlan",
+                "overview"
+              ],
+              "query": [
+                { "key": "courseId", "value": "" },
+                { "key": "sessionId", "value": "" },
+                { "key": "subjectId", "value": "" },
+                { "key": "assessmentPlanId", "value": "" },
+                { "key": "academicRegulationId", "value": "" },
+                { "key": "assignmentStatus", "value": "all", "description": "Options: assigned | unassigned | all" },
+                { "key": "term", "value": "" },
+                { "key": "search", "value": "" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.10 Get Assessment Plan Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/assessmentPlan/stats?courseId=&sessionId=&term=",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "assessmentPlan",
+                "stats"
+              ],
+              "query": [
+                { "key": "courseId", "value": "" },
+                { "key": "sessionId", "value": "" },
+                { "key": "term", "value": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.11 Create Subject Assessment Plan Mapping",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.data && jsonData.data.assessmentPlanSubjectMappingId) {",
+                  "    pm.collectionVariables.set('assessmentPlanSubjectMappingId', jsonData.data.assessmentPlanSubjectMappingId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assessmentPlanId\": {{assessmentPlanId}},\n  \"subjectId\": 402,\n  \"courseId\": 45,\n  \"sessionId\": 23\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/assessmentPlan/subjectMapping",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "assessmentPlan",
+                "subjectMapping"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.12 Get Subject Assessment Plan Mappings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/assessmentPlan/subjectMapping?page=1&limit=10",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "assessmentPlan",
+                "subjectMapping"
+              ],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.13 Delete Subject Assessment Plan Mapping",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/assessmentPlan/subjectMapping/{{assessmentPlanSubjectMappingId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "assessmentPlan",
+                "subjectMapping",
+                "{{assessmentPlanSubjectMappingId}}"
+              ]
+            }
+          }
+        }
+      ]
     }
   ],
   "variable": [
@@ -1121,6 +1548,16 @@
     },
     {
       "key": "examSetupTypeId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assessmentPlanId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assessmentPlanComponentId",
       "value": "1",
       "type": "string"
     }
