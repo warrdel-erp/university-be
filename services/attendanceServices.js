@@ -6,11 +6,13 @@ import sequelize from "../database/sequelizeConfig.js";
 import { Op } from "sequelize";
 import * as model from "../models/index.js";
 import { ATTENDANCE_STATUS } from "../constant.js";
+import { decimalDivide, decimalMultiply } from "../utility/decimalMoney.js";
 import { resolveProgramYear, resolveStudentClassSectionsId } from "../utility/classSectionIncludes.js";
 import {
   assertCopyPeriodDateWiseMatch,
   assertDateWiseCellsBelongToTerm,
   canCopyPeriodToTarget,
+  getPeriodTeacherUserId,
   resolveAttendancePlacement,
   resolveDateWiseRoutinePlacement,
   resolveSourcePeriodByDateWiseId,
@@ -192,6 +194,30 @@ export async function copyAttendancePeriod(copyData, createdBy, updatedBy) {
     );
   }
 
+  const studentIds = [...new Set(sourceRows.map((r) => r.studentId))];
+  const studentSectionMap = new Map();
+  if (studentIds.length > 0) {
+    const students = await model.studentModel.findAll({
+      where: { studentId: { [Op.in]: studentIds } },
+      attributes: ['studentId', 'classSectionTermId'],
+      include: [
+        {
+          model: model.classSectionTermModel,
+          as: 'studentClassSectionTerm',
+          attributes: ['classSectionTermId', 'classSectionsId'],
+          required: false,
+        },
+      ],
+    });
+    for (const s of students) {
+      const plainS = s.get({ plain: true });
+      const sectionId = plainS.studentClassSectionTerm?.classSectionsId || null;
+      if (sectionId) {
+        studentSectionMap.set(plainS.studentId, sectionId);
+      }
+    }
+  }
+
   const t = await sequelize.transaction();
   try {
     const attendanceRecords = [];
@@ -199,13 +225,14 @@ export async function copyAttendancePeriod(copyData, createdBy, updatedBy) {
     for (const targetDateWiseId of pendingTargetIds) {
       const target = targetById.get(Number(targetDateWiseId));
       for (const row of sourceRows) {
+        const resolvedClassSectionsId = row.classSectionsId || sourcePlacement.classSectionsId || studentSectionMap.get(row.studentId) || null;
         attendanceRecords.push({
           studentId: row.studentId,
           attendanceStatus: row.attendanceStatus,
           notes: row.notes,
           description: row.description,
-          classSectionsId: sourcePlacement.classSectionsId,
-          classSectionTermId: sourcePlacement.classSectionTermId,
+          classSectionsId: resolvedClassSectionsId,
+          classSectionTermId: sourcePlacement.classSectionTermId || null,
           timeTableCellDateWiseId: Number(targetDateWiseId),
           timeTableCellId: Number(target.timeTableCellId),
           date,
@@ -281,6 +308,7 @@ function mapCopyPeriodItem(periodItem) {
     endTime: structurePeriod.endTime ?? null,
     subjectId: subject.subjectId,
     subjectName: subject.subjectName,
+    userId: getPeriodTeacherUserId(plain),
   };
 }
 
@@ -300,6 +328,7 @@ function mapCurrentPeriod(sourcePeriod, date, isMarked) {
     endTime: structurePeriod.endTime ?? null,
     subjectId: subject.subjectId,
     subjectName: subject.subjectName,
+    userId: getPeriodTeacherUserId(sourcePeriod),
     isMarked,
   };
 }
@@ -322,10 +351,16 @@ async function getCopyToPeriodsForSameDay(sourcePeriod, date) {
 
   const markedIds = await attendanceService.getMarkedDateWiseIds(candidateIds);
   const copyToPeriods = [];
+  const sourceUserId = getPeriodTeacherUserId(sourcePeriod);
 
   for (const periodItem of laterPeriods) {
     const targetDateWiseId = Number(periodItem.timeTableCellDateWiseId);
     if (targetDateWiseId === Number(sourcePeriod.timeTableCellDateWiseId)) {
+      continue;
+    }
+
+    const targetUserId = getPeriodTeacherUserId(periodItem);
+    if (sourceUserId != null && targetUserId != null && sourceUserId !== targetUserId) {
       continue;
     }
 
@@ -769,17 +804,99 @@ export async function getEmployeeSectionDates(classSectionTermId, subjectId, use
   };
 }
 
-export async function getStudentsBatchAttendance(classSectionTermId, filters) {
-  const placement = await resolveAttendancePlacement(classSectionTermId);
-  const dateWiseIds = filters.map((f) => f.timeTableCellDateWiseId);
-  await assertDateWiseCellsBelongToTerm(dateWiseIds, placement.classSectionTermId);
+const LEAVE_STATUS_SET = new Set(["Approved Leave", "Duty Leave", "Sports Leave", "NCC Leave"]);
 
-  const students = await attendanceService.getStudentsBatchAttendance(
+export async function getStudentsBatchAttendance(classSectionTermId, filters = []) {
+  const placement = await resolveAttendancePlacement(classSectionTermId);
+
+  const dateWiseIds = [];
+  const templateAttendance = {};
+  if (Array.isArray(filters)) {
+    for (let i = 0; i < filters.length; i++) {
+      const id = Number(filters[i]?.timeTableCellDateWiseId);
+      if (id) {
+        dateWiseIds.push(id);
+        templateAttendance[id] = null;
+      }
+    }
+  }
+
+  if (dateWiseIds.length > 0) {
+    await assertDateWiseCellsBelongToTerm(dateWiseIds, placement.classSectionTermId);
+  }
+
+  const rawStudents = await attendanceService.getStudentsBatchAttendance(
     placement.classSectionTermId,
     filters,
   );
 
-  return students;
+  const len = rawStudents.length;
+  const students = new Array(len);
+
+  for (let i = 0; i < len; i++) {
+    const row = rawStudents[i];
+    const s = row.get ? row.get({ plain: true }) : row;
+    const records = s.studentAttendance || [];
+
+    const attendance = { ...templateAttendance };
+    let present = 0;
+    let absent = 0;
+    let leave = 0;
+    let medical = 0;
+    let holiday = 0;
+
+    const rLen = records.length;
+    for (let j = 0; j < rLen; j++) {
+      const rec = records[j];
+      const cellId = rec.timeTableCellDateWiseId;
+      const status = rec.attendanceStatus;
+
+      if (cellId && status) {
+        attendance[cellId] = status.toUpperCase();
+
+        if (status === "Present") {
+          present++;
+        } else if (status === "Absent") {
+          absent++;
+        } else if (status === "Medical Leave") {
+          medical++;
+        } else if (status === "Holiday") {
+          holiday++;
+        } else if (LEAVE_STATUS_SET.has(status)) {
+          leave++;
+        }
+      }
+    }
+
+    const totalEvaluated = present + absent + medical + leave;
+    const attended = present + leave + medical;
+    const percentage = totalEvaluated > 0
+      ? decimalDivide(decimalMultiply(attended, 100), totalEvaluated)
+      : 0;
+
+    let studentName = s.firstName || '';
+    if (s.middleName) studentName += ' ' + s.middleName;
+    if (s.lastName) studentName += ' ' + s.lastName;
+
+    students[i] = {
+      studentId: s.studentId,
+      studentName,
+      scholarNumber: s.scholarNumber,
+      enrollNumber: s.enrollNumber ?? null,
+      summary: {
+        present,
+        leave,
+        absent,
+        medical,
+        holiday,
+        percentage,
+      },
+      attendance,
+      studentAttendance: records,
+    };
+  }
+
+  return { students };
 }
 
 /* ----------------  Extract Student ID from Name ---------------- */

@@ -165,11 +165,16 @@ const dateWiseIdList = z.preprocess(
   z.array(positiveIntegerId).min(1, "timeTableCellDateWiseId is required"),
 );
 
+const optionalAttendanceStatusFilter = z
+  .union([z.string(), z.array(z.string())])
+  .optional();
+
 const classSectionStudentsQuerySchema = z.object({
   timeTableCellDateWiseId: dateWiseIdList,
   academicYearId: optionalPositiveIntegerId,
   date: optionalDateField,
   groupPeriods: z.union([z.boolean(), z.string()]).optional(),
+  attendanceStatus: optionalAttendanceStatusFilter,
 }).passthrough();
 
 const studentSharedOptionalFields = {

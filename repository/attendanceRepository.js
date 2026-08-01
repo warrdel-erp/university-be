@@ -37,6 +37,7 @@ export async function getAttendanceRowsByDateWiseId(timeTableCellDateWiseId) {
                 'attendanceStatus',
                 'notes',
                 'description',
+                'classSectionsId',
             ],
             where: {
                 timeTableCellDateWiseId: Number(timeTableCellDateWiseId),
@@ -63,6 +64,12 @@ export async function getNextDateWisePeriodsOnSameDay(timeTableRoutineId, date, 
             ],
             include: [
                 {
+                    model: model.timeTableCellTeachersDateWiseModel,
+                    as: 'timeTableCellTeachersDateWise',
+                    attributes: ['timeTableCellTeachersDateWiseId', 'userId', 'teacherType'],
+                    required: false,
+                },
+                {
                     model: model.timeTableCellModel,
                     as: 'timeTableCell',
                     required: true,
@@ -82,6 +89,12 @@ export async function getNextDateWisePeriodsOnSameDay(timeTableRoutineId, date, 
                         'timeTableRoutineId',
                     ],
                     include: [
+                        {
+                            model: model.timeTableCellTeachersModel,
+                            as: 'timeTableCellTeachers',
+                            attributes: ['timeTableCellTeacherId', 'userId', 'teacherType'],
+                            required: false,
+                        },
                         {
                             model: model.timeTableRoutineModel,
                             as: 'timeTableRoutine',
@@ -117,7 +130,7 @@ export async function getNextDateWisePeriodsOnSameDay(timeTableRoutineId, date, 
                         {
                             model: model.teacherSubjectMappingModel,
                             as: 'timeTableTeacherSubject',
-                            attributes: ['teacherSubjectMappingId'],
+                            attributes: ['teacherSubjectMappingId', 'userId'],
                             required: false,
                             include: [
                                 {
@@ -668,15 +681,31 @@ export async function getStudentAttendanceReport(classSectionsId, subjectId, use
     }
 };
 
-export async function getStudentsBatchAttendance(classSectionTermId, filters) {
+export async function getStudentsBatchAttendance(classSectionTermId, filters = []) {
     try {
+        const dateWiseIds = (filters || [])
+            .map((f) => Number(f.timeTableCellDateWiseId))
+            .filter(Boolean);
+
+        const attendanceWhere = dateWiseIds.length > 0
+            ? { timeTableCellDateWiseId: { [Op.in]: dateWiseIds } }
+            : undefined;
+
         return await scoped(model.studentModel).findAll({
             where: {
-                classSectionTermId: Number(classSectionTermId),
+                [Op.or]: [
+                    { classSectionTermId: Number(classSectionTermId) },
+                    { '$studentClassSectionTerm.class_section_term_id$': Number(classSectionTermId) },
+                ],
                 deletedAt: null,
             },
-            attributes: ['studentId', 'firstName', 'middleName', 'lastName', 'scholarNumber', 'enrollNumber'],
+            attributes: ['studentId', 'firstName', 'middleName', 'lastName', 'scholarNumber', 'enrollNumber', 'classSectionTermId'],
             include: [
+                studentClassSectionTermWithSectionInclude({
+                    classSectionTermId: Number(classSectionTermId),
+                    termRequired: false,
+                    sectionRequired: false,
+                }),
                 {
                     model: model.attendanceModel,
                     as: 'studentAttendance',
@@ -687,13 +716,15 @@ export async function getStudentsBatchAttendance(classSectionTermId, filters) {
                         'attendanceStatus',
                         'timeTableCellDateWiseId',
                         'timeTableCellId',
+                        'notes',
+                        'description',
                     ],
-                    where: {
-                        [Op.or]: filters.map((f) => ({
-                            timeTableCellDateWiseId: Number(f.timeTableCellDateWiseId),
-                        })),
-                    },
+                    where: attendanceWhere,
                 },
+            ],
+            order: [
+                ['scholarNumber', 'ASC'],
+                ['firstName', 'ASC'],
             ],
         });
     } catch (error) {

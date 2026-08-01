@@ -149,10 +149,8 @@ import internalAssessmentModel from "./internalAssessmentModel.js";
 import assessmentEvaluationModel from "./assessmentEvaluationModel.js";
 import jobSettingModel from "./jobSettingModel.js";
 import jobModel from "./jobModel.js";
-import gradeModel from "./gradeModel.js";
-import gradeScaleModel from "./gradeScaleModel.js";
-import gradeCourseModel from "./gradeCourseModel.js";
-import gradePassFailModel from "./gradePassFailModel.js";
+import gradingModel from "./gradingModel.js";
+import gradingGradeModel from "./gradingGradeModel.js";
 import creditModel from "./creditModel.js";
 import evalutionModel from "./evalutionModel.js";
 // userPermissionModel and userRoleModel removed — replaced by userRolePermissionModel (user_role_permission_scope)
@@ -1238,6 +1236,15 @@ sessionModel.hasMany(academicGroupScopeModel, {
   as: "academicGroupScopes",
 });
 
+academicGroupScopeModel.belongsTo(classSectionTermModel, {
+  foreignKey: "classSectionTermId",
+  as: "classSectionTerm",
+});
+classSectionTermModel.hasMany(academicGroupScopeModel, {
+  foreignKey: "classSectionTermId",
+  as: "academicGroupScopes",
+});
+
 academicGroupModel.belongsTo(academicGroupScopeModel, {
   foreignKey: "academicGroupScopeId",
   as: "scope",
@@ -1809,23 +1816,11 @@ subjectModel.hasMany(jobModel, { foreignKey: "subjectId", as: "jobsSubject" });
 jobModel.belongsTo(courseModel, { foreignKey: "courseId", as: "courseJobs" });
 courseModel.hasMany(jobModel, { foreignKey: "courseId", as: "jobsCourse" });
 
-gradeModel.hasMany(gradeScaleModel, { foreignKey: "gradeId", as: "scales" });
-gradeScaleModel.belongsTo(gradeModel, { foreignKey: "gradeId", as: "gradeMaster" });
+gradingModel.hasMany(gradingGradeModel, { foreignKey: "gradingId", as: "grades", onDelete: "CASCADE" });
+gradingGradeModel.belongsTo(gradingModel, { foreignKey: "gradingId", as: "grading" });
 
-gradeModel.hasMany(gradeCourseModel, { foreignKey: "gradeId", as: "coursesGrade" });
-gradeCourseModel.belongsTo(gradeModel, { foreignKey: "gradeId", as: "grade" });
-
-gradeCourseModel.hasMany(gradePassFailModel, { foreignKey: "gradeCourseId", as: "passFail" });
-gradePassFailModel.belongsTo(gradeCourseModel, { foreignKey: "gradeCourseId", as: "gradeCourse" });
-
-courseModel.hasMany(gradeCourseModel, { foreignKey: "courseId", as: "gradeCourses" });
-gradeCourseModel.belongsTo(courseModel, { foreignKey: "courseId", as: "Allcourse" });
-
-sessionModel.hasMany(gradeCourseModel, { foreignKey: "sessionId", as: "gradeSession" });
-gradeCourseModel.belongsTo(sessionModel, { foreignKey: "sessionId", as: "sessions" });
-
-acedmicYearModel.hasMany(gradeCourseModel, { foreignKey: "academicYearId", as: "gradeAcedmic" });
-gradeCourseModel.belongsTo(acedmicYearModel, { foreignKey: "academicYearId", as: "academicYear" });
+gradingModel.belongsTo(universityModel, { foreignKey: "universityId", as: "university" });
+universityModel.hasMany(gradingModel, { foreignKey: "universityId", as: "gradings" });
 
 creditModel.belongsTo(courseModel, { foreignKey: "courseId", as: "courseCredit" });
 courseModel.hasMany(creditModel, { foreignKey: "courseId", as: "creditsCourse" });
@@ -2169,10 +2164,8 @@ export {
   assessmentEvaluationModel,
   jobSettingModel,
   jobModel,
-  gradeModel,
-  gradeCourseModel,
-  gradePassFailModel,
-  gradeScaleModel,
+  gradingModel,
+  gradingGradeModel,
   creditModel,
   evalutionModel,
   questionPaperModel,

@@ -2715,22 +2715,46 @@ function isGroupPeriodsEnabled(groupPeriods) {
   return groupPeriods === true || groupPeriods === 'true' || groupPeriods === '1';
 }
 
-function buildProgramDetails(period, students) {
-  const first = students[0] || {};
-  const termRow = first.studentClassSectionTerm || {};
+function buildProgramDetails(period, students = []) {
+  const studentWithCourse = students.find((s) => s.course && (s.course.courseName || s.course.courseId));
+  const studentWithTerm = students.find((s) => s.studentClassSectionTerm);
+
+  const termRow = studentWithTerm?.studentClassSectionTerm || {};
   const section = termRow.classSection || {};
-  const course = first.course || {};
-  const subject = period.timeTableSubject || {};
+
+  const cell = period.timeTableCell || {};
+  const routine = period.timeTableRoutine || cell.timeTableRoutine || {};
+  const academicGroupScope = period.academicGroup?.scope || routine.academicGroup?.scope || {};
+
+  const course =
+    studentWithCourse?.course
+    || routine.timeTableCourse
+    || academicGroupScope.course
+    || period.timeTableCourse
+    || period.course
+    || {};
+
+  const subject = period.timeTableSubject || cell.timeTableSubject || {};
+
+  const scopeClassSectionTerm = academicGroupScope.classSectionTerm || {};
+  const scopeSection = scopeClassSectionTerm.classSection || {};
+  const routineTermRow = routine.timeTableClassSectionTerm || {};
+  const routineSection = routineTermRow.classSection || {};
 
   return {
     classSectionsId:
       period.classSectionsId
       ?? termRow.classSectionsId
       ?? section.classSectionsId
+      ?? scopeClassSectionTerm.classSectionsId
+      ?? scopeSection.classSectionsId
+      ?? routineTermRow.classSectionsId
+      ?? routineSection.classSectionsId
       ?? null,
-    year: period.year ?? section.year ?? null,
-    section: period.section ?? section.section ?? null,
-    term: period.term ?? termRow.term ?? null,
+    year: period.year ?? section.year ?? scopeSection.year ?? routineSection.year ?? null,
+    section: period.section ?? section.section ?? scopeSection.section ?? routineSection.section ?? null,
+    term: period.term ?? termRow.term ?? academicGroupScope.term ?? scopeClassSectionTerm.term ?? routineTermRow.term ?? null,
+    termType: course.termType ?? null,
     subjectId: subject.subjectId ?? null,
     subjectName: subject.subjectName ?? null,
     courseId: course.courseId ?? null,
@@ -2752,7 +2776,40 @@ function buildPeriodMeta(period) {
   };
 }
 
-async function buildClassSectionStudentsBlock(dateWiseId) {
+export function parseAttendanceStatus(val) {
+  if (!val) return null;
+  let items = [];
+  if (Array.isArray(val)) {
+    items = val.flatMap((v) => (typeof v === "string" ? v.split(",") : [v]));
+  } else if (typeof val === "string") {
+    items = val.split(",");
+  }
+
+  const allowedStatuses = [
+    "Present",
+    "Absent",
+    "Medical Leave",
+    "Duty Leave",
+    "Sports Leave",
+    "NCC Leave",
+    "Approved Leave",
+    "Holiday",
+  ];
+
+  const allowedMap = {};
+  for (const status of allowedStatuses) {
+    allowedMap[status.toLowerCase()] = status;
+  }
+
+  const cleaned = items
+    .map((v) => (v != null ? String(v).trim().toLowerCase() : ""))
+    .filter((v) => allowedMap[v])
+    .map((v) => allowedMap[v]);
+
+  return cleaned.length > 0 ? Array.from(new Set(cleaned)) : null;
+}
+
+async function buildClassSectionStudentsBlock(dateWiseId, options = {}) {
   const period = await resolveSourcePeriodByDateWiseId(Number(dateWiseId));
 
   const classSectionTermId = period.classSectionTermId;
@@ -2769,6 +2826,7 @@ async function buildClassSectionStudentsBlock(dateWiseId) {
     await studentRepository.getStudentsByPlacement(
       period,
       period.timeTableCellDateWiseId,
+      options,
     ),
   );
 
@@ -2791,8 +2849,12 @@ async function buildClassSectionStudentsBlock(dateWiseId) {
 export async function getStudentsByClassSection({
   timeTableCellDateWiseId,
   groupPeriods,
+  attendanceStatus,
 }) {
   try {
+    const normalizedAttendanceStatus = parseAttendanceStatus(attendanceStatus);
+    const options = { attendanceStatus: normalizedAttendanceStatus };
+
     const rawIds = Array.isArray(timeTableCellDateWiseId)
       ? timeTableCellDateWiseId
       : [timeTableCellDateWiseId];
@@ -2816,7 +2878,7 @@ export async function getStudentsByClassSection({
     if (uniqueIds.length === 1 || !group) {
       const periods = [];
       for (const dateWiseId of uniqueIds) {
-        periods.push(await buildClassSectionStudentsBlock(dateWiseId));
+        periods.push(await buildClassSectionStudentsBlock(dateWiseId, options));
       }
 
       if (periods.length === 1) {
@@ -2867,6 +2929,7 @@ export async function getStudentsByClassSection({
       await studentRepository.getStudentsByPlacement(
         resolvedPeriods[0],
         dateWiseIds,
+        options,
       ),
     );
 
@@ -2944,7 +3007,10 @@ export async function getAllAnswerSheets(filters) {
 export async function getStudentsByElectiveSubject({
   timeTableCellDateWiseId,
   groupPeriods,
+  attendanceStatus,
 }) {
+  const normalizedAttendanceStatus = parseAttendanceStatus(attendanceStatus);
+
   const rawIds = Array.isArray(timeTableCellDateWiseId)
     ? timeTableCellDateWiseId
     : [timeTableCellDateWiseId];
@@ -3022,6 +3088,11 @@ export async function getStudentsByElectiveSubject({
   const electiveSubject = cell.timeTableElective || {};
   const dateWiseIds = cellDateWiseRows.map((r) => r.timeTableCellDateWiseId);
 
+  const attendanceWhere = { timeTableCellDateWiseId: { [Op.in]: dateWiseIds } };
+  if (normalizedAttendanceStatus && normalizedAttendanceStatus.length > 0) {
+    attendanceWhere.attendanceStatus = { [Op.in]: normalizedAttendanceStatus };
+  }
+
   const mappings = await model.studentElectiveSubjectModel.findAll({
     where: { electiveSubjectId: Number(electiveSubjectId) },
     include: [
@@ -3059,8 +3130,8 @@ export async function getStudentsByElectiveSubject({
               "timeTableCellDateWiseId",
               "timeTableCellId",
             ],
-            where: { timeTableCellDateWiseId: { [Op.in]: dateWiseIds } },
-            required: false,
+            where: attendanceWhere,
+            required: normalizedAttendanceStatus && normalizedAttendanceStatus.length > 0 ? true : false,
           },
         ],
       },
