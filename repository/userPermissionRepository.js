@@ -1,6 +1,7 @@
 import * as model from "../models/index.js";
 import { scoped } from "../utility/scoped.js";
 import { SCOPES } from "../const/scopes.js";
+import { expandPermissions } from "../utility/permissionUtility.js";
 
 /**
  * Clear all permission entries for a user under a given role.
@@ -61,7 +62,7 @@ export async function setUserPermissions(userId, roleId, permissions, transactio
         } else if (!currentRoleId) {
           throw new Error(`roleId is required for permission ${item.permission}`);
         }
-        
+
         dataToInsert.push({
           userId,
           roleId: currentRoleId,
@@ -120,13 +121,15 @@ export async function getUserPermissionsByUserId(userId, roleId = null) {
       include: [{ model: model.roleModel, as: "userRole", attributes: ["roleId", "role"] }],
     });
 
-    return entries.map((e) => ({
+    const rawList = entries.map((e) => ({
       permission: e.permission,
       scope: e.scope,
       roleId: e.roleId,
       roleName: e.userRole?.role,
       resourceId: e.resourceId,
     }));
+
+    return expandPermissions(rawList);
   } catch (error) {
     console.error("Error in getUserPermissionsByUserId:", error);
     throw error;

@@ -1,11 +1,13 @@
 import * as model from "../models/index.js";
 import { Op } from "sequelize";
 import { SCOPES } from "../const/scopes.js";
+import { expandPermissions } from "./permissionUtility.js";
 
 /**
  * Centrally resolves a user's permissions for a given active role.
  * Queries the single `user_role_permission_scope` table directly.
  * User can access only one role's permissions at a time (active/selected role).
+ * Automatically expands implied permissions using `dependentOn`.
  *
  * @param {number} userId - The user's ID
  * @param {number} roleId - The active role ID
@@ -37,7 +39,8 @@ export async function getUserPermissions(userId, roleId) {
     }
   });
 
-  return Object.values(permissionMap);
+  // 4. Expand permissions based on 'dependentOn'
+  return expandPermissions(Object.values(permissionMap));
 }
 
 /**

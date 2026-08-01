@@ -338,6 +338,7 @@ export const PERMISSIONS = {
     },
     STUDENT_WISE_INCIDENT_LIST: {
         value: "STUDENT_WISE_INCIDENT_LIST",
+        dependentOn: ["STUDENT_LIST"],
     },
     TRANSPORT_ROUTE: {
         value: "TRANSPORT_ROUTE",
@@ -548,18 +549,22 @@ export const PERMISSIONS = {
     SUBJECTS_ADD: {
         value: "SUBJECTS_ADD",
         parentPermission: 'SUBJECTS',
+        dependentOn: ["COURSES", "COURSES_SIDEBAR"],
     },
     SUBJECTS_EDIT: {
         value: "SUBJECTS_EDIT",
         parentPermission: 'SUBJECTS',
+        dependentOn: ["COURSES", "COURSES_SIDEBAR"],
     },
     SUBJECTS_DELETE: {
         value: "SUBJECTS_DELETE",
         parentPermission: 'SUBJECTS',
+        dependentOn: ["COURSES", "COURSES_SIDEBAR"],
     },
     SUBJECTS_IMPORT: {
         value: "SUBJECTS_IMPORT",
         parentPermission: 'SUBJECTS',
+        dependentOn: ["COURSES", "COURSES_SIDEBAR"],
     },
     CREDITS_SIDEBAR: {
         value: "CREDITS_SIDEBAR",
@@ -576,14 +581,17 @@ export const PERMISSIONS = {
     SYLLABUS_ADD: {
         value: "SYLLABUS_ADD",
         parentPermission: 'SYLLABUS',
+        dependentOn: ["COURSES", "COURSES_SIDEBAR", "SUBJECTS", "SUBJECTS_SIDEBAR"],
     },
     SYLLABUS_EDIT: {
         value: "SYLLABUS_EDIT",
         parentPermission: 'SYLLABUS',
+        dependentOn: ["COURSES", "COURSES_SIDEBAR", "SUBJECTS", "SUBJECTS_SIDEBAR"],
     },
     SYLLABUS_DELETE: {
         value: "SYLLABUS_DELETE",
         parentPermission: 'SYLLABUS',
+        dependentOn: ["COURSES", "COURSES_SIDEBAR", "SUBJECTS", "SUBJECTS_SIDEBAR"],
     },
     SEMESTER_SUBJECT_MAPPING_SIDEBAR: {
         value: "SEMESTER_SUBJECT_MAPPING_SIDEBAR",
@@ -591,6 +599,7 @@ export const PERMISSIONS = {
     },
     SEMESTER_SUBJECT_MAPPING_ASSIGN: {
         value: "SEMESTER_SUBJECT_MAPPING_ASSIGN",
+        dependentOn: ["COURSES", "COURSES_SIDEBAR", "SUBJECTS", "SUBJECTS_SIDEBAR"],
     },
     PROGRAM_OUTCOME_SIDEBAR: {
         value: "PROGRAM_OUTCOME_SIDEBAR",
@@ -623,6 +632,7 @@ export const PERMISSIONS = {
     CLASS_SETUP_ADD: {
         value: "CLASS_SETUP_ADD",
         parentPermission: 'CLASS_SETUP',
+        dependentOn: ["COURSES", "COURSES_SIDEBAR", "ACADEMIC_YEAR", "SESSION_SETUP"],
     },
     TEACHER_MAPPED_CLASSES_SIDEBAR: {
         value: "TEACHER_MAPPED_CLASSES_SIDEBAR",
@@ -630,6 +640,7 @@ export const PERMISSIONS = {
     },
     TEACHER_MAPPED_CLASSES_ASSIGN: {
         value: "TEACHER_MAPPED_CLASSES_ASSIGN",
+        dependentOn: ["COURSES", "COURSES_SIDEBAR", "STAFF_DIRECTORY"],
     },
     TEACHER_MAPPED_CLASSES_UNASSIGN: {
         value: "TEACHER_MAPPED_CLASSES_UNASSIGN",
@@ -640,6 +651,7 @@ export const PERMISSIONS = {
     },
     TEACHER_MAPPED_SUBJECTS_ASSIGN: {
         value: "TEACHER_MAPPED_SUBJECTS_ASSIGN",
+        dependentOn: ["COURSES", "COURSES_SIDEBAR", "SUBJECTS", "SUBJECTS_SIDEBAR", "STAFF_DIRECTORY"],
     },
     TEACHER_MAPPED_SUBJECTS_UNASSIGN: {
         value: "TEACHER_MAPPED_SUBJECTS_UNASSIGN",
@@ -655,6 +667,7 @@ export const PERMISSIONS = {
     TIME_TABLE_SETUP_ADD: {
         value: "TIME_TABLE_SETUP_ADD",
         parentPermission: 'TIME_TABLE_SETUP',
+        dependentOn: ["CLASS_SETUP", "SUBJECTS", "STAFF_DIRECTORY"],
     },
     TIME_TABLE_SETUP_EDIT: {
         value: "TIME_TABLE_SETUP_EDIT",
@@ -675,6 +688,7 @@ export const PERMISSIONS = {
     CREATE_TIME_TABLE_CREATE_TIMETABLE: {
         value: "CREATE_TIME_TABLE_CREATE_TIMETABLE",
         parentPermission: 'CREATE_TIME_TABLE',
+        dependentOn: ["CLASS_SETUP", "SUBJECTS", "STAFF_DIRECTORY", "ROOM"],
     },
     CREATE_TIME_TABLE_EDIT_ROUTINE: {
         value: "CREATE_TIME_TABLE_EDIT_ROUTINE",
@@ -695,6 +709,7 @@ export const PERMISSIONS = {
     FACULTY_LOAD_ADD: {
         value: "FACULTY_LOAD_ADD",
         parentPermission: 'FACULTY_LOAD',
+        dependentOn: ["STAFF_DIRECTORY", "SUBJECTS", "COURSES"],
     },
     FACULTY_LOAD_EDIT: {
         value: "FACULTY_LOAD_EDIT",
@@ -727,6 +742,7 @@ export const PERMISSIONS = {
     LESSON_LIST_ADD: {
         value: "LESSON_LIST_ADD",
         parentPermission: 'LESSON_LIST',
+        dependentOn: ["SUBJECTS", "SUBJECTS_SIDEBAR", "COURSES"],
     },
     LESSON_PLAN_BUILDER_SIDEBAR: {
         value: "LESSON_PLAN_BUILDER_SIDEBAR",
@@ -735,10 +751,12 @@ export const PERMISSIONS = {
     LESSON_PLAN_BUILDER_ADD: {
         value: "LESSON_PLAN_BUILDER_ADD",
         parentPermission: 'LESSON_PLAN_BUILDER',
+        dependentOn: ["SUBJECTS", "SUBJECTS_SIDEBAR", "COURSES"],
     },
     LESSON_PLAN_BUILDER_EDIT: {
         value: "LESSON_PLAN_BUILDER_EDIT",
         parentPermission: 'LESSON_PLAN_BUILDER',
+        dependentOn: ["SUBJECTS", "SUBJECTS_SIDEBAR", "COURSES"],
     },
     LESSON_PLAN_BUILDER_DELETE: {
         value: "LESSON_PLAN_BUILDER_DELETE",
@@ -751,6 +769,7 @@ export const PERMISSIONS = {
     TOPIC_OVERVIEW_ADD: {
         value: "TOPIC_OVERVIEW_ADD",
         parentPermission: 'TOPIC_OVERVIEW',
+        dependentOn: ["SUBJECTS", "SUBJECTS_SIDEBAR", "COURSES"],
     },
     TOPIC_OVERVIEW_EDIT: {
         value: "TOPIC_OVERVIEW_EDIT",
@@ -804,18 +823,25 @@ export const PERMISSIONS = {
     FEES_PLAN_ADD: {
         value: "FEES_PLAN_ADD",
         parentPermission: 'FEES_PLAN',
+        dependentOn: ["FEES_TYPE", "FEES_TYPE_SIDEBAR", "ACADEMIC_YEAR"],
     },
     FEES_PLAN_EDIT: {
         value: "FEES_PLAN_EDIT",
         parentPermission: 'FEES_PLAN',
+        dependentOn: ["FEES_TYPE", "FEES_TYPE_SIDEBAR", "ACADEMIC_YEAR"],
     },
     FEES_PLAN_DELETE: {
         value: "FEES_PLAN_DELETE",
         parentPermission: 'FEES_PLAN',
+        dependentOn: ["FEES_TYPE", "FEES_TYPE_SIDEBAR", "ACADEMIC_YEAR"],
     },
     FEES_PLAN_PUBLISH: {
         value: "FEES_PLAN_PUBLISH",
         parentPermission: 'FEES_PLAN',
+    },
+    FEES_INVOICE: {
+        value: "FEES_INVOICE",
+        dependentOn: ["FEES_PLAN", "FEES_PLAN_SIDEBAR", "FEES_TYPE", "FEES_TYPE_SIDEBAR", "STUDENT_LIST"],
     },
     FEES_INVOICE_SIDEBAR: {
         value: "FEES_INVOICE_SIDEBAR",
@@ -824,9 +850,11 @@ export const PERMISSIONS = {
     FEES_INVOICE_ADD: {
         value: "FEES_INVOICE_ADD",
         parentPermission: 'FEES_INVOICE',
+        dependentOn: ["FEES_PLAN", "FEES_PLAN_SIDEBAR", "FEES_TYPE", "FEES_TYPE_SIDEBAR", "STUDENT_LIST"],
     },
     STUDENT_FEE_PLANS: {
         value: "STUDENT_FEE_PLANS",
+        dependentOn: ["FEES_PLAN", "FEES_PLAN_SIDEBAR", "FEES_TYPE", "FEES_TYPE_SIDEBAR", "STUDENT_LIST"],
     },
     STUDENT_FEE_PLANS_SIDEBAR: {
         value: "STUDENT_FEE_PLANS_SIDEBAR",
@@ -834,6 +862,7 @@ export const PERMISSIONS = {
     },
     STUDENT_FEE_PAYMENTS: {
         value: "STUDENT_FEE_PAYMENTS",
+        dependentOn: ["FEES_PLAN", "FEES_PLAN_SIDEBAR", "FEES_TYPE", "FEES_TYPE_SIDEBAR", "STUDENT_LIST"],
     },
     STUDENT_FEE_PAYMENTS_SIDEBAR: {
         value: "STUDENT_FEE_PAYMENTS_SIDEBAR",
@@ -885,10 +914,12 @@ export const PERMISSIONS = {
     EXAM_TIME_TABLE_CREATE_ADD: {
         value: "EXAM_TIME_TABLE_CREATE_ADD",
         parentPermission: 'EXAM_TIME_TABLE_CREATE',
+        dependentOn: ["EXAM_TYPES", "EXAM_TYPES_SIDEBAR", "COURSES", "SUBJECTS"],
     },
     EXAM_TIME_TABLE_CREATE_ASSIGN_ROOMS: {
         value: "EXAM_TIME_TABLE_CREATE_ASSIGN_ROOMS",
         parentPermission: 'EXAM_TIME_TABLE_CREATE',
+        dependentOn: ["EXAM_TYPES", "ROOM", "BUILDINGS"],
     },
     EXAM_TIME_TABLE_CREATE_SEAT_ALLOCATION: {
         value: "EXAM_TIME_TABLE_CREATE_SEAT_ALLOCATION",
@@ -934,6 +965,7 @@ export const PERMISSIONS = {
     EXAM_ROOM_ALLOCATE_EDIT: {
         value: "EXAM_ROOM_ALLOCATE_EDIT",
         parentPermission: 'EXAM_ROOM_ALLOCATE',
+        dependentOn: ["EXAM_TYPES", "ROOM", "BUILDINGS"],
     },
 
     EXAM_ATTENDANCE_SIDEBAR: {
@@ -943,6 +975,7 @@ export const PERMISSIONS = {
     EXAM_ATTENDANCE_EXECUTE: {
         value: "EXAM_ATTENDANCE_EXECUTE",
         parentPermission: 'EXAM_ATTENDANCE',
+        dependentOn: ["EXAM_TYPES", "SUBJECTS", "COURSES", "STUDENT_LIST"],
     },
     EVALUATION_SIDEBAR: {
         value: "EVALUATION_SIDEBAR",
@@ -951,6 +984,7 @@ export const PERMISSIONS = {
     EVALUATION_EXECUTE: {
         value: "EVALUATION_EXECUTE",
         parentPermission: 'EVALUATION',
+        dependentOn: ["EXAM_TYPES", "SUBJECTS", "COURSES", "STUDENT_LIST"],
     },
     MARK_REGISTER_SIDEBAR: {
         value: "MARK_REGISTER_SIDEBAR",
@@ -958,6 +992,7 @@ export const PERMISSIONS = {
     },
     MARK_REGISTER_EXECUTE: {
         value: "MARK_REGISTER_EXECUTE",
+        dependentOn: ["EXAM_TYPES", "SUBJECTS", "COURSES", "STUDENT_LIST"],
     },
     TRANSCRIPT_SIDEBAR: {
         value: "TRANSCRIPT_SIDEBAR",
@@ -980,6 +1015,7 @@ export const PERMISSIONS = {
     STAFF_DIRECTORY_ADD: {
         value: "STAFF_DIRECTORY_ADD",
         parentPermission: 'STAFF_DIRECTORY',
+        dependentOn: ["DEPARTMENT", "DESIGNATIONS", "JOB_TYPE_SETTING"],
     },
     STAFF_DIRECTORY_EDIT: {
         value: "STAFF_DIRECTORY_EDIT",
@@ -1020,6 +1056,7 @@ export const PERMISSIONS = {
     APPLY_LEAVE_ADD: {
         value: "APPLY_LEAVE_ADD",
         parentPermission: 'APPLY_LEAVE',
+        dependentOn: ["STAFF_DIRECTORY"],
     },
 
     APPROVE_LEAVE_REQUEST_SIDEBAR: {
@@ -1065,6 +1102,7 @@ export const PERMISSIONS = {
     EMPLOYEE_ATTENDANCE_ADD: {
         value: "EMPLOYEE_ATTENDANCE_ADD",
         parentPermission: 'EMPLOYEE_ATTENDANCE',
+        dependentOn: ["STAFF_DIRECTORY"],
     },
     EMPLOYEE_ATTENDANCE_EDIT: {
         value: "EMPLOYEE_ATTENDANCE_EDIT",
@@ -1113,10 +1151,12 @@ export const PERMISSIONS = {
     ADD_STUDENT_ADD: {
         value: "ADD_STUDENT_ADD",
         parentPermission: 'ADD_STUDENT',
+        dependentOn: ["COURSES", "COURSES_SIDEBAR", "ACADEMIC_YEAR", "SESSION_SETUP", "STUDENT_LIST"],
     },
     ADD_STUDENT_EDIT: {
         value: "ADD_STUDENT_EDIT",
         parentPermission: 'ADD_STUDENT',
+        dependentOn: ["COURSES", "COURSES_SIDEBAR", "ACADEMIC_YEAR", "SESSION_SETUP", "STUDENT_LIST"],
     },
     ADD_STUDENT_DELETE: {
         value: "ADD_STUDENT_DELETE",
@@ -1176,6 +1216,7 @@ export const PERMISSIONS = {
     },
     STUDENT_PROMOTE_EXECUTE: {
         value: "STUDENT_PROMOTE_EXECUTE",
+        dependentOn: ["STUDENT_LIST", "COURSES", "ACADEMIC_YEAR"],
     },
     INCIDENT_LIST_SIDEBAR: {
         value: "INCIDENT_LIST_SIDEBAR",
@@ -1184,6 +1225,7 @@ export const PERMISSIONS = {
     INCIDENT_LIST_EXPORT: {
         value: "INCIDENT_LIST_EXPORT",
         parentPermission: 'INCIDENT_LIST',
+        dependentOn: ["STUDENT_LIST"],
     },
     INCIDENT_LIST_PRINT: {
         value: "INCIDENT_LIST_PRINT",
@@ -1236,6 +1278,7 @@ export const PERMISSIONS = {
     CATALOGUE_ADD: {
         value: "CATALOGUE_ADD",
         parentPermission: 'CATALOGUE',
+        dependentOn: ["LIBRARY_CREATION"],
     },
     CATALOGUE_EDIT: {
         value: "CATALOGUE_EDIT",
@@ -1270,6 +1313,7 @@ export const PERMISSIONS = {
     },
     BOOK_ISSUE_EXECUTE: {
         value: "BOOK_ISSUE_EXECUTE",
+        dependentOn: ["LIBRARY_CREATION", "STUDENT_LIST", "STAFF_DIRECTORY"],
     },
     RETURN_BOOK_SIDEBAR: {
         value: "RETURN_BOOK_SIDEBAR",
@@ -1277,6 +1321,7 @@ export const PERMISSIONS = {
     },
     RETURN_BOOK_EXECUTE: {
         value: "RETURN_BOOK_EXECUTE",
+        dependentOn: ["LIBRARY_CREATION", "STUDENT_LIST", "STAFF_DIRECTORY"],
     },
     DORMITORY_ROOM_TYPE_SIDEBAR: {
         value: "DORMITORY_ROOM_TYPE_SIDEBAR",
@@ -1301,6 +1346,7 @@ export const PERMISSIONS = {
     DORMITORY_ROOMS_ADD: {
         value: "DORMITORY_ROOMS_ADD",
         parentPermission: 'DORMITORY_ROOMS',
+        dependentOn: ["DORMITORY_ROOM_TYPE", "BUILDINGS"],
     },
     DORMITORY_ROOMS_EDIT: {
         value: "DORMITORY_ROOMS_EDIT",
@@ -1316,6 +1362,7 @@ export const PERMISSIONS = {
     },
     DORMITORY_ASSIGNMENT_ASSIGN: {
         value: "DORMITORY_ASSIGNMENT_ASSIGN",
+        dependentOn: ["DORMITORY_ROOMS", "STUDENT_LIST"],
     },
     DORMITORY_ASSIGNMENT_UNASSIGN: {
         value: "DORMITORY_ASSIGNMENT_UNASSIGN",
@@ -1358,6 +1405,7 @@ export const PERMISSIONS = {
     },
     ASSIGN_VEHICLE_ASSIGN: {
         value: "ASSIGN_VEHICLE_ASSIGN",
+        dependentOn: ["VEHICLE", "TRANSPORT_ROUTE", "STUDENT_LIST"],
     },
     ASSIGN_VEHICLE_UNASSIGN: {
         value: "ASSIGN_VEHICLE_UNASSIGN",
@@ -1395,6 +1443,7 @@ export const PERMISSIONS = {
     STUDY_MATERIAL_ADD: {
         value: "STUDY_MATERIAL_ADD",
         parentPermission: 'STUDY_MATERIAL',
+        dependentOn: ["SUBJECTS", "COURSES"],
     },
     STUDY_MATERIAL_EDIT: {
         value: "STUDY_MATERIAL_EDIT",
@@ -1411,6 +1460,7 @@ export const PERMISSIONS = {
     UPLOAD_STUDY_MATERIAL_ADD: {
         value: "UPLOAD_STUDY_MATERIAL_ADD",
         parentPermission: 'UPLOAD_STUDY_MATERIAL',
+        dependentOn: ["SUBJECTS", "COURSES"],
     },
     UPLOAD_STUDY_MATERIAL_EDIT: {
         value: "UPLOAD_STUDY_MATERIAL_EDIT",
@@ -1626,10 +1676,12 @@ export const PERMISSIONS = {
     ELECTIVE_SUBJECT_NEW_ADD: {
         value: "ELECTIVE_SUBJECT_NEW_ADD",
         parentPermission: 'ELECTIVE_SUBJECT_NEW',
+        dependentOn: ["COURSES", "COURSES_SIDEBAR", "SUBJECTS", "STUDENT_LIST"],
     },
     ELECTIVE_SUBJECT_NEW_EDIT: {
         value: "ELECTIVE_SUBJECT_NEW_EDIT",
         parentPermission: 'ELECTIVE_SUBJECT_NEW',
+        dependentOn: ["COURSES", "COURSES_SIDEBAR", "SUBJECTS", "STUDENT_LIST"],
     },
     ELECTIVE_SUBJECT_NEW_DELETE: {
         value: "ELECTIVE_SUBJECT_NEW_DELETE",
@@ -1683,6 +1735,7 @@ export const PERMISSIONS = {
     HALL_TICKETS_ADD: {
         value: "HALL_TICKETS_ADD",
         parentPermission: 'HALL_TICKETS',
+        dependentOn: ["EXAM_TYPES", "STUDENT_LIST"],
     },
 
     ANSWER_SHEET_MAPPING: {
@@ -1715,10 +1768,12 @@ export const PERMISSIONS = {
     QUESTION_PAPER_BUILDER_ADD: {
         value: "QUESTION_PAPER_BUILDER_ADD",
         parentPermission: 'QUESTION_PAPER_BUILDER',
+        dependentOn: ["SUBJECTS", "SYLLABUS", "BLOOMS_TAXONOMY"],
     },
     QUESTION_PAPER_BUILDER_EDIT: {
         value: "QUESTION_PAPER_BUILDER_EDIT",
         parentPermission: 'QUESTION_PAPER_BUILDER',
+        dependentOn: ["SUBJECTS", "SYLLABUS", "BLOOMS_TAXONOMY"],
     },
     QUESTION_PAPER_BUILDER_DELETE: {
         value: "QUESTION_PAPER_BUILDER_DELETE",
@@ -1783,6 +1838,7 @@ export const PERMISSIONS = {
     AMC_CONTRACTS_ADD: {
         value: "AMC_CONTRACTS_ADD",
         parentPermission: 'AMC_CONTRACTS',
+        dependentOn: ["ASSET_MANAGEMENT", "AMC_VENDORS"],
     },
     AMC_CONTRACTS_EDIT: {
         value: "AMC_CONTRACTS_EDIT",
@@ -1802,6 +1858,7 @@ export const PERMISSIONS = {
     SERVICE_TICKETS_ADD: {
         value: "SERVICE_TICKETS_ADD",
         parentPermission: 'SERVICE_TICKETS',
+        dependentOn: ["ASSET_MANAGEMENT", "AMC_VENDORS"],
     },
     SERVICE_TICKETS_EDIT: {
         value: "SERVICE_TICKETS_EDIT",
@@ -1821,6 +1878,7 @@ export const PERMISSIONS = {
     ASSET_ISSUE_ADD: {
         value: "ASSET_ISSUE_ADD",
         parentPermission: 'ASSET_ISSUE',
+        dependentOn: ["ASSET_MANAGEMENT", "AMC_VENDORS"],
     },
     ASSET_ISSUE_EDIT: {
         value: "ASSET_ISSUE_EDIT",
