@@ -32,7 +32,7 @@ export async function createExaminationSession(sessionData, options = {}) {
       const validTermSet = new Set(validTerms.map((vt) => vt.classSectionTermId));
       const invalidTerm = termIds.find((id) => !validTermSet.has(id));
       if (invalidTerm !== undefined) {
-        const error = new Error(`Class section term ID ${invalidTerm} does not exist.`);
+        const error = new Error(`The selected class section term (ID: ${invalidTerm}) is invalid or does not exist.`);
         error.statusCode = 400;
         throw error;
       }
@@ -328,7 +328,7 @@ export async function createExaminationSessionTerm(termData, options = {}) {
       transaction: options.transaction,
     });
     if (!termExists) {
-      const error = new Error(`Class section term ID ${termData.classSectionTermId} does not exist.`);
+      const error = new Error(`The selected class section term (ID: ${termData.classSectionTermId}) is invalid or does not exist.`);
       error.statusCode = 400;
       throw error;
     }
