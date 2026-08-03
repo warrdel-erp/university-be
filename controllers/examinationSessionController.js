@@ -12,7 +12,8 @@ export const createExaminationSession = async (req, res) => {
     return SuccessResponse(res, 201, "Examination session created successfully", result);
   } catch (error) {
     console.error("Error creating examination session:", error);
-    return ErrorResponse(res, 500, "Failed to create examination session", error.message);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(res, statusCode, error.message || "Failed to create examination session");
   }
 };
 
@@ -59,7 +60,8 @@ export const updateExaminationSession = async (req, res) => {
     return SuccessResponse(res, 200, "Examination session updated successfully", result);
   } catch (error) {
     console.error("Error updating examination session:", error);
-    return ErrorResponse(res, 500, "Failed to update examination session", error.message);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(res, statusCode, error.message || "Failed to update examination session");
   }
 };
 

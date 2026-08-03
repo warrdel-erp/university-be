@@ -4,6 +4,20 @@ import { scoped } from "../utility/scoped.js";
 
 export async function createExaminationSession(sessionData, options = {}) {
   const { classSectionTerms, ...mainData } = sessionData;
+
+  if (mainData.assessmentTypeId) {
+    const existing = await scoped(model.examinationSessionModel).findOne({
+      where: { assessmentTypeId: Number(mainData.assessmentTypeId) },
+      transaction: options.transaction,
+    });
+
+    if (existing) {
+      const error = new Error("An examination session for this assessment type already exists.");
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
   const record = await scoped(model.examinationSessionModel).create(mainData, options);
 
   if (Array.isArray(classSectionTerms) && classSectionTerms.length > 0) {
@@ -295,6 +309,22 @@ export async function getExaminationSessionById(id, options = {}) {
 export async function updateExaminationSession(id, updateData = {}, options = {}) {
   const sessionId = Number(id);
   const { classSectionTerms, ...mainUpdateData } = updateData;
+
+  if (mainUpdateData.assessmentTypeId) {
+    const existing = await scoped(model.examinationSessionModel).findOne({
+      where: {
+        assessmentTypeId: Number(mainUpdateData.assessmentTypeId),
+        examinationSessionId: { [Op.ne]: sessionId },
+      },
+      transaction: options.transaction,
+    });
+
+    if (existing) {
+      const error = new Error("An examination session for this assessment type already exists.");
+      error.statusCode = 400;
+      throw error;
+    }
+  }
 
   if (Object.keys(mainUpdateData).length > 0) {
     await scoped(model.examinationSessionModel).update(mainUpdateData, {
