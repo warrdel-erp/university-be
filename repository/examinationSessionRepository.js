@@ -21,6 +21,23 @@ export async function createExaminationSession(sessionData, options = {}) {
   const record = await scoped(model.examinationSessionModel).create(mainData, options);
 
   if (Array.isArray(classSectionTerms) && classSectionTerms.length > 0) {
+    const termIds = classSectionTerms.map((t) => Number(t.classSectionTermId)).filter(Boolean);
+    if (termIds.length > 0) {
+      const validTerms = await model.classSectionTermModel.findAll({
+        where: { classSectionTermId: { [Op.in]: termIds } },
+        attributes: ["classSectionTermId"],
+        raw: true,
+        transaction: options.transaction,
+      });
+      const validTermSet = new Set(validTerms.map((vt) => vt.classSectionTermId));
+      const invalidTerm = termIds.find((id) => !validTermSet.has(id));
+      if (invalidTerm !== undefined) {
+        const error = new Error(`Class section term ID ${invalidTerm} does not exist.`);
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+
     const termsToCreate = classSectionTerms.map((term) => ({
       ...term,
       examinationSessionId: record.examinationSessionId,
@@ -306,6 +323,16 @@ export async function deleteExaminationSession(id, options = {}) {
 // examination_session_term specific CRUD operations
 
 export async function createExaminationSessionTerm(termData, options = {}) {
+  if (termData.classSectionTermId) {
+    const termExists = await model.classSectionTermModel.findByPk(Number(termData.classSectionTermId), {
+      transaction: options.transaction,
+    });
+    if (!termExists) {
+      const error = new Error(`Class section term ID ${termData.classSectionTermId} does not exist.`);
+      error.statusCode = 400;
+      throw error;
+    }
+  }
   return await model.examinationSessionTermModel.create(termData, options);
 }
 
