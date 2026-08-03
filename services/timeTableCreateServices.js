@@ -1495,8 +1495,9 @@ export async function changeTimeTableCreate(body, updatedBy) {
   if (!current) {
     throw new Error('Routine not found');
   }
-  if (current.isPublish) {
-    throw new Error('Published routine cannot be updated');
+  const todayStr = toDateOnlyString(new Date());
+  if (current.isPublish && current.startingDate <= todayStr) {
+    throw new Error('Published routine cannot be updated on or after its starting date.');
   }
 
   let placementFields = { ...updateData };
@@ -1573,6 +1574,10 @@ export async function changeTimeTableCreate(body, updatedBy) {
   };
 
   const result = await timeTableCreateRepository.changeTimeTableCreate(timeTableRoutineId, data);
+
+  if (current.isPublish && (placementFields.startingDate || placementFields.endingDate)) {
+    await publishTimeTableService(timeTableRoutineId);
+  }
 
   return result;
 }
