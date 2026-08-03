@@ -289,8 +289,11 @@ router.post('/', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_CREATE_TIME
 
 
 router.patch('/create', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_EDIT_ROUTINE.value, null), validate({ body: patchTimeTableCreateSchema }), changeTimeTableCreate);
+
 router.delete('/', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_DELETE_ROUTINE.value, null), validate({ query: deleteTimeTableRoutineQuerySchema }), deleteTimeTableRoutine);
+
 router.post('/clone', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_CREATE_TIMETABLE.value, null), validate({ body: cloneRoutineSchema }), cloneTimeTableRoutine);
+
 router.patch('/publish', userAuth, checkAccess(PERMISSIONS.CREATE_TIME_TABLE_EDIT_ROUTINE.value, null), validate({ query: publishTimeTableQuerySchema }), publishTimeTable);
 
 const deleteTimeTableTeacherQuerySchema = z.object({
