@@ -977,8 +977,12 @@ export async function deletetimeTableMapping(timeTableCellId, options = {}) {
       throw error;
     }
 
+    const routineId = schedule.timeTableRoutineId
+      ?? schedule.dataValues?.timeTableRoutineId
+      ?? schedule.time_table_routine_id;
+
     const routine = await timeTableCreateRepository.getRoutineByIdRepository(
-      schedule.timeTableRoutineId,
+      routineId,
       { transaction },
     );
     if (!routine) {

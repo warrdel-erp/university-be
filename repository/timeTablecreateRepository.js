@@ -4,18 +4,20 @@ import { buildScope, scoped } from '../utility/scoped.js';
 import { classSectionTermsInclude, studentClassSectionTermWithSectionInclude, timeTableRoutineClassSectionInclude, stripRoutinePersistPayload, routineStructureInclude } from '../utility/classSectionIncludes.js';
 
 async function assertScopedRoutine(timeTableRoutineId, options = {}) {
+  if (timeTableRoutineId == null) return null;
   const { transaction, attributes = ['timeTableRoutineId'] } = options;
   return scoped(model.timeTableRoutineModel).findOne({
-    where: { timeTableRoutineId },
+    where: { timeTableRoutineId: Number(timeTableRoutineId) },
     attributes,
     transaction,
   });
 }
 
 async function assertScopedSchedule(timeTableCellId, options = {}) {
+  if (timeTableCellId == null) return null;
   const { transaction, attributes = ['timeTableCellId', 'timeTableRoutineId'] } = options;
   const cell = await model.timeTableCellModel.findOne({
-    where: { timeTableCellId },
+    where: { timeTableCellId: Number(timeTableCellId) },
     attributes,
     transaction,
   });
@@ -23,7 +25,8 @@ async function assertScopedSchedule(timeTableCellId, options = {}) {
     return null;
   }
 
-  const routine = await assertScopedRoutine(cell.timeTableRoutineId, {
+  const routineId = cell.timeTableRoutineId ?? cell.dataValues?.timeTableRoutineId;
+  const routine = await assertScopedRoutine(routineId, {
     transaction,
     attributes: ['timeTableRoutineId'],
   });
@@ -623,8 +626,11 @@ export async function checkElectiveSubjectConflictRepository(
 };
 
 export async function getRoutineByIdRepository(timeTableRoutineId, options = {}) {
+  if (timeTableRoutineId == null || Number.isNaN(Number(timeTableRoutineId))) {
+    return null;
+  }
   return await scoped(model.timeTableRoutineModel).findOne({
-    where: { timeTableRoutineId },
+    where: { timeTableRoutineId: Number(timeTableRoutineId) },
     attributes: [
       'timeTableRoutineId',
       'startingDate',
@@ -692,11 +698,13 @@ export async function findRoutineForCombinedSessionRepository(
 };
 
 export async function getMappingByIdRepository(timeTableCellId, options = {}) {
-  return await model.timeTableCellModel.findOne({
-    where: { timeTableCellId },
+  const row = await model.timeTableCellModel.findOne({
+    where: { timeTableCellId: Number(timeTableCellId) },
     attributes: ['timeTableCellId', 'timeTableRoutineId', 'combinedGroupId', 'timeTableCreationId'],
     transaction: options.transaction,
   });
+  if (!row) return null;
+  return row.get ? row.get({ plain: true }) : row;
 };
 
 export async function getMappingCopySourceRepository(timeTableCellId, options = {}) {
