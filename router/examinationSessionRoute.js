@@ -8,33 +8,35 @@ const router = Router();
 
 const dateStringSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format");
 
+const sessionBodyObject = z.object({
+  assessmentTypeId: z.number({ required_error: "assessmentTypeId is required" }),
+  sessionName: z.string().min(1, "sessionName is required"),
+  examStartDate: dateStringSchema.optional(),
+  examEndDate: dateStringSchema.optional(),
+  hallTicketReleaseDate: dateStringSchema.optional(),
+  seatAllocationDate: dateStringSchema.optional(),
+  evaluationStartDate: dateStringSchema.optional(),
+  evaluationDeadline: dateStringSchema.optional(),
+  moderationDeadline: dateStringSchema.optional(),
+  resultPublicationDate: dateStringSchema.optional(),
+  autoGenerateSeating: z.boolean().optional(),
+  autoAllocateRooms: z.boolean().optional(),
+  autoAssignInvigilators: z.boolean().optional(),
+  qrAttendance: z.boolean().optional(),
+  barcodeAnswerSheet: z.boolean().optional(),
+  aiEvaluation: z.boolean().optional(),
+  moderationWorkflow: z.boolean().optional(),
+  allowRevaluation: z.boolean().optional(),
+  status: z.enum(['Draft', 'Published', 'Completed', 'Cancelled']).optional(),
+  classSectionTerms: z.array(z.object({
+    classSectionTermId: z.number(),
+    includeElectives: z.boolean().optional(),
+    remarks: z.string().optional(),
+  })).optional(),
+});
+
 const createSessionSchema = z.object({
-  body: z.object({
-    assessmentTypeId: z.number({ required_error: "assessmentTypeId is required" }),
-    sessionName: z.string().min(1, "sessionName is required"),
-    examStartDate: dateStringSchema.optional(),
-    examEndDate: dateStringSchema.optional(),
-    hallTicketReleaseDate: dateStringSchema.optional(),
-    seatAllocationDate: dateStringSchema.optional(),
-    evaluationStartDate: dateStringSchema.optional(),
-    evaluationDeadline: dateStringSchema.optional(),
-    moderationDeadline: dateStringSchema.optional(),
-    resultPublicationDate: dateStringSchema.optional(),
-    autoGenerateSeating: z.boolean().optional(),
-    autoAllocateRooms: z.boolean().optional(),
-    autoAssignInvigilators: z.boolean().optional(),
-    qrAttendance: z.boolean().optional(),
-    barcodeAnswerSheet: z.boolean().optional(),
-    aiEvaluation: z.boolean().optional(),
-    moderationWorkflow: z.boolean().optional(),
-    allowRevaluation: z.boolean().optional(),
-    status: z.enum(['Draft', 'Published', 'Completed', 'Cancelled']).optional(),
-    classSectionTerms: z.array(z.object({
-      classSectionTermId: z.number(),
-      includeElectives: z.boolean().optional(),
-      remarks: z.string().optional(),
-    })).optional(),
-  }).refine((data) => {
+  body: sessionBodyObject.refine((data) => {
     const dates = {
       examStart: data.examStartDate ? new Date(data.examStartDate).getTime() : null,
       examEnd: data.examEndDate ? new Date(data.examEndDate).getTime() : null,
@@ -75,7 +77,7 @@ const updateSessionSchema = z.object({
   query: z.object({
     examinationSessionId: z.string().regex(/^\d+$/).transform(Number),
   }),
-  body: createSessionSchema.shape.body.unwrap().partial(),
+  body: sessionBodyObject.partial(),
 });
 
 const getSessionByIdSchema = z.object({
