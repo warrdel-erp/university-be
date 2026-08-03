@@ -1579,7 +1579,12 @@ export async function changeTimeTableCreate(body, updatedBy) {
 
   const result = await timeTableCreateRepository.changeTimeTableCreate(timeTableRoutineId, data);
 
-  if (current.isPublish && (placementFields.startingDate || placementFields.endingDate)) {
+  const isDateChanged = Boolean(
+    (placementFields.startingDate && placementFields.startingDate !== toDateOnlyString(current.startingDate))
+    || (placementFields.endingDate && placementFields.endingDate !== toDateOnlyString(current.endingDate))
+  );
+
+  if (current.isPublish && isDateChanged) {
     await publishTimeTableService(timeTableRoutineId);
   }
 
