@@ -171,6 +171,7 @@ export async function deleteExamType(req, res) {
     }
     return SuccessResponse(res, 200, "Exam examType not found", []);
   } catch (error) {
-    return ErrorResponse(res, 500, error.message);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(res, statusCode, error.message);
   }
 }
