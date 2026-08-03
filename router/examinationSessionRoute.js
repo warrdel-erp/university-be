@@ -48,13 +48,19 @@ const createSessionSchema = {
       resultPub: data.resultPublicationDate ? new Date(data.resultPublicationDate).getTime() : null,
     };
 
-    if (dates.examStart && dates.examEnd && dates.examStart > dates.examEnd) {
+    if (dates.hallTicket && dates.seatAlloc && dates.hallTicket > dates.seatAlloc) {
+      return false;
+    }
+    if (dates.seatAlloc && dates.examStart && dates.seatAlloc > dates.examStart) {
       return false;
     }
     if (dates.hallTicket && dates.examStart && dates.hallTicket > dates.examStart) {
       return false;
     }
-    if (dates.seatAlloc && dates.examStart && dates.seatAlloc > dates.examStart) {
+    if (dates.examStart && dates.examEnd && dates.examStart > dates.examEnd) {
+      return false;
+    }
+    if (dates.examEnd && dates.evalStart && dates.examEnd > dates.evalStart) {
       return false;
     }
     if (dates.evalStart && dates.evalDeadline && dates.evalStart > dates.evalDeadline) {
@@ -69,7 +75,7 @@ const createSessionSchema = {
 
     return true;
   }, {
-    message: "Invalid date chronological order. Expected sequence: Hall Ticket / Seat Allocation <= Exam Start <= Exam End <= Evaluation Start <= Evaluation Deadline <= Moderation Deadline <= Result Publication Date",
+    message: "Invalid date chronological order. Expected sequence: Hall Ticket Release <= Seat Allocation <= Exam Start <= Exam End <= Evaluation Start <= Evaluation Deadline <= Moderation Deadline <= Result Publication Date",
   }),
 };
 
