@@ -82,7 +82,6 @@ import roomTypeModel from "./roomTypeModel.js";
 import dormitoryListModel from "./dormitoryListModel.js";
 import addDormitoryModel from "./addDormitoryModel.js";
 import feePlanSubItemsModel from "./feePlanSubItemsModel.js";
-import examTypeModel from "./examTypeModel.js";
 import examSetupModel from "./examSetupModel.js";
 import examAttendanceModel from "./examAttendanceModel.js";
 import transportRouteModel from "./transportRouteModel.js";
@@ -176,6 +175,27 @@ import studentFeeInvoiceItemsModel from "./studentFeeInvoiceItemsModel.js";
 import answerSheetQrModel from "./answerSheetQrModel.js";
 import s3FileModel from "./s3FileModel.js";
 import pdfSplitJobModel from "./pdfSplitJobModel.js";
+import examinationSessionModel from "./examinationSessionModel.js";
+import examinationSessionTermModel from "./examinationSessionTermModel.js";
+
+// Examination Session associations
+examinationSessionModel.belongsTo(universityModel, { foreignKey: "university_id", as: "university" });
+universityModel.hasMany(examinationSessionModel, { foreignKey: "university_id", as: "examinationSessions" });
+
+examinationSessionModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "institute" });
+instituteModel.hasMany(examinationSessionModel, { foreignKey: "institute_id", as: "examinationSessions" });
+
+examinationSessionModel.belongsTo(acedmicYearModel, { foreignKey: "acedmic_year_id", as: "academicYear" });
+acedmicYearModel.hasMany(examinationSessionModel, { foreignKey: "acedmic_year_id", as: "examinationSessions" });
+
+examinationSessionModel.belongsTo(examSetupTypeModel, { foreignKey: "assessment_type_id", as: "assessmentType" });
+examSetupTypeModel.hasMany(examinationSessionModel, { foreignKey: "assessment_type_id", as: "examinationSessions" });
+
+examinationSessionModel.hasMany(examinationSessionTermModel, { foreignKey: "examination_session_id", as: "examinationSessionTerms" });
+examinationSessionTermModel.belongsTo(examinationSessionModel, { foreignKey: "examination_session_id", as: "examinationSession" });
+
+examinationSessionTermModel.belongsTo(classSectionTermModel, { foreignKey: "class_section_term_id", as: "classSectionTerm" });
+classSectionTermModel.hasMany(examinationSessionTermModel, { foreignKey: "class_section_term_id", as: "examinationSessionTerms" });
 
 studentModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "campus" });
 campusModel.hasMany(studentModel, { foreignKey: "campus_id", as: "campus" });
@@ -1086,9 +1106,6 @@ userModel.hasMany(questionBankModel, { foreignKey: "updatedBy", as: "updatedQues
 
 // Associations
 
-examTypeModel.belongsTo(userModel, { foreignKey: "createdBy", as: "examTypeUser" });
-userModel.hasMany(examTypeModel, { foreignKey: "createdBy", as: "examTypeUser" });
-
 examSetupModel.belongsTo(userModel, { foreignKey: "createdBy", as: "examSetUpUser" });
 userModel.hasMany(examSetupModel, { foreignKey: "createdBy", as: "examSetUpUser" });
 
@@ -1105,7 +1122,7 @@ examSetupModel.belongsTo(userModel, { foreignKey: "teacherId", as: "teacherUser"
 examSetupModel.belongsTo(classRoomModel, { foreignKey: "roomId", as: "room" });
 examSetupModel.belongsTo(courseModel, { foreignKey: "courseId", as: "course" });
 examSetupModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "subject" });
-examSetupModel.belongsTo(examTypeModel, { foreignKey: "examTypeId", as: "examType" });
+examSetupModel.belongsTo(examSetupTypeModel, { foreignKey: "examTypeId", as: "examSetupType" });
 
 examAttendanceModel.belongsTo(examSetupModel, { foreignKey: "examSetupId", as: "examSetup" });
 examAttendanceModel.belongsTo(studentModel, { foreignKey: "studentId", as: "students" });
@@ -2140,7 +2157,7 @@ export {
   dormitoryListModel,
   addDormitoryModel,
   feePlanSubItemsModel,
-  examTypeModel,
+  examSetupTypeModel,
   examSetupModel,
   examAttendanceModel,
   transportRouteModel,
@@ -2184,7 +2201,6 @@ export {
   lessonMappingModel,
   noticeModel,
   syllabusUnitModel,
-  examSetupTypeModel,
   scheduleModel,
   scheduleAssignModel,
   teacherAttendeceModel,
@@ -2230,6 +2246,8 @@ export {
   studentHallTicketModel,
   s3FileModel,
   pdfSplitJobModel,
+  examinationSessionModel,
+  examinationSessionTermModel,
   userModel as users,
 };
 
