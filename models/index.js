@@ -1579,10 +1579,6 @@ subjectModel.hasMany(syllabusUnitModel, { foreignKey: "subjectId", as: "syllabus
 
 syllabusUnitModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "instituteUnit" });
 instituteModel.hasMany(syllabusUnitModel, { foreignKey: "instituteId", as: "syllabusUnitsInstitute" });
-
-examSetupTypeModel.belongsTo(courseModel, { foreignKey: "course_id", as: "course" });
-examSetupTypeModel.belongsTo(sessionModel, { foreignKey: "session_id", as: "session" });
-
 scheduleModel.hasMany(scheduleAssignModel, { foreignKey: "scheduleId", as: "assignedEmployees" });
 scheduleAssignModel.belongsTo(scheduleModel, { foreignKey: "scheduleId", as: "schedule" });
 

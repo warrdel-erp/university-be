@@ -113,10 +113,8 @@ function resolveStudentCount(plain, sessionId, courseId, academicYearId, termNum
     return countMap.get(`${term}:${yearId}`) ?? 0;
 }
 
-export async function getAllExamTypes(courseId, sessionId, academicYearId, termNumber, options = {}) {
+export async function getAllExamTypes(academicYearId, termNumber, options = {}) {
     const result = await examStructureRepository.getAllExamTypes(
-        courseId,
-        sessionId,
         academicYearId,
         termNumber,
         options,
@@ -136,12 +134,9 @@ export async function getAllExamTypes(courseId, sessionId, academicYearId, termN
     }
 
     const termIds = collectTermIds(rows);
-    const [studentCountMap, hallTicketCountByTermId] = await Promise.all([
-        buildStudentCountMap(rows, sessionId, courseId, academicYearId, termNumber),
-        sessionId && termIds.length
-            ? studentHallTicketRepository.countHallTicketsByTermIds(termIds, sessionId)
-            : Promise.resolve(new Map()),
-    ]);
+    const hallTicketCountByTermId = termIds.length
+        ? await studentHallTicketRepository.countHallTicketsByTermIds(termIds, null)
+        : new Map();
 
     const formattedData = rows.map((row) => {
         const plain = toPlain(row);
@@ -151,14 +146,7 @@ export async function getAllExamTypes(courseId, sessionId, academicYearId, termN
 
         return {
             ...plain,
-            studentCount: resolveStudentCount(
-                plain,
-                sessionId,
-                courseId,
-                academicYearId,
-                termNumber,
-                studentCountMap,
-            ),
+            studentCount: 0,
             isHallTicketGenerated: rowTermIds.some(
                 (termId) => (hallTicketCountByTermId.get(termId) ?? 0) > 0,
             ),

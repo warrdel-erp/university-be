@@ -1045,7 +1045,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"examSetupTypeId\": {{examSetupTypeId}},\n  \"examName\": \"Updated Mid Term Assessment\",\n  \"examDescription\": \"Updated description\"\n}"
+              "raw": "{\n  \"examSetupTypeId\": 1,\n  \"examName\": \"Updated Mid Term Assessment\",\n  \"examCode\": \"MID_2026_UPDATED\",\n  \"examCategory\": \"EXAMINATION\",\n  \"examSubcategory\": \"Mid Term\",\n  \"examDescription\": \"Updated description\"\n}"
             },
             "url": {
               "raw": "{{baseurl}}/examStructure/examType",
