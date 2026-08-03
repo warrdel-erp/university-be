@@ -54,9 +54,6 @@ const createSessionSchema = {
     if (dates.seatAlloc && dates.examStart && dates.seatAlloc > dates.examStart) {
       return false;
     }
-    if (dates.hallTicket && dates.examStart && dates.hallTicket > dates.examStart) {
-      return false;
-    }
     if (dates.examStart && dates.examEnd && dates.examStart > dates.examEnd) {
       return false;
     }
