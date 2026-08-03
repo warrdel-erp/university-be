@@ -4472,14 +4472,14 @@ export async function deleteTimeTableTeacher(timeTableCellTeacherId) {
 
     const { timeTableCellId, userId } = teacherRecord;
 
-    const cellRow = await timeTableCreateRepository.findMappingById(timeTableCellId);
+    const cellRow = await timeTableCreateRepository.findMappingById(timeTableCellId, { transaction });
     if (!cellRow) {
       const error = new Error('Associated timetable cell not found');
       error.statusCode = 404;
       throw error;
     }
 
-    const routineInfo = await timeTableCreateRepository.getRoutineByIdRepository(cellRow.timeTableRoutineId);
+    const routineInfo = await timeTableCreateRepository.getRoutineByIdRepository(cellRow.timeTableRoutineId, { transaction });
     if (!routineInfo) {
       const error = new Error('Associated timetable routine not found');
       error.statusCode = 404;
