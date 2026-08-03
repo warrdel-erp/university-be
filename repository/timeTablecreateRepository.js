@@ -385,9 +385,10 @@ export async function deleteTimeTableRoutineRepository(timeTableRoutineId, optio
 
 export async function deletetimeTableMapping(timeTableCellId, options = {}) {
   const { transaction, deleteCombinedGroup = false } = options;
-  const schedule = await assertScopedSchedule(timeTableCellId, {
-    transaction,
+  const schedule = await model.timeTableCellModel.findOne({
+    where: { timeTableCellId: Number(timeTableCellId) },
     attributes: ['timeTableCellId', 'combinedGroupId'],
+    transaction,
   });
   if (!schedule) {
     throw new Error('Mapping not found');
