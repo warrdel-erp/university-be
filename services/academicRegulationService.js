@@ -3,8 +3,11 @@ import * as academicRegulationRepo from "../repository/academicRegulationReposit
 
 export async function createAcademicRegulation(payload, user) {
   return await sequelize.transaction(async (t) => {
+    const sanitizeDate = (val) => (!val || val === "" || val === "Invalid date" ? null : val);
     const regulationData = {
       ...payload,
+      effectiveFrom: sanitizeDate(payload.effectiveFrom),
+      effectiveUntil: sanitizeDate(payload.effectiveUntil),
       courseId: payload.courseId ? Number(payload.courseId) : null,
       sessionId: payload.sessionId ? Number(payload.sessionId) : null,
       academicYearId: payload.academicYearId ? Number(payload.academicYearId) : (user?.academicYearId || null),
@@ -67,8 +70,9 @@ export async function updateAcademicRegulation(academicRegulationId, payload, us
     if (payload.academicYearId !== undefined) updateData.academicYearId = payload.academicYearId ? Number(payload.academicYearId) : null;
     if (payload.academicYearRange !== undefined) updateData.academicYearRange = payload.academicYearRange;
     if (payload.applicableBatch !== undefined) updateData.applicableBatch = payload.applicableBatch;
-    if (payload.effectiveFrom !== undefined) updateData.effectiveFrom = payload.effectiveFrom;
-    if (payload.effectiveUntil !== undefined) updateData.effectiveUntil = payload.effectiveUntil;
+    const sanitizeDate = (val) => (!val || val === "" || val === "Invalid date" ? null : val);
+    if (payload.effectiveFrom !== undefined) updateData.effectiveFrom = sanitizeDate(payload.effectiveFrom);
+    if (payload.effectiveUntil !== undefined) updateData.effectiveUntil = sanitizeDate(payload.effectiveUntil);
     if (payload.gradingSchemeId !== undefined) updateData.gradingSchemeId = payload.gradingSchemeId ? Number(payload.gradingSchemeId) : null;
     if (payload.evaluationPattern !== undefined) updateData.evaluationPattern = payload.evaluationPattern;
     if (payload.internalWeightage !== undefined) updateData.internalWeightage = payload.internalWeightage;
@@ -172,6 +176,13 @@ export async function createCourseMapping({ academicRegulationId, courseId, sess
       error.statusCode = 404;
       throw error;
     }
+
+    if (!existingRegulation.isActive) {
+      const error = new Error("Academic regulation is not active");
+      error.statusCode = 400;
+      throw error;
+    }
+
     return await academicRegulationRepo.createCourseMapping(
       {
         academicRegulationId: Number(academicRegulationId),
