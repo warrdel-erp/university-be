@@ -198,3 +198,88 @@ export async function deleteExaminationSessionTerm(examinationSessionTermId, opt
 
   return { message: "Examination session term mapping deleted successfully" };
 }
+
+export async function getClassSectionTermsBySetupType(examSetupTypeId, options = {}) {
+  const setupTypeId = Number(examSetupTypeId);
+
+  // 1. Fetch exam_setup_type_term entries for examSetupTypeId
+  const termWhere = { examSetupTypeId: setupTypeId };
+
+  const setupTerms = await scoped(model.examSetupTypeTermModel).findAll({
+    where: termWhere,
+    attributes: ["courseId", "term"],
+    raw: true,
+    transaction: options.transaction,
+  });
+
+  if (!setupTerms || setupTerms.length === 0) {
+    return [];
+  }
+
+  // Map courseId -> array of terms
+  const courseTermsMap = new Map();
+  for (const item of setupTerms) {
+    if (!item.courseId) continue;
+    if (!courseTermsMap.has(item.courseId)) {
+      courseTermsMap.set(item.courseId, new Set());
+    }
+    if (item.term != null) {
+      courseTermsMap.get(item.courseId).add(item.term);
+    }
+  }
+
+  const targetCourseIds = [...courseTermsMap.keys()];
+  if (targetCourseIds.length === 0) {
+    return [];
+  }
+
+  // 2. Fetch course details for all target courses
+  const courses = await scoped(model.courseModel).findAll({
+    where: { courseId: { [Op.in]: targetCourseIds } },
+    attributes: ["courseId", "courseName", "courseCode", "courseDuration", "termType", "totalTerms"],
+    raw: true,
+    transaction: options.transaction,
+  });
+
+  const courseMap = new Map(courses.map((c) => [c.courseId, c]));
+
+  // 3. For each course, fetch matching class_section_term entries
+  const result = [];
+
+  for (const cId of targetCourseIds) {
+    const courseDetails = courseMap.get(cId);
+    if (!courseDetails) continue;
+
+    const termsArray = [...(courseTermsMap.get(cId) || [])];
+
+    // Fetch class_sections for this course
+    const classSections = await scoped(model.classSectionModel).findAll({
+      where: { courseId: cId },
+      attributes: ["classSectionsId"],
+      raw: true,
+      transaction: options.transaction,
+    });
+
+    const classSectionsIds = [...new Set(classSections.map((cs) => cs.classSectionsId).filter(Boolean))];
+
+    let termDetails = [];
+    if (classSectionsIds.length > 0 && termsArray.length > 0) {
+      termDetails = await scoped(model.classSectionTermModel).findAll({
+        where: {
+          classSectionsId: { [Op.in]: classSectionsIds },
+          term: { [Op.in]: termsArray },
+        },
+        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+        raw: true,
+        transaction: options.transaction,
+      });
+    }
+
+    result.push({
+      course: courseDetails,
+      terms: termDetails,
+    });
+  }
+
+  return result;
+}

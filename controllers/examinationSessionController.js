@@ -33,7 +33,7 @@ export const getExaminationSessions = async (req, res) => {
 
 export const getExaminationSessionById = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.query.examinationSessionId || req.query.id || req.params.id;
     const result = await examinationSessionServices.getExaminationSessionById(id);
     if (!result) {
       return ErrorResponse(res, 404, "Examination session not found");
@@ -47,7 +47,7 @@ export const getExaminationSessionById = async (req, res) => {
 
 export const updateExaminationSession = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.query.examinationSessionId || req.query.id || req.params.id;
     const payload = {
       ...req.body,
       updatedBy: req.user?.userId || req.user?.id || req.body.updatedBy,
@@ -65,7 +65,7 @@ export const updateExaminationSession = async (req, res) => {
 
 export const deleteExaminationSession = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.query.examinationSessionId || req.query.id || req.params.id;
     const result = await examinationSessionServices.deleteExaminationSession(id);
     if (!result) {
       return ErrorResponse(res, 404, "Examination session not found");
@@ -89,7 +89,7 @@ export const createExaminationSessionTerm = async (req, res) => {
 
 export const deleteExaminationSessionTerm = async (req, res) => {
   try {
-    const { examinationSessionTermId } = req.params;
+    const examinationSessionTermId = req.query.examinationSessionTermId || req.params.examinationSessionTermId;
     const result = await examinationSessionServices.deleteExaminationSessionTerm(examinationSessionTermId);
     if (!result) {
       return ErrorResponse(res, 404, "Examination session term mapping not found");
@@ -98,5 +98,18 @@ export const deleteExaminationSessionTerm = async (req, res) => {
   } catch (error) {
     console.error("Error deleting examination session term:", error);
     return ErrorResponse(res, 500, "Failed to delete examination session term", error.message);
+  }
+};
+
+export const getClassSectionTermsBySetupType = async (req, res) => {
+  try {
+    const { examSetupTypeId } = req.query;
+    const result = await examinationSessionServices.getClassSectionTermsBySetupType(
+      examSetupTypeId
+    );
+    return SuccessResponse(res, 200, "Mapped class section terms fetched successfully", result);
+  } catch (error) {
+    console.error("Error fetching mapped class section terms:", error);
+    return ErrorResponse(res, 500, "Failed to fetch mapped class section terms", error.message);
   }
 };

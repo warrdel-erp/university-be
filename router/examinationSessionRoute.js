@@ -35,7 +35,7 @@ const sessionBodyObject = z.object({
   })).optional(),
 });
 
-const createSessionSchema = z.object({
+const createSessionSchema = {
   body: sessionBodyObject.refine((data) => {
     const dates = {
       examStart: data.examStartDate ? new Date(data.examStartDate).getTime() : null,
@@ -71,43 +71,58 @@ const createSessionSchema = z.object({
   }, {
     message: "Invalid date chronological order. Expected sequence: Hall Ticket / Seat Allocation <= Exam Start <= Exam End <= Evaluation Start <= Evaluation Deadline <= Moderation Deadline <= Result Publication Date",
   }),
-});
+};
 
-const updateSessionSchema = z.object({
+const emptyToUndefined = (val) =>
+  val === "" || val === null || val === undefined ? undefined : val;
+
+const positiveIntegerQueryId = z.preprocess(
+  emptyToUndefined,
+  z.union([z.string().regex(/^\d+$/).transform(Number), z.number().int().positive()])
+);
+
+const updateSessionSchema = {
   query: z.object({
-    examinationSessionId: z.string().regex(/^\d+$/).transform(Number),
+    examinationSessionId: positiveIntegerQueryId,
   }),
   body: sessionBodyObject.partial(),
-});
+};
 
-const getSessionByIdSchema = z.object({
+const getSessionByIdSchema = {
   query: z.object({
-    examinationSessionId: z.string().regex(/^\d+$/).transform(Number),
+    examinationSessionId: positiveIntegerQueryId,
   }),
-});
+};
 
-const createTermSchema = z.object({
+const createTermSchema = {
   body: z.object({
     examinationSessionId: z.number({ required_error: "examinationSessionId is required" }),
     classSectionTermId: z.number({ required_error: "classSectionTermId is required" }),
     includeElectives: z.boolean().optional(),
     remarks: z.string().optional(),
   }),
-});
+};
 
-const deleteTermSchema = z.object({
-  params: z.object({
-    examinationSessionTermId: z.string().regex(/^\d+$/).transform(Number),
+const deleteTermSchema = {
+  query: z.object({
+    examinationSessionTermId: positiveIntegerQueryId,
   }),
-});
+};
+
+const getClassSectionTermsBySetupTypeSchema = {
+  query: z.object({
+    examSetupTypeId: positiveIntegerQueryId,
+  }),
+};
 
 router.post('/', userAuth, validate(createSessionSchema), examinationSessionController.createExaminationSession);
 router.get('/', userAuth, examinationSessionController.getExaminationSessions);
-router.get('/:id', userAuth, validate(getSessionByIdSchema), examinationSessionController.getExaminationSessionById);
-router.patch('/:id', userAuth, validate(updateSessionSchema), examinationSessionController.updateExaminationSession);
-router.delete('/:id', userAuth, validate(getSessionByIdSchema), examinationSessionController.deleteExaminationSession);
+router.get('/single', userAuth, validate(getSessionByIdSchema), examinationSessionController.getExaminationSessionById);
+router.get('/classSectionTerms', userAuth, validate(getClassSectionTermsBySetupTypeSchema), examinationSessionController.getClassSectionTermsBySetupType);
+router.patch('/', userAuth, validate(updateSessionSchema), examinationSessionController.updateExaminationSession);
+router.delete('/', userAuth, validate(getSessionByIdSchema), examinationSessionController.deleteExaminationSession);
 
 router.post('/term', userAuth, validate(createTermSchema), examinationSessionController.createExaminationSessionTerm);
-router.delete('/term/:examinationSessionTermId', userAuth, validate(deleteTermSchema), examinationSessionController.deleteExaminationSessionTerm);
+router.delete('/term', userAuth, validate(deleteTermSchema), examinationSessionController.deleteExaminationSessionTerm);
 
 export default router;

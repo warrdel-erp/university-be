@@ -27,3 +27,10 @@ export async function createExaminationSessionTerm(termData, options) {
 export async function deleteExaminationSessionTerm(examinationSessionTermId, options) {
   return await examinationSessionRepository.deleteExaminationSessionTerm(examinationSessionTermId, options);
 }
+
+export async function getClassSectionTermsBySetupType(examSetupTypeId, options) {
+  return await examinationSessionRepository.getClassSectionTermsBySetupType(
+    examSetupTypeId,
+    options
+  );
+}

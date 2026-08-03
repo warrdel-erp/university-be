@@ -1611,13 +1611,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examinationSession/{{examinationSessionId}}",
+              "raw": "{{baseurl}}/examinationSession/single?examinationSessionId={{examinationSessionId}}",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "examinationSession",
-                "{{examinationSessionId}}"
+                "single"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "{{examinationSessionId}}"
+                }
               ]
             }
           }
@@ -1641,19 +1647,52 @@
               "raw": "{\n  \"sessionName\": \"End Semester Examination - May 2027 (Updated)\",\n  \"status\": \"Published\"\n}"
             },
             "url": {
-              "raw": "{{baseurl}}/examinationSession/{{examinationSessionId}}",
+              "raw": "{{baseurl}}/examinationSession?examinationSessionId={{examinationSessionId}}",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
-                "examinationSession",
-                "{{examinationSessionId}}"
+                "examinationSession"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "{{examinationSessionId}}"
+                }
               ]
             }
           }
         },
         {
-          "name": "5.5 Create Examination Session Term",
+          "name": "5.5 Get Mapped Class Section Terms By Setup Type",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examinationSession/classSectionTerms?examSetupTypeId={{examSetupTypeId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examinationSession",
+                "classSectionTerms"
+              ],
+              "query": [
+                {
+                  "key": "examSetupTypeId",
+                  "value": "{{examSetupTypeId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "5.6 Create Examination Session Term",
           "request": {
             "method": "POST",
             "header": [
@@ -1697,7 +1736,7 @@
           ]
         },
         {
-          "name": "5.6 Delete Examination Session Term",
+          "name": "5.7 Delete Examination Session Term",
           "request": {
             "method": "DELETE",
             "header": [
@@ -1707,20 +1746,25 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examinationSession/term/{{examinationSessionTermId}}",
+              "raw": "{{baseurl}}/examinationSession/term?examinationSessionTermId={{examinationSessionTermId}}",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "examinationSession",
-                "term",
-                "{{examinationSessionTermId}}"
+                "term"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionTermId",
+                  "value": "{{examinationSessionTermId}}"
+                }
               ]
             }
           }
         },
         {
-          "name": "5.7 Delete Examination Session",
+          "name": "5.8 Delete Examination Session",
           "request": {
             "method": "DELETE",
             "header": [
@@ -1730,13 +1774,18 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examinationSession/{{examinationSessionId}}",
+              "raw": "{{baseurl}}/examinationSession?examinationSessionId={{examinationSessionId}}",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
-                "examinationSession",
-                "{{examinationSessionId}}"
+                "examinationSession"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "{{examinationSessionId}}"
+                }
               ]
             }
           }
