@@ -202,29 +202,57 @@ export async function deleteExaminationSessionTerm(examinationSessionTermId, opt
 export async function getClassSectionTermsBySetupType(examSetupTypeId, options = {}) {
   const setupTypeId = Number(examSetupTypeId);
 
-  // 1. Fetch exam_setup_type_term entries for examSetupTypeId
-  const termWhere = { examSetupTypeId: setupTypeId };
-
-  const setupTerms = await scoped(model.examSetupTypeTermModel).findAll({
-    where: termWhere,
-    attributes: ["courseId", "term"],
+  // 1. Fetch assessmentPlanIds from assessment_plan_component for examSetupTypeId
+  const components = await scoped(model.assessmentPlanComponentModel).findAll({
+    where: { examSetupTypeId: setupTypeId },
+    attributes: ["assessmentPlanId"],
     raw: true,
     transaction: options.transaction,
   });
 
-  if (!setupTerms || setupTerms.length === 0) {
+  if (!components || components.length === 0) {
     return [];
   }
 
-  // Map courseId -> array of terms
+  const planIds = [...new Set(components.map((c) => c.assessmentPlanId).filter(Boolean))];
+  if (planIds.length === 0) {
+    return [];
+  }
+
+  // 2. Fetch subjectIds from assessment_plan_subject_mapping for these assessmentPlanIds
+  const subjectMappings = await scoped(model.assessmentPlanSubjectMappingModel).findAll({
+    where: { assessmentPlanId: { [Op.in]: planIds } },
+    attributes: ["subjectId", "courseId", "sessionId"],
+    raw: true,
+    transaction: options.transaction,
+  });
+
+  if (!subjectMappings || subjectMappings.length === 0) {
+    return [];
+  }
+
+  const subjectIds = [...new Set(subjectMappings.map((m) => m.subjectId).filter(Boolean))];
+  if (subjectIds.length === 0) {
+    return [];
+  }
+
+  // 3. Fetch subjects to get courseId and term
+  const subjects = await scoped(model.subjectModel).findAll({
+    where: { subjectId: { [Op.in]: subjectIds } },
+    attributes: ["subjectId", "courseId", "term"],
+    raw: true,
+    transaction: options.transaction,
+  });
+
+  // Map courseId -> Set of terms
   const courseTermsMap = new Map();
-  for (const item of setupTerms) {
-    if (!item.courseId) continue;
-    if (!courseTermsMap.has(item.courseId)) {
-      courseTermsMap.set(item.courseId, new Set());
+  for (const sub of subjects) {
+    if (!sub.courseId) continue;
+    if (!courseTermsMap.has(sub.courseId)) {
+      courseTermsMap.set(sub.courseId, new Set());
     }
-    if (item.term != null) {
-      courseTermsMap.get(item.courseId).add(item.term);
+    if (sub.term != null) {
+      courseTermsMap.get(sub.courseId).add(sub.term);
     }
   }
 
@@ -233,7 +261,7 @@ export async function getClassSectionTermsBySetupType(examSetupTypeId, options =
     return [];
   }
 
-  // 2. Fetch course details for all target courses
+  // 4. Fetch course details for all target courses
   const courses = await scoped(model.courseModel).findAll({
     where: { courseId: { [Op.in]: targetCourseIds } },
     attributes: ["courseId", "courseName", "courseCode", "courseDuration", "termType", "totalTerms"],
@@ -243,7 +271,7 @@ export async function getClassSectionTermsBySetupType(examSetupTypeId, options =
 
   const courseMap = new Map(courses.map((c) => [c.courseId, c]));
 
-  // 3. For each course, fetch matching class_section_term entries
+  // 5. For each course, fetch matching class_section_term entries
   const result = [];
 
   for (const cId of targetCourseIds) {
@@ -264,7 +292,7 @@ export async function getClassSectionTermsBySetupType(examSetupTypeId, options =
 
     let termDetails = [];
     if (classSectionsIds.length > 0 && termsArray.length > 0) {
-      termDetails = await scoped(model.classSectionTermModel).findAll({
+      const rawTermDetails = await scoped(model.classSectionTermModel).findAll({
         where: {
           classSectionsId: { [Op.in]: classSectionsIds },
           term: { [Op.in]: termsArray },
@@ -273,6 +301,45 @@ export async function getClassSectionTermsBySetupType(examSetupTypeId, options =
         raw: true,
         transaction: options.transaction,
       });
+
+      // Calculate studentCount and subjectCount per distinct term
+      termDetails = await Promise.all(
+        termsArray.map(async (t) => {
+          const matchingItems = rawTermDetails.filter((item) => item.term === t);
+          const firstItem = matchingItems[0] || {};
+
+          const allCstIds = matchingItems.map((i) => i.classSectionTermId).filter(Boolean);
+          const allCsIds = matchingItems.map((i) => i.classSectionsId).filter(Boolean);
+
+          const studentWhere = [];
+          if (allCstIds.length > 0) studentWhere.push({ classSectionTermId: { [Op.in]: allCstIds } });
+          if (allCsIds.length > 0) studentWhere.push({ classSectionsId: { [Op.in]: allCsIds } });
+
+          const [studentCount, subjectCount] = await Promise.all([
+            studentWhere.length > 0
+              ? model.studentClassSectionsHistoryModel.count({
+                  where: { [Op.or]: studentWhere },
+                  transaction: options.transaction,
+                })
+              : 0,
+            scoped(model.subjectModel).count({
+              where: {
+                subjectId: { [Op.in]: subjectIds },
+                courseId: cId,
+                term: t,
+              },
+              transaction: options.transaction,
+            }),
+          ]);
+
+          return {
+            ...firstItem,
+            term: t,
+            studentCount,
+            subjectCount,
+          };
+        })
+      );
     }
 
     result.push({
