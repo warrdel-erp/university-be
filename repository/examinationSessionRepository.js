@@ -103,7 +103,6 @@ export async function getExaminationSessions({
       // 1. Calculate courseCount, totalStudents, and subjectCount from mapped classSectionTerms
       let courseCount = 0;
       let totalStudents = 0;
-      let subjectCount = 0;
       const termsList = sessionPlain.examinationSessionTerms || [];
       const cstIds = [...new Set(termsList.map((t) => t.classSectionTermId).filter(Boolean))];
 
@@ -134,44 +133,12 @@ export async function getExaminationSessions({
         totalStudents = await model.studentClassSectionsHistoryModel.count({
           where: { [Op.or]: studentWhere },
         });
-
-        // Calculate subjectCount connected in assessmentPlan for assessmentTypeId
-        if (sessionPlain.assessmentTypeId && courseIds.length > 0) {
-          const components = await scoped(model.assessmentPlanComponentModel).findAll({
-            where: { examSetupTypeId: sessionPlain.assessmentTypeId },
-            attributes: ["assessmentPlanId"],
-            raw: true,
-          });
-
-          const planIds = [...new Set(components.map((c) => c.assessmentPlanId).filter(Boolean))];
-          if (planIds.length > 0) {
-            const mappings = await scoped(model.assessmentPlanSubjectMappingModel).findAll({
-              where: { assessmentPlanId: { [Op.in]: planIds } },
-              attributes: ["subjectId"],
-              raw: true,
-            });
-
-            const planSubjectIds = [...new Set(mappings.map((m) => m.subjectId).filter(Boolean))];
-            const terms = [...new Set(cstRecords.map((cst) => cst.term).filter(Boolean))];
-
-            if (planSubjectIds.length > 0 && terms.length > 0) {
-              subjectCount = await scoped(model.subjectModel).count({
-                where: {
-                  subjectId: { [Op.in]: planSubjectIds },
-                  courseId: { [Op.in]: courseIds },
-                  term: { [Op.in]: terms },
-                },
-              });
-            }
-          }
-        }
       }
 
       return {
         ...sessionPlain,
         courseCount,
         totalStudents,
-        subjectCount,
       };
     })
   );
@@ -228,7 +195,6 @@ export async function getExaminationSessionById(id, options = {}) {
   // 1. Calculate courseCount, totalStudents, and subjectCount from mapped classSectionTerms
   let courseCount = 0;
   let totalStudents = 0;
-  let subjectCount = 0;
   const termsList = sessionPlain.examinationSessionTerms || [];
   const cstIds = [...new Set(termsList.map((t) => t.classSectionTermId).filter(Boolean))];
 
@@ -263,46 +229,12 @@ export async function getExaminationSessionById(id, options = {}) {
       transaction: options.transaction,
     });
 
-    // Calculate subjectCount connected in assessmentPlan for assessmentTypeId
-    if (sessionPlain.assessmentTypeId && courseIds.length > 0) {
-      const components = await scoped(model.assessmentPlanComponentModel).findAll({
-        where: { examSetupTypeId: sessionPlain.assessmentTypeId },
-        attributes: ["assessmentPlanId"],
-        raw: true,
-        transaction: options.transaction,
-      });
-
-      const planIds = [...new Set(components.map((c) => c.assessmentPlanId).filter(Boolean))];
-      if (planIds.length > 0) {
-        const mappings = await scoped(model.assessmentPlanSubjectMappingModel).findAll({
-          where: { assessmentPlanId: { [Op.in]: planIds } },
-          attributes: ["subjectId"],
-          raw: true,
-          transaction: options.transaction,
-        });
-
-        const planSubjectIds = [...new Set(mappings.map((m) => m.subjectId).filter(Boolean))];
-        const terms = [...new Set(cstRecords.map((cst) => cst.term).filter(Boolean))];
-
-        if (planSubjectIds.length > 0 && terms.length > 0) {
-          subjectCount = await scoped(model.subjectModel).count({
-            where: {
-              subjectId: { [Op.in]: planSubjectIds },
-              courseId: { [Op.in]: courseIds },
-              term: { [Op.in]: terms },
-            },
-            transaction: options.transaction,
-          });
-        }
-      }
-    }
   }
 
   return {
     ...sessionPlain,
     courseCount,
     totalStudents,
-    subjectCount,
   };
 }
 
