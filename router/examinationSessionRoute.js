@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import * as examinationSessionController from '../controllers/examinationSessionController.js';
 import userAuth from '../middleware/authUser.js';
+import { checkAccess } from '../middleware/checkAccess.js';
+import { PERMISSIONS } from '../const/permissions.js';
 import { validate } from '../utility/validation.js';
 import { z } from 'zod';
 
@@ -98,14 +100,14 @@ const getClassSectionTermsBySetupTypeSchema = {
   }),
 };
 
-router.post('/', userAuth, validate(createSessionSchema), examinationSessionController.createExaminationSession);
-router.get('/', userAuth, examinationSessionController.getExaminationSessions);
-router.get('/single', userAuth, validate(getSessionByIdSchema), examinationSessionController.getExaminationSessionById);
-router.get('/classSectionTerms', userAuth, validate(getClassSectionTermsBySetupTypeSchema), examinationSessionController.getClassSectionTermsBySetupType);
-router.patch('/', userAuth, validate(updateSessionSchema), examinationSessionController.updateExaminationSession);
-router.delete('/', userAuth, validate(getSessionByIdSchema), examinationSessionController.deleteExaminationSession);
+router.post('/', userAuth, checkAccess(PERMISSIONS.EXAMINATION_SESSION_ADD.value, 'examinationSesssion'), validate(createSessionSchema), examinationSessionController.createExaminationSession);
+router.get('/', userAuth, checkAccess(PERMISSIONS.EXAMINATION_SESSION.value, 'examinationSesssion'), examinationSessionController.getExaminationSessions);
+router.get('/single', userAuth, checkAccess(PERMISSIONS.EXAMINATION_SESSION.value, 'examinationSesssion'), validate(getSessionByIdSchema), examinationSessionController.getExaminationSessionById);
+router.get('/classSectionTerms', userAuth, checkAccess(PERMISSIONS.EXAMINATION_SESSION.value, 'examinationSesssion'), validate(getClassSectionTermsBySetupTypeSchema), examinationSessionController.getClassSectionTermsBySetupType);
+router.patch('/', userAuth, checkAccess(PERMISSIONS.EXAMINATION_SESSION_EDIT.value, 'examinationSesssion'), validate(updateSessionSchema), examinationSessionController.updateExaminationSession);
+router.delete('/', userAuth, checkAccess(PERMISSIONS.EXAMINATION_SESSION_DELETE.value, 'examinationSesssion'), validate(getSessionByIdSchema), examinationSessionController.deleteExaminationSession);
 
-router.post('/term', userAuth, validate(createTermSchema), examinationSessionController.createExaminationSessionTerm);
-router.delete('/term', userAuth, validate(deleteTermSchema), examinationSessionController.deleteExaminationSessionTerm);
+router.post('/term', userAuth, checkAccess(PERMISSIONS.EXAMINATION_SESSION_ADD.value, 'examinationSesssion'), validate(createTermSchema), examinationSessionController.createExaminationSessionTerm);
+router.delete('/term', userAuth, checkAccess(PERMISSIONS.EXAMINATION_SESSION_DELETE.value, 'examinationSesssion'), validate(deleteTermSchema), examinationSessionController.deleteExaminationSessionTerm);
 
 export default router;

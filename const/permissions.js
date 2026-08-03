@@ -1848,6 +1848,25 @@ export const PERMISSIONS = {
     ASSET_ISSUE_RETURN_DELETE: {
         value: "ASSET_ISSUE_RETURN_DELETE",
         parentPermission: 'ASSET_ISSUE_RETURN',
+    },
+    EXAMINATION_SESSION: {
+        value: "EXAMINATION_SESSION",
+    },
+    EXAMINATION_SESSION_SIDEBAR: {
+        value: "EXAMINATION_SESSION_SIDEBAR",
+        parentPermission: 'EXAMINATION_SESSION',
+    },
+    EXAMINATION_SESSION_ADD: {
+        value: "EXAMINATION_SESSION_ADD",
+        parentPermission: 'EXAMINATION_SESSION',
+    },
+    EXAMINATION_SESSION_EDIT: {
+        value: "EXAMINATION_SESSION_EDIT",
+        parentPermission: 'EXAMINATION_SESSION',
+    },
+    EXAMINATION_SESSION_DELETE: {
+        value: "EXAMINATION_SESSION_DELETE",
+        parentPermission: 'EXAMINATION_SESSION',
     }
 
 };
