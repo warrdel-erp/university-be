@@ -2740,9 +2740,37 @@ export async function getPeriodsForStructures(timeTableNameIds) {
   });
 }
 
-export async function findAcademicGroupById(academicGroupId, options = {}) {
-  return await scoped(model.academicGroupModel).findByPk(Number(academicGroupId), {
+export async function findCellTeacherByIdRepository(timeTableCellTeacherId, options = {}) {
+  return await model.timeTableCellTeachersModel.findOne({
+    where: { timeTableCellTeacherId: Number(timeTableCellTeacherId) },
     transaction: options.transaction,
+  });
+}
+
+export async function deleteCellTeacherRepository(timeTableCellTeacherId, transaction) {
+  return await model.timeTableCellTeachersModel.destroy({
+    where: { timeTableCellTeacherId: Number(timeTableCellTeacherId) },
+    transaction,
+  });
+}
+
+export async function deleteDateWiseTeachersByCellAndUserRepository(timeTableCellId, userId, transaction) {
+  const dateWiseCells = await model.timeTableCellDateWiseModel.findAll({
+    where: { timeTableCellId: Number(timeTableCellId) },
+    attributes: ['timeTableCellDateWiseId'],
+    transaction,
+  });
+
+  if (!dateWiseCells || dateWiseCells.length === 0) return;
+
+  const dateWiseIds = dateWiseCells.map((c) => c.timeTableCellDateWiseId);
+
+  await model.timeTableCellTeachersDateWiseModel.destroy({
+    where: {
+      timeTableCellDateWiseId: { [Op.in]: dateWiseIds },
+      userId: Number(userId),
+    },
+    transaction,
   });
 }
 
