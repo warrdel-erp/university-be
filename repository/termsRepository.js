@@ -112,20 +112,10 @@ export async function getExamSetupTypeTermsByCourseAndSession(courseId, sessionI
         {
           model: model.examSetupTypeModel,
           as: 'examSetupType',
-          attributes: ['examType', 'examName'],
-          required: true,
-          include: [
-            {
-              model: model.examStructureModel,
-              as: 'examStructure',
-              required: true,
-              attributes: [],
-              where: whereFromSession(session, model.examStructureModel, {
-                courseId,
-                sessionId,
-              }),
-            },
-          ],
+          where: whereFromSession(session, model.examSetupTypeModel, {
+            courseId,
+            sessionId,
+          }),
         },
       ],
     });

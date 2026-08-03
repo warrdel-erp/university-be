@@ -25,11 +25,20 @@ export async function updateExamStructure(examStructureId, examDetail, updatedBy
     await examStructureRepository.updateExamStructure(examStructureId, examDetail);
 };
 
-export async function addExamType(examDetail, createdBy, updatedBy) {
+export async function addExamType(examDetail, user) {
     const payload = { ...examDetail };
     delete payload.scheduledBy;
-    payload.createdBy = createdBy;
-    payload.updatedBy = updatedBy;
+    
+    if (typeof user === 'object' && user !== null) {
+        payload.createdBy = user.userId || payload.createdBy;
+        payload.updatedBy = user.userId || payload.updatedBy;
+        payload.universityId = user.universityId || payload.universityId;
+        payload.instituteId = user.instituteId || payload.instituteId;
+    } else {
+        payload.createdBy = user;
+        payload.updatedBy = user;
+    }
+
     return await examStructureRepository.addExamType(payload);
 };
 
@@ -104,16 +113,26 @@ function resolveStudentCount(plain, sessionId, courseId, academicYearId, termNum
     return countMap.get(`${term}:${yearId}`) ?? 0;
 }
 
-export async function getSingleExamType(courseId, sessionId, academicYearId, termNumber) {
-    const rows = await examStructureRepository.getSingleExamType(
+export async function getAllExamTypes(courseId, sessionId, academicYearId, termNumber, options = {}) {
+    const result = await examStructureRepository.getAllExamTypes(
         courseId,
         sessionId,
         academicYearId,
         termNumber,
+        options,
     );
 
-    if (!rows?.length) {
-        return [];
+    const rows = result.rows || [];
+    if (!rows.length) {
+        return {
+            data: [],
+            meta: {
+                page: Number(options.page) || 1,
+                limit: Number(options.limit) || 10,
+                total: 0,
+                totalPage: 0,
+            },
+        };
     }
 
     const termIds = collectTermIds(rows);
@@ -124,7 +143,7 @@ export async function getSingleExamType(courseId, sessionId, academicYearId, ter
             : Promise.resolve(new Map()),
     ]);
 
-    return rows.map((row) => {
+    const formattedData = rows.map((row) => {
         const plain = toPlain(row);
         const rowTermIds = (plain.examSetupTypeTerms ?? [])
             .map((termItem) => termItem?.examSetupTypeTermId)
@@ -145,6 +164,16 @@ export async function getSingleExamType(courseId, sessionId, academicYearId, ter
             ),
         };
     });
+
+    return {
+        data: formattedData,
+        meta: {
+            page: result.page,
+            limit: result.limit,
+            total: result.total,
+            totalPage: result.totalPages,
+        },
+    };
 };
 
 export async function deleteExamType(examSetupTypeId) {

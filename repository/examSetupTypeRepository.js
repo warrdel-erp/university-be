@@ -21,13 +21,6 @@ export async function getExamSetupTypes(filters) {
                     attributes: [],
                     required: !!(courseId || term),
                 },
-                {
-                    model: model.examStructureModel,
-                    as: "examStructure",
-                    attributes: ["examStructureId", "totalMarks"],
-                    where: buildScope(model.examStructureModel),
-                    required: false,
-                },
             ],
         });
         return result;

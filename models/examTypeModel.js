@@ -46,6 +46,32 @@ const examTypeModel = sequelize.define(
             field: 'exam_name',
             allowNull: false
         },
+        assessmentCode: {
+            type: DataTypes.STRING(30),
+            allowNull: false,
+            field: 'assessment_code'
+        },
+        assessmentCategory: {
+            type: DataTypes.ENUM(
+                'EXAMINATION',
+                'CONTINUOUS_ASSESSMENT',
+                'PRACTICAL_EVALUATION',
+                'PROJECT_RESEARCH_EVALUATION',
+                'PARTICIPATION_ENGAGEMENT'
+            ),
+            allowNull: false,
+            field: 'assessment_category'
+        },
+        assessmentSubCategory: {
+            type: DataTypes.STRING(100),
+            allowNull: false,
+            field: 'assessment_sub_category'
+        },
+        description: {
+            type: DataTypes.STRING(500),
+            allowNull: true,
+            field: 'description'
+        },
         averagePassingMark: {
             type: DataTypes.INTEGER,
             allowNull: true,
@@ -53,7 +79,8 @@ const examTypeModel = sequelize.define(
         },
         isAveragePassingMark: {
             type: DataTypes.BOOLEAN,
-            allowNull: false,
+            allowNull: true,
+            defaultValue: false,
             field: 'is_average_passing_mark'
         },
         createdBy: {

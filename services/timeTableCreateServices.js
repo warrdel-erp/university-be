@@ -977,8 +977,12 @@ export async function deletetimeTableMapping(timeTableCellId, options = {}) {
       throw error;
     }
 
+    const routineId = schedule.timeTableRoutineId
+      ?? schedule.dataValues?.timeTableRoutineId
+      ?? schedule.time_table_routine_id;
+
     const routine = await timeTableCreateRepository.getRoutineByIdRepository(
-      schedule.timeTableRoutineId,
+      routineId,
       { transaction },
     );
     if (!routine) {
@@ -1495,8 +1499,9 @@ export async function changeTimeTableCreate(body, updatedBy) {
   if (!current) {
     throw new Error('Routine not found');
   }
-  if (current.isPublish) {
-    throw new Error('Published routine cannot be updated');
+  const todayStr = toDateOnlyString(new Date());
+  if (current.isPublish && current.startingDate <= todayStr) {
+    throw new Error('Published routine cannot be updated on or after its starting date.');
   }
 
   let placementFields = { ...updateData };
@@ -1573,6 +1578,10 @@ export async function changeTimeTableCreate(body, updatedBy) {
   };
 
   const result = await timeTableCreateRepository.changeTimeTableCreate(timeTableRoutineId, data);
+
+  if (current.isPublish && (placementFields.startingDate || placementFields.endingDate)) {
+    await publishTimeTableService(timeTableRoutineId);
+  }
 
   return result;
 }
@@ -4445,6 +4454,59 @@ export async function updateDateWiseCell(timeTableCellDateWiseId, payload, updat
       result.classRoomSectionId = Number(payload.classRoomSectionId);
     }
     return result;
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+export async function deleteTimeTableTeacher(timeTableCellTeacherId) {
+  const transaction = await sequelize.transaction();
+  try {
+    const teacherRecord = await timeTableCreateRepository.findCellTeacherByIdRepository(
+      timeTableCellTeacherId,
+      { transaction }
+    );
+
+    if (!teacherRecord) {
+      const error = new Error('Time table teacher assignment not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const { timeTableCellId, userId } = teacherRecord;
+
+    const cellRow = await timeTableCreateRepository.findMappingById(timeTableCellId, { transaction });
+    if (!cellRow) {
+      const error = new Error('Associated timetable cell not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const routineInfo = await timeTableCreateRepository.getRoutineByIdRepository(cellRow.timeTableRoutineId, { transaction });
+    if (!routineInfo) {
+      const error = new Error('Associated timetable routine not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    assertMappingDeletable(routineInfo);
+
+    await timeTableCreateRepository.deleteCellTeacherRepository(timeTableCellTeacherId, transaction);
+
+    await timeTableCreateRepository.deleteDateWiseTeachersByCellAndUserRepository(
+      timeTableCellId,
+      userId,
+      transaction
+    );
+
+    await recomputeFacultyLoadForUser(userId, transaction);
+
+    await transaction.commit();
+    return {
+      message: 'Time table teacher deleted successfully',
+      deletedTimeTableCellTeacherId: Number(timeTableCellTeacherId),
+    };
   } catch (error) {
     await transaction.rollback();
     throw error;

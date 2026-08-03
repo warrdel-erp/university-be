@@ -1,4 +1,7 @@
 import settingModel from "./settingModel.js";
+import assessmentPlanModel from "./assessmentPlanModel.js";
+import assessmentPlanComponentModel from "./assessmentPlanComponentModel.js";
+import assessmentPlanSubjectMappingModel from "./assessmentPlanSubjectMappingModel.js";
 import universityModel from "./universityModel.js";
 import campusModel from "./campusModel.js";
 import instituteModel from "./instituteModel.js";
@@ -100,6 +103,9 @@ import academicGroupScopeModel from "./academicGroupScopeModel.js";
 import academicGroupModel from "./academicGroupModel.js";
 import academicGroupUserModel from "./academicGroupUserModel.js";
 import academicGroupStudentModel from "./academicGroupStudentModel.js";
+import academicRegulationModel from "./academicRegulationModel.js";
+import academicRegulationClassificationModel from "./academicRegulationClassificationModel.js";
+import academicRegulationCourseMappingModel from "./academicRegulationCourseMappingModel.js";
 import syllabusDetailsModel from "./syllabusDetailsModel.js";
 import syllabusModel from "./syllabusModel.js";
 import sessionModel from "./sessionModel.js";
@@ -121,7 +127,6 @@ import topicModel from "./topicModel.js";
 import subTopicModel from "./subTopicModel.js";
 import lessonMappingModel from "./lessonMappingModel.js";
 import noticeModel from "./noticeModel.js";
-import examStructureModel from "./examStructureModel.js";
 import syllabusUnitModel from "./syllabusUnitModel.js";
 import examSetupTypeModel from "./examSetupTypeModel.js";
 import scheduleModel from "./scheduleModel.js";
@@ -1536,26 +1541,7 @@ timeTableCellModel.hasMany(lessonMappingModel, {
   as: "lessonMappings",
 });
 
-courseModel.hasMany(examStructureModel, { foreignKey: "courseId", sourceKey: "courseId", as: "examStructuresCourse" });
-examStructureModel.belongsTo(courseModel, { foreignKey: "courseId", targetKey: "courseId", as: "courseExam" });
 
-sessionModel.hasMany(examStructureModel, {
-  foreignKey: "sessionId",
-  sourceKey: "sessionId",
-  as: "examStructuresSession",
-});
-examStructureModel.belongsTo(sessionModel, { foreignKey: "sessionId", targetKey: "sessionId", as: "sessionExam" });
-
-acedmicYearModel.hasMany(examStructureModel, {
-  foreignKey: "academicYearId",
-  sourceKey: "academicYearId",
-  as: "examStructuresAcedmic",
-});
-examStructureModel.belongsTo(acedmicYearModel, {
-  foreignKey: "academicYearId",
-  targetKey: "academicYearId",
-  as: "acedmicExam",
-});
 
 syllabusUnitModel.belongsTo(acedmicYearModel, {
   foreignKey: "academicYearId",
@@ -1577,8 +1563,8 @@ subjectModel.hasMany(syllabusUnitModel, { foreignKey: "subjectId", as: "syllabus
 syllabusUnitModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "instituteUnit" });
 instituteModel.hasMany(syllabusUnitModel, { foreignKey: "instituteId", as: "syllabusUnitsInstitute" });
 
-examStructureModel.hasMany(examSetupTypeModel, { foreignKey: "exam_structure_id", as: "setupTypes" });
-examSetupTypeModel.belongsTo(examStructureModel, { foreignKey: "exam_structure_id", as: "examStructure" });
+examSetupTypeModel.belongsTo(courseModel, { foreignKey: "course_id", as: "course" });
+examSetupTypeModel.belongsTo(sessionModel, { foreignKey: "session_id", as: "session" });
 
 scheduleModel.hasMany(scheduleAssignModel, { foreignKey: "scheduleId", as: "assignedEmployees" });
 scheduleAssignModel.belongsTo(scheduleModel, { foreignKey: "scheduleId", as: "schedule" });
@@ -2011,7 +1997,68 @@ universityModel.hasMany(studentHallTicketModel, { foreignKey: "university_id", a
 
 s3FileModel.belongsTo(userModel, { foreignKey: "createdBy", as: "creator" });
 userModel.hasMany(s3FileModel, { foreignKey: "createdBy", as: "s3Files" });
+academicRegulationModel.belongsTo(gradingModel, { foreignKey: 'gradingSchemeId', as: 'gradingScheme' });
+academicRegulationModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
+courseModel.hasMany(academicRegulationModel, { foreignKey: 'courseId', as: 'academicRegulations' });
+academicRegulationModel.belongsTo(sessionModel, { foreignKey: 'sessionId', as: 'session' });
+academicRegulationModel.belongsTo(acedmicYearModel, { foreignKey: 'academicYearId', as: 'academicYear' });
+academicRegulationModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'creator' });
+academicRegulationModel.belongsTo(userModel, { foreignKey: 'updatedBy', as: 'updater' });
+academicRegulationModel.hasMany(academicRegulationClassificationModel, { foreignKey: 'academicRegulationId', as: 'classifications' });
+academicRegulationClassificationModel.belongsTo(academicRegulationModel, { foreignKey: 'academicRegulationId', as: 'academicRegulation' });
+
+academicRegulationModel.hasMany(academicRegulationCourseMappingModel, { foreignKey: 'academicRegulationId', as: 'courseMappings' });
+academicRegulationCourseMappingModel.belongsTo(academicRegulationModel, { foreignKey: 'academicRegulationId', as: 'academicRegulation' });
+academicRegulationCourseMappingModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
+academicRegulationCourseMappingModel.belongsTo(sessionModel, { foreignKey: 'sessionId', as: 'session' });
+
+// Subject Associations
+subjectModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
+courseModel.hasMany(subjectModel, { foreignKey: 'courseId', as: 'subjects' });
+
+// Assessment Plan Associations
+assessmentPlanModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
+courseModel.hasMany(assessmentPlanModel, { foreignKey: 'courseId', as: 'assessmentPlans' });
+
+assessmentPlanModel.belongsTo(sessionModel, { foreignKey: 'sessionId', as: 'session' });
+sessionModel.hasMany(assessmentPlanModel, { foreignKey: 'sessionId', as: 'assessmentPlans' });
+
+assessmentPlanModel.belongsTo(academicRegulationModel, { foreignKey: 'regulationId', as: 'academicRegulation' });
+academicRegulationModel.hasMany(assessmentPlanModel, { foreignKey: 'regulationId', as: 'assessmentPlans' });
+
+assessmentPlanModel.belongsTo(acedmicYearModel, { foreignKey: 'academicYearId', as: 'academicYear' });
+acedmicYearModel.hasMany(assessmentPlanModel, { foreignKey: 'academicYearId', as: 'assessmentPlans' });
+
+assessmentPlanModel.belongsTo(gradingModel, { foreignKey: 'gradingId', as: 'gradingScheme' });
+gradingModel.hasMany(assessmentPlanModel, { foreignKey: 'gradingId', as: 'assessmentPlans' });
+
+assessmentPlanComponentModel.belongsTo(acedmicYearModel, { foreignKey: 'academicYearId', as: 'academicYear' });
+acedmicYearModel.hasMany(assessmentPlanComponentModel, { foreignKey: 'academicYearId', as: 'assessmentPlanComponents' });
+
+assessmentPlanComponentModel.belongsTo(examSetupTypeModel, { foreignKey: 'examSetupTypeId', as: 'examSetupType' });
+examSetupTypeModel.hasMany(assessmentPlanComponentModel, { foreignKey: 'examSetupTypeId', as: 'assessmentPlanComponents' });
+
+assessmentPlanModel.hasMany(assessmentPlanComponentModel, { foreignKey: 'assessmentPlanId', as: 'components' });
+assessmentPlanComponentModel.belongsTo(assessmentPlanModel, { foreignKey: 'assessmentPlanId', as: 'assessmentPlan' });
+
+// Assessment Plan Subject Mapping Associations
+assessmentPlanSubjectMappingModel.belongsTo(assessmentPlanModel, { foreignKey: 'assessmentPlanId', as: 'assessmentPlan' });
+assessmentPlanModel.hasMany(assessmentPlanSubjectMappingModel, { foreignKey: 'assessmentPlanId', as: 'subjectMappings' });
+
+assessmentPlanSubjectMappingModel.belongsTo(subjectModel, { foreignKey: 'subjectId', as: 'subject' });
+subjectModel.hasMany(assessmentPlanSubjectMappingModel, { foreignKey: 'subjectId', as: 'assessmentPlanMappings' });
+
+assessmentPlanSubjectMappingModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
+assessmentPlanSubjectMappingModel.belongsTo(sessionModel, { foreignKey: 'sessionId', as: 'session' });
+assessmentPlanSubjectMappingModel.belongsTo(acedmicYearModel, { foreignKey: 'academicYearId', as: 'academicYear' });
+
 export {
+  assessmentPlanModel,
+  assessmentPlanComponentModel,
+  assessmentPlanSubjectMappingModel,
+  academicRegulationModel,
+  academicRegulationClassificationModel,
+  academicRegulationCourseMappingModel,
   settingModel,
   universityModel,
   campusModel,
@@ -2136,7 +2183,6 @@ export {
   subTopicModel,
   lessonMappingModel,
   noticeModel,
-  examStructureModel,
   syllabusUnitModel,
   examSetupTypeModel,
   scheduleModel,
