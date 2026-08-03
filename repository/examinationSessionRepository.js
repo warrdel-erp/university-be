@@ -82,12 +82,92 @@ export async function getExaminationSessions({
     offset,
   });
 
+  const formattedRows = await Promise.all(
+    rows.map(async (row) => {
+      const sessionPlain = row.get({ plain: true });
+
+      // 1. Calculate courseCount, totalStudents, and subjectCount from mapped classSectionTerms
+      let courseCount = 0;
+      let totalStudents = 0;
+      let subjectCount = 0;
+      const termsList = sessionPlain.examinationSessionTerms || [];
+      const cstIds = [...new Set(termsList.map((t) => t.classSectionTermId).filter(Boolean))];
+
+      if (cstIds.length > 0) {
+        const cstRecords = await model.classSectionTermModel.findAll({
+          where: { classSectionTermId: { [Op.in]: cstIds } },
+          attributes: ["classSectionsId", "term"],
+          raw: true,
+        });
+
+        const csIds = [...new Set(cstRecords.map((cst) => cst.classSectionsId).filter(Boolean))];
+        let courseIds = [];
+        if (csIds.length > 0) {
+          const csRecords = await model.classSectionModel.findAll({
+            where: { classSectionsId: { [Op.in]: csIds } },
+            attributes: ["courseId"],
+            raw: true,
+          });
+
+          courseIds = [...new Set(csRecords.map((cs) => cs.courseId).filter(Boolean))];
+          courseCount = courseIds.length;
+        }
+
+        const studentWhere = [];
+        if (cstIds.length > 0) studentWhere.push({ classSectionTermId: { [Op.in]: cstIds } });
+        if (csIds.length > 0) studentWhere.push({ classSectionsId: { [Op.in]: csIds } });
+
+        totalStudents = await model.studentClassSectionsHistoryModel.count({
+          where: { [Op.or]: studentWhere },
+        });
+
+        // Calculate subjectCount connected in assessmentPlan for assessmentTypeId
+        if (sessionPlain.assessmentTypeId && courseIds.length > 0) {
+          const components = await scoped(model.assessmentPlanComponentModel).findAll({
+            where: { examSetupTypeId: sessionPlain.assessmentTypeId },
+            attributes: ["assessmentPlanId"],
+            raw: true,
+          });
+
+          const planIds = [...new Set(components.map((c) => c.assessmentPlanId).filter(Boolean))];
+          if (planIds.length > 0) {
+            const mappings = await scoped(model.assessmentPlanSubjectMappingModel).findAll({
+              where: { assessmentPlanId: { [Op.in]: planIds } },
+              attributes: ["subjectId"],
+              raw: true,
+            });
+
+            const planSubjectIds = [...new Set(mappings.map((m) => m.subjectId).filter(Boolean))];
+            const terms = [...new Set(cstRecords.map((cst) => cst.term).filter(Boolean))];
+
+            if (planSubjectIds.length > 0 && terms.length > 0) {
+              subjectCount = await scoped(model.subjectModel).count({
+                where: {
+                  subjectId: { [Op.in]: planSubjectIds },
+                  courseId: { [Op.in]: courseIds },
+                  term: { [Op.in]: terms },
+                },
+              });
+            }
+          }
+        }
+      }
+
+      return {
+        ...sessionPlain,
+        courseCount,
+        totalStudents,
+        subjectCount,
+      };
+    })
+  );
+
   return {
     totalRecords: count,
     totalPages: Math.ceil(count / limitNum),
     currentPage: pageNum,
     pageSize: limitNum,
-    data: rows,
+    data: formattedRows,
   };
 }
 
@@ -95,7 +175,7 @@ export async function getExaminationSessionById(id, options = {}) {
   const parsedId = Number(id);
   if (isNaN(parsedId)) return null;
 
-  return await scoped(model.examinationSessionModel).findOne({
+  const sessionRecord = await scoped(model.examinationSessionModel).findOne({
     where: { examinationSessionId: parsedId },
     include: [
       {
@@ -126,6 +206,90 @@ export async function getExaminationSessionById(id, options = {}) {
     ],
     transaction: options.transaction,
   });
+
+  if (!sessionRecord) return null;
+
+  const sessionPlain = sessionRecord.get({ plain: true });
+
+  // 1. Calculate courseCount, totalStudents, and subjectCount from mapped classSectionTerms
+  let courseCount = 0;
+  let totalStudents = 0;
+  let subjectCount = 0;
+  const termsList = sessionPlain.examinationSessionTerms || [];
+  const cstIds = [...new Set(termsList.map((t) => t.classSectionTermId).filter(Boolean))];
+
+  if (cstIds.length > 0) {
+    const cstRecords = await model.classSectionTermModel.findAll({
+      where: { classSectionTermId: { [Op.in]: cstIds } },
+      attributes: ["classSectionsId", "term"],
+      raw: true,
+      transaction: options.transaction,
+    });
+
+    const csIds = [...new Set(cstRecords.map((cst) => cst.classSectionsId).filter(Boolean))];
+    let courseIds = [];
+    if (csIds.length > 0) {
+      const csRecords = await model.classSectionModel.findAll({
+        where: { classSectionsId: { [Op.in]: csIds } },
+        attributes: ["courseId"],
+        raw: true,
+        transaction: options.transaction,
+      });
+
+      courseIds = [...new Set(csRecords.map((cs) => cs.courseId).filter(Boolean))];
+      courseCount = courseIds.length;
+    }
+
+    const studentWhere = [];
+    if (cstIds.length > 0) studentWhere.push({ classSectionTermId: { [Op.in]: cstIds } });
+    if (csIds.length > 0) studentWhere.push({ classSectionsId: { [Op.in]: csIds } });
+
+    totalStudents = await model.studentClassSectionsHistoryModel.count({
+      where: { [Op.or]: studentWhere },
+      transaction: options.transaction,
+    });
+
+    // Calculate subjectCount connected in assessmentPlan for assessmentTypeId
+    if (sessionPlain.assessmentTypeId && courseIds.length > 0) {
+      const components = await scoped(model.assessmentPlanComponentModel).findAll({
+        where: { examSetupTypeId: sessionPlain.assessmentTypeId },
+        attributes: ["assessmentPlanId"],
+        raw: true,
+        transaction: options.transaction,
+      });
+
+      const planIds = [...new Set(components.map((c) => c.assessmentPlanId).filter(Boolean))];
+      if (planIds.length > 0) {
+        const mappings = await scoped(model.assessmentPlanSubjectMappingModel).findAll({
+          where: { assessmentPlanId: { [Op.in]: planIds } },
+          attributes: ["subjectId"],
+          raw: true,
+          transaction: options.transaction,
+        });
+
+        const planSubjectIds = [...new Set(mappings.map((m) => m.subjectId).filter(Boolean))];
+        const terms = [...new Set(cstRecords.map((cst) => cst.term).filter(Boolean))];
+
+        if (planSubjectIds.length > 0 && terms.length > 0) {
+          subjectCount = await scoped(model.subjectModel).count({
+            where: {
+              subjectId: { [Op.in]: planSubjectIds },
+              courseId: { [Op.in]: courseIds },
+              term: { [Op.in]: terms },
+            },
+            transaction: options.transaction,
+          });
+        }
+      }
+    }
+  }
+
+  return {
+    ...sessionPlain,
+    courseCount,
+    totalStudents,
+    subjectCount,
+  };
 }
 
 export async function updateExaminationSession(id, updateData = {}, options = {}) {

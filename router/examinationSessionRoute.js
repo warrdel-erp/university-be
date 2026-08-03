@@ -38,31 +38,11 @@ const sessionBodyObject = z.object({
 const createSessionSchema = {
   body: sessionBodyObject.refine((data) => {
     const dates = {
-      examStart: data.examStartDate ? new Date(data.examStartDate).getTime() : null,
-      examEnd: data.examEndDate ? new Date(data.examEndDate).getTime() : null,
-      hallTicket: data.hallTicketReleaseDate ? new Date(data.hallTicketReleaseDate).getTime() : null,
-      seatAlloc: data.seatAllocationDate ? new Date(data.seatAllocationDate).getTime() : null,
-      evalStart: data.evaluationStartDate ? new Date(data.evaluationStartDate).getTime() : null,
       evalDeadline: data.evaluationDeadline ? new Date(data.evaluationDeadline).getTime() : null,
       modDeadline: data.moderationDeadline ? new Date(data.moderationDeadline).getTime() : null,
       resultPub: data.resultPublicationDate ? new Date(data.resultPublicationDate).getTime() : null,
     };
 
-    if (dates.hallTicket && dates.seatAlloc && dates.hallTicket > dates.seatAlloc) {
-      return false;
-    }
-    if (dates.seatAlloc && dates.examStart && dates.seatAlloc > dates.examStart) {
-      return false;
-    }
-    if (dates.examStart && dates.examEnd && dates.examStart > dates.examEnd) {
-      return false;
-    }
-    if (dates.examEnd && dates.evalStart && dates.examEnd > dates.evalStart) {
-      return false;
-    }
-    if (dates.evalStart && dates.evalDeadline && dates.evalStart > dates.evalDeadline) {
-      return false;
-    }
     if (dates.evalDeadline && dates.modDeadline && dates.evalDeadline > dates.modDeadline) {
       return false;
     }
@@ -72,7 +52,7 @@ const createSessionSchema = {
 
     return true;
   }, {
-    message: "Invalid date chronological order. Expected sequence: Hall Ticket Release <= Seat Allocation <= Exam Start <= Exam End <= Evaluation Start <= Evaluation Deadline <= Moderation Deadline <= Result Publication Date",
+    message: "Evaluation deadline must be before or equal to Moderation deadline, and Moderation deadline must be before or equal to Result publication date.",
   }),
 };
 
