@@ -938,7 +938,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"examName\": \"Mid Term Assessment\",\n  \"examCode\": \"MID_2026\",\n  \"examCategory\": \"EXAMINATION\",\n  \"examSubcategory\": \"Mid Term\",\n  \"examDescription\": \"Mid term examination for semester 1\",\n  \"courseId\": 35,\n  \"sessionId\": 18\n}"
+              "raw": "{\n  \"examName\": \"Mid Term Assessment\",\n  \"examCode\": \"MID_2026\",\n  \"examCategory\": \"EXAMINATION\",\n  \"examSubcategory\": \"Mid Term\",\n  \"examDescription\": \"Mid term examination at institute level\"\n}"
             },
             "url": {
               "raw": "{{baseurl}}/examStructure/examType",
@@ -1003,7 +1003,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examStructure/examType/all?search=Mid&page=1&limit=10&courseId=35&sessionId=18",
+              "raw": "{{baseurl}}/examStructure/examType/all?search=Mid&page=1&limit=10",
               "host": [
                 "{{baseurl}}"
               ],
@@ -1024,14 +1024,6 @@
                 {
                   "key": "limit",
                   "value": "10"
-                },
-                {
-                  "key": "courseId",
-                  "value": "35"
-                },
-                {
-                  "key": "sessionId",
-                  "value": "18"
                 }
               ]
             }

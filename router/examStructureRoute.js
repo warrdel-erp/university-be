@@ -37,8 +37,6 @@ const addExamTypeSchema = z.object({
   examCategory: z.enum(ASSESSMENT_CATEGORIES).optional().nullable(),
   examSubcategory: z.string().optional().nullable(),
   examDescription: z.string().max(500).optional().nullable(),
-  courseId: z.coerce.number().int().positive().optional().nullable(),
-  sessionId: z.coerce.number().int().positive().optional().nullable(),
 });
 
 const updateExamTypeSchema = z.object({
@@ -48,8 +46,6 @@ const updateExamTypeSchema = z.object({
   examCategory: z.enum(ASSESSMENT_CATEGORIES).optional().nullable(),
   examSubcategory: z.string().optional().nullable(),
   examDescription: z.string().max(500).optional().nullable(),
-  courseId: z.coerce.number().int().positive().optional().nullable(),
-  sessionId: z.coerce.number().int().positive().optional().nullable(),
 });
 
 //Table of examType
