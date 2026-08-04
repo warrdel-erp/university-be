@@ -867,7 +867,7 @@ export async function getMappedSubjectsBySessionAndTerm({ examinationSessionId, 
 
   const mappedSubjects = await scoped(model.subjectModel).findAll({
     where: subjectWhereClause,
-    attributes: ["subjectId", "subjectName", "subjectCode", "subjectType", "term", "courseId"],
+    attributes: ["subjectId", "subjectName", "subjectCode", "subjectType", "subjectCategory", "term", "courseId"],
     raw: true,
     transaction: options.transaction,
   });
