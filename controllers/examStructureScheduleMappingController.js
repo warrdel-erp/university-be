@@ -89,8 +89,8 @@ export async function addExamSchedule(req, res) {
         examSetupTypeTermId: req.body.examSetupTypeTermId || null,
         academicYearId,
       },
-      req.user?.userId || req.user?.id,
-      req.user?.userId || req.user?.id,
+      req.user?.userId ,
+      req.user?.userId ,
     );
     res.status(201).json({ message: "Exam schedule created successfully", examSchedule });
   } catch (error) {
