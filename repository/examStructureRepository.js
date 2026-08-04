@@ -152,6 +152,18 @@ export async function deleteExamType(examSetupTypeId) {
     if (!existing) {
       return false;
     }
+
+    const inUse = await scoped(model.assessmentPlanComponentModel).findOne({
+      where: { examSetupTypeId: Number(examSetupTypeId) },
+      attributes: ['assessmentPlanComponentId'],
+    });
+
+    if (inUse) {
+      const error = new Error("Cannot delete exam type as it is linked to assessment plan.");
+      error.statusCode = 400;
+      throw error;
+    }
+
     const deleted = await scoped(model.examSetupTypeModel).destroy({ where: { examSetupTypeId } });
     return deleted > 0;
   } catch (error) {

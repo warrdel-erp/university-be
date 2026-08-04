@@ -63,6 +63,7 @@ export const componentSchema = z.object({
   evaluationBy: z.enum(["Faculty", "CoE", "External"]).optional().default("Faculty"),
   weightagePercentage: z.coerce.number().nonnegative(),
   maxAssessments: z.coerce.number().int().positive().optional().default(1),
+  duration: z.coerce.number().int().positive().optional().nullable(),
 });
 
 export const createAssessmentPlanBody = z.object({
@@ -73,6 +74,7 @@ export const createAssessmentPlanBody = z.object({
   sessionId: z.coerce.number().int().positive().optional().nullable(),
   regulationId: z.coerce.number().int().positive().optional().nullable(),
   term: z.coerce.number().int().positive().optional().nullable(),
+  duration: z.coerce.number().int().positive().optional().nullable(),
   gradingId: z.coerce.number().int().positive().optional().nullable(),
   status: z.preprocess((val) => (val === "" || val === null ? undefined : val), z.enum(["Draft", "Published"]).optional().default("Draft")),
   isActive: z.boolean().optional().default(true),

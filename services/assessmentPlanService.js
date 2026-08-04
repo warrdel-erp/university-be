@@ -10,6 +10,7 @@ export async function createAssessmentPlan({ payload, user }) {
       sessionId: payload.sessionId ? Number(payload.sessionId) : null,
       regulationId: payload.regulationId ? Number(payload.regulationId) : null,
       term: payload.term !== undefined && payload.term !== null ? Number(payload.term) : null,
+      duration: payload.duration !== undefined && payload.duration !== null ? Number(payload.duration) : null,
       academicYearId: payload.academicYearId ? Number(payload.academicYearId) : (user?.academicYearId || null),
       universityId: user?.universityId ? Number(user.universityId) : null,
       instituteId: user?.instituteId ? Number(user.instituteId) : null,
@@ -61,6 +62,7 @@ export async function updateAssessmentPlan({ assessmentPlanId, payload, user }) 
     if (payload.sessionId !== undefined) updateData.sessionId = payload.sessionId ? Number(payload.sessionId) : null;
     if (payload.regulationId !== undefined) updateData.regulationId = payload.regulationId ? Number(payload.regulationId) : null;
     if (payload.term !== undefined) updateData.term = payload.term !== null ? Number(payload.term) : null;
+    if (payload.duration !== undefined) updateData.duration = payload.duration !== null ? Number(payload.duration) : null;
     if (payload.academicYearId !== undefined) updateData.academicYearId = payload.academicYearId ? Number(payload.academicYearId) : null;
 
     return await assessmentPlanRepo.updateAssessmentPlan(assessmentPlanId, updateData, { transaction: t });
