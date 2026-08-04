@@ -1875,7 +1875,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examinationSession/subjects?examinationSessionId={{examinationSessionId}}&term=1&courseId=&sessionId=",
+              "raw": "{{baseurl}}/examinationSession/subjects?examinationSessionId={{examinationSessionId}}&term=1&courseId=45&sessionId=23",
               "host": [
                 "{{baseurl}}"
               ],
@@ -1894,11 +1894,11 @@
                 },
                 {
                   "key": "courseId",
-                  "value": ""
+                  "value": "45"
                 },
                 {
                   "key": "sessionId",
-                  "value": ""
+                  "value": "23"
                 }
               ]
             }
