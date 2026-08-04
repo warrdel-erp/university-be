@@ -883,7 +883,7 @@ export async function getMappedSubjectsBySessionAndTerm({ examinationSessionId, 
 export async function getExamSchedulesBySession(examinationSessionId, options = {}) {
   const slots = await scoped(model.examinationSessionSlotModel).findAll({
     where: { examinationSessionId: Number(examinationSessionId) },
-    attributes: ["examinationSessionSlotId", "slotNumber", "slotName", "startTime", "endTime", "durationMinutes"],
+    attributes: ["examinationSessionSlotId", "slotNumber", "startTime", "endTime", "durationMinutes"],
     order: [["slotNumber", "ASC"]],
     transaction: options.transaction,
     raw: true,
@@ -909,7 +909,7 @@ export async function getExamSchedulesBySession(examinationSessionId, options = 
       {
         model: model.examinationSessionSlotModel,
         as: "examinationSessionSlot",
-        attributes: ["examinationSessionSlotId", "slotNumber", "slotName", "startTime", "endTime", "durationMinutes"],
+        attributes: ["examinationSessionSlotId", "slotNumber", "startTime", "endTime", "durationMinutes"],
       },
       {
         model: model.examScheduleRoomCapacityModel,

@@ -27,14 +27,14 @@ const addScheduleSchema = {
   body: z.object({
     subjectId: z.coerce.number().int().positive().optional().nullable(),
     term: z.coerce.number().int().positive().optional().nullable(),
-    examSetupTypeTermId: z.coerce.number().int().positive(),
+    examSetupTypeTermId: z.coerce.number().int().positive().optional().nullable(),
     academicYearId: z.coerce.number().int().positive().optional().nullable(),
-    sessionId: z.coerce.number().int().positive(),
+    sessionId: z.coerce.number().int().positive().optional().nullable(),
     examinationSessionSlotId: z.coerce.number().int().positive().optional().nullable(),
     examDate: z.string().min(1, "examDate is required"),
-    examTime: z.string().min(1, "examTime is required"),
+    examTime: z.string().optional().nullable(),
     type: z.string().min(1, "type is required"),
-    duration: z.string().min(1, "duration is required"),
+    duration: z.string().optional().nullable(),
   }),
 };
 
@@ -43,14 +43,14 @@ const updateScheduleSchema = {
     examScheduleId: z.coerce.number().int().positive({ message: "examScheduleId is required" }),
     subjectId: z.coerce.number().int().positive().optional().nullable(),
     term: z.coerce.number().int().positive().optional().nullable(),
-    examSetupTypeTermId: z.coerce.number().int().positive().optional(),
+    examSetupTypeTermId: z.coerce.number().int().positive().optional().nullable(),
     academicYearId: z.coerce.number().int().positive().optional().nullable(),
     sessionId: z.coerce.number().int().positive().optional(),
     examinationSessionSlotId: z.coerce.number().int().positive().optional().nullable(),
     examDate: z.string().optional(),
-    examTime: z.string().optional(),
+    examTime: z.string().optional().nullable(),
     type: z.string().optional(),
-    duration: z.string().optional(),
+    duration: z.string().optional().nullable(),
   }),
 };
 

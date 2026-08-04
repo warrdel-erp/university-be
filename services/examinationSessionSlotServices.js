@@ -18,10 +18,13 @@ function addMinutesToTime(timeStr, minutes) {
 
 export async function createExaminationSessionSlot({ payload, user }, options = {}) {
   return await sequelize.transaction(async (t) => {
+    const examinationSessionId = Number(payload.examinationSessionId);
     const numberOfSlots = payload.numberOfSlots ? Number(payload.numberOfSlots) : 1;
     const durationMinutes = payload.durationMinutes !== undefined && payload.durationMinutes !== null ? Number(payload.durationMinutes) : null;
     const initialStartTime = payload.startTime || null;
-    const initialSlotNumber = payload.slotNumber !== undefined && payload.slotNumber !== null ? Number(payload.slotNumber) : null;
+
+    const maxSlotNumber = await examinationSessionSlotRepository.getMaxSlotNumber(examinationSessionId, { ...options, transaction: t });
+    const baseSlotNumber = payload.slotNumber !== undefined && payload.slotNumber !== null ? Number(payload.slotNumber) : maxSlotNumber + 1;
 
     const createdSlots = [];
     let currentStartTime = initialStartTime;
@@ -34,9 +37,8 @@ export async function createExaminationSessionSlot({ payload, user }, options = 
       }
 
       const slotData = {
-        examinationSessionId: Number(payload.examinationSessionId),
-        slotNumber: initialSlotNumber !== null ? initialSlotNumber + i : null,
-        slotName: payload.slotName || null,
+        examinationSessionId,
+        slotNumber: baseSlotNumber + i,
         startTime: currentStartTime,
         endTime: currentEndTime,
         durationMinutes: durationMinutes,
@@ -72,7 +74,9 @@ export async function updateExaminationSessionSlot({ examinationSessionSlotId, p
       ...payload,
       updatedBy: user?.userId || null,
     };
-    if (payload.slotNumber !== undefined) updateData.slotNumber = payload.slotNumber !== null ? Number(payload.slotNumber) : null;
+    delete updateData.slotName;
+
+    if (payload.slotNumber !== undefined) updateData.slotNumber = Number(payload.slotNumber);
     if (payload.durationMinutes !== undefined) updateData.durationMinutes = payload.durationMinutes !== null ? Number(payload.durationMinutes) : null;
 
     const startTime = payload.startTime !== undefined ? payload.startTime : existingSlot?.startTime;

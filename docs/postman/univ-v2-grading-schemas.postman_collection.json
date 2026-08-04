@@ -1983,13 +1983,12 @@
               "raw": "{\n  \"examinationSessionId\": {{examinationSessionId}},\n  \"startTime\": \"09:00:00\",\n  \"durationMinutes\": 180,\n  \"numberOfSlots\": 3\n}"
             },
             "url": {
-              "raw": "{{baseurl}}/examinationSession/slot",
+              "raw": "{{baseurl}}/examinationSessionSlot",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
-                "examinationSession",
-                "slot"
+                "examinationSessionSlot"
               ]
             }
           },
@@ -2020,13 +2019,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examinationSession/slot?examinationSessionId={{examinationSessionId}}",
+              "raw": "{{baseurl}}/examinationSessionSlot?examinationSessionId={{examinationSessionId}}",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
-                "examinationSession",
-                "slot"
+                "examinationSessionSlot"
               ],
               "query": [
                 {
@@ -2048,13 +2046,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examinationSession/slot/single?examinationSessionSlotId={{examinationSessionSlotId}}",
+              "raw": "{{baseurl}}/examinationSessionSlot/single?examinationSessionSlotId={{examinationSessionSlotId}}",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
-                "examinationSession",
-                "slot",
+                "examinationSessionSlot",
                 "single"
               ],
               "query": [
@@ -2082,16 +2079,15 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"slotName\": \"Morning Slot (Updated)\",\n  \"durationMinutes\": 180\n}"
+              "raw": "{\n  \"startTime\": \"09:30:00\",\n  \"durationMinutes\": 180\n}"
             },
             "url": {
-              "raw": "{{baseurl}}/examinationSession/slot?examinationSessionSlotId={{examinationSessionSlotId}}",
+              "raw": "{{baseurl}}/examinationSessionSlot?examinationSessionSlotId={{examinationSessionSlotId}}",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
-                "examinationSession",
-                "slot"
+                "examinationSessionSlot"
               ],
               "query": [
                 {
@@ -2113,18 +2109,124 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examinationSession/slot?examinationSessionSlotId={{examinationSessionSlotId}}",
+              "raw": "{{baseurl}}/examinationSessionSlot?examinationSessionSlotId={{examinationSessionSlotId}}",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
-                "examinationSession",
-                "slot"
+                "examinationSessionSlot"
               ],
               "query": [
                 {
                   "key": "examinationSessionSlotId",
                   "value": "{{examinationSessionSlotId}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Exam & Slot Mapping (Exam Schedule for a Day)",
+      "item": [
+        {
+          "name": "9.1 Map Subject & Slot to Exam Schedule (Add Schedule)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjectId\": 402,\n  \"term\": 1,\n  \"sessionId\": 23,\n  \"examinationSessionSlotId\": {{examinationSessionSlotId}},\n  \"examDate\": \"2027-05-10\",\n  \"type\": \"Theory\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/examScheduleMapping/schedule",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examScheduleMapping",
+                "schedule"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if (res.success && res.data && res.data.examScheduleId) {",
+                  "    pm.collectionVariables.set('examScheduleId', res.data.examScheduleId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "9.2 Update Exam & Slot Mapping (Update Schedule)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examScheduleId\": {{examScheduleId}},\n  \"subjectId\": 402,\n  \"term\": 1,\n  \"sessionId\": 23,\n  \"examinationSessionSlotId\": {{examinationSessionSlotId}},\n  \"examDate\": \"2027-05-12\",\n  \"type\": \"Theory\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/examScheduleMapping/schedule",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examScheduleMapping",
+                "schedule"
+              ]
+            }
+          }
+        },
+        {
+          "name": "9.3 Delete Exam & Slot Mapping (Delete Schedule)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examScheduleMapping/schedule?examScheduleId={{examScheduleId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examScheduleMapping",
+                "schedule"
+              ],
+              "query": [
+                {
+                  "key": "examScheduleId",
+                  "value": "{{examScheduleId}}"
                 }
               ]
             }

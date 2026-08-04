@@ -186,6 +186,7 @@ app.use("/teacherExamAssignment", teacherExamAssignment);
 app.use("/teacherSubstitute", teacherSubstitute);
 app.use("/questionPaperBlueprint", questionPaperBlueprint);
 app.use("/examSetupTypeTerm", examSetupTypeTerm);
+
 app.use("/examinationSession", examinationSession);
 app.use("/examinationSessionSlot", examinationSessionSlot);
 
@@ -195,6 +196,7 @@ app.use("/examSchedule", examSchedule);
 app.use("/examStructure", examStructure);
 
 app.use("/examScheduleMapping", examScheduleMapping);
+
 app.use("/internalAssessment", internalAssessment);
 app.use("/examSetup", examSetup);
 app.use("/examAttendance", examAttendance);

@@ -1,3 +1,5 @@
+import * as model from "../models/index.js";
+import { scoped } from "../utility/scoped.js";
 import * as examStructureScheduleRepository from "../repository/examStructureScheduleMappingRepository.js";
 
 const studentListFields = [
@@ -13,6 +15,37 @@ const studentListFields = [
   "termName",
 ];
 
+async function resolveSlotDetails(examDetail) {
+  if (examDetail.examinationSessionSlotId) {
+    const slot = await scoped(model.examinationSessionSlotModel).findOne({
+      where: { examinationSessionSlotId: Number(examDetail.examinationSessionSlotId) },
+      attributes: ["startTime", "durationMinutes", "examinationSessionId"],
+      raw: true,
+    });
+    if (slot) {
+      if (!examDetail.examTime && slot.startTime) {
+        examDetail.examTime = slot.startTime;
+      }
+      if (!examDetail.duration && slot.durationMinutes != null) {
+        examDetail.duration = String(slot.durationMinutes);
+      }
+    }
+  }
+}
+
+async function resolveSessionId(examDetail) {
+  if (!examDetail.sessionId && examDetail.subjectId) {
+    const mapping = await scoped(model.assessmentPlanSubjectMappingModel).findOne({
+      where: { subjectId: Number(examDetail.subjectId) },
+      attributes: ["sessionId"],
+      raw: true,
+    });
+    if (mapping && mapping.sessionId) {
+      examDetail.sessionId = mapping.sessionId;
+    }
+  }
+}
+
 async function resolveAcademicYearId(examDetail) {
   if (!examDetail.academicYearId && examDetail.subjectId) {
     const academicYearId = await examStructureScheduleRepository.findSubjectacademicYearId(examDetail.subjectId);
@@ -26,14 +59,25 @@ async function resolveTermForExamDetail(examDetail) {
   if (examDetail.term != null) {
     return Number(examDetail.term);
   }
-  if (!examDetail.examSetupTypeTermId) {
-    return null;
+  if (examDetail.examSetupTypeTermId) {
+    const termDetail = await examStructureScheduleRepository.getExamSetupTypeTermById(
+      examDetail.examSetupTypeTermId,
+    );
+    if (termDetail?.term != null) {
+      return Number(termDetail.term);
+    }
   }
-
-  const termDetail = await examStructureScheduleRepository.getExamSetupTypeTermById(
-    examDetail.examSetupTypeTermId,
-  );
-  return termDetail?.term != null ? Number(termDetail.term) : null;
+  if (examDetail.subjectId) {
+    const subject = await scoped(model.subjectModel).findOne({
+      where: { subjectId: Number(examDetail.subjectId) },
+      attributes: ["term"],
+      raw: true,
+    });
+    if (subject?.term != null) {
+      return Number(subject.term);
+    }
+  }
+  return null;
 }
 
 function subjectsToPlain(rows) {
@@ -198,12 +242,37 @@ function getExamSlotMinutes(examTime, duration) {
 }
 
 async function assertNoStudentExamTimeConflict(examDetail, excludeExamScheduleId) {
-  const termDetail = await examStructureScheduleRepository.getExamSetupTypeTermById(examDetail.examSetupTypeTermId);
-  if (!termDetail) {
-    throw new Error("Exam setup type term not found");
+  if (!examDetail.examTime || !examDetail.duration) {
+    return;
   }
 
-  const academicYearId = examDetail.academicYearId ?? termDetail.academicYearId;
+  let courseId = null;
+  let term = examDetail.term != null ? Number(examDetail.term) : null;
+
+  if (examDetail.examSetupTypeTermId) {
+    const termDetail = await examStructureScheduleRepository.getExamSetupTypeTermById(examDetail.examSetupTypeTermId);
+    if (termDetail) {
+      courseId = termDetail.courseId;
+      if (term == null) term = termDetail.term;
+    }
+  }
+
+  if (!courseId && examDetail.subjectId) {
+    const subject = await scoped(model.subjectModel).findOne({
+      where: { subjectId: Number(examDetail.subjectId) },
+      attributes: ["courseId", "term"],
+      raw: true,
+    });
+    if (subject) {
+      courseId = subject.courseId;
+      if (term == null) term = subject.term;
+    }
+  }
+
+  if (!courseId || term == null) {
+    return;
+  }
+
   const { startMinutes, endMinutes } = getExamSlotMinutes(examDetail.examTime, examDetail.duration);
 
   const conflict = await examStructureScheduleRepository.findConflictingExamForStudentCohort({
@@ -211,9 +280,9 @@ async function assertNoStudentExamTimeConflict(examDetail, excludeExamScheduleId
     startMinutes,
     endMinutes,
     sessionId: examDetail.sessionId,
-    academicYearId,
-    courseId: termDetail.courseId,
-    term: termDetail.term,
+    academicYearId: examDetail.academicYearId,
+    courseId,
+    term,
     excludeExamScheduleId,
   });
 
@@ -227,12 +296,14 @@ export async function addExamSchedule(examDetail, createdBy, updatedBy) {
   examDetail.createdBy = createdBy;
   examDetail.updatedBy = updatedBy;
 
+  await resolveSlotDetails(examDetail);
+  await resolveSessionId(examDetail);
   await resolveAcademicYearId(examDetail);
+
   const resolvedTerm = await resolveTermForExamDetail(examDetail);
-  if (resolvedTerm == null) {
-    throw new Error('term could not be resolved for exam schedule');
+  if (resolvedTerm != null) {
+    examDetail.term = resolvedTerm;
   }
-  examDetail.term = resolvedTerm;
   delete examDetail.semesterId;
 
   await assertNoStudentExamTimeConflict(examDetail);
@@ -240,44 +311,13 @@ export async function addExamSchedule(examDetail, createdBy, updatedBy) {
   return await examStructureScheduleRepository.addExamSchedule(examDetail);
 }
 
-// export async function getDetailByExamType(examSetupTypeId) {
-//   return await examStructureScheduleRepository.getDetailByExamType(examSetupTypeId);
-// }
-
-// export async function getExamDetailByStudentId(studentId) {
-//   const data = await examStructureScheduleRepository.getExamDetailByStudentId(studentId);
-
-//   if (!data || !data.studentSemester) {
-//     return null;
-//   }
-
-//   const studentInfo = {
-//     studentId: data.studentId,
-//     studentName: data.firstName,
-//     semesterId: data.studentSemester.semesterId,
-//     semesterName: data.studentSemester.name,
-//     exams: data.studentSemester.examSchedules.map((exam) => ({
-//       subjectId: exam.subjectId,
-//       subjectName: exam.subjectSchedule?.subjectName,
-//       subjectCode: exam.subjectSchedule?.subjectCode,
-//       subjectType: exam.subjectSchedule?.subjectType,
-//       type: exam.type,
-//       examDate: exam.examDate,
-//       examTime: exam.examTime,
-//       duration: exam.duration,
-//     })),
-//   };
-
-//   return studentInfo;
-// }
-
-// export async function getExamScheduleById(examScheduleId) {
-//   return await examStructureScheduleRepository.getExamScheduleById(examScheduleId);
-// }
-
 export async function updateExamSchedule(examScheduleId, examDetail, updatedBy) {
   examDetail.updatedBy = updatedBy;
+
+  await resolveSlotDetails(examDetail);
+  await resolveSessionId(examDetail);
   await resolveAcademicYearId(examDetail);
+
   const resolvedTerm = await resolveTermForExamDetail(examDetail);
   if (resolvedTerm != null) {
     examDetail.term = resolvedTerm;

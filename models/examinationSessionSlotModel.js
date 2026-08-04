@@ -23,13 +23,8 @@ const examinationSessionSlotModel = sequelize.define(
         },
         slotNumber: {
             type: DataTypes.INTEGER,
-            allowNull: true,
+            allowNull: false,
             field: 'slot_number'
-        },
-        slotName: {
-            type: DataTypes.STRING(100),
-            allowNull: true,
-            field: 'slot_name'
         },
         startTime: {
             type: DataTypes.TIME,

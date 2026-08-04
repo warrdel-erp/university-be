@@ -28,7 +28,7 @@ const examScheduleModel = sequelize.define(
         },
         examSetupTypeTermId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'exam_setup_type_term_id',
             references: {
                 model: 'exam_setup_type_term',

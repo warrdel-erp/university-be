@@ -151,8 +151,8 @@ export async function findConflictingExamForStudentCohort({
     attributes: ["examScheduleId", "examDate", "examTime", "duration", "subjectId"],
     where: {
       examDate,
-      sessionId,
-      academicYearId,
+      ...(sessionId && { sessionId }),
+      ...(academicYearId && { academicYearId }),
       ...(term != null && { term }),
       ...(excludeExamScheduleId && {
         examScheduleId: { [Op.ne]: excludeExamScheduleId },
@@ -167,8 +167,7 @@ export async function findConflictingExamForStudentCohort({
         model: model.examSetupTypeTermModel,
         as: "examSetupTypeTerm",
         attributes: ["courseId", "term"],
-        where: { courseId, term },
-        required: true,
+        required: false,
       },
       {
         model: model.subjectModel,

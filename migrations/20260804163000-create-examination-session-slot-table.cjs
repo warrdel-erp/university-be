@@ -24,11 +24,7 @@ module.exports = {
         },
         slot_number: {
           type: Sequelize.INTEGER,
-          allowNull: true,
-        },
-        slot_name: {
-          type: Sequelize.STRING(100),
-          allowNull: true,
+          allowNull: false,
         },
         start_time: {
           type: Sequelize.TIME,

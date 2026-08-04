@@ -1,6 +1,18 @@
 import * as model from "../models/index.js";
 import { scoped } from "../utility/scoped.js";
 
+export async function getMaxSlotNumber(examinationSessionId, options = {}) {
+  const highestSlot = await scoped(model.examinationSessionSlotModel).findOne({
+    where: { examinationSessionId: Number(examinationSessionId) },
+    order: [["slotNumber", "DESC"]],
+    attributes: ["slotNumber"],
+    transaction: options.transaction,
+    paranoid: false,
+    raw: true,
+  });
+  return highestSlot && highestSlot.slotNumber ? Number(highestSlot.slotNumber) : 0;
+}
+
 export async function createExaminationSessionSlot(slotData, options = {}) {
   return await scoped(model.examinationSessionSlotModel).create(slotData, {
     transaction: options.transaction,

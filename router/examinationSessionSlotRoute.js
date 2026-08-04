@@ -16,7 +16,6 @@ const createSlotSchema = {
     examinationSessionId: z.coerce.number().int().positive(),
     numberOfSlots: z.coerce.number().int().positive().optional(),
     slotNumber: z.coerce.number().int().positive().optional().nullable(),
-    slotName: z.string().max(100).optional().nullable(),
     startTime: z.string().optional().nullable(),
     endTime: z.string().optional().nullable(),
     durationMinutes: z.coerce.number().int().positive().optional().nullable(),
@@ -41,7 +40,6 @@ const updateSlotSchema = {
   }),
   body: z.object({
     slotNumber: z.coerce.number().int().positive().optional(),
-    slotName: z.string().max(100).optional().nullable(),
     startTime: z.string().optional().nullable(),
     endTime: z.string().optional().nullable(),
     durationMinutes: z.coerce.number().int().positive().optional().nullable(),
