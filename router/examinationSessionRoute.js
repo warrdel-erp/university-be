@@ -94,7 +94,29 @@ const deleteTermSchema = {
 
 const getClassSectionTermsBySetupTypeSchema = {
   query: z.object({
-    examSetupTypeId: positiveIntegerQueryId,
+    examSetupTypeId: positiveIntegerQueryId.optional(),
+    examinationSessionId: positiveIntegerQueryId.optional(),
+  }),
+};
+
+const getStructureSchema = {
+  query: z.object({
+    examinationSessionId: positiveIntegerQueryId,
+  }),
+};
+
+const getSubjectsBySessionAndTermSchema = {
+  query: z.object({
+    examinationSessionId: positiveIntegerQueryId,
+    term: z.union([z.string(), z.number()]).optional(),
+    courseId: positiveIntegerQueryId.optional(),
+    sessionId: positiveIntegerQueryId.optional(),
+  }),
+};
+
+const getSchedulesSchema = {
+  query: z.object({
+    examinationSessionId: positiveIntegerQueryId,
   }),
 };
 
@@ -102,6 +124,9 @@ router.post('/', userAuth, validate(createSessionSchema), examinationSessionCont
 router.get('/', userAuth, examinationSessionController.getExaminationSessions);
 router.get('/single', userAuth, validate(getSessionByIdSchema), examinationSessionController.getExaminationSessionById);
 router.get('/classSectionTerms', userAuth, validate(getClassSectionTermsBySetupTypeSchema), examinationSessionController.getClassSectionTermsBySetupType);
+router.get('/structure', userAuth, validate(getStructureSchema), examinationSessionController.getExaminationStructure);
+router.get('/subjects', userAuth, validate(getSubjectsBySessionAndTermSchema), examinationSessionController.getMappedSubjectsBySessionAndTerm);
+router.get('/schedules', userAuth, validate(getSchedulesSchema), examinationSessionController.getExamSchedulesBySession);
 router.patch('/', userAuth, validate(updateSessionSchema), examinationSessionController.updateExaminationSession);
 router.delete('/', userAuth, validate(getSessionByIdSchema), examinationSessionController.deleteExaminationSession);
 

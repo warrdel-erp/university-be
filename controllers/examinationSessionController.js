@@ -120,14 +120,49 @@ export const deleteExaminationSessionTerm = async (req, res) => {
 
 export const getClassSectionTermsBySetupType = async (req, res) => {
   try {
-    const { examSetupTypeId } = req.query;
+    const { examSetupTypeId, examinationSessionId } = req.query;
     const result = await examinationSessionServices.getClassSectionTermsBySetupType(
-      examSetupTypeId
+      examSetupTypeId,
+      { examinationSessionId }
     );
     return SuccessResponse(res, 200, "Mapped class section terms fetched successfully", result);
   } catch (error) {
     console.error("Error fetching mapped class section terms:", error);
     const statusCode = error.statusCode || 500;
     return ErrorResponse(res, statusCode, getErrorMessage(error, "Failed to fetch mapped class section terms"));
+  }
+};
+
+export const getExaminationStructure = async (req, res) => {
+  try {
+    const result = await examinationSessionServices.getExaminationStructure(req.query);
+    return SuccessResponse(res, 200, "Examination structure fetched successfully", result);
+  } catch (error) {
+    console.error("Error fetching examination structure:", error);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(res, statusCode, getErrorMessage(error, "Failed to fetch examination structure"));
+  }
+};
+
+export const getMappedSubjectsBySessionAndTerm = async (req, res) => {
+  try {
+    const result = await examinationSessionServices.getMappedSubjectsBySessionAndTerm(req.query);
+    return SuccessResponse(res, 200, "Mapped subjects fetched successfully", result);
+  } catch (error) {
+    console.error("Error fetching mapped subjects:", error);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(res, statusCode, getErrorMessage(error, "Failed to fetch mapped subjects"));
+  }
+};
+
+export const getExamSchedulesBySession = async (req, res) => {
+  try {
+    const { examinationSessionId } = req.query;
+    const result = await examinationSessionServices.getExamSchedulesBySession(examinationSessionId);
+    return SuccessResponse(res, 200, "Examination session exam schedules fetched successfully", result);
+  } catch (error) {
+    console.error("Error fetching examination session exam schedules:", error);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(res, statusCode, getErrorMessage(error, "Failed to fetch examination session exam schedules"));
   }
 };

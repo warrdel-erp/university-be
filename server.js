@@ -98,6 +98,7 @@ import teacherSubstitute from "./router/teacherSubstituteRoute.js";
 import questionPaperBlueprint from "./router/questionPaperBlueprintRoute.js";
 import examSetupTypeTerm from "./router/examSetupTypeTermRoute.js";
 import examinationSession from "./router/examinationSessionRoute.js";
+import examinationSessionSlot from "./router/examinationSessionSlotRoute.js";
 import examSetupType from "./router/examSetupTypeRoute.js";
 import examSchedule from "./router/examScheduleRoute.js";
 import studentHallTicket from "./router/studentHallTicketRoute.js";
@@ -186,6 +187,9 @@ app.use("/teacherSubstitute", teacherSubstitute);
 app.use("/questionPaperBlueprint", questionPaperBlueprint);
 app.use("/examSetupTypeTerm", examSetupTypeTerm);
 app.use("/examinationSession", examinationSession);
+app.use("/examinationSessionSlot", examinationSessionSlot);
+
+
 app.use("/examSchedule", examSchedule);
 
 app.use("/examStructure", examStructure);

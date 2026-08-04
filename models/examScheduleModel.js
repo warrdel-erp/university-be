@@ -71,6 +71,15 @@ const examScheduleModel = sequelize.define(
             type: DataTypes.STRING,
             allowNull: false
         },
+        examinationSessionSlotId: {
+            type: DataTypes.BIGINT,
+            allowNull: true,
+            field: 'examination_session_slot_id',
+            references: {
+                model: 'examination_session_slot',
+                key: 'examination_session_slot_id'
+            }
+        },
         createdBy: {
             type: DataTypes.INTEGER,
             allowNull: false,
