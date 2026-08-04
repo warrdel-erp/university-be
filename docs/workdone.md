@@ -126,3 +126,5 @@
 ---
 
 1. permission dependency.
+2. nested checkbox tree structure for Target User Base Access Level (University -> Campus -> Institute -> Department -> Course/Class).
+
