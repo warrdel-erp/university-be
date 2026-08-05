@@ -34,15 +34,112 @@ async function resolveSlotDetails(examDetail) {
 }
 
 async function resolveSessionId(examDetail) {
-  if (!examDetail.sessionId && examDetail.subjectId) {
-    const mapping = await scoped(model.assessmentPlanSubjectMappingModel).findOne({
+  let mappedSessionId = null;
+  let mappedAcademicYearId = null;
+  let mappedCourseId = examDetail.courseId ? Number(examDetail.courseId) : null;
+
+  // 1. Resolve courseId, academicYearId, term from subjectModel if subjectId is passed
+  if (!mappedCourseId && examDetail.subjectId) {
+    const subject = await scoped(model.subjectModel).findOne({
       where: { subjectId: Number(examDetail.subjectId) },
-      attributes: ["sessionId"],
+      attributes: ["courseId", "academicYearId", "term"],
       raw: true,
     });
-    if (mapping && mapping.sessionId) {
-      examDetail.sessionId = mapping.sessionId;
+    if (subject) {
+      mappedCourseId = subject.courseId;
+      examDetail.courseId = subject.courseId;
+      if (!examDetail.academicYearId && subject.academicYearId) {
+        examDetail.academicYearId = subject.academicYearId;
+      }
+      if (!examDetail.term && subject.term != null) {
+        examDetail.term = subject.term;
+      }
     }
+  }
+
+  // 2. Match subjectId + courseId (+ candidate sessionId) in assessmentPlanSubjectMappingModel
+  if (examDetail.subjectId) {
+    const mappingWhere = { subjectId: Number(examDetail.subjectId) };
+    if (mappedCourseId) {
+      mappingWhere.courseId = mappedCourseId;
+    }
+    if (examDetail.sessionId) {
+      mappingWhere.sessionId = Number(examDetail.sessionId);
+    }
+
+    let mapping = await scoped(model.assessmentPlanSubjectMappingModel).findOne({
+      where: mappingWhere,
+      attributes: ["sessionId", "academicYearId", "courseId", "assessmentPlanId"],
+      raw: true,
+    });
+
+    if (!mapping && examDetail.sessionId && mappedCourseId) {
+      mapping = await scoped(model.assessmentPlanSubjectMappingModel).findOne({
+        where: { subjectId: Number(examDetail.subjectId), courseId: mappedCourseId },
+        attributes: ["sessionId", "academicYearId", "courseId", "assessmentPlanId"],
+        raw: true,
+      });
+    }
+
+    if (mapping) {
+      if (mapping.sessionId) mappedSessionId = Number(mapping.sessionId);
+      if (mapping.academicYearId) mappedAcademicYearId = Number(mapping.academicYearId);
+      if (!examDetail.courseId && mapping.courseId) examDetail.courseId = mapping.courseId;
+    }
+  }
+
+  // 3. Fallback to assessmentPlanModel matching (courseId + sessionId) if needed
+  if (!mappedSessionId && mappedCourseId) {
+    const planWhere = { courseId: mappedCourseId, isActive: true };
+    if (examDetail.sessionId) {
+      planWhere.sessionId = Number(examDetail.sessionId);
+    }
+    const plan = await scoped(model.assessmentPlanModel).findOne({
+      where: planWhere,
+      attributes: ["sessionId", "academicYearId"],
+      raw: true,
+    });
+    if (plan) {
+      if (plan.sessionId) mappedSessionId = Number(plan.sessionId);
+      if (plan.academicYearId && !mappedAcademicYearId) mappedAcademicYearId = Number(plan.academicYearId);
+    }
+  }
+
+  // 4. Validate candidate or mapped sessionId in sessionModel
+  let candidateSessionId = examDetail.sessionId ? Number(examDetail.sessionId) : mappedSessionId;
+
+  if (candidateSessionId) {
+    const validSession = await scoped(model.sessionModel).findOne({
+      where: { sessionId: candidateSessionId },
+      attributes: ["sessionId", "academicYearId"],
+      raw: true,
+    });
+    if (validSession) {
+      examDetail.sessionId = validSession.sessionId;
+      if (!examDetail.academicYearId && validSession.academicYearId) {
+        examDetail.academicYearId = validSession.academicYearId;
+      }
+    } else if (mappedSessionId && mappedSessionId !== candidateSessionId) {
+      const validMappedSession = await scoped(model.sessionModel).findOne({
+        where: { sessionId: mappedSessionId },
+        attributes: ["sessionId", "academicYearId"],
+        raw: true,
+      });
+      if (validMappedSession) {
+        examDetail.sessionId = validMappedSession.sessionId;
+        if (!examDetail.academicYearId && validMappedSession.academicYearId) {
+          examDetail.academicYearId = validMappedSession.academicYearId;
+        }
+      } else {
+        examDetail.sessionId = null;
+      }
+    } else {
+      examDetail.sessionId = null;
+    }
+  }
+
+  if (mappedAcademicYearId && !examDetail.academicYearId) {
+    examDetail.academicYearId = mappedAcademicYearId;
   }
 }
 

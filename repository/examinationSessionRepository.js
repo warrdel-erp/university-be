@@ -390,7 +390,7 @@ export async function getClassSectionTermsBySetupType(examSetupTypeId, options =
   // 2. Fetch subjectIds from assessment_plan_subject_mapping for these assessmentPlanIds
   const subjectMappings = await scoped(model.assessmentPlanSubjectMappingModel).findAll({
     where: { assessmentPlanId: { [Op.in]: planIds } },
-    attributes: ["subjectId", "courseId", "sessionId"],
+    attributes: ["subjectId", "courseId", "sessionId", "academicYearId"],
     raw: true,
     transaction: options.transaction,
   });
@@ -448,9 +448,20 @@ export async function getClassSectionTermsBySetupType(examSetupTypeId, options =
 
     const termsArray = [...(courseTermsMap.get(cId) || [])].sort((a, b) => Number(a) - Number(b));
 
-    // Fetch class_sections for this course
+    const matchingSessions = [...new Set(subjectMappings.filter(m => Number(m.courseId) === Number(cId)).map(m => m.sessionId).filter(Boolean))];
+    const matchingYears = [...new Set(subjectMappings.filter(m => Number(m.courseId) === Number(cId)).map(m => m.academicYearId).filter(Boolean))];
+
+    const csWhere = { courseId: cId };
+    if (matchingSessions.length > 0) {
+      csWhere.sessionId = { [Op.in]: matchingSessions };
+    }
+    if (matchingYears.length > 0) {
+      csWhere.academicYearId = { [Op.in]: matchingYears };
+    }
+
+    // Fetch class_sections matching courseId, sessionId, academicYearId from assessmentPlanSubjectMappingModel
     const classSections = await scoped(model.classSectionModel).findAll({
-      where: { courseId: cId },
+      where: csWhere,
       attributes: ["classSectionsId"],
       raw: true,
       transaction: options.transaction,
