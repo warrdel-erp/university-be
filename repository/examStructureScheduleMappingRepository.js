@@ -13,11 +13,56 @@ async function assertScopedExamSchedule(examScheduleId, options = {}) {
   });
 }
 
-export async function addExamStructureSchedule(examDetailSchedule) {
+export async function addExamStructureSchedule(examDetailSchedule, options = {}) {
   try {
-    return await scoped(model.examStructureScheduleMappingModel).create(examDetailSchedule);
+    const slot = await scoped(model.examinationSessionSlotModel).findOne({
+      where: {
+        examinationSessionSlotId: examDetailSchedule.examinationSessionSlotId,
+      },
+      attributes: ["startTime", "durationMinutes"],
+      raw: true,
+      transaction: options.transaction,
+    });
+
+    console.log(slot.startTime);
+    console.log(slot.durationMinutes);
+
+    if (!slot) {
+      throw new Error("Invalid examination session slot.");
+    }
+
+    examDetailSchedule.startingDate = slot.startTime;
+    // examDetailSchedule.durationMinutes = slot.durationMinutes;
+
+    await scoped(model.examStructureScheduleMappingModel).create(
+      examDetailSchedule,
+      {
+        transaction: options.transaction,
+      }
+    );
+
+   await scoped(model.examScheduleModel).create(
+  {
+    subjectId: examDetailSchedule.subjectId,
+    term: examDetailSchedule.term,
+    examSetupTypeTermId: examDetailSchedule.examSetupTypeTermId,
+    academicYearId: examDetailSchedule.academicYearId,
+    sessionId: examDetailSchedule.sessionId,
+    examDate: examDetailSchedule.examDate,
+    examTime: slot.startTime,
+    type: examDetailSchedule.type,
+    duration: slot.durationMinutes,
+    examinationSessionSlotId: examDetailSchedule.examinationSessionSlotId,
+    createdBy: examDetailSchedule.createdBy,
+    updatedBy: examDetailSchedule.updatedBy,
+  },
+  {
+    transaction: options.transaction,
+  }
+
+    );
   } catch (error) {
-    console.error("Error adding exam Structure Schedule:", error);
+    console.error("Error adding exam structure schedule:", error);
     throw error;
   }
 }

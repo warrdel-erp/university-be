@@ -1051,7 +1051,143 @@ export async function getExaminationStructure(
   return result;
 }
 
-export async function getMappedSubjectsBySessionAndTerm({ examinationSessionId, term, courseId, sessionId }, options = {}) {
+// export async function getMappedSubjectsBySessionAndTerm({ examinationSessionId, term, courseId, sessionId }, options = {}) {
+//   const parsedExaminationSessionId = Number(examinationSessionId);
+//   const targetTerm = term !== undefined && term !== null && term !== "" ? Number(term) : null;
+//   const targetCourseId = courseId !== undefined && courseId !== null && courseId !== "" ? Number(courseId) : null;
+//   const targetSessionId = sessionId !== undefined && sessionId !== null && sessionId !== "" ? Number(sessionId) : null;
+
+//   if (isNaN(parsedExaminationSessionId)) {
+//     return [];
+//   }
+
+//   // 1. Fetch examination session with mapped terms to get assessmentTypeId & mapped (courseId, term)
+//   const examinationSession = await scoped(model.examinationSessionModel).findOne({
+//     where: { examinationSessionId: parsedExaminationSessionId },
+//     include: [
+//       {
+//         model: model.examinationSessionTermModel,
+//         as: "examinationSessionTerms",
+//         include: [
+//           {
+//             model: model.classSectionTermModel,
+//             as: "classSectionTerm",
+//             attributes: ["classSectionTermId", "classSectionsId", "term"],
+//             required: false,
+//           },
+//         ],
+//         required: false,
+//       },
+//     ],
+//     transaction: options.transaction,
+//   });
+
+//   if (!examinationSession || !examinationSession.assessmentTypeId) {
+//     return [];
+//   }
+
+//   const examSetupTypeId = Number(examinationSession.assessmentTypeId);
+
+//   // Extract mapped courseId and term combinations from examinationSessionTerms
+//   const mappedCourseTermsSet = new Set();
+//   const mappedCourseIdsSet = new Set();
+
+//   if (examinationSession.examinationSessionTerms && examinationSession.examinationSessionTerms.length > 0) {
+//     for (const sessionTerm of examinationSession.examinationSessionTerms) {
+//       if (sessionTerm.classSectionTerm && sessionTerm.classSectionTerm.classSectionsId) {
+//         const classSection = await scoped(model.classSectionModel).findOne({
+//           where: { classSectionsId: sessionTerm.classSectionTerm.classSectionsId },
+//           attributes: ["courseId"],
+//           raw: true,
+//           transaction: options.transaction,
+//         });
+//         if (classSection && classSection.courseId) {
+//           mappedCourseIdsSet.add(classSection.courseId);
+//           if (sessionTerm.classSectionTerm.term != null) {
+//             mappedCourseTermsSet.add(`${classSection.courseId}_${sessionTerm.classSectionTerm.term}`);
+//           }
+//         }
+//       }
+//     }
+//   }
+
+//   // 2. Fetch assessmentPlanIds from assessmentPlanComponentModel for examSetupTypeId
+//   const assessmentPlanComponents = await scoped(model.assessmentPlanComponentModel).findAll({
+//     where: { examSetupTypeId },
+//     attributes: ["assessmentPlanId"],
+//     raw: true,
+//     transaction: options.transaction,
+//   });
+
+//   if (!assessmentPlanComponents || assessmentPlanComponents.length === 0) {
+//     return [];
+//   }
+
+//   const assessmentPlanIds = [...new Set(assessmentPlanComponents.map((component) => component.assessmentPlanId).filter(Boolean))];
+//   if (assessmentPlanIds.length === 0) {
+//     return [];
+//   }
+
+//   // 3. Fetch subjectIds from assessmentPlanSubjectMappingModel for these assessmentPlanIds
+//   const mappingWhereClause = { assessmentPlanId: { [Op.in]: assessmentPlanIds } };
+
+//   if (targetCourseId !== null && !isNaN(targetCourseId)) {
+//     mappingWhereClause.courseId = targetCourseId;
+//   } else if (mappedCourseIdsSet.size > 0) {
+//     mappingWhereClause.courseId = { [Op.in]: [...mappedCourseIdsSet] };
+//   }
+
+//   if (targetSessionId !== null && !isNaN(targetSessionId)) {
+//     mappingWhereClause.sessionId = targetSessionId;
+//   }
+
+//   const subjectMappings = await scoped(model.assessmentPlanSubjectMappingModel).findAll({
+//     where: mappingWhereClause,
+//     attributes: ["subjectId", "courseId", "sessionId"],
+//     raw: true,
+//     transaction: options.transaction,
+//   });
+
+//   if (!subjectMappings || subjectMappings.length === 0) {
+//     return [];
+//   }
+
+//   const mappedSubjectIds = [...new Set(subjectMappings.map((mapping) => mapping.subjectId).filter(Boolean))];
+//   if (mappedSubjectIds.length === 0) {
+//     return [];
+//   }
+
+//   // 4. Query subjectModel for target mapped subjects
+//   const subjectWhereClause = {
+//     subjectId: { [Op.in]: mappedSubjectIds },
+//     isActive: true,
+//   };
+//   if (targetTerm !== null && !isNaN(targetTerm)) {
+//     subjectWhereClause.term = targetTerm;
+//   }
+//   if (targetCourseId !== null && !isNaN(targetCourseId)) {
+//     subjectWhereClause.courseId = targetCourseId;
+//   }
+
+//   const mappedSubjects = await scoped(model.subjectModel).findAll({
+//     where: subjectWhereClause,
+//     attributes: ["subjectId", "subjectName", "subjectCode", "subjectType", "subjectCategory", "term", "courseId"],
+//     raw: true,
+//     transaction: options.transaction,
+//   });
+
+//   // 5. If session terms are defined, strictly filter subjects matching mapped courseId + term
+//   if (mappedCourseTermsSet.size > 0) {
+//     return mappedSubjects.filter((subject) => mappedCourseTermsSet.has(`${subject.courseId}_${subject.term}`));
+//   }
+
+//   return mappedSubjects;
+// }
+
+export async function getMappedSubjectsBySessionAndTerm(
+  { examinationSessionId, term, courseId, sessionId },
+  options = {}
+) {
   const parsedExaminationSessionId = Number(examinationSessionId);
   const targetTerm = term !== undefined && term !== null && term !== "" ? Number(term) : null;
   const targetCourseId = courseId !== undefined && courseId !== null && courseId !== "" ? Number(courseId) : null;
@@ -1061,24 +1197,13 @@ export async function getMappedSubjectsBySessionAndTerm({ examinationSessionId, 
     return [];
   }
 
-  // 1. Fetch examination session with mapped terms to get assessmentTypeId & mapped (courseId, term)
+  // 1. Get Examination Session
   const examinationSession = await scoped(model.examinationSessionModel).findOne({
-    where: { examinationSessionId: parsedExaminationSessionId },
-    include: [
-      {
-        model: model.examinationSessionTermModel,
-        as: "examinationSessionTerms",
-        include: [
-          {
-            model: model.classSectionTermModel,
-            as: "classSectionTerm",
-            attributes: ["classSectionTermId", "classSectionsId", "term"],
-            required: false,
-          },
-        ],
-        required: false,
-      },
-    ],
+    where: {
+      examinationSessionId: parsedExaminationSessionId,
+    },
+    attributes: ["assessmentTypeId"],
+    raw: true,
     transaction: options.transaction,
   });
 
@@ -1088,100 +1213,102 @@ export async function getMappedSubjectsBySessionAndTerm({ examinationSessionId, 
 
   const examSetupTypeId = Number(examinationSession.assessmentTypeId);
 
-  // Extract mapped courseId and term combinations from examinationSessionTerms
-  const mappedCourseTermsSet = new Set();
-  const mappedCourseIdsSet = new Set();
-
-  if (examinationSession.examinationSessionTerms && examinationSession.examinationSessionTerms.length > 0) {
-    for (const sessionTerm of examinationSession.examinationSessionTerms) {
-      if (sessionTerm.classSectionTerm && sessionTerm.classSectionTerm.classSectionsId) {
-        const classSection = await scoped(model.classSectionModel).findOne({
-          where: { classSectionsId: sessionTerm.classSectionTerm.classSectionsId },
-          attributes: ["courseId"],
-          raw: true,
-          transaction: options.transaction,
-        });
-        if (classSection && classSection.courseId) {
-          mappedCourseIdsSet.add(classSection.courseId);
-          if (sessionTerm.classSectionTerm.term != null) {
-            mappedCourseTermsSet.add(`${classSection.courseId}_${sessionTerm.classSectionTerm.term}`);
-          }
-        }
-      }
-    }
-  }
-
-  // 2. Fetch assessmentPlanIds from assessmentPlanComponentModel for examSetupTypeId
+  // 2. Get Assessment Plans
   const assessmentPlanComponents = await scoped(model.assessmentPlanComponentModel).findAll({
-    where: { examSetupTypeId },
+    where: {
+      examSetupTypeId,
+    },
     attributes: ["assessmentPlanId"],
     raw: true,
     transaction: options.transaction,
   });
 
-  if (!assessmentPlanComponents || assessmentPlanComponents.length === 0) {
+  if (!assessmentPlanComponents.length) {
     return [];
   }
 
-  const assessmentPlanIds = [...new Set(assessmentPlanComponents.map((component) => component.assessmentPlanId).filter(Boolean))];
-  if (assessmentPlanIds.length === 0) {
+  const assessmentPlanIds = [
+    ...new Set(
+      assessmentPlanComponents
+        .map((item) => item.assessmentPlanId)
+        .filter(Boolean)
+    ),
+  ];
+
+  if (!assessmentPlanIds.length) {
     return [];
   }
 
-  // 3. Fetch subjectIds from assessmentPlanSubjectMappingModel for these assessmentPlanIds
-  const mappingWhereClause = { assessmentPlanId: { [Op.in]: assessmentPlanIds } };
+  // 3. Get Subject Mapping
+  const mappingWhere = {
+    assessmentPlanId: {
+      [Op.in]: assessmentPlanIds,
+    },
+  };
 
-  if (targetCourseId !== null && !isNaN(targetCourseId)) {
-    mappingWhereClause.courseId = targetCourseId;
-  } else if (mappedCourseIdsSet.size > 0) {
-    mappingWhereClause.courseId = { [Op.in]: [...mappedCourseIdsSet] };
+  if (targetCourseId !== null) {
+    mappingWhere.courseId = targetCourseId;
   }
 
-  if (targetSessionId !== null && !isNaN(targetSessionId)) {
-    mappingWhereClause.sessionId = targetSessionId;
+  if (targetSessionId !== null) {
+    mappingWhere.sessionId = targetSessionId;
   }
 
   const subjectMappings = await scoped(model.assessmentPlanSubjectMappingModel).findAll({
-    where: mappingWhereClause,
-    attributes: ["subjectId", "courseId", "sessionId"],
+    where: mappingWhere,
+    attributes: ["subjectId","sessionId"],
     raw: true,
     transaction: options.transaction,
   });
 
-  if (!subjectMappings || subjectMappings.length === 0) {
+  if (!subjectMappings.length) {
     return [];
   }
 
-  const mappedSubjectIds = [...new Set(subjectMappings.map((mapping) => mapping.subjectId).filter(Boolean))];
-  if (mappedSubjectIds.length === 0) {
+  const mappedSubjectIds = [
+    ...new Set(
+      subjectMappings
+        .map((item) => item.subjectId)
+        .filter(Boolean)
+    ),
+  ];
+
+  if (!mappedSubjectIds.length) {
     return [];
   }
 
-  // 4. Query subjectModel for target mapped subjects
-  const subjectWhereClause = {
-    subjectId: { [Op.in]: mappedSubjectIds },
+  // 4. Get Subjects
+  const subjectWhere = {
+    subjectId: {
+      [Op.in]: mappedSubjectIds,
+    },
     isActive: true,
   };
-  if (targetTerm !== null && !isNaN(targetTerm)) {
-    subjectWhereClause.term = targetTerm;
-  }
-  if (targetCourseId !== null && !isNaN(targetCourseId)) {
-    subjectWhereClause.courseId = targetCourseId;
+
+  if (targetCourseId !== null) {
+    subjectWhere.courseId = targetCourseId;
   }
 
-  const mappedSubjects = await scoped(model.subjectModel).findAll({
-    where: subjectWhereClause,
-    attributes: ["subjectId", "subjectName", "subjectCode", "subjectType", "subjectCategory", "term", "courseId"],
+  if (targetTerm !== null) {
+    subjectWhere.term = targetTerm;
+  }
+
+  const subjects = await scoped(model.subjectModel).findAll({
+    where: subjectWhere,
+    attributes: [
+      "subjectId",
+      "subjectName",
+      "subjectCode",
+      "subjectType",
+      "subjectCategory",
+      "term",
+      "courseId",
+    ],
     raw: true,
     transaction: options.transaction,
   });
 
-  // 5. If session terms are defined, strictly filter subjects matching mapped courseId + term
-  if (mappedCourseTermsSet.size > 0) {
-    return mappedSubjects.filter((subject) => mappedCourseTermsSet.has(`${subject.courseId}_${subject.term}`));
-  }
-
-  return mappedSubjects;
+  return subjects;
 }
 
 export async function getExamSchedulesBySession(examinationSessionId, options = {}) {
