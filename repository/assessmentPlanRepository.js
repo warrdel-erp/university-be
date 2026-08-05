@@ -352,7 +352,7 @@ export async function getCourseAssessmentPlanOverview({
   if (parsedAcademicRegulationId !== undefined) planWhere.regulationId = parsedAcademicRegulationId;
 
   let mappingRequired = false;
-  if (assignmentStatus === "assigned" || Object.keys(mappingWhere).length > 0 || Object.keys(planWhere).length > 0) {
+  if (assignmentStatus === "assigned") {
     mappingRequired = true;
   }
 
