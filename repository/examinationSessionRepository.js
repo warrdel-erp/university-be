@@ -1189,9 +1189,18 @@ export async function getMappedSubjectsBySessionAndTerm(
   options = {}
 ) {
   const parsedExaminationSessionId = Number(examinationSessionId);
-  const targetTerm = term !== undefined && term !== null && term !== "" ? Number(term) : null;
-  const targetCourseId = courseId !== undefined && courseId !== null && courseId !== "" ? Number(courseId) : null;
-  const targetSessionId = sessionId !== undefined && sessionId !== null && sessionId !== "" ? Number(sessionId) : null;
+  const targetTerm =
+    term !== undefined && term !== null && term !== ""
+      ? Number(term)
+      : null;
+  const targetCourseId =
+    courseId !== undefined && courseId !== null && courseId !== ""
+      ? Number(courseId)
+      : null;
+  const targetSessionId =
+    sessionId !== undefined && sessionId !== null && sessionId !== ""
+      ? Number(sessionId)
+      : null;
 
   if (isNaN(parsedExaminationSessionId)) {
     return [];
@@ -1213,8 +1222,10 @@ export async function getMappedSubjectsBySessionAndTerm(
 
   const examSetupTypeId = Number(examinationSession.assessmentTypeId);
 
-  // 2. Get Assessment Plans
-  const assessmentPlanComponents = await scoped(model.assessmentPlanComponentModel).findAll({
+  // 2. Get Assessment Plan Ids
+  const assessmentPlanComponents = await scoped(
+    model.assessmentPlanComponentModel
+  ).findAll({
     where: {
       examSetupTypeId,
     },
@@ -1254,9 +1265,11 @@ export async function getMappedSubjectsBySessionAndTerm(
     mappingWhere.sessionId = targetSessionId;
   }
 
-  const subjectMappings = await scoped(model.assessmentPlanSubjectMappingModel).findAll({
+  const subjectMappings = await scoped(
+    model.assessmentPlanSubjectMappingModel
+  ).findAll({
     where: mappingWhere,
-    attributes: ["subjectId","sessionId"],
+    attributes: ["subjectId", "sessionId"],
     raw: true,
     transaction: options.transaction,
   });
@@ -1265,22 +1278,28 @@ export async function getMappedSubjectsBySessionAndTerm(
     return [];
   }
 
-  const mappedSubjectIds = [
-    ...new Set(
-      subjectMappings
-        .map((item) => item.subjectId)
-        .filter(Boolean)
-    ),
-  ];
+  const mappedSubjectIds = [];
+  const subjectSessionMap = new Map();
 
-  if (!mappedSubjectIds.length) {
+  for (const mapping of subjectMappings) {
+    if (!mapping.subjectId) {
+      continue;
+    }
+
+    mappedSubjectIds.push(mapping.subjectId);
+    subjectSessionMap.set(mapping.subjectId, mapping.sessionId);
+  }
+
+  const uniqueSubjectIds = [...new Set(mappedSubjectIds)];
+
+  if (!uniqueSubjectIds.length) {
     return [];
   }
 
   // 4. Get Subjects
   const subjectWhere = {
     subjectId: {
-      [Op.in]: mappedSubjectIds,
+      [Op.in]: uniqueSubjectIds,
     },
     isActive: true,
   };
@@ -1308,7 +1327,22 @@ export async function getMappedSubjectsBySessionAndTerm(
     transaction: options.transaction,
   });
 
-  return subjects;
+  const result = [];
+
+  for (const subject of subjects) {
+    result.push({
+      subjectId: subject.subjectId,
+      subjectName: subject.subjectName,
+      subjectCode: subject.subjectCode,
+      subjectType: subject.subjectType,
+      subjectCategory: subject.subjectCategory,
+      term: subject.term,
+      courseId: subject.courseId,
+      sessionId: subjectSessionMap.get(subject.subjectId) || null,
+    });
+  }
+
+  return result;
 }
 
 export async function getExamSchedulesBySession(examinationSessionId, options = {}) {
