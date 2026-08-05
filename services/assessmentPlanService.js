@@ -148,6 +148,19 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
       throw error;
     }
 
+    // Verify assessmentPlanId courseId and sessionId match assessmentPlanModel
+    if (plan.courseId && Number(plan.courseId) !== Number(payload.courseId)) {
+      const error = new Error(`Assessment Plan (ID: ${payload.assessmentPlanId}) is created for Course (ID: ${plan.courseId}), which does not match payload Course (ID: ${payload.courseId})`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (plan.sessionId && Number(plan.sessionId) !== Number(payload.sessionId)) {
+      const error = new Error(`Assessment Plan (ID: ${payload.assessmentPlanId}) is created for Session (ID: ${plan.sessionId}), which does not match payload Session (ID: ${payload.sessionId})`);
+      error.statusCode = 400;
+      throw error;
+    }
+
     // 1. Verify subjectId belongs to courseId
     const subjectRecord = await model.subjectModel.findOne({
       where: {
@@ -184,13 +197,34 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
       throw error;
     }
 
-    // Auto save active academicYearId strictly from requestContext / active user
+    // Auto save active academicYearId strictly from requestContext / active user or session / plan
     let academicYearId = getAcademicYearId() || (user?.academicYearId ? Number(user.academicYearId) : null);
+    if (!academicYearId && sessionRecord?.academicYearId) {
+      academicYearId = Number(sessionRecord.academicYearId);
+    }
+    if (!academicYearId && plan?.academicYearId) {
+      academicYearId = Number(plan.academicYearId);
+    }
+
     if (academicYearId) {
       const yearRecord = await model.acedmicYearModel.findByPk(academicYearId, { transaction: t });
       if (!yearRecord) {
         academicYearId = null;
       }
+    }
+
+    // Verify session belongs to active academicYearId
+    if (academicYearId && sessionRecord.academicYearId && Number(sessionRecord.academicYearId) !== Number(academicYearId)) {
+      const error = new Error(`Session (ID: ${sessionId}) belongs to Academic Year ID ${sessionRecord.academicYearId}, which does not match active Academic Year ID ${academicYearId}`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Verify assessment plan belongs to active academicYearId
+    if (academicYearId && plan.academicYearId && Number(plan.academicYearId) !== Number(academicYearId)) {
+      const error = new Error(`Assessment Plan (ID: ${payload.assessmentPlanId}) belongs to Academic Year ID ${plan.academicYearId}, which does not match active Academic Year ID ${academicYearId}`);
+      error.statusCode = 400;
+      throw error;
     }
 
     // Auto fetch examSetupTypeId strictly from internal assessmentPlanComponentModel connection
