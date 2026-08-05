@@ -2,6 +2,9 @@ import * as model from "../models/index.js";
 import { scoped } from "../utility/scoped.js";
 import { Op } from "sequelize";
 
+import { findRoomsByExamScheduleIds } from "./examStructureScheduleMappingRepository.js";
+import { countStudentsForTerm } from "./examStructureScheduleMappingRepository.js";
+
 export async function getMaxSlotNumber(examinationSessionId, options = {}) {
   const highestSlot = await scoped(model.examinationSessionSlotModel).findOne({
     where: { examinationSessionId: Number(examinationSessionId) },
@@ -38,11 +41,7 @@ export async function getExaminationSessionSlots(
     return [];
   }
 
-  const slotIds = [];
-
-  for (const slot of slots) {
-    slotIds.push(slot.examinationSessionSlotId);
-  }
+  const slotIds = slots.map((slot) => slot.examinationSessionSlotId);
 
   const scheduleWhere = {
     examinationSessionSlotId: {
@@ -60,7 +59,12 @@ export async function getExaminationSessionSlots(
       {
         model: model.subjectModel,
         as: "subjectSchedule",
-        attributes: ["subjectId", "subjectName", "subjectCode"],
+        attributes: [
+          "subjectId",
+          "subjectName",
+          "subjectCode",
+          "courseId",
+        ],
       },
     ],
     order: [
@@ -70,10 +74,62 @@ export async function getExaminationSessionSlots(
     transaction: options.transaction,
   });
 
+  if (!schedules.length) {
+    return slots.map((slot) => ({
+      ...slot,
+      schedules: [],
+    }));
+  }
+
+  const examScheduleIds = schedules.map(
+    (schedule) => schedule.examScheduleId
+  );
+
+  const roomRows = await findRoomsByExamScheduleIds(examScheduleIds);
+
+  const roomMap = new Map();
+
+  for (const room of roomRows) {
+    if (!roomMap.has(room.examScheduleId)) {
+      roomMap.set(room.examScheduleId, []);
+    }
+
+    roomMap.get(room.examScheduleId).push(room.classRoom?.roomNumber);
+  }
+
+  const studentCountMap = new Map();
   const scheduleMap = new Map();
 
   for (const schedule of schedules) {
     const item = schedule.get({ plain: true });
+
+    const courseId = item.subjectSchedule?.courseId;
+
+    if (
+      courseId &&
+      item.academicYearId &&
+      item.term &&
+      item.sessionId
+    ) {
+      const studentKey = `${courseId}_${item.academicYearId}_${item.term}_${item.sessionId}`;
+
+      if (!studentCountMap.has(studentKey)) {
+        const count = await countStudentsForTerm(
+          courseId,
+          item.academicYearId,
+          item.term,
+          item.sessionId
+        );
+
+        studentCountMap.set(studentKey, count);
+      }
+
+      item.studentCount = studentCountMap.get(studentKey) || 0;
+    } else {
+      item.studentCount = 0;
+    }
+
+    item.roomNumbers = roomMap.get(item.examScheduleId) || [];
 
     if (!scheduleMap.has(item.examinationSessionSlotId)) {
       scheduleMap.set(item.examinationSessionSlotId, []);
@@ -82,16 +138,10 @@ export async function getExaminationSessionSlots(
     scheduleMap.get(item.examinationSessionSlotId).push(item);
   }
 
-  const result = [];
-
-  for (const slot of slots) {
-    result.push({
-      ...slot,
-      schedules: scheduleMap.get(slot.examinationSessionSlotId) || [],
-    });
-  }
-
-  return result;
+  return slots.map((slot) => ({
+    ...slot,
+    schedules: scheduleMap.get(slot.examinationSessionSlotId) || [],
+  }));
 }
 
 export async function getExaminationSessionSlotById(examinationSessionSlotId, options = {}) {
