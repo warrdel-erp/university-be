@@ -1,6 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as assessmentPlanRepo from "../repository/assessmentPlanRepository.js";
 import * as model from "../models/index.js";
+import { getAcademicYearId } from "../utility/requestContext.js";
 
 export async function createAssessmentPlan({ payload, user }) {
   return await sequelize.transaction(async (t) => {
@@ -162,12 +163,28 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
       }
     }
 
-    // Verify academicYearId exists in acedmic_year table
-    let academicYearId = user?.academicYearId ? Number(user.academicYearId) : null;
+    // Auto save active academicYearId strictly from requestContext / active user
+    let academicYearId = getAcademicYearId() || (user?.academicYearId ? Number(user.academicYearId) : null);
     if (academicYearId) {
       const yearRecord = await model.acedmicYearModel.findByPk(academicYearId, { transaction: t });
       if (!yearRecord) {
         academicYearId = null;
+      }
+    }
+
+    // Auto fetch examSetupTypeId strictly from internal assessmentPlanComponentModel connection
+    let examSetupTypeId = null;
+    const component = await model.assessmentPlanComponentModel.findOne({
+      where: { assessmentPlanId: Number(payload.assessmentPlanId) },
+      attributes: ["examSetupTypeId"],
+      raw: true,
+      transaction: t,
+    });
+    if (component && component.examSetupTypeId) {
+      examSetupTypeId = Number(component.examSetupTypeId);
+      const setupTypeRecord = await model.examSetupTypeModel.findByPk(examSetupTypeId, { transaction: t });
+      if (!setupTypeRecord) {
+        examSetupTypeId = null;
       }
     }
 
@@ -177,6 +194,7 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
       courseId: Number(payload.courseId),
       sessionId: sessionId || null,
       academicYearId: academicYearId || null,
+      examSetupTypeId: examSetupTypeId || null,
       universityId: user?.universityId ? Number(user.universityId) : null,
       instituteId: user?.instituteId ? Number(user.instituteId) : null,
       createdBy: user?.userId || null,

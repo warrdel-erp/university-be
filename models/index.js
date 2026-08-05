@@ -2070,6 +2070,7 @@ subjectModel.hasMany(assessmentPlanSubjectMappingModel, { foreignKey: 'subjectId
 assessmentPlanSubjectMappingModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
 assessmentPlanSubjectMappingModel.belongsTo(sessionModel, { foreignKey: 'sessionId', as: 'session' });
 assessmentPlanSubjectMappingModel.belongsTo(acedmicYearModel, { foreignKey: 'academicYearId', as: 'academicYear' });
+assessmentPlanSubjectMappingModel.belongsTo(examSetupTypeModel, { foreignKey: 'examSetupTypeId', as: 'examSetupType' });
 
 export {
   assessmentPlanModel,
