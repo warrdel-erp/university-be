@@ -148,19 +148,40 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
       throw error;
     }
 
-    let sessionId = payload.sessionId ? Number(payload.sessionId) : null;
-
-    // Fallback: If sessionId not specified, check if assessmentPlan has a sessionId
-    if (!sessionId && plan.sessionId) {
-      sessionId = Number(plan.sessionId);
+    // 1. Verify subjectId belongs to courseId
+    const subjectRecord = await model.subjectModel.findOne({
+      where: {
+        subjectId: Number(payload.subjectId),
+        courseId: Number(payload.courseId),
+      },
+      transaction: t,
+    });
+    if (!subjectRecord) {
+      const error = new Error(`Subject (ID: ${payload.subjectId}) does not belong to Course (ID: ${payload.courseId})`);
+      error.statusCode = 400;
+      throw error;
     }
 
-    // Verify sessionId exists in session table
-    if (sessionId) {
-      const sessionRecord = await model.sessionModel.findByPk(sessionId, { transaction: t });
-      if (!sessionRecord) {
-        sessionId = null;
-      }
+    // 2. Verify sessionId and courseId are mapped in sessionCouseMappingModel
+    const sessionCourseRecord = await model.sessionCouseMappingModel.findOne({
+      where: {
+        sessionId: Number(payload.sessionId),
+        courseId: Number(payload.courseId),
+      },
+      transaction: t,
+    });
+    if (!sessionCourseRecord) {
+      const error = new Error(`Session (ID: ${payload.sessionId}) is not mapped to Course (ID: ${payload.courseId})`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    let sessionId = Number(payload.sessionId);
+    const sessionRecord = await model.sessionModel.findByPk(sessionId, { transaction: t });
+    if (!sessionRecord) {
+      const error = new Error(`Session (ID: ${sessionId}) does not exist`);
+      error.statusCode = 400;
+      throw error;
     }
 
     // Auto save active academicYearId strictly from requestContext / active user

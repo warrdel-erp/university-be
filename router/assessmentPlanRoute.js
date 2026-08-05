@@ -23,10 +23,10 @@ import {
 const router = express.Router();
 
 export const createSubjectMappingBody = z.object({
-  assessmentPlanId: z.coerce.number().int().positive(),
-  subjectId: z.coerce.number().int().positive(),
-  courseId: z.coerce.number().int().positive(),
-  sessionId: z.coerce.number().int().positive().optional().nullable(),
+  assessmentPlanId: z.coerce.number().int().positive("assessmentPlanId is required"),
+  subjectId: z.coerce.number().int().positive("subjectId is required"),
+  courseId: z.coerce.number().int().positive("courseId is required"),
+  sessionId: z.coerce.number().int().positive("sessionId is required"),
 });
 
 export const listSubjectMappingQuery = z.object({
