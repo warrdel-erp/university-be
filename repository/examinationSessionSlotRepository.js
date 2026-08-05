@@ -22,6 +22,7 @@ export async function createExaminationSessionSlot(slotData, options = {}) {
 
 export async function getExaminationSessionSlots(
   examinationSessionId,
+  date,
   options = {}
 ) {
   const slots = await scoped(model.examinationSessionSlotModel).findAll({
@@ -43,12 +44,18 @@ export async function getExaminationSessionSlots(
     slotIds.push(slot.examinationSessionSlotId);
   }
 
-  const schedules = await scoped(model.examScheduleModel).findAll({
-    where: {
-      examinationSessionSlotId: {
-        [Op.in]: slotIds,
-      },
+  const scheduleWhere = {
+    examinationSessionSlotId: {
+      [Op.in]: slotIds,
     },
+  };
+
+  if (date) {
+    scheduleWhere.examDate = date;
+  }
+
+  const schedules = await scoped(model.examScheduleModel).findAll({
+    where: scheduleWhere,
     include: [
       {
         model: model.subjectModel,

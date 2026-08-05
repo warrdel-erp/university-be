@@ -27,8 +27,9 @@ export const createExaminationSessionSlot = async (req, res) => {
 
 export const getExaminationSessionSlots = async (req, res) => {
   try {
-    const { examinationSessionId } = req.query;
-    const result = await examinationSessionSlotServices.getExaminationSessionSlots(examinationSessionId);
+    const { examinationSessionId ,date } = req.query;
+
+    const result = await examinationSessionSlotServices.getExaminationSessionSlots(examinationSessionId ,date);
     return SuccessResponse(res, 200, "Examination session slots fetched successfully", result);
   } catch (error) {
     console.error("Error fetching examination session slots:", error);

@@ -58,8 +58,8 @@ export async function createExaminationSessionSlot({ payload, user }, options = 
   });
 }
 
-export async function getExaminationSessionSlots(examinationSessionId, options) {
-  return await examinationSessionSlotRepository.getExaminationSessionSlots(examinationSessionId, options);
+export async function getExaminationSessionSlots(examinationSessionId, date, options) {
+  return await examinationSessionSlotRepository.getExaminationSessionSlots(examinationSessionId, date, options);
 }
 
 export async function getExaminationSessionSlotById(examinationSessionSlotId, options) {
