@@ -187,6 +187,19 @@ export async function findSubjects(where, options = {}) {
   });
 }
 
+export async function findExamScheduledSubjectIds(examinationSessionId, subjectIds, options = {}) {
+  const records = await scoped(model.examScheduleModel).findAll({
+    where: {
+      examinationSessionId: Number(examinationSessionId),
+      subjectId: { [Op.in]: subjectIds }
+    },
+    attributes: ["subjectId"],
+    raw: true,
+    transaction: options.transaction,
+  });
+  return records.map(r => r.subjectId);
+}
+
 export async function findCoursesByIds(courseIds, options = {}) {
   return scoped(model.courseModel).findAll({
     where: { courseId: { [Op.in]: courseIds } },

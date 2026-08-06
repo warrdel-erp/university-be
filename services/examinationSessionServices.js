@@ -511,6 +511,14 @@ export async function getMappedSubjectsBySessionAndTerm(
   if (targetTerm !== null) subjectWhere.term = targetTerm;
 
   const subjects = await examinationSessionRepository.findSubjects(subjectWhere, options);
+  
+  const scheduledSubjectIdsList = await examinationSessionRepository.findExamScheduledSubjectIds(
+    parsedExaminationSessionId,
+    subjects.map((sub) => sub.subjectId),
+    options
+  );
+  const scheduledSubjectIds = new Set(scheduledSubjectIdsList);
+
   return subjects.map((subject) => ({
     subjectId: subject.subjectId,
     subjectName: subject.subjectName,
@@ -520,6 +528,7 @@ export async function getMappedSubjectsBySessionAndTerm(
     term: subject.term,
     courseId: subject.courseId,
     sessionId: subjectSessionMap.get(subject.subjectId) || null,
+    isExamScheduled: scheduledSubjectIds.has(subject.subjectId),
   }));
 }
 
@@ -583,6 +592,12 @@ export async function getExamSchedulesBySession(examinationSessionId, options = 
         c.academicYearId === cleanSchedule.academicYearId
     );
     cleanSchedule.studentCount = countObj ? parseInt(countObj.studentCount) : 0;
+    
+    // Status flags
+    cleanSchedule.noRoom = cleanSchedule.roomCapacity === 0;
+    cleanSchedule.needsRoom = cleanSchedule.studentCount > cleanSchedule.roomCapacity;
+    cleanSchedule.overCapacity = cleanSchedule.roomCapacity > cleanSchedule.studentCount;
+    cleanSchedule.confirmed = cleanSchedule.roomCapacity > 0 && cleanSchedule.roomCapacity >= cleanSchedule.studentCount;
     
     slotMap.get(slotKey).schedules.push(cleanSchedule);
   }
