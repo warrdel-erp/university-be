@@ -168,12 +168,22 @@ export async function getExamScheduleRooms(examScheduleId) {
         throw new Error("Exam schedule not found");
     }
 
-    const rooms = await examRoomCapacityRepository.getRoomsByExamScheduleId(examScheduleId);
-    if (!rooms.length) {
+    const rows = await examRoomCapacityRepository.getRoomsByExamScheduleId(examScheduleId);
+    if (!rows.length) {
         throw new Error("No rooms assigned to this exam schedule");
     }
 
-    return rooms;
+    return rows.map((plain) => {
+      return {
+        examScheduleRoomCapacityId: plain.examScheduleRoomCapacityId,
+        examScheduleId: plain.examScheduleId,
+        classRoomSectionId: plain.classRoomSectionId,
+        capacity: plain.capacity,
+        columns: plain.columns,
+        orderKey: plain.orderKey,
+        classRoom: plain.classRoom ?? null,
+      };
+    });
 }
 
 export async function deleteExamRoomCapacity(examScheduleRoomCapacityId) {
@@ -207,5 +217,37 @@ export async function getAvailableRoomsForExamSchedule(examScheduleId) {
         examSchedule.duration,
         examSchedule.examinationSessionSlot,
     );
-    return examRoomCapacityRepository.getAvailableRoomsPayload(examScheduleId, examSchedule, slot);
+
+    const { examDate, day, startTime, endTime, startMinutes, endMinutes } = {
+        examDate: examSchedule.examDate,
+        ...slot,
+    };
+
+    const [classBusyRoomIds, assignedRoomIds, overlappingExamRoomIds] = await Promise.all([
+        examRoomCapacityRepository.findOccupiedRoomIdsByClassSchedule(day, startTime, endTime, examDate),
+        examRoomCapacityRepository.findAssignedRoomIdsForExam(examScheduleId),
+        examRoomCapacityRepository.findOverlappingExamBusyRoomIds(examDate, examScheduleId, startMinutes, endMinutes),
+    ]);
+
+    const busyRoomIds = [...new Set([...classBusyRoomIds, ...assignedRoomIds, ...overlappingExamRoomIds])];
+    
+    // Retrieve all rooms (including busy ones) and mark conflict flag
+    const allRooms = await examRoomCapacityRepository.findAllRoomsForExamSlot();
+    const roomsWithConflict = allRooms.map((room) => ({
+        ...room,
+        conflict: busyRoomIds.includes(room.classRoomSectionId),
+    }));
+
+    return {
+        examScheduleId: examSchedule.examScheduleId,
+        examDate: examSchedule.examDate,
+        examTime: examSchedule.examTime,
+        duration: examSchedule.duration,
+        examinationSessionSlotId: examSchedule.examinationSessionSlotId,
+        examinationSessionSlot: examSchedule.examinationSessionSlot,
+        slotStartTime: startTime,
+        slotEndTime: endTime,
+        day,
+        rooms: roomsWithConflict,
+    };
 }

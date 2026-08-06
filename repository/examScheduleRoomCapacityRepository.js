@@ -184,18 +184,7 @@ export async function getRoomsByExamScheduleId(examScheduleId) {
     order: [["orderKey", "ASC"]],
   });
 
-  return rows.map((row) => {
-    const plain = row.get({ plain: true });
-    return {
-      examScheduleRoomCapacityId: plain.examScheduleRoomCapacityId,
-      examScheduleId: plain.examScheduleId,
-      classRoomSectionId: plain.classRoomSectionId,
-      capacity: plain.capacity,
-      columns: plain.columns,
-      orderKey: plain.orderKey,
-      classRoom: plain.classRoom ?? null,
-    };
-  });
+  return rows.map((row) => row.get({ plain: true }));
 }
 
 export async function getExamScheduleSlot(examScheduleId) {
@@ -216,7 +205,7 @@ export async function getExamScheduleSlot(examScheduleId) {
   });
 }
 
-async function findOverlappingExamBusyRoomIds(examDate, excludeExamScheduleId, startMinutes, endMinutes) {
+export async function findOverlappingExamBusyRoomIds(examDate, excludeExamScheduleId, startMinutes, endMinutes) {
   const rows = await model.examScheduleRoomCapacityModel.findAll({
     attributes: ["classRoomSectionId"],
     include: [
@@ -260,7 +249,7 @@ async function findOverlappingExamBusyRoomIds(examDate, excludeExamScheduleId, s
 
 
 
-async function findAssignedRoomIdsForExam(examScheduleId) {
+export async function findAssignedRoomIdsForExam(examScheduleId) {
   const rows = await model.examScheduleRoomCapacityModel.findAll({
     attributes: ["classRoomSectionId"],
     where: { examScheduleId },
@@ -298,7 +287,7 @@ async function findAvailableRoomsForExamSlot(busyRoomIds) {
 }
 
 // New helper to fetch *all* rooms for the exam slot without filtering out busy rooms
-async function findAllRoomsForExamSlot() {
+export async function findAllRoomsForExamSlot() {
   const rooms = await scoped(model.classRoomModel).findAll({
     attributes: [
       "classRoomSectionId",
@@ -345,37 +334,4 @@ export async function getRoomsForAllocationLookup(classRoomSectionIds) {
   return roomMap;
 }
 
-export async function getAvailableRoomsPayload(examScheduleId, examSchedule, slot) {
-  const { examDate, day, startTime, endTime, startMinutes, endMinutes } = {
-    examDate: examSchedule.examDate,
-    ...slot,
-  };
 
-  const [classBusyRoomIds, assignedRoomIds, overlappingExamRoomIds] = await Promise.all([
-    findOccupiedRoomIdsByClassSchedule(day, startTime, endTime, examDate),
-    findAssignedRoomIdsForExam(examScheduleId),
-    findOverlappingExamBusyRoomIds(examDate, examScheduleId, startMinutes, endMinutes),
-  ]);
-
-  const busyRoomIds = [...new Set([...classBusyRoomIds, ...assignedRoomIds, ...overlappingExamRoomIds])];
-  // Retrieve all rooms (including busy ones) and mark conflict flag
-  const allRooms = await findAllRoomsForExamSlot();
-  const roomsWithConflict = allRooms.map((room) => ({
-    ...room,
-    conflict: busyRoomIds.includes(room.classRoomSectionId),
-  }));
-  return {
-    examScheduleId: examSchedule.examScheduleId,
-    examDate: examSchedule.examDate,
-    examTime: examSchedule.examTime,
-    duration: examSchedule.duration,
-    examinationSessionSlotId: examSchedule.examinationSessionSlotId,
-    examinationSessionSlot: examSchedule.examinationSessionSlot,
-    slotStartTime: startTime,
-    slotEndTime: endTime,
-    day,
-    rooms: roomsWithConflict,
-  };
-
-
-}
