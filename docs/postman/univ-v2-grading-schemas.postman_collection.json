@@ -2079,21 +2079,15 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"startTime\": \"09:30:00\",\n  \"durationMinutes\": 180\n}"
+              "raw": "[\n  {\n    \"examinationSessionSlotId\": {{examinationSessionSlotId}},\n    \"startTime\": \"09:30:00\",\n    \"durationMinutes\": 180\n  }\n]"
             },
             "url": {
-              "raw": "{{baseurl}}/examinationSessionSlot?examinationSessionSlotId={{examinationSessionSlotId}}",
+              "raw": "{{baseurl}}/examinationSessionSlot",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "examinationSessionSlot"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionSlotId",
-                  "value": "{{examinationSessionSlotId}}"
-                }
               ]
             }
           }

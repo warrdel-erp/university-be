@@ -40,15 +40,15 @@ const getSlotByIdSchema = {
 };
 
 const updateSlotSchema = {
-  query: z.object({
-    examinationSessionSlotId: positiveIntegerQueryId,
-  }),
-  body: z.object({
-    slotNumber: z.coerce.number().int().positive().optional(),
-    startTime: z.string().optional().nullable(),
-    endTime: z.string().optional().nullable(),
-    durationMinutes: z.coerce.number().int().positive().optional().nullable(),
-  }),
+  body: z.array(
+    z.object({
+      examinationSessionSlotId: z.coerce.number().int().positive(),
+      slotNumber: z.coerce.number().int().positive().optional(),
+      startTime: z.string().optional().nullable(),
+      endTime: z.string().optional().nullable(),
+      durationMinutes: z.coerce.number().int().positive().optional().nullable(),
+    })
+  ).min(1, "At least one slot update is required"),
 };
 
 router.post('/', userAuth, validate(createSlotSchema), examinationSessionSlotController.createExaminationSessionSlot);

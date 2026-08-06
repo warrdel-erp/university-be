@@ -66,31 +66,39 @@ export async function getExaminationSessionSlotById(examinationSessionSlotId, op
   return await examinationSessionSlotRepository.getExaminationSessionSlotById(examinationSessionSlotId, options);
 }
 
-export async function updateExaminationSessionSlot({ examinationSessionSlotId, payload, user }, options = {}) {
+export async function updateExaminationSessionSlots({ payloadArray, user }, options = {}) {
   return await sequelize.transaction(async (t) => {
-    const existingSlot = await examinationSessionSlotRepository.getExaminationSessionSlotById(examinationSessionSlotId, { transaction: t });
+    
+    const results = [];
+    for (const payload of payloadArray) {
+      const existingSlot = await examinationSessionSlotRepository.getExaminationSessionSlotById(payload.examinationSessionSlotId, { transaction: t });
+      if (!existingSlot) continue;
 
-    const updateData = {
-      ...payload,
-      updatedBy: user?.userId || null,
-    };
-    delete updateData.slotName;
+      const updateData = {
+        ...payload,
+        updatedBy: user?.userId || null,
+      };
+      delete updateData.slotName;
+      delete updateData.examinationSessionSlotId; // prevent updating PK
 
-    if (payload.slotNumber !== undefined) updateData.slotNumber = Number(payload.slotNumber);
-    if (payload.durationMinutes !== undefined) updateData.durationMinutes = payload.durationMinutes !== null ? Number(payload.durationMinutes) : null;
+      if (payload.slotNumber !== undefined) updateData.slotNumber = Number(payload.slotNumber);
+      if (payload.durationMinutes !== undefined) updateData.durationMinutes = payload.durationMinutes !== null ? Number(payload.durationMinutes) : null;
 
-    const startTime = payload.startTime !== undefined ? payload.startTime : existingSlot?.startTime;
-    const durationMinutes = updateData.durationMinutes !== undefined ? updateData.durationMinutes : existingSlot?.durationMinutes;
+      const startTime = payload.startTime !== undefined ? payload.startTime : existingSlot.startTime;
+      const durationMinutes = updateData.durationMinutes !== undefined ? updateData.durationMinutes : existingSlot.durationMinutes;
 
-    if (payload.endTime === undefined && startTime && durationMinutes) {
-      updateData.endTime = addMinutesToTime(startTime, durationMinutes);
+      if (payload.endTime === undefined && startTime && durationMinutes) {
+        updateData.endTime = addMinutesToTime(startTime, durationMinutes);
+      }
+
+      const updated = await examinationSessionSlotRepository.updateExaminationSessionSlot(
+        payload.examinationSessionSlotId,
+        updateData,
+        { ...options, transaction: t }
+      );
+      results.push(updated);
     }
-
-    return await examinationSessionSlotRepository.updateExaminationSessionSlot(
-      examinationSessionSlotId,
-      updateData,
-      { ...options, transaction: t }
-    );
+    return results;
   });
 }
 

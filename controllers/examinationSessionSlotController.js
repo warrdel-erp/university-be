@@ -55,13 +55,11 @@ export const getExaminationSessionSlotById = async (req, res) => {
 
 export const updateExaminationSessionSlot = async (req, res) => {
   try {
-    const { examinationSessionSlotId } = req.query;
-    const result = await examinationSessionSlotServices.updateExaminationSessionSlot({
-      examinationSessionSlotId,
-      payload: req.body,
+    const result = await examinationSessionSlotServices.updateExaminationSessionSlots({
+      payloadArray: req.body,
       user: req.user,
     });
-    return SuccessResponse(res, 200, "Examination session slot updated successfully", result);
+    return SuccessResponse(res, 200, "Examination session slots updated successfully", result);
   } catch (error) {
     console.error("Error updating examination session slot:", error);
     const statusCode = error.statusCode || 500;
