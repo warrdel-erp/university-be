@@ -4,7 +4,7 @@ import { buildScope, scoped } from "../utility/scoped.js";
 async function assertScopedExamSchedule(examScheduleId, transaction) {
     return scoped(model.examScheduleModel).findOne({
         where: { examScheduleId },
-        attributes: ['examScheduleId'],
+        attributes: ['examScheduleId', 'academicYearId'],
         transaction,
     });
 }
@@ -33,6 +33,7 @@ export async function assignExam(data) {
         if (!schedule) {
             throw new Error('Exam schedule not found');
         }
+        data.academicYearId = schedule.academicYearId;
         const result = await scoped(model.teacherExamAssignmentModel).create(data);
         return result;
     } catch (error) {

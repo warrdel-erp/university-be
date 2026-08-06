@@ -3,6 +3,7 @@ import { DataTypes } from "sequelize";
 import users from "./userModel.js";
 import examScheduleModel from "./examScheduleModel.js";
 import employeeModel from "./employeeModel.js";
+import feePlanSemesterModel from "./feePlanSemesterModel.js";
 
 const teacherExamAssignmentModel = sequelize.define(
   "teacher_exam_assignment",
@@ -90,6 +91,6 @@ const teacherExamAssignmentModel = sequelize.define(
   },
 );
 
-teacherExamAssignmentModel.scopeConfig = { university: true, institute: true, academicYear: true };
+teacherExamAssignmentModel.scopeConfig = { university: feePlanSemesterModel, institute: false, academicYear: true };
 
 export default teacherExamAssignmentModel;
