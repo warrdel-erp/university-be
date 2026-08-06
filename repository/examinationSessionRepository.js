@@ -221,7 +221,7 @@ export async function findTeacherAssignmentsByExamSchedules(examScheduleIds, opt
   if (!examScheduleIds.length) return [];
   return scoped(model.teacherExamAssignmentModel).findAll({
     where: { examScheduleId: { [Op.in]: examScheduleIds } },
-    attributes: ["teacherExamAssignmentId", "examScheduleId", "createdAt"],
+    attributes: ["teacherExamAssignmentId", "examScheduleId", "createdAt", "deadline"],
     include: [
       {
         model: model.employeeModel,

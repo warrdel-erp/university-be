@@ -574,19 +574,21 @@ export async function getMappedSubjectsBySessionAndTerm(
 
     for (const ta of teacherAssignments) {
       if (!teacherAssignmentByScheduleId.has(ta.examScheduleId)) {
-        teacherAssignmentByScheduleId.set(ta.examScheduleId, {
-          teacherExamAssignmentId: ta.teacherExamAssignmentId,
-          userId: ta.userId || ta.teacherEmployee?.userId,
-          assignedAt: ta.createdAt,
-          user: ta.teacherEmployee?.user ? {
-            userId: ta.teacherEmployee.user.userId,
-            userName: ta.teacherEmployee.user.userName,
-            email: ta.teacherEmployee.user.email,
-            phone: ta.teacherEmployee.user.phone,
-            employeeCode: ta.teacherEmployee.employeeCode
-          } : null
-        });
+        teacherAssignmentByScheduleId.set(ta.examScheduleId, []);
       }
+      teacherAssignmentByScheduleId.get(ta.examScheduleId).push({
+        teacherExamAssignmentId: ta.teacherExamAssignmentId,
+        userId: ta.userId || ta.teacherEmployee?.userId,
+        assignedAt: ta.createdAt,
+        deadline: ta.deadline,
+        user: ta.teacherEmployee?.user ? {
+          userId: ta.teacherEmployee.user.userId,
+          userName: ta.teacherEmployee.user.userName,
+          email: ta.teacherEmployee.user.email,
+          phone: ta.teacherEmployee.user.phone,
+          employeeCode: ta.teacherEmployee.employeeCode
+        } : null
+      });
     }
 
     for (const c of counts) {
@@ -608,10 +610,10 @@ export async function getMappedSubjectsBySessionAndTerm(
 
     if (hasSchedule) {
       const plainSched = scheduleBySubjectId.get(subject.subjectId);
-      teacherAssignment = teacherAssignmentByScheduleId.get(plainSched.examScheduleId) || null;
+      teacherAssignment = teacherAssignmentByScheduleId.get(plainSched.examScheduleId) || [];
 
-      if (teacherAssignmentStatus === 'assigned' && !teacherAssignment) continue;
-      if (teacherAssignmentStatus === 'notAssigned' && teacherAssignment) continue;
+      if (teacherAssignmentStatus === 'assigned' && teacherAssignment.length === 0) continue;
+      if (teacherAssignmentStatus === 'notAssigned' && teacherAssignment.length > 0) continue;
 
       const roomCapacity = roomCapacityByScheduleId.get(plainSched.examScheduleId) || 0;
       const groupKey = `${plainSched.sessionId}_${plainSched.examSetupTypeTerm?.courseId}_${plainSched.examSetupTypeTerm?.term}_${plainSched.academicYearId}`;
