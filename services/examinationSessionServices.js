@@ -478,60 +478,8 @@ export async function getExaminationStructure(
   });
 }
 
-function _enrichScheduleWithStatus(plainSched, counts) {
-  const roomCapacity = plainSched.roomCapacities?.reduce((sum, rc) => sum + (rc.capacity || 0), 0) || 0;
-
-  const countObj = counts.find(c =>
-      c.sessionId === plainSched.sessionId &&
-      c.term === plainSched.examSetupTypeTerm?.term &&
-      c.courseId === plainSched.examSetupTypeTerm?.courseId &&
-      c.academicYearId === plainSched.academicYearId
-  );
-  const studentCount = countObj ? parseInt(countObj.studentCount) : 0;
-  const hasAssignedRoom = roomCapacity > 0;
-
-  return {
-      examScheduleId: plainSched.examScheduleId,
-      roomCapacity,
-      studentCount,
-      noRoom: !hasAssignedRoom,
-      needsRoom: hasAssignedRoom && roomCapacity < studentCount,
-      overCapacity: hasAssignedRoom && roomCapacity > studentCount,
-      confirmed: hasAssignedRoom && roomCapacity === studentCount
-  };
-}
-
-async function _buildSubjectScheduleMap(examinationSessionId, subjects, options) {
-  const schedules = await examinationSessionRepository.findExamSchedulesBySubjects(
-    examinationSessionId,
-    subjects.map((sub) => sub.subjectId),
-    options
-  );
-
-  const sessionsForCounts = uniqueValues(schedules.map(r => r.sessionId));
-  const coursesForCounts = uniqueValues(schedules.map(r => r.examSetupTypeTerm?.courseId));
-  const termsForCounts = uniqueValues(schedules.map(r => r.examSetupTypeTerm?.term));
-  const acedmicYearsForCounts = uniqueValues(schedules.map(r => r.academicYearId));
-
-  let counts = [];
-  if (sessionsForCounts.length > 0 && coursesForCounts.length > 0 && termsForCounts.length > 0) {
-      counts = await examScheduleRepository.getStudentCountsByGroups(
-          sessionsForCounts, coursesForCounts, termsForCounts, acedmicYearsForCounts
-      );
-  }
-
-  const scheduleMap = new Map();
-  for (const sched of schedules) {
-      const plainSched = toPlain(sched);
-      const enrichedSched = _enrichScheduleWithStatus(plainSched, counts);
-      scheduleMap.set(plainSched.subjectId, enrichedSched);
-  }
-
-  return scheduleMap;
-}
-
 export async function getMappedSubjectsBySessionAndTerm(
-  { examinationSessionId, term, courseId, sessionId },
+  { examinationSessionId, term, courseId, sessionId, isExamScheduled, teacherAssignmentStatus },
   options = {},
 ) {
   const parsedExaminationSessionId = Number(examinationSessionId);
@@ -554,22 +502,142 @@ export async function getMappedSubjectsBySessionAndTerm(
   if (targetSessionId !== null) mappingWhere.sessionId = targetSessionId;
 
   const subjectMappings = await examinationSessionRepository.findAssessmentPlanSubjectMappings(mappingWhere, options);
+  if (!subjectMappings.length) return [];
+  
   const uniqueSubjectIds = uniqueValues(subjectMappings.map((mapping) => mapping.subjectId));
-  if (!uniqueSubjectIds.length) return [];
+  const subjectSessionMap = new Map();
+  for (const mapping of subjectMappings) {
+    subjectSessionMap.set(mapping.subjectId, mapping.sessionId);
+  }
 
-  const subjectSessionMap = new Map(subjectMappings.map((mapping) => [mapping.subjectId, mapping.sessionId]));
   const subjectWhere = { subjectId: { [Op.in]: uniqueSubjectIds }, isActive: true };
   if (targetCourseId !== null) subjectWhere.courseId = targetCourseId;
   if (targetTerm !== null) subjectWhere.term = targetTerm;
 
-  const subjects = await examinationSessionRepository.findSubjects(subjectWhere, options);
-  
-  const scheduleMap = await _buildSubjectScheduleMap(parsedExaminationSessionId, subjects, options);
+  const mappedSubjects = await examinationSessionRepository.findSubjects(subjectWhere, options);
+  if (!mappedSubjects.length) return [];
 
-  return subjects.map((subject) => {
-    const schedInfo = scheduleMap.get(subject.subjectId);
-    
-    return {
+  const allSchedules = await examinationSessionRepository.findExamSchedulesBySubjects(
+    parsedExaminationSessionId,
+    mappedSubjects.map((sub) => sub.subjectId),
+    options
+  );
+
+  const scheduleBySubjectId = new Map();
+  const examScheduleIds = [];
+  const sessionsForCounts = new Set();
+  const coursesForCounts = new Set();
+  const termsForCounts = new Set();
+  const acedmicYearsForCounts = new Set();
+
+  for (const sched of allSchedules) {
+    if (!scheduleBySubjectId.has(sched.subjectId)) {
+      scheduleBySubjectId.set(sched.subjectId, toPlain(sched));
+      examScheduleIds.push(sched.examScheduleId);
+      
+      if (sched.sessionId) sessionsForCounts.add(sched.sessionId);
+      if (sched.examSetupTypeTerm?.courseId) coursesForCounts.add(sched.examSetupTypeTerm.courseId);
+      if (sched.examSetupTypeTerm?.term) termsForCounts.add(sched.examSetupTypeTerm.term);
+      if (sched.academicYearId) acedmicYearsForCounts.add(sched.academicYearId);
+    }
+  }
+
+  const roomCapacityByScheduleId = new Map();
+  const teacherAssignmentByScheduleId = new Map();
+  const studentCountByGroup = new Map();
+
+  if (examScheduleIds.length > 0) {
+    const promises = [
+      examinationSessionRepository.findRoomCapacitiesByExamSchedules(examScheduleIds, options),
+      examinationSessionRepository.findTeacherAssignmentsByExamSchedules(examScheduleIds, options)
+    ];
+
+    if (sessionsForCounts.size > 0 && coursesForCounts.size > 0 && termsForCounts.size > 0) {
+      promises.push(
+        examScheduleRepository.getStudentCountsByGroups(
+          Array.from(sessionsForCounts),
+          Array.from(coursesForCounts),
+          Array.from(termsForCounts),
+          Array.from(acedmicYearsForCounts)
+        )
+      );
+    } else {
+      promises.push(Promise.resolve([]));
+    }
+
+    const [roomCapacities, teacherAssignments, counts] = await Promise.all(promises);
+
+    for (const rc of roomCapacities) {
+      const current = roomCapacityByScheduleId.get(rc.examScheduleId) || 0;
+      roomCapacityByScheduleId.set(rc.examScheduleId, current + (rc.capacity || 0));
+    }
+
+    for (const ta of teacherAssignments) {
+      if (!teacherAssignmentByScheduleId.has(ta.examScheduleId)) {
+        teacherAssignmentByScheduleId.set(ta.examScheduleId, {
+          teacherExamAssignmentId: ta.teacherExamAssignmentId,
+          userId: ta.userId || ta.teacherEmployee?.userId,
+          assignedAt: ta.createdAt,
+          user: ta.teacherEmployee?.user ? {
+            userId: ta.teacherEmployee.user.userId,
+            userName: ta.teacherEmployee.user.userName,
+            email: ta.teacherEmployee.user.email,
+            phone: ta.teacherEmployee.user.phone,
+            employeeCode: ta.teacherEmployee.employeeCode
+          } : null
+        });
+      }
+    }
+
+    for (const c of counts) {
+      const key = `${c.sessionId}_${c.courseId}_${c.term}_${c.academicYearId}`;
+      studentCountByGroup.set(key, parseInt(c.studentCount, 10) || 0);
+    }
+  }
+
+  const finalResponse = [];
+
+  for (const subject of mappedSubjects) {
+    const hasSchedule = scheduleBySubjectId.has(subject.subjectId);
+
+    if (isExamScheduled === true && !hasSchedule) continue;
+    if (isExamScheduled === false && hasSchedule) continue;
+
+    let schedInfo = null;
+    let teacherAssignment = null;
+
+    if (hasSchedule) {
+      const plainSched = scheduleBySubjectId.get(subject.subjectId);
+      teacherAssignment = teacherAssignmentByScheduleId.get(plainSched.examScheduleId) || null;
+
+      if (teacherAssignmentStatus === 'assigned' && !teacherAssignment) continue;
+      if (teacherAssignmentStatus === 'notAssigned' && teacherAssignment) continue;
+
+      const roomCapacity = roomCapacityByScheduleId.get(plainSched.examScheduleId) || 0;
+      const groupKey = `${plainSched.sessionId}_${plainSched.examSetupTypeTerm?.courseId}_${plainSched.examSetupTypeTerm?.term}_${plainSched.academicYearId}`;
+      const studentCount = studentCountByGroup.get(groupKey) || 0;
+      const hasAssignedRoom = roomCapacity > 0;
+
+      schedInfo = {
+        examScheduleId: plainSched.examScheduleId,
+        examDate: plainSched.examDate,
+        examTime: plainSched.examTime,
+        duration: plainSched.duration,
+        type: plainSched.type,
+        examinationSessionSlotId: plainSched.examinationSessionSlotId,
+        roomCapacity,
+        studentCount,
+        noRoom: !hasAssignedRoom,
+        needsRoom: hasAssignedRoom && roomCapacity < studentCount,
+        overCapacity: hasAssignedRoom && roomCapacity > studentCount,
+        confirmed: hasAssignedRoom && roomCapacity === studentCount,
+        teacherAssignment
+      };
+    } else {
+      if (teacherAssignmentStatus === 'assigned') continue;
+    }
+
+    finalResponse.push({
       subjectId: subject.subjectId,
       subjectName: subject.subjectName,
       subjectCode: subject.subjectCode,
@@ -578,14 +646,22 @@ export async function getMappedSubjectsBySessionAndTerm(
       term: subject.term,
       courseId: subject.courseId,
       sessionId: subjectSessionMap.get(subject.subjectId) || null,
-      isExamScheduled: !!schedInfo,
+      isExamScheduled: hasSchedule,
       examScheduleId: schedInfo?.examScheduleId || null,
+      examDate: schedInfo?.examDate || null,
+      examTime: schedInfo?.examTime || null,
+      duration: schedInfo?.duration || null,
+      type: schedInfo?.type || null,
+      examinationSessionSlotId: schedInfo?.examinationSessionSlotId || null,
       studentCount: schedInfo?.studentCount || 0,
       roomCapacity: schedInfo?.roomCapacity || 0,
       noRoom: schedInfo ? schedInfo.noRoom : true,
       needsRoom: schedInfo ? schedInfo.needsRoom : false,
       overCapacity: schedInfo ? schedInfo.overCapacity : false,
       confirmed: schedInfo ? schedInfo.confirmed : false,
-    };
-  });
+      teacherAssignment: schedInfo ? schedInfo.teacherAssignment : null
+    });
+  }
+
+  return finalResponse;
 }

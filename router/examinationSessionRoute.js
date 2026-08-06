@@ -111,6 +111,8 @@ const getSubjectsBySessionAndTermSchema = {
     term: z.union([z.string(), z.number()]).optional(),
     courseId: positiveIntegerQueryId.optional(),
     sessionId: positiveIntegerQueryId.optional(),
+    isExamScheduled: z.union([z.boolean(), z.enum(["true", "false"])]).transform(val => val === "true" || val === true ? true : (val === "false" || val === false ? false : undefined)).optional(),
+    teacherAssignmentStatus: z.enum(["assigned", "notAssigned"]).optional(),
   }),
 };
 

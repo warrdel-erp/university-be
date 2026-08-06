@@ -188,23 +188,54 @@ export async function findSubjects(where, options = {}) {
 }
 
 export async function findExamSchedulesBySubjects(examinationSessionId, subjectIds, options = {}) {
+  if (!subjectIds || subjectIds.length === 0) return [];
   return scoped(model.examScheduleModel).findAll({
     where: {
       examinationSessionId: Number(examinationSessionId),
       subjectId: { [Op.in]: subjectIds }
     },
-    attributes: ["examScheduleId", "subjectId", "sessionId", "academicYearId"],
+    attributes: ["examScheduleId", "subjectId", "sessionId", "academicYearId", "examDate", "examTime", "type", "duration", "examinationSessionSlotId"],
     include: [
-      {
-        model: model.examScheduleRoomCapacityModel,
-        as: "roomCapacities",
-        attributes: ["capacity"],
-      },
       {
         model: model.examSetupTypeTermModel,
         as: "examSetupTypeTerm",
         attributes: ["courseId", "term"],
       },
+    ],
+    order: [["examScheduleId", "DESC"]],
+    transaction: options.transaction,
+  });
+}
+
+export async function findRoomCapacitiesByExamSchedules(examScheduleIds, options = {}) {
+  if (!examScheduleIds.length) return [];
+  return scoped(model.examScheduleRoomCapacityModel).findAll({
+    where: { examScheduleId: { [Op.in]: examScheduleIds } },
+    attributes: ["examScheduleId", "capacity"],
+    transaction: options.transaction,
+    raw: true,
+  });
+}
+
+export async function findTeacherAssignmentsByExamSchedules(examScheduleIds, options = {}) {
+  if (!examScheduleIds.length) return [];
+  return scoped(model.teacherExamAssignmentModel).findAll({
+    where: { examScheduleId: { [Op.in]: examScheduleIds } },
+    attributes: ["teacherExamAssignmentId", "examScheduleId", "createdAt"],
+    include: [
+      {
+        model: model.employeeModel,
+        as: "teacherEmployee",
+        attributes: ["employeeId", "userId", "employeeCode"],
+        required: true,
+        include: [
+          {
+            model: model.userModel,
+            as: "user",
+            attributes: ["userId", "userName", "email", "phone"],
+          }
+        ]
+      }
     ],
     transaction: options.transaction,
   });

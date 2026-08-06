@@ -1875,7 +1875,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examinationSession/subjects?examinationSessionId={{examinationSessionId}}&term=1&courseId=45&sessionId=23",
+              "raw": "{{baseurl}}/examinationSession/subjects?examinationSessionId={{examinationSessionId}}&term=1&courseId=34&sessionId=6&isExamScheduled=true&teacherAssignmentStatus=assigned",
               "host": [
                 "{{baseurl}}"
               ],
@@ -1894,11 +1894,19 @@
                 },
                 {
                   "key": "courseId",
-                  "value": "45"
+                  "value": "34"
                 },
                 {
                   "key": "sessionId",
-                  "value": "23"
+                  "value": "6"
+                },
+                {
+                  "key": "isExamScheduled",
+                  "value": "true"
+                },
+                {
+                  "key": "teacherAssignmentStatus",
+                  "value": "assigned"
                 }
               ]
             }
