@@ -67,6 +67,45 @@ function isOverlappingSchedule(schedule, startMinutes, endMinutes) {
   return doTimeSlotsOverlap(getScheduleRange(schedule), { startMinutes, endMinutes });
 }
 
+export async function findOccupiedRoomIdsByClassSchedule(day, startTime, endTime, examDate) {
+  const targetRange = getTimeSlotRange({ startTime, endTime });
+  if (!targetRange) return [];
+
+  const dateCells = await model.timeTableCellDateWiseModel.findAll({
+    where: { 
+      date: examDate,
+      classRoomSectionId: { [Op.not]: null }
+    },
+    attributes: ['classRoomSectionId'],
+    include: [{
+      model: model.timeTableCellModel,
+      as: 'timeTableCell',
+      attributes: ['timeTableCellId'],
+      required: true,
+      include: [{
+        model: model.timeTableStructurePeriodsModel,
+        as: 'timeTablecreation',
+        attributes: ['startTime', 'endTime'],
+        required: true,
+      }]
+    }],
+    raw: true,
+  });
+
+  const busyRoomIds = new Set();
+  for (const row of dateCells) {
+    const periodStart = row['timeTableCell.timeTablecreation.startTime'];
+    const periodEnd = row['timeTableCell.timeTablecreation.endTime'];
+    const periodRange = getTimeSlotRange({ startTime: periodStart, endTime: periodEnd });
+    
+    if (periodRange && doTimeSlotsOverlap(targetRange, periodRange)) {
+      busyRoomIds.add(row.classRoomSectionId);
+    }
+  }
+
+  return [...busyRoomIds];
+}
+
 export async function addExamRoomCapacity(data, transaction) {
   const schedule = await assertScopedExamSchedule(data.examScheduleId, { transaction });
   if (!schedule) {

@@ -56,6 +56,7 @@ const getExamScheduleRoomsSchema = z.object({
 });
 
 router.get("/", userAuth, examScheduleController.getExamSchedules);
+
 router.get(
   "/availableRooms",
   userAuth,
