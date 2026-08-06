@@ -2,6 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import subjectModel from "./subjectModel.js";
+import examinationSessionModel from "./examinationSessionModel.js";
 
 const examScheduleModel = sequelize.define(
     'exam_schedule',
@@ -78,6 +79,15 @@ const examScheduleModel = sequelize.define(
             references: {
                 model: 'examination_session_slot',
                 key: 'examination_session_slot_id'
+            }
+        },
+        examinationSessionId: {
+            type: DataTypes.BIGINT,
+            allowNull: true,
+            field: 'examination_session_id',
+            references: {
+                model: examinationSessionModel,
+                key: 'examination_session_id'
             }
         },
         createdBy: {

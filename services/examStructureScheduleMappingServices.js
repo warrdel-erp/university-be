@@ -1,6 +1,7 @@
 import * as model from "../models/index.js";
 import { scoped } from "../utility/scoped.js";
 import * as examStructureScheduleRepository from "../repository/examStructureScheduleMappingRepository.js";
+import { getTimeSlotRange } from "../utility/timeSlot.js";
 
 const studentListFields = [
   "studentId",
@@ -28,6 +29,9 @@ async function resolveSlotDetails(examDetail) {
       }
       if (!examDetail.duration && slot.durationMinutes != null) {
         examDetail.duration = String(slot.durationMinutes);
+      }
+      if (!examDetail.examinationSessionId && slot.examinationSessionId) {
+        examDetail.examinationSessionId = slot.examinationSessionId;
       }
     }
   }
@@ -329,13 +333,11 @@ export async function publishExamSchedule(publishExamStructureSchedule) {
 }
 
 function getExamSlotMinutes(examTime, duration) {
-  const [h = 0, m = 0] = String(examTime).split(":").map(Number);
-  const startMinutes = h * 60 + m;
-  const durationMinutes = Number(duration);
-  if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+  const range = getTimeSlotRange({ startTime: examTime, duration });
+  if (!range) {
     throw new Error("Invalid exam duration");
   }
-  return { startMinutes, endMinutes: startMinutes + durationMinutes };
+  return range;
 }
 
 async function assertNoStudentExamTimeConflict(examDetail, excludeExamScheduleId) {
@@ -397,6 +399,8 @@ export async function addExamSchedule(examDetail, createdBy, updatedBy) {
   await resolveSessionId(examDetail);
   await resolveAcademicYearId(examDetail);
 
+
+
   const resolvedTerm = await resolveTermForExamDetail(examDetail);
   if (resolvedTerm != null) {
     examDetail.term = resolvedTerm;
@@ -405,7 +409,8 @@ export async function addExamSchedule(examDetail, createdBy, updatedBy) {
 
   await assertNoStudentExamTimeConflict(examDetail);
 
-  return await examStructureScheduleRepository.addExamSchedule(examDetail);
+
+    return await examStructureScheduleRepository.addExamSchedule(examDetail);
 }
 
 export async function updateExamSchedule(examScheduleId, examDetail, updatedBy) {

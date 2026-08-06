@@ -27,6 +27,7 @@ const addScheduleSchema = {
   body: z.object({
     subjectId: z.coerce.number().int().positive().optional().nullable(),
     term: z.coerce.number().int().positive().optional().nullable(),
+    examSetupTypeId: z.coerce.number().int().positive().optional().nullable(),
     examSetupTypeTermId: z.coerce.number().int().positive().optional().nullable(),
     academicYearId: z.coerce.number().int().positive().optional().nullable(),
     sessionId: z.coerce.number().int().positive().optional().nullable(),
@@ -43,6 +44,7 @@ const updateScheduleSchema = {
     examScheduleId: z.coerce.number().int().positive({ message: "examScheduleId is required" }),
     subjectId: z.coerce.number().int().positive().optional().nullable(),
     term: z.coerce.number().int().positive().optional().nullable(),
+    examSetupTypeId: z.coerce.number().int().positive().optional().nullable(),
     examSetupTypeTermId: z.coerce.number().int().positive().optional().nullable(),
     academicYearId: z.coerce.number().int().positive().optional().nullable(),
     sessionId: z.coerce.number().int().positive().optional(),

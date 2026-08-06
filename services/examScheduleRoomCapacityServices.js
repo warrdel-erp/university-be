@@ -2,32 +2,29 @@ import sequelize from "../database/sequelizeConfig.js";
 import * as examRoomCapacityRepository from "../repository/examScheduleRoomCapacityRepository.js";
 import * as examScheduleServices from "./examScheduleServices.js";
 import { z } from "zod";
+import { getTimeSlotRange, minutesToTime } from "../utility/timeSlot.js";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-const toMinutes = (time) => {
-    const [h = 0, m = 0] = String(time).split(":").map(Number);
-    return h * 60 + m;
-};
+const getExamSlot = (examDate, examTime, duration, examinationSessionSlot) => {
+    const resolvedStartTime = examinationSessionSlot?.startTime || examTime;
+    const resolvedDuration = examinationSessionSlot?.durationMinutes ?? duration;
+    const range = getTimeSlotRange({
+        startTime: resolvedStartTime,
+        endTime: examinationSessionSlot?.endTime,
+        duration: resolvedDuration,
+    });
 
-const toTime = (mins) => {
-    const n = ((mins % 1440) + 1440) % 1440;
-    return `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}:00`;
-};
-
-const getExamSlot = (examDate, examTime, duration) => {
-    const startMinutes = toMinutes(examTime);
-    const durationMinutes = Number(duration);
-    if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
-        throw new Error("Invalid exam duration");
+    if (!range) {
+        throw new Error("Invalid exam slot time");
     }
-    const endMinutes = startMinutes + durationMinutes;
+
     return {
         day: DAYS[new Date(`${examDate}T00:00:00`).getDay()],
-        startTime: toTime(startMinutes),
-        endTime: toTime(endMinutes),
-        startMinutes,
-        endMinutes,
+        startTime: minutesToTime(range.startMinutes),
+        endTime: minutesToTime(range.endMinutes),
+        startMinutes: range.startMinutes,
+        endMinutes: range.endMinutes,
     };
 };
 
@@ -95,21 +92,12 @@ export async function addExamRoomCapacity(data, userId) {
     const validatedData = examRoomCapacitySchema.parse(data);
     const { uniqueRoomIds, orderedRoomIds, roomOrderLookup } = normalizeRoomIds(validatedData.classRoomSectionIds);
 
-    // 1. Fetch Student Count for the Exam
-    const exam = await examScheduleServices.getExamScheduleById(validatedData.examScheduleId);
-    if (!exam) {
-        throw new Error("Exam schedule not found");
-    }
-    const studentCount = exam.getDataValue('studentCount') || 0;
-
-    // 2. Fetch Room Details
+    // Fetch Room Details
     const roomLookup = await examRoomCapacityRepository.getRoomsForAllocationLookup([...uniqueRoomIds]);
     if (roomLookup.size !== uniqueRoomIds.size) {
         throw new Error("One or more class rooms not found");
     }
 
-    // 3. Validate Capacities and Calculate Total
-    let totalCapacity = 0;
     const assignments = [];
 
     for (const roomId of orderedRoomIds) {
@@ -120,7 +108,6 @@ export async function addExamRoomCapacity(data, userId) {
         if (!resolvedExamCapacity || resolvedExamCapacity <= 0) {
             throw new Error(`Room ${room.roomNumber} has invalid capacity`);
         }
-        totalCapacity += resolvedExamCapacity;
 
         assignments.push({
             classRoomSectionId: room.classRoomSectionId,
@@ -131,11 +118,6 @@ export async function addExamRoomCapacity(data, userId) {
             createdBy: userId,
             updatedBy: userId
         });
-    }
-
-    // 4. Final Validation against student count
-    if (totalCapacity < studentCount) {
-        throw new Error(`Selected rooms have a total capacity of ${totalCapacity}, but ${studentCount} students are enrolled. Please select more or larger rooms.`);
     }
 
     const transaction = await sequelize.transaction();
@@ -150,8 +132,6 @@ export async function addExamRoomCapacity(data, userId) {
     }
 }
 
-
-
 export async function updateExamRoomCapacity(examScheduleRoomCapacityId, data, userId) {
     const { capacity, columns } = data;
     const updatePayload = {
@@ -163,8 +143,6 @@ export async function updateExamRoomCapacity(examScheduleRoomCapacityId, data, u
     if (!existing) {
         throw new Error("Exam room capacity not found");
     }
-    // Check if assigned to any schedule? 
-    // In the new implementation, it IS an assignment to a schedule.
 
     updatePayload.updatedBy = userId;
 
@@ -223,6 +201,11 @@ export async function getAvailableRoomsForExamSchedule(examScheduleId) {
     const examSchedule = await examRoomCapacityRepository.getExamScheduleSlot(examScheduleId);
     if (!examSchedule) throw new Error("Exam schedule not found");
 
-    const slot = getExamSlot(examSchedule.examDate, examSchedule.examTime, examSchedule.duration);
+    const slot = getExamSlot(
+        examSchedule.examDate,
+        examSchedule.examTime,
+        examSchedule.duration,
+        examSchedule.examinationSessionSlot,
+    );
     return examRoomCapacityRepository.getAvailableRoomsPayload(examScheduleId, examSchedule, slot);
 }

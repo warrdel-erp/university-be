@@ -185,6 +185,8 @@ examinationSessionModel.hasMany(examinationSessionSlotModel, { foreignKey: 'exam
 
 examScheduleModel.belongsTo(examinationSessionSlotModel, { foreignKey: 'examinationSessionSlotId', as: 'examinationSessionSlot' });
 examinationSessionSlotModel.hasMany(examScheduleModel, { foreignKey: 'examinationSessionSlotId', as: 'examSchedules' });
+examScheduleModel.belongsTo(examinationSessionModel, { foreignKey: 'examinationSessionId', as: 'examinationSession' });
+examinationSessionModel.hasMany(examScheduleModel, { foreignKey: 'examinationSessionId', as: 'examSchedules' });
 examinationSessionModel.belongsTo(universityModel, { foreignKey: "university_id", as: "university" });
 universityModel.hasMany(examinationSessionModel, { foreignKey: "university_id", as: "examinationSessions" });
 

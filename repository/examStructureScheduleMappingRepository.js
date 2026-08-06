@@ -4,6 +4,7 @@ import { Op } from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { classSectionTermsInclude } from "../utility/classSectionIncludes.js";
 
+
 async function assertScopedExamSchedule(examScheduleId, options = {}) {
   const { transaction, attributes = ['examScheduleId'] } = options;
   return scoped(model.examScheduleModel).findOne({
@@ -226,9 +227,42 @@ export async function findConflictingExamForStudentCohort({
   });
 }
 
+
 export async function addExamSchedule(examDetail) {
   try {
-    return await scoped(model.examScheduleModel).create(examDetail);
+    if (!examDetail.examinationSessionId && !examDetail.examSetupTypeId) {
+      throw new Error("examSetupTypeId or examinationSessionSlotId is required.");
+    }
+
+    const sessionWhere = examDetail.examinationSessionId
+      ? { examinationSessionId: Number(examDetail.examinationSessionId) }
+      : {
+          assessmentTypeId: Number(examDetail.examSetupTypeId),
+          examStartDate: {
+            [Op.lte]: examDetail.examDate,
+          },
+          examEndDate: {
+            [Op.gte]: examDetail.examDate,
+          },
+        };
+
+    const examinationSession = await scoped(model.examinationSessionModel).findOne({
+      where: sessionWhere,
+      attributes: [
+        "examinationSessionId",
+        "examStartDate",
+        "examEndDate",
+      ],
+    });
+
+    if (!examinationSession) {
+      throw new Error("No examination session found for the selected exam date.");
+    }
+
+    return await scoped(model.examScheduleModel).create({
+      ...examDetail,
+      examinationSessionId: examinationSession.examinationSessionId,
+    });
   } catch (error) {
     console.error("Error adding exam schedule:", error.message);
     throw error;
