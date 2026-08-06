@@ -478,6 +478,58 @@ export async function getExaminationStructure(
   });
 }
 
+function _enrichScheduleWithStatus(plainSched, counts) {
+  const roomCapacity = plainSched.roomCapacities?.reduce((sum, rc) => sum + (rc.capacity || 0), 0) || 0;
+
+  const countObj = counts.find(c =>
+      c.sessionId === plainSched.sessionId &&
+      c.term === plainSched.examSetupTypeTerm?.term &&
+      c.courseId === plainSched.examSetupTypeTerm?.courseId &&
+      c.academicYearId === plainSched.academicYearId
+  );
+  const studentCount = countObj ? parseInt(countObj.studentCount) : 0;
+  const hasAssignedRoom = roomCapacity > 0;
+
+  return {
+      examScheduleId: plainSched.examScheduleId,
+      roomCapacity,
+      studentCount,
+      noRoom: !hasAssignedRoom,
+      needsRoom: hasAssignedRoom && roomCapacity < studentCount,
+      overCapacity: hasAssignedRoom && roomCapacity > studentCount,
+      confirmed: hasAssignedRoom && roomCapacity === studentCount
+  };
+}
+
+async function _buildSubjectScheduleMap(examinationSessionId, subjects, options) {
+  const schedules = await examinationSessionRepository.findExamSchedulesBySubjects(
+    examinationSessionId,
+    subjects.map((sub) => sub.subjectId),
+    options
+  );
+
+  const sessionsForCounts = uniqueValues(schedules.map(r => r.sessionId));
+  const coursesForCounts = uniqueValues(schedules.map(r => r.examSetupTypeTerm?.courseId));
+  const termsForCounts = uniqueValues(schedules.map(r => r.examSetupTypeTerm?.term));
+  const acedmicYearsForCounts = uniqueValues(schedules.map(r => r.academicYearId));
+
+  let counts = [];
+  if (sessionsForCounts.length > 0 && coursesForCounts.length > 0 && termsForCounts.length > 0) {
+      counts = await examScheduleRepository.getStudentCountsByGroups(
+          sessionsForCounts, coursesForCounts, termsForCounts, acedmicYearsForCounts
+      );
+  }
+
+  const scheduleMap = new Map();
+  for (const sched of schedules) {
+      const plainSched = toPlain(sched);
+      const enrichedSched = _enrichScheduleWithStatus(plainSched, counts);
+      scheduleMap.set(plainSched.subjectId, enrichedSched);
+  }
+
+  return scheduleMap;
+}
+
 export async function getMappedSubjectsBySessionAndTerm(
   { examinationSessionId, term, courseId, sessionId },
   options = {},
@@ -512,23 +564,28 @@ export async function getMappedSubjectsBySessionAndTerm(
 
   const subjects = await examinationSessionRepository.findSubjects(subjectWhere, options);
   
-  const scheduledSubjectIdsList = await examinationSessionRepository.findExamScheduledSubjectIds(
-    parsedExaminationSessionId,
-    subjects.map((sub) => sub.subjectId),
-    options
-  );
-  const scheduledSubjectIds = new Set(scheduledSubjectIdsList);
+  const scheduleMap = await _buildSubjectScheduleMap(parsedExaminationSessionId, subjects, options);
 
-  return subjects.map((subject) => ({
-    subjectId: subject.subjectId,
-    subjectName: subject.subjectName,
-    subjectCode: subject.subjectCode,
-    subjectType: subject.subjectType,
-    subjectCategory: subject.subjectCategory,
-    term: subject.term,
-    courseId: subject.courseId,
-    sessionId: subjectSessionMap.get(subject.subjectId) || null,
-    isExamScheduled: scheduledSubjectIds.has(subject.subjectId),
-  }));
+  return subjects.map((subject) => {
+    const schedInfo = scheduleMap.get(subject.subjectId);
+    
+    return {
+      subjectId: subject.subjectId,
+      subjectName: subject.subjectName,
+      subjectCode: subject.subjectCode,
+      subjectType: subject.subjectType,
+      subjectCategory: subject.subjectCategory,
+      term: subject.term,
+      courseId: subject.courseId,
+      sessionId: subjectSessionMap.get(subject.subjectId) || null,
+      isExamScheduled: !!schedInfo,
+      examScheduleId: schedInfo?.examScheduleId || null,
+      studentCount: schedInfo?.studentCount || 0,
+      roomCapacity: schedInfo?.roomCapacity || 0,
+      noRoom: schedInfo ? schedInfo.noRoom : true,
+      needsRoom: schedInfo ? schedInfo.needsRoom : false,
+      overCapacity: schedInfo ? schedInfo.overCapacity : false,
+      confirmed: schedInfo ? schedInfo.confirmed : false,
+    };
+  });
 }
-

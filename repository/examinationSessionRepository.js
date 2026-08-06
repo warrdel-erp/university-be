@@ -187,17 +187,27 @@ export async function findSubjects(where, options = {}) {
   });
 }
 
-export async function findExamScheduledSubjectIds(examinationSessionId, subjectIds, options = {}) {
-  const records = await scoped(model.examScheduleModel).findAll({
+export async function findExamSchedulesBySubjects(examinationSessionId, subjectIds, options = {}) {
+  return scoped(model.examScheduleModel).findAll({
     where: {
       examinationSessionId: Number(examinationSessionId),
       subjectId: { [Op.in]: subjectIds }
     },
-    attributes: ["subjectId"],
-    raw: true,
+    attributes: ["examScheduleId", "subjectId", "sessionId", "academicYearId"],
+    include: [
+      {
+        model: model.examScheduleRoomCapacityModel,
+        as: "roomCapacities",
+        attributes: ["capacity"],
+      },
+      {
+        model: model.examSetupTypeTermModel,
+        as: "examSetupTypeTerm",
+        attributes: ["courseId", "term"],
+      },
+    ],
     transaction: options.transaction,
   });
-  return records.map(r => r.subjectId);
 }
 
 export async function findCoursesByIds(courseIds, options = {}) {
