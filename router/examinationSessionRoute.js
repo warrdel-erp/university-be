@@ -114,11 +114,7 @@ const getSubjectsBySessionAndTermSchema = {
   }),
 };
 
-const getSchedulesSchema = {
-  query: z.object({
-    examinationSessionId: positiveIntegerQueryId,
-  }),
-};
+
 
 router.post('/', userAuth, validate(createSessionSchema), examinationSessionController.createExaminationSession);
 router.get('/', userAuth, examinationSessionController.getExaminationSessions);
@@ -128,7 +124,6 @@ router.get('/structure', userAuth, validate(getStructureSchema), examinationSess
 
 router.get('/subjects', userAuth, validate(getSubjectsBySessionAndTermSchema), examinationSessionController.getMappedSubjectsBySessionAndTerm);
 
-router.get('/schedules', userAuth, validate(getSchedulesSchema), examinationSessionController.getExamSchedulesBySession);
 
 router.patch('/', userAuth, validate(updateSessionSchema), examinationSessionController.updateExaminationSession);
 router.delete('/', userAuth, validate(getSessionByIdSchema), examinationSessionController.deleteExaminationSession);

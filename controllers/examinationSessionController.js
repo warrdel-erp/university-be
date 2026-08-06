@@ -155,14 +155,3 @@ export const getMappedSubjectsBySessionAndTerm = async (req, res) => {
   }
 };
 
-export const getExamSchedulesBySession = async (req, res) => {
-  try {
-    const { examinationSessionId } = req.query;
-    const result = await examinationSessionServices.getExamSchedulesBySession(examinationSessionId);
-    return SuccessResponse(res, 200, "Examination session exam schedules fetched successfully", result);
-  } catch (error) {
-    console.error("Error fetching examination session exam schedules:", error);
-    const statusCode = error.statusCode || 500;
-    return ErrorResponse(res, statusCode, getErrorMessage(error, "Failed to fetch examination session exam schedules"));
-  }
-};

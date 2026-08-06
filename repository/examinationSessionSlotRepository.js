@@ -87,14 +87,17 @@ export async function getExaminationSessionSlots(
 
   const roomRows = await findRoomsByExamScheduleIds(examScheduleIds);
 
-  const roomMap = new Map();
+  const roomNumbersMap = new Map();
+  const roomCapacityMap = new Map();
 
   for (const room of roomRows) {
-    if (!roomMap.has(room.examScheduleId)) {
-      roomMap.set(room.examScheduleId, []);
+    if (!roomNumbersMap.has(room.examScheduleId)) {
+      roomNumbersMap.set(room.examScheduleId, []);
+      roomCapacityMap.set(room.examScheduleId, 0);
     }
 
-    roomMap.get(room.examScheduleId).push(room.classRoom?.roomNumber);
+    roomNumbersMap.get(room.examScheduleId).push(room.classRoom?.roomNumber);
+    roomCapacityMap.set(room.examScheduleId, roomCapacityMap.get(room.examScheduleId) + Number(room.capacity || 0));
   }
 
   const studentCountMap = new Map();
@@ -129,7 +132,14 @@ export async function getExaminationSessionSlots(
       item.studentCount = 0;
     }
 
-    item.roomNumbers = roomMap.get(item.examScheduleId) || [];
+    item.roomNumbers = roomNumbersMap.get(item.examScheduleId) || [];
+    item.roomCapacity = roomCapacityMap.get(item.examScheduleId) || 0;
+
+    const hasAssignedRoom = item.roomCapacity > 0;
+    item.noRoom = !hasAssignedRoom;
+    item.needsRoom = hasAssignedRoom && item.roomCapacity < item.studentCount;
+    item.overCapacity = hasAssignedRoom && item.roomCapacity > item.studentCount;
+    item.confirmed = hasAssignedRoom && item.roomCapacity === item.studentCount;
 
     if (!scheduleMap.has(item.examinationSessionSlotId)) {
       scheduleMap.set(item.examinationSessionSlotId, []);
