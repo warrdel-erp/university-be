@@ -1,4 +1,5 @@
 import * as model from "../models/index.js";
+import { Op } from "sequelize";
 import { scoped } from "../utility/scoped.js";
 import * as examStructureScheduleRepository from "../repository/examStructureScheduleMappingRepository.js";
 import { getTimeSlotRange } from "../utility/timeSlot.js";
@@ -391,6 +392,76 @@ async function assertNoStudentExamTimeConflict(examDetail, excludeExamScheduleId
   }
 }
 
+async function assertUniqueExamScheduleMapping(examDetail, excludeExamScheduleId) {
+  if (!examDetail.courseId || !examDetail.sessionId || !examDetail.subjectId) {
+    return;
+  }
+
+  let examinationSessionId = examDetail.examinationSessionId;
+  if (!examinationSessionId && examDetail.examSetupTypeId && examDetail.examDate) {
+    const sessionWhere = {
+      assessmentTypeId: Number(examDetail.examSetupTypeId),
+      examStartDate: { [Op.lte]: examDetail.examDate },
+      examEndDate: { [Op.gte]: examDetail.examDate },
+    };
+    const examinationSession = await scoped(model.examinationSessionModel).findOne({
+      where: sessionWhere,
+      attributes: ["examinationSessionId"],
+    });
+    if (examinationSession) {
+      examinationSessionId = examinationSession.examinationSessionId;
+    }
+  }
+
+  if (!examinationSessionId) {
+    return;
+  }
+
+  const whereClause = {
+    sessionId: examDetail.sessionId,
+    examinationSessionId: examinationSessionId,
+    subjectId: examDetail.subjectId,
+  };
+
+  if (excludeExamScheduleId) {
+    whereClause.examScheduleId = { [Op.ne]: excludeExamScheduleId };
+  }
+
+  const conflict = await scoped(model.examScheduleModel).findOne({
+    where: whereClause,
+    include: [
+      {
+        model: model.examSetupTypeTermModel,
+        as: "examSetupTypeTerm",
+        where: { courseId: examDetail.courseId },
+        required: true,
+      }
+    ],
+    raw: true,
+  });
+
+  if (conflict) {
+    throw new Error("Cannot add duplicate exam schedule: A schedule with the same Course, Session, Examination Session, and Subject already exists.");
+  }
+
+  const conflictBySubject = await scoped(model.examScheduleModel).findOne({
+    where: whereClause,
+    include: [
+      {
+        model: model.subjectModel,
+        as: "subjectSchedule",
+        where: { courseId: examDetail.courseId },
+        required: true,
+      }
+    ],
+    raw: true,
+  });
+
+  if (conflictBySubject) {
+    throw new Error("Cannot add duplicate exam schedule: A schedule with the same Course, Session, Examination Session, and Subject already exists.");
+  }
+}
+
 export async function addExamSchedule(examDetail, createdBy, updatedBy) {
   examDetail.createdBy = createdBy;
   examDetail.updatedBy = updatedBy;
@@ -399,8 +470,6 @@ export async function addExamSchedule(examDetail, createdBy, updatedBy) {
   await resolveSessionId(examDetail);
   await resolveAcademicYearId(examDetail);
 
-
-
   const resolvedTerm = await resolveTermForExamDetail(examDetail);
   if (resolvedTerm != null) {
     examDetail.term = resolvedTerm;
@@ -408,9 +477,9 @@ export async function addExamSchedule(examDetail, createdBy, updatedBy) {
   delete examDetail.semesterId;
 
   await assertNoStudentExamTimeConflict(examDetail);
+  await assertUniqueExamScheduleMapping(examDetail);
 
-
-    return await examStructureScheduleRepository.addExamSchedule(examDetail);
+  return await examStructureScheduleRepository.addExamSchedule(examDetail);
 }
 
 export async function updateExamSchedule(examScheduleId, examDetail, updatedBy) {
@@ -427,6 +496,8 @@ export async function updateExamSchedule(examScheduleId, examDetail, updatedBy) 
   delete examDetail.semesterId;
 
   await assertNoStudentExamTimeConflict(examDetail, examScheduleId);
+  await assertUniqueExamScheduleMapping(examDetail, examScheduleId);
+  
   await examStructureScheduleRepository.updateExamSchedule(examScheduleId, examDetail);
 }
 
