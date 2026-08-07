@@ -62,9 +62,27 @@ module.exports = {
 
     // 4. Make examination_session_slot_id NOT NULL
     if (tableDescription.examination_session_slot_id) {
+      try {
+        await queryInterface.removeConstraint('exam_schedule', 'exam_schedule_examination_session_slot_id_foreign_idx');
+      } catch (err) {
+        console.log("Constraint might not exist or already removed.", err.message);
+      }
+
       await queryInterface.changeColumn('exam_schedule', 'examination_session_slot_id', {
         type: Sequelize.BIGINT,
         allowNull: false,
+      });
+
+      await queryInterface.addConstraint('exam_schedule', {
+        fields: ['examination_session_slot_id'],
+        type: 'foreign key',
+        name: 'exam_schedule_examination_session_slot_id_foreign_idx',
+        references: {
+          table: 'examination_session_slot',
+          field: 'examination_session_slot_id'
+        },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
       });
     }
   },
