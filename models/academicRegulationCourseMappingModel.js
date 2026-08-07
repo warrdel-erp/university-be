@@ -1,26 +1,46 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
+import academicRegulationModel from "./academicRegulationModel.js";
+import courseModel from "./courseModel.js";
+import sessionModel from "./sessionModel.js";
 import users from "./userModel.js";
-import acedmicYear from "./acedmicYearModel.js";
 import instituteModel from "./instituteModel.js";
 import university from "./universityModel.js";
 
-const examTypeModel = sequelize.define(
-    'exam_type',
+const academicRegulationCourseMappingModel = sequelize.define(
+    'academic_regulation_course_mapping',
     {
-        examTypeId: {
+        academicRegulationCourseMappingId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'exam_type_id'
+            field: 'academic_regulation_course_mapping_id'
         },
-        academicYearId: {
+        academicRegulationId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'acedmic_year_id',
+            field: 'academic_regulation_id',
             references: {
-                model: acedmicYear,
-                key: 'acedmic_year_id'
+                model: academicRegulationModel,
+                key: 'academic_regulation_id'
+            }
+        },
+        courseId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'course_id',
+            references: {
+                model: courseModel,
+                key: 'course_id'
+            }
+        },
+        sessionId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'session_id',
+            references: {
+                model: sessionModel,
+                key: 'session_id'
             }
         },
         instituteId: {
@@ -40,21 +60,6 @@ const examTypeModel = sequelize.define(
                 model: university,
                 key: 'university_id'
             }
-        },
-        examName: {
-            type: DataTypes.STRING,
-            field: 'exam_name',
-            allowNull: false
-        },
-        averagePassingMark: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'average_passing_mark'
-        },
-        isAveragePassingMark: {
-            type: DataTypes.BOOLEAN,
-            allowNull: false,
-            field: 'is_average_passing_mark'
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -93,12 +98,12 @@ const examTypeModel = sequelize.define(
         }
     },
     {
-        tableName: 'exam_type',
+        tableName: 'academic_regulation_course_mapping',
         timestamps: true,
         paranoid: true
     }
 );
 
-examTypeModel.scopeConfig = { university: true, institute: true, academicYear: true };
+academicRegulationCourseMappingModel.scopeConfig = { university: true, institute: true };
 
-export default examTypeModel;
+export default academicRegulationCourseMappingModel;

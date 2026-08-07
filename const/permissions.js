@@ -1144,38 +1144,20 @@ export const PERMISSIONS = {
         value: "SHIFT_LIST_DELETE",
         parentPermission: 'SHIFT_LIST',
     },
-    ADD_STUDENT_SIDEBAR: {
-        value: "ADD_STUDENT_SIDEBAR",
-        parentPermission: 'ADD_STUDENT',
-    },
-    ADD_STUDENT_ADD: {
-        value: "ADD_STUDENT_ADD",
-        parentPermission: 'ADD_STUDENT',
-        dependentOn: ["COURSES", "ACADEMIC_YEAR", "SESSION_SETUP", "STUDENT_LIST"],
-    },
-    ADD_STUDENT_EDIT: {
-        value: "ADD_STUDENT_EDIT",
-        parentPermission: 'ADD_STUDENT',
-        dependentOn: ["COURSES", "ACADEMIC_YEAR", "SESSION_SETUP", "STUDENT_LIST"],
-    },
-    ADD_STUDENT_DELETE: {
-        value: "ADD_STUDENT_DELETE",
-        parentPermission: 'ADD_STUDENT',
-    },
-    ADD_STUDENT_IMPORT: {
-        value: "ADD_STUDENT_IMPORT",
-        parentPermission: 'ADD_STUDENT',
-    },
-    ADD_STUDENT_MAPPING: {
-        value: "ADD_STUDENT_MAPPING",
-        parentPermission: 'ADD_STUDENT',
-    },
-    ADD_STUDENT_ADD_ELECTIVE: {
-        value: "ADD_STUDENT_ADD_ELECTIVE",
-        parentPermission: 'ADD_STUDENT',
-    },
     STUDENT_LIST_SIDEBAR: {
         value: "STUDENT_LIST_SIDEBAR",
+        parentPermission: 'STUDENT_LIST',
+    },
+    STUDENT_LIST_ADD: {
+        value: "STUDENT_LIST_ADD",
+        parentPermission: 'STUDENT_LIST',
+    },
+    STUDENT_LIST_EDIT: {
+        value: "STUDENT_LIST_EDIT",
+        parentPermission: 'STUDENT_LIST',
+    },
+    STUDENT_LIST_DELETE: {
+        value: "STUDENT_LIST_DELETE",
         parentPermission: 'STUDENT_LIST',
     },
     STUDENT_LIST_EXPORT: {
@@ -1893,7 +1875,6 @@ export const PERMISSIONS = {
     },
     ASSET_ISSUE_RETURN_SIDEBAR: {
         value: "ASSET_ISSUE_RETURN_SIDEBAR",
-        parentPermission: 'ASSET_ISSUE_RETURN',
     },
     ASSET_ISSUE_RETURN_ADD: {
         value: "ASSET_ISSUE_RETURN_ADD",
@@ -1907,5 +1888,6 @@ export const PERMISSIONS = {
         value: "ASSET_ISSUE_RETURN_DELETE",
         parentPermission: 'ASSET_ISSUE_RETURN',
     }
+
 
 };

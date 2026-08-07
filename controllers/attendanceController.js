@@ -204,7 +204,7 @@ export async function getStudentsBatchAttendance(req, res) {
       filters
     );
 
-    return SuccessResponse(res, 200, "Student Batch Attendance Fetched Successfully", data);
+    return SuccessResponse(res, 200, "Student attendance fetched successfully", data);
   } catch (error) {
     console.error("Controller Error:", error);
     ErrorResponse(res, 500, error.message || 'An unexpected error occurred');

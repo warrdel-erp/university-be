@@ -4,6 +4,10 @@ export const listCourses = async (options = {}) => {
   return courseRepository.getAllCourses(options);
 };
 
+export const getCourseByCourseId = async (courseId) => {
+  return courseRepository.getCourseByCourseId(courseId);
+};
+
 export const getCourseWithSubjects = async (academicYearId) => {
   return courseRepository.getCourseListWithSubjects(academicYearId);
 };

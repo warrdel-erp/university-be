@@ -472,7 +472,7 @@ router.get(
 router.patch(
   "/:studentId",
   userAuth,
-  checkAccess(PERMISSIONS.ADD_STUDENT_EDIT.value, null),
+  checkAccess(PERMISSIONS.STUDENT_LIST_EDIT.value, null),
   validate({
     params: updateStudentDetailsParamsSchema,
     body: updateStudentDetailsBodySchema,
@@ -480,7 +480,7 @@ router.patch(
   mapStudentBody,
   updateStudentDetails
 );
-router.delete("/:studentId", userAuth, checkAccess(PERMISSIONS.ADD_STUDENT_DELETE.value, null), deleteStudentDetail);
+router.delete("/:studentId", userAuth, checkAccess(PERMISSIONS.STUDENT_LIST_DELETE.value, null), deleteStudentDetail);
 
 const emptyEnrollNumberQuerySchema = z.object({
   page: z.coerce
@@ -542,11 +542,11 @@ const sectionStudentMappingQuerySchema = z.object({
   search: z.string().trim().optional(),
 });
 
-router.post("/studentMapping", userAuth, checkAccess(PERMISSIONS.ADD_STUDENT_MAPPING.value, null), studentCourseMapping);
+router.post("/studentMapping", userAuth, checkAccess(PERMISSIONS.ADD_STUDENT.value, null), studentCourseMapping);
 router.post(
   "/sectionStudentMapping",
   userAuth,
-  checkAccess(PERMISSIONS.ADD_STUDENT_ADD.value, null),
+  checkAccess(PERMISSIONS.ADD_STUDENT.value, null),
   validate({ body: sectionStudentMappingBodySchema }),
   sectionStudentMapping,
 );
@@ -557,7 +557,7 @@ router.get(
   validate({ query: sectionStudentMappingQuerySchema }),
   getSectionStudentMapping,
 );
-router.post("/electiveSubject", userAuth, checkAccess(PERMISSIONS.ADD_STUDENT_ADD_ELECTIVE.value, null), addElectiveSubject);
+router.post("/electiveSubject", userAuth, checkAccess(PERMISSIONS.ADD_STUDENT.value, null), addElectiveSubject);
 
 const promotionStudentListQuerySchema = z.object({
   page: z.coerce
@@ -620,7 +620,7 @@ const promotionAvailableClassSectionQuerySchema = z.object({
 router.post(
   "/promoteStudent",
   userAuth,
-  checkAccess(PERMISSIONS.ADD_STUDENT_ADD.value, null),
+  checkAccess(PERMISSIONS.STUDENT_PROMOTE_EXECUTE.value, null),
   validate({ body: promoteStudentBodySchema }),
   promoteStudent,
 );
@@ -689,7 +689,7 @@ router.get(
 router.post(
   "/",
   userAuth,
-  checkAccess(PERMISSIONS.ADD_STUDENT_ADD.value, null),
+  checkAccess(PERMISSIONS.ADD_STUDENT.value, null),
   validate({ body: addStudentWithFeePlanProfileBodySchema }),
   mapStudentBody,
   addStudentWithFeePlanProfile
@@ -698,6 +698,7 @@ router.post(
 router.post(
   "/import",
   userAuth,
+  checkAccess(PERMISSIONS.ADD_STUDENT.value, null),
   mapStudentImportBody,
   validate({ body: importStudentBodySchema }),
   importStudentData,

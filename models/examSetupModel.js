@@ -2,7 +2,6 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import users from "./userModel.js";
 import subjectModel from "./subjectModel.js";
-import examTypeModel from "./examTypeModel.js";
 import courseModel from "./courseModel.js";
 import classRoomModel from "./classRoomModel.js";
 
@@ -25,8 +24,8 @@ const examSetupModel = sequelize.define(
             allowNull: false,
             field: "exam_type_id",
             references: {
-                model: examTypeModel,
-                key: "exam_type_id",
+                model: "exam_setup_type",
+                key: "exam_setup_type_id",
             },
         },
         classId: {

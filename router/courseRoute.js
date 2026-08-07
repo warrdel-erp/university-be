@@ -28,8 +28,17 @@ const courseIdParamSchema = z.object({
     courseId: z.coerce.number().int().positive(),
 });
 
+const getSingleCourseQuerySchema = z.object({
+    courseId: z.preprocess(
+        (val) => (val === "" || val === null ? undefined : val),
+        z.union([z.string().regex(/^\d+$/).transform(Number), z.number().int().positive({ message: "courseId is required" })])
+    ),
+});
+
 // Routes
 router.get("/", userAuth, checkAccess(PERMISSIONS.COURSES.value, null), validate({ query: listCoursesSchema }), courseController.listCourses);
+
+router.get("/single", userAuth, checkAccess(PERMISSIONS.COURSES.value, null), validate({ query: getSingleCourseQuerySchema }), courseController.getSingleCourse);
 
 router.get("/withSubjects", userAuth, checkAccess(PERMISSIONS.COURSES.value, null), validate({ query: courseListWithSubjectsSchema }), courseController.getCourseWithSubjects);
 

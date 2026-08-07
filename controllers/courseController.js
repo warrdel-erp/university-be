@@ -40,6 +40,27 @@ export const getCourseWithSubjects = async (req, res) => {
   }
 };
 
+export const getSingleCourse = async (req, res) => {
+  try {
+    const courseId = Number(req.query.courseId || req.params.courseId);
+
+    if (!courseId) {
+      return ErrorResponse(res, 400, "courseId is required");
+    }
+
+    const result = await courseService.getCourseByCourseId(courseId);
+
+    if (!result) {
+      return ErrorResponse(res, 404, "Course not found");
+    }
+
+    return SuccessResponse(res, 200, "Course details fetched successfully", result);
+  } catch (error) {
+    console.error("Error in Get Single Course Controller:", error);
+    return ErrorResponse(res, 500, "Failed to fetch course details", error.message);
+  }
+};
+
 export const getCourseSessions = async (req, res) => {
   try {
     const courseId = Number(req.params.courseId);

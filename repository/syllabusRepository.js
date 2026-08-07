@@ -407,13 +407,6 @@ export async function findSubjectsWithSyllabusByTerm(courseId, term, academicYea
               model: model.examSetupTypeModel,
               as: 'examSetupTypeSyllabus',
               attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
-              include: [
-                {
-                  model: model.examStructureModel,
-                  as: 'examStructure',
-                  attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
-                },
-              ],
             },
           ],
         },

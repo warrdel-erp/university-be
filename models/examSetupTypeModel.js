@@ -1,7 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
-import examStructureModel from "./examStructureModel.js";
 import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
 
@@ -13,15 +12,6 @@ const examSetupTypeModel = sequelize.define(
             primaryKey: true,
             autoIncrement: true,
             field: 'exam_setup_type_id'
-        },
-        examStructureId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'exam_structure_id',
-            references: {
-                model: examStructureModel,
-                key: 'exam_structure_id'
-            }
         },
         universityId: {
             type: DataTypes.INTEGER,
@@ -41,26 +31,30 @@ const examSetupTypeModel = sequelize.define(
                 key: 'institute_id'
             }
         },
-        examType: {
-            type: DataTypes.STRING,
-            field: 'exam_type',
-            allowNull: true
-        },
-        maximumAssessment: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'maximum_assessment'
-        },
         examName: {
-            type: DataTypes.STRING,
+            type: DataTypes.STRING(100),
             field: 'exam_name',
             allowNull: true
         },
-        isPublish: {
-            type: DataTypes.BOOLEAN,
-            allowNull: false,
-            defaultValue: false,
-            field: 'is_publish'
+        examCode: {
+            type: DataTypes.STRING(30),
+            field: 'exam_code',
+            allowNull: true
+        },
+        examCategory: {
+            type: DataTypes.STRING(100),
+            field: 'exam_category',
+            allowNull: true
+        },
+        examSubcategory: {
+            type: DataTypes.STRING(100),
+            field: 'exam_subcategory',
+            allowNull: true
+        },
+        examDescription: {
+            type: DataTypes.STRING(500),
+            field: 'exam_description',
+            allowNull: true
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -101,18 +95,7 @@ const examSetupTypeModel = sequelize.define(
     {
         tableName: 'exam_setup_type',
         timestamps: true,
-        paranoid: true,
-        hooks: {
-            beforeValidate: async (examSetupType, options) => {
-                if (examSetupType.examStructureId && (!examSetupType.universityId || !examSetupType.instituteId)) {
-                    const examStructure = await examStructureModel.findByPk(examSetupType.examStructureId);
-                    if (examStructure) {
-                        examSetupType.universityId = examStructure.universityId;
-                        examSetupType.instituteId = examStructure.instituteId;
-                    }
-                }
-            }
-        }
+        paranoid: true
     }
 );
 

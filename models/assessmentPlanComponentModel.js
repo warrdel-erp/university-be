@@ -1,37 +1,66 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import users from "./userModel.js";
-import acedmicYear from "./acedmicYearModel.js";
-import instituteModel from "./instituteModel.js";
-import university from "./universityModel.js";
-import course from "./courseModel.js";
-import sessionModel from "./sessionModel.js";
 
-const examStructureModel = sequelize.define(
-    'exam_structure', // exam_rule 
+const assessmentPlanComponentModel = sequelize.define(
+    'assessment_plan_component',
     {
-        examStructureId: {
+        assessmentPlanComponentId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'exam_structure_id'
+            field: 'assessment_plan_component_id'
+        },
+        examSetupTypeId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'exam_setup_type_id',
+            references: {
+                model: 'exam_setup_type',
+                key: 'exam_setup_type_id'
+            }
         },
         academicYearId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'acedmic_year_id',
             references: {
-                model: acedmicYear,
+                model: 'acedmic_year',
                 key: 'acedmic_year_id'
             }
         },
-        sessionId: {
+        assessmentPlanId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'session_id',
+            field: 'assessment_plan_id',
             references: {
-                model: sessionModel,
-                key: 'session_id'
+                model: 'assessment_plan',
+                key: 'assessment_plan_id'
+            }
+        },
+        evaluationBy: {
+            type: DataTypes.ENUM('Faculty', 'CoE', 'External'),
+            allowNull: false,
+            defaultValue: 'Faculty',
+            field: 'evaluation_by'
+        },
+        weightagePercentage: {
+            type: DataTypes.DECIMAL(5, 2),
+            allowNull: false,
+            field: 'weightage_percentage'
+        },
+        maxAssessments: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            defaultValue: 1,
+            field: 'max_assessments'
+        },
+        universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'university_id',
+            references: {
+                model: 'university',
+                key: 'university_id'
             }
         },
         instituteId: {
@@ -39,48 +68,25 @@ const examStructureModel = sequelize.define(
             allowNull: false,
             field: 'institute_id',
             references: {
-                model: instituteModel,
+                model: 'institute',
                 key: 'institute_id'
             }
         },
-        universityId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'university_id',
-            references: {
-                model: university,
-                key: 'university_id'
-            }
-        },
-        courseId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'course_id',
-            references: {
-                model: course,
-                key: 'course_id'
-            }
-        },
-        totalMarks:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'total_marks'
-        },
         createdBy: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'created_by',
             references: {
-                model: users,
+                model: 'users',
                 key: 'user_id'
             }
         },
         updatedBy: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'updated_by',
             references: {
-                model: users,
+                model: 'users',
                 key: 'user_id'
             }
         },
@@ -103,12 +109,12 @@ const examStructureModel = sequelize.define(
         }
     },
     {
-        tableName: 'exam_structure',
+        tableName: 'assessment_plan_component',
         timestamps: true,
         paranoid: true
     }
 );
 
-examStructureModel.scopeConfig = { university: true, institute: true, academicYear: true };
+assessmentPlanComponentModel.scopeConfig = { university: true, institute: true };
 
-export default examStructureModel;
+export default assessmentPlanComponentModel;

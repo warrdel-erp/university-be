@@ -51,6 +51,7 @@ function scopeFieldsForModel(model, scopeWhere) {
  */
 export const buildScope = (model, options = {}) => {
   const where = {};
+  if (!model) return where;
   const config = { ...(model.scopeConfig || {}), ...(options.scopeConfig || {}) };
   const store = requestContext.getStore();
   const attrs = model.rawAttributes || {};

@@ -7,11 +7,11 @@ async function assertScopedExamSetup(examSetupId, transaction) {
         attributes: ['examSetupId'],
         transaction,
         include: [{
-            model: model.examTypeModel,
-            as: 'examType',
+            model: model.examSetupTypeModel,
+            as: 'examSetupType',
             required: true,
-            where: buildScope(model.examTypeModel),
-            attributes: ['examTypeId'],
+            where: buildScope(model.examSetupTypeModel),
+            attributes: ['examSetupTypeId'],
         }],
     });
 }
@@ -46,11 +46,11 @@ export async function getAllExamAttendance(academicYearId) {
                 required: true,
                 include: [
                     {
-                        model: model.examTypeModel,
-                        as: "examType",
-                        attributes: ["examTypeId", "academicYearId"],
+                        model: model.examSetupTypeModel,
+                        as: "examSetupType",
+                        attributes: ["examSetupTypeId"],
                         required: true,
-                        where: { academicYearId: Number(academicYearId) },
+                        where: buildScope(model.examSetupTypeModel),
                     },
                 ],
             },

@@ -42,7 +42,6 @@ import userRolePermission from "./router/userRolePermissionRoute.js";
 import dormitoryRoomType from "./router/roomTypeRoute.js";
 import dormitoryList from "./router/dormitoryListRoute.js";
 import addDormitory from "./router/addDormitoryRoute.js";
-import examType from "./router/examTypeRoute.js";
 import examSetup from "./router/examSetupRoute.js";
 import examAttendance from "./router/examAttendanceRoute.js";
 import transportRoute from "./router/transportRoute.js";
@@ -82,6 +81,8 @@ import internalAssessment from "./router/internalAssessmentRoute.js";
 import jobSetting from "./router/jobSettingsRoutes.js";
 import jobs from "./router/jobRoutes.js";
 import gradingSchemas from "./router/gradingSchemasRouter.js";
+import academicRegulation from "./router/academicRegulationRoute.js";
+import assessmentPlan from "./router/assessmentPlanRoute.js";
 import credit from "./router/creditRoute.js";
 import evalution from "./router/evalutionRoute.js";
 import terms from "./router/termsRoute.js";
@@ -96,6 +97,7 @@ import teacherExamAssignment from "./router/teacherExamAssignmentRoute.js";
 import teacherSubstitute from "./router/teacherSubstituteRoute.js";
 import questionPaperBlueprint from "./router/questionPaperBlueprintRoute.js";
 import examSetupTypeTerm from "./router/examSetupTypeTermRoute.js";
+import examinationSession from "./router/examinationSessionRoute.js";
 import examSetupType from "./router/examSetupTypeRoute.js";
 import examSchedule from "./router/examScheduleRoute.js";
 import studentHallTicket from "./router/studentHallTicketRoute.js";
@@ -143,6 +145,8 @@ app.use("/questionBank", questionBank);
 app.use("/examSetupType", examSetupType);
 
 app.use("/gradingSchemas", gradingSchemas);
+app.use("/academicRegulation", academicRegulation);
+app.use("/assessmentPlan", assessmentPlan);
 
 app.use("/credit", credit);
 app.use("/evalution", evalution);
@@ -181,11 +185,13 @@ app.use("/teacherExamAssignment", teacherExamAssignment);
 app.use("/teacherSubstitute", teacherSubstitute);
 app.use("/questionPaperBlueprint", questionPaperBlueprint);
 app.use("/examSetupTypeTerm", examSetupTypeTerm);
+app.use("/examinationSession", examinationSession);
 app.use("/examSchedule", examSchedule);
+
 app.use("/examStructure", examStructure);
+
 app.use("/examScheduleMapping", examScheduleMapping);
 app.use("/internalAssessment", internalAssessment);
-app.use("/examType", examType);
 app.use("/examSetup", examSetup);
 app.use("/examAttendance", examAttendance);
 app.use("/studentHallTicket", studentHallTicket);
