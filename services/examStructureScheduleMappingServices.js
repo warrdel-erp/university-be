@@ -2,6 +2,7 @@ import * as model from "../models/index.js";
 import { Op } from "sequelize";
 import { scoped } from "../utility/scoped.js";
 import * as examStructureScheduleRepository from "../repository/examStructureScheduleMappingRepository.js";
+import * as examinationSessionRepository from "../repository/examinationSessionRepository.js";
 import { getTimeSlotRange } from "../utility/timeSlot.js";
 
 const studentListFields = [
@@ -38,14 +39,10 @@ async function resolveSlotDetails(examDetail) {
 async function resolveDurationFromAssessmentPlan(examDetail) {
   if (!examDetail.examinationSessionId) return;
 
-  // Fetch examination session
-  const session = await scoped(model.examinationSessionModel).findOne({
-    where: {
-      examinationSessionId: Number(examDetail.examinationSessionId),
-    },
-    attributes: ["examinationSessionId", "assessmentTypeId"],
-    raw: true,
-  });
+  // 1. Fetch examinationSession → get examSetupTypeId (assessmentTypeId)
+  const session = await examinationSessionRepository.findExaminationSessionAssessmentTypeById(
+    examDetail.examinationSessionId,
+  );
 
   if (!session) {
     const err = new Error("Examination session not found.");
@@ -53,49 +50,31 @@ async function resolveDurationFromAssessmentPlan(examDetail) {
     throw err;
   }
 
-  // Fetch assessment plan component for this session + assessment type
-  const component = await scoped(model.assessmentPlanComponentModel).findOne({
-    attributes: [
-      "assessmentPlanComponentId",
-      "duration",
-    ],
-    where: {
-      assessmentTypeId: session.assessmentTypeId,
-    },
-    include: [
-      {
-        model: model.assessmentPlanModel,
-        as: "assessmentPlan",
-        attributes: [],
-        required: true,
-        where: {
-          examinationSessionId: session.examinationSessionId,
-        },
-      },
-    ],
-  });
+  if (!session.assessmentTypeId) {
+    const err = new Error("Assessment plan is not configured for this examination session.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // 2. Fetch assessment plan component duration using examSetupTypeId
+  const component = await examinationSessionRepository.findAssessmentPlanComponentDurationBySetupTypeId(
+    session.assessmentTypeId,
+  );
 
   if (!component) {
-    const err = new Error(
-      "Assessment plan component not found for this examination session."
-    );
+    const err = new Error("Assessment plan component not found for this examination session type.");
     err.statusCode = 400;
     throw err;
   }
 
   if (component.duration == null) {
-    const err = new Error(
-      "Duration is not configured in the assessment plan component."
-    );
+    const err = new Error("Duration is not configured in the assessment plan component.");
     err.statusCode = 400;
     throw err;
   }
 
-  // Save snapshot values
-  examDetail.assessmentPlanComponentId =
-    component.assessmentPlanComponentId;
-
-  examDetail.durationMinute = component.duration;
+  // 3. Copy duration as a snapshot value — no foreign key stored
+  examDetail.duration = String(component.duration);
 }
 
 async function resolveSessionId(examDetail) {

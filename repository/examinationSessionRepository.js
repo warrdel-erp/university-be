@@ -152,6 +152,15 @@ export async function findAssessmentPlanComponentsBySetupTypeId(examSetupTypeId,
   });
 }
 
+export async function findAssessmentPlanComponentDurationBySetupTypeId(examSetupTypeId, options = {}) {
+  return scoped(model.assessmentPlanComponentModel).findOne({
+    where: { examSetupTypeId: Number(examSetupTypeId) },
+    attributes: ["duration"],
+    raw: true,
+    transaction: options.transaction,
+  });
+}
+
 export async function findAssessmentPlanSubjectMappings(where, options = {}) {
   return scoped(model.assessmentPlanSubjectMappingModel).findAll({
     where,
