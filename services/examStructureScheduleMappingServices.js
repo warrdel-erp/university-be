@@ -470,8 +470,8 @@ async function assertUniqueExamScheduleMapping(examDetail, excludeExamScheduleId
     where: whereClause,
     include: [
       {
-        model: model.examSetupTypeTermModel,
-        as: "examSetupTypeTerm",
+        model: model.subjectModel,
+        as: "subjectSchedule",
         where: { courseId: examDetail.courseId },
         required: true,
       }
@@ -507,6 +507,9 @@ export async function addExamSchedule(examDetail, createdBy, updatedBy) {
 
   // Do NOT accept duration from frontend — always resolve from assessment plan
   delete examDetail.duration;
+  
+  // Set examSetupTypeTermId to null explicitly
+  examDetail.examSetupTypeTermId = null;
 
   await resolveSlotDetails(examDetail);
   await resolveSessionId(examDetail);

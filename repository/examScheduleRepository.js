@@ -57,6 +57,10 @@ export async function getExamSchedules(filters = {}) {
                     model: model.subjectModel,
                     as: "subjectSchedule",
                     attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
+                    where: {
+                        ...(courseId && { courseId: Number(courseId) }),
+                    },
+                    required: !!courseId,
                 },
                 {
                     model: model.acedmicYearModel,
@@ -64,23 +68,16 @@ export async function getExamSchedules(filters = {}) {
                     attributes: ["academicYearId", "yearTitle"],
                 },
                 {
-                    model: model.examSetupTypeTermModel,
-                    as: "examSetupTypeTerm",
-                    attributes: ["examSetupTypeTermId", "term", "courseId"],
-                    where: {
-                        ...buildScope(model.examSetupTypeTermModel),
-                        ...(courseId && { courseId }),
-                        ...(term && { term }),
-                    },
-                    required: !!(courseId || term),
+                    model: model.examinationSessionModel,
+                    as: "examinationSession",
+                    attributes: ["examinationSessionId", "assessmentTypeId"],
                     include: [
                         {
                             model: model.examSetupTypeModel,
-                            as: "examSetupType",
+                            as: "assessmentType",
                             attributes: ["examSetupTypeId", "examType", "examName"],
-                            where: buildScope(model.examSetupTypeModel),
-                        },
-                    ],
+                        }
+                    ]
                 },
                 {
                     model: model.sessionModel,

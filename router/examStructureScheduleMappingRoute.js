@@ -28,7 +28,6 @@ const addScheduleSchema = {
     subjectId: z.coerce.number().int().positive().optional().nullable(),
     term: z.coerce.number().int().positive().optional().nullable(),
     examSetupTypeId: z.coerce.number().int().positive().optional().nullable(),
-    examSetupTypeTermId: z.coerce.number().int().positive().optional().nullable(),
     academicYearId: z.coerce.number().int().positive().optional().nullable(),
     sessionId: z.coerce.number().int().positive().optional().nullable(),
     examinationSessionSlotId: z.coerce.number().int().positive().optional().nullable(),
