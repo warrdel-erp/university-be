@@ -106,7 +106,7 @@ export async function generateQuestionPaper(req, res) {
         return SuccessResponse(res, 201, `${numberOfPapers} Question paper(s) generated successfully`, result);
     } catch (error) {
         console.error("Generate Question Paper Error:", error);
-        return ErrorResponse(res, 500, error.message);
+        return ErrorResponse(res, error.statusCode || 400, error.message);
     }
 }
 

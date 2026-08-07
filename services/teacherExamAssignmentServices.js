@@ -18,6 +18,28 @@ async function resolveEmployeeIdFromUserId(userId) {
 export async function assignExam(data) {
   const employeeId = await resolveEmployeeIdFromUserId(data.userId);
 
+  const schedule = await scoped(model.examScheduleModel).findByPk(data.examScheduleId, {
+    attributes: ["examScheduleId", "examinationSessionId"],
+  });
+
+  if (!schedule) {
+    const error = new Error("Exam schedule not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (schedule.examinationSessionId) {
+    const session = await scoped(model.examinationSessionModel).findByPk(schedule.examinationSessionId, {
+      attributes: ["status"],
+    });
+
+    if (!session || session.status !== "Published") {
+      const error = new Error("Examination session must be published before assigning teachers.");
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
   const existing = await teacherExamAssignmentRepository.findAssignment({
     examScheduleId: data.examScheduleId,
     employeeId,

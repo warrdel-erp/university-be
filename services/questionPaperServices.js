@@ -63,7 +63,14 @@ export async function generateQuestionPaper(name, blueprintId, examScheduleId, n
         if (!blueprintRecord) {
             throw new Error(`Blueprint with id ${blueprintId} not found`);
         }
-        const blueprintSections = blueprintRecord.blueprint;
+        let blueprintSections = blueprintRecord.blueprint;
+        if (typeof blueprintSections === 'string') {
+            try {
+                blueprintSections = JSON.parse(blueprintSections);
+            } catch (e) {
+                throw new Error("Invalid blueprint format in database.");
+            }
+        }
 
         // 2. Fetch exam schedule
         const examSchedule = await questionPaperRepository.getExamScheduleById(examScheduleId);
@@ -89,7 +96,9 @@ export async function generateQuestionPaper(name, blueprintId, examScheduleId, n
                 );
 
                 if (questions.length < totalQuestions) {
-                    throw new Error(`Not enough approved questions found for section ${sectionName}. Expected ${totalQuestions}, got ${questions.length}`);
+                    const error = new Error(`Not enough approved questions found for section ${sectionName}. Expected ${totalQuestions}, got ${questions.length}`);
+                    error.statusCode = 400;
+                    throw error;
                 }
 
                 generatedPaper.push({
