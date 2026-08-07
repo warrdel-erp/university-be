@@ -24,14 +24,7 @@ export async function getDetailByExamType(examSetupTypeId) {
     const result = await scoped(model.examSetupTypeModel).findOne({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       where: { examSetupTypeId },
-      include: [
-        {
-          model: model.examSetupTypeTermModel,
-          as: "examSetupTypeTerms",
-          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-          required: false,
-        },
-      ],
+
     });
 
     return result;
@@ -59,26 +52,9 @@ export async function getAllExamTypes(academicYearId, termNumber, options = {}) 
     if (yearId) termWhere.academicYearId = yearId;
     if (termNumber != null) termWhere.term = Number(termNumber);
 
-    const termInclude = {
-      model: model.examSetupTypeTermModel,
-      as: "examSetupTypeTerms",
-      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-      where: termWhere,
-      required: termNumber != null,
-      include: [
-        {
-          model: model.examScheduleModel,
-          as: "examSchedules",
-          attributes: ["examScheduleId", "subjectId", "examDate", "examTime"],
-          required: false,
-        },
-      ],
-    };
-
     const queryOptions = {
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       where,
-      include: [termInclude],
       subQuery: false,
       distinct: true,
     };
