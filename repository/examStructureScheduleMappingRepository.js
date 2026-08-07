@@ -46,7 +46,7 @@ export async function addExamStructureSchedule(examDetailSchedule, options = {})
   {
     subjectId: examDetailSchedule.subjectId,
     term: examDetailSchedule.term,
-    examSetupTypeTermId: examDetailSchedule.examSetupTypeTermId,
+    examinationSessionId: examDetailSchedule.examinationSessionId,
     academicYearId: examDetailSchedule.academicYearId,
     sessionId: examDetailSchedule.sessionId,
     examDate: examDetailSchedule.examDate,
@@ -114,13 +114,7 @@ export async function getExamStructureSchedule(examSetupTypeId) {
         model: model.examSetupTypeTermModel,
         as: "examSetupTypeTerms",
         attributes: { exclude: ["createdAt", "updatedAt"] },
-        include: [
-          {
-            model: model.examScheduleModel,
-            as: "examSchedules",
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "answerSheetS3FileId"] },
-          },
-        ],
+
       },
     ],
   });
@@ -209,12 +203,7 @@ export async function findConflictingExamForStudentCohort({
       ],
     },
     include: [
-      {
-        model: model.examSetupTypeTermModel,
-        as: "examSetupTypeTerm",
-        attributes: ["courseId", "term"],
-        required: false,
-      },
+
       {
         model: model.subjectModel,
         as: "subjectSchedule",
@@ -363,16 +352,7 @@ export async function getExamScheduleById(examScheduleId) {
           model: model.subjectModel,
           as: "subjectSchedule",
         },
-        {
-          model: model.examSetupTypeTermModel,
-          as: "examSetupTypeTerm",
-          include: [
-            {
-              model: model.examSetupTypeModel,
-              as: "examSetupType",
-            },
-          ],
-        },
+
         {
           model: model.acedmicYearModel,
           as: "acedmicYearSchedule",
@@ -415,23 +395,16 @@ export async function findSubjectsWithSchedules(courseId, academicYearId, term, 
           "examScheduleId",
           "subjectId",
           "term",
-          "examSetupTypeTermId",
           "academicYearId",
           "sessionId",
           "examDate",
           "examTime",
           "type",
           "duration",
+          "examinationSessionSlotId",
+          "examinationSessionId",
           "createdBy",
           "updatedBy",
-        ],
-        include: [
-          {
-            model: model.examSetupTypeTermModel,
-            where: { examSetupTypeTermId },
-            as: "examSetupTypeTerm",
-            attributes: { exclude: ["createdAt", "updatedAt"] },
-          },
         ],
       },
     ],

@@ -536,8 +536,8 @@ export async function getMappedSubjectsBySessionAndTerm(
       examScheduleIds.push(sched.examScheduleId);
       
       if (sched.sessionId) sessionsForCounts.add(sched.sessionId);
-      if (sched.examSetupTypeTerm?.courseId) coursesForCounts.add(sched.examSetupTypeTerm.courseId);
-      if (sched.examSetupTypeTerm?.term) termsForCounts.add(sched.examSetupTypeTerm.term);
+      if (sched.subjectSchedule?.courseId) coursesForCounts.add(sched.subjectSchedule.courseId);
+      if (sched.term) termsForCounts.add(sched.term);
       if (sched.academicYearId) acedmicYearsForCounts.add(sched.academicYearId);
     }
   }

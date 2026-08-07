@@ -194,12 +194,12 @@ export async function findExamSchedulesBySubjects(examinationSessionId, subjectI
       examinationSessionId: Number(examinationSessionId),
       subjectId: { [Op.in]: subjectIds }
     },
-    attributes: ["examScheduleId", "subjectId", "sessionId", "academicYearId", "examDate", "examTime", "type", "duration", "examinationSessionSlotId"],
+    attributes: ["examScheduleId", "subjectId", "sessionId", "academicYearId", "examDate", "examTime", "type", "duration", "examinationSessionSlotId", "term"],
     include: [
       {
-        model: model.examSetupTypeTermModel,
-        as: "examSetupTypeTerm",
-        attributes: ["courseId", "term"],
+        model: model.subjectModel,
+        as: "subjectSchedule",
+        attributes: ["courseId"],
       },
     ],
     order: [["examScheduleId", "DESC"]],
@@ -314,9 +314,9 @@ export async function findExamSchedulesBySlotIds(slotIds, options = {}) {
         ],
       },
       {
-        model: model.examSetupTypeTermModel,
-        as: "examSetupTypeTerm",
-        attributes: ["courseId", "term"],
+        model: model.subjectModel,
+        as: "subjectSchedule",
+        attributes: ["courseId"],
       },
     ],
     order: [
