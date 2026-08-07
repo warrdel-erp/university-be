@@ -28,14 +28,74 @@ async function resolveSlotDetails(examDetail) {
       if (!examDetail.examTime && slot.startTime) {
         examDetail.examTime = slot.startTime;
       }
-      if (!examDetail.duration && slot.durationMinutes != null) {
-        examDetail.duration = String(slot.durationMinutes);
-      }
       if (!examDetail.examinationSessionId && slot.examinationSessionId) {
         examDetail.examinationSessionId = slot.examinationSessionId;
       }
     }
   }
+}
+
+async function resolveDurationFromAssessmentPlan(examDetail) {
+  if (!examDetail.examinationSessionId) return;
+
+  // Fetch examination session
+  const session = await scoped(model.examinationSessionModel).findOne({
+    where: {
+      examinationSessionId: Number(examDetail.examinationSessionId),
+    },
+    attributes: ["examinationSessionId", "assessmentTypeId"],
+    raw: true,
+  });
+
+  if (!session) {
+    const err = new Error("Examination session not found.");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // Fetch assessment plan component for this session + assessment type
+  const component = await scoped(model.assessmentPlanComponentModel).findOne({
+    attributes: [
+      "assessmentPlanComponentId",
+      "duration",
+    ],
+    where: {
+      assessmentTypeId: session.assessmentTypeId,
+    },
+    include: [
+      {
+        model: model.assessmentPlanModel,
+        as: "assessmentPlan",
+        attributes: [],
+        required: true,
+        where: {
+          examinationSessionId: session.examinationSessionId,
+        },
+      },
+    ],
+  });
+
+  if (!component) {
+    const err = new Error(
+      "Assessment plan component not found for this examination session."
+    );
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (component.duration == null) {
+    const err = new Error(
+      "Duration is not configured in the assessment plan component."
+    );
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // Save snapshot values
+  examDetail.assessmentPlanComponentId =
+    component.assessmentPlanComponentId;
+
+  examDetail.durationMinute = component.duration;
 }
 
 async function resolveSessionId(examDetail) {
@@ -466,9 +526,15 @@ export async function addExamSchedule(examDetail, createdBy, updatedBy) {
   examDetail.createdBy = createdBy;
   examDetail.updatedBy = updatedBy;
 
+  // Do NOT accept duration from frontend — always resolve from assessment plan
+  delete examDetail.duration;
+
   await resolveSlotDetails(examDetail);
   await resolveSessionId(examDetail);
   await resolveAcademicYearId(examDetail);
+
+  // Resolve duration and assessmentPlanComponentId from assessmentPlanComponent
+  await resolveDurationFromAssessmentPlan(examDetail);
 
   const resolvedTerm = await resolveTermForExamDetail(examDetail);
   if (resolvedTerm != null) {
