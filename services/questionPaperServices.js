@@ -37,7 +37,14 @@ export async function addQuestionPaper(questionPaperData, createdBy, updatedBy) 
 }
 
 export async function getQuestionPapers(filters, pagination) {
-    return await questionPaperRepository.getQuestionPapers(filters, pagination);
+    const { total, questionPapers } = await questionPaperRepository.getQuestionPapers(filters, pagination);
+    
+    const transformedPapers = questionPapers.map(paperRecord => {
+        const paper = paperRecord.toJSON ? paperRecord.toJSON() : paperRecord;
+        return transformQuestionPaper(paper, paper.examSchedule);
+    });
+
+    return { total, questionPapers: transformedPapers };
 }
 
 function transformQuestionPaper(paper, schedule) {
