@@ -48,6 +48,15 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'),
       },
+      deleted_at: {
+        type: Sequelize.DATE,
+        allowNull: true,
+      },
+    });
+
+    await queryInterface.addIndex('examination_session_term', ['examination_session_id', 'class_section_term_id'], {
+      unique: true,
+      name: 'unique_examination_session_class_section_term',
     });
   },
 
