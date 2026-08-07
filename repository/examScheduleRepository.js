@@ -56,7 +56,7 @@ export async function getExamSchedules(filters = {}) {
                 {
                     model: model.subjectModel,
                     as: "subjectSchedule",
-                    attributes: ["subjectId", "subjectName", "subjectCode"],
+                    attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
                 },
                 {
                     model: model.acedmicYearModel,
@@ -134,7 +134,7 @@ export async function getExamScheduleById(examScheduleId) {
                 {
                     model: model.subjectModel,
                     as: "subjectSchedule",
-                    attributes: ["subjectId", "subjectName", "subjectCode"],
+                    attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
                 },
                 {
                     model: model.acedmicYearModel,
