@@ -479,7 +479,7 @@ export async function getExaminationStructure(
 }
 
 export async function getMappedSubjectsBySessionAndTerm(
-  { examinationSessionId, term, courseId, sessionId, isExamScheduled, teacherAssignmentStatus },
+  { examinationSessionId, term, courseId, sessionId, isExamScheduled, teacherAssignmentStatus, isModerationActive },
   options = {},
 ) {
   const parsedExaminationSessionId = Number(examinationSessionId);
@@ -544,12 +544,14 @@ export async function getMappedSubjectsBySessionAndTerm(
 
   const roomCapacityByScheduleId = new Map();
   const teacherAssignmentByScheduleId = new Map();
+  const questionPapersByScheduleId = new Map();
   const studentCountByGroup = new Map();
 
   if (examScheduleIds.length > 0) {
     const promises = [
       examinationSessionRepository.findRoomCapacitiesByExamSchedules(examScheduleIds, options),
-      examinationSessionRepository.findTeacherAssignmentsByExamSchedules(examScheduleIds, options)
+      examinationSessionRepository.findTeacherAssignmentsByExamSchedules(examScheduleIds, options),
+      examinationSessionRepository.findQuestionPapersByExamSchedules(examScheduleIds, options)
     ];
 
     if (sessionsForCounts.size > 0 && coursesForCounts.size > 0 && termsForCounts.size > 0) {
@@ -565,11 +567,18 @@ export async function getMappedSubjectsBySessionAndTerm(
       promises.push(Promise.resolve([]));
     }
 
-    const [roomCapacities, teacherAssignments, counts] = await Promise.all(promises);
+    const [roomCapacities, teacherAssignments, questionPapers, counts] = await Promise.all(promises);
 
     for (const rc of roomCapacities) {
       const current = roomCapacityByScheduleId.get(rc.examScheduleId) || 0;
       roomCapacityByScheduleId.set(rc.examScheduleId, current + (rc.capacity || 0));
+    }
+
+    for (const qp of questionPapers) {
+      if (!questionPapersByScheduleId.has(qp.examScheduleId)) {
+        questionPapersByScheduleId.set(qp.examScheduleId, []);
+      }
+      questionPapersByScheduleId.get(qp.examScheduleId).push(qp);
     }
 
     for (const ta of teacherAssignments) {
@@ -620,6 +629,25 @@ export async function getMappedSubjectsBySessionAndTerm(
       const studentCount = studentCountByGroup.get(groupKey) || 0;
       const hasAssignedRoom = roomCapacity > 0;
 
+      let moderationActive = false;
+      let questionPaperInfo = null;
+      const questionPapers = questionPapersByScheduleId.get(plainSched.examScheduleId) || [];
+      if (teacherAssignment.length > 0 && questionPapers.length > 0) {
+        const assignedUserIds = teacherAssignment.map(ta => ta.userId);
+        const matchingQP = questionPapers.find(qp => assignedUserIds.includes(qp.createdBy));
+        if (matchingQP) {
+          moderationActive = true;
+          questionPaperInfo = {
+            id: matchingQP.id,
+            status: matchingQP.status,
+            createdBy: matchingQP.createdBy
+          };
+        }
+      }
+
+      if (isModerationActive === true && !moderationActive) continue;
+      if (isModerationActive === false && moderationActive) continue;
+
       schedInfo = {
         examScheduleId: plainSched.examScheduleId,
         examDate: plainSched.examDate,
@@ -633,7 +661,9 @@ export async function getMappedSubjectsBySessionAndTerm(
         needsRoom: hasAssignedRoom && roomCapacity < studentCount,
         overCapacity: hasAssignedRoom && roomCapacity > studentCount,
         confirmed: hasAssignedRoom && roomCapacity === studentCount,
-        teacherAssignment
+        teacherAssignment,
+        isModerationActive: moderationActive,
+        questionPaper: questionPaperInfo
       };
     } else {
       if (teacherAssignmentStatus === 'assigned') continue;
@@ -661,7 +691,9 @@ export async function getMappedSubjectsBySessionAndTerm(
       needsRoom: schedInfo ? schedInfo.needsRoom : false,
       overCapacity: schedInfo ? schedInfo.overCapacity : false,
       confirmed: schedInfo ? schedInfo.confirmed : false,
-      teacherAssignment: schedInfo ? schedInfo.teacherAssignment : null
+      teacherAssignment: schedInfo ? schedInfo.teacherAssignment : null,
+      isModerationActive: schedInfo ? schedInfo.isModerationActive : false,
+      questionPaper: schedInfo ? schedInfo.questionPaper : null
     });
   }
 

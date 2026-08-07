@@ -28,9 +28,27 @@ module.exports = {
         onDelete: 'SET NULL', // Or RESTRICT, depending on logic, but SET NULL conflicts with allowNull: false
       });
     } else {
+      try {
+        await queryInterface.removeConstraint('exam_schedule', 'exam_schedule_examination_session_id_foreign_idx');
+      } catch (err) {
+        console.log("Constraint might not exist or already removed.", err.message);
+      }
+      
       await queryInterface.changeColumn('exam_schedule', 'examination_session_id', {
         type: Sequelize.BIGINT,
         allowNull: false,
+      });
+
+      await queryInterface.addConstraint('exam_schedule', {
+        fields: ['examination_session_id'],
+        type: 'foreign key',
+        name: 'exam_schedule_examination_session_id_foreign_idx',
+        references: {
+          table: 'examination_session',
+          field: 'examination_session_id'
+        },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
       });
     }
 

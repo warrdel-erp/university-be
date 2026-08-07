@@ -241,6 +241,16 @@ export async function findTeacherAssignmentsByExamSchedules(examScheduleIds, opt
   });
 }
 
+export async function findQuestionPapersByExamSchedules(examScheduleIds, options = {}) {
+  if (!examScheduleIds.length) return [];
+  return scoped(model.questionPaperModel).findAll({
+    where: { examScheduleId: { [Op.in]: examScheduleIds } },
+    attributes: ["id", "examScheduleId", "createdBy", "status"],
+    transaction: options.transaction,
+    raw: true,
+  });
+}
+
 export async function findCoursesByIds(courseIds, options = {}) {
   return scoped(model.courseModel).findAll({
     where: { courseId: { [Op.in]: courseIds } },

@@ -113,6 +113,7 @@ const getSubjectsBySessionAndTermSchema = {
     sessionId: positiveIntegerQueryId.optional(),
     isExamScheduled: z.union([z.boolean(), z.enum(["true", "false"])]).transform(val => val === "true" || val === true ? true : (val === "false" || val === false ? false : undefined)).optional(),
     teacherAssignmentStatus: z.enum(["assigned", "notAssigned"]).optional(),
+    isModerationActive: z.union([z.boolean(), z.enum(["true", "false"])]).transform(val => val === "true" || val === true ? true : (val === "false" || val === false ? false : undefined)).optional(),
   }),
 };
 
