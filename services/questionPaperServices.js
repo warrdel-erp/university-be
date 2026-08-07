@@ -40,8 +40,92 @@ export async function getQuestionPapers(filters, pagination) {
     return await questionPaperRepository.getQuestionPapers(filters, pagination);
 }
 
+function transformQuestionPaper(paper, schedule) {
+    let sections = [];
+    if (paper.questionPaper) {
+        let parsed = paper.questionPaper;
+        if (typeof parsed === "string") {
+            try {
+                parsed = JSON.parse(parsed);
+            } catch (err) {
+                throw new Error("Invalid question paper JSON structure");
+            }
+        }
+        if (Array.isArray(parsed)) {
+            sections = parsed.map(section => {
+                const questions = Array.isArray(section.questions)
+                    ? section.questions.map(q => {
+                        const {
+                            universityId,
+                            subjectId,
+                            content,
+                            status,
+                            createdBy,
+                            updatedBy,
+                            createdAt,
+                            updatedAt,
+                            Answer,
+                            answer,
+                            ...rest
+                        } = q;
+                        return {
+                            ...rest,
+                            answer: Answer !== undefined ? Answer : answer
+                        };
+                    })
+                    : [];
+                return {
+                    sectionName: section.sectionName,
+                    typeOfQuestions: section.typeOfQuestions,
+                    marksPerQuestion: section.marksPerQuestion,
+                    questions
+                };
+            });
+        }
+    }
+
+    let transformedSchedule = null;
+    if (schedule) {
+        const plainSched = schedule.get ? schedule.get({ plain: true }) : schedule;
+        transformedSchedule = {
+            examScheduleId: plainSched.examScheduleId,
+            subjectId: plainSched.subjectId,
+            term: plainSched.term,
+            academicYearId: plainSched.academicYearId,
+            sessionId: plainSched.sessionId,
+            examinationSessionId: plainSched.examinationSessionId,
+            examinationSessionSlotId: plainSched.examinationSessionSlotId,
+            examDate: plainSched.examDate,
+            examTime: plainSched.examTime,
+            type: plainSched.type,
+            duration: plainSched.duration != null ? Number(plainSched.duration) : null
+        };
+    }
+
+    return {
+        id: paper.id,
+        name: paper.name,
+        examScheduleId: paper.examScheduleId,
+        blueprintId: paper.blueprintId,
+        status: paper.status,
+        totalMarks: paper.totalMarks,
+        sections,
+        creator: paper.creator || null,
+        examSchedule: transformedSchedule,
+        createdAt: paper.createdAt,
+        updatedAt: paper.updatedAt
+    };
+}
+
 export async function getSingleQuestionPaper(id) {
-    return await questionPaperRepository.getSingleQuestionPaper(id);
+    const paper = await questionPaperRepository.getSingleQuestionPaper(id);
+    if (!paper) return null;
+
+    const schedule = paper.examScheduleId
+        ? await questionPaperRepository.getExamScheduleById(paper.examScheduleId)
+        : null;
+
+    return transformQuestionPaper(paper, schedule);
 }
 
 export async function updateQuestionPaper(id, questionPaperData, updatedBy) {
