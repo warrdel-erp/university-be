@@ -1,16 +1,6 @@
 import * as examinationSessionSlotServices from "../services/examinationSessionSlotServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
-const getErrorMessage = (error, defaultMsg) => {
-  if (error.name === "SequelizeForeignKeyConstraintError") {
-    return "The selected session or slot reference is invalid.";
-  }
-  if (error.name === "SequelizeUniqueConstraintError") {
-    return "An examination session slot entry with these details already exists.";
-  }
-  return error.message || defaultMsg;
-};
-
 export const createExaminationSessionSlot = async (req, res) => {
   try {
     const result = await examinationSessionSlotServices.createExaminationSessionSlot({
@@ -21,7 +11,7 @@ export const createExaminationSessionSlot = async (req, res) => {
   } catch (error) {
     console.error("Error creating examination session slot:", error);
     const statusCode = error.statusCode || 500;
-    return ErrorResponse(res, statusCode, getErrorMessage(error, "Failed to create examination session slot"));
+    return ErrorResponse(res, statusCode, error.message || "Failed to create examination session slot");
   }
 };
 
@@ -34,7 +24,7 @@ export const getExaminationSessionSlots = async (req, res) => {
   } catch (error) {
     console.error("Error fetching examination session slots:", error);
     const statusCode = error.statusCode || 500;
-    return ErrorResponse(res, statusCode, getErrorMessage(error, "Failed to fetch examination session slots"));
+    return ErrorResponse(res, statusCode, error.message || "Failed to fetch examination session slots");
   }
 };
 
@@ -49,7 +39,7 @@ export const getExaminationSessionSlotById = async (req, res) => {
   } catch (error) {
     console.error("Error fetching examination session slot:", error);
     const statusCode = error.statusCode || 500;
-    return ErrorResponse(res, statusCode, getErrorMessage(error, "Failed to fetch examination session slot"));
+    return ErrorResponse(res, statusCode, error.message || "Failed to fetch examination session slot");
   }
 };
 
@@ -63,7 +53,7 @@ export const updateExaminationSessionSlot = async (req, res) => {
   } catch (error) {
     console.error("Error updating examination session slot:", error);
     const statusCode = error.statusCode || 500;
-    return ErrorResponse(res, statusCode, getErrorMessage(error, "Failed to update examination session slot"));
+    return ErrorResponse(res, statusCode, error.message || "Failed to update examination session slot");
   }
 };
 
@@ -75,6 +65,6 @@ export const deleteExaminationSessionSlot = async (req, res) => {
   } catch (error) {
     console.error("Error deleting examination session slot:", error);
     const statusCode = error.statusCode || 500;
-    return ErrorResponse(res, statusCode, getErrorMessage(error, "Failed to delete examination session slot"));
+    return ErrorResponse(res, statusCode, error.message || "Failed to delete examination session slot");
   }
 };
