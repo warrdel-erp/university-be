@@ -630,19 +630,24 @@ export async function getMappedSubjectsBySessionAndTerm(
       const hasAssignedRoom = roomCapacity > 0;
 
       let moderationActive = false;
-      let questionPaperInfo = null;
       const questionPapers = questionPapersByScheduleId.get(plainSched.examScheduleId) || [];
-      if (teacherAssignment.length > 0 && questionPapers.length > 0) {
-        const assignedUserIds = teacherAssignment.map(ta => ta.userId);
-        const matchingQP = questionPapers.find(qp => assignedUserIds.includes(qp.createdBy));
-        if (matchingQP) {
-          moderationActive = true;
-          questionPaperInfo = {
-            id: matchingQP.id,
-            status: matchingQP.status,
-            createdBy: matchingQP.createdBy
-          };
-        }
+      
+      if (teacherAssignment.length > 0) {
+        teacherAssignment = teacherAssignment.map(ta => {
+          const matchingQP = questionPapers.find(qp => qp.createdBy === ta.userId);
+          if (matchingQP) {
+            moderationActive = true;
+            return {
+              ...ta,
+              questionPaper: {
+                id: matchingQP.id,
+                status: matchingQP.status,
+                createdBy: matchingQP.createdBy
+              }
+            };
+          }
+          return { ...ta, questionPaper: null };
+        });
       }
 
       if (isModerationActive === true && !moderationActive) continue;
@@ -662,8 +667,7 @@ export async function getMappedSubjectsBySessionAndTerm(
         overCapacity: hasAssignedRoom && roomCapacity > studentCount,
         confirmed: hasAssignedRoom && roomCapacity === studentCount,
         teacherAssignment,
-        isModerationActive: moderationActive,
-        questionPaper: questionPaperInfo
+        isModerationActive: moderationActive
       };
     } else {
       if (teacherAssignmentStatus === 'assigned') continue;
@@ -692,8 +696,7 @@ export async function getMappedSubjectsBySessionAndTerm(
       overCapacity: schedInfo ? schedInfo.overCapacity : false,
       confirmed: schedInfo ? schedInfo.confirmed : false,
       teacherAssignment: schedInfo ? schedInfo.teacherAssignment : null,
-      isModerationActive: schedInfo ? schedInfo.isModerationActive : false,
-      questionPaper: schedInfo ? schedInfo.questionPaper : null
+      isModerationActive: schedInfo ? schedInfo.isModerationActive : false
     });
   }
 
