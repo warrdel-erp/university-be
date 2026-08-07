@@ -938,7 +938,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"examName\": \"Mid Term Assessment\",\n  \"examCode\": \"MID_2026\",\n  \"examCategory\": \"EXAMINATION\",\n  \"examSubcategory\": \"Mid Term\",\n  \"examDescription\": \"Mid term examination for semester 1\",\n  \"courseId\": 35,\n  \"sessionId\": 18\n}"
+              "raw": "{\n  \"examName\": \"Mid Term Assessment\",\n  \"examCode\": \"MID_2026\",\n  \"examCategory\": \"EXAMINATION\",\n  \"examSubcategory\": \"Mid Term\",\n  \"examDescription\": \"Mid term examination at institute level\"\n}"
             },
             "url": {
               "raw": "{{baseurl}}/examStructure/examType",
@@ -1003,7 +1003,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examStructure/examType/all?search=Mid&page=1&limit=10&courseId=35&sessionId=18",
+              "raw": "{{baseurl}}/examStructure/examType/all?search=Mid&page=1&limit=10",
               "host": [
                 "{{baseurl}}"
               ],
@@ -1024,14 +1024,6 @@
                 {
                   "key": "limit",
                   "value": "10"
-                },
-                {
-                  "key": "courseId",
-                  "value": "35"
-                },
-                {
-                  "key": "sessionId",
-                  "value": "18"
                 }
               ]
             }
@@ -1053,7 +1045,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"examSetupTypeId\": {{examSetupTypeId}},\n  \"examName\": \"Updated Mid Term Assessment\",\n  \"examDescription\": \"Updated description\"\n}"
+              "raw": "{\n  \"examSetupTypeId\": 1,\n  \"examName\": \"Updated Mid Term Assessment\",\n  \"examCode\": \"MID_2026_UPDATED\",\n  \"examCategory\": \"EXAMINATION\",\n  \"examSubcategory\": \"Mid Term\",\n  \"examDescription\": \"Updated description\"\n}"
             },
             "url": {
               "raw": "{{baseurl}}/examStructure/examType",
@@ -1518,6 +1510,287 @@
           }
         }
       ]
+    },
+    {
+      "name": "5. Examination Sessions",
+      "item": [
+        {
+          "name": "5.1 Create Examination Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assessmentTypeId\": {{examSetupTypeId}},\n  \"sessionName\": \"End Semester Examination - May 2027\",\n  \"examStartDate\": \"2027-05-10\",\n  \"examEndDate\": \"2027-05-25\",\n  \"hallTicketReleaseDate\": \"2027-05-01\",\n  \"seatAllocationDate\": \"2027-05-05\",\n  \"evaluationStartDate\": \"2027-05-26\",\n  \"evaluationDeadline\": \"2027-06-10\",\n  \"moderationDeadline\": \"2027-06-15\",\n  \"resultPublicationDate\": \"2027-06-20\",\n  \"autoGenerateSeating\": true,\n  \"autoAllocateRooms\": true,\n  \"autoAssignInvigilators\": false,\n  \"qrAttendance\": true,\n  \"barcodeAnswerSheet\": true,\n  \"aiEvaluation\": false,\n  \"moderationWorkflow\": true,\n  \"allowRevaluation\": true,\n  \"status\": \"Draft\",\n  \"classSectionTerms\": [\n    {\n      \"classSectionTermId\": 1,\n      \"includeElectives\": true,\n      \"remarks\": \"Main batch participation\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/examinationSession",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examinationSession"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if (res.success && res.data && res.data.examinationSessionId) {",
+                  "    pm.collectionVariables.set('examinationSessionId', res.data.examinationSessionId);",
+                  "    console.log('Saved examinationSessionId:', res.data.examinationSessionId);",
+                  "    if (res.data.examinationSessionTerms && res.data.examinationSessionTerms.length > 0) {",
+                  "        pm.collectionVariables.set('examinationSessionTermId', res.data.examinationSessionTerms[0].examinationSessionTermId);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.2 Get All Examination Sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examinationSession?search=&status=&page=1&limit=10",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examinationSession"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "status",
+                  "value": ""
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "5.3 Get Examination Session By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examinationSession/single?examinationSessionId={{examinationSessionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examinationSession",
+                "single"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "{{examinationSessionId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "5.4 Patch Examination Session",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionName\": \"End Semester Examination - May 2027 (Updated)\",\n  \"status\": \"Published\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/examinationSession?examinationSessionId={{examinationSessionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examinationSession"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "{{examinationSessionId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "5.5 Get Mapped Class Section Terms By Setup Type",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examinationSession/classSectionTerms?examSetupTypeId={{examSetupTypeId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examinationSession",
+                "classSectionTerms"
+              ],
+              "query": [
+                {
+                  "key": "examSetupTypeId",
+                  "value": "{{examSetupTypeId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "5.6 Create Examination Session Term",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examinationSessionId\": {{examinationSessionId}},\n  \"classSectionTermId\": 2,\n  \"includeElectives\": true,\n  \"remarks\": \"Additional section mapping\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/examinationSession/term",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examinationSession",
+                "term"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if (res.success && res.data && res.data.examinationSessionTermId) {",
+                  "    pm.collectionVariables.set('examinationSessionTermId', res.data.examinationSessionTermId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.7 Delete Examination Session Term",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examinationSession/term?examinationSessionTermId={{examinationSessionTermId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examinationSession",
+                "term"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionTermId",
+                  "value": "{{examinationSessionTermId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "5.8 Delete Examination Session",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examinationSession?examinationSessionId={{examinationSessionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examinationSession"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "{{examinationSessionId}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
     }
   ],
   "variable": [
@@ -1558,6 +1831,16 @@
     },
     {
       "key": "assessmentPlanComponentId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "examinationSessionId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "examinationSessionTermId",
       "value": "1",
       "type": "string"
     }

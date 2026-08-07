@@ -3,8 +3,6 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
-import courseModel from "./courseModel.js";
-import sessionModel from "./sessionModel.js";
 
 const examSetupTypeModel = sequelize.define(
     'exam_setup_type', // exam Type 1.1
@@ -57,24 +55,6 @@ const examSetupTypeModel = sequelize.define(
             type: DataTypes.STRING(500),
             field: 'exam_description',
             allowNull: true
-        },
-        courseId: {
-            type: DataTypes.INTEGER,
-            field: 'course_id',
-            allowNull: true,
-            references: {
-                model: courseModel,
-                key: 'course_id'
-            }
-        },
-        sessionId: {
-            type: DataTypes.INTEGER,
-            field: 'session_id',
-            allowNull: true,
-            references: {
-                model: sessionModel,
-                key: 'session_id'
-            }
         },
         createdBy: {
             type: DataTypes.INTEGER,

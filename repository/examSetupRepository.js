@@ -1,10 +1,10 @@
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 
-async function assertScopedExamType(examTypeId, transaction) {
-    return scoped(model.examTypeModel).findOne({
-        where: { examTypeId },
-        attributes: ['examTypeId'],
+async function assertScopedExamType(examSetupTypeId, transaction) {
+    return scoped(model.examSetupTypeModel).findOne({
+        where: { examSetupTypeId },
+        attributes: ['examSetupTypeId'],
         transaction,
     });
 }
@@ -15,11 +15,11 @@ async function assertScopedExamSetup(examSetupId, transaction) {
         attributes: ['examSetupId', 'examTypeId'],
         transaction,
         include: [{
-            model: model.examTypeModel,
-            as: 'examType',
+            model: model.examSetupTypeModel,
+            as: 'examSetupType',
             required: true,
-            where: buildScope(model.examTypeModel),
-            attributes: ['examTypeId'],
+            where: buildScope(model.examSetupTypeModel),
+            attributes: ['examSetupTypeId'],
         }],
     });
 }
@@ -41,7 +41,7 @@ export async function addExamSetup(examDetail) {
 export async function getExamSetup(academicYearId) {
     try {
         const examTypeWhere = {
-            ...buildScope(model.examTypeModel),
+            ...buildScope(model.examSetupTypeModel),
             ...(academicYearId && { academicYearId }),
         };
         const employeeWhere = {
@@ -69,9 +69,9 @@ export async function getExamSetup(academicYearId) {
                     required: true,
                 },
                 {
-                    model: model.examTypeModel,
-                    as: "examType",
-                    attributes: ["examTypeId", "examName"],
+                    model: model.examSetupTypeModel,
+                    as: "examSetupType",
+                    attributes: ["examSetupTypeId", "examName"],
                     where: examTypeWhere,
                     required: true,
                 },

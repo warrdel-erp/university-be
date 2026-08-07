@@ -20,11 +20,13 @@ const positiveIntegerId = z.coerce.number().int().positive();
 
 const getDetailByExamTypeQuerySchema = z.object({
   examSetupTypeId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
+  termNumber: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
+  search: z.string().optional(),
+  page: z.union([z.string(), z.number()]).optional(),
+  limit: z.union([z.string(), z.number()]).optional(),
 });
 
 const getallExamTypeQuerySchema = z.object({
-  courseId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
-  sessionId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
   termNumber: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
   search: z.string().optional(),
   page: z.union([z.string(), z.number()]).optional(),
@@ -37,8 +39,6 @@ const addExamTypeSchema = z.object({
   examCategory: z.enum(ASSESSMENT_CATEGORIES).optional().nullable(),
   examSubcategory: z.string().optional().nullable(),
   examDescription: z.string().max(500).optional().nullable(),
-  courseId: z.coerce.number().int().positive().optional().nullable(),
-  sessionId: z.coerce.number().int().positive().optional().nullable(),
 });
 
 const updateExamTypeSchema = z.object({
@@ -48,14 +48,14 @@ const updateExamTypeSchema = z.object({
   examCategory: z.enum(ASSESSMENT_CATEGORIES).optional().nullable(),
   examSubcategory: z.string().optional().nullable(),
   examDescription: z.string().max(500).optional().nullable(),
-  courseId: z.coerce.number().int().positive().optional().nullable(),
-  sessionId: z.coerce.number().int().positive().optional().nullable(),
 });
 
 //Table of examType
 router.post("/examType", userAuth, validate({ body: addExamTypeSchema }), addExamType);
 
 router.get("/examType", userAuth, validate({ query: getDetailByExamTypeQuerySchema }), getDetailByExamType);
+
+router.get("/examType/single", userAuth, validate({ query: getDetailByExamTypeQuerySchema }), getDetailByExamType);
 
 router.get("/examType/all", userAuth, validate({ query: getallExamTypeQuerySchema }), getAllExamTypes);
 

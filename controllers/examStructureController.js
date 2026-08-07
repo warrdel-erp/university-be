@@ -93,7 +93,7 @@ export async function addExamType(req, res) {
 
 export async function getDetailByExamType(req, res) {
   try {
-    const { examSetupTypeId, courseId, sessionId, termNumber, search, page = 1, limit = 10 } = req.query;
+    const { examSetupTypeId, termNumber, search, page = 1, limit = 10 } = req.query;
 
     if (examSetupTypeId) {
       const examDetails = await examStructureServices.getDetailByExamType(examSetupTypeId);
@@ -104,8 +104,6 @@ export async function getDetailByExamType(req, res) {
     }
 
     const result = await examStructureServices.getAllExamTypes(
-      courseId,
-      sessionId,
       undefined,
       termNumber ?? null,
       { search, page, limit }
@@ -125,10 +123,8 @@ export async function getDetailByExamType(req, res) {
 
 export async function getAllExamTypes(req, res) {
   try {
-    const { courseId, sessionId, termNumber, search, page = 1, limit = 10 } = req.query;
+    const { termNumber, search, page = 1, limit = 10 } = req.query;
     const result = await examStructureServices.getAllExamTypes(
-      courseId,
-      sessionId,
       undefined,
       termNumber ?? null,
       { search, page, limit }
@@ -175,6 +171,7 @@ export async function deleteExamType(req, res) {
     }
     return SuccessResponse(res, 200, "Exam examType not found", []);
   } catch (error) {
-    return ErrorResponse(res, 500, error.message);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(res, statusCode, error.message);
   }
 }

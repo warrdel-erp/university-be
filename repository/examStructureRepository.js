@@ -26,18 +26,6 @@ export async function getDetailByExamType(examSetupTypeId) {
       where: { examSetupTypeId },
       include: [
         {
-          model: model.courseModel,
-          as: "course",
-          attributes: ["courseId", "courseName"],
-          required: false,
-        },
-        {
-          model: model.sessionModel,
-          as: "session",
-          attributes: ["sessionId", "sessionName"],
-          required: false,
-        },
-        {
           model: model.examSetupTypeTermModel,
           as: "examSetupTypeTerms",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
@@ -53,12 +41,10 @@ export async function getDetailByExamType(examSetupTypeId) {
   }
 };
 
-export async function getAllExamTypes(courseId, sessionId, academicYearId, termNumber, options = {}) {
+export async function getAllExamTypes(academicYearId, termNumber, options = {}) {
   try {
     const yearId = resolveAcademicYearId(academicYearId);
     const where = {};
-    if (courseId) where.courseId = Number(courseId);
-    if (sessionId) where.sessionId = Number(sessionId);
 
     if (options.search) {
       where[Op.or] = [
@@ -71,7 +57,6 @@ export async function getAllExamTypes(courseId, sessionId, academicYearId, termN
 
     const termWhere = {};
     if (yearId) termWhere.academicYearId = yearId;
-    if (courseId) termWhere.courseId = Number(courseId);
     if (termNumber != null) termWhere.term = Number(termNumber);
 
     const termInclude = {
@@ -85,7 +70,6 @@ export async function getAllExamTypes(courseId, sessionId, academicYearId, termN
           model: model.examScheduleModel,
           as: "examSchedules",
           attributes: ["examScheduleId", "subjectId", "examDate", "examTime"],
-          where: { sessionId },
           required: false,
         },
       ],
@@ -94,21 +78,7 @@ export async function getAllExamTypes(courseId, sessionId, academicYearId, termN
     const queryOptions = {
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       where,
-      include: [
-        {
-          model: model.courseModel,
-          as: "course",
-          attributes: ["courseId", "courseName"],
-          required: false,
-        },
-        {
-          model: model.sessionModel,
-          as: "session",
-          attributes: ["sessionId", "sessionName"],
-          required: false,
-        },
-        termInclude,
-      ],
+      include: [termInclude],
       subQuery: false,
       distinct: true,
     };
@@ -152,6 +122,18 @@ export async function deleteExamType(examSetupTypeId) {
     if (!existing) {
       return false;
     }
+
+    const inUse = await scoped(model.assessmentPlanComponentModel).findOne({
+      where: { examSetupTypeId: Number(examSetupTypeId) },
+      attributes: ['assessmentPlanComponentId'],
+    });
+
+    if (inUse) {
+      const error = new Error("Cannot delete exam type as it is currently in use in an assessment plan.");
+      error.statusCode = 400;
+      throw error;
+    }
+
     const deleted = await scoped(model.examSetupTypeModel).destroy({ where: { examSetupTypeId } });
     return deleted > 0;
   } catch (error) {
