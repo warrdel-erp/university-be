@@ -254,7 +254,7 @@ export async function findQuestionPapersByExamSchedules(examScheduleIds, options
   if (!examScheduleIds.length) return [];
   return scoped(model.questionPaperModel).findAll({
     where: { examScheduleId: { [Op.in]: examScheduleIds } },
-    attributes: ["id", "examScheduleId", "createdBy", "status"],
+    attributes: ["id", "examScheduleId", "createdBy", "status", "createdAt", "updatedAt"],
     transaction: options.transaction,
     raw: true,
   });

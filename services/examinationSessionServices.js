@@ -650,6 +650,7 @@ export async function getMappedSubjectsBySessionAndTerm(
       const hasAssignedRoom = roomCapacity > 0;
 
       let moderationActive = false;
+      let isApproved = false;
       const questionPapers = questionPapersByScheduleId.get(plainSched.examScheduleId) || [];
       
       if (teacherAssignment.length > 0) {
@@ -657,12 +658,17 @@ export async function getMappedSubjectsBySessionAndTerm(
           const matchingQP = questionPapers.find(qp => qp.createdBy === ta.userId);
           if (matchingQP) {
             moderationActive = true;
+            if (matchingQP.status === "Approved") {
+              isApproved = true;
+            }
             return {
               ...ta,
               questionPaper: {
                 id: matchingQP.id,
                 status: matchingQP.status,
-                createdBy: matchingQP.createdBy
+                createdBy: matchingQP.createdBy,
+                createdAt: matchingQP.createdAt,
+                updatedAt: matchingQP.updatedAt
               }
             };
           }
@@ -687,7 +693,8 @@ export async function getMappedSubjectsBySessionAndTerm(
         overCapacity: hasAssignedRoom && roomCapacity > studentCount,
         confirmed: hasAssignedRoom && roomCapacity === studentCount,
         teacherAssignment,
-        isModerationActive: moderationActive
+        isModerationActive: moderationActive,
+        isApproved
       };
     } else {
       if (teacherAssignmentStatus === 'assigned') continue;
@@ -716,7 +723,8 @@ export async function getMappedSubjectsBySessionAndTerm(
       overCapacity: schedInfo ? schedInfo.overCapacity : false,
       confirmed: schedInfo ? schedInfo.confirmed : false,
       teacherAssignment: schedInfo ? schedInfo.teacherAssignment : null,
-      isModerationActive: schedInfo ? schedInfo.isModerationActive : false
+      isModerationActive: schedInfo ? schedInfo.isModerationActive : false,
+      isApproved: schedInfo ? schedInfo.isApproved : false
     });
   }
 
