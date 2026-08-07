@@ -452,17 +452,21 @@ export async function getExaminationStructure(
 
   return [...courseSessionGroups.values()].map((group) => {
     let totalSubjects = 0;
-    const terms = [...group.termsMap.keys()].sort((a, b) => a - b).map((term) => {
-      const termSubjects = group.termsMap.get(term);
-      totalSubjects += termSubjects.length;
-      return {
-        term,
-        termTitle: `${group.termType === "Year" ? "Year" : "Semester"} ${term}`,
-        classSectionTermId: mappedCstMap.get(`${group.courseId}_${term}`) || null,
-        subjectCount: termSubjects.length,
-        subjects: termSubjects,
-      };
-    });
+    const terms = [...group.termsMap.keys()].sort((a, b) => a - b).reduce((acc, term) => {
+      const classSectionTermId = mappedCstMap.get(`${group.courseId}_${term}`);
+      if (classSectionTermId) {
+        const termSubjects = group.termsMap.get(term);
+        totalSubjects += termSubjects.length;
+        acc.push({
+          term,
+          termTitle: `${group.termType === "Year" ? "Year" : "Semester"} ${term}`,
+          classSectionTermId,
+          subjectCount: termSubjects.length,
+          subjects: termSubjects,
+        });
+      }
+      return acc;
+    }, []);
 
     return {
       examinationSessionId: plainSession?.examinationSessionId || null,
@@ -475,7 +479,7 @@ export async function getExaminationStructure(
       totalSubjects,
       terms,
     };
-  });
+  }).filter((group) => group.terms.length > 0);
 }
 
 export async function getMappedSubjectsBySessionAndTerm(
@@ -488,11 +492,27 @@ export async function getMappedSubjectsBySessionAndTerm(
   const targetTerm = term !== undefined && term !== null && term !== "" ? Number(term) : null;
   const targetCourseId = courseId !== undefined && courseId !== null && courseId !== "" ? Number(courseId) : null;
   const targetSessionId = sessionId !== undefined && sessionId !== null && sessionId !== "" ? Number(sessionId) : null;
+  
   const examinationSession = await examinationSessionRepository.findExaminationSessionAssessmentTypeById(
     parsedExaminationSessionId,
     options,
   );
-  if (!examinationSession?.assessmentTypeId) return [];
+  if (!examinationSession) {
+    const error = new Error("Examination session not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const hasPublishedOnlyFilter =
+    isExamScheduled !== undefined ||
+    teacherAssignmentStatus !== undefined ||
+    isModerationActive !== undefined;
+
+  if (hasPublishedOnlyFilter && examinationSession.status !== 'Published') {
+    throw createBadRequestError("Exam planning filters are available only for a published examination session.");
+  }
+
+  if (!examinationSession.assessmentTypeId) return [];
 
   const assessmentPlanIds = await getAssessmentPlanIds(Number(examinationSession.assessmentTypeId), options);
   if (!assessmentPlanIds.length) return [];

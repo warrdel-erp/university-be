@@ -80,11 +80,15 @@ export async function getQuestionPapers(filters = {}, pagination = {}) {
 export async function getSingleQuestionPaper(id) {
     try {
         const existing = await assertScopedQuestionPaper(id);
+
         if (!existing) {
             return null;
         }
+
         const result = await model.questionPaperModel.findOne({
-            attributes: { exclude: ["deletedAt"] },
+            attributes: {
+                exclude: ["deletedAt"],
+            },
             where: { id },
             include: [
                 {
@@ -94,7 +98,32 @@ export async function getSingleQuestionPaper(id) {
                 },
             ],
         });
-        return result;
+
+        if (!result) {
+            return null;
+        }
+
+        const questionPaper = result.toJSON();
+
+        if (
+            questionPaper.questionPaper &&
+            typeof questionPaper.questionPaper === "string"
+        ) {
+            try {
+                questionPaper.questionPaper = JSON.parse(
+                    questionPaper.questionPaper
+                );
+            } catch (error) {
+                console.error(
+                    "Invalid questionPaper JSON:",
+                    error.message
+                );
+
+                questionPaper.questionPaper = [];
+            }
+        }
+
+        return questionPaper;
     } catch (error) {
         console.error("Error fetching question paper:", error);
         throw error;
