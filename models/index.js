@@ -1960,9 +1960,6 @@ courseModel.hasMany(examSetupTypeTermModel, { foreignKey: "courseId", as: "examS
 examSetupTypeTermModel.belongsTo(userModel, { foreignKey: "createdBy", as: "creator" });
 examSetupTypeTermModel.belongsTo(userModel, { foreignKey: "updatedBy", as: "updater" });
 
-examScheduleModel.belongsTo(examSetupTypeTermModel, { foreignKey: "examSetupTypeTermId", as: "examSetupTypeTerm" });
-examSetupTypeTermModel.hasMany(examScheduleModel, { foreignKey: "examSetupTypeTermId", as: "examSchedules" });
-
 subjectWeightageModel.belongsTo(examSetupTypeTermModel, { foreignKey: "examSetupTypeTermId", as: "examSetupTypeTerm" });
 examSetupTypeTermModel.hasMany(subjectWeightageModel, { foreignKey: "examSetupTypeTermId", as: "subjectWeightages" });
 

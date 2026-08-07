@@ -142,22 +142,10 @@ export async function getExamScheduleById(examScheduleId) {
                     attributes: ["academicYearId", "yearTitle"],
                 },
                 {
-                    model: model.examSetupTypeTermModel,
-                    as: "examSetupTypeTerm",
-                    attributes: ["examSetupTypeTermId", "term", "courseId"],
-                    include: [
-                        {
-                            model: model.examSetupTypeModel,
-                            as: "examSetupType",
-                            attributes: ["examSetupTypeId", "examType", "examName"],
-                        },
-                    ],
-                },
-                {
                     model: model.sessionModel,
                     as: "sessionSchedule",
                     attributes: ["sessionId", "sessionName"],
-                },
+                }
             ],
         });
 

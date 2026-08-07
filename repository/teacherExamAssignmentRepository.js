@@ -65,19 +65,6 @@ export async function getAssignments(whereClause) {
                                 },
                             ],
                         },
-                        {
-                            model: model.examSetupTypeTermModel,
-                            as: "examSetupTypeTerm",
-                            where: buildScope(model.examSetupTypeTermModel),
-                            required: false,
-                            include: [
-                                {
-                                    model: model.examSetupTypeModel,
-                                    as: "examSetupType",
-                                    where: buildScope(model.examSetupTypeModel),
-                                },
-                            ],
-                        },
                     ],
                 },
                 {

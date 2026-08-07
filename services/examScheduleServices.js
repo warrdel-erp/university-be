@@ -45,8 +45,8 @@ export async function getExamScheduleById(examScheduleId) {
     const result = await examScheduleRepository.getExamScheduleById(examScheduleId);
 
     if (result) {
-        const term = result.examSetupTypeTerm?.term || result.term;
-        const courseId = result.examSetupTypeTerm?.courseId || result.subjectSchedule?.courseId;
+        const term = result.term;
+        const courseId =  result.subjectSchedule?.courseId;
         const sessionId = result.sessionId;
         const academicYearId = result.academicYearId;
 

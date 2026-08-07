@@ -15,7 +15,7 @@ const examScheduleModel = sequelize.define(
         },
         subjectId: {
             type: DataTypes.INTEGER,
-            allowNull: true,
+            allowNull: false,
             field: 'subject_id',
             references: {
                 model: subjectModel,
@@ -26,15 +26,6 @@ const examScheduleModel = sequelize.define(
             type: DataTypes.INTEGER,
             allowNull: true,
             comment: 'Program term number',
-        },
-        examSetupTypeTermId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'exam_setup_type_term_id',
-            references: {
-                model: 'exam_setup_type_term',
-                key: 'exam_setup_type_term_id'
-            }
         },
         academicYearId: {
             type: DataTypes.INTEGER,
@@ -74,7 +65,7 @@ const examScheduleModel = sequelize.define(
         },
         examinationSessionSlotId: {
             type: DataTypes.BIGINT,
-            allowNull: true,
+            allowNull: false,
             field: 'examination_session_slot_id',
             references: {
                 model: 'examination_session_slot',
@@ -83,7 +74,7 @@ const examScheduleModel = sequelize.define(
         },
         examinationSessionId: {
             type: DataTypes.BIGINT,
-            allowNull: true,
+            allowNull: false,
             field: 'examination_session_id',
             references: {
                 model: examinationSessionModel,
