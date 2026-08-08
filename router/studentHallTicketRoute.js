@@ -57,7 +57,7 @@ const sessionStudentsQuerySchema = z.object({
 
 
 // 1. Cancel / block an already-generated hall ticket
-router.patch("/:id/block", userAuth, validate({ params: idParamsSchema }), studentHallTicketController.blockHallTicket);
+router.patch("/block/:id", userAuth, validate({ params: idParamsSchema }), studentHallTicketController.blockHallTicket);
 
 // 2. Verify / fetch hall ticket through QR
 router.get("/byQr", userAuth, validate({ query: qrQuerySchema }), studentHallTicketController.getHallTicketByQr);
