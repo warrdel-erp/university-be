@@ -1980,11 +1980,6 @@ studentExamSeatModel.belongsTo(examScheduleRoomCapacityModel, {
 
 studentModel.hasMany(studentExamSeatModel, { foreignKey: "student_id", as: "examSeats" });
 studentExamSeatModel.belongsTo(studentModel, { foreignKey: "student_id", as: "student" });
-studentHallTicketModel.belongsTo(examSetupTypeTermModel, {
-  foreignKey: "exam_setup_type_term_id",
-  as: "examSetupTypeTerm",
-});
-examSetupTypeTermModel.hasMany(studentHallTicketModel, { foreignKey: "exam_setup_type_term_id", as: "hallTickets" });
 
 answerSheetQrModel.belongsTo(studentModel, { foreignKey: "student_id", as: "student" });
 studentModel.hasMany(answerSheetQrModel, { foreignKey: "student_id", as: "answerSheetQrs" });
@@ -2001,8 +1996,19 @@ s3FileModel.hasOne(answerSheetQrModel, { foreignKey: "file_upload_id", as: "answ
 examScheduleModel.belongsTo(s3FileModel, { foreignKey: "answerSheetS3FileId", as: "answerSheetS3File" });
 s3FileModel.hasMany(examScheduleModel, { foreignKey: "answerSheetS3FileId", as: "examSchedules" });
 
-studentHallTicketModel.belongsTo(sessionModel, { foreignKey: "session_id", as: "session" });
-sessionModel.hasMany(studentHallTicketModel, { foreignKey: "session_id", as: "hallTickets" });
+studentHallTicketModel.belongsTo(examinationSessionModel, {
+  foreignKey: "examination_session_id",
+  as: "examinationSession",
+});
+examinationSessionModel.hasMany(studentHallTicketModel, { foreignKey: "examination_session_id", as: "hallTickets" });
+
+studentHallTicketModel.belongsTo(acedmicYearModel, {
+  foreignKey: "acedmic_year_id",
+  as: "academicYear",
+});
+acedmicYearModel.hasMany(studentHallTicketModel, { foreignKey: "acedmic_year_id", as: "hallTickets" });
+
+
 
 studentHallTicketModel.belongsTo(studentModel, { foreignKey: "student_id", as: "student" });
 studentModel.hasMany(studentHallTicketModel, { foreignKey: "student_id", as: "hallTickets" });

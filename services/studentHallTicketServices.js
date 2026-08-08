@@ -1,59 +1,58 @@
 import crypto from "crypto";
 import sequelize from "../database/sequelizeConfig.js";
 import { buildTermName } from "../utility/courseTerms.js";
+import { getAcademicYearId } from "../utility/requestContext.js";
 import * as studentHallTicketRepository from "../repository/studentHallTicketRepository.js";
 
-async function buildGenerationReadiness({ examSetupTypeTermId, sessionId, transaction }) {
-    const examSetupTypeTerm = await studentHallTicketRepository.findExamSetupTypeTermById(examSetupTypeTermId, transaction);
-    if (!examSetupTypeTerm) {
-        const error = new Error("examSetupTypeTerm not found");
+async function buildGenerationReadiness({ examinationSessionId, transaction }) {
+    const examinationSession = await studentHallTicketRepository.findExaminationSessionById(examinationSessionId, transaction);
+    if (!examinationSession) {
+        const error = new Error("examinationSession not found");
         error.statusCode = 404;
         throw error;
     }
 
-    const schedules = await studentHallTicketRepository.getSchedulesByExamSetupTypeTermAndSession(examSetupTypeTermId, sessionId, transaction);
+    const schedules = await studentHallTicketRepository.getSchedulesByExaminationSessionId(examinationSessionId, transaction);
     const canGenerate = schedules.some((s) => s.examDate && s.examTime);
 
     return {
-        examSetupTypeTerm,
+        examinationSession,
         totalSchedules: schedules.length,
         canGenerate,
     };
 }
 
-export async function generateHallTicketsByExamSession({ examSetupTypeTermId, sessionId }) {
+export async function generateHallTicketsByExamSession({ examinationSessionId, user }) {
     return await sequelize.transaction(async (transaction) => {
         const readiness = await buildGenerationReadiness({
-            examSetupTypeTermId,
-            sessionId,
+            examinationSessionId,
             transaction,
         });
 
         if (!readiness.canGenerate) {
             const error = new Error(
-                "Schedule at least one subject with exam date and time for this exam type and session before generating hall tickets.",
+                "Schedule at least one subject with exam date and time for this examination session before generating hall tickets.",
             );
             error.statusCode = 400;
             throw error;
         }
 
+        const effectiveAcademicYearId = getAcademicYearId() || (user?.academicYearId ? Number(user.academicYearId) : readiness.examinationSession.academicYearId);
+
         const existingCount = await studentHallTicketRepository.countHallTickets(
-            { examSetupTypeTermId, sessionId },
+            { examinationSessionId },
             transaction,
         );
         if (existingCount > 0) {
             const error = new Error(
-                "Hall tickets have already been generated for this exam and session. Regeneration is not allowed.",
+                "Hall tickets have already been generated for this examination session. Regeneration is not allowed.",
             );
             error.statusCode = 400;
             throw error;
         }
 
-        const students = await studentHallTicketRepository.getEligibleStudents(
-            sessionId,
-            readiness.examSetupTypeTerm.courseId,
-            readiness.examSetupTypeTerm.term,
-            readiness.examSetupTypeTerm.academicYearId,
+        const students = await studentHallTicketRepository.getEligibleStudentsForExaminationSession(
+            examinationSessionId,
             transaction,
         );
 
@@ -62,8 +61,8 @@ export async function generateHallTicketsByExamSession({ examSetupTypeTermId, se
         }
 
         const hallTicketPayloads = students.map((student) => ({
-            examSetupTypeTermId,
-            sessionId,
+            examinationSessionId,
+            academicYearId: effectiveAcademicYearId,
             studentId: student.studentId,
             qr: crypto.randomUUID(),
         }));
@@ -71,42 +70,39 @@ export async function generateHallTicketsByExamSession({ examSetupTypeTermId, se
         await studentHallTicketRepository.bulkCreateHallTickets(hallTicketPayloads, transaction);
 
         const hallTickets = await studentHallTicketRepository.getAllHallTickets(
-            { examSetupTypeTermId, sessionId },
+            { examinationSessionId },
             transaction,
         );
 
         return {
             generatedCount: hallTickets.length,
-            examSetupType: readiness.examSetupTypeTerm.examSetupType,
+            assessmentType: readiness.examinationSession.assessmentType,
             hallTickets,
         };
     });
 }
 
-export async function generateHallTicketsForUser(payload) {
+export async function generateHallTicketsForUser(payload, user) {
     return generateHallTicketsByExamSession({
-        examSetupTypeTermId: Number(payload.examSetupTypeTermId),
-        sessionId: Number(payload.sessionId),
+        examinationSessionId: Number(payload.examinationSessionId),
+        user,
     });
 }
 
-function resolveScheduleTerm(plain, defaultTerm) {
+function resolveScheduleTerm(plain) {
     if (plain.term != null) return Number(plain.term);
     if (plain.subjectSchedule?.term != null) return Number(plain.subjectSchedule.term);
-    if (defaultTerm != null) return Number(defaultTerm);
     return null;
 }
 
-function schedulesToSubjectList(scheduleRows, mappedScheduleIds = [], { course, defaultTerm } = {}) {
+function schedulesToSubjectList(scheduleRows, mappedScheduleIds = []) {
     const mappedSet = new Set(mappedScheduleIds || []);
-    const coursePlain = course?.get ? course.get({ plain: true }) : course;
-    const termType = coursePlain?.termType;
 
     return (scheduleRows || []).map((row) => {
-        const plain = row.get({ plain: true });
+        const plain = row.get ? row.get({ plain: true }) : row;
         const sub = plain.subjectSchedule;
-        const term = resolveScheduleTerm(plain, defaultTerm);
-        const termName = term != null ? buildTermName(termType, term) : null;
+        const slot = plain.examinationSessionSlot;
+        const term = resolveScheduleTerm(plain);
         const isMapped = plain.examScheduleId != null && mappedSet.has(plain.examScheduleId);
         return {
             examScheduleId: plain.examScheduleId,
@@ -115,39 +111,28 @@ function schedulesToSubjectList(scheduleRows, mappedScheduleIds = [], { course, 
             subjectName: sub?.subjectName ?? null,
             subjectCode: sub?.subjectCode ?? null,
             term,
-            termName,
-            semesterId: null,
-            semesterName: termName,
             examDate: plain.examDate ?? null,
             examTime: plain.examTime ?? null,
             duration: plain.duration ?? null,
             scheduleKind: plain.type ?? null,
+            slot: slot ?? null,
             subject: sub ?? null,
-            semester: term != null ? { term, name: termName } : null,
         };
     });
 }
 
 function flattenHallTicketDetail(ticket, scheduleRows, mappedScheduleIds = []) {
     const st = ticket.student;
-    const sess = ticket.session;
-    const est = ticket.examSetupTypeTerm;
-    const examType = est?.examSetupType;
-    const course = est?.course;
-    const examTerm = est?.term ?? null;
-    const subjects = schedulesToSubjectList(scheduleRows, mappedScheduleIds, {
-        course,
-        defaultTerm: examTerm,
-    });
-    const termName = examTerm != null
-        ? buildTermName(course?.termType, examTerm)
-        : null;
+    const es = ticket.examinationSession;
+    const assessmentType = es?.assessmentType;
+    const academicYear = ticket.academicYear || es?.academicYear;
+    const subjects = schedulesToSubjectList(scheduleRows, mappedScheduleIds);
 
     return {
         id: ticket.id,
         qr: ticket.qr,
-        examSetupTypeTermId: ticket.examSetupTypeTermId,
-        sessionId: ticket.sessionId,
+        examinationSessionId: ticket.examinationSessionId,
+        academicYearId: ticket.academicYearId,
         studentId: ticket.studentId,
         instituteId: ticket.instituteId,
         universityId: ticket.universityId,
@@ -158,13 +143,11 @@ function flattenHallTicketDetail(ticket, scheduleRows, mappedScheduleIds = []) {
         studentLastName: st?.lastName ?? null,
         scholarNumber: st?.scholarNumber ?? null,
         enrollNumber: st?.enrollNumber ?? null,
-        sessionName: sess?.sessionName ?? null,
-        examSetupTypeId: examType?.examSetupTypeId ?? est?.examSetupTypeId ?? null,
-        examType: examType?.examType ?? null,
-        examName: examType?.examName ?? null,
-        term: examTerm,
-        termName,
-        courseId: est?.courseId ?? null,
+        sessionName: es?.sessionName ?? null,
+        academicYearTitle: academicYear?.yearTitle ?? null,
+        assessmentTypeId: es?.assessmentTypeId ?? null,
+        examType: assessmentType?.examType ?? null,
+        examName: assessmentType?.examName ?? null,
         subjects,
     };
 }
@@ -174,9 +157,8 @@ export async function getHallTicketById(id) {
         const ticket = await studentHallTicketRepository.getHallTicketById(id, transaction);
         if (!ticket) return null;
 
-        const schedules = await studentHallTicketRepository.getSchedulesWithSubjectsForExamTermSession(
-            ticket.examSetupTypeTermId,
-            ticket.sessionId,
+        const schedules = await studentHallTicketRepository.getSchedulesWithSubjectsForExaminationSession(
+            ticket.examinationSessionId,
             transaction,
         );
 
@@ -200,9 +182,8 @@ export async function getHallTicketDetailsByQr(qr) {
         const ticket = await studentHallTicketRepository.getHallTicketByQr(qr, transaction);
         if (!ticket) return null;
 
-        const schedules = await studentHallTicketRepository.getSchedulesWithSubjectsForExamTermSession(
-            ticket.examSetupTypeTermId,
-            ticket.sessionId,
+        const schedules = await studentHallTicketRepository.getSchedulesWithSubjectsForExaminationSession(
+            ticket.examinationSessionId,
             transaction,
         );
 
@@ -236,10 +217,11 @@ export async function getAllHallTickets(filters, pagination = {}) {
     });
 }
 
-export async function getAllHallTicketsForUser(query = {}) {
+export async function getAllHallTicketsForUser(query = {}, user) {
     const filters = {};
-    if (query.examSetupTypeTermId) filters.examSetupTypeTermId = query.examSetupTypeTermId;
-    if (query.sessionId) filters.sessionId = query.sessionId;
+    if (query.examinationSessionId) filters.examinationSessionId = query.examinationSessionId;
+    const academicYearId = query.academicYearId || getAcademicYearId() || (user?.academicYearId ? Number(user.academicYearId) : undefined);
+    if (academicYearId) filters.academicYearId = academicYearId;
     if (query.studentId) filters.studentId = query.studentId;
 
     return getAllHallTickets(filters, {
