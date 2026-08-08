@@ -11,7 +11,8 @@ const idParamsSchema = z.object({
 });
 
 const generateSchema = z.object({
-    examinationSessionId: z.number({ required_error: "examinationSessionId is required" })
+    examinationSessionId: z.number({ required_error: "examinationSessionId is required" }),
+    studentIds: z.array(z.number()).optional(),
 });
 
 const qrQuerySchema = z.object({
@@ -26,13 +27,11 @@ const listHallTicketsQuerySchema = z.object({
     limit: z.coerce.number().int("limit must be an integer").min(1, "limit must be at least 1").optional().default(1000),
 });
 
-const singleStudentGenerateSchema = z.object({
-    examinationSessionId: z.number({ required_error: "examinationSessionId is required" }),
-    studentId: z.number({ required_error: "studentId is required" }),
-});
 
-const publishSessionSchema = z.object({
+
+const publishHallTicketsSchema = z.object({
     examinationSessionId: z.number({ required_error: "examinationSessionId is required" }),
+    studentIds: z.array(z.number()).optional(),
 });
 
 const examinationSessionIdParamsSchema = z.object({
@@ -45,10 +44,22 @@ const studentEligibilityParamsSchema = z.object({
 });
 
 
+const queryArrayOrSingleNumberSchema = z.preprocess((val) => {
+    if (val === "" || val === null || val === undefined) return undefined;
+    if (Array.isArray(val)) return val.map(Number);
+    if (typeof val === "string") {
+        if (val.includes(",")) {
+            return val.split(",").map(Number);
+        }
+        return [Number(val)];
+    }
+    return [Number(val)];
+}, z.array(z.number()).optional());
+
 const sessionStudentsQuerySchema = z.object({
-    courseId: z.coerce.number().int("courseId must be an integer").positive("courseId must be positive").optional(),
-    sessionId: z.coerce.number().int("sessionId must be an integer").positive("sessionId must be positive").optional(),
-    term: z.coerce.number().int("term must be an integer").positive("term must be positive").optional(),
+    courseId: queryArrayOrSingleNumberSchema,
+    sessionId: queryArrayOrSingleNumberSchema,
+    term: queryArrayOrSingleNumberSchema,
     status: z.preprocess(
         (val) => (val === "" || val === null || val === undefined ? undefined : val),
         z.enum(["Ready", "Blocked", "Review", "Not Generated", "Generated", "Published"]).optional()
@@ -68,16 +79,10 @@ router.patch("/block/:id", userAuth, validate({ params: idParamsSchema }), stude
 // 2. Verify / fetch hall ticket through QR
 router.get("/byQr", userAuth, validate({ query: qrQuerySchema }), studentHallTicketController.getHallTicketByQr);
 
-// 3. Publish an individual student's hall ticket
-router.patch("/:id/publish", userAuth, validate({ params: idParamsSchema }), studentHallTicketController.publishStudentHallTicket);
+// 3. Publish hall tickets (all or specific student IDs) for the examination session
+router.post("/publish", userAuth, validate({ body: publishHallTicketsSchema }), studentHallTicketController.publishHallTickets);
 
-// 4. Publish generated hall tickets for the examination session
-router.post("/publishSession", userAuth, validate({ body: publishSessionSchema }), studentHallTicketController.publishSessionHallTickets);
-
-// 5. Generate / regenerate hall ticket for one student
-router.post("/generateStudent", userAuth, validate({ body: singleStudentGenerateSchema }), studentHallTicketController.generateOrRegenerateStudentTicket);
-
-// 6. Bulk-generate hall tickets for all Ready students
+// 5. Generate / regenerate hall tickets (all eligible or specific student IDs)
 router.post("/generate", userAuth, validate({ body: generateSchema }), studentHallTicketController.generateHallTickets);
 
 // 7. Get one student's detailed eligibility before generating ticket

@@ -31,7 +31,11 @@ export async function getHallTicketEligibilityOverview(req, res) {
 
 export async function generateHallTickets(req, res) {
     try {
-        const result = await studentHallTicketServices.generateHallTicketsForUser(req.body, req.user);
+        const result = await studentHallTicketServices.generateHallTickets({
+            examinationSessionId: Number(req.body.examinationSessionId),
+            studentIds: req.body.studentIds,
+            user: req.user
+        });
         return SuccessResponse(res, 201, "Hall tickets generated successfully", result);
     } catch (error) {
         return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
@@ -80,32 +84,16 @@ export async function blockHallTicket(req, res) {
     }
 }
 
-export async function publishStudentHallTicket(req, res) {
+export async function publishHallTickets(req, res) {
     try {
-        const result = await studentHallTicketServices.publishStudentHallTicket(req.params.id);
-        return SuccessResponse(res, 200, "Hall ticket published successfully", result);
+        const result = await studentHallTicketServices.publishHallTickets(req.body);
+        return SuccessResponse(res, 200, "Hall tickets published successfully", result);
     } catch (error) {
         return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
     }
 }
 
-export async function publishSessionHallTickets(req, res) {
-    try {
-        const result = await studentHallTicketServices.publishSessionHallTickets(req.body.examinationSessionId);
-        return SuccessResponse(res, 200, "Examination session hall tickets published successfully", result);
-    } catch (error) {
-        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
-    }
-}
 
-export async function generateOrRegenerateStudentTicket(req, res) {
-    try {
-        const result = await studentHallTicketServices.generateOrRegenerateStudentTicket(req.body, req.user);
-        return SuccessResponse(res, 201, "Student hall ticket generated/regenerated successfully", result);
-    } catch (error) {
-        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
-    }
-}
 
 export async function getStudentEligibilityDetails(req, res) {
     try {

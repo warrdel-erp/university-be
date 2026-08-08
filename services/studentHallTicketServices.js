@@ -30,7 +30,7 @@ async function buildGenerationReadiness({ examinationSessionId, transaction }) {
     };
 }
 
-export async function generateHallTicketsByExamSession({ examinationSessionId, user }) {
+export async function generateHallTickets({ examinationSessionId, studentIds, user }) {
     return await sequelize.transaction(async (transaction) => {
         const readiness = await buildGenerationReadiness({
             examinationSessionId,
@@ -47,53 +47,52 @@ export async function generateHallTicketsByExamSession({ examinationSessionId, u
 
         const effectiveAcademicYearId = getAcademicYearId() || (user?.academicYearId ? Number(user.academicYearId) : readiness.examinationSession.academicYearId);
 
-        const existingCount = await studentHallTicketRepository.countHallTickets(
-            { examinationSessionId },
-            transaction,
-        );
-        if (existingCount > 0) {
-            const error = new Error(
-                "Hall tickets have already been generated for this examination session. Regeneration is not allowed.",
-            );
-            error.statusCode = 400;
-            throw error;
+        // Fetch students in the exam session
+        const allStudents = await studentHallTicketRepository.getStudentsByExaminationSessionId(examinationSessionId, {}, transaction);
+        const studentList = Array.isArray(allStudents) ? allStudents : (allStudents?.rows || []);
+
+        let targetStudents = [];
+        if (studentIds && studentIds.length > 0) {
+            // Specific student(s) mode
+            for (const sid of studentIds) {
+                const student = studentList.find(s => s.studentId === sid);
+                if (!student) {
+                    const error = new Error(`Student ${sid} is not part of this examination session`);
+                    error.statusCode = 404;
+                    throw error;
+                }
+                if (student.eligibilityStatus !== "Ready") {
+                    const error = new Error(`Cannot generate hall ticket. Student ${sid} eligibility status is '${student.eligibilityStatus}': ${student.eligibilityReason}`);
+                    error.statusCode = 400;
+                    throw error;
+                }
+                targetStudents.push(student);
+            }
+        } else {
+            // Bulk mode (all eligible "Ready" students who do NOT already have hall tickets)
+            targetStudents = studentList.filter(s => s.eligibilityStatus === "Ready" && !s.hallTicketId);
         }
 
-        const students = await studentHallTicketRepository.getEligibleStudentsForExaminationSession(
-            examinationSessionId,
-            transaction,
-        );
-
-        if (!students.length) {
+        if (!targetStudents.length) {
             return { generatedCount: 0, hallTickets: [] };
         }
 
-        const hallTicketPayloads = students.map((student) => ({
-            examinationSessionId,
-            academicYearId: effectiveAcademicYearId,
-            studentId: student.studentId,
-            qr: crypto.randomUUID(),
-        }));
-
-        await studentHallTicketRepository.bulkCreateHallTickets(hallTicketPayloads, transaction);
-
-        const hallTickets = await studentHallTicketRepository.getAllHallTickets(
-            { examinationSessionId },
-            transaction,
-        );
+        // Generate / update hall tickets for each target student
+        const generatedTickets = [];
+        for (const student of targetStudents) {
+            const ticket = await studentHallTicketRepository.generateOrRegenerateStudentHallTicket({
+                examinationSessionId,
+                academicYearId: effectiveAcademicYearId,
+                studentId: student.studentId,
+            }, transaction);
+            generatedTickets.push(ticket);
+        }
 
         return {
-            generatedCount: hallTickets.length,
+            generatedCount: generatedTickets.length,
             assessmentType: readiness.examinationSession.assessmentType,
-            hallTickets,
+            hallTickets: generatedTickets,
         };
-    });
-}
-
-export async function generateHallTicketsForUser(payload, user) {
-    return generateHallTicketsByExamSession({
-        examinationSessionId: Number(payload.examinationSessionId),
-        user,
     });
 }
 
@@ -268,51 +267,30 @@ export async function blockHallTicket(id) {
     });
 }
 
-export async function publishStudentHallTicket(id) {
+export async function publishHallTickets({ examinationSessionId, studentIds }) {
     return await sequelize.transaction(async (transaction) => {
-        const ticket = await studentHallTicketRepository.publishStudentHallTicket(id, transaction);
-        if (!ticket) {
-            const error = new Error("Hall ticket not found");
-            error.statusCode = 404;
-            throw error;
-        }
-        return ticket;
-    });
-}
+        // Retrieve all students belonging to the exam session to verify relations
+        const allSessionStudents = await studentHallTicketRepository.getStudentsByExaminationSessionId(examinationSessionId, {}, transaction);
+        const validStudentIds = new Set(allSessionStudents.map(s => s.studentId));
 
-export async function publishSessionHallTickets(examinationSessionId) {
-    return await sequelize.transaction(async (transaction) => {
-        const publishedCount = await studentHallTicketRepository.publishSessionHallTickets(examinationSessionId, transaction);
+        let targets = null;
+        if (studentIds && studentIds.length > 0) {
+            for (const sid of studentIds) {
+                if (!validStudentIds.has(sid)) {
+                    const error = new Error(`Student ${sid} is not associated with examination session ${examinationSessionId}`);
+                    error.statusCode = 400;
+                    throw error;
+                }
+            }
+            targets = studentIds;
+        }
+
+        const publishedCount = await studentHallTicketRepository.publishHallTickets(examinationSessionId, targets, transaction);
         return { examinationSessionId, publishedCount };
     });
 }
 
-export async function generateOrRegenerateStudentTicket({ examinationSessionId, studentId, user }) {
-    return await sequelize.transaction(async (transaction) => {
-        const students = await studentHallTicketRepository.getStudentsByExaminationSessionId(examinationSessionId, transaction);
-        const student = students.find((s) => s.studentId === studentId);
-        if (!student) {
-            const error = new Error("Student is not part of this examination session");
-            error.statusCode = 404;
-            throw error;
-        }
 
-        if (student.eligibilityStatus !== "Ready") {
-            const error = new Error(`Cannot generate hall ticket. Student eligibility status is '${student.eligibilityStatus}': ${student.eligibilityReason}`);
-            error.statusCode = 400;
-            throw error;
-        }
-
-        const effectiveAcademicYearId = getAcademicYearId() || (user?.academicYearId ? Number(user.academicYearId) : undefined);
-        const ticket = await studentHallTicketRepository.generateOrRegenerateStudentHallTicket({
-            examinationSessionId,
-            academicYearId: effectiveAcademicYearId,
-            studentId,
-        }, transaction);
-
-        return ticket;
-    });
-}
 
 export async function getStudentEligibilityDetails(examinationSessionId, studentId) {
     const students = await studentHallTicketRepository.getStudentsByExaminationSessionId(examinationSessionId);

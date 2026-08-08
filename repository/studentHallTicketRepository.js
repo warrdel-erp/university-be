@@ -82,10 +82,10 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
         ...buildScope(model.studentModel),
     };
     if (filters.courseId) {
-        studentWhere.courseId = Number(filters.courseId);
+        studentWhere.courseId = Array.isArray(filters.courseId) ? { [Op.in]: filters.courseId } : Number(filters.courseId);
     }
     if (filters.sessionId) {
-        studentWhere.sessionId = Number(filters.sessionId);
+        studentWhere.sessionId = Array.isArray(filters.sessionId) ? { [Op.in]: filters.sessionId } : Number(filters.sessionId);
     }
     if (filters.search?.trim()) {
         const search = `%${filters.search.trim()}%`;
@@ -99,7 +99,7 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
 
     const classSectionTermWhere = {};
     if (filters.term != null) {
-        classSectionTermWhere.term = filters.term;
+        classSectionTermWhere.term = Array.isArray(filters.term) ? { [Op.in]: filters.term } : filters.term;
     }
 
     const isPaginated = filters?.page != null || filters?.limit != null;
@@ -587,30 +587,24 @@ export async function blockHallTicket(id, transaction) {
     return ticket;
 }
 
-export async function publishStudentHallTicket(id, transaction) {
-    const ticket = await scoped(model.studentHallTicketModel).findByPk(id, { transaction });
-    if (!ticket) return null;
-    await ticket.update(
-        {
-            isPublished: true,
-            publishedAt: new Date(),
-        },
-        { transaction }
-    );
-    return ticket;
-}
+export async function publishHallTickets(examinationSessionId, studentIds = null, transaction = null) {
+    const whereClause = {
+        examinationSessionId,
+        isBlocked: false,
+    };
+    if (studentIds && studentIds.length > 0) {
+        whereClause.studentId = {
+            [Op.in]: studentIds
+        };
+    }
 
-export async function publishSessionHallTickets(examinationSessionId, transaction) {
     const [updatedCount] = await scoped(model.studentHallTicketModel).update(
         {
             isPublished: true,
             publishedAt: new Date(),
         },
         {
-            where: {
-                examinationSessionId,
-                isBlocked: false,
-            },
+            where: whereClause,
             transaction,
         }
     );
