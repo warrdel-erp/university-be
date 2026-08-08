@@ -1791,6 +1791,29 @@
               ]
             }
           }
+        },
+        {
+          "name": "10.10 Get Hall Ticket Eligibility Overview",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/eligibilityOverview/{{examinationSessionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                "eligibilityOverview",
+                "{{examinationSessionId}}"
+              ]
+            }
+          }
         }
       ]
     }

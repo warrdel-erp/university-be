@@ -19,6 +19,16 @@ export async function getStudentsForExaminationSession(req, res) {
     }
 }
 
+export async function getHallTicketEligibilityOverview(req, res) {
+    try {
+        const { examinationSessionId } = req.params;
+        const result = await studentHallTicketServices.getHallTicketEligibilityOverview(examinationSessionId);
+        return SuccessResponse(res, 200, "Hall ticket eligibility overview fetched successfully", result);
+    } catch (error) {
+        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+    }
+}
+
 export async function generateHallTickets(req, res) {
     try {
         const result = await studentHallTicketServices.generateHallTicketsForUser(req.body, req.user);

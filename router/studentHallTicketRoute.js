@@ -49,8 +49,14 @@ const sessionStudentsQuerySchema = z.object({
     courseId: z.coerce.number().int("courseId must be an integer").positive("courseId must be positive").optional(),
     sessionId: z.coerce.number().int("sessionId must be an integer").positive("sessionId must be positive").optional(),
     term: z.coerce.number().int("term must be an integer").positive("term must be positive").optional(),
-    status: z.enum(["Ready", "Blocked", "Review", "Not Generated", "Generated", "Published"]).optional(),
-    search: z.string().optional(),
+    status: z.preprocess(
+        (val) => (val === "" || val === null || val === undefined ? undefined : val),
+        z.enum(["Ready", "Blocked", "Review", "Not Generated", "Generated", "Published"]).optional()
+    ),
+    search: z.preprocess(
+        (val) => (val === "" || val === null ? undefined : val),
+        z.string().optional()
+    ),
     page: z.coerce.number().int("page must be an integer").min(1, "page must be at least 1").optional().default(1),
     limit: z.coerce.number().int("limit must be an integer").min(1, "limit must be at least 1").optional().default(10),
 });
@@ -68,23 +74,25 @@ router.patch("/:id/publish", userAuth, validate({ params: idParamsSchema }), stu
 // 4. Publish generated hall tickets for the examination session
 router.post("/publishSession", userAuth, validate({ body: publishSessionSchema }), studentHallTicketController.publishSessionHallTickets);
 
-// 5. Get complete hall ticket with student + exam schedule + room details
-router.get("/:id", userAuth, validate({ params: idParamsSchema }), studentHallTicketController.getHallTicketById);
-
-// 6. Generate / regenerate hall ticket for one student
+// 5. Generate / regenerate hall ticket for one student
 router.post("/generateStudent", userAuth, validate({ body: singleStudentGenerateSchema }), studentHallTicketController.generateOrRegenerateStudentTicket);
 
-// 7. Bulk-generate hall tickets for all Ready students
+// 6. Bulk-generate hall tickets for all Ready students
 router.post("/generate", userAuth, validate({ body: generateSchema }), studentHallTicketController.generateHallTickets);
 
-// 8. Get one student's detailed eligibility before generating ticket
+// 7. Get one student's detailed eligibility before generating ticket
 router.get("/eligibility/:examinationSessionId/:studentId", userAuth, validate({ params: studentEligibilityParamsSchema }), studentHallTicketController.getStudentEligibilityDetails);
 
+// 8. Get hall ticket eligibility overview counts for summary cards
+router.get("/eligibilityOverview/:examinationSessionId", userAuth, validate({ params: examinationSessionIdParamsSchema }), studentHallTicketController.getHallTicketEligibilityOverview);
 
+// 9. Get session students for examination session
+router.get("/sessionStudents/:examinationSessionId", userAuth, validate({ params: examinationSessionIdParamsSchema, query: sessionStudentsQuerySchema }), studentHallTicketController.getStudentsForExaminationSession);
 
-// Additional List route
+// 10. Additional List route
 router.get("/", userAuth, validate({ query: listHallTicketsQuerySchema }), studentHallTicketController.getAllHallTickets);
 
-router.get("/sessionStudents/:examinationSessionId", userAuth, validate({ params: examinationSessionIdParamsSchema, query: sessionStudentsQuerySchema }), studentHallTicketController.getStudentsForExaminationSession);
+// 11. Get complete hall ticket with student + exam schedule + room details (Wildcard /:id route must come after specific routes)
+router.get("/:id", userAuth, validate({ params: idParamsSchema }), studentHallTicketController.getHallTicketById);
 
 export default router;

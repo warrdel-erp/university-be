@@ -13,7 +13,7 @@ export async function findExaminationSessionById(examinationSessionId, transacti
             {
                 model: model.examSetupTypeModel,
                 as: "assessmentType",
-                attributes: ["examSetupTypeId", "examType", "examName", "isPublish"],
+                attributes: ["examSetupTypeId", "examName", "examCode", "examCategory"],
                 where: buildScope(model.examSetupTypeModel),
                 required: false,
             },
@@ -405,6 +405,32 @@ export async function getEligibleStudentsForExaminationSession(examinationSessio
     );
 }
 
+export async function getHallTicketEligibilityOverview(examinationSessionId, transaction = null) {
+    const students = await getStudentsByExaminationSessionId(examinationSessionId, {}, transaction);
+    const studentList = Array.isArray(students) ? students : (students?.rows || []);
+
+    let ready = 0;
+    let blocked = 0;
+    let review = 0;
+
+    for (const student of studentList) {
+        if (student.eligibilityStatus === "Ready") {
+            ready++;
+        } else if (student.eligibilityStatus === "Blocked") {
+            blocked++;
+        } else if (student.eligibilityStatus === "Review") {
+            review++;
+        }
+    }
+
+    return {
+        totalStudents: studentList.length,
+        ready,
+        blocked,
+        review,
+    };
+}
+
 export async function bulkCreateHallTickets(payloads, transaction) {
     return scoped(model.studentHallTicketModel).bulkCreate(payloads, { transaction });
 }
@@ -513,7 +539,7 @@ function getHallTicketIncludes() {
                 {
                     model: model.examSetupTypeModel,
                     as: "assessmentType",
-                    attributes: ["examSetupTypeId", "examType", "examName"],
+                    attributes: ["examSetupTypeId", "examName", "examCode", "examCategory"],
                 },
                 {
                     model: model.acedmicYearModel,

@@ -8,6 +8,10 @@ export async function getStudentsForExaminationSession(examinationSessionId, fil
     return studentHallTicketRepository.getStudentsByExaminationSessionId(Number(examinationSessionId), filters);
 }
 
+export async function getHallTicketEligibilityOverview(examinationSessionId) {
+    return studentHallTicketRepository.getHallTicketEligibilityOverview(Number(examinationSessionId));
+}
+
 async function buildGenerationReadiness({ examinationSessionId, transaction }) {
     const examinationSession = await studentHallTicketRepository.findExaminationSessionById(examinationSessionId, transaction);
     if (!examinationSession) {
@@ -156,7 +160,7 @@ function flattenHallTicketDetail(ticket, scheduleRows, mappedScheduleIds = [], r
         sessionName: es?.sessionName ?? null,
         academicYearTitle: academicYear?.yearTitle ?? null,
         assessmentTypeId: es?.assessmentTypeId ?? null,
-        examType: assessmentType?.examType ?? null,
+        examType: assessmentType?.examCategory ?? null,
         examName: assessmentType?.examName ?? null,
         subjects,
     };
