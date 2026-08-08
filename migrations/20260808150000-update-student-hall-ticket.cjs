@@ -52,6 +52,36 @@ module.exports = {
       });
     } catch (e) {}
 
+    try {
+      await queryInterface.addColumn('student_hall_ticket', 'is_blocked', {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+      });
+    } catch (e) {}
+
+    try {
+      await queryInterface.addColumn('student_hall_ticket', 'is_published', {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+      });
+    } catch (e) {}
+
+    try {
+      await queryInterface.addColumn('student_hall_ticket', 'published_at', {
+        type: Sequelize.DATE,
+        allowNull: true
+      });
+    } catch (e) {}
+
+    try {
+      await queryInterface.addColumn('student_hall_ticket', 'blocked_at', {
+        type: Sequelize.DATE,
+        allowNull: true
+      });
+    } catch (e) {}
+
     // 5. Add new indexes
     await queryInterface.addIndex('student_hall_ticket', ['examination_session_id', 'student_id'], {
       unique: true,
@@ -71,6 +101,19 @@ module.exports = {
     } catch (e) {}
     try {
       await queryInterface.sequelize.query('ALTER TABLE student_hall_ticket DROP INDEX student_hall_ticket_inst_univ_exam_session_idx;');
+    } catch (e) {}
+
+    try {
+      await queryInterface.removeColumn('student_hall_ticket', 'is_blocked');
+    } catch (e) {}
+    try {
+      await queryInterface.removeColumn('student_hall_ticket', 'is_published');
+    } catch (e) {}
+    try {
+      await queryInterface.removeColumn('student_hall_ticket', 'published_at');
+    } catch (e) {}
+    try {
+      await queryInterface.removeColumn('student_hall_ticket', 'blocked_at');
     } catch (e) {}
 
     try {

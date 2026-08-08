@@ -65,6 +65,28 @@ const studentHallTicketModel = sequelize.define(
                 key: "university_id"
             }
         },
+        isBlocked: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+            field: "is_blocked"
+        },
+        isPublished: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+            field: "is_published"
+        },
+        publishedAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field: "published_at"
+        },
+        blockedAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field: "blocked_at"
+        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,

@@ -4,6 +4,10 @@ import { buildTermName } from "../utility/courseTerms.js";
 import { getAcademicYearId } from "../utility/requestContext.js";
 import * as studentHallTicketRepository from "../repository/studentHallTicketRepository.js";
 
+export async function getStudentsForExaminationSession(examinationSessionId, filters = {}) {
+    return studentHallTicketRepository.getStudentsByExaminationSessionId(Number(examinationSessionId), filters);
+}
+
 async function buildGenerationReadiness({ examinationSessionId, transaction }) {
     const examinationSession = await studentHallTicketRepository.findExaminationSessionById(examinationSessionId, transaction);
     if (!examinationSession) {
@@ -95,7 +99,7 @@ function resolveScheduleTerm(plain) {
     return null;
 }
 
-function schedulesToSubjectList(scheduleRows, mappedScheduleIds = []) {
+function schedulesToSubjectList(scheduleRows, mappedScheduleIds = [], roomSeatingMap = new Map()) {
     const mappedSet = new Set(mappedScheduleIds || []);
 
     return (scheduleRows || []).map((row) => {
@@ -104,6 +108,7 @@ function schedulesToSubjectList(scheduleRows, mappedScheduleIds = []) {
         const slot = plain.examinationSessionSlot;
         const term = resolveScheduleTerm(plain);
         const isMapped = plain.examScheduleId != null && mappedSet.has(plain.examScheduleId);
+        const seating = roomSeatingMap.get(plain.examScheduleId) || null;
         return {
             examScheduleId: plain.examScheduleId,
             isMapped,
@@ -117,16 +122,17 @@ function schedulesToSubjectList(scheduleRows, mappedScheduleIds = []) {
             scheduleKind: plain.type ?? null,
             slot: slot ?? null,
             subject: sub ?? null,
+            seating,
         };
     });
 }
 
-function flattenHallTicketDetail(ticket, scheduleRows, mappedScheduleIds = []) {
+function flattenHallTicketDetail(ticket, scheduleRows, mappedScheduleIds = [], roomSeatingMap = new Map()) {
     const st = ticket.student;
     const es = ticket.examinationSession;
     const assessmentType = es?.assessmentType;
     const academicYear = ticket.academicYear || es?.academicYear;
-    const subjects = schedulesToSubjectList(scheduleRows, mappedScheduleIds);
+    const subjects = schedulesToSubjectList(scheduleRows, mappedScheduleIds, roomSeatingMap);
 
     return {
         id: ticket.id,
@@ -136,6 +142,10 @@ function flattenHallTicketDetail(ticket, scheduleRows, mappedScheduleIds = []) {
         studentId: ticket.studentId,
         instituteId: ticket.instituteId,
         universityId: ticket.universityId,
+        isBlocked: ticket.isBlocked ?? false,
+        isPublished: ticket.isPublished ?? false,
+        publishedAt: ticket.publishedAt ?? null,
+        blockedAt: ticket.blockedAt ?? null,
         createdAt: ticket.createdAt,
         updatedAt: ticket.updatedAt,
         studentFirstName: st?.firstName ?? null,
@@ -169,7 +179,13 @@ export async function getHallTicketById(id) {
             transaction,
         );
 
-        return flattenHallTicketDetail(ticket, schedules, mappedScheduleIds);
+        const roomSeatingMap = await studentHallTicketRepository.getStudentRoomSeatingDetails(
+            ticket.studentId,
+            examScheduleIds,
+            transaction,
+        );
+
+        return flattenHallTicketDetail(ticket, schedules, mappedScheduleIds, roomSeatingMap);
     });
 }
 
@@ -194,7 +210,13 @@ export async function getHallTicketDetailsByQr(qr) {
             transaction,
         );
 
-        return flattenHallTicketDetail(ticket, schedules, mappedScheduleIds);
+        const roomSeatingMap = await studentHallTicketRepository.getStudentRoomSeatingDetails(
+            ticket.studentId,
+            examScheduleIds,
+            transaction,
+        );
+
+        return flattenHallTicketDetail(ticket, schedules, mappedScheduleIds, roomSeatingMap);
     });
 }
 
@@ -228,4 +250,73 @@ export async function getAllHallTicketsForUser(query = {}, user) {
         page: query.page,
         limit: query.limit,
     });
+}
+
+export async function blockHallTicket(id) {
+    return await sequelize.transaction(async (transaction) => {
+        const ticket = await studentHallTicketRepository.blockHallTicket(id, transaction);
+        if (!ticket) {
+            const error = new Error("Hall ticket not found");
+            error.statusCode = 404;
+            throw error;
+        }
+        return ticket;
+    });
+}
+
+export async function publishStudentHallTicket(id) {
+    return await sequelize.transaction(async (transaction) => {
+        const ticket = await studentHallTicketRepository.publishStudentHallTicket(id, transaction);
+        if (!ticket) {
+            const error = new Error("Hall ticket not found");
+            error.statusCode = 404;
+            throw error;
+        }
+        return ticket;
+    });
+}
+
+export async function publishSessionHallTickets(examinationSessionId) {
+    return await sequelize.transaction(async (transaction) => {
+        const publishedCount = await studentHallTicketRepository.publishSessionHallTickets(examinationSessionId, transaction);
+        return { examinationSessionId, publishedCount };
+    });
+}
+
+export async function generateOrRegenerateStudentTicket({ examinationSessionId, studentId, user }) {
+    return await sequelize.transaction(async (transaction) => {
+        const students = await studentHallTicketRepository.getStudentsByExaminationSessionId(examinationSessionId, transaction);
+        const student = students.find((s) => s.studentId === studentId);
+        if (!student) {
+            const error = new Error("Student is not part of this examination session");
+            error.statusCode = 404;
+            throw error;
+        }
+
+        if (student.eligibilityStatus !== "Ready") {
+            const error = new Error(`Cannot generate hall ticket. Student eligibility status is '${student.eligibilityStatus}': ${student.eligibilityReason}`);
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const effectiveAcademicYearId = getAcademicYearId() || (user?.academicYearId ? Number(user.academicYearId) : undefined);
+        const ticket = await studentHallTicketRepository.generateOrRegenerateStudentHallTicket({
+            examinationSessionId,
+            academicYearId: effectiveAcademicYearId,
+            studentId,
+        }, transaction);
+
+        return ticket;
+    });
+}
+
+export async function getStudentEligibilityDetails(examinationSessionId, studentId) {
+    const students = await studentHallTicketRepository.getStudentsByExaminationSessionId(examinationSessionId);
+    const student = students.find((s) => s.studentId === Number(studentId));
+    if (!student) {
+        const error = new Error("Student not found in this examination session");
+        error.statusCode = 404;
+        throw error;
+    }
+    return student;
 }

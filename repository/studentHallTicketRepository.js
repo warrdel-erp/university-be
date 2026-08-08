@@ -1,7 +1,10 @@
+import crypto from "crypto";
 import { Op, fn, col } from "sequelize";
 import * as model from "../models/index.js";
+import sequelize from '../database/sequelizeConfig.js';
 import { buildScope, scoped } from "../utility/scoped.js";
 import { studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
+
 
 export async function findExaminationSessionById(examinationSessionId, transaction) {
     return scoped(model.examinationSessionModel).findByPk(examinationSessionId, {
@@ -69,41 +72,337 @@ export async function getSchedulesWithSubjectsForExaminationSession(examinationS
     });
 }
 
-export async function getEligibleStudentsForExaminationSession(examinationSessionId, transaction) {
-    const session = await findExaminationSessionById(examinationSessionId, transaction);
-    if (!session) return [];
-
-    const classSectionTermIds = (session.examinationSessionTerms || [])
-        .map((t) => t.classSectionTermId)
-        .filter(Boolean);
-
-    if (classSectionTermIds.length) {
-        return scoped(model.studentModel).findAll({
-            transaction,
-            attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "enrollNumber"],
-            where: {
-                ...buildScope(model.studentModel),
-            },
-            include: [
-                {
-                    model: model.studentClassSectionsHistoryModel,
-                    as: "sectionHistory",
-                    required: true,
-                    where: {
-                        classSectionTermId: { [Op.in]: classSectionTermIds },
-                    },
-                },
-            ],
-        });
+export async function getStudentsByExaminationSessionId(examinationSessionId, filters = {}, transaction = null) {
+    if (filters && (typeof filters.commit === "function" || filters.finished || filters.LOCK)) {
+        transaction = filters;
+        filters = {};
     }
 
-    return scoped(model.studentModel).findAll({
-        transaction,
-        attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "enrollNumber"],
-        where: {
-            ...buildScope(model.studentModel),
+    const studentWhere = {
+        ...buildScope(model.studentModel),
+    };
+    if (filters.courseId) {
+        studentWhere.courseId = Number(filters.courseId);
+    }
+    if (filters.sessionId) {
+        studentWhere.sessionId = Number(filters.sessionId);
+    }
+    if (filters.search?.trim()) {
+        const search = `%${filters.search.trim()}%`;
+        studentWhere[Op.or] = [
+            { enrollNumber: { [Op.like]: search } },
+            { firstName: { [Op.like]: search } },
+            { middleName: { [Op.like]: search } },
+            { lastName: { [Op.like]: search } },
+        ];
+    }
+
+    const classSectionTermWhere = {};
+    if (filters.term != null) {
+        classSectionTermWhere.term = filters.term;
+    }
+
+    const isPaginated = filters?.page != null || filters?.limit != null;
+    const page = Math.max(1, Number(filters.page) || 1);
+    const limit = Math.max(1, Number(filters.limit) || 10);
+    const offset = (page - 1) * limit;
+
+    const presentStatuses = ["Present", "Medical Leave", "Duty Leave", "Sports Leave", "NCC Leave", "Approved Leave"];
+
+    const getStudentIncludes = () => [
+        {
+            model: model.courseModel,
+            as: "course",
+            required: false,
+            attributes: ["courseId", "courseName"]
         },
-    });
+        {
+            model: model.sessionModel,
+            as: "studentSession",
+            required: false,
+            attributes: ["sessionId", "sessionName"]
+        },
+        {
+            model: model.attendanceModel,
+            as: "attendances",
+            required: false,
+            attributes: ["attendanceId", "attendanceStatus", "classSectionTermId"],
+            where: {
+                attendanceStatus: { [Op.ne]: "Holiday" },
+                ...buildScope(model.attendanceModel),
+            }
+        },
+        {
+            model: model.assessmentPlanModel,
+            as: "assessmentPlans",
+            required: false,
+            attributes: ["assessmentPlanId", "courseId", "sessionId", "academicYearId", "term", "regulationId"],
+            include: [
+                {
+                    model: model.assessmentPlanComponentModel,
+                    as: "components",
+                    required: false,
+                    attributes: ["assessmentPlanComponentId", "examSetupTypeId"]
+                },
+                {
+                    model: model.academicRegulationModel,
+                    as: "academicRegulation",
+                    required: false,
+                    attributes: ["academicRegulationId", "minimumAttendance"]
+                }
+            ]
+        },
+        {
+            model: model.studentHallTicketModel,
+            as: "hallTickets",
+            required: false,
+            attributes: ["id", "examinationSessionId", "isPublished", "isBlocked", "publishedAt", "blockedAt"],
+            where: {
+                examinationSessionId: Number(examinationSessionId)
+            }
+        }
+    ];
+
+    const activeEstQuery = {
+        where: {
+            examinationSessionId: Number(examinationSessionId),
+        },
+        attributes: [
+            "examinationSessionTermId",
+            "classSectionTermId",
+        ],
+        include: [
+            {
+                model: model.examinationSessionModel,
+                as: "examinationSession",
+                required: true,
+                attributes: ["examinationSessionId", "assessmentTypeId", "academicYearId"]
+            },
+            {
+                model: model.classSectionTermModel,
+                as: "classSectionTerm",
+                required: true,
+                attributes: ["classSectionTermId", "term"],
+                where: Object.keys(classSectionTermWhere).length ? classSectionTermWhere : undefined,
+                include: [
+                    {
+                        model: model.classStudentMapperModel,
+                        as: "studentTermPlacement",
+                        required: true,
+                        attributes: ["classStudentMapperId", "studentId", "sessionId"],
+                        where: {
+                            isPassed: false,
+                            ...buildScope(model.classStudentMapperModel),
+                        },
+                        include: [
+                            {
+                                model: model.studentModel,
+                                as: "studentMapped",
+                                required: true,
+                                attributes: [
+                                    "studentId",
+                                    "enrollNumber",
+                                    "firstName",
+                                    "middleName",
+                                    "lastName",
+                                    "courseId",
+                                    "sessionId"
+                                ],
+                                where: Object.keys(studentWhere).length ? studentWhere : undefined,
+                                include: getStudentIncludes(),
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        distinct: true,
+        transaction,
+    };
+
+    const historyEstQuery = {
+        where: {
+            examinationSessionId: Number(examinationSessionId),
+        },
+        attributes: [
+            "examinationSessionTermId",
+            "classSectionTermId",
+        ],
+        include: [
+            {
+                model: model.examinationSessionModel,
+                as: "examinationSession",
+                required: true,
+                attributes: ["examinationSessionId", "assessmentTypeId", "academicYearId"]
+            },
+            {
+                model: model.classSectionTermModel,
+                as: "classSectionTerm",
+                required: true,
+                attributes: ["classSectionTermId", "term"],
+                where: Object.keys(classSectionTermWhere).length ? classSectionTermWhere : undefined,
+                include: [
+                    {
+                        model: model.studentClassSectionsHistoryModel,
+                        as: "sectionHistoryTerms",
+                        required: true,
+                        attributes: ["id", "studentId", "classSectionTermId"],
+                        where: buildScope(model.studentClassSectionsHistoryModel),
+                        include: [
+                            {
+                                model: model.studentModel,
+                                as: "student",
+                                required: true,
+                                attributes: [
+                                    "studentId",
+                                    "enrollNumber",
+                                    "firstName",
+                                    "middleName",
+                                    "lastName",
+                                    "courseId",
+                                    "sessionId"
+                                ],
+                                where: Object.keys(studentWhere).length ? studentWhere : undefined,
+                                include: getStudentIncludes(),
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        distinct: true,
+        transaction,
+    };
+
+    const [activeEstList, historyEstList] = await Promise.all([
+        scoped(model.examinationSessionTermModel).findAll(activeEstQuery),
+        scoped(model.examinationSessionTermModel).findAll(historyEstQuery),
+    ]);
+
+    const studentRows = [];
+    const seenStudentIds = new Set();
+
+    const processStudent = (st, cst, est, mapperSessionId) => {
+        const course = st.course;
+        const session = st.studentSession;
+        const attendances = (st.attendances || []).filter(a => a.classSectionTermId === cst.classSectionTermId);
+
+        const totalClasses = attendances.length;
+        const presentClasses = attendances.filter(a => presentStatuses.includes(a.attendanceStatus)).length;
+        const attendancePercentage = totalClasses > 0 ? Number(((presentClasses / totalClasses) * 100).toFixed(2)) : 0;
+
+        const plans = st.assessmentPlans || [];
+        let minimumAttendance = null;
+        for (const plan of plans) {
+            if (plan.academicRegulation?.minimumAttendance != null) {
+                minimumAttendance = Number(plan.academicRegulation.minimumAttendance);
+                break;
+            }
+        }
+
+        let eligibilityStatus = "Ready";
+        let eligibilityReason = null;
+        if (totalClasses === 0) {
+            eligibilityStatus = "Review";
+            eligibilityReason = "Attendance data unavailable";
+        } else if (minimumAttendance !== null && attendancePercentage < minimumAttendance) {
+            eligibilityStatus = "Blocked";
+            eligibilityReason = "Attendance below minimum requirement";
+        }
+
+        const hallTickets = st.hallTickets || [];
+        const hallTicket = hallTickets[0] || null;
+
+        const isGenerated = !!hallTicket;
+        const isPublished = hallTicket?.isPublished ?? false;
+        const isBlocked = hallTicket?.isBlocked ?? false;
+
+        let hallTicketStatus = "Not Generated";
+        if (isBlocked) hallTicketStatus = "Blocked";
+        else if (isPublished) hallTicketStatus = "Published";
+        else if (isGenerated) hallTicketStatus = "Generated";
+
+        if (filters.status) {
+            const targetStatus = String(filters.status).trim().toLowerCase();
+            const eligMatch = eligibilityStatus.toLowerCase() === targetStatus;
+            const hallMatch = hallTicketStatus.toLowerCase() === targetStatus;
+            if (!eligMatch && !hallMatch) return;
+        }
+
+        studentRows.push({
+            studentId: st.studentId,
+            enrollmentNumber: st.enrollNumber ?? null,
+            firstName: st.firstName ?? null,
+            middleName: st.middleName ?? null,
+            lastName: st.lastName ?? null,
+            courseId: st.courseId ?? course?.courseId ?? null,
+            courseName: course?.courseName ?? null,
+            sessionId: mapperSessionId ?? st.sessionId ?? session?.sessionId ?? null,
+            sessionName: session?.sessionName ?? null,
+            term: cst.term,
+            examinationSessionTermId: est.examinationSessionTermId,
+            classSectionTermId: cst.classSectionTermId,
+            totalClasses,
+            presentClasses,
+            attendancePercentage,
+            minimumAttendance,
+            hallTicketId: hallTicket?.id ?? null,
+            isGenerated,
+            isPublished,
+            isBlocked,
+            hallTicketStatus,
+            eligibilityStatus,
+            eligibilityReason,
+        });
+    };
+
+    for (const est of activeEstList) {
+        const cst = est.classSectionTerm;
+        if (!cst) continue;
+        const mappers = cst.studentTermPlacement || [];
+        for (const mapper of mappers) {
+            const st = mapper.studentMapped;
+            if (!st || seenStudentIds.has(st.studentId)) continue;
+            seenStudentIds.add(st.studentId);
+            processStudent(st, cst, est, mapper.sessionId);
+        }
+    }
+
+    for (const est of historyEstList) {
+        const cst = est.classSectionTerm;
+        if (!cst) continue;
+        const histories = cst.sectionHistoryTerms || [];
+        for (const history of histories) {
+            const st = history.student;
+            if (!st || seenStudentIds.has(st.studentId)) continue;
+            seenStudentIds.add(st.studentId);
+            processStudent(st, cst, est, null);
+        }
+    }
+
+    if (!isPaginated) {
+        return studentRows;
+    }
+
+    const total = studentRows.length;
+    const paginatedRows = studentRows.slice(offset, offset + limit);
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    return {
+        rows: paginatedRows,
+        total,
+        page,
+        limit,
+        totalPages,
+    };
+}
+
+export async function getEligibleStudentsForExaminationSession(examinationSessionId, transaction) {
+    return getStudentsByExaminationSessionId(
+        examinationSessionId,
+        { status: "Ready" },
+        transaction
+    );
 }
 
 export async function bulkCreateHallTickets(payloads, transaction) {
@@ -247,4 +546,121 @@ export async function getMappedExamScheduleIds(studentId, examScheduleIds, trans
         transaction,
     });
     return answerSheetQrs.map((a) => a.examScheduleId);
+}
+
+export async function blockHallTicket(id, transaction) {
+    const ticket = await scoped(model.studentHallTicketModel).findByPk(id, { transaction });
+    if (!ticket) return null;
+    await ticket.update(
+        {
+            isBlocked: true,
+            blockedAt: new Date(),
+        },
+        { transaction }
+    );
+    return ticket;
+}
+
+export async function publishStudentHallTicket(id, transaction) {
+    const ticket = await scoped(model.studentHallTicketModel).findByPk(id, { transaction });
+    if (!ticket) return null;
+    await ticket.update(
+        {
+            isPublished: true,
+            publishedAt: new Date(),
+        },
+        { transaction }
+    );
+    return ticket;
+}
+
+export async function publishSessionHallTickets(examinationSessionId, transaction) {
+    const [updatedCount] = await scoped(model.studentHallTicketModel).update(
+        {
+            isPublished: true,
+            publishedAt: new Date(),
+        },
+        {
+            where: {
+                examinationSessionId,
+                isBlocked: false,
+            },
+            transaction,
+        }
+    );
+    return updatedCount;
+}
+
+export async function getStudentRoomSeatingDetails(studentId, examScheduleIds, transaction) {
+    if (!examScheduleIds || !examScheduleIds.length) return new Map();
+
+    const seats = await scoped(model.studentExamSeatModel).findAll({
+        where: {
+            studentId,
+        },
+        include: [
+            {
+                model: model.examScheduleRoomCapacityModel,
+                as: "roomCapacity",
+                where: {
+                    examScheduleId: { [Op.in]: examScheduleIds },
+                },
+                include: [
+                    {
+                        model: model.classRoomModel,
+                        as: "classRoom",
+                        attributes: ["classRoomSectionId", "roomName", "roomNumber", "block"],
+                    },
+                ],
+            },
+        ],
+        transaction,
+    });
+
+    const seatMap = new Map();
+    for (const seat of seats) {
+        const roomCap = seat.roomCapacity;
+        if (!roomCap) continue;
+        const examScheduleId = roomCap.examScheduleId;
+        seatMap.set(examScheduleId, {
+            row: seat.row,
+            column: seat.column,
+            roomName: roomCap.classRoom?.roomName ?? null,
+            roomNumber: roomCap.classRoom?.roomNumber ?? null,
+            block: roomCap.classRoom?.block ?? null,
+        });
+    }
+    return seatMap;
+}
+
+export async function generateOrRegenerateStudentHallTicket({ examinationSessionId, academicYearId, studentId }, transaction) {
+    let ticket = await scoped(model.studentHallTicketModel).findOne({
+        where: { examinationSessionId, studentId },
+        transaction,
+    });
+
+    if (ticket) {
+        await ticket.update(
+            {
+                isBlocked: false,
+                blockedAt: null,
+                updatedAt: new Date(),
+            },
+            { transaction }
+        );
+    } else {
+        ticket = await scoped(model.studentHallTicketModel).create(
+            {
+                examinationSessionId,
+                academicYearId,
+                studentId,
+                qr: crypto.randomUUID(),
+                isBlocked: false,
+                isPublished: false,
+            },
+            { transaction }
+        );
+    }
+
+    return ticket;
 }

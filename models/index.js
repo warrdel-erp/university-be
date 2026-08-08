@@ -2012,6 +2012,8 @@ acedmicYearModel.hasMany(studentHallTicketModel, { foreignKey: "acedmic_year_id"
 
 studentHallTicketModel.belongsTo(studentModel, { foreignKey: "student_id", as: "student" });
 studentModel.hasMany(studentHallTicketModel, { foreignKey: "student_id", as: "hallTickets" });
+studentModel.hasMany(attendanceModel, { foreignKey: 'student_id', as: 'attendances' });
+studentModel.hasMany(assessmentPlanModel, { foreignKey: 'courseId', sourceKey: 'courseId', as: 'assessmentPlans' });
 
 studentHallTicketModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "institute" });
 instituteModel.hasMany(studentHallTicketModel, { foreignKey: "institute_id", as: "hallTickets" });

@@ -1,6 +1,24 @@
 import * as studentHallTicketServices from "../services/studentHallTicketServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
+export async function getStudentsForExaminationSession(req, res) {
+    try {
+        const { examinationSessionId } = req.params;
+        const result = await studentHallTicketServices.getStudentsForExaminationSession(examinationSessionId, req.query, req.user);
+        if (result && typeof result === "object" && "rows" in result) {
+            return SuccessResponse(res, 200, "Students fetched successfully", result.rows, {
+                total: result.total,
+                page: result.page,
+                limit: result.limit,
+                totalPages: result.totalPages,
+            });
+        }
+        return SuccessResponse(res, 200, "Students fetched successfully", result);
+    } catch (error) {
+        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+    }
+}
+
 export async function generateHallTickets(req, res) {
     try {
         const result = await studentHallTicketServices.generateHallTicketsForUser(req.body, req.user);
@@ -40,5 +58,50 @@ export async function getHallTicketByQr(req, res) {
         return SuccessResponse(res, 200, "Hall ticket fetched successfully", result);
     } catch (error) {
         return ErrorResponse(res, 500, error.message || "Internal Server Error");
+    }
+}
+
+export async function blockHallTicket(req, res) {
+    try {
+        const result = await studentHallTicketServices.blockHallTicket(req.params.id);
+        return SuccessResponse(res, 200, "Hall ticket blocked successfully", result);
+    } catch (error) {
+        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+    }
+}
+
+export async function publishStudentHallTicket(req, res) {
+    try {
+        const result = await studentHallTicketServices.publishStudentHallTicket(req.params.id);
+        return SuccessResponse(res, 200, "Hall ticket published successfully", result);
+    } catch (error) {
+        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+    }
+}
+
+export async function publishSessionHallTickets(req, res) {
+    try {
+        const result = await studentHallTicketServices.publishSessionHallTickets(req.body.examinationSessionId);
+        return SuccessResponse(res, 200, "Examination session hall tickets published successfully", result);
+    } catch (error) {
+        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+    }
+}
+
+export async function generateOrRegenerateStudentTicket(req, res) {
+    try {
+        const result = await studentHallTicketServices.generateOrRegenerateStudentTicket(req.body, req.user);
+        return SuccessResponse(res, 201, "Student hall ticket generated/regenerated successfully", result);
+    } catch (error) {
+        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+    }
+}
+
+export async function getStudentEligibilityDetails(req, res) {
+    try {
+        const result = await studentHallTicketServices.getStudentEligibilityDetails(req.params.examinationSessionId, req.params.studentId);
+        return SuccessResponse(res, 200, "Student eligibility details fetched successfully", result);
+    } catch (error) {
+        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
     }
 }
