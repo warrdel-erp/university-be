@@ -44,18 +44,27 @@ export async function getSchedulesByExaminationSessionId(examinationSessionId, t
     });
 }
 
-export async function getSchedulesWithSubjectsForExaminationSession(examinationSessionId, transaction) {
+export async function getSchedulesWithSubjectsForExaminationSession(examinationSessionId, filters = {}, transaction = null) {
+    const { courseId, sessionId, term } = filters;
+
     return scoped(model.examScheduleModel).findAll({
         transaction,
-        where: { examinationSessionId },
+        where: {
+            examinationSessionId,
+            ...(term != null && { term }),
+            ...(sessionId != null && { sessionId }),
+        },
         attributes: ["examScheduleId", "subjectId", "term", "examDate", "examTime", "duration", "type", "examinationSessionSlotId"],
         include: [
             {
                 model: model.subjectModel,
                 as: "subjectSchedule",
-                required: false,
+                required: courseId != null,
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"] },
-                where: buildScope(model.subjectModel),
+                where: {
+                    ...buildScope(model.subjectModel),
+                    ...(courseId != null && { courseId }),
+                },
             },
             {
                 model: model.examinationSessionSlotModel,
@@ -519,7 +528,7 @@ function getHallTicketIncludes() {
         {
             model: model.studentModel,
             as: "student",
-            attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "enrollNumber"],
+            attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "enrollNumber", "courseId", "sessionId"],
             where: buildScope(model.studentModel),
             required: false,
             include: [

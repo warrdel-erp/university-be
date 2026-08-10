@@ -170,8 +170,19 @@ export async function getHallTicketById(id) {
         const ticket = await studentHallTicketRepository.getHallTicketById(id, transaction);
         if (!ticket) return null;
 
+        const student = ticket.student;
+        const term = student?.studentClassSectionTerm?.term;
+        const courseId = student?.courseId;
+        const sessionId = student?.sessionId;
+
+        // If the student or their current term/placement info is missing, do not silently return schedules for all terms
+        if (!student || term == null || courseId == null || sessionId == null) {
+            return flattenHallTicketDetail(ticket, [], [], new Map());
+        }
+
         const schedules = await studentHallTicketRepository.getSchedulesWithSubjectsForExaminationSession(
             ticket.examinationSessionId,
+            { courseId, sessionId, term },
             transaction,
         );
 
@@ -201,8 +212,18 @@ export async function getHallTicketDetailsByQr(qr) {
         const ticket = await studentHallTicketRepository.getHallTicketByQr(qr, transaction);
         if (!ticket) return null;
 
+        const student = ticket.student;
+        const term = student?.studentClassSectionTerm?.term;
+        const courseId = student?.courseId;
+        const sessionId = student?.sessionId;
+
+        if (!student || term == null || courseId == null || sessionId == null) {
+            return flattenHallTicketDetail(ticket, [], [], new Map());
+        }
+
         const schedules = await studentHallTicketRepository.getSchedulesWithSubjectsForExaminationSession(
             ticket.examinationSessionId,
+            { courseId, sessionId, term },
             transaction,
         );
 
