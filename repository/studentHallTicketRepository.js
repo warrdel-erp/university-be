@@ -90,6 +90,9 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
     const studentWhere = {
         ...buildScope(model.studentModel),
     };
+    if (filters.studentId) {
+        studentWhere.studentId = Array.isArray(filters.studentId) ? { [Op.in]: filters.studentId } : Number(filters.studentId);
+    }
     if (filters.courseId) {
         studentWhere.courseId = Array.isArray(filters.courseId) ? { [Op.in]: filters.courseId } : Number(filters.courseId);
     }
@@ -213,6 +216,7 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
             }
         ],
         distinct: true,
+        subQuery: false,
         transaction,
     };
 
@@ -254,6 +258,7 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
             }
         ],
         distinct: true,
+        subQuery: false,
         transaction,
     };
 
@@ -310,31 +315,7 @@ export async function getEligibleStudentsForExaminationSession(examinationSessio
     );
 }
 
-export async function getHallTicketEligibilityOverview(examinationSessionId, transaction = null) {
-    const students = await getStudentsByExaminationSessionId(examinationSessionId, {}, transaction);
-    const studentList = Array.isArray(students) ? students : (students?.rows || []);
 
-    let ready = 0;
-    let blocked = 0;
-    let review = 0;
-
-    for (const student of studentList) {
-        if (student.eligibilityStatus === "Ready") {
-            ready++;
-        } else if (student.eligibilityStatus === "Blocked") {
-            blocked++;
-        } else if (student.eligibilityStatus === "Review") {
-            review++;
-        }
-    }
-
-    return {
-        totalStudents: studentList.length,
-        ready,
-        blocked,
-        review,
-    };
-}
 
 export async function bulkCreateHallTickets(payloads, transaction) {
     return scoped(model.studentHallTicketModel).bulkCreate(payloads, { transaction });
