@@ -629,7 +629,7 @@ export async function getStudentRoomSeatingDetails(studentId, examScheduleIds, t
                     {
                         model: model.classRoomModel,
                         as: "classRoom",
-                        attributes: ["classRoomSectionId", "roomName", "roomNumber", "block"],
+                        attributes: ["classRoomSectionId", "roomNumber"],
                     },
                 ],
             },
@@ -645,9 +645,9 @@ export async function getStudentRoomSeatingDetails(studentId, examScheduleIds, t
         seatMap.set(examScheduleId, {
             row: seat.row,
             column: seat.column,
-            roomName: roomCap.classRoom?.roomName ?? null,
+            roomName: roomCap.classRoom?.roomNumber ?? null,
             roomNumber: roomCap.classRoom?.roomNumber ?? null,
-            block: roomCap.classRoom?.block ?? null,
+            block: null,
         });
     }
     return seatMap;
