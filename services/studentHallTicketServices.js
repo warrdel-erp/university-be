@@ -285,6 +285,22 @@ export async function publishHallTickets({ examinationSessionId, studentIds }) {
             targets = studentIds;
         }
 
+        // Count generated tickets first to avoid fake success responses
+        const generatedCount = await studentHallTicketRepository.countHallTickets({
+            examinationSessionId,
+            ...(targets && { studentId: targets }),
+        }, transaction);
+
+        if (generatedCount === 0) {
+            const error = new Error(
+                targets && targets.length > 0
+                    ? "No generated hall tickets found for the specified student(s). Please generate them first."
+                    : "No generated hall tickets found for this examination session. Please generate them first."
+            );
+            error.statusCode = 400;
+            throw error;
+        }
+
         const publishedCount = await studentHallTicketRepository.publishHallTickets(examinationSessionId, targets, transaction);
         return { examinationSessionId, publishedCount };
     });
