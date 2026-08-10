@@ -1372,8 +1372,8 @@ export async function getTeacherCourses(userId) {
   return await employeeRepository.getTeacherCourses(userId);
 }
 
-export async function getTeacherSubjectsFromSchedule(userId) {
-  return await employeeScheduleRepository.getTeacherSubjectsFromWeekCells(userId);
+export async function getTeacherSubjectsFromSchedule(userId, filters = {}) {
+  return await employeeScheduleRepository.getTeacherSubjectsFromWeekCells(userId, filters);
 }
 
 function getTeacherDetails(rawSchedules) {
