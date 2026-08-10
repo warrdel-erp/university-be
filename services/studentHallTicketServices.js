@@ -96,6 +96,22 @@ export function calculateStudentEligibility(rawRecord) {
             severity: "warning",
             message: "Required registration document has not been submitted."
         });
+        reviewReasons.push({
+            code: "DOCUMENT_VERIFICATION_PENDING",
+            title: "Document verification pending",
+            severity: "warning",
+            message: "Registration document verification is pending."
+        });
+    }
+
+    // 1b. Photograph checking
+    if (!st.studentPhoto) {
+        reviewReasons.push({
+            code: "MISSING_PHOTOGRAPH",
+            title: "Missing photograph",
+            severity: "warning",
+            message: "Student photograph is missing."
+        });
     }
 
     // 2. Invoice checking
@@ -388,37 +404,39 @@ export async function getHallTicketEligibilityOverview(examinationSessionId) {
 
 export async function getHallTicketSummary(examinationSessionId) {
     const rawList = await studentHallTicketRepository.getStudentsByExaminationSessionId(Number(examinationSessionId));
-    let ready = 0;
-    let blocked = 0;
-    let review = 0;
-    let generated = 0;
-    let published = 0;
+    let feeClearance = 0;
+    let attendanceShortage = 0;
+    let registrationPending = 0;
+    let missingPhotograph = 0;
+    let documentVerification = 0;
 
     for (const raw of rawList) {
         const calculated = calculateStudentEligibility(raw);
-        if (calculated.eligibilityStatus === "Ready") {
-            ready++;
-        } else if (calculated.eligibilityStatus === "Blocked") {
-            blocked++;
-        } else if (calculated.eligibilityStatus === "Review") {
-            review++;
-        }
+        const reasons = calculated.reviewReasons || [];
 
-        if (calculated.isGenerated) {
-            generated++;
+        if (reasons.some(r => r.code === "UNPAID_INVOICE")) {
+            feeClearance++;
         }
-        if (calculated.isPublished) {
-            published++;
+        if (reasons.some(r => r.code === "LOW_ATTENDANCE")) {
+            attendanceShortage++;
+        }
+        if (reasons.some(r => r.code === "DOCUMENT_NOT_SUBMITTED")) {
+            registrationPending++;
+        }
+        if (reasons.some(r => r.code === "MISSING_PHOTOGRAPH")) {
+            missingPhotograph++;
+        }
+        if (reasons.some(r => r.code === "DOCUMENT_VERIFICATION_PENDING")) {
+            documentVerification++;
         }
     }
 
     return {
-        totalStudents: rawList.length,
-        ready,
-        blocked,
-        review,
-        generated,
-        published,
+        feeClearance,
+        attendanceShortage,
+        registrationPending,
+        missingPhotograph,
+        documentVerification
     };
 }
 

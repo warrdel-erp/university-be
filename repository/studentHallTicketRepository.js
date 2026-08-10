@@ -202,7 +202,7 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
                         model: model.studentModel,
                         as: "studentClassSectionTerm",
                         required: true,
-                        attributes: ["studentId", "enrollNumber", "firstName", "middleName", "lastName", "courseId", "sessionId", "universityId", "instituteId", "documentStatus"],
+                        attributes: ["studentId", "enrollNumber", "firstName", "middleName", "lastName", "courseId", "sessionId", "universityId", "instituteId", "documentStatus", "studentPhoto"],
                         where: Object.keys(studentWhere).length ? studentWhere : undefined,
                         include: getStudentIncludes(),
                     }
@@ -242,7 +242,7 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
                                 model: model.studentModel,
                                 as: "student",
                                 required: true,
-                                attributes: ["studentId", "enrollNumber", "firstName", "middleName", "lastName", "courseId", "sessionId", "universityId", "instituteId", "documentStatus"],
+                                attributes: ["studentId", "enrollNumber", "firstName", "middleName", "lastName", "courseId", "sessionId", "universityId", "instituteId", "documentStatus", "studentPhoto"],
                                 where: Object.keys(studentWhere).length ? studentWhere : undefined,
                                 include: getStudentIncludes(),
                             }
