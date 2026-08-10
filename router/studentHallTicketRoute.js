@@ -2,6 +2,8 @@ import { Router } from "express";
 import { z } from "zod";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
+// import { checkAccess } from "../middleware/checkAccess.js";
+// import { PERMISSIONS } from "../const/permissions.js";
 import * as studentHallTicketController from "../controllers/studentHallTicketController.js";
 
 const router = Router();
@@ -13,6 +15,7 @@ const idParamsSchema = z.object({
 const generateSchema = z.object({
     examinationSessionId: z.number({ required_error: "examinationSessionId is required" }),
     studentIds: z.array(z.number()).optional(),
+    overrideReason: z.string().optional(),
 });
 
 const qrQuerySchema = z.object({
@@ -73,6 +76,14 @@ const sessionStudentsQuerySchema = z.object({
 });
 
 
+const reviewDetailsParamsSchema = z.object({
+    studentId: z.string().regex(/^\d+$/, "studentId must be a number").transform((v) => Number(v)),
+});
+
+const reviewDetailsQuerySchema = z.object({
+    examinationSessionId: z.coerce.number().int("examinationSessionId must be an integer").positive("examinationSessionId must be greater than 0"),
+});
+
 // 1. Cancel / block an already-generated hall ticket
 router.patch("/block/:id", userAuth, validate({ params: idParamsSchema }), studentHallTicketController.blockHallTicket);
 
@@ -93,6 +104,9 @@ router.get("/eligibilityOverview/:examinationSessionId", userAuth, validate({ pa
 
 // 9. Get session students for examination session
 router.get("/sessionStudents/:examinationSessionId", userAuth, validate({ params: examinationSessionIdParamsSchema, query: sessionStudentsQuerySchema }), studentHallTicketController.getStudentsForExaminationSession);
+
+// 9b. Get review details for a student
+router.get("/reviewDetails/:studentId", userAuth, validate({ params: reviewDetailsParamsSchema, query: reviewDetailsQuerySchema }), studentHallTicketController.getReviewDetails);
 
 // 10. Additional List route
 router.get("/", userAuth, validate({ query: listHallTicketsQuerySchema }), studentHallTicketController.getAllHallTickets);

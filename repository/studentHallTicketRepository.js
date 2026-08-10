@@ -173,19 +173,14 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
     ];
 
     const activeEstQuery = {
-        where: {
-            examinationSessionId: Number(examinationSessionId),
-        },
-        attributes: [
-            "examinationSessionTermId",
-            "classSectionTermId",
-        ],
+        where: { examinationSessionId: Number(examinationSessionId) },
+        attributes: ["examinationSessionTermId", "classSectionTermId"],
         include: [
             {
                 model: model.examinationSessionModel,
                 as: "examinationSession",
                 required: true,
-                attributes: ["examinationSessionId", "assessmentTypeId", "academicYearId"]
+                attributes: ["examinationSessionId", "sessionName", "examStartDate", "examEndDate", "assessmentTypeId", "academicYearId"]
             },
             {
                 model: model.classSectionTermModel,
@@ -208,15 +203,7 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
                                 model: model.studentModel,
                                 as: "studentMapped",
                                 required: true,
-                                attributes: [
-                                    "studentId",
-                                    "enrollNumber",
-                                    "firstName",
-                                    "middleName",
-                                    "lastName",
-                                    "courseId",
-                                    "sessionId"
-                                ],
+                                attributes: ["studentId", "enrollNumber", "firstName", "middleName", "lastName", "courseId", "sessionId", "universityId", "instituteId"],
                                 where: Object.keys(studentWhere).length ? studentWhere : undefined,
                                 include: getStudentIncludes(),
                             }
@@ -230,19 +217,14 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
     };
 
     const historyEstQuery = {
-        where: {
-            examinationSessionId: Number(examinationSessionId),
-        },
-        attributes: [
-            "examinationSessionTermId",
-            "classSectionTermId",
-        ],
+        where: { examinationSessionId: Number(examinationSessionId) },
+        attributes: ["examinationSessionTermId", "classSectionTermId"],
         include: [
             {
                 model: model.examinationSessionModel,
                 as: "examinationSession",
                 required: true,
-                attributes: ["examinationSessionId", "assessmentTypeId", "academicYearId"]
+                attributes: ["examinationSessionId", "sessionName", "examStartDate", "examEndDate", "assessmentTypeId", "academicYearId"]
             },
             {
                 model: model.classSectionTermModel,
@@ -262,15 +244,7 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
                                 model: model.studentModel,
                                 as: "student",
                                 required: true,
-                                attributes: [
-                                    "studentId",
-                                    "enrollNumber",
-                                    "firstName",
-                                    "middleName",
-                                    "lastName",
-                                    "courseId",
-                                    "sessionId"
-                                ],
+                                attributes: ["studentId", "enrollNumber", "firstName", "middleName", "lastName", "courseId", "sessionId", "universityId", "instituteId"],
                                 where: Object.keys(studentWhere).length ? studentWhere : undefined,
                                 include: getStudentIncludes(),
                             }
@@ -292,76 +266,12 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
     const seenStudentIds = new Set();
 
     const processStudent = (st, cst, est, mapperSessionId) => {
-        const course = st.course;
-        const session = st.studentSession;
-        const attendances = (st.attendances || []).filter(a => a.classSectionTermId === cst.classSectionTermId);
-
-        const totalClasses = attendances.length;
-        const presentClasses = attendances.filter(a => presentStatuses.includes(a.attendanceStatus)).length;
-        const attendancePercentage = totalClasses > 0 ? Number(((presentClasses / totalClasses) * 100).toFixed(2)) : 0;
-
-        const plans = st.assessmentPlans || [];
-        let minimumAttendance = null;
-        for (const plan of plans) {
-            if (plan.academicRegulation?.minimumAttendance != null) {
-                minimumAttendance = Number(plan.academicRegulation.minimumAttendance);
-                break;
-            }
-        }
-
-        let eligibilityStatus = "Ready";
-        let eligibilityReason = null;
-        if (totalClasses === 0) {
-            eligibilityStatus = "Review";
-            eligibilityReason = "Attendance data unavailable";
-        } else if (minimumAttendance !== null && attendancePercentage < minimumAttendance) {
-            eligibilityStatus = "Blocked";
-            eligibilityReason = "Attendance below minimum requirement";
-        }
-
-        const hallTickets = st.hallTickets || [];
-        const hallTicket = hallTickets[0] || null;
-
-        const isGenerated = !!hallTicket;
-        const isPublished = hallTicket?.isPublished ?? false;
-        const isBlocked = hallTicket?.isBlocked ?? false;
-
-        let hallTicketStatus = "Not Generated";
-        if (isBlocked) hallTicketStatus = "Blocked";
-        else if (isPublished) hallTicketStatus = "Published";
-        else if (isGenerated) hallTicketStatus = "Generated";
-
-        if (filters.status) {
-            const targetStatus = String(filters.status).trim().toLowerCase();
-            const eligMatch = eligibilityStatus.toLowerCase() === targetStatus;
-            const hallMatch = hallTicketStatus.toLowerCase() === targetStatus;
-            if (!eligMatch && !hallMatch) return;
-        }
-
         studentRows.push({
-            studentId: st.studentId,
-            enrollmentNumber: st.enrollNumber ?? null,
-            firstName: st.firstName ?? null,
-            middleName: st.middleName ?? null,
-            lastName: st.lastName ?? null,
-            courseId: st.courseId ?? course?.courseId ?? null,
-            courseName: course?.courseName ?? null,
-            sessionId: mapperSessionId ?? st.sessionId ?? session?.sessionId ?? null,
-            sessionName: session?.sessionName ?? null,
-            term: cst.term,
-            examinationSessionTermId: est.examinationSessionTermId,
-            classSectionTermId: cst.classSectionTermId,
-            totalClasses,
-            presentClasses,
-            attendancePercentage,
-            minimumAttendance,
-            hallTicketId: hallTicket?.id ?? null,
-            isGenerated,
-            isPublished,
-            isBlocked,
-            hallTicketStatus,
-            eligibilityStatus,
-            eligibilityReason,
+            student: st.get ? st.get({ plain: true }) : st,
+            classSectionTerm: cst.get ? cst.get({ plain: true }) : cst,
+            examinationSessionTerm: est.get ? est.get({ plain: true }) : est,
+            examinationSession: est.examinationSession ? (est.examinationSession.get ? est.examinationSession.get({ plain: true }) : est.examinationSession) : null,
+            mapperSessionId
         });
     };
 
@@ -389,21 +299,7 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
         }
     }
 
-    if (!isPaginated) {
-        return studentRows;
-    }
-
-    const total = studentRows.length;
-    const paginatedRows = studentRows.slice(offset, offset + limit);
-    const totalPages = Math.ceil(total / limit) || 1;
-
-    return {
-        rows: paginatedRows,
-        total,
-        page,
-        limit,
-        totalPages,
-    };
+    return studentRows;
 }
 
 export async function getEligibleStudentsForExaminationSession(examinationSessionId, transaction) {
@@ -662,21 +558,26 @@ export async function getStudentRoomSeatingDetails(studentId, examScheduleIds, t
     return seatMap;
 }
 
-export async function generateOrRegenerateStudentHallTicket({ examinationSessionId, academicYearId, studentId }, transaction) {
+export async function generateOrRegenerateStudentHallTicket({ examinationSessionId, academicYearId, studentId, overrideReason = null, overrideBy = null, previousEligibilityStatus = null }, transaction = null) {
     let ticket = await scoped(model.studentHallTicketModel).findOne({
         where: { examinationSessionId, studentId },
         transaction,
     });
 
+    const updateFields = {
+        isBlocked: false,
+        blockedAt: null,
+        updatedAt: new Date(),
+    };
+    if (overrideReason) {
+        updateFields.overrideReason = overrideReason;
+        updateFields.overrideBy = overrideBy;
+        updateFields.overrideAt = new Date();
+        updateFields.previousEligibilityStatus = previousEligibilityStatus;
+    }
+
     if (ticket) {
-        await ticket.update(
-            {
-                isBlocked: false,
-                blockedAt: null,
-                updatedAt: new Date(),
-            },
-            { transaction }
-        );
+        await ticket.update(updateFields, { transaction });
     } else {
         ticket = await scoped(model.studentHallTicketModel).create(
             {
@@ -686,10 +587,21 @@ export async function generateOrRegenerateStudentHallTicket({ examinationSession
                 qr: crypto.randomUUID(),
                 isBlocked: false,
                 isPublished: false,
+                ...(overrideReason && {
+                    overrideReason,
+                    overrideBy,
+                    overrideAt: new Date(),
+                    previousEligibilityStatus,
+                }),
             },
             { transaction }
         );
     }
 
     return ticket;
+}
+
+export async function getSingleStudentByExamSession(examinationSessionId, studentId, transaction = null) {
+    const list = await getStudentsByExaminationSessionId(examinationSessionId, { studentId: Number(studentId) }, transaction);
+    return list[0] || null;
 }

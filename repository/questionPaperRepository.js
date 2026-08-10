@@ -130,24 +130,46 @@ export async function getSingleQuestionPaper(id) {
     }
 }
 
-export async function updateQuestionPaper(id, questionPaperData) {
+export async function updateQuestionPaper(id, questionPaperData, transaction = null) {
     try {
-        const existing = await assertScopedQuestionPaper(id);
+        const existing = await assertScopedQuestionPaper(id, transaction);
         if (!existing) {
             return [0];
         }
         if (questionPaperData.examScheduleId) {
-            const schedule = await assertScopedExamSchedule(questionPaperData.examScheduleId);
+            const schedule = await assertScopedExamSchedule(questionPaperData.examScheduleId, transaction);
             if (!schedule) {
                 throw new Error('Exam schedule not found');
             }
         }
         const result = await model.questionPaperModel.update(questionPaperData, {
             where: { id },
+            transaction,
         });
         return result;
     } catch (error) {
         console.error("Error updating question paper:", error);
+        throw error;
+    }
+}
+
+export async function getApprovedQuestionPapersByScheduleId(examScheduleId, transaction = null) {
+    try {
+        return await model.questionPaperModel.findAll({
+            where: {
+                examScheduleId,
+                status: "Approved"
+            },
+            include: [{
+                model: model.examScheduleModel,
+                as: "examSchedule",
+                required: true,
+                where: buildScope(model.examScheduleModel)
+            }],
+            transaction
+        });
+    } catch (error) {
+        console.error("Error fetching approved papers:", error);
         throw error;
     }
 }

@@ -1867,6 +1867,10 @@ export const PERMISSIONS = {
     HALL_TICKETS_DELETE: {
         value: "HALL_TICKETS_DELETE",
         parentPermission: 'HALL_TICKETS',
+    },
+    HALL_TICKET_OVERRIDE_GENERATE: {
+        value: "HALL_TICKET_OVERRIDE_GENERATE",
+        parentPermission: 'HALL_TICKETS',
     }
 
 };

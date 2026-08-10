@@ -2021,6 +2021,9 @@ instituteModel.hasMany(studentHallTicketModel, { foreignKey: "institute_id", as:
 studentHallTicketModel.belongsTo(universityModel, { foreignKey: "university_id", as: "university" });
 universityModel.hasMany(studentHallTicketModel, { foreignKey: "university_id", as: "hallTickets" });
 
+studentHallTicketModel.belongsTo(userModel, { foreignKey: "override_by", as: "overrideUser" });
+userModel.hasMany(studentHallTicketModel, { foreignKey: "override_by", as: "overriddenHallTickets" });
+
 s3FileModel.belongsTo(userModel, { foreignKey: "createdBy", as: "creator" });
 userModel.hasMany(s3FileModel, { foreignKey: "createdBy", as: "s3Files" });
 academicRegulationModel.belongsTo(gradingModel, { foreignKey: 'gradingSchemeId', as: 'gradingScheme' });

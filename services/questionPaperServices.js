@@ -3,6 +3,7 @@ import * as questionPaperBlueprintRepository from "../repository/questionPaperBl
 import * as questionBankRepository from "../repository/questionBankRepository.js";
 import * as subjectRepository from "../repository/subjectRepository.js";
 import { questionStatus } from "../constant.js";
+import sequelize from "../database/sequelizeConfig.js";
 
 /**
  * Calculates total marks from all sections of a question paper.
@@ -225,55 +226,103 @@ export async function generateQuestionPaper(name, blueprintId, examScheduleId, n
     }
 }
 
-export async function approveQuestionPaper(id, updatedBy) {
-    const questionPaperRecord = await questionPaperRepository.getSingleQuestionPaper(id);
+export async function approveQuestionPaper({ questionPaperId, status, remarks, updatedBy }) {
+    const questionPaperRecord = await questionPaperRepository.getSingleQuestionPaper(questionPaperId);
     if (!questionPaperRecord) {
-        throw new Error(`Question paper with id ${id} not found`);
+        const error = new Error(`Question paper with id ${questionPaperId} not found`);
+        error.statusCode = 404;
+        throw error;
     }
 
-    // 1. Fetch subject and university ID from exam schedule
+    // 1. Fetch/verify its examScheduleId
     const examSchedule = await questionPaperRepository.getExamScheduleById(questionPaperRecord.examScheduleId);
     if (!examSchedule) {
-        throw new Error(`Exam schedule not found for question paper ${id}`);
+        const error = new Error(`Exam schedule not found for question paper ${questionPaperId}`);
+        error.statusCode = 404;
+        throw error;
     }
 
-    const { subjectId } = examSchedule;
-    const subject = await subjectRepository.getSubjectById(subjectId);
-    if (!subject) {
-        throw new Error(`Subject with id ${subjectId} not found`);
+    // 2. Verify the paper is in a state where COE is allowed to approve or reject it
+    if (!["Pending", "Approved", "Rejected"].includes(questionPaperRecord.status)) {
+        const error = new Error(`Question paper cannot be approved/rejected in its current status: ${questionPaperRecord.status}`);
+        error.statusCode = 400;
+        throw error;
     }
 
-    // 2. Iterate through sections and questions to add/update in bank
-    const sections = questionPaperRecord.questionPaper;
-    if (sections && Array.isArray(sections)) {
-        for (const section of sections) {
-            if (section.questions && Array.isArray(section.questions)) {
-                for (const question of section.questions) {
-                    if (question.id) {
-                        // Update status for existing bank questions
-                        await questionBankRepository.updateQuestion(question.id, { status: questionStatus[1], updatedBy });
-                    } else {
-                        // Create new entries for questions not in bank
-                        const questionData = {
-                            type: section.typeOfQuestions || question.type,
-                            difficulty: question.difficulty,
-                            bloom: question.bloom,
-                            marks: question.marks,
-                            question: question.question,
-                            Answer: question.Answer,
-                            content: question.content,
-                            subjectId,
-                            status: questionStatus[1],
-                            createdBy: updatedBy,
-                            updatedBy
-                        };
-                        await questionBankRepository.addQuestion(questionData);
+    if (status === "Approved") {
+        const { subjectId } = examSchedule;
+        const subject = await subjectRepository.getSubjectById(subjectId);
+        if (!subject) {
+            const error = new Error(`Subject with id ${subjectId} not found`);
+            error.statusCode = 404;
+            throw error;
+        }
+
+        // Iterate through sections and questions to add/update in bank
+        const sections = questionPaperRecord.questionPaper;
+        if (sections && Array.isArray(sections)) {
+            for (const section of sections) {
+                if (section.questions && Array.isArray(section.questions)) {
+                    for (const question of section.questions) {
+                        if (question.id) {
+                            // Update status for existing bank questions
+                            await questionBankRepository.updateQuestion(question.id, { status: "Approved", updatedBy });
+                        } else {
+                            // Create new entries for questions not in bank
+                            const questionData = {
+                                type: section.typeOfQuestions || question.type,
+                                difficulty: question.difficulty,
+                                bloom: question.bloom,
+                                marks: question.marks,
+                                question: question.question,
+                                Answer: question.Answer,
+                                content: question.content,
+                                subjectId,
+                                status: "Approved",
+                                createdBy: updatedBy,
+                                updatedBy
+                            };
+                            await questionBankRepository.addQuestion(questionData);
+                        }
                     }
                 }
             }
         }
     }
 
-    // 3. Update the question paper status itself
-    return await questionPaperRepository.updateQuestionPaper(id, { status: questionStatus[1], updatedBy });
+    // 3. Update only that Question Paper status and remarks
+    return await questionPaperRepository.updateQuestionPaper(questionPaperId, {
+        status,
+        remarks: remarks || null,
+        updatedBy
+    });
+}
+
+export async function approvefinalpaper({ examScheduleId, updatedBy }) {
+    return await sequelize.transaction(async (transaction) => {
+        const approvedPapers = await questionPaperRepository.getApprovedQuestionPapersByScheduleId(examScheduleId, transaction);
+
+        if (!approvedPapers || approvedPapers.length === 0) {
+            const error = new Error("No approved question papers found for this exam schedule");
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const randomIndex = Math.floor(Math.random() * approvedPapers.length);
+        const selectedPaper = approvedPapers[randomIndex];
+
+        for (const paper of approvedPapers) {
+            const finalApproval = (paper.id === selectedPaper.id) ? "Approved" : "Rejected";
+            await questionPaperRepository.updateQuestionPaper(paper.id, {
+                finalApproval,
+                updatedBy
+            }, transaction);
+        }
+
+        return {
+        
+            totalApprovedPool: approvedPapers.length,
+          
+        };
+    });
 }

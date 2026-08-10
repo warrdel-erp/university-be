@@ -34,6 +34,7 @@ export async function generateHallTickets(req, res) {
         const result = await studentHallTicketServices.generateHallTickets({
             examinationSessionId: Number(req.body.examinationSessionId),
             studentIds: req.body.studentIds,
+            overrideReason: req.body.overrideReason,
             user: req.user
         });
         return SuccessResponse(res, 201, "Hall tickets generated successfully", result);
@@ -103,3 +104,17 @@ export async function getStudentEligibilityDetails(req, res) {
         return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
     }
 }
+
+export async function getReviewDetails(req, res) {
+    try {
+        const result = await studentHallTicketServices.getReviewDetails({
+            studentId: req.params.studentId,
+            examinationSessionId: req.query.examinationSessionId,
+        });
+        return SuccessResponse(res, 200, "Hall ticket review details fetched successfully", result);
+    } catch (error) {
+        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+    }
+}
+
+

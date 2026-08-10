@@ -87,6 +87,30 @@ const studentHallTicketModel = sequelize.define(
             allowNull: true,
             field: "blocked_at"
         },
+        previousEligibilityStatus: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: "previous_eligibility_status"
+        },
+        overrideReason: {
+            type: DataTypes.TEXT,
+            allowNull: true,
+            field: "override_reason"
+        },
+        overrideBy: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: "override_by",
+            references: {
+                model: "users",
+                key: "user_id"
+            }
+        },
+        overrideAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field: "override_at"
+        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,

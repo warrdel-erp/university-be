@@ -9,6 +9,7 @@ import {
     deleteQuestionPaper,
     generateQuestionPaper,
     approveQuestionPaper,
+    approvefinalpaper
 } from "../controllers/questionPaperController.js";
 
 import userAuth from "../middleware/authUser.js";
@@ -96,7 +97,13 @@ const generateQuestionPaperSchema = z.object({
 });
 
 const approveQuestionPaperSchema = z.object({
-    id: z.number({ required_error: "id is required" }),
+    questionPaperId: z.number({ required_error: "questionPaperId is required" }),
+    status: z.enum(["Approved", "Rejected"], { required_error: "status is required and must be either Approved or Rejected" }),
+    remarks: z.string().optional(),
+});
+
+const finalApprovalSchema = z.object({
+    examScheduleId: z.number({ required_error: "examScheduleId is required" }),
 });
 
 router.post("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, null), validate({ body: createQuestionPaperSchema }), addQuestionPaper);
@@ -111,6 +118,10 @@ router.put("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_EDIT.va
 
 router.delete("/:id", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_DELETE.value, null), deleteQuestionPaper);
 
+
+
 router.put("/approve", userAuth, checkAccessAny([PERMISSIONS.QUESTION_APPROVAL_EDIT.value, PERMISSIONS.EXAM_TIME_TABLE_CREATE_PAPER_APPROVAL.value], null), validate({ body: approveQuestionPaperSchema }), approveQuestionPaper);
+
+router.patch("/finalApproved", userAuth, validate({ body: finalApprovalSchema }), approvefinalpaper);
 
 export default router;
