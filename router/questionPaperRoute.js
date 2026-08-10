@@ -103,7 +103,7 @@ const approveQuestionPaperSchema = z.object({
 });
 
 const finalApprovalSchema = z.object({
-    examScheduleId: z.number({ required_error: "examScheduleId is required" }),
+    examScheduleId: z.coerce.number({ required_error: "examScheduleId is required" }),
 });
 
 router.post("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, null), validate({ body: createQuestionPaperSchema }), addQuestionPaper);
