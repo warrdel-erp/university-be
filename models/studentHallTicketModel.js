@@ -92,24 +92,25 @@ const studentHallTicketModel = sequelize.define(
             allowNull: true,
             field: "previous_eligibility_status"
         },
-        overrideReason: {
-            type: DataTypes.TEXT,
-            allowNull: true,
-            field: "override_reason"
+        markAsEligible: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+            field: "mark_as_eligible"
         },
-        overrideBy: {
+        markedBy: {
             type: DataTypes.INTEGER,
             allowNull: true,
-            field: "override_by",
+            field: "marked_by",
             references: {
                 model: "users",
                 key: "user_id"
             }
         },
-        overrideAt: {
+        markedAt: {
             type: DataTypes.DATE,
             allowNull: true,
-            field: "override_at"
+            field: "marked_at"
         },
         createdAt: {
             type: DataTypes.DATE,

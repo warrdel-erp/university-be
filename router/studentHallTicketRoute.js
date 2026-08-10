@@ -15,7 +15,12 @@ const idParamsSchema = z.object({
 const generateSchema = z.object({
     examinationSessionId: z.number({ required_error: "examinationSessionId is required" }),
     studentIds: z.array(z.number()).optional(),
-    overrideReason: z.string().optional(),
+});
+
+const markAsEligibleSchema = z.object({
+    examinationSessionId: z.number({ required_error: "examinationSessionId is required" }),
+    studentId: z.number({ required_error: "studentId is required" }),
+    markAsEligible: z.boolean({ required_error: "markAsEligible is required" }),
 });
 
 const qrQuerySchema = z.object({
@@ -96,11 +101,17 @@ router.post("/publish", userAuth, validate({ body: publishHallTicketsSchema }), 
 // 5. Generate / regenerate hall tickets (all eligible or specific student IDs)
 router.post("/generate", userAuth, validate({ body: generateSchema }), studentHallTicketController.generateHallTickets);
 
+// 6. Mark student as eligible (COE/Admin override)
+router.post("/markAsEligible", userAuth, validate({ body: markAsEligibleSchema }), studentHallTicketController.markAsEligible);
+
 // 7. Get one student's detailed eligibility before generating ticket
 router.get("/eligibility/:examinationSessionId/:studentId", userAuth, validate({ params: studentEligibilityParamsSchema }), studentHallTicketController.getStudentEligibilityDetails);
 
 // 8. Get hall ticket eligibility overview counts for summary cards
 router.get("/eligibilityOverview/:examinationSessionId", userAuth, validate({ params: examinationSessionIdParamsSchema }), studentHallTicketController.getHallTicketEligibilityOverview);
+
+// 8b. Get optimized hall ticket eligibility and lifecycle summary
+router.get("/summary/:examinationSessionId", userAuth, validate({ params: examinationSessionIdParamsSchema }), studentHallTicketController.getHallTicketSummary);
 
 // 9. Get session students for examination session
 router.get("/sessionStudents/:examinationSessionId", userAuth, validate({ params: examinationSessionIdParamsSchema, query: sessionStudentsQuerySchema }), studentHallTicketController.getStudentsForExaminationSession);

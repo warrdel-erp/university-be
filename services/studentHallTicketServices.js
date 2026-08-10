@@ -3,6 +3,9 @@ import sequelize from "../database/sequelizeConfig.js";
 import { buildTermName } from "../utility/courseTerms.js";
 import { getAcademicYearId } from "../utility/requestContext.js";
 import * as studentHallTicketRepository from "../repository/studentHallTicketRepository.js";
+ import { getUserPermissions } from "../utility/authEngine.js";
+ import { PERMISSIONS } from "../const/permissions.js";
+
 
 export function calculateStudentEligibility(rawRecord) {
     const {
@@ -85,30 +88,75 @@ export function calculateStudentEligibility(rawRecord) {
 
     const reviewReasons = [];
 
-    let eligibilityStatus = "Ready";
+    // 1. Document checking
+    if (st.documentStatus === "Pending Documents") {
+        reviewReasons.push({
+            code: "DOCUMENT_NOT_SUBMITTED",
+            title: "Required document missing",
+            severity: "warning",
+            message: "Required registration document has not been submitted."
+        });
+    }
 
+    // 2. Invoice checking
+    const invoices = st.studentFeeInvoices || [];
+    const totalInvoices = invoices.length;
+    const unpaidInvoicesList = invoices.filter(inv => inv.paymentStatus === "unpaid" || inv.paymentStatus === "partial");
+    const unpaidInvoices = unpaidInvoicesList.length;
+    const paidInvoices = totalInvoices - unpaidInvoices;
+    const outstandingAmount = unpaidInvoicesList.reduce((sum, inv) => sum + Math.max(0, Number(inv.total) - Number(inv.paidAmount)), 0);
+    const hasOutstandingInvoice = unpaidInvoices > 0 && outstandingAmount > 0;
+
+    const invoiceKPIs = {
+        totalInvoices,
+        paidInvoices,
+        unpaidInvoices,
+        outstandingAmount,
+        hasOutstandingInvoice
+    };
+
+    if (hasOutstandingInvoice) {
+        reviewReasons.push({
+            code: "UNPAID_INVOICE",
+            title: "Outstanding fee payment",
+            severity: "warning",
+            message: `Student has ${unpaidInvoices} unpaid invoices with an outstanding amount of ₹${outstandingAmount.toLocaleString('en-IN')}.`
+        });
+    }
+
+    // 3. Attendance checking
     if (totalClasses === 0) {
-        eligibilityStatus = "Review";
-
         reviewReasons.push({
             code: "ATTENDANCE_DATA_INCOMPLETE",
             title: "Attendance data incomplete",
             severity: "warning",
-            message:
-                "No classes have been logged for this student in the current term.",
+            message: "Attendance data is incomplete for the current term."
         });
     } else if (
         minimumAttendanceRequired !== null &&
         attendancePercentage < minimumAttendanceRequired
     ) {
-        eligibilityStatus = "Blocked";
-
         reviewReasons.push({
             code: "LOW_ATTENDANCE",
             title: "Attendance below minimum",
             severity: "error",
-            message: `Attendance is ${attendancePercentage}%, while the required minimum is ${minimumAttendanceRequired}%.`,
+            message: `Attendance is ${attendancePercentage}%, below the required minimum of ${minimumAttendanceRequired}%.`
         });
+    }
+
+    // Priority resolution
+    let eligibilityStatus = "Ready";
+    let reasonText = null;
+
+    const errorReason = reviewReasons.find(r => r.severity === "error");
+    const warningReason = reviewReasons.find(r => r.severity === "warning");
+
+    if (errorReason) {
+        eligibilityStatus = "Blocked";
+        reasonText = errorReason.message;
+    } else if (warningReason) {
+        eligibilityStatus = "Review";
+        reasonText = warningReason.message;
     }
 
     // --------------------------------
@@ -192,12 +240,14 @@ export function calculateStudentEligibility(rawRecord) {
 
     return {
         eligibilityStatus,
+        reasonText,
 
         hallTicketStatus,
 
         isGenerated,
         isPublished,
         isBlocked,
+        markAsEligible: hallTicket?.markAsEligible ?? false,
 
         hallTicketId:
             hallTicket?.id ?? null,
@@ -241,6 +291,9 @@ export function calculateStudentEligibility(rawRecord) {
         regulation:
             regulationInfo,
 
+        invoice:
+            invoiceKPIs,
+
         reviewReasons,
     };
 }
@@ -271,8 +324,12 @@ export async function getStudentsForExaminationSession(examinationSessionId, fil
             isGenerated: calculated.isGenerated,
             isPublished: calculated.isPublished,
             isBlocked: calculated.isBlocked,
+            markAsEligible: calculated.markAsEligible,
             hallTicketStatus: calculated.hallTicketStatus,
             eligibilityStatus: calculated.eligibilityStatus,
+            reasonText: calculated.reasonText,
+            hasOutstandingInvoice: calculated.invoice.hasOutstandingInvoice,
+            outstandingAmount: calculated.invoice.outstandingAmount,
             eligibilityReason: calculated.eligibilityStatus !== "Ready" ? calculated.reviewReasons[0]?.message : null,
         };
     });
@@ -329,6 +386,42 @@ export async function getHallTicketEligibilityOverview(examinationSessionId) {
     };
 }
 
+export async function getHallTicketSummary(examinationSessionId) {
+    const rawList = await studentHallTicketRepository.getStudentsByExaminationSessionId(Number(examinationSessionId));
+    let ready = 0;
+    let blocked = 0;
+    let review = 0;
+    let generated = 0;
+    let published = 0;
+
+    for (const raw of rawList) {
+        const calculated = calculateStudentEligibility(raw);
+        if (calculated.eligibilityStatus === "Ready") {
+            ready++;
+        } else if (calculated.eligibilityStatus === "Blocked") {
+            blocked++;
+        } else if (calculated.eligibilityStatus === "Review") {
+            review++;
+        }
+
+        if (calculated.isGenerated) {
+            generated++;
+        }
+        if (calculated.isPublished) {
+            published++;
+        }
+    }
+
+    return {
+        totalStudents: rawList.length,
+        ready,
+        blocked,
+        review,
+        generated,
+        published,
+    };
+}
+
 async function buildGenerationReadiness({ examinationSessionId, transaction }) {
     const examinationSession = await studentHallTicketRepository.findExaminationSessionById(examinationSessionId, transaction);
     if (!examinationSession) {
@@ -347,7 +440,7 @@ async function buildGenerationReadiness({ examinationSessionId, transaction }) {
     };
 }
 
-export async function generateHallTickets({ examinationSessionId, studentIds, overrideReason, user }) {
+export async function generateHallTickets({ examinationSessionId, studentIds, user }) {
     return await sequelize.transaction(async (transaction) => {
         const readiness = await buildGenerationReadiness({
             examinationSessionId,
@@ -360,19 +453,6 @@ export async function generateHallTickets({ examinationSessionId, studentIds, ov
             );
             error.statusCode = 400;
             throw error;
-        }
-
-        // Check override permissions if overrideReason is explicitly supplied
-        if (overrideReason) {
-            const { getUserPermissions } = await import("../utility/authEngine.js");
-            const { PERMISSIONS } = await import("../const/permissions.js");
-            const permissions = await getUserPermissions(user?.id || user?.userId, user?.defaultRoleId);
-            const hasOverridePerm = permissions.some(p => p.permissionKey === PERMISSIONS.HALL_TICKET_OVERRIDE_GENERATE.value);
-            if (!hasOverridePerm && user?.isTeacher !== true) {
-                const error = new Error("Access denied: Insufficient permissions to override hall ticket generation.");
-                error.statusCode = 403;
-                throw error;
-            }
         }
 
         const effectiveAcademicYearId = getAcademicYearId() || (user?.academicYearId ? Number(user.academicYearId) : readiness.examinationSession.academicYearId);
@@ -389,8 +469,13 @@ export async function generateHallTickets({ examinationSessionId, studentIds, ov
                     throw error;
                 }
                 const calculated = calculateStudentEligibility(rawRecord);
-                if (calculated.eligibilityStatus !== "Ready" && calculated.eligibilityStatus !== "Review") {
-                    const error = new Error(`Cannot generate hall ticket. Student ${sid} eligibility status is '${calculated.eligibilityStatus}': ${calculated.reviewReasons[0]?.message || 'Blocked'}`);
+                if (calculated.eligibilityStatus === "Blocked") {
+                    const error = new Error(`Cannot generate hall ticket. Student ${sid} is blocked for Hall Ticket generation`);
+                    error.statusCode = 400;
+                    throw error;
+                }
+                if (calculated.eligibilityStatus === "Review" && calculated.markAsEligible !== true) {
+                    const error = new Error(`Cannot generate hall ticket. Student ${sid} is under review and must be marked as eligible before Hall Ticket generation.`);
                     error.statusCode = 400;
                     throw error;
                 }
@@ -399,7 +484,7 @@ export async function generateHallTickets({ examinationSessionId, studentIds, ov
         } else {
             for (const raw of allStudents) {
                 const calculated = calculateStudentEligibility(raw);
-                if ((calculated.eligibilityStatus === "Ready" || calculated.eligibilityStatus === "Review") && !calculated.isGenerated) {
+                if ((calculated.eligibilityStatus === "Ready" || (calculated.eligibilityStatus === "Review" && calculated.markAsEligible === true)) && !calculated.isGenerated) {
                     targetStudents.push(calculated);
                 }
             }
@@ -411,16 +496,10 @@ export async function generateHallTickets({ examinationSessionId, studentIds, ov
 
         const generatedTickets = [];
         for (const target of targetStudents) {
-            // Only save override reason if the student actually required override (status is Review)
-            const actualOverrideReason = (target.eligibilityStatus === "Review" && overrideReason) ? overrideReason : null;
-
             const ticket = await studentHallTicketRepository.generateOrRegenerateStudentHallTicket({
                 examinationSessionId,
                 academicYearId: effectiveAcademicYearId,
                 studentId: target.student.studentId,
-                overrideReason: actualOverrideReason,
-                overrideBy: actualOverrideReason ? (user?.id || user?.userId) : null,
-                previousEligibilityStatus: actualOverrideReason ? target.eligibilityStatus : null,
             }, transaction);
             generatedTickets.push(ticket);
         }
@@ -488,6 +567,7 @@ export async function getReviewDetails({
         isGenerated: calculated.isGenerated,
         isPublished: calculated.isPublished,
         isBlocked: calculated.isBlocked,
+        markAsEligible: calculated.markAsEligible,
 
         student: calculated.student,
 
@@ -757,7 +837,46 @@ export async function getStudentEligibilityDetails(examinationSessionId, student
         isGenerated: calculated.isGenerated,
         isPublished: calculated.isPublished,
         isBlocked: calculated.isBlocked,
+        markAsEligible: calculated.markAsEligible,
         hallTicketStatus: calculated.hallTicketStatus,
         hallTicketId: calculated.hallTicketId,
     };
+}
+
+export async function markAsEligible({ examinationSessionId, studentId, markAsEligible, user }) {
+    return await sequelize.transaction(async (transaction) => {
+        // Fetch student details to get academicYearId and current eligibilityStatus
+        const rawRecord = await studentHallTicketRepository.getSingleStudentByExamSession(
+            Number(examinationSessionId),
+            Number(studentId),
+            transaction
+        );
+        if (!rawRecord) {
+            const error = new Error("Student not found in this examination session");
+            error.statusCode = 404;
+            throw error;
+        }
+
+        const calculated = calculateStudentEligibility(rawRecord);
+        
+        const effectiveAcademicYearId = getAcademicYearId() || (user?.academicYearId ? Number(user.academicYearId) : rawRecord.examinationSession?.academicYearId || 1);
+
+        const ticket = await studentHallTicketRepository.generateOrRegenerateStudentHallTicket({
+            examinationSessionId,
+            academicYearId: effectiveAcademicYearId,
+            studentId,
+            markAsEligible,
+            markedBy: markAsEligible ? (user?.id || user?.userId) : null,
+            previousEligibilityStatus: calculated.eligibilityStatus,
+        }, transaction);
+
+        return {
+            studentId,
+            examinationSessionId,
+            markAsEligible: ticket.markAsEligible,
+            markedBy: ticket.markedBy,
+            markedAt: ticket.markedAt,
+            previousEligibilityStatus: ticket.previousEligibilityStatus,
+        };
+    });
 }

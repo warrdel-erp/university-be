@@ -168,10 +168,16 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
             model: model.studentHallTicketModel,
             as: "hallTickets",
             required: false,
-            attributes: ["id", "examinationSessionId", "isPublished", "isBlocked", "publishedAt", "blockedAt"],
+            attributes: ["id", "examinationSessionId", "isPublished", "isBlocked", "markAsEligible", "publishedAt", "blockedAt"],
             where: {
                 examinationSessionId: Number(examinationSessionId)
             }
+        },
+        {
+            model: model.studentFeeInvoiceModel,
+            as: "studentFeeInvoices",
+            required: false,
+            attributes: ["studentFeeInvoiceId", "total", "paymentStatus", "paidAmount"]
         }
     ];
 
@@ -193,24 +199,12 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
                 where: Object.keys(classSectionTermWhere).length ? classSectionTermWhere : undefined,
                 include: [
                     {
-                        model: model.classStudentMapperModel,
-                        as: "studentTermPlacement",
+                        model: model.studentModel,
+                        as: "studentClassSectionTerm",
                         required: true,
-                        attributes: ["classStudentMapperId", "studentId", "sessionId"],
-                        where: {
-                            isPassed: false,
-                            ...buildScope(model.classStudentMapperModel),
-                        },
-                        include: [
-                            {
-                                model: model.studentModel,
-                                as: "studentMapped",
-                                required: true,
-                                attributes: ["studentId", "enrollNumber", "firstName", "middleName", "lastName", "courseId", "sessionId", "universityId", "instituteId"],
-                                where: Object.keys(studentWhere).length ? studentWhere : undefined,
-                                include: getStudentIncludes(),
-                            }
-                        ]
+                        attributes: ["studentId", "enrollNumber", "firstName", "middleName", "lastName", "courseId", "sessionId", "universityId", "instituteId", "documentStatus"],
+                        where: Object.keys(studentWhere).length ? studentWhere : undefined,
+                        include: getStudentIncludes(),
                     }
                 ]
             }
@@ -248,7 +242,7 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
                                 model: model.studentModel,
                                 as: "student",
                                 required: true,
-                                attributes: ["studentId", "enrollNumber", "firstName", "middleName", "lastName", "courseId", "sessionId", "universityId", "instituteId"],
+                                attributes: ["studentId", "enrollNumber", "firstName", "middleName", "lastName", "courseId", "sessionId", "universityId", "instituteId", "documentStatus"],
                                 where: Object.keys(studentWhere).length ? studentWhere : undefined,
                                 include: getStudentIncludes(),
                             }
@@ -283,12 +277,11 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
     for (const est of activeEstList) {
         const cst = est.classSectionTerm;
         if (!cst) continue;
-        const mappers = cst.studentTermPlacement || [];
-        for (const mapper of mappers) {
-            const st = mapper.studentMapped;
+        const students = cst.studentClassSectionTerm || [];
+        for (const st of students) {
             if (!st || seenStudentIds.has(st.studentId)) continue;
             seenStudentIds.add(st.studentId);
-            processStudent(st, cst, est, mapper.sessionId);
+            processStudent(st, cst, est, st.sessionId);
         }
     }
 
@@ -539,7 +532,7 @@ export async function getStudentRoomSeatingDetails(studentId, examScheduleIds, t
     return seatMap;
 }
 
-export async function generateOrRegenerateStudentHallTicket({ examinationSessionId, academicYearId, studentId, overrideReason = null, overrideBy = null, previousEligibilityStatus = null }, transaction = null) {
+export async function generateOrRegenerateStudentHallTicket({ examinationSessionId, academicYearId, studentId, markAsEligible = false, markedBy = null, previousEligibilityStatus = null }, transaction = null) {
     let ticket = await scoped(model.studentHallTicketModel).findOne({
         where: { examinationSessionId, studentId },
         transaction,
@@ -550,10 +543,10 @@ export async function generateOrRegenerateStudentHallTicket({ examinationSession
         blockedAt: null,
         updatedAt: new Date(),
     };
-    if (overrideReason) {
-        updateFields.overrideReason = overrideReason;
-        updateFields.overrideBy = overrideBy;
-        updateFields.overrideAt = new Date();
+    if (markAsEligible) {
+        updateFields.markAsEligible = true;
+        updateFields.markedBy = markedBy;
+        updateFields.markedAt = new Date();
         updateFields.previousEligibilityStatus = previousEligibilityStatus;
     }
 
@@ -568,10 +561,10 @@ export async function generateOrRegenerateStudentHallTicket({ examinationSession
                 qr: crypto.randomUUID(),
                 isBlocked: false,
                 isPublished: false,
-                ...(overrideReason && {
-                    overrideReason,
-                    overrideBy,
-                    overrideAt: new Date(),
+                ...(markAsEligible && {
+                    markAsEligible: true,
+                    markedBy,
+                    markedAt: new Date(),
                     previousEligibilityStatus,
                 }),
             },
