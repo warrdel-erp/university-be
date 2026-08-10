@@ -56,7 +56,7 @@ export async function getSpecializationOptions(courseId) {
     });
 }
 
-export async function getSubjectOptions(courseId, term, academicYearId, userId) {
+export async function getSubjectOptions(courseId, term, academicYearId, userId, sessionId = null) {
     const subjectWhere = {
         ...(courseId != null && { courseId: Number(courseId) }),
         ...(term != null && { term: Number(term) }),
@@ -65,16 +65,62 @@ export async function getSubjectOptions(courseId, term, academicYearId, userId) 
 
     // Teacher dropdown: subjects of course (+ session year) mapped to userId
     if (userId != null) {
+        // Case 1: Direct subject mapping
         const mappingRows = await scoped(model.teacherSubjectMappingModel).findAll({
             attributes: ['subjectId'],
             where: { userId: Number(userId) },
+            raw: true,
+        });
+        const mappedSubjectIds = mappingRows.map(row => Number(row.subjectId));
+
+        // Case 2: Timetable/class assignment
+        const cellTeachers = await scoped(model.timeTableCellTeachersModel).findAll({
+            attributes: [],
+            where: { userId: Number(userId) },
+            include: [{
+                model: model.timeTableCellModel,
+                as: 'timeTableCell',
+                attributes: ['subjectId'],
+                required: true,
+                include: [{
+                    model: model.timeTableRoutineModel,
+                    as: 'timeTableRoutine',
+                    attributes: [],
+                    required: true,
+                    where: {
+                        ...(courseId != null && { courseId: Number(courseId) }),
+                    },
+                    include: [{
+                        model: model.classSectionTermModel,
+                        as: 'classSectionTerm',
+                        attributes: [],
+                        required: (term != null || sessionId != null),
+                        where: {
+                            ...(term != null && { term: Number(term) }),
+                        },
+                        include: [{
+                            model: model.classSectionModel,
+                            as: 'classSection',
+                            attributes: [],
+                            required: (sessionId != null),
+                            where: {
+                                ...(sessionId != null && { sessionId: Number(sessionId) }),
+                            },
+                        }],
+                    }],
+                }],
+            }],
+            raw: true,
         });
 
-        const mappedSubjectIds = [];
-        for (const row of mappingRows) {
-            mappedSubjectIds.push(Number(row.subjectId));
-        }
-        if (mappedSubjectIds.length === 0) {
+        const timetableSubjectIds = cellTeachers
+            .map(row => row['timeTableCell.subjectId'] || row.timeTableCell?.subjectId)
+            .filter(id => id != null)
+            .map(Number);
+
+        const combinedIds = [...new Set([...mappedSubjectIds, ...timetableSubjectIds])];
+
+        if (combinedIds.length === 0) {
             return [];
         }
 
@@ -82,7 +128,7 @@ export async function getSubjectOptions(courseId, term, academicYearId, userId) 
             attributes: [['subject_name', 'label'], ['subject_id', 'value']],
             where: {
                 ...subjectWhere,
-                subjectId: { [Op.in]: mappedSubjectIds },
+                subjectId: { [Op.in]: combinedIds },
             },
             order: [['subject_name', 'ASC']],
         });
