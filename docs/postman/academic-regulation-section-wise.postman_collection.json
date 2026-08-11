@@ -29,12 +29,12 @@
           }
         },
         "url": {
-          "raw": "{{baseUrl}}/academic-regulations",
+          "raw": "{{baseUrl}}/academicRegulation",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
-            "academic-regulations"
+            "academicRegulation"
           ]
         },
         "description": "Creates a new Academic Regulation draft. Only regulationCode and regulationName are strictly required to create the draft."
@@ -64,12 +64,12 @@
           }
         },
         "url": {
-          "raw": "{{baseUrl}}/academic-regulations/{{academicRegulationId}}",
+          "raw": "{{baseUrl}}/academicRegulation/{{academicRegulationId}}",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
-            "academic-regulations",
+            "academicRegulation",
             "{{academicRegulationId}}"
           ]
         }
@@ -99,12 +99,12 @@
           }
         },
         "url": {
-          "raw": "{{baseUrl}}/academic-regulations/{{academicRegulationId}}",
+          "raw": "{{baseUrl}}/academicRegulation/{{academicRegulationId}}",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
-            "academic-regulations",
+            "academicRegulation",
             "{{academicRegulationId}}"
           ]
         }
@@ -134,12 +134,12 @@
           }
         },
         "url": {
-          "raw": "{{baseUrl}}/academic-regulations/{{academicRegulationId}}",
+          "raw": "{{baseUrl}}/academicRegulation/{{academicRegulationId}}",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
-            "academic-regulations",
+            "academicRegulation",
             "{{academicRegulationId}}"
           ]
         }
@@ -169,12 +169,12 @@
           }
         },
         "url": {
-          "raw": "{{baseUrl}}/academic-regulations/{{academicRegulationId}}",
+          "raw": "{{baseUrl}}/academicRegulation/{{academicRegulationId}}",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
-            "academic-regulations",
+            "academicRegulation",
             "{{academicRegulationId}}"
           ]
         }
@@ -204,12 +204,12 @@
           }
         },
         "url": {
-          "raw": "{{baseUrl}}/academic-regulations/{{academicRegulationId}}",
+          "raw": "{{baseUrl}}/academicRegulation/{{academicRegulationId}}",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
-            "academic-regulations",
+            "academicRegulation",
             "{{academicRegulationId}}"
           ]
         }
@@ -239,12 +239,12 @@
           }
         },
         "url": {
-          "raw": "{{baseUrl}}/academic-regulations/{{academicRegulationId}}",
+          "raw": "{{baseUrl}}/academicRegulation/{{academicRegulationId}}",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
-            "academic-regulations",
+            "academicRegulation",
             "{{academicRegulationId}}"
           ]
         }
@@ -274,12 +274,12 @@
           }
         },
         "url": {
-          "raw": "{{baseUrl}}/academic-regulations/{{academicRegulationId}}",
+          "raw": "{{baseUrl}}/academicRegulation/{{academicRegulationId}}",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
-            "academic-regulations",
+            "academicRegulation",
             "{{academicRegulationId}}"
           ]
         }
@@ -309,12 +309,12 @@
           }
         },
         "url": {
-          "raw": "{{baseUrl}}/academic-regulations/{{academicRegulationId}}",
+          "raw": "{{baseUrl}}/academicRegulation/{{academicRegulationId}}",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
-            "academic-regulations",
+            "academicRegulation",
             "{{academicRegulationId}}"
           ]
         }
@@ -344,12 +344,12 @@
           }
         },
         "url": {
-          "raw": "{{baseUrl}}/academic-regulations/{{academicRegulationId}}",
+          "raw": "{{baseUrl}}/academicRegulation/{{academicRegulationId}}",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
-            "academic-regulations",
+            "academicRegulation",
             "{{academicRegulationId}}"
           ]
         }
@@ -379,12 +379,12 @@
           }
         },
         "url": {
-          "raw": "{{baseUrl}}/academic-regulations/{{academicRegulationId}}",
+          "raw": "{{baseUrl}}/academicRegulation/{{academicRegulationId}}",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
-            "academic-regulations",
+            "academicRegulation",
             "{{academicRegulationId}}"
           ]
         }
@@ -414,12 +414,12 @@
           }
         },
         "url": {
-          "raw": "{{baseUrl}}/academic-regulations/{{academicRegulationId}}",
+          "raw": "{{baseUrl}}/academicRegulation/{{academicRegulationId}}",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
-            "academic-regulations",
+            "academicRegulation",
             "{{academicRegulationId}}"
           ]
         }
@@ -449,52 +449,16 @@
           }
         },
         "url": {
-          "raw": "{{baseUrl}}/academic-regulations/courseRegulationMapping",
+          "raw": "{{baseUrl}}/academicRegulation/courseRegulationMapping",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
-            "academic-regulations",
+            "academicRegulation",
             "courseRegulationMapping"
           ]
         },
         "description": "Call this in a loop for each Course + Session pair mapped to the regulation."
-      }
-    },
-    {
-      "name": "Bulk Course Mapping via Edit (PATCH)",
-      "request": {
-        "method": "PATCH",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"courseMappings\": [\n    {\n      \"courseId\": 34,\n      \"sessionId\": 6\n    },\n    {\n      \"courseId\": 35,\n      \"sessionId\": 7\n    }\n  ]\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        },
-        "url": {
-          "raw": "{{baseUrl}}/academic-regulations/{{academicRegulationId}}",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "academic-regulations",
-            "{{academicRegulationId}}"
-          ]
-        },
-        "description": "Alternatively, you can sync/bulk-save all course mappings via the main PATCH endpoint which computes the diff internally."
       }
     },
     {
@@ -508,15 +472,63 @@
           }
         ],
         "url": {
-          "raw": "{{baseUrl}}/academic-regulations/{{academicRegulationId}}",
+          "raw": "{{baseUrl}}/academicRegulation/{{academicRegulationId}}",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
-            "academic-regulations",
+            "academicRegulation",
             "{{academicRegulationId}}"
           ]
         }
+      }
+    },
+    {
+      "name": "Get Course Mappings By Regulation",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/academicRegulation/courseRegulationMapping/{{academicRegulationId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "academicRegulation",
+            "courseRegulationMapping",
+            "{{academicRegulationId}}"
+          ]
+        },
+        "description": "Fetches all course and session mappings for a given academic regulation."
+      }
+    },
+    {
+      "name": "Delete Course Mapping",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/academicRegulation/courseRegulationMapping/{{academicRegulationCourseMappingId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "academicRegulation",
+            "courseRegulationMapping",
+            "{{academicRegulationCourseMappingId}}"
+          ]
+        },
+        "description": "Deletes a specific course and session mapping by its mapping ID."
       }
     }
   ],
@@ -533,6 +545,11 @@
     },
     {
       "key": "academicRegulationId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "academicRegulationCourseMappingId",
       "value": "1",
       "type": "string"
     }

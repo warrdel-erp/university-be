@@ -1,15 +1,22 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as academicRegulationRepo from "../repository/academicRegulationRepository.js";
+import { getAcademicYearId } from "../utility/requestContext.js";
 
 export async function createAcademicRegulation(payload, user) {
   return await sequelize.transaction(async (t) => {
     const sanitizeDate = (val) => (!val || val === "" || val === "Invalid date" ? null : val);
     const { courseId, sessionId, ...restPayload } = payload;
+    
+    let finalAcademicYearId = restPayload.academicYearId ? Number(restPayload.academicYearId) : null;
+    if (!finalAcademicYearId) {
+      finalAcademicYearId = getAcademicYearId() || user?.defaultAcademicYearId || null;
+    }
+
     const regulationData = {
       ...restPayload,
       effectiveFrom: sanitizeDate(restPayload.effectiveFrom),
       effectiveUntil: sanitizeDate(restPayload.effectiveUntil),
-      academicYearId: restPayload.academicYearId ? Number(restPayload.academicYearId) : (user?.academicYearId || null),
+      academicYearId: finalAcademicYearId,
       gradingSchemeId: restPayload.gradingSchemeId ? Number(restPayload.gradingSchemeId) : null,
       status: payload.status || "DRAFT",
       isActive: payload.isActive !== undefined ? payload.isActive : true,
