@@ -39,11 +39,13 @@ function normalizeAddCoursePayload(data) {
     const rootTerm = data.term ?? 'semester';
     const rootDepartmentId = resolveDepartmentIdFromInput(data);
     const courses = Array.isArray(data.courses) ? data.courses : [];
+    const rootInstituteId = coercePositiveInt(data.instituteId);
 
     return {
         course_levelId: coercePositiveInt(data.course_levelId),
         affiliatedUniversityId: coercePositiveInt(data.affiliatedUniversityId),
         academicYearId: coercePositiveInt(data.academicYearId),
+        instituteId: rootInstituteId,
         departmentId: rootDepartmentId,
         term: rootTerm,
         courses: courses.map((course) => ({
@@ -197,6 +199,10 @@ export async function addCourse(data, createdBy) {
                 createdBy,
                 termType: termConfig.termLabel,
             };
+
+            if (normalized.instituteId != null) {
+                payload.instituteId = normalized.instituteId;
+            }
 
             if (course.capacity != null) {
                 payload.capacity = course.capacity;

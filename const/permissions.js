@@ -7,18 +7,26 @@ export const PERMISSIONS = {
     },
     COURSES: {
         value: "COURSES",
+        resource: "course",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     COURSE_SESSIONS: {
         value: "COURSE_SESSIONS",
     },
     ACADEMIC_YEAR: {
         value: "ACADEMIC_YEAR",
+        resource: "academicYear",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     CODE_MASTER: {
         value: "CODE_MASTER",
+        resource: "codeMaster",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     SESSION_SETUP: {
         value: "SESSION_SETUP",
+        resource: "session",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     ADMIN_PROFILE: {
         value: "ADMIN_PROFILE",
@@ -187,6 +195,7 @@ export const PERMISSIONS = {
     },
     FEES_PLAN: {
         value: "FEES_PLAN",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     FEES_INVOICE: {
         value: "FEES_INVOICE",

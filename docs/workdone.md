@@ -128,3 +128,10 @@
 1. permission dependency.
 2. nested checkbox tree structure for Target User Base Access Level (University -> Campus -> Institute -> Department -> Course/Class).
 
+---
+
+1. permission scopes binding.
+2. program creation error resolved.
+3. system to add department permission.
+4. permission policies for course, session, codeMaster, academicYear.
+5. data only permission not working.

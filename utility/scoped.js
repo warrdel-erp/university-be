@@ -14,10 +14,6 @@ import { requestContext } from "./requestContext.js";
 
 const ACADEMIC_YEAR_FIELD = "academicYearId";
 
-function isScoped(configValue, field, attrs) {
-  return configValue === true && field in attrs;
-}
-
 function getOriginal(model, method) {
   if (model._scopeOriginals?.[method]) {
     return model._scopeOriginals[method];
@@ -33,21 +29,33 @@ function mergeScopedWhere(baseWhere, optionsWhere = {}, pkField, pkValue) {
   return where;
 }
 
-function scopeFieldsForModel(model, scopeWhere) {
+function scopeFieldsForModel(model) {
   const attrs = model.rawAttributes || {};
+  const config = model.scopeConfig || {};
+  const store = requestContext.getStore();
   const filtered = {};
-  for (const [key, value] of Object.entries(scopeWhere)) {
-    if (key in attrs) {
-      filtered[key] = value;
-    }
+
+  if (!store) {
+    return filtered;
   }
+
+  if (config.university && "universityId" in attrs && store.universityId != null) {
+    filtered.universityId = store.universityId;
+  }
+
+  if (config.institute && "instituteId" in attrs && store.instituteId != null) {
+    filtered.instituteId = store.instituteId;
+  }
+
+  if (config.academicYear && ACADEMIC_YEAR_FIELD in attrs && store.academicYearId != null) {
+    filtered[ACADEMIC_YEAR_FIELD] = store.academicYearId;
+  }
+
   return filtered;
 }
 
 /**
- * Builds tenant WHERE filters for a model based on requestContext.
- * Override per model via model.scopeConfig: { university, institute, academicYear, teacherRestricted }
- * Pass options.scopeConfig to override fields for a single query (e.g. { academicYear: false }).
+ * Builds tenant WHERE filters for a model based on requestContext and model.scopeConfig.
  */
 export const buildScope = (model, options = {}) => {
   const where = {};
@@ -60,51 +68,35 @@ export const buildScope = (model, options = {}) => {
     return where;
   }
 
-  const permScope = store.permissionScope; // e.g. 'UNIVERSITY', 'CAMPUS', 'INSTITUTE', 'DEPARTMENT', etc.
-
-  if (isScoped(config.university, "universityId", attrs)) {
-    if (!store.universityId) {
+  if (config.university) {
+    if (!store?.universityId) {
       throw new Error(`Error in university scope ${model.name}`);
     }
     where.universityId = store.universityId;
   }
 
-  // Campus scope enforcement
-  if (permScope === 'CAMPUS' && "campusId" in attrs) {
-    if (store.campusId) {
-      where.campusId = store.campusId;
-    }
-  }
-
-  if (isScoped(config.institute, "instituteId", attrs)) {
-    // If user has a higher scope, they don't HAVE to provide an instituteId.
-    // But if they DO provide it (frontend selected institute), we filter by it.
-    const isHigherScope = permScope === 'UNIVERSITY' || permScope === 'CAMPUS';
-    
-    if (!store.instituteId && !isHigherScope) {
+  if (config.institute) {
+    if (!store?.instituteId) {
       throw new Error(`Error in institute scope ${model.name}`);
     }
-
-    if (store.instituteId) {
-      where.instituteId = store.instituteId;
-    }
+    where.instituteId = store.instituteId;
   }
 
-  if (isScoped(config.academicYear, ACADEMIC_YEAR_FIELD, attrs)) {
-    if (!store.academicYearId) {
+  if (config.academicYear) {
+    if (!store?.academicYearId) {
       throw new Error(`Error in academic year scope ${model.name}`);
     }
     where[ACADEMIC_YEAR_FIELD] = store.academicYearId;
   }
 
   if (store.defaultRole?.toLowerCase() === "teacher" && (config.teacherRestricted || "teacherId" in attrs)) {
-    if (!store.userId) {
+    if (!store?.userId) {
       throw new Error(`Error in teacher scope ${model.name}`);
     }
     where["teacherId" in attrs ? "teacherId" : "userId"] = store.userId;
   }
 
-  if (store.accessFilter) {
+  if (store?.accessFilter) {
     for (const [key, value] of Object.entries(store.accessFilter)) {
       if (key in attrs) {
         where[key] = value;
@@ -118,7 +110,7 @@ export const buildScope = (model, options = {}) => {
 export const scoped = (model) => {
   const baseWhere = buildScope(model);
   const pk = model.primaryKeyAttribute || "id";
-  const writeScope = scopeFieldsForModel(model, baseWhere);
+  const writeScope = scopeFieldsForModel(model);
 
   return {
     findAll: (options = {}) =>

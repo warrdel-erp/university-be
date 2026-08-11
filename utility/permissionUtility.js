@@ -15,8 +15,18 @@ export function expandPermissions(permissionsList = []) {
     const permKey = item.permission || item.permissionKey;
     if (!permKey) return;
 
-    if (!expandedMap.has(permKey)) {
-      expandedMap.set(permKey, item);
+    const roleIdStr = item.roleId !== undefined && item.roleId !== null ? item.roleId : "";
+    const scopeStr = item.scope || item.scopeKey || "";
+    const resIdStr = item.resourceId !== undefined && item.resourceId !== null
+      ? item.resourceId
+      : (Array.isArray(item.resourceIds) ? item.resourceIds.join(",") : "");
+
+    const compositeKey = `${permKey}:${roleIdStr}:${scopeStr}:${resIdStr}`;
+    const isExistingImplied = expandedMap.has(compositeKey) ? expandedMap.get(compositeKey).isImplied : false;
+    const isNewImplied = !!item.isImplied;
+
+    if (!expandedMap.has(compositeKey) || (isExistingImplied && !isNewImplied)) {
+      expandedMap.set(compositeKey, item);
 
       const permDef = PERMISSIONS[permKey];
       if (permDef && Array.isArray(permDef.dependentOn)) {

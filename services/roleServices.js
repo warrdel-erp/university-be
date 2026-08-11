@@ -33,8 +33,9 @@ export async function getRolePermissions(roleId) {
 
   const permissionMap = {};
   mappings.forEach(m => {
-    if (!permissionMap[m.permission]) {
-      permissionMap[m.permission] = {
+    const key = `${m.permission}:${m.scope}`;
+    if (!permissionMap[key]) {
+      permissionMap[key] = {
         rolePermissionMappingId: m.rolePermissionMappingId,
         roleId: m.roleId,
         permission: m.permission,
@@ -43,7 +44,7 @@ export async function getRolePermissions(roleId) {
       };
     }
     if (m.resourceId) {
-      permissionMap[m.permission].resourceIds.push(m.resourceId);
+      permissionMap[key].resourceIds.push(m.resourceId);
     }
   });
 

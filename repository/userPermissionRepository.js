@@ -63,12 +63,15 @@ export async function setUserPermissions(userId, roleId, permissions, transactio
           throw new Error(`roleId is required for permission ${item.permission}`);
         }
 
-        dataToInsert.push({
-          userId,
-          roleId: currentRoleId,
-          permission: item.permission,
-          scope: item.scope || SCOPES.INSTITUTE,
-          resourceId: item.resourceIds && item.resourceIds.length > 0 ? item.resourceIds[0] : null,
+        let resourceIds = (item.resourceIds && item.resourceIds.length > 0) ? item.resourceIds : [null];
+        resourceIds.forEach((resId) => {
+          dataToInsert.push({
+            userId,
+            roleId: currentRoleId,
+            permission: item.permission,
+            scope: item.scope || SCOPES.INSTITUTE,
+            resourceId: resId !== null && resId !== undefined && !isNaN(Number(resId)) ? Number(resId) : (resId || null),
+          });
         });
       }
     }
