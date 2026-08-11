@@ -43,6 +43,10 @@ const updateExamRoomCapacitySchema = z.object({
   columns: z.number(),
 });
 
+const deleteRoomCapacityParamsSchema = z.object({
+  examScheduleRoomCapacityId: z.coerce.number().int().positive(),
+});
+
 const allocateSeatsSchema = z.object({
   examScheduleId: z.number({ required_error: "examScheduleId is required" }),
 });
@@ -87,6 +91,14 @@ router.put(
   checkAccess(PERMISSIONS.EXAM_TIME_TABLE_CREATE_ASSIGN_ROOMS.value, null),
   validate({ body: updateExamRoomCapacitySchema }),
   examRoomCapacityController.updateExamRoomCapacity,
+);
+
+router.delete(
+  "/roomAssignment/:examScheduleRoomCapacityId",
+  userAuth,
+  checkAccess(PERMISSIONS.EXAM_TIME_TABLE_CREATE_ASSIGN_ROOMS.value, null),
+  validate({ params: deleteRoomCapacityParamsSchema }),
+  examRoomCapacityController.deleteExamRoomCapacity,
 );
 
 router.post(

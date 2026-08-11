@@ -373,21 +373,38 @@ export async function getExaminationStructure(
   if (courseId) mappingWhere.courseId = Number(courseId);
   if (sessionId) mappingWhere.sessionId = Number(sessionId);
 
-  const subjectMappings = await examinationSessionRepository.findAssessmentPlanSubjectMappings(mappingWhere, options);
+  const plainSession = toPlain(sessionRecord);
+  const classSectionIds = plainSession?.examinationSessionTerms
+    ? uniqueValues(
+        plainSession.examinationSessionTerms
+          .map((term) => term.classSectionTerm?.classSectionsId),
+      )
+    : [];
+
+  const [subjectMappings, classSections] = await Promise.all([
+    examinationSessionRepository.findAssessmentPlanSubjectMappings(mappingWhere, options),
+    classSectionIds.length
+      ? examinationSessionRepository.findClassSections({ classSectionsId: { [Op.in]: classSectionIds } }, options)
+      : []
+  ]);
+
   const subjectIds = uniqueValues(subjectMappings.map((mapping) => mapping.subjectId));
   if (!subjectIds.length) return [];
 
   const subjectWhere = { subjectId: { [Op.in]: subjectIds }, isActive: true };
   if (academicYearId) subjectWhere.academicYearId = Number(academicYearId);
 
-  const subjects = await examinationSessionRepository.findSubjects(subjectWhere, options);
+  const [subjects, mappings] = await Promise.all([
+    examinationSessionRepository.findSubjects(subjectWhere, options),
+    examinationSessionRepository.findAssessmentPlanSubjectMappingsWithSession({
+      subjectId: { [Op.in]: subjectIds },
+    }, options)
+  ]);
+
   if (!subjects.length) return [];
 
   const courses = await examinationSessionRepository.findCoursesByIds(uniqueValues(subjects.map((subject) => subject.courseId)), options);
   const courseMap = new Map(courses.map((course) => [course.courseId, course]));
-  const mappings = await examinationSessionRepository.findAssessmentPlanSubjectMappingsWithSession({
-    subjectId: { [Op.in]: subjectIds },
-  }, options);
   const subjectSessionMap = new Map(mappings.map((mapping) => [
     mapping.subjectId,
     {
@@ -396,18 +413,10 @@ export async function getExaminationStructure(
     },
   ]));
   const mappedCstMap = new Map();
-  const plainSession = toPlain(sessionRecord);
+
+  const classSectionMap = new Map(classSections.map((section) => [section.classSectionsId, section]));
 
   if (plainSession?.examinationSessionTerms) {
-    const classSectionIds = uniqueValues(
-      plainSession.examinationSessionTerms
-        .map((term) => term.classSectionTerm?.classSectionsId),
-    );
-    const classSections = classSectionIds.length
-      ? await examinationSessionRepository.findClassSections({ classSectionsId: { [Op.in]: classSectionIds } }, options)
-      : [];
-    const classSectionMap = new Map(classSections.map((section) => [section.classSectionsId, section]));
-
     for (const sessionTerm of plainSession.examinationSessionTerms) {
       const classSectionTerm = sessionTerm.classSectionTerm;
       const classSection = classSectionMap.get(classSectionTerm?.classSectionsId);

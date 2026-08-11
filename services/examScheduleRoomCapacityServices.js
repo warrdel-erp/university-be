@@ -149,6 +149,16 @@ export async function updateExamRoomCapacity(examScheduleRoomCapacityId, data, u
     const transaction = await sequelize.transaction();
 
     try {
+        const seatCount = await examRoomCapacityRepository.getSeatAllocationCountByCapacityId(examScheduleRoomCapacityId, transaction);
+        if (seatCount > 0) {
+            if (Number(existing.columns) !== Number(columns)) {
+                throw new Error("Room seating configuration cannot be changed because seats have already been allocated.");
+            }
+            if (Number(capacity) < seatCount) {
+                throw new Error("Room seating configuration cannot be changed because seats have already been allocated.");
+            }
+        }
+
         const result = await examRoomCapacityRepository.updateExamRoomCapacity(
             examScheduleRoomCapacityId,
             updatePayload,
@@ -192,13 +202,34 @@ export async function deleteExamRoomCapacity(examScheduleRoomCapacityId) {
         throw new Error("Exam room capacity not found");
     }
 
+    const examScheduleId = existing.examScheduleId;
     const transaction = await sequelize.transaction();
 
     try {
+        const seatCount = await examRoomCapacityRepository.getSeatAllocationCountByCapacityId(examScheduleRoomCapacityId, transaction);
+        if (seatCount > 0) {
+            throw new Error("Room assignment cannot be removed because seats have already been allocated for this room.");
+        }
+
         const result = await examRoomCapacityRepository.deleteExamRoomCapacity(
             examScheduleRoomCapacityId,
             transaction
         );
+
+        // Fetch remaining room capacities and re-sequence orderKey sequentially from 1
+        const remainingRooms = await examRoomCapacityRepository.getRoomsByExamScheduleId(examScheduleId, transaction);
+        let currentOrder = 1;
+        for (const room of remainingRooms) {
+            if (room.examScheduleRoomCapacityId !== Number(examScheduleRoomCapacityId)) {
+                await examRoomCapacityRepository.updateExamRoomCapacityOrderKey(
+                    room.examScheduleRoomCapacityId,
+                    currentOrder,
+                    transaction
+                );
+                currentOrder++;
+            }
+        }
+
         await transaction.commit();
         return result;
     } catch (error) {

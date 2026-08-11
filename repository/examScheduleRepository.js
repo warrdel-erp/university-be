@@ -300,9 +300,22 @@ export async function getStudentsForSchedule(sessionId, courseId, term, academic
 
 export async function allocateSeats(allocations, transaction) {
     try {
-        for (const allocation of allocations) {
-            const capacity = await assertScopedRoomCapacity(allocation.examScheduleRoomCapacityId, transaction);
-            if (!capacity) {
+        const capacityIds = [...new Set(allocations.map(a => a.examScheduleRoomCapacityId))];
+        if (capacityIds.length > 0) {
+            const count = await model.examScheduleRoomCapacityModel.count({
+                where: {
+                    examScheduleRoomCapacityId: { [Op.in]: capacityIds },
+                    ...buildScope(model.examScheduleRoomCapacityModel)
+                },
+                include: [{
+                    model: model.examScheduleModel,
+                    as: 'examSchedule',
+                    required: true,
+                    where: buildScope(model.examScheduleModel)
+                }],
+                transaction
+            });
+            if (count !== capacityIds.length) {
                 throw new Error('Exam schedule room capacity not found');
             }
         }
@@ -315,9 +328,21 @@ export async function allocateSeats(allocations, transaction) {
 
 export async function clearExistingAllocations(examScheduleRoomCapacityIds, transaction) {
     try {
-        for (const capacityId of examScheduleRoomCapacityIds) {
-            const capacity = await assertScopedRoomCapacity(capacityId, transaction);
-            if (!capacity) {
+        if (examScheduleRoomCapacityIds.length > 0) {
+            const count = await model.examScheduleRoomCapacityModel.count({
+                where: {
+                    examScheduleRoomCapacityId: { [Op.in]: examScheduleRoomCapacityIds },
+                    ...buildScope(model.examScheduleRoomCapacityModel)
+                },
+                include: [{
+                    model: model.examScheduleModel,
+                    as: 'examSchedule',
+                    required: true,
+                    where: buildScope(model.examScheduleModel)
+                }],
+                transaction
+            });
+            if (count !== examScheduleRoomCapacityIds.length) {
                 throw new Error('Exam schedule room capacity not found');
             }
         }

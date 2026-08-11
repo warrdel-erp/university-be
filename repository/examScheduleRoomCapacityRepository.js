@@ -1,5 +1,5 @@
 import * as model from "../models/index.js";
-import { Op } from "sequelize";
+import { Op, fn, col } from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { doTimeSlotsOverlap, getTimeSlotRange } from "../utility/timeSlot.js";
 
@@ -151,8 +151,8 @@ export async function getExamRoomCapacityById(examScheduleRoomCapacityId) {
   return await assertScopedRoomCapacity(examScheduleRoomCapacityId);
 }
 
-export async function getRoomsByExamScheduleId(examScheduleId) {
-  const schedule = await assertScopedExamSchedule(examScheduleId);
+export async function getRoomsByExamScheduleId(examScheduleId, transaction = null) {
+  const schedule = await assertScopedExamSchedule(examScheduleId, { transaction });
   if (!schedule) {
     return [];
   }
@@ -182,9 +182,20 @@ export async function getRoomsByExamScheduleId(examScheduleId) {
       },
     ],
     order: [["orderKey", "ASC"]],
+    transaction,
   });
 
   return rows.map((row) => row.get({ plain: true }));
+}
+
+export async function updateExamRoomCapacityOrderKey(examScheduleRoomCapacityId, orderKey, transaction = null) {
+  await model.examScheduleRoomCapacityModel.update(
+    { orderKey },
+    {
+      where: { examScheduleRoomCapacityId },
+      transaction,
+    }
+  );
 }
 
 export async function getExamScheduleSlot(examScheduleId) {
@@ -332,6 +343,29 @@ export async function getRoomsForAllocationLookup(classRoomSectionIds) {
     });
   });
   return roomMap;
+}
+
+export async function getSeatAllocationCountByCapacityId(examScheduleRoomCapacityId, transaction = null) {
+  return await model.studentExamSeatModel.count({
+    where: { examScheduleRoomCapacityId },
+    transaction,
+  });
+}
+
+export async function getSeatAllocationCountsByRoomCapacityIds(examScheduleRoomCapacityIds, transaction = null) {
+  const rows = await model.studentExamSeatModel.findAll({
+    where: {
+      examScheduleRoomCapacityId: { [Op.in]: examScheduleRoomCapacityIds }
+    },
+    attributes: [
+      'examScheduleRoomCapacityId',
+      [fn('COUNT', col('student_exam_seat_id')), 'allocatedSeatCount']
+    ],
+    group: ['examScheduleRoomCapacityId'],
+    raw: true,
+    transaction,
+  });
+  return rows;
 }
 
 
