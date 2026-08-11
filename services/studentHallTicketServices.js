@@ -1,11 +1,11 @@
 import crypto from "crypto";
-import sequelize from "../database/sequelizeConfig.js";
 import { buildTermName } from "../utility/courseTerms.js";
 import { getAcademicYearId } from "../utility/requestContext.js";
 import * as studentHallTicketRepository from "../repository/studentHallTicketRepository.js";
- import { getUserPermissions } from "../utility/authEngine.js";
- import { PERMISSIONS } from "../const/permissions.js";
-
+import { getUserPermissions } from "../utility/authEngine.js";
+import { PERMISSIONS } from "../const/permissions.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 export function calculateStudentEligibility(rawRecord) {
     const {
@@ -459,75 +459,78 @@ async function buildGenerationReadiness({ examinationSessionId, transaction }) {
 }
 
 export async function generateHallTickets({ examinationSessionId, studentIds, user }) {
-    return await sequelize.transaction(async (transaction) => {
-        const readiness = await buildGenerationReadiness({
-            examinationSessionId,
-            transaction,
-        });
+    return withAuditEvent(
+        AUDIT_EVENTS.HALL_TICKET_GENERATE,
+        async ({ transaction }) => {
+            const readiness = await buildGenerationReadiness({
+                examinationSessionId,
+                transaction,
+            });
 
-        if (!readiness.canGenerate) {
-            const error = new Error(
-                "Schedule at least one subject with exam date and time for this examination session before generating hall tickets.",
-            );
-            error.statusCode = 400;
-            throw error;
-        }
-
-        const effectiveAcademicYearId = getAcademicYearId() || (user?.academicYearId ? Number(user.academicYearId) : readiness.examinationSession.academicYearId);
-
-        const allStudents = await studentHallTicketRepository.getStudentsByExaminationSessionId(examinationSessionId, {}, transaction);
-
-        let targetStudents = [];
-        if (studentIds && studentIds.length > 0) {
-            for (const sid of studentIds) {
-                const rawRecord = allStudents.find(s => s.student.studentId === sid);
-                if (!rawRecord) {
-                    const error = new Error(`Student ${sid} is not part of this examination session`);
-                    error.statusCode = 404;
-                    throw error;
-                }
-                const calculated = calculateStudentEligibility(rawRecord);
-                if (calculated.eligibilityStatus === "Blocked") {
-                    const error = new Error(`Cannot generate hall ticket. Student ${sid} is blocked for Hall Ticket generation`);
-                    error.statusCode = 400;
-                    throw error;
-                }
-                if (calculated.eligibilityStatus === "Review" && calculated.markAsEligible !== true) {
-                    const error = new Error(`Cannot generate hall ticket. Student ${sid} is under review and must be marked as eligible before Hall Ticket generation.`);
-                    error.statusCode = 400;
-                    throw error;
-                }
-                targetStudents.push(calculated);
+            if (!readiness.canGenerate) {
+                const error = new Error(
+                    "Schedule at least one subject with exam date and time for this examination session before generating hall tickets.",
+                );
+                error.statusCode = 400;
+                throw error;
             }
-        } else {
-            for (const raw of allStudents) {
-                const calculated = calculateStudentEligibility(raw);
-                if ((calculated.eligibilityStatus === "Ready" || (calculated.eligibilityStatus === "Review" && calculated.markAsEligible === true)) && !calculated.isGenerated) {
+
+            const effectiveAcademicYearId = getAcademicYearId() || (user?.academicYearId ? Number(user.academicYearId) : readiness.examinationSession.academicYearId);
+
+            const allStudents = await studentHallTicketRepository.getStudentsByExaminationSessionId(examinationSessionId, {}, transaction);
+
+            let targetStudents = [];
+            if (studentIds && studentIds.length > 0) {
+                for (const sid of studentIds) {
+                    const rawRecord = allStudents.find(s => s.student.studentId === sid);
+                    if (!rawRecord) {
+                        const error = new Error(`Student ${sid} is not part of this examination session`);
+                        error.statusCode = 404;
+                        throw error;
+                    }
+                    const calculated = calculateStudentEligibility(rawRecord);
+                    if (calculated.eligibilityStatus === "Blocked") {
+                        const error = new Error(`Cannot generate hall ticket. Student ${sid} is blocked for Hall Ticket generation`);
+                        error.statusCode = 400;
+                        throw error;
+                    }
+                    if (calculated.eligibilityStatus === "Review" && calculated.markAsEligible !== true) {
+                        const error = new Error(`Cannot generate hall ticket. Student ${sid} is under review and must be marked as eligible before Hall Ticket generation.`);
+                        error.statusCode = 400;
+                        throw error;
+                    }
                     targetStudents.push(calculated);
                 }
+            } else {
+                for (const raw of allStudents) {
+                    const calculated = calculateStudentEligibility(raw);
+                    if ((calculated.eligibilityStatus === "Ready" || (calculated.eligibilityStatus === "Review" && calculated.markAsEligible === true)) && !calculated.isGenerated) {
+                        targetStudents.push(calculated);
+                    }
+                }
             }
-        }
 
-        if (!targetStudents.length) {
-            return { generatedCount: 0, hallTickets: [] };
-        }
+            if (!targetStudents.length) {
+                return { generatedCount: 0, hallTickets: [] };
+            }
 
-        const generatedTickets = [];
-        for (const target of targetStudents) {
-            const ticket = await studentHallTicketRepository.generateOrRegenerateStudentHallTicket({
-                examinationSessionId,
-                academicYearId: effectiveAcademicYearId,
-                studentId: target.student.studentId,
-            }, transaction);
-            generatedTickets.push(ticket);
-        }
+            const generatedTickets = [];
+            for (const target of targetStudents) {
+                const ticket = await studentHallTicketRepository.generateOrRegenerateStudentHallTicket({
+                    examinationSessionId,
+                    academicYearId: effectiveAcademicYearId,
+                    studentId: target.student.studentId,
+                }, transaction);
+                generatedTickets.push(ticket);
+            }
 
-        return {
-            generatedCount: generatedTickets.length,
-            assessmentType: readiness.examinationSession.assessmentType,
-            hallTickets: generatedTickets,
-        };
-    });
+            return {
+                generatedCount: generatedTickets.length,
+                assessmentType: readiness.examinationSession.assessmentType,
+                hallTickets: generatedTickets,
+            };
+        }
+    );
 }
 
 export async function getReviewDetails({
@@ -791,52 +794,58 @@ export async function getAllHallTicketsForUser(query = {}, user) {
 }
 
 export async function blockHallTicket(id) {
-    return await sequelize.transaction(async (transaction) => {
-        const ticket = await studentHallTicketRepository.blockHallTicket(id, transaction);
-        if (!ticket) {
-            const error = new Error("Hall ticket not found");
-            error.statusCode = 404;
-            throw error;
+    return withAuditEvent(
+        AUDIT_EVENTS.HALL_TICKET_BLOCK,
+        async ({ transaction }) => {
+            const ticket = await studentHallTicketRepository.blockHallTicket(id, transaction);
+            if (!ticket) {
+                const error = new Error("Hall ticket not found");
+                error.statusCode = 404;
+                throw error;
+            }
+            return ticket;
         }
-        return ticket;
-    });
+    );
 }
 
 export async function publishHallTickets({ examinationSessionId, studentIds }) {
-    return await sequelize.transaction(async (transaction) => {
-        const allSessionStudents = await studentHallTicketRepository.getStudentsByExaminationSessionId(examinationSessionId, {}, transaction);
-        const validStudentIds = new Set(allSessionStudents.map(s => s.student.studentId));
+    return withAuditEvent(
+        AUDIT_EVENTS.HALL_TICKET_PUBLISH,
+        async ({ transaction }) => {
+            const allSessionStudents = await studentHallTicketRepository.getStudentsByExaminationSessionId(examinationSessionId, {}, transaction);
+            const validStudentIds = new Set(allSessionStudents.map(s => s.student.studentId));
 
-        let targets = null;
-        if (studentIds && studentIds.length > 0) {
-            for (const sid of studentIds) {
-                if (!validStudentIds.has(sid)) {
-                    const error = new Error(`Student ${sid} is not associated with examination session ${examinationSessionId}`);
-                    error.statusCode = 400;
-                    throw error;
+            let targets = null;
+            if (studentIds && studentIds.length > 0) {
+                for (const sid of studentIds) {
+                    if (!validStudentIds.has(sid)) {
+                        const error = new Error(`Student ${sid} is not associated with examination session ${examinationSessionId}`);
+                        error.statusCode = 400;
+                        throw error;
+                    }
                 }
+                targets = studentIds;
             }
-            targets = studentIds;
+
+            const generatedCount = await studentHallTicketRepository.countHallTickets({
+                examinationSessionId,
+                ...(targets && { studentId: targets }),
+            }, transaction);
+
+            if (generatedCount === 0) {
+                const error = new Error(
+                    targets && targets.length > 0
+                        ? "No generated hall tickets found for the specified student(s). Please generate them first."
+                        : "No generated hall tickets found for this examination session. Please generate them first."
+                );
+                error.statusCode = 400;
+                throw error;
+            }
+
+            const publishedCount = await studentHallTicketRepository.publishHallTickets(examinationSessionId, targets, transaction);
+            return { examinationSessionId, publishedCount };
         }
-
-        const generatedCount = await studentHallTicketRepository.countHallTickets({
-            examinationSessionId,
-            ...(targets && { studentId: targets }),
-        }, transaction);
-
-        if (generatedCount === 0) {
-            const error = new Error(
-                targets && targets.length > 0
-                    ? "No generated hall tickets found for the specified student(s). Please generate them first."
-                    : "No generated hall tickets found for this examination session. Please generate them first."
-            );
-            error.statusCode = 400;
-            throw error;
-        }
-
-        const publishedCount = await studentHallTicketRepository.publishHallTickets(examinationSessionId, targets, transaction);
-        return { examinationSessionId, publishedCount };
-    });
+    );
 }
 
 export async function getStudentEligibilityDetails(examinationSessionId, studentId) {
@@ -862,39 +871,41 @@ export async function getStudentEligibilityDetails(examinationSessionId, student
 }
 
 export async function markAsEligible({ examinationSessionId, studentId, markAsEligible, user }) {
-    return await sequelize.transaction(async (transaction) => {
-        // Fetch student details to get academicYearId and current eligibilityStatus
-        const rawRecord = await studentHallTicketRepository.getSingleStudentByExamSession(
-            Number(examinationSessionId),
-            Number(studentId),
-            transaction
-        );
-        if (!rawRecord) {
-            const error = new Error("Student not found in this examination session");
-            error.statusCode = 404;
-            throw error;
+    return withAuditEvent(
+        AUDIT_EVENTS.HALL_TICKET_MARK_ELIGIBLE,
+        async ({ transaction }) => {
+            const rawRecord = await studentHallTicketRepository.getSingleStudentByExamSession(
+                Number(examinationSessionId),
+                Number(studentId),
+                transaction
+            );
+            if (!rawRecord) {
+                const error = new Error("Student not found in this examination session");
+                error.statusCode = 404;
+                throw error;
+            }
+
+            const calculated = calculateStudentEligibility(rawRecord);
+
+            const effectiveAcademicYearId = getAcademicYearId() || (user?.academicYearId ? Number(user.academicYearId) : rawRecord.examinationSession?.academicYearId || 1);
+
+            const ticket = await studentHallTicketRepository.generateOrRegenerateStudentHallTicket({
+                examinationSessionId,
+                academicYearId: effectiveAcademicYearId,
+                studentId,
+                markAsEligible,
+                markedBy: markAsEligible ? (user?.id || user?.userId) : null,
+                previousEligibilityStatus: calculated.eligibilityStatus,
+            }, transaction);
+
+            return {
+                studentId,
+                examinationSessionId,
+                markAsEligible: ticket.markAsEligible,
+                markedBy: ticket.markedBy,
+                markedAt: ticket.markedAt,
+                previousEligibilityStatus: ticket.previousEligibilityStatus,
+            };
         }
-
-        const calculated = calculateStudentEligibility(rawRecord);
-        
-        const effectiveAcademicYearId = getAcademicYearId() || (user?.academicYearId ? Number(user.academicYearId) : rawRecord.examinationSession?.academicYearId || 1);
-
-        const ticket = await studentHallTicketRepository.generateOrRegenerateStudentHallTicket({
-            examinationSessionId,
-            academicYearId: effectiveAcademicYearId,
-            studentId,
-            markAsEligible,
-            markedBy: markAsEligible ? (user?.id || user?.userId) : null,
-            previousEligibilityStatus: calculated.eligibilityStatus,
-        }, transaction);
-
-        return {
-            studentId,
-            examinationSessionId,
-            markAsEligible: ticket.markAsEligible,
-            markedBy: ticket.markedBy,
-            markedAt: ticket.markedAt,
-            previousEligibilityStatus: ticket.previousEligibilityStatus,
-        };
-    });
+    );
 }

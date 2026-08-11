@@ -24,13 +24,13 @@ async function assertScopedQuestionPaper(id, transaction) {
     });
 }
 
-export async function addQuestionPaper(questionPaperData) {
+export async function addQuestionPaper(questionPaperData, options = {}) {
     try {
-        const schedule = await assertScopedExamSchedule(questionPaperData.examScheduleId);
+        const schedule = await assertScopedExamSchedule(questionPaperData.examScheduleId, options.transaction);
         if (!schedule) {
             throw new Error('Exam schedule not found');
         }
-        const result = await model.questionPaperModel.create(questionPaperData);
+        const result = await model.questionPaperModel.create(questionPaperData, options);
         return result;
     } catch (error) {
         console.error("Error adding question paper:", error);
@@ -174,13 +174,16 @@ export async function getApprovedQuestionPapersByScheduleId(examScheduleId, tran
     }
 }
 
-export async function deleteQuestionPaper(id) {
+export async function deleteQuestionPaper(id, options = {}) {
     try {
-        const existing = await assertScopedQuestionPaper(id);
+        const existing = await assertScopedQuestionPaper(id, options.transaction);
         if (!existing) {
             return false;
         }
-        const deleted = await model.questionPaperModel.destroy({ where: { id } });
+        const deleted = await model.questionPaperModel.destroy({
+            where: { id },
+            transaction: options.transaction,
+        });
         return deleted > 0;
     } catch (error) {
         console.error("Error deleting question paper:", error);
