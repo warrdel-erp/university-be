@@ -98,10 +98,38 @@ export async function addExamRoomCapacity(data, userId) {
         throw new Error("One or more class rooms not found");
     }
 
+    const examSchedule = await examRoomCapacityRepository.getExamScheduleSlot(validatedData.examScheduleId);
+    if (!examSchedule) throw new Error("Exam schedule not found");
+
+    const slot = getExamSlot(
+        examSchedule.examDate,
+        examSchedule.examTime,
+        examSchedule.duration,
+        examSchedule.examinationSessionSlot,
+    );
+
+    const { examDate, day, startTime, endTime, startMinutes, endMinutes } = {
+        examDate: examSchedule.examDate,
+        ...slot,
+    };
+
+    const [classBusyRoomIds, assignedRoomIds, overlappingExamRoomIds] = await Promise.all([
+        examRoomCapacityRepository.findOccupiedRoomIdsByClassSchedule(day, startTime, endTime, examDate),
+        examRoomCapacityRepository.findAssignedRoomIdsForExam(validatedData.examScheduleId),
+        examRoomCapacityRepository.findOverlappingExamBusyRoomIds(examDate, validatedData.examScheduleId, startMinutes, endMinutes),
+    ]);
+
+    const busyRoomIds = new Set([...classBusyRoomIds, ...assignedRoomIds, ...overlappingExamRoomIds]);
+
     const assignments = [];
 
     for (const roomId of orderedRoomIds) {
         const room = roomLookup.get(roomId);
+
+        if (busyRoomIds.has(roomId)) {
+            throw new Error(`Room ${room.roomNumber} is already assigned or not available for the selected time slot`);
+        }
+
         const resolvedExamCapacity = room.examCapacity ?? room.capacity;
         const resolvedExamColumns = room.examCapacityColumns ?? 1;
 
