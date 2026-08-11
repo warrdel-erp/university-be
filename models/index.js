@@ -2027,9 +2027,6 @@ userModel.hasMany(studentHallTicketModel, { foreignKey: "marked_by", as: "marked
 s3FileModel.belongsTo(userModel, { foreignKey: "createdBy", as: "creator" });
 userModel.hasMany(s3FileModel, { foreignKey: "createdBy", as: "s3Files" });
 academicRegulationModel.belongsTo(gradingModel, { foreignKey: 'gradingSchemeId', as: 'gradingScheme' });
-academicRegulationModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
-courseModel.hasMany(academicRegulationModel, { foreignKey: 'courseId', as: 'academicRegulations' });
-academicRegulationModel.belongsTo(sessionModel, { foreignKey: 'sessionId', as: 'session' });
 academicRegulationModel.belongsTo(acedmicYearModel, { foreignKey: 'academicYearId', as: 'academicYear' });
 academicRegulationModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'creator' });
 academicRegulationModel.belongsTo(userModel, { foreignKey: 'updatedBy', as: 'updater' });

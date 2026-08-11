@@ -32,7 +32,13 @@ export async function getAcademicRegulations({ search, status, courseId, academi
     where.status = status;
   }
   if (courseId) {
-    where.courseId = Number(courseId);
+    const matchingMappings = await scoped(model.academicRegulationCourseMappingModel).findAll({
+      attributes: ['academicRegulationId'],
+      where: { courseId: Number(courseId) },
+      raw: true,
+    });
+    const regulationIds = matchingMappings.map(m => m.academicRegulationId);
+    where.academicRegulationId = { [Op.in]: regulationIds };
   }
   if (academicYearId) {
     where.academicYearId = Number(academicYearId);
@@ -54,18 +60,6 @@ export async function getAcademicRegulations({ search, status, courseId, academi
         model: model.gradingModel,
         as: "gradingScheme",
         attributes: ["gradingId", "gradingName", "gradingCode", "gradingMethod"],
-        required: false,
-      },
-      {
-        model: model.courseModel,
-        as: "course",
-        attributes: ["courseId", "courseName", "courseCode"],
-        required: false,
-      },
-      {
-        model: model.sessionModel,
-        as: "session",
-        attributes: ["sessionId", "sessionName"],
         required: false,
       },
       {
@@ -113,18 +107,6 @@ export async function getAcademicRegulationById(academicRegulationId, options = 
         model: model.gradingModel,
         as: "gradingScheme",
         attributes: ["gradingId", "gradingName", "gradingCode", "gradingMethod"],
-        required: false,
-      },
-      {
-        model: model.courseModel,
-        as: "course",
-        attributes: ["courseId", "courseName", "courseCode"],
-        required: false,
-      },
-      {
-        model: model.sessionModel,
-        as: "session",
-        attributes: ["sessionId", "sessionName"],
         required: false,
       },
       {
@@ -203,18 +185,34 @@ export async function updateAcademicRegulation(academicRegulationId, data, optio
   }
 
   if (Array.isArray(courseMappings)) {
-    await scoped(model.academicRegulationCourseMappingModel).destroy({
+    const existingMappings = await scoped(model.academicRegulationCourseMappingModel).findAll({
       where: { academicRegulationId: Number(academicRegulationId) },
       transaction: options.transaction,
     });
 
-    if (courseMappings.length > 0) {
-      const mappingsToCreate = courseMappings.map((item) => ({
+    const submittedSet = new Set(courseMappings.map(m => `${m.courseId}_${m.sessionId}`));
+    const existingSet = new Set(existingMappings.map(m => `${m.courseId}_${m.sessionId}`));
+
+    const toDeleteIds = existingMappings
+      .filter(m => !submittedSet.has(`${m.courseId}_${m.sessionId}`))
+      .map(m => m.academicRegulationCourseMappingId);
+
+    if (toDeleteIds.length > 0) {
+      await scoped(model.academicRegulationCourseMappingModel).destroy({
+        where: { academicRegulationCourseMappingId: toDeleteIds },
+        transaction: options.transaction,
+      });
+    }
+
+    const mappingsToCreate = courseMappings
+      .filter(m => !existingSet.has(`${m.courseId}_${m.sessionId}`))
+      .map((item) => ({
         academicRegulationId: Number(academicRegulationId),
         courseId: Number(item.courseId),
         sessionId: Number(item.sessionId),
       }));
 
+    if (mappingsToCreate.length > 0) {
       await Promise.all(
         mappingsToCreate.map((item) =>
           scoped(model.academicRegulationCourseMappingModel).create(item, { transaction: options.transaction })

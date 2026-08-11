@@ -54,8 +54,6 @@ export const createAcademicRegulationBody = z.object({
   effectiveFrom: z.string().optional().nullable(),
   effectiveUntil: z.string().optional().nullable(),
   gradingSchemeId: z.coerce.number().int().positive().optional().nullable(),
-  courseId: z.coerce.number().int().positive().optional().nullable(),
-  sessionId: z.coerce.number().int().positive().optional().nullable(),
   academicYearId: z.coerce.number().int().positive().optional().nullable(),
 
   // ==========================================
@@ -177,6 +175,14 @@ export const createAcademicRegulationBody = z.object({
   degreePrefix: z.string().max(50).optional().nullable(),
   isAutoNumberingEnabled: z.boolean().optional().default(true),
 
+  // ==========================================
+  // COURSE MAPPINGS
+  // ==========================================
+  courseMappings: z.array(z.object({
+    courseId: z.coerce.number().int().positive(),
+    sessionId: z.coerce.number().int().positive(),
+  })).optional(),
+
   // STATUS & AUDIT
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional().default("DRAFT"),
   isActive: z.boolean().optional().default(true),
@@ -194,8 +200,6 @@ export const updateAcademicRegulationBody = z.object({
   effectiveFrom: z.string().optional().nullable(),
   effectiveUntil: z.string().optional().nullable(),
   gradingSchemeId: z.coerce.number().int().positive().optional().nullable(),
-  courseId: z.coerce.number().int().positive().optional().nullable(),
-  sessionId: z.coerce.number().int().positive().optional().nullable(),
   academicYearId: z.coerce.number().int().positive().optional().nullable(),
 
   // ==========================================
