@@ -3,6 +3,9 @@ import { DataTypes } from 'sequelize';
 import employee from "./employeeModel.js";
 import subject from "./subjectModel.js";
 import users from "./userModel.js";
+import universityModel from "./universityModel.js";
+import instituteModel from "./instituteModel.js";
+import acedmicYearModel from "./acedmicYearModel.js";
 
 const teacherSubjectMappingModel = sequelize.define(
     'teacher_subject_mapping',
@@ -29,6 +32,33 @@ const teacherSubjectMappingModel = sequelize.define(
             references: {
                 model: subject,
                 key: 'subject_id'
+            }
+        },
+        universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
+        },
+        academicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYearModel,
+                key: 'acedmic_year_id'
             }
         },
         createdAt: {

@@ -1,11 +1,41 @@
 import sequelize from "../database/sequelizeConfig.js"
 import { DataTypes } from 'sequelize';
+import universityModel from "./universityModel.js";
+import instituteModel from "./instituteModel.js";
+import acedmicYearModel from "./acedmicYearModel.js";
 import users from "./userModel.js";
 import timeTableStructureModel from "./timeTableStructureModel.js";
 
 const timeTableStructurePeriodsModel = sequelize.define(
     'time_table_structure_periods',
     {
+                universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
+        },
+        academicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYearModel,
+                key: 'acedmic_year_id'
+            }
+        },
         timeTableCreationId: {
             type: DataTypes.INTEGER,
             primaryKey: true,

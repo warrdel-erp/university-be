@@ -1,11 +1,31 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
+import universityModel from "./universityModel.js";
+import instituteModel from "./instituteModel.js";
 import users from "./userModel.js";
 import subjectModel from "./subjectModel.js";
 
 const examScheduleModel = sequelize.define(
     'exam_schedule',
     {
+                universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
+        },
         examScheduleId: {
             type: DataTypes.INTEGER,
             primaryKey: true,

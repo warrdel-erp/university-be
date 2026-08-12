@@ -1,12 +1,22 @@
 import sequelize from "../database/sequelizeConfig.js";
-import { DataTypes } from "sequelize";
+import { DataTypes } from 'sequelize';
+import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
 import users from "./userModel.js";
 
 const studentFeePaymentModel = sequelize.define(
   "student_fee_payment",
   {
-    studentFeePaymentId: {
+            universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        studentFeePaymentId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,

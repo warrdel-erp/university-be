@@ -8,7 +8,7 @@ export const PERMISSIONS = {
     COURSES: {
         value: "COURSES",
         resource: "course",
-        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT", "OWN"]
     },
     COURSE_SESSIONS: {
         value: "COURSE_SESSIONS",
@@ -39,6 +39,8 @@ export const PERMISSIONS = {
     },
     ORGANOGARAM: {
         value: "ORGANOGARAM",
+        resource: "organogram",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     ADD_ROLE: {
         value: "ADD_ROLE",
@@ -48,9 +50,13 @@ export const PERMISSIONS = {
     },
     HEAD_OF_THE_INSTITUTION: {
         value: "HEAD_OF_THE_INSTITUTION",
+        resource: "head",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     DEPARTMENT: {
         value: "DEPARTMENT",
+        resource: "department",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     STAFF_PROFILES: {
         value: "STAFF_PROFILES",
@@ -1640,6 +1646,8 @@ export const PERMISSIONS = {
 
     GOVERNANCE: {
         value: "GOVERNANCE",
+        resource: "governanceBody",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     GOVERNANCE_SIDEBAR: {
         value: "GOVERNANCE_SIDEBAR",

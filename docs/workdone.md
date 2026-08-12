@@ -135,3 +135,4 @@
 3. system to add department permission.
 4. permission policies for course, session, codeMaster, academicYear.
 5. data only permission not working.
+6. id correction of scopes.

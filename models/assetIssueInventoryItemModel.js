@@ -1,5 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
-import { DataTypes } from "sequelize";
+import { DataTypes } from 'sequelize';
+import universityModel from "./universityModel.js";
+import instituteModel from "./instituteModel.js";
 import assetIssueTransactionModel from "./assetIssueTransactionModel.js";
 import assetInventoryItemModel from "./assetInventoryItemModel.js";
 import assetReturnTransactionModel from "./assetReturnTransactionModel.js";
@@ -8,7 +10,25 @@ import { assetConditions } from "../constant.js";
 const assetIssueInventoryItemModel = sequelize.define(
   "asset_issue_inventory_item",
   {
-    assetIssueInventoryItemId: {
+            universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
+        },
+        assetIssueInventoryItemId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,

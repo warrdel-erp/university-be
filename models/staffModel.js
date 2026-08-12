@@ -1,5 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
+import instituteModel from "./instituteModel.js";
 import users from "./userModel.js";
 import department from "./departmentModel.js";
 import university from "./universityModel.js";
@@ -8,6 +9,15 @@ import employee from "./employeeModel.js";
 const staffModel = sequelize.define(
     'staff',
     {
+                instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
+        },
         staffId: {
             type: DataTypes.INTEGER,
             primaryKey: true,

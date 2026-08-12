@@ -14,7 +14,7 @@ export const coursePolicies = {
                 FROM subject s 
                 JOIN time_table_cell_date_wise cdw ON cdw.subject_id = s.subject_id 
                 JOIN time_table_cell_teachers_date_wise ctw ON ctw.time_table_cell_date_wise_id = cdw.time_table_cell_date_wise_id 
-                WHERE ctw.user_id = ${user.id}
+                WHERE ctw.user_id = ${user.userId}
             )`)
         }
     })

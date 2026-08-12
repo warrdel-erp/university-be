@@ -5,7 +5,10 @@ import student from "./studentModel.js";
 import course from "./courseModel.js";
 import specialization from "./specializationModel.js";
 import classSectionTerm from "./classSectionTermModel.js";
-import users from "./userModel.js"
+import users from "./userModel.js";
+import universityModel from "./universityModel.js";
+import instituteModel from "./instituteModel.js";
+import acedmicYearModel from "./acedmicYearModel.js";
 
 const subjectMapperModel = sequelize.define(
     'subject_mapper',
@@ -23,6 +26,33 @@ const subjectMapperModel = sequelize.define(
             references: {
                 model: subject,
                 key: 'subject_id'
+            }
+        },
+        universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
+        },
+        academicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYearModel,
+                key: 'acedmic_year_id'
             }
         },
         studentId: {

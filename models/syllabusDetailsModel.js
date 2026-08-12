@@ -1,5 +1,8 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
+import universityModel from "./universityModel.js";
+import instituteModel from "./instituteModel.js";
+import acedmicYearModel from "./acedmicYearModel.js";
 import syllabus from './syllabusModel.js';
 import users from './userModel.js';
 import subject from './subjectModel.js';
@@ -8,6 +11,33 @@ import examSetupType from "./examSetupTypeModel.js";
 const syllabusDetailsModel = sequelize.define(
     'syllabus_details',
     {
+                universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
+        },
+        academicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYearModel,
+                key: 'acedmic_year_id'
+            }
+        },
         syllabusDetailsId: {
             type: DataTypes.INTEGER,
             primaryKey: true,

@@ -19,11 +19,17 @@ export async function getUserPermissions(userId, roleId) {
     return [];
   }
 
-  // 2. Query user_role_permission_scope for this user + role
-  const entries = await model.userRolePermissionModel.findAll({
-    where: { userId, roleId },
-    attributes: ['permission', 'scope', 'resourceId']
-  });
+  let entries = [];
+  try {
+    // 2. Query user_role_permission_scope for this user + role
+    entries = await model.userRolePermissionModel.findAll({
+      where: { userId, roleId },
+      attributes: ['permission', 'scope', 'resourceId']
+    });
+  } catch (error) {
+    console.error(`[authEngine] Error fetching permissions for userId: ${userId}, roleId: ${roleId}`, error);
+    throw error;
+  }
 
   // 3. Build permission map (grouping multiple resourceIds)
   const permissionMap = {};
@@ -166,5 +172,7 @@ export async function getAccessFilter(user, permissionKey, activeRoleId) {
   // Delegate entirely to policyEngine.js
   const filter = getPolicyFilter(scope, targets, user, permissionKey);
 
-  return { filter, scope };
+  const data = { filter, scope };
+
+  return data;
 }
