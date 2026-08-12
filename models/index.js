@@ -178,6 +178,7 @@ import pdfSplitJobModel from "./pdfSplitJobModel.js";
 import examinationSessionModel from "./examinationSessionModel.js";
 import examinationSessionTermModel from "./examinationSessionTermModel.js";
 import examinationSessionSlotModel from "./examinationSessionSlotModel.js";
+import examinationSessionEligibilityModel from "./examinationSessionEligibilityModel.js";
 
 // Examination Session associations
 examinationSessionSlotModel.belongsTo(examinationSessionModel, { foreignKey: 'examinationSessionId', as: 'examinationSession' });
@@ -198,6 +199,17 @@ acedmicYearModel.hasMany(examinationSessionModel, { foreignKey: "acedmic_year_id
 
 examinationSessionModel.belongsTo(examSetupTypeModel, { foreignKey: "assessment_type_id", as: "assessmentType" });
 examSetupTypeModel.hasMany(examinationSessionModel, { foreignKey: "assessment_type_id", as: "examinationSessions" });
+
+// Examination Session Eligibility Associations
+examinationSessionEligibilityModel.belongsTo(studentModel, { foreignKey: "student_id", as: "student" });
+studentModel.hasMany(examinationSessionEligibilityModel, { foreignKey: "student_id", as: "examinationSessionEligibilities" });
+examinationSessionEligibilityModel.belongsTo(examinationSessionModel, { foreignKey: "examination_session_id", as: "examinationSession" });
+examinationSessionModel.hasMany(examinationSessionEligibilityModel, { foreignKey: "examination_session_id", as: "examinationSessionEligibilities" });
+
+examinationSessionEligibilityModel.belongsTo(userModel, { foreignKey: "approved_by", as: "approver" });
+examinationSessionEligibilityModel.belongsTo(userModel, { foreignKey: "blocked_by", as: "blocker" });
+examinationSessionEligibilityModel.belongsTo(userModel, { foreignKey: "created_by", as: "creator" });
+examinationSessionEligibilityModel.belongsTo(userModel, { foreignKey: "updated_by", as: "updater" });
 
 examinationSessionModel.hasMany(examinationSessionTermModel, { foreignKey: "examination_session_id", as: "examinationSessionTerms" });
 examinationSessionTermModel.belongsTo(examinationSessionModel, { foreignKey: "examination_session_id", as: "examinationSession" });
@@ -1980,11 +1992,6 @@ studentExamSeatModel.belongsTo(examScheduleRoomCapacityModel, {
 
 studentModel.hasMany(studentExamSeatModel, { foreignKey: "student_id", as: "examSeats" });
 studentExamSeatModel.belongsTo(studentModel, { foreignKey: "student_id", as: "student" });
-studentHallTicketModel.belongsTo(examSetupTypeTermModel, {
-  foreignKey: "exam_setup_type_term_id",
-  as: "examSetupTypeTerm",
-});
-examSetupTypeTermModel.hasMany(studentHallTicketModel, { foreignKey: "exam_setup_type_term_id", as: "hallTickets" });
 
 answerSheetQrModel.belongsTo(studentModel, { foreignKey: "student_id", as: "student" });
 studentModel.hasMany(answerSheetQrModel, { foreignKey: "student_id", as: "answerSheetQrs" });
@@ -2001,11 +2008,24 @@ s3FileModel.hasOne(answerSheetQrModel, { foreignKey: "file_upload_id", as: "answ
 examScheduleModel.belongsTo(s3FileModel, { foreignKey: "answerSheetS3FileId", as: "answerSheetS3File" });
 s3FileModel.hasMany(examScheduleModel, { foreignKey: "answerSheetS3FileId", as: "examSchedules" });
 
-studentHallTicketModel.belongsTo(sessionModel, { foreignKey: "session_id", as: "session" });
-sessionModel.hasMany(studentHallTicketModel, { foreignKey: "session_id", as: "hallTickets" });
+studentHallTicketModel.belongsTo(examinationSessionModel, {
+  foreignKey: "examination_session_id",
+  as: "examinationSession",
+});
+examinationSessionModel.hasMany(studentHallTicketModel, { foreignKey: "examination_session_id", as: "hallTickets" });
+
+studentHallTicketModel.belongsTo(acedmicYearModel, {
+  foreignKey: "acedmic_year_id",
+  as: "academicYear",
+});
+acedmicYearModel.hasMany(studentHallTicketModel, { foreignKey: "acedmic_year_id", as: "hallTickets" });
+
+
 
 studentHallTicketModel.belongsTo(studentModel, { foreignKey: "student_id", as: "student" });
 studentModel.hasMany(studentHallTicketModel, { foreignKey: "student_id", as: "hallTickets" });
+studentModel.hasMany(attendanceModel, { foreignKey: 'student_id', as: 'attendances' });
+studentModel.hasMany(assessmentPlanModel, { foreignKey: 'courseId', sourceKey: 'courseId', as: 'assessmentPlans' });
 
 studentHallTicketModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "institute" });
 instituteModel.hasMany(studentHallTicketModel, { foreignKey: "institute_id", as: "hallTickets" });
@@ -2013,12 +2033,12 @@ instituteModel.hasMany(studentHallTicketModel, { foreignKey: "institute_id", as:
 studentHallTicketModel.belongsTo(universityModel, { foreignKey: "university_id", as: "university" });
 universityModel.hasMany(studentHallTicketModel, { foreignKey: "university_id", as: "hallTickets" });
 
+studentHallTicketModel.belongsTo(userModel, { foreignKey: "marked_by", as: "markedUser" });
+userModel.hasMany(studentHallTicketModel, { foreignKey: "marked_by", as: "markedHallTickets" });
+
 s3FileModel.belongsTo(userModel, { foreignKey: "createdBy", as: "creator" });
 userModel.hasMany(s3FileModel, { foreignKey: "createdBy", as: "s3Files" });
 academicRegulationModel.belongsTo(gradingModel, { foreignKey: 'gradingSchemeId', as: 'gradingScheme' });
-academicRegulationModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
-courseModel.hasMany(academicRegulationModel, { foreignKey: 'courseId', as: 'academicRegulations' });
-academicRegulationModel.belongsTo(sessionModel, { foreignKey: 'sessionId', as: 'session' });
 academicRegulationModel.belongsTo(acedmicYearModel, { foreignKey: 'academicYearId', as: 'academicYear' });
 academicRegulationModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'creator' });
 academicRegulationModel.belongsTo(userModel, { foreignKey: 'updatedBy', as: 'updater' });
@@ -2029,6 +2049,21 @@ academicRegulationModel.hasMany(academicRegulationCourseMappingModel, { foreignK
 academicRegulationCourseMappingModel.belongsTo(academicRegulationModel, { foreignKey: 'academicRegulationId', as: 'academicRegulation' });
 academicRegulationCourseMappingModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
 academicRegulationCourseMappingModel.belongsTo(sessionModel, { foreignKey: 'sessionId', as: 'session' });
+courseModel.hasMany(academicRegulationCourseMappingModel, { foreignKey: 'courseId', as: 'regulationCourseMappings' });
+sessionModel.hasMany(academicRegulationCourseMappingModel, { foreignKey: 'sessionId', as: 'regulationCourseMappings' });
+
+courseModel.belongsToMany(academicRegulationModel, {
+    through: academicRegulationCourseMappingModel,
+    foreignKey: 'courseId',
+    otherKey: 'academicRegulationId',
+    as: 'academicRegulations'
+});
+academicRegulationModel.belongsToMany(courseModel, {
+    through: academicRegulationCourseMappingModel,
+    foreignKey: 'academicRegulationId',
+    otherKey: 'courseId',
+    as: 'courses'
+});
 
 // Subject Associations
 subjectModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
@@ -2251,6 +2286,7 @@ export {
   examinationSessionModel,
   examinationSessionTermModel,
   examinationSessionSlotModel,
+  examinationSessionEligibilityModel,
   userModel as users,
 };
 

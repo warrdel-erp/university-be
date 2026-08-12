@@ -1523,6 +1523,416 @@
           }
         }
       ]
+    },
+    {
+      "name": "10. Student Hall Ticket (/studentHallTicket)",
+      "item": [
+        {
+          "name": "10.1 Cancel/Block Hall Ticket",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/block/{{hallTicketId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                "block",
+                "{{hallTicketId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "10.2 Verify/Fetch Hall Ticket through QR",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/byQr?qr={{qrCode}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                "byQr"
+              ],
+              "query": [
+                {
+                  "key": "qr",
+                  "value": "{{qrCode}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "10.3 Publish Hall Tickets",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examinationSessionId\": {{examinationSessionId}},\n  \"studentIds\": [202, 229]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/publish",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                "publish"
+              ]
+            }
+          }
+        },
+        {
+          "name": "10.4 Get Complete Hall Ticket Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/{{hallTicketId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                "{{hallTicketId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "10.5 Generate Hall Tickets",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examinationSessionId\": {{examinationSessionId}},\n  \"studentIds\": [\n    {{studentId}}\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/generate",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                "generate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "10.6 Get Student Detailed Eligibility",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/eligibility/{{examinationSessionId}}/{{studentId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                "eligibility",
+                "{{examinationSessionId}}",
+                "{{studentId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "10.7 Get Session Students",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/sessionStudents/{{examinationSessionId}}?courseId={{courseId}}&sessionId={{sessionId}}&term={{term}}&status={{status}}&page=1&limit=10",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                "sessionStudents",
+                "{{examinationSessionId}}"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "{{courseId}}"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}"
+                },
+                {
+                  "key": "term",
+                  "value": "{{term}}"
+                },
+                {
+                  "key": "status",
+                  "value": "{{status}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "10.8 Get Hall Ticket Eligibility Overview",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/eligibilityOverview/{{examinationSessionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                "eligibilityOverview",
+                "{{examinationSessionId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "10.9 Get Hall Ticket Review Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/reviewDetails/{{studentId}}?examinationSessionId={{examinationSessionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                "reviewDetails",
+                "{{studentId}}"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "{{examinationSessionId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "10.10 Mark Student(s) as Eligible (COE override)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examinationSessionId\": {{examinationSessionId}},\n  \"studentIds\": [\n    {{studentId}}\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/markAsEligible",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                "markAsEligible"
+              ]
+            }
+          }
+        },
+        {
+          "name": "10.11 Get Hall Ticket Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/summary/{{examinationSessionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                "summary",
+                "{{examinationSessionId}}"
+            }
+          }
+        },
+        {
+          "name": "10.12 Filter Students by Review Reasons",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examinationSessionId\": {{examinationSessionId}},\n  \"courseId\": {{courseId}},\n  \"sessionId\": {{sessionId}},\n  \"term\": {{term}},\n  \"filters\": [\"PHOTOGRAPH_PENDING\", \"ATTENDANCE_PENDING\"],\n  \"page\": 1,\n  \"limit\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/reviewFilterStudents",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                "reviewFilterStudents"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. Question Paper (/questionPaper)",
+      "item": [
+        {
+          "name": "11.1 Approve or Reject Question Paper",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"questionPaperId\": 21,\n  \"status\": \"Approved\",\n  \"remarks\": \"Good blueprint mapping\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionPaper/approve",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionPaper",
+                "approve"
+              ]
+            }
+          }
+        },
+        {
+          "name": "11.2 Final Approve Exam Schedule Paper",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examScheduleId\": 18\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionPaper/finalApproved",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionPaper",
+                "finalApproved"
+              ]
+            }
+          }
+        }
+      ]
     }
   ],
   "variable": [
@@ -1584,6 +1994,21 @@
     {
       "key": "teacherExamAssignmentId",
       "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "hallTicketId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "studentId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "qrCode",
+      "value": "sample-uuid-qr-code",
       "type": "string"
     }
   ]

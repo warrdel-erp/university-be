@@ -42,6 +42,12 @@ const questionPaperModel = sequelize.define(
             defaultValue: "Pending",
             field: "status",
         },
+        finalApproval: {
+            type: DataTypes.ENUM('Pending', 'Approved', 'Rejected'),
+            allowNull: true,
+            defaultValue: 'Pending',
+            field: "final_status",
+        },
         questionPaper: {
             type: DataTypes.JSON,
             allowNull: false,
@@ -51,6 +57,11 @@ const questionPaperModel = sequelize.define(
             type: DataTypes.INTEGER,
             allowNull: true,
             field: "total_marks",
+        },
+        remarks: {
+            type: DataTypes.TEXT,
+            allowNull: true,
+            field: "remarks",
         },
         createdBy: {
             type: DataTypes.INTEGER,
