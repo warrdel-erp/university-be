@@ -623,7 +623,50 @@ export async function getTeacherWeekCells(userId) {
   });
 }
 
-export async function getTeacherSubjectsFromWeekCells(userId) {
+export async function getTeacherSubjectsFromWeekCells(userId, filters = {}) {
+  const { courseId, sessionId } = filters;
+
+  // 1. Fetch direct subject mappings
+  const mappingRows = await model.teacherSubjectMappingModel.findAll({
+    where: {
+      userId: Number(userId),
+      ...buildScope(model.teacherSubjectMappingModel),
+    },
+    include: [{
+      model: model.subjectModel,
+      as: 'employeeSubject',
+      required: true,
+      where: {
+        ...(courseId != null && { courseId: Number(courseId) }),
+        ...buildScope(model.subjectModel),
+      },
+      include: [{
+        model: model.courseModel,
+        as: 'courseInfo',
+        attributes: ['courseId', 'courseName', 'courseCode'],
+        required: false,
+      }],
+    }],
+  });
+
+  // 2. Fetch routine cells
+  const routineWhere = {
+    ...buildScope(model.timeTableRoutineModel),
+    ...(courseId != null && { courseId: Number(courseId) }),
+  };
+
+  const termInclude = {
+    model: model.classSectionTermModel,
+    as: 'classSectionTerm',
+    required: sessionId != null,
+    include: sessionId != null ? [{
+      model: model.classSectionModel,
+      as: 'classSection',
+      required: true,
+      where: { sessionId: Number(sessionId) },
+    }] : [],
+  };
+
   const cells = await model.timeTableCellModel.findAll({
     attributes: ['timeTableCellId', 'subjectId', 'electiveSubjectId', 'teacherSubjectMappingId'],
     include: [
@@ -638,8 +681,9 @@ export async function getTeacherSubjectsFromWeekCells(userId) {
         model: model.timeTableRoutineModel,
         as: 'timeTableRoutine',
         required: true,
-        where: buildScope(model.timeTableRoutineModel),
+        where: routineWhere,
         attributes: ['timeTableRoutineId'],
+        include: [termInclude],
       },
       {
         model: model.subjectModel,
@@ -687,6 +731,26 @@ export async function getTeacherSubjectsFromWeekCells(userId) {
 
   const coursesMap = new Map();
   const subjectsMap = new Map();
+
+  for (const mapping of mappingRows) {
+    const item = mapping.get({ plain: true });
+    if (item.employeeSubject) {
+      const sub = item.employeeSubject;
+      const subject = {
+        subjectId: sub.subjectId,
+        subjectName: sub.subjectName,
+        subjectCode: sub.subjectCode,
+      };
+      const course = sub.courseInfo;
+
+      if (course && !coursesMap.has(course.courseId)) {
+        coursesMap.set(course.courseId, course);
+      }
+      if (subject && !subjectsMap.has(subject.subjectId)) {
+        subjectsMap.set(subject.subjectId, subject);
+      }
+    }
+  }
 
   for (const cell of cells) {
     const item = cell.get({ plain: true });
