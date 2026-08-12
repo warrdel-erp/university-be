@@ -78,16 +78,29 @@ export async function getStudentsForExaminationSession(examinationSessionId, fil
         };
     });
 
+    // Apply status filter in-service (status is a frontend-facing label array e.g. ["Ready","Review"])
+    const statusFilter = filters?.status;
+    const filteredProcessed = (statusFilter && statusFilter.length > 0)
+        ? processed.filter(row => statusFilter.includes(row.eligibilityStatus))
+        : processed;
+
     if (!isPaginated) {
-        return processed;
+        return filteredProcessed;
     }
 
+    // Re-paginate from the filtered list so totals are accurate
+    const page = Math.max(1, Number(filters.page) || 1);
+    const limit = Math.max(1, Number(filters.limit) || 10);
+    const offset = (page - 1) * limit;
+    const paginatedRows = filteredProcessed.slice(offset, offset + limit);
+    const total = filteredProcessed.length;
+
     return {
-        rows: processed,
-        total: repoResult.total,
-        page: repoResult.page,
-        limit: repoResult.limit,
-        totalPages: repoResult.totalPages,
+        rows: paginatedRows,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit) || 1,
     };
 }
 

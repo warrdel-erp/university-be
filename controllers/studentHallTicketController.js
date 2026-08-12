@@ -157,7 +157,12 @@ export async function getStudentsByReviewReasons(req, res) {
             page,
             limit
         });
-        return SuccessResponse(res, 200, "Students matching review filters fetched successfully", result);
+        return SuccessResponse(res, 200, "Students matching review filters fetched successfully", result.rows, {
+            total: result.total,
+            page: result.page,
+            limit: result.limit,
+            totalPages: result.totalPages,
+        });
     } catch (error) {
         return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
     }

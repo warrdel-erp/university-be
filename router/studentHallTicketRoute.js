@@ -93,9 +93,14 @@ const sessionStudentsQuerySchema = z.object({
     courseId: queryArrayOrSingleNumberSchema,
     sessionId: queryArrayOrSingleNumberSchema,
     term: queryArrayOrSingleNumberSchema,
+    // Accepts single or comma-separated: "Ready,Review" or repeated ?status=Ready&status=Review
     status: z.preprocess(
-        (val) => (val === "" || val === null || val === undefined ? undefined : val),
-        z.enum(["Ready", "Review", "Approved", "Blocked"]).optional()
+        (val) => {
+            if (val === "" || val === null || val === undefined) return undefined;
+            if (Array.isArray(val)) return val.filter(Boolean);
+            return String(val).split(",").map(v => v.trim()).filter(Boolean);
+        },
+        z.array(z.enum(["Ready", "Review", "Approved", "Blocked"])).optional()
     ),
     search: z.preprocess(
         (val) => (val === "" || val === null ? undefined : val),
