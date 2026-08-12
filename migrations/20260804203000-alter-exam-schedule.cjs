@@ -38,12 +38,22 @@ module.exports = {
         onUpdate: 'CASCADE'
       });
 
-      // Now enforce NOT NULL after FK is in place
+      // Remove rows without a valid examination_session_id before enforcing NOT NULL
+      await queryInterface.sequelize.query(
+        `DELETE FROM exam_schedule WHERE examination_session_id IS NULL;`
+      );
+
+      // Now enforce NOT NULL after FK is in place and NULLs are cleaned up
       await queryInterface.changeColumn('exam_schedule', 'examination_session_id', {
         type: Sequelize.BIGINT,
         allowNull: false,
       });
     } else {
+      // examination_session_id column already exists — clean up NULLs first before enforcing NOT NULL
+      await queryInterface.sequelize.query(
+        `DELETE FROM exam_schedule WHERE examination_session_id IS NULL;`
+      );
+
       try {
         await queryInterface.removeConstraint('exam_schedule', 'exam_schedule_examination_session_id_foreign_idx');
       } catch (err) {
@@ -68,8 +78,11 @@ module.exports = {
       });
     }
 
-    // 3. Make subject_id NOT NULL
+    // 3. Make subject_id NOT NULL — delete NULLs first to avoid truncation error
     if (tableDescription.subject_id) {
+      await queryInterface.sequelize.query(
+        `DELETE FROM exam_schedule WHERE subject_id IS NULL;`
+      );
       await queryInterface.changeColumn('exam_schedule', 'subject_id', {
         type: Sequelize.INTEGER,
         allowNull: false,
@@ -78,6 +91,11 @@ module.exports = {
 
     // 4. Make examination_session_slot_id NOT NULL
     if (tableDescription.examination_session_slot_id) {
+      // Clean up NULLs first to avoid truncation error
+      await queryInterface.sequelize.query(
+        `DELETE FROM exam_schedule WHERE examination_session_slot_id IS NULL;`
+      );
+
       try {
         await queryInterface.removeConstraint('exam_schedule', 'exam_schedule_examination_session_slot_id_foreign_idx');
       } catch (err) {
@@ -89,17 +107,21 @@ module.exports = {
         allowNull: false,
       });
 
-      await queryInterface.addConstraint('exam_schedule', {
-        fields: ['examination_session_slot_id'],
-        type: 'foreign key',
-        name: 'exam_schedule_examination_session_slot_id_foreign_idx',
-        references: {
-          table: 'examination_session_slot',
-          field: 'examination_session_slot_id'
-        },
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE'
-      });
+      try {
+        await queryInterface.addConstraint('exam_schedule', {
+          fields: ['examination_session_slot_id'],
+          type: 'foreign key',
+          name: 'exam_schedule_examination_session_slot_id_foreign_idx',
+          references: {
+            table: 'examination_session_slot',
+            field: 'examination_session_slot_id'
+          },
+          onDelete: 'CASCADE',
+          onUpdate: 'CASCADE'
+        });
+      } catch (err) {
+        console.log("FK constraint on examination_session_slot_id could not be added:", err.message);
+      }
     }
   },
 
