@@ -2049,6 +2049,21 @@ academicRegulationModel.hasMany(academicRegulationCourseMappingModel, { foreignK
 academicRegulationCourseMappingModel.belongsTo(academicRegulationModel, { foreignKey: 'academicRegulationId', as: 'academicRegulation' });
 academicRegulationCourseMappingModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
 academicRegulationCourseMappingModel.belongsTo(sessionModel, { foreignKey: 'sessionId', as: 'session' });
+courseModel.hasMany(academicRegulationCourseMappingModel, { foreignKey: 'courseId', as: 'regulationCourseMappings' });
+sessionModel.hasMany(academicRegulationCourseMappingModel, { foreignKey: 'sessionId', as: 'regulationCourseMappings' });
+
+courseModel.belongsToMany(academicRegulationModel, {
+    through: academicRegulationCourseMappingModel,
+    foreignKey: 'courseId',
+    otherKey: 'academicRegulationId',
+    as: 'academicRegulations'
+});
+academicRegulationModel.belongsToMany(courseModel, {
+    through: academicRegulationCourseMappingModel,
+    foreignKey: 'academicRegulationId',
+    otherKey: 'courseId',
+    as: 'courses'
+});
 
 // Subject Associations
 subjectModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
