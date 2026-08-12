@@ -105,21 +105,55 @@ export async function getStudentsForExaminationSession(examinationSessionId, fil
 }
 
 export async function getHallTicketEligibilityOverview(examinationSessionId, filters = {}) {
-    const counts = await studentHallTicketRepository.getEligibilityOverviewCounts(examinationSessionId, filters);
+    const repoResult = await studentHallTicketRepository.getStudentsByExaminationSessionId(Number(examinationSessionId), {
+        courseId: filters.courseId,
+        sessionId: filters.sessionId,
+        term: filters.term
+    });
+
+    const dbStatusMap = await examinationSessionEligibilityRepo.getEligibilityStatusesMap(examinationSessionId);
 
     let ready = 0;
     let blocked = 0;
     let review = 0;
     let approved = 0;
     let totalStudents = 0;
+    let generatedCount = 0;
+    let publishedCount = 0;
+    let readyAndApprovedNotGenerated = 0;
 
-    for (const row of counts) {
-        const count = Number(row.count) || 0;
-        totalStudents += count;
-        if (row.status === "READY") ready = count;
-        else if (row.status === "APPROVED") approved = count;
-        else if (row.status === "BLOCKED") blocked = count;
-        else if (row.status === "REVIEW") review = count;
+    const seenStudents = new Set();
+
+    for (const raw of repoResult) {
+        const student = raw.student;
+        if (!student) continue;
+
+        const studentId = student.studentId;
+        if (seenStudents.has(studentId)) continue;
+        seenStudents.add(studentId);
+
+        totalStudents++;
+
+        const eligibilityRecord = student.examinationSessionEligibilities?.[0];
+        const dbStatus = eligibilityRecord?.status || dbStatusMap.get(studentId) || "REVIEW";
+
+        if (dbStatus === "READY") ready++;
+        else if (dbStatus === "APPROVED") approved++;
+        else if (dbStatus === "BLOCKED") blocked++;
+        else if (dbStatus === "REVIEW") review++;
+
+        const hallTicket = student.hallTickets?.[0];
+        if (hallTicket) {
+            generatedCount++;
+            if (hallTicket.isPublished) {
+                publishedCount++;
+            }
+        } else {
+            // No hall ticket generated
+            if (dbStatus === "READY" || dbStatus === "APPROVED") {
+                readyAndApprovedNotGenerated++;
+            }
+        }
     }
 
     return {
@@ -127,7 +161,10 @@ export async function getHallTicketEligibilityOverview(examinationSessionId, fil
         ready,
         approved,
         blocked,
-        review
+        review,
+        generatedCount,
+        publishedCount,
+        readyAndApprovedNotGenerated
     };
 }
 
@@ -213,25 +250,28 @@ export async function getHallTicketSummary(examinationSessionId, filters = {}) {
             cstObj.approvedStudentCount++;
         }
 
-        if (conditions.ATTENDANCE_PENDING) {
-            attendanceShortage++;
-            termObj.attendanceShortage++;
-            cstObj.attendanceShortage++;
-        }
-        if (conditions.REGISTRATION_PENDING) {
-            registrationPending++;
-            termObj.registrationPending++;
-            cstObj.registrationPending++;
-        }
-        if (conditions.PHOTOGRAPH_PENDING) {
-            missingPhotograph++;
-            termObj.missingPhotograph++;
-            cstObj.missingPhotograph++;
-        }
-        if (conditions.INVOICE_PENDING) {
-            feeClearance++;
-            termObj.feeClearance++;
-            cstObj.feeClearance++;
+        // Only count failure reasons/pending checks if student status is REVIEW (not APPROVED or READY)
+        if (status !== "APPROVED" && status !== "READY") {
+            if (conditions.ATTENDANCE_PENDING) {
+                attendanceShortage++;
+                termObj.attendanceShortage++;
+                cstObj.attendanceShortage++;
+            }
+            if (conditions.REGISTRATION_PENDING) {
+                registrationPending++;
+                termObj.registrationPending++;
+                cstObj.registrationPending++;
+            }
+            if (conditions.PHOTOGRAPH_PENDING) {
+                missingPhotograph++;
+                termObj.missingPhotograph++;
+                cstObj.missingPhotograph++;
+            }
+            if (conditions.INVOICE_PENDING) {
+                feeClearance++;
+                termObj.feeClearance++;
+                cstObj.feeClearance++;
+            }
         }
     }
 

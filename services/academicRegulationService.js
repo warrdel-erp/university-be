@@ -5,7 +5,7 @@ import { getAcademicYearId } from "../utility/requestContext.js";
 export async function createAcademicRegulation(payload, user) {
   return await sequelize.transaction(async (t) => {
     const sanitizeDate = (val) => (!val || val === "" || val === "Invalid date" ? null : val);
-    const { courseId, sessionId, ...restPayload } = payload;
+    const { courseId, sessionId, courseMappings, ...restPayload } = payload;
     
     let finalAcademicYearId = restPayload.academicYearId ? Number(restPayload.academicYearId) : null;
     if (!finalAcademicYearId) {
@@ -22,6 +22,7 @@ export async function createAcademicRegulation(payload, user) {
       isActive: payload.isActive !== undefined ? payload.isActive : true,
       createdBy: user?.userId || null,
       updatedBy: user?.userId || null,
+      courseMappings: courseMappings || [],
     };
 
     return await academicRegulationRepo.createAcademicRegulation(regulationData, { transaction: t });

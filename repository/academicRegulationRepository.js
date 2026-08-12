@@ -15,10 +15,28 @@ export async function findAcademicRegulationByCode(regulationCode, universityId,
 }
 
 export async function createAcademicRegulation(data, options = {}) {
+  const { courseMappings, ...regulationData } = data;
   const record = await scoped(model.academicRegulationModel).create({
-    ...data,
+    ...regulationData,
     version: 1.0,
   }, options);
+
+  if (Array.isArray(courseMappings) && courseMappings.length > 0) {
+    const mappingsToCreate = courseMappings.map((item) => ({
+      academicRegulationId: record.academicRegulationId,
+      courseId: Number(item.courseId),
+      sessionId: Number(item.sessionId),
+      createdBy: data.createdBy,
+      updatedBy: data.updatedBy,
+    }));
+
+    await Promise.all(
+      mappingsToCreate.map((item) =>
+        scoped(model.academicRegulationCourseMappingModel).create(item, { transaction: options.transaction })
+      )
+    );
+  }
+
   return await getAcademicRegulationById(record.academicRegulationId, options);
 }
 
@@ -210,6 +228,8 @@ export async function updateAcademicRegulation(academicRegulationId, data, optio
         academicRegulationId: Number(academicRegulationId),
         courseId: Number(item.courseId),
         sessionId: Number(item.sessionId),
+        createdBy: data.updatedBy,
+        updatedBy: data.updatedBy,
       }));
 
     if (mappingsToCreate.length > 0) {

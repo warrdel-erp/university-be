@@ -77,6 +77,7 @@ router.get(
 
 router.get("/:id", userAuth, examScheduleController.getExamScheduleById);
 
+// add room to exam of branch
 router.post(
   "/assignRoom",
   userAuth,
