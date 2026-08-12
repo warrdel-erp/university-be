@@ -197,6 +197,24 @@ instituteModel.hasMany(examinationSessionModel, { foreignKey: "institute_id", as
 examinationSessionModel.belongsTo(acedmicYearModel, { foreignKey: "acedmic_year_id", as: "academicYear" });
 acedmicYearModel.hasMany(examinationSessionModel, { foreignKey: "acedmic_year_id", as: "examinationSessions" });
 
+examinationSessionSlotModel.belongsTo(universityModel, { foreignKey: "university_id", as: "university" });
+universityModel.hasMany(examinationSessionSlotModel, { foreignKey: "university_id", as: "examinationSessionSlots" });
+
+examinationSessionSlotModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "institute" });
+instituteModel.hasMany(examinationSessionSlotModel, { foreignKey: "institute_id", as: "examinationSessionSlots" });
+
+examinationSessionSlotModel.belongsTo(acedmicYearModel, { foreignKey: "acedmic_year_id", as: "academicYear" });
+acedmicYearModel.hasMany(examinationSessionSlotModel, { foreignKey: "acedmic_year_id", as: "examinationSessionSlots" });
+
+examinationSessionTermModel.belongsTo(universityModel, { foreignKey: "university_id", as: "university" });
+universityModel.hasMany(examinationSessionTermModel, { foreignKey: "university_id", as: "examinationSessionTerms" });
+
+examinationSessionTermModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "institute" });
+instituteModel.hasMany(examinationSessionTermModel, { foreignKey: "institute_id", as: "examinationSessionTerms" });
+
+examinationSessionTermModel.belongsTo(acedmicYearModel, { foreignKey: "acedmic_year_id", as: "academicYear" });
+acedmicYearModel.hasMany(examinationSessionTermModel, { foreignKey: "acedmic_year_id", as: "examinationSessionTerms" });
+
 examinationSessionModel.belongsTo(examSetupTypeModel, { foreignKey: "assessment_type_id", as: "assessmentType" });
 examSetupTypeModel.hasMany(examinationSessionModel, { foreignKey: "assessment_type_id", as: "examinationSessions" });
 

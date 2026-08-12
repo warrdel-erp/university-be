@@ -2,6 +2,9 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import examinationSessionModel from "./examinationSessionModel.js";
 import classSectionTermModel from "./classSectionTermModel.js";
+import universityModel from "./universityModel.js";
+import instituteModel from "./instituteModel.js";
+import acedmicYearModel from "./acedmicYearModel.js";
 
 const examinationSessionTermModel = sequelize.define(
     'examination_session_term',
@@ -19,6 +22,33 @@ const examinationSessionTermModel = sequelize.define(
             references: {
                 model: examinationSessionModel,
                 key: 'examination_session_id'
+            }
+        },
+        universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
+        },
+        academicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYearModel,
+                key: 'acedmic_year_id'
             }
         },
         classSectionTermId: {
@@ -67,6 +97,6 @@ const examinationSessionTermModel = sequelize.define(
     }
 );
 
-examinationSessionTermModel.scopeConfig = { university: false, institute: false, academicYear: false };
+examinationSessionTermModel.scopeConfig = { university: true, institute: true, academicYear: true };
 
 export default examinationSessionTermModel;
