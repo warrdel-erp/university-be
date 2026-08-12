@@ -83,14 +83,22 @@ module.exports = {
     } catch (e) {}
 
     // 5. Add new indexes
-    await queryInterface.addIndex('student_hall_ticket', ['examination_session_id', 'student_id'], {
-      unique: true,
-      name: 'uq_student_hall_ticket_exam_session_student'
-    });
+    try {
+      await queryInterface.addIndex('student_hall_ticket', ['examination_session_id', 'student_id'], {
+        unique: true,
+        name: 'uq_student_hall_ticket_exam_session_student'
+      });
+    } catch (e) {
+      console.log('Index uq_student_hall_ticket_exam_session_student already exists or failed to add:', e.message);
+    }
 
-    await queryInterface.addIndex('student_hall_ticket', ['institute_id', 'university_id', 'examination_session_id', 'acedmic_year_id'], {
-      name: 'student_hall_ticket_inst_univ_exam_session_idx'
-    });
+    try {
+      await queryInterface.addIndex('student_hall_ticket', ['institute_id', 'university_id', 'examination_session_id', 'acedmic_year_id'], {
+        name: 'student_hall_ticket_inst_univ_exam_session_idx'
+      });
+    } catch (e) {
+      console.log('Index student_hall_ticket_inst_univ_exam_session_idx already exists or failed to add:', e.message);
+    }
   },
 
   async down(queryInterface, Sequelize) {
