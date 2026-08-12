@@ -716,7 +716,11 @@ export async function getMappedSubjectsBySessionAndTerm(
                 status: matchingQP.status,
                 createdBy: matchingQP.createdBy,
                 createdAt: matchingQP.createdAt,
-                updatedAt: matchingQP.updatedAt
+                updatedAt: matchingQP.updatedAt,
+                ...(matchingQP.status === "Approved" && {
+                  updatedBy: matchingQP.updatedBy ?? null,
+                  updatedByName: matchingQP.updater?.userName ?? null,
+                })
               }
             };
           }

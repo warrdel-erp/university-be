@@ -123,11 +123,15 @@ export async function getDetailByExamType(req, res) {
 
 export async function getAllExamTypes(req, res) {
   try {
-    const { termNumber, search, page = 1, limit = 10 } = req.query;
+    const { termNumber, search, page, limit } = req.query;
+    const options = { search };
+    if (page !== undefined && page !== null && page !== "") options.page = page;
+    if (limit !== undefined && limit !== null && limit !== "") options.limit = limit;
+
     const result = await examStructureServices.getAllExamTypes(
       undefined,
       termNumber ?? null,
-      { search, page, limit }
+      options
     );
 
     return SuccessResponse(
