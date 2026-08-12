@@ -20,15 +20,28 @@ module.exports = {
 
     // 2. Add examination_session_id if missing, or alter if exists
     if (!tableDescription.examination_session_id) {
+      // Add column without FK first to avoid MySQL errno 150
       await queryInterface.addColumn('exam_schedule', 'examination_session_id', {
         type: Sequelize.BIGINT,
-        allowNull: false,
+        allowNull: true, // temporarily nullable to allow adding the column safely
+      });
+
+      await queryInterface.addConstraint('exam_schedule', {
+        fields: ['examination_session_id'],
+        type: 'foreign key',
+        name: 'exam_schedule_examination_session_id_foreign_idx',
         references: {
-          model: 'examination_session',
-          key: 'examination_session_id',
+          table: 'examination_session',
+          field: 'examination_session_id'
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL', // Or RESTRICT, depending on logic, but SET NULL conflicts with allowNull: false
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+      });
+
+      // Now enforce NOT NULL after FK is in place
+      await queryInterface.changeColumn('exam_schedule', 'examination_session_id', {
+        type: Sequelize.BIGINT,
+        allowNull: false,
       });
     } else {
       try {
