@@ -27,13 +27,21 @@ const qrQuerySchema = z.object({
 const reviewFilterEnum = z.enum(["REGISTRATION_PENDING", "PHOTOGRAPH_PENDING", "INVOICE_PENDING", "ATTENDANCE_PENDING"]);
 
 const reviewFilterStudentsSchema = z.object({
-    examinationSessionId: z.number({ required_error: "examinationSessionId is required" }),
-    courseId: z.number().optional(),
-    sessionId: z.number().optional(),
-    term: z.number().optional(),
-    filters: z.array(reviewFilterEnum).optional(),
-    page: z.number().int().min(1).optional().default(1),
-    limit: z.number().int().min(1).optional().default(10)
+    examinationSessionId: z.coerce.number({ required_error: "examinationSessionId is required" }),
+    courseId: z.coerce.number().optional(),
+    sessionId: z.coerce.number().optional(),
+    term: z.coerce.number().optional(),
+    // Accepts comma-separated string: "PHOTOGRAPH_PENDING,ATTENDANCE_PENDING" or repeated keys
+    filters: z.preprocess(
+        (val) => {
+            if (!val) return undefined;
+            if (Array.isArray(val)) return val;
+            return String(val).split(",").map(v => v.trim()).filter(Boolean);
+        },
+        z.array(reviewFilterEnum).optional()
+    ),
+    page: z.coerce.number().int().min(1).optional().default(1),
+    limit: z.coerce.number().int().min(1).optional().default(10)
 });
 
 /** Filters + optional `page` / `limit` (limit defaults 1000, clamped 10–1000 per page). */
@@ -128,7 +136,7 @@ router.get("/summary/:examinationSessionId", userAuth, validate({ params: examin
 router.get("/sessionStudents/:examinationSessionId", userAuth, validate({ params: examinationSessionIdParamsSchema, query: sessionStudentsQuerySchema }), studentHallTicketController.getStudentsForExaminationSession);
 
 // 9b. Filter students by review reasons/failures
-router.post("/reviewFilterStudents", userAuth, validate({ body: reviewFilterStudentsSchema }), studentHallTicketController.getStudentsByReviewReasons);
+router.get("/reviewFilterStudents", userAuth, validate({ query: reviewFilterStudentsSchema }), studentHallTicketController.getStudentsByReviewReasons);
 
 // 10. Additional List route
 router.get("/", userAuth, validate({ query: listHallTicketsQuerySchema }), studentHallTicketController.getAllHallTickets);

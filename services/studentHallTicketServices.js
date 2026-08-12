@@ -118,6 +118,21 @@ export async function getHallTicketEligibilityOverview(examinationSessionId, fil
     };
 }
 
+export function evaluateReviewConditions(reason = "") {
+    const lowerReason = (reason || "").toLowerCase();
+    return {
+        // "Required registration document has not been submitted." / "Registration document verification is pending."
+        REGISTRATION_PENDING: lowerReason.includes("document") || lowerReason.includes("registration"),
+        // "Student photograph is missing."
+        PHOTOGRAPH_PENDING: lowerReason.includes("photograph") || lowerReason.includes("photo"),
+        // "Student has X unpaid invoices with an outstanding amount of ..."
+        INVOICE_PENDING: lowerReason.includes("invoice") || lowerReason.includes("unpaid") || lowerReason.includes("fee") || lowerReason.includes("payment"),
+        FEE_PENDING: lowerReason.includes("invoice") || lowerReason.includes("unpaid") || lowerReason.includes("fee") || lowerReason.includes("payment"),
+        // "Attendance is X%..." / "Attendance data is incomplete..."
+        ATTENDANCE_PENDING: lowerReason.includes("attendance")
+    };
+}
+
 export async function getHallTicketSummary(examinationSessionId, filters = {}) {
     const { page, limit, ...queryFilters } = filters;
     const rawList = await studentHallTicketRepository.getStudentsByExaminationSessionId(examinationSessionId, queryFilters);
@@ -126,22 +141,29 @@ export async function getHallTicketSummary(examinationSessionId, filters = {}) {
     let attendanceShortage = 0;
     let registrationPending = 0;
     let missingPhotograph = 0;
+    let approvedStudentCount = 0;
     let totalStudents = 0;
 
     const termWiseMap = new Map();
     const courseSessionTermWiseMap = new Map();
+    const seenStudents = new Set();
 
     const getStatObj = () => ({
         totalStudents: 0,
         feeClearance: 0,
         attendanceShortage: 0,
         registrationPending: 0,
-        missingPhotograph: 0
+        missingPhotograph: 0,
+        approvedStudentCount: 0
     });
 
     for (const raw of rawList) {
         const student = raw.student;
         if (!student) continue;
+
+        const studentId = student.studentId;
+        if (seenStudents.has(studentId)) continue;
+        seenStudents.add(studentId);
 
         totalStudents++;
         
@@ -169,23 +191,31 @@ export async function getHallTicketSummary(examinationSessionId, filters = {}) {
 
         const eligibilityRecord = student.examinationSessionEligibilities?.[0];
         const reason = eligibilityRecord?.reviewReason || "";
+        const conditions = evaluateReviewConditions(reason);
 
-        if (reason.includes("attendance") || reason.includes("Attendance")) {
+        const status = eligibilityRecord?.status || "REVIEW";
+        if (status === "APPROVED") {
+            approvedStudentCount++;
+            termObj.approvedStudentCount++;
+            cstObj.approvedStudentCount++;
+        }
+
+        if (conditions.ATTENDANCE_PENDING) {
             attendanceShortage++;
             termObj.attendanceShortage++;
             cstObj.attendanceShortage++;
         }
-        if (reason.includes("document") || reason.includes("Document")) {
+        if (conditions.REGISTRATION_PENDING) {
             registrationPending++;
             termObj.registrationPending++;
             cstObj.registrationPending++;
         }
-        if (reason.includes("photograph") || reason.includes("photo") || reason.includes("Photograph")) {
+        if (conditions.PHOTOGRAPH_PENDING) {
             missingPhotograph++;
             termObj.missingPhotograph++;
             cstObj.missingPhotograph++;
         }
-        if (reason.includes("fee") || reason.includes("payment") || reason.includes("invoice") || reason.includes("Invoice")) {
+        if (conditions.INVOICE_PENDING) {
             feeClearance++;
             termObj.feeClearance++;
             cstObj.feeClearance++;
@@ -195,6 +225,7 @@ export async function getHallTicketSummary(examinationSessionId, filters = {}) {
     if (filters.courseId && filters.term && filters.sessionId) {
         return {
             totalStudents,
+            approvedStudentCount,
             feeClearance,
             attendanceShortage,
             registrationPending,
@@ -204,6 +235,7 @@ export async function getHallTicketSummary(examinationSessionId, filters = {}) {
 
     return {
         totalStudents,
+        approvedStudentCount,
         feeClearance,
         attendanceShortage,
         registrationPending,
@@ -678,10 +710,15 @@ export async function getStudentsByReviewReasons(examinationSessionId, filters =
 
     // 2. Filter students by matching the stored review reason patterns
     const filteredList = [];
+    const seenStudents = new Set();
 
     for (const raw of repoResult) {
         const student = raw.student;
         const studentId = student.studentId;
+
+        // Ensure distinct student processing
+        if (seenStudents.has(studentId)) continue;
+
         const dbStatus = student.examinationSessionEligibilities?.[0]?.status || dbStatusMap.get(studentId) || "REVIEW";
 
         // We only care about students in REVIEW status (which is what summary cards count)
@@ -691,32 +728,19 @@ export async function getStudentsByReviewReasons(examinationSessionId, filters =
 
         const eligibilityRecord = student.examinationSessionEligibilities?.[0];
         const reason = eligibilityRecord?.reviewReason || "";
+        const conditions = evaluateReviewConditions(reason);
 
+        // Determine if student matches requested filters (OR semantics)
         let matches = false;
-
-        if (filters.reasons && filters.reasons.length > 0) {
-            matches = filters.reasons.some(reasonEnum => {
-                const upper = reasonEnum.toUpperCase();
-                if (upper === "REGISTRATION_PENDING") {
-                    return reason.includes("document") || reason.includes("Document");
-                }
-                if (upper === "PHOTOGRAPH_PENDING") {
-                    return reason.includes("photograph") || reason.includes("photo") || reason.includes("Photograph");
-                }
-                if (upper === "INVOICE_PENDING") {
-                    return reason.includes("fee") || reason.includes("payment") || reason.includes("invoice") || reason.includes("Invoice");
-                }
-                if (upper === "ATTENDANCE_PENDING") {
-                    return reason.includes("attendance") || reason.includes("Attendance");
-                }
-                return false;
-            });
+        if (filters && filters.filters && filters.filters.length > 0) {
+            matches = filters.filters.some(f => conditions[f.toUpperCase()]);
         } else {
-            // Default to any review reasons if no filters are selected
+            // No specific filters => any reason qualifies
             matches = reason.length > 0;
         }
 
         if (matches) {
+            seenStudents.add(studentId); // Mark as added to filteredList
             const finalStatus = mapStatusToFrontend(dbStatus);
             const hallTicket = student.hallTickets?.[0];
             const isGenerated = !!hallTicket;

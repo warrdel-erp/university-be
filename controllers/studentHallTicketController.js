@@ -148,12 +148,12 @@ export async function markAsEligible(req, res) {
 
 export async function getStudentsByReviewReasons(req, res) {
     try {
-        const { examinationSessionId, courseId, sessionId, term, filters, page, limit } = req.body;
+        const { examinationSessionId, courseId, sessionId, term, filters, page, limit } = req.query;
         const result = await studentHallTicketServices.getStudentsByReviewReasons(examinationSessionId, {
             courseId,
             sessionId,
             term,
-            reasons: filters,
+            filters,
             page,
             limit
         });
