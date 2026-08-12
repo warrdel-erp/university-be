@@ -212,9 +212,16 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
     };
 
     if (filters.status) {
-        const statusUpper = filters.status.toUpperCase();
-        if (["READY", "REVIEW", "BLOCKED", "APPROVED"].includes(statusUpper)) {
-            eligibilityWhere.status = statusUpper;
+        if (Array.isArray(filters.status)) {
+            const statusUpperArray = filters.status.map(s => String(s).toUpperCase()).filter(s => ["READY", "REVIEW", "BLOCKED", "APPROVED"].includes(s));
+            if (statusUpperArray.length > 0) {
+                eligibilityWhere.status = { [Op.in]: statusUpperArray };
+            }
+        } else {
+            const statusUpper = String(filters.status).toUpperCase();
+            if (["READY", "REVIEW", "BLOCKED", "APPROVED"].includes(statusUpper)) {
+                eligibilityWhere.status = statusUpper;
+            }
         }
     }
 

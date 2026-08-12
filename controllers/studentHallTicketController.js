@@ -127,8 +127,6 @@ export async function getReviewDetails(req, res) {
 }
 
 
-
-
 export async function markAsEligible(req, res) {
     try {
         const { examinationSessionId, studentIds } = req.body;
