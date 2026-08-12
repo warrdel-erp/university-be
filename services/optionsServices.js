@@ -84,6 +84,7 @@ export async function getSubjectOptions(courseId, term, academicYearId, sessionI
         term,
         resolvedAcademicYearId,
         userId,
+        sessionId,
     );
 }
 

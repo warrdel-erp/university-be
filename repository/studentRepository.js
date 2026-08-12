@@ -450,23 +450,31 @@ export async function getAllStudents({
 
         const whereCondition = buildStudentListWhere(search, courseId, sessionId);
 
-        const placementStudentIds = await resolvePlacementStudentIds({
-            classSectionsId,
-            year,
-            term,
-        });
-        if (placementStudentIds != null) {
-            if (placementStudentIds.length === 0) {
-                return {
-                    result: [],
-                    totalCount: 0,
-                    page,
-                    limit,
-                    totalPages: 0,
-                };
-            }
-            whereCondition.studentId = { [Op.in]: placementStudentIds };
-        }
+        const classSectionTermWhere = {};
+        if (term?.length) classSectionTermWhere.term = { [Op.in]: term.map(Number) };
+
+        const classSectionWhere = {};
+        if (classSectionsId?.length) classSectionWhere.classSectionsId = { [Op.in]: classSectionsId.map(Number) };
+        if (year?.length) classSectionWhere.year = { [Op.in]: year.map(Number) };
+        if (academicYearId?.length) classSectionWhere.academicYearId = { [Op.in]: academicYearId.map(Number) };
+
+        const hasTermFilter = Object.keys(classSectionTermWhere).length > 0;
+        const hasSectionFilter = Object.keys(classSectionWhere).length > 0;
+
+        const classSectionTermIncludeForFilter = {
+            model: model.classSectionTermModel,
+            as: "studentClassSectionTerm",
+            attributes: [],
+            required: hasTermFilter || hasSectionFilter,
+            ...(hasTermFilter && { where: classSectionTermWhere }),
+            include: [{
+                model: model.classSectionModel,
+                as: "classSection",
+                attributes: [],
+                required: hasSectionFilter,
+                ...(hasSectionFilter && { where: classSectionWhere }),
+            }],
+        };
 
         if (excludeStudentIds != null && excludeStudentIds.length > 0) {
             const excludeSet = new Set();
@@ -586,6 +594,7 @@ export async function getAllStudents({
         if (search) {
             filterInclude.push({ model: model.courseModel, as: "course", attributes: [] });
         }
+        filterInclude.push(classSectionTermIncludeForFilter);
 
         const offset = (page - 1) * limit;
 

@@ -192,6 +192,19 @@ export const deletetimeTableMapping = async (req, res) => {
     }
 };
 
+export const deleteTimeTableTeacherController = async (req, res) => {
+    const { timeTableCellTeacherId } = req.query;
+    try {
+        const result = await timeTableCreateServices.deleteTimeTableTeacher(timeTableCellTeacherId);
+        return SuccessResponse(res, 200, result.message, result);
+    } catch (error) {
+        console.error(`Error in deleting time table teacher Id ${timeTableCellTeacherId}:`, error);
+        const message = error.message || 'Internal Server Error';
+        const statusCode = error.statusCode || (/not found/i.test(message) ? 404 : 500);
+        return ErrorResponse(res, statusCode, message);
+    }
+};
+
 export const getTimeTableCellData = async (req, res) => {
     const { courseId, classSectionTermId } = req.query;
     try {
@@ -218,9 +231,12 @@ export const publishTimeTable = async (req, res) => {
     try {
         const { timeTableRoutineId } = req.query;
         const response = await timeTableCreateServices.publishTimeTableService(timeTableRoutineId);
-        res.status(200).send(response);
+        return SuccessResponse(res, 200, response.message, response);
     } catch (error) {
-        res.status(500).send(error.message);
+        console.error(`Error in publishing timetable routine ${req.query.timeTableRoutineId}:`, error);
+        const message = error.message || 'Internal Server Error';
+        const statusCode = error.statusCode || (/not found/i.test(message) ? 404 : /required|cannot|invalid|already exists/i.test(message) ? 400 : 500);
+        return ErrorResponse(res, statusCode, message);
     }
 };
 

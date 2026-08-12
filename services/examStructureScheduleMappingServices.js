@@ -371,7 +371,6 @@ export async function publishExamSchedule(publishExamStructureSchedule) {
   const data = { isPublish: true };
   return await examStructureScheduleRepository.publishExamSchedule(examSetupTypeId, data);
 }
-
 function getExamSlotMinutes(examTime, duration) {
   const range = getTimeSlotRange({ startTime: examTime, duration });
   if (!range) {
@@ -430,6 +429,7 @@ async function assertNoStudentExamTimeConflict(examDetail, excludeExamScheduleId
     throw new Error(`Cannot schedule exam: ${subjectName} is already scheduled at the same time for the same students`);
   }
 }
+
 
 async function assertUniqueExamScheduleMapping(examDetail, excludeExamScheduleId) {
   if (!examDetail.courseId || !examDetail.sessionId || !examDetail.subjectId) {

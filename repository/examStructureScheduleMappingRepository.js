@@ -203,12 +203,12 @@ export async function findConflictingExamForStudentCohort({
       ],
     },
     include: [
-
       {
         model: model.subjectModel,
         as: "subjectSchedule",
         attributes: ["subjectName"],
-        required: false,
+        where: { courseId },
+        required: true,
       },
     ],
     raw: true,

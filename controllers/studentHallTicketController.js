@@ -22,7 +22,7 @@ export async function getStudentsForExaminationSession(req, res) {
 export async function getHallTicketEligibilityOverview(req, res) {
     try {
         const { examinationSessionId } = req.params;
-        const result = await studentHallTicketServices.getHallTicketEligibilityOverview(examinationSessionId);
+        const result = await studentHallTicketServices.getHallTicketEligibilityOverview(examinationSessionId, req.query);
         return SuccessResponse(res, 200, "Hall ticket eligibility overview fetched successfully", result);
     } catch (error) {
         return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
@@ -32,7 +32,7 @@ export async function getHallTicketEligibilityOverview(req, res) {
 export async function getHallTicketSummary(req, res) {
     try {
         const { examinationSessionId } = req.params;
-        const result = await studentHallTicketServices.getHallTicketSummary(examinationSessionId);
+        const result = await studentHallTicketServices.getHallTicketSummary(examinationSessionId, req.query);
         return SuccessResponse(res, 200, "Hall ticket summary fetched successfully", result);
     } catch (error) {
         return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
@@ -67,7 +67,7 @@ export async function getAllHallTickets(req, res) {
 
 export async function getHallTicketById(req, res) {
     try {
-        const result = await studentHallTicketServices.getHallTicketByIdForUser(req.params.id, req.user);
+        const result = await studentHallTicketServices.getHallTicketById(req.params.id);
         if (!result) return ErrorResponse(res, 404, "Hall ticket not found");
         return SuccessResponse(res, 200, "Hall ticket fetched successfully", result);
     } catch (error) {
@@ -77,7 +77,7 @@ export async function getHallTicketById(req, res) {
 
 export async function getHallTicketByQr(req, res) {
     try {
-        const result = await studentHallTicketServices.getHallTicketByQrForUser(req.query.qr, req.user);
+        const result = await studentHallTicketServices.getHallTicketDetailsByQr(req.query.qr);
         if (!result) return ErrorResponse(res, 404, "Hall ticket not found");
         return SuccessResponse(res, 200, "Hall ticket fetched successfully", result);
     } catch (error) {
@@ -126,18 +126,42 @@ export async function getReviewDetails(req, res) {
     }
 }
 
+
 export async function markAsEligible(req, res) {
     try {
-        const result = await studentHallTicketServices.markAsEligible({
-            examinationSessionId: Number(req.body.examinationSessionId),
-            studentId: Number(req.body.studentId),
-            markAsEligible: req.body.markAsEligible,
+        const { examinationSessionId, studentIds } = req.body;
+        
+        const data = await studentHallTicketServices.markAsEligible({
+            examinationSessionId,
+            studentIds,
             user: req.user
         });
-        return SuccessResponse(res, 200, "Student eligibility updated successfully", result);
+
+        return SuccessResponse(res, 200, "Eligibility approved successfully", data);
+    } catch (error) {
+        console.error("Error in markAsEligible:", error.message);
+        return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to approve eligibility");
+    }
+}
+
+export async function getStudentsByReviewReasons(req, res) {
+    try {
+        const { examinationSessionId, courseId, sessionId, term, filters, page, limit } = req.query;
+        const result = await studentHallTicketServices.getStudentsByReviewReasons(examinationSessionId, {
+            courseId,
+            sessionId,
+            term,
+            filters,
+            page,
+            limit
+        });
+        return SuccessResponse(res, 200, "Students matching review filters fetched successfully", result.rows, {
+            total: result.total,
+            page: result.page,
+            limit: result.limit,
+            totalPages: result.totalPages,
+        });
     } catch (error) {
         return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
     }
 }
-
-

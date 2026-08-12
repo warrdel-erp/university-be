@@ -256,13 +256,13 @@ export const getTeacherCourses = async (req, res) => {
 
 export const getTeacherSubjectsFromSchedule = async (req, res) => {
     try {
-        const { userId } = req.query;
+        const { userId, courseId, sessionId } = req.query;
 
         if (!userId) {
             return res.status(400).send('userId is required');
         }
 
-        const result = await employee.getTeacherSubjectsFromSchedule(userId);
+        const result = await employee.getTeacherSubjectsFromSchedule(userId, { courseId, sessionId });
         res.status(200).send({ success: true, result });
     } catch (error) {
         console.error('Error in getTeacherSubjectsFromSchedule controller:', error);

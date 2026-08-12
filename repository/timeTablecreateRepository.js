@@ -4,18 +4,20 @@ import { buildScope, scoped } from '../utility/scoped.js';
 import { classSectionTermsInclude, studentClassSectionTermWithSectionInclude, timeTableRoutineClassSectionInclude, stripRoutinePersistPayload, routineStructureInclude } from '../utility/classSectionIncludes.js';
 
 async function assertScopedRoutine(timeTableRoutineId, options = {}) {
+  if (timeTableRoutineId == null) return null;
   const { transaction, attributes = ['timeTableRoutineId'] } = options;
   return scoped(model.timeTableRoutineModel).findOne({
-    where: { timeTableRoutineId },
+    where: { timeTableRoutineId: Number(timeTableRoutineId) },
     attributes,
     transaction,
   });
 }
 
 async function assertScopedSchedule(timeTableCellId, options = {}) {
+  if (timeTableCellId == null) return null;
   const { transaction, attributes = ['timeTableCellId', 'timeTableRoutineId'] } = options;
   const cell = await model.timeTableCellModel.findOne({
-    where: { timeTableCellId },
+    where: { timeTableCellId: Number(timeTableCellId) },
     attributes,
     transaction,
   });
@@ -23,7 +25,8 @@ async function assertScopedSchedule(timeTableCellId, options = {}) {
     return null;
   }
 
-  const routine = await assertScopedRoutine(cell.timeTableRoutineId, {
+  const routineId = cell.timeTableRoutineId ?? cell.dataValues?.timeTableRoutineId;
+  const routine = await assertScopedRoutine(routineId, {
     transaction,
     attributes: ['timeTableRoutineId'],
   });
@@ -382,9 +385,10 @@ export async function deleteTimeTableRoutineRepository(timeTableRoutineId, optio
 
 export async function deletetimeTableMapping(timeTableCellId, options = {}) {
   const { transaction, deleteCombinedGroup = false } = options;
-  const schedule = await assertScopedSchedule(timeTableCellId, {
-    transaction,
+  const schedule = await model.timeTableCellModel.findOne({
+    where: { timeTableCellId: Number(timeTableCellId) },
     attributes: ['timeTableCellId', 'combinedGroupId'],
+    transaction,
   });
   if (!schedule) {
     throw new Error('Mapping not found');
@@ -623,8 +627,11 @@ export async function checkElectiveSubjectConflictRepository(
 };
 
 export async function getRoutineByIdRepository(timeTableRoutineId, options = {}) {
+  if (timeTableRoutineId == null || Number.isNaN(Number(timeTableRoutineId))) {
+    return null;
+  }
   return await scoped(model.timeTableRoutineModel).findOne({
-    where: { timeTableRoutineId },
+    where: { timeTableRoutineId: Number(timeTableRoutineId) },
     attributes: [
       'timeTableRoutineId',
       'startingDate',
@@ -692,11 +699,13 @@ export async function findRoutineForCombinedSessionRepository(
 };
 
 export async function getMappingByIdRepository(timeTableCellId, options = {}) {
-  return await model.timeTableCellModel.findOne({
-    where: { timeTableCellId },
+  const row = await model.timeTableCellModel.findOne({
+    where: { timeTableCellId: Number(timeTableCellId) },
     attributes: ['timeTableCellId', 'timeTableRoutineId', 'combinedGroupId', 'timeTableCreationId'],
     transaction: options.transaction,
   });
+  if (!row) return null;
+  return row.get ? row.get({ plain: true }) : row;
 };
 
 export async function getMappingCopySourceRepository(timeTableCellId, options = {}) {
@@ -2740,9 +2749,37 @@ export async function getPeriodsForStructures(timeTableNameIds) {
   });
 }
 
-export async function findAcademicGroupById(academicGroupId, options = {}) {
-  return await scoped(model.academicGroupModel).findByPk(Number(academicGroupId), {
+export async function findCellTeacherByIdRepository(timeTableCellTeacherId, options = {}) {
+  return await model.timeTableCellTeachersModel.findOne({
+    where: { timeTableCellTeacherId: Number(timeTableCellTeacherId) },
     transaction: options.transaction,
+  });
+}
+
+export async function deleteCellTeacherRepository(timeTableCellTeacherId, transaction) {
+  return await model.timeTableCellTeachersModel.destroy({
+    where: { timeTableCellTeacherId: Number(timeTableCellTeacherId) },
+    transaction,
+  });
+}
+
+export async function deleteDateWiseTeachersByCellAndUserRepository(timeTableCellId, userId, transaction) {
+  const dateWiseCells = await model.timeTableCellDateWiseModel.findAll({
+    where: { timeTableCellId: Number(timeTableCellId) },
+    attributes: ['timeTableCellDateWiseId'],
+    transaction,
+  });
+
+  if (!dateWiseCells || dateWiseCells.length === 0) return;
+
+  const dateWiseIds = dateWiseCells.map((c) => c.timeTableCellDateWiseId);
+
+  await model.timeTableCellTeachersDateWiseModel.destroy({
+    where: {
+      timeTableCellDateWiseId: { [Op.in]: dateWiseIds },
+      userId: Number(userId),
+    },
+    transaction,
   });
 }
 
