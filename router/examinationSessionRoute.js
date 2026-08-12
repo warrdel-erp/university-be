@@ -94,14 +94,40 @@ const deleteTermSchema = {
 
 const getClassSectionTermsBySetupTypeSchema = {
   query: z.object({
-    examSetupTypeId: positiveIntegerQueryId,
+    examSetupTypeId: positiveIntegerQueryId.optional(),
+    examinationSessionId: positiveIntegerQueryId.optional(),
   }),
 };
+
+const getStructureSchema = {
+  query: z.object({
+    examinationSessionId: positiveIntegerQueryId,
+  }),
+};
+
+const getSubjectsBySessionAndTermSchema = {
+  query: z.object({
+    examinationSessionId: positiveIntegerQueryId,
+    term: z.union([z.string(), z.number()]).optional(),
+    courseId: positiveIntegerQueryId.optional(),
+    sessionId: positiveIntegerQueryId.optional(),
+    isExamScheduled: z.union([z.boolean(), z.enum(["true", "false"])]).transform(val => val === "true" || val === true ? true : (val === "false" || val === false ? false : undefined)).optional(),
+    teacherAssignmentStatus: z.enum(["assigned", "notAssigned"]).optional(),
+    isModerationActive: z.union([z.boolean(), z.enum(["true", "false"])]).transform(val => val === "true" || val === true ? true : (val === "false" || val === false ? false : undefined)).optional(),
+  }),
+};
+
+
 
 router.post('/', userAuth, validate(createSessionSchema), examinationSessionController.createExaminationSession);
 router.get('/', userAuth, examinationSessionController.getExaminationSessions);
 router.get('/single', userAuth, validate(getSessionByIdSchema), examinationSessionController.getExaminationSessionById);
 router.get('/classSectionTerms', userAuth, validate(getClassSectionTermsBySetupTypeSchema), examinationSessionController.getClassSectionTermsBySetupType);
+router.get('/structure', userAuth, validate(getStructureSchema), examinationSessionController.getExaminationStructure);
+
+router.get('/subjects', userAuth, validate(getSubjectsBySessionAndTermSchema), examinationSessionController.getMappedSubjectsBySessionAndTerm);
+
+
 router.patch('/', userAuth, validate(updateSessionSchema), examinationSessionController.updateExaminationSession);
 router.delete('/', userAuth, validate(getSessionByIdSchema), examinationSessionController.deleteExaminationSession);
 

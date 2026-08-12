@@ -177,8 +177,16 @@ import s3FileModel from "./s3FileModel.js";
 import pdfSplitJobModel from "./pdfSplitJobModel.js";
 import examinationSessionModel from "./examinationSessionModel.js";
 import examinationSessionTermModel from "./examinationSessionTermModel.js";
+import examinationSessionSlotModel from "./examinationSessionSlotModel.js";
 
 // Examination Session associations
+examinationSessionSlotModel.belongsTo(examinationSessionModel, { foreignKey: 'examinationSessionId', as: 'examinationSession' });
+examinationSessionModel.hasMany(examinationSessionSlotModel, { foreignKey: 'examinationSessionId', as: 'slots' });
+
+examScheduleModel.belongsTo(examinationSessionSlotModel, { foreignKey: 'examinationSessionSlotId', as: 'examinationSessionSlot' });
+examinationSessionSlotModel.hasMany(examScheduleModel, { foreignKey: 'examinationSessionSlotId', as: 'examSchedules' });
+examScheduleModel.belongsTo(examinationSessionModel, { foreignKey: 'examinationSessionId', as: 'examinationSession' });
+examinationSessionModel.hasMany(examScheduleModel, { foreignKey: 'examinationSessionId', as: 'examSchedules' });
 examinationSessionModel.belongsTo(universityModel, { foreignKey: "university_id", as: "university" });
 universityModel.hasMany(examinationSessionModel, { foreignKey: "university_id", as: "examinationSessions" });
 
@@ -1952,9 +1960,6 @@ courseModel.hasMany(examSetupTypeTermModel, { foreignKey: "courseId", as: "examS
 examSetupTypeTermModel.belongsTo(userModel, { foreignKey: "createdBy", as: "creator" });
 examSetupTypeTermModel.belongsTo(userModel, { foreignKey: "updatedBy", as: "updater" });
 
-examScheduleModel.belongsTo(examSetupTypeTermModel, { foreignKey: "examSetupTypeTermId", as: "examSetupTypeTerm" });
-examSetupTypeTermModel.hasMany(examScheduleModel, { foreignKey: "examSetupTypeTermId", as: "examSchedules" });
-
 subjectWeightageModel.belongsTo(examSetupTypeTermModel, { foreignKey: "examSetupTypeTermId", as: "examSetupTypeTerm" });
 examSetupTypeTermModel.hasMany(subjectWeightageModel, { foreignKey: "examSetupTypeTermId", as: "subjectWeightages" });
 
@@ -2064,6 +2069,7 @@ subjectModel.hasMany(assessmentPlanSubjectMappingModel, { foreignKey: 'subjectId
 assessmentPlanSubjectMappingModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
 assessmentPlanSubjectMappingModel.belongsTo(sessionModel, { foreignKey: 'sessionId', as: 'session' });
 assessmentPlanSubjectMappingModel.belongsTo(acedmicYearModel, { foreignKey: 'academicYearId', as: 'academicYear' });
+assessmentPlanSubjectMappingModel.belongsTo(examSetupTypeModel, { foreignKey: 'examSetupTypeId', as: 'examSetupType' });
 
 export {
   assessmentPlanModel,
@@ -2244,6 +2250,7 @@ export {
   pdfSplitJobModel,
   examinationSessionModel,
   examinationSessionTermModel,
+  examinationSessionSlotModel,
   userModel as users,
 };
 

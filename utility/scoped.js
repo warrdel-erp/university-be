@@ -163,6 +163,12 @@ export const scoped = (model) => {
         where: mergeScopedWhere(baseWhere, options.where),
       }),
 
+    max: (field, options = {}) =>
+      getOriginal(model, "max")(field, {
+        ...options,
+        where: mergeScopedWhere(baseWhere, options.where),
+      }),
+
     destroy: (options = {}) =>
       getOriginal(model, "destroy")({
         ...options,

@@ -6,16 +6,16 @@ export async function getExamSchedules(filters) {
 
     if (result && result.length > 0) {
         const sessions = [...new Set(result.map(r => r.sessionId))];
-        const courses = [...new Set(result.map(r => r.examSetupTypeTerm?.courseId).filter(Boolean))];
-        const terms = [...new Set(result.map(r => r.examSetupTypeTerm?.term).filter(Boolean))];
+        const courses = [...new Set(result.map(r => r.examSetupTypeTerm?.courseId || r.subjectSchedule?.courseId).filter(Boolean))];
+        const terms = [...new Set(result.map(r => r.examSetupTypeTerm?.term || r.term).filter(Boolean))];
         const acedmicYears = [...new Set(result.map(r => r.academicYearId))];
 
         if (sessions.length > 0 && courses.length > 0 && terms.length > 0) {
             const counts = await examScheduleRepository.getStudentCountsByGroups(sessions, courses, terms, acedmicYears);
 
             result.forEach(schedule => {
-                const term = schedule.examSetupTypeTerm?.term;
-                const courseId = schedule.examSetupTypeTerm?.courseId;
+                const term = schedule.examSetupTypeTerm?.term || schedule.term;
+                const courseId = schedule.examSetupTypeTerm?.courseId || schedule.subjectSchedule?.courseId;
                 const sessionId = schedule.sessionId;
                 const academicYearId = schedule.academicYearId;
 
@@ -45,8 +45,8 @@ export async function getExamScheduleById(examScheduleId) {
     const result = await examScheduleRepository.getExamScheduleById(examScheduleId);
 
     if (result) {
-        const term = result.examSetupTypeTerm?.term;
-        const courseId = result.examSetupTypeTerm?.courseId;
+        const term = result.term;
+        const courseId =  result.subjectSchedule?.courseId;
         const sessionId = result.sessionId;
         const academicYearId = result.academicYearId;
 
@@ -103,8 +103,8 @@ async function allocateSeatsByStrategy(examScheduleId, userId, strategy = "rando
             throw new Error("Exam schedule not found");
         }
 
-        const term = schedule.examSetupTypeTerm?.term;
-        const courseId = schedule.examSetupTypeTerm?.courseId;
+        const term = schedule.examSetupTypeTerm?.term || schedule.term;
+        const courseId = schedule.examSetupTypeTerm?.courseId || schedule.subjectSchedule?.courseId;
         const sessionId = schedule.sessionId;
         const academicYearId = schedule.academicYearId;
 

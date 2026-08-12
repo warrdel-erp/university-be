@@ -145,7 +145,7 @@ const examinationSessionModel = sequelize.define(
             field: 'allow_revaluation'
         },
         status: {
-            type: DataTypes.ENUM('Draft', 'Published', 'Completed', 'Cancelled'),
+            type: DataTypes.ENUM('Draft', 'Published'),
             allowNull: false,
             defaultValue: 'Draft',
             field: 'status'

@@ -1,4 +1,9 @@
+import * as model from "../models/index.js";
+import { Op } from "sequelize";
+import { scoped } from "../utility/scoped.js";
 import * as examStructureScheduleRepository from "../repository/examStructureScheduleMappingRepository.js";
+import * as examinationSessionRepository from "../repository/examinationSessionRepository.js";
+import { getTimeSlotRange } from "../utility/timeSlot.js";
 
 const studentListFields = [
   "studentId",
@@ -13,6 +18,175 @@ const studentListFields = [
   "termName",
 ];
 
+async function resolveSlotDetails(examDetail) {
+  if (examDetail.examinationSessionSlotId) {
+    const slot = await scoped(model.examinationSessionSlotModel).findOne({
+      where: { examinationSessionSlotId: Number(examDetail.examinationSessionSlotId) },
+      attributes: ["startTime", "durationMinutes", "examinationSessionId"],
+      raw: true,
+    });
+    if (slot) {
+      if (!examDetail.examTime && slot.startTime) {
+        examDetail.examTime = slot.startTime;
+      }
+      if (!examDetail.examinationSessionId && slot.examinationSessionId) {
+        examDetail.examinationSessionId = slot.examinationSessionId;
+      }
+    }
+  }
+}
+
+async function resolveDurationFromAssessmentPlan(examDetail) {
+  if (!examDetail.examinationSessionId) return;
+
+  // 1. Fetch examinationSession → get examSetupTypeId (assessmentTypeId)
+  const session = await examinationSessionRepository.findExaminationSessionAssessmentTypeById(
+    examDetail.examinationSessionId,
+  );
+
+  if (!session) {
+    const err = new Error("Examination session not found.");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (!session.assessmentTypeId) {
+    const err = new Error("Assessment plan is not configured for this examination session.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // 2. Fetch assessment plan component duration using examSetupTypeId
+  const component = await examinationSessionRepository.findAssessmentPlanComponentDurationBySetupTypeId(
+    session.assessmentTypeId,
+  );
+
+  if (!component) {
+    const err = new Error("Assessment plan component not found for this examination session type.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (component.duration == null) {
+    const err = new Error("Duration is not configured in the assessment plan component.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // 3. Copy duration as a snapshot value — no foreign key stored
+  examDetail.duration = String(component.duration);
+}
+
+async function resolveSessionId(examDetail) {
+  let mappedSessionId = null;
+  let mappedAcademicYearId = null;
+  let mappedCourseId = examDetail.courseId ? Number(examDetail.courseId) : null;
+
+  // 1. Resolve courseId, academicYearId, term from subjectModel if subjectId is passed
+  if (!mappedCourseId && examDetail.subjectId) {
+    const subject = await scoped(model.subjectModel).findOne({
+      where: { subjectId: Number(examDetail.subjectId) },
+      attributes: ["courseId", "academicYearId", "term"],
+      raw: true,
+    });
+    if (subject) {
+      mappedCourseId = subject.courseId;
+      examDetail.courseId = subject.courseId;
+      if (!examDetail.academicYearId && subject.academicYearId) {
+        examDetail.academicYearId = subject.academicYearId;
+      }
+      if (!examDetail.term && subject.term != null) {
+        examDetail.term = subject.term;
+      }
+    }
+  }
+
+  // 2. Match subjectId + courseId (+ candidate sessionId) in assessmentPlanSubjectMappingModel
+  if (examDetail.subjectId) {
+    const mappingWhere = { subjectId: Number(examDetail.subjectId) };
+    if (mappedCourseId) {
+      mappingWhere.courseId = mappedCourseId;
+    }
+    if (examDetail.sessionId) {
+      mappingWhere.sessionId = Number(examDetail.sessionId);
+    }
+
+    let mapping = await scoped(model.assessmentPlanSubjectMappingModel).findOne({
+      where: mappingWhere,
+      attributes: ["sessionId", "academicYearId", "courseId", "assessmentPlanId"],
+      raw: true,
+    });
+
+    if (!mapping && examDetail.sessionId && mappedCourseId) {
+      mapping = await scoped(model.assessmentPlanSubjectMappingModel).findOne({
+        where: { subjectId: Number(examDetail.subjectId), courseId: mappedCourseId },
+        attributes: ["sessionId", "academicYearId", "courseId", "assessmentPlanId"],
+        raw: true,
+      });
+    }
+
+    if (mapping) {
+      if (mapping.sessionId) mappedSessionId = Number(mapping.sessionId);
+      if (mapping.academicYearId) mappedAcademicYearId = Number(mapping.academicYearId);
+      if (!examDetail.courseId && mapping.courseId) examDetail.courseId = mapping.courseId;
+    }
+  }
+
+  // 3. Fallback to assessmentPlanModel matching (courseId + sessionId) if needed
+  if (!mappedSessionId && mappedCourseId) {
+    const planWhere = { courseId: mappedCourseId, isActive: true };
+    if (examDetail.sessionId) {
+      planWhere.sessionId = Number(examDetail.sessionId);
+    }
+    const plan = await scoped(model.assessmentPlanModel).findOne({
+      where: planWhere,
+      attributes: ["sessionId", "academicYearId"],
+      raw: true,
+    });
+    if (plan) {
+      if (plan.sessionId) mappedSessionId = Number(plan.sessionId);
+      if (plan.academicYearId && !mappedAcademicYearId) mappedAcademicYearId = Number(plan.academicYearId);
+    }
+  }
+
+  // 4. Validate candidate or mapped sessionId in sessionModel
+  let candidateSessionId = examDetail.sessionId ? Number(examDetail.sessionId) : mappedSessionId;
+
+  if (candidateSessionId) {
+    const validSession = await scoped(model.sessionModel).findOne({
+      where: { sessionId: candidateSessionId },
+      attributes: ["sessionId", "academicYearId"],
+      raw: true,
+    });
+    if (validSession) {
+      examDetail.sessionId = validSession.sessionId;
+      if (!examDetail.academicYearId && validSession.academicYearId) {
+        examDetail.academicYearId = validSession.academicYearId;
+      }
+    } else if (mappedSessionId && mappedSessionId !== candidateSessionId) {
+      const validMappedSession = await scoped(model.sessionModel).findOne({
+        where: { sessionId: mappedSessionId },
+        attributes: ["sessionId", "academicYearId"],
+        raw: true,
+      });
+      if (validMappedSession) {
+        examDetail.sessionId = validMappedSession.sessionId;
+        if (!examDetail.academicYearId && validMappedSession.academicYearId) {
+          examDetail.academicYearId = validMappedSession.academicYearId;
+        }
+      } else {
+        examDetail.sessionId = null;
+      }
+    } else {
+      examDetail.sessionId = null;
+    }
+  }
+
+  if (mappedAcademicYearId && !examDetail.academicYearId) {
+    examDetail.academicYearId = mappedAcademicYearId;
+  }
+}
+
 async function resolveAcademicYearId(examDetail) {
   if (!examDetail.academicYearId && examDetail.subjectId) {
     const academicYearId = await examStructureScheduleRepository.findSubjectacademicYearId(examDetail.subjectId);
@@ -26,14 +200,25 @@ async function resolveTermForExamDetail(examDetail) {
   if (examDetail.term != null) {
     return Number(examDetail.term);
   }
-  if (!examDetail.examSetupTypeTermId) {
-    return null;
+  if (examDetail.examSetupTypeTermId) {
+    const termDetail = await examStructureScheduleRepository.getExamSetupTypeTermById(
+      examDetail.examSetupTypeTermId,
+    );
+    if (termDetail?.term != null) {
+      return Number(termDetail.term);
+    }
   }
-
-  const termDetail = await examStructureScheduleRepository.getExamSetupTypeTermById(
-    examDetail.examSetupTypeTermId,
-  );
-  return termDetail?.term != null ? Number(termDetail.term) : null;
+  if (examDetail.subjectId) {
+    const subject = await scoped(model.subjectModel).findOne({
+      where: { subjectId: Number(examDetail.subjectId) },
+      attributes: ["term"],
+      raw: true,
+    });
+    if (subject?.term != null) {
+      return Number(subject.term);
+    }
+  }
+  return null;
 }
 
 function subjectsToPlain(rows) {
@@ -188,22 +373,45 @@ export async function publishExamSchedule(publishExamStructureSchedule) {
 }
 
 function getExamSlotMinutes(examTime, duration) {
-  const [h = 0, m = 0] = String(examTime).split(":").map(Number);
-  const startMinutes = h * 60 + m;
-  const durationMinutes = Number(duration);
-  if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+  const range = getTimeSlotRange({ startTime: examTime, duration });
+  if (!range) {
     throw new Error("Invalid exam duration");
   }
-  return { startMinutes, endMinutes: startMinutes + durationMinutes };
+  return range;
 }
 
 async function assertNoStudentExamTimeConflict(examDetail, excludeExamScheduleId) {
-  const termDetail = await examStructureScheduleRepository.getExamSetupTypeTermById(examDetail.examSetupTypeTermId);
-  if (!termDetail) {
-    throw new Error("Exam setup type term not found");
+  if (!examDetail.examTime || !examDetail.duration) {
+    return;
   }
 
-  const academicYearId = examDetail.academicYearId ?? termDetail.academicYearId;
+  let courseId = null;
+  let term = examDetail.term != null ? Number(examDetail.term) : null;
+
+  if (examDetail.examSetupTypeTermId) {
+    const termDetail = await examStructureScheduleRepository.getExamSetupTypeTermById(examDetail.examSetupTypeTermId);
+    if (termDetail) {
+      courseId = termDetail.courseId;
+      if (term == null) term = termDetail.term;
+    }
+  }
+
+  if (!courseId && examDetail.subjectId) {
+    const subject = await scoped(model.subjectModel).findOne({
+      where: { subjectId: Number(examDetail.subjectId) },
+      attributes: ["courseId", "term"],
+      raw: true,
+    });
+    if (subject) {
+      courseId = subject.courseId;
+      if (term == null) term = subject.term;
+    }
+  }
+
+  if (!courseId || term == null) {
+    return;
+  }
+
   const { startMinutes, endMinutes } = getExamSlotMinutes(examDetail.examTime, examDetail.duration);
 
   const conflict = await examStructureScheduleRepository.findConflictingExamForStudentCohort({
@@ -211,9 +419,9 @@ async function assertNoStudentExamTimeConflict(examDetail, excludeExamScheduleId
     startMinutes,
     endMinutes,
     sessionId: examDetail.sessionId,
-    academicYearId,
-    courseId: termDetail.courseId,
-    term: termDetail.term,
+    academicYearId: examDetail.academicYearId,
+    courseId,
+    term,
     excludeExamScheduleId,
   });
 
@@ -223,61 +431,112 @@ async function assertNoStudentExamTimeConflict(examDetail, excludeExamScheduleId
   }
 }
 
+async function assertUniqueExamScheduleMapping(examDetail, excludeExamScheduleId) {
+  if (!examDetail.courseId || !examDetail.sessionId || !examDetail.subjectId) {
+    return;
+  }
+
+  let examinationSessionId = examDetail.examinationSessionId;
+  if (!examinationSessionId && examDetail.examSetupTypeId && examDetail.examDate) {
+    const sessionWhere = {
+      assessmentTypeId: Number(examDetail.examSetupTypeId),
+      examStartDate: { [Op.lte]: examDetail.examDate },
+      examEndDate: { [Op.gte]: examDetail.examDate },
+    };
+    const examinationSession = await scoped(model.examinationSessionModel).findOne({
+      where: sessionWhere,
+      attributes: ["examinationSessionId"],
+    });
+    if (examinationSession) {
+      examinationSessionId = examinationSession.examinationSessionId;
+    }
+  }
+
+  if (!examinationSessionId) {
+    return;
+  }
+
+  const whereClause = {
+    sessionId: examDetail.sessionId,
+    examinationSessionId: examinationSessionId,
+    subjectId: examDetail.subjectId,
+  };
+
+  if (excludeExamScheduleId) {
+    whereClause.examScheduleId = { [Op.ne]: excludeExamScheduleId };
+  }
+
+  const conflict = await scoped(model.examScheduleModel).findOne({
+    where: whereClause,
+    include: [
+      {
+        model: model.subjectModel,
+        as: "subjectSchedule",
+        where: { courseId: examDetail.courseId },
+        required: true,
+      }
+    ],
+    raw: true,
+  });
+
+  if (conflict) {
+    throw new Error("Cannot add duplicate exam schedule: A schedule with the same Course, Session, Examination Session, and Subject already exists.");
+  }
+
+  const conflictBySubject = await scoped(model.examScheduleModel).findOne({
+    where: whereClause,
+    include: [
+      {
+        model: model.subjectModel,
+        as: "subjectSchedule",
+        where: { courseId: examDetail.courseId },
+        required: true,
+      }
+    ],
+    raw: true,
+  });
+
+  if (conflictBySubject) {
+    throw new Error("Cannot add duplicate exam schedule: A schedule with the same Course, Session, Examination Session, and Subject already exists.");
+  }
+}
+
 export async function addExamSchedule(examDetail, createdBy, updatedBy) {
   examDetail.createdBy = createdBy;
   examDetail.updatedBy = updatedBy;
 
+  // Do NOT accept duration from frontend — always resolve from assessment plan
+  delete examDetail.duration;
+  
+  // Set examSetupTypeTermId to null explicitly
+  examDetail.examSetupTypeTermId = null;
+
+  await resolveSlotDetails(examDetail);
+  await resolveSessionId(examDetail);
   await resolveAcademicYearId(examDetail);
+
+  // Resolve duration and assessmentPlanComponentId from assessmentPlanComponent
+  await resolveDurationFromAssessmentPlan(examDetail);
+
   const resolvedTerm = await resolveTermForExamDetail(examDetail);
-  if (resolvedTerm == null) {
-    throw new Error('term could not be resolved for exam schedule');
+  if (resolvedTerm != null) {
+    examDetail.term = resolvedTerm;
   }
-  examDetail.term = resolvedTerm;
   delete examDetail.semesterId;
 
   await assertNoStudentExamTimeConflict(examDetail);
+  await assertUniqueExamScheduleMapping(examDetail);
 
   return await examStructureScheduleRepository.addExamSchedule(examDetail);
 }
 
-// export async function getDetailByExamType(examSetupTypeId) {
-//   return await examStructureScheduleRepository.getDetailByExamType(examSetupTypeId);
-// }
-
-// export async function getExamDetailByStudentId(studentId) {
-//   const data = await examStructureScheduleRepository.getExamDetailByStudentId(studentId);
-
-//   if (!data || !data.studentSemester) {
-//     return null;
-//   }
-
-//   const studentInfo = {
-//     studentId: data.studentId,
-//     studentName: data.firstName,
-//     semesterId: data.studentSemester.semesterId,
-//     semesterName: data.studentSemester.name,
-//     exams: data.studentSemester.examSchedules.map((exam) => ({
-//       subjectId: exam.subjectId,
-//       subjectName: exam.subjectSchedule?.subjectName,
-//       subjectCode: exam.subjectSchedule?.subjectCode,
-//       subjectType: exam.subjectSchedule?.subjectType,
-//       type: exam.type,
-//       examDate: exam.examDate,
-//       examTime: exam.examTime,
-//       duration: exam.duration,
-//     })),
-//   };
-
-//   return studentInfo;
-// }
-
-// export async function getExamScheduleById(examScheduleId) {
-//   return await examStructureScheduleRepository.getExamScheduleById(examScheduleId);
-// }
-
 export async function updateExamSchedule(examScheduleId, examDetail, updatedBy) {
   examDetail.updatedBy = updatedBy;
+
+  await resolveSlotDetails(examDetail);
+  await resolveSessionId(examDetail);
   await resolveAcademicYearId(examDetail);
+
   const resolvedTerm = await resolveTermForExamDetail(examDetail);
   if (resolvedTerm != null) {
     examDetail.term = resolvedTerm;
@@ -285,6 +544,8 @@ export async function updateExamSchedule(examScheduleId, examDetail, updatedBy) 
   delete examDetail.semesterId;
 
   await assertNoStudentExamTimeConflict(examDetail, examScheduleId);
+  await assertUniqueExamScheduleMapping(examDetail, examScheduleId);
+  
   await examStructureScheduleRepository.updateExamSchedule(examScheduleId, examDetail);
 }
 

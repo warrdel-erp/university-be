@@ -1819,6 +1819,7 @@ export const PERMISSIONS = {
     },
     ASSET_ISSUE_RETURN_SIDEBAR: {
         value: "ASSET_ISSUE_RETURN_SIDEBAR",
+        parentPermission: 'ASSET_ISSUE_RETURN',
     },
     ASSET_ISSUE_RETURN_ADD: {
         value: "ASSET_ISSUE_RETURN_ADD",
@@ -1832,6 +1833,5 @@ export const PERMISSIONS = {
         value: "ASSET_ISSUE_RETURN_DELETE",
         parentPermission: 'ASSET_ISSUE_RETURN',
     }
-   
 
 };
