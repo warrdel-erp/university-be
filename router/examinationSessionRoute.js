@@ -126,11 +126,8 @@ router.get('/classSectionTerms', userAuth, validate(getClassSectionTermsBySetupT
 router.get('/structure', userAuth, validate(getStructureSchema), examinationSessionController.getExaminationStructure);
 
 router.get('/subjects', userAuth, validate(getSubjectsBySessionAndTermSchema), examinationSessionController.getMappedSubjectsBySessionAndTerm);
-
-
 router.patch('/', userAuth, validate(updateSessionSchema), examinationSessionController.updateExaminationSession);
 router.delete('/', userAuth, validate(getSessionByIdSchema), examinationSessionController.deleteExaminationSession);
-
 router.post('/term', userAuth, validate(createTermSchema), examinationSessionController.createExaminationSessionTerm);
 router.delete('/term', userAuth, validate(deleteTermSchema), examinationSessionController.deleteExaminationSessionTerm);
 

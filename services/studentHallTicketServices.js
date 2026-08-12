@@ -3,447 +3,208 @@ import sequelize from "../database/sequelizeConfig.js";
 import { buildTermName } from "../utility/courseTerms.js";
 import { getAcademicYearId } from "../utility/requestContext.js";
 import * as studentHallTicketRepository from "../repository/studentHallTicketRepository.js";
- import { getUserPermissions } from "../utility/authEngine.js";
- import { PERMISSIONS } from "../const/permissions.js";
+import { getUserPermissions } from "../utility/authEngine.js";
+import { PERMISSIONS } from "../const/permissions.js";
+import * as examinationSessionEligibilityRepo from "../repository/examinationSessionEligibilityRepository.js";
+import * as examinationSessionEligibilityServices from "./examinationSessionEligibilityServices.js";
 
+function resolveEligibilityStatus(storedStatus, dynamicStatus) {
+    if (storedStatus === "BLOCKED") return "BLOCKED";
+    if (storedStatus === "APPROVED") return "APPROVED";
+    return dynamicStatus; // READY or REVIEW
+}
 
-export function calculateStudentEligibility(rawRecord) {
-    const {
-        student: st,
-        classSectionTerm: cst,
-        examinationSessionTerm: est,
-        mapperSessionId,
-    } = rawRecord;
-
-    const presentStatuses = [
-        "Present",
-        "Medical Leave",
-        "Duty Leave",
-        "Sports Leave",
-        "NCC Leave",
-        "Approved Leave",
-    ];
-
-    const course = st.course;
-    const session = st.studentSession;
-
-    const attendances = (st.attendances || []).filter(
-        (a) => a.classSectionTermId === cst.classSectionTermId
-    );
-
-    const totalClasses = attendances.length;
-
-    const presentClasses = attendances.filter((a) =>
-        presentStatuses.includes(a.attendanceStatus)
-    ).length;
-
-    const absentClasses = totalClasses - presentClasses;
-
-    const attendancePercentage =
-        totalClasses > 0
-            ? Number(((presentClasses / totalClasses) * 100).toFixed(2))
-            : 0;
-
-    const activeRegulation =
-        (st.assessmentPlans || []).find(
-            (plan) => plan.academicRegulation
-        )?.academicRegulation ?? null;
-
-    const minimumAttendanceRequired =
-        activeRegulation?.minimumAttendance != null
-            ? Number(activeRegulation.minimumAttendance)
-            : null;
-
-    const attendanceShortagePercentage =
-        minimumAttendanceRequired != null
-            ? Math.max(
-                  0,
-                  Number(
-                      (
-                          minimumAttendanceRequired -
-                          attendancePercentage
-                      ).toFixed(2)
-                  )
-              )
-            : 0;
-
-    const requiredPresentClasses =
-        minimumAttendanceRequired != null
-            ? Math.ceil(
-                  (totalClasses * minimumAttendanceRequired) / 100
-              )
-            : 0;
-
-    const additionalClassesNeeded =
-        minimumAttendanceRequired != null
-            ? Math.max(
-                  0,
-                  requiredPresentClasses - presentClasses
-              )
-            : 0;
-
-    // --------------------------------
-    // Eligibility status
-    // --------------------------------
-
-    const reviewReasons = [];
-
-    // 1. Document checking
-    if (st.documentStatus === "Pending Documents") {
-        reviewReasons.push({
-            code: "DOCUMENT_NOT_SUBMITTED",
-            title: "Required document missing",
-            severity: "warning",
-            message: "Required registration document has not been submitted."
-        });
-        reviewReasons.push({
-            code: "DOCUMENT_VERIFICATION_PENDING",
-            title: "Document verification pending",
-            severity: "warning",
-            message: "Registration document verification is pending."
-        });
-    }
-
-    // 1b. Photograph checking
-    if (!st.studentPhoto) {
-        reviewReasons.push({
-            code: "MISSING_PHOTOGRAPH",
-            title: "Missing photograph",
-            severity: "warning",
-            message: "Student photograph is missing."
-        });
-    }
-
-    // 2. Invoice checking
-    const invoices = st.studentFeeInvoices || [];
-    const totalInvoices = invoices.length;
-    const unpaidInvoicesList = invoices.filter(inv => inv.paymentStatus === "unpaid" || inv.paymentStatus === "partial");
-    const unpaidInvoices = unpaidInvoicesList.length;
-    const paidInvoices = totalInvoices - unpaidInvoices;
-    const outstandingAmount = unpaidInvoicesList.reduce((sum, inv) => sum + Math.max(0, Number(inv.total) - Number(inv.paidAmount)), 0);
-    const hasOutstandingInvoice = unpaidInvoices > 0 && outstandingAmount > 0;
-
-    const invoiceKPIs = {
-        totalInvoices,
-        paidInvoices,
-        unpaidInvoices,
-        outstandingAmount,
-        hasOutstandingInvoice
-    };
-
-    if (hasOutstandingInvoice) {
-        reviewReasons.push({
-            code: "UNPAID_INVOICE",
-            title: "Outstanding fee payment",
-            severity: "warning",
-            message: `Student has ${unpaidInvoices} unpaid invoices with an outstanding amount of ₹${outstandingAmount.toLocaleString('en-IN')}.`
-        });
-    }
-
-    // 3. Attendance checking
-    if (totalClasses === 0) {
-        reviewReasons.push({
-            code: "ATTENDANCE_DATA_INCOMPLETE",
-            title: "Attendance data incomplete",
-            severity: "warning",
-            message: "Attendance data is incomplete for the current term."
-        });
-    } else if (
-        minimumAttendanceRequired !== null &&
-        attendancePercentage < minimumAttendanceRequired
-    ) {
-        reviewReasons.push({
-            code: "LOW_ATTENDANCE",
-            title: "Attendance below minimum",
-            severity: "error",
-            message: `Attendance is ${attendancePercentage}%, below the required minimum of ${minimumAttendanceRequired}%.`
-        });
-    }
-
-    // Priority resolution
-    let eligibilityStatus = "Ready";
-    let reasonText = null;
-
-    const errorReason = reviewReasons.find(r => r.severity === "error");
-    const warningReason = reviewReasons.find(r => r.severity === "warning");
-
-    if (errorReason) {
-        eligibilityStatus = "Blocked";
-        reasonText = errorReason.message;
-    } else if (warningReason) {
-        eligibilityStatus = "Review";
-        reasonText = warningReason.message;
-    }
-
-    // --------------------------------
-    // Hall Ticket lifecycle
-    // --------------------------------
-
-    const hallTicket = (st.hallTickets || [])[0] ?? null;
-
-    const isGenerated = !!hallTicket;
-    const isPublished = hallTicket?.isPublished ?? false;
-    const isBlocked = hallTicket?.isBlocked ?? false;
-
-    let hallTicketStatus = "Not Generated";
-
-    if (isBlocked) {
-        hallTicketStatus = "Blocked";
-    } else if (isPublished) {
-        hallTicketStatus = "Published";
-    } else if (isGenerated) {
-        hallTicketStatus = "Generated";
-    }
-
-    // IMPORTANT:
-    // Do not overwrite eligibilityStatus here.
-
-    const academicContext = {
-        courseId:
-            st.courseId ??
-            course?.courseId ??
-            null,
-
-        courseName:
-            course?.courseName ??
-            null,
-
-        sessionId:
-            mapperSessionId ??
-            st.sessionId ??
-            session?.sessionId ??
-            null,
-
-        sessionName:
-            session?.sessionName ??
-            null,
-
-        term: cst.term,
-
-        examinationSessionTermId:
-            est.examinationSessionTermId,
-
-        classSectionTermId:
-            cst.classSectionTermId,
-    };
-
-    const attendanceKPIs = {
-        totalClasses,
-        presentClasses,
-        absentClasses,
-        attendancePercentage,
-
-        minimumAttendanceRequired,
-
-        attendanceShortagePercentage,
-        requiredPresentClasses,
-        additionalClassesNeeded,
-    };
-
-    const regulationInfo = activeRegulation
-        ? {
-              academicRegulationId:
-                  activeRegulation.academicRegulationId,
-
-              regulationCode:
-                  activeRegulation.regulationCode ||
-                  `REG-${activeRegulation.academicRegulationId}`,
-
-              minimumAttendance:
-                  minimumAttendanceRequired,
-          }
-        : null;
-
-    return {
-        eligibilityStatus,
-        reasonText,
-
-        hallTicketStatus,
-
-        isGenerated,
-        isPublished,
-        isBlocked,
-        markAsEligible: hallTicket?.markAsEligible ?? false,
-
-        hallTicketId:
-            hallTicket?.id ?? null,
-
-        student: {
-            studentId:
-                st.studentId,
-
-            enrollmentNumber:
-                st.enrollNumber ?? null,
-
-            studentName: [
-                st.firstName,
-                st.middleName,
-                st.lastName,
-            ]
-                .filter(Boolean)
-                .join(" "),
-
-            courseId:
-                academicContext.courseId,
-
-            courseName:
-                academicContext.courseName,
-
-            sessionId:
-                academicContext.sessionId,
-
-            sessionName:
-                academicContext.sessionName,
-
-            term:
-                academicContext.term,
-        },
-
-        academicContext,
-
-        attendance:
-            attendanceKPIs,
-
-        regulation:
-            regulationInfo,
-
-        invoice:
-            invoiceKPIs,
-
-        reviewReasons,
-    };
+function mapStatusToFrontend(status) {
+    if (status === "READY") return "Ready";
+    if (status === "BLOCKED") return "Blocked";
+    if (status === "APPROVED") return "Approved";
+    return "Review";
 }
 
 export async function getStudentsForExaminationSession(examinationSessionId, filters = {}) {
-    const rawList = await studentHallTicketRepository.getStudentsByExaminationSessionId(Number(examinationSessionId), filters);
+    const repoResult = await studentHallTicketRepository.getStudentsByExaminationSessionId(Number(examinationSessionId), filters);
+    
+    const isPaginated = filters?.page != null || filters?.limit != null;
+    const rawList = isPaginated ? repoResult.rows : repoResult;
 
-    let processed = rawList.map(raw => {
-        const calculated = calculateStudentEligibility(raw);
+    // Fetch existing status map from database
+    const dbStatusMap = await examinationSessionEligibilityRepo.getEligibilityStatusesMap(examinationSessionId);
+
+    const processed = rawList.map((raw) => {
+        const student = raw.student;
+        const studentId = student.studentId;
+
+        // Persisted status directly from database
+        const eligibilityRecord = student.examinationSessionEligibilities?.[0];
+        const dbStatus = eligibilityRecord?.status || dbStatusMap.get(studentId) || "REVIEW";
+        const finalStatus = mapStatusToFrontend(dbStatus);
+
+        // Hall Ticket info
+        const hallTicket = student.hallTickets?.[0];
+        const isGenerated = !!hallTicket;
+        const isPublished = hallTicket?.isPublished ?? false;
+        const isBlocked = dbStatus === 'BLOCKED' ? true : (hallTicket?.isBlocked ?? false);
+        const hallTicketStatus = hallTicket?.isBlocked ? "Blocked" : (hallTicket?.isPublished ? "Published" : (isGenerated ? "Generated" : "Not Generated"));
+
         return {
-            studentId: calculated.student.studentId,
-            enrollmentNumber: calculated.student.enrollmentNumber,
-            firstName: raw.student.firstName ?? null,
-            middleName: raw.student.middleName ?? null,
-            lastName: raw.student.lastName ?? null,
-            courseId: calculated.student.courseId,
-            courseName: calculated.student.courseName,
-            sessionId: calculated.student.sessionId,
-            sessionName: calculated.student.sessionName,
-            term: calculated.student.term,
-            examinationSessionTermId: calculated.academicContext.examinationSessionTermId,
-            classSectionTermId: calculated.academicContext.classSectionTermId,
-            totalClasses: calculated.attendance.totalClasses,
-            presentClasses: calculated.attendance.presentClasses,
-            attendancePercentage: calculated.attendance.attendancePercentage,
-            minimumAttendance: calculated.regulation?.minimumAttendance ?? null,
-            hallTicketId: calculated.hallTicketId,
-            isGenerated: calculated.isGenerated,
-            isPublished: calculated.isPublished,
-            isBlocked: calculated.isBlocked,
-            markAsEligible: calculated.markAsEligible,
-            hallTicketStatus: calculated.hallTicketStatus,
-            eligibilityStatus: calculated.eligibilityStatus,
-            reasonText: calculated.reasonText,
-            hasOutstandingInvoice: calculated.invoice.hasOutstandingInvoice,
-            outstandingAmount: calculated.invoice.outstandingAmount,
-            eligibilityReason: calculated.eligibilityStatus !== "Ready" ? calculated.reviewReasons[0]?.message : null,
+            studentId: studentId,
+            enrollmentNumber: student.enrollNumber,
+            firstName: student.firstName ?? null,
+            middleName: student.middleName ?? null,
+            lastName: student.lastName ?? null,
+            courseId: student.courseId,
+            courseName: student.course?.courseName,
+            sessionId: raw.mapperSessionId,
+            sessionName: student.studentSession?.sessionName,
+            term: raw.classSectionTerm?.term ?? null,
+            examinationSessionTermId: raw.examinationSessionTerm?.examinationSessionTermId ?? null,
+            classSectionTermId: raw.classSectionTerm?.classSectionTermId ?? null,
+            
+            totalClasses: null,
+            presentClasses: null,
+            attendancePercentage: null,
+            minimumAttendance: null,
+            
+            hallTicketId: hallTicket?.id ?? null,
+            isGenerated,
+            isPublished,
+            isBlocked,
+            markAsEligible: dbStatus === 'APPROVED',
+            hallTicketStatus,
+            eligibilityStatus: finalStatus,
+            reasonText: eligibilityRecord?.reviewReason ?? null,
+            
+            eligibilityReason: dbStatus !== "READY" && dbStatus !== "APPROVED" ? (eligibilityRecord?.reviewReason ?? null) : null
         };
     });
 
-    if (filters.status) {
-        const targetStatus = String(filters.status).trim().toLowerCase();
-        processed = processed.filter(p => p.eligibilityStatus.toLowerCase() === targetStatus || p.hallTicketStatus.toLowerCase() === targetStatus);
-    }
-
-    const isPaginated = filters?.page != null || filters?.limit != null;
     if (!isPaginated) {
         return processed;
     }
 
-    const page = Math.max(1, Number(filters.page) || 1);
-    const limit = Math.max(1, Number(filters.limit) || 10);
-    const offset = (page - 1) * limit;
-
-    const total = processed.length;
-    const paginatedRows = processed.slice(offset, offset + limit);
-    const totalPages = Math.ceil(total / limit) || 1;
-
     return {
-        rows: paginatedRows,
-        total,
-        page,
-        limit,
-        totalPages,
+        rows: processed,
+        total: repoResult.total,
+        page: repoResult.page,
+        limit: repoResult.limit,
+        totalPages: repoResult.totalPages,
     };
 }
 
 export async function getHallTicketEligibilityOverview(examinationSessionId) {
-    const rawList = await studentHallTicketRepository.getStudentsByExaminationSessionId(Number(examinationSessionId));
+    const counts = await studentHallTicketRepository.getEligibilityOverviewCounts(examinationSessionId);
+
     let ready = 0;
     let blocked = 0;
     let review = 0;
+    let approved = 0;
+    let totalStudents = 0;
 
-    for (const raw of rawList) {
-        const calculated = calculateStudentEligibility(raw);
-        if (calculated.eligibilityStatus === "Ready") {
-            ready++;
-        } else if (calculated.eligibilityStatus === "Blocked") {
-            blocked++;
-        } else if (calculated.eligibilityStatus === "Review") {
-            review++;
-        }
+    for (const row of counts) {
+        const count = Number(row.count) || 0;
+        totalStudents += count;
+        if (row.status === "READY") ready = count;
+        else if (row.status === "APPROVED") approved = count;
+        else if (row.status === "BLOCKED") blocked = count;
+        else if (row.status === "REVIEW") review = count;
     }
 
     return {
-        totalStudents: rawList.length,
+        totalStudents,
         ready,
+        approved,
         blocked,
-        review,
+        review
     };
 }
 
-export async function getHallTicketSummary(examinationSessionId) {
-    const rawList = await studentHallTicketRepository.getStudentsByExaminationSessionId(Number(examinationSessionId));
+export async function getHallTicketSummary(examinationSessionId, filters = {}) {
+    const eligibilityList = await studentHallTicketRepository.getEligibilitySummaryList(examinationSessionId, filters);
+
     let feeClearance = 0;
     let attendanceShortage = 0;
     let registrationPending = 0;
     let missingPhotograph = 0;
-    let documentVerification = 0;
+    let totalStudents = 0;
 
-    for (const raw of rawList) {
-        const calculated = calculateStudentEligibility(raw);
-        const reasons = calculated.reviewReasons || [];
+    const termWiseMap = new Map();
+    const courseSessionTermWiseMap = new Map();
 
-        if (reasons.some(r => r.code === "UNPAID_INVOICE")) {
-            feeClearance++;
+    const getStatObj = () => ({
+        totalStudents: 0,
+        feeClearance: 0,
+        attendanceShortage: 0,
+        registrationPending: 0,
+        missingPhotograph: 0
+    });
+
+    for (const el of eligibilityList) {
+        const student = el.student;
+        if (!student) continue;
+
+        totalStudents++;
+        
+        const term = student.studentClassSectionTerm?.term ?? "Unknown Term";
+        const courseId = student.courseId ?? "Unknown Course";
+        const sessionId = student.sessionId ?? "Unknown Session";
+        const courseName = student.course?.courseName ?? "Unknown";
+        const sessionName = student.studentSession?.sessionName ?? "Unknown";
+
+        const termKey = term;
+        const cstKey = `${courseId}_${sessionId}_${term}`;
+
+        if (!termWiseMap.has(termKey)) {
+            termWiseMap.set(termKey, { term, ...getStatObj() });
         }
-        if (reasons.some(r => r.code === "LOW_ATTENDANCE")) {
+        if (!courseSessionTermWiseMap.has(cstKey)) {
+            courseSessionTermWiseMap.set(cstKey, { courseId, courseName, sessionId, sessionName, term, ...getStatObj() });
+        }
+
+        const termObj = termWiseMap.get(termKey);
+        const cstObj = courseSessionTermWiseMap.get(cstKey);
+
+        termObj.totalStudents++;
+        cstObj.totalStudents++;
+
+        const reason = el.reviewReason || "";
+
+        if (reason.includes("attendance") || reason.includes("Attendance")) {
             attendanceShortage++;
+            termObj.attendanceShortage++;
+            cstObj.attendanceShortage++;
         }
-        if (reasons.some(r => r.code === "DOCUMENT_NOT_SUBMITTED")) {
+        if (reason.includes("document") || reason.includes("Document")) {
             registrationPending++;
+            termObj.registrationPending++;
+            cstObj.registrationPending++;
         }
-        if (reasons.some(r => r.code === "MISSING_PHOTOGRAPH")) {
+        if (reason.includes("photograph") || reason.includes("photo") || reason.includes("Photograph")) {
             missingPhotograph++;
+            termObj.missingPhotograph++;
+            cstObj.missingPhotograph++;
         }
-        if (reasons.some(r => r.code === "DOCUMENT_VERIFICATION_PENDING")) {
-            documentVerification++;
+        if (reason.includes("fee") || reason.includes("payment") || reason.includes("invoice") || reason.includes("Invoice")) {
+            feeClearance++;
+            termObj.feeClearance++;
+            cstObj.feeClearance++;
         }
     }
 
     return {
+        totalStudents,
         feeClearance,
         attendanceShortage,
         registrationPending,
         missingPhotograph,
-        documentVerification
+        termWise: Array.from(termWiseMap.values()),
+        courseSessionTermWise: Array.from(courseSessionTermWiseMap.values())
     };
 }
 
 async function buildGenerationReadiness({ examinationSessionId, transaction }) {
     const examinationSession = await studentHallTicketRepository.findExaminationSessionById(examinationSessionId, transaction);
     if (!examinationSession) {
-        const error = new Error("examinationSession not found");
+        const error = new Error("Examination Session not found");
         error.statusCode = 404;
         throw error;
     }
@@ -467,57 +228,31 @@ export async function generateHallTickets({ examinationSessionId, studentIds, us
 
         if (!readiness.canGenerate) {
             const error = new Error(
-                "Schedule at least one subject with exam date and time for this examination session before generating hall tickets.",
+                "Schedule at least one subject with exam date and time for this examination session before generating hall tickets."
             );
             error.statusCode = 400;
             throw error;
         }
 
-        const effectiveAcademicYearId = getAcademicYearId() || (user?.academicYearId ? Number(user.academicYearId) : readiness.examinationSession.academicYearId);
+        const effectiveAcademicYearId = getAcademicYearId() || (user?.academicYearId ? Number(user.academicYearId) : undefined) || readiness.examinationSession.academicYearId;
 
-        const allStudents = await studentHallTicketRepository.getStudentsByExaminationSessionId(examinationSessionId, {}, transaction);
+        // Fetch eligible student Ids (READY or APPROVED) directly from examinationSessionEligibilityModel
+        const eligibleStudentIds = await examinationSessionEligibilityRepo.getEligibleStudentIdsForGeneration(
+            examinationSessionId,
+            studentIds,
+            { transaction }
+        );
 
-        let targetStudents = [];
-        if (studentIds && studentIds.length > 0) {
-            for (const sid of studentIds) {
-                const rawRecord = allStudents.find(s => s.student.studentId === sid);
-                if (!rawRecord) {
-                    const error = new Error(`Student ${sid} is not part of this examination session`);
-                    error.statusCode = 404;
-                    throw error;
-                }
-                const calculated = calculateStudentEligibility(rawRecord);
-                if (calculated.eligibilityStatus === "Blocked") {
-                    const error = new Error(`Cannot generate hall ticket. Student ${sid} is blocked for Hall Ticket generation`);
-                    error.statusCode = 400;
-                    throw error;
-                }
-                if (calculated.eligibilityStatus === "Review" && calculated.markAsEligible !== true) {
-                    const error = new Error(`Cannot generate hall ticket. Student ${sid} is under review and must be marked as eligible before Hall Ticket generation.`);
-                    error.statusCode = 400;
-                    throw error;
-                }
-                targetStudents.push(calculated);
-            }
-        } else {
-            for (const raw of allStudents) {
-                const calculated = calculateStudentEligibility(raw);
-                if ((calculated.eligibilityStatus === "Ready" || (calculated.eligibilityStatus === "Review" && calculated.markAsEligible === true)) && !calculated.isGenerated) {
-                    targetStudents.push(calculated);
-                }
-            }
-        }
-
-        if (!targetStudents.length) {
+        if (!eligibleStudentIds.length) {
             return { generatedCount: 0, hallTickets: [] };
         }
 
         const generatedTickets = [];
-        for (const target of targetStudents) {
+        for (const targetStudentId of eligibleStudentIds) {
             const ticket = await studentHallTicketRepository.generateOrRegenerateStudentHallTicket({
                 examinationSessionId,
                 academicYearId: effectiveAcademicYearId,
-                studentId: target.student.studentId,
+                studentId: targetStudentId
             }, transaction);
             generatedTickets.push(ticket);
         }
@@ -532,7 +267,7 @@ export async function generateHallTickets({ examinationSessionId, studentIds, us
 
 export async function getReviewDetails({
     studentId,
-    examinationSessionId,
+    examinationSessionId
 }) {
     const rawRecord =
         await studentHallTicketRepository.getSingleStudentByExamSession(
@@ -556,36 +291,41 @@ export async function getReviewDetails({
         throw error;
     }
 
-    const calculated = calculateStudentEligibility(rawRecord);
+    const calculated = examinationSessionEligibilityServices.calculateStudentEligibility(rawRecord);
 
-    const eligibilityStatus = calculated.eligibilityStatus;
-    const hallTicketStatus = calculated.hallTicketStatus;
+    const eligibilityRecord = await examinationSessionEligibilityRepo.getSingleEligibilityRecord(Number(examinationSessionId), Number(studentId));
+    const storedStatus = eligibilityRecord?.status || "REVIEW";
+    const dynamicStatus = calculated.eligibilityStatus.toUpperCase();
+    const resolvedStatus = resolveEligibilityStatus(storedStatus, dynamicStatus);
+    const finalEligibilityStatus = mapStatusToFrontend(resolvedStatus);
+
+    const hallTicketRecord = await studentHallTicketRepository.findHallTicketByStudentAndSession(Number(studentId), Number(examinationSessionId));
+    const isGenerated = !!hallTicketRecord;
+    const isPublished = hallTicketRecord?.isPublished ?? false;
+    const isBlocked = resolvedStatus === "BLOCKED" ? true : (hallTicketRecord?.isBlocked ?? false);
+    const hallTicketStatus = isBlocked ? "Blocked" : (isPublished ? "Published" : (isGenerated ? "Generated" : "Not Generated"));
 
     const overview = {
-        eligibleNormally: eligibilityStatus === "Ready",
-
-        requiresReview: eligibilityStatus === "Review",
-
-        isBlocked: eligibilityStatus === "Blocked",
-
+        eligibleNormally: finalEligibilityStatus === "Ready",
+        requiresReview: finalEligibilityStatus === "Review",
+        isBlocked: finalEligibilityStatus === "Blocked",
         canGenerateNormally:
-            !calculated.isGenerated &&
-            ["Ready", "Review"].includes(eligibilityStatus),
-
+            !isGenerated &&
+            ["Ready", "Review"].includes(finalEligibilityStatus),
         canGenerateWithOverride:
-            !calculated.isGenerated &&
-            eligibilityStatus === "Review",
+            !isGenerated &&
+            finalEligibilityStatus === "Review"
     };
 
     return {
-        eligibilityStatus,
+        eligibilityStatus: finalEligibilityStatus,
         hallTicketStatus,
 
-        hallTicketId: calculated.hallTicketId,
-        isGenerated: calculated.isGenerated,
-        isPublished: calculated.isPublished,
-        isBlocked: calculated.isBlocked,
-        markAsEligible: calculated.markAsEligible,
+        hallTicketId: hallTicketRecord?.id ?? null,
+        isGenerated,
+        isPublished,
+        isBlocked,
+        markAsEligible: storedStatus === "APPROVED",
 
         student: calculated.student,
 
@@ -598,7 +338,7 @@ export async function getReviewDetails({
             examSetupTypeTermId:
                 calculated.academicContext.examSetupTypeTermId ?? null,
             examinationSessionTermId:
-                calculated.academicContext.examinationSessionTermId,
+                calculated.academicContext.examinationSessionTermId
         },
 
         attendance: calculated.attendance,
@@ -640,7 +380,7 @@ function schedulesToSubjectList(scheduleRows, mappedScheduleIds = [], roomSeatin
             scheduleKind: plain.type ?? null,
             slot: slot ?? null,
             subject: sub ?? null,
-            seating,
+            seating
         };
     });
 }
@@ -697,29 +437,26 @@ export async function getHallTicketById(id) {
         const schedules = await studentHallTicketRepository.getSchedulesWithSubjectsForExaminationSession(
             ticket.examinationSessionId,
             { courseId, sessionId, term },
-            transaction,
+            transaction
         );
 
-        const examScheduleIds = schedules.map((s) => s.examScheduleId).filter((scheduleId) => scheduleId != null);
+        const examScheduleIds = schedules.map((s) => s.examScheduleId).filter((examScheduleId) => examScheduleId != null);
         const mappedScheduleIds = await studentHallTicketRepository.getMappedExamScheduleIds(
             ticket.studentId,
             examScheduleIds,
-            transaction,
+            transaction
         );
 
         const roomSeatingMap = await studentHallTicketRepository.getStudentRoomSeatingDetails(
             ticket.studentId,
             examScheduleIds,
-            transaction,
+            transaction
         );
 
         return flattenHallTicketDetail(ticket, schedules, mappedScheduleIds, roomSeatingMap);
     });
 }
 
-export async function getHallTicketByIdForUser(id) {
-    return getHallTicketById(Number(id));
-}
 
 export async function getHallTicketDetailsByQr(qr) {
     return await sequelize.transaction(async (transaction) => {
@@ -738,29 +475,26 @@ export async function getHallTicketDetailsByQr(qr) {
         const schedules = await studentHallTicketRepository.getSchedulesWithSubjectsForExaminationSession(
             ticket.examinationSessionId,
             { courseId, sessionId, term },
-            transaction,
+            transaction
         );
 
-        const examScheduleIds = schedules.map((s) => s.examScheduleId).filter((scheduleId) => scheduleId != null);
+        const examScheduleIds = schedules.map((s) => s.examScheduleId).filter((examScheduleId) => examScheduleId != null);
         const mappedScheduleIds = await studentHallTicketRepository.getMappedExamScheduleIds(
             ticket.studentId,
             examScheduleIds,
-            transaction,
+            transaction
         );
 
         const roomSeatingMap = await studentHallTicketRepository.getStudentRoomSeatingDetails(
             ticket.studentId,
             examScheduleIds,
-            transaction,
+            transaction
         );
 
         return flattenHallTicketDetail(ticket, schedules, mappedScheduleIds, roomSeatingMap);
     });
 }
 
-export async function getHallTicketByQrForUser(qr) {
-    return getHallTicketDetailsByQr(qr);
-}
 
 export async function getAllHallTickets(filters, pagination = {}) {
     const page = pagination.page ?? 1;
@@ -771,7 +505,7 @@ export async function getAllHallTickets(filters, pagination = {}) {
     return await sequelize.transaction(async (transaction) => {
         const [rows, total] = await Promise.all([
             studentHallTicketRepository.getAllHallTickets(filters, transaction, { limit, offset }),
-            studentHallTicketRepository.countHallTickets(filters, transaction),
+            studentHallTicketRepository.countHallTickets(filters, transaction)
         ]);
         return { rows, total, page, limit };
     });
@@ -821,7 +555,7 @@ export async function publishHallTickets({ examinationSessionId, studentIds }) {
 
         const generatedCount = await studentHallTicketRepository.countHallTickets({
             examinationSessionId,
-            ...(targets && { studentId: targets }),
+            ...(targets && { studentId: targets })
         }, transaction);
 
         if (generatedCount === 0) {
@@ -840,61 +574,76 @@ export async function publishHallTickets({ examinationSessionId, studentIds }) {
 }
 
 export async function getStudentEligibilityDetails(examinationSessionId, studentId) {
+    // 1. Fetch academic details
     const rawRecord = await studentHallTicketRepository.getSingleStudentByExamSession(examinationSessionId, studentId);
     if (!rawRecord) {
         const error = new Error("Student not found in this examination session");
         error.statusCode = 404;
         throw error;
     }
-    const calculated = calculateStudentEligibility(rawRecord);
+    
+    // 2. Calculate Dynamic Eligibility
+    const calculated = examinationSessionEligibilityServices.calculateStudentEligibility(rawRecord);
+    const dynamicStatus = calculated.eligibilityStatus.toUpperCase(); // 'READY', 'REVIEW', 'BLOCKED'
+    
+    // 3. Fetch Stored Eligibility (Do NOT create if missing here)
+    const eligibilityRecord = await examinationSessionEligibilityRepo.getSingleEligibilityRecord(examinationSessionId, studentId);
+    if (!eligibilityRecord) {
+        const error = new Error("Student eligibility record not found for this session");
+        error.statusCode = 404;
+        throw error;
+    }
+    
+    const storedStatus = eligibilityRecord.status;
+    
+    // 4. Resolve Final Status (BLOCKED > APPROVED > Dynamic)
+    const resolvedStatus = resolveEligibilityStatus(storedStatus, dynamicStatus);
+    const finalEligibilityStatus = mapStatusToFrontend(resolvedStatus);
+
+    // 5. Query Hall Ticket Existence efficiently
+    const hallTicketRecord = await studentHallTicketRepository.findHallTicketByStudentAndSession(studentId, examinationSessionId);
+
+    // Assemble payload matching existing frontend expectations
     return {
         ...calculated.student,
         ...calculated.attendance,
-        eligibilityStatus: calculated.eligibilityStatus,
-        eligibilityReason: calculated.eligibilityStatus !== "Ready" ? calculated.reviewReasons[0]?.message : null,
-        isGenerated: calculated.isGenerated,
-        isPublished: calculated.isPublished,
-        isBlocked: calculated.isBlocked,
-        markAsEligible: calculated.markAsEligible,
-        hallTicketStatus: calculated.hallTicketStatus,
-        hallTicketId: calculated.hallTicketId,
+        
+        storedStatus: storedStatus,
+        dynamicStatus: dynamicStatus,
+        eligibilityStatus: finalEligibilityStatus,
+        eligibilityReason: resolvedStatus !== "READY" && resolvedStatus !== "APPROVED" ? (calculated.reasonText || null) : null,
+        
+        isGenerated: Boolean(hallTicketRecord),
+        isPublished: hallTicketRecord?.isPublished ?? false,
+        isBlocked: hallTicketRecord?.isBlocked ?? false,
+        markAsEligible: storedStatus === "APPROVED",
+        hallTicketStatus: hallTicketRecord?.isBlocked ? "Blocked" : (hallTicketRecord?.isPublished ? "Published" : (hallTicketRecord ? "Generated" : "Not Generated")),
+        hallTicketId: hallTicketRecord?.id ?? null,
+        
+        canGenerateHallTicket: resolvedStatus === "READY" || resolvedStatus === "APPROVED"
     };
 }
 
-export async function markAsEligible({ examinationSessionId, studentId, markAsEligible, user }) {
+
+
+/**
+ * Bulk approves student's hall ticket eligibility for an examination session.
+ * Only targets students currently in "REVIEW" status.
+ */
+export async function markAsEligible({ examinationSessionId, studentIds, user }) {
     return await sequelize.transaction(async (transaction) => {
-        // Fetch student details to get academicYearId and current eligibilityStatus
-        const rawRecord = await studentHallTicketRepository.getSingleStudentByExamSession(
-            Number(examinationSessionId),
-            Number(studentId),
-            transaction
-        );
-        if (!rawRecord) {
-            const error = new Error("Student not found in this examination session");
-            error.statusCode = 404;
-            throw error;
-        }
-
-        const calculated = calculateStudentEligibility(rawRecord);
-        
-        const effectiveAcademicYearId = getAcademicYearId() || (user?.academicYearId ? Number(user.academicYearId) : rawRecord.examinationSession?.academicYearId || 1);
-
-        const ticket = await studentHallTicketRepository.generateOrRegenerateStudentHallTicket({
+        const requestedCount = studentIds.length;
+        const approvedCount = await examinationSessionEligibilityRepo.bulkApproveEligibility(
             examinationSessionId,
-            academicYearId: effectiveAcademicYearId,
-            studentId,
-            markAsEligible,
-            markedBy: markAsEligible ? (user?.id || user?.userId) : null,
-            previousEligibilityStatus: calculated.eligibilityStatus,
-        }, transaction);
+            studentIds,
+            user?.userId || user?.id,
+            { transaction }
+        );
 
         return {
-            studentId,
-            examinationSessionId,
-            markAsEligible: ticket.markAsEligible,
-            markedBy: ticket.markedBy,
-            markedAt: ticket.markedAt,
-            previousEligibilityStatus: ticket.previousEligibilityStatus,
+            requestedCount,
+            approvedCount,
+            skippedCount: requestedCount - approvedCount
         };
     });
 }

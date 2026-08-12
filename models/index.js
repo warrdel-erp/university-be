@@ -178,6 +178,7 @@ import pdfSplitJobModel from "./pdfSplitJobModel.js";
 import examinationSessionModel from "./examinationSessionModel.js";
 import examinationSessionTermModel from "./examinationSessionTermModel.js";
 import examinationSessionSlotModel from "./examinationSessionSlotModel.js";
+import examinationSessionEligibilityModel from "./examinationSessionEligibilityModel.js";
 
 // Examination Session associations
 examinationSessionSlotModel.belongsTo(examinationSessionModel, { foreignKey: 'examinationSessionId', as: 'examinationSession' });
@@ -198,6 +199,17 @@ acedmicYearModel.hasMany(examinationSessionModel, { foreignKey: "acedmic_year_id
 
 examinationSessionModel.belongsTo(examSetupTypeModel, { foreignKey: "assessment_type_id", as: "assessmentType" });
 examSetupTypeModel.hasMany(examinationSessionModel, { foreignKey: "assessment_type_id", as: "examinationSessions" });
+
+// Examination Session Eligibility Associations
+examinationSessionEligibilityModel.belongsTo(studentModel, { foreignKey: "student_id", as: "student" });
+studentModel.hasMany(examinationSessionEligibilityModel, { foreignKey: "student_id", as: "examinationSessionEligibilities" });
+examinationSessionEligibilityModel.belongsTo(examinationSessionModel, { foreignKey: "examination_session_id", as: "examinationSession" });
+examinationSessionModel.hasMany(examinationSessionEligibilityModel, { foreignKey: "examination_session_id", as: "examinationSessionEligibilities" });
+
+examinationSessionEligibilityModel.belongsTo(userModel, { foreignKey: "approved_by", as: "approver" });
+examinationSessionEligibilityModel.belongsTo(userModel, { foreignKey: "blocked_by", as: "blocker" });
+examinationSessionEligibilityModel.belongsTo(userModel, { foreignKey: "created_by", as: "creator" });
+examinationSessionEligibilityModel.belongsTo(userModel, { foreignKey: "updated_by", as: "updater" });
 
 examinationSessionModel.hasMany(examinationSessionTermModel, { foreignKey: "examination_session_id", as: "examinationSessionTerms" });
 examinationSessionTermModel.belongsTo(examinationSessionModel, { foreignKey: "examination_session_id", as: "examinationSession" });
@@ -2259,6 +2271,7 @@ export {
   examinationSessionModel,
   examinationSessionTermModel,
   examinationSessionSlotModel,
+  examinationSessionEligibilityModel,
   userModel as users,
 };
 

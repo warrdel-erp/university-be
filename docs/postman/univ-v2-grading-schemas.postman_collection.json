@@ -1538,14 +1538,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/studentHallTicket/{{hallTicketId}}/block",
+              "raw": "{{baseurl}}/studentHallTicket/block/{{hallTicketId}}",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "studentHallTicket",
-                "{{hallTicketId}}",
-                "block"
+                "block",
+                "{{hallTicketId}}"
               ]
             }
           }
@@ -1609,7 +1609,7 @@
           }
         },
         {
-          "name": "10.5 Get Complete Hall Ticket Details",
+          "name": "10.4 Get Complete Hall Ticket Details",
           "request": {
             "method": "GET",
             "header": [
@@ -1631,7 +1631,7 @@
           }
         },
         {
-          "name": "10.6 Generate Hall Tickets",
+          "name": "10.5 Generate Hall Tickets",
           "request": {
             "method": "POST",
             "header": [
@@ -1661,7 +1661,7 @@
           }
         },
         {
-          "name": "10.8 Get Student Detailed Eligibility",
+          "name": "10.6 Get Student Detailed Eligibility",
           "request": {
             "method": "GET",
             "header": [
@@ -1685,7 +1685,7 @@
           }
         },
         {
-          "name": "10.9 Get Session Students",
+          "name": "10.7 Get Session Students",
           "request": {
             "method": "GET",
             "header": [
@@ -1740,7 +1740,7 @@
           }
         },
         {
-          "name": "10.10 Get Hall Ticket Eligibility Overview",
+          "name": "10.8 Get Hall Ticket Eligibility Overview",
           "request": {
             "method": "GET",
             "header": [
@@ -1763,7 +1763,7 @@
           }
         },
         {
-          "name": "10.11 Get Hall Ticket Review Details",
+          "name": "10.9 Get Hall Ticket Review Details",
           "request": {
             "method": "GET",
             "header": [
@@ -1792,7 +1792,7 @@
           }
         },
         {
-          "name": "10.6 Mark Student as Eligible",
+          "name": "10.10 Mark Student(s) as Eligible (COE override)",
           "request": {
             "method": "POST",
             "header": [
@@ -1807,7 +1807,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"examinationSessionId\": 4,\n  \"studentId\": 2166,\n  \"markAsEligible\": true\n}"
+              "raw": "{\n  \"examinationSessionId\": {{examinationSessionId}},\n  \"studentIds\": [\n    {{studentId}}\n  ]\n}"
             },
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/markAsEligible",
@@ -1822,7 +1822,7 @@
           }
         },
         {
-          "name": "10.7 Get Hall Ticket Summary",
+          "name": "10.11 Get Hall Ticket Summary",
           "request": {
             "method": "GET",
             "header": [

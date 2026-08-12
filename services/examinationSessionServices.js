@@ -2,7 +2,9 @@ import { Op } from "sequelize";
 import sequelize from "../database/sequelizeConfig.js";
 import * as examinationSessionRepository from "../repository/examinationSessionRepository.js";
 import * as examScheduleRepository from "../repository/examScheduleRepository.js";
-
+import * as studentHallTicketRepository from "../repository/studentHallTicketRepository.js";
+import * as examinationSessionEligibilityServices from "./examinationSessionEligibilityServices.js";
+import * as examinationSessionEligibilityRepo from "../repository/examinationSessionEligibilityRepository.js";
 function createBadRequestError(message) {
   const error = new Error(message);
   error.statusCode = 400;
@@ -88,6 +90,35 @@ async function getAssessmentPlanIds(examSetupTypeId, options = {}) {
   return uniqueValues(components.map((component) => component.assessmentPlanId));
 }
 
+async function initializeEligibilityRecords(examinationSessionId, defaultAcademicYearId, transaction) {
+  const rawStudentsList = await studentHallTicketRepository.getStudentsByExaminationSessionId(examinationSessionId, {}, transaction);
+  
+  const eligibilityRecords = [];
+  const seenStudentIds = new Set();
+  
+  for (const raw of rawStudentsList) {
+      if (seenStudentIds.has(raw.student.studentId)) continue;
+      seenStudentIds.add(raw.student.studentId);
+      
+      const calculated = examinationSessionEligibilityServices.calculateStudentEligibility(raw);
+      const initialStatus = calculated.eligibilityStatus === 'Ready' ? 'READY' : 'REVIEW';
+      
+      eligibilityRecords.push({
+          universityId: raw.student.universityId,
+          instituteId: raw.student.instituteId,
+          academicYearId: raw.examinationSession?.academicYearId ?? defaultAcademicYearId,
+          studentId: raw.student.studentId,
+          examinationSessionId: examinationSessionId,
+          status: initialStatus,
+          reviewReason: initialStatus !== 'READY' ? calculated.reviewReasons[0]?.message : null
+      });
+  }
+  
+  if (eligibilityRecords.length > 0) {
+      await examinationSessionEligibilityRepo.bulkCreateRecords(eligibilityRecords, { transaction });
+  }
+}
+
 export async function createExaminationSession(sessionData, options = {}) {
   return sequelize.transaction(async (transaction) => {
     const { classSectionTerms, ...mainData } = sessionData;
@@ -111,6 +142,9 @@ export async function createExaminationSession(sessionData, options = {}) {
         examinationSessionId: record.examinationSessionId,
       }));
       await examinationSessionRepository.createExaminationSessionTerms(termsToCreate, { ...options, transaction });
+
+      // Calculate initial eligibility for students in the created terms
+      await initializeEligibilityRecords(record.examinationSessionId, mainData.academicYearId, transaction);
     }
 
     return getExaminationSessionById(record.examinationSessionId, { ...options, transaction });
@@ -193,6 +227,7 @@ export async function updateExaminationSession(id, updateData = {}, options = {}
           examinationSessionId: sessionId,
         }));
         await examinationSessionRepository.createExaminationSessionTerms(termsToCreate, { ...options, transaction });
+        await initializeEligibilityRecords(sessionId, mainUpdateData.academicYearId, transaction);
       }
     }
 
@@ -215,7 +250,11 @@ export async function deleteExaminationSession(id, options = {}) {
 export async function createExaminationSessionTerm(termData, options = {}) {
   return sequelize.transaction(async (transaction) => {
     await validateClassSectionTermIds([termData], { ...options, transaction });
-    return examinationSessionRepository.createExaminationSessionTerm(termData, { ...options, transaction });
+    const record = await examinationSessionRepository.createExaminationSessionTerm(termData, { ...options, transaction });
+    
+    await initializeEligibilityRecords(termData.examinationSessionId, undefined, transaction);
+    
+    return record;
   });
 }
 

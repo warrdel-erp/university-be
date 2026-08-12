@@ -2,8 +2,6 @@ import { Router } from "express";
 import { z } from "zod";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
-// import { checkAccess } from "../middleware/checkAccess.js";
-// import { PERMISSIONS } from "../const/permissions.js";
 import * as studentHallTicketController from "../controllers/studentHallTicketController.js";
 
 const router = Router();
@@ -19,8 +17,7 @@ const generateSchema = z.object({
 
 const markAsEligibleSchema = z.object({
     examinationSessionId: z.number({ required_error: "examinationSessionId is required" }),
-    studentId: z.number({ required_error: "studentId is required" }),
-    markAsEligible: z.boolean({ required_error: "markAsEligible is required" }),
+    studentIds: z.array(z.number()).min(1, "At least one studentId is required")
 });
 
 const qrQuerySchema = z.object({
@@ -49,6 +46,14 @@ const examinationSessionIdParamsSchema = z.object({
 const studentEligibilityParamsSchema = z.object({
     examinationSessionId: z.string().regex(/^\d+$/, "examinationSessionId must be a number").transform((v) => Number(v)),
     studentId: z.string().regex(/^\d+$/, "studentId must be a number").transform((v) => Number(v)),
+});
+
+const reviewDetailsParamsSchema = z.object({
+    studentId: z.string().regex(/^\d+$/, "studentId must be a number").transform((v) => Number(v)),
+});
+
+const reviewDetailsQuerySchema = z.object({
+    examinationSessionId: z.string().regex(/^\d+$/, "examinationSessionId must be a number").transform((v) => Number(v)),
 });
 
 
@@ -80,15 +85,6 @@ const sessionStudentsQuerySchema = z.object({
     limit: z.coerce.number().int("limit must be an integer").min(1, "limit must be at least 1").optional().default(10),
 });
 
-
-const reviewDetailsParamsSchema = z.object({
-    studentId: z.string().regex(/^\d+$/, "studentId must be a number").transform((v) => Number(v)),
-});
-
-const reviewDetailsQuerySchema = z.object({
-    examinationSessionId: z.coerce.number().int("examinationSessionId must be an integer").positive("examinationSessionId must be greater than 0"),
-});
-
 // 1. Cancel / block an already-generated hall ticket
 router.patch("/block/:id", userAuth, validate({ params: idParamsSchema }), studentHallTicketController.blockHallTicket);
 
@@ -107,17 +103,17 @@ router.post("/markAsEligible", userAuth, validate({ body: markAsEligibleSchema }
 // 7. Get one student's detailed eligibility before generating ticket
 router.get("/eligibility/:examinationSessionId/:studentId", userAuth, validate({ params: studentEligibilityParamsSchema }), studentHallTicketController.getStudentEligibilityDetails);
 
+// 7b. Get detailed review requirements for a student
+router.get("/reviewDetails/:studentId", userAuth, validate({ params: reviewDetailsParamsSchema, query: reviewDetailsQuerySchema }), studentHallTicketController.getReviewDetails);
+
 // 8. Get hall ticket eligibility overview counts for summary cards
 router.get("/eligibilityOverview/:examinationSessionId", userAuth, validate({ params: examinationSessionIdParamsSchema }), studentHallTicketController.getHallTicketEligibilityOverview);
 
 // 8b. Get optimized hall ticket eligibility and lifecycle summary
-router.get("/summary/:examinationSessionId", userAuth, validate({ params: examinationSessionIdParamsSchema }), studentHallTicketController.getHallTicketSummary);
+router.get("/summary/:examinationSessionId", userAuth, validate({ params: examinationSessionIdParamsSchema, query: sessionStudentsQuerySchema }), studentHallTicketController.getHallTicketSummary);
 
 // 9. Get session students for examination session
 router.get("/sessionStudents/:examinationSessionId", userAuth, validate({ params: examinationSessionIdParamsSchema, query: sessionStudentsQuerySchema }), studentHallTicketController.getStudentsForExaminationSession);
-
-// 9b. Get review details for a student
-router.get("/reviewDetails/:studentId", userAuth, validate({ params: reviewDetailsParamsSchema, query: reviewDetailsQuerySchema }), studentHallTicketController.getReviewDetails);
 
 // 10. Additional List route
 router.get("/", userAuth, validate({ query: listHallTicketsQuerySchema }), studentHallTicketController.getAllHallTickets);
