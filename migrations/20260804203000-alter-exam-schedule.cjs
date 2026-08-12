@@ -3,12 +3,15 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Delete all old exam schedules that do not have an examination_session_id
-    await queryInterface.sequelize.query(
-      `DELETE FROM exam_schedule WHERE examination_session_id IS NULL;`
-    );
-
     const tableDescription = await queryInterface.describeTable('exam_schedule').catch(() => ({}));
+
+    // Delete all old exam schedules that do not have an examination_session_id
+    // (only safe to run if the column already exists from a previous partial run)
+    if (tableDescription.examination_session_id) {
+      await queryInterface.sequelize.query(
+        `DELETE FROM exam_schedule WHERE examination_session_id IS NULL;`
+      );
+    }
 
     // 1. Remove exam_setup_type_term_id
     if (tableDescription.exam_setup_type_term_id) {
