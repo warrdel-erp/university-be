@@ -24,6 +24,18 @@ const qrQuerySchema = z.object({
     qr: z.string().min(1, "qr is required")
 });
 
+const reviewFilterEnum = z.enum(["REGISTRATION_PENDING", "PHOTOGRAPH_PENDING", "INVOICE_PENDING", "ATTENDANCE_PENDING"]);
+
+const reviewFilterStudentsSchema = z.object({
+    examinationSessionId: z.number({ required_error: "examinationSessionId is required" }),
+    courseId: z.number().optional(),
+    sessionId: z.number().optional(),
+    term: z.number().optional(),
+    filters: z.array(reviewFilterEnum).optional(),
+    page: z.number().int().min(1).optional().default(1),
+    limit: z.number().int().min(1).optional().default(10)
+});
+
 /** Filters + optional `page` / `limit` (limit defaults 1000, clamped 10–1000 per page). */
 const listHallTicketsQuerySchema = z.object({
     examinationSessionId: z.coerce.number().int("examinationSessionId must be an integer").positive("examinationSessionId must be greater than 0").optional(),
@@ -75,7 +87,7 @@ const sessionStudentsQuerySchema = z.object({
     term: queryArrayOrSingleNumberSchema,
     status: z.preprocess(
         (val) => (val === "" || val === null || val === undefined ? undefined : val),
-        z.enum(["Ready", "Blocked", "Review", "Not Generated", "Generated", "Published"]).optional()
+        z.enum(["Ready", "Review", "Approved", "Blocked"]).optional()
     ),
     search: z.preprocess(
         (val) => (val === "" || val === null ? undefined : val),
@@ -107,13 +119,16 @@ router.get("/eligibility/:examinationSessionId/:studentId", userAuth, validate({
 router.get("/reviewDetails/:studentId", userAuth, validate({ params: reviewDetailsParamsSchema, query: reviewDetailsQuerySchema }), studentHallTicketController.getReviewDetails);
 
 // 8. Get hall ticket eligibility overview counts for summary cards
-router.get("/eligibilityOverview/:examinationSessionId", userAuth, validate({ params: examinationSessionIdParamsSchema }), studentHallTicketController.getHallTicketEligibilityOverview);
+router.get("/eligibilityOverview/:examinationSessionId", userAuth, validate({ params: examinationSessionIdParamsSchema, query: sessionStudentsQuerySchema }), studentHallTicketController.getHallTicketEligibilityOverview);
 
 // 8b. Get optimized hall ticket eligibility and lifecycle summary
 router.get("/summary/:examinationSessionId", userAuth, validate({ params: examinationSessionIdParamsSchema, query: sessionStudentsQuerySchema }), studentHallTicketController.getHallTicketSummary);
 
 // 9. Get session students for examination session
 router.get("/sessionStudents/:examinationSessionId", userAuth, validate({ params: examinationSessionIdParamsSchema, query: sessionStudentsQuerySchema }), studentHallTicketController.getStudentsForExaminationSession);
+
+// 9b. Filter students by review reasons/failures
+router.post("/reviewFilterStudents", userAuth, validate({ body: reviewFilterStudentsSchema }), studentHallTicketController.getStudentsByReviewReasons);
 
 // 10. Additional List route
 router.get("/", userAuth, validate({ query: listHallTicketsQuerySchema }), studentHallTicketController.getAllHallTickets);

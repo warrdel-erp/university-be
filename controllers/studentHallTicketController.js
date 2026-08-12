@@ -22,7 +22,7 @@ export async function getStudentsForExaminationSession(req, res) {
 export async function getHallTicketEligibilityOverview(req, res) {
     try {
         const { examinationSessionId } = req.params;
-        const result = await studentHallTicketServices.getHallTicketEligibilityOverview(examinationSessionId);
+        const result = await studentHallTicketServices.getHallTicketEligibilityOverview(examinationSessionId, req.query);
         return SuccessResponse(res, 200, "Hall ticket eligibility overview fetched successfully", result);
     } catch (error) {
         return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
@@ -143,5 +143,22 @@ export async function markAsEligible(req, res) {
     } catch (error) {
         console.error("Error in markAsEligible:", error.message);
         return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to approve eligibility");
+    }
+}
+
+export async function getStudentsByReviewReasons(req, res) {
+    try {
+        const { examinationSessionId, courseId, sessionId, term, filters, page, limit } = req.body;
+        const result = await studentHallTicketServices.getStudentsByReviewReasons(examinationSessionId, {
+            courseId,
+            sessionId,
+            term,
+            reasons: filters,
+            page,
+            limit
+        });
+        return SuccessResponse(res, 200, "Students matching review filters fetched successfully", result);
+    } catch (error) {
+        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
     }
 }

@@ -218,6 +218,7 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
         }
     }
 
+
     const include = [
         {
             model: model.courseModel,
@@ -619,25 +620,7 @@ export async function generateOrRegenerateStudentHallTicket({ examinationSession
     return ticket;
 }
 
-export async function getSingleStudentByExamSession(examinationSessionId, studentId, transaction = null) {
-    const list = await getStudentsByExaminationSessionId(examinationSessionId, { studentId: Number(studentId) }, transaction);
-    return list[0] || null;
-}
-
-export async function getEligibilityOverviewCounts(examinationSessionId, transaction = null) {
-    return scoped(model.examinationSessionEligibilityModel).findAll({
-        where: { examinationSessionId: Number(examinationSessionId) },
-        attributes: [
-            "status",
-            [fn("COUNT", col("examination_session_eligibility_id")), "count"]
-        ],
-        group: ["status"],
-        raw: true,
-        transaction
-    });
-}
-
-export async function getEligibilitySummaryList(examinationSessionId, filters = {}, transaction = null) {
+export async function getEligibilityOverviewCounts(examinationSessionId, filters = {}, transaction = null) {
     const eligibilityWhere = { examinationSessionId: Number(examinationSessionId) };
     
     const studentWhere = {};
@@ -655,27 +638,30 @@ export async function getEligibilitySummaryList(examinationSessionId, filters = 
 
     return scoped(model.examinationSessionEligibilityModel).findAll({
         where: eligibilityWhere,
-        attributes: ["status", "reviewReason"],
+        attributes: [
+            "status",
+            [fn("COUNT", col("examination_session_eligibility_id")), "count"]
+        ],
         include: [
             {
                 model: model.studentModel,
                 as: "student",
                 required: true,
                 where: studentWhere,
-                attributes: ["courseId", "sessionId"],
+                attributes: [],
                 include: [
-                    { model: model.courseModel, as: "course", attributes: ["courseName"] },
-                    { model: model.sessionModel, as: "studentSession", attributes: ["sessionName"] },
                     { 
                         model: model.classSectionTermModel, 
                         as: "studentClassSectionTerm", 
                         required: !!filters.term,
                         where: Object.keys(termWhere).length ? termWhere : undefined,
-                        attributes: ["term"] 
+                        attributes: [] 
                     }
                 ]
             }
         ],
+        group: ["status"],
+        raw: true,
         transaction
     });
 }

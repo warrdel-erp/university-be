@@ -1646,7 +1646,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"examinationSessionId\": {{examinationSessionId}},\n  \"studentIds\": [202, 229],\n  \"overrideReason\": \"Approved by COE after review\"\n}"
+              "raw": "{\n  \"examinationSessionId\": {{examinationSessionId}},\n  \"studentIds\": [\n    {{studentId}}\n  ]\n}"
             },
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/generate",
@@ -1707,33 +1707,27 @@
               "query": [
                 {
                   "key": "courseId",
-                  "value": "{{courseId}}",
-                  "disabled": true
+                  "value": "{{courseId}}"
                 },
                 {
                   "key": "sessionId",
-                  "value": "{{sessionId}}",
-                  "disabled": true
+                  "value": "{{sessionId}}"
                 },
                 {
                   "key": "term",
-                  "value": "{{term}}",
-                  "disabled": true
+                  "value": "{{term}}"
                 },
                 {
                   "key": "status",
-                  "value": "{{status}}",
-                  "disabled": true
+                  "value": "{{status}}"
                 },
                 {
                   "key": "page",
-                  "value": "1",
-                  "disabled": true
+                  "value": "1"
                 },
                 {
                   "key": "limit",
-                  "value": "10",
-                  "disabled": true
+                  "value": "10"
                 }
               ]
             }
@@ -1840,6 +1834,35 @@
                 "studentHallTicket",
                 "summary",
                 "{{examinationSessionId}}"
+            }
+          }
+        },
+        {
+          "name": "10.12 Filter Students by Review Reasons",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examinationSessionId\": {{examinationSessionId}},\n  \"courseId\": {{courseId}},\n  \"sessionId\": {{sessionId}},\n  \"term\": {{term}},\n  \"filters\": [\"PHOTOGRAPH_PENDING\", \"ATTENDANCE_PENDING\"],\n  \"page\": 1,\n  \"limit\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/reviewFilterStudents",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                "reviewFilterStudents"
               ]
             }
           }

@@ -91,8 +91,8 @@ export async function getStudentsForExaminationSession(examinationSessionId, fil
     };
 }
 
-export async function getHallTicketEligibilityOverview(examinationSessionId) {
-    const counts = await studentHallTicketRepository.getEligibilityOverviewCounts(examinationSessionId);
+export async function getHallTicketEligibilityOverview(examinationSessionId, filters = {}) {
+    const counts = await studentHallTicketRepository.getEligibilityOverviewCounts(examinationSessionId, filters);
 
     let ready = 0;
     let blocked = 0;
@@ -119,7 +119,8 @@ export async function getHallTicketEligibilityOverview(examinationSessionId) {
 }
 
 export async function getHallTicketSummary(examinationSessionId, filters = {}) {
-    const eligibilityList = await studentHallTicketRepository.getEligibilitySummaryList(examinationSessionId, filters);
+    const { page, limit, ...queryFilters } = filters;
+    const rawList = await studentHallTicketRepository.getStudentsByExaminationSessionId(examinationSessionId, queryFilters);
 
     let feeClearance = 0;
     let attendanceShortage = 0;
@@ -138,15 +139,15 @@ export async function getHallTicketSummary(examinationSessionId, filters = {}) {
         missingPhotograph: 0
     });
 
-    for (const el of eligibilityList) {
-        const student = el.student;
+    for (const raw of rawList) {
+        const student = raw.student;
         if (!student) continue;
 
         totalStudents++;
         
-        const term = student.studentClassSectionTerm?.term ?? "Unknown Term";
+        const term = raw.classSectionTerm?.term ?? "Unknown Term";
         const courseId = student.courseId ?? "Unknown Course";
-        const sessionId = student.sessionId ?? "Unknown Session";
+        const sessionId = raw.mapperSessionId ?? "Unknown Session";
         const courseName = student.course?.courseName ?? "Unknown";
         const sessionName = student.studentSession?.sessionName ?? "Unknown";
 
@@ -166,7 +167,8 @@ export async function getHallTicketSummary(examinationSessionId, filters = {}) {
         termObj.totalStudents++;
         cstObj.totalStudents++;
 
-        const reason = el.reviewReason || "";
+        const eligibilityRecord = student.examinationSessionEligibilities?.[0];
+        const reason = eligibilityRecord?.reviewReason || "";
 
         if (reason.includes("attendance") || reason.includes("Attendance")) {
             attendanceShortage++;
@@ -188,6 +190,16 @@ export async function getHallTicketSummary(examinationSessionId, filters = {}) {
             termObj.feeClearance++;
             cstObj.feeClearance++;
         }
+    }
+
+    if (filters.courseId && filters.term && filters.sessionId) {
+        return {
+            totalStudents,
+            feeClearance,
+            attendanceShortage,
+            registrationPending,
+            missingPhotograph
+        };
     }
 
     return {
@@ -269,11 +281,11 @@ export async function getReviewDetails({
     studentId,
     examinationSessionId
 }) {
-    const rawRecord =
-        await studentHallTicketRepository.getSingleStudentByExamSession(
-            Number(examinationSessionId),
-            Number(studentId)
-        );
+    const list = await studentHallTicketRepository.getStudentsByExaminationSessionId(
+        Number(examinationSessionId),
+        { studentId: Number(studentId) }
+    );
+    const rawRecord = list[0] || null;
 
     if (!rawRecord) {
         const error = new Error(
@@ -572,10 +584,12 @@ export async function publishHallTickets({ examinationSessionId, studentIds }) {
         return { examinationSessionId, publishedCount };
     });
 }
-
 export async function getStudentEligibilityDetails(examinationSessionId, studentId) {
-    // 1. Fetch academic details
-    const rawRecord = await studentHallTicketRepository.getSingleStudentByExamSession(examinationSessionId, studentId);
+    const list = await studentHallTicketRepository.getStudentsByExaminationSessionId(
+        Number(examinationSessionId),
+        { studentId: Number(studentId) }
+    );
+    const rawRecord = list[0] || null;
     if (!rawRecord) {
         const error = new Error("Student not found in this examination session");
         error.statusCode = 404;
@@ -646,4 +660,115 @@ export async function markAsEligible({ examinationSessionId, studentIds, user })
             skippedCount: requestedCount - approvedCount
         };
     });
+}
+
+export async function getStudentsByReviewReasons(examinationSessionId, filters = {}) {
+    // 1. Fetch all matching students in cohort (without page/limit)
+    const repoResult = await studentHallTicketRepository.getStudentsByExaminationSessionId(
+        Number(examinationSessionId), 
+        {
+            courseId: filters.courseId,
+            sessionId: filters.sessionId,
+            term: filters.term
+        }
+    );
+
+    // Fetch existing status map from database
+    const dbStatusMap = await examinationSessionEligibilityRepo.getEligibilityStatusesMap(examinationSessionId);
+
+    // 2. Filter students by matching the stored review reason patterns
+    const filteredList = [];
+
+    for (const raw of repoResult) {
+        const student = raw.student;
+        const studentId = student.studentId;
+        const dbStatus = student.examinationSessionEligibilities?.[0]?.status || dbStatusMap.get(studentId) || "REVIEW";
+
+        // We only care about students in REVIEW status (which is what summary cards count)
+        if (dbStatus !== "REVIEW") {
+            continue;
+        }
+
+        const eligibilityRecord = student.examinationSessionEligibilities?.[0];
+        const reason = eligibilityRecord?.reviewReason || "";
+
+        let matches = false;
+
+        if (filters.reasons && filters.reasons.length > 0) {
+            matches = filters.reasons.some(reasonEnum => {
+                const upper = reasonEnum.toUpperCase();
+                if (upper === "REGISTRATION_PENDING") {
+                    return reason.includes("document") || reason.includes("Document");
+                }
+                if (upper === "PHOTOGRAPH_PENDING") {
+                    return reason.includes("photograph") || reason.includes("photo") || reason.includes("Photograph");
+                }
+                if (upper === "INVOICE_PENDING") {
+                    return reason.includes("fee") || reason.includes("payment") || reason.includes("invoice") || reason.includes("Invoice");
+                }
+                if (upper === "ATTENDANCE_PENDING") {
+                    return reason.includes("attendance") || reason.includes("Attendance");
+                }
+                return false;
+            });
+        } else {
+            // Default to any review reasons if no filters are selected
+            matches = reason.length > 0;
+        }
+
+        if (matches) {
+            const finalStatus = mapStatusToFrontend(dbStatus);
+            const hallTicket = student.hallTickets?.[0];
+            const isGenerated = !!hallTicket;
+            const isPublished = hallTicket?.isPublished ?? false;
+            const isBlocked = dbStatus === 'BLOCKED' ? true : (hallTicket?.isBlocked ?? false);
+            const hallTicketStatus = hallTicket?.isBlocked ? "Blocked" : (hallTicket?.isPublished ? "Published" : (isGenerated ? "Generated" : "Not Generated"));
+
+            filteredList.push({
+                studentId: studentId,
+                enrollmentNumber: student.enrollNumber,
+                firstName: student.firstName ?? null,
+                middleName: student.middleName ?? null,
+                lastName: student.lastName ?? null,
+                courseId: student.courseId,
+                courseName: student.course?.courseName,
+                sessionId: raw.mapperSessionId,
+                sessionName: student.studentSession?.sessionName,
+                term: raw.classSectionTerm?.term ?? null,
+                examinationSessionTermId: raw.examinationSessionTerm?.examinationSessionTermId ?? null,
+                classSectionTermId: raw.classSectionTerm?.classSectionTermId ?? null,
+                
+                totalClasses: null,
+                presentClasses: null,
+                attendancePercentage: null,
+                minimumAttendance: null,
+                
+                hallTicketId: hallTicket?.id ?? null,
+                isGenerated,
+                isPublished,
+                isBlocked,
+                markAsEligible: dbStatus === 'APPROVED',
+                hallTicketStatus,
+                eligibilityStatus: finalStatus,
+                reasonText: reason ?? null,
+                eligibilityReason: reason ?? null
+            });
+        }
+    }
+
+    // 3. Paginate the filtered list
+    const page = Math.max(1, Number(filters.page) || 1);
+    const limit = Math.max(1, Number(filters.limit) || 10);
+    const offset = (page - 1) * limit;
+    
+    const paginatedRows = filteredList.slice(offset, offset + limit);
+    const total = filteredList.length;
+
+    return {
+        rows: paginatedRows,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit) || 1
+    };
 }
