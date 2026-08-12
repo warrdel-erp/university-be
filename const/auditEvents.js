@@ -1,16 +1,4 @@
-/**
- * AUDIT_EVENTS — Canonical business event type names.
- *
- * These are business-level identifiers, NOT database operation names.
- * Each value must match a string written into event.event_type.
- *
- * Naming convention: ENTITY_VERB (past-tense or gerund describing the business action)
- *
- * Do NOT use raw CRUD names (CREATE / UPDATE / DELETE) here.
- * Database actions are captured separately in AUDIT_ACTIONS (auditActions.js).
- *
- * To extend: add a new key/value pair following the existing pattern.
- */
+// Canonical business event type names (stored in event.event_type)
 export const AUDIT_EVENTS = Object.freeze({
     // ─── Student ──────────────────────────────────────────────────────
     STUDENT_CREATE:           "STUDENT_CREATE",
@@ -48,4 +36,9 @@ export const AUDIT_EVENTS = Object.freeze({
 
     // ─── Hall Ticket (eligibility override) ───────────────────────────
     HALL_TICKET_MARK_ELIGIBLE: "HALL_TICKET_MARK_ELIGIBLE",
+
+    // ─── Exam Setup Type ──────────────────────────────────────────────
+    EXAM_SETUP_TYPE_CREATE:   "EXAM_SETUP_TYPE_CREATE",
+    EXAM_SETUP_TYPE_UPDATE:   "EXAM_SETUP_TYPE_UPDATE",
+    EXAM_SETUP_TYPE_DELETE:   "EXAM_SETUP_TYPE_DELETE",
 });
