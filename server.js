@@ -99,6 +99,7 @@ import questionPaperBlueprint from "./router/questionPaperBlueprintRoute.js";
 import examSetupTypeTerm from "./router/examSetupTypeTermRoute.js";
 import examinationSession from "./router/examinationSessionRoute.js";
 import examinationSessionSlot from "./router/examinationSessionSlotRoute.js";
+import examInvigilatorAssignment from "./router/examInvigilatorAssignmentRoute.js";
 import examSetupType from "./router/examSetupTypeRoute.js";
 import examSchedule from "./router/examScheduleRoute.js";
 import studentHallTicket from "./router/studentHallTicketRoute.js";
@@ -188,6 +189,7 @@ app.use("/examSetupTypeTerm", examSetupTypeTerm);
 
 app.use("/examinationSession", examinationSession);
 app.use("/examinationSessionSlot", examinationSessionSlot);
+app.use("/examInvigilatorAssignment", examInvigilatorAssignment);
 
 
 app.use("/examSchedule", examSchedule);

@@ -1,0 +1,136 @@
+import * as examInvigilatorAssignmentServices from "../services/examInvigilatorAssignmentServices.js";
+import { SuccessResponse, ErrorResponse } from "../utility/response.js";
+
+export async function createAssignment(req, res) {
+    try {
+        const payload = {
+            ...req.body,
+            assignedBy: req.user.userId,
+            createdBy: req.user.userId,
+            updatedBy: req.user.userId,
+        };
+        const result = await examInvigilatorAssignmentServices.createAssignment(payload);
+        return SuccessResponse(res, 201, "Invigilator assignment created successfully", result);
+    } catch (error) {
+        const statusCode = error.statusCode || 500;
+        return ErrorResponse(res, statusCode, error.message);
+    }
+}
+
+export async function updateAssignment(req, res) {
+    try {
+        const { examInvigilatorAssignmentId } = req.query;
+        const payload = {
+            ...req.body,
+            updatedBy: req.user.userId,
+        };
+        const result = await examInvigilatorAssignmentServices.updateAssignment(examInvigilatorAssignmentId, payload);
+        return SuccessResponse(res, 200, "Invigilator assignment updated successfully", result);
+    } catch (error) {
+        const statusCode = error.statusCode || 500;
+        return ErrorResponse(res, statusCode, error.message);
+    }
+}
+
+export async function getAssignmentById(req, res) {
+    try {
+        const { examInvigilatorAssignmentId } = req.query;
+        const result = await examInvigilatorAssignmentServices.getAssignmentById(examInvigilatorAssignmentId);
+        return SuccessResponse(res, 200, "Invigilator assignment fetched successfully", result);
+    } catch (error) {
+        const statusCode = error.statusCode || 500;
+        return ErrorResponse(res, statusCode, error.message);
+    }
+}
+
+export async function getAssignments(req, res) {
+    try {
+        const {
+            examInvigilatorAssignmentId,
+            examinationSessionSlotId,
+            examDate,
+            classRoomSectionId,
+            userId,
+            role,
+        } = req.query;
+
+        if (examInvigilatorAssignmentId) {
+            const result = await examInvigilatorAssignmentServices.getAssignmentById(examInvigilatorAssignmentId);
+            return SuccessResponse(res, 200, "Invigilator assignment fetched successfully", result);
+        }
+
+        const result = await examInvigilatorAssignmentServices.getAssignments(
+            { examinationSessionSlotId, examDate, classRoomSectionId, userId, role }
+        );
+
+        return SuccessResponse(res, 200, "Invigilator assignments fetched successfully", result);
+    } catch (error) {
+        const statusCode = error.statusCode || 500;
+        return ErrorResponse(res, statusCode, error.message);
+    }
+}
+
+export async function deleteAssignment(req, res) {
+    try {
+        const { examInvigilatorAssignmentId } = req.query;
+        const result = await examInvigilatorAssignmentServices.deleteAssignment(examInvigilatorAssignmentId);
+        return SuccessResponse(res, 200, result.message);
+    } catch (error) {
+        const statusCode = error.statusCode || 500;
+        return ErrorResponse(res, statusCode, error.message);
+    }
+}
+
+export async function getListOfRooms(req, res) {
+    try {
+        const { examinationSessionId, examinationSessionSlotId, page = 1, limit = 10 } = req.query;
+        const result = await examInvigilatorAssignmentServices.getListOfRooms(
+            { examinationSessionId, examinationSessionSlotId },
+            { page: Number(page), limit: Number(limit) }
+        );
+        return SuccessResponse(res, 200, "Rooms list fetched successfully", result.rooms, {
+            total: result.total,
+            limit: Number(result.limit),
+            page: Number(result.page),
+        });
+    } catch (error) {
+        const statusCode = error.statusCode || 500;
+        return ErrorResponse(res, statusCode, error.message);
+    }
+}
+
+export async function getInvigilatorSummary(req, res) {
+    try {
+        const { examinationSessionId, examinationSessionSlotId } = req.query;
+        const result = await examInvigilatorAssignmentServices.getInvigilatorSummary({
+            examinationSessionId,
+            examinationSessionSlotId
+        });
+        return SuccessResponse(res, 200, "Invigilator summary fetched successfully", result);
+    } catch (error) {
+        const statusCode = error.statusCode || 500;
+        return ErrorResponse(res, statusCode, error.message);
+    }
+}
+
+export async function getAssignmentsByUserId(req, res) {
+    try {
+        const { userId, examinationSessionId } = req.query;
+        const result = await examInvigilatorAssignmentServices.getAssignmentsByUserId(userId, examinationSessionId);
+        return SuccessResponse(res, 200, "Invigilator assignments fetched successfully", result);
+    } catch (error) {
+        const statusCode = error.statusCode || 500;
+        return ErrorResponse(res, statusCode, error.message);
+    }
+}
+
+export async function getAssignmentsByExamScheduleId(req, res) {
+    try {
+        const { examScheduleId } = req.query;
+        const result = await examInvigilatorAssignmentServices.getAssignmentsByExamScheduleId(examScheduleId);
+        return SuccessResponse(res, 200, "Exam schedule assignment details fetched successfully", result);
+    } catch (error) {
+        const statusCode = error.statusCode || 500;
+        return ErrorResponse(res, statusCode, error.message);
+    }
+}

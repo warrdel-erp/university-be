@@ -29,13 +29,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/examStructure/examType",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examStructure",
-                "examType"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["examStructure", "examType"]
             }
           }
         },
@@ -51,13 +46,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/examStructure/examType?search=Mid&status=true&page=1&limit=10",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examStructure",
-                "examType"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examStructure", "examType"],
               "query": [
                 {
                   "key": "search",
@@ -91,14 +81,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/examStructure/examType/all?search=Mid&page=1&limit=10",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examStructure",
-                "examType",
-                "all"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examStructure", "examType", "all"],
               "query": [
                 {
                   "key": "search",
@@ -136,13 +120,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/examStructure/examType",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examStructure",
-                "examType"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["examStructure", "examType"]
             }
           }
         },
@@ -158,14 +137,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/examStructure/examType/{{examSetupTypeId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examStructure",
-                "examType",
-                "{{examSetupTypeId}}"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["examStructure", "examType", "{{examSetupTypeId}}"]
             }
           }
         }
@@ -194,12 +167,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/assessmentPlan",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["assessmentPlan"]
             }
           },
           "event": [
@@ -233,12 +202,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/assessmentPlan?search=&status=&courseId=&sessionId=&regulationId=&term=&page=1&limit=10",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["assessmentPlan"],
               "query": [
                 {
                   "key": "search",
@@ -288,13 +253,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/assessmentPlan/{{assessmentPlanId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "{{assessmentPlanId}}"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["assessmentPlan", "{{assessmentPlanId}}"]
             }
           }
         },
@@ -318,13 +278,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/assessmentPlan/{{assessmentPlanId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "{{assessmentPlanId}}"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["assessmentPlan", "{{assessmentPlanId}}"]
             }
           }
         },
@@ -340,13 +295,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/assessmentPlan/{{assessmentPlanId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "{{assessmentPlanId}}"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["assessmentPlan", "{{assessmentPlanId}}"]
             }
           }
         },
@@ -370,13 +320,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/assessmentPlan/component",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "component"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["assessmentPlan", "component"]
             }
           },
           "event": [
@@ -414,9 +359,7 @@
             },
             "url": {
               "raw": "{{baseurl}}/assessmentPlan/component/{{assessmentPlanComponentId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
+              "host": ["{{baseurl}}"],
               "path": [
                 "assessmentPlan",
                 "component",
@@ -437,9 +380,7 @@
             ],
             "url": {
               "raw": "{{baseurl}}/assessmentPlan/component/{{assessmentPlanComponentId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
+              "host": ["{{baseurl}}"],
               "path": [
                 "assessmentPlan",
                 "component",
@@ -460,13 +401,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/assessmentPlan/overview?courseId=&sessionId=&subjectId=&assessmentPlanId=&academicRegulationId=&assignmentStatus=all&term=&search=&page=1&limit=10",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "overview"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["assessmentPlan", "overview"],
               "query": [
                 {
                   "key": "courseId",
@@ -525,13 +461,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/assessmentPlan/stats?courseId=&sessionId=&term=",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "stats"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["assessmentPlan", "stats"],
               "query": [
                 {
                   "key": "courseId",
@@ -583,13 +514,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/assessmentPlan/subjectMapping",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "subjectMapping"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["assessmentPlan", "subjectMapping"]
             }
           }
         },
@@ -605,13 +531,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/assessmentPlan/subjectMapping?page=1&limit=10",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "subjectMapping"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["assessmentPlan", "subjectMapping"],
               "query": [
                 {
                   "key": "page",
@@ -637,9 +558,7 @@
             ],
             "url": {
               "raw": "{{baseurl}}/assessmentPlan/subjectMapping/{{assessmentPlanSubjectMappingId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
+              "host": ["{{baseurl}}"],
               "path": [
                 "assessmentPlan",
                 "subjectMapping",
@@ -673,12 +592,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/examinationSession",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["examinationSession"]
             }
           },
           "event": [
@@ -712,12 +627,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/examinationSession?search=&status=&page=1&limit=10",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examinationSession"],
               "query": [
                 {
                   "key": "search",
@@ -751,13 +662,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/examinationSession/single?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "single"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examinationSession", "single"],
               "query": [
                 {
                   "key": "examinationSessionId",
@@ -787,12 +693,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/examinationSession?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examinationSession"],
               "query": [
                 {
                   "key": "examinationSessionId",
@@ -814,13 +716,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/examinationSession/classSectionTerms?examSetupTypeId={{examSetupTypeId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "classSectionTerms"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examinationSession", "classSectionTerms"],
               "query": [
                 {
                   "key": "examSetupTypeId",
@@ -850,13 +747,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/examinationSession/term",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "term"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["examinationSession", "term"]
             }
           },
           "event": [
@@ -886,13 +778,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/examinationSession/term?examinationSessionTermId={{examinationSessionTermId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "term"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examinationSession", "term"],
               "query": [
                 {
                   "key": "examinationSessionTermId",
@@ -914,13 +801,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/examinationSession/structure?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "structure"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examinationSession", "structure"],
               "query": [
                 {
                   "key": "examinationSessionId",
@@ -942,13 +824,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/examinationSession/subjects?examinationSessionId={{examinationSessionId}}&term=1&courseId=34&sessionId=6&isExamScheduled=true&teacherAssignmentStatus=assigned",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "subjects"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examinationSession", "subjects"],
               "query": [
                 {
                   "key": "examinationSessionId",
@@ -990,12 +867,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/examinationSession?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examinationSession"],
               "query": [
                 {
                   "key": "examinationSessionId",
@@ -1022,13 +895,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/examinationSession/schedules?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "schedules"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examinationSession", "schedules"],
               "query": [
                 {
                   "key": "examinationSessionId",
@@ -1058,12 +926,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/examinationSessionSlot",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSessionSlot"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["examinationSessionSlot"]
             }
           },
           "event": [
@@ -1094,12 +958,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/examinationSessionSlot?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSessionSlot"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examinationSessionSlot"],
               "query": [
                 {
                   "key": "examinationSessionId",
@@ -1121,13 +981,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/examinationSessionSlot/single?examinationSessionSlotId={{examinationSessionSlotId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSessionSlot",
-                "single"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examinationSessionSlot", "single"],
               "query": [
                 {
                   "key": "examinationSessionSlotId",
@@ -1157,12 +1012,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/examinationSessionSlot",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSessionSlot"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["examinationSessionSlot"]
             }
           }
         },
@@ -1178,12 +1029,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/examinationSessionSlot?examinationSessionSlotId={{examinationSessionSlotId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSessionSlot"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examinationSessionSlot"],
               "query": [
                 {
                   "key": "examinationSessionSlotId",
@@ -1218,13 +1065,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/examScheduleMapping/schedule",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examScheduleMapping",
-                "schedule"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["examScheduleMapping", "schedule"]
             }
           },
           "event": [
@@ -1262,13 +1104,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/examScheduleMapping/schedule",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examScheduleMapping",
-                "schedule"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["examScheduleMapping", "schedule"]
             }
           }
         },
@@ -1284,13 +1121,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/examScheduleMapping/schedule?examScheduleId={{examScheduleId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examScheduleMapping",
-                "schedule"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examScheduleMapping", "schedule"],
               "query": [
                 {
                   "key": "examScheduleId",
@@ -1317,13 +1149,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/examSchedule/availableRooms?examScheduleId=1",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examSchedule",
-                "availableRooms"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examSchedule", "availableRooms"],
               "query": [
                 {
                   "key": "examScheduleId",
@@ -1353,13 +1180,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/examSchedule/assignRoom",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examSchedule",
-                "assignRoom"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["examSchedule", "assignRoom"]
             }
           }
         },
@@ -1375,13 +1197,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/examSchedule/roomAssignments?examScheduleId=1",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examSchedule",
-                "roomAssignments"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examSchedule", "roomAssignments"],
               "query": [
                 {
                   "key": "examScheduleId",
@@ -1411,13 +1228,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/examSchedule/roomAssignment",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examSchedule",
-                "roomAssignment"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["examSchedule", "roomAssignment"]
             }
           }
         }
@@ -1446,12 +1258,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/teacherExamAssignment",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "teacherExamAssignment"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["teacherExamAssignment"]
             }
           },
           "event": [
@@ -1481,12 +1289,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/teacherExamAssignment?examScheduleId=1&userId=2",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "teacherExamAssignment"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["teacherExamAssignment"],
               "query": [
                 {
                   "key": "examScheduleId",
@@ -1512,13 +1316,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/teacherExamAssignment/{{teacherExamAssignmentId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "teacherExamAssignment",
-                "{{teacherExamAssignmentId}}"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["teacherExamAssignment", "{{teacherExamAssignmentId}}"]
             }
           }
         }
@@ -1539,14 +1338,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/block/{{hallTicketId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "block",
-                "{{hallTicketId}}"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["studentHallTicket", "block", "{{hallTicketId}}"]
             }
           }
         },
@@ -1562,13 +1355,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/byQr?qr={{qrCode}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "byQr"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["studentHallTicket", "byQr"],
               "query": [
                 {
                   "key": "qr",
@@ -1598,13 +1386,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/publish",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "publish"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["studentHallTicket", "publish"]
             }
           }
         },
@@ -1620,13 +1403,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/{{hallTicketId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "{{hallTicketId}}"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["studentHallTicket", "{{hallTicketId}}"]
             }
           }
         },
@@ -1650,13 +1428,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/generate",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "generate"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["studentHallTicket", "generate"]
             }
           }
         },
@@ -1672,9 +1445,7 @@
             ],
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/eligibility/{{examinationSessionId}}/{{studentId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
+              "host": ["{{baseurl}}"],
               "path": [
                 "studentHallTicket",
                 "eligibility",
@@ -1696,9 +1467,7 @@
             ],
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/sessionStudents/{{examinationSessionId}}?courseId={{courseId}}&sessionId={{sessionId}}&term={{term}}&status={{status}}&page=1&limit=10",
-              "host": [
-                "{{baseurl}}"
-              ],
+              "host": ["{{baseurl}}"],
               "path": [
                 "studentHallTicket",
                 "sessionStudents",
@@ -1745,9 +1514,7 @@
             ],
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/eligibilityOverview/{{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
+              "host": ["{{baseurl}}"],
               "path": [
                 "studentHallTicket",
                 "eligibilityOverview",
@@ -1768,14 +1535,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/reviewDetails/{{studentId}}?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "reviewDetails",
-                "{{studentId}}"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["studentHallTicket", "reviewDetails", "{{studentId}}"],
               "query": [
                 {
                   "key": "examinationSessionId",
@@ -1805,13 +1566,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/markAsEligible",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "markAsEligible"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["studentHallTicket", "markAsEligible"]
             }
           }
         },
@@ -1827,13 +1583,12 @@
             ],
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/summary/{{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
+              "host": ["{{baseurl}}"],
               "path": [
                 "studentHallTicket",
                 "summary",
                 "{{examinationSessionId}}"
+              ]
             }
           }
         },
@@ -1857,13 +1612,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/reviewFilterStudents",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "reviewFilterStudents"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["studentHallTicket", "reviewFilterStudents"]
             }
           }
         }
@@ -1892,13 +1642,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/questionPaper/approve",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "questionPaper",
-                "approve"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["questionPaper", "approve"]
             }
           }
         },
@@ -1922,12 +1667,249 @@
             },
             "url": {
               "raw": "{{baseurl}}/questionPaper/finalApproved",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "questionPaper",
-                "finalApproved"
+              "host": ["{{baseurl}}"],
+              "path": ["questionPaper", "finalApproved"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. Exam Invigilator Assignment (/examInvigilatorAssignment)",
+      "item": [
+        {
+          "name": "12.1 Create Invigilator Assignment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examinationSessionSlotId\": 1,\n  \"examDate\": \"2026-12-01\",\n  \"classRoomSectionId\": 8,\n  \"userId\": 56,\n  \"role\": \"INVIGILATOR\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/examInvigilatorAssignment",
+              "host": ["{{baseurl}}"],
+              "path": ["examInvigilatorAssignment"]
+            }
+          }
+        },
+        {
+          "name": "12.2 Update Invigilator Assignment",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 56,\n  \"role\": \"INVIGILATOR\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/examInvigilatorAssignment?examInvigilatorAssignmentId=1",
+              "host": ["{{baseurl}}"],
+              "path": ["examInvigilatorAssignment"],
+              "query": [
+                {
+                  "key": "examInvigilatorAssignmentId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.3 Get Room List nested",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examInvigilatorAssignment/rooms?examinationSessionId=1&examinationSessionSlotId=1&page=1&limit=10",
+              "host": ["{{baseurl}}"],
+              "path": ["examInvigilatorAssignment", "rooms"],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "1"
+                },
+                {
+                  "key": "examinationSessionSlotId",
+                  "value": "1"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.4 Get Invigilator Summary Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examInvigilatorAssignment/summary?examinationSessionId=1&examinationSessionSlotId=1",
+              "host": ["{{baseurl}}"],
+              "path": ["examInvigilatorAssignment", "summary"],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "1"
+                },
+                {
+                  "key": "examinationSessionSlotId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.5 Get Assignment By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examInvigilatorAssignment?examInvigilatorAssignmentId=1",
+              "host": ["{{baseurl}}"],
+              "path": ["examInvigilatorAssignment"],
+              "query": [
+                {
+                  "key": "examInvigilatorAssignmentId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.6 Get Assignments list (filtered)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examInvigilatorAssignment?classRoomSectionId=8",
+              "host": ["{{baseurl}}"],
+              "path": ["examInvigilatorAssignment"],
+              "query": [
+                {
+                  "key": "classRoomSectionId",
+                  "value": "8"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.7 Delete Assignment",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examInvigilatorAssignment?examInvigilatorAssignmentId=1",
+              "host": ["{{baseurl}}"],
+              "path": ["examInvigilatorAssignment"],
+              "query": [
+                {
+                  "key": "examInvigilatorAssignmentId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.8 Get Assignments By userId",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examInvigilatorAssignment/byUserId?userId=56&examinationSessionId=1",
+              "host": ["{{baseurl}}"],
+              "path": ["examInvigilatorAssignment", "byUserId"],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "56"
+                },
+                {
+                  "key": "examinationSessionId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.9 Get Details By examScheduleId",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examInvigilatorAssignment/byExamScheduleId?examScheduleId=1",
+              "host": ["{{baseurl}}"],
+              "path": ["examInvigilatorAssignment", "byExamScheduleId"],
+              "query": [
+                {
+                  "key": "examScheduleId",
+                  "value": "1"
+                }
               ]
             }
           }
@@ -1943,7 +1925,7 @@
     },
     {
       "key": "token",
-      "value": "",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlSWQiOjE1LCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInBhc3N3b3JkIjoiJDJhJDEwJEVzMmlldHdab0FBNHhTRnBKbGYzRmUuQmR1eDIuanVtR3BUMmZaUEtYaHEubTVxR2dhaEJPIiwiZHVtbXlQYXNzd29yZCI6bnVsbCwic3RhdHVzIjoiYWN0aXZlIiwicGhvbmUiOiI5OTI5NTU1NjQ0IiwiZW1haWwiOiJhYWRpMjh4NkBnbWFpbC5jb20iLCJpc1RlYWNoZXIiOmZhbHNlLCJjcmVhdGVkQXQiOiIyMDI1LTA4LTEzVDE2OjQ4OjQyLjAwMFoiLCJ1cGRhdGVkQXQiOiIyMDI2LTA4LTA3VDEwOjI3OjQ3LjAwMFoiLCJkZWxldGVkQXQiOm51bGwsImRlZmF1bHRfcm9sZV9pZCI6MTUsImluc3RpdHV0ZU5hbWUiOiJBYXlvamFuIFNjaG9vbCBvZiBBcmNoaXRlY3R1cmUiLCJpYXQiOjE3ODY2MDE5NTQsImV4cCI6MTc4OTE5Mzk1NH0.0StGGK5rYHLN9tWTowpH2NtJnW_lauoqO6GtWNAhi7A",
       "type": "string"
     },
     {

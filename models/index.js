@@ -179,6 +179,7 @@ import examinationSessionModel from "./examinationSessionModel.js";
 import examinationSessionTermModel from "./examinationSessionTermModel.js";
 import examinationSessionSlotModel from "./examinationSessionSlotModel.js";
 import examinationSessionEligibilityModel from "./examinationSessionEligibilityModel.js";
+import examInvigilatorAssignmentModel from "./examInvigilatorAssignmentModel.js";
 
 // Examination Session associations
 examinationSessionSlotModel.belongsTo(examinationSessionModel, { foreignKey: 'examinationSessionId', as: 'examinationSession' });
@@ -234,6 +235,31 @@ examinationSessionTermModel.belongsTo(examinationSessionModel, { foreignKey: "ex
 
 examinationSessionTermModel.belongsTo(classSectionTermModel, { foreignKey: "class_section_term_id", as: "classSectionTerm" });
 classSectionTermModel.hasMany(examinationSessionTermModel, { foreignKey: "class_section_term_id", as: "examinationSessionTerms" });
+
+// Exam Invigilator Assignment Associations
+examInvigilatorAssignmentModel.belongsTo(universityModel, { foreignKey: "university_id", as: "university" });
+universityModel.hasMany(examInvigilatorAssignmentModel, { foreignKey: "university_id", as: "examInvigilatorAssignments" });
+
+examInvigilatorAssignmentModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "institute" });
+instituteModel.hasMany(examInvigilatorAssignmentModel, { foreignKey: "institute_id", as: "examInvigilatorAssignments" });
+
+examInvigilatorAssignmentModel.belongsTo(acedmicYearModel, { foreignKey: "acedmic_year_id", as: "academicYear" });
+acedmicYearModel.hasMany(examInvigilatorAssignmentModel, { foreignKey: "acedmic_year_id", as: "examInvigilatorAssignments" });
+
+
+
+examInvigilatorAssignmentModel.belongsTo(examinationSessionSlotModel, { foreignKey: "examination_session_slot_id", as: "examinationSessionSlot" });
+examinationSessionSlotModel.hasMany(examInvigilatorAssignmentModel, { foreignKey: "examination_session_slot_id", as: "examInvigilatorAssignments" });
+
+examInvigilatorAssignmentModel.belongsTo(classRoomModel, { foreignKey: "class_room_section_id", as: "classRoom" });
+classRoomModel.hasMany(examInvigilatorAssignmentModel, { foreignKey: "class_room_section_id", as: "examInvigilatorAssignments" });
+
+examInvigilatorAssignmentModel.belongsTo(userModel, { foreignKey: "user_id", as: "user" });
+userModel.hasMany(examInvigilatorAssignmentModel, { foreignKey: "user_id", as: "examInvigilatorAssignments" });
+
+examInvigilatorAssignmentModel.belongsTo(userModel, { foreignKey: "assigned_by", as: "assignedByUser" });
+examInvigilatorAssignmentModel.belongsTo(userModel, { foreignKey: "created_by", as: "createdByUser" });
+examInvigilatorAssignmentModel.belongsTo(userModel, { foreignKey: "updated_by", as: "updatedByUser" });
 
 studentModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "campus" });
 campusModel.hasMany(studentModel, { foreignKey: "campus_id", as: "campus" });
@@ -2305,6 +2331,7 @@ export {
   examinationSessionTermModel,
   examinationSessionSlotModel,
   examinationSessionEligibilityModel,
+  examInvigilatorAssignmentModel,
   userModel as users,
 };
 
