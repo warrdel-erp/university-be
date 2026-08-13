@@ -1,15 +1,19 @@
-import { Router } from 'express';
-import * as examinationSessionController from '../controllers/examinationSessionController.js';
-import userAuth from '../middleware/authUser.js';
-import { validate } from '../utility/validation.js';
-import { z } from 'zod';
+import { Router } from "express";
+import * as examinationSessionController from "../controllers/examinationSessionController.js";
+import userAuth from "../middleware/authUser.js";
+import { validate } from "../utility/validation.js";
+import { z } from "zod";
 
 const router = Router();
 
-const dateStringSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format");
+const dateStringSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format");
 
 const sessionBodyObject = z.object({
-  assessmentTypeId: z.number({ required_error: "assessmentTypeId is required" }),
+  assessmentTypeId: z.number({
+    required_error: "assessmentTypeId is required",
+  }),
   sessionName: z.string().min(1, "sessionName is required"),
   examStartDate: dateStringSchema.optional(),
   examEndDate: dateStringSchema.optional(),
@@ -27,33 +31,55 @@ const sessionBodyObject = z.object({
   aiEvaluation: z.boolean().optional(),
   moderationWorkflow: z.boolean().optional(),
   allowRevaluation: z.boolean().optional(),
-  status: z.enum(['Draft', 'Published', 'Completed', 'Cancelled']).optional(),
-  classSectionTerms: z.array(z.object({
-    classSectionTermId: z.number(),
-    includeElectives: z.boolean().optional(),
-    remarks: z.string().optional(),
-  })).optional(),
+  status: z.enum(["Draft", "Published", "Completed", "Cancelled"]).optional(),
+  classSectionTerms: z
+    .array(
+      z.object({
+        classSectionTermId: z.number(),
+        includeElectives: z.boolean().optional(),
+        remarks: z.string().optional(),
+      }),
+    )
+    .optional(),
 });
 
 const createSessionSchema = {
-  body: sessionBodyObject.refine((data) => {
-    const dates = {
-      evalDeadline: data.evaluationDeadline ? new Date(data.evaluationDeadline).getTime() : null,
-      modDeadline: data.moderationDeadline ? new Date(data.moderationDeadline).getTime() : null,
-      resultPub: data.resultPublicationDate ? new Date(data.resultPublicationDate).getTime() : null,
-    };
+  body: sessionBodyObject.refine(
+    (data) => {
+      const dates = {
+        evalDeadline: data.evaluationDeadline
+          ? new Date(data.evaluationDeadline).getTime()
+          : null,
+        modDeadline: data.moderationDeadline
+          ? new Date(data.moderationDeadline).getTime()
+          : null,
+        resultPub: data.resultPublicationDate
+          ? new Date(data.resultPublicationDate).getTime()
+          : null,
+      };
 
-    if (dates.evalDeadline && dates.modDeadline && dates.evalDeadline > dates.modDeadline) {
-      return false;
-    }
-    if (dates.modDeadline && dates.resultPub && dates.modDeadline > dates.resultPub) {
-      return false;
-    }
+      if (
+        dates.evalDeadline &&
+        dates.modDeadline &&
+        dates.evalDeadline > dates.modDeadline
+      ) {
+        return false;
+      }
+      if (
+        dates.modDeadline &&
+        dates.resultPub &&
+        dates.modDeadline > dates.resultPub
+      ) {
+        return false;
+      }
 
-    return true;
-  }, {
-    message: "Evaluation deadline must be before or equal to Moderation deadline, and Moderation deadline must be before or equal to Result publication date.",
-  }),
+      return true;
+    },
+    {
+      message:
+        "Evaluation deadline must be before or equal to Moderation deadline, and Moderation deadline must be before or equal to Result publication date.",
+    },
+  ),
 };
 
 const emptyToUndefined = (val) =>
@@ -61,7 +87,10 @@ const emptyToUndefined = (val) =>
 
 const positiveIntegerQueryId = z.preprocess(
   emptyToUndefined,
-  z.union([z.string().regex(/^\d+$/).transform(Number), z.number().int().positive()])
+  z.union([
+    z.string().regex(/^\d+$/).transform(Number),
+    z.number().int().positive(),
+  ]),
 );
 
 const updateSessionSchema = {
@@ -79,8 +108,12 @@ const getSessionByIdSchema = {
 
 const createTermSchema = {
   body: z.object({
-    examinationSessionId: z.number({ required_error: "examinationSessionId is required" }),
-    classSectionTermId: z.number({ required_error: "classSectionTermId is required" }),
+    examinationSessionId: z.number({
+      required_error: "examinationSessionId is required",
+    }),
+    classSectionTermId: z.number({
+      required_error: "classSectionTermId is required",
+    }),
     includeElectives: z.boolean().optional(),
     remarks: z.string().optional(),
   }),
@@ -111,24 +144,86 @@ const getSubjectsBySessionAndTermSchema = {
     term: z.union([z.string(), z.number()]).optional(),
     courseId: positiveIntegerQueryId.optional(),
     sessionId: positiveIntegerQueryId.optional(),
-    isExamScheduled: z.union([z.boolean(), z.enum(["true", "false"])]).transform(val => val === "true" || val === true ? true : (val === "false" || val === false ? false : undefined)).optional(),
+    isExamScheduled: z
+      .union([z.boolean(), z.enum(["true", "false"])])
+      .transform((val) =>
+        val === "true" || val === true
+          ? true
+          : val === "false" || val === false
+            ? false
+            : undefined,
+      )
+      .optional(),
     teacherAssignmentStatus: z.enum(["assigned", "notAssigned"]).optional(),
-    isModerationActive: z.union([z.boolean(), z.enum(["true", "false"])]).transform(val => val === "true" || val === true ? true : (val === "false" || val === false ? false : undefined)).optional(),
+    isModerationActive: z
+      .union([z.boolean(), z.enum(["true", "false"])])
+      .transform((val) =>
+        val === "true" || val === true
+          ? true
+          : val === "false" || val === false
+            ? false
+            : undefined,
+      )
+      .optional(),
   }),
 };
 
+router.post(
+  "/",
+  userAuth,
+  validate(createSessionSchema),
+  examinationSessionController.createExaminationSession,
+);
+router.get("/", userAuth, examinationSessionController.getExaminationSessions);
+router.get(
+  "/single",
+  userAuth,
+  validate(getSessionByIdSchema),
+  examinationSessionController.getExaminationSessionById,
+);
+router.get(
+  "/classSectionTerms",
+  userAuth,
+  validate(getClassSectionTermsBySetupTypeSchema),
+  examinationSessionController.getClassSectionTermsBySetupType,
+);
+router.get(
+  "/structure",
+  userAuth,
+  validate(getStructureSchema),
+  examinationSessionController.getExaminationStructure,
+);
 
+router.get(
+  "/subjects",
+  userAuth,
+  validate(getSubjectsBySessionAndTermSchema),
+  examinationSessionController.getMappedSubjectsBySessionAndTerm,
+);
 
-router.post('/', userAuth, validate(createSessionSchema), examinationSessionController.createExaminationSession);
-router.get('/', userAuth, examinationSessionController.getExaminationSessions);
-router.get('/single', userAuth, validate(getSessionByIdSchema), examinationSessionController.getExaminationSessionById);
-router.get('/classSectionTerms', userAuth, validate(getClassSectionTermsBySetupTypeSchema), examinationSessionController.getClassSectionTermsBySetupType);
-router.get('/structure', userAuth, validate(getStructureSchema), examinationSessionController.getExaminationStructure);
-
-router.get('/subjects', userAuth, validate(getSubjectsBySessionAndTermSchema), examinationSessionController.getMappedSubjectsBySessionAndTerm);
-router.patch('/', userAuth, validate(updateSessionSchema), examinationSessionController.updateExaminationSession);
-router.delete('/', userAuth, validate(getSessionByIdSchema), examinationSessionController.deleteExaminationSession);
-router.post('/term', userAuth, validate(createTermSchema), examinationSessionController.createExaminationSessionTerm);
-router.delete('/term', userAuth, validate(deleteTermSchema), examinationSessionController.deleteExaminationSessionTerm);
+router.patch(
+  "/",
+  userAuth,
+  validate(updateSessionSchema),
+  examinationSessionController.updateExaminationSession,
+);
+router.delete(
+  "/",
+  userAuth,
+  validate(getSessionByIdSchema),
+  examinationSessionController.deleteExaminationSession,
+);
+router.post(
+  "/term",
+  userAuth,
+  validate(createTermSchema),
+  examinationSessionController.createExaminationSessionTerm,
+);
+router.delete(
+  "/term",
+  userAuth,
+  validate(deleteTermSchema),
+  examinationSessionController.deleteExaminationSessionTerm,
+);
 
 export default router;

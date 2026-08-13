@@ -5,6 +5,9 @@ import * as examScheduleRepository from "../repository/examScheduleRepository.js
 import * as studentHallTicketRepository from "../repository/studentHallTicketRepository.js";
 import * as examinationSessionEligibilityServices from "./examinationSessionEligibilityServices.js";
 import * as examinationSessionEligibilityRepo from "../repository/examinationSessionEligibilityRepository.js";
+import { buildScope, scoped } from "../utility/scoped.js";
+import * as model from "../models/index.js";
+
 function createBadRequestError(message) {
   const error = new Error(message);
   error.statusCode = 400;
@@ -55,13 +58,43 @@ async function buildSessionSummary(sessionRecord, options = {}) {
       courseCount = uniqueValues(classSections.map((section) => section.courseId)).length;
     }
 
-    const studentWhere = [];
-    if (classSectionTermIds.length) studentWhere.push({ classSectionTermId: { [Op.in]: classSectionTermIds } });
-    if (classSectionIds.length) studentWhere.push({ classSectionsId: { [Op.in]: classSectionIds } });
+    const mapperStudentRows = await model.classStudentMapperModel.findAll({
+      attributes: ["studentId"],
+      where: {
+        classSectionTermId: { [Op.in]: classSectionTermIds },
+        ...buildScope(model.classStudentMapperModel)
+      },
+      raw: true,
+      transaction: options.transaction
+    });
+    const mapperStudentIds = mapperStudentRows.map((r) => r.studentId);
 
-    if (studentWhere.length) {
-      totalStudents = await examinationSessionRepository.countStudentClassSectionHistory({ [Op.or]: studentWhere }, options);
-    }
+    const directStudentRows = await scoped(model.studentModel).findAll({
+      attributes: ["studentId"],
+      where: {
+        classSectionTermId: { [Op.in]: classSectionTermIds }
+      },
+      raw: true,
+      transaction: options.transaction
+    });
+    const directStudentIds = directStudentRows.map((r) => r.studentId);
+
+    const historyStudentRows = await model.studentClassSectionsHistoryModel.findAll({
+      attributes: ["studentId"],
+      where: {
+        classSectionTermId: { [Op.in]: classSectionTermIds }
+      },
+      raw: true,
+      transaction: options.transaction
+    });
+    const historyStudentIds = historyStudentRows.map((r) => r.studentId);
+
+    const allStudentIds = new Set([
+      ...mapperStudentIds,
+      ...directStudentIds,
+      ...historyStudentIds
+    ]);
+    totalStudents = allStudentIds.size;
   }
 
   return {
@@ -124,12 +157,24 @@ export async function createExaminationSession(sessionData, options = {}) {
     const { classSectionTerms, ...mainData } = sessionData;
 
     if (mainData.assessmentTypeId) {
-      const existing = await examinationSessionRepository.findExaminationSessionByAssessmentTypeId(
-        mainData.assessmentTypeId,
-        { ...options, transaction },
-      );
-      if (existing) {
-        throw createBadRequestError("An examination session for this assessment type already exists.");
+      if (Array.isArray(classSectionTerms) && classSectionTerms.length > 0) {
+        const newTermIds = classSectionTerms.map((t) => Number(t.classSectionTermId));
+        const existingOverlap = await examinationSessionRepository.findOverlapTermForAssessmentType(
+          mainData.assessmentTypeId,
+          newTermIds,
+          { ...options, transaction }
+        );
+        if (existingOverlap) {
+          throw createBadRequestError("An examination session for this assessment type already exists with overlapping terms.");
+        }
+      } else {
+        const existing = await examinationSessionRepository.findExaminationSessionByAssessmentTypeId(
+          mainData.assessmentTypeId,
+          { ...options, transaction },
+        );
+        if (existing) {
+          throw createBadRequestError("An examination session for this assessment type already exists.");
+        }
       }
     }
 
@@ -202,14 +247,35 @@ export async function updateExaminationSession(id, updateData = {}, options = {}
     const sessionId = Number(id);
     const { classSectionTerms, ...mainUpdateData } = updateData;
 
-    if (mainUpdateData.assessmentTypeId) {
-      const existing = await examinationSessionRepository.findExaminationSessionByAssessmentTypeIdExcludingId(
-        mainUpdateData.assessmentTypeId,
-        sessionId,
-        { ...options, transaction },
-      );
-      if (existing) {
-        throw createBadRequestError("An examination session for this assessment type already exists.");
+    const activeAssessmentTypeId = mainUpdateData.assessmentTypeId || (await examinationSessionRepository.getExaminationSessionById(sessionId, { ...options, transaction }))?.assessmentTypeId;
+
+    if (activeAssessmentTypeId) {
+      let targetTerms = classSectionTerms;
+      if (!Array.isArray(targetTerms)) {
+        const existingTerms = await examinationSessionRepository.findExaminationSessionTerms(sessionId, { ...options, transaction });
+        targetTerms = existingTerms.map((t) => ({ classSectionTermId: t.classSectionTermId }));
+      }
+
+      if (targetTerms.length > 0) {
+        const termIds = targetTerms.map((t) => Number(t.classSectionTermId));
+        const existingOverlap = await examinationSessionRepository.findOverlapTermForAssessmentTypeExcludingSession(
+          activeAssessmentTypeId,
+          sessionId,
+          termIds,
+          { ...options, transaction }
+        );
+        if (existingOverlap) {
+          throw createBadRequestError("An examination session for this assessment type already exists with overlapping terms.");
+        }
+      } else {
+        const existing = await examinationSessionRepository.findExaminationSessionByAssessmentTypeIdExcludingId(
+          activeAssessmentTypeId,
+          sessionId,
+          { ...options, transaction },
+        );
+        if (existing) {
+          throw createBadRequestError("An examination session for this assessment type already exists.");
+        }
       }
     }
 

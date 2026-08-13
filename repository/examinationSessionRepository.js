@@ -113,24 +113,24 @@ export async function findClassSectionTerms(where, options = {}) {
 }
 
 export async function createExaminationSessionTerms(termData, options = {}) {
-  return model.examinationSessionTermModel.bulkCreate(termData, {
+  return scoped(model.examinationSessionTermModel).bulkCreate(termData, {
     transaction: options.transaction,
   });
 }
 
 export async function createExaminationSessionTerm(termData, options = {}) {
-  return model.examinationSessionTermModel.create(termData, options);
+  return scoped(model.examinationSessionTermModel).create(termData, options);
 }
 
 export async function deleteExaminationSessionTermsBySessionId(examinationSessionId, options = {}) {
-  return model.examinationSessionTermModel.destroy({
+  return scoped(model.examinationSessionTermModel).destroy({
     where: { examinationSessionId: Number(examinationSessionId) },
     transaction: options.transaction,
   });
 }
 
 export async function findExaminationSessionTermById(examinationSessionTermId, options = {}) {
-  return model.examinationSessionTermModel.findOne({
+  return scoped(model.examinationSessionTermModel).findOne({
     where: { examinationSessionTermId: Number(examinationSessionTermId) },
     transaction: options.transaction,
   });
@@ -352,6 +352,50 @@ export async function findExamSchedulesBySlotIds(slotIds, options = {}) {
       [{ model: model.examinationSessionSlotModel, as: "examinationSessionSlot" }, "slotNumber", "ASC"],
       ["examTime", "ASC"],
     ],
+    transaction: options.transaction,
+  });
+}
+
+export async function findOverlapTermForAssessmentType(assessmentTypeId, classSectionTermIds, options = {}) {
+  return scoped(model.examinationSessionTermModel).findOne({
+    where: {
+      classSectionTermId: { [Op.in]: classSectionTermIds },
+    },
+    include: [
+      {
+        model: model.examinationSessionModel,
+        as: "examinationSession",
+        where: { assessmentTypeId: Number(assessmentTypeId) },
+        required: true,
+      },
+    ],
+    transaction: options.transaction,
+  });
+}
+
+export async function findOverlapTermForAssessmentTypeExcludingSession(assessmentTypeId, sessionId, classSectionTermIds, options = {}) {
+  return scoped(model.examinationSessionTermModel).findOne({
+    where: {
+      classSectionTermId: { [Op.in]: classSectionTermIds },
+    },
+    include: [
+      {
+        model: model.examinationSessionModel,
+        as: "examinationSession",
+        where: {
+          assessmentTypeId: Number(assessmentTypeId),
+          examinationSessionId: { [Op.ne]: Number(sessionId) },
+        },
+        required: true,
+      },
+    ],
+    transaction: options.transaction,
+  });
+}
+
+export async function findExaminationSessionTerms(examinationSessionId, options = {}) {
+  return scoped(model.examinationSessionTermModel).findAll({
+    where: { examinationSessionId: Number(examinationSessionId) },
     transaction: options.transaction,
   });
 }
