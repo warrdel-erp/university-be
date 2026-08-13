@@ -250,8 +250,13 @@ export async function getHallTicketSummary(examinationSessionId, filters = {}) {
     cstObj.totalStudents++;
 
     const eligibilityRecord = student.examinationSessionEligibilities?.[0];
-    const status = eligibilityRecord?.status || "REVIEW";
-    const conditions = evaluateReviewConditions(eligibilityRecord?.reviewReason || "");
+    const calculated = examinationSessionEligibilityServices.calculateStudentEligibility(raw);
+    const status = eligibilityRecord?.status || (calculated.eligibilityStatus === "Ready" ? "READY" : (calculated.eligibilityStatus === "Blocked" ? "BLOCKED" : "REVIEW"));
+    
+    const conditions = evaluateReviewConditions(
+      eligibilityRecord?.reviewReason || calculated.reasonText || "",
+      calculated.reviewReasons
+    );
 
     if (status === "APPROVED") {
       approvedStudentCount++;
@@ -259,7 +264,6 @@ export async function getHallTicketSummary(examinationSessionId, filters = {}) {
       cstObj.approvedStudentCount++;
     }
 
-    // Only count pending flags for REVIEW students.
     if (status !== "APPROVED" && status !== "READY") {
       if (conditions.ATTENDANCE_PENDING) { attendanceShortage++; termObj.attendanceShortage++; cstObj.attendanceShortage++; }
       if (conditions.REGISTRATION_PENDING) { registrationPending++; termObj.registrationPending++; cstObj.registrationPending++; }
@@ -296,20 +300,23 @@ export async function getStudentsByReviewReasons(examinationSessionId, filters =
 
   for (const raw of repoResult) {
     const student = raw.student;
+    if (!student) continue;
     const studentId = student.studentId;
     if (seenStudents.has(studentId)) continue;
 
+    const eligibilityRecord = student.examinationSessionEligibilities?.[0];
+    const calculated = examinationSessionEligibilityServices.calculateStudentEligibility(raw);
+
     const dbStatus =
-      student.examinationSessionEligibilities?.[0]?.status ||
+      eligibilityRecord?.status ||
       dbStatusMap.get(studentId) ||
-      "REVIEW";
+      (calculated.eligibilityStatus === "Ready" ? "READY" : (calculated.eligibilityStatus === "Blocked" ? "BLOCKED" : "REVIEW"));
 
     // Only include REVIEW students.
     if (dbStatus !== "REVIEW") continue;
 
-    const eligibilityRecord = student.examinationSessionEligibilities?.[0];
-    const reason = eligibilityRecord?.reviewReason || "";
-    const conditions = evaluateReviewConditions(reason);
+    const reason = eligibilityRecord?.reviewReason || calculated.reasonText || "";
+    const conditions = evaluateReviewConditions(reason, calculated.reviewReasons);
 
     const matches =
       filters.filters && filters.filters.length > 0
