@@ -64,6 +64,13 @@ export async function getQuestionPapers(filters = {}, pagination = {}) {
                     as: "examSchedule",
                     required: true,
                     where: buildScope(model.examScheduleModel),
+                    include: [
+                        {
+                            model: model.examinationSessionModel,
+                            as: "examinationSession",
+                            attributes: ["sessionName"],
+                        }
+                    ]
                 },
             ],
             limit: limit ? parseInt(limit, 10) : undefined,
@@ -190,7 +197,15 @@ export async function deleteQuestionPaper(id) {
 
 export async function getExamScheduleById(id) {
     try {
-        return await scoped(model.examScheduleModel).findByPk(id);
+        return await scoped(model.examScheduleModel).findByPk(id, {
+            include: [
+                {
+                    model: model.examinationSessionModel,
+                    as: "examinationSession",
+                    attributes: ["sessionName"],
+                }
+            ]
+        });
     } catch (error) {
         console.error("Error fetching exam schedule:", error);
         throw error;

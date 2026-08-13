@@ -106,7 +106,9 @@ function transformQuestionPaper(paper, schedule) {
             examDate: plainSched.examDate,
             examTime: plainSched.examTime,
             type: plainSched.type,
-            duration: plainSched.duration != null ? Number(plainSched.duration) : null
+            duration: plainSched.duration != null ? Number(plainSched.duration) : null,
+            examName: plainSched.examinationSession?.sessionName ?? null,
+            examinationSessionName: plainSched.examinationSession?.sessionName ?? null
         };
     }
 
