@@ -115,8 +115,8 @@ export const buildScope = (model, options = {}) => {
   return where;
 };
 
-export const scoped = (model) => {
-  const baseWhere = buildScope(model);
+export const scoped = (model, options = {}) => {
+  const baseWhere = buildScope(model, options);
   const pk = model.primaryKeyAttribute || "id";
   const writeScope = scopeFieldsForModel(model, baseWhere);
 

@@ -1965,12 +1965,39 @@ export async function getNormalRoutinesBySectionIdRepository(classSectionsId) {
   return getNormalRoutinesBySectionScopeRepository({ classSectionsId });
 }
 
-export async function getElectiveRoutinesByTableNamesRepository(timeTableNameIds, userId) {
+export async function getElectiveRoutinesByTableNamesRepository(timeTableNameIds, userId, normalRoutines) {
+  const whereClause = {
+    timeTableType: 'elective',
+  };
+
+  if (normalRoutines && normalRoutines.length) {
+    const toDateStr = (d) => {
+      if (!d) return null;
+      if (d instanceof Date) {
+        return d.toISOString().split('T')[0];
+      }
+      if (typeof d === 'string') {
+        return d.split(' ')[0].split('T')[0];
+      }
+      return d;
+    };
+
+    const orConditions = normalRoutines.map((nr) => {
+      const plain = nr.get ? nr.get({ plain: true }) : nr;
+      const startStr = toDateStr(plain.startingDate);
+      const endStr = toDateStr(plain.endingDate);
+      return {
+        timetableStructureCourseMapperId: plain.timetableStructureCourseMapperId,
+        startingDate: { [Op.gte]: new Date(startStr + 'T00:00:00.000Z') },
+        endingDate: { [Op.lte]: new Date(endStr + 'T00:00:00.000Z') },
+      };
+    });
+    whereClause[Op.or] = orConditions;
+  }
+
   return await scoped(model.timeTableRoutineModel).findAll({
-    where: {
-      timeTableType: 'elective',
-    },
-    attributes: ['timeTableRoutineId', 'timetableStructureCourseMapperId', 'timeTableType'],
+    where: whereClause,
+    attributes: ['timeTableRoutineId', 'timetableStructureCourseMapperId', 'timeTableType', 'startingDate', 'endingDate'],
     include: [
       {
         model: model.timeTableStructureCourseModel,
@@ -2162,6 +2189,7 @@ async function fetchElectiveCellsForTeacher(
   courseId,
   sessionId,
   timeTableNameIds,
+  normalRoutines,
 ) {
   if (!timeTableNameIds.length) {
     return new Map();
@@ -2177,9 +2205,34 @@ async function fetchElectiveCellsForTeacher(
     ];
   }
 
+  if (normalRoutines && normalRoutines.length) {
+    const toDateStr = (d) => {
+      if (!d) return null;
+      if (d instanceof Date) {
+        return d.toISOString().split('T')[0];
+      }
+      if (typeof d === 'string') {
+        return d.split(' ')[0].split('T')[0];
+      }
+      return d;
+    };
+
+    const orConditions = normalRoutines.map((nr) => {
+      const plain = nr.get ? nr.get({ plain: true }) : nr;
+      const startStr = toDateStr(plain.startingDate);
+      const endStr = toDateStr(plain.endingDate);
+      return {
+        timetableStructureCourseMapperId: plain.timetableStructureCourseMapperId,
+        startingDate: { [Op.gte]: new Date(startStr + 'T00:00:00.000Z') },
+        endingDate: { [Op.lte]: new Date(endStr + 'T00:00:00.000Z') },
+      };
+    });
+    electiveWhere[Op.or] = orConditions;
+  }
+
   const electiveRoutines = await scoped(model.timeTableRoutineModel).findAll({
     where: electiveWhere,
-    attributes: ['timeTableRoutineId', 'timetableStructureCourseMapperId', 'academicGroupId'],
+    attributes: ['timeTableRoutineId', 'timetableStructureCourseMapperId', 'academicGroupId', 'startingDate', 'endingDate'],
     include: [
       {
         model: model.timeTableStructureCourseModel,
@@ -2230,6 +2283,11 @@ async function fetchElectiveCellsForTeacher(
     if (!mapping || mapping.timeTableNameId == null || !cells.length) {
       continue;
     }
+    for (const cell of cells) {
+      cell.setDataValue('startingDate', electiveRoutine.startingDate);
+      cell.setDataValue('endingDate', electiveRoutine.endingDate);
+      cell.setDataValue('electiveRoutineId', electiveRoutine.timeTableRoutineId);
+    }
     const tableNameId = mapping.timeTableNameId;
     const existing = electiveCellsByTableNameId.get(tableNameId) || [];
     electiveCellsByTableNameId.set(
@@ -2263,6 +2321,7 @@ export async function getTeacherRoutineBundle(userId, courseId, sessionId, subje
     courseId,
     sessionId,
     timeTableNameIds,
+    safeNormalRoutines,
   );
 
   const routines = [];
