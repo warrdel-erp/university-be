@@ -210,32 +210,102 @@ export async function getListOfRooms(filters, pagination, options = {}) {
 }
 
 export async function getInvigilatorSummary(filters, options = {}) {
-  const result = await getListOfRooms(filters, { page: 1, limit: 999999 }, options);
-  const list = result.rooms;
+  const mappedFilters = {
+    ...filters,
+    sessionId: filters.sessionId || filters.examinationSessionId,
+  };
 
-  let totalRooms = 0, readyRooms = 0, partialRooms = 0, requiredInvigilators = 0, assignedInvigilators = 0;
+  const { rows: schedules } = await examInvigilatorAssignmentRepository.getSchedulesFiltered(mappedFilters, { page: 1, limit: 999999 }, options);
+  const scheduleIds = schedules.map((s) => s.examScheduleId);
+  if (!scheduleIds.length) {
+    return {
+      totalRooms: 0,
+      readyRooms: 0,
+      partialRooms: 0,
+      pendingRooms: 0,
+      requiredInvigilators: 0,
+      assignedInvigilators: 0,
+      pendingInvigilators: 0,
+    };
+  }
 
-  for (const item of list) {
-    const summary = item.getDataValue("summary") || {};
-    totalRooms += summary.totalRooms || 0;
-    requiredInvigilators += summary.requiredInvigilatorCount || 0;
-    assignedInvigilators += summary.assignedInvigilatorCount || 0;
+  const roomCapacities = await examInvigilatorAssignmentRepository.getRoomCapacitiesForSchedules(scheduleIds, options);
+  if (!roomCapacities.length) {
+    return {
+      totalRooms: 0,
+      readyRooms: 0,
+      partialRooms: 0,
+      pendingRooms: 0,
+      requiredInvigilators: 0,
+      assignedInvigilators: 0,
+      pendingInvigilators: 0,
+    };
+  }
 
-    const capacities = item.getDataValue("examScheduleRoomCapacities") || [];
-    for (const rc of capacities) {
-      const assignedCount = (rc.getDataValue("examInvigilatorAssignments") || []).length;
-      if (assignedCount >= 2) readyRooms++;
-      else if (assignedCount > 0) partialRooms++;
+  const scheduleMap = new Map(schedules.map((s) => [s.examScheduleId, s]));
+
+  const physicalRooms = new Map();
+  for (const rc of roomCapacities) {
+    const sched = scheduleMap.get(rc.examScheduleId);
+    if (!sched) continue;
+    const key = `${sched.examDate}_${sched.examinationSessionSlotId}_${rc.classRoomSectionId}`;
+    if (!physicalRooms.has(key)) {
+      physicalRooms.set(key, {
+        classRoomSectionId: rc.classRoomSectionId,
+        examDate: sched.examDate,
+        examinationSessionSlotId: sched.examinationSessionSlotId,
+      });
     }
   }
+
+  const classRoomSectionIds = [...new Set(roomCapacities.map((rc) => rc.classRoomSectionId))];
+  const examDates = [...new Set(schedules.map((s) => s.examDate))];
+  const slotIds = [...new Set(schedules.map((s) => s.examinationSessionSlotId))];
+
+  const assignments = await examInvigilatorAssignmentRepository.getAssignmentsForRooms(classRoomSectionIds, examDates, slotIds, options);
+
+  const assignmentsMap = new Map();
+  for (const ass of assignments) {
+    const key = `${ass.examDate}_${ass.examinationSessionSlotId}_${ass.classRoomSectionId}`;
+    if (!assignmentsMap.has(key)) {
+      assignmentsMap.set(key, []);
+    }
+    assignmentsMap.get(key).push(ass);
+  }
+
+  let totalRooms = physicalRooms.size;
+  let readyRooms = 0;
+  let partialRooms = 0;
+  let pendingRooms = 0;
+  let assignedInvigilators = 0;
+
+  const requiredPerRoom = 2;
+
+  for (const [key, room] of physicalRooms.entries()) {
+    const roomAssignments = assignmentsMap.get(key) || [];
+    const assignedCount = roomAssignments.length;
+    assignedInvigilators += assignedCount;
+
+    if (assignedCount >= requiredPerRoom) {
+      readyRooms++;
+    } else if (assignedCount > 0) {
+      partialRooms++;
+    } else {
+      pendingRooms++;
+    }
+  }
+
+  const requiredInvigilators = totalRooms * requiredPerRoom;
+  const pendingInvigilators = Math.max(0, requiredInvigilators - assignedInvigilators);
 
   return {
     totalRooms,
     readyRooms,
     partialRooms,
+    pendingRooms,
     requiredInvigilators,
     assignedInvigilators,
-    pendingInvigilators: Math.max(0, requiredInvigilators - assignedInvigilators),
+    pendingInvigilators,
   };
 }
 
@@ -244,7 +314,85 @@ export async function getAssignmentsByUserId(userId, examinationSessionId, optio
 }
 
 export async function getAssignmentsByExamScheduleId(examScheduleId, options = {}) {
-  return examInvigilatorAssignmentRepository.getAssignmentsByExamScheduleId(examScheduleId, options);
+  const parsedId = Number(examScheduleId);
+  if (isNaN(parsedId)) return null;
+
+  const schedule = await examInvigilatorAssignmentRepository.findScheduleById(parsedId, options);
+  if (!schedule) return null;
+
+  const roomCapacities = await examInvigilatorAssignmentRepository.findRoomCapacitiesBySchedule(parsedId, options);
+
+  const classRoomSectionIds = roomCapacities.map((rc) => rc.classRoomSectionId);
+  const roomCapacityIds = roomCapacities.map((rc) => rc.examScheduleRoomCapacityId);
+
+  const [assignments, seatCounts] = await Promise.all([
+    classRoomSectionIds.length
+      ? examInvigilatorAssignmentRepository.getAssignmentsForRooms(
+          classRoomSectionIds,
+          [schedule.examDate],
+          [schedule.examinationSessionSlotId],
+          options,
+        )
+      : [],
+    roomCapacityIds.length
+      ? examInvigilatorAssignmentRepository.getSeatCounts(roomCapacityIds, options)
+      : [],
+  ]);
+
+  const assignmentsMap = new Map();
+  for (const row of assignments) {
+    const key = row.classRoomSectionId;
+    if (!assignmentsMap.has(key)) {
+      assignmentsMap.set(key, []);
+    }
+    assignmentsMap.get(key).push(row);
+  }
+
+  const seatCountMap = new Map(
+    seatCounts.map((r) => [r.examScheduleRoomCapacityId, parseInt(r.studentCount, 10) || 0]),
+  );
+
+  let totalRoomCapacitySum = 0;
+  let studentCountSum = 0;
+  let assignedInvigilatorCount = 0;
+
+  for (const rc of roomCapacities) {
+    const roomAssignments = assignmentsMap.get(rc.classRoomSectionId) || [];
+    const studentCount = seatCountMap.get(rc.examScheduleRoomCapacityId) || 0;
+
+    totalRoomCapacitySum += rc.capacity || 0;
+    studentCountSum += studentCount;
+    assignedInvigilatorCount += roomAssignments.length;
+
+    rc.setDataValue("studentCount", studentCount);
+    rc.setDataValue("examInvigilatorAssignments", roomAssignments);
+    rc.setDataValue("totalInvigilators", roomAssignments.length);
+    rc.setDataValue("invigilatorRequired", 2);
+  }
+
+  const totalRooms = roomCapacities.length;
+  const requiredInvigilatorCount = totalRooms * 2;
+  const pendingInvigilatorCount = Math.max(0, requiredInvigilatorCount - assignedInvigilatorCount);
+
+  let status = "PENDING";
+  if (assignedInvigilatorCount >= requiredInvigilatorCount) {
+    status = "ASSIGNED";
+  } else if (assignedInvigilatorCount > 0) {
+    status = "PARTIAL";
+  }
+
+  schedule.setDataValue("examScheduleRoomCapacities", roomCapacities);
+  schedule.setDataValue("summary", {
+    totalRooms,
+    totalRoomCapacitySum,
+    studentCount: studentCountSum,
+    requiredInvigilatorCount,
+    assignedInvigilatorCount,
+    pendingInvigilatorCount,
+    status,
+  });
+
+  return schedule;
 }
 
 export async function getFacultyAvailability(examScheduleId, options = {}) {

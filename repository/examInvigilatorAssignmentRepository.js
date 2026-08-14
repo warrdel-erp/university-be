@@ -633,15 +633,9 @@ export async function getAssignmentsByUserId(
   };
 }
 
-export async function getAssignmentsByExamScheduleId(
-  examScheduleId,
-  options = {},
-) {
-  const parsedId = Number(examScheduleId);
-  if (isNaN(parsedId)) return null;
-
-  const schedule = await scoped(model.examScheduleModel).findOne({
-    where: { examScheduleId: parsedId },
+export async function findScheduleById(examScheduleId, options = {}) {
+  return scoped(model.examScheduleModel).findOne({
+    where: { examScheduleId },
     attributes: [
       "examScheduleId",
       "examDate",
@@ -674,23 +668,27 @@ export async function getAssignmentsByExamScheduleId(
     ],
     transaction: options.transaction,
   });
+}
 
-  if (!schedule) return null;
-
-  const roomCapacities = await scoped(model.examScheduleRoomCapacityModel).findAll({
+export async function findRoomCapacitiesBySchedule(examScheduleId, options = {}) {
+  return scoped(model.examScheduleRoomCapacityModel).findAll({
     where: {
-      examScheduleId: parsedId,
+      examScheduleId,
       ...buildScope(model.examScheduleRoomCapacityModel),
     },
     attributes: [
       "examScheduleRoomCapacityId",
       "classRoomSectionId",
+      "examScheduleId",
       "capacity",
+      "columns",
+      "orderKey",
     ],
     include: [
       {
         model: model.classRoomModel,
         as: "classRoom",
+        required: true,
         attributes: [
           "classRoomSectionId",
           "roomNumber",
@@ -698,38 +696,10 @@ export async function getAssignmentsByExamScheduleId(
           "examCapacity",
         ],
         where: buildScope(model.classRoomModel),
-        required: true,
-        include: [
-          {
-            model: model.examInvigilatorAssignmentModel,
-            as: "examInvigilatorAssignments",
-            where: {
-              examDate: schedule.examDate,
-              examinationSessionSlotId: schedule.examinationSessionSlotId,
-            },
-            required: false,
-            attributes: [
-              "examInvigilatorAssignmentId",
-              "classRoomSectionId",
-              "userId",
-              "role",
-            ],
-            include: [
-              {
-                model: model.users,
-                as: "user",
-                attributes: ["userId", "userName", "email"],
-              },
-            ],
-          },
-        ],
       },
     ],
     transaction: options.transaction,
   });
-
-  schedule.setDataValue("roomCapacities", roomCapacities);
-  return schedule;
 }
 
 export async function getAssignmentsByDateAndSlot(examDate, examinationSessionSlotId, options = {}) {
@@ -761,3 +731,5 @@ export async function getAllEmployeesWithUser(options = {}) {
     transaction: options.transaction,
   });
 }
+
+

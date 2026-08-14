@@ -124,13 +124,24 @@ const byExamScheduleIdSchema = {
   }),
 };
 
+const getInvigilatorSummarySchema = {
+  query: z.object({
+    examinationSessionId: positiveIntegerQueryId,
+    courseId: positiveIntegerId,
+    sessionId: positiveIntegerId,
+    term: positiveIntegerId,
+    examDate: z.preprocess(emptyToUndefined, z.string().optional()),
+    examinationSessionSlotId: positiveIntegerQueryId,
+  }),
+};
+
 router.post("/", userAuth, validate(createSchema), createAssignment);
 
 router.patch("/", userAuth, validate(updateSchema), updateAssignment);
 router.get(
   "/summary",
   userAuth,
-  validate(getExamRoomsSchema),
+  validate(getInvigilatorSummarySchema),
   getInvigilatorSummary,
 );
 router.get("/rooms", userAuth, validate(getExamRoomsSchema), getListOfRooms);
@@ -149,6 +160,7 @@ router.get(
   validate(byUserIdSchema),
   getAssignmentsByUserId,
 );
+
 router.get(
   "/byExamScheduleId",
   userAuth,

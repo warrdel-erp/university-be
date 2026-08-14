@@ -122,10 +122,9 @@ export async function getInvigilatorSummary(req, res) {
             examinationSessionSlotId
         } = req.query;
 
-        const actualSessionId = sessionId || examinationSessionId;
-
         const result = await examInvigilatorAssignmentServices.getInvigilatorSummary({
-            sessionId: actualSessionId,
+            examinationSessionId,
+            sessionId,
             courseId,
             term,
             examDate,

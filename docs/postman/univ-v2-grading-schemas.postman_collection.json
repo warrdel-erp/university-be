@@ -1814,7 +1814,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examInvigilatorAssignment/summary?examinationSessionId=1&examinationSessionSlotId=1&courseId=1&term=1&examDate=2026-12-01",
+              "raw": "{{baseurl}}/examInvigilatorAssignment/summary?examinationSessionId=1&courseId=34&sessionId=6&term=4&examDate=2026-12-01",
               "host": ["{{baseurl}}"],
               "path": ["examInvigilatorAssignment", "summary"],
               "query": [
@@ -1823,16 +1823,16 @@
                   "value": "1"
                 },
                 {
-                  "key": "examinationSessionSlotId",
-                  "value": "1"
+                  "key": "courseId",
+                  "value": "34"
                 },
                 {
-                  "key": "courseId",
-                  "value": "1"
+                  "key": "sessionId",
+                  "value": "6"
                 },
                 {
                   "key": "term",
-                  "value": "1"
+                  "value": "4"
                 },
                 {
                   "key": "examDate",
