@@ -396,7 +396,7 @@ export async function getAssignmentsByExamScheduleId(examScheduleId, options = {
 }
 
 export async function getFacultyAvailability(examScheduleId, options = {}) {
-  const schedule = await examInvigilatorAssignmentRepository.getAssignmentsByExamScheduleId(examScheduleId, options);
+  const schedule = await examInvigilatorAssignmentRepository.findScheduleById(examScheduleId, options);
   if (!schedule) {
     const err = new Error("Exam schedule not found");
     err.statusCode = 404;
