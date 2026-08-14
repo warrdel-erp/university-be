@@ -3010,7 +3010,7 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
   for (const r of normalRoutines) {
     timeTableNameIds.push(r.structureCourseMapping.timeTableNameId);
   }
-  const electiveRoutines = await timeTableCreateRepository.getElectiveRoutinesByTableNamesRepository(timeTableNameIds);
+  const electiveRoutines = await timeTableCreateRepository.getElectiveRoutinesByTableNamesRepository(timeTableNameIds, null, normalRoutines);
 
   const allCellsForLookup = [];
   for (const routine of normalRoutines) {
@@ -3028,6 +3028,8 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
   const daysList = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const structuresById = new Map();
 
+  const toDateStr = (d) => d ? new Date(d).toISOString().split('T')[0] : '';
+
   for (const routine of normalRoutines) {
     const mapping = routine.structureCourseMapping;
     const timeTableNameId = mapping.timeTableNameId;
@@ -3035,9 +3037,16 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
     const periods = timeTableCreateName.timeTableName || [];
     const normalCells = routine.timeTableCells || [];
 
+    const routineStart = toDateStr(routine.startingDate);
+    const routineEnd = toDateStr(routine.endingDate);
+
     const matchingElectives = [];
     for (const er of electiveRoutines) {
-      if (er.structureCourseMapping.timeTableNameId === timeTableNameId) {
+      if (
+        er.structureCourseMapping.timeTableNameId === timeTableNameId &&
+        toDateStr(er.startingDate) >= routineStart &&
+        toDateStr(er.endingDate) <= routineEnd
+      ) {
         matchingElectives.push(er);
       }
     }
@@ -3194,7 +3203,7 @@ export async function getRoutineByAcademicGroupId(academicGroupId) {
   for (const r of normalRoutines) {
     timeTableNameIds.push(r.structureCourseMapping.timeTableNameId);
   }
-  const electiveRoutines = await timeTableCreateRepository.getElectiveRoutinesByTableNamesRepository(timeTableNameIds);
+  const electiveRoutines = await timeTableCreateRepository.getElectiveRoutinesByTableNamesRepository(timeTableNameIds, null, normalRoutines);
 
   const allCellsForLookup = [];
   for (const routine of normalRoutines) {
@@ -3212,6 +3221,8 @@ export async function getRoutineByAcademicGroupId(academicGroupId) {
   const daysList = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const structuresById = new Map();
 
+  const toDateStr = (d) => d ? new Date(d).toISOString().split('T')[0] : '';
+
   for (const routine of normalRoutines) {
     const mapping = routine.structureCourseMapping;
     const timeTableNameId = mapping.timeTableNameId;
@@ -3219,9 +3230,16 @@ export async function getRoutineByAcademicGroupId(academicGroupId) {
     const periods = timeTableCreateName.timeTableName || [];
     const normalCells = routine.timeTableCells || [];
 
+    const routineStart = toDateStr(routine.startingDate);
+    const routineEnd = toDateStr(routine.endingDate);
+
     const matchingElectives = [];
     for (const er of electiveRoutines) {
-      if (er.structureCourseMapping.timeTableNameId === timeTableNameId) {
+      if (
+        er.structureCourseMapping.timeTableNameId === timeTableNameId &&
+        toDateStr(er.startingDate) >= routineStart &&
+        toDateStr(er.endingDate) <= routineEnd
+      ) {
         matchingElectives.push(er);
       }
     }
@@ -3795,12 +3813,18 @@ export async function getRoutineByTeacherAndAcademicYear(userId, courseId, sessi
     const timeTableCreateName = mapping.timeTableStructure;
     const periods = timeTableCreateName.timeTableName || [];
     
+    const toDateStr = (d) => d ? new Date(d).toISOString().split('T')[0] : '';
+    const routineStart = toDateStr(routine.startingDate);
+    const routineEnd = toDateStr(routine.endingDate);
+
     // Filter cells down to only those matching the requested userId
     const normalCells = (routine.timeTableCells || []).filter(cell => 
       cell.timeTableCellTeachers && cell.timeTableCellTeachers.length > 0
     );
     const filteredElectiveCells = (electiveCells || []).filter(cell => 
-      cell.timeTableCellTeachers && cell.timeTableCellTeachers.length > 0
+      cell.timeTableCellTeachers && cell.timeTableCellTeachers.length > 0 &&
+      toDateStr(cell.getDataValue('startingDate')) >= routineStart &&
+      toDateStr(cell.getDataValue('endingDate')) <= routineEnd
     );
 
     if (!normalCells.length && !filteredElectiveCells.length) {
@@ -4370,11 +4394,21 @@ export async function getDateWiseCellsBySection(
   if (timeTableNameId != null) {
     const electiveRoutines = await timeTableCreateRepository.getElectiveRoutinesByTableNamesRepository(
       [timeTableNameId],
+      null,
+      [selectedRoutine]
     );
+    const toDateStr = (d) => d ? new Date(d).toISOString().split('T')[0] : '';
+    const selectedStart = toDateStr(plainSelected.startingDate);
+    const selectedEnd = toDateStr(plainSelected.endingDate);
     for (const electiveRoutine of electiveRoutines) {
-      const cells = electiveRoutine.timeTableCells || [];
-      for (const cell of cells) {
-        electiveCells.push(cell);
+      if (
+        toDateStr(electiveRoutine.startingDate) >= selectedStart &&
+        toDateStr(electiveRoutine.endingDate) <= selectedEnd
+      ) {
+        const cells = electiveRoutine.timeTableCells || [];
+        for (const cell of cells) {
+          electiveCells.push(cell);
+        }
       }
     }
   }
