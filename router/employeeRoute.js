@@ -24,7 +24,7 @@ const optionalPositiveId = z.preprocess(
     z.coerce.number().int().positive().optional(),
 );
 
-// Shared query schema for GET /employee/schedule and GET /employee/pastSchedule.
+// Shared query schema for GET /employee/schedule, GET /employee/pastSchedule, GET /employee/upcomingSchedule and GET /employee/uniqueClassSectionSubjects.
 const scheduleQuerySchema = z.object({
     userId: z.coerce.number().int().positive(),
     date: z.string().optional(),
@@ -32,10 +32,14 @@ const scheduleQuerySchema = z.object({
     groupPeriods: z.enum(['false', 'sessional', 'consecutive']).optional(),
     instituteId: optionalPositiveId,
     universityId: optionalPositiveId,
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
 }).passthrough();
 
 const uniqueClassSectionSubjectsQuerySchema = z.object({
     userId: positiveIntegerId,
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 
 const teacherSubjectQuerySchema = z.object({
@@ -49,7 +53,7 @@ const teacherSubjectQuerySchema = z.object({
 // ---------------------------------------------------------------------------
 router.get('/schedule', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), validate({ query: scheduleQuerySchema }), getTodayClassSchedule);
 router.get('/pastSchedule', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), validate({ query: scheduleQuerySchema }), getPastClassSchedules);
-router.get('/upcomingSchedule', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getUpcomingClassSchedules);
+router.get('/upcomingSchedule', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), validate({ query: scheduleQuerySchema }), getUpcomingClassSchedules);
 router.get('/sectionDates', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), validate({ query: sectionDatesQuerySchema }), getEmployeeSectionDates);
 router.get('/sectionCounts', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getSectionCounts);
 
@@ -60,7 +64,7 @@ router.get(
     '/uniqueClassSectionSubjects',
     userAuth,
     checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
-    validate({ query: uniqueClassSectionSubjectsQuerySchema }),
+    validate({ query: scheduleQuerySchema }),
     getUniqueClassSectionSubjects,
 );
 router.get('/coursesFromSchedule', userAuth, checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null), getTeacherSubjectsFromSchedule);

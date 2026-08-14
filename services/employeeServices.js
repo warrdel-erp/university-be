@@ -34,6 +34,7 @@ import { resolveTimeTableRoutineSection } from '../utility/classSectionIncludes.
 import { ROLES } from '../const/roles.js';
 import moment from 'moment';
 import { getTenantStore } from '../utility/requestContext.js';
+import { decimalAdd } from '../utility/decimalMoney.js';
 
 async function generateEmployeeNumber(campusId, instituteId) {
   const getCampusCodeDetail = await getCampusCode(campusId);
@@ -1345,11 +1346,12 @@ function expandScheduleForExactDate(rawSchedules, currentDate) {
   return results;
 }
 
-export async function getTodayClassSchedule(userId, currentDate, sessionId, groupPeriods = false) {
-  const rawSchedules = await employeeScheduleRepository.getTodayClassScheduleForEmployee(
+export async function getTodayClassSchedule(userId, currentDate, sessionId, groupPeriods = false, pagination = {}) {
+  const { rows: rawSchedules, total } = await employeeScheduleRepository.getTodayClassScheduleForEmployee(
     Number(userId),
     currentDate,
     sessionId,
+    pagination,
   );
 
   const strippedSchedules = [];
@@ -1359,13 +1361,14 @@ export async function getTodayClassSchedule(userId, currentDate, sessionId, grou
 
   const schedules = await enrichTodayClassSchedules(strippedSchedules);
 
+  let finalSchedules = schedules;
   if (groupPeriods) {
-    return applyGroupAttendanceStatus(
+    finalSchedules = applyGroupAttendanceStatus(
       await groupConsecutivePeriods(schedules, groupPeriods === 'sessional'),
     );
   }
 
-  return schedules;
+  return { schedules: finalSchedules, total };
 }
 
 export async function getTeacherCourses(userId) {
@@ -1664,12 +1667,14 @@ export async function getPastClassSchedules(
   currentDateString,
   groupPeriods = false,
   sessionId,
+  pagination = {},
 ) {
-  const rawSchedules = await employeeScheduleRepository.getPastClassSchedulesForEmployee(
+  const { rows: rawSchedules, total } = await employeeScheduleRepository.getPastClassSchedulesForEmployee(
     userId,
     academicYearId,
     currentDateString,
     sessionId,
+    pagination,
   );
 
   const teacher = getTeacherDetails(rawSchedules);
@@ -1683,17 +1688,19 @@ export async function getPastClassSchedules(
     return {
       teacher,
       schedules: await applyGroupAttendanceStatus(grouped),
+      total,
     };
   }
 
-  return { teacher, schedules };
+  return { teacher, schedules, total };
 }
 
-export async function getUpcomingClassSchedules(userId, academicYearId, currentDateString, groupPeriods = false) {
-  const upcomingClasses = await employeeScheduleRepository.getUpcomingClassSchedulesForEmployee(
+export async function getUpcomingClassSchedules(userId, academicYearId, currentDateString, groupPeriods = false, pagination = {}) {
+  const { rows: upcomingClasses, total } = await employeeScheduleRepository.getUpcomingClassSchedulesForEmployee(
     userId,
     academicYearId,
     currentDateString,
+    pagination,
   );
 
   const strippedSchedules = [];
@@ -1703,13 +1710,14 @@ export async function getUpcomingClassSchedules(userId, academicYearId, currentD
 
   const schedules = await enrichSchedulesWithAttendance(strippedSchedules);
 
+  let finalSchedules = schedules;
   if (groupPeriods) {
     const grouped = await groupConsecutivePeriods(schedules, groupPeriods === 'sessional');
     grouped.sort((a, b) => new Date(a.date) - new Date(b.date));
-    return applyGroupAttendanceStatus(grouped);
+    finalSchedules = await applyGroupAttendanceStatus(grouped);
   }
 
-  return schedules;
+  return { schedules: finalSchedules, total };
 }
 
 async function groupConsecutivePeriods(classes, sessionalBreak = false) {
@@ -1924,7 +1932,7 @@ function processScheduleCombinations(schedules) {
     const dayStr = schedule.day;
 
     if (startDateStr && endDateStr && dayStr) {
-      entry.totalClasses += countWeekdayInRange(startDateStr, endDateStr, dayStr);
+      entry.totalClasses = decimalAdd(entry.totalClasses, countWeekdayInRange(startDateStr, endDateStr, dayStr));
     }
   }
 
@@ -1946,7 +1954,7 @@ function getEmployeeDetails(schedules) {
     employmentType: employee.employmentType,
     departmentId: employee.departmentId ?? null,
     departmentName: employee.employeeDepartment?.departmentName || employee.departmentName || "",
-    totalClasses: schedules.reduce((acc, schedule) => acc + schedule.totalClasses, 0),
+    totalClasses: schedules.reduce((acc, schedule) => decimalAdd(acc, schedule.totalClasses || 0), 0),
     totalUniqueSubjects: schedules.length
   };
 }
@@ -1957,9 +1965,12 @@ export async function getUniqueClassSectionSubjects(userId, academicYearId) {
     academicYearId,
   );
 
+  const employeeDetails = getEmployeeDetails(schedules);
+  const combinations = processScheduleCombinations(schedules);
+
   return {
-    employeeDetails: getEmployeeDetails(schedules),
-    combinations: processScheduleCombinations(schedules),
+    employeeDetails,
+    combinations,
   };
 }
 

@@ -278,7 +278,7 @@ function dateWiseScheduleIncludes({ sessionId, academicYearId } = {}) {
   ];
 }
 
-export async function getTodayClassScheduleForEmployee(userId, currentDate, sessionId) {
+export async function getTodayClassScheduleForEmployee(userId, currentDate, sessionId, pagination = {}) {
   const includes = dateWiseScheduleIncludes({ sessionId });
   const cellInclude = includes.find((item) => item.as === 'timeTableCell');
   cellInclude.include = cellInclude.include.map((nested) => {
@@ -307,7 +307,16 @@ export async function getTodayClassScheduleForEmployee(userId, currentDate, sess
       result.push(flattenDateWiseScheduleRow(row, userId));
     }
   }
-  return result;
+
+  const total = result.length;
+  const { page, limit } = pagination;
+  let sliced = result;
+  if (page && limit) {
+    const start = (page - 1) * limit;
+    sliced = result.slice(start, start + limit);
+  }
+
+  return { rows: sliced, total };
 }
 
 export async function getPastClassSchedulesForEmployee(
@@ -315,6 +324,7 @@ export async function getPastClassSchedulesForEmployee(
   academicYearId,
   currentDate,
   sessionId,
+  pagination = {},
 ) {
   const rows = await model.timeTableCellDateWiseModel.findAll({
     where: { date: { [Op.lt]: currentDate } },
@@ -329,13 +339,23 @@ export async function getPastClassSchedulesForEmployee(
       result.push(flattenDateWiseScheduleRow(row, userId));
     }
   }
-  return result;
+
+  const total = result.length;
+  const { page, limit } = pagination;
+  let sliced = result;
+  if (page && limit) {
+    const start = (page - 1) * limit;
+    sliced = result.slice(start, start + limit);
+  }
+
+  return { rows: sliced, total };
 }
 
 export async function getUpcomingClassSchedulesForEmployee(
   userId,
   academicYearId,
   currentDate,
+  pagination = {},
 ) {
   const rows = await model.timeTableCellDateWiseModel.findAll({
     where: { date: { [Op.gte]: currentDate } },
@@ -350,7 +370,16 @@ export async function getUpcomingClassSchedulesForEmployee(
       result.push(flattenDateWiseScheduleRow(row, userId));
     }
   }
-  return result;
+
+  const total = result.length;
+  const { page, limit } = pagination;
+  let sliced = result;
+  if (page && limit) {
+    const start = (page - 1) * limit;
+    sliced = result.slice(start, start + limit);
+  }
+
+  return { rows: sliced, total };
 }
 
 export async function getUniqueClassSectionSubjectsForEmployee(userId, academicYearId) {
