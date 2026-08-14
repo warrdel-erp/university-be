@@ -17,9 +17,9 @@ function questionFiltersWhere(filters, subjectIds) {
     };
 }
 
-export async function addQuestion(questionData) {
+export async function addQuestion(questionData, options = {}) {
     try {
-        const result = await scoped(model.questionBankModel).create(questionData);
+        const result = await scoped(model.questionBankModel).create(questionData, options);
         return result;
     } catch (error) {
         console.error("Error adding question to bank:", error);
@@ -147,17 +147,19 @@ export async function getSingleQuestion(id) {
     }
 }
 
-export async function updateQuestion(id, questionData) {
+export async function updateQuestion(id, questionData, options = {}) {
     try {
         const existing = await scoped(model.questionBankModel).findOne({
             where: { id },
             attributes: ['id'],
+            transaction: options.transaction,
         });
         if (!existing) {
             return [0];
         }
         const result = await scoped(model.questionBankModel).update(questionData, {
             where: { id },
+            transaction: options.transaction,
         });
         return result;
     } catch (error) {

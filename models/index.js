@@ -178,11 +178,18 @@ import pdfSplitJobModel from "./pdfSplitJobModel.js";
 import examinationSessionModel from "./examinationSessionModel.js";
 import examinationSessionTermModel from "./examinationSessionTermModel.js";
 import examinationSessionSlotModel from "./examinationSessionSlotModel.js";
+import eventModel from "./eventModel.js";
+import eventLogModel from "./eventLogModel.js";
+
+// Event to EventLog associations
+eventModel.hasMany(eventLogModel, { foreignKey: 'eventId', as: 'eventLogs' });
+eventLogModel.belongsTo(eventModel, { foreignKey: 'eventId', as: 'event' });
 import examinationSessionEligibilityModel from "./examinationSessionEligibilityModel.js";
 
 // Examination Session associations
 examinationSessionSlotModel.belongsTo(examinationSessionModel, { foreignKey: 'examinationSessionId', as: 'examinationSession' });
 examinationSessionModel.hasMany(examinationSessionSlotModel, { foreignKey: 'examinationSessionId', as: 'slots' });
+
 
 examScheduleModel.belongsTo(examinationSessionSlotModel, { foreignKey: 'examinationSessionSlotId', as: 'examinationSessionSlot' });
 examinationSessionSlotModel.hasMany(examScheduleModel, { foreignKey: 'examinationSessionSlotId', as: 'examSchedules' });
@@ -2304,6 +2311,8 @@ export {
   examinationSessionModel,
   examinationSessionTermModel,
   examinationSessionSlotModel,
+  eventModel,
+  eventLogModel,
   examinationSessionEligibilityModel,
   userModel as users,
 };

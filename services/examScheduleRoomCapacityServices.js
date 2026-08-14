@@ -3,6 +3,8 @@ import * as examRoomCapacityRepository from "../repository/examScheduleRoomCapac
 import * as examScheduleServices from "./examScheduleServices.js";
 import { z } from "zod";
 import { getTimeSlotRange, minutesToTime } from "../utility/timeSlot.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -213,16 +215,12 @@ export async function addExamRoomCapacity(data, userId) {
         });
     }
 
-    const transaction = await sequelize.transaction();
-
-    try {
-        const result = await examRoomCapacityRepository.bulkAddExamRoomCapacity(assignments, transaction);
-        await transaction.commit();
-        return result;
-    } catch (error) {
-        await transaction.rollback();
-        throw error;
-    }
+    return withAuditEvent(
+        AUDIT_EVENTS.EXAM_ROOM_ALLOCATE,
+        async ({ transaction }) => {
+            return examRoomCapacityRepository.bulkAddExamRoomCapacity(assignments, transaction);
+        }
+    );
 }
 
 export async function updateExamRoomCapacity(examScheduleRoomCapacityId, data, userId) {
@@ -239,30 +237,26 @@ export async function updateExamRoomCapacity(examScheduleRoomCapacityId, data, u
 
     updatePayload.updatedBy = userId;
 
-    const transaction = await sequelize.transaction();
+    return withAuditEvent(
+        AUDIT_EVENTS.EXAM_ROOM_ALLOCATE,
+        async ({ transaction }) => {
+            const seatCount = await examRoomCapacityRepository.getSeatAllocationCountByCapacityId(examScheduleRoomCapacityId, transaction);
+            if (seatCount > 0) {
+                if (Number(existing.columns) !== Number(columns)) {
+                    throw new Error("Room seating configuration cannot be changed because seats have already been allocated.");
+                }
+                if (Number(capacity) < seatCount) {
+                    throw new Error("Room seating configuration cannot be changed because seats have already been allocated.");
+                }
+            }
 
-    try {
-        const seatCount = await examRoomCapacityRepository.getSeatAllocationCountByCapacityId(examScheduleRoomCapacityId, transaction);
-        if (seatCount > 0) {
-            if (Number(existing.columns) !== Number(columns)) {
-                throw new Error("Room seating configuration cannot be changed because seats have already been allocated.");
-            }
-            if (Number(capacity) < seatCount) {
-                throw new Error("Room seating configuration cannot be changed because seats have already been allocated.");
-            }
+            return examRoomCapacityRepository.updateExamRoomCapacity(
+                examScheduleRoomCapacityId,
+                updatePayload,
+                transaction
+            );
         }
-
-        const result = await examRoomCapacityRepository.updateExamRoomCapacity(
-            examScheduleRoomCapacityId,
-            updatePayload,
-            transaction
-        );
-        await transaction.commit();
-        return result;
-    } catch (error) {
-        await transaction.rollback();
-        throw error;
-    }
+    );
 }
 
 export async function getExamScheduleRooms(examScheduleId) {
@@ -296,39 +290,37 @@ export async function deleteExamRoomCapacity(examScheduleRoomCapacityId) {
     }
 
     const examScheduleId = existing.examScheduleId;
-    const transaction = await sequelize.transaction();
 
-    try {
-        const seatCount = await examRoomCapacityRepository.getSeatAllocationCountByCapacityId(examScheduleRoomCapacityId, transaction);
-        if (seatCount > 0) {
-            throw new Error("Room assignment cannot be removed because seats have already been allocated for this room.");
-        }
-
-        const result = await examRoomCapacityRepository.deleteExamRoomCapacity(
-            examScheduleRoomCapacityId,
-            transaction
-        );
-
-        // Fetch remaining room capacities and re-sequence orderKey sequentially from 1
-        const remainingRooms = await examRoomCapacityRepository.getRoomsByExamScheduleId(examScheduleId, transaction);
-        let currentOrder = 1;
-        for (const room of remainingRooms) {
-            if (room.examScheduleRoomCapacityId !== Number(examScheduleRoomCapacityId)) {
-                await examRoomCapacityRepository.updateExamRoomCapacityOrderKey(
-                    room.examScheduleRoomCapacityId,
-                    currentOrder,
-                    transaction
-                );
-                currentOrder++;
+    return withAuditEvent(
+        AUDIT_EVENTS.EXAM_ROOM_UNMAP,
+        async ({ transaction }) => {
+            const seatCount = await examRoomCapacityRepository.getSeatAllocationCountByCapacityId(examScheduleRoomCapacityId, transaction);
+            if (seatCount > 0) {
+                throw new Error("Room assignment cannot be removed because seats have already been allocated for this room.");
             }
-        }
 
-        await transaction.commit();
-        return result;
-    } catch (error) {
-        await transaction.rollback();
-        throw error;
-    }
+            const result = await examRoomCapacityRepository.deleteExamRoomCapacity(
+                examScheduleRoomCapacityId,
+                transaction
+            );
+
+            // Fetch remaining room capacities and re-sequence orderKey sequentially from 1
+            const remainingRooms = await examRoomCapacityRepository.getRoomsByExamScheduleId(examScheduleId, transaction);
+            let currentOrder = 1;
+            for (const room of remainingRooms) {
+                if (room.examScheduleRoomCapacityId !== Number(examScheduleRoomCapacityId)) {
+                    await examRoomCapacityRepository.updateExamRoomCapacityOrderKey(
+                        room.examScheduleRoomCapacityId,
+                        currentOrder,
+                        transaction
+                    );
+                    currentOrder++;
+                }
+            }
+
+            return result;
+        }
+    );
 }
 
 export async function getAvailableRoomsForExamSchedule(examScheduleId) {
