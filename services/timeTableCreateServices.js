@@ -3806,6 +3806,13 @@ export async function getRoutineByTeacherAndAcademicYear(userId, courseId, sessi
   const daysList = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const formattedRoutines = [];
 
+  const toDateStr = (d) => d ? new Date(d).toISOString().split('T')[0] : '';
+  const addDays = (dateStr, days) => {
+    const d = new Date(dateStr + 'T12:00:00');
+    d.setDate(d.getDate() + days);
+    return d.toISOString().split('T')[0];
+  };
+
   for (const row of routineRows) {
     const routine = row.routine;
     const electiveCells = row.electiveCells;
@@ -3813,120 +3820,167 @@ export async function getRoutineByTeacherAndAcademicYear(userId, courseId, sessi
     const timeTableCreateName = mapping.timeTableStructure;
     const periods = timeTableCreateName.timeTableName || [];
     
-    const toDateStr = (d) => d ? new Date(d).toISOString().split('T')[0] : '';
-    const routineStart = toDateStr(routine.startingDate);
-    const routineEnd = toDateStr(routine.endingDate);
+    const normalStart = toDateStr(routine.startingDate);
+    const normalEnd = toDateStr(routine.endingDate);
 
-    // Filter cells down to only those matching the requested userId
-    const normalCells = (routine.timeTableCells || []).filter(cell => 
-      cell.timeTableCellTeachers && cell.timeTableCellTeachers.length > 0
-    );
-    const filteredElectiveCells = (electiveCells || []).filter(cell => 
-      cell.timeTableCellTeachers && cell.timeTableCellTeachers.length > 0 &&
-      toDateStr(cell.getDataValue('startingDate')) >= routineStart &&
-      toDateStr(cell.getDataValue('endingDate')) <= routineEnd
-    );
+    const boundariesSet = new Set();
+    boundariesSet.add(normalStart);
+    boundariesSet.add(addDays(normalEnd, 1));
 
-    if (!normalCells.length && !filteredElectiveCells.length) {
-      continue;
+    const electiveRoutinesMap = new Map();
+    for (const cell of electiveCells || []) {
+      const eStart = toDateStr(cell.getDataValue('startingDate'));
+      const eEnd = toDateStr(cell.getDataValue('endingDate'));
+      const eId = cell.getDataValue('electiveRoutineId');
+      if (eId && eStart && eEnd) {
+        electiveRoutinesMap.set(eId, { startDate: eStart, endDate: eEnd, cells: [] });
+      }
     }
 
-    const classSection = mapRoutineClassSection(resolveTimeTableRoutineSection(routine));
-    
-    if (routine.classSectionTermId != null && !classSection.classSectionsId) {
-      continue;
-    }
-    
-    const weekOffList = parseWeekOffList(timeTableCreateName.weekOff);
-    const weekOffLower = [];
-    for (const day of weekOffList) {
-      weekOffLower.push(String(day).toLowerCase());
+    for (const cell of electiveCells || []) {
+      const eId = cell.getDataValue('electiveRoutineId');
+      if (eId && electiveRoutinesMap.has(eId)) {
+        electiveRoutinesMap.get(eId).cells.push(cell);
+      }
     }
 
-    const formattedPeriods = [];
-    for (const period of periods) {
-      const formattedDays = [];
-      for (const daysName of daysList) {
-        if (weekOffLower.includes(daysName.toLowerCase())) {
+    const electiveRoutines = Array.from(electiveRoutinesMap.values());
+
+    for (const er of electiveRoutines) {
+      if (er.startDate <= normalEnd && er.endDate >= normalStart) {
+        boundariesSet.add(er.startDate);
+        boundariesSet.add(addDays(er.endDate, 1));
+      }
+    }
+
+    const sortedBoundaries = Array.from(boundariesSet).sort();
+
+    const segments = [];
+    for (let i = 0; i < sortedBoundaries.length - 1; i++) {
+      const segStart = sortedBoundaries[i];
+      const segEnd = addDays(sortedBoundaries[i + 1], -1);
+      if (segStart >= normalStart && segEnd <= normalEnd) {
+        segments.push({ startDate: segStart, endDate: segEnd });
+      }
+    }
+
+    for (const seg of segments) {
+      const activeElectiveCells = [];
+      for (const er of electiveRoutines) {
+        if (er.startDate <= seg.endDate && er.endDate >= seg.startDate) {
+          activeElectiveCells.push(...er.cells);
+        }
+      }
+
+      // Filter cells down to only those matching the requested userId
+      const normalCells = (routine.timeTableCells || []).filter(cell => 
+        cell.timeTableCellTeachers && cell.timeTableCellTeachers.length > 0
+      );
+      const filteredElectiveCells = activeElectiveCells.filter(cell => 
+        cell.timeTableCellTeachers && cell.timeTableCellTeachers.length > 0
+      );
+
+      if (!normalCells.length && !filteredElectiveCells.length) {
+        continue;
+      }
+
+      const classSection = mapRoutineClassSection(resolveTimeTableRoutineSection(routine));
+      
+      if (routine.classSectionTermId != null && !classSection.classSectionsId) {
+        continue;
+      }
+      
+      const weekOffList = parseWeekOffList(timeTableCreateName.weekOff);
+      const weekOffLower = [];
+      for (const day of weekOffList) {
+        weekOffLower.push(String(day).toLowerCase());
+      }
+
+      const formattedPeriods = [];
+      for (const period of periods) {
+        const formattedDays = [];
+        for (const daysName of daysList) {
+          if (weekOffLower.includes(daysName.toLowerCase())) {
+            formattedDays.push({
+              name: daysName,
+              isDayOff: true,
+            });
+            continue;
+          }
+
+          if (period.isBreak) {
+            formattedDays.push({
+              name: daysName,
+              isBreak: true,
+            });
+            continue;
+          }
+
+          const periodNormalCells = collectPeriodCells(normalCells, period, daysName);
+
+          const periodElectiveCells = collectPeriodCells(filteredElectiveCells, period, daysName);
+
+          let isOverriding = false;
+          for (const cell of periodNormalCells) {
+            if (cell.isOverridingSyblingElectives === true) {
+              isOverriding = true;
+              break;
+            }
+          }
+
+          const scheduleItems = formatNormalCellsAsScheduleItems(periodNormalCells, employeeByUserId);
+
+          if (!isOverriding) {
+            const electiveItems = formatElectiveCellsAsScheduleItems(periodElectiveCells, employeeByUserId);
+            for (const item of electiveItems) {
+              scheduleItems.push(item);
+            }
+          }
+
           formattedDays.push({
             name: daysName,
-            isDayOff: true,
+            scheduleItems,
           });
-          continue;
         }
 
-        if (period.isBreak) {
-          formattedDays.push({
-            name: daysName,
-            isBreak: true,
-          });
-          continue;
-        }
-
-        const periodNormalCells = collectPeriodCells(normalCells, period, daysName);
-
-        const periodElectiveCells = collectPeriodCells(filteredElectiveCells, period, daysName);
-
-        let isOverriding = false;
-        for (const cell of periodNormalCells) {
-          if (cell.isOverridingSyblingElectives === true) {
-            isOverriding = true;
-            break;
-          }
-        }
-
-        const scheduleItems = formatNormalCellsAsScheduleItems(periodNormalCells, employeeByUserId);
-
-        if (!isOverriding) {
-          const electiveItems = formatElectiveCellsAsScheduleItems(periodElectiveCells, employeeByUserId);
-          for (const item of electiveItems) {
-            scheduleItems.push(item);
-          }
-        }
-
-        formattedDays.push({
-          name: daysName,
-          scheduleItems,
+        formattedPeriods.push({
+          timeTableCreationId: period.timeTableCreationId,
+          name: period.periodName,
+          startTime: period.startTime,
+          endTime: period.endTime,
+          days: formattedDays,
         });
       }
 
-      formattedPeriods.push({
-        timeTableCreationId: period.timeTableCreationId,
-        name: period.periodName,
-        startTime: period.startTime,
-        endTime: period.endTime,
-        days: formattedDays,
+      let academicGroup = null;
+      if (routine.academicGroup) {
+        const scope = routine.academicGroup.scope || {};
+        academicGroup = {
+          academicGroupId: routine.academicGroup.academicGroupId,
+          groupName: routine.academicGroup.groupName,
+          groupCode: routine.academicGroup.groupCode,
+          academicGroupScopeId: scope.academicGroupScopeId || null,
+          courseId: scope.courseId || null,
+          courseName: scope.course?.courseName || null,
+          sessionId: scope.sessionId || null,
+          sessionName: scope.session?.sessionName || null,
+          term: scope.term || null,
+          classSectionTermId: scope.classSectionTermId || null,
+        };
+      }
+
+      formattedRoutines.push({
+        timeTableRoutineId: routine.timeTableRoutineId,
+        isPublished: routine.isPublish,
+        timeTableNameId: mapping.timeTableNameId,
+        name: timeTableCreateName.name || 'N/A',
+        startDate: seg.startDate,
+        endDate: seg.endDate,
+        classSection,
+        academicGroup,
+        periods: formattedPeriods,
       });
     }
-
-    let academicGroup = null;
-    if (routine.academicGroup) {
-      const scope = routine.academicGroup.scope || {};
-      academicGroup = {
-        academicGroupId: routine.academicGroup.academicGroupId,
-        groupName: routine.academicGroup.groupName,
-        groupCode: routine.academicGroup.groupCode,
-        academicGroupScopeId: scope.academicGroupScopeId || null,
-        courseId: scope.courseId || null,
-        courseName: scope.course?.courseName || null,
-        sessionId: scope.sessionId || null,
-        sessionName: scope.session?.sessionName || null,
-        term: scope.term || null,
-        classSectionTermId: scope.classSectionTermId || null,
-      };
-    }
-
-    formattedRoutines.push({
-      timeTableRoutineId: routine.timeTableRoutineId,
-      isPublished: routine.isPublish,
-      timeTableNameId: mapping.timeTableNameId,
-      name: timeTableCreateName.name || 'N/A',
-      startDate: routine.startingDate,
-      endDate: routine.endingDate,
-      classSection,
-      academicGroup,
-      periods: formattedPeriods,
-    });
   }
 
   return { ...common, routines: formattedRoutines };
