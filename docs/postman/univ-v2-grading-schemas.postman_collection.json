@@ -856,7 +856,30 @@
           }
         },
         {
-          "name": "7.10 Delete Examination Session",
+          "name": "7.10 Get Question Paper Summary Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examinationSession/questionPaperSummary?examinationSessionId={{examinationSessionId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["examinationSession", "questionPaperSummary"],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "{{examinationSessionId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "7.11 Delete Examination Session",
           "request": {
             "method": "DELETE",
             "header": [
@@ -1744,7 +1767,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examInvigilatorAssignment/rooms?examinationSessionId=1&examinationSessionSlotId=1&page=1&limit=10",
+              "raw": "{{baseurl}}/examInvigilatorAssignment/rooms?examinationSessionId=1&examinationSessionSlotId=1&courseId=1&term=1&examDate=2026-12-01&page=1&limit=10",
               "host": ["{{baseurl}}"],
               "path": ["examInvigilatorAssignment", "rooms"],
               "query": [
@@ -1755,6 +1778,18 @@
                 {
                   "key": "examinationSessionSlotId",
                   "value": "1"
+                },
+                {
+                  "key": "courseId",
+                  "value": "1"
+                },
+                {
+                  "key": "term",
+                  "value": "1"
+                },
+                {
+                  "key": "examDate",
+                  "value": "2026-12-01"
                 },
                 {
                   "key": "page",
@@ -1779,7 +1814,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examInvigilatorAssignment/summary?examinationSessionId=1&examinationSessionSlotId=1",
+              "raw": "{{baseurl}}/examInvigilatorAssignment/summary?examinationSessionId=1&examinationSessionSlotId=1&courseId=1&term=1&examDate=2026-12-01",
               "host": ["{{baseurl}}"],
               "path": ["examInvigilatorAssignment", "summary"],
               "query": [
@@ -1790,6 +1825,18 @@
                 {
                   "key": "examinationSessionSlotId",
                   "value": "1"
+                },
+                {
+                  "key": "courseId",
+                  "value": "1"
+                },
+                {
+                  "key": "term",
+                  "value": "1"
+                },
+                {
+                  "key": "examDate",
+                  "value": "2026-12-01"
                 }
               ]
             }
@@ -1905,6 +1952,29 @@
               "raw": "{{baseurl}}/examInvigilatorAssignment/byExamScheduleId?examScheduleId=1",
               "host": ["{{baseurl}}"],
               "path": ["examInvigilatorAssignment", "byExamScheduleId"],
+              "query": [
+                {
+                  "key": "examScheduleId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.10 Get Faculty Availability",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examInvigilatorAssignment/availability?examScheduleId=1",
+              "host": ["{{baseurl}}"],
+              "path": ["examInvigilatorAssignment", "availability"],
               "query": [
                 {
                   "key": "examScheduleId",

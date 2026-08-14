@@ -12,6 +12,7 @@ import {
   getInvigilatorSummary,
   getAssignmentsByUserId,
   getAssignmentsByExamScheduleId,
+  getFacultyAvailability,
 } from "../controllers/examInvigilatorAssignmentController.js";
 
 const router = Router();
@@ -81,7 +82,10 @@ const getListSchema = {
 
 const getExamRoomsSchema = {
   query: z.object({
-    examinationSessionId: positiveIntegerId,
+    examinationSessionId: positiveIntegerQueryId,
+    sessionId: positiveIntegerQueryId,
+    courseId: positiveIntegerQueryId,
+    term: positiveIntegerQueryId,
     examDate: z.preprocess(emptyToUndefined, z.string().optional()),
     examinationSessionSlotId: positiveIntegerQueryId,
     page: z.preprocess(
@@ -150,6 +154,19 @@ router.get(
   userAuth,
   validate(byExamScheduleIdSchema),
   getAssignmentsByExamScheduleId,
+);
+
+const availabilitySchema = {
+  query: z.object({
+    examScheduleId: positiveIntegerId,
+  }),
+};
+
+router.get(
+  "/availability",
+  userAuth,
+  validate(availabilitySchema),
+  getFacultyAvailability,
 );
 
 export default router;

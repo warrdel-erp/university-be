@@ -679,7 +679,7 @@ export async function getMappedSubjectsBySessionAndTerm(
   const roomCapacityByScheduleId = new Map();
   const teacherAssignmentByScheduleId = new Map();
   const questionPapersByScheduleId = new Map();
-  const studentCountByGroup = new Map();
+  let counts = [];
 
   if (examScheduleIds.length > 0) {
     const promises = [
@@ -701,7 +701,8 @@ export async function getMappedSubjectsBySessionAndTerm(
       promises.push(Promise.resolve([]));
     }
 
-    const [roomCapacities, teacherAssignments, questionPapers, counts] = await Promise.all(promises);
+    const [roomCapacities, teacherAssignments, questionPapers, resolvedCounts] = await Promise.all(promises);
+    counts = resolvedCounts || [];
 
     for (const rc of roomCapacities) {
       const current = roomCapacityByScheduleId.get(rc.examScheduleId) || 0;
@@ -733,11 +734,6 @@ export async function getMappedSubjectsBySessionAndTerm(
         } : null
       });
     }
-
-    for (const c of counts) {
-      const key = `${c.sessionId}_${c.courseId}_${c.term}_${c.academicYearId}`;
-      studentCountByGroup.set(key, parseInt(c.studentCount, 10) || 0);
-    }
   }
 
   const finalResponse = [];
@@ -759,8 +755,14 @@ export async function getMappedSubjectsBySessionAndTerm(
       if (teacherAssignmentStatus === 'notAssigned' && teacherAssignment.length > 0) continue;
 
       const roomCapacity = roomCapacityByScheduleId.get(plainSched.examScheduleId) || 0;
-      const groupKey = `${plainSched.sessionId}_${plainSched.examSetupTypeTerm?.courseId}_${plainSched.examSetupTypeTerm?.term}_${plainSched.academicYearId}`;
-      const studentCount = studentCountByGroup.get(groupKey) || 0;
+      const matchedCountRow = counts.find(
+        (c) =>
+          Number(c.sessionId) === Number(plainSched.sessionId) &&
+          Number(c.courseId) === Number(plainSched.subjectSchedule?.courseId) &&
+          Number(c.term) === Number(plainSched.term) &&
+          Number(c.academicYearId) === Number(plainSched.academicYearId)
+      );
+      const studentCount = matchedCountRow ? (parseInt(matchedCountRow.studentCount, 10) || 0) : 0;
       const hasAssignedRoom = roomCapacity > 0;
 
       let moderationActive = false;
@@ -847,4 +849,131 @@ export async function getMappedSubjectsBySessionAndTerm(
   }
 
   return finalResponse;
+}
+
+export async function getQuestionPaperSummary(examinationSessionId, options = {}) {
+  const parsedSessionId = Number(examinationSessionId);
+  if (Number.isNaN(parsedSessionId)) {
+    throw new Error("Invalid examinationSessionId");
+  }
+
+  const examinationSession = await examinationSessionRepository.findExaminationSessionAssessmentTypeById(
+    parsedSessionId,
+    options,
+  );
+  if (!examinationSession) {
+    const error = new Error("Examination session not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  let totalCourses = 0;
+  if (examinationSession.assessmentTypeId) {
+    const assessmentPlanIds = await getAssessmentPlanIds(Number(examinationSession.assessmentTypeId), options);
+    if (assessmentPlanIds.length > 0) {
+      const subjectMappings = await examinationSessionRepository.findAssessmentPlanSubjectMappings(
+        { assessmentPlanId: { [Op.in]: assessmentPlanIds } },
+        options,
+      );
+      const uniqueSubjectIds = [...new Set(subjectMappings.map((m) => m.subjectId))];
+      totalCourses = uniqueSubjectIds.length;
+    }
+  }
+
+  const schedules = await scoped(model.examScheduleModel).findAll({
+    where: { examinationSessionId: parsedSessionId },
+    attributes: ["examScheduleId", "subjectId"],
+    transaction: options.transaction,
+  });
+  const totalExamSchedule = schedules.length;
+
+  if (totalExamSchedule === 0) {
+    return {
+      totalCourses,
+      totalExamSchedule: 0,
+      notAssigned: 0,
+      awaitingSubmission: 0,
+      withModerator: 0,
+      changesRequested: 0,
+      approved: 0,
+      readyForEncryption: 0,
+      readyToPrint: 0,
+      totalPapers: 0,
+    };
+  }
+
+  const examScheduleIds = schedules.map((s) => s.examScheduleId);
+
+  const [teacherAssignments, questionPapers] = await Promise.all([
+    scoped(model.teacherExamAssignmentModel).findAll({
+      where: { examScheduleId: { [Op.in]: examScheduleIds } },
+      attributes: ["examScheduleId", "employeeId"],
+      transaction: options.transaction,
+    }),
+    scoped(model.questionPaperModel).findAll({
+      where: { examScheduleId: { [Op.in]: examScheduleIds } },
+      attributes: ["examScheduleId", "status", "finalApproval"],
+      transaction: options.transaction,
+    }),
+  ]);
+
+  const assignedScheduleIds = new Set(teacherAssignments.map((ta) => ta.examScheduleId));
+  const questionPapersByScheduleId = new Map();
+  for (const qp of questionPapers) {
+    if (!questionPapersByScheduleId.has(qp.examScheduleId)) {
+      questionPapersByScheduleId.set(qp.examScheduleId, []);
+    }
+    questionPapersByScheduleId.get(qp.examScheduleId).push(qp);
+  }
+
+  let notAssigned = 0;
+  let awaitingSubmission = 0;
+  let withModerator = 0;
+  let changesRequested = 0;
+  let approved = 0;
+  let readyForEncryption = 0;
+  let readyToPrint = 0;
+
+  for (const schedule of schedules) {
+    const sId = schedule.examScheduleId;
+    const hasTeacher = assignedScheduleIds.has(sId);
+    const papers = questionPapersByScheduleId.get(sId) || [];
+
+    if (!hasTeacher) {
+      notAssigned++;
+      continue;
+    }
+
+    if (papers.length === 0) {
+      awaitingSubmission++;
+      continue;
+    }
+
+    const isApproved = papers.some((p) => p.finalApproval === "Approved" || p.status === "Approved");
+    const isRejected = papers.some((p) => p.finalApproval === "Rejected" || p.status === "Rejected");
+    const isPending = papers.some((p) => p.finalApproval === "Pending" || p.status === "Pending");
+
+    if (isApproved) {
+      approved++;
+      readyForEncryption++;
+      readyToPrint++;
+    } else if (isRejected) {
+      changesRequested++;
+    } else if (isPending) {
+      withModerator++;
+    }
+  }
+
+  return {
+    totalCourses,
+    totalExamSchedule,
+    notAssigned,
+    awaitingSubmission,
+    withModerator,
+    changesRequested,
+    approved,
+    readyForEncryption,
+    readyToPrint,
+    totalPapers: questionPapers.length,
+  };
 }

@@ -138,6 +138,12 @@ const getStructureSchema = {
   }),
 };
 
+const questionPaperSummarySchema = {
+  query: z.object({
+    examinationSessionId: positiveIntegerQueryId,
+  }),
+};
+
 const getSubjectsBySessionAndTermSchema = {
   query: z.object({
     examinationSessionId: positiveIntegerQueryId,
@@ -199,6 +205,13 @@ router.get(
   userAuth,
   validate(getSubjectsBySessionAndTermSchema),
   examinationSessionController.getMappedSubjectsBySessionAndTerm,
+);
+
+router.get(
+  "/questionPaperSummary",
+  userAuth,
+  validate(questionPaperSummarySchema),
+  examinationSessionController.getQuestionPaperSummary,
 );
 
 router.patch(

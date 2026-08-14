@@ -83,9 +83,21 @@ export async function deleteAssignment(req, res) {
 
 export async function getListOfRooms(req, res) {
     try {
-        const { examinationSessionId, examinationSessionSlotId, page = 1, limit = 10 } = req.query;
+        const {
+            examinationSessionId,
+            sessionId,
+            courseId,
+            term,
+            examDate,
+            examinationSessionSlotId,
+            page = 1,
+            limit = 10
+        } = req.query;
+
+        const actualSessionId = sessionId || examinationSessionId;
+
         const result = await examInvigilatorAssignmentServices.getListOfRooms(
-            { examinationSessionId, examinationSessionSlotId },
+            { sessionId: actualSessionId, courseId, term, examDate, examinationSessionSlotId },
             { page: Number(page), limit: Number(limit) }
         );
         return SuccessResponse(res, 200, "Rooms list fetched successfully", result.rooms, {
@@ -101,9 +113,22 @@ export async function getListOfRooms(req, res) {
 
 export async function getInvigilatorSummary(req, res) {
     try {
-        const { examinationSessionId, examinationSessionSlotId } = req.query;
-        const result = await examInvigilatorAssignmentServices.getInvigilatorSummary({
+        const {
             examinationSessionId,
+            sessionId,
+            courseId,
+            term,
+            examDate,
+            examinationSessionSlotId
+        } = req.query;
+
+        const actualSessionId = sessionId || examinationSessionId;
+
+        const result = await examInvigilatorAssignmentServices.getInvigilatorSummary({
+            sessionId: actualSessionId,
+            courseId,
+            term,
+            examDate,
             examinationSessionSlotId
         });
         return SuccessResponse(res, 200, "Invigilator summary fetched successfully", result);
@@ -129,6 +154,17 @@ export async function getAssignmentsByExamScheduleId(req, res) {
         const { examScheduleId } = req.query;
         const result = await examInvigilatorAssignmentServices.getAssignmentsByExamScheduleId(examScheduleId);
         return SuccessResponse(res, 200, "Exam schedule assignment details fetched successfully", result);
+    } catch (error) {
+        const statusCode = error.statusCode || 500;
+        return ErrorResponse(res, statusCode, error.message);
+    }
+}
+
+export async function getFacultyAvailability(req, res) {
+    try {
+        const { examScheduleId } = req.query;
+        const result = await examInvigilatorAssignmentServices.getFacultyAvailability(examScheduleId);
+        return SuccessResponse(res, 200, "Faculty availability fetched successfully", result);
     } catch (error) {
         const statusCode = error.statusCode || 500;
         return ErrorResponse(res, statusCode, error.message);

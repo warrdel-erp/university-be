@@ -144,3 +144,15 @@ export const getMappedSubjectsBySessionAndTerm = async (req, res) => {
     return ErrorResponse(res, statusCode, error.message || "Failed to fetch mapped subjects");
   }
 };
+
+export const getQuestionPaperSummary = async (req, res) => {
+  try {
+    const { examinationSessionId } = req.query;
+    const result = await examinationSessionServices.getQuestionPaperSummary(examinationSessionId);
+    return SuccessResponse(res, 200, "Question paper summary stats fetched successfully", result);
+  } catch (error) {
+    console.error("Error fetching question paper summary:", error);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(res, statusCode, error.message || "Failed to fetch question paper summary stats");
+  }
+};
