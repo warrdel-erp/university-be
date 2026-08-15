@@ -1,0 +1,228 @@
+{
+  "info": {
+    "_postman_id": "self-service-employee-api-collection-v2",
+    "name": "Self-Service Employee Module",
+    "description": "Complete Postman collection for self-service employee GET routes",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "GET My Unique Class Section Subjects",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/employee/my/uniqueClassSectionSubjects",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "employee",
+            "my",
+            "uniqueClassSectionSubjects"
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET My Today Class Schedule",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/employee/my/schedule?date=2026-08-15&groupPeriods=false",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "employee",
+            "my",
+            "schedule"
+          ],
+          "query": [
+            {
+              "key": "date",
+              "value": "2026-08-15"
+            },
+            {
+              "key": "groupPeriods",
+              "value": "false"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET My Past Class Schedules",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/employee/my/pastSchedule?date=2026-08-15&groupPeriods=false",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "employee",
+            "my",
+            "pastSchedule"
+          ],
+          "query": [
+            {
+              "key": "date",
+              "value": "2026-08-15"
+            },
+            {
+              "key": "groupPeriods",
+              "value": "false"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET My Upcoming Class Schedules",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/employee/my/upcomingSchedule?date=2026-08-15&groupPeriods=false",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "employee",
+            "my",
+            "upcomingSchedule"
+          ],
+          "query": [
+            {
+              "key": "date",
+              "value": "2026-08-15"
+            },
+            {
+              "key": "groupPeriods",
+              "value": "false"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET My Section Counts",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/employee/my/sectionCounts?date=2026-08-15",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "employee",
+            "my",
+            "sectionCounts"
+          ],
+          "query": [
+            {
+              "key": "date",
+              "value": "2026-08-15"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET My Section Dates",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/employee/my/sectionDates?classSectionTermId=1&subjectId=2",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "employee",
+            "my",
+            "sectionDates"
+          ],
+          "query": [
+            {
+              "key": "classSectionTermId",
+              "value": "1"
+            },
+            {
+              "key": "subjectId",
+              "value": "2"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET My Employee Details",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/employee/my",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "employee",
+            "my"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseurl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjU2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlSWQiOm51bGwsImRlZmF1bHRBY2FkZW1pY1llYXJJZCI6NTksInVzZXJOYW1lIjoiUGF5YWwgTHVsbGEiLCJ1bmlxdWVJZCI6IjE0NWQ5ODU2LTYyYzctNDY4ZS1hNzYyLTI2ZTkzYjdmYzgyZiIsInBhc3N3b3JkIjoiJDJhJDEwJEVzMmlldHdab0FBNHhTRnBKbGYzRmUuQmR1eDIuanVtR3BUMmZaUEtYaHEubTVxR2dhaEJPIiwiZHVtbXlQYXNzd29yZCI6IiIsInN0YXR1cyI6ImFjdGl2ZSIsInBob25lIjoiNzYwMDc5ODMwNyIsImVtYWlsIjoicGx1QGFheW9qYW4uZWR1LmluIiwiaXNUZWFjaGVyIjp0cnVlLCJjcmVhdGVkQXQiOiIyMDI1LTA5LTMwVDExOjUyOjA5LjAwMFoiLCJ1cGRhdGVkQXQiOiIyMDI2LTA4LTExVDE5OjUyOjE0LjAwMFoiLCJkZWxldGVkQXQiOm51bGwsImRlZmF1bHRfcm9sZV9pZCI6bnVsbCwiaW5zdGl0dXRlTmFtZSI6IkFheW9qYW4gU2Nob29sIG9mIEFyY2hpdGVjdHVyZSIsImlhdCI6MTc4NjgxMTY2OSwiZXhwIjoxNzg5NDAzNjY5fQ.9rEUibo0Al-3x8p03oMRGZGNMeJH4ml17xl31ZHPIlg",
+      "type": "string"
+    }
+  ]
+}
