@@ -211,6 +211,234 @@
           ]
         }
       }
+    },
+    {
+      "name": "GET My Routine By Teacher",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/timeTableCreate/my/getRoutineByTeacher?courseId=34&sessionId=6",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "timeTableCreate",
+            "my",
+            "getRoutineByTeacher"
+          ],
+          "query": [
+            {
+              "key": "courseId",
+              "value": "34"
+            },
+            {
+              "key": "sessionId",
+              "value": "6"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET My Questions",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/questionBank/my",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "questionBank",
+            "my"
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET My Questions Count",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/questionBank/my/count",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "questionBank",
+            "my",
+            "count"
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET My Question Papers",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/questionPaper/my",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "questionPaper",
+            "my"
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET My Courses From Schedule",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/employee/my/coursesFromSchedule?courseId=34&sessionId=6",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "employee",
+            "my",
+            "coursesFromSchedule"
+          ],
+          "query": [
+            {
+              "key": "courseId",
+              "value": "34"
+            },
+            {
+              "key": "sessionId",
+              "value": "6"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET My Lesson Routine By Teacher",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/lesson/my/getRoutineByTeacher?subjectId=182&date=",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "lesson",
+            "my",
+            "getRoutineByTeacher"
+          ],
+          "query": [
+            {
+              "key": "subjectId",
+              "value": "182"
+            },
+            {
+              "key": "date",
+              "value": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET My Employee Subject and Lesson",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/lesson/my/employee?courseId=34&sessionId=6",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "lesson",
+            "my",
+            "employee"
+          ],
+          "query": [
+            {
+              "key": "courseId",
+              "value": "34"
+            },
+            {
+              "key": "sessionId",
+              "value": "6"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET My Mapped Lesson Progress",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/lesson/my/mapped?subjectId=182",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "lesson",
+            "my",
+            "mapped"
+          ],
+          "query": [
+            {
+              "key": "subjectId",
+              "value": "182"
+            }
+          ]
+        }
+      }
     }
   ],
   "variable": [

@@ -10,6 +10,8 @@ import {
     getSingleQuestion,
     updateQuestion,
     deleteQuestion,
+    getMyQuestions,
+    getMyQuestionsCount,
 } from "../controllers/questionBankController.js";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
@@ -65,6 +67,17 @@ const getAllQuestionsQuerySchema = z.object({
     status: z.enum(questionStatus).optional(),
 });
 
+const getMyQuestionsQuerySchema = z.object({
+    page: z.string().regex(/^\d+$/).transform(val => parseInt(val)).optional().default("1"),
+    limit: z.string().regex(/^\d+$/).transform(val => parseInt(val)).optional().default("10"),
+    type: z.enum(Object.values(questionTypes)).optional(),
+    difficulty: z.string().optional(),
+    bloom: z.string().optional(),
+    marks: z.string().regex(/^\d+$/).transform(val => parseInt(val)).optional(),
+    subjectId: z.coerce.number().optional(),
+    status: z.enum(questionStatus).optional(),
+});
+
 const bulkActionSchema = z.object({
     ids: z.array(z.number()).min(1, "At least one ID is required"),
 });
@@ -101,7 +114,11 @@ router.post("/", userAuth, validate({ body: createQuestionSchema }), addQuestion
 
 router.get("/", userAuth, validate({ query: getAllQuestionsQuerySchema }), getAllQuestions);
 
+router.get("/my", userAuth, validate({ query: getMyQuestionsQuerySchema }), getMyQuestions);
+
 router.get("/count", userAuth, validate({ query: getAllQuestionsQuerySchema }), countQuestions);
+
+router.get("/my/count", userAuth, validate({ query: getMyQuestionsQuerySchema }), getMyQuestionsCount);
 
 router.get("/:id", userAuth, getSingleQuestion);
 

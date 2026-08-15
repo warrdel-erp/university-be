@@ -285,17 +285,37 @@ export const getTeacherSubjectsFromSchedule = async (req, res) => {
     const { userId, courseId, sessionId } = req.query;
 
     if (!userId) {
-      return res.status(400).send("userId is required");
+      return ErrorResponse(res, 400, "userId is required");
     }
 
     const result = await employee.getTeacherSubjectsFromSchedule(userId, {
       courseId,
       sessionId,
     });
-    res.status(200).send({ success: true, result });
+    return SuccessResponse(res, 200, "Teacher subjects fetched successfully from schedule", result);
   } catch (error) {
     console.error("Error in getTeacherSubjectsFromSchedule controller:", error);
-    res.status(500).send({ message: "Internal Server Error", success: false });
+    return ErrorResponse(res, 500, "Internal Server Error");
+  }
+};
+
+export const getMyTeacherSubjectsFromSchedule = async (req, res) => {
+  try {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return ErrorResponse(res, validation.status, validation.message);
+    }
+    const { userId } = validation;
+    const { courseId, sessionId } = req.query;
+
+    const result = await employee.getTeacherSubjectsFromSchedule(userId, {
+      courseId,
+      sessionId,
+    });
+    return SuccessResponse(res, 200, "Teacher subjects fetched successfully from schedule", result);
+  } catch (error) {
+    console.error("Error in getMyTeacherSubjectsFromSchedule controller:", error);
+    return ErrorResponse(res, 500, "Internal Server Error");
   }
 };
 

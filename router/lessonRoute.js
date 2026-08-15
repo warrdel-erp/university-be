@@ -19,10 +19,13 @@ import {
     updateCompleteMapping,
     deleteMapping,
     getEmployeeSubjectAndLesson,
+    getMyEmployeeSubjectAndLesson,
     getSimpleLessonList,
     linkLessonsToWindow,
     getRoutineByTeacher,
+    getMyRoutineByTeacher,
     getMappedLessonProgress,
+    getMyMappedLessonProgress,
 } from "../controllers/lessonController.js";
 
 import { PERMISSIONS } from '../const/permissions.js';
@@ -112,8 +115,36 @@ const getRoutineByTeacherSchema = z
         },
     );
 
+const getMyRoutineByTeacherSchema = z
+    .object({
+        courseId: optionalPositiveId,
+        sessionId: optionalPositiveId,
+        subjectId: optionalPositiveId,
+        date: optionalDateOnly,
+    })
+    .refine(
+        (data) =>
+            (data.courseId == null && data.sessionId == null)
+            || (data.courseId != null && data.sessionId != null),
+        {
+            message: 'courseId and sessionId must be sent together',
+            path: ['courseId'],
+        },
+    );
+
 const mappedProgressQuerySchema = z.object({
     userId: positiveIntegerId,
+    subjectId: positiveIntegerId,
+    courseId: optionalPositiveId,
+    sessionId: optionalPositiveId,
+    lessonId: optionalPositiveId,
+    status: z.preprocess(
+        (val) => (val === '' || val == null ? undefined : val),
+        z.string().optional(),
+    ),
+});
+
+const getMyMappedProgressQuerySchema = z.object({
     subjectId: positiveIntegerId,
     courseId: optionalPositiveId,
     sessionId: optionalPositiveId,
@@ -155,6 +186,7 @@ router.get('/', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, nul
 router.get('/simple', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getSimpleLessonList);
 router.get('/single', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getSingleLessonDetails);
 router.get('/employee', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getEmployeeSubjectAndLesson);
+router.get('/my/employee', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getMyEmployeeSubjectAndLesson);
 router.get(
     '/getRoutineByTeacher',
     userAuth,
@@ -163,11 +195,25 @@ router.get(
     getRoutineByTeacher,
 );
 router.get(
+    '/my/getRoutineByTeacher',
+    userAuth,
+    checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null),
+    validate({ query: getMyRoutineByTeacherSchema }),
+    getMyRoutineByTeacher,
+);
+router.get(
     '/mapped',
     userAuth,
     checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null),
     validate({ query: mappedProgressQuerySchema }),
     getMappedLessonProgress,
+);
+router.get(
+    '/my/mapped',
+    userAuth,
+    checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null),
+    validate({ query: getMyMappedProgressQuerySchema }),
+    getMyMappedLessonProgress,
 );
 
 // ---------------------------------------------------------------------------

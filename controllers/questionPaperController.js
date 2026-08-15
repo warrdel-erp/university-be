@@ -1,5 +1,6 @@
 import * as questionPaperServices from "../services/questionPaperServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
+import { validateEmployeeUser } from "../utility/employeeValidation.js";
 import { ROLES } from "../const/roles.js";
 import { questionStatus } from "../constant.js";
 
@@ -144,5 +145,29 @@ export async function approvefinalpaper(req, res) {
         return SuccessResponse(res, 200, "Question paper randomly selected and final approved successfully", result);
     } catch (error) {
         return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+    }
+}
+
+export async function getMyQuestionPapers(req, res) {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+        return ErrorResponse(res, validation.status, validation.message);
+    }
+    const { userId } = validation;
+    const { page = 1, limit = 10, examScheduleId } = req.query;
+    const offset = (page - 1) * limit;
+
+    try {
+        const result = await questionPaperServices.getQuestionPapers(
+            { examScheduleId, createdBy: userId },
+            { limit, offset }
+        );
+        return SuccessResponse(res, 200, "Question papers fetched successfully", result.questionPapers, {
+            total: result.total,
+            limit: parseInt(limit, 10),
+            page: parseInt(page, 10)
+        });
+    } catch (error) {
+        return ErrorResponse(res, 500, error.message);
     }
 }

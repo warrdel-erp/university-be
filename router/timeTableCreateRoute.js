@@ -25,6 +25,7 @@ import {
   getRoutineByClassSectionId,
   getRoutineByAcademicGroupId,
   getRoutineByTeacherAndAcademicYear,
+  getMyRoutineByTeacherAndAcademicYear,
   deleteTimeTableRoutine,
   getDateWiseCellsBySection,
   updateDateWiseCellController,
@@ -52,6 +53,12 @@ const getRoutineByAcademicGroupSchema = z.object({
 
 const getRoutineByTeacherSchema = z.object({
   userId: positiveIntegerId,
+  courseId: positiveIntegerId,
+  sessionId: positiveIntegerId,
+  subjectId: optionalPositiveId,
+});
+
+const getMyRoutineByTeacherSchema = z.object({
   courseId: positiveIntegerId,
   sessionId: positiveIntegerId,
   subjectId: optionalPositiveId,
@@ -368,6 +375,14 @@ router.get(
   checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null),
   validate({ query: getRoutineByTeacherSchema }),
   getRoutineByTeacherAndAcademicYear,
+);
+
+router.get(
+  "/my/getRoutineByTeacher",
+  userAuth,
+  checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null),
+  validate({ query: getMyRoutineByTeacherSchema }),
+  getMyRoutineByTeacherAndAcademicYear,
 );
 
 router.get(

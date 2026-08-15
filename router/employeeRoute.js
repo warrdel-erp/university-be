@@ -34,6 +34,7 @@ import {
   getMySectionCounts,
   getMyEmployeeSectionDates,
   getMyEmployeeDetails,
+  getMyTeacherSubjectsFromSchedule,
 } from "../controllers/employeeController.js";
 import { validate } from "../utility/validation.js";
 
@@ -199,6 +200,13 @@ router.get(
   checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
   validate({ query: sectionDatesQuerySchemaWithoutUserId }),
   getMyEmployeeSectionDates,
+);
+
+router.get(
+  "/my/coursesFromSchedule",
+  userAuth,
+  checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
+  getMyTeacherSubjectsFromSchedule,
 );
 
 // ---------------------------------------------------------------------------

@@ -686,7 +686,7 @@ export async function getTeacherSubjectsFromWeekCells(userId, filters = {}) {
 
   const termInclude = {
     model: model.classSectionTermModel,
-    as: 'classSectionTerm',
+    as: 'timeTableClassSectionTerm',
     required: sessionId != null,
     include: sessionId != null ? [{
       model: model.classSectionModel,

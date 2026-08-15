@@ -2,6 +2,7 @@ import * as timeTableCreateServices from '../services/timeTableCreateServices.js
 import * as timeTableServices from '../services/timeTableServices.js';
 import * as academicGroupScopeService from '../services/academicGroupScopeService.js';
 import { ErrorResponse, SuccessResponse } from '../utility/response.js';
+import { validateEmployeeUser } from "../utility/employeeValidation.js";
 
 
 export const addtimeTableCreate = async (req, res) => {
@@ -288,6 +289,27 @@ export const getRoutineByAcademicGroupId = async (req, res) => {
 export const getRoutineByTeacherAndAcademicYear = async (req, res) => {
     const { userId, courseId, sessionId, subjectId } = req.query;
     try {
+        const result = await timeTableCreateServices.getRoutineByTeacherAndAcademicYear(
+            userId,
+            courseId,
+            sessionId,
+            subjectId,
+        );
+        return SuccessResponse(res, 200, 'Teacher routine fetched successfully', result);
+    } catch (error) {
+        console.error('Error in getting routine by teacher and academic year:', error);
+        return ErrorResponse(res, 500, error.message || 'Internal Server Error');
+    }
+};
+
+export const getMyRoutineByTeacherAndAcademicYear = async (req, res) => {
+    try {
+        const validation = await validateEmployeeUser(req, res);
+        if (!validation.valid) {
+            return ErrorResponse(res, validation.status, validation.message);
+        }
+        const { userId } = validation;
+        const { courseId, sessionId, subjectId } = req.query;
         const result = await timeTableCreateServices.getRoutineByTeacherAndAcademicYear(
             userId,
             courseId,

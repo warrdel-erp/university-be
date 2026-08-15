@@ -9,7 +9,8 @@ import {
     deleteQuestionPaper,
     generateQuestionPaper,
     approveQuestionPaper,
-    approvefinalpaper
+    approvefinalpaper,
+    getMyQuestionPapers,
 } from "../controllers/questionPaperController.js";
 
 import userAuth from "../middleware/authUser.js";
@@ -83,6 +84,12 @@ const getAllQuestionPapersQuerySchema = z.object({
     createdBy: z.string().regex(/^\d+$/).transform(val => parseInt(val)).optional(),
 });
 
+const getMyQuestionPapersQuerySchema = z.object({
+    page: z.string().regex(/^\d+$/).transform(val => parseInt(val)).optional().default("1"),
+    limit: z.string().regex(/^\d+$/).transform(val => parseInt(val)).optional().default("10"),
+    examScheduleId: z.string().regex(/^\d+$/).transform(val => parseInt(val)).optional(),
+});
+
 const updateQuestionPaperSchema = z.object({
     id: z.number({ required_error: "id is required" }),
     name: z.string().optional(),
@@ -111,6 +118,8 @@ router.post("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.va
 router.post("/generate", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, null), validate({ body: generateQuestionPaperSchema }), generateQuestionPaper);
 
 router.get("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER.value, null), validate({ query: getAllQuestionPapersQuerySchema }), getAllQuestionPapers);
+
+router.get("/my", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER.value, null), validate({ query: getMyQuestionPapersQuerySchema }), getMyQuestionPapers);
 
 router.get("/:id", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER.value, null), getSingleQuestionPaper);
 

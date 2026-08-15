@@ -1,5 +1,6 @@
 import * as lesson from "../services/lessonServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
+import { validateEmployeeUser } from "../utility/employeeValidation.js";
 import { getAcademicYearId } from "../utility/requestContext.js";
 
 export async function addLesson(req, res) {
@@ -213,9 +214,32 @@ export async function getEmployeeSubjectAndLesson(req, res) {
             subjectSearch,
             subjectId,
         );
-        res.status(200).json(Lessons);
+        return SuccessResponse(res, 200, "Employee subject and lessons fetched successfully", Lessons);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error("Error in getEmployeeSubjectAndLesson:", error);
+        return ErrorResponse(res, 500, error.message || "Internal Server Error");
+    }
+};
+
+export async function getMyEmployeeSubjectAndLesson(req, res) {
+    try {
+        const validation = await validateEmployeeUser(req, res);
+        if (!validation.valid) {
+            return ErrorResponse(res, validation.status, validation.message);
+        }
+        const { userId } = validation;
+        const { courseId, sessionId, subjectSearch, subjectId } = req.query;
+        const Lessons = await lesson.getEmployeeSubjectAndLesson(
+            userId,
+            courseId,
+            sessionId,
+            subjectSearch,
+            subjectId,
+        );
+        return SuccessResponse(res, 200, "Employee subject and lessons fetched successfully", Lessons);
+    } catch (error) {
+        console.error("Error in getMyEmployeeSubjectAndLesson:", error);
+        return ErrorResponse(res, 500, error.message || "Internal Server Error");
     }
 };
 
@@ -273,6 +297,29 @@ export async function getRoutineByTeacher(req, res) {
     }
 };
 
+export async function getMyRoutineByTeacher(req, res) {
+    try {
+        const validation = await validateEmployeeUser(req, res);
+        if (!validation.valid) {
+            return ErrorResponse(res, validation.status, validation.message);
+        }
+        const { userId } = validation;
+        const { courseId, sessionId, subjectId, date } = req.query;
+        const result = await lesson.getRoutineByTeacherForLesson(
+            userId,
+            courseId,
+            sessionId,
+            subjectId,
+            date,
+        );
+        return SuccessResponse(res, 200, "Teacher lesson routine fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getMyRoutineByTeacher:", error);
+        const status = /required|must be sent/i.test(error.message) ? 400 : 500;
+        return ErrorResponse(res, status, error.message || "Internal Server Error");
+    }
+};
+
 export async function getMappedLessonProgress(req, res) {
     try {
         const { userId, subjectId, courseId, sessionId, lessonId, status } = req.query;
@@ -287,6 +334,30 @@ export async function getMappedLessonProgress(req, res) {
         return SuccessResponse(res, 200, "Mapped lesson plans fetched successfully", result);
     } catch (error) {
         console.error("Error in getMappedLessonProgress:", error);
+        const statusCode = error.statusCode || (/required/i.test(error.message) ? 400 : 500);
+        return ErrorResponse(res, statusCode, error.message || "Internal Server Error");
+    }
+};
+
+export async function getMyMappedLessonProgress(req, res) {
+    try {
+        const validation = await validateEmployeeUser(req, res);
+        if (!validation.valid) {
+            return ErrorResponse(res, validation.status, validation.message);
+        }
+        const { userId } = validation;
+        const { subjectId, courseId, sessionId, lessonId, status } = req.query;
+        const result = await lesson.getMappedLessonProgress({
+            userId: Number(userId),
+            subjectId: Number(subjectId),
+            courseId: courseId != null ? Number(courseId) : undefined,
+            sessionId: sessionId != null ? Number(sessionId) : undefined,
+            lessonId: lessonId != null ? Number(lessonId) : undefined,
+            status,
+        });
+        return SuccessResponse(res, 200, "Mapped lesson plans fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getMyMappedLessonProgress:", error);
         const statusCode = error.statusCode || (/required/i.test(error.message) ? 400 : 500);
         return ErrorResponse(res, statusCode, error.message || "Internal Server Error");
     }
