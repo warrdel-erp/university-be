@@ -999,6 +999,31 @@
           }
         },
         {
+          "name": "POST My Lecture Window",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjectId\": 190,\n  \"sessionId\": 6,\n  \"startDate\": \"2026-08-17\",\n  \"endDate\": \"2026-08-30\",\n  \"name\": \"Unit 1 Window\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/lecture/my",
+              "host": ["{{baseurl}}"],
+              "path": ["lecture", "my"]
+            }
+          }
+        },
+        {
           "name": "GET My Lecture Windows",
           "request": {
             "method": "GET",
@@ -1022,6 +1047,65 @@
                   "value": "190"
                 }
               ]
+            }
+          }
+        },
+        {
+          "name": "GET My Single Lecture Window",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lecture/my/{{lectureWindowId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["lecture", "my", "{{lectureWindowId}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH My Lecture Window",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Unit 1 Window Updated\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/lecture/my/{{lectureWindowId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["lecture", "my", "{{lectureWindowId}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE My Lecture Window",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lecture/my/{{lectureWindowId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["lecture", "my", "{{lectureWindowId}}"]
             }
           }
         },
@@ -1096,6 +1180,11 @@
     {
       "key": "questionPaperId",
       "value": "8",
+      "type": "string"
+    },
+    {
+      "key": "lectureWindowId",
+      "value": "1",
       "type": "string"
     }
   ]

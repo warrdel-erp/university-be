@@ -158,3 +158,121 @@ export async function deleteLectureWindow(req, res) {
         return ErrorResponse(res, statusCode, error.message || "Internal Server Error");
     }
 }
+
+export async function addMyLectureWindow(req, res) {
+    try {
+        const validation = await validateEmployeeUser(req, res);
+        if (!validation.valid) {
+            return ErrorResponse(res, validation.status, validation.message);
+        }
+        const { userId } = validation;
+
+        const academicYearId = requireActiveAcademicYearId(res);
+        if (!academicYearId) {
+            return;
+        }
+
+        const result = await lectureWindow.addLectureWindow(
+            {
+                ...req.body,
+                userId,
+                academicYearId,
+            },
+            userId,
+            userId,
+        );
+
+        return SuccessResponse(res, 201, "Lecture window created successfully", result);
+    } catch (error) {
+        console.error("Error in addMyLectureWindow:", error);
+        return ErrorResponse(res, 500, error.message || "Internal Server Error");
+    }
+}
+
+export async function getMyLectureWindowById(req, res) {
+    try {
+        const validation = await validateEmployeeUser(req, res);
+        if (!validation.valid) {
+            return ErrorResponse(res, validation.status, validation.message);
+        }
+        const { userId } = validation;
+
+        const academicYearId = requireActiveAcademicYearId(res);
+        if (!academicYearId) {
+            return;
+        }
+
+        const { lectureWindowId } = req.params;
+        const result = await lectureWindow.getLectureWindowById(lectureWindowId, academicYearId, userId);
+
+        if (!result) {
+            return ErrorResponse(res, 404, "Lecture window not found");
+        }
+
+        return SuccessResponse(res, 200, "Lecture window fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getMyLectureWindowById:", error);
+        return ErrorResponse(res, 500, error.message || "Internal Server Error");
+    }
+}
+
+export async function updateMyLectureWindow(req, res) {
+    try {
+        const validation = await validateEmployeeUser(req, res);
+        if (!validation.valid) {
+            return ErrorResponse(res, validation.status, validation.message);
+        }
+        const { userId } = validation;
+
+        const academicYearId = requireActiveAcademicYearId(res);
+        if (!academicYearId) {
+            return;
+        }
+
+        const { lectureWindowId } = req.params;
+
+        if (req.body.startDate && req.body.endDate) {
+            if (new Date(req.body.startDate) > new Date(req.body.endDate)) {
+                return ErrorResponse(res, 400, "startDate cannot be after endDate");
+            }
+        }
+
+        const result = await lectureWindow.updateLectureWindow(lectureWindowId, req.body, userId, academicYearId, userId);
+        if (!result) {
+            return ErrorResponse(res, 404, "Lecture window not found or unauthorized");
+        }
+
+        return SuccessResponse(res, 200, "Lecture window updated successfully", result);
+    } catch (error) {
+        console.error("Error in updateMyLectureWindow:", error);
+        return ErrorResponse(res, 500, error.message || "Internal Server Error");
+    }
+}
+
+export async function deleteMyLectureWindow(req, res) {
+    try {
+        const validation = await validateEmployeeUser(req, res);
+        if (!validation.valid) {
+            return ErrorResponse(res, validation.status, validation.message);
+        }
+        const { userId } = validation;
+
+        const academicYearId = requireActiveAcademicYearId(res);
+        if (!academicYearId) {
+            return;
+        }
+
+        const { lectureWindowId } = req.params;
+        const deleted = await lectureWindow.deleteLectureWindow(lectureWindowId, academicYearId, userId);
+
+        if (!deleted) {
+            return ErrorResponse(res, 404, "Lecture window not found or unauthorized");
+        }
+
+        return SuccessResponse(res, 200, "Lecture window deleted successfully");
+    } catch (error) {
+        console.error("Error in deleteMyLectureWindow:", error);
+        const statusCode = /lessons are present/i.test(error.message) ? 400 : 500;
+        return ErrorResponse(res, statusCode, error.message || "Internal Server Error");
+    }
+}
