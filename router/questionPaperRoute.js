@@ -15,6 +15,7 @@ import {
     getMySingleQuestionPaper,
     updateMyQuestionPaper,
     deleteMyQuestionPaper,
+    generateMyQuestionPaper,
 } from "../controllers/questionPaperController.js";
 
 import userAuth from "../middleware/authUser.js";
@@ -123,6 +124,8 @@ router.post("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.va
 router.post("/my", userAuth, validate({ body: createQuestionPaperSchema }), addMyQuestionPaper);
 
 router.post("/generate", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, null), validate({ body: generateQuestionPaperSchema }), generateQuestionPaper);
+
+router.post("/my/generate", userAuth, validate({ body: generateQuestionPaperSchema }), generateMyQuestionPaper);
 
 router.get("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER.value, null), validate({ query: getAllQuestionPapersQuerySchema }), getAllQuestionPapers);
 

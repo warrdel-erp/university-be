@@ -969,6 +969,90 @@
               "path": ["questionPaper", "my", "{{questionPaperId}}"]
             }
           }
+        },
+        {
+          "name": "POST My Blueprint",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Blueprint A\",\n  \"subjectId\": 190,\n  \"blueprint\": [\n    {\n      \"sectionName\": \"Section A\",\n      \"typeOfQuestions\": \"theory\",\n      \"totalQuestions\": 2,\n      \"marksPerQuestion\": 5\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionPaperBlueprint/my",
+              "host": ["{{baseurl}}"],
+              "path": ["questionPaperBlueprint", "my"]
+            }
+          }
+        },
+        {
+          "name": "GET My Blueprints",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/questionPaperBlueprint/my",
+              "host": ["{{baseurl}}"],
+              "path": ["questionPaperBlueprint", "my"]
+            }
+          }
+        },
+        {
+          "name": "POST Generate Question Paper My",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Generated Mock Paper\",\n  \"blueprintId\": 1,\n  \"examScheduleId\": 1,\n  \"numberOfPapers\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionPaper/my/generate",
+              "host": ["{{baseurl}}"],
+              "path": ["questionPaper", "my", "generate"]
+            }
+          }
+        },
+        {
+          "name": "DELETE My Blueprint",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/questionPaperBlueprint/my/{{blueprintId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["questionPaperBlueprint", "my", "{{blueprintId}}"]
+            }
+          }
         }
       ]
     },
@@ -1184,6 +1268,11 @@
     },
     {
       "key": "lectureWindowId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "blueprintId",
       "value": "1",
       "type": "string"
     }

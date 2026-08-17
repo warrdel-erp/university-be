@@ -35,6 +35,6 @@ export async function getBlueprints(filters) {
     });
 }
 
-export async function deleteBlueprint(id) {
-    return await questionPaperBlueprintRepository.deleteBlueprint(id);
+export async function deleteBlueprint(id, ownerId) {
+    return await questionPaperBlueprintRepository.deleteBlueprint(id, ownerId);
 }
