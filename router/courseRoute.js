@@ -49,6 +49,8 @@ router.get("/termsWithClassSections", userAuth, checkAccess(PERMISSIONS.COURSES.
 
 router.get("/:courseId/terms", userAuth, checkAccess(PERMISSIONS.COURSES.value, null), courseController.getTermOptionsByCourse);
 
+router.get("/my/subjects/single", userAuth, courseController.getMyMappedSubjectById);
+
 router.get("/my/subjects", userAuth, courseController.getMyMappedSubjects);
 
 router.delete("/:courseId", userAuth, checkAccess(PERMISSIONS.COURSES_DELETE.value, null), validate({ params: courseIdParamSchema }), courseController.deleteCourse);

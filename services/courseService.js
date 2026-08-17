@@ -136,6 +136,10 @@ export const deleteCourse = async (courseId) => {
   return result;
 };
 
-export const getSubjectsByTeacherUserId = async (userId) => {
-  return courseRepository.getSubjectsByTeacherUserId(userId);
+export const getSubjectsByTeacherUserId = async (userId, searchKey) => {
+  return courseRepository.getSubjectsByTeacherUserId(userId, searchKey);
+};
+
+export const getSubjectByTeacherUserIdAndSubjectId = async (userId, subjectId) => {
+  return courseRepository.getSubjectByTeacherUserIdAndSubjectId(userId, subjectId);
 };

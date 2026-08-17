@@ -612,8 +612,17 @@ export async function deleteCourseById(courseId) {
   }
 }
 
-export async function getSubjectsByTeacherUserId(userId) {
+export async function getSubjectsByTeacherUserId(userId, searchKey) {
   try {
+    const searchFilter = searchKey
+      ? {
+          [Op.or]: [
+            { subjectName: { [Op.like]: `%${searchKey}%` } },
+            { subjectCode: { [Op.like]: `%${searchKey}%` } },
+          ],
+        }
+      : {};
+
     const subjects = await scoped(model.subjectModel).findAll({
       attributes: [
         "subjectId",
@@ -649,6 +658,73 @@ export async function getSubjectsByTeacherUserId(userId) {
         },
       ],
       where: {
+        [Op.and]: [
+          {
+            [Op.or]: [
+              {
+                "$employeeSubject.user_id$": userId,
+              },
+              {
+                "$timeTableCells->timeTableCellTeachers.user_id$": userId,
+              },
+            ],
+          },
+          searchFilter,
+        ],
+      },
+      group: [
+        "subject.subject_id",
+        "subject.subject_name",
+        "subject.subject_code",
+      ],
+      raw: true,
+    });
+
+    return subjects;
+  } catch (error) {
+    console.error("Error fetching subjects by teacher userId:", error);
+    throw error;
+  }
+}
+
+export async function getSubjectByTeacherUserIdAndSubjectId(userId, subjectId) {
+  try {
+    const subject = await scoped(model.subjectModel).findOne({
+      attributes: [
+        "subjectId",
+        "subjectName",
+        "subjectCode",
+      ],
+      include: [
+        {
+          model: model.teacherSubjectMappingModel,
+          as: "employeeSubject",
+          attributes: [],
+          required: false,
+          where: {
+            userId,
+          },
+        },
+        {
+          model: model.timeTableCellModel,
+          as: "timeTableCells",
+          attributes: [],
+          required: false,
+          include: [
+            {
+              model: model.timeTableCellTeachersModel,
+              as: "timeTableCellTeachers",
+              attributes: [],
+              required: false,
+              where: {
+                userId,
+              },
+            },
+          ],
+        },
+      ],
+      where: {
+        subjectId,
         [Op.or]: [
           {
             "$employeeSubject.user_id$": userId,
@@ -666,9 +742,9 @@ export async function getSubjectsByTeacherUserId(userId) {
       raw: true,
     });
 
-    return subjects;
+    return subject;
   } catch (error) {
-    console.error("Error fetching subjects by teacher userId:", error);
+    console.error("Error fetching subject by teacher userId and subjectId:", error);
     throw error;
   }
 }
