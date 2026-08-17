@@ -13,6 +13,7 @@ import {
   getAssignmentsByUserId,
   getAssignmentsByExamScheduleId,
   getFacultyAvailability,
+  getMyAssignments,
 } from "../controllers/examInvigilatorAssignmentController.js";
 
 const router = Router();
@@ -160,6 +161,8 @@ router.get(
   validate(byUserIdSchema),
   getAssignmentsByUserId,
 );
+
+router.get("/my", userAuth, getMyAssignments);
 
 router.get(
   "/byExamScheduleId",
