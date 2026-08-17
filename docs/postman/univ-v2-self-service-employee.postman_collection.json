@@ -227,6 +227,23 @@
               ]
             }
           }
+        },
+        {
+          "name": "GET My Mapped Subjects",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/course/my/subjects",
+              "host": ["{{baseurl}}"],
+              "path": ["course", "my", "subjects"]
+            }
+          }
         }
       ]
     },
@@ -868,7 +885,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Mock Final Exam\",\n  \"examScheduleId\": 1,\n  \"questionPaper\": [\n    {\n      \"sectionName\": \"Section A\",\n      \"typeOfQuestions\": \"theory\",\n      \"marksPerQuestion\": 5,\n      \"questions\": [\n        {\n          \"id\": 20,\n          \"type\": \"theory\",\n          \"difficulty\": \"Easy\",\n          \"bloom\": \"Remember\",\n          \"marks\": 5,\n          \"question\": \"What is 2 + 2? (Updated)\",\n          \"Answer\": \"4\",\n          \"content\": null\n        }\n      ]\n    }\n  ]\n}"
+              "raw": "{\n  \"name\": \"Mock Final Exam\",\n  \"examScheduleId\": 1,\n  \"questionPaper\": [\n    {\n      \"sectionName\": \"Section A\",\n      \"typeOfQuestions\": \"theory\",\n      \"marksPerQuestion\": 5,\n      \"questions\": [\n        {\n          \"id\": 20,\n          \"type\": \"theory\",\n          \"difficulty\": \"Easy\",\n          \"bloom\": \"Remember\",\n          \"marks\": 5,\n          \"question\": \"What is 2 + 2? (Updated)\",\n          \"Answer\": \"4\",\n          "content": null\n        }\n      ]\n    }\n  ]\n}"
             },
             "url": {
               "raw": "{{baseurl}}/questionPaper/my",

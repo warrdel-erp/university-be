@@ -158,3 +158,17 @@ export const deleteCourse = async (req, res) => {
     });
   }
 };
+
+export const getMyMappedSubjects = async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return ErrorResponse(res, 404, "User ID not found");
+    }
+    const result = await courseService.getSubjectsByTeacherUserId(userId);
+    return SuccessResponse(res, 200, "Teacher subjects fetched successfully from timeTable", result);
+  } catch (error) {
+    console.error("Error in getMyMappedSubjects controller:", error);
+    return ErrorResponse(res, 500, "Internal Server Error", error.message);
+  }
+};

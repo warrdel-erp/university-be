@@ -1,5 +1,6 @@
 import * as model from '../models/index.js';
 import { Op, fn, col } from 'sequelize';
+import sequelize from '../database/sequelizeConfig.js';
 import { getTenantStore } from '../utility/requestContext.js';
 import { buildScope, scoped } from '../utility/scoped.js';
 import { classSectionTermsInclude } from '../utility/classSectionIncludes.js';
@@ -607,6 +608,67 @@ export async function deleteCourseById(courseId) {
     };
   } catch (error) {
     console.error(`Error deleting course ${courseId}:`, error);
+    throw error;
+  }
+}
+
+export async function getSubjectsByTeacherUserId(userId) {
+  try {
+    const subjects = await scoped(model.subjectModel).findAll({
+      attributes: [
+        "subjectId",
+        "subjectName",
+        "subjectCode",
+      ],
+      include: [
+        {
+          model: model.teacherSubjectMappingModel,
+          as: "employeeSubject",
+          attributes: [],
+          required: false,
+          where: {
+            userId,
+          },
+        },
+        {
+          model: model.timeTableCellModel,
+          as: "timeTableCells",
+          attributes: [],
+          required: false,
+          include: [
+            {
+              model: model.timeTableCellTeachersModel,
+              as: "timeTableCellTeachers",
+              attributes: [],
+              required: false,
+              where: {
+                userId,
+              },
+            },
+          ],
+        },
+      ],
+      where: {
+        [Op.or]: [
+          {
+            "$employeeSubject.user_id$": userId,
+          },
+          {
+            "$timeTableCells->timeTableCellTeachers.user_id$": userId,
+          },
+        ],
+      },
+      group: [
+        "subject.subject_id",
+        "subject.subject_name",
+        "subject.subject_code",
+      ],
+      raw: true,
+    });
+
+    return subjects;
+  } catch (error) {
+    console.error("Error fetching subjects by teacher userId:", error);
     throw error;
   }
 }
