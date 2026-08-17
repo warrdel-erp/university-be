@@ -26,6 +26,21 @@ import {
     getMyRoutineByTeacher,
     getMappedLessonProgress,
     getMyMappedLessonProgress,
+    addMyLesson,
+    getAllMyLessons,
+    getMySimpleLessonList,
+    getMySingleLessonDetails,
+    updateMyLesson,
+    deleteMyLesson,
+    addMyTopic,
+    updateMyTopic,
+    deleteMyTopic,
+    addMyMapping,
+    copyMyMapping,
+    getMyMapping,
+    updateMyMapping,
+    updateMyCompleteMapping,
+    deleteMyMapping,
 } from "../controllers/lessonController.js";
 
 import { PERMISSIONS } from '../const/permissions.js';
@@ -187,6 +202,11 @@ router.get('/simple', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.valu
 router.get('/single', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getSingleLessonDetails);
 router.get('/employee', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getEmployeeSubjectAndLesson);
 router.get('/my/employee', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getMyEmployeeSubjectAndLesson);
+
+router.post('/my', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_ADD.value, null), addMyLesson);
+router.get('/my', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getAllMyLessons);
+router.get('/my/simple', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getMySimpleLessonList);
+router.get('/my/single', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getMySingleLessonDetails);
 router.get(
     '/getRoutineByTeacher',
     userAuth,
@@ -235,6 +255,22 @@ router.delete(
     deleteTopic,
 );
 
+router.post('/my/topic', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_ADD.value, null), addMyTopic);
+router.patch(
+    '/my/topic/:topicId',
+    userAuth,
+    checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_EDIT.value, null),
+    validate({ params: topicIdParamSchema, body: updateTopicBodySchema }),
+    updateMyTopic,
+);
+router.delete(
+    '/my/topic/:topicId',
+    userAuth,
+    checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_DELETE.value, null),
+    validate({ params: topicIdParamSchema }),
+    deleteMyTopic,
+);
+
 // ---------------------------------------------------------------------------
 // 3. Mapping — period key = timeTableCellDateWiseId
 // ---------------------------------------------------------------------------
@@ -256,6 +292,24 @@ router.patch('/', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_EDIT.val
 router.patch('/mapping/:lessonMappingId', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_EDIT.value, null), updateCompleteMapping);
 router.delete('/mapping/:lessonMappingId', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_DELETE.value, null), deleteMapping);
 
+router.post(
+    '/my/mapping',
+    userAuth,
+    checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_ADD.value, null),
+    validate({ body: addMappingBodySchema }),
+    addMyMapping,
+);
+router.post(
+    '/my/mapping/copy',
+    userAuth,
+    validate({ body: copyMappingBodySchema }),
+    copyMyMapping,
+);
+router.get('/my/mapping', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), getMyMapping);
+router.patch('/my/mapping', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_EDIT.value, null), updateMyMapping);
+router.patch('/my/mapping/:lessonMappingId', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_EDIT.value, null), updateMyCompleteMapping);
+router.delete('/my/mapping/:lessonMappingId', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_DELETE.value, null), deleteMyMapping);
+
 // ---------------------------------------------------------------------------
 // 4. Lecture window link
 // ---------------------------------------------------------------------------
@@ -269,6 +323,21 @@ router.post(
 // ---------------------------------------------------------------------------
 // 5. Lesson edit / delete (param routes last so they do not capture named paths)
 // ---------------------------------------------------------------------------
+router.patch(
+    '/my/:lessonId',
+    userAuth,
+    checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_EDIT.value, null),
+    validate({ params: lessonIdParamSchema, body: updateLessonBodySchema }),
+    updateMyLesson,
+);
+router.delete(
+    '/my/:lessonId',
+    userAuth,
+    checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_DELETE.value, null),
+    validate({ params: lessonIdParamSchema }),
+    deleteMyLesson,
+);
+
 router.patch(
     '/:lessonId',
     userAuth,

@@ -2,6 +2,7 @@ import * as lesson from "../services/lessonServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 import { validateEmployeeUser } from "../utility/employeeValidation.js";
 import { getAcademicYearId } from "../utility/requestContext.js";
+import * as model from "../models/index.js";
 
 export async function addLesson(req, res) {
     const { name, subjectId, sessionId, lectureWindowId } = req.body;
@@ -362,3 +363,387 @@ export async function getMyMappedLessonProgress(req, res) {
         return ErrorResponse(res, statusCode, error.message || "Internal Server Error");
     }
 };
+
+// Ownership verification helpers
+async function verifyLessonOwnership(lessonId, userId) {
+    const record = await model.lessonModel.findOne({
+        where: { lessonId, userId }
+    });
+    if (!record) {
+        const err = new Error("Lesson plan not found or not owned by you");
+        err.statusCode = 403;
+        throw err;
+    }
+    return record;
+}
+
+async function verifyTopicOwnership(topicId, userId) {
+    const record = await model.topicModel.findOne({
+        where: { topicId },
+        include: [{
+            model: model.lessonModel,
+            as: "lessonTopic",
+            where: { userId },
+            required: true,
+        }]
+    });
+    if (!record) {
+        const err = new Error("Topic not found or not owned by you");
+        err.statusCode = 403;
+        throw err;
+    }
+    return record;
+}
+
+async function verifyMappingOwnership(lessonMappingId, userId) {
+    const record = await model.lessonMappingModel.findOne({
+        where: { lessonMappingId },
+        include: [{
+            model: model.topicModel,
+            as: "mappingTopic",
+            required: true,
+            include: [{
+                model: model.lessonModel,
+                as: "lessonTopic",
+                where: { userId },
+                required: true,
+            }]
+        }]
+    });
+    if (!record) {
+        const err = new Error("Lesson mapping not found or not owned by you");
+        err.statusCode = 403;
+        throw err;
+    }
+    return record;
+}
+
+async function verifyDateWiseCellAssignment(timeTableCellDateWiseId, userId) {
+    const record = await model.timeTableCellTeachersDateWiseModel.findOne({
+        where: { timeTableCellDateWiseId, userId }
+    });
+    if (!record) {
+        const err = new Error("You are not assigned to this scheduled period");
+        err.statusCode = 403;
+        throw err;
+    }
+    return record;
+}
+
+// self-service /my APIs
+export async function addMyLesson(req, res) {
+    const createdBy = req.user.userId;
+    const updatedBy = req.user.userId;
+    try {
+        const academicYearId = getAcademicYearId();
+        if (!academicYearId) {
+            return res.status(400).send("academicYearId not found in user session");
+        }
+        const { name, subjectId, sessionId, lectureWindowId } = req.body;
+        if (!(name && subjectId && sessionId && lectureWindowId)) {
+            return res.status(400).send("name, subjectId, sessionId and lectureWindowId are required");
+        }
+        const lessonData = await lesson.addLesson(
+            { ...req.body, userId: createdBy, academicYearId: Number(academicYearId) },
+            createdBy,
+            updatedBy,
+        );
+        res.status(201).json({ message: "Data added successfully", lessonData });
+    } catch (error) {
+        const statusCode = error.statusCode || (/not found/i.test(error.message) ? 404 : 500);
+        res.status(statusCode).json({ error: error.message });
+    }
+}
+
+export async function getAllMyLessons(req, res) {
+    const { academicYearId } = req.query;
+    const userId = req.user.userId;
+    try {
+        const Lessons = await model.lessonModel.findAll({
+            where: {
+                userId,
+                ...(academicYearId && { academicYearId }),
+            },
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+            include: [
+                {
+                    model: model.subjectModel,
+                    as: "lessonSubject",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                    include: [
+                        {
+                            model: model.courseModel,
+                            as: "courseInfo",
+                            attributes: {
+                                exclude: [
+                                    "createdAt",
+                                    "updatedAt",
+                                    "deletedAt",
+                                    "createdBy",
+                                    "updatedBy",
+                                    "affiliated_university_id",
+                                    "institute_id",
+                                ],
+                            },
+                        },
+                    ],
+                },
+                {
+                    model: model.semesterModel,
+                    as: "lessionSemester",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                },
+                {
+                    model: model.sessionModel,
+                    as: "lessionSession",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                },
+                {
+                    model: model.topicModel,
+                    as: "topicSession",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                    include: [
+                        {
+                            model: model.subTopicModel,
+                            as: "subTopic",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                        },
+                        {
+                            model: model.lessonMappingModel,
+                            as: "topicMapping",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                        },
+                    ],
+                },
+            ],
+        });
+        res.status(200).json(Lessons);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+export async function getMySimpleLessonList(req, res) {
+    const userId = req.user.userId;
+    try {
+        const result = await model.lessonModel.findAll({
+            where: { userId },
+            attributes: ["lessonId", "name", "subjectId", "sessionId", "academicYearId"],
+        });
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+export async function getMySingleLessonDetails(req, res) {
+    const { lessonId } = req.query;
+    const userId = req.user.userId;
+    try {
+        if (!lessonId) {
+            return res.status(400).send("lessonId is required");
+        }
+        await verifyLessonOwnership(lessonId, userId);
+        const result = await lesson.getSingleLessonDetails(lessonId);
+        res.status(200).json(result);
+    } catch (error) {
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).json({ error: error.message });
+    }
+}
+
+export async function updateMyLesson(req, res) {
+    const { lessonId } = req.params;
+    const userId = req.user.userId;
+    const updatedBy = req.user.userId;
+    try {
+        await verifyLessonOwnership(lessonId, userId);
+        const lessonData = await lesson.updateLesson(
+            Number(lessonId),
+            { ...req.body },
+            updatedBy,
+        );
+        res.status(200).json({ message: "Lesson updated successfully", lessonData });
+    } catch (error) {
+        const statusCode = error.statusCode || (/not found/i.test(error.message) ? 404 : 500);
+        res.status(statusCode).json({ error: error.message });
+    }
+}
+
+export async function deleteMyLesson(req, res) {
+    const { lessonId } = req.params;
+    const userId = req.user.userId;
+    try {
+        await verifyLessonOwnership(lessonId, userId);
+        await lesson.deleteLesson(Number(lessonId));
+        res.status(200).json({ message: "Lesson deleted successfully" });
+    } catch (error) {
+        const statusCode = error.statusCode || (/not found/i.test(error.message) ? 404 : 500);
+        res.status(statusCode).json({ error: error.message });
+    }
+}
+
+export async function addMyTopic(req, res) {
+    const { lessonId, name } = req.body;
+    const userId = req.user.userId;
+    const createdBy = req.user.userId;
+    const updatedBy = req.user.userId;
+    try {
+        if (!(lessonId && name)) {
+            return res.status(400).send("lessonId and name are required");
+        }
+        await verifyLessonOwnership(lessonId, userId);
+        const topicData = await lesson.addTopice(req.body, createdBy, updatedBy);
+        res.status(201).json({ message: "Topic added successfully", topicData });
+    } catch (error) {
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).json({ error: error.message });
+    }
+}
+
+export async function updateMyTopic(req, res) {
+    const { topicId } = req.params;
+    const userId = req.user.userId;
+    const updatedBy = req.user.userId;
+    try {
+        await verifyTopicOwnership(topicId, userId);
+        const topicData = await lesson.updateTopic(Number(topicId), req.body, updatedBy);
+        res.status(200).json({ message: "Topic updated successfully", topicData });
+    } catch (error) {
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).json({ error: error.message });
+    }
+}
+
+export async function deleteMyTopic(req, res) {
+    const { topicId } = req.params;
+    const userId = req.user.userId;
+    try {
+        await verifyTopicOwnership(topicId, userId);
+        await lesson.deleteTopic(Number(topicId));
+        res.status(200).json({ message: "Topic deleted successfully" });
+    } catch (error) {
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).json({ error: error.message });
+    }
+}
+
+export async function addMyMapping(req, res) {
+    const { topicId, timeTableCellDateWiseId } = req.body;
+    const userId = req.user.userId;
+    const createdBy = req.user.userId;
+    const updatedBy = req.user.userId;
+    try {
+        if (!(topicId && timeTableCellDateWiseId)) {
+            return res.status(400).send("topicId and timeTableCellDateWiseId are required");
+        }
+        await verifyTopicOwnership(topicId, userId);
+        await verifyDateWiseCellAssignment(timeTableCellDateWiseId, userId);
+
+        const lessonData = await lesson.addMapping(req.body, createdBy, updatedBy);
+        res.status(201).json({ message: "Data added successfully", lessonData });
+    } catch (error) {
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).json({ error: error.message });
+    }
+}
+
+export async function copyMyMapping(req, res) {
+    const { sourceLessonMappingId, targets } = req.body;
+    const userId = req.user.userId;
+    const createdBy = req.user.userId;
+    const updatedBy = req.user.userId;
+    try {
+        await verifyMappingOwnership(sourceLessonMappingId, userId);
+        
+        const ids = Array.isArray(targets) ? targets.map(t => Number(t.timeTableCellDateWiseId)) : [];
+        for (const tid of ids) {
+            await verifyDateWiseCellAssignment(tid, userId);
+        }
+
+        const lessonData = await lesson.copyMapping(req.body, createdBy, updatedBy);
+        return SuccessResponse(res, 201, lessonData.message, {
+            copied: lessonData.copied,
+            sourceLessonMappingId: lessonData.sourceLessonMappingId,
+        });
+    } catch (error) {
+        const statusCode = error.statusCode || 500;
+        return ErrorResponse(res, statusCode, error.message || "Internal Server Error");
+    }
+}
+
+export async function getMyMapping(req, res) {
+    const { academicYearId } = req.query;
+    const userId = req.user.userId;
+    try {
+        const mappings = await model.lessonMappingModel.findAll({
+            include: [{
+                model: model.topicModel,
+                as: "mappingTopic",
+                required: true,
+                include: [{
+                    model: model.lessonModel,
+                    as: "lessonTopic",
+                    where: {
+                        userId,
+                        ...(academicYearId && { academicYearId }),
+                    },
+                    required: true,
+                }]
+            }],
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] }
+        });
+        res.status(200).json(mappings);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+export async function updateMyMapping(req, res) {
+    const { completeDate, lessonMappingId } = req.body;
+    const userId = req.user.userId;
+    try {
+        if (!(completeDate && lessonMappingId)) {
+            return res.status(400).send('completeDate and lessonMappingId is required');
+        }
+        await verifyMappingOwnership(lessonMappingId, userId);
+        const Lessons = await lesson.updateMapping(completeDate, lessonMappingId);
+        res.status(200).json(Lessons);
+    } catch (error) {
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).json({ error: error.message });
+    }
+}
+
+export async function updateMyCompleteMapping(req, res) {
+    const { lessonMappingId } = req.params;
+    const userId = req.user.userId;
+    const updatedBy = req.user.userId;
+    try {
+        if (!lessonMappingId) {
+            return res.status(400).send("Mapping ID is required");
+        }
+        await verifyMappingOwnership(lessonMappingId, userId);
+        const lessonData = await lesson.updateCompleteMapping(Number(lessonMappingId), req.body, updatedBy);
+        res.status(200).json({ message: "Data updated successfully", lessonData });
+    } catch (error) {
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).json({ error: error.message });
+    }
+}
+
+export async function deleteMyMapping(req, res) {
+    const { lessonMappingId } = req.params;
+    const userId = req.user.userId;
+    try {
+        if (!lessonMappingId) {
+            return res.status(400).send("Mapping ID is required");
+        }
+        await verifyMappingOwnership(lessonMappingId, userId);
+        await lesson.deleteMapping(Number(lessonMappingId));
+        res.status(200).json({ message: "Mapping deleted successfully" });
+    } catch (error) {
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).json({ error: error.message });
+    }
+}

@@ -4,6 +4,7 @@ const router = Router();
 import {
     addLectureWindow,
     getLectureWindows,
+    getMyLectureWindows,
     getLectureWindowById,
     updateLectureWindow,
     deleteLectureWindow,
@@ -42,6 +43,12 @@ const lectureWindowListQuerySchema = z.object({
     lessonId: optionalPositiveId,
 }).strict();
 
+const getMyLectureWindowListQuerySchema = z.object({
+    subjectId: optionalPositiveId,
+    sessionId: optionalPositiveId,
+    lessonId: optionalPositiveId,
+}).strict();
+
 const lectureWindowIdParamsSchema = z.object({
     lectureWindowId: positiveIntegerId,
 });
@@ -57,6 +64,8 @@ const lectureWindowUpdateSchema = z.object({
 router.post('/', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_ADD.value, null), validate({ body: lectureWindowBodySchema }), addLectureWindow);
 
 router.get('/', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), validate({ query: lectureWindowListQuerySchema }), getLectureWindows);
+
+router.get('/my', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), validate({ query: getMyLectureWindowListQuerySchema }), getMyLectureWindows);
 
 router.get('/:lectureWindowId', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), validate({ params: lectureWindowIdParamsSchema }), getLectureWindowById);
 

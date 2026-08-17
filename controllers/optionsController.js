@@ -1,5 +1,6 @@
 import * as optionsServices from '../services/optionsServices.js';
 import { SuccessResponse, ErrorResponse } from '../utility/response.js';
+import { validateEmployeeUser } from '../utility/employeeValidation.js';
 import { getAcademicYearId } from '../utility/requestContext.js';
 
 export const getAffiliatedUniversityOptions = async (req, res) => {
@@ -82,6 +83,30 @@ export async function getSubjectOptions(req, res) {
         return SuccessResponse(res, 200, "Subject options fetched successfully", result);
     } catch (error) {
         console.error("Error in getSubjectOptions:", error);
+        const status = error.message?.includes("not found") || error.message?.includes("not mapped") ? 400 : 500;
+        return ErrorResponse(res, status, error.message || "Internal Server Error");
+    }
+};
+
+export async function getMySubjectOptions(req, res) {
+    try {
+        const validation = await validateEmployeeUser(req, res);
+        if (!validation.valid) {
+            return ErrorResponse(res, validation.status, validation.message);
+        }
+        const { userId } = validation;
+        const { courseId, term, sessionId } = req.query;
+        const academicYearId = getAcademicYearId();
+        const result = await optionsServices.getSubjectOptions(
+            courseId,
+            term,
+            academicYearId,
+            sessionId,
+            userId,
+        );
+        return SuccessResponse(res, 200, "Subject options fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getMySubjectOptions:", error);
         const status = error.message?.includes("not found") || error.message?.includes("not mapped") ? 400 : 500;
         return ErrorResponse(res, status, error.message || "Internal Server Error");
     }

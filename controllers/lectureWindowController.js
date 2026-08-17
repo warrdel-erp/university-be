@@ -1,5 +1,6 @@
 import * as lectureWindow from "../services/lectureWindowServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
+import { validateEmployeeUser } from "../utility/employeeValidation.js";
 import { getAcademicYearId } from "../utility/requestContext.js";
 
 function requireActiveAcademicYearId(res) {
@@ -54,6 +55,35 @@ export async function getLectureWindows(req, res) {
         return SuccessResponse(res, 200, "Lecture windows fetched successfully", result);
     } catch (error) {
         console.error("Error in getLectureWindows:", error);
+        return ErrorResponse(res, 500, error.message || "Internal Server Error");
+    }
+}
+
+export async function getMyLectureWindows(req, res) {
+    try {
+        const validation = await validateEmployeeUser(req, res);
+        if (!validation.valid) {
+            return ErrorResponse(res, validation.status, validation.message);
+        }
+        const { userId } = validation;
+
+        const academicYearId = requireActiveAcademicYearId(res);
+        if (!academicYearId) {
+            return;
+        }
+
+        const { subjectId, sessionId, lessonId } = req.query;
+        const result = await lectureWindow.getLectureWindows({
+            academicYearId,
+            subjectId,
+            userId,
+            sessionId,
+            lessonId,
+        });
+
+        return SuccessResponse(res, 200, "Lecture windows fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getMyLectureWindows:", error);
         return ErrorResponse(res, 500, error.message || "Internal Server Error");
     }
 }
