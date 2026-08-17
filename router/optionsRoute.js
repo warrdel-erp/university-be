@@ -84,6 +84,14 @@ const lectureWindowsQuerySchema = z
     path: ["userId"],
   });
 
+const getMyLectureWindowsQuerySchema = z.object({
+  subjectId: positiveIntegerId,
+  date: z
+    .string({ required_error: "date is required" })
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
+  sessionId: optionalPositiveIntegerId,
+});
+
 const lessonsQuerySchema = z.object({
   lectureWindowId: positiveIntegerId,
 });
@@ -204,6 +212,13 @@ router.get(
   userAuth,
   validate({ query: lectureWindowsQuerySchema }),
   optionsController.getLectureWindowOptions,
+);
+
+router.get(
+  "/my/lectureWindows",
+  userAuth,
+  validate({ query: getMyLectureWindowsQuerySchema }),
+  optionsController.getMyLectureWindowOptions,
 );
 
 router.get(

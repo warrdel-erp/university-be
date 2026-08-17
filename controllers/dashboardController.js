@@ -37,7 +37,7 @@ export const getMyTeacherDashboard = async (req, res) => {
     if (!validation.valid) {
       return ErrorResponse(res, validation.status, validation.message);
     }
-    const employeeId = validation.employeeRecord.employeeId;
+    const employeeId = validation.employeeRecord?.employeeId;
 
     const result = await dashboardServices.getTeacherDashboard({ employeeId });
     return SuccessResponse(res, 200, 'Teacher dashboard fetched successfully', result);

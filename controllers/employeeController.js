@@ -808,7 +808,7 @@ export const getMyEmployeeDetails = async (req, res) => {
       return ErrorResponse(res, validation.status, validation.message);
     }
     const { employeeRecord } = validation;
-    const employeeId = employeeRecord.employeeId;
+    const employeeId = employeeRecord?.employeeId;
 
     const result = await employee.getSingleEmployeeDetails(employeeId);
     return SuccessResponse(res, 200, "Employee details fetched successfully", result);

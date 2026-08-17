@@ -169,6 +169,33 @@ export const getLectureWindowOptions = async (req, res) => {
     }
 };
 
+export const getMyLectureWindowOptions = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { subjectId, date, sessionId } = req.query;
+        const academicYearId = getAcademicYearId();
+        if (!academicYearId) {
+            return ErrorResponse(res, 400, "academicYearId not found in user session");
+        }
+
+        const result = await optionsServices.getLectureWindowOptions(
+            Number(userId),
+            undefined,
+            Number(subjectId),
+            Number(academicYearId),
+            date,
+            sessionId != null ? Number(sessionId) : undefined,
+        );
+        return SuccessResponse(res, 200, "Lecture window options fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getMyLectureWindowOptions:", error);
+        const status = error.message?.includes('not found') || error.message?.includes('no linked userId')
+            ? 404
+            : 500;
+        return ErrorResponse(res, status, error.message || "Internal Server Error");
+    }
+};
+
 export const getLessonOptions = async (req, res) => {
     try {
         const { lectureWindowId } = req.query;

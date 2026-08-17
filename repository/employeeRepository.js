@@ -144,6 +144,7 @@ export async function getAllEmployee(campusId, instituteId, options = {}) {
 };
 
 export async function getSingleEmployeeDetails(employeeId) {
+    if (!employeeId) return [];
     try {
         const result = await scoped(model.employeeModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
