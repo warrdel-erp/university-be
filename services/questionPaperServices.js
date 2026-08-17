@@ -127,8 +127,8 @@ function transformQuestionPaper(paper, schedule) {
     };
 }
 
-export async function getSingleQuestionPaper(id) {
-    const paper = await questionPaperRepository.getSingleQuestionPaper(id);
+export async function getSingleQuestionPaper(id, ownerId = null) {
+    const paper = await questionPaperRepository.getSingleQuestionPaper(id, ownerId);
     if (!paper) return null;
 
     const schedule = paper.examScheduleId
@@ -138,16 +138,16 @@ export async function getSingleQuestionPaper(id) {
     return transformQuestionPaper(paper, schedule);
 }
 
-export async function updateQuestionPaper(id, questionPaperData, updatedBy) {
+export async function updateQuestionPaper(id, questionPaperData, updatedBy, ownerId = null) {
     questionPaperData.updatedBy = updatedBy;
     if (Array.isArray(questionPaperData.questionPaper)) {
         questionPaperData.totalMarks = calculateTotalMarks(questionPaperData.questionPaper);
     }
-    return await questionPaperRepository.updateQuestionPaper(id, questionPaperData);
+    return await questionPaperRepository.updateQuestionPaper(id, questionPaperData, null, ownerId);
 }
 
-export async function deleteQuestionPaper(id) {
-    return await questionPaperRepository.deleteQuestionPaper(id);
+export async function deleteQuestionPaper(id, ownerId = null) {
+    return await questionPaperRepository.deleteQuestionPaper(id, ownerId);
 }
 
 export async function generateQuestionPaper(name, blueprintId, examScheduleId, numberOfPapers, createdBy, updatedBy) {

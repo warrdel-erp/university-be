@@ -11,6 +11,10 @@ import {
     approveQuestionPaper,
     approvefinalpaper,
     getMyQuestionPapers,
+    addMyQuestionPaper,
+    getMySingleQuestionPaper,
+    updateMyQuestionPaper,
+    deleteMyQuestionPaper,
 } from "../controllers/questionPaperController.js";
 
 import userAuth from "../middleware/authUser.js";
@@ -56,6 +60,7 @@ const baseQuestionSchema = z.object({
     updatedBy: z.number().optional(),
     createdAt: z.any().optional(),
     updatedAt: z.any().optional(),
+    updatedBy: z.number().optional(),
 });
 
 const questionSchema = z.discriminatedUnion("type", [
@@ -115,15 +120,23 @@ const finalApprovalSchema = z.object({
 
 router.post("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, null), validate({ body: createQuestionPaperSchema }), addQuestionPaper);
 
+router.post("/my", userAuth, validate({ body: createQuestionPaperSchema }), addMyQuestionPaper);
+
 router.post("/generate", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, null), validate({ body: generateQuestionPaperSchema }), generateQuestionPaper);
 
 router.get("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER.value, null), validate({ query: getAllQuestionPapersQuerySchema }), getAllQuestionPapers);
 
-router.get("/my", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER.value, null), validate({ query: getMyQuestionPapersQuerySchema }), getMyQuestionPapers);
+router.get("/my", userAuth, validate({ query: getMyQuestionPapersQuerySchema }), getMyQuestionPapers);
+
+router.get("/my/:id", userAuth, getMySingleQuestionPaper);
 
 router.get("/:id", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER.value, null), getSingleQuestionPaper);
 
 router.put("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_EDIT.value, null), validate({ body: updateQuestionPaperSchema }), updateQuestionPaper);
+
+router.put("/my", userAuth, validate({ body: updateQuestionPaperSchema }), updateMyQuestionPaper);
+
+router.delete("/my/:id", userAuth, deleteMyQuestionPaper);
 
 router.delete("/:id", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_DELETE.value, null), deleteQuestionPaper);
 

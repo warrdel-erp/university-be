@@ -735,6 +735,31 @@
       "name": "Question Bank",
       "item": [
         {
+          "name": "POST My Question",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"theory\",\n  \"difficulty\": \"Easy\",\n  \"bloom\": \"Remember\",\n  \"marks\": 5,\n  \"question\": \"What is 2 + 2?\",\n  \"Answer\": \"4\",\n  \"subjectId\": 190,\n  \"content\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionBank/my",
+              "host": ["{{baseurl}}"],
+              "path": ["questionBank", "my"]
+            }
+          }
+        },
+        {
           "name": "GET My Questions",
           "request": {
             "method": "GET",
@@ -748,6 +773,23 @@
               "raw": "{{baseurl}}/questionBank/my",
               "host": ["{{baseurl}}"],
               "path": ["questionBank", "my"]
+            }
+          }
+        },
+        {
+          "name": "GET My Single Question",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/questionBank/my/{{questionId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["questionBank", "my", "{{questionId}}"]
             }
           }
         },
@@ -769,6 +811,73 @@
           }
         },
         {
+          "name": "PUT My Question",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": {{questionId}},\n  \"question\": \"What is 2 + 2? (Updated)\",\n  \"type\": \"theory\",\n  \"content\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionBank/my",
+              "host": ["{{baseurl}}"],
+              "path": ["questionBank", "my"]
+            }
+          }
+        },
+        {
+          "name": "DELETE My Question",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/questionBank/my/{{questionId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["questionBank", "my", "{{questionId}}"]
+            }
+          }
+        },
+        {
+          "name": "POST My Question Paper",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mock Final Exam\",\n  \"examScheduleId\": 1,\n  \"questionPaper\": [\n    {\n      \"sectionName\": \"Section A\",\n      \"typeOfQuestions\": \"theory\",\n      \"marksPerQuestion\": 5,\n      \"questions\": [\n        {\n          \"id\": 20,\n          \"type\": \"theory\",\n          \"difficulty\": \"Easy\",\n          \"bloom\": \"Remember\",\n          \"marks\": 5,\n          \"question\": \"What is 2 + 2? (Updated)\",\n          \"Answer\": \"4\",\n          \"content\": null\n        }\n      ]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionPaper/my",
+              "host": ["{{baseurl}}"],
+              "path": ["questionPaper", "my"]
+            }
+          }
+        },
+        {
           "name": "GET My Question Papers",
           "request": {
             "method": "GET",
@@ -782,6 +891,65 @@
               "raw": "{{baseurl}}/questionPaper/my",
               "host": ["{{baseurl}}"],
               "path": ["questionPaper", "my"]
+            }
+          }
+        },
+        {
+          "name": "GET My Single Question Paper",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/questionPaper/my/{{questionPaperId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["questionPaper", "my", "{{questionPaperId}}"]
+            }
+          }
+        },
+        {
+          "name": "PUT My Question Paper",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": {{questionPaperId}},\n  \"name\": \"Mock Final Exam (Updated)\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionPaper/my",
+              "host": ["{{baseurl}}"],
+              "path": ["questionPaper", "my"]
+            }
+          }
+        },
+        {
+          "name": "DELETE My Question Paper",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/questionPaper/my/{{questionPaperId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["questionPaper", "my", "{{questionPaperId}}"]
             }
           }
         }
@@ -901,6 +1069,16 @@
     {
       "key": "token",
       "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjU2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlSWQiOm51bGwsImRlZmF1bHRBY2FkZW1pY1llYXJJZCI6NTksInVzZXJOYW1lIjoiUGF5YWwgTHVsbGEiLCJ1bmlxdWVJZCI6IjE0NWQ5ODU2LTYyYzctNDY4ZS1hNzYyLTI2ZTkzYjdmYzgyZiIsInBhc3N3b3JkIjoiJDJhJDEwJEVzMmlldHdab0FBNHhTRnBKbGYzRmUuQmR1eDIuanVtR3BUMmZaUEtYaHEubTVxR2dhaEJPIiwiZHVtbXlQYXNzd29yZCI6IiIsInN0YXR1cyI6ImFjdGl2ZSIsInBob25lIjoiNzYwMDc5ODMwNyIsImVtYWlsIjoicGx1QGFheW9qYW4uZWR1LmluIiwiaXNUZWFjaGVyIjp0cnVlLCJjcmVhdGVkQXQiOiIyMDI1LTA5LTMwVDExOjUyOjA5LjAwMFoiLCJ1cGRhdGVkQXQiOiIyMDI2LTA4LTExVDE5OjUyOjE0LjAwMFoiLCJkZWxldGVkQXQiOm51bGwsImRlZmF1bHRfcm9sZV9pZCI6bnVsbCwiaW5zdGl0dXRlTmFtZSI6IkFheW9qYW4gU2Nob29sIG9mIEFyY2hpdGVjdHVyZSIsImlhdCI6MTc4NjgxMTY2OSwiZXhwIjoxNzg5NDAzNjY5fQ.9rEUibo0Al-3x8p03oMRGZGNMeJH4ml17xl31ZHPIlg",
+      "type": "string"
+    },
+    {
+      "key": "questionId",
+      "value": "20",
+      "type": "string"
+    },
+    {
+      "key": "questionPaperId",
+      "value": "8",
       "type": "string"
     }
   ]

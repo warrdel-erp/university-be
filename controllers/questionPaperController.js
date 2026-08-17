@@ -171,3 +171,82 @@ export async function getMyQuestionPapers(req, res) {
         return ErrorResponse(res, 500, error.message);
     }
 }
+
+export async function addMyQuestionPaper(req, res) {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+        return ErrorResponse(res, validation.status, validation.message);
+    }
+    const { userId } = validation;
+
+    try {
+        const result = await questionPaperServices.addQuestionPaper(req.body, userId, userId);
+
+        return SuccessResponse(res, 201, "Question paper created successfully", result);
+    } catch (error) {
+        return ErrorResponse(res, 500, error.message);
+    }
+}
+
+export async function getMySingleQuestionPaper(req, res) {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+        return ErrorResponse(res, validation.status, validation.message);
+    }
+    const { userId } = validation;
+    try {
+        const { id } = req.params;
+
+        const result = await questionPaperServices.getSingleQuestionPaper(id, userId);
+
+        if (result) {
+            return SuccessResponse(res, 200, "Question paper fetched successfully", result);
+        } else {
+            return ErrorResponse(res, 404, "Question paper not found");
+        }
+    } catch (error) {
+        return ErrorResponse(res, 500, error.message);
+    }
+}
+
+export async function updateMyQuestionPaper(req, res) {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+        return ErrorResponse(res, validation.status, validation.message);
+    }
+    const { userId } = validation;
+    try {
+        const { id } = req.body;
+        const result = await questionPaperServices.updateQuestionPaper(id, req.body, userId, userId);
+
+        if (result[0] > 0) {
+            return SuccessResponse(res, 200, "Question paper updated successfully", result);
+        } else {
+            return ErrorResponse(res, 404, "Question paper not found or unauthorized");
+        }
+    } catch (error) {
+        return ErrorResponse(res, 500, error.message);
+    }
+}
+
+export async function deleteMyQuestionPaper(req, res) {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+        return ErrorResponse(res, validation.status, validation.message);
+    }
+    const { userId } = validation;
+    try {
+        const { id } = req.params;
+        if (!id) {
+            return ErrorResponse(res, 400, "id is required");
+        }
+        const deleted = await questionPaperServices.deleteQuestionPaper(id, userId);
+        if (deleted) {
+            return SuccessResponse(res, 200, `Delete successful for question paper ID ${id}`);
+        } else {
+            return ErrorResponse(res, 404, "Question paper not found or unauthorized");
+        }
+    } catch (error) {
+        return ErrorResponse(res, 500, error.message);
+    }
+}

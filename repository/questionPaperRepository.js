@@ -9,9 +9,13 @@ async function assertScopedExamSchedule(examScheduleId, transaction) {
     });
 }
 
-async function assertScopedQuestionPaper(id, transaction) {
+async function assertScopedQuestionPaper(id, transaction, ownerId = null) {
+    const whereClause = { id };
+    if (ownerId) {
+        whereClause.createdBy = ownerId;
+    }
     return model.questionPaperModel.findOne({
-        where: { id },
+        where: whereClause,
         attributes: ['id', 'examScheduleId'],
         transaction,
         include: [{
@@ -84,9 +88,9 @@ export async function getQuestionPapers(filters = {}, pagination = {}) {
     }
 }
 
-export async function getSingleQuestionPaper(id) {
+export async function getSingleQuestionPaper(id, ownerId = null) {
     try {
-        const existing = await assertScopedQuestionPaper(id);
+        const existing = await assertScopedQuestionPaper(id, null, ownerId);
 
         if (!existing) {
             return null;
@@ -137,9 +141,9 @@ export async function getSingleQuestionPaper(id) {
     }
 }
 
-export async function updateQuestionPaper(id, questionPaperData, transaction = null) {
+export async function updateQuestionPaper(id, questionPaperData, transaction = null, ownerId = null) {
     try {
-        const existing = await assertScopedQuestionPaper(id, transaction);
+        const existing = await assertScopedQuestionPaper(id, transaction, ownerId);
         if (!existing) {
             return [0];
         }
@@ -181,9 +185,9 @@ export async function getApprovedQuestionPapersByScheduleId(examScheduleId, tran
     }
 }
 
-export async function deleteQuestionPaper(id) {
+export async function deleteQuestionPaper(id, ownerId = null) {
     try {
-        const existing = await assertScopedQuestionPaper(id);
+        const existing = await assertScopedQuestionPaper(id, null, ownerId);
         if (!existing) {
             return false;
         }

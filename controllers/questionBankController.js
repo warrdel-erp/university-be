@@ -170,3 +170,68 @@ export async function getMyQuestionsCount(req, res) {
         return ErrorResponse(res, 500, error.message);
     }
 }
+
+export async function getMySingleQuestion(req, res) {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+        return ErrorResponse(res, validation.status, validation.message);
+    }
+    const { userId } = validation;
+    try {
+        const { id } = req.params;
+        const result = await questionBankServices.getSingleQuestion(id, userId);
+
+        if (result) {
+            return SuccessResponse(res, 200, "Question fetched successfully", result);
+        } else {
+            return ErrorResponse(res, 404, "Question not found in bank");
+        }
+    } catch (error) {
+        return ErrorResponse(res, 500, error.message);
+    }
+}
+
+export async function updateMyQuestion(req, res) {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+        return ErrorResponse(res, validation.status, validation.message);
+    }
+    const { userId } = validation;
+    try {
+        const { id } = req.body;
+        if (!id) {
+            return ErrorResponse(res, 400, "id is required in body");
+        }
+        const result = await questionBankServices.updateQuestion(id, req.body, userId, userId);
+
+        if (result[0] > 0) {
+            return SuccessResponse(res, 200, "Question updated successfully", result);
+        } else {
+            return ErrorResponse(res, 404, "Question not found or unauthorized");
+        }
+    } catch (error) {
+        return ErrorResponse(res, 500, error.message);
+    }
+}
+
+export async function deleteMyQuestion(req, res) {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+        return ErrorResponse(res, validation.status, validation.message);
+    }
+    const { userId } = validation;
+    try {
+        const { id } = req.params;
+        if (!id) {
+            return ErrorResponse(res, 400, "id is required");
+        }
+        const deleted = await questionBankServices.deleteQuestion(id, userId);
+        if (deleted) {
+            return SuccessResponse(res, 200, `Delete successful for question ID ${id}`);
+        } else {
+            return ErrorResponse(res, 404, "Question not found or unauthorized");
+        }
+    } catch (error) {
+        return ErrorResponse(res, 500, error.message);
+    }
+}

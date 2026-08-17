@@ -12,6 +12,9 @@ import {
     deleteQuestion,
     getMyQuestions,
     getMyQuestionsCount,
+    getMySingleQuestion,
+    updateMyQuestion,
+    deleteMyQuestion,
 } from "../controllers/questionBankController.js";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
@@ -112,6 +115,8 @@ const updateQuestionSchema = z.object({
 
 router.post("/", userAuth, validate({ body: createQuestionSchema }), addQuestion);
 
+router.post("/my", userAuth, validate({ body: createQuestionSchema }), addQuestion);
+
 router.get("/", userAuth, validate({ query: getAllQuestionsQuerySchema }), getAllQuestions);
 
 router.get("/my", userAuth, validate({ query: getMyQuestionsQuerySchema }), getMyQuestions);
@@ -120,6 +125,8 @@ router.get("/count", userAuth, validate({ query: getAllQuestionsQuerySchema }), 
 
 router.get("/my/count", userAuth, validate({ query: getMyQuestionsQuerySchema }), getMyQuestionsCount);
 
+router.get("/my/:id", userAuth, getMySingleQuestion);
+
 router.get("/:id", userAuth, getSingleQuestion);
 
 router.put("/bulkApprove", userAuth, validate({ body: bulkActionSchema }), bulkApprove);
@@ -127,6 +134,10 @@ router.put("/bulkApprove", userAuth, validate({ body: bulkActionSchema }), bulkA
 router.put("/bulkReject", userAuth, validate({ body: bulkActionSchema }), bulkReject);
 
 router.put("/", userAuth, validate({ body: updateQuestionSchema }), updateQuestion);
+
+router.put("/my", userAuth, validate({ body: updateQuestionSchema }), updateMyQuestion);
+
+router.delete("/my/:id", userAuth, deleteMyQuestion);
 
 router.delete("/:id", userAuth, deleteQuestion);
 
