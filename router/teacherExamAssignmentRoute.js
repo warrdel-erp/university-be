@@ -4,7 +4,8 @@ const router = Router();
 import {
     assignTeacherToExam,
     getAllExamAssignments,
-    removeTeacherFromExam
+    removeTeacherFromExam,
+    getMyExamAssignments,
 } from "../controllers/teacherExamAssignmentController.js";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
@@ -23,6 +24,8 @@ const assignmentParamsSchema = z.object({
 });
 
 router.post("/", userAuth, checkAccess(PERMISSIONS.EXAM_ASSIGN_TEACHER_ADD.value, 'teacherExamAssignment'), validate({ body: assignmentSchema }), assignTeacherToExam);
+
+router.get("/my", userAuth, getMyExamAssignments);
 
 router.get("/", userAuth, checkAccess(PERMISSIONS.EXAM_ASSIGN_TEACHER.value, 'teacherExamAssignment'), getAllExamAssignments);
 

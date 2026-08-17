@@ -244,6 +244,23 @@
               "path": ["course", "my", "subjects"]
             }
           }
+        },
+        {
+          "name": "GET My Exam Assignments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/teacherExamAssignment/my",
+              "host": ["{{baseurl}}"],
+              "path": ["teacherExamAssignment", "my"]
+            }
+          }
         }
       ]
     },
