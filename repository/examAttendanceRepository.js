@@ -416,3 +416,24 @@ export async function getSchedulesForSummary(examinationSessionId, filters) {
         ]
     });
 }
+
+export async function getAttendancesWithStudent(examScheduleId, examScheduleRoomCapacityId) {
+    return scoped(model.examAttendanceModel).findAll({
+        where: {
+            examScheduleId,
+            examScheduleRoomCapacityId
+        },
+        include: [
+            {
+                model: model.studentModel,
+                as: "student",
+                attributes: ["studentId", "firstName", "lastName", "scholarNumber", "enrollNumber"]
+            },
+            {
+                model: model.studentExamSeatModel,
+                as: "studentExamSeat",
+                attributes: ["row", "column"]
+            }
+        ]
+    });
+}

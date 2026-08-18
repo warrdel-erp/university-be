@@ -878,6 +878,36 @@
           }
         },
         {
+          "name": "13.3 Generate Room Attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examScheduleId\": 1,\n  \"examScheduleRoomCapacityId\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/examAttendance/room",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examAttendance",
+                "room"
+              ]
+            }
+          }
+        },
+        {
           "name": "13.3 Get Exam Attendance Details (Right-Side Inspector)",
           "request": {
             "method": "GET",

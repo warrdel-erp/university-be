@@ -244,3 +244,21 @@ export async function getExamOperationsSummary(req, res) {
         return ErrorResponse(res, 500, error.message);
     }
 }
+
+export async function generateRoomAttendance(req, res) {
+    try {
+        const { examScheduleId, examScheduleRoomCapacityId } = req.body;
+        if (!examScheduleId || !examScheduleRoomCapacityId) {
+            return ErrorResponse(res, 400, "Missing required parameters: examScheduleId, examScheduleRoomCapacityId");
+        }
+
+        const result = await examAttendanceServices.generateRoomAttendance({
+            examScheduleId: Number(examScheduleId),
+            examScheduleRoomCapacityId: Number(examScheduleRoomCapacityId)
+        }, req.user);
+
+        return SuccessResponse(res, 200, "Exam room attendance generated successfully (kept pending)", result);
+    } catch (error) {
+        return ErrorResponse(res, 500, error.message);
+    }
+}

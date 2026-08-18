@@ -55,8 +55,9 @@ const examAttendanceModel = sequelize.define(
             field: "student_exam_seat_id",
         },
         attendanceStatus: {
-            type: DataTypes.ENUM("PRESENT", "ABSENT"),
+            type: DataTypes.ENUM("PRESENT", "ABSENT", "PENDING"),
             allowNull: false,
+            defaultValue: "PENDING",
             field: "attendance_status",
         },
         markedBy: {

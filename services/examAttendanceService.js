@@ -185,26 +185,23 @@ export async function getExamOperationsAttendanceRoom(examScheduleId, examSchedu
         classRoomSectionId
     );
 
-    const seats = await examAttendanceRepository.getStudentSeats(examScheduleRoomCapacityId);
-    const attendances = await examAttendanceRepository.getAttendances(examScheduleId, examScheduleRoomCapacityId);
+    const attendances = await examAttendanceRepository.getAttendancesWithStudent(examScheduleId, examScheduleRoomCapacityId);
 
-    const attendanceMap = new Map();
-    attendances.forEach(att => {
-        attendanceMap.set(att.studentId, att.attendanceStatus);
-    });
-
-    const students = seats.map(seat => {
-        const student = seat.student;
-        const rowChar = String.fromCharCode(64 + seat.row);
-        const seatNumber = `${rowChar}${seat.column}`;
+    const students = attendances.map(att => {
+        const student = att.student || {};
+        const seat = att.studentExamSeat || {};
+        const rowVal = seat.row || 0;
+        const colVal = seat.column || 0;
+        const rowChar = rowVal ? String.fromCharCode(64 + rowVal) : "";
+        const seatNumber = rowChar ? `${rowChar}${colVal}` : "";
         return {
-            studentId: student.studentId,
-            enrollmentNumber: student.enrollNumber || student.scholarNumber,
-            studentName: `${student.firstName} ${student.lastName}`.trim(),
-            row: seat.row,
-            column: seat.column,
+            studentId: att.studentId,
+            enrollmentNumber: student.enrollNumber || student.scholarNumber || "",
+            studentName: `${student.firstName || ""} ${student.lastName || ""}`.trim(),
+            row: rowVal,
+            column: colVal,
             seatNumber,
-            attendanceStatus: attendanceMap.has(student.studentId) ? attendanceMap.get(student.studentId) : null
+            attendanceStatus: att.attendanceStatus
         };
     });
 
@@ -499,4 +496,52 @@ export async function getExamOperationsSummary(examinationSessionId, filters) {
         totalStudentCount,
         inProgressExamCount
     };
+}
+
+export async function generateRoomAttendance(generateData, user) {
+    const { examScheduleId, examScheduleRoomCapacityId } = generateData;
+    const { userId, universityId, defaultInstituteId, defaultAcademicYearId } = user;
+
+    const roomCapacity = await examAttendanceRepository.getRoomCapacityById(examScheduleRoomCapacityId);
+    if (!roomCapacity) {
+        throw new Error("Room capacity not found");
+    }
+
+    const seats = await examAttendanceRepository.getStudentSeats(examScheduleRoomCapacityId);
+    if (!seats || seats.length === 0) {
+        throw new Error("No student seats allocated in this room");
+    }
+
+    const existingAttendances = await examAttendanceRepository.getAttendances(examScheduleId, examScheduleRoomCapacityId);
+    const existingStudentIds = new Set(existingAttendances.map(att => att.studentId));
+
+    const transaction = await examAttendanceRepository.sequelize.transaction();
+    try {
+        const results = [];
+        for (const seat of seats) {
+            if (!existingStudentIds.has(seat.studentId)) {
+                const created = await examAttendanceRepository.createAttendance({
+                    examScheduleId,
+                    examScheduleRoomCapacityId,
+                    studentId: seat.studentId,
+                    studentExamSeatId: seat.studentExamSeatId || null,
+                    attendanceStatus: "PENDING",
+                    universityId,
+                    instituteId: defaultInstituteId,
+                    academicYearId: defaultAcademicYearId,
+                    createdBy: userId,
+                    updatedBy: userId
+                }, transaction);
+                results.push(created);
+            }
+        }
+
+        await examAttendanceRepository.updateRoomCapacityStatus(examScheduleRoomCapacityId, "GENERATED", transaction);
+
+        await transaction.commit();
+        return results;
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
+    }
 }

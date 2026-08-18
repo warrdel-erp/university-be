@@ -6,7 +6,8 @@ import {
     markExamAttendance,
     updateRoomAttendanceStatus,
     getExamAttendanceDetails,
-    getExamOperationsSummary
+    getExamOperationsSummary,
+    generateRoomAttendance
 } from "../controllers/examAttendanceController.js";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
@@ -34,7 +35,7 @@ const markAttendanceSchema = z.object({
     examScheduleRoomCapacityId: z.number().int().positive(),
     students: z.array(z.object({
         studentId: z.number().int().positive(),
-        attendanceStatus: z.enum(["PRESENT", "ABSENT"])
+        attendanceStatus: z.enum(["PRESENT", "ABSENT", "PENDING"])
     })).min(1, "At least one student is required")
 });
 
@@ -59,8 +60,14 @@ const getSummarySchema = z.object({
     })
 });
 
+const generateAttendanceSchema = z.object({
+    examScheduleId: z.number().int().positive(),
+    examScheduleRoomCapacityId: z.number().int().positive()
+});
+
 router.get("/", userAuth, validate({ query: querySchema }), getExamOperationsAttendance);
 router.get("/room", userAuth, validate({ query: roomQuerySchema }), getExamOperationsAttendanceRoom);
+router.post("/room", userAuth, validate({ body: generateAttendanceSchema }), generateRoomAttendance);
 router.get("/summary", userAuth, validate(getSummarySchema), getExamOperationsSummary);
 router.get("/:examScheduleId", userAuth, validate({ params: getDetailsParamsSchema }), getExamAttendanceDetails);
 router.patch("/", userAuth, validate({ body: markAttendanceSchema }), markExamAttendance);
