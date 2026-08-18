@@ -560,8 +560,18 @@ export async function getAssignmentsByUserId(
   options = {},
 ) {
   const parsedUserId = Number(userId);
-  const parsedSessionId = Number(examinationSessionId);
-  if (isNaN(parsedUserId) || isNaN(parsedSessionId)) return null;
+  if (isNaN(parsedUserId)) return null;
+
+  const slotWhere = {
+    ...buildScope(model.examinationSessionSlotModel),
+  };
+
+  if (examinationSessionId !== undefined && examinationSessionId !== null && examinationSessionId !== "") {
+    const parsedSessionId = Number(examinationSessionId);
+    if (!isNaN(parsedSessionId)) {
+      slotWhere.examinationSessionId = parsedSessionId;
+    }
+  }
 
   const [userVal, assignments] = await Promise.all([
     model.users.findOne({
@@ -598,10 +608,7 @@ export async function getAssignmentsByUserId(
             "endTime",
             "examinationSessionId",
           ],
-          where: {
-            examinationSessionId: parsedSessionId,
-            ...buildScope(model.examinationSessionSlotModel),
-          },
+          where: slotWhere,
           required: true,
         },
         {

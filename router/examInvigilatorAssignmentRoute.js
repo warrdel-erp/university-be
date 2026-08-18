@@ -114,7 +114,7 @@ const getExamRoomsSchema = {
 const byUserIdSchema = {
   query: z.object({
     userId: positiveIntegerId,
-    examinationSessionId: positiveIntegerId,
+    examinationSessionId: positiveIntegerQueryId,
   }),
 };
 

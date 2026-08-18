@@ -777,6 +777,29 @@
               ]
             }
           }
+        },
+        {
+          "name": "12.11 Get My Invigilator Assignments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examInvigilatorAssignment/my?examinationSessionId=1",
+              "host": ["{{baseurl}}"],
+              "path": ["examInvigilatorAssignment", "my"],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
         }
       ]
     }

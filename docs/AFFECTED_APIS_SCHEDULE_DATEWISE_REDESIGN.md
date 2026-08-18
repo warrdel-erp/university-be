@@ -272,6 +272,30 @@ Router: `studentRoute.js`
 
 ---
 
+### 4.8 `/examAttendance` — exam room capacity student attendance
+Router: `examAttendanceRoute.js`
+
+| Method | Full URL | Key fields / params |
+|--------|----------|---------------------|
+| `GET` | `/examAttendance/` | Query: `examinationSessionId` (req), filters (opt) |
+| `GET` | `/examAttendance/room` | Query: `examScheduleId`, `examScheduleRoomCapacityId` |
+| `GET` | `/examAttendance/:examScheduleId` | Param: `examScheduleId` |
+| `PATCH` | `/examAttendance/` | Body: `examScheduleId`, `examScheduleRoomCapacityId`, array of `students` |
+| `POST` | `/examAttendance/status` | Body: `examScheduleId`, `examScheduleRoomCapacityId`, `status` |
+
+---
+
+### 4.9 `/examSchedule` — seat allocation options
+Router: `examScheduleRoute.js`
+
+| Method | Full URL | Key fields / params |
+|--------|----------|---------------------|
+| `POST` | `/examSchedule/allocateSeats/randomly` | Body: `examScheduleId` |
+| `POST` | `/examSchedule/allocateSeats/ascending` | Body: `examScheduleId` |
+| `POST` | `/examSchedule/allocateSeats/descending` | Body: `examScheduleId` |
+
+---
+
 ## 5. FE contract checklist
 
 - [ ] Replace all `timeTableMappingId` in week UI with `timeTableCellId`

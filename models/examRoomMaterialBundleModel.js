@@ -1,77 +1,100 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
+import examinationSessionSlotModel from "./examinationSessionSlotModel.js";
+import classRoomSectionModel from "./classRoomModel.js";
 import userModel from "./userModel.js";
-import examScheduleModel from "./examScheduleModel.js";
-import examScheduleRoomCapacityModel from "./examScheduleRoomCapacityModel.js";
-import studentModel from "./studentModel.js";
-import studentExamSeatModel from "./studentExamSeatModel.js";
 import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
 import acedmicYearModel from "./acedmicYearModel.js";
 
-const examAttendanceModel = sequelize.define(
-    "exam_attendance",
+const examRoomMaterialBundleModel = sequelize.define(
+    "exam_room_material_bundle",
     {
-        examAttendanceId: {
+        examRoomMaterialBundleId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: "exam_attendance_id",
+            field: "exam_room_material_bundle_id",
         },
-        examScheduleId: {
+        examDate: {
+            type: DataTypes.DATEONLY,
+            allowNull: false,
+            field: "exam_date",
+        },
+        examinationSessionSlotId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             references: {
-                model: examScheduleModel,
-                key: "exam_schedule_id",
+                model: examinationSessionSlotModel,
+                key: "examination_session_slot_id",
             },
-            field: "exam_schedule_id",
+            field: "examination_session_slot_id",
         },
-        examScheduleRoomCapacityId: {
+        classRoomSectionId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             references: {
-                model: examScheduleRoomCapacityModel,
-                key: "exam_schedule_room_capacity_id",
+                model: classRoomSectionModel,
+                key: "class_room_section_id",
             },
-            field: "exam_schedule_room_capacity_id",
+            field: "class_room_section_id",
         },
-        studentId: {
-            type: DataTypes.INTEGER,
+        status: {
+            type: DataTypes.ENUM("PREPARING", "READY", "ISSUED", "RECEIVED", "VERIFIED", "CLOSED"),
             allowNull: false,
-            references: {
-                model: studentModel,
-                key: "student_id",
-            },
-            field: "student_id",
+            defaultValue: "PREPARING",
+            field: "status",
         },
-        studentExamSeatId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            references: {
-                model: studentExamSeatModel,
-                key: "student_exam_seat_id",
-            },
-            field: "student_exam_seat_id",
-        },
-        attendanceStatus: {
-            type: DataTypes.ENUM("PRESENT", "ABSENT"),
-            allowNull: false,
-            field: "attendance_status",
-        },
-        markedBy: {
+        issuedTo: {
             type: DataTypes.INTEGER,
             allowNull: true,
             references: {
                 model: userModel,
                 key: "user_id",
             },
-            field: "marked_by",
+            field: "issued_to",
         },
-        markedAt: {
+        issuedBy: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+                model: userModel,
+                key: "user_id",
+            },
+            field: "issued_by",
+        },
+        issuedAt: {
             type: DataTypes.DATE,
             allowNull: true,
-            field: "marked_at",
+            field: "issued_at",
+        },
+        receivedBy: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+                model: userModel,
+                key: "user_id",
+            },
+            field: "received_by",
+        },
+        receivedAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field: "received_at",
+        },
+        verifiedBy: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+                model: userModel,
+                key: "user_id",
+            },
+            field: "verified_by",
+        },
+        verifiedAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field: "verified_at",
         },
         remarks: {
             type: DataTypes.TEXT,
@@ -142,12 +165,12 @@ const examAttendanceModel = sequelize.define(
         },
     },
     {
-        tableName: "exam_attendance",
+        tableName: "exam_room_material_bundle",
         timestamps: true,
         paranoid: true,
     }
 );
 
-examAttendanceModel.scopeConfig = { university: true, institute: true, academicYear: true };
+examRoomMaterialBundleModel.scopeConfig = { university: true, institute: true, academicYear: true };
 
-export default examAttendanceModel;
+export default examRoomMaterialBundleModel;
