@@ -443,3 +443,60 @@ function buildExamAttendanceResponse({
         rooms
     };
 }
+
+export async function getExamOperationsSummary(examinationSessionId, filters) {
+    const schedules = await examAttendanceRepository.getSchedulesForSummary(examinationSessionId, filters);
+
+    const todayStr = new Date().toISOString().split("T")[0];
+
+    let upcomingExamCount = 0;
+    let todayExamCount = 0;
+    let assignedRoomCount = 0;
+    let pendingAttendanceRoomCount = 0;
+    let totalStudentCount = 0;
+    let inProgressExamCount = 0;
+
+    schedules.forEach(schedule => {
+        const isToday = schedule.examDate === todayStr;
+        const isUpcoming = schedule.examDate > todayStr;
+
+        if (isToday) {
+            todayExamCount++;
+        }
+        if (isUpcoming) {
+            upcomingExamCount++;
+        }
+
+        let scheduleHasInProgressRoom = false;
+
+        (schedule.roomCapacities || []).forEach(room => {
+            const hasSeats = (room.seats || []).length > 0;
+            if (hasSeats) {
+                assignedRoomCount++;
+                totalStudentCount += room.seats.length;
+            }
+
+            const status = room.status || "NOT_GENERATED";
+            if (status !== "SUBMITTED" && status !== "VERIFIED") {
+                pendingAttendanceRoomCount++;
+            }
+
+            if (status === "IN_PROGRESS") {
+                scheduleHasInProgressRoom = true;
+            }
+        });
+
+        if (isToday && scheduleHasInProgressRoom) {
+            inProgressExamCount++;
+        }
+    });
+
+    return {
+        upcomingExamCount,
+        todayExamCount,
+        assignedRoomCount,
+        pendingAttendanceRoomCount,
+        totalStudentCount,
+        inProgressExamCount
+    };
+}

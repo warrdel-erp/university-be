@@ -5,7 +5,8 @@ import {
     getExamOperationsAttendanceRoom,
     markExamAttendance,
     updateRoomAttendanceStatus,
-    getExamAttendanceDetails
+    getExamAttendanceDetails,
+    getExamOperationsSummary
 } from "../controllers/examAttendanceController.js";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
@@ -47,8 +48,20 @@ const getDetailsParamsSchema = z.object({
     examScheduleId: z.string().regex(/^\d+$/).transform(Number)
 });
 
+const getSummarySchema = z.object({
+    query: z.object({
+        examinationSessionId: z.coerce.number().int().positive(),
+        courseId: z.coerce.number().int().positive().optional(),
+        sessionId: z.coerce.number().int().positive().optional(),
+        term: z.coerce.number().int().positive().optional(),
+        examDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD").optional(),
+        examinationSessionSlotId: z.coerce.number().int().positive().optional()
+    })
+});
+
 router.get("/", userAuth, validate({ query: querySchema }), getExamOperationsAttendance);
 router.get("/room", userAuth, validate({ query: roomQuerySchema }), getExamOperationsAttendanceRoom);
+router.get("/summary", userAuth, validate(getSummarySchema), getExamOperationsSummary);
 router.get("/:examScheduleId", userAuth, validate({ params: getDetailsParamsSchema }), getExamAttendanceDetails);
 router.patch("/", userAuth, validate({ body: markAttendanceSchema }), markExamAttendance);
 router.post("/status", userAuth, validate({ body: updateRoomStatusSchema }), updateRoomAttendanceStatus);

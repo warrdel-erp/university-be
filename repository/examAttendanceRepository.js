@@ -367,3 +367,52 @@ export async function getInvigilatorsByRooms({ examDate, examinationSessionSlotI
         ]
     });
 }
+
+export async function getSchedulesForSummary(examinationSessionId, filters) {
+    const { courseId, sessionId, term, examDate, examinationSessionSlotId } = filters;
+
+    const where = { examinationSessionId: Number(examinationSessionId) };
+    if (examDate) {
+        where.examDate = examDate;
+    }
+    if (examinationSessionSlotId) {
+        where.examinationSessionSlotId = Number(examinationSessionSlotId);
+    }
+    if (sessionId) {
+        where.sessionId = Number(sessionId);
+    }
+    if (term) {
+        where.term = Number(term);
+    }
+
+    const subjectWhere = {};
+    if (courseId) {
+        subjectWhere.courseId = Number(courseId);
+    }
+
+    return scoped(model.examScheduleModel).findAll({
+        where,
+        attributes: ["examScheduleId", "examDate"],
+        include: [
+            {
+                model: model.subjectModel,
+                as: "subjectSchedule",
+                attributes: ["subjectId", "courseId"],
+                where: Object.keys(subjectWhere).length > 0 ? subjectWhere : undefined,
+                required: Object.keys(subjectWhere).length > 0 ? true : false,
+            },
+            {
+                model: model.examScheduleRoomCapacityModel,
+                as: "roomCapacities",
+                attributes: ["examScheduleRoomCapacityId", "status"],
+                include: [
+                    {
+                        model: model.studentExamSeatModel,
+                        as: "seats",
+                        attributes: ["studentExamSeatId"]
+                    }
+                ]
+            }
+        ]
+    });
+}

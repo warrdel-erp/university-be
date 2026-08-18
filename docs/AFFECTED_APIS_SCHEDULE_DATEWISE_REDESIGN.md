@@ -279,6 +279,7 @@ Router: `examAttendanceRoute.js`
 |--------|----------|---------------------|
 | `GET` | `/examAttendance/` | Query: `examinationSessionId` (req), filters (opt) |
 | `GET` | `/examAttendance/room` | Query: `examScheduleId`, `examScheduleRoomCapacityId` |
+| `GET` | `/examAttendance/summary` | Query: `examinationSessionId` (req), filters (opt) |
 | `GET` | `/examAttendance/:examScheduleId` | Param: `examScheduleId` |
 | `PATCH` | `/examAttendance/` | Body: `examScheduleId`, `examScheduleRoomCapacityId`, array of `students` |
 | `POST` | `/examAttendance/status` | Body: `examScheduleId`, `examScheduleRoomCapacityId`, `status` |

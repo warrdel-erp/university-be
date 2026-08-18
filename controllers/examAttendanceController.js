@@ -222,3 +222,25 @@ export async function getExamAttendanceDetails(req, res) {
         return ErrorResponse(res, 500, error.message);
     }
 }
+
+export async function getExamOperationsSummary(req, res) {
+    try {
+        const { examinationSessionId } = req.query;
+        if (!examinationSessionId) {
+            return ErrorResponse(res, 400, "Missing required parameter: examinationSessionId");
+        }
+
+        const filters = {
+            courseId: req.query.courseId ? Number(req.query.courseId) : undefined,
+            sessionId: req.query.sessionId ? Number(req.query.sessionId) : undefined,
+            term: req.query.term ? Number(req.query.term) : undefined,
+            examDate: req.query.examDate,
+            examinationSessionSlotId: req.query.examinationSessionSlotId ? Number(req.query.examinationSessionSlotId) : undefined
+        };
+
+        const result = await examAttendanceServices.getExamOperationsSummary(Number(examinationSessionId), filters);
+        return SuccessResponse(res, 200, "Exam operations summary fetched successfully", result);
+    } catch (error) {
+        return ErrorResponse(res, 500, error.message);
+    }
+}
