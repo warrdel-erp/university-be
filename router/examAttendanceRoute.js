@@ -61,13 +61,13 @@ const getSummarySchema = z.object({
 });
 
 const generateAttendanceSchema = z.object({
-    examScheduleId: z.number().int().positive(),
-    examScheduleRoomCapacityId: z.number().int().positive()
+    examScheduleId: z.coerce.number().int().positive().optional(),
+    examScheduleRoomCapacityId: z.coerce.number().int().positive().optional()
 });
 
 router.get("/", userAuth, validate({ query: querySchema }), getExamOperationsAttendance);
 router.get("/room", userAuth, validate({ query: roomQuerySchema }), getExamOperationsAttendanceRoom);
-router.post("/room", userAuth, validate({ body: generateAttendanceSchema }), generateRoomAttendance);
+router.post("/room", userAuth, validate({ query: generateAttendanceSchema, body: generateAttendanceSchema }), generateRoomAttendance);
 router.get("/summary", userAuth, validate(getSummarySchema), getExamOperationsSummary);
 router.get("/:examScheduleId", userAuth, validate({ params: getDetailsParamsSchema }), getExamAttendanceDetails);
 router.patch("/", userAuth, validate({ body: markAttendanceSchema }), markExamAttendance);

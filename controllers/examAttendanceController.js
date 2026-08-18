@@ -247,7 +247,9 @@ export async function getExamOperationsSummary(req, res) {
 
 export async function generateRoomAttendance(req, res) {
     try {
-        const { examScheduleId, examScheduleRoomCapacityId } = req.body;
+        const examScheduleId = req.body.examScheduleId || req.query.examScheduleId;
+        const examScheduleRoomCapacityId = req.body.examScheduleRoomCapacityId || req.query.examScheduleRoomCapacityId;
+
         if (!examScheduleId || !examScheduleRoomCapacityId) {
             return ErrorResponse(res, 400, "Missing required parameters: examScheduleId, examScheduleRoomCapacityId");
         }
