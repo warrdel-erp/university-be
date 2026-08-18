@@ -101,13 +101,8 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/options/studentFilters?courseIds={{courseId}}&sessionIds={{sessionId}}&term={{term}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "options",
-                "studentFilters"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["options", "studentFilters"],
               "query": [
                 {
                   "key": "courseIds",
@@ -144,13 +139,8 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/student/all?page=1&limit=20&courseId={{courseId}}&sessionId={{sessionId}}&term={{term}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "student",
-                "all"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["student", "all"],
               "query": [
                 {
                   "key": "page",
@@ -195,13 +185,8 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/options/teachers",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "options",
-                "teachers"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["options", "teachers"],
               "query": []
             },
             "description": "Faculty picker for Step 3 (`value` = userId)."
@@ -262,13 +247,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/academicGroup/scope",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicGroup",
-                "scope"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["academicGroup", "scope"]
             },
             "description": "**POST /academicGroup/scope**\n\n`program_specific` requires `courseId`, `sessionId`, `term`.\n\nSaves `academicGroupScopeId`."
           },
@@ -322,13 +302,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/academicGroup/scope",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicGroup",
-                "scope"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["academicGroup", "scope"]
             },
             "description": "**POST /academicGroup/scope** with `academicContextType: course` -> requires `contextSubjectId`."
           },
@@ -351,14 +326,8 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/academicGroup/scope/all?search=",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicGroup",
-                "scope",
-                "all"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["academicGroup", "scope", "all"],
               "query": [
                 {
                   "key": "search",
@@ -378,14 +347,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseurl}}/academicGroup/scope/all",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "academicGroup",
-                    "scope",
-                    "all"
-                  ]
+                  "host": ["{{baseurl}}"],
+                  "path": ["academicGroup", "scope", "all"]
                 }
               },
               "status": "OK",
@@ -418,14 +381,8 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/academicGroup/scope/single?academicGroupScopeId={{academicGroupScopeId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicGroup",
-                "scope",
-                "single"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["academicGroup", "scope", "single"],
               "query": [
                 {
                   "key": "academicGroupScopeId",
@@ -443,14 +400,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseurl}}/academicGroup/scope/single?academicGroupScopeId={{academicGroupScopeId}}",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "academicGroup",
-                    "scope",
-                    "single"
-                  ],
+                  "host": ["{{baseurl}}"],
+                  "path": ["academicGroup", "scope", "single"],
                   "query": [
                     {
                       "key": "academicGroupScopeId",
@@ -503,13 +454,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/academicGroup/scope",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicGroup",
-                "scope"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["academicGroup", "scope"]
             }
           },
           "response": []
@@ -531,13 +477,8 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/academicGroup/scope?academicGroupScopeId={{academicGroupScopeId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicGroup",
-                "scope"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["academicGroup", "scope"],
               "query": [
                 {
                   "key": "academicGroupScopeId",
@@ -606,12 +547,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/academicGroup",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicGroup"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["academicGroup"]
             },
             "description": "Omit `groupCode` to auto-generate. Same `academicGroupScopeId` may create multiple groups."
           },
@@ -634,13 +571,8 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/academicGroup/all?page=1&limit=10",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicGroup",
-                "all"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["academicGroup", "all"],
               "query": [
                 {
                   "key": "page",
@@ -703,13 +635,8 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/academicGroup/single?academicGroupId={{academicGroupId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicGroup",
-                "single"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["academicGroup", "single"],
               "query": [
                 {
                   "key": "academicGroupId",
@@ -752,12 +679,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/academicGroup",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicGroup"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["academicGroup"]
             }
           },
           "response": []
@@ -793,13 +716,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/academicGroup/publish",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicGroup",
-                "publish"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["academicGroup", "publish"]
             },
             "description": "Sets `publishStatus` to `published` (from draft only)."
           },
@@ -822,12 +740,8 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/academicGroup?academicGroupId={{academicGroupId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicGroup"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["academicGroup"],
               "query": [
                 {
                   "key": "academicGroupId",
@@ -836,290 +750,6 @@
               ]
             },
             "description": "Soft-deletes group + users + students."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "3. user (faculty)",
-      "description": "Step 3 — assign faculty with role. At most one `primary_faculty` per group.",
-      "item": [
-        {
-          "name": "GET availableUsers",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/academicGroup/availableUsers?academicGroupId={{academicGroupId}}&page=1&limit=20",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicGroup",
-                "availableUsers"
-              ],
-              "query": [
-                {
-                  "key": "academicGroupId",
-                  "value": "{{academicGroupId}}"
-                },
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "20"
-                },
-                {
-                  "key": "search",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "campusId",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "subjectId",
-                  "value": "",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "**GET /academicGroup/availableUsers**\n\nTeachers available to assign."
-          },
-          "response": []
-        },
-        {
-          "name": "GET user (faculty by group)",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/academicGroup/user?academicGroupId={{academicGroupId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicGroup",
-                "user"
-              ],
-              "query": [
-                {
-                  "key": "academicGroupId",
-                  "value": "{{academicGroupId}}"
-                }
-              ]
-            },
-            "description": "**GET /academicGroup/user?academicGroupId=**"
-          },
-          "response": []
-        },
-        {
-          "name": "POST user (bulk)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "try {",
-                  "  const res = pm.response.json();",
-                  "  const rows = res.data;",
-                  "  if (Array.isArray(rows) && rows[0] && rows[0].academicGroupUserId) {",
-                  "    pm.collectionVariables.set('academicGroupUserId', String(rows[0].academicGroupUserId));",
-                  "  }",
-                  "} catch (e) {}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"academicGroupId\": {{academicGroupId}},\n  \"users\": [\n    { \"userId\": {{userId}}, \"role\": \"primary_faculty\" }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/academicGroup/user",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicGroup",
-                "user"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "POST user (single)",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"academicGroupId\": {{academicGroupId}},\n  \"userId\": {{userId}},\n  \"role\": \"co_faculty\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/academicGroup/user",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicGroup",
-                "user"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "PATCH user",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"academicGroupUserId\": {{academicGroupUserId}},\n  \"role\": \"mentor\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/academicGroup/user",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicGroup",
-                "user"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "DELETE user",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"academicGroupUserId\": {{academicGroupUserId}}\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/academicGroup/user",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicGroup",
-                "user"
-              ]
-            }
           },
           "response": []
         }
@@ -1146,13 +776,8 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/academicGroup/availableStudents?academicGroupId={{academicGroupId}}&page=1&limit=20&term=1,2,3,4,5",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicGroup",
-                "availableStudents"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["academicGroup", "availableStudents"],
               "query": [
                 {
                   "key": "academicGroupId",
@@ -1240,13 +865,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/academicGroup/student",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicGroup",
-                "student"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["academicGroup", "student"]
             }
           },
           "response": []
@@ -1282,13 +902,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/academicGroup/student",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicGroup",
-                "student"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["academicGroup", "student"]
             }
           },
           "response": []
@@ -1347,13 +962,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/timetableAcademicGroup/mapping",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "timetableAcademicGroup",
-                "mapping"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["timetableAcademicGroup", "mapping"]
             },
             "description": "**POST /timetableAcademicGroup/mapping**\n\nMaps existing `timeTableNameId` (structure) with `academicGroupScopeId`. Automatically resolves `courseId` and `sessionId` from `academic_group_scope` if omitted."
           },
@@ -1374,13 +984,8 @@
                 },
                 "url": {
                   "raw": "{{baseurl}}/timetableAcademicGroup/mapping",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "timetableAcademicGroup",
-                    "mapping"
-                  ]
+                  "host": ["{{baseurl}}"],
+                  "path": ["timetableAcademicGroup", "mapping"]
                 }
               },
               "status": "OK",
@@ -1413,13 +1018,8 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/timetableAcademicGroup/mapping?academicGroupScopeId={{academicGroupScopeId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "timetableAcademicGroup",
-                "mapping"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["timetableAcademicGroup", "mapping"],
               "query": [
                 {
                   "key": "academicGroupScopeId",
@@ -1457,13 +1057,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseurl}}/timetableAcademicGroup/mapping?academicGroupScopeId=1",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "timetableAcademicGroup",
-                    "mapping"
-                  ],
+                  "host": ["{{baseurl}}"],
+                  "path": ["timetableAcademicGroup", "mapping"],
                   "query": [
                     {
                       "key": "academicGroupScopeId",
@@ -1502,13 +1097,8 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/timetableAcademicGroup/allMappings",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "timetableAcademicGroup",
-                "allMappings"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["timetableAcademicGroup", "allMappings"],
               "query": [
                 {
                   "key": "academicGroupScopeId",
@@ -1542,13 +1132,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseurl}}/timetableAcademicGroup/allMappings",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "timetableAcademicGroup",
-                    "allMappings"
-                  ]
+                  "host": ["{{baseurl}}"],
+                  "path": ["timetableAcademicGroup", "allMappings"]
                 }
               },
               "status": "OK",
@@ -1581,13 +1166,8 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/timetableAcademicGroup/mapping?timetableStructureCourseMapperId={{timetableStructureCourseMapperId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "timetableAcademicGroup",
-                "mapping"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["timetableAcademicGroup", "mapping"],
               "query": [
                 {
                   "key": "timetableStructureCourseMapperId",
@@ -1605,13 +1185,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseurl}}/timetableAcademicGroup/mapping?timetableStructureCourseMapperId=8",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "timetableAcademicGroup",
-                    "mapping"
-                  ],
+                  "host": ["{{baseurl}}"],
+                  "path": ["timetableAcademicGroup", "mapping"],
                   "query": [
                     {
                       "key": "timetableStructureCourseMapperId",
@@ -1681,13 +1256,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/timetableAcademicGroup/routine",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "timetableAcademicGroup",
-                "routine"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["timetableAcademicGroup", "routine"]
             },
             "description": "**POST /timetableAcademicGroup/routine**\n\nCreates a routine for `academicGroupId` + `timetableStructureCourseMapperId`."
           },
@@ -1708,13 +1278,8 @@
                 },
                 "url": {
                   "raw": "{{baseurl}}/timetableAcademicGroup/routine",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "timetableAcademicGroup",
-                    "routine"
-                  ]
+                  "host": ["{{baseurl}}"],
+                  "path": ["timetableAcademicGroup", "routine"]
                 }
               },
               "status": "OK",
@@ -1747,13 +1312,8 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/timetableAcademicGroup/cascadingGroupRoutines?academicGroupScopeId={{academicGroupScopeId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "timetableAcademicGroup",
-                "cascadingGroupRoutines"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["timetableAcademicGroup", "cascadingGroupRoutines"],
               "query": [
                 {
                   "key": "academicGroupScopeId",
@@ -1781,13 +1341,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseurl}}/timetableAcademicGroup/cascadingGroupRoutines?academicGroupScopeId=1",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "timetableAcademicGroup",
-                    "cascadingGroupRoutines"
-                  ],
+                  "host": ["{{baseurl}}"],
+                  "path": ["timetableAcademicGroup", "cascadingGroupRoutines"],
                   "query": [
                     {
                       "key": "academicGroupScopeId",
@@ -1826,9 +1381,7 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/timetableAcademicGroup/groupRoutinesWrappedInStructure?academicGroupId={{academicGroupId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
+              "host": ["{{baseurl}}"],
               "path": [
                 "timetableAcademicGroup",
                 "groupRoutinesWrappedInStructure"
@@ -1855,9 +1408,7 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseurl}}/timetableAcademicGroup/groupRoutinesWrappedInStructure?academicGroupId=1",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
+                  "host": ["{{baseurl}}"],
                   "path": [
                     "timetableAcademicGroup",
                     "groupRoutinesWrappedInStructure"
@@ -1900,13 +1451,8 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/timetableAcademicGroup/routine?timeTableRoutineId={{timeTableRoutineId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "timetableAcademicGroup",
-                "routine"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["timetableAcademicGroup", "routine"],
               "query": [
                 {
                   "key": "timeTableRoutineId",
@@ -1924,13 +1470,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseurl}}/timetableAcademicGroup/routine?timeTableRoutineId=15",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "timetableAcademicGroup",
-                    "routine"
-                  ],
+                  "host": ["{{baseurl}}"],
+                  "path": ["timetableAcademicGroup", "routine"],
                   "query": [
                     {
                       "key": "timeTableRoutineId",
@@ -1969,13 +1510,8 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/timetableAcademicGroup/subjectOptions?classSectionTermId={{classSectionTermId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "timetableAcademicGroup",
-                "subjectOptions"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["timetableAcademicGroup", "subjectOptions"],
               "query": [
                 {
                   "key": "classSectionTermId",
@@ -1998,13 +1534,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseurl}}/timetableAcademicGroup/subjectOptions?classSectionTermId=12",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "timetableAcademicGroup",
-                    "subjectOptions"
-                  ],
+                  "host": ["{{baseurl}}"],
+                  "path": ["timetableAcademicGroup", "subjectOptions"],
                   "query": [
                     {
                       "key": "classSectionTermId",
@@ -2047,12 +1578,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/examType",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examType"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["examType"]
             },
             "description": "**POST /examType**\n\nCreates a new exam type record with assessment code, category, sub-category, and description."
           },
@@ -2073,12 +1600,8 @@
                 },
                 "url": {
                   "raw": "{{baseurl}}/examType",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "examType"
-                  ]
+                  "host": ["{{baseurl}}"],
+                  "path": ["examType"]
                 }
               },
               "status": "Created",
@@ -2101,12 +1624,8 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/examType?academicYearId=60",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examType"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examType"],
               "query": [
                 {
                   "key": "academicYearId",
@@ -2124,12 +1643,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseurl}}/examType?academicYearId=60",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "examType"
-                  ],
+                  "host": ["{{baseurl}}"],
+                  "path": ["examType"],
                   "query": [
                     {
                       "key": "academicYearId",
@@ -2158,13 +1673,8 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/examType/single?examTypeId=1",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examType",
-                "single"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examType", "single"],
               "query": [
                 {
                   "key": "examTypeId",
@@ -2182,13 +1692,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseurl}}/examType/single?examTypeId=1",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "examType",
-                    "single"
-                  ],
+                  "host": ["{{baseurl}}"],
+                  "path": ["examType", "single"],
                   "query": [
                     {
                       "key": "examTypeId",
@@ -2226,12 +1731,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/examType",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examType"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["examType"]
             },
             "description": "**PATCH /examType**\n\nUpdates an existing exam type record by examTypeId."
           },
@@ -2252,12 +1753,8 @@
                 },
                 "url": {
                   "raw": "{{baseurl}}/examType",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "examType"
-                  ]
+                  "host": ["{{baseurl}}"],
+                  "path": ["examType"]
                 }
               },
               "status": "OK",
@@ -2280,12 +1777,8 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/examType?examTypeId=1",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examType"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examType"],
               "query": [
                 {
                   "key": "examTypeId",
@@ -2303,12 +1796,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseurl}}/examType?examTypeId=1",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "examType"
-                  ],
+                  "host": ["{{baseurl}}"],
+                  "path": ["examType"],
                   "query": [
                     {
                       "key": "examTypeId",
@@ -2351,12 +1840,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/academicRegulation",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicRegulation"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["academicRegulation"]
             },
             "description": "**POST /academicRegulation**\n\nCreates a new academic regulation record with initial version 1.0."
           },
@@ -2377,12 +1862,8 @@
                 },
                 "url": {
                   "raw": "{{baseurl}}/academicRegulation",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "academicRegulation"
-                  ]
+                  "host": ["{{baseurl}}"],
+                  "path": ["academicRegulation"]
                 }
               },
               "status": "Created",
@@ -2405,12 +1886,8 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/academicRegulation?search=AR-2026&courseId=34&page=1&limit=10",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicRegulation"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["academicRegulation"],
               "query": [
                 {
                   "key": "search",
@@ -2440,12 +1917,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseurl}}/academicRegulation?search=AR-2026&courseId=34&page=1&limit=10",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "academicRegulation"
-                  ]
+                  "host": ["{{baseurl}}"],
+                  "path": ["academicRegulation"]
                 }
               },
               "status": "OK",
@@ -2468,13 +1941,8 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/academicRegulation/1",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicRegulation",
-                "1"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["academicRegulation", "1"]
             },
             "description": "**GET /academicRegulation/:academicRegulationId**\n\nReturns single academic regulation details."
           },
@@ -2486,13 +1954,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseurl}}/academicRegulation/1",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "academicRegulation",
-                    "1"
-                  ]
+                  "host": ["{{baseurl}}"],
+                  "path": ["academicRegulation", "1"]
                 }
               },
               "status": "OK",
@@ -2524,13 +1987,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/academicRegulation/1",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicRegulation",
-                "1"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["academicRegulation", "1"]
             },
             "description": "**PUT /academicRegulation/:academicRegulationId**\n\nUpdates academic regulation record and increments version by +0.1 (e.g. 1.0 -> 1.1)."
           },
@@ -2551,13 +2009,8 @@
                 },
                 "url": {
                   "raw": "{{baseurl}}/academicRegulation/1",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "academicRegulation",
-                    "1"
-                  ]
+                  "host": ["{{baseurl}}"],
+                  "path": ["academicRegulation", "1"]
                 }
               },
               "status": "OK",
@@ -2580,13 +2033,8 @@
             "header": [],
             "url": {
               "raw": "{{baseurl}}/academicRegulation/1",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "academicRegulation",
-                "1"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["academicRegulation", "1"]
             },
             "description": "**DELETE /academicRegulation/:academicRegulationId**\n\nSoft deletes academic regulation record."
           },
@@ -2598,13 +2046,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseurl}}/academicRegulation/1",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "academicRegulation",
-                    "1"
-                  ]
+                  "host": ["{{baseurl}}"],
+                  "path": ["academicRegulation", "1"]
                 }
               },
               "status": "OK",

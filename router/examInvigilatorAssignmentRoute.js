@@ -88,7 +88,6 @@ const getExamRoomsSchema = {
     courseId: positiveIntegerQueryId,
     term: positiveIntegerQueryId,
     examDate: z.preprocess(emptyToUndefined, z.string().optional()),
-    examinationSessionSlotId: positiveIntegerQueryId,
     page: z.preprocess(
       emptyToUndefined,
       z
