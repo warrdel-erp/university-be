@@ -123,10 +123,14 @@ export async function bulkUpdateStatus(ids, status, updatedBy) {
     }
 }
 
-export async function getSingleQuestion(id) {
+export async function getSingleQuestion(id, ownerId = null) {
     try {
+        const whereClause = { id };
+        if (ownerId !== null) {
+            whereClause.createdBy = ownerId;
+        }
         const result = await scoped(model.questionBankModel).findOne({
-            where: { id },
+            where: whereClause,
             include: [
                 {
                     model: model.userModel,
@@ -147,17 +151,21 @@ export async function getSingleQuestion(id) {
     }
 }
 
-export async function updateQuestion(id, questionData) {
+export async function updateQuestion(id, questionData, ownerId = null) {
     try {
+        const whereClause = { id };
+        if (ownerId !== null) {
+            whereClause.createdBy = ownerId;
+        }
         const existing = await scoped(model.questionBankModel).findOne({
-            where: { id },
+            where: whereClause,
             attributes: ['id'],
         });
         if (!existing) {
             return [0];
         }
         const result = await scoped(model.questionBankModel).update(questionData, {
-            where: { id },
+            where: whereClause,
         });
         return result;
     } catch (error) {
@@ -166,16 +174,20 @@ export async function updateQuestion(id, questionData) {
     }
 }
 
-export async function deleteQuestion(id) {
+export async function deleteQuestion(id, ownerId = null) {
     try {
+        const whereClause = { id };
+        if (ownerId !== null) {
+            whereClause.createdBy = ownerId;
+        }
         const existing = await scoped(model.questionBankModel).findOne({
-            where: { id },
+            where: whereClause,
             attributes: ['id'],
         });
         if (!existing) {
             return false;
         }
-        const deleted = await scoped(model.questionBankModel).destroy({ where: { id } });
+        const deleted = await scoped(model.questionBankModel).destroy({ where: whereClause });
         return deleted > 0;
     } catch (error) {
         console.error("Error deleting question from bank:", error);

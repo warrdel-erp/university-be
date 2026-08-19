@@ -599,6 +599,13 @@ export async function getLibraryIssueBookTransactions(query = {}) {
   const search = query.search?.trim();
 
   const where = {};
+  if (query.memberId != null) {
+    where.memberId = Number(query.memberId);
+  }
+  if (query.memberType != null) {
+    where.memberType = query.memberType;
+  }
+
   if (search) {
     const likeSearch = `%${search}%`;
 

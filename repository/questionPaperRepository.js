@@ -9,9 +9,13 @@ async function assertScopedExamSchedule(examScheduleId, transaction) {
     });
 }
 
-async function assertScopedQuestionPaper(id, transaction) {
+async function assertScopedQuestionPaper(id, transaction, ownerId = null) {
+    const whereClause = { id };
+    if (ownerId) {
+        whereClause.createdBy = ownerId;
+    }
     return model.questionPaperModel.findOne({
-        where: { id },
+        where: whereClause,
         attributes: ['id', 'examScheduleId'],
         transaction,
         include: [{
@@ -64,6 +68,13 @@ export async function getQuestionPapers(filters = {}, pagination = {}) {
                     as: "examSchedule",
                     required: true,
                     where: buildScope(model.examScheduleModel),
+                    include: [
+                        {
+                            model: model.examinationSessionModel,
+                            as: "examinationSession",
+                            attributes: ["sessionName"],
+                        }
+                    ]
                 },
             ],
             limit: limit ? parseInt(limit, 10) : undefined,
@@ -77,9 +88,9 @@ export async function getQuestionPapers(filters = {}, pagination = {}) {
     }
 }
 
-export async function getSingleQuestionPaper(id) {
+export async function getSingleQuestionPaper(id, ownerId = null) {
     try {
-        const existing = await assertScopedQuestionPaper(id);
+        const existing = await assertScopedQuestionPaper(id, null, ownerId);
 
         if (!existing) {
             return null;
@@ -130,9 +141,9 @@ export async function getSingleQuestionPaper(id) {
     }
 }
 
-export async function updateQuestionPaper(id, questionPaperData, transaction = null) {
+export async function updateQuestionPaper(id, questionPaperData, transaction = null, ownerId = null) {
     try {
-        const existing = await assertScopedQuestionPaper(id, transaction);
+        const existing = await assertScopedQuestionPaper(id, transaction, ownerId);
         if (!existing) {
             return [0];
         }
@@ -174,9 +185,9 @@ export async function getApprovedQuestionPapersByScheduleId(examScheduleId, tran
     }
 }
 
-export async function deleteQuestionPaper(id) {
+export async function deleteQuestionPaper(id, ownerId = null) {
     try {
-        const existing = await assertScopedQuestionPaper(id);
+        const existing = await assertScopedQuestionPaper(id, null, ownerId);
         if (!existing) {
             return false;
         }
@@ -190,7 +201,15 @@ export async function deleteQuestionPaper(id) {
 
 export async function getExamScheduleById(id) {
     try {
-        return await scoped(model.examScheduleModel).findByPk(id);
+        return await scoped(model.examScheduleModel).findByPk(id, {
+            include: [
+                {
+                    model: model.examinationSessionModel,
+                    as: "examinationSession",
+                    attributes: ["sessionName"],
+                }
+            ]
+        });
     } catch (error) {
         console.error("Error fetching exam schedule:", error);
         throw error;

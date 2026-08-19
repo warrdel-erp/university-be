@@ -4,9 +4,14 @@ const router = Router();
 import {
     addLectureWindow,
     getLectureWindows,
+    getMyLectureWindows,
     getLectureWindowById,
     updateLectureWindow,
     deleteLectureWindow,
+    addMyLectureWindow,
+    getMyLectureWindowById,
+    updateMyLectureWindow,
+    deleteMyLectureWindow,
 } from "../controllers/lectureWindowController.js";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
@@ -42,6 +47,12 @@ const lectureWindowListQuerySchema = z.object({
     lessonId: optionalPositiveId,
 }).strict();
 
+const getMyLectureWindowListQuerySchema = z.object({
+    subjectId: optionalPositiveId,
+    sessionId: optionalPositiveId,
+    lessonId: optionalPositiveId,
+}).strict();
+
 const lectureWindowIdParamsSchema = z.object({
     lectureWindowId: positiveIntegerId,
 });
@@ -56,11 +67,21 @@ const lectureWindowUpdateSchema = z.object({
 
 router.post('/', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_ADD.value, null), validate({ body: lectureWindowBodySchema }), addLectureWindow);
 
+router.post('/my', userAuth, validate({ body: lectureWindowBodySchema }), addMyLectureWindow);
+
 router.get('/', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), validate({ query: lectureWindowListQuerySchema }), getLectureWindows);
+
+router.get('/my', userAuth, validate({ query: getMyLectureWindowListQuerySchema }), getMyLectureWindows);
+
+router.get('/my/:lectureWindowId', userAuth, validate({ params: lectureWindowIdParamsSchema }), getMyLectureWindowById);
 
 router.get('/:lectureWindowId', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER.value, null), validate({ params: lectureWindowIdParamsSchema }), getLectureWindowById);
 
+router.patch('/my/:lectureWindowId', userAuth, validate({ params: lectureWindowIdParamsSchema, body: lectureWindowUpdateSchema }), updateMyLectureWindow);
+
 router.patch('/:lectureWindowId', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_EDIT.value, null), validate({ params: lectureWindowIdParamsSchema, body: lectureWindowUpdateSchema }), updateLectureWindow);
+
+router.delete('/my/:lectureWindowId', userAuth, validate({ params: lectureWindowIdParamsSchema }), deleteMyLectureWindow);
 
 router.delete('/:lectureWindowId', userAuth, checkAccess(PERMISSIONS.LESSON_PLAN_BUILDER_DELETE.value, null), validate({ params: lectureWindowIdParamsSchema }), deleteLectureWindow);
 

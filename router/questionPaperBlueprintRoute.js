@@ -5,6 +5,9 @@ import {
     addBlueprint,
     getAllBlueprints,
     deleteBlueprint,
+    addMyBlueprint,
+    getMyBlueprints,
+    deleteMyBlueprint,
 } from "../controllers/questionPaperBlueprintController.js";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
@@ -35,7 +38,13 @@ import { PERMISSIONS } from "../const/permissions.js";
 // Define routes
 router.post("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, null), validate({ body: createBlueprintSchema }), addBlueprint);
 
+router.post("/my", userAuth, validate({ body: createBlueprintSchema }), addMyBlueprint);
+
 router.get("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER.value, null), validate({ query: getAllBlueprintsQuerySchema }), getAllBlueprints);
+
+router.get("/my", userAuth, validate({ query: getAllBlueprintsQuerySchema }), getMyBlueprints);
+
+router.delete("/my/:id", userAuth, deleteMyBlueprint);
 
 router.delete("/:id", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_DELETE.value, null), deleteBlueprint);
 

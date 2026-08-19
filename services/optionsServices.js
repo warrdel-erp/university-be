@@ -120,7 +120,10 @@ export async function getFeePlanOptions(filters) {
 export async function getLectureWindowOptions(userId, employeeId, subjectId, academicYearId, date, sessionId) {
     const employee = await optionsRepository.getEmployeeOptionDetail({ userId, employeeId });
     if (!employee) {
-        throw new Error('Employee not found');
+        return {
+            selected: { employee: null, subject: null },
+            options: [],
+        };
     }
     if (employee.userId == null) {
         throw new Error('Employee has no linked userId');

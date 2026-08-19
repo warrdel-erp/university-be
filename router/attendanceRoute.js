@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { z } from "zod";
 const router = Router();
-import { addAttendance, copyAttendancePeriod, getCopyAttendancePeriod, getAttendanceDetails, updateAttendance, importAttendance, importBulkAttendance, getAttendanceByDate, getPreviousSessions, getStudentAttendanceReport, getStudentsBatchAttendance, getEmployeeSectionDates } from "../controllers/attendanceController.js";
+import { addAttendance, addMyAttendance, copyAttendancePeriod, getCopyAttendancePeriod, getAttendanceDetails, updateAttendance, updateMyAttendance, importAttendance, importBulkAttendance, getAttendanceByDate, getPreviousSessions, getStudentAttendanceReport, getStudentsBatchAttendance, getEmployeeSectionDates } from "../controllers/attendanceController.js";
 import userAuth from "../middleware/authUser.js"
 import { validate } from "../utility/validation.js";
 
@@ -82,6 +82,9 @@ const attendanceByDateQuerySchema = z.object({
 // ---------------------------------------------------------------------------
 router.post('/', userAuth, validate({ body: addAttendanceSchema }), addAttendance);
 router.patch('/', userAuth, updateAttendance);
+
+router.post('/my', userAuth, validate({ body: addAttendanceSchema }), addMyAttendance);
+router.patch('/my', userAuth, updateMyAttendance);
 
 // ---------------------------------------------------------------------------
 // 2. Copy period

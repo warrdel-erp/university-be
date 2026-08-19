@@ -92,7 +92,7 @@ export async function getSubjectOptions(courseId, term, academicYearId, userId, 
                     },
                     include: [{
                         model: model.classSectionTermModel,
-                        as: 'classSectionTerm',
+                        as: 'timeTableClassSectionTerm',
                         attributes: [],
                         required: (term != null || sessionId != null),
                         where: {

@@ -13,10 +13,11 @@ export async function addBlueprint(blueprintData) {
 
 export async function getBlueprints(filters = {}) {
     try {
-        const { subjectId } = filters;
+        const { subjectId, ownerId } = filters;
 
         const whereClause = {
             ...(subjectId && { subjectId }),
+            ...(ownerId && { createdBy: ownerId }),
         };
 
         const rows = await scoped(model.questionPaperBlueprintModel).findAll({
@@ -45,17 +46,21 @@ export async function getBlueprints(filters = {}) {
     }
 }
 
-export async function deleteBlueprint(id) {
+export async function deleteBlueprint(id, ownerId) {
     try {
+        const where = { id };
+        if (ownerId != null) {
+            where.createdBy = ownerId;
+        }
         const existing = await scoped(model.questionPaperBlueprintModel).findOne({
-            where: { id },
+            where,
             attributes: ['id'],
         });
         if (!existing) {
             return false;
         }
         const deleted = await scoped(model.questionPaperBlueprintModel).destroy({
-            where: { id },
+            where,
         });
         return deleted > 0;
     } catch (error) {
@@ -64,10 +69,14 @@ export async function deleteBlueprint(id) {
     }
 }
 
-export async function getBlueprintById(id) {
+export async function getBlueprintById(id, ownerId) {
     try {
+        const where = { id };
+        if (ownerId != null) {
+            where.createdBy = ownerId;
+        }
         const result = await scoped(model.questionPaperBlueprintModel).findOne({
-            where: { id },
+            where,
         });
         return result;
     } catch (error) {

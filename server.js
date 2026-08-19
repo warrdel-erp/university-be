@@ -44,6 +44,7 @@ import dormitoryList from "./router/dormitoryListRoute.js";
 import addDormitory from "./router/addDormitoryRoute.js";
 import examSetup from "./router/examSetupRoute.js";
 import examAttendance from "./router/examAttendanceRoute.js";
+import examRoomMaterialBundle from "./router/examRoomMaterialBundleRoute.js";
 import transportRoute from "./router/transportRoute.js";
 import vehicleRoute from "./router/vehicleRoute.js";
 import assignVehicleRoute from "./router/assignVehicleRoute.js";
@@ -99,6 +100,7 @@ import questionPaperBlueprint from "./router/questionPaperBlueprintRoute.js";
 import examSetupTypeTerm from "./router/examSetupTypeTermRoute.js";
 import examinationSession from "./router/examinationSessionRoute.js";
 import examinationSessionSlot from "./router/examinationSessionSlotRoute.js";
+import examInvigilatorAssignment from "./router/examInvigilatorAssignmentRoute.js";
 import examSetupType from "./router/examSetupTypeRoute.js";
 import examSchedule from "./router/examScheduleRoute.js";
 import studentHallTicket from "./router/studentHallTicketRoute.js";
@@ -188,6 +190,7 @@ app.use("/examSetupTypeTerm", examSetupTypeTerm);
 
 app.use("/examinationSession", examinationSession);
 app.use("/examinationSessionSlot", examinationSessionSlot);
+app.use("/examInvigilatorAssignment", examInvigilatorAssignment);
 
 
 app.use("/examSchedule", examSchedule);
@@ -199,6 +202,7 @@ app.use("/examScheduleMapping", examScheduleMapping);
 app.use("/internalAssessment", internalAssessment);
 app.use("/examSetup", examSetup);
 app.use("/examAttendance", examAttendance);
+app.use("/examRoomMaterialBundle", examRoomMaterialBundle);
 app.use("/studentHallTicket", studentHallTicket);
 app.use("/options", options);
 app.use("/academicGroup", academicGroup);

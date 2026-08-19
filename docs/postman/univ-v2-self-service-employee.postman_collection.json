@@ -1,0 +1,1320 @@
+{
+  "info": {
+    "_postman_id": "self-service-employee-api-collection-v2",
+    "name": "Self-Service Employee Module",
+    "description": "Complete Postman collection for self-service employee endpoints organized folder-wise",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Employee Schedule & Details",
+      "item": [
+        {
+          "name": "GET My Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/employee/my",
+              "host": ["{{baseurl}}"],
+              "path": ["employee", "my"]
+            }
+          }
+        },
+        {
+          "name": "GET My Unique Class Section Subjects",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/employee/my/uniqueClassSectionSubjects",
+              "host": ["{{baseurl}}"],
+              "path": ["employee", "my", "uniqueClassSectionSubjects"]
+            }
+          }
+        },
+        {
+          "name": "GET My Today Class Schedule",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/employee/my/schedule?date=2026-08-15&groupPeriods=false",
+              "host": ["{{baseurl}}"],
+              "path": ["employee", "my", "schedule"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-08-15"
+                },
+                {
+                  "key": "groupPeriods",
+                  "value": "false"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET My Past Class Schedules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/employee/my/pastSchedule?date=2026-08-15&groupPeriods=false",
+              "host": ["{{baseurl}}"],
+              "path": ["employee", "my", "pastSchedule"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-08-15"
+                },
+                {
+                  "key": "groupPeriods",
+                  "value": "false"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET My Upcoming Class Schedules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/employee/my/upcomingSchedule?date=2026-08-15&groupPeriods=false",
+              "host": ["{{baseurl}}"],
+              "path": ["employee", "my", "upcomingSchedule"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-08-15"
+                },
+                {
+                  "key": "groupPeriods",
+                  "value": "false"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET My Section Counts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/employee/my/sectionCounts?date=2026-08-15",
+              "host": ["{{baseurl}}"],
+              "path": ["employee", "my", "sectionCounts"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-08-15"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET My Employee Section Dates",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/employee/my/sectionDates?classSectionTermId=1&subjectId=2",
+              "host": ["{{baseurl}}"],
+              "path": ["employee", "my", "sectionDates"],
+              "query": [
+                {
+                  "key": "classSectionTermId",
+                  "value": "1"
+                },
+                {
+                  "key": "subjectId",
+                  "value": "2"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Teacher Subjects From Schedule",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/employee/my/coursesFromSchedule?courseId=34&sessionId=6",
+              "host": ["{{baseurl}}"],
+              "path": ["employee", "my", "coursesFromSchedule"],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "34"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "6"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Routine By Teacher",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/timeTableCreate/my/getRoutineByTeacher?courseId=34&sessionId=6",
+              "host": ["{{baseurl}}"],
+              "path": ["timeTableCreate", "my", "getRoutineByTeacher"],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "34"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "6"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET My Mapped Subjects",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/course/my/subjects",
+              "host": ["{{baseurl}}"],
+              "path": ["course", "my", "subjects"]
+            }
+          }
+        },
+        {
+          "name": "GET My Exam Assignments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/teacherExamAssignment/my",
+              "host": ["{{baseurl}}"],
+              "path": ["teacherExamAssignment", "my"]
+            }
+          }
+        },
+        {
+          "name": "GET My Invigilator Assignments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examInvigilatorAssignment/my?examinationSessionId=1",
+              "host": ["{{baseurl}}"],
+              "path": ["examInvigilatorAssignment", "my"],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "GET My Teacher Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/dashboard/my/teacher",
+              "host": ["{{baseurl}}"],
+              "path": ["dashboard", "my", "teacher"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Attendance",
+      "item": [
+        {
+          "name": "POST My Attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timeTableCellDateWiseId\": 55535,\n  \"classSectionTermId\": 1,\n  \"attendance\": [\n    {\n      \"studentId\": 1,\n      \"attendanceStatus\": \"Present\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/attendance/my",
+              "host": ["{{baseurl}}"],
+              "path": ["attendance", "my"]
+            }
+          }
+        },
+        {
+          "name": "PATCH My Attendance",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"attendanceId\": 1,\n    \"attendanceStatus\": \"Present\"\n  }\n]"
+            },
+            "url": {
+              "raw": "{{baseurl}}/attendance/my",
+              "host": ["{{baseurl}}"],
+              "path": ["attendance", "my"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lesson Planning",
+      "item": [
+        {
+          "name": "POST My Lesson",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Architectural Basics\",\n  \"subjectId\": 190,\n  \"sessionId\": 6,\n  \"lectureWindowId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/lesson/my",
+              "host": ["{{baseurl}}"],
+              "path": ["lesson", "my"]
+            }
+          }
+        },
+        {
+          "name": "GET My Lessons",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lesson/my?academicYearId=59",
+              "host": ["{{baseurl}}"],
+              "path": ["lesson", "my"],
+              "query": [
+                {
+                  "key": "academicYearId",
+                  "value": "59"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET My Simple Lesson List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lesson/my/simple",
+              "host": ["{{baseurl}}"],
+              "path": ["lesson", "my", "simple"]
+            }
+          }
+        },
+        {
+          "name": "GET My Single Lesson Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lesson/my/single?lessonId=1",
+              "host": ["{{baseurl}}"],
+              "path": ["lesson", "my", "single"],
+              "query": [
+                {
+                  "key": "lessonId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH My Lesson",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Architectural Basics Updated\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/lesson/my/1",
+              "host": ["{{baseurl}}"],
+              "path": ["lesson", "my", "1"]
+            }
+          }
+        },
+        {
+          "name": "DELETE My Lesson",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lesson/my/1",
+              "host": ["{{baseurl}}"],
+              "path": ["lesson", "my", "1"]
+            }
+          }
+        },
+        {
+          "name": "POST My Topic",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lessonId\": 1,\n  \"name\": \"Topic 1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/lesson/my/topic",
+              "host": ["{{baseurl}}"],
+              "path": ["lesson", "my", "topic"]
+            }
+          }
+        },
+        {
+          "name": "PATCH My Topic",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Topic 1 Updated\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/lesson/my/topic/1",
+              "host": ["{{baseurl}}"],
+              "path": ["lesson", "my", "topic", "1"]
+            }
+          }
+        },
+        {
+          "name": "DELETE My Topic",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lesson/my/topic/1",
+              "host": ["{{baseurl}}"],
+              "path": ["lesson", "my", "topic", "1"]
+            }
+          }
+        },
+        {
+          "name": "GET My Employee Subject And Lesson",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lesson/my/employee?courseId=34&sessionId=6",
+              "host": ["{{baseurl}}"],
+              "path": ["lesson", "my", "employee"],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "34"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "6"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET My Mapped Lesson Progress",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lesson/my/mapped?subjectId=182",
+              "host": ["{{baseurl}}"],
+              "path": ["lesson", "my", "mapped"],
+              "query": [
+                {
+                  "key": "subjectId",
+                  "value": "182"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Routine By Teacher (Lesson)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lesson/my/getRoutineByTeacher?subjectId=182&date=",
+              "host": ["{{baseurl}}"],
+              "path": ["lesson", "my", "getRoutineByTeacher"],
+              "query": [
+                {
+                  "key": "subjectId",
+                  "value": "182"
+                },
+                {
+                  "key": "date",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lesson Mapping",
+      "item": [
+        {
+          "name": "POST My Lesson Mapping",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"topicId\": 1,\n  \"timeTableCellDateWiseId\": 55535\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/lesson/my/mapping",
+              "host": ["{{baseurl}}"],
+              "path": ["lesson", "my", "mapping"]
+            }
+          }
+        },
+        {
+          "name": "POST My Lesson Mapping Copy",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sourceLessonMappingId\": 1,\n  \"targets\": [\n    {\n      \"timeTableCellDateWiseId\": 55535\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/lesson/my/mapping/copy",
+              "host": ["{{baseurl}}"],
+              "path": ["lesson", "my", "mapping", "copy"]
+            }
+          }
+        },
+        {
+          "name": "GET My Lesson Mappings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lesson/my/mapping?academicYearId=59",
+              "host": ["{{baseurl}}"],
+              "path": ["lesson", "my", "mapping"],
+              "query": [
+                {
+                  "key": "academicYearId",
+                  "value": "59"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH My Lesson Mapping",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"completeDate\": \"2026-08-17\",\n  \"lessonMappingId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/lesson/my/mapping",
+              "host": ["{{baseurl}}"],
+              "path": ["lesson", "my", "mapping"]
+            }
+          }
+        },
+        {
+          "name": "PATCH My Lesson Complete Mapping",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"completeDate\": \"2026-08-17\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/lesson/my/mapping/1",
+              "host": ["{{baseurl}}"],
+              "path": ["lesson", "my", "mapping", "1"]
+            }
+          }
+        },
+        {
+          "name": "DELETE My Lesson Mapping",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lesson/my/mapping/1",
+              "host": ["{{baseurl}}"],
+              "path": ["lesson", "my", "mapping", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Question Bank",
+      "item": [
+        {
+          "name": "POST My Question",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"theory\",\n  \"difficulty\": \"Easy\",\n  \"bloom\": \"Remember\",\n  \"marks\": 5,\n  \"question\": \"What is 2 + 2?\",\n  \"Answer\": \"4\",\n  \"subjectId\": 190,\n  \"content\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionBank/my",
+              "host": ["{{baseurl}}"],
+              "path": ["questionBank", "my"]
+            }
+          }
+        },
+        {
+          "name": "GET My Questions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/questionBank/my",
+              "host": ["{{baseurl}}"],
+              "path": ["questionBank", "my"]
+            }
+          }
+        },
+        {
+          "name": "GET My Single Question",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/questionBank/my/{{questionId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["questionBank", "my", "{{questionId}}"]
+            }
+          }
+        },
+        {
+          "name": "GET My Questions Count",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/questionBank/my/count",
+              "host": ["{{baseurl}}"],
+              "path": ["questionBank", "my", "count"]
+            }
+          }
+        },
+        {
+          "name": "PUT My Question",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": {{questionId}},\n  \"question\": \"What is 2 + 2? (Updated)\",\n  \"type\": \"theory\",\n  \"content\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionBank/my",
+              "host": ["{{baseurl}}"],
+              "path": ["questionBank", "my"]
+            }
+          }
+        },
+        {
+          "name": "DELETE My Question",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/questionBank/my/{{questionId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["questionBank", "my", "{{questionId}}"]
+            }
+          }
+        },
+        {
+          "name": "POST My Question Paper",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mock Final Exam\",\n  \"examScheduleId\": 1,\n  \"questionPaper\": [\n    {\n      \"sectionName\": \"Section A\",\n      \"typeOfQuestions\": \"theory\",\n      \"marksPerQuestion\": 5,\n      \"questions\": [\n        {\n          \"id\": 20,\n          \"type\": \"theory\",\n          \"difficulty\": \"Easy\",\n          \"bloom\": \"Remember\",\n          \"marks\": 5,\n          \"question\": \"What is 2 + 2? (Updated)\",\n          \"Answer\": \"4\",\n          \"content\": null\n        }\n      ]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionPaper/my",
+              "host": ["{{baseurl}}"],
+              "path": ["questionPaper", "my"]
+            }
+          }
+        },
+        {
+          "name": "GET My Question Papers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/questionPaper/my",
+              "host": ["{{baseurl}}"],
+              "path": ["questionPaper", "my"]
+            }
+          }
+        },
+        {
+          "name": "GET My Single Question Paper",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/questionPaper/my/{{questionPaperId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["questionPaper", "my", "{{questionPaperId}}"]
+            }
+          }
+        },
+        {
+          "name": "PUT My Question Paper",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": {{questionPaperId}},\n  \"name\": \"Mock Final Exam (Updated)\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionPaper/my",
+              "host": ["{{baseurl}}"],
+              "path": ["questionPaper", "my"]
+            }
+          }
+        },
+        {
+          "name": "DELETE My Question Paper",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/questionPaper/my/{{questionPaperId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["questionPaper", "my", "{{questionPaperId}}"]
+            }
+          }
+        },
+        {
+          "name": "POST My Blueprint",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Blueprint A\",\n  \"subjectId\": 190,\n  \"blueprint\": [\n    {\n      \"sectionName\": \"Section A\",\n      \"typeOfQuestions\": \"theory\",\n      \"totalQuestions\": 2,\n      \"marksPerQuestion\": 5\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionPaperBlueprint/my",
+              "host": ["{{baseurl}}"],
+              "path": ["questionPaperBlueprint", "my"]
+            }
+          }
+        },
+        {
+          "name": "GET My Blueprints",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/questionPaperBlueprint/my",
+              "host": ["{{baseurl}}"],
+              "path": ["questionPaperBlueprint", "my"]
+            }
+          }
+        },
+        {
+          "name": "POST Generate Question Paper My",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Generated Mock Paper\",\n  \"blueprintId\": 1,\n  \"examScheduleId\": 1,\n  \"numberOfPapers\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionPaper/my/generate",
+              "host": ["{{baseurl}}"],
+              "path": ["questionPaper", "my", "generate"]
+            }
+          }
+        },
+        {
+          "name": "DELETE My Blueprint",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/questionPaperBlueprint/my/{{blueprintId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["questionPaperBlueprint", "my", "{{blueprintId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Options & Lecture Windows",
+      "item": [
+        {
+          "name": "GET My Subject Options",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/options/my/subjects?courseId=35",
+              "host": ["{{baseurl}}"],
+              "path": ["options", "my", "subjects"],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "35"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST My Lecture Window",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjectId\": 190,\n  \"sessionId\": 6,\n  \"startDate\": \"2026-08-17\",\n  \"endDate\": \"2026-08-30\",\n  \"name\": \"Unit 1 Window\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/lecture/my",
+              "host": ["{{baseurl}}"],
+              "path": ["lecture", "my"]
+            }
+          }
+        },
+        {
+          "name": "GET My Lecture Windows",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lecture/my?sessionId=6&subjectId=190",
+              "host": ["{{baseurl}}"],
+              "path": ["lecture", "my"],
+              "query": [
+                {
+                  "key": "sessionId",
+                  "value": "6"
+                },
+                {
+                  "key": "subjectId",
+                  "value": "190"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET My Single Lecture Window",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lecture/my/{{lectureWindowId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["lecture", "my", "{{lectureWindowId}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH My Lecture Window",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Unit 1 Window Updated\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/lecture/my/{{lectureWindowId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["lecture", "my", "{{lectureWindowId}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE My Lecture Window",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/lecture/my/{{lectureWindowId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["lecture", "my", "{{lectureWindowId}}"]
+            }
+          }
+        },
+        {
+          "name": "GET My Lecture Windows Options",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/options/my/lectureWindows?subjectId=190&date=2026-08-17",
+              "host": ["{{baseurl}}"],
+              "path": ["options", "my", "lectureWindows"],
+              "query": [
+                {
+                  "key": "subjectId",
+                  "value": "190"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-08-17"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Library",
+      "item": [
+        {
+          "name": "GET My Library Book Issues",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/libraryIssueBook/my",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryIssueBook", "my"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseurl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjU2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlSWQiOm51bGwsImRlZmF1bHRBY2FkZW1pY1llYXJJZCI6NTksInVzZXJOYW1lIjoiUGF5YWwgTHVsbGEiLCJ1bmlxdWVJZCI6IjE0NWQ5ODU2LTYyYzctNDY4ZS1hNzYyLTI2ZTkzYjdmYzgyZiIsInBhc3N3b3JkIjoiJDJhJDEwJEVzMmlldHdab0FBNHhTRnBKbGYzRmUuQmR1eDIuanVtR3BUMmZaUEtYaHEubTVxR2dhaEJPIiwiZHVtbXlQYXNzd29yZCI6IiIsInN0YXR1cyI6ImFjdGl2ZSIsInBob25lIjoiNzYwMDc5ODMwNyIsImVtYWlsIjoicGx1QGFheW9qYW4uZWR1LmluIiwiaXNUZWFjaGVyIjp0cnVlLCJjcmVhdGVkQXQiOiIyMDI1LTA5LTMwVDExOjUyOjA5LjAwMFoiLCJ1cGRhdGVkQXQiOiIyMDI2LTA4LTExVDE5OjUyOjE0LjAwMFoiLCJkZWxldGVkQXQiOm51bGwsImRlZmF1bHRfcm9sZV9pZCI6bnVsbCwiaW5zdGl0dXRlTmFtZSI6IkFheW9qYW4gU2Nob29sIG9mIEFyY2hpdGVjdHVyZSIsImlhdCI6MTc4NjgxMTY2OSwiZXhwIjoxNzg5NDAzNjY5fQ.9rEUibo0Al-3x8p03oMRGZGNMeJH4ml17xl31ZHPIlg",
+      "type": "string"
+    },
+    {
+      "key": "questionId",
+      "value": "20",
+      "type": "string"
+    },
+    {
+      "key": "questionPaperId",
+      "value": "8",
+      "type": "string"
+    },
+    {
+      "key": "lectureWindowId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "blueprintId",
+      "value": "1",
+      "type": "string"
+    }
+  ]
+}

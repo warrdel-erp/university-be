@@ -89,6 +89,15 @@ function collectTeacherDashboardIds(subjectMappings, scheduleMappings, sectionMa
 
 export async function getTeacherDashboard({ employeeId } = {}) {
   const currentDate = formatQueryDate();
+  if (!employeeId) {
+    return {
+      studentsCount: 0,
+      subjectsCount: 0,
+      coursesCount: 0,
+      examScheduledForPaperCreationCount: 0,
+      upcomingClassesCount: 0,
+    };
+  }
   const teacher = await dashboardRepository.getTeacherDashboardEmployee(employeeId);
   if (!teacher) {
     const error = new Error('Teacher not found');

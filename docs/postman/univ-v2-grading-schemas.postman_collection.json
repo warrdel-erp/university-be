@@ -29,13 +29,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/examStructure/examType",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examStructure",
-                "examType"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["examStructure", "examType"]
             }
           }
         },
@@ -51,13 +46,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/examStructure/examType?search=Mid&status=true&page=1&limit=10",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examStructure",
-                "examType"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examStructure", "examType"],
               "query": [
                 {
                   "key": "search",
@@ -91,14 +81,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/examStructure/examType/all?search=Mid&page=1&limit=10",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examStructure",
-                "examType",
-                "all"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examStructure", "examType", "all"],
               "query": [
                 {
                   "key": "search",
@@ -136,13 +120,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/examStructure/examType",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examStructure",
-                "examType"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["examStructure", "examType"]
             }
           }
         },
@@ -158,1367 +137,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/examStructure/examType/{{examSetupTypeId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examStructure",
-                "examType",
-                "{{examSetupTypeId}}"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "6. Assessment Plans",
-      "item": [
-        {
-          "name": "6.1 Create Assessment Plan",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"planName\": \"B.Tech CSE Assessment Plan 2026\",\n  \"planCode\": \"AP_CSE_2026\",\n  \"description\": \"Comprehensive assessment plan for CSE 1st year\",\n  \"courseId\": 1,\n  \"sessionId\": 1,\n  \"regulationId\": 1,\n  \"term\": 1,\n  \"gradingScheme\": \"10-Point Scale\",\n  \"status\": \"Draft\",\n  \"isActive\": true,\n  \"components\": [\n    {\n      \"examSetupTypeId\": 1,\n      \"evaluationBy\": \"Faculty\",\n      \"weightagePercentage\": 30,\n      \"maxAssessments\": 1\n    },\n    {\n      \"examSetupTypeId\": 2,\n      \"evaluationBy\": \"CoE\",\n      \"weightagePercentage\": 70,\n      \"maxAssessments\": 1\n    }\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "var res = pm.response.json();",
-                  "if (res.success && res.data && res.data.assessmentPlanId) {",
-                  "    pm.collectionVariables.set('assessmentPlanId', res.data.assessmentPlanId);",
-                  "    console.log('Saved assessmentPlanId:', res.data.assessmentPlanId);",
-                  "    if (res.data.components && res.data.components.length > 0) {",
-                  "        pm.collectionVariables.set('assessmentPlanComponentId', res.data.components[0].assessmentPlanComponentId);",
-                  "    }",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ]
-        },
-        {
-          "name": "6.2 Get All Assessment Plans",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan?search=&status=&courseId=&sessionId=&regulationId=&term=&page=1&limit=10",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan"
-              ],
-              "query": [
-                {
-                  "key": "search",
-                  "value": ""
-                },
-                {
-                  "key": "status",
-                  "value": ""
-                },
-                {
-                  "key": "courseId",
-                  "value": ""
-                },
-                {
-                  "key": "sessionId",
-                  "value": ""
-                },
-                {
-                  "key": "regulationId",
-                  "value": ""
-                },
-                {
-                  "key": "term",
-                  "value": ""
-                },
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "6.3 Get Assessment Plan By ID",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan/{{assessmentPlanId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "{{assessmentPlanId}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "6.4 Update Assessment Plan",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"planName\": \"B.Tech CSE Assessment Plan 2026 Updated\",\n  \"status\": \"Active\"\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan/{{assessmentPlanId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "{{assessmentPlanId}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "6.5 Toggle Active Status (Soft Delete)",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan/{{assessmentPlanId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "{{assessmentPlanId}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "6.6 Create Assessment Plan Component",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"assessmentPlanId\": {{assessmentPlanId}},\n  \"examSetupTypeId\": 3,\n  \"evaluationBy\": \"Faculty\",\n  \"weightagePercentage\": 10,\n  \"maxAssessments\": 1\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan/component",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "component"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "var res = pm.response.json();",
-                  "if (res.success && res.data && res.data.assessmentPlanComponentId) {",
-                  "    pm.collectionVariables.set('assessmentPlanComponentId', res.data.assessmentPlanComponentId);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ]
-        },
-        {
-          "name": "6.7 Update Assessment Plan Component",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"weightagePercentage\": 15\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan/component/{{assessmentPlanComponentId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "component",
-                "{{assessmentPlanComponentId}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "6.8 Delete Assessment Plan Component",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan/component/{{assessmentPlanComponentId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "component",
-                "{{assessmentPlanComponentId}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "6.9 Get Course Assessment Plan Overview",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan/overview?courseId=&sessionId=&subjectId=&assessmentPlanId=&academicRegulationId=&assignmentStatus=all&term=&search=&page=1&limit=10",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "courseId",
-                  "value": ""
-                },
-                {
-                  "key": "sessionId",
-                  "value": ""
-                },
-                {
-                  "key": "subjectId",
-                  "value": ""
-                },
-                {
-                  "key": "assessmentPlanId",
-                  "value": ""
-                },
-                {
-                  "key": "academicRegulationId",
-                  "value": ""
-                },
-                {
-                  "key": "assignmentStatus",
-                  "value": "all",
-                  "description": "Options: assigned | unassigned | all"
-                },
-                {
-                  "key": "term",
-                  "value": ""
-                },
-                {
-                  "key": "search",
-                  "value": ""
-                },
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "6.10 Get Assessment Plan Statistics",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan/stats?courseId=&sessionId=&term=",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "stats"
-              ],
-              "query": [
-                {
-                  "key": "courseId",
-                  "value": ""
-                },
-                {
-                  "key": "sessionId",
-                  "value": ""
-                },
-                {
-                  "key": "term",
-                  "value": ""
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "6.11 Create Subject Assessment Plan Mapping",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "var jsonData = pm.response.json();",
-                  "if (jsonData && jsonData.data && jsonData.data.assessmentPlanSubjectMappingId) {",
-                  "    pm.collectionVariables.set('assessmentPlanSubjectMappingId', jsonData.data.assessmentPlanSubjectMappingId);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"assessmentPlanId\": {{assessmentPlanId}},\n  \"subjectId\": 402,\n  \"courseId\": 45,\n  \"sessionId\": 23\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan/subjectMapping",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "subjectMapping"
-              ]
-            }
-          }
-        },
-        {
-          "name": "6.12 Get Subject Assessment Plan Mappings",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan/subjectMapping?page=1&limit=10",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "subjectMapping"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "6.13 Delete Subject Assessment Plan Mapping",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan/subjectMapping/{{assessmentPlanSubjectMappingId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "subjectMapping",
-                "{{assessmentPlanSubjectMappingId}}"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "7. Examination Sessions",
-      "item": [
-        {
-          "name": "7.1 Create Examination Session",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"assessmentTypeId\": {{examSetupTypeId}},\n  \"sessionName\": \"End Semester Examination - May 2027\",\n  \"examStartDate\": \"2027-05-10\",\n  \"examEndDate\": \"2027-05-25\",\n  \"hallTicketReleaseDate\": \"2027-05-01\",\n  \"seatAllocationDate\": \"2027-05-05\",\n  \"evaluationStartDate\": \"2027-05-26\",\n  \"evaluationDeadline\": \"2027-06-10\",\n  \"moderationDeadline\": \"2027-06-15\",\n  \"resultPublicationDate\": \"2027-06-20\",\n  \"autoGenerateSeating\": true,\n  \"autoAllocateRooms\": true,\n  \"autoAssignInvigilators\": false,\n  \"qrAttendance\": true,\n  \"barcodeAnswerSheet\": true,\n  \"aiEvaluation\": false,\n  \"moderationWorkflow\": true,\n  \"allowRevaluation\": true,\n  \"status\": \"Draft\",\n  \"classSectionTerms\": [\n    {\n      \"classSectionTermId\": 1,\n      \"includeElectives\": true,\n      \"remarks\": \"Main batch participation\"\n    }\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/examinationSession",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "var res = pm.response.json();",
-                  "if (res.success && res.data && res.data.examinationSessionId) {",
-                  "    pm.collectionVariables.set('examinationSessionId', res.data.examinationSessionId);",
-                  "    console.log('Saved examinationSessionId:', res.data.examinationSessionId);",
-                  "    if (res.data.examinationSessionTerms && res.data.examinationSessionTerms.length > 0) {",
-                  "        pm.collectionVariables.set('examinationSessionTermId', res.data.examinationSessionTerms[0].examinationSessionTermId);",
-                  "    }",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ]
-        },
-        {
-          "name": "7.2 Get All Examination Sessions",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession?search=&status=&page=1&limit=10",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession"
-              ],
-              "query": [
-                {
-                  "key": "search",
-                  "value": ""
-                },
-                {
-                  "key": "status",
-                  "value": ""
-                },
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "7.3 Get Examination Session By ID",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession/single?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "single"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "7.4 Patch Examination Session",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"sessionName\": \"End Semester Examination - May 2027 (Updated)\",\n  \"status\": \"Published\"\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/examinationSession?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "7.5 Get Mapped Class Section Terms By Setup Type",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession/classSectionTerms?examSetupTypeId={{examSetupTypeId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "classSectionTerms"
-              ],
-              "query": [
-                {
-                  "key": "examSetupTypeId",
-                  "value": "{{examSetupTypeId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "7.6 Create Examination Session Term",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examinationSessionId\": {{examinationSessionId}},\n  \"classSectionTermId\": 2,\n  \"includeElectives\": true,\n  \"remarks\": \"Additional section mapping\"\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/examinationSession/term",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "term"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "var res = pm.response.json();",
-                  "if (res.success && res.data && res.data.examinationSessionTermId) {",
-                  "    pm.collectionVariables.set('examinationSessionTermId', res.data.examinationSessionTermId);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ]
-        },
-        {
-          "name": "7.7 Delete Examination Session Term",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession/term?examinationSessionTermId={{examinationSessionTermId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "term"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionTermId",
-                  "value": "{{examinationSessionTermId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "7.8 Get Examination Session Structure",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession/structure?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "structure"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "7.9 Get Mapped Subjects By Session And Term",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession/subjects?examinationSessionId={{examinationSessionId}}&term=1&courseId=34&sessionId=6&isExamScheduled=true&teacherAssignmentStatus=assigned",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "subjects"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                },
-                {
-                  "key": "term",
-                  "value": "1"
-                },
-                {
-                  "key": "courseId",
-                  "value": "34"
-                },
-                {
-                  "key": "sessionId",
-                  "value": "6"
-                },
-                {
-                  "key": "isExamScheduled",
-                  "value": "true"
-                },
-                {
-                  "key": "teacherAssignmentStatus",
-                  "value": "assigned"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "7.10 Delete Examination Session",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                }
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "8. Examination Session Slots",
-      "item": [
-        {
-          "name": "8.1 Get Examination Session Schedules (Date-wise & Slot-wise)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession/schedules?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "schedules"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "8.2 Create Examination Session Slot",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examinationSessionId\": {{examinationSessionId}},\n  \"startTime\": \"09:00:00\",\n  \"durationMinutes\": 180,\n  \"numberOfSlots\": 3\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/examinationSessionSlot",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSessionSlot"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "var res = pm.response.json();",
-                  "var slotData = Array.isArray(res.data) ? res.data[0] : res.data;",
-                  "if (res.success && slotData && slotData.examinationSessionSlotId) {",
-                  "    pm.collectionVariables.set('examinationSessionSlotId', slotData.examinationSessionSlotId);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ]
-        },
-        {
-          "name": "8.3 Get Examination Session Slots",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSessionSlot?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSessionSlot"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "8.4 Get Examination Session Slot By ID",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSessionSlot/single?examinationSessionSlotId={{examinationSessionSlotId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSessionSlot",
-                "single"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionSlotId",
-                  "value": "{{examinationSessionSlotId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "8.5 Patch Examination Session Slot",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "[\n  {\n    \"examinationSessionSlotId\": {{examinationSessionSlotId}},\n    \"startTime\": \"09:30:00\",\n    \"durationMinutes\": 180\n  }\n]"
-            },
-            "url": {
-              "raw": "{{baseurl}}/examinationSessionSlot",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSessionSlot"
-              ]
-            }
-          }
-        },
-        {
-          "name": "8.6 Delete Examination Session Slot",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSessionSlot?examinationSessionSlotId={{examinationSessionSlotId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSessionSlot"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionSlotId",
-                  "value": "{{examinationSessionSlotId}}"
-                }
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "9. Exam & Slot Mapping (Exam Schedule for a Day)",
-      "item": [
-        {
-          "name": "9.1 Map Subject & Slot to Exam Schedule (Add Schedule)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"subjectId\": 402,\n  \"term\": 1,\n  \"sessionId\": 23,\n  \"examinationSessionSlotId\": {{examinationSessionSlotId}},\n  \"examDate\": \"2027-05-10\",\n  \"type\": \"Theory\"\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/examScheduleMapping/schedule",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examScheduleMapping",
-                "schedule"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "var res = pm.response.json();",
-                  "if (res.success && res.data && res.data.examScheduleId) {",
-                  "    pm.collectionVariables.set('examScheduleId', res.data.examScheduleId);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ]
-        },
-        {
-          "name": "9.2 Update Exam & Slot Mapping (Update Schedule)",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examScheduleId\": {{examScheduleId}},\n  \"subjectId\": 402,\n  \"term\": 1,\n  \"sessionId\": 23,\n  \"examinationSessionSlotId\": {{examinationSessionSlotId}},\n  \"examDate\": \"2027-05-12\",\n  \"type\": \"Theory\"\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/examScheduleMapping/schedule",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examScheduleMapping",
-                "schedule"
-              ]
-            }
-          }
-        },
-        {
-          "name": "9.3 Delete Exam & Slot Mapping (Delete Schedule)",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examScheduleMapping/schedule?examScheduleId={{examScheduleId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examScheduleMapping",
-                "schedule"
-              ],
-              "query": [
-                {
-                  "key": "examScheduleId",
-                  "value": "{{examScheduleId}}"
-                }
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Exam Schedule Room Capacity",
-      "item": [
-        {
-          "name": "Available Rooms",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examSchedule/availableRooms?examScheduleId=1",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examSchedule",
-                "availableRooms"
-              ],
-              "query": [
-                {
-                  "key": "examScheduleId",
-                  "value": "1"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Assign Room",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examScheduleId\": 1,\n  \"classRoomSectionIds\": [\n    1,\n    {\n      \"classRoomSectionId\": 2,\n      \"orderKey\": 2\n    }\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/examSchedule/assignRoom",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examSchedule",
-                "assignRoom"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Room Assignments",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examSchedule/roomAssignments?examScheduleId=1",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examSchedule",
-                "roomAssignments"
-              ],
-              "query": [
-                {
-                  "key": "examScheduleId",
-                  "value": "1"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Room Assignment (Update)",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examScheduleRoomCapacityId\": 1,\n  \"capacity\": 50,\n  \"columns\": 5\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/examSchedule/roomAssignment",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examSchedule",
-                "roomAssignment"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "9. Teacher Exam Assignment",
-      "item": [
-        {
-          "name": "9.1 Assign Teacher to Exam",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"deadline\": \"2026-12-31\",\n  \"examScheduleId\": 1,\n  \"userId\": 2\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/teacherExamAssignment",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "teacherExamAssignment"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "var res = pm.response.json();",
-                  "if (res.success && res.data && res.data.teacherExamAssignmentId) {",
-                  "    pm.collectionVariables.set('teacherExamAssignmentId', res.data.teacherExamAssignmentId);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ]
-        },
-        {
-          "name": "9.2 Get All Exam Assignments",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/teacherExamAssignment?examScheduleId=1&userId=2",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "teacherExamAssignment"
-              ],
-              "query": [
-                {
-                  "key": "examScheduleId",
-                  "value": "1"
-                },
-                {
-                  "key": "userId",
-                  "value": "2"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "9.3 Remove Teacher from Exam",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/teacherExamAssignment/{{teacherExamAssignmentId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "teacherExamAssignment",
-                "{{teacherExamAssignmentId}}"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["examStructure", "examType", "{{examSetupTypeId}}"]
             }
           }
         }
@@ -1539,14 +159,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/block/{{hallTicketId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "block",
-                "{{hallTicketId}}"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["studentHallTicket", "block", "{{hallTicketId}}"]
             }
           }
         },
@@ -1562,13 +176,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/byQr?qr={{qrCode}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "byQr"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["studentHallTicket", "byQr"],
               "query": [
                 {
                   "key": "qr",
@@ -1598,13 +207,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/publish",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "publish"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["studentHallTicket", "publish"]
             }
           }
         },
@@ -1620,13 +224,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/{{hallTicketId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "{{hallTicketId}}"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["studentHallTicket", "{{hallTicketId}}"]
             }
           }
         },
@@ -1650,13 +249,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/generate",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "generate"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["studentHallTicket", "generate"]
             }
           }
         },
@@ -1672,9 +266,7 @@
             ],
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/eligibility/{{examinationSessionId}}/{{studentId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
+              "host": ["{{baseurl}}"],
               "path": [
                 "studentHallTicket",
                 "eligibility",
@@ -1696,9 +288,7 @@
             ],
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/sessionStudents/{{examinationSessionId}}?courseId={{courseId}}&sessionId={{sessionId}}&term={{term}}&status={{status}}&page=1&limit=10",
-              "host": [
-                "{{baseurl}}"
-              ],
+              "host": ["{{baseurl}}"],
               "path": [
                 "studentHallTicket",
                 "sessionStudents",
@@ -1745,9 +335,7 @@
             ],
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/eligibilityOverview/{{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
+              "host": ["{{baseurl}}"],
               "path": [
                 "studentHallTicket",
                 "eligibilityOverview",
@@ -1768,14 +356,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/reviewDetails/{{studentId}}?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "reviewDetails",
-                "{{studentId}}"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["studentHallTicket", "reviewDetails", "{{studentId}}"],
               "query": [
                 {
                   "key": "examinationSessionId",
@@ -1805,13 +387,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/markAsEligible",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "markAsEligible"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["studentHallTicket", "markAsEligible"]
             }
           }
         },
@@ -1827,13 +404,12 @@
             ],
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/summary/{{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
+              "host": ["{{baseurl}}"],
               "path": [
                 "studentHallTicket",
                 "summary",
                 "{{examinationSessionId}}"
+              ]
             }
           }
         },
@@ -1857,13 +433,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/studentHallTicket/reviewFilterStudents",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "reviewFilterStudents"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["studentHallTicket", "reviewFilterStudents"]
             }
           }
         }
@@ -1892,13 +463,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/questionPaper/approve",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "questionPaper",
-                "approve"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["questionPaper", "approve"]
             }
           }
         },
@@ -1922,12 +488,550 @@
             },
             "url": {
               "raw": "{{baseurl}}/questionPaper/finalApproved",
+              "host": ["{{baseurl}}"],
+              "path": ["questionPaper", "finalApproved"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. Exam Invigilator Assignment (/examInvigilatorAssignment)",
+      "item": [
+        {
+          "name": "12.1 Create Invigilator Assignment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examinationSessionSlotId\": 1,\n  \"examDate\": \"2026-12-01\",\n  \"classRoomSectionId\": 8,\n  \"userId\": 56,\n  \"role\": \"INVIGILATOR\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/examInvigilatorAssignment",
+              "host": ["{{baseurl}}"],
+              "path": ["examInvigilatorAssignment"]
+            }
+          }
+        },
+        {
+          "name": "12.2 Update Invigilator Assignment",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 56,\n  \"role\": \"INVIGILATOR\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/examInvigilatorAssignment?examInvigilatorAssignmentId=1",
+              "host": ["{{baseurl}}"],
+              "path": ["examInvigilatorAssignment"],
+              "query": [
+                {
+                  "key": "examInvigilatorAssignmentId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.3 Get Room List nested",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examInvigilatorAssignment/rooms?examinationSessionId=1&courseId=1&term=1&examDate=2026-12-01&page=1&limit=10",
+              "host": ["{{baseurl}}"],
+              "path": ["examInvigilatorAssignment", "rooms"],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "1"
+                },
+                {
+                  "key": "courseId",
+                  "value": "1"
+                },
+                {
+                  "key": "term",
+                  "value": "1"
+                },
+                {
+                  "key": "examDate",
+                  "value": "2026-12-01"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.4 Get Invigilator Summary Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examInvigilatorAssignment/summary?examinationSessionId=1&courseId=34&sessionId=6&term=4&examDate=2026-12-01",
+              "host": ["{{baseurl}}"],
+              "path": ["examInvigilatorAssignment", "summary"],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "1"
+                },
+                {
+                  "key": "courseId",
+                  "value": "34"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "6"
+                },
+                {
+                  "key": "term",
+                  "value": "4"
+                },
+                {
+                  "key": "examDate",
+                  "value": "2026-12-01"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.5 Get Assignment By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examInvigilatorAssignment?examInvigilatorAssignmentId=1",
+              "host": ["{{baseurl}}"],
+              "path": ["examInvigilatorAssignment"],
+              "query": [
+                {
+                  "key": "examInvigilatorAssignmentId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.6 Get Assignments list (filtered)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examInvigilatorAssignment?classRoomSectionId=8",
+              "host": ["{{baseurl}}"],
+              "path": ["examInvigilatorAssignment"],
+              "query": [
+                {
+                  "key": "classRoomSectionId",
+                  "value": "8"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.7 Delete Assignment",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examInvigilatorAssignment?examInvigilatorAssignmentId=1",
+              "host": ["{{baseurl}}"],
+              "path": ["examInvigilatorAssignment"],
+              "query": [
+                {
+                  "key": "examInvigilatorAssignmentId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.8 Get Assignments By userId",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examInvigilatorAssignment/byUserId?userId=56&examinationSessionId=1",
+              "host": ["{{baseurl}}"],
+              "path": ["examInvigilatorAssignment", "byUserId"],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "56"
+                },
+                {
+                  "key": "examinationSessionId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.9 Get Details By examScheduleId",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examInvigilatorAssignment/byExamScheduleId?examScheduleId=1",
+              "host": ["{{baseurl}}"],
+              "path": ["examInvigilatorAssignment", "byExamScheduleId"],
+              "query": [
+                {
+                  "key": "examScheduleId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.10 Get Faculty Availability",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examInvigilatorAssignment/availability?examScheduleId=1",
+              "host": ["{{baseurl}}"],
+              "path": ["examInvigilatorAssignment", "availability"],
+              "query": [
+                {
+                  "key": "examScheduleId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.11 Get My Invigilator Assignments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examInvigilatorAssignment/my?examinationSessionId=1",
+              "host": ["{{baseurl}}"],
+              "path": ["examInvigilatorAssignment", "my"],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "13. Exam Attendance (/examAttendance)",
+      "item": [
+        {
+          "name": "13.1 Get Exam Attendance (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examAttendance?examinationSessionId=1&examDate=2026-12-01&page=1&limit=10",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
-                "questionPaper",
-                "finalApproved"
+                "examAttendance"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "1"
+                },
+                {
+                  "key": "examDate",
+                  "value": "2026-12-01"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "13.2 Get Attendance Sheet for one Room",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examAttendance/room?examScheduleId=1&examScheduleRoomCapacityId=2",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examAttendance",
+                "room"
+              ],
+              "query": [
+                {
+                  "key": "examScheduleId",
+                  "value": "1"
+                },
+                {
+                  "key": "examScheduleRoomCapacityId",
+                  "value": "2"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "13.3 Generate Room Attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examScheduleId\": 1,\n  \"examScheduleRoomCapacityId\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/examAttendance/room",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examAttendance",
+                "room"
+              ]
+            }
+          }
+        },
+        {
+          "name": "13.3 Get Exam Attendance Details (Right-Side Inspector)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examAttendance/1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examAttendance",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "13.4 Mark Exam Attendance",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examScheduleId\": 1,\n  \"examScheduleRoomCapacityId\": 2,\n  \"students\": [\n    {\n      \"studentId\": 1863,\n      \"attendanceStatus\": \"PRESENT\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/examAttendance",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examAttendance"
+              ]
+            }
+          }
+        },
+        {
+          "name": "13.5 Update Room Attendance Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examScheduleId\": 1,\n  \"examScheduleRoomCapacityId\": 2,\n  \"status\": \"SUBMITTED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/examAttendance/status",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examAttendance",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "13.6 Get Exam Operations Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examAttendance/summary?examinationSessionId=9&courseId=34&sessionId=6&term=1&examDate=2026-08-18&examinationSessionSlotId=4",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examAttendance",
+                "summary"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "9"
+                },
+                {
+                  "key": "courseId",
+                  "value": "34"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "6"
+                },
+                {
+                  "key": "term",
+                  "value": "1"
+                },
+                {
+                  "key": "examDate",
+                  "value": "2026-08-18"
+                },
+                {
+                  "key": "examinationSessionSlotId",
+                  "value": "4"
+                }
               ]
             }
           }
@@ -1943,7 +1047,7 @@
     },
     {
       "key": "token",
-      "value": "",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlSWQiOjE1LCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInBhc3N3b3JkIjoiJDJhJDEwJEVzMmlldHdab0FBNHhTRnBKbGYzRmUuQmR1eDIuanVtR3BUMmZaUEtYaHEubTVxR2dhaEJPIiwiZHVtbXlQYXNzd29yZCI6bnVsbCwic3RhdHVzIjoiYWN0aXZlIiwicGhvbmUiOiI5OTI5NTU1NjQ0IiwiZW1haWwiOiJhYWRpMjh4NkBnbWFpbC5jb20iLCJpc1RlYWNoZXIiOmZhbHNlLCJjcmVhdGVkQXQiOiIyMDI1LTA4LTEzVDE2OjQ4OjQyLjAwMFoiLCJ1cGRhdGVkQXQiOiIyMDI2LTA4LTA3VDEwOjI3OjQ3LjAwMFoiLCJkZWxldGVkQXQiOm51bGwsImRlZmF1bHRfcm9sZV9pZCI6MTUsImluc3RpdHV0ZU5hbWUiOiJBYXlvamFuIFNjaG9vbCBvZiBBcmNoaXRlY3R1cmUiLCJpYXQiOjE3ODY2MDE5NTQsImV4cCI6MTc4OTE5Mzk1NH0.0StGGK5rYHLN9tWTowpH2NtJnW_lauoqO6GtWNAhi7A",
       "type": "string"
     },
     {

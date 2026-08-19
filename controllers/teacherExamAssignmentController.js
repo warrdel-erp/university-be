@@ -50,3 +50,21 @@ export async function removeTeacherFromExam(req, res) {
         return ErrorResponse(res, 500, error.message);
     }
 }
+
+export async function getMyExamAssignments(req, res) {
+    try {
+        const userId = req.user?.userId;
+        if (!userId) {
+            return ErrorResponse(res, 404, "User ID not found");
+        }
+        const { examScheduleId } = req.query;
+
+        const assignments = await teacherExamAssignmentServices.getAssignments({
+            examScheduleId,
+            userId,
+        });
+        return SuccessResponse(res, 200, "Assignments retrieved successfully", assignments);
+    } catch (error) {
+        return ErrorResponse(res, 500, error.message);
+    }
+}

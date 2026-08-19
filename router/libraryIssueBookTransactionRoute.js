@@ -5,6 +5,7 @@ import userAuth from "../middleware/authUser.js";
 import {
   createLibraryIssueBookTransaction,
   getLibraryIssueBookTransactions,
+  getMyLibraryIssueBookTransactions,
   getLibraryIssueBookTransactionById,
   updateLibraryIssueBookTransaction,
   getLibraryBookInventoryIssueHistory,
@@ -102,6 +103,12 @@ router.get(
   userAuth,
   validate({ query: listIssueBookTransactionQuerySchema }),
   getLibraryIssueBookTransactions,
+);
+router.get(
+  "/my",
+  userAuth,
+  validate({ query: listIssueBookTransactionQuerySchema }),
+  getMyLibraryIssueBookTransactions,
 );
 router.get(
   "/single",

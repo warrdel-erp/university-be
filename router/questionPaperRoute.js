@@ -9,7 +9,13 @@ import {
     deleteQuestionPaper,
     generateQuestionPaper,
     approveQuestionPaper,
-    approvefinalpaper
+    approvefinalpaper,
+    getMyQuestionPapers,
+    addMyQuestionPaper,
+    getMySingleQuestionPaper,
+    updateMyQuestionPaper,
+    deleteMyQuestionPaper,
+    generateMyQuestionPaper,
 } from "../controllers/questionPaperController.js";
 
 import userAuth from "../middleware/authUser.js";
@@ -55,6 +61,7 @@ const baseQuestionSchema = z.object({
     updatedBy: z.number().optional(),
     createdAt: z.any().optional(),
     updatedAt: z.any().optional(),
+    updatedBy: z.number().optional(),
 });
 
 const questionSchema = z.discriminatedUnion("type", [
@@ -83,6 +90,12 @@ const getAllQuestionPapersQuerySchema = z.object({
     createdBy: z.string().regex(/^\d+$/).transform(val => parseInt(val)).optional(),
 });
 
+const getMyQuestionPapersQuerySchema = z.object({
+    page: z.string().regex(/^\d+$/).transform(val => parseInt(val)).optional().default("1"),
+    limit: z.string().regex(/^\d+$/).transform(val => parseInt(val)).optional().default("10"),
+    examScheduleId: z.string().regex(/^\d+$/).transform(val => parseInt(val)).optional(),
+});
+
 const updateQuestionPaperSchema = z.object({
     id: z.number({ required_error: "id is required" }),
     name: z.string().optional(),
@@ -108,13 +121,25 @@ const finalApprovalSchema = z.object({
 
 router.post("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, null), validate({ body: createQuestionPaperSchema }), addQuestionPaper);
 
+router.post("/my", userAuth, validate({ body: createQuestionPaperSchema }), addMyQuestionPaper);
+
 router.post("/generate", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, null), validate({ body: generateQuestionPaperSchema }), generateQuestionPaper);
 
+router.post("/my/generate", userAuth, validate({ body: generateQuestionPaperSchema }), generateMyQuestionPaper);
+
 router.get("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER.value, null), validate({ query: getAllQuestionPapersQuerySchema }), getAllQuestionPapers);
+
+router.get("/my", userAuth, validate({ query: getMyQuestionPapersQuerySchema }), getMyQuestionPapers);
+
+router.get("/my/:id", userAuth, getMySingleQuestionPaper);
 
 router.get("/:id", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER.value, null), getSingleQuestionPaper);
 
 router.put("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_EDIT.value, null), validate({ body: updateQuestionPaperSchema }), updateQuestionPaper);
+
+router.put("/my", userAuth, validate({ body: updateQuestionPaperSchema }), updateMyQuestionPaper);
+
+router.delete("/my/:id", userAuth, deleteMyQuestionPaper);
 
 router.delete("/:id", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_DELETE.value, null), deleteQuestionPaper);
 

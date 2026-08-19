@@ -1,9 +1,13 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import userModel from "./userModel.js";
-import examSetupModel from "./examSetupModel.js";
+import examScheduleModel from "./examScheduleModel.js";
+import examScheduleRoomCapacityModel from "./examScheduleRoomCapacityModel.js";
 import studentModel from "./studentModel.js";
+import studentExamSeatModel from "./studentExamSeatModel.js";
+import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
+import acedmicYearModel from "./acedmicYearModel.js";
 
 const examAttendanceModel = sequelize.define(
     "exam_attendance",
@@ -14,14 +18,23 @@ const examAttendanceModel = sequelize.define(
             autoIncrement: true,
             field: "exam_attendance_id",
         },
-        examSetupId: {
+        examScheduleId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             references: {
-                model: examSetupModel,
-                key: "exam_setup_id",
+                model: examScheduleModel,
+                key: "exam_schedule_id",
             },
-            field: "exam_setup_id",
+            field: "exam_schedule_id",
+        },
+        examScheduleRoomCapacityId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            references: {
+                model: examScheduleRoomCapacityModel,
+                key: "exam_schedule_room_capacity_id",
+            },
+            field: "exam_schedule_room_capacity_id",
         },
         studentId: {
             type: DataTypes.INTEGER,
@@ -32,6 +45,49 @@ const examAttendanceModel = sequelize.define(
             },
             field: "student_id",
         },
+        studentExamSeatId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+                model: studentExamSeatModel,
+                key: "student_exam_seat_id",
+            },
+            field: "student_exam_seat_id",
+        },
+        attendanceStatus: {
+            type: DataTypes.ENUM("PRESENT", "ABSENT", "PENDING"),
+            allowNull: false,
+            defaultValue: "PENDING",
+            field: "attendance_status",
+        },
+        markedBy: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+                model: userModel,
+                key: "user_id",
+            },
+            field: "marked_by",
+        },
+        markedAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field: "marked_at",
+        },
+        remarks: {
+            type: DataTypes.TEXT,
+            allowNull: true,
+            field: "remarks",
+        },
+        universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: "university_id",
+            references: {
+                model: universityModel,
+                key: "university_id",
+            },
+        },
         instituteId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -41,10 +97,14 @@ const examAttendanceModel = sequelize.define(
                 key: 'institute_id'
             }
         },
-        attendanceStatus: {
-            type: DataTypes.ENUM("Present", "Absent"),
+        academicYearId: {
+            type: DataTypes.INTEGER,
             allowNull: false,
-            field: "attendance_status",
+            field: 'academic_year_id',
+            references: {
+                model: acedmicYearModel,
+                key: 'acedmic_year_id'
+            }
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -88,7 +148,6 @@ const examAttendanceModel = sequelize.define(
         paranoid: true,
     }
 );
-
 
 examAttendanceModel.scopeConfig = { university: true, institute: true, academicYear: true };
 

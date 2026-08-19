@@ -45,6 +45,12 @@ const examScheduleRoomCapacityModel = sequelize.define(
             allowNull: true,
             field: 'order_key'
         },
+        status: {
+            type: DataTypes.ENUM("NOT_GENERATED", "GENERATED", "IN_PROGRESS", "SUBMITTED", "VERIFIED"),
+            allowNull: false,
+            defaultValue: "NOT_GENERATED",
+            field: "status"
+        },
 
         createdBy: {
             type: DataTypes.INTEGER,
