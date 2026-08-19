@@ -81,6 +81,15 @@ const studentFeeInvoiceModel = sequelize.define(
         key: "institute_id",
       },
     },
+    campusId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "campus_id",
+      references: {
+        model: "campus",
+        key: "campus_id",
+      },
+    },
   },
   {
     tableName: "student_fee_invoice",

@@ -55,6 +55,15 @@ const vehicleModel = sequelize.define(
                 key: 'institute_id'
             }
         },
+        campusId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'campus_id',
+            references: {
+                model: 'campus',
+                key: 'campus_id'
+            }
+        },
         note: {
             type: DataTypes.STRING,
             field: 'note',

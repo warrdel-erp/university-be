@@ -47,6 +47,10 @@ function scopeFieldsForModel(model) {
     filtered.instituteId = store.instituteId;
   }
 
+  if ("campusId" in attrs && store.campusId != null) {
+    filtered.campusId = store.campusId;
+  }
+
   if (config.academicYear && ACADEMIC_YEAR_FIELD in attrs && store.academicYearId != null) {
     filtered[ACADEMIC_YEAR_FIELD] = store.academicYearId;
   }

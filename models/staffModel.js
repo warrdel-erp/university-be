@@ -51,6 +51,15 @@ const staffModel = sequelize.define(
                     key: 'university_id'
                 }
         },
+        campusId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'campus_id',
+            references: {
+                model: 'campus',
+                key: 'campus_id'
+            }
+        },
         createdBy: {
             type: DataTypes.INTEGER,
             allowNull: false,

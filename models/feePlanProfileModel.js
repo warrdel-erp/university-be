@@ -61,6 +61,15 @@ const feePlanProfileModel = sequelize.define(
       defaultValue: "draft",
       field: "publish_status",
     },
+    campusId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "campus_id",
+      references: {
+        model: "campus",
+        key: "campus_id",
+      },
+    },
   },
   {
     tableName: "fee_plan_profile",

@@ -96,6 +96,33 @@ const coModel = sequelize.define(
                 key: 'user_id'
             }
         },
+        campusId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'campus_id',
+            references: {
+                model: 'campus',
+                key: 'campus_id'
+            }
+        },
+        departmentId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'department_id',
+            references: {
+                model: 'department',
+                key: 'department_id'
+            }
+        },
+        courseId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'course_id',
+            references: {
+                model: 'course',
+                key: 'course_id'
+            }
+        },
         deletedAt: {
             type: DataTypes.DATE,
             allowNull: true,

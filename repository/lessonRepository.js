@@ -18,6 +18,14 @@ const lectureWindowInclude = {
 
 export async function addLesson(data, transaction) {
   try {
+    if (!data.departmentId && data.subjectId) {
+      const subject = await model.subjectModel.findByPk(data.subjectId, {
+        include: [{ model: model.courseModel, as: 'courseInfo', attributes: ['departmentId'] }]
+      });
+      if (subject?.courseInfo?.departmentId) {
+        data.departmentId = subject.courseInfo.departmentId;
+      }
+    }
     return await scoped(model.lessonModel).create(data, { transaction });
   } catch (error) {
     console.error("Error in add lesson :", error);

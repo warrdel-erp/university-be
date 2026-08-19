@@ -8,7 +8,7 @@ export const PERMISSIONS = {
     COURSES: {
         value: "COURSES",
         resource: "course",
-        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT", "OWN"]
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     COURSE_SESSIONS: {
         value: "COURSE_SESSIONS",
@@ -66,42 +66,64 @@ export const PERMISSIONS = {
     },
     JOB_TYPE_SETTING: {
         value: "JOB_TYPE_SETTING",
+        resource: "jobTypeSetting",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     OTHERS_SETTING: {
         value: "OTHERS_SETTING",
     },
     CLASS_SETUP: {
         value: "CLASS_SETUP",
+        resource: "classSetup",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     SUBJECTS: {
         value: "SUBJECTS",
+        resource: "subject",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     SEMESTER_SUBJECT_MAPPING: {
         value: "SEMESTER_SUBJECT_MAPPING",
+        resource: "semesterSubjectMapping",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     SYLLABUS: {
         value: "SYLLABUS",
+        resource: "syllabus",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     TEACHER_MAPPED_CLASSES: {
         value: "TEACHER_MAPPED_CLASSES",
+        resource: "teacherMappedClasses",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     TEACHER_MAPPED_SUBJECTS: {
         value: "TEACHER_MAPPED_SUBJECTS",
+        resource: "teacherMappedSubjects",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     CLASS_RECORDS: {
         value: "CLASS_RECORDS",
+        resource: "classRecords",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     PROGRAM_OUTCOME: {
         value: "PROGRAM_OUTCOME",
+        resource: "programOutcome",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     COURSE_OUTCOME: {
         value: "COURSE_OUTCOME",
+        resource: "courseOutcome",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     GRADING_SETUP: {
         value: "GRADING_SETUP",
     },
     CREDITS: {
         value: "CREDITS",
+        resource: "credit",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     EXAM_TYPES: {
         value: "EXAM_TYPES",
@@ -138,57 +160,89 @@ export const PERMISSIONS = {
     },
     LESSON_LIST: {
         value: "LESSON_LIST",
+        resource: "lessonList",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     LESSON_PLAN_BUILDER: {
         value: "LESSON_PLAN_BUILDER",
+        resource: "lessonPlanBuilder",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     TOPIC_OVERVIEW: {
         value: "TOPIC_OVERVIEW",
+        resource: "topicOverview",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     LESSON_PLAN_OVERVIEW: {
         value: "LESSON_PLAN_OVERVIEW",
+        resource: "lessonPlanOverview",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     STUDY_MATERIAL: {
         value: "STUDY_MATERIAL",
+        resource: "studyMaterial",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     UPLOAD_STUDY_MATERIAL: {
         value: "UPLOAD_STUDY_MATERIAL",
+        resource: "uploadStudyMaterial",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     TIME_TABLE_SETUP: {
         value: "TIME_TABLE_SETUP",
+        resource: "timeTableSetup",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     CREATE_TIME_TABLE: {
         value: "CREATE_TIME_TABLE",
+        resource: "createTimeTable",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     CLASS_ROUTINE: {
         value: "CLASS_ROUTINE",
+        resource: "classRoutine",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     FACULTY_LOAD: {
         value: "FACULTY_LOAD",
+        resource: "facultyLoad",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     MY_CLASSES: {
         value: "MY_CLASSES",
+        resource: "myClasses",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     ATTENDANCE_LIST: {
         value: "ATTENDANCE_LIST",
     },
     ADD_STUDENT: {
         value: "ADD_STUDENT",
+        resource: "addStudent",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     STUDENT_LIST: {
         value: "STUDENT_LIST",
+        resource: "studentList",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     MISSING_ENROLLMENTS: {
         value: "MISSING_ENROLLMENTS",
+        resource: "missingEnrollments",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     MISSING_FEE_PLAN: {
         value: "MISSING_FEE_PLAN",
     },
     STUDENT_PROMOTE: {
         value: "STUDENT_PROMOTE",
+        resource: "studentPromote",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     INCIDENT_LIST: {
         value: "INCIDENT_LIST",
+        resource: "incidentList",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     STUDENT_WISE_LIST: {
         value: "STUDENT_WISE_LIST",
@@ -198,34 +252,44 @@ export const PERMISSIONS = {
     },
     FEES_TYPE: {
         value: "FEES_TYPE",
+        resource: "feesType",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     FEES_PLAN: {
         value: "FEES_PLAN",
+        resource: "feesPlan",
         possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
-    },
-    FEES_INVOICE: {
-        value: "FEES_INVOICE",
     },
     HR_MASTER: {
         value: "HR_MASTER",
+        resource: "hrMaster",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     STAFF_DIRECTORY: {
         value: "STAFF_DIRECTORY",
+        resource: "staffDirectory",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     TEACHER_EVALUATION: {
         value: "TEACHER_EVALUATION",
     },
     APPLY_LEAVE: {
         value: "APPLY_LEAVE",
+        resource: "applyLeave",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     APPROVE_LEAVE_REQUEST: {
         value: "APPROVE_LEAVE_REQUEST",
     },
     PENDING_LEAVE_REQUEST: {
         value: "PENDING_LEAVE_REQUEST",
+        resource: "pendingLeaveRequest",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     LEAVE_POLICY: {
         value: "LEAVE_POLICY",
+        resource: "leavePolicy",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     ATTENDANCE: {
         value: "ATTENDANCE",
@@ -238,9 +302,13 @@ export const PERMISSIONS = {
     },
     OVERVIEW: {
         value: "OVERVIEW",
+        resource: "overview",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     MANAGE_ACTIVE_JOBS: {
         value: "MANAGE_ACTIVE_JOBS",
+        resource: "manageActiveJobs",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     CALENDAR_VIEW: {
         value: "CALENDAR_VIEW",
@@ -248,6 +316,8 @@ export const PERMISSIONS = {
     },
     BUILDINGS: {
         value: "BUILDINGS",
+        resource: "buildings",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     FLOORS: {
         value: "FLOORS",
@@ -260,12 +330,16 @@ export const PERMISSIONS = {
     },
     CATALOGUE: {
         value: "CATALOGUE",
+        resource: "catalogue",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     MEMBER_MANAGEMENT: {
         value: "MEMBER_MANAGEMENT",
     },
     BOOK_ISSUE: {
         value: "BOOK_ISSUE",
+        resource: "bookIssue",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     ISSUE_RETURN_BOOKS: {
         value: "ISSUE_RETURN_BOOKS",
@@ -275,24 +349,34 @@ export const PERMISSIONS = {
     },
     VEHICLE: {
         value: "VEHICLE",
+        resource: "vehicle",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     ASSIGN_VEHICLE: {
         value: "ASSIGN_VEHICLE",
+        resource: "assignVehicle",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     DORMITORY_TYPES: {
         value: "DORMITORY_TYPES",
     },
     DORMITORY_ROOMS: {
         value: "DORMITORY_ROOMS",
+        resource: "dormitoryRooms",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     ASSIGN_DORMITORY: {
         value: "ASSIGN_DORMITORY",
     },
     NOTICE_BOARD: {
         value: "NOTICE_BOARD",
+        resource: "noticeBoard",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     CALENDAR: {
         value: "CALENDAR",
+        resource: "calendar",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     CONTENT_TYPE: {
         value: "CONTENT_TYPE",
@@ -311,15 +395,21 @@ export const PERMISSIONS = {
     },
     ID_CARD: {
         value: "ID_CARD",
+        resource: "idCard",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     CERTIFICATE: {
         value: "CERTIFICATE",
+        resource: "certificateList",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     PAYROLL_BULK_PRINT: {
         value: "PAYROLL_BULK_PRINT",
     },
     CALENDAR_VIEW_JOBS: {
         value: "CALENDAR_VIEW_JOBS",
+        resource: "calendarViewJobs",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     CERTIFICATE_LIST: {
         value: "CERTIFICATE_LIST",
@@ -329,34 +419,54 @@ export const PERMISSIONS = {
     },
     DORMITORY_ASSIGNMENT: {
         value: "DORMITORY_ASSIGNMENT",
+        resource: "dormitoryAssignment",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     DORMITORY_ROOM_TYPE: {
         value: "DORMITORY_ROOM_TYPE",
+        resource: "dormitoryRoomType",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     EMPLOYEE_ATTENDANCE: {
         value: "EMPLOYEE_ATTENDANCE",
+        resource: "employeeAttendance",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     LIBRARY_CREATION: {
         value: "LIBRARY_CREATION",
+        resource: "libraryCreation",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     MISSING_STUDENT_FEE_PLAN: {
         value: "MISSING_STUDENT_FEE_PLAN",
+        resource: "missingStudentFeePlan",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     RETURN_BOOK: {
         value: "RETURN_BOOK",
+        resource: "returnBook",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     SCHEDULE_LIST: {
         value: "SCHEDULE_LIST",
+        resource: "scheduleList",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     SHIFT_LIST: {
         value: "SHIFT_LIST",
+        resource: "shiftList",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     STUDENT_WISE_INCIDENT_LIST: {
         value: "STUDENT_WISE_INCIDENT_LIST",
+        resource: "studentWiseIncidentList",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"],
         dependentOn: ["STUDENT_LIST"],
     },
     TRANSPORT_ROUTE: {
         value: "TRANSPORT_ROUTE",
+        resource: "transportRoute",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     BY_PASS: {
         value: "BY_PASS",
@@ -856,6 +966,8 @@ export const PERMISSIONS = {
     },
     FEES_INVOICE: {
         value: "FEES_INVOICE",
+        resource: "feesInvoice",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"],
         dependentOn: ["FEES_PLAN", "FEES_TYPE", "STUDENT_LIST"],
     },
     FEES_INVOICE_SIDEBAR: {
@@ -869,6 +981,8 @@ export const PERMISSIONS = {
     },
     STUDENT_FEE_PLANS: {
         value: "STUDENT_FEE_PLANS",
+        resource: "studentFeePlans",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"],
         dependentOn: ["FEES_PLAN", "FEES_TYPE", "STUDENT_LIST"],
     },
     STUDENT_FEE_PLANS_SIDEBAR: {
@@ -877,6 +991,8 @@ export const PERMISSIONS = {
     },
     STUDENT_FEE_PAYMENTS: {
         value: "STUDENT_FEE_PAYMENTS",
+        resource: "studentFeePayments",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"],
         dependentOn: ["FEES_PLAN", "FEES_TYPE", "STUDENT_LIST"],
     },
     STUDENT_FEE_PAYMENTS_SIDEBAR: {
@@ -1287,6 +1403,8 @@ export const PERMISSIONS = {
     },
     ADD_MEMBER: {
         value: "ADD_MEMBER",
+        resource: "addMember",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     ADD_MEMBER_SIDEBAR: {
         value: "ADD_MEMBER_SIDEBAR",
@@ -1667,6 +1785,8 @@ export const PERMISSIONS = {
     },
     ELECTIVE_SUBJECT_NEW: {
         value: "ELECTIVE_SUBJECT_NEW",
+        resource: "electiveSubject",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     ELECTIVE_SUBJECT_NEW_SIDEBAR: {
         value: "ELECTIVE_SUBJECT_NEW_SIDEBAR",
@@ -1688,6 +1808,26 @@ export const PERMISSIONS = {
     },
     BLOOMS_TAXONOMY: {
         value: "BLOOMS_TAXONOMY",
+        resource: "bloomsTaxonomy",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
+    },
+    GROUPS_SCOPE: {
+        value: "GROUPS_SCOPE",
+        resource: "groupsScope",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
+    },
+    GROUPS_SCOPE_SIDEBAR: {
+        value: "GROUPS_SCOPE_SIDEBAR",
+        parentPermission: 'GROUPS_SCOPE',
+    },
+    DATE_WISE_TIME_TABLE_ROUTINE: {
+        value: "DATE_WISE_TIME_TABLE_ROUTINE",
+        resource: "dateWiseTimeTableRoutine",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
+    },
+    DATE_WISE_TIME_TABLE_ROUTINE_SIDEBAR: {
+        value: "DATE_WISE_TIME_TABLE_ROUTINE_SIDEBAR",
+        parentPermission: 'DATE_WISE_TIME_TABLE_ROUTINE',
     },
     BLOOMS_TAXONOMY_SIDEBAR: {
         value: "BLOOMS_TAXONOMY_SIDEBAR",
@@ -1791,6 +1931,8 @@ export const PERMISSIONS = {
     },
     ASSET_MANAGEMENT: {
         value: "ASSET_MANAGEMENT",
+        resource: "assetManagement",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     ASSET_MANAGEMENT_SIDEBAR: {
         value: "ASSET_MANAGEMENT_SIDEBAR",
@@ -1810,6 +1952,8 @@ export const PERMISSIONS = {
     },
     AMC_VENDORS: {
         value: "AMC_VENDORS",
+        resource: "amcVendors",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     AMC_VENDORS_SIDEBAR: {
         value: "AMC_VENDORS_SIDEBAR",
@@ -1829,6 +1973,8 @@ export const PERMISSIONS = {
     },
     AMC_CONTRACTS: {
         value: "AMC_CONTRACTS",
+        resource: "amcContracts",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE"]
     },
     AMC_CONTRACTS_SIDEBAR: {
         value: "AMC_CONTRACTS_SIDEBAR",
@@ -1849,6 +1995,8 @@ export const PERMISSIONS = {
     },
     SERVICE_TICKETS: {
         value: "SERVICE_TICKETS",
+        resource: "serviceTickets",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     SERVICE_TICKETS_SIDEBAR: {
         value: "SERVICE_TICKETS_SIDEBAR",
@@ -1869,6 +2017,8 @@ export const PERMISSIONS = {
     },
     ASSET_ISSUE: {
         value: "ASSET_ISSUE",
+        resource: "assetIssue",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     ASSET_ISSUE_SIDEBAR: {
         value: "ASSET_ISSUE_SIDEBAR",
@@ -1889,6 +2039,8 @@ export const PERMISSIONS = {
     },
     ASSET_ISSUE_RETURN: {
         value: "ASSET_ISSUE_RETURN",
+        resource: "assetIssueReturn",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"]
     },
     ASSET_ISSUE_RETURN_SIDEBAR: {
         value: "ASSET_ISSUE_RETURN_SIDEBAR",

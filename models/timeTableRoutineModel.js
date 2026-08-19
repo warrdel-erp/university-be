@@ -143,6 +143,15 @@ const timeTableRoutineModel = sequelize.define(
                 key: 'user_id'
             }
         },
+        departmentId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'department_id',
+            references: {
+                model: 'department',
+                key: 'department_id'
+            }
+        },
     },
     {
         tableName: 'time_table_routine',
