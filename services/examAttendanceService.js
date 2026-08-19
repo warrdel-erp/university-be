@@ -143,50 +143,6 @@ export async function getExamOperationsAttendance(filters) {
     Number(offset),
   );
 
-  const roomCapacityIds = [];
-  const examDates = [];
-  const slotIds = [];
-  const classRoomSectionIds = [];
-
-  rows.forEach(schedule => {
-      if (schedule.examDate && !examDates.includes(schedule.examDate)) {
-          examDates.push(schedule.examDate);
-      }
-      if (schedule.examinationSessionSlotId && !slotIds.includes(schedule.examinationSessionSlotId)) {
-          slotIds.push(schedule.examinationSessionSlotId);
-      }
-      (schedule.roomCapacities || []).forEach(room => {
-          roomCapacityIds.push(room.examScheduleRoomCapacityId);
-          if (room.classRoomSectionId && !classRoomSectionIds.includes(room.classRoomSectionId)) {
-              classRoomSectionIds.push(room.classRoomSectionId);
-          }
-      });
-  });
-
-  const [attendanceCounts, invigilators] = await Promise.all([
-      examAttendanceRepository.getAttendanceCountsForRoomCapacities(roomCapacityIds),
-      examAttendanceRepository.getInvigilatorAssignmentsForSchedules({ examDates, slotIds, classRoomSectionIds })
-  ]);
-
-  const attendanceCountsMap = new Map();
-  attendanceCounts.forEach(item => {
-      const key = item.examScheduleRoomCapacityId;
-      const status = item.attendanceStatus;
-      const countVal = Number(item.count) || 0;
-      if (!attendanceCountsMap.has(key)) {
-          attendanceCountsMap.set(key, { present: 0, absent: 0, pending: 0 });
-      }
-      const countsObj = attendanceCountsMap.get(key);
-      if (status === "PRESENT") countsObj.present += countVal;
-      else if (status === "ABSENT") countsObj.absent += countVal;
-      else if (status === "PENDING") countsObj.pending += countVal;
-  });
-
-  const invigilatorMap = new Set();
-  invigilators.forEach(inv => {
-      invigilatorMap.add(`${inv.examDate}_${inv.examinationSessionSlotId}_${inv.classRoomSectionId}`);
-  });
-
   const data = rows.map((schedule) => {
     const scheduleData = schedule.get({ plain: true });
 
@@ -194,36 +150,48 @@ export async function getExamOperationsAttendance(filters) {
 
     scheduleData.roomCapacities = (scheduleData.roomCapacities || []).map(
       (room) => {
-        const isRoomAllocationDone = (room.seats || []).length > 0;
-        const countsObj = (attendanceCountsMap && room) ? (attendanceCountsMap.get(room.examScheduleRoomCapacityId) || { present: 0, absent: 0, pending: 0 }) : { present: 0, absent: 0, pending: 0 };
-        
-        const hasAttendanceGenerated = (countsObj.present + countsObj.absent + countsObj.pending) > 0;
+        const isInvigilatorAssigned = !!room.isInvigilatorAssigned;
+        const isRoomAllocationDone = ((room.seats || []).length > 0) || isInvigilatorAssigned;
+
+        let present = 0;
+        let absent = 0;
+        let pending = 0;
+        (room.examAttendances || []).forEach((att) => {
+          if (att.attendanceStatus === "PRESENT") present++;
+          else if (att.attendanceStatus === "ABSENT") absent++;
+          else if (att.attendanceStatus === "PENDING") pending++;
+        });
+
+        const hasAttendanceGenerated = (present + absent + pending) > 0;
         if (hasAttendanceGenerated) {
             submittedCount++;
         }
 
-        const key = scheduleData ? `${scheduleData.examDate || ""}_${scheduleData.examinationSessionSlotId || ""}_${room.classRoomSectionId || ""}` : "";
-        const isInvigilatorAssigned = invigilatorMap ? invigilatorMap.has(key) : false;
+        let calculatedStatus = "NOT_GENERATED";
+        if (hasAttendanceGenerated) {
+            if (pending === 0) {
+                calculatedStatus = "COMPLETED";
+            } else if (present > 0 || absent > 0) {
+                calculatedStatus = "IN_PROGRESS";
+            } else {
+                calculatedStatus = "GENERATED";
+            }
+        }
 
         return {
           examScheduleRoomCapacityId: room.examScheduleRoomCapacityId,
           classRoomSectionId: room.classRoomSectionId,
           capacity: room.capacity,
-          classRoom: room.classRoom,
-          status: room.status || "NOT_GENERATED",
+          classRoom: room.classRoom ? {
+            classRoomSectionId: room.classRoom.classRoomSectionId,
+            roomNumber: room.classRoom.roomNumber
+          } : null,
+          status: calculatedStatus,
           isRoomAllocationDone,
           isInvigilatorAssigned,
-          present: countsObj.present,
-          absent: countsObj.absent,
-          pending: countsObj.pending,
-          students: isRoomAllocationDone
-            ? room.seats.map((seat) => ({
-                studentExamSeatId: seat.studentExamSeatId,
-                row: seat.row,
-                column: seat.column,
-                ...seat.student,
-              }))
-            : [],
+          present,
+          absent,
+          pending,
         };
       },
     );

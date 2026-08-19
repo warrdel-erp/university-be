@@ -52,6 +52,7 @@ export async function getAssignments(req, res) {
             classRoomSectionId,
             userId,
             role,
+            examScheduleId,
         } = req.query;
 
         if (examInvigilatorAssignmentId) {
@@ -59,8 +60,13 @@ export async function getAssignments(req, res) {
             return SuccessResponse(res, 200, "Invigilator assignment fetched successfully", result);
         }
 
+        if (examScheduleId && classRoomSectionId) {
+            const result = await examInvigilatorAssignmentServices.getRoomAssignmentDetail(Number(examScheduleId), Number(classRoomSectionId));
+            return SuccessResponse(res, 200, "Invigilator assignments fetched successfully", result);
+        }
+
         const result = await examInvigilatorAssignmentServices.getAssignments(
-            { examinationSessionSlotId, examDate, classRoomSectionId, userId, role }
+            { examinationSessionSlotId, examDate, classRoomSectionId, userId, role, examScheduleId }
         );
 
         return SuccessResponse(res, 200, "Invigilator assignments fetched successfully", result);

@@ -5,6 +5,14 @@ import { buildScope, scoped } from "../utility/scoped.js";
 
 export { sequelize };
 
+if (!model.examScheduleRoomCapacityModel.associations.examInvigilatorAssignments) {
+  model.examScheduleRoomCapacityModel.hasMany(model.examInvigilatorAssignmentModel, {
+    foreignKey: "classRoomSectionId",
+    sourceKey: "classRoomSectionId",
+    as: "examInvigilatorAssignments",
+  });
+}
+
 async function assertScopedExamSchedule(examScheduleId, transaction) {
   return scoped(model.examScheduleModel).findOne({
     where: { examScheduleId },
@@ -157,7 +165,7 @@ export async function findAndCountSchedules(
   limit,
   offset,
 ) {
-  return scoped(model.examScheduleModel).findAndCountAll({
+  const result = await scoped(model.examScheduleModel).findAndCountAll({
     where,
     attributes: [
       "examScheduleId",
@@ -177,6 +185,18 @@ export async function findAndCountSchedules(
           Object.keys(subjectWhere).length > 0 || where[Op.or] ? true : false,
       },
       {
+        model: model.examinationSessionSlotModel,
+        as: "examinationSessionSlot",
+        attributes: [
+          "examinationSessionSlotId",
+          "slotNumber",
+          "startTime",
+          "endTime",
+        ],
+        where: buildScope(model.examinationSessionSlotModel),
+        required: false,
+      },
+      {
         model: model.examScheduleRoomCapacityModel,
         as: "roomCapacities",
         attributes: [
@@ -191,23 +211,15 @@ export async function findAndCountSchedules(
             attributes: ["classRoomSectionId", "roomNumber"],
           },
           {
+            model: model.examAttendanceModel,
+            as: "examAttendances",
+            attributes: ["examAttendanceId", "attendanceStatus"],
+            required: false,
+          },
+          {
             model: model.studentExamSeatModel,
             as: "seats",
-            attributes: ["studentExamSeatId", "row", "column"],
-            include: [
-              {
-                model: model.studentModel,
-                as: "student",
-                attributes: [
-                  "studentId",
-                  "firstName",
-                  "middleName",
-                  "lastName",
-                  "scholarNumber",
-                  "enrollNumber",
-                ],
-              },
-            ],
+            attributes: ["studentExamSeatId"],
           },
         ],
       },
@@ -217,6 +229,69 @@ export async function findAndCountSchedules(
     offset,
     order: [["examDate", "ASC"]],
   });
+
+  const examDates = [];
+  const slotIds = [];
+  const classRoomSectionIds = [];
+
+  result.rows.forEach((schedule) => {
+    if (schedule.examDate && !examDates.includes(schedule.examDate)) {
+      examDates.push(schedule.examDate);
+    }
+    if (
+      schedule.examinationSessionSlotId &&
+      !slotIds.includes(schedule.examinationSessionSlotId)
+    ) {
+      slotIds.push(schedule.examinationSessionSlotId);
+    }
+    (schedule.roomCapacities || []).forEach((room) => {
+      if (
+        room.classRoomSectionId &&
+        !classRoomSectionIds.includes(room.classRoomSectionId)
+      ) {
+        classRoomSectionIds.push(room.classRoomSectionId);
+      }
+    });
+  });
+
+  let assignments = [];
+  if (
+    examDates.length > 0 &&
+    slotIds.length > 0 &&
+    classRoomSectionIds.length > 0
+  ) {
+    assignments = await scoped(model.examInvigilatorAssignmentModel).findAll({
+      where: {
+        examDate: { [Op.in]: examDates },
+        examinationSessionSlotId: { [Op.in]: slotIds },
+        classRoomSectionId: { [Op.in]: classRoomSectionIds },
+        ...buildScope(model.examInvigilatorAssignmentModel),
+      },
+      attributes: [
+        "examInvigilatorAssignmentId",
+        "examDate",
+        "examinationSessionSlotId",
+        "classRoomSectionId",
+      ],
+      raw: true,
+    });
+  }
+
+  const assignmentSet = new Set();
+  assignments.forEach((inv) => {
+    assignmentSet.add(
+      `${inv.examDate}_${inv.examinationSessionSlotId}_${inv.classRoomSectionId}`,
+    );
+  });
+
+  result.rows.forEach((schedule) => {
+    (schedule.roomCapacities || []).forEach((room) => {
+      const key = `${schedule.examDate}_${schedule.examinationSessionSlotId}_${room.classRoomSectionId}`;
+      room.setDataValue("isInvigilatorAssigned", assignmentSet.has(key));
+    });
+  });
+
+  return result;
 }
 
 export async function getScheduleDetails(examScheduleId) {

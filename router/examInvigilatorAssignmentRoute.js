@@ -78,6 +78,7 @@ const getListSchema = {
     classRoomSectionId: positiveIntegerQueryId,
     userId: positiveIntegerQueryId,
     role: z.preprocess(emptyToUndefined, z.string().optional()),
+    examScheduleId: positiveIntegerQueryId,
   }),
 };
 

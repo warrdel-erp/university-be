@@ -739,4 +739,37 @@ export async function getAllEmployeesWithUser(options = {}) {
   });
 }
 
+export async function findRoomCapacityByScheduleAndSection(examScheduleId, classRoomSectionId, options = {}) {
+  return scoped(model.examScheduleRoomCapacityModel).findOne({
+    where: {
+      examScheduleId,
+      classRoomSectionId,
+      ...buildScope(model.examScheduleRoomCapacityModel),
+    },
+    attributes: [
+      "examScheduleRoomCapacityId",
+      "classRoomSectionId",
+      "examScheduleId",
+      "capacity",
+      "columns",
+      "orderKey",
+    ],
+    include: [
+      {
+        model: model.classRoomModel,
+        as: "classRoom",
+        required: true,
+        attributes: [
+          "classRoomSectionId",
+          "roomNumber",
+          "capacity",
+          "examCapacity",
+        ],
+        where: buildScope(model.classRoomModel),
+      },
+    ],
+    transaction: options.transaction,
+  });
+}
+
 

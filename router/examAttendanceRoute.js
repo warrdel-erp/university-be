@@ -50,14 +50,12 @@ const getDetailsParamsSchema = z.object({
 });
 
 const getSummarySchema = z.object({
-    query: z.object({
-        examinationSessionId: z.coerce.number().int().positive(),
-        courseId: z.coerce.number().int().positive().optional(),
-        sessionId: z.coerce.number().int().positive().optional(),
-        term: z.coerce.number().int().positive().optional(),
-        examDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD").optional(),
-        examinationSessionSlotId: z.coerce.number().int().positive().optional()
-    })
+    examinationSessionId: z.coerce.number().int().positive(),
+    courseId: z.coerce.number().int().positive().optional(),
+    sessionId: z.coerce.number().int().positive().optional(),
+    term: z.coerce.number().int().positive().optional(),
+    examDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD").optional(),
+    examinationSessionSlotId: z.coerce.number().int().positive().optional()
 });
 
 const generateAttendanceSchema = z.object({
@@ -68,7 +66,7 @@ const generateAttendanceSchema = z.object({
 router.get("/", userAuth, validate({ query: querySchema }), getExamOperationsAttendance);
 router.get("/room", userAuth, validate({ query: roomQuerySchema }), getExamOperationsAttendanceRoom);
 router.post("/room", userAuth, validate({ query: generateAttendanceSchema, body: generateAttendanceSchema }), generateRoomAttendance);
-router.get("/summary", userAuth, validate(getSummarySchema), getExamOperationsSummary);
+router.get("/summary", userAuth, validate({ query: getSummarySchema }), getExamOperationsSummary);
 router.get("/:examScheduleId", userAuth, validate({ params: getDetailsParamsSchema }), getExamAttendanceDetails);
 router.patch("/", userAuth, validate({ body: markAttendanceSchema }), markExamAttendance);
 router.post("/status", userAuth, validate({ body: updateRoomStatusSchema }), updateRoomAttendanceStatus);
