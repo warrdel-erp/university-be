@@ -111,8 +111,8 @@ export const buildScope = (model, options = {}) => {
   return where;
 };
 
-export const scoped = (model) => {
-  const baseWhere = buildScope(model);
+export const scoped = (model, options = {}) => {
+  const baseWhere = buildScope(model, options);
   const pk = model.primaryKeyAttribute || "id";
   const writeScope = scopeFieldsForModel(model);
 
@@ -155,6 +155,12 @@ export const scoped = (model) => {
 
     count: (options = {}) =>
       getOriginal(model, "count")({
+        ...options,
+        where: mergeScopedWhere(baseWhere, options.where),
+      }),
+
+    max: (field, options = {}) =>
+      getOriginal(model, "max")(field, {
         ...options,
         where: mergeScopedWhere(baseWhere, options.where),
       }),

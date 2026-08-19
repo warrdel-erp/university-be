@@ -22,15 +22,15 @@ export async function bulkRejectQuestions(ids, updatedBy) {
     return await questionBankRepository.bulkUpdateStatus(ids, 'Rejected', updatedBy);
 }
 
-export async function getSingleQuestion(id) {
-    return await questionBankRepository.getSingleQuestion(id);
+export async function getSingleQuestion(id, ownerId = null) {
+    return await questionBankRepository.getSingleQuestion(id, ownerId);
 }
 
-export async function updateQuestion(id, questionData, updatedBy) {
+export async function updateQuestion(id, questionData, updatedBy, ownerId = null) {
     questionData.updatedBy = updatedBy;
-    return await questionBankRepository.updateQuestion(id, questionData);
+    return await questionBankRepository.updateQuestion(id, questionData, ownerId);
 }
 
-export async function deleteQuestion(id) {
-    return await questionBankRepository.deleteQuestion(id);
+export async function deleteQuestion(id, ownerId = null) {
+    return await questionBankRepository.deleteQuestion(id, ownerId);
 }

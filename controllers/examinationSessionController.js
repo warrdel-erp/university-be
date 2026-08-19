@@ -1,16 +1,6 @@
 import * as examinationSessionServices from "../services/examinationSessionServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
-const getErrorMessage = (error, defaultMsg) => {
-  if (error.name === "SequelizeForeignKeyConstraintError") {
-    return "The selected term or session reference is invalid.";
-  }
-  if (error.name === "SequelizeUniqueConstraintError") {
-    return "An examination session entry with these details already exists.";
-  }
-  return error.message || defaultMsg;
-};
-
 export const createExaminationSession = async (req, res) => {
   try {
     const payload = {
@@ -23,7 +13,7 @@ export const createExaminationSession = async (req, res) => {
   } catch (error) {
     console.error("Error creating examination session:", error);
     const statusCode = error.statusCode || 400;
-    return ErrorResponse(res, statusCode, getErrorMessage(error, "Failed to create examination session"));
+    return ErrorResponse(res, statusCode, error.message || "Failed to create examination session");
   }
 };
 
@@ -39,7 +29,7 @@ export const getExaminationSessions = async (req, res) => {
   } catch (error) {
     console.error("Error fetching examination sessions:", error);
     const statusCode = error.statusCode || 500;
-    return ErrorResponse(res, statusCode, getErrorMessage(error, "Failed to fetch examination sessions"));
+    return ErrorResponse(res, statusCode, error.message || "Failed to fetch examination sessions");
   }
 };
 
@@ -54,7 +44,7 @@ export const getExaminationSessionById = async (req, res) => {
   } catch (error) {
     console.error("Error fetching examination session by id:", error);
     const statusCode = error.statusCode || 500;
-    return ErrorResponse(res, statusCode, getErrorMessage(error, "Failed to fetch examination session"));
+    return ErrorResponse(res, statusCode, error.message || "Failed to fetch examination session");
   }
 };
 
@@ -73,7 +63,7 @@ export const updateExaminationSession = async (req, res) => {
   } catch (error) {
     console.error("Error updating examination session:", error);
     const statusCode = error.statusCode || 400;
-    return ErrorResponse(res, statusCode, getErrorMessage(error, "Failed to update examination session"));
+    return ErrorResponse(res, statusCode, error.message || "Failed to update examination session");
   }
 };
 
@@ -88,7 +78,7 @@ export const deleteExaminationSession = async (req, res) => {
   } catch (error) {
     console.error("Error deleting examination session:", error);
     const statusCode = error.statusCode || 500;
-    return ErrorResponse(res, statusCode, getErrorMessage(error, "Failed to delete examination session"));
+    return ErrorResponse(res, statusCode, error.message || "Failed to delete examination session");
   }
 };
 
@@ -99,7 +89,7 @@ export const createExaminationSessionTerm = async (req, res) => {
   } catch (error) {
     console.error("Error creating examination session term:", error);
     const statusCode = error.statusCode || 400;
-    return ErrorResponse(res, statusCode, getErrorMessage(error, "Failed to create examination session term"));
+    return ErrorResponse(res, statusCode, error.message || "Failed to create examination session term");
   }
 };
 
@@ -114,20 +104,55 @@ export const deleteExaminationSessionTerm = async (req, res) => {
   } catch (error) {
     console.error("Error deleting examination session term:", error);
     const statusCode = error.statusCode || 500;
-    return ErrorResponse(res, statusCode, getErrorMessage(error, "Failed to delete examination session term"));
+    return ErrorResponse(res, statusCode, error.message || "Failed to delete examination session term");
   }
 };
 
 export const getClassSectionTermsBySetupType = async (req, res) => {
   try {
-    const { examSetupTypeId } = req.query;
+    const { examSetupTypeId, examinationSessionId } = req.query;
     const result = await examinationSessionServices.getClassSectionTermsBySetupType(
-      examSetupTypeId
+      examSetupTypeId,
+      { examinationSessionId }
     );
     return SuccessResponse(res, 200, "Mapped class section terms fetched successfully", result);
   } catch (error) {
     console.error("Error fetching mapped class section terms:", error);
     const statusCode = error.statusCode || 500;
-    return ErrorResponse(res, statusCode, getErrorMessage(error, "Failed to fetch mapped class section terms"));
+    return ErrorResponse(res, statusCode, error.message || "Failed to fetch mapped class section terms");
+  }
+};
+
+export const getExaminationStructure = async (req, res) => {
+  try {
+    const result = await examinationSessionServices.getExaminationStructure(req.query);
+    return SuccessResponse(res, 200, "Examination structure fetched successfully", result);
+  } catch (error) {
+    console.error("Error fetching examination structure:", error);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(res, statusCode, error.message || "Failed to fetch examination structure");
+  }
+};
+
+export const getMappedSubjectsBySessionAndTerm = async (req, res) => {
+  try {
+    const result = await examinationSessionServices.getMappedSubjectsBySessionAndTerm(req.query);
+    return SuccessResponse(res, 200, "Mapped subjects fetched successfully", result);
+  } catch (error) {
+    console.error("Error fetching mapped subjects:", error);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(res, statusCode, error.message || "Failed to fetch mapped subjects");
+  }
+};
+
+export const getQuestionPaperSummary = async (req, res) => {
+  try {
+    const { examinationSessionId } = req.query;
+    const result = await examinationSessionServices.getQuestionPaperSummary(examinationSessionId);
+    return SuccessResponse(res, 200, "Question paper summary stats fetched successfully", result);
+  } catch (error) {
+    console.error("Error fetching question paper summary:", error);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(res, statusCode, error.message || "Failed to fetch question paper summary stats");
   }
 };

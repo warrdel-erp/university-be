@@ -1,0 +1,557 @@
+{
+  "info": {
+    "name": "Academic Regulation (Section-Wise)",
+    "description": "Collection for Academic Regulation APIs split step-by-step for the frontend wizard.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Step 1: Basic Information (Create)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"regulationCode\": \"REG-2026-CS\",\n  \"regulationName\": \"Computer Science Regulation 2026\",\n  \"description\": \"Standard B.Tech CS Regulation\",\n  \"academicYearRange\": \"2024-2029\",\n  \"applicableBatch\": \"2026 Batch\",\n  \"effectiveFrom\": \"2026-08-01\",\n  \"effectiveUntil\": \"2030-07-31\",\n  \"gradingSchemeId\": 1,\n  \"status\": \"DRAFT\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/academicRegulation",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "academicRegulation"
+          ]
+        },
+        "description": "Creates a new Academic Regulation draft. Only regulationCode and regulationName are strictly required to create the draft."
+      }
+    },
+    {
+      "name": "Step 2: Evaluation Pattern & Weightage",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"evaluationPattern\": \"SEMESTER\",\n  \"internalWeightage\": 40,\n  \"externalWeightage\": 60,\n  \"maximumInternalMarks\": 40,\n  \"maximumExternalMarks\": 60,\n  \"isInternalAssessmentMandatory\": true,\n  \"isExternalAssessmentMandatory\": true\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/academicRegulation/{{academicRegulationId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "academicRegulation",
+            "{{academicRegulationId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Step 3: Passing Rules & Eligibility",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"minimumAttendance\": 75,\n  \"isAssessmentCompletionRequired\": true,\n  \"isPracticalCompletionRequired\": true,\n  \"isProjectSubmissionRequired\": false,\n  \"isInternshipCompletionRequired\": false,\n  \"minimumOverallMarks\": 40,\n  \"minimumOverallPercentage\": 40.0,\n  \"minimumInternalMarks\": 16,\n  \"minimumExternalMarks\": 24,\n  \"mandatoryComponents\": [\"ATTENDANCE\", \"INTERNAL_MARKS\"]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/academicRegulation/{{academicRegulationId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "academicRegulation",
+            "{{academicRegulationId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Step 4: GPA & Ranking Rules",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"calculateSGPA\": true,\n  \"calculateCGPA\": true,\n  \"calculatePercentage\": false,\n  \"generateClass\": true,\n  \"generateRank\": false,\n  \"tieBreakingMethod\": \"CGPA_FIRST\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/academicRegulation/{{academicRegulationId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "academicRegulation",
+            "{{academicRegulationId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Step 5: Moderation, Grace Marks & Results",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"isModerationEnabled\": true,\n  \"isScalingEnabled\": false,\n  \"isNormalizationEnabled\": false,\n  \"isGraceMarksEnabled\": true,\n  \"maximumGraceMarks\": 5,\n  \"graceApplicableTo\": \"OVERALL\",\n  \"allowWithheldResult\": true,\n  \"resultFreeze\": true,\n  \"allowResultRevision\": false,\n  \"publishAutomatically\": false,\n  \"approvalRequired\": true\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/academicRegulation/{{academicRegulationId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "academicRegulation",
+            "{{academicRegulationId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Step 6: Credit Requirements",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"totalCredits\": 160,\n  \"coreCredits\": 100,\n  \"electiveCredits\": 30,\n  \"openElectiveCredits\": 10,\n  \"internshipCredits\": 10,\n  \"projectCredits\": 10\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/academicRegulation/{{academicRegulationId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "academicRegulation",
+            "{{academicRegulationId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Step 7: Promotion & ATKT Rules",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"isAtktEnabled\": true,\n  \"maximumAtktSubjects\": 4,\n  \"isCarryForwardEnabled\": true,\n  \"maximumCarryForwardSubjects\": 4,\n  \"promotionMethod\": \"CREDIT_BASED\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/academicRegulation/{{academicRegulationId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "academicRegulation",
+            "{{academicRegulationId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Step 8: Improvement Rules",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"isImprovementAllowed\": true,\n  \"maximumImprovementAttempts\": 2,\n  \"improvementMarksConsidered\": \"BEST_OF_TWO\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/academicRegulation/{{academicRegulationId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "academicRegulation",
+            "{{academicRegulationId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Step 9: Backlog & Supplementary",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"isBacklogAllowed\": true,\n  \"maximumBacklogAttempts\": 3,\n  \"isSupplementaryAllowed\": true,\n  \"backlogValidityYears\": 2\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/academicRegulation/{{academicRegulationId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "academicRegulation",
+            "{{academicRegulationId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Step 10: Graduation & Degree",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"totalCreditsRequired\": 160,\n  \"minimumCgpa\": 5.0,\n  \"isInternshipMandatory\": true,\n  \"isProjectMandatory\": true,\n  \"isCapstoneMandatory\": false,\n  \"isExitExaminationRequired\": false,\n  \"isNoActiveBacklogsRequired\": true,\n  \"isNoPendingFeesRequired\": true,\n  \"isNoDisciplinaryHoldRequired\": true,\n  \"minimumDegreeAttendancePercentage\": 75\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/academicRegulation/{{academicRegulationId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "academicRegulation",
+            "{{academicRegulationId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Step 11: Degree Classifications",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"classifications\": [\n    {\n      \"classificationName\": \"First Class with Distinction\",\n      \"minimumCgpa\": 8.0,\n      \"minimumPercentage\": 75.0,\n      \"sortOrder\": 1\n    },\n    {\n      \"classificationName\": \"First Class\",\n      \"minimumCgpa\": 6.5,\n      \"minimumPercentage\": 60.0,\n      \"sortOrder\": 2\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/academicRegulation/{{academicRegulationId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "academicRegulation",
+            "{{academicRegulationId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Step 12: Certificates & Transcripts",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"marksheetTemplateId\": 1,\n  \"transcriptTemplateId\": 2,\n  \"degreeCertificateTemplateId\": 3,\n  \"provisionalCertificateTemplateId\": 4,\n  \"isGenerateTranscriptAutomatically\": true,\n  \"isGenerateMarksheetAutomatically\": true,\n  \"isDigitalSignatureRequired\": true,\n  \"isQrVerificationEnabled\": true,\n  \"marksheetPrefix\": \"MS-CS-\",\n  \"transcriptPrefix\": \"TS-CS-\",\n  \"degreePrefix\": \"DEG-CS-\",\n  \"isAutoNumberingEnabled\": true,\n  \"status\": \"PUBLISHED\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/academicRegulation/{{academicRegulationId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "academicRegulation",
+            "{{academicRegulationId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Add Course Mapping (Single Row)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"academicRegulationId\": {{academicRegulationId}},\n  \"courseId\": 34,\n  \"sessionId\": 6\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/academicRegulation/courseRegulationMapping",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "academicRegulation",
+            "courseRegulationMapping"
+          ]
+        },
+        "description": "Call this in a loop for each Course + Session pair mapped to the regulation."
+      }
+    },
+    {
+      "name": "Get Regulation By ID (Includes Mappings)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/academicRegulation/{{academicRegulationId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "academicRegulation",
+            "{{academicRegulationId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Course Mappings By Regulation",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/academicRegulation/courseRegulationMapping/{{academicRegulationId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "academicRegulation",
+            "courseRegulationMapping",
+            "{{academicRegulationId}}"
+          ]
+        },
+        "description": "Fetches all course and session mappings for a given academic regulation."
+      }
+    },
+    {
+      "name": "Delete Course Mapping",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/academicRegulation/courseRegulationMapping/{{academicRegulationCourseMappingId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "academicRegulation",
+            "courseRegulationMapping",
+            "{{academicRegulationCourseMappingId}}"
+          ]
+        },
+        "description": "Deletes a specific course and session mapping by its mapping ID."
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "academicRegulationId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "academicRegulationCourseMappingId",
+      "value": "1",
+      "type": "string"
+    }
+  ]
+}

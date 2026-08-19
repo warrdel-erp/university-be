@@ -9,9 +9,13 @@ async function assertScopedExamSchedule(examScheduleId, transaction) {
     });
 }
 
-async function assertScopedQuestionPaper(id, transaction) {
+async function assertScopedQuestionPaper(id, transaction, ownerId = null) {
+    const whereClause = { id };
+    if (ownerId) {
+        whereClause.createdBy = ownerId;
+    }
     return model.questionPaperModel.findOne({
-        where: { id },
+        where: whereClause,
         attributes: ['id', 'examScheduleId'],
         transaction,
         include: [{
@@ -64,6 +68,13 @@ export async function getQuestionPapers(filters = {}, pagination = {}) {
                     as: "examSchedule",
                     required: true,
                     where: buildScope(model.examScheduleModel),
+                    include: [
+                        {
+                            model: model.examinationSessionModel,
+                            as: "examinationSession",
+                            attributes: ["sessionName"],
+                        }
+                    ]
                 },
             ],
             limit: limit ? parseInt(limit, 10) : undefined,
@@ -77,14 +88,18 @@ export async function getQuestionPapers(filters = {}, pagination = {}) {
     }
 }
 
-export async function getSingleQuestionPaper(id) {
+export async function getSingleQuestionPaper(id, ownerId = null) {
     try {
-        const existing = await assertScopedQuestionPaper(id);
+        const existing = await assertScopedQuestionPaper(id, null, ownerId);
+
         if (!existing) {
             return null;
         }
+
         const result = await model.questionPaperModel.findOne({
-            attributes: { exclude: ["deletedAt"] },
+            attributes: {
+                exclude: ["deletedAt"],
+            },
             where: { id },
             include: [
                 {
@@ -94,27 +109,53 @@ export async function getSingleQuestionPaper(id) {
                 },
             ],
         });
-        return result;
+
+        if (!result) {
+            return null;
+        }
+
+        const questionPaper = result.toJSON();
+
+        if (
+            questionPaper.questionPaper &&
+            typeof questionPaper.questionPaper === "string"
+        ) {
+            try {
+                questionPaper.questionPaper = JSON.parse(
+                    questionPaper.questionPaper
+                );
+            } catch (error) {
+                console.error(
+                    "Invalid questionPaper JSON:",
+                    error.message
+                );
+
+                questionPaper.questionPaper = [];
+            }
+        }
+
+        return questionPaper;
     } catch (error) {
         console.error("Error fetching question paper:", error);
         throw error;
     }
 }
 
-export async function updateQuestionPaper(id, questionPaperData) {
+export async function updateQuestionPaper(id, questionPaperData, transaction = null, ownerId = null) {
     try {
-        const existing = await assertScopedQuestionPaper(id);
+        const existing = await assertScopedQuestionPaper(id, transaction, ownerId);
         if (!existing) {
             return [0];
         }
         if (questionPaperData.examScheduleId) {
-            const schedule = await assertScopedExamSchedule(questionPaperData.examScheduleId);
+            const schedule = await assertScopedExamSchedule(questionPaperData.examScheduleId, transaction);
             if (!schedule) {
                 throw new Error('Exam schedule not found');
             }
         }
         const result = await model.questionPaperModel.update(questionPaperData, {
             where: { id },
+            transaction,
         });
         return result;
     } catch (error) {
@@ -123,9 +164,30 @@ export async function updateQuestionPaper(id, questionPaperData) {
     }
 }
 
-export async function deleteQuestionPaper(id) {
+export async function getApprovedQuestionPapersByScheduleId(examScheduleId, transaction = null) {
     try {
-        const existing = await assertScopedQuestionPaper(id);
+        return await model.questionPaperModel.findAll({
+            where: {
+                examScheduleId,
+                status: "Approved"
+            },
+            include: [{
+                model: model.examScheduleModel,
+                as: "examSchedule",
+                required: true,
+                where: buildScope(model.examScheduleModel)
+            }],
+            transaction
+        });
+    } catch (error) {
+        console.error("Error fetching approved papers:", error);
+        throw error;
+    }
+}
+
+export async function deleteQuestionPaper(id, ownerId = null) {
+    try {
+        const existing = await assertScopedQuestionPaper(id, null, ownerId);
         if (!existing) {
             return false;
         }
@@ -139,7 +201,15 @@ export async function deleteQuestionPaper(id) {
 
 export async function getExamScheduleById(id) {
     try {
-        return await scoped(model.examScheduleModel).findByPk(id);
+        return await scoped(model.examScheduleModel).findByPk(id, {
+            include: [
+                {
+                    model: model.examinationSessionModel,
+                    as: "examinationSession",
+                    attributes: ["sessionName"],
+                }
+            ]
+        });
     } catch (error) {
         console.error("Error fetching exam schedule:", error);
         throw error;

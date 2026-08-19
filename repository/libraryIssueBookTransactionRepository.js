@@ -73,25 +73,6 @@ function buildInventoryItemInclude({ forList = false } = {}) {
 
 function buildTransactionInclude({ forList = false } = {}) {
   return [
-    {
-      model: model.studentModel,
-      as: "studentMember",
-      attributes: studentMemberAttributes(),
-      include: [
-        {
-          model: model.courseModel,
-          as: "course",
-          attributes: ["courseId", "courseName", "courseCode"],
-        },
-      ],
-      required: false,
-    },
-    {
-      model: model.employeeModel,
-      as: "teacherMember",
-      attributes: teacherMemberAttributes(),
-      required: false,
-    },
     buildInventoryItemInclude({ forList }),
   ];
 }
@@ -113,12 +94,114 @@ async function assertScopedIssueTransaction(libraryIssueBookTransactionId, trans
   });
 }
 
+export async function resolveMembersForTransactions(transactions) {
+  if (!transactions.length) return;
+
+  const studentIds = new Set();
+  const teacherUserIds = new Set();
+
+  for (const tx of transactions) {
+    if (tx.memberType === "STUDENT") {
+      studentIds.add(tx.memberId);
+    } else if (tx.memberType === "TEACHER") {
+      teacherUserIds.add(tx.memberId);
+    }
+  }
+
+  const studentList = studentIds.size
+    ? await scoped(model.studentModel, { scopeConfig: { academicYear: false } }).findAll({
+        where: { studentId: { [Op.in]: Array.from(studentIds) } },
+        attributes: [
+          "studentId",
+          "firstName",
+          "middleName",
+          "lastName",
+          "scholarNumber",
+          "email",
+          "phoneNumber",
+        ],
+        include: [
+          {
+            model: model.courseModel,
+            as: "course",
+            attributes: ["courseId", "courseName", "courseCode"],
+          },
+        ],
+      })
+    : [];
+
+  const studentById = new Map();
+  for (const student of studentList) {
+    const plain = student.get({ plain: true });
+    studentById.set(plain.studentId, {
+      studentId: plain.studentId,
+      firstName: plain.firstName,
+      middleName: plain.middleName,
+      lastName: plain.lastName,
+      scholarNumber: plain.scholarNumber,
+      email: plain.email,
+      phoneNumber: plain.phoneNumber,
+      course: plain.course || null,
+    });
+  }
+
+  const teacherList = teacherUserIds.size
+    ? await scoped(model.employeeModel).findAll({
+        where: {
+          [Op.or]: [
+            { employeeId: { [Op.in]: Array.from(teacherUserIds) } },
+            { userId: { [Op.in]: Array.from(teacherUserIds) } }
+          ]
+        },
+        attributes: ["employeeId", "userId", "employeeName", "employeeCode", "departmentId"],
+        include: [
+          {
+            model: model.userModel,
+            as: "user",
+            attributes: ["userId", "email", "phone"],
+          },
+          {
+            model: model.departmentModel,
+            as: "employeeDepartment",
+            attributes: ["departmentId", "departmentName", "departmentCode"],
+          },
+        ],
+      })
+    : [];
+
+  const teacherById = new Map();
+  for (const teacher of teacherList) {
+    const plain = teacher.get({ plain: true });
+    const teacherData = {
+      employeeId: plain.employeeId,
+      userId: plain.userId,
+      name: plain.employeeName,
+      email: plain.user?.email || null,
+      phoneNumber: plain.user?.phone || null,
+      department: plain.employeeDepartment || null,
+    };
+    if (plain.userId != null) {
+      teacherById.set(plain.userId, teacherData);
+    }
+    if (plain.employeeId != null) {
+      teacherById.set(plain.employeeId, teacherData);
+    }
+  }
+
+  for (const tx of transactions) {
+    if (tx.memberType === "STUDENT") {
+      tx.member = studentById.get(tx.memberId) || null;
+    } else if (tx.memberType === "TEACHER") {
+      tx.member = teacherById.get(tx.memberId) || null;
+    }
+  }
+}
+
 function toPlainTransaction(row) {
   if (!row) return null;
 
   const plain = row.get({ plain: true });
-  plain.member =
-    plain.memberType === "STUDENT" ? plain.studentMember ?? null : plain.teacherMember ?? null;
+  plain.member = null;
   delete plain.studentMember;
   delete plain.teacherMember;
 
@@ -198,16 +281,16 @@ export async function countStudentMemberById(studentId, transaction) {
   });
 }
 
-export async function countTeacherMemberById(userId, transaction) {
+export async function countTeacherMemberById(memberId, transaction) {
   return scoped(model.employeeModel).count({
-    where: { userId },
+    where: { employeeId: Number(memberId) },
     transaction,
   });
 }
 
-export async function findEmployeeIdByUserId(userId, transaction) {
+export async function findEmployeeIdByUserId(memberId, transaction) {
   const employee = await scoped(model.employeeModel).findOne({
-    where: { userId },
+    where: { employeeId: Number(memberId) },
     attributes: ["employeeId"],
     transaction,
   });
@@ -516,8 +599,44 @@ export async function getLibraryIssueBookTransactions(query = {}) {
   const search = query.search?.trim();
 
   const where = {};
+  if (query.memberId != null) {
+    where.memberId = Number(query.memberId);
+  }
+  if (query.memberType != null) {
+    where.memberType = query.memberType;
+  }
+
   if (search) {
     const likeSearch = `%${search}%`;
+
+    const matchedStudents = await scoped(model.studentModel, { scopeConfig: { academicYear: false } }).findAll({
+      where: {
+        [Op.or]: [
+          { firstName: { [Op.like]: likeSearch } },
+          { middleName: { [Op.like]: likeSearch } },
+          { lastName: { [Op.like]: likeSearch } },
+          { scholarNumber: { [Op.like]: likeSearch } }
+        ]
+      },
+      attributes: ["studentId"]
+    });
+    const matchedStudentIds = matchedStudents.map(s => s.studentId);
+
+    const matchedTeachers = await scoped(model.employeeModel).findAll({
+      where: {
+        [Op.or]: [
+          { employeeName: { [Op.like]: likeSearch } },
+          { employeeCode: { [Op.like]: likeSearch } }
+        ]
+      },
+      attributes: ["employeeId", "userId"]
+    });
+    const matchedTeacherIds = [];
+    for (const t of matchedTeachers) {
+      if (t.employeeId) matchedTeacherIds.push(t.employeeId);
+      if (t.userId) matchedTeacherIds.push(t.userId);
+    }
+
     where[Op.or] = [
       { memberType: { [Op.like]: likeSearch } },
       sequelizeWhere(fn("DATE_FORMAT", col("library_issue_book_transaction.issue_date"), "%Y-%m-%d"), {
@@ -526,13 +645,18 @@ export async function getLibraryIssueBookTransactions(query = {}) {
       sequelizeWhere(fn("DATE_FORMAT", col("library_issue_book_transaction.due_date"), "%Y-%m-%d"), {
         [Op.like]: likeSearch,
       }),
-      sequelizeWhere(col("studentMember.first_name"), { [Op.like]: likeSearch }),
-      sequelizeWhere(col("studentMember.middle_name"), { [Op.like]: likeSearch }),
-      sequelizeWhere(col("studentMember.last_name"), { [Op.like]: likeSearch }),
-      sequelizeWhere(col("studentMember.scholar_number"), { [Op.like]: likeSearch }),
-      sequelizeWhere(col("studentMember->course.course_name"), { [Op.like]: likeSearch }),
-      sequelizeWhere(col("teacherMember.employee_name"), { [Op.like]: likeSearch }),
-      sequelizeWhere(col("teacherMember.employee_code"), { [Op.like]: likeSearch }),
+      {
+        [Op.and]: [
+          { memberType: "STUDENT" },
+          { memberId: { [Op.in]: matchedStudentIds } }
+        ]
+      },
+      {
+        [Op.and]: [
+          { memberType: "TEACHER" },
+          { memberId: { [Op.in]: matchedTeacherIds } }
+        ]
+      },
       sequelizeWhere(col("inventoryItems->inventory.accession_number"), { [Op.like]: likeSearch }),
       sequelizeWhere(col("inventoryItems->inventory->bookDetails.title"), { [Op.like]: likeSearch }),
       sequelizeWhere(col("inventoryItems->inventory->bookDetails.authors"), { [Op.like]: likeSearch }),
@@ -551,6 +675,8 @@ export async function getLibraryIssueBookTransactions(query = {}) {
   });
 
   const data = rows.map(toPlainTransaction);
+  await resolveMembersForTransactions(data);
+
   const transactionIds = data.map((row) => row.libraryIssueBookTransactionId);
   const countsById = await getReturnCountsByTransactionIds(transactionIds);
 
@@ -581,6 +707,8 @@ export async function getLibraryIssueBookTransactionById(libraryIssueBookTransac
   });
   const plain = toPlainTransaction(row);
   if (!plain) return null;
+
+  await resolveMembersForTransactions([plain]);
 
   const countsById = await getReturnCountsByTransactionIds(
     [plain.libraryIssueBookTransactionId],
@@ -800,27 +928,6 @@ export async function getLibraryReturnBookTransactions(query = {}) {
             as: "issueBookTransaction",
             attributes: ["libraryIssueBookTransactionId", "memberId", "memberType", "issueDate", "dueDate"],
             required: true,
-            include: [
-              {
-                model: model.studentModel,
-                as: "studentMember",
-                attributes: studentMemberAttributes(),
-                include: [
-                  {
-                    model: model.courseModel,
-                    as: "course",
-                    attributes: ["courseId", "courseName", "courseCode"],
-                  },
-                ],
-                required: false,
-              },
-              {
-                model: model.employeeModel,
-                as: "teacherMember",
-                attributes: teacherMemberAttributes(),
-                required: false,
-              },
-            ],
           },
         ],
       },
@@ -834,6 +941,102 @@ export async function getLibraryReturnBookTransactions(query = {}) {
       ],
     ],
   });
+
+  const studentIds = new Set();
+  const teacherUserIds = new Set();
+
+  for (const row of rows) {
+    for (const item of row.inventoryItems || []) {
+      const tx = item.issueBookTransaction;
+      if (tx) {
+        if (tx.memberType === "STUDENT") {
+          studentIds.add(tx.memberId);
+        } else if (tx.memberType === "TEACHER") {
+          teacherUserIds.add(tx.memberId);
+        }
+      }
+    }
+  }
+
+  const studentList = studentIds.size
+    ? await scoped(model.studentModel, { scopeConfig: { academicYear: false } }).findAll({
+        where: { studentId: { [Op.in]: Array.from(studentIds) } },
+        attributes: [
+          "studentId",
+          "firstName",
+          "middleName",
+          "lastName",
+          "scholarNumber",
+          "email",
+          "phoneNumber",
+        ],
+        include: [
+          {
+            model: model.courseModel,
+            as: "course",
+            attributes: ["courseId", "courseName", "courseCode"],
+          },
+        ],
+      })
+    : [];
+
+  const studentById = new Map();
+  for (const student of studentList) {
+    const plain = student.get({ plain: true });
+    studentById.set(plain.studentId, {
+      studentId: plain.studentId,
+      firstName: plain.firstName,
+      middleName: plain.middleName,
+      lastName: plain.lastName,
+      scholarNumber: plain.scholarNumber,
+      email: plain.email,
+      phoneNumber: plain.phoneNumber,
+      course: plain.course || null,
+    });
+  }
+
+  const teacherList = teacherUserIds.size
+    ? await scoped(model.employeeModel).findAll({
+        where: {
+          [Op.or]: [
+            { employeeId: { [Op.in]: Array.from(teacherUserIds) } },
+            { userId: { [Op.in]: Array.from(teacherUserIds) } }
+          ]
+        },
+        attributes: ["employeeId", "userId", "employeeName", "employeeCode", "departmentId"],
+        include: [
+          {
+            model: model.userModel,
+            as: "user",
+            attributes: ["userId", "email", "phone"],
+          },
+          {
+            model: model.departmentModel,
+            as: "employeeDepartment",
+            attributes: ["departmentId", "departmentName", "departmentCode"],
+          },
+        ],
+      })
+    : [];
+
+  const teacherById = new Map();
+  for (const teacher of teacherList) {
+    const plain = teacher.get({ plain: true });
+    const teacherData = {
+      employeeId: plain.employeeId,
+      userId: plain.userId,
+      name: plain.employeeName,
+      email: plain.user?.email || null,
+      phoneNumber: plain.user?.phone || null,
+      department: plain.employeeDepartment || null,
+    };
+    if (plain.userId != null) {
+      teacherById.set(plain.userId, teacherData);
+    }
+    if (plain.employeeId != null) {
+      teacherById.set(plain.employeeId, teacherData);
+    }
+  }
 
   const returnTransactions = [];
 
@@ -849,16 +1052,20 @@ export async function getLibraryReturnBookTransactions(query = {}) {
 
       let issueTransactionEntry = issueTransactionById.get(issueTransactionId);
       if (!issueTransactionEntry) {
+        let member = null;
+        if (transaction.memberType === "STUDENT") {
+          member = studentById.get(transaction.memberId) || null;
+        } else if (transaction.memberType === "TEACHER") {
+          member = teacherById.get(transaction.memberId) || null;
+        }
+
         issueTransactionEntry = {
           libraryIssueBookTransactionId: issueTransactionId,
           memberId: transaction.memberId,
           memberType: transaction.memberType,
           issueDate: transaction.issueDate,
           dueDate: transaction.dueDate,
-          member:
-            transaction.memberType === "STUDENT"
-              ? transaction.studentMember ?? null
-              : transaction.teacherMember ?? null,
+          member,
           returnedBooks: [],
         };
         issueTransactionById.set(issueTransactionId, issueTransactionEntry);

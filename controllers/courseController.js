@@ -158,3 +158,41 @@ export const deleteCourse = async (req, res) => {
     });
   }
 };
+
+export const getMyMappedSubjects = async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return ErrorResponse(res, 404, "User ID not found");
+    }
+    const { search } = req.query;
+    const result = await courseService.getSubjectsByTeacherUserId(userId, search);
+    return SuccessResponse(res, 200, "Teacher subjects fetched successfully from timeTable", result);
+  } catch (error) {
+    console.error("Error in getMyMappedSubjects controller:", error);
+    return ErrorResponse(res, 500, "Internal Server Error", error.message);
+  }
+};
+
+export const getMyMappedSubjectById = async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return ErrorResponse(res, 404, "User ID not found");
+    }
+    const { subjectId } = req.query;
+    const targetSubjectId = Number(subjectId || req.params.subjectId);
+    if (!targetSubjectId) {
+      return ErrorResponse(res, 400, "subjectId is required");
+    }
+
+    const result = await courseService.getSubjectByTeacherUserIdAndSubjectId(userId, targetSubjectId);
+    if (!result) {
+      return ErrorResponse(res, 404, "Subject not found or not mapped to you");
+    }
+    return SuccessResponse(res, 200, "Subject details fetched successfully", result);
+  } catch (error) {
+    console.error("Error in getMyMappedSubjectById controller:", error);
+    return ErrorResponse(res, 500, "Internal Server Error", error.message);
+  }
+};

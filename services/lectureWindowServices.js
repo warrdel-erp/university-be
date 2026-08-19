@@ -22,11 +22,11 @@ export async function getLectureWindows(filters) {
   return lectureWindowRepository.getLectureWindows(filters);
 }
 
-export async function getLectureWindowById(lectureWindowId, academicYearId) {
-  return lectureWindowRepository.getLectureWindowById(lectureWindowId, academicYearId);
+export async function getLectureWindowById(lectureWindowId, academicYearId, userId) {
+  return lectureWindowRepository.getLectureWindowById(lectureWindowId, academicYearId, userId);
 }
 
-export async function updateLectureWindow(lectureWindowId, data, updatedBy, academicYearId) {
+export async function updateLectureWindow(lectureWindowId, data, updatedBy, academicYearId, userId) {
   if (data.startDate && data.endDate) {
     assertValidDateRange(data.startDate, data.endDate);
   }
@@ -38,7 +38,7 @@ export async function updateLectureWindow(lectureWindowId, data, updatedBy, acad
   delete payload.lessonIds;
   delete payload.academicYearId;
 
-  const updated = await lectureWindowRepository.updateLectureWindow(lectureWindowId, payload, academicYearId);
+  const updated = await lectureWindowRepository.updateLectureWindow(lectureWindowId, payload, academicYearId, userId);
   if (!updated) {
     return null;
   }
@@ -47,11 +47,11 @@ export async function updateLectureWindow(lectureWindowId, data, updatedBy, acad
     await lectureWindowRepository.linkLessonsToWindow(lectureWindowId, data.lessonIds, updatedBy);
   }
 
-  return lectureWindowRepository.getLectureWindowById(lectureWindowId, academicYearId);
+  return lectureWindowRepository.getLectureWindowById(lectureWindowId, academicYearId, userId);
 }
 
-export async function deleteLectureWindow(lectureWindowId, academicYearId) {
-  const window = await lectureWindowRepository.getLectureWindowById(lectureWindowId, academicYearId);
+export async function deleteLectureWindow(lectureWindowId, academicYearId, userId) {
+  const window = await lectureWindowRepository.getLectureWindowById(lectureWindowId, academicYearId, userId);
   if (!window) {
     return false;
   }
@@ -60,5 +60,5 @@ export async function deleteLectureWindow(lectureWindowId, academicYearId) {
     throw new Error("Cannot delete lecture window while lessons are present");
   }
 
-  return lectureWindowRepository.deleteLectureWindow(lectureWindowId, academicYearId);
+  return lectureWindowRepository.deleteLectureWindow(lectureWindowId, academicYearId, userId);
 }

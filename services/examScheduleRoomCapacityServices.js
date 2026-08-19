@@ -2,32 +2,29 @@ import sequelize from "../database/sequelizeConfig.js";
 import * as examRoomCapacityRepository from "../repository/examScheduleRoomCapacityRepository.js";
 import * as examScheduleServices from "./examScheduleServices.js";
 import { z } from "zod";
+import { getTimeSlotRange, minutesToTime } from "../utility/timeSlot.js";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-const toMinutes = (time) => {
-    const [h = 0, m = 0] = String(time).split(":").map(Number);
-    return h * 60 + m;
-};
+const getExamSlot = (examDate, examTime, duration, examinationSessionSlot) => {
+    const resolvedStartTime = examinationSessionSlot?.startTime || examTime;
+    const resolvedDuration = examinationSessionSlot?.durationMinutes ?? duration;
+    const range = getTimeSlotRange({
+        startTime: resolvedStartTime,
+        endTime: examinationSessionSlot?.endTime,
+        duration: resolvedDuration,
+    });
 
-const toTime = (mins) => {
-    const n = ((mins % 1440) + 1440) % 1440;
-    return `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}:00`;
-};
-
-const getExamSlot = (examDate, examTime, duration) => {
-    const startMinutes = toMinutes(examTime);
-    const durationMinutes = Number(duration);
-    if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
-        throw new Error("Invalid exam duration");
+    if (!range) {
+        throw new Error("Invalid exam slot time");
     }
-    const endMinutes = startMinutes + durationMinutes;
+
     return {
         day: DAYS[new Date(`${examDate}T00:00:00`).getDay()],
-        startTime: toTime(startMinutes),
-        endTime: toTime(endMinutes),
-        startMinutes,
-        endMinutes,
+        startTime: minutesToTime(range.startMinutes),
+        endTime: minutesToTime(range.endMinutes),
+        startMinutes: range.startMinutes,
+        endMinutes: range.endMinutes,
     };
 };
 
@@ -93,49 +90,127 @@ function normalizeRoomIds(classRoomSectionIds) {
 
 export async function addExamRoomCapacity(data, userId) {
     const validatedData = examRoomCapacitySchema.parse(data);
-    const { uniqueRoomIds, orderedRoomIds, roomOrderLookup } = normalizeRoomIds(validatedData.classRoomSectionIds);
 
-    // 1. Fetch Student Count for the Exam
-    const exam = await examScheduleServices.getExamScheduleById(validatedData.examScheduleId);
-    if (!exam) {
-        throw new Error("Exam schedule not found");
+    // Normalize room inputs and detect duplicates in payload
+    const inputSelections = validatedData.classRoomSectionIds.map((item, idx) => {
+        const classRoomSectionId = typeof item === "number" ? item : item.classRoomSectionId;
+        const orderKey = (typeof item === "number" || item.orderKey === undefined || item.orderKey === null)
+            ? null
+            : Number(item.orderKey);
+        return { classRoomSectionId, orderKey, originalIndex: idx };
+    });
+
+    const inputRoomIds = inputSelections.map(s => s.classRoomSectionId);
+    if (new Set(inputRoomIds).size !== inputRoomIds.length) {
+        throw new Error("Duplicate room IDs in assignment request");
     }
-    const studentCount = exam.getDataValue('studentCount') || 0;
 
-    // 2. Fetch Room Details
-    const roomLookup = await examRoomCapacityRepository.getRoomsForAllocationLookup([...uniqueRoomIds]);
-    if (roomLookup.size !== uniqueRoomIds.size) {
+    const inputOrderKeys = inputSelections.map(s => s.orderKey).filter(k => k !== null);
+    if (new Set(inputOrderKeys).size !== inputOrderKeys.length) {
+        throw new Error("Duplicate order keys in assignment request");
+    }
+
+    // Fetch existing room capacities for the exam schedule
+    const existingAssignments = await examRoomCapacityRepository.getRoomsByExamScheduleId(validatedData.examScheduleId);
+    const existingMap = new Map(existingAssignments.map(a => [a.classRoomSectionId, a]));
+
+    // Separate self-assigned rooms from new candidate rooms
+    const newCandidates = [];
+    const finalRoomsMap = new Map();
+
+    for (const ext of existingAssignments) {
+        finalRoomsMap.set(ext.classRoomSectionId, ext.orderKey);
+    }
+
+    for (const input of inputSelections) {
+        if (existingMap.has(input.classRoomSectionId)) {
+            // Skip insertion, preserve existing assignment
+            continue;
+        }
+        newCandidates.push(input);
+    }
+
+    // Assign order keys to new candidates if they weren't explicitly provided
+    let maxOrderKey = finalRoomsMap.size > 0 ? Math.max(...finalRoomsMap.values()) : 0;
+    for (const candidate of newCandidates) {
+        if (candidate.orderKey === null) {
+            maxOrderKey++;
+            candidate.orderKey = maxOrderKey;
+        }
+        finalRoomsMap.set(candidate.classRoomSectionId, candidate.orderKey);
+    }
+
+    // Validate final combined sequence of order keys
+    const allOrderKeys = Array.from(finalRoomsMap.values()).sort((a, b) => a - b);
+    if (new Set(allOrderKeys).size !== allOrderKeys.length) {
+        throw new Error("Invalid room order. Duplicate order keys detected in final assignments.");
+    }
+    const hasSequentialOrder = allOrderKeys.every((orderKey, idx) => orderKey === idx + 1);
+    if (!hasSequentialOrder) {
+        throw new Error(`Invalid room order. Order keys must be 1 to ${allOrderKeys.length} without gaps.`);
+    }
+
+    // If there are no new rooms to insert, return the existing assignments (idempotent success)
+    if (newCandidates.length === 0) {
+        return [];
+    }
+
+    const candidateRoomIds = newCandidates.map(c => c.classRoomSectionId);
+
+    // Fetch Room Details for new candidates
+    const roomLookup = await examRoomCapacityRepository.getRoomsForAllocationLookup(candidateRoomIds);
+    if (roomLookup.size !== candidateRoomIds.length) {
         throw new Error("One or more class rooms not found");
     }
 
-    // 3. Validate Capacities and Calculate Total
-    let totalCapacity = 0;
-    const assignments = [];
+    const examSchedule = await examRoomCapacityRepository.getExamScheduleSlot(validatedData.examScheduleId);
+    if (!examSchedule) throw new Error("Exam schedule not found");
 
-    for (const roomId of orderedRoomIds) {
+    const slot = getExamSlot(
+        examSchedule.examDate,
+        examSchedule.examTime,
+        examSchedule.duration,
+        examSchedule.examinationSessionSlot,
+    );
+
+    const { examDate, day, startTime, endTime, startMinutes, endMinutes } = {
+        examDate: examSchedule.examDate,
+        ...slot,
+    };
+
+    // Check availability only for the new candidate rooms
+    const [classBusyRoomIds, overlappingExamRoomIds] = await Promise.all([
+        examRoomCapacityRepository.findOccupiedRoomIdsByClassSchedule(day, startTime, endTime, examDate),
+        examRoomCapacityRepository.findOverlappingExamBusyRoomIds(examDate, validatedData.examScheduleId, startMinutes, endMinutes),
+    ]);
+
+    const busyRoomIds = new Set([...classBusyRoomIds, ...overlappingExamRoomIds]);
+
+    const assignments = [];
+    for (const candidate of newCandidates) {
+        const roomId = candidate.classRoomSectionId;
         const room = roomLookup.get(roomId);
+
+        if (busyRoomIds.has(roomId)) {
+            throw new Error(`Room ${room.roomNumber} is not available for the selected time slot`);
+        }
+
         const resolvedExamCapacity = room.examCapacity ?? room.capacity;
         const resolvedExamColumns = room.examCapacityColumns ?? 1;
 
         if (!resolvedExamCapacity || resolvedExamCapacity <= 0) {
             throw new Error(`Room ${room.roomNumber} has invalid capacity`);
         }
-        totalCapacity += resolvedExamCapacity;
 
         assignments.push({
             classRoomSectionId: room.classRoomSectionId,
             examScheduleId: validatedData.examScheduleId,
             capacity: resolvedExamCapacity,
             columns: resolvedExamColumns,
-            orderKey: roomOrderLookup.get(room.classRoomSectionId),
+            orderKey: candidate.orderKey,
             createdBy: userId,
             updatedBy: userId
         });
-    }
-
-    // 4. Final Validation against student count
-    if (totalCapacity < studentCount) {
-        throw new Error(`Selected rooms have a total capacity of ${totalCapacity}, but ${studentCount} students are enrolled. Please select more or larger rooms.`);
     }
 
     const transaction = await sequelize.transaction();
@@ -150,8 +225,6 @@ export async function addExamRoomCapacity(data, userId) {
     }
 }
 
-
-
 export async function updateExamRoomCapacity(examScheduleRoomCapacityId, data, userId) {
     const { capacity, columns } = data;
     const updatePayload = {
@@ -163,14 +236,22 @@ export async function updateExamRoomCapacity(examScheduleRoomCapacityId, data, u
     if (!existing) {
         throw new Error("Exam room capacity not found");
     }
-    // Check if assigned to any schedule? 
-    // In the new implementation, it IS an assignment to a schedule.
 
     updatePayload.updatedBy = userId;
 
     const transaction = await sequelize.transaction();
 
     try {
+        const seatCount = await examRoomCapacityRepository.getSeatAllocationCountByCapacityId(examScheduleRoomCapacityId, transaction);
+        if (seatCount > 0) {
+            if (Number(existing.columns) !== Number(columns)) {
+                throw new Error("Room seating configuration cannot be changed because seats have already been allocated.");
+            }
+            if (Number(capacity) < seatCount) {
+                throw new Error("Room seating configuration cannot be changed because seats have already been allocated.");
+            }
+        }
+
         const result = await examRoomCapacityRepository.updateExamRoomCapacity(
             examScheduleRoomCapacityId,
             updatePayload,
@@ -190,12 +271,22 @@ export async function getExamScheduleRooms(examScheduleId) {
         throw new Error("Exam schedule not found");
     }
 
-    const rooms = await examRoomCapacityRepository.getRoomsByExamScheduleId(examScheduleId);
-    if (!rooms.length) {
+    const rows = await examRoomCapacityRepository.getRoomsByExamScheduleId(examScheduleId);
+    if (!rows.length) {
         throw new Error("No rooms assigned to this exam schedule");
     }
 
-    return rooms;
+    return rows.map((plain) => {
+      return {
+        examScheduleRoomCapacityId: plain.examScheduleRoomCapacityId,
+        examScheduleId: plain.examScheduleId,
+        classRoomSectionId: plain.classRoomSectionId,
+        capacity: plain.capacity,
+        columns: plain.columns,
+        orderKey: plain.orderKey,
+        classRoom: plain.classRoom ?? null,
+      };
+    });
 }
 
 export async function deleteExamRoomCapacity(examScheduleRoomCapacityId) {
@@ -204,13 +295,34 @@ export async function deleteExamRoomCapacity(examScheduleRoomCapacityId) {
         throw new Error("Exam room capacity not found");
     }
 
+    const examScheduleId = existing.examScheduleId;
     const transaction = await sequelize.transaction();
 
     try {
+        const seatCount = await examRoomCapacityRepository.getSeatAllocationCountByCapacityId(examScheduleRoomCapacityId, transaction);
+        if (seatCount > 0) {
+            throw new Error("Room assignment cannot be removed because seats have already been allocated for this room.");
+        }
+
         const result = await examRoomCapacityRepository.deleteExamRoomCapacity(
             examScheduleRoomCapacityId,
             transaction
         );
+
+        // Fetch remaining room capacities and re-sequence orderKey sequentially from 1
+        const remainingRooms = await examRoomCapacityRepository.getRoomsByExamScheduleId(examScheduleId, transaction);
+        let currentOrder = 1;
+        for (const room of remainingRooms) {
+            if (room.examScheduleRoomCapacityId !== Number(examScheduleRoomCapacityId)) {
+                await examRoomCapacityRepository.updateExamRoomCapacityOrderKey(
+                    room.examScheduleRoomCapacityId,
+                    currentOrder,
+                    transaction
+                );
+                currentOrder++;
+            }
+        }
+
         await transaction.commit();
         return result;
     } catch (error) {
@@ -223,6 +335,45 @@ export async function getAvailableRoomsForExamSchedule(examScheduleId) {
     const examSchedule = await examRoomCapacityRepository.getExamScheduleSlot(examScheduleId);
     if (!examSchedule) throw new Error("Exam schedule not found");
 
-    const slot = getExamSlot(examSchedule.examDate, examSchedule.examTime, examSchedule.duration);
-    return examRoomCapacityRepository.getAvailableRoomsPayload(examScheduleId, examSchedule, slot);
+    const slot = getExamSlot(
+        examSchedule.examDate,
+        examSchedule.examTime,
+        examSchedule.duration,
+        examSchedule.examinationSessionSlot,
+    );
+
+    const { examDate, day, startTime, endTime, startMinutes, endMinutes } = {
+        examDate: examSchedule.examDate,
+        ...slot,
+    };
+
+    const [classBusyRoomIds, assignedRoomIds, overlappingExamRoomIds] = await Promise.all([
+        examRoomCapacityRepository.findOccupiedRoomIdsByClassSchedule(day, startTime, endTime, examDate),
+        examRoomCapacityRepository.findAssignedRoomIdsForExam(examScheduleId),
+        examRoomCapacityRepository.findOverlappingExamBusyRoomIds(examDate, examScheduleId, startMinutes, endMinutes),
+    ]);
+
+    const busyRoomIds = [...new Set([...classBusyRoomIds, ...assignedRoomIds, ...overlappingExamRoomIds])];
+    
+    // Retrieve all rooms and filter to return only available rooms that can be added (no conflicts/already assigned rooms)
+    const allRooms = await examRoomCapacityRepository.findAllRoomsForExamSlot();
+    const availableRooms = allRooms
+        .map((room) => ({
+            ...room,
+            conflict: busyRoomIds.includes(room.classRoomSectionId),
+        }))
+        .filter((room) => !room.conflict);
+
+    return {
+        examScheduleId: examSchedule.examScheduleId,
+        examDate: examSchedule.examDate,
+        examTime: examSchedule.examTime,
+        duration: examSchedule.duration,
+        examinationSessionSlotId: examSchedule.examinationSessionSlotId,
+        examinationSessionSlot: examSchedule.examinationSessionSlot,
+        slotStartTime: startTime,
+        slotEndTime: endTime,
+        day,
+        rooms: availableRooms,
+    };
 }

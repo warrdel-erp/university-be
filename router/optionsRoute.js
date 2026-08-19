@@ -1,211 +1,245 @@
-import { Router } from 'express';
-import { z } from 'zod';
-import * as optionsController from '../controllers/optionsController.js';
-import userAuth from '../middleware/authUser.js';
-import { validate } from '../utility/validation.js';
+import { Router } from "express";
+import { z } from "zod";
+import * as optionsController from "../controllers/optionsController.js";
+import userAuth from "../middleware/authUser.js";
+import { validate } from "../utility/validation.js";
 
 const router = Router();
 
 const emptyToUndefined = (val) =>
-    val === '' || val === null || val === undefined ? undefined : val;
+  val === "" || val === null || val === undefined ? undefined : val;
 
 const positiveIntegerId = z.coerce
-    .number({ invalid_type_error: 'id must be a number' })
-    .int({ message: 'id must be an integer' })
-    .positive({ message: 'id must be positive' });
+  .number({ invalid_type_error: "id must be a number" })
+  .int({ message: "id must be an integer" })
+  .positive({ message: "id must be positive" });
 
 const optionalPositiveIntegerId = z.preprocess(
-    emptyToUndefined,
-    positiveIntegerId.optional(),
+  emptyToUndefined,
+  positiveIntegerId.optional(),
 );
 
 const courseTermsQuerySchema = z.object({
-    courseId: positiveIntegerId,
+  courseId: positiveIntegerId,
 });
 
 const courseProgramQuerySchema = z.object({
-    courseId: positiveIntegerId,
+  courseId: positiveIntegerId,
 });
 
 const classSectionsQuerySchema = z.object({
-    courseId: positiveIntegerId,
-    term: optionalPositiveIntegerId,
-    sessionId: optionalPositiveIntegerId,
-    year: optionalPositiveIntegerId,
+  courseId: positiveIntegerId,
+  term: optionalPositiveIntegerId,
+  sessionId: optionalPositiveIntegerId,
+  year: optionalPositiveIntegerId,
 });
 
 const coursesQuerySchema = z.object({
-    courseLevelId: optionalPositiveIntegerId,
+  courseLevelId: optionalPositiveIntegerId,
 });
 
 const specializationsQuerySchema = z.object({
-    courseId: optionalPositiveIntegerId,
+  courseId: optionalPositiveIntegerId,
 });
 
 const subjectsQuerySchema = z.object({
-    courseId: optionalPositiveIntegerId,
-    term: optionalPositiveIntegerId,
-    sessionId: optionalPositiveIntegerId,
-    userId: optionalPositiveIntegerId,
+  courseId: optionalPositiveIntegerId,
+  term: optionalPositiveIntegerId,
+  sessionId: optionalPositiveIntegerId,
+  userId: optionalPositiveIntegerId,
+});
+
+const getMySubjectsQuerySchema = z.object({
+  courseId: optionalPositiveIntegerId,
+  term: optionalPositiveIntegerId,
+  sessionId: optionalPositiveIntegerId,
 });
 
 const teachersQuerySchema = z.object({
-    campusId: optionalPositiveIntegerId,
-    subjectId: optionalPositiveIntegerId,
+  campusId: optionalPositiveIntegerId,
+  subjectId: optionalPositiveIntegerId,
 });
 
 const feePlansQuerySchema = z.object({
-    courseId: optionalPositiveIntegerId,
-    sessionId: optionalPositiveIntegerId,
+  courseId: optionalPositiveIntegerId,
+  sessionId: optionalPositiveIntegerId,
 });
 
 const topicsQuerySchema = z.object({
-    lessonId: positiveIntegerId,
+  lessonId: positiveIntegerId,
 });
 
-const lectureWindowsQuerySchema = z.object({
+const lectureWindowsQuerySchema = z
+  .object({
     userId: optionalPositiveIntegerId,
     employeeId: optionalPositiveIntegerId,
     subjectId: positiveIntegerId,
     date: z
-        .string({ required_error: 'date is required' })
-        .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD'),
+      .string({ required_error: "date is required" })
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
     sessionId: optionalPositiveIntegerId,
-}).refine(
-    (data) => data.userId != null || data.employeeId != null,
-    { message: 'userId or employeeId is required', path: ['userId'] },
-);
+  })
+  .refine((data) => data.userId != null || data.employeeId != null, {
+    message: "userId or employeeId is required",
+    path: ["userId"],
+  });
+
+const getMyLectureWindowsQuerySchema = z.object({
+  subjectId: positiveIntegerId,
+  date: z
+    .string({ required_error: "date is required" })
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
+  sessionId: optionalPositiveIntegerId,
+});
 
 const lessonsQuerySchema = z.object({
-    lectureWindowId: positiveIntegerId,
+  lectureWindowId: positiveIntegerId,
 });
 
 /** Single id or list: `4`, `4,5`, `?courseIds=4&courseIds=5`, `[4,5]` */
 const optionalPositiveIntegerIdList = z.preprocess((val) => {
-    if (val === undefined || val === null || val === '' || val === 'undefined') {
-        return undefined;
+  if (val === undefined || val === null || val === "" || val === "undefined") {
+    return undefined;
+  }
+  const rawItems = Array.isArray(val) ? val : String(val).split(",");
+  const ids = [];
+  for (const item of rawItems) {
+    if (item === "" || item == null) {
+      continue;
     }
-    const rawItems = Array.isArray(val) ? val : String(val).split(',');
-    const ids = [];
-    for (const item of rawItems) {
-        if (item === '' || item == null) {
-            continue;
-        }
-        ids.push(item);
-    }
-    return ids.length > 0 ? ids : undefined;
+    ids.push(item);
+  }
+  return ids.length > 0 ? ids : undefined;
 }, z.array(positiveIntegerId).min(1).optional());
 
 const studentFilterOptionsQuerySchema = z
-    .object({
-        courseIds: optionalPositiveIntegerIdList,
-        courseId: optionalPositiveIntegerIdList,
-        sessionIds: optionalPositiveIntegerIdList,
-        sessionId: optionalPositiveIntegerIdList,
-        year: optionalPositiveIntegerIdList,
-        classSectionsIds: optionalPositiveIntegerIdList,
-        classSectionsId: optionalPositiveIntegerIdList,
-        term: optionalPositiveIntegerIdList,
-        terms: optionalPositiveIntegerIdList,
-    })
-    .transform((data) => ({
-        courseIds: data.courseIds ?? data.courseId,
-        sessionIds: data.sessionIds ?? data.sessionId,
-        year: data.year,
-        classSectionsIds: data.classSectionsIds ?? data.classSectionsId,
-        term: data.terms ?? data.term,
-    }));
-
-router.get('/affiliatedUniversity', userAuth, optionsController.getAffiliatedUniversityOptions);
+  .object({
+    courseIds: optionalPositiveIntegerIdList,
+    courseId: optionalPositiveIntegerIdList,
+    sessionIds: optionalPositiveIntegerIdList,
+    sessionId: optionalPositiveIntegerIdList,
+    year: optionalPositiveIntegerIdList,
+    classSectionsIds: optionalPositiveIntegerIdList,
+    classSectionsId: optionalPositiveIntegerIdList,
+    term: optionalPositiveIntegerIdList,
+    terms: optionalPositiveIntegerIdList,
+  })
+  .transform((data) => ({
+    courseIds: data.courseIds ?? data.courseId,
+    sessionIds: data.sessionIds ?? data.sessionId,
+    year: data.year,
+    classSectionsIds: data.classSectionsIds ?? data.classSectionsId,
+    term: data.terms ?? data.term,
+  }));
 
 router.get(
-    '/courses',
-    userAuth,
-    validate({ query: coursesQuerySchema }),
-    optionsController.getCourseOptions,
+  "/affiliatedUniversity",
+  userAuth,
+  optionsController.getAffiliatedUniversityOptions,
 );
 
 router.get(
-    '/courseTerms',
-    userAuth,
-    validate({ query: courseTermsQuerySchema }),
-    optionsController.getTermOptions,
+  "/courses",
+  userAuth,
+  validate({ query: coursesQuerySchema }),
+  optionsController.getCourseOptions,
 );
 
 router.get(
-    '/courseProgram',
-    userAuth,
-    validate({ query: courseProgramQuerySchema }),
-    optionsController.getCourseProgramOptions,
+  "/courseTerms",
+  userAuth,
+  validate({ query: courseTermsQuerySchema }),
+  optionsController.getTermOptions,
 );
 
 router.get(
-    '/classSections',
-    userAuth,
-    validate({ query: classSectionsQuerySchema }),
-    optionsController.getClassSectionOptions,
+  "/courseProgram",
+  userAuth,
+  validate({ query: courseProgramQuerySchema }),
+  optionsController.getCourseProgramOptions,
 );
 
 router.get(
-    '/specializations',
-    userAuth,
-    validate({ query: specializationsQuerySchema }),
-    optionsController.getSpecializationOptions,
+  "/classSections",
+  userAuth,
+  validate({ query: classSectionsQuerySchema }),
+  optionsController.getClassSectionOptions,
 );
 
 router.get(
-    '/subjects',
-    userAuth,
-    validate({ query: subjectsQuerySchema }),
-    optionsController.getSubjectOptions,
+  "/specializations",
+  userAuth,
+  validate({ query: specializationsQuerySchema }),
+  optionsController.getSpecializationOptions,
 );
 
 router.get(
-    '/teachers',
-    userAuth,
-    validate({ query: teachersQuerySchema }),
-    optionsController.getTeacherOptions,
+  "/subjects",
+  userAuth,
+  validate({ query: subjectsQuerySchema }),
+  optionsController.getSubjectOptions,
 );
 
 router.get(
-    '/structures',
-    userAuth,
-    optionsController.getTimeTableStructureOptions,
+  "/my/subjects",
+  userAuth,
+  validate({ query: getMySubjectsQuerySchema }),
+  optionsController.getMySubjectOptions,
 );
 
 router.get(
-    '/feePlans',
-    userAuth,
-    validate({ query: feePlansQuerySchema }),
-    optionsController.getFeePlanOptions,
+  "/teachers",
+  userAuth,
+  validate({ query: teachersQuerySchema }),
+  optionsController.getTeacherOptions,
 );
 
 router.get(
-    '/lectureWindows',
-    userAuth,
-    validate({ query: lectureWindowsQuerySchema }),
-    optionsController.getLectureWindowOptions,
+  "/structures",
+  userAuth,
+  optionsController.getTimeTableStructureOptions,
 );
 
 router.get(
-    '/lessons',
-    userAuth,
-    validate({ query: lessonsQuerySchema }),
-    optionsController.getLessonOptions,
+  "/feePlans",
+  userAuth,
+  validate({ query: feePlansQuerySchema }),
+  optionsController.getFeePlanOptions,
 );
 
 router.get(
-    '/topics',
-    userAuth,
-    validate({ query: topicsQuerySchema }),
-    optionsController.getTopicOptions,
+  "/lectureWindows",
+  userAuth,
+  validate({ query: lectureWindowsQuerySchema }),
+  optionsController.getLectureWindowOptions,
 );
 
 router.get(
-    '/studentFilters',
-    userAuth,
-    validate({ query: studentFilterOptionsQuerySchema }),
-    optionsController.getStudentFilterOptions,
+  "/my/lectureWindows",
+  userAuth,
+  validate({ query: getMyLectureWindowsQuerySchema }),
+  optionsController.getMyLectureWindowOptions,
+);
+
+router.get(
+  "/lessons",
+  userAuth,
+  validate({ query: lessonsQuerySchema }),
+  optionsController.getLessonOptions,
+);
+
+router.get(
+  "/topics",
+  userAuth,
+  validate({ query: topicsQuerySchema }),
+  optionsController.getTopicOptions,
+);
+
+router.get(
+  "/studentFilters",
+  userAuth,
+  validate({ query: studentFilterOptionsQuerySchema }),
+  optionsController.getStudentFilterOptions,
 );
 
 export default router;

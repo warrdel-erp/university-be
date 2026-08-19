@@ -1,6 +1,7 @@
 import * as AttendanceCreation from "../services/attendanceServices.js";
 import * as fileHandler from '../utility/fileHandler.js';
 import { ErrorResponse, SuccessResponse } from "../utility/response.js";
+import * as model from "../models/index.js";
 
 export async function addAttendance(req, res) {
   const createdBy = req.user.userId;
@@ -84,6 +85,93 @@ export async function updateAttendance(req, res) {
     res.status(500).json({ error: error.message });
   }
 };
+
+export async function addMyAttendance(req, res) {
+  const createdBy = req.user.userId;
+  const updatedBy = req.user.userId;
+  try {
+    const { timeTableCellDateWiseId } = req.body;
+    if (!timeTableCellDateWiseId) {
+      return res.status(400).json({ error: "timeTableCellDateWiseId is required" });
+    }
+
+    const ids = Array.isArray(timeTableCellDateWiseId)
+      ? timeTableCellDateWiseId.map(Number)
+      : [Number(timeTableCellDateWiseId)];
+
+    const assignments = await model.timeTableCellTeachersDateWiseModel.findAll({
+      where: {
+        timeTableCellDateWiseId: ids,
+        userId: createdBy,
+      },
+    });
+
+    if (assignments.length !== ids.length) {
+      return res.status(403).json({
+        error: "Forbidden: You are not assigned to one or more of these scheduled periods.",
+      });
+    }
+
+    const result = await AttendanceCreation.addAttendance(req.body, createdBy, updatedBy);
+    const response = { message: "Attendance Add Successfully" };
+    if (result.skippedPeriods?.length) {
+      response.markedPeriods = result.markedPeriods;
+      response.skippedPeriods = result.skippedPeriods;
+    }
+    res.status(201).json(response);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+export async function updateMyAttendance(req, res) {
+  try {
+    const attendanceRecords = req.body;
+    if (!Array.isArray(attendanceRecords) || attendanceRecords.length === 0) {
+      return res.status(400).json({ error: "Request body must be a non-empty array of records" });
+    }
+
+    const updatedBy = req.user.userId;
+    const attendanceIds = attendanceRecords.map(r => Number(r.attendanceId)).filter(Boolean);
+
+    const attendances = await model.attendanceModel.findAll({
+      where: { attendanceId: attendanceIds },
+      attributes: ["attendanceId", "timeTableCellDateWiseId"],
+    });
+
+    const cellIds = attendances.map(a => a.timeTableCellDateWiseId).filter(Boolean);
+
+    const assignments = await model.timeTableCellTeachersDateWiseModel.findAll({
+      where: {
+        timeTableCellDateWiseId: cellIds,
+        userId: updatedBy,
+      },
+    });
+
+    const assignedCellIds = new Set(assignments.map(a => a.timeTableCellDateWiseId));
+
+    for (const att of attendances) {
+      if (!assignedCellIds.has(att.timeTableCellDateWiseId)) {
+        return res.status(403).json({
+          error: "Forbidden: One or more attendance records do not belong to your assigned periods.",
+        });
+      }
+    }
+
+    const updatePromises = attendanceRecords.map(async (record) => {
+      const { attendanceId } = record;
+      if (!attendanceId) {
+        throw new Error('Attendance Id is required for each record');
+      }
+      return AttendanceCreation.updateAttendance(attendanceId, record, updatedBy);
+    });
+
+    await Promise.all(updatePromises);
+    res.status(200).json({ message: "Attendance records updated successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
 
 export const importAttendance = async (req, res) => {
   try {

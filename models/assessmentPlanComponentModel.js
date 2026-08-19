@@ -54,6 +54,12 @@ const assessmentPlanComponentModel = sequelize.define(
             defaultValue: 1,
             field: 'max_assessments'
         },
+        duration: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'duration',
+            comment: 'Duration in minutes'
+        },
         universityId: {
             type: DataTypes.INTEGER,
             allowNull: false,

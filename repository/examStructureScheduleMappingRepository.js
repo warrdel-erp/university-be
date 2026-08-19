@@ -4,6 +4,7 @@ import { Op } from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { classSectionTermsInclude } from "../utility/classSectionIncludes.js";
 
+
 async function assertScopedExamSchedule(examScheduleId, options = {}) {
   const { transaction, attributes = ['examScheduleId'] } = options;
   return scoped(model.examScheduleModel).findOne({
@@ -13,11 +14,56 @@ async function assertScopedExamSchedule(examScheduleId, options = {}) {
   });
 }
 
-export async function addExamStructureSchedule(examDetailSchedule) {
+export async function addExamStructureSchedule(examDetailSchedule, options = {}) {
   try {
-    return await scoped(model.examStructureScheduleMappingModel).create(examDetailSchedule);
+    const slot = await scoped(model.examinationSessionSlotModel).findOne({
+      where: {
+        examinationSessionSlotId: examDetailSchedule.examinationSessionSlotId,
+      },
+      attributes: ["startTime", "durationMinutes"],
+      raw: true,
+      transaction: options.transaction,
+    });
+
+    console.log(slot.startTime);
+    console.log(slot.durationMinutes);
+
+    if (!slot) {
+      throw new Error("Invalid examination session slot.");
+    }
+
+    examDetailSchedule.startingDate = slot.startTime;
+    // examDetailSchedule.durationMinutes = slot.durationMinutes;
+
+    await scoped(model.examStructureScheduleMappingModel).create(
+      examDetailSchedule,
+      {
+        transaction: options.transaction,
+      }
+    );
+
+   await scoped(model.examScheduleModel).create(
+  {
+    subjectId: examDetailSchedule.subjectId,
+    term: examDetailSchedule.term,
+    examinationSessionId: examDetailSchedule.examinationSessionId,
+    academicYearId: examDetailSchedule.academicYearId,
+    sessionId: examDetailSchedule.sessionId,
+    examDate: examDetailSchedule.examDate,
+    examTime: slot.startTime,
+    type: examDetailSchedule.type,
+    duration: slot.durationMinutes,
+    examinationSessionSlotId: examDetailSchedule.examinationSessionSlotId,
+    createdBy: examDetailSchedule.createdBy,
+    updatedBy: examDetailSchedule.updatedBy,
+  },
+  {
+    transaction: options.transaction,
+  }
+
+    );
   } catch (error) {
-    console.error("Error adding exam Structure Schedule:", error);
+    console.error("Error adding exam structure schedule:", error);
     throw error;
   }
 }
@@ -68,13 +114,7 @@ export async function getExamStructureSchedule(examSetupTypeId) {
         model: model.examSetupTypeTermModel,
         as: "examSetupTypeTerms",
         attributes: { exclude: ["createdAt", "updatedAt"] },
-        include: [
-          {
-            model: model.examScheduleModel,
-            as: "examSchedules",
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "answerSheetS3FileId"] },
-          },
-        ],
+
       },
     ],
   });
@@ -151,8 +191,8 @@ export async function findConflictingExamForStudentCohort({
     attributes: ["examScheduleId", "examDate", "examTime", "duration", "subjectId"],
     where: {
       examDate,
-      sessionId,
-      academicYearId,
+      ...(sessionId && { sessionId }),
+      ...(academicYearId && { academicYearId }),
       ...(term != null && { term }),
       ...(excludeExamScheduleId && {
         examScheduleId: { [Op.ne]: excludeExamScheduleId },
@@ -164,17 +204,11 @@ export async function findConflictingExamForStudentCohort({
     },
     include: [
       {
-        model: model.examSetupTypeTermModel,
-        as: "examSetupTypeTerm",
-        attributes: ["courseId", "term"],
-        where: { courseId, term },
-        required: true,
-      },
-      {
         model: model.subjectModel,
         as: "subjectSchedule",
         attributes: ["subjectName"],
-        required: false,
+        where: { courseId },
+        required: true,
       },
     ],
     raw: true,
@@ -182,9 +216,42 @@ export async function findConflictingExamForStudentCohort({
   });
 }
 
+
 export async function addExamSchedule(examDetail) {
   try {
-    return await scoped(model.examScheduleModel).create(examDetail);
+    if (!examDetail.examinationSessionId && !examDetail.examSetupTypeId) {
+      throw new Error("examSetupTypeId or examinationSessionSlotId is required.");
+    }
+
+    const sessionWhere = examDetail.examinationSessionId
+      ? { examinationSessionId: Number(examDetail.examinationSessionId) }
+      : {
+          assessmentTypeId: Number(examDetail.examSetupTypeId),
+          examStartDate: {
+            [Op.lte]: examDetail.examDate,
+          },
+          examEndDate: {
+            [Op.gte]: examDetail.examDate,
+          },
+        };
+
+    const examinationSession = await scoped(model.examinationSessionModel).findOne({
+      where: sessionWhere,
+      attributes: [
+        "examinationSessionId",
+        "examStartDate",
+        "examEndDate",
+      ],
+    });
+
+    if (!examinationSession) {
+      throw new Error("No examination session found for the selected exam date.");
+    }
+
+    return await scoped(model.examScheduleModel).create({
+      ...examDetail,
+      examinationSessionId: examinationSession.examinationSessionId,
+    });
   } catch (error) {
     console.error("Error adding exam schedule:", error.message);
     throw error;
@@ -285,16 +352,7 @@ export async function getExamScheduleById(examScheduleId) {
           model: model.subjectModel,
           as: "subjectSchedule",
         },
-        {
-          model: model.examSetupTypeTermModel,
-          as: "examSetupTypeTerm",
-          include: [
-            {
-              model: model.examSetupTypeModel,
-              as: "examSetupType",
-            },
-          ],
-        },
+
         {
           model: model.acedmicYearModel,
           as: "acedmicYearSchedule",
@@ -337,23 +395,16 @@ export async function findSubjectsWithSchedules(courseId, academicYearId, term, 
           "examScheduleId",
           "subjectId",
           "term",
-          "examSetupTypeTermId",
           "academicYearId",
           "sessionId",
           "examDate",
           "examTime",
           "type",
           "duration",
+          "examinationSessionSlotId",
+          "examinationSessionId",
           "createdBy",
           "updatedBy",
-        ],
-        include: [
-          {
-            model: model.examSetupTypeTermModel,
-            where: { examSetupTypeTermId },
-            as: "examSetupTypeTerm",
-            attributes: { exclude: ["createdAt", "updatedAt"] },
-          },
         ],
       },
     ],

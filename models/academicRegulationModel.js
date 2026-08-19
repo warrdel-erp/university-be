@@ -76,26 +76,6 @@ const academicRegulationModel = sequelize.define(
                 key: 'grading_id'
             }
         },
-        // Direct linked Course ID (1-to-1 connection)
-        courseId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'course_id',
-            references: {
-                model: courseModel,
-                key: 'course_id'
-            }
-        },
-        // Direct linked Session ID (1-to-1 connection)
-        sessionId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'session_id',
-            references: {
-                model: sessionModel,
-                key: 'session_id'
-            }
-        },
         // Linked Academic Year ID in which this regulation was created/applicable
         academicYearId: {
             type: DataTypes.INTEGER,

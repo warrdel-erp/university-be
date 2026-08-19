@@ -2044,6 +2044,7 @@ export const PERMISSIONS = {
     },
     ASSET_ISSUE_RETURN_SIDEBAR: {
         value: "ASSET_ISSUE_RETURN_SIDEBAR",
+        parentPermission: 'ASSET_ISSUE_RETURN',
     },
     ASSET_ISSUE_RETURN_ADD: {
         value: "ASSET_ISSUE_RETURN_ADD",
@@ -2056,7 +2057,29 @@ export const PERMISSIONS = {
     ASSET_ISSUE_RETURN_DELETE: {
         value: "ASSET_ISSUE_RETURN_DELETE",
         parentPermission: 'ASSET_ISSUE_RETURN',
+    },
+    HALL_TICKETS: {
+        value: "HALL_TICKETS",
+    },
+    HALL_TICKETS_SIDEBAR: {
+        value: "HALL_TICKETS_SIDEBAR",
+        parentPermission: 'HALL_TICKETS',
+    },
+    HALL_TICKETS_ADD: {
+        value: "HALL_TICKETS_ADD",
+        parentPermission: 'HALL_TICKETS',
+    },
+    HALL_TICKETS_EDIT: {
+        value: "HALL_TICKETS_EDIT",
+        parentPermission: 'HALL_TICKETS',
+    },
+    HALL_TICKETS_DELETE: {
+        value: "HALL_TICKETS_DELETE",
+        parentPermission: 'HALL_TICKETS',
+    },
+    HALL_TICKET_OVERRIDE_GENERATE: {
+        value: "HALL_TICKET_OVERRIDE_GENERATE",
+        parentPermission: 'HALL_TICKETS',
     }
-
 
 };

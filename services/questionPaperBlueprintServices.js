@@ -21,9 +21,20 @@ export async function addBlueprint(blueprintData, createdBy, updatedBy) {
 }
 
 export async function getBlueprints(filters) {
-    return await questionPaperBlueprintRepository.getBlueprints(filters);
+    const results = await questionPaperBlueprintRepository.getBlueprints(filters);
+    return results.map(row => {
+        const plainRow = typeof row.toJSON === 'function' ? row.toJSON() : row;
+        if (plainRow.blueprint && typeof plainRow.blueprint === 'string') {
+            try {
+                plainRow.blueprint = JSON.parse(plainRow.blueprint);
+            } catch (e) {
+                // If it fails to parse, leave as is or set to empty array
+            }
+        }
+        return plainRow;
+    });
 }
 
-export async function deleteBlueprint(id) {
-    return await questionPaperBlueprintRepository.deleteBlueprint(id);
+export async function deleteBlueprint(id, ownerId) {
+    return await questionPaperBlueprintRepository.deleteBlueprint(id, ownerId);
 }
