@@ -48,6 +48,7 @@ export async function getBundleList(filters, pagination) {
           : null,
         invigilators,
         exams: [],
+        bundle: null,
       });
     }
 
@@ -57,19 +58,41 @@ export async function getBundleList(filters, pagination) {
         ? plain.classRoom.materialBundles[0]
         : null;
 
-    const quantities = {
-      ANSWER_SHEET: 0,
-      EXTRA_SHEET: 0,
-      GRAPH_SHEET: 0,
-      ROUGH_SHEET: 0,
-      ATTENDANCE_SHEET: 0,
-      ROOM_KIT: 0,
-    };
+    if (bundle && !roomMap.get(key).bundle) {
+      const quantities = {
+        ANSWER_SHEET: 0,
+        EXTRA_SHEET: 0,
+        GRAPH_SHEET: 0,
+        ROUGH_SHEET: 0,
+        ATTENDANCE_SHEET: 0,
+        ROOM_KIT: 0,
+      };
 
-    if (bundle && bundle.items) {
-      bundle.items.forEach((item) => {
-        quantities[item.itemType] = item.plannedQuantity || 0;
-      });
+      if (bundle.items) {
+        bundle.items.forEach((item) => {
+          quantities[item.itemType] = item.plannedQuantity || 0;
+        });
+      }
+
+      roomMap.get(key).bundle = {
+        examRoomMaterialBundleId: bundle.examRoomMaterialBundleId,
+        bundleCode: bundle.bundleCode,
+        status: bundle.status,
+        materialQuantities: quantities,
+        issuedTo: bundle.recipientUser
+          ? {
+              userId: bundle.recipientUser.userId,
+              userName: bundle.recipientUser.userName,
+            }
+          : null,
+        issuedBy: bundle.issuerUser
+          ? {
+              userId: bundle.issuerUser.userId,
+              userName: bundle.issuerUser.userName,
+            }
+          : null,
+        issuedAt: bundle.issuedAt,
+      };
     }
 
     const studentCount = plain.seats?.length || 0;
@@ -86,27 +109,6 @@ export async function getBundleList(filters, pagination) {
       capacity: plain.capacity,
       studentCount,
       isRoomAllocationDone: studentCount > 0,
-      bundle: bundle
-        ? {
-            examRoomMaterialBundleId: bundle.examRoomMaterialBundleId,
-            bundleCode: bundle.bundleCode,
-            status: bundle.status,
-            materialQuantities: quantities,
-            issuedTo: bundle.recipientUser
-              ? {
-                  userId: bundle.recipientUser.userId,
-                  userName: bundle.recipientUser.userName,
-                }
-              : null,
-            issuedBy: bundle.issuerUser
-              ? {
-                  userId: bundle.issuerUser.userId,
-                  userName: bundle.issuerUser.userName,
-                }
-              : null,
-            issuedAt: bundle.issuedAt,
-          }
-        : null,
     });
   }
 
