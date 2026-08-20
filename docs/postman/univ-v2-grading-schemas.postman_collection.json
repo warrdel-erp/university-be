@@ -555,7 +555,7 @@
           }
         },
         {
-          "name": "12.3 Get Room List nested",
+          "name": "12.3 Get Room List Room-Wise",
           "request": {
             "method": "GET",
             "header": [
@@ -565,20 +565,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examInvigilatorAssignment/rooms?examinationSessionId=1&courseId=1&term=1&examDate=2026-12-01&page=1&limit=10",
+              "raw": "{{baseurl}}/examInvigilatorAssignment/rooms?examinationSessionId=1&examDate=2026-12-01&page=1&limit=10",
               "host": ["{{baseurl}}"],
               "path": ["examInvigilatorAssignment", "rooms"],
               "query": [
                 {
                   "key": "examinationSessionId",
-                  "value": "1"
-                },
-                {
-                  "key": "courseId",
-                  "value": "1"
-                },
-                {
-                  "key": "term",
                   "value": "1"
                 },
                 {
@@ -811,7 +803,7 @@
       "name": "13. Exam Attendance (/examAttendance)",
       "item": [
         {
-          "name": "13.1 Get Exam Attendance (Paginated)",
+          "name": "13.1 Get Exam Attendance Room-Centric (Paginated)",
           "request": {
             "method": "GET",
             "header": [
