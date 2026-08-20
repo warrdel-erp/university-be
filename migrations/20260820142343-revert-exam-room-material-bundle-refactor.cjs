@@ -57,14 +57,21 @@ module.exports = {
         {
           type: Sequelize.BIGINT,
           allowNull: false,
-          references: {
-            model: "examination_session_slot",
-            key: "examination_session_slot_id",
-          },
-          onUpdate: "CASCADE",
-          onDelete: "CASCADE",
         },
       );
+      
+      // Add FK constraint with explicit short name to stay within MySQL 64-char limit
+      await queryInterface.addConstraint("exam_room_material_bundle", {
+        fields: ["examination_session_slot_id"],
+        type: "foreign key",
+        name: "fk_ermb_session_slot_id",
+        references: {
+          table: "examination_session_slot",
+          field: "examination_session_slot_id",
+        },
+        onUpdate: "CASCADE",
+        onDelete: "CASCADE",
+      });
     }
 
     if (!tableDefinition.class_room_section_id) {
@@ -74,14 +81,21 @@ module.exports = {
         {
           type: Sequelize.INTEGER,
           allowNull: false,
-          references: {
-            model: "class_room_section",
-            key: "class_room_section_id",
-          },
-          onUpdate: "CASCADE",
-          onDelete: "CASCADE",
         },
       );
+
+      // Add FK constraint with explicit short name
+      await queryInterface.addConstraint("exam_room_material_bundle", {
+        fields: ["class_room_section_id"],
+        type: "foreign key",
+        name: "fk_ermb_class_room_section_id",
+        references: {
+          table: "class_room_section",
+          field: "class_room_section_id",
+        },
+        onUpdate: "CASCADE",
+        onDelete: "CASCADE",
+      });
     }
 
     // 5. Add back unique index
@@ -107,6 +121,20 @@ module.exports = {
       await queryInterface.removeIndex(
         "exam_room_material_bundle",
         "exam_room_material_bundle_unique_idx",
+      );
+    } catch (e) {}
+
+    try {
+      await queryInterface.removeConstraint(
+        "exam_room_material_bundle",
+        "fk_ermb_class_room_section_id",
+      );
+    } catch (e) {}
+
+    try {
+      await queryInterface.removeConstraint(
+        "exam_room_material_bundle",
+        "fk_ermb_session_slot_id",
       );
     } catch (e) {}
 
