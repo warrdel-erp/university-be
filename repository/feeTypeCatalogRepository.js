@@ -18,13 +18,47 @@ export async function createFeeTypeCatalog(data, options = {}) {  return scoped(
 }
 
 export async function findFeeTypeCatalogsByInstitute(options = {}) {
-  const { transaction } = options;
-  return scoped(model.feeTypeCatalogModel).findAll({
-    attributes: { exclude: ["createdAt", "updatedAt"] },
-    include: catalogIncludeCategory(),
-    order: [["feeTypeCatalogId", "ASC"]],
+  const {
     transaction,
-  });
+    page = 1,
+    limit = 10,
+  } = options;
+
+  const parsedPage = Math.max(Number(page) || 1, 1);
+  const parsedLimit = Math.min(
+    Math.max(Number(limit) || 10, 1),
+    100
+  );
+
+  const offset = (parsedPage - 1) * parsedLimit;
+
+  const { rows, count } =
+    await scoped(model.feeTypeCatalogModel).findAndCountAll({
+      attributes: {
+        exclude: ["createdAt", "updatedAt"],
+      },
+
+      include: catalogIncludeCategory(),
+
+      order: [["feeTypeCatalogId", "ASC"]],
+
+      limit: parsedLimit,
+      offset,
+
+      distinct: true,
+
+      transaction,
+    });
+
+  return {
+    data: rows,
+    pagination: {
+      page: parsedPage,
+      limit: parsedLimit,
+      total: count,
+      totalPages: Math.ceil(count / parsedLimit),
+    },
+  };
 }
 
 export async function findFeeTypeCatalogById(feeTypeCatalogId, options = {}) {

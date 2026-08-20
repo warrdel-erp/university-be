@@ -12,8 +12,9 @@ export async function addFeeTypeCatalog(req, res) {
 
 export async function getAllFeeTypeCatalog(req, res) {
   try {
-    const rows = await feeTypeCatalogService.listFeeTypeCatalogs();
-    return SuccessResponse(res, 200, "Fee type catalog list fetched successfully", rows);
+    const { page = 1, limit = 10 } = req.query;
+    const rows = await feeTypeCatalogService.listFeeTypeCatalogs({page,limit});
+    return SuccessResponse(res, 200, "Fee type catalog list fetched successfully", rows.data,rows.pagination);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }

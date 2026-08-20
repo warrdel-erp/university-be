@@ -35,9 +35,9 @@ export async function addFeeTypeCatalog(body) {
   return row;
 }
 
-export async function listFeeTypeCatalogs() {
+export async function listFeeTypeCatalogs({page,limit}) {
   return sequelize.transaction(async (transaction) =>
-    feeTypeCatalogRepo.findFeeTypeCatalogsByInstitute({ transaction })
+    feeTypeCatalogRepo.findFeeTypeCatalogsByInstitute({ transaction, page, limit })
   );
 }
 
