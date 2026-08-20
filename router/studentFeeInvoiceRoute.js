@@ -75,9 +75,30 @@ const listAllInvoicesQuerySchema = z
   .object({
     status: z.enum(["all", "pending", "completed"]).optional(),
     paymentTab: z.enum(["all", "pending", "completed"]).optional(),
+    search: z
+      .string()
+      .trim()
+      .optional()
+      .transform((value) => (value === "" ? undefined : value)),
+    page: z.coerce
+      .number()
+      .int("page must be an integer")
+      .min(1, "page must be at least 1")
+      .optional()
+      .default(1),
+    limit: z.coerce
+      .number()
+      .int("limit must be an integer")
+      .min(1, "limit must be at least 1")
+      .max(100, "limit must be at most 100")
+      .optional()
+      .default(10),
   })
   .transform((d) => ({
     status: d.status ?? d.paymentTab ?? "all",
+    search: d.search,
+    page: d.page,
+    limit: d.limit,
   }));
 
 router.post(

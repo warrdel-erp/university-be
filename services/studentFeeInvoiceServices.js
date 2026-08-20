@@ -389,18 +389,27 @@ function formatFeesInvoiceTableRow(row) {
   };
 }
 
-export async function listAllStudentFeeInvoices(status = "all") {
+export async function listAllStudentFeeInvoices(status = "all", { page, limit, search } = {}) {
+  const result = await repo.findAllStudentFeeInvoicesByInstitute({
+    page,
+    limit,
+    search,
+    paymentStatuses:
+      status === "pending"
+        ? ["unpaid", "partial"]
+        : status === "completed"
+          ? ["paid"]
+          : null,
+  });
+
   return {
     status,
-    invoices: (
-      await repo.findAllStudentFeeInvoicesByInstitute({
-        paymentStatuses:
-          status === "pending"
-            ? ["unpaid", "partial"]
-            : status === "completed"
-              ? ["paid"]
-              : null,
-      })
-    ).map((row) => formatFeesInvoiceTableRow(row)),
+    invoices: (result.rows || []).map((row) => formatFeesInvoiceTableRow(row)),
+    pagination: {
+      page: result.page,
+      limit: result.limit,
+      total: result.total,
+      totalPages: Math.ceil((result.total || 0) / (result.limit || 1)),
+    },
   };
 }

@@ -220,14 +220,104 @@ export async function findStudentFeeInvoicesByStudentId(studentId, options = {})
   });
 }
 
-export async function findAllStudentFeeInvoicesByInstitute(options = {}) {
-  const where = { status: "generated" };
+function resolvePagination(pagination = {}) {
+  const page = Math.max(1, Number(pagination.page) || 1);
+  const limit = Math.max(1, Math.min(100, Number(pagination.limit) || 20));
+  const offset = (page - 1) * limit;
+  return { page, limit, offset };
+}
 
-  if (options.paymentStatuses?.length) {
-    where.paymentStatus = { [Op.in]: options.paymentStatuses };
+async function findStudentIdsMatchingInvoiceSearch(search, options = {}) {
+  const term = search?.trim();
+  if (!term) return [];
+  const pattern = { [Op.like]: `%${term}%` };
+
+  const orConditions = [
+    { firstName: pattern },
+    { middleName: pattern },
+    { lastName: pattern },
+    { scholarNumber: pattern },
+    { enrollNumber: pattern },
+    { email: pattern },
+    { mobileNumber: pattern },
+  ];
+
+  const tokens = term.split(/\s+/).filter(Boolean);
+  if (tokens.length > 1) {
+    orConditions.push({
+      [Op.and]: tokens.map((token) => ({
+        [Op.or]: [
+          { firstName: { [Op.like]: `%${token}%` } },
+          { middleName: { [Op.like]: `%${token}%` } },
+          { lastName: { [Op.like]: `%${token}%` } },
+          { scholarNumber: { [Op.like]: `%${token}%` } },
+          { enrollNumber: { [Op.like]: `%${token}%` } },
+        ],
+      })),
+    });
   }
 
-  return scoped(model.studentFeeInvoiceModel).findAll({
+  const rows = await scoped(model.studentModel).findAll({
+    where: { [Op.or]: orConditions },
+    attributes: ["studentId"],
+    raw: true,
+    transaction: options.transaction,
+  });
+
+  return rows.map((r) => r.studentId);
+}
+
+function buildInvoiceWhere({ paymentStatuses, search, matchingStudentIds = [] }) {
+  const andParts = [{ status: "generated" }];
+
+  if (paymentStatuses?.length) {
+    andParts.push({ paymentStatus: { [Op.in]: paymentStatuses } });
+  }
+
+  const term = search?.trim();
+  if (term) {
+    const orConditions = [];
+
+    if (matchingStudentIds.length) {
+      orConditions.push({
+        studentId: { [Op.in]: matchingStudentIds },
+      });
+    }
+
+    const numericId = Number(term);
+    if (!Number.isNaN(numericId) && Number.isInteger(numericId)) {
+      orConditions.push(
+        { studentFeeInvoiceId: numericId },
+        { studentId: numericId }
+      );
+    }
+
+    if (orConditions.length === 0) {
+      orConditions.push({ studentFeeInvoiceId: -1 });
+    }
+
+    andParts.push({ [Op.or]: orConditions });
+  }
+
+  return andParts.length === 1 ? andParts[0] : { [Op.and]: andParts };
+}
+
+export async function findAllStudentFeeInvoicesByInstitute({
+  paymentStatuses,
+  search,
+  page,
+  limit,
+  transaction,
+} = {}) {
+  const { page: resolvedPage, limit: resolvedLimit, offset } = resolvePagination({ page, limit });
+
+  const matchingStudentIds = search
+    ? await findStudentIdsMatchingInvoiceSearch(search, { transaction })
+    : [];
+
+  const where = buildInvoiceWhere({ paymentStatuses, search, matchingStudentIds });
+
+  const { count, rows } = await scoped(model.studentFeeInvoiceModel).findAndCountAll({
     where,
     attributes: [
       "studentFeeInvoiceId",
@@ -251,6 +341,16 @@ export async function findAllStudentFeeInvoicesByInstitute(options = {}) {
       feePlanItemInclude(),
     ],
     order: [["studentFeeInvoiceId", "DESC"]],
-    transaction: options.transaction,
+    limit: resolvedLimit,
+    offset,
+    distinct: true,
+    transaction,
   });
+
+  return {
+    rows,
+    total: count,
+    page: resolvedPage,
+    limit: resolvedLimit,
+  };
 }
