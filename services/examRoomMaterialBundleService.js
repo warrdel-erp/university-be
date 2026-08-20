@@ -116,44 +116,55 @@ export async function getBundleList(filters, pagination) {
   };
 }
 
-export async function getBundleByRoomDetails(classRoomSectionId, examDate, examinationSessionSlotId) {
+export async function getBundleByRoomDetails(
+  classRoomSectionId,
+  examDate,
+  examinationSessionSlotId,
+) {
   // 1. Find all room capacity records sharing this room, date, and slot
   const sharingCapacities = await model.examScheduleRoomCapacityModel.findAll({
-     where: { classRoomSectionId },
-     include: [
-       {
-         model: model.examScheduleModel,
-         as: "examSchedule",
-         where: { examDate, examinationSessionSlotId },
-         required: true,
-         include: [
-           {
-             model: model.subjectModel,
-             as: "subjectSchedule",
-             attributes: ["subjectId", "subjectName", "subjectCode", "courseId"]
-           },
-           {
-             model: model.examinationSessionSlotModel,
-             as: "examinationSessionSlot",
-             attributes: ["examinationSessionSlotId", "slotNumber", "startTime", "endTime"]
-           }
-         ]
-       },
-       {
-         model: model.classRoomModel,
-         as: "classRoom",
-         attributes: ["classRoomSectionId", "roomNumber"]
-       },
-       {
-         model: model.studentExamSeatModel,
-         as: "seats",
-         attributes: ["studentId"]
-       }
-     ]
+    where: { classRoomSectionId },
+    include: [
+      {
+        model: model.examScheduleModel,
+        as: "examSchedule",
+        where: { examDate, examinationSessionSlotId },
+        required: true,
+        include: [
+          {
+            model: model.subjectModel,
+            as: "subjectSchedule",
+            attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
+          },
+          {
+            model: model.examinationSessionSlotModel,
+            as: "examinationSessionSlot",
+            attributes: [
+              "examinationSessionSlotId",
+              "slotNumber",
+              "startTime",
+              "endTime",
+            ],
+          },
+        ],
+      },
+      {
+        model: model.classRoomModel,
+        as: "classRoom",
+        attributes: ["classRoomSectionId", "roomNumber"],
+      },
+      {
+        model: model.studentExamSeatModel,
+        as: "seats",
+        attributes: ["studentId"],
+      },
+    ],
   });
 
   if (sharingCapacities.length === 0) {
-    const error = new Error("No exam schedule found for this room, date, and slot");
+    const error = new Error(
+      "No exam schedule found for this room, date, and slot",
+    );
     error.statusCode = 404;
     throw error;
   }
@@ -161,35 +172,41 @@ export async function getBundleByRoomDetails(classRoomSectionId, examDate, exami
   const firstRc = sharingCapacities[0].get({ plain: true });
 
   let totalStudentCount = 0;
-  const exams = sharingCapacities.map(rc => {
-     const plainRc = rc.get({ plain: true });
-     const count = plainRc.seats?.length || 0;
-     totalStudentCount += count;
-     return {
-        examScheduleRoomCapacityId: plainRc.examScheduleRoomCapacityId,
-        examScheduleId: plainRc.examScheduleId,
-        subjectId: plainRc.examSchedule?.subjectSchedule?.subjectId,
-        subjectName: plainRc.examSchedule?.subjectSchedule?.subjectName,
-        subjectCode: plainRc.examSchedule?.subjectSchedule?.subjectCode,
-        courseId: plainRc.examSchedule?.subjectSchedule?.courseId,
-        sessionId: plainRc.examSchedule?.sessionId,
-        term: plainRc.examSchedule?.term,
-        capacity: plainRc.capacity,
-        studentCount: count,
-        isRoomAllocationDone: count > 0
-     };
+  const exams = sharingCapacities.map((rc) => {
+    const plainRc = rc.get({ plain: true });
+    const count = plainRc.seats?.length || 0;
+    totalStudentCount += count;
+    return {
+      examScheduleRoomCapacityId: plainRc.examScheduleRoomCapacityId,
+      examScheduleId: plainRc.examScheduleId,
+      subjectId: plainRc.examSchedule?.subjectSchedule?.subjectId,
+      subjectName: plainRc.examSchedule?.subjectSchedule?.subjectName,
+      subjectCode: plainRc.examSchedule?.subjectSchedule?.subjectCode,
+      courseId: plainRc.examSchedule?.subjectSchedule?.courseId,
+      sessionId: plainRc.examSchedule?.sessionId,
+      term: plainRc.examSchedule?.term,
+      capacity: plainRc.capacity,
+      studentCount: count,
+      isRoomAllocationDone: count > 0,
+    };
   });
 
   // 2. Find if bundle exists
-  const bundle = await repo.findBundleByMapping(examDate, examinationSessionSlotId, classRoomSectionId);
+  const bundle = await repo.findBundleByMapping(
+    examDate,
+    examinationSessionSlotId,
+    classRoomSectionId,
+  );
   let bundleDetails = null;
 
   if (bundle) {
-    const fullBundle = await repo.getBundleById(bundle.examRoomMaterialBundleId);
+    const fullBundle = await repo.getBundleById(
+      bundle.examRoomMaterialBundleId,
+    );
     if (fullBundle) {
       const plainBundle = fullBundle.get({ plain: true });
       if (plainBundle.items) {
-        plainBundle.items.forEach(item => {
+        plainBundle.items.forEach((item) => {
           const planned = item.plannedQuantity || 0;
           const issued = item.issuedQuantity || 0;
           item.pendingQuantity = Math.max(planned - issued, 0);
@@ -207,7 +224,7 @@ export async function getBundleByRoomDetails(classRoomSectionId, examDate, exami
         receivedAt: plainBundle.receivedAt,
         verifiedByUser: plainBundle.verifierUser,
         verifiedAt: plainBundle.verifiedAt,
-        remarks: plainBundle.remarks
+        remarks: plainBundle.remarks,
       };
     }
   }
@@ -217,17 +234,21 @@ export async function getBundleByRoomDetails(classRoomSectionId, examDate, exami
     roomNumber: firstRc.classRoom?.roomNumber,
     examDate,
     examinationSessionSlotId,
-    slot: firstRc.examSchedule?.examinationSessionSlot ? {
-      examinationSessionSlotId: firstRc.examSchedule.examinationSessionSlot.examinationSessionSlotId,
-      slotNumber: firstRc.examSchedule.examinationSessionSlot.slotNumber,
-      startTime: firstRc.examSchedule.examinationSessionSlot.startTime,
-      endTime: firstRc.examSchedule.examinationSessionSlot.endTime
-    } : null,
+    slot: firstRc.examSchedule?.examinationSessionSlot
+      ? {
+          examinationSessionSlotId:
+            firstRc.examSchedule.examinationSessionSlot
+              .examinationSessionSlotId,
+          slotNumber: firstRc.examSchedule.examinationSessionSlot.slotNumber,
+          startTime: firstRc.examSchedule.examinationSessionSlot.startTime,
+          endTime: firstRc.examSchedule.examinationSessionSlot.endTime,
+        }
+      : null,
     studentCount: totalStudentCount,
     isRoomAllocationDone: totalStudentCount > 0,
     isBundleCreated: bundleDetails !== null,
     exams,
-    bundle: bundleDetails
+    bundle: bundleDetails,
   };
 }
 
@@ -243,10 +264,10 @@ export async function createBundle(payload, user) {
       classRoomSectionId,
       transaction,
     );
-    
+
     if (existing) {
       // 2. Reuse existing bundle and upsert items under it
-      const itemsData = items.map(item => ({
+      const itemsData = items.map((item) => ({
         examRoomMaterialBundleId: existing.examRoomMaterialBundleId,
         itemType: item.itemType,
         plannedQuantity: item.plannedQuantity || 0,
@@ -257,11 +278,19 @@ export async function createBundle(payload, user) {
         damagedQuantity: 0,
         remarks: item.remarks || null,
         createdBy: user.userId,
-        updatedBy: user.userId
+        updatedBy: user.userId,
       }));
-      
-      await repo.updateBundleItems(existing.examRoomMaterialBundleId, itemsData, transaction);
-      return getBundleByRoomDetails(classRoomSectionId, examDate, examinationSessionSlotId);
+
+      await repo.updateBundleItems(
+        existing.examRoomMaterialBundleId,
+        itemsData,
+        transaction,
+      );
+      return getBundleByRoomDetails(
+        classRoomSectionId,
+        examDate,
+        examinationSessionSlotId,
+      );
     }
 
     // Check if there is an exam schedule capacity for this combo to make sure it's valid
@@ -325,13 +354,17 @@ export async function createBundle(payload, user) {
     }));
 
     await repo.createBundle(bundleData, itemsData, transaction);
-    return getBundleByRoomDetails(classRoomSectionId, examDate, examinationSessionSlotId);
+    return getBundleByRoomDetails(
+      classRoomSectionId,
+      examDate,
+      examinationSessionSlotId,
+    );
   });
 }
 
 export async function updateBundleItems(bundleId, payload, user) {
   const { status, remarks, issuedTo, items } = payload;
-  
+
   return await sequelize.transaction(async (transaction) => {
     const bundle = await repo.getBundleById(bundleId);
     if (!bundle) {
@@ -413,7 +446,11 @@ export async function updateBundleItems(bundleId, payload, user) {
       await repo.updateBundleItems(bundleId, itemsToUpsert, transaction);
     }
 
-    return getBundleByRoomDetails(bundle.classRoomSectionId, bundle.examDate, bundle.examinationSessionSlotId);
+    return getBundleByRoomDetails(
+      bundle.classRoomSectionId,
+      bundle.examDate,
+      bundle.examinationSessionSlotId,
+    );
   });
 }
 
@@ -424,12 +461,12 @@ export async function getBundleSummary(examinationSessionId) {
   const capacities = await repo.getSummaryCapacities(scheduleWhere);
 
   const uniqueRooms = new Map();
-  capacities.forEach(c => {
-    const key = `${c.classRoomSectionId}_${c['examSchedule.examDate']}_${c['examSchedule.examinationSessionSlotId']}`;
+  capacities.forEach((c) => {
+    const key = `${c.classRoomSectionId}_${c["examSchedule.examDate"]}_${c["examSchedule.examinationSessionSlotId"]}`;
     uniqueRooms.set(key, {
       classRoomSectionId: c.classRoomSectionId,
-      examDate: c['examSchedule.examDate'],
-      examinationSessionSlotId: c['examSchedule.examinationSessionSlotId']
+      examDate: c["examSchedule.examDate"],
+      examinationSessionSlotId: c["examSchedule.examinationSessionSlotId"],
     });
   });
 
@@ -440,16 +477,23 @@ export async function getBundleSummary(examinationSessionId) {
 
   if (roomCount > 0) {
     const roomList = Array.from(uniqueRooms.values());
-    const classRoomSectionIds = roomList.map(r => r.classRoomSectionId);
-    const examDates = roomList.map(r => r.examDate);
-    const slotIds = roomList.map(r => r.examinationSessionSlotId);
+    const classRoomSectionIds = roomList.map((r) => r.classRoomSectionId);
+    const examDates = roomList.map((r) => r.examDate);
+    const slotIds = roomList.map((r) => r.examinationSessionSlotId);
 
     // 2. Fetch all bundles using repository
-    const bundles = await repo.getSummaryBundles(classRoomSectionIds, examDates, slotIds);
+    const bundles = await repo.getSummaryBundles(
+      classRoomSectionIds,
+      examDates,
+      slotIds,
+    );
 
     const bundleMap = new Map();
-    bundles.forEach(b => {
-      const key = `${b.classRoomSectionId}_${b.examDate}_${b.examinationSessionSlotId}`;
+    bundles.forEach((b) => {
+      const classRoomSectionId = b.examScheduleRoomCapacity?.classRoomSectionId;
+      const examDate = b.examScheduleRoomCapacity?.examSchedule?.examDate;
+      const examinationSessionSlotId = b.examScheduleRoomCapacity?.examSchedule?.examinationSessionSlotId;
+      const key = `${classRoomSectionId}_${examDate}_${examinationSessionSlotId}`;
       bundleMap.set(key, b.status);
     });
 
@@ -457,7 +501,11 @@ export async function getBundleSummary(examinationSessionId) {
       const status = bundleMap.get(key);
       if (!status || status === "PREPARING" || status === "READY") {
         pendingCount++;
-      } else if (status === "ISSUED" || status === "RECEIVED" || status === "VERIFIED") {
+      } else if (
+        status === "ISSUED" ||
+        status === "RECEIVED" ||
+        status === "VERIFIED"
+      ) {
         issuedCount++;
       } else if (status === "CLOSED") {
         closedCount++;
@@ -469,7 +517,7 @@ export async function getBundleSummary(examinationSessionId) {
     roomCount,
     bundleIssuePending: pendingCount,
     bundleIssued: issuedCount,
-    bundleClosed: closedCount
+    bundleClosed: closedCount,
   };
 }
 
@@ -504,7 +552,10 @@ export async function updateBundleStatus(bundleId, status, user) {
     bundleUpdateFields.updatedBy = user.userId;
     await bundle.update(bundleUpdateFields, { transaction });
 
-    return getBundleByRoomDetails(bundle.classRoomSectionId, bundle.examDate, bundle.examinationSessionSlotId);
+    const classRoomSectionId = bundle.examScheduleRoomCapacity?.classRoomSectionId;
+    const examDate = bundle.examScheduleRoomCapacity?.examSchedule?.examDate;
+    const examinationSessionSlotId = bundle.examScheduleRoomCapacity?.examSchedule?.examinationSessionSlotId;
+    return getBundleByRoomDetails(classRoomSectionId, examDate, examinationSessionSlotId);
   });
 }
 
