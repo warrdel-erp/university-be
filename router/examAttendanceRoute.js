@@ -53,14 +53,12 @@ const updateRoomStatusSchema = z.object({
   ]),
 });
 
-const byRoomSchema = {
-  query: z.object({
-    classRoomSectionId: z.coerce.number().int().positive(),
-    examinationSessionId: z.coerce.number().int().positive().optional(),
-    examDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD").optional(),
-    examinationSessionSlotId: z.coerce.number().int().positive().optional(),
-  }),
-};
+const byRoomSchema = z.object({
+  classRoomSectionId: z.coerce.number().int().positive(),
+  examinationSessionId: z.coerce.number().int().positive().optional(),
+  examDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD").optional(),
+  examinationSessionSlotId: z.coerce.number().int().positive().optional(),
+});
 
 const getSummarySchema = z.object({
   examinationSessionId: z.coerce.number().int().positive(),
