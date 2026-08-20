@@ -417,4 +417,95 @@ export async function updateBundleItems(bundleId, payload, user) {
   });
 }
 
+export async function getBundleSummary(examinationSessionId) {
+  const scheduleWhere = { examinationSessionId };
+
+  // 1. Fetch classroom capacities matching our filters using repository
+  const capacities = await repo.getSummaryCapacities(scheduleWhere);
+
+  const uniqueRooms = new Map();
+  capacities.forEach(c => {
+    const key = `${c.classRoomSectionId}_${c['examSchedule.examDate']}_${c['examSchedule.examinationSessionSlotId']}`;
+    uniqueRooms.set(key, {
+      classRoomSectionId: c.classRoomSectionId,
+      examDate: c['examSchedule.examDate'],
+      examinationSessionSlotId: c['examSchedule.examinationSessionSlotId']
+    });
+  });
+
+  let roomCount = uniqueRooms.size;
+  let pendingCount = 0;
+  let issuedCount = 0;
+  let closedCount = 0;
+
+  if (roomCount > 0) {
+    const roomList = Array.from(uniqueRooms.values());
+    const classRoomSectionIds = roomList.map(r => r.classRoomSectionId);
+    const examDates = roomList.map(r => r.examDate);
+    const slotIds = roomList.map(r => r.examinationSessionSlotId);
+
+    // 2. Fetch all bundles using repository
+    const bundles = await repo.getSummaryBundles(classRoomSectionIds, examDates, slotIds);
+
+    const bundleMap = new Map();
+    bundles.forEach(b => {
+      const key = `${b.classRoomSectionId}_${b.examDate}_${b.examinationSessionSlotId}`;
+      bundleMap.set(key, b.status);
+    });
+
+    uniqueRooms.forEach((room, key) => {
+      const status = bundleMap.get(key);
+      if (!status || status === "PREPARING" || status === "READY") {
+        pendingCount++;
+      } else if (status === "ISSUED" || status === "RECEIVED" || status === "VERIFIED") {
+        issuedCount++;
+      } else if (status === "CLOSED") {
+        closedCount++;
+      }
+    });
+  }
+
+  return {
+    roomCount,
+    bundleIssuePending: pendingCount,
+    bundleIssued: issuedCount,
+    bundleClosed: closedCount
+  };
+}
+
+export async function updateBundleStatus(bundleId, status, user) {
+  return await sequelize.transaction(async (transaction) => {
+    const bundle = await repo.getBundleById(bundleId);
+    if (!bundle) {
+      const error = new Error("Bundle not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (bundle.status === "CLOSED") {
+      const error = new Error("Cannot update status of a closed bundle");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const bundleUpdateFields = { status };
+    if (status === "RECEIVED") {
+      bundleUpdateFields.receivedBy = user.userId;
+      bundleUpdateFields.receivedAt = new Date();
+    } else if (status === "VERIFIED") {
+      bundleUpdateFields.verifiedBy = user.userId;
+      bundleUpdateFields.verifiedAt = new Date();
+    } else {
+      const error = new Error("Invalid status update");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    bundleUpdateFields.updatedBy = user.userId;
+    await bundle.update(bundleUpdateFields, { transaction });
+
+    return getBundleByRoomDetails(bundle.classRoomSectionId, bundle.examDate, bundle.examinationSessionSlotId);
+  });
+}
+
 // end of file

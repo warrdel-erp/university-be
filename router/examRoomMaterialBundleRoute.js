@@ -131,6 +131,13 @@ const singleQuerySchema = {
   }),
 };
 
+const summarySchema = {
+  query: z.object({
+    examinationSessionId: positiveIntegerId,
+  }),
+};
+
+router.get("/summary", userAuth, validate(summarySchema), controller.getBundleSummary);
 router.get("/", userAuth, validate(listSchema), controller.getBundleList);
 
 router.get(
@@ -140,12 +147,27 @@ router.get(
   controller.getBundleByRoomDetails,
 );
 
+const updateStatusSchema = {
+  params: z.object({
+    examRoomMaterialBundleId: positiveIntegerId,
+  }),
+  body: z.object({
+    status: z.enum(["RECEIVED", "VERIFIED"]),
+  }),
+};
+
 router.post("/", userAuth, validate(createSchema), controller.createBundle);
 router.patch(
   "/items/:examRoomMaterialBundleId",
   userAuth,
   validate(updateItemsSchema),
   controller.updateBundleItems,
+);
+router.patch(
+  "/status/:examRoomMaterialBundleId",
+  userAuth,
+  validate(updateStatusSchema),
+  controller.updateBundleStatus,
 );
 
 export default router;

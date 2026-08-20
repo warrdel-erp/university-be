@@ -258,3 +258,30 @@ export async function getStudentCountForRoomCapacity(examScheduleRoomCapacityId)
   return parseInt(result.studentCount, 10) || 0;
 }
 
+export async function getSummaryCapacities(scheduleWhere) {
+  return await scoped(model.examScheduleRoomCapacityModel).findAll({
+    attributes: ["classRoomSectionId"],
+    include: [
+      {
+        model: model.examScheduleModel,
+        as: "examSchedule",
+        attributes: ["examDate", "examinationSessionSlotId"],
+        where: scheduleWhere,
+        required: true,
+      }
+    ],
+    raw: true
+  });
+}
+
+export async function getSummaryBundles(classRoomSectionIds, examDates, slotIds) {
+  return await scoped(model.examRoomMaterialBundleModel).findAll({
+    where: {
+      classRoomSectionId: { [Op.in]: classRoomSectionIds },
+      examDate: { [Op.in]: examDates },
+      examinationSessionSlotId: { [Op.in]: slotIds }
+    },
+    raw: true
+  });
+}
+

@@ -66,3 +66,26 @@ export const updateBundleItems = async (req, res) => {
     return ErrorResponse(res, statusCode, error.message);
   }
 };
+
+export const getBundleSummary = async (req, res) => {
+  try {
+    const examinationSessionId = Number(req.query.examinationSessionId);
+    const result = await service.getBundleSummary(examinationSessionId);
+    return SuccessResponse(res, 200, "Bundle summary fetched successfully", result);
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(res, statusCode, error.message);
+  }
+};
+
+export const updateBundleStatus = async (req, res) => {
+  try {
+    const user = req.user;
+    const { status } = req.body;
+    const result = await service.updateBundleStatus(req.params.examRoomMaterialBundleId, status, user);
+    return SuccessResponse(res, 200, "Bundle status updated successfully", result);
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(res, statusCode, error.message);
+  }
+};
