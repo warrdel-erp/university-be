@@ -1,4 +1,5 @@
 import * as electiveSubject  from  "../services/electiveSubjectService.js";
+import { SuccessResponse } from "../utility/response.js";
 
 export async function addElectiveSubject(req, res) {
     const { electiveSubjectName, academicYearId, electiveSubjectType } = req.body;
@@ -19,8 +20,34 @@ export async function addElectiveSubject(req, res) {
 
 export async function getAllElectiveSubject(req, res) {
     try {
-        const electiveSubjects = await electiveSubject.getElectiveSubjectDetails();
-        res.status(200).json(electiveSubjects);
+        const { page, limit, search } = req.query;
+        const result = await electiveSubject.getElectiveSubjectDetails({ page, limit, search });
+        
+        if (page && limit) {
+            return SuccessResponse(
+                res,
+                200,
+                "Elective subjects fetched successfully",
+                result.rows,
+                {
+                    total: result.total,
+                    limit: parseInt(limit, 10),
+                    page: parseInt(page, 10),
+                }
+            );
+        } else {
+            return SuccessResponse(
+                res,
+                200,
+                "Elective subjects fetched successfully",
+                result.rows,
+                {
+                    total: result.total,
+                    limit: result.total || 10,
+                    page: 1,
+                }
+            );
+        }
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

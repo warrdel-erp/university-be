@@ -20,10 +20,10 @@ export async function getAllJobTypes() {
   }
 }
 
-export async function getSingleJobType(jobSettingId) {
+export async function getSingleJobType(jobSettingId, options = {}) {
   try {
     if (!jobSettingId) throw new Error("settingId is required");
-    return await jobSettingsRepository.getSingleJobType(jobSettingId);
+    return await jobSettingsRepository.getSingleJobType(jobSettingId, options);
   } catch (error) {
     throw new Error(error.message);
   }

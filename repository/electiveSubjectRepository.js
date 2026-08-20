@@ -23,25 +23,65 @@ export async function addBulkElectiveSubject(electiveSubjectData, options = {}) 
     }
 }
 
-export async function getElectiveSubjectDetails() {
+export async function getElectiveSubjectDetails(options = {}) {
     try {
-        return await scoped(model.electiveSubjectModel).findAll({
-            attributes: { exclude: excludeMeta },
-            include: [
-                {
-                    model: model.courseModel,
-                    as: 'course',
-                    attributes: ['courseId', 'courseName'],
-                    required: false,
-                },
-                {
-                    model: model.studentElectiveSubjectModel,
-                    as: 'studentMappings',
-                    attributes: ['studentElectiveSubjectId', 'studentId'],
-                    required: false,
-                },
-            ],
-        });
+        const { page, limit, search } = options;
+        const where = {};
+        if (search && String(search).trim()) {
+            const searchTerm = `%${String(search).trim()}%`;
+            where[Op.or] = [
+                { electiveSubjectName: { [Op.like]: searchTerm } },
+                { electiveSubjectCode: { [Op.like]: searchTerm } },
+            ];
+        }
+
+        const include = [
+            {
+                model: model.courseModel,
+                as: 'course',
+                attributes: ['courseId', 'courseName'],
+                required: false,
+            },
+            {
+                model: model.studentElectiveSubjectModel,
+                as: 'studentMappings',
+                attributes: ['studentElectiveSubjectId', 'studentId'],
+                required: false,
+            },
+        ];
+
+        if (page && limit) {
+            const parsedPage = parseInt(page, 10) || 1;
+            const parsedLimit = parseInt(limit, 10) || 10;
+            const offset = (parsedPage - 1) * parsedLimit;
+
+            const { count, rows } = await scoped(model.electiveSubjectModel).findAndCountAll({
+                where,
+                attributes: { exclude: excludeMeta },
+                include,
+                offset,
+                limit: parsedLimit,
+            });
+
+            return {
+                rows,
+                total: count,
+                page: parsedPage,
+                limit: parsedLimit,
+            };
+        } else {
+            const rows = await scoped(model.electiveSubjectModel).findAll({
+                where,
+                attributes: { exclude: excludeMeta },
+                include,
+            });
+            return {
+                rows,
+                total: rows.length,
+                page: 1,
+                limit: rows.length || 10,
+            };
+        }
     } catch (error) {
         console.error('Error fetching electiveSubject details:', error);
         throw error;

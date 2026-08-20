@@ -16,9 +16,14 @@ export async function addElectiveSubject(electiveSubjectData, createdBy, updated
     return await electiveSubjectServices.addElectiveSubject(electiveSubjectData);
 }
 
-export async function getElectiveSubjectDetails() {
-    const rows = await electiveSubjectServices.getElectiveSubjectDetails();
-    return rows.map(formatElectiveSubject);
+export async function getElectiveSubjectDetails(options = {}) {
+    const result = await electiveSubjectServices.getElectiveSubjectDetails(options);
+    return {
+        rows: result.rows.map(formatElectiveSubject),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+    };
 }
 
 export async function getSingleElectiveSubjectDetails(electiveSubjectId) {

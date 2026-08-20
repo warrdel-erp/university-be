@@ -1,5 +1,5 @@
 import * as model from '../models/index.js';
-import sequelize from "sequelize";
+import sequelize, { Op } from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { getTenantStore } from "../utility/requestContext.js";
 import { getCampusIdByInstituteId } from "./buildingRepository.js";
@@ -506,63 +506,103 @@ export async function addSectionSubjectMapper(data) {
     }
 }
 
-export async function getSectionSubjectMapper(term, academicYearId) {
+export async function getSectionSubjectMapper(term, academicYearId, options = {}) {
     try {
-        return scoped(model.classSubjectMapperModel).findAll({
-            attributes: ['classSubjectMapperId', 'subjectId'],
-            include: [
-                {
-                    model: model.userModel,
-                    as: "userClassSubjectMapper",
-                    attributes: ["universityId", "userId"],
-                    where: buildScope(model.userModel),
-                    required: true,
-                },
-                {
-                    model: model.subjectModel,
-                    as: "subjects",
-                    attributes: ["subjectName", "subjectId", "subjectType", "subjectCode", "term", "courseId"],
-                    where: {
-                        ...buildScope(model.subjectModel),
-                        ...(academicYearId && { academicYearId }),
-                        ...(term && { term: Number(term) }),
+        const { page, limit, search } = options;
+        const subjectWhereClause = {
+            ...buildScope(model.subjectModel),
+            ...(academicYearId && { academicYearId }),
+            ...(term && { term: Number(term) }),
+        };
+
+        if (search && String(search).trim()) {
+            const searchTerm = `%${String(search).trim()}%`;
+            subjectWhereClause[Op.or] = [
+                { subjectName: { [Op.like]: searchTerm } },
+                { subjectCode: { [Op.like]: searchTerm } },
+            ];
+        }
+
+        const includeArray = [
+            {
+                model: model.userModel,
+                as: "userClassSubjectMapper",
+                attributes: ["universityId", "userId"],
+                where: buildScope(model.userModel),
+                required: true,
+            },
+            {
+                model: model.subjectModel,
+                as: "subjects",
+                attributes: ["subjectName", "subjectId", "subjectType", "subjectCode", "term", "courseId"],
+                where: subjectWhereClause,
+                required: true,
+                include: [
+                    {
+                        model: model.courseModel,
+                        as: "courseInfo",
+                        attributes: ["courseName", "capacity", "courseId", "termType", "totalTerms"],
+                        where: buildScope(model.courseModel),
+                        required: false,
+                        include: [
+                            {
+                                model: model.affiliatedIniversityModel,
+                                as: "affiliated",
+                                attributes: ["affiliatedUniversityName"],
+                                include: [
+                                    {
+                                        model: model.instituteModel,
+                                        as: "institut",
+                                        attributes: ["instituteName", "instituteId"],
+                                        where: buildScope(model.instituteModel),
+                                        include: [
+                                            {
+                                                model: model.campusModel,
+                                                as: "campues",
+                                                attributes: ["campusName", "campusId"],
+                                                where: buildScope(model.campusModel),
+                                            },
+                                        ],
+                                    },
+                                ],
+                            },
+                        ],
                     },
-                    required: true,
-                    include: [
-                        {
-                            model: model.courseModel,
-                            as: "courseInfo",
-                            attributes: ["courseName", "capacity", "courseId", "termType", "totalTerms"],
-                            where: buildScope(model.courseModel),
-                            required: false,
-                            include: [
-                                {
-                                    model: model.affiliatedIniversityModel,
-                                    as: "affiliated",
-                                    attributes: ["affiliatedUniversityName"],
-                                    include: [
-                                        {
-                                            model: model.instituteModel,
-                                            as: "institut",
-                                            attributes: ["instituteName", "instituteId"],
-                                            where: buildScope(model.instituteModel),
-                                            include: [
-                                                {
-                                                    model: model.campusModel,
-                                                    as: "campues",
-                                                    attributes: ["campusName", "campusId"],
-                                                    where: buildScope(model.campusModel),
-                                                },
-                                            ],
-                                        },
-                                    ],
-                                },
-                            ],
-                        },
-                    ],
-                },
-            ],
-        });
+                ],
+            },
+        ];
+
+        if (page && limit) {
+            const parsedPage = parseInt(page, 10) || 1;
+            const parsedLimit = parseInt(limit, 10) || 10;
+            const offset = (parsedPage - 1) * parsedLimit;
+
+            const { count, rows } = await scoped(model.classSubjectMapperModel).findAndCountAll({
+                attributes: ['classSubjectMapperId', 'subjectId'],
+                include: includeArray,
+                offset,
+                limit: parsedLimit,
+            });
+
+            return {
+                rows,
+                total: count,
+                page: parsedPage,
+                limit: parsedLimit,
+            };
+        } else {
+            const rows = await scoped(model.classSubjectMapperModel).findAll({
+                attributes: ['classSubjectMapperId', 'subjectId'],
+                include: includeArray,
+            });
+
+            return {
+                rows,
+                total: rows.length,
+                page: 1,
+                limit: rows.length || 10,
+            };
+        }
     } catch (error) {
         console.error("Error fetching class subject mapper details:", error.message);
         throw error;
