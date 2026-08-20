@@ -634,4 +634,3 @@ export async function getInvigilatorAssignmentsForSchedules({ examDates, slotIds
   });
 }
 
-

@@ -2,6 +2,7 @@ import * as examInvigilatorAssignmentRepository from "../repository/examInvigila
 import sequelize from "../database/sequelizeConfig.js";
 import { decimalAdd } from "../utility/decimalMoney.js";
 import { formatDateKey } from "../utility/dateFormat.js";
+import { getRoomCentricMetrics } from "../utility/roomCentricHelper.js";
 
 function createBadRequestError(message) {
   const error = new Error(message);
@@ -132,98 +133,6 @@ export async function deleteAssignment(id, options = {}) {
   });
 }
 
-export async function getListOfRooms(filters, pagination, options = {}) {
-  const { page = 1, limit = 10 } = pagination;
-
-  const { rows: schedules, count: totalSchedules } =
-    await examInvigilatorAssignmentRepository.getSchedulesFiltered(
-      filters,
-      pagination,
-      options,
-    );
-
-  const scheduleIds = schedules.map((s) => s.examScheduleId);
-  if (!scheduleIds.length) {
-    return { rooms: [], total: 0, page: Number(page), limit: Number(limit) };
-  }
-
-  const roomCapacities =
-    await examInvigilatorAssignmentRepository.getRoomCapacitiesForSchedules(
-      scheduleIds,
-      options,
-    );
-
-  const classRoomSectionIds = [...new Set(roomCapacities.map((rc) => rc.classRoomSectionId))];
-  const roomCapacityIds = roomCapacities.map((rc) => rc.examScheduleRoomCapacityId);
-  const examDates = [...new Set(schedules.map((s) => s.examDate))];
-  const slotIds = [...new Set(schedules.map((s) => s.examinationSessionSlotId))];
-
-  const [assignments, duplicateChecks, seatCounts] = await Promise.all([
-    classRoomSectionIds.length ? examInvigilatorAssignmentRepository.getAssignmentsForRooms(classRoomSectionIds, examDates, slotIds, options) : [],
-    classRoomSectionIds.length ? examInvigilatorAssignmentRepository.getDuplicateChecks(classRoomSectionIds, examDates, slotIds, options) : [],
-    roomCapacityIds.length ? examInvigilatorAssignmentRepository.getSeatCounts(roomCapacityIds, options) : [],
-  ]);
-  const seatCountMap = new Map(seatCounts.map((r) => [r.examScheduleRoomCapacityId, parseInt(r.studentCount, 10) || 0]));
-  const duplicateMap = new Map(duplicateChecks.map((r) => [`${r.classRoomSectionId}_${formatDateKey(r.examDate)}_${Number(r.examinationSessionSlotId)}`, (parseInt(r.scheduleCount, 10) || 0) > 1]));
-
-  const assignmentsMap = new Map();
-  for (const r of assignments) {
-    const key = `${r.classRoomSectionId}_${formatDateKey(r.examDate)}_${Number(r.examinationSessionSlotId)}`;
-    if (!assignmentsMap.has(key)) assignmentsMap.set(key, []);
-    assignmentsMap.get(key).push(r);
-  }
-
-  const scheduleMap = new Map(schedules.map(s => [s.examScheduleId, s]));
-  const capacitiesMap = new Map();
-
-  for (const rc of roomCapacities) {
-    if (!capacitiesMap.has(rc.examScheduleId)) {
-      capacitiesMap.set(rc.examScheduleId, []);
-    }
-    const schedule = scheduleMap.get(rc.examScheduleId);
-    const roomAssKey = `${rc.classRoomSectionId}_${formatDateKey(schedule.examDate)}_${Number(schedule.examinationSessionSlotId)}`;
-
-    rc.setDataValue("studentCount", seatCountMap.get(rc.examScheduleRoomCapacityId) || 0);
-    rc.setDataValue("duplicateExam", duplicateMap.get(roomAssKey) || false);
-    rc.setDataValue("examInvigilatorAssignments", assignmentsMap.get(roomAssKey) || []);
-
-    capacitiesMap.get(rc.examScheduleId).push(rc);
-  }
-
-  for (const schedule of schedules) {
-    const capacities = capacitiesMap.get(schedule.examScheduleId) || [];
-    const assignedCount = capacities.reduce((sum, rc) => decimalAdd(sum, rc.getDataValue("examInvigilatorAssignments").length), 0);
-    const capacitySum = capacities.reduce((sum, rc) => decimalAdd(sum, rc.capacity || 0), 0);
-    const studentsSum = capacities.reduce((sum, rc) => decimalAdd(sum, rc.getDataValue("studentCount") || 0), 0);
-
-    const requiredCount = capacities.length * 2;
-    let pendingCountSum = 0;
-    for (const rc of capacities) {
-      const assignedToRoom = rc.getDataValue("examInvigilatorAssignments").length;
-      pendingCountSum = decimalAdd(pendingCountSum, Math.max(0, 2 - assignedToRoom));
-    }
-    const status = pendingCountSum === 0 ? "ASSIGNED" : assignedCount > 0 ? "PARTIAL" : "PENDING";
-
-    schedule.setDataValue("examScheduleRoomCapacities", capacities);
-    schedule.setDataValue("summary", {
-      totalRooms: capacities.length,
-      totalRoomCapacitySum: capacitySum,
-      studentCount: studentsSum,
-      requiredInvigilatorCount: requiredCount,
-      assignedInvigilatorCount: assignedCount,
-      pendingInvigilatorCount: pendingCountSum,
-      status,
-    });
-  }
-
-  return {
-    rooms: schedules,
-    total: totalSchedules,
-    page: Number(page),
-    limit: Number(limit),
-  };
-}
-
 export async function getInvigilatorSummary(filters, options = {}) {
   const mappedFilters = {
     ...filters,
@@ -328,87 +237,54 @@ export async function getAssignmentsByUserId(userId, examinationSessionId, optio
   return examInvigilatorAssignmentRepository.getAssignmentsByUserId(userId, examinationSessionId, options);
 }
 
-export async function getAssignmentsByExamScheduleId(examScheduleId, options = {}) {
-  const parsedId = Number(examScheduleId);
-  if (isNaN(parsedId)) return null;
-
-  const schedule = await examInvigilatorAssignmentRepository.findScheduleById(parsedId, options);
-  if (!schedule) return null;
-
-  const roomCapacities = await examInvigilatorAssignmentRepository.findRoomCapacitiesBySchedule(parsedId, options);
-
-  const classRoomSectionIds = roomCapacities.map((rc) => rc.classRoomSectionId);
-  const roomCapacityIds = roomCapacities.map((rc) => rc.examScheduleRoomCapacityId);
-
-  const [assignments, seatCounts] = await Promise.all([
-    classRoomSectionIds.length
-      ? examInvigilatorAssignmentRepository.getAssignmentsForRooms(
-          classRoomSectionIds,
-          [schedule.examDate],
-          [schedule.examinationSessionSlotId],
-          options,
-        )
-      : [],
-    roomCapacityIds.length
-      ? examInvigilatorAssignmentRepository.getSeatCounts(roomCapacityIds, options)
-      : [],
-  ]);
-
-  const assignmentsMap = new Map();
-  for (const row of assignments) {
-    const key = row.classRoomSectionId;
-    if (!assignmentsMap.has(key)) {
-      assignmentsMap.set(key, []);
-    }
-    assignmentsMap.get(key).push(row);
-  }
-
-  const seatCountMap = new Map(
-    seatCounts.map((r) => [r.examScheduleRoomCapacityId, parseInt(r.studentCount, 10) || 0]),
+export async function getAssignmentsByRoom(classRoomSectionId, filters, options = {}) {
+  const roomCapacities = await examInvigilatorAssignmentRepository.getRoomCapacitiesByRoom(
+    classRoomSectionId,
+    filters,
+    options
   );
 
-  let totalRoomCapacitySum = 0;
-  let studentCountSum = 0;
-  let assignedInvigilatorCount = 0;
-  let pendingInvigilatorCount = 0;
-
+  const results = [];
   for (const rc of roomCapacities) {
-    const roomAssignments = assignmentsMap.get(rc.classRoomSectionId) || [];
-    const studentCount = seatCountMap.get(rc.examScheduleRoomCapacityId) || 0;
+    const metrics = await getRoomCentricMetrics(rc.examScheduleId, classRoomSectionId);
+    
+    // Fetch invigilators assigned to this room at this slot/date
+    const invigilators = await examInvigilatorAssignmentRepository.getAssignmentsForRooms(
+      [Number(classRoomSectionId)],
+      [rc.examSchedule.examDate],
+      [rc.examSchedule.examinationSessionSlotId],
+      options
+    );
 
-    totalRoomCapacitySum = decimalAdd(totalRoomCapacitySum, rc.capacity || 0);
-    studentCountSum = decimalAdd(studentCountSum, studentCount);
-    assignedInvigilatorCount = decimalAdd(assignedInvigilatorCount, roomAssignments.length);
-    pendingInvigilatorCount = decimalAdd(pendingInvigilatorCount, Math.max(0, 2 - roomAssignments.length));
-
-    rc.setDataValue("studentCount", studentCount);
-    rc.setDataValue("examInvigilatorAssignments", roomAssignments);
-    rc.setDataValue("totalInvigilators", roomAssignments.length);
-    rc.setDataValue("invigilatorRequired", 2);
+    results.push({
+      examScheduleRoomCapacityId: rc.examScheduleRoomCapacityId,
+      examScheduleId: rc.examScheduleId,
+      examDate: rc.examSchedule.examDate,
+      term: rc.examSchedule.term,
+      sessionId: rc.examSchedule.sessionId,
+      examinationSessionSlotId: rc.examSchedule.examinationSessionSlotId,
+      subjectId: rc.examSchedule.subjectSchedule?.subjectId,
+      subjectName: rc.examSchedule.subjectSchedule?.subjectName,
+      subjectCode: rc.examSchedule.subjectSchedule?.subjectCode,
+      courseId: rc.examSchedule.subjectSchedule?.courseId,
+      slot: rc.examSchedule.examinationSessionSlot ? {
+        examinationSessionSlotId: rc.examSchedule.examinationSessionSlot.examinationSessionSlotId,
+        slotNumber: rc.examSchedule.examinationSessionSlot.slotNumber,
+        startTime: rc.examSchedule.examinationSessionSlot.startTime,
+        endTime: rc.examSchedule.examinationSessionSlot.endTime,
+      } : null,
+      roomNumber: rc.classRoom?.roomNumber,
+      capacity: rc.capacity,
+      invigilators: invigilators.map(inv => ({
+        userId: inv.user ? inv.user.userId : inv.userId,
+        userName: inv.user ? inv.user.userName : "",
+        role: inv.role
+      })),
+      roomDetails: metrics
+    });
   }
 
-  const totalRooms = roomCapacities.length;
-  const requiredInvigilatorCount = totalRooms * 2;
-
-  let status = "PENDING";
-  if (pendingInvigilatorCount === 0) {
-    status = "ASSIGNED";
-  } else if (assignedInvigilatorCount > 0) {
-    status = "PARTIAL";
-  }
-
-  schedule.setDataValue("examScheduleRoomCapacities", roomCapacities);
-  schedule.setDataValue("summary", {
-    totalRooms,
-    totalRoomCapacitySum,
-    studentCount: studentCountSum,
-    requiredInvigilatorCount,
-    assignedInvigilatorCount,
-    pendingInvigilatorCount,
-    status,
-  });
-
-  return schedule;
+  return results;
 }
 
 export async function getFacultyAvailability(examScheduleId, options = {}) {
@@ -485,4 +361,82 @@ export async function getRoomAssignmentDetail(examScheduleId, classRoomSectionId
   plainRoom.invigilatorRequired = 2;
 
   return plainRoom;
+}
+
+/**
+ * Room-centric list: returns unique rooms, each carrying all exam schedules
+ * (with subject, term, courseId, sessionId) assigned to that room.
+ * Filters: examinationSessionId (required), examDate (optional).
+ */
+export async function getListOfRoomsRoomWise(filters, pagination, options = {}) {
+  const { page = 1, limit = 10 } = pagination;
+
+  // Fetch all room-capacity rows matching the filters (no DB-level pagination
+  // because we need to group by classRoomSectionId first)
+  const allRows = await examInvigilatorAssignmentRepository.getRoomsWithExams(
+    filters,
+    options,
+  );
+
+  // Group by classRoomSectionId — each unique room can appear in multiple rows
+  // (one per examScheduleId assigned to that room)
+  const roomMap = new Map();
+
+  for (const rc of allRows) {
+    const roomId = rc.classRoomSectionId;
+    const schedule = rc.examSchedule;
+    const subject = schedule?.subjectSchedule;
+    const slot = schedule?.examinationSessionSlot;
+
+    const examEntry = {
+      examScheduleRoomCapacityId: rc.examScheduleRoomCapacityId,
+      examScheduleId: schedule?.examScheduleId,
+      examDate: schedule?.examDate,
+      term: schedule?.term,
+      sessionId: schedule?.sessionId,
+      examinationSessionSlotId: schedule?.examinationSessionSlotId,
+      subjectId: subject?.subjectId,
+      subjectName: subject?.subjectName,
+      subjectCode: subject?.subjectCode,
+      courseId: subject?.courseId,
+      slot: slot
+        ? {
+            examinationSessionSlotId: slot.examinationSessionSlotId,
+            slotNumber: slot.slotNumber,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+          }
+        : null,
+      capacity: rc.capacity,
+    };
+
+    if (!roomMap.has(roomId)) {
+      roomMap.set(roomId, {
+        classRoomSectionId: roomId,
+        roomNumber: rc.classRoom?.roomNumber,
+        roomCapacity: rc.classRoom?.capacity,
+        examCapacity: rc.classRoom?.examCapacity,
+        exams: [],
+      });
+    }
+
+    roomMap.get(roomId).exams.push(examEntry);
+  }
+
+  // Convert map to array — already ordered by roomNumber from the DB query
+  const allUniqueRooms = Array.from(roomMap.values());
+
+  // Paginate at the unique-room level
+  const total = allUniqueRooms.length;
+  const pageNum = Number(page);
+  const limitNum = Number(limit);
+  const offset = (pageNum - 1) * limitNum;
+  const paginatedRooms = allUniqueRooms.slice(offset, offset + limitNum);
+
+  return {
+    rooms: paginatedRooms,
+    total,
+    page: pageNum,
+    limit: limitNum,
+  };
 }

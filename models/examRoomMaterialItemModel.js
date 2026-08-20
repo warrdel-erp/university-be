@@ -107,6 +107,12 @@ const examRoomMaterialItemModel = sequelize.define(
         tableName: "exam_room_material_item",
         timestamps: true,
         paranoid: true,
+        indexes: [
+            {
+                unique: true,
+                fields: ["exam_room_material_bundle_id", "item_type"],
+            },
+        ],
     }
 );
 

@@ -733,7 +733,7 @@
           }
         },
         {
-          "name": "12.9 Get Details By examScheduleId",
+          "name": "12.9 Get Details By Room",
           "request": {
             "method": "GET",
             "header": [
@@ -743,12 +743,16 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examInvigilatorAssignment/byExamScheduleId?examScheduleId=1",
+              "raw": "{{baseurl}}/examInvigilatorAssignment/byroom?classRoomSectionId=8&examinationSessionId=1",
               "host": ["{{baseurl}}"],
-              "path": ["examInvigilatorAssignment", "byExamScheduleId"],
+              "path": ["examInvigilatorAssignment", "byroom"],
               "query": [
                 {
-                  "key": "examScheduleId",
+                  "key": "classRoomSectionId",
+                  "value": "8"
+                },
+                {
+                  "key": "examinationSessionId",
                   "value": "1"
                 }
               ]
@@ -878,37 +882,7 @@
           }
         },
         {
-          "name": "13.3 Generate Room Attendance",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examScheduleId\": 1,\n  \"examScheduleRoomCapacityId\": 2\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/examAttendance/room",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examAttendance",
-                "room"
-              ]
-            }
-          }
-        },
-        {
-          "name": "13.3 Get Exam Attendance Details (Right-Side Inspector)",
+          "name": "13.3 Get Exam Attendance Details By Room",
           "request": {
             "method": "GET",
             "header": [
@@ -918,13 +892,23 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examAttendance/1",
+              "raw": "{{baseurl}}/examAttendance/byroom?classRoomSectionId=8&examinationSessionId=1",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "examAttendance",
-                "1"
+                "byroom"
+              ],
+              "query": [
+                {
+                  "key": "classRoomSectionId",
+                  "value": "8"
+                },
+                {
+                  "key": "examinationSessionId",
+                  "value": "1"
+                }
               ]
             }
           }

@@ -1204,19 +1204,19 @@ examSetupModel.belongsTo(courseModel, { foreignKey: "courseId", as: "course" });
 examSetupModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "subject" });
 examSetupModel.belongsTo(examSetupTypeModel, { foreignKey: "examTypeId", as: "examSetupType" });
 
-examRoomMaterialBundleModel.belongsTo(examinationSessionSlotModel, { foreignKey: "examinationSessionSlotId", as: "examinationSessionSlot" });
-examinationSessionSlotModel.hasMany(examRoomMaterialBundleModel, { foreignKey: "examinationSessionSlotId", as: "examRoomMaterialBundles" });
+examRoomMaterialBundleModel.belongsTo(examScheduleModel, { foreignKey: "examScheduleId", as: "examSchedule" });
+examScheduleModel.hasMany(examRoomMaterialBundleModel, { foreignKey: "examScheduleId", as: "materialBundles" });
 
-examRoomMaterialBundleModel.belongsTo(classRoomModel, { foreignKey: "classRoomSectionId", as: "classRoomSection" });
-classRoomModel.hasMany(examRoomMaterialBundleModel, { foreignKey: "classRoomSectionId", as: "examRoomMaterialBundles" });
+examRoomMaterialBundleModel.belongsTo(examScheduleRoomCapacityModel, { foreignKey: "examScheduleRoomCapacityId", as: "roomCapacity" });
+examScheduleRoomCapacityModel.hasMany(examRoomMaterialBundleModel, { foreignKey: "examScheduleRoomCapacityId", as: "materialBundles" });
 
 examRoomMaterialBundleModel.belongsTo(userModel, { foreignKey: "issuedTo", as: "recipientUser" });
 examRoomMaterialBundleModel.belongsTo(userModel, { foreignKey: "issuedBy", as: "issuerUser" });
 examRoomMaterialBundleModel.belongsTo(userModel, { foreignKey: "receivedBy", as: "receiverUser" });
 examRoomMaterialBundleModel.belongsTo(userModel, { foreignKey: "verifiedBy", as: "verifierUser" });
 
-examRoomMaterialItemModel.belongsTo(examRoomMaterialBundleModel, { foreignKey: "examRoomMaterialBundleId", as: "examRoomMaterialBundle" });
-examRoomMaterialBundleModel.hasMany(examRoomMaterialItemModel, { foreignKey: "examRoomMaterialBundleId", as: "examRoomMaterialItems" });
+examRoomMaterialItemModel.belongsTo(examRoomMaterialBundleModel, { foreignKey: "examRoomMaterialBundleId", as: "materialBundle" });
+examRoomMaterialBundleModel.hasMany(examRoomMaterialItemModel, { foreignKey: "examRoomMaterialBundleId", as: "items" });
 
 // semesterModel.belongsTo(courseModel, {foreignKey: "courseId",as: "course"});
 // courseModel.hasMany(semesterModel, {foreignKey: "courseId",as: "semesters"});

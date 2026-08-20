@@ -1,5 +1,7 @@
 import * as examAttendanceRepository from "../repository/examAttendanceRepository.js";
+import { getRoomsWithExams, getRoomCapacitiesByRoom } from "../repository/examInvigilatorAssignmentRepository.js";
 import { getAcademicYearId } from "../utility/requestContext.js";
+import { getRoomCentricMetrics } from "../utility/roomCentricHelper.js";
 import { Op } from "sequelize";
 
 export async function addExamAttendance(data, createdBy, updatedBy) {
@@ -92,124 +94,99 @@ export async function deleteExamAttendance(examAttendanceId) {
   }
 }
 
-export async function getExamOperationsAttendance(filters) {
-  const {
-    examinationSessionId,
-    examDate,
-    examinationSessionSlotId,
-    courseId,
-    sessionId,
-    term,
-    search,
-    page = 1,
-    limit = 10,
-  } = filters;
+export async function getExamOperationsAttendance(filters, pagination) {
+  const { page = 1, limit = 10 } = pagination;
 
-  const offset = (page - 1) * limit;
+  // Reuse the same room-with-exams query from the invigilator module
+  const allRows = await getRoomsWithExams(filters);
 
-  const where = {};
-  if (examinationSessionId) {
-    where.examinationSessionId = Number(examinationSessionId);
-  }
-  if (examDate) {
-    where.examDate = examDate;
-  }
-  if (examinationSessionSlotId) {
-    where.examinationSessionSlotId = Number(examinationSessionSlotId);
-  }
-  if (sessionId) {
-    where.sessionId = Number(sessionId);
-  }
-  if (term) {
-    where.term = Number(term);
+  // Build a set of all unique examScheduleRoomCapacityIds to batch-fetch attendance counts
+  const capacityIds = allRows.map((rc) => rc.examScheduleRoomCapacityId);
+
+  // Batch fetch attendance counts grouped by examScheduleRoomCapacityId + attendanceStatus
+  const attendanceCounts = capacityIds.length
+    ? await examAttendanceRepository.getAttendanceCountsForRoomCapacities(capacityIds)
+    : [];
+
+  // Build a map: capacityId → { present, absent, pending }
+  const attendanceMap = new Map();
+  for (const row of attendanceCounts) {
+    const id = row.examScheduleRoomCapacityId;
+    if (!attendanceMap.has(id)) {
+      attendanceMap.set(id, { present: 0, absent: 0, pending: 0 });
+    }
+    const entry = attendanceMap.get(id);
+    const count = parseInt(row.count, 10) || 0;
+    if (row.attendanceStatus === "PRESENT") entry.present += count;
+    else if (row.attendanceStatus === "ABSENT") entry.absent += count;
+    else if (row.attendanceStatus === "PENDING") entry.pending += count;
   }
 
-  const subjectWhere = {};
-  if (courseId) {
-    subjectWhere.courseId = Number(courseId);
-  }
+  // Group by classRoomSectionId — same pattern as invigilator rooms
+  const roomMap = new Map();
 
-  if (search) {
-    where[Op.or] = [
-      { "$subjectSchedule.subject_name$": { [Op.like]: `%${search}%` } },
-      { "$subjectSchedule.subject_code$": { [Op.like]: `%${search}%` } },
-    ];
-  }
+  for (const rc of allRows) {
+    const roomId = rc.classRoomSectionId;
+    const schedule = rc.examSchedule;
+    const subject = schedule?.subjectSchedule;
+    const slot = schedule?.examinationSessionSlot;
+    const att = attendanceMap.get(rc.examScheduleRoomCapacityId) || { present: 0, absent: 0, pending: 0 };
+    const totalAttendance = att.present + att.absent + att.pending;
 
-  const { count, rows } = await examAttendanceRepository.findAndCountSchedules(
-    where,
-    subjectWhere,
-    Number(limit),
-    Number(offset),
-  );
-
-  const data = rows.map((schedule) => {
-    const scheduleData = schedule.get({ plain: true });
-
-    let submittedCount = 0;
-
-    scheduleData.roomCapacities = (scheduleData.roomCapacities || []).map(
-      (room) => {
-        const isInvigilatorAssigned = !!room.isInvigilatorAssigned;
-        const isRoomAllocationDone = ((room.seats || []).length > 0) || isInvigilatorAssigned;
-
-        let present = 0;
-        let absent = 0;
-        let pending = 0;
-        (room.examAttendances || []).forEach((att) => {
-          if (att.attendanceStatus === "PRESENT") present++;
-          else if (att.attendanceStatus === "ABSENT") absent++;
-          else if (att.attendanceStatus === "PENDING") pending++;
-        });
-
-        const hasAttendanceGenerated = (present + absent + pending) > 0;
-        if (hasAttendanceGenerated) {
-            submittedCount++;
-        }
-
-        let calculatedStatus = "NOT_GENERATED";
-        if (hasAttendanceGenerated) {
-            if (pending === 0) {
-                calculatedStatus = "COMPLETED";
-            } else if (present > 0 || absent > 0) {
-                calculatedStatus = "IN_PROGRESS";
-            } else {
-                calculatedStatus = "GENERATED";
-            }
-        }
-
-        return {
-          examScheduleRoomCapacityId: room.examScheduleRoomCapacityId,
-          classRoomSectionId: room.classRoomSectionId,
-          capacity: room.capacity,
-          classRoom: room.classRoom ? {
-            classRoomSectionId: room.classRoom.classRoomSectionId,
-            roomNumber: room.classRoom.roomNumber
-          } : null,
-          status: calculatedStatus,
-          isRoomAllocationDone,
-          isInvigilatorAssigned,
-          present,
-          absent,
-          pending,
-        };
+    const examEntry = {
+      examScheduleRoomCapacityId: rc.examScheduleRoomCapacityId,
+      examScheduleId: schedule?.examScheduleId,
+      examDate: schedule?.examDate,
+      term: schedule?.term,
+      sessionId: schedule?.sessionId,
+      examinationSessionSlotId: schedule?.examinationSessionSlotId,
+      subjectId: subject?.subjectId,
+      subjectName: subject?.subjectName,
+      subjectCode: subject?.subjectCode,
+      courseId: subject?.courseId,
+      slot: slot
+        ? {
+            examinationSessionSlotId: slot.examinationSessionSlotId,
+            slotNumber: slot.slotNumber,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+          }
+        : null,
+      capacity: rc.capacity,
+      attendance: {
+        present: att.present,
+        absent: att.absent,
+        pending: att.pending,
+        total: totalAttendance,
+        isGenerated: totalAttendance > 0,
       },
-    );
+    };
 
-    scheduleData.submittedCount = submittedCount;
-    scheduleData.totalSheets = (scheduleData.roomCapacities || []).length;
+    if (!roomMap.has(roomId)) {
+      roomMap.set(roomId, {
+        classRoomSectionId: roomId,
+        roomNumber: rc.classRoom?.roomNumber,
+        roomCapacity: rc.classRoom?.capacity,
+        examCapacity: rc.classRoom?.examCapacity,
+        exams: [],
+      });
+    }
 
-    return scheduleData;
-  });
+    roomMap.get(roomId).exams.push(examEntry);
+  }
+
+  const allUniqueRooms = Array.from(roomMap.values());
+  const total = allUniqueRooms.length;
+  const pageNum = Number(page);
+  const limitNum = Number(limit);
+  const offset = (pageNum - 1) * limitNum;
+  const paginatedRooms = allUniqueRooms.slice(offset, offset + limitNum);
 
   return {
-    paginationData: {
-      total: count,
-      limit: Number(limit),
-      page: Number(page),
-      totalPages: Math.ceil(count / limit),
-    },
-    data,
+    rooms: paginatedRooms,
+    total,
+    page: pageNum,
+    limit: limitNum,
   };
 }
 
@@ -412,54 +389,61 @@ export async function updateRoomAttendanceStatus(statusData) {
     absent: absentCount,
   };
 }
-
-export async function getExamAttendanceDetails(examScheduleId) {
-  const examSchedule =
-    await examAttendanceRepository.getExamScheduleById(examScheduleId);
-
-  if (!examSchedule) {
-    throw new Error("Exam schedule not found");
-  }
-
-  const roomCapacities =
-    await examAttendanceRepository.getRoomCapacitiesByExamScheduleId(
-      examScheduleId,
-    );
-
-  const roomCapacityIds = roomCapacities.map(
-    (item) => item.examScheduleRoomCapacityId,
+export async function getExamAttendanceDetailsByRoom(classRoomSectionId, filters, options = {}) {
+  const roomCapacities = await getRoomCapacitiesByRoom(
+    classRoomSectionId,
+    filters,
+    options
   );
 
-  const [studentCounts, attendanceStatuses, invigilators, attendanceCounts] =
-    await Promise.all([
-      examAttendanceRepository.getStudentCountsByRoomCapacityIds(
-        roomCapacityIds,
-      ),
+  const results = [];
+  for (const rc of roomCapacities) {
+    const metrics = await getRoomCentricMetrics(rc.examScheduleId, classRoomSectionId);
+    
+    // Fetch attendance sheet status
+    const attendanceStatusRow = await examAttendanceRepository.getAttendanceStatusByExamSchedule(
+      rc.examScheduleId,
+      [rc.examScheduleRoomCapacityId]
+    );
+    const attendanceSheetStatus = (attendanceStatusRow && attendanceStatusRow.length > 0)
+      ? attendanceStatusRow[0].status
+      : "NOT_GENERATED";
 
-      examAttendanceRepository.getAttendanceStatusByExamSchedule(
-        examScheduleId,
-        roomCapacityIds,
-      ),
+    // Fetch attendance status counts
+    const counts = await examAttendanceRepository.getAttendanceCountsForRoomCapacities([rc.examScheduleRoomCapacityId]);
+    const countsObj = { present: 0, absent: 0, pending: 0 };
+    counts.forEach(row => {
+      if (row.attendanceStatus === "PRESENT") countsObj.present += parseInt(row.count, 10) || 0;
+      else if (row.attendanceStatus === "ABSENT") countsObj.absent += parseInt(row.count, 10) || 0;
+      else if (row.attendanceStatus === "PENDING") countsObj.pending += parseInt(row.count, 10) || 0;
+    });
 
-      examAttendanceRepository.getInvigilatorsByRooms({
-        examDate: examSchedule.examDate,
-        examinationSessionSlotId: examSchedule.examinationSessionSlotId,
-        classRoomSectionIds: roomCapacities.map(
-          (item) => item.classRoomSectionId,
-        ),
-      }),
+    results.push({
+      examScheduleRoomCapacityId: rc.examScheduleRoomCapacityId,
+      examScheduleId: rc.examScheduleId,
+      examDate: rc.examSchedule.examDate,
+      term: rc.examSchedule.term,
+      sessionId: rc.examSchedule.sessionId,
+      examinationSessionSlotId: rc.examSchedule.examinationSessionSlotId,
+      subjectId: rc.examSchedule.subjectSchedule?.subjectId,
+      subjectName: rc.examSchedule.subjectSchedule?.subjectName,
+      subjectCode: rc.examSchedule.subjectSchedule?.subjectCode,
+      courseId: rc.examSchedule.subjectSchedule?.courseId,
+      slot: rc.examSchedule.examinationSessionSlot ? {
+        examinationSessionSlotId: rc.examSchedule.examinationSessionSlot.examinationSessionSlotId,
+        slotNumber: rc.examSchedule.examinationSessionSlot.slotNumber,
+        startTime: rc.examSchedule.examinationSessionSlot.startTime,
+        endTime: rc.examSchedule.examinationSessionSlot.endTime,
+      } : null,
+      roomNumber: rc.classRoom?.roomNumber,
+      capacity: rc.capacity,
+      attendanceSheetStatus,
+      attendance: countsObj,
+      roomDetails: metrics
+    });
+  }
 
-      examAttendanceRepository.getAttendanceCountsByRoom(examScheduleId),
-    ]);
-
-  return buildExamAttendanceResponse({
-    examSchedule,
-    roomCapacities,
-    studentCounts,
-    attendanceStatuses,
-    invigilators,
-    attendanceCounts,
-  });
+  return results;
 }
 
 function buildExamAttendanceResponse({
@@ -647,67 +631,6 @@ export async function getExamOperationsSummary(examinationSessionId, filters) {
   };
 }
 
-export async function generateRoomAttendance(generateData, user) {
-  const { examScheduleId, examScheduleRoomCapacityId } = generateData;
-  const { userId, universityId, defaultInstituteId, defaultAcademicYearId } =
-    user;
 
-  const roomCapacity = await examAttendanceRepository.getRoomCapacityById(
-    examScheduleRoomCapacityId,
-  );
-  if (!roomCapacity) {
-    throw new Error("Room capacity not found");
-  }
 
-  const seats = await examAttendanceRepository.getStudentSeats(
-    examScheduleRoomCapacityId,
-  );
-  if (!seats || seats.length === 0) {
-    throw new Error("No student seats allocated in this room");
-  }
 
-  const existingAttendances = await examAttendanceRepository.getAttendances(
-    examScheduleId,
-    examScheduleRoomCapacityId,
-  );
-  const existingStudentIds = new Set(
-    existingAttendances.map((att) => att.studentId),
-  );
-
-  const transaction = await examAttendanceRepository.sequelize.transaction();
-  try {
-    const results = [];
-    for (const seat of seats) {
-      if (!existingStudentIds.has(seat.studentId)) {
-        const created = await examAttendanceRepository.createAttendance(
-          {
-            examScheduleId,
-            examScheduleRoomCapacityId,
-            studentId: seat.studentId,
-            studentExamSeatId: seat.studentExamSeatId || null,
-            attendanceStatus: "PENDING",
-            universityId,
-            instituteId: defaultInstituteId,
-            academicYearId: defaultAcademicYearId,
-            createdBy: userId,
-            updatedBy: userId,
-          },
-          transaction,
-        );
-        results.push(created);
-      }
-    }
-
-    await examAttendanceRepository.updateRoomCapacityStatus(
-      examScheduleRoomCapacityId,
-      "GENERATED",
-      transaction,
-    );
-
-    await transaction.commit();
-    return results;
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
-}

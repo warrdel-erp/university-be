@@ -1,46 +1,120 @@
 import { Router } from "express";
-const router = Router();
-import {
-    createBundle,
-    getBundleById,
-    updateBundleStatus
-} from "../controllers/examRoomMaterialBundleController.js";
-import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
 import { z } from "zod";
+import * as controller from "../controllers/examRoomMaterialBundleController.js";
+import userAuth from "../middleware/authUser.js";
 
-const createBundleSchema = {
-    body: z.object({
-        examDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD"),
-        examinationSessionSlotId: z.number().int().positive(),
-        classRoomSectionId: z.number().int().positive(),
-        examRoomMaterialItems: z.array(z.object({
-            itemType: z.enum(["ANSWER_SHEET", "EXTRA_SHEET", "GRAPH_SHEET", "ROUGH_SHEET", "ATTENDANCE_SHEET", "ROOM_KIT"]),
-            plannedQuantity: z.number().int().nonnegative().optional(),
-            remarks: z.string().optional()
-        })).min(1, "At least one item is required")
-    })
+const route = Router();
+
+const emptyToUndefined = (val) =>
+  val === "" || val === null || val === undefined ? undefined : val;
+
+const positiveIntegerId = z.union([
+  z.string().regex(/^\d+$/).transform(Number),
+  z.number().int().positive(),
+]);
+
+const positiveIntegerQueryId = z.preprocess(
+  emptyToUndefined,
+  z
+    .union([
+      z.string().regex(/^\d+$/).transform(Number),
+      z.number().int().positive(),
+    ])
+    .optional()
+);
+
+const listSchema = {
+  query: z.object({
+    examinationSessionId: positiveIntegerId,
+    examDate: z.preprocess(
+      emptyToUndefined,
+      z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD").optional()
+    ),
+    examinationSessionSlotId: positiveIntegerQueryId,
+    courseId: positiveIntegerQueryId,
+    sessionId: positiveIntegerQueryId,
+    term: positiveIntegerQueryId,
+    status: z.preprocess(emptyToUndefined, z.enum(["PREPARING", "READY", "ISSUED", "RECEIVED", "VERIFIED", "CLOSED"]).optional()),
+    search: z.preprocess(emptyToUndefined, z.string().optional()),
+    page: positiveIntegerQueryId,
+    limit: positiveIntegerQueryId,
+  }),
 };
 
-const getByIdSchema = {
-    query: z.object({
-        examRoomMaterialBundleId: z.string().regex(/^\d+$/).transform(Number)
-    })
+const idParamSchema = {
+  params: z.object({
+    examRoomMaterialBundleId: positiveIntegerId,
+  }),
+};
+
+const createSchema = {
+  body: z.object({
+    examScheduleId: positiveIntegerId,
+    examScheduleRoomCapacityId: positiveIntegerId,
+    items: z.array(
+      z.object({
+        itemType: z.enum(["ANSWER_SHEET", "EXTRA_SHEET", "GRAPH_SHEET", "ROUGH_SHEET", "ATTENDANCE_SHEET", "ROOM_KIT"]),
+        plannedQuantity: z.number().int().min(0).optional(),
+        remarks: z.string().optional(),
+      })
+    ).optional().default([]),
+  }),
+};
+
+const updateItemsSchema = {
+  params: z.object({
+    examRoomMaterialBundleId: positiveIntegerId,
+  }),
+  body: z.object({
+    items: z.array(
+      z.object({
+        itemType: z.enum(["ANSWER_SHEET", "EXTRA_SHEET", "GRAPH_SHEET", "ROUGH_SHEET", "ATTENDANCE_SHEET", "ROOM_KIT"]),
+        plannedQuantity: z.number().int().min(0).optional(),
+        issuedQuantity: z.number().int().min(0).optional(),
+        usedQuantity: z.number().int().min(0).optional(),
+        unusedQuantity: z.number().int().min(0).optional(),
+        returnedQuantity: z.number().int().min(0).optional(),
+        damagedQuantity: z.number().int().min(0).optional(),
+        remarks: z.string().optional(),
+      })
+    ).min(1, "At least one item must be provided"),
+  }),
 };
 
 const updateStatusSchema = {
-    query: z.object({
-        examRoomMaterialBundleId: z.string().regex(/^\d+$/).transform(Number)
-    }),
-    body: z.object({
-        status: z.enum(["PREPARING", "READY", "ISSUED", "RECEIVED", "VERIFIED", "CLOSED"]),
-        remarks: z.string().optional(),
-        issuedTo: z.number().int().positive().optional()
-    })
+  params: z.object({
+    examRoomMaterialBundleId: positiveIntegerId,
+  }),
+  body: z.object({
+    status: z.enum(["ISSUED", "RECEIVED", "VERIFIED", "CLOSED"]),
+    issuedTo: positiveIntegerQueryId,
+    remarks: z.string().optional(),
+  }),
 };
 
-router.post("/", userAuth, validate(createBundleSchema), createBundle);
-router.get("/single", userAuth, validate(getByIdSchema), getBundleById);
-router.patch("/status", userAuth, validate(updateStatusSchema), updateBundleStatus);
+const bulkPrepareSchema = {
+  body: z.object({
+    roomCapacityIds: z.array(positiveIntegerId).min(1, "At least one room capacity ID must be provided"),
+    defaultItems: z.array(
+      z.object({
+        itemType: z.enum(["ANSWER_SHEET", "EXTRA_SHEET", "GRAPH_SHEET", "ROUGH_SHEET", "ATTENDANCE_SHEET", "ROOM_KIT"]),
+        plannedQuantity: z.number().int().min(0).optional(),
+      })
+    ).optional().default([]),
+  }),
+};
 
-export default router;
+route.use(userAuth);
+
+route.get("/", validate(listSchema), controller.getBundleList);
+route.get("/single/:examRoomMaterialBundleId", validate(idParamSchema), controller.getBundleById);
+route.post("/", validate(createSchema), controller.createBundle);
+route.patch("/items/:examRoomMaterialBundleId", validate(updateItemsSchema), controller.updateBundleItems);
+route.patch("/ready/:examRoomMaterialBundleId", validate(idParamSchema), controller.markReady);
+route.patch("/reopen/:examRoomMaterialBundleId", validate(idParamSchema), controller.reopenBundle);
+route.patch("/status/:examRoomMaterialBundleId", validate(updateStatusSchema), controller.updateBundleStatus);
+route.post("/bulk-prepare", validate(bulkPrepareSchema), controller.bulkPrepare);
+route.get("/cover/:examRoomMaterialBundleId", validate(idParamSchema), controller.getBundleCoverData);
+
+export default route;

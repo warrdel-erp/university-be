@@ -8,10 +8,10 @@ import {
   getAssignmentById,
   getAssignments,
   deleteAssignment,
-  getListOfRooms,
+  getListOfRoomsRoomWise,
   getInvigilatorSummary,
   getAssignmentsByUserId,
-  getAssignmentsByExamScheduleId,
+  getAssignmentsByRoom,
   getFacultyAvailability,
   getMyAssignments,
 } from "../controllers/examInvigilatorAssignmentController.js";
@@ -82,12 +82,11 @@ const getListSchema = {
   }),
 };
 
-const getExamRoomsSchema = {
+
+// Room-centric schema: unique rooms carrying their exam list
+const getRoomsRoomWiseSchema = {
   query: z.object({
-    examinationSessionId: positiveIntegerQueryId,
-    sessionId: positiveIntegerQueryId,
-    courseId: positiveIntegerQueryId,
-    term: positiveIntegerQueryId,
+    examinationSessionId: positiveIntegerId,
     examDate: z.preprocess(emptyToUndefined, z.string().optional()),
     page: z.preprocess(
       emptyToUndefined,
@@ -119,9 +118,12 @@ const byUserIdSchema = {
   }),
 };
 
-const byExamScheduleIdSchema = {
+const byRoomSchema = {
   query: z.object({
-    examScheduleId: positiveIntegerId,
+    classRoomSectionId: positiveIntegerId,
+    examinationSessionId: positiveIntegerQueryId,
+    examDate: z.preprocess(emptyToUndefined, z.string().optional()),
+    examinationSessionSlotId: positiveIntegerQueryId,
   }),
 };
 
@@ -145,14 +147,9 @@ router.get(
   validate(getInvigilatorSummarySchema),
   getInvigilatorSummary,
 );
-router.get("/rooms", userAuth, validate(getExamRoomsSchema), getListOfRooms);
+router.get("/rooms", userAuth, validate(getRoomsRoomWiseSchema), getListOfRoomsRoomWise);
 
-router.get(
-  "/examRooms",
-  userAuth,
-  validate(getExamRoomsSchema),
-  getListOfRooms,
-);
+
 router.get("/", userAuth, validate(getListSchema), getAssignments);
 router.delete("/", userAuth, validate(getByIdSchema), deleteAssignment);
 router.get(
@@ -165,10 +162,10 @@ router.get(
 router.get("/my", userAuth, getMyAssignments);
 
 router.get(
-  "/byExamScheduleId",
+  "/byroom",
   userAuth,
-  validate(byExamScheduleIdSchema),
-  getAssignmentsByExamScheduleId,
+  validate(byRoomSchema),
+  getAssignmentsByRoom,
 );
 
 const availabilitySchema = {
