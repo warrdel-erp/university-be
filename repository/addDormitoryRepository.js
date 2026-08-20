@@ -1,5 +1,6 @@
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
+import { Op } from "sequelize";
 
 export async function addDormitoryRoom(DormitoryRoomData) {
   try {
@@ -26,10 +27,25 @@ export async function addDormitoryRoom(DormitoryRoomData) {
   }
 }
 
-export async function getDormitoryRoomDetails() {
+export async function getDormitoryRoomDetails(page, limit, search) {
   try {
-    return scoped(model.addDormitoryModel).findAll({
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, parseInt(limit, 10) || 10);
+    const offset = (pageNum - 1) * limitNum;
+
+    const where = {};
+    if (search && String(search).trim()) {
+      const searchTerm = `%${String(search).trim()}%`;
+      where[Op.or] = [
+        { roomNumber: { [Op.like]: searchTerm } },
+        { "$dormitoryList.dormitoryName$": { [Op.like]: searchTerm } },
+        { "$roomType.roomTypeName$": { [Op.like]: searchTerm } }
+      ];
+    }
+
+    const { count, rows } = await scoped(model.addDormitoryModel).findAndCountAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+      where,
       include: [
         {
           model: model.dormitoryListModel,
@@ -46,7 +62,18 @@ export async function getDormitoryRoomDetails() {
           required: true,
         },
       ],
+      limit: limitNum,
+      offset,
+      subQuery: false,
+      order: [["dormitoryListId", "DESC"]],
     });
+
+    return {
+      rows,
+      total: count,
+      page: pageNum,
+      limit: limitNum,
+    };
   } catch (error) {
     console.error("Error fetching DormitoryRoom details:", error);
     throw error;

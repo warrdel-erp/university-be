@@ -1,4 +1,5 @@
 import * as service from "../services/leaveRequestService.js";
+import { SuccessResponse } from "../utility/response.js";
 
 export async function addRequest(req, res) {
   const requiredFields = ["userId", "policyId", "startDate", "endDate", "totalDays"];
@@ -18,9 +19,20 @@ export async function addRequest(req, res) {
 
 export async function getAllRequests(req, res) {
   try {
-    const { userId } = req.query;
-    const requests = await service.getRequests({ userId });
-    res.status(200).json(requests);
+    const { userId, page = 1, limit = 10, search } = req.query;
+    const result = await service.getRequests({ userId, page, limit, search });
+    
+    return SuccessResponse(
+      res,
+      200,
+      "Leave requests fetched successfully",
+      result.rows,
+      {
+        total: result.total,
+        limit: parseInt(limit, 10),
+        page: parseInt(page, 10),
+      }
+    );
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

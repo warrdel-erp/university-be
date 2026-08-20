@@ -5,6 +5,7 @@ import {
   updateAssignVehicle as updateAssignVehicleService,
   deleteAssignVehicle as deleteAssignVehicleService,
 } from "../services/assignVehicleServices.js";
+import { SuccessResponse } from "../utility/response.js";
 
 export const addAssignVehicle = async (req, res) => {
   try {
@@ -27,8 +28,13 @@ export const addAssignVehicle = async (req, res) => {
 
 export const getAssignVehicle = async (req, res) => {
   try {
-    const vehicles = await getAssignVehicleService();
-    res.status(200).json(vehicles);
+    const { page = 1, limit = 10, search } = req.query;
+    const result = await getAssignVehicleService(page, limit, search);
+    return SuccessResponse(res, 200, "Vehicle assignments fetched successfully", result.rows, {
+      total: result.total,
+      limit: parseInt(limit, 10),
+      page: parseInt(page, 10),
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

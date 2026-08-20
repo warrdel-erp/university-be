@@ -72,8 +72,8 @@ export const listGradingSchemaQuery = z.object({
   search: z.string().optional(),
   status: z.enum(["DRAFT", "PUBLISHED"]).optional(),
   gradingMethod: z.enum(["ABSOLUTE", "RELATIVE"]).optional(),
-  page: z.union([z.string(), z.number()]).optional(),
-  limit: z.union([z.string(), z.number()]).optional(),
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().positive().optional().default(10),
 });
 
 // ---------------------------------------------------------------------------

@@ -88,6 +88,6 @@ export async function updateAttendence(teacherAttendenceId, data, updatedBy) {
   await scheduleCreationRepository.updateAttendence(teacherAttendenceId, data);
 };
 
-export async function getAllAttendence(page, limit, fromDate, toDate) {
-  return await scheduleCreationRepository.getAllAttendence(page, limit, fromDate, toDate);
+export async function getAllAttendence(page, limit, fromDate, toDate, search) {
+  return await scheduleCreationRepository.getAllAttendence(page, limit, fromDate, toDate, search);
 };

@@ -1,4 +1,5 @@
 import * as RoomTypeCreation from "../services/roomTypeServices.js";
+import { SuccessResponse } from "../utility/response.js";
 
 export async function addRoomType(req, res) {
     const { roomTypeName, academicYearId } = req.body;
@@ -17,8 +18,13 @@ export async function addRoomType(req, res) {
 
 export async function getAllRoomType(req, res) {
     try {
-        const roomType = await RoomTypeCreation.getRoomTypeDetails();
-        res.status(200).json(roomType);
+        const { page = 1, limit = 10, search } = req.query;
+        const result = await RoomTypeCreation.getRoomTypeDetails(page, limit, search);
+        return SuccessResponse(res, 200, "Room types fetched successfully", result.rows, {
+            total: result.total,
+            limit: parseInt(limit, 10),
+            page: parseInt(page, 10),
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

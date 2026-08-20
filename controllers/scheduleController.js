@@ -1,4 +1,5 @@
 import * as scheduleCreation from "../services/scheduleServices.js";
+import { SuccessResponse } from "../utility/response.js";
 
 export async function addSchedule(req, res) {
     const requiredFields = [
@@ -143,10 +144,21 @@ export async function updateAttendence(req, res) {
 };
 
 export async function getAllAttendence(req, res) {
-    const { page, limit, fromDate, toDate } = req.query
+    const { page = 1, limit = 10, fromDate, toDate, search } = req.query
     try {
-        const schedule = await scheduleCreation.getAllAttendence(page, limit, fromDate, toDate);
-        res.status(200).json(schedule);
+        const result = await scheduleCreation.getAllAttendence(page, limit, fromDate, toDate, search);
+        
+        return SuccessResponse(
+            res,
+            200,
+            "Attendance list fetched successfully",
+            result.rows,
+            {
+                total: result.total,
+                limit: parseInt(limit, 10),
+                page: parseInt(page, 10),
+            }
+        );
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

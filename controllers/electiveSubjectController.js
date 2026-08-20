@@ -20,34 +20,20 @@ export async function addElectiveSubject(req, res) {
 
 export async function getAllElectiveSubject(req, res) {
     try {
-        const { page, limit, search } = req.query;
+        const { page = 1, limit = 10, search } = req.query;
         const result = await electiveSubject.getElectiveSubjectDetails({ page, limit, search });
         
-        if (page && limit) {
-            return SuccessResponse(
-                res,
-                200,
-                "Elective subjects fetched successfully",
-                result.rows,
-                {
-                    total: result.total,
-                    limit: parseInt(limit, 10),
-                    page: parseInt(page, 10),
-                }
-            );
-        } else {
-            return SuccessResponse(
-                res,
-                200,
-                "Elective subjects fetched successfully",
-                result.rows,
-                {
-                    total: result.total,
-                    limit: result.total || 10,
-                    page: 1,
-                }
-            );
-        }
+        return SuccessResponse(
+            res,
+            200,
+            "Elective subjects fetched successfully",
+            result.rows,
+            {
+                total: result.total,
+                limit: parseInt(limit, 10),
+                page: parseInt(page, 10),
+            }
+        );
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

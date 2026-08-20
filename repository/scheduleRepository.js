@@ -135,7 +135,7 @@ export async function updateAttendence(teacherAttendenceId, data) {
     }
 }
 
-export async function getAllAttendence(page, limit, fromDate, toDate) {
+export async function getAllAttendence(page, limit, fromDate, toDate, search) {
     try {
         const whereClause = {};
         const scheduleWhere = buildScope(model.scheduleModel);
@@ -172,6 +172,13 @@ export async function getAllAttendence(page, limit, fromDate, toDate) {
                         {
                             model: model.employeeModel,
                             as: 'employeeSchedule',
+                            where: search ? {
+                                [Op.or]: [
+                                    { employeeName: { [Op.like]: `%${search}%` } },
+                                    { employeeCode: { [Op.like]: `%${search}%` } },
+                                ],
+                            } : undefined,
+                            required: search ? true : false,
                             attributes: [
                                 'userId',
                                 'employeeName',
@@ -185,14 +192,15 @@ export async function getAllAttendence(page, limit, fromDate, toDate) {
             ],
             limit: pageSize,
             offset,
+            subQuery: false,
             order: [['date', 'DESC']],
         });
 
         return {
-            totalRecords: attendances.count,
-            totalPages: Math.ceil(attendances.count / pageSize),
-            currentPage: pageNumber,
-            data: attendances.rows,
+            rows: attendances.rows,
+            total: attendances.count,
+            page: pageNumber,
+            limit: pageSize,
         };
     } catch (error) {
         console.error('Error fetching attendance with details:', error);

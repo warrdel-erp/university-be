@@ -5,20 +5,19 @@ import {
   updateTransportRouteService,
   deleteTransportRouteService,
 } from "../services/transportRouteService.js";
+import { SuccessResponse } from "../utility/response.js";
 
 export const addTransportRoute = async (req, res) => {
   try {
-    const { routeTitle, fare } = req.body;
+    const { routeTitle, fare, academicYearId } = req.body;
+    if (!routeTitle || !fare || !academicYearId) {
+      return res.status(400).json({ message: "routeTitle, fare, academicYearId are required" });
+    }
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
-    if (!routeTitle || !fare) {
-      return res.status(400).json({ message: "routeTitle and fare are required" });
-    }
-
-    const transportRouteData = { ...req.body, createdBy, updatedBy };
-    const result = await addTransportRouteService(transportRouteData);
-
-    res.status(201).json({ message: "Transport route added successfully", result });
+    const data = { ...req.body, createdBy, updatedBy };
+    const result = await addTransportRouteService(data);
+    res.status(201).json({ success: true, data: result });
   } catch (error) {
     console.error("Error in addTransportRoute:", error);
     res.status(500).json({ error: error.message });
@@ -27,8 +26,13 @@ export const addTransportRoute = async (req, res) => {
 
 export const getAllTransportRoute = async (req, res) => {
   try {
-    const result = await getAllTransportRouteService();
-    res.status(200).json(result);
+    const { page = 1, limit = 10, search } = req.query;
+    const result = await getAllTransportRouteService(page, limit, search);
+    return SuccessResponse(res, 200, "Transport routes fetched successfully", result.rows, {
+      total: result.total,
+      limit: parseInt(limit, 10),
+      page: parseInt(page, 10),
+    });
   } catch (error) {
     console.error("Error in getAllTransportRoute:", error);
     res.status(500).json({ error: error.message });

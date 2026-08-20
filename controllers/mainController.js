@@ -196,34 +196,21 @@ export const getSectionSubjectMapper = async (req, res) => {
     try {
         const term = req.query.term ? Number(req.query.term) : undefined;
         const academicYearId = req.query.academicYearId ? Number(req.query.academicYearId) : undefined;
-        const { page, limit, search } = req.query;
+        const { page = 1, limit = 10, search } = req.query;
 
         const result = await mainServices.getSectionSubjectMapper(term, academicYearId, { page, limit, search });
 
-        if (page && limit) {
-            return SuccessResponse(
-                res,
-                200,
-                "Section subject mappings fetched successfully",
-                result.rows,
-                {
-                    total: result.total,
-                    limit: parseInt(limit, 10),
-                    page: parseInt(page, 10),
-                }
-            );
-        } else {
-            return SuccessResponse(
-                res,
-                200,
-                "Section subject mappings fetched successfully",
-                result.rows,
-                {
-                    total: result.total,
-                    limit: result.total || 10,
-                    page: 1,
-                }
-            );
+        return SuccessResponse(
+            res,
+            200,
+            "Section subject mappings fetched successfully",
+            result.rows,
+            {
+                total: result.total,
+                limit: parseInt(limit, 10),
+                page: parseInt(page, 10),
+            }
+        );
         }
     } catch (error) {
         console.error("Error in getting section subject mapper:", error);

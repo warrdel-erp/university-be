@@ -8,10 +8,18 @@ import {
     updateTransportRoute
 } from "../controllers/transportRouteController.js";
 import userAuth from "../middleware/authUser.js";
+import { z } from "zod";
+import { validate } from "../utility/validation.js";
+
+const transportRouteQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().positive().optional(),
+  search: z.string().optional(),
+});
 
 router.post("/", userAuth, addTransportRoute);
 
-router.get("/", userAuth, getAllTransportRoute);
+router.get("/", userAuth, validate({ query: transportRouteQuerySchema }), getAllTransportRoute);
 
 router.get("/single", userAuth, getSingleTransportRoute);
 

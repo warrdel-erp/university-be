@@ -123,8 +123,16 @@ router.patch('/subject/update', userAuth, checkAccess(PERMISSIONS.SUBJECTS_EDIT.
 router.post('/classSections', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP_ADD.value, null), validate({ body: addClassSectionsSchema }), addClassSections);
 router.get('/classSections', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP.value, null), getClassSections);
 router.get('/classSectionSpecific', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP.value, null), getClassSectionSpecific);
+const sectionSubjectMapperQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().positive().optional(),
+  search: z.string().optional(),
+  term: z.coerce.number().int().positive().optional(),
+  academicYearId: z.coerce.number().int().positive().optional(),
+});
+
 router.post('/sectionSubjectMapper', userAuth, checkAccess(PERMISSIONS.SEMESTER_SUBJECT_MAPPING_ASSIGN.value, null), addSectionSubjectMapper);
-router.get('/sectionSubjectMapper', userAuth, checkAccess(PERMISSIONS.SEMESTER_SUBJECT_MAPPING.value, null), getSectionSubjectMapper);
+router.get('/sectionSubjectMapper', userAuth, checkAccess(PERMISSIONS.SEMESTER_SUBJECT_MAPPING.value, null), validate({ query: sectionSubjectMapperQuerySchema }), getSectionSubjectMapper);
 router.get(
     '/classSectionRecord',
     userAuth,

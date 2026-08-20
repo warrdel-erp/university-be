@@ -6,8 +6,8 @@ export async function addDormitoryRoom(DormitoryRoomData, createdBy, updatedBy) 
   return DormitoryRoomCreationService.addDormitoryRoom(DormitoryRoomData);
 }
 
-export async function getDormitoryRoomDetails() {
-  return DormitoryRoomCreationService.getDormitoryRoomDetails();
+export async function getDormitoryRoomDetails(page, limit, search) {
+  return DormitoryRoomCreationService.getDormitoryRoomDetails(page, limit, search);
 }
 
 export async function getSingleDormitoryRoomDetails(dormitoryListId) {

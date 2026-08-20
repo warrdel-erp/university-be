@@ -8,10 +8,18 @@ import {
     updateAssignVehicle
 } from "../controllers/assignVehicleController.js";
 import userAuth from "../middleware/authUser.js";
+import { z } from "zod";
+import { validate } from "../utility/validation.js";
+
+const assignVehicleQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().positive().optional(),
+  search: z.string().optional(),
+});
 
 router.post("/", userAuth, addAssignVehicle);
 
-router.get("/", userAuth, getAssignVehicle);
+router.get("/", userAuth, validate({ query: assignVehicleQuerySchema }), getAssignVehicle);
 
 router.get("/single", userAuth, getSingleAssignVehicle);
 

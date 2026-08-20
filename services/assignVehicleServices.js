@@ -14,9 +14,9 @@ export async function addAssignVehicle(assignVehicleData) {
   }
 }
 
-export async function getAssignVehicle() {
+export async function getAssignVehicle(page, limit, search) {
   try {
-    return getAssignVehicleRepo();
+    return getAssignVehicleRepo(page, limit, search);
   } catch (error) {
     throw new Error(`Failed to fetch vehicle assignments: ${error.message}`);
   }

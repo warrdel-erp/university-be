@@ -1,5 +1,6 @@
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
+import { Op } from "sequelize";
 
 export async function addAssignVehicle(assignVehicleData) {
   const route = await scoped(model.transportRouteModel).findOne({
@@ -21,12 +22,27 @@ export async function addAssignVehicle(assignVehicleData) {
   return scoped(model.assignVehicleModel).create(assignVehicleData);
 }
 
-export async function getAssignVehicle() {
+export async function getAssignVehicle(page, limit, search) {
   try {
-    return scoped(model.assignVehicleModel).findAll({
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, parseInt(limit, 10) || 10);
+    const offset = (pageNum - 1) * limitNum;
+
+    const where = {};
+    if (search && String(search).trim()) {
+      const searchTerm = `%${String(search).trim()}%`;
+      where[Op.or] = [
+        { "$transportRoute.route_title$": { [Op.like]: searchTerm } },
+        { "$vehicle.vehicle_number$": { [Op.like]: searchTerm } },
+        { "$vehicle.vehicle_model$": { [Op.like]: searchTerm } }
+      ];
+    }
+
+    const { count, rows } = await scoped(model.assignVehicleModel).findAndCountAll({
       attributes: {
         exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
       },
+      where,
       include: [
         {
           model: model.transportRouteModel,
@@ -50,7 +66,18 @@ export async function getAssignVehicle() {
           required: true,
         },
       ],
+      limit: limitNum,
+      offset,
+      subQuery: false,
+      order: [["assignVehicleId", "DESC"]],
     });
+
+    return {
+      rows,
+      total: count,
+      page: pageNum,
+      limit: limitNum,
+    };
   } catch (error) {
     console.error("Error in getAssignVehicle:", error);
     throw error;

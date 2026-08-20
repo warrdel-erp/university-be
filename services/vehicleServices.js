@@ -8,9 +8,9 @@ export async function createVehicle(vehicleData) {
   }
 }
 
-export async function getAllVehicles() {
+export async function getAllVehicles(page, limit, search) {
   try {
-    return transportVehicleRepository.getAllVehicles();
+    return transportVehicleRepository.getAllVehicles(page, limit, search);
   } catch (error) {
     throw new Error(`Failed to fetch vehicles: ${error.message}`);
   }

@@ -15,9 +15,9 @@ export async function addTransportRouteService(data) {
   }
 }
 
-export async function getAllTransportRouteService() {
+export async function getAllTransportRouteService(page, limit, search) {
   try {
-    return findAllTransportRoutes();
+    return findAllTransportRoutes(page, limit, search);
   } catch (error) {
     console.error("Error in getAllTransportRouteService:", error);
     throw error;

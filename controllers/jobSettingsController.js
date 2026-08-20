@@ -32,35 +32,21 @@ export async function getAllJobTypes(req, res) {
 
 export async function getSingleJobType(req, res) {
   try {
-    const { page, limit, search } = req.query;
+    const { page = 1, limit = 10, search } = req.query;
     const result = await jobSettingsService.getSingleJobType(req.params.id, { page, limit, search });
     
     if (result) {
-      if (page && limit) {
-        return SuccessResponse(
-          res,
-          200,
-          "Job setting details fetched successfully",
-          result.jobSetting,
-          {
-            total: result.total,
-            limit: parseInt(limit, 10),
-            page: parseInt(page, 10),
-          }
-        );
-      } else {
-        return SuccessResponse(
-          res,
-          200,
-          "Job setting details fetched successfully",
-          result.jobSetting,
-          {
-            total: result.total,
-            limit: result.total || 10,
-            page: 1,
-          }
-        );
-      }
+      return SuccessResponse(
+        res,
+        200,
+        "Job setting details fetched successfully",
+        result.jobSetting,
+        {
+          total: result.total,
+          limit: parseInt(limit, 10),
+          page: parseInt(page, 10),
+        }
+      );
     } else {
       return res.status(404).json({ success: false, message: "Job type not found" });
     }

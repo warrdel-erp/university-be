@@ -8,10 +8,18 @@ import {
     updateVehicle
 } from "../controllers/vehicleController.js";
 import userAuth from "../middleware/authUser.js";
+import { z } from "zod";
+import { validate } from "../utility/validation.js";
+
+const vehicleQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().positive().optional(),
+  search: z.string().optional(),
+});
 
 router.post("/", userAuth, addVehicle);
 
-router.get("/", userAuth, getVehicle);
+router.get("/", userAuth, validate({ query: vehicleQuerySchema }), getVehicle);
 
 router.get("/single", userAuth, getSingleVehicle);
 

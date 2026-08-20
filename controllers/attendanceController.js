@@ -58,8 +58,13 @@ export async function getCopyAttendancePeriod(req, res) {
 
 export async function getAttendanceDetails(req, res) {
   try {
-    const Attendance = await AttendanceCreation.getAttendanceDetails();
-    res.status(200).json(Attendance);
+    const { page = 1, limit = 10, search } = req.query;
+    const result = await AttendanceCreation.getAttendanceDetails(page, limit, search);
+    return SuccessResponse(res, 200, "Attendance details fetched successfully", result.rows, {
+      total: result.total,
+      limit: parseInt(limit, 10),
+      page: parseInt(page, 10),
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

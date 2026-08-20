@@ -189,7 +189,8 @@ export async function getScheduleData(filters) {
   const {
     type,          // undefined | previous | upcoming
     page = 1,
-    limit = 10
+    limit = 10,
+    search
   } = filters;
 
   const today = todayStr();
@@ -213,10 +214,21 @@ export async function getScheduleData(filters) {
 
   // 3️ Fetch timetable (already converted to job-like rows)
   const lectureRows = await jobRepository.fetchTimetableAsJobs(filters, fromDate, toDate);
-console.log(`>>>>>>>>>>>>>>>lectureRows`,lectureRows);
 
   // 4️ Merge
-  const merged = [...jobRows, ...lectureRows];
+  let merged = [...jobRows, ...lectureRows];
+
+  // Apply search filtering
+  if (search && String(search).trim()) {
+    const term = String(search).trim().toLowerCase();
+    merged = merged.filter((item) => {
+      return (
+        (item.jobTitle && item.jobTitle.toLowerCase().includes(term)) ||
+        (item.faculty && item.faculty.toLowerCase().includes(term)) ||
+        (item.department && item.department.toLowerCase().includes(term))
+      );
+    });
+  }
 
   // 5 Sort by date + time
   // merged.sort((a, b) => {

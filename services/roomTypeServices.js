@@ -6,8 +6,8 @@ export async function addRoomType(roomTypeData, createdBy, updatedBy) {
     return await RoomTypeCreationService.addRoomType(roomTypeData);
 };
 
-export async function getRoomTypeDetails() {
-    return await RoomTypeCreationService.getRoomTypeDetails();
+export async function getRoomTypeDetails(page, limit, search) {
+    return await RoomTypeCreationService.getRoomTypeDetails(page, limit, search);
 }
 
 export async function getSingleRoomTypeDetails(roomTypeId) {

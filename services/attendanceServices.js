@@ -401,7 +401,7 @@ export async function getCopyAttendanceNextPeriods(query) {
   };
 };
 
-export async function getAttendanceDetails() {
+export async function getAttendanceDetails(page, limit, search) {
   const result = await attendanceService.getAttendanceDetails();
   const groupedData = {};
   for (const record of result) {
@@ -471,9 +471,32 @@ export async function getAttendanceDetails() {
       notes
     });
   }
+
+  let grouped = Object.values(groupedData);
+
+  if (search && String(search).trim()) {
+    const term = String(search).trim().toLowerCase();
+    grouped = grouped.filter(item => {
+      const matchesSubject = (item.subjectName && item.subjectName.toLowerCase().includes(term)) ||
+                            (item.subjectCode && item.subjectCode.toLowerCase().includes(term)) ||
+                            (item.sectionName && item.sectionName.toLowerCase().includes(term));
+      const matchesStudent = item.students.some(st => 
+        (st.fullName && st.fullName.toLowerCase().includes(term)) ||
+        (st.scholarNumber && st.scholarNumber.toLowerCase().includes(term))
+      );
+      return matchesSubject || matchesStudent;
+    });
+  }
+
+  const total = grouped.length;
+  const pageNum = parseInt(page, 10) || 1;
+  const limitNum = parseInt(limit, 10) || 10;
+  const start = (pageNum - 1) * limitNum;
+  const paginated = grouped.slice(start, start + limitNum);
+
   return {
-    original: result,
-    grouped: Object.values(groupedData)
+    rows: paginated,
+    total,
   };
 }
 

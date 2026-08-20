@@ -1,4 +1,5 @@
 import * as jobService from "../services/jobService.js";
+import { SuccessResponse } from "../utility/response.js";
 
 export async function addJob(req, res) {
   try {
@@ -143,7 +144,17 @@ export async function getFilteredJobs(req, res) {
 export async function getScheduleList(req, res) {
   try {
     const result = await jobService.getScheduleData({ ...req.query });
-    return res.json({ success: true, ...result });
+    return SuccessResponse(
+      res,
+      200,
+      "Schedule list fetched successfully",
+      result.data,
+      {
+        total: result.total,
+        limit: result.limit,
+        page: result.page,
+      }
+    );
   } catch (error) {
     console.error(error);
     return res.status(500).json({

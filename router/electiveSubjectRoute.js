@@ -14,10 +14,18 @@ import {
 import userAuth from "../middleware/authUser.js"
 import { checkAccess } from "../middleware/checkAccess.js";
 import { PERMISSIONS } from "../const/permissions.js";
+import { z } from "zod";
+import { validate } from "../utility/validation.js";
+
+const electiveSubjectQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().positive().optional(),
+  search: z.string().optional(),
+});
 
 router.post('/', userAuth, checkAccess(PERMISSIONS.ELECTIVE_SUBJECT_NEW_ADD.value, 'electiveSubject'), addElectiveSubject);
 
-router.get('/', userAuth, checkAccess(PERMISSIONS.ELECTIVE_SUBJECT_NEW.value, null), getAllElectiveSubject);
+router.get('/', userAuth, checkAccess(PERMISSIONS.ELECTIVE_SUBJECT_NEW.value, null), validate({ query: electiveSubjectQuerySchema }), getAllElectiveSubject);
 
 router.get('/single', userAuth, checkAccess(PERMISSIONS.ELECTIVE_SUBJECT_NEW.value, null), getSingleElectiveSubjectDetails);
 

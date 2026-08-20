@@ -1,4 +1,5 @@
 import * as transportVehicleService from "../services/vehicleServices.js";
+import { SuccessResponse } from "../utility/response.js";
 
 export const addVehicle = async (req, res) => {
   try {
@@ -18,8 +19,13 @@ export const addVehicle = async (req, res) => {
 
 export const getVehicle = async (req, res) => {
   try {
-    const vehicles = await transportVehicleService.getAllVehicles();
-    res.status(200).json(vehicles);
+    const { page = 1, limit = 10, search } = req.query;
+    const result = await transportVehicleService.getAllVehicles(page, limit, search);
+    return SuccessResponse(res, 200, "Vehicles fetched successfully", result.rows, {
+      total: result.total,
+      limit: parseInt(limit, 10),
+      page: parseInt(page, 10),
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

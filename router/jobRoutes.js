@@ -10,6 +10,16 @@ import {
   getFacultyCalendar,
   getDepartmentCalendar,getFilteredJobs,getScheduleList
 } from "../controllers/jobController.js";
+import { z } from "zod";
+import { validate } from "../utility/validation.js";
+
+const scheduleListQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().positive().optional(),
+  search: z.string().optional(),
+  type: z.enum(["previous", "upcoming"]).optional(),
+  userId: z.coerce.number().int().positive().optional(),
+});
 
 const router = express.Router();
 
@@ -25,6 +35,6 @@ router.delete("/delete/:id", useAuth, deleteJob);
 
 router.get("/list/filter", useAuth, getFilteredJobs);
 
-router.get("/schedule/list", useAuth, getScheduleList);
+router.get("/schedule/list", useAuth, validate({ query: scheduleListQuerySchema }), getScheduleList);
 
 export default router;

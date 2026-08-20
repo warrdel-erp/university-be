@@ -1,5 +1,6 @@
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
+import { Op } from "sequelize";
 
 export async function createTransportRoute(data) {
   try {
@@ -10,10 +11,23 @@ export async function createTransportRoute(data) {
   }
 }
 
-export async function findAllTransportRoutes() {
+export async function findAllTransportRoutes(page, limit, search) {
   try {
-    return scoped(model.transportRouteModel).findAll({
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, parseInt(limit, 10) || 10);
+    const offset = (pageNum - 1) * limitNum;
+
+    const where = {};
+    if (search && String(search).trim()) {
+      const searchTerm = `%${String(search).trim()}%`;
+      where[Op.or] = [
+        { routeTitle: { [Op.like]: searchTerm } },
+      ];
+    }
+
+    const { count, rows } = await scoped(model.transportRouteModel).findAndCountAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+      where,
       include: [
         {
           model: model.userModel,
@@ -23,7 +37,18 @@ export async function findAllTransportRoutes() {
           required: true,
         },
       ],
+      limit: limitNum,
+      offset,
+      subQuery: false,
+      order: [["transportRouteId", "DESC"]],
     });
+
+    return {
+      rows,
+      total: count,
+      page: pageNum,
+      limit: limitNum,
+    };
   } catch (error) {
     console.error("Error in findAllTransportRoutes:", error);
     throw error;

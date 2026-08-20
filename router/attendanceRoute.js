@@ -92,10 +92,13 @@ router.patch('/my', userAuth, updateMyAttendance);
 router.post('/copyPeriod', userAuth, validate({ body: copyAttendancePeriodSchema }), copyAttendancePeriod);
 router.get('/copyPeriod', userAuth, validate({ query: copyAttendancePeriodQuerySchema }), getCopyAttendancePeriod);
 
-// ---------------------------------------------------------------------------
-// 3. List / lookup
-// ---------------------------------------------------------------------------
-router.get('/', userAuth, getAttendanceDetails);
+const attendanceQuerySchema = z.object({
+    page: z.coerce.number().int().positive().optional(),
+    limit: z.coerce.number().int().positive().optional(),
+    search: z.string().optional(),
+});
+
+router.get('/', userAuth, validate({ query: attendanceQuerySchema }), getAttendanceDetails);
 router.get('/byDate', userAuth, validate({ query: attendanceByDateQuerySchema }), getAttendanceByDate);
 router.get("/previous-sessions/:userId", userAuth, getPreviousSessions);
 router.get('/sectionDates', userAuth, validate({ query: sectionDatesQuerySchema }), getEmployeeSectionDates);

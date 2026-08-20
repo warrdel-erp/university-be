@@ -1,4 +1,5 @@
 import * as DormitoryRoomCreation from "../services/addDormitoryServices.js";
+import { SuccessResponse } from "../utility/response.js";
 
 export async function addDormitoryRoom(req, res) {
   const { dormitory, roomNumber, type, numberOfBed, costPerBed } = req.body;
@@ -19,8 +20,13 @@ export async function addDormitoryRoom(req, res) {
 
 export async function getAllDormitoryRoom(req, res) {
   try {
-    const result = await DormitoryRoomCreation.getDormitoryRoomDetails();
-    res.status(200).json(result);
+    const { page = 1, limit = 10, search } = req.query;
+    const result = await DormitoryRoomCreation.getDormitoryRoomDetails(page, limit, search);
+    return SuccessResponse(res, 200, "Dormitory rooms fetched successfully", result.rows, {
+      total: result.total,
+      limit: parseInt(limit, 10),
+      page: parseInt(page, 10),
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
