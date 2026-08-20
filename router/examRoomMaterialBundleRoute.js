@@ -4,7 +4,7 @@ import { z } from "zod";
 import * as controller from "../controllers/examRoomMaterialBundleController.js";
 import userAuth from "../middleware/authUser.js";
 
-const route = Router();
+const router = Router();
 
 const emptyToUndefined = (val) =>
   val === "" || val === null || val === undefined ? undefined : val;
@@ -32,9 +32,6 @@ const listSchema = {
       z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD").optional()
     ),
     examinationSessionSlotId: positiveIntegerQueryId,
-    courseId: positiveIntegerQueryId,
-    sessionId: positiveIntegerQueryId,
-    term: positiveIntegerQueryId,
     status: z.preprocess(emptyToUndefined, z.enum(["PREPARING", "READY", "ISSUED", "RECEIVED", "VERIFIED", "CLOSED"]).optional()),
     search: z.preprocess(emptyToUndefined, z.string().optional()),
     page: positiveIntegerQueryId,
@@ -105,16 +102,14 @@ const bulkPrepareSchema = {
   }),
 };
 
-route.use(userAuth);
+router.get("/", userAuth, validate(listSchema), controller.getBundleList);
+router.get("/single/:examRoomMaterialBundleId", userAuth, validate(idParamSchema), controller.getBundleById);
+router.post("/", userAuth, validate(createSchema), controller.createBundle);
+router.patch("/items/:examRoomMaterialBundleId", userAuth, validate(updateItemsSchema), controller.updateBundleItems);
+router.patch("/ready/:examRoomMaterialBundleId", userAuth, validate(idParamSchema), controller.markReady);
+router.patch("/reopen/:examRoomMaterialBundleId", userAuth, validate(idParamSchema), controller.reopenBundle);
+router.patch("/status/:examRoomMaterialBundleId", userAuth, validate(updateStatusSchema), controller.updateBundleStatus);
+router.post("/bulk-prepare", userAuth, validate(bulkPrepareSchema), controller.bulkPrepare);
+router.get("/cover/:examRoomMaterialBundleId", userAuth, validate(idParamSchema), controller.getBundleCoverData);
 
-route.get("/", validate(listSchema), controller.getBundleList);
-route.get("/single/:examRoomMaterialBundleId", validate(idParamSchema), controller.getBundleById);
-route.post("/", validate(createSchema), controller.createBundle);
-route.patch("/items/:examRoomMaterialBundleId", validate(updateItemsSchema), controller.updateBundleItems);
-route.patch("/ready/:examRoomMaterialBundleId", validate(idParamSchema), controller.markReady);
-route.patch("/reopen/:examRoomMaterialBundleId", validate(idParamSchema), controller.reopenBundle);
-route.patch("/status/:examRoomMaterialBundleId", validate(updateStatusSchema), controller.updateBundleStatus);
-route.post("/bulk-prepare", validate(bulkPrepareSchema), controller.bulkPrepare);
-route.get("/cover/:examRoomMaterialBundleId", validate(idParamSchema), controller.getBundleCoverData);
-
-export default route;
+export default router;

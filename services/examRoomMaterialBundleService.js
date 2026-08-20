@@ -7,26 +7,41 @@ function generateBundleCode(seqId) {
 }
 
 export async function getBundleList(filters, pagination) {
-  const result = await repo.getBundleList(filters, pagination);
-  
-  // Format the output as requested: return one row per examScheduleId + examScheduleRoomCapacityId
-  const formattedRows = [];
-  
-  // Pre-fetch student counts for all capacities returned to avoid N+1
-  const capacityIds = result.rows.map(r => r.examScheduleRoomCapacityId);
-  const studentCounts = await repo.getStudentCountsForRoomCapacities(capacityIds);
-  const studentCountMap = new Map();
-  studentCounts.forEach(sc => {
-    studentCountMap.set(sc.examScheduleRoomCapacityId, parseInt(sc.studentCount, 10));
-  });
+  const { limit = 10, page = 1 } = pagination;
 
-  for (const capacity of result.rows) {
-    const schedule = capacity.examSchedule;
-    const bundle = (capacity.materialBundles && capacity.materialBundles.length > 0) 
-      ? capacity.materialBundles[0] 
-      : null;
+  // 1. Fetch raw matching capacities
+  const allRows = await repo.getRawBundleCapacities(filters);
+
+  // 2. Perform in-memory grouping: room + date + slot
+  const roomMap = new Map();
+
+  for (const rc of allRows) {
+    const roomId = rc.classRoomSectionId;
+    const schedule = rc.examSchedule;
+    const slot = schedule?.examinationSessionSlot;
     
-    // Construct quantities summary
+    // Grouping key: classRoomSectionId + examDate + examinationSessionSlotId
+    const key = `${roomId}_${schedule.examDate}_${schedule.examinationSessionSlotId}`;
+    
+    if (!roomMap.has(key)) {
+      roomMap.set(key, {
+        classRoomSectionId: roomId,
+        roomNumber: rc.classRoom?.roomNumber,
+        examDate: schedule.examDate,
+        slot: slot ? {
+          examinationSessionSlotId: slot.examinationSessionSlotId,
+          slotNumber: slot.slotNumber,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+        } : null,
+        exams: []
+      });
+    }
+
+    const bundle = (rc.materialBundles && rc.materialBundles.length > 0)
+      ? rc.materialBundles[0]
+      : null;
+
     const quantities = {
       ANSWER_SHEET: 0,
       EXTRA_SHEET: 0,
@@ -35,56 +50,81 @@ export async function getBundleList(filters, pagination) {
       ATTENDANCE_SHEET: 0,
       ROOM_KIT: 0
     };
-    
+
     if (bundle && bundle.items) {
       bundle.items.forEach(item => {
         quantities[item.itemType] = item.plannedQuantity || 0;
       });
     }
 
-    formattedRows.push({
-      examRoomMaterialBundleId: bundle ? bundle.examRoomMaterialBundleId : null,
-      bundleCode: bundle ? bundle.bundleCode : null,
-      status: bundle ? bundle.status : null,
-      
-      examScheduleId: schedule.examScheduleId,
-      examScheduleRoomCapacityId: capacity.examScheduleRoomCapacityId,
-      
+    roomMap.get(key).exams.push({
+      examScheduleRoomCapacityId: rc.examScheduleRoomCapacityId,
+      examScheduleId: rc.examScheduleId,
       subjectId: schedule.subjectSchedule?.subjectId,
       subjectName: schedule.subjectSchedule?.subjectName,
       subjectCode: schedule.subjectSchedule?.subjectCode,
-      
       courseId: schedule.subjectSchedule?.courseId,
       sessionId: schedule.sessionId,
       term: schedule.term,
-      
-      examDate: schedule.examDate,
-      
-      slot: schedule.examinationSessionSlot ? {
-        examinationSessionSlotId: schedule.examinationSessionSlot.examinationSessionSlotId,
-        slotNumber: schedule.examinationSessionSlot.slotNumber,
-        startTime: schedule.examinationSessionSlot.startTime,
-        endTime: schedule.examinationSessionSlot.endTime,
-      } : null,
-      
-      room: capacity.classRoom ? {
-        classRoomSectionId: capacity.classRoom.classRoomSectionId,
-        roomNumber: capacity.classRoom.roomNumber,
-      } : null,
-      
-      studentCount: studentCountMap.get(capacity.examScheduleRoomCapacityId) || 0,
-      
-      materialQuantities: quantities,
-      
-      issuedTo: bundle?.recipientUser ? { userId: bundle.recipientUser.userId, userName: bundle.recipientUser.userName } : null,
-      issuedBy: bundle?.issuerUser ? { userId: bundle.issuerUser.userId, userName: bundle.issuerUser.userName } : null,
-      issuedAt: bundle ? bundle.issuedAt : null,
+      capacity: rc.capacity,
+      bundle: bundle ? {
+        examRoomMaterialBundleId: bundle.examRoomMaterialBundleId,
+        bundleCode: bundle.bundleCode,
+        status: bundle.status,
+        materialQuantities: quantities,
+        issuedTo: bundle.recipientUser ? { userId: bundle.recipientUser.userId, userName: bundle.recipientUser.userName } : null,
+        issuedBy: bundle.issuerUser ? { userId: bundle.issuerUser.userId, userName: bundle.issuerUser.userName } : null,
+        issuedAt: bundle.issuedAt
+      } : null
     });
   }
+
+  // 3. Filter/Search by subjectName / subjectCode / bundleCode if `search` is provided
+  let allUniqueRooms = Array.from(roomMap.values());
+  const searchVal = filters.search?.toLowerCase();
   
+  if (searchVal) {
+    allUniqueRooms = allUniqueRooms.filter(room => {
+      return room.exams.some(exam => {
+        const matchesSubject = exam.subjectName?.toLowerCase().includes(searchVal) ||
+                               exam.subjectCode?.toLowerCase().includes(searchVal);
+        const matchesBundleCode = exam.bundle?.bundleCode?.toLowerCase().includes(searchVal);
+        return matchesSubject || matchesBundleCode;
+      });
+    });
+  }
+
+  const total = allUniqueRooms.length;
+  const pageNum = Number(page);
+  const limitNum = Number(limit);
+  const offset = (pageNum - 1) * limitNum;
+  const paginatedRooms = allUniqueRooms.slice(offset, offset + limitNum);
+
+  // 4. Batch-fetch student counts to avoid N+1 for final output
+  const capacityIds = [];
+  paginatedRooms.forEach(room => {
+    room.exams.forEach(exam => {
+      capacityIds.push(exam.examScheduleRoomCapacityId);
+    });
+  });
+
+  const studentCounts = capacityIds.length 
+    ? await repo.getStudentCountsForRoomCapacities(capacityIds)
+    : [];
+
+  const studentCountMap = new Map(
+    studentCounts.map(sc => [sc.examScheduleRoomCapacityId, parseInt(sc.studentCount, 10) || 0])
+  );
+
+  paginatedRooms.forEach(room => {
+    room.exams.forEach(exam => {
+      exam.studentCount = studentCountMap.get(exam.examScheduleRoomCapacityId) || 0;
+    });
+  });
+
   return {
-    rows: formattedRows,
-    count: result.count
+    rows: paginatedRooms,
+    count: total
   };
 }
 

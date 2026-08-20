@@ -334,3 +334,93 @@ export async function getMaxBundleId(transaction) {
   });
   return parseInt(result.maxId, 10) || 0;
 }
+
+export async function getRawBundleCapacities(filters, options = {}) {
+  const {
+    examinationSessionId,
+    examDate,
+    examinationSessionSlotId,
+    status,
+  } = filters;
+
+  const scheduleWhere = { examinationSessionId };
+  if (examDate) scheduleWhere.examDate = examDate;
+  if (examinationSessionSlotId) scheduleWhere.examinationSessionSlotId = examinationSessionSlotId;
+
+  const bundleWhere = {};
+  if (status) bundleWhere.status = status;
+
+  return scoped(model.examScheduleRoomCapacityModel).findAll({
+    attributes: ["examScheduleRoomCapacityId", "classRoomSectionId", "capacity"],
+    include: [
+      {
+        model: model.examScheduleModel,
+        as: "examSchedule",
+        attributes: ["examScheduleId", "examDate", "examinationSessionSlotId", "sessionId", "term"],
+        where: scheduleWhere,
+        required: true,
+        include: [
+          {
+            model: model.subjectModel,
+            as: "subjectSchedule",
+            attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
+            required: false,
+          },
+          {
+            model: model.examinationSessionSlotModel,
+            as: "examinationSessionSlot",
+            attributes: ["examinationSessionSlotId", "slotNumber", "startTime", "endTime"],
+            required: true,
+          }
+        ]
+      },
+      {
+        model: model.classRoomModel,
+        as: "classRoom",
+        attributes: ["classRoomSectionId", "roomNumber"],
+        required: true,
+      },
+      {
+        model: model.examRoomMaterialBundleModel,
+        as: "materialBundles",
+        attributes: [
+          "examRoomMaterialBundleId",
+          "bundleCode",
+          "status",
+          "issuedTo",
+          "issuedBy",
+          "issuedAt"
+        ],
+        where: Object.keys(bundleWhere).length > 0 ? bundleWhere : undefined,
+        required: Object.keys(bundleWhere).length > 0,
+        include: [
+          {
+            model: model.examRoomMaterialItemModel,
+            as: "items",
+            attributes: ["itemType", "plannedQuantity", "issuedQuantity", "usedQuantity", "unusedQuantity", "returnedQuantity", "damagedQuantity"],
+            required: false,
+          },
+          {
+             model: model.userModel,
+             as: "issuerUser",
+             attributes: ["userId", "userName"],
+             required: false
+          },
+          {
+             model: model.userModel,
+             as: "recipientUser",
+             attributes: ["userId", "userName"],
+             required: false
+          }
+        ]
+      }
+    ],
+    order: [
+      [{ model: model.examScheduleModel, as: 'examSchedule' }, 'examDate', 'ASC'],
+      [{ model: model.examScheduleModel, as: 'examSchedule' }, { model: model.examinationSessionSlotModel, as: 'examinationSessionSlot' }, 'startTime', 'ASC'],
+      [{ model: model.classRoomModel, as: 'classRoom' }, 'roomNumber', 'ASC']
+    ],
+    transaction: options.transaction
+  });
+}
+
