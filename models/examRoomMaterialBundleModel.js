@@ -1,7 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
-import examScheduleModel from "./examScheduleModel.js";
-import examScheduleRoomCapacityModel from "./examScheduleRoomCapacityModel.js";
+import classRoomModel from "./classRoomModel.js";
+import examinationSessionSlotModel from "./examinationSessionSlotModel.js";
 import userModel from "./userModel.js";
 import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
@@ -16,23 +16,20 @@ const examRoomMaterialBundleModel = sequelize.define(
       autoIncrement: true,
       field: "exam_room_material_bundle_id",
     },
-    examScheduleId: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      field: "exam_schedule_id",
-      references: {
-        model: examScheduleModel,
-        key: "exam_schedule_id",
-      },
+    examDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: false,
+      field: "exam_date",
     },
-    examScheduleRoomCapacityId: {
+    examinationSessionSlotId: {
       type: DataTypes.INTEGER,
-      allowNull: true,
-      field: "exam_schedule_room_capacity_id",
-      references: {
-        model: examScheduleRoomCapacityModel,
-        key: "exam_schedule_room_capacity_id",
-      },
+      allowNull: false,
+      field: "examination_session_slot_id",
+    },
+    classRoomSectionId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: "class_room_section_id",
     },
     bundleCode: {
       type: DataTypes.STRING(50),
@@ -177,8 +174,13 @@ const examRoomMaterialBundleModel = sequelize.define(
     paranoid: true,
     indexes: [
       {
+        name: "exam_room_material_bundle_unique_idx",
         unique: true,
-        fields: ["exam_schedule_id", "exam_schedule_room_capacity_id"],
+        fields: [
+          "exam_date",
+          "examination_session_slot_id",
+          "class_room_section_id",
+        ],
       },
     ],
   },

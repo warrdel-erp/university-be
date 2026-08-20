@@ -814,12 +814,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/examAttendance?examinationSessionId=1&examDate=2026-12-01&page=1&limit=10",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examAttendance"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examAttendance"],
               "query": [
                 {
                   "key": "examinationSessionId",
@@ -853,13 +849,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/examAttendance/room?examScheduleId=1&examScheduleRoomCapacityId=2",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examAttendance",
-                "room"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examAttendance", "room"],
               "query": [
                 {
                   "key": "examScheduleId",
@@ -885,13 +876,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/examAttendance/byroom?classRoomSectionId=8&examinationSessionId=1",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examAttendance",
-                "byroom"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examAttendance", "byroom"],
               "query": [
                 {
                   "key": "classRoomSectionId",
@@ -925,12 +911,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/examAttendance",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examAttendance"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["examAttendance"]
             }
           }
         },
@@ -954,13 +936,8 @@
             },
             "url": {
               "raw": "{{baseurl}}/examAttendance/status",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examAttendance",
-                "status"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["examAttendance", "status"]
             }
           }
         },
@@ -976,13 +953,8 @@
             ],
             "url": {
               "raw": "{{baseurl}}/examAttendance/summary?examinationSessionId=9&courseId=34&sessionId=6&term=1&examDate=2026-08-18&examinationSessionSlotId=4",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examAttendance",
-                "summary"
-              ],
+              "host": ["{{baseurl}}"],
+              "path": ["examAttendance", "summary"],
               "query": [
                 {
                   "key": "examinationSessionId",
@@ -1008,6 +980,131 @@
                   "key": "examinationSessionSlotId",
                   "value": "4"
                 }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "14. Exam Room Material Bundle (/examRoomMaterialBundle)",
+      "item": [
+        {
+          "name": "14.1 Get Bundle List (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examRoomMaterialBundle?examinationSessionId=1&examDate=2026-12-01&page=1&limit=10",
+              "host": ["{{baseurl}}"],
+              "path": ["examRoomMaterialBundle"],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "1"
+                },
+                {
+                  "key": "examDate",
+                  "value": "2026-12-01"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "14.2 Get Bundle Room Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examRoomMaterialBundle/room?classRoomSectionId=8&examDate=2026-12-01&examinationSessionSlotId=2",
+              "host": ["{{baseurl}}"],
+              "path": ["examRoomMaterialBundle"],
+              "query": [
+                {
+                  "key": "classRoomSectionId",
+                  "value": "8"
+                },
+                {
+                  "key": "examDate",
+                  "value": "2026-12-01"
+                },
+                {
+                  "key": "examinationSessionSlotId",
+                  "value": "2"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "14.3 Create Bundle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examDate\": \"2026-12-01\",\n  \"examinationSessionSlotId\": 2,\n  \"classRoomSectionId\": 8,\n  \"items\": [\n    {\n      \"itemType\": \"ANSWER_SHEET\",\n      \"plannedQuantity\": 30,\n      \"remarks\": \"Standard 32-page sheets\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/examRoomMaterialBundle",
+              "host": ["{{baseurl}}"],
+              "path": ["examRoomMaterialBundle"]
+            }
+          }
+        },
+        {
+          "name": "14.4 Update Bundle Items",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ISSUED\",\n  \"remarks\": \"Handed over to invigilator\",\n  \"issuedTo\": 56,\n  \"items\": [\n    {\n      \"itemType\": \"ANSWER_SHEET\",\n      \"plannedQuantity\": 30,\n      \"issuedQuantity\": 30,\n      \"usedQuantity\": 25,\n      \"unusedQuantity\": 5,\n      \"returnedQuantity\": 5,\n      \"damagedQuantity\": 0\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/examRoomMaterialBundle/items/{{examRoomMaterialBundleId}}",
+              "host": ["{{baseurl}}"],
+              "path": [
+                "examRoomMaterialBundle",
+                "items",
+                "{{examRoomMaterialBundleId}}"
               ]
             }
           }
@@ -1089,6 +1186,11 @@
     {
       "key": "qrCode",
       "value": "sample-uuid-qr-code",
+      "type": "string"
+    },
+    {
+      "key": "examRoomMaterialBundleId",
+      "value": "1",
       "type": "string"
     }
   ]

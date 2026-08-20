@@ -1204,16 +1204,16 @@ examSetupModel.belongsTo(courseModel, { foreignKey: "courseId", as: "course" });
 examSetupModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "subject" });
 examSetupModel.belongsTo(examSetupTypeModel, { foreignKey: "examTypeId", as: "examSetupType" });
 
-examRoomMaterialBundleModel.belongsTo(examScheduleModel, { foreignKey: "examScheduleId", as: "examSchedule" });
-examScheduleModel.hasMany(examRoomMaterialBundleModel, { foreignKey: "examScheduleId", as: "materialBundles" });
+examRoomMaterialBundleModel.belongsTo(classRoomModel, { foreignKey: "classRoomSectionId", as: "classRoom", constraints: false });
+classRoomModel.hasMany(examRoomMaterialBundleModel, { foreignKey: "classRoomSectionId", as: "materialBundles", constraints: false });
 
-examRoomMaterialBundleModel.belongsTo(examScheduleRoomCapacityModel, { foreignKey: "examScheduleRoomCapacityId", as: "roomCapacity" });
-examScheduleRoomCapacityModel.hasMany(examRoomMaterialBundleModel, { foreignKey: "examScheduleRoomCapacityId", as: "materialBundles" });
+examRoomMaterialBundleModel.belongsTo(examinationSessionSlotModel, { foreignKey: "examinationSessionSlotId", as: "examinationSessionSlot", constraints: false });
+examinationSessionSlotModel.hasMany(examRoomMaterialBundleModel, { foreignKey: "examinationSessionSlotId", as: "materialBundles", constraints: false });
 
-examRoomMaterialBundleModel.belongsTo(userModel, { foreignKey: "issuedTo", as: "recipientUser" });
-examRoomMaterialBundleModel.belongsTo(userModel, { foreignKey: "issuedBy", as: "issuerUser" });
-examRoomMaterialBundleModel.belongsTo(userModel, { foreignKey: "receivedBy", as: "receiverUser" });
-examRoomMaterialBundleModel.belongsTo(userModel, { foreignKey: "verifiedBy", as: "verifierUser" });
+examRoomMaterialBundleModel.belongsTo(userModel, { foreignKey: "issuedTo", as: "recipientUser", constraints: false });
+examRoomMaterialBundleModel.belongsTo(userModel, { foreignKey: "issuedBy", as: "issuerUser", constraints: false });
+examRoomMaterialBundleModel.belongsTo(userModel, { foreignKey: "receivedBy", as: "receiverUser", constraints: false });
+examRoomMaterialBundleModel.belongsTo(userModel, { foreignKey: "verifiedBy", as: "verifierUser", constraints: false });
 
 examRoomMaterialItemModel.belongsTo(examRoomMaterialBundleModel, { foreignKey: "examRoomMaterialBundleId", as: "materialBundle" });
 examRoomMaterialBundleModel.hasMany(examRoomMaterialItemModel, { foreignKey: "examRoomMaterialBundleId", as: "items" });
