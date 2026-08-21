@@ -24,6 +24,17 @@ const positiveIntegerQueryId = z.preprocess(
     .optional(),
 );
 
+const optionalIdWithNullDefault = z.preprocess(
+  emptyToUndefined,
+  z
+    .union([
+      z.string().regex(/^\d+$/).transform(Number),
+      z.number().int().positive(),
+    ])
+    .nullable()
+    .optional(),
+).transform((val) => (val === undefined || val === null ? null : val));
+
 const listSchema = {
   query: z.object({
     examinationSessionId: positiveIntegerId,
@@ -67,7 +78,7 @@ const createSchema = {
       .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD"),
     examinationSessionSlotId: positiveIntegerId,
     classRoomSectionId: positiveIntegerId,
-    issuedTo: positiveIntegerQueryId,
+    issuedTo: optionalIdWithNullDefault,
     items: z
       .array(
         z.object({
@@ -97,7 +108,7 @@ const updateItemsSchema = {
       .enum(["PREPARING", "READY", "ISSUED", "RECEIVED", "VERIFIED", "CLOSED"])
       .optional(),
     remarks: z.string().optional(),
-    issuedTo: positiveIntegerQueryId,
+    issuedTo: optionalIdWithNullDefault,
     items: z
       .array(
         z.object({
