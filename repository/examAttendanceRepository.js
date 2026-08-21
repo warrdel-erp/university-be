@@ -649,6 +649,14 @@ export async function getRoomCapacitiesForRoomSlot(classRoomSectionId, examDate,
             as: "subjectSchedule",
             attributes: ["subjectId", "subjectName", "subjectCode"],
             required: false,
+            include: [
+              {
+                model: model.courseModel,
+                as: "courseInfo",
+                attributes: ["courseName"],
+                required: false,
+              }
+            ]
           },
           {
             model: model.examinationSessionSlotModel,
