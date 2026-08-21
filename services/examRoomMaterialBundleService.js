@@ -2,6 +2,7 @@ import * as repo from "../repository/examRoomMaterialBundleRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 import { Op } from "sequelize";
 import * as model from "../models/index.js";
+import { getTenantStore } from "../utility/requestContext.js";
 
 // Utility to generate bundle code
 function generateBundleCode(seqId) {
@@ -270,6 +271,18 @@ export async function getBundleByRoomDetails(
     }
   }
 
+  let TotalMaterial = 0;
+  let issuedmaterial = 0;
+  let materialTypes = 0;
+
+  if (bundleDetails) {
+    materialTypes = bundleDetails.items?.length || 0;
+    bundleDetails.items?.forEach((item) => {
+      TotalMaterial += item.plannedQuantity || 0;
+      issuedmaterial += item.issuedQuantity || 0;
+    });
+  }
+
   return {
     classRoomSectionId,
     roomNumber: firstRc.classRoom?.roomNumber,
@@ -288,6 +301,13 @@ export async function getBundleByRoomDetails(
     studentCount: totalStudentCount,
     isRoomAllocationDone: totalStudentCount > 0,
     isBundleCreated: bundleDetails !== null,
+    bundleCode: bundleDetails ? bundleDetails.bundleCode : null,
+    BundleCode: bundleDetails ? bundleDetails.bundleCode : null,
+    TotalMaterial,
+    totalMaterial: TotalMaterial,
+    issuedmaterial,
+    issuedMaterial: issuedmaterial,
+    materialTypes,
     exams,
     bundle: bundleDetails,
   };
@@ -417,6 +437,11 @@ export async function createBundle(payload, user) {
     const maxId = parseInt(maxIdResult?.maxId, 10) || 0;
     const bundleCode = generateBundleCode(maxId + 1);
 
+    const tenantStore = getTenantStore();
+    const universityId = tenantStore.universityId || user.universityId;
+    const instituteId = tenantStore.instituteId || user.defaultInstituteId;
+    const academicYearId = tenantStore.academicYearId || user.defaultAcademicYearId;
+
     const bundleData = {
       examDate,
       examinationSessionSlotId,
@@ -426,9 +451,9 @@ export async function createBundle(payload, user) {
       issuedTo: issuedTo || null,
       issuedBy: issuedTo ? user.userId : null,
       issuedAt: issuedTo ? new Date() : null,
-      universityId: user.universityId,
-      instituteId: user.defaultInstituteId,
-      academicYearId: user.defaultAcademicYearId,
+      universityId,
+      instituteId,
+      academicYearId,
       createdBy: user.userId,
       updatedBy: user.userId,
     };
