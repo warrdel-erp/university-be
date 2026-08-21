@@ -506,9 +506,10 @@ export async function getListOfRoomsRoomWise(
 
     const examDate = schedule?.examDate;
     const slotId = schedule?.examinationSessionSlotId;
-    const key = `${roomId}_${examDate}_${slotId}`;
+    const examDateStr = formatDateKey(examDate);
+    const key = `${roomId}_${examDateStr}_${slotId}`;
 
-    const assKey = `${formatDateKey(examDate)}_${slotId}_${roomId}`;
+    const assKey = `${examDateStr}_${slotId}_${roomId}`;
     const roomAssignments = assignmentsMap.get(assKey) || [];
     const assignedCount = roomAssignments.length;
 

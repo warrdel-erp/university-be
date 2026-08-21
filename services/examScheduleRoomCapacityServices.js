@@ -3,6 +3,7 @@ import * as examRoomCapacityRepository from "../repository/examScheduleRoomCapac
 import * as examScheduleServices from "./examScheduleServices.js";
 import { z } from "zod";
 import { getTimeSlotRange, minutesToTime } from "../utility/timeSlot.js";
+import { decimalSubtract } from "../utility/decimalMoney.js";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -178,14 +179,6 @@ export async function addExamRoomCapacity(data, userId) {
         ...slot,
     };
 
-    // Check availability only for the new candidate rooms
-    const [classBusyRoomIds, overlappingExamRoomIds] = await Promise.all([
-        examRoomCapacityRepository.findOccupiedRoomIdsByClassSchedule(day, startTime, endTime, examDate),
-        examRoomCapacityRepository.findOverlappingExamBusyRoomIds(examDate, validatedData.examScheduleId, startMinutes, endMinutes),
-    ]);
-
-    const busyRoomIds = new Set([...classBusyRoomIds, ...overlappingExamRoomIds]);
-
     const transaction = await sequelize.transaction();
 
     try {
@@ -193,6 +186,7 @@ export async function addExamRoomCapacity(data, userId) {
             examSchedule.sessionId,
             examSchedule.subjectSchedule?.courseId,
             examSchedule.term,
+            examSchedule.academicYearId,
             transaction
         );
 
@@ -201,16 +195,12 @@ export async function addExamRoomCapacity(data, userId) {
             transaction
         );
 
-        let remainingStudents = Math.max(0, totalStudents - alreadyAssignedCapacity);
+        let remainingStudents = Math.max(0, decimalSubtract(totalStudents, alreadyAssignedCapacity));
 
         const assignments = [];
         for (const candidate of newCandidates) {
             const roomId = candidate.classRoomSectionId;
             const room = roomLookup.get(roomId);
-
-            if (busyRoomIds.has(roomId)) {
-                throw new Error(`Room ${room.roomNumber} is not available for the selected time slot`);
-            }
 
             const roomMaxCapacity = room.examCapacity ?? room.capacity;
             const resolvedExamColumns = room.examCapacityColumns ?? 1;
@@ -226,14 +216,14 @@ export async function addExamRoomCapacity(data, userId) {
                 transaction
             );
 
-            const remainingRoomCapacity = Math.max(0, roomMaxCapacity - usedCapacity);
+            const remainingRoomCapacity = Math.max(0, decimalSubtract(roomMaxCapacity, usedCapacity));
             const capacityToSave = Math.min(remainingStudents, remainingRoomCapacity);
 
-            if (capacityToSave <= 0) {
-                throw new Error(`Room ${room.roomNumber} has no remaining capacity to assign`);
+            if (remainingRoomCapacity <= 0) {
+                throw new Error(`Room ${room.roomNumber} is not available for the selected time slot. Booked capacity: ${usedCapacity}/${roomMaxCapacity}`);
             }
 
-            remainingStudents = Math.max(0, remainingStudents - capacityToSave);
+            remainingStudents = Math.max(0, decimalSubtract(remainingStudents, capacityToSave));
 
             assignments.push({
                 classRoomSectionId: room.classRoomSectionId,
@@ -329,10 +319,10 @@ export async function deleteExamRoomCapacity(examScheduleRoomCapacityId) {
     const transaction = await sequelize.transaction();
 
     try {
-        const seatCount = await examRoomCapacityRepository.getSeatAllocationCountByCapacityId(examScheduleRoomCapacityId, transaction);
-        if (seatCount > 0) {
-            throw new Error("Room assignment cannot be removed because seats have already been allocated for this room.");
-        }
+        await examRoomCapacityRepository.deleteAssociatedSeatsAndAttendance(
+            examScheduleRoomCapacityId,
+            transaction
+        );
 
         const result = await examRoomCapacityRepository.deleteExamRoomCapacity(
             examScheduleRoomCapacityId,

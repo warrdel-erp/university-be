@@ -207,7 +207,8 @@ export async function getExamScheduleSlot(examScheduleId) {
       "duration",
       "examinationSessionSlotId",
       "sessionId",
-      "term"
+      "term",
+      "academicYearId"
     ],
     include: [
       {
@@ -382,8 +383,8 @@ export async function getSeatAllocationCountsByRoomCapacityIds(examScheduleRoomC
   return rows;
 }
 
-export async function getEnrolledStudentsCount(sessionId, courseId, term, transaction = null) {
-  return await model.studentModel.count({
+export async function getEnrolledStudentsCount(sessionId, courseId, term, academicYearId, transaction = null) {
+  return await scoped(model.studentModel).count({
     include: [
       {
         model: model.classSectionTermModel,
@@ -395,7 +396,7 @@ export async function getEnrolledStudentsCount(sessionId, courseId, term, transa
             model: model.classSectionModel,
             as: 'classSection',
             required: true,
-            where: { sessionId, courseId },
+            where: { sessionId, courseId, academicYearId },
           }
         ]
       }
@@ -412,35 +413,44 @@ export async function getAlreadyAssignedCapacity(examScheduleId, transaction = n
 }
 
 export async function getOccupiedCapacityForRoomSlot(classRoomSectionId, examDate, examinationSessionSlotId, transaction = null) {
+  const schedules = await model.examScheduleModel.findAll({
+    where: { examDate, examinationSessionSlotId },
+    attributes: ['examScheduleId'],
+    raw: true,
+    transaction
+  });
+  const scheduleIds = schedules.map(s => s.examScheduleId);
+  if (scheduleIds.length === 0) {
+    return 0;
+  }
   return await model.examScheduleRoomCapacityModel.sum('capacity', {
-    include: [
-      {
-        model: model.examScheduleModel,
-        as: 'examSchedule',
-        required: true,
-        where: { examDate, examinationSessionSlotId }
-      }
-    ],
-    where: { classRoomSectionId },
+    where: {
+      classRoomSectionId,
+      examScheduleId: { [Op.in]: scheduleIds }
+    },
     transaction
   }) || 0;
 }
 
 export async function getOccupiedCapacitiesForDateSlot(examDate, examinationSessionSlotId, transaction = null) {
+  const schedules = await model.examScheduleModel.findAll({
+    where: { examDate, examinationSessionSlotId },
+    attributes: ['examScheduleId'],
+    raw: true,
+    transaction
+  });
+  const scheduleIds = schedules.map(s => s.examScheduleId);
+  if (scheduleIds.length === 0) {
+    return {};
+  }
   const rows = await model.examScheduleRoomCapacityModel.findAll({
     attributes: [
       'classRoomSectionId',
       [fn('SUM', col('capacity')), 'totalUsedCapacity']
     ],
-    include: [
-      {
-        model: model.examScheduleModel,
-        as: 'examSchedule',
-        required: true,
-        attributes: [],
-        where: { examDate, examinationSessionSlotId }
-      }
-    ],
+    where: {
+      examScheduleId: { [Op.in]: scheduleIds }
+    },
     group: ['classRoomSectionId'],
     raw: true,
     transaction
@@ -450,6 +460,20 @@ export async function getOccupiedCapacitiesForDateSlot(examDate, examinationSess
     acc[r.classRoomSectionId] = Number(r.totalUsedCapacity || 0);
     return acc;
   }, {});
+}
+
+export async function deleteAssociatedSeatsAndAttendance(examScheduleRoomCapacityId, transaction = null) {
+  // Delete attendance records first
+  await model.examAttendanceModel.destroy({
+    where: { examScheduleRoomCapacityId },
+    transaction
+  });
+
+  // Delete seating records
+  await model.studentExamSeatModel.destroy({
+    where: { examScheduleRoomCapacityId },
+    transaction
+  });
 }
 
 
