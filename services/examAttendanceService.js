@@ -1,8 +1,11 @@
 import * as examAttendanceRepository from "../repository/examAttendanceRepository.js";
-import { getRoomsWithExams, getRoomCapacitiesByRoom } from "../repository/examInvigilatorAssignmentRepository.js";
+import { getRoomsWithExams, getRoomCapacitiesByRoom, getAssignmentsForRooms } from "../repository/examInvigilatorAssignmentRepository.js";
 import { getAcademicYearId } from "../utility/requestContext.js";
 import { getRoomCentricMetrics } from "../utility/roomCentricHelper.js";
 import { Op } from "sequelize";
+import { formatDateKey } from "../utility/dateFormat.js";
+import * as model from "../models/index.js";
+import sequelize from "../database/sequelizeConfig.js";
 
 export async function addExamAttendance(data, createdBy, updatedBy) {
   const {
@@ -100,29 +103,27 @@ export async function getExamOperationsAttendance(filters, pagination) {
   // Reuse the same room-with-exams query from the invigilator module
   const allRows = await getRoomsWithExams(filters);
 
-  // Build a set of all unique examScheduleRoomCapacityIds to batch-fetch attendance counts
+  // Build a set of all unique examScheduleRoomCapacityIds to batch-fetch seat counts
   const capacityIds = allRows.map((rc) => rc.examScheduleRoomCapacityId);
 
-  // Batch fetch attendance counts grouped by examScheduleRoomCapacityId + attendanceStatus
-  const attendanceCounts = capacityIds.length
-    ? await examAttendanceRepository.getAttendanceCountsForRoomCapacities(capacityIds)
+  // Batch fetch seat counts grouped by examScheduleRoomCapacityId
+  const seatCounts = capacityIds.length
+    ? await model.studentExamSeatModel.findAll({
+        where: { examScheduleRoomCapacityId: { [Op.in]: capacityIds } },
+        attributes: [
+          "examScheduleRoomCapacityId",
+          [sequelize.fn("COUNT", sequelize.col("student_id")), "studentCount"]
+        ],
+        group: ["examScheduleRoomCapacityId"],
+        raw: true
+      })
     : [];
 
-  // Build a map: capacityId → { present, absent, pending }
-  const attendanceMap = new Map();
-  for (const row of attendanceCounts) {
-    const id = row.examScheduleRoomCapacityId;
-    if (!attendanceMap.has(id)) {
-      attendanceMap.set(id, { present: 0, absent: 0, pending: 0 });
-    }
-    const entry = attendanceMap.get(id);
-    const count = parseInt(row.count, 10) || 0;
-    if (row.attendanceStatus === "PRESENT") entry.present += count;
-    else if (row.attendanceStatus === "ABSENT") entry.absent += count;
-    else if (row.attendanceStatus === "PENDING") entry.pending += count;
-  }
+  const seatCountMap = new Map(
+    seatCounts.map((r) => [Number(r.examScheduleRoomCapacityId), parseInt(r.studentCount, 10) || 0])
+  );
 
-  // Group by classRoomSectionId — same pattern as invigilator rooms
+  // Group by classRoomSectionId + examDate + examinationSessionSlotId
   const roomMap = new Map();
 
   for (const rc of allRows) {
@@ -130,49 +131,45 @@ export async function getExamOperationsAttendance(filters, pagination) {
     const schedule = rc.examSchedule;
     const subject = schedule?.subjectSchedule;
     const slot = schedule?.examinationSessionSlot;
-    const att = attendanceMap.get(rc.examScheduleRoomCapacityId) || { present: 0, absent: 0, pending: 0 };
-    const totalAttendance = att.present + att.absent + att.pending;
+    const studentCount = seatCountMap.get(rc.examScheduleRoomCapacityId) || 0;
 
     const examEntry = {
       examScheduleRoomCapacityId: rc.examScheduleRoomCapacityId,
       examScheduleId: schedule?.examScheduleId,
-      examDate: schedule?.examDate,
       term: schedule?.term,
       sessionId: schedule?.sessionId,
-      examinationSessionSlotId: schedule?.examinationSessionSlotId,
       subjectId: subject?.subjectId,
       subjectName: subject?.subjectName,
       subjectCode: subject?.subjectCode,
       courseId: subject?.courseId,
-      slot: slot
-        ? {
-            examinationSessionSlotId: slot.examinationSessionSlotId,
-            slotNumber: slot.slotNumber,
-            startTime: slot.startTime,
-            endTime: slot.endTime,
-          }
-        : null,
       capacity: rc.capacity,
-      attendance: {
-        present: att.present,
-        absent: att.absent,
-        pending: att.pending,
-        total: totalAttendance,
-        isGenerated: totalAttendance > 0,
-      },
+      studentCount
     };
 
-    if (!roomMap.has(roomId)) {
-      roomMap.set(roomId, {
+    const examDateStr = formatDateKey(schedule?.examDate);
+    const slotId = schedule?.examinationSessionSlotId;
+    const key = `${roomId}_${examDateStr}_${slotId}`;
+
+    if (!roomMap.has(key)) {
+      roomMap.set(key, {
         classRoomSectionId: roomId,
         roomNumber: rc.classRoom?.roomNumber,
         roomCapacity: rc.classRoom?.capacity,
         examCapacity: rc.classRoom?.examCapacity,
+        examDate: schedule?.examDate,
+        slot: slot
+          ? {
+              examinationSessionSlotId: slot.examinationSessionSlotId,
+              slotNumber: slot.slotNumber,
+              startTime: slot.startTime,
+              endTime: slot.endTime,
+            }
+          : null,
         exams: [],
       });
     }
 
-    roomMap.get(roomId).exams.push(examEntry);
+    roomMap.get(key).exams.push(examEntry);
   }
 
   const allUniqueRooms = Array.from(roomMap.values());
@@ -405,54 +402,106 @@ export async function getExamAttendanceDetailsByRoom(classRoomSectionId, filters
     options
   );
 
-  const results = [];
+  if (!roomCapacities.length) {
+    return null;
+  }
+
+  const firstRc = roomCapacities[0];
+  const examDate = firstRc.examSchedule.examDate;
+  const slotId = firstRc.examSchedule.examinationSessionSlotId;
+
+  // 1. Fetch invigilators assigned to this room at this slot/date
+  const invigilatorsRaw = await getAssignmentsForRooms(
+    [Number(classRoomSectionId)],
+    [examDate],
+    [slotId],
+    options
+  );
+
+  const invigilators = invigilatorsRaw.map((inv) => ({
+    userId: inv.user ? inv.user.userId : inv.userId,
+    userName: inv.user ? inv.user.userName : "",
+    role: inv.role,
+  }));
+
+  // 2. Fetch seat counts for sibling capacities in the room to get numberOfStudentInRoom
+  const siblingCapacityIds = roomCapacities.map(rc => rc.examScheduleRoomCapacityId);
+
+  const seatCounts = siblingCapacityIds.length ? await model.studentExamSeatModel.findAll({
+    where: {
+      examScheduleRoomCapacityId: { [Op.in]: siblingCapacityIds }
+    },
+    attributes: [
+      "examScheduleRoomCapacityId",
+      [sequelize.fn("COUNT", sequelize.col("student_id")), "studentCount"]
+    ],
+    group: ["examScheduleRoomCapacityId"],
+    raw: true,
+    transaction: options.transaction
+  }) : [];
+
+  const seatCountMap = new Map(
+    seatCounts.map(r => [Number(r.examScheduleRoomCapacityId), parseInt(r.studentCount, 10) || 0])
+  );
+
+  // 3. Process exams and compute student count in this room and total count in subject across all rooms
+  const exams = [];
+  let totalStudentsAll = 0;
+
   for (const rc of roomCapacities) {
-    const metrics = await getRoomCentricMetrics(rc.examScheduleId, classRoomSectionId);
-    
-    // Fetch attendance sheet status
-    const attendanceStatusRow = await examAttendanceRepository.getAttendanceStatusByExamSchedule(
-      rc.examScheduleId,
-      [rc.examScheduleRoomCapacityId]
-    );
-    const attendanceSheetStatus = (attendanceStatusRow && attendanceStatusRow.length > 0)
-      ? attendanceStatusRow[0].status
-      : "NOT_GENERATED";
+    const numberOfStudentInRoom = seatCountMap.get(Number(rc.examScheduleRoomCapacityId)) || 0;
+    totalStudentsAll += numberOfStudentInRoom;
 
-    // Fetch attendance status counts
-    const counts = await examAttendanceRepository.getAttendanceCountsForRoomCapacities([rc.examScheduleRoomCapacityId]);
-    const countsObj = { present: 0, absent: 0, pending: 0 };
-    counts.forEach(row => {
-      if (row.attendanceStatus === "PRESENT") countsObj.present += parseInt(row.count, 10) || 0;
-      else if (row.attendanceStatus === "ABSENT") countsObj.absent += parseInt(row.count, 10) || 0;
-      else if (row.attendanceStatus === "PENDING") countsObj.pending += parseInt(row.count, 10) || 0;
+    // Fetch total student count for this exam schedule across all rooms
+    const examScheduleCapacities = await model.examScheduleRoomCapacityModel.findAll({
+      where: { examScheduleId: Number(rc.examScheduleId) },
+      transaction: options.transaction
     });
+    const capacityIds = examScheduleCapacities.map(c => c.examScheduleRoomCapacityId);
+    const totalStudentsInSubject = capacityIds.length ? await model.studentExamSeatModel.count({
+      where: { examScheduleRoomCapacityId: { [Op.in]: capacityIds } },
+      transaction: options.transaction
+    }) : 0;
 
-    results.push({
+    exams.push({
       examScheduleRoomCapacityId: rc.examScheduleRoomCapacityId,
       examScheduleId: rc.examScheduleId,
-      examDate: rc.examSchedule.examDate,
-      term: rc.examSchedule.term,
-      sessionId: rc.examSchedule.sessionId,
-      examinationSessionSlotId: rc.examSchedule.examinationSessionSlotId,
-      subjectId: rc.examSchedule.subjectSchedule?.subjectId,
-      subjectName: rc.examSchedule.subjectSchedule?.subjectName,
-      subjectCode: rc.examSchedule.subjectSchedule?.subjectCode,
-      courseId: rc.examSchedule.subjectSchedule?.courseId,
-      slot: rc.examSchedule.examinationSessionSlot ? {
-        examinationSessionSlotId: rc.examSchedule.examinationSessionSlot.examinationSessionSlotId,
-        slotNumber: rc.examSchedule.examinationSessionSlot.slotNumber,
-        startTime: rc.examSchedule.examinationSessionSlot.startTime,
-        endTime: rc.examSchedule.examinationSessionSlot.endTime,
-      } : null,
-      roomNumber: rc.classRoom?.roomNumber,
+      term: rc.examSchedule?.term,
+      sessionId: rc.examSchedule?.sessionId,
+      subjectId: rc.examSchedule?.subjectSchedule?.subjectId,
+      subjectName: rc.examSchedule?.subjectSchedule?.subjectName,
+      subjectCode: rc.examSchedule?.subjectSchedule?.subjectCode,
+      courseId: rc.examSchedule?.subjectSchedule?.courseId,
+      classRoomSectionId: Number(classRoomSectionId),
       capacity: rc.capacity,
-      attendanceSheetStatus,
-      attendance: countsObj,
-      roomDetails: metrics
+      numberOfStudentInRoom,
+      totalStudentsInSubject
     });
   }
 
-  return results;
+  // 4. Build room details
+  const roomDetails = {
+    classRoomSectionId: Number(classRoomSectionId),
+    roomNumber: firstRc.classRoom?.roomNumber,
+    numberOfExamsInRoom: roomCapacities.length,
+    numberOfInvigilatorsInRoom: invigilators.length,
+    totalStudentsAll
+  };
+
+  return {
+    examDate,
+    slot: firstRc.examSchedule?.examinationSessionSlot
+      ? {
+          examinationSessionSlotId: firstRc.examSchedule.examinationSessionSlot.examinationSessionSlotId,
+          slotNumber: firstRc.examSchedule.examinationSessionSlot.slotNumber,
+          startTime: firstRc.examSchedule.examinationSessionSlot.startTime,
+          endTime: firstRc.examSchedule.examinationSessionSlot.endTime,
+        }
+      : null,
+    roomDetails,
+    invigilators,
+    exams
+  };
 }
 
 function buildExamAttendanceResponse({
