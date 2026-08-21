@@ -143,8 +143,13 @@ export async function getAssignmentsByRoom(req, res) {
 
 export async function getFacultyAvailability(req, res) {
     try {
-        const { examScheduleId } = req.query;
-        const result = await examInvigilatorAssignmentServices.getFacultyAvailability(examScheduleId);
+        const { examScheduleId, classRoomSectionId, examinationSessionSlotId, examDate } = req.query;
+        const result = await examInvigilatorAssignmentServices.getFacultyAvailability({
+            examScheduleId,
+            classRoomSectionId,
+            examinationSessionSlotId,
+            examDate
+        });
         return SuccessResponse(res, 200, "Faculty availability fetched successfully", result);
     } catch (error) {
         const statusCode = error.statusCode || 500;

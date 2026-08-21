@@ -465,6 +465,7 @@ export async function getExamAttendanceDetailsByRoom(
   );
 
   const invigilators = invigilatorsRaw.map((inv) => ({
+    examInvigilatorAssignmentId: inv.examInvigilatorAssignmentId,
     userId: inv.user ? inv.user.userId : inv.userId,
     userName: inv.user ? inv.user.userName : "",
     role: inv.role,

@@ -170,7 +170,13 @@ router.get(
 
 const availabilitySchema = {
   query: z.object({
-    examScheduleId: positiveIntegerId,
+    examScheduleId: positiveIntegerQueryId,
+    classRoomSectionId: positiveIntegerQueryId,
+    examinationSessionSlotId: positiveIntegerQueryId,
+    examDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD")
+      .optional(),
   }),
 };
 

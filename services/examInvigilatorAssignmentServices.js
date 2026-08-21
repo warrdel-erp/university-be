@@ -302,6 +302,7 @@ export async function getAssignmentsByRoom(
     );
 
   const invigilators = invigilatorsRaw.map((inv) => ({
+    examInvigilatorAssignmentId: inv.examInvigilatorAssignmentId,
     userId: inv.user ? inv.user.userId : inv.userId,
     userName: inv.user ? inv.user.userName : "",
     role: inv.role,
@@ -387,23 +388,36 @@ export async function getAssignmentsByRoom(
   };
 }
 
-export async function getFacultyAvailability(examScheduleId, options = {}) {
-  const schedule = await examInvigilatorAssignmentRepository.findScheduleById(
-    examScheduleId,
-    options,
-  );
-  if (!schedule) {
-    const err = new Error("Exam schedule not found");
-    err.statusCode = 404;
+export async function getFacultyAvailability(params, options = {}) {
+  const { examScheduleId, classRoomSectionId, examinationSessionSlotId, examDate } = params;
+
+  let targetExamDate = examDate;
+  let targetSlotId = examinationSessionSlotId;
+
+  if (examScheduleId) {
+    const schedule = await examInvigilatorAssignmentRepository.findScheduleById(
+      examScheduleId,
+      options,
+    );
+    if (!schedule) {
+      const err = new Error("Exam schedule not found");
+      err.statusCode = 404;
+      throw err;
+    }
+    targetExamDate = schedule.examDate;
+    targetSlotId = schedule.examinationSessionSlotId;
+  }
+
+  if (!targetExamDate || !targetSlotId) {
+    const err = new Error("Either examScheduleId or both examDate and examinationSessionSlotId are required");
+    err.statusCode = 400;
     throw err;
   }
 
-  const { examDate, examinationSessionSlotId } = schedule;
-
   const [activeAssignments, allEmployees] = await Promise.all([
     examInvigilatorAssignmentRepository.getAssignmentsByDateAndSlot(
-      examDate,
-      examinationSessionSlotId,
+      targetExamDate,
+      targetSlotId,
       options,
     ),
     examInvigilatorAssignmentRepository.getAllEmployeesWithUser(options),
