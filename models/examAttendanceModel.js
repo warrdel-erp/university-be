@@ -7,14 +7,12 @@ import examScheduleModel from "./examScheduleModel.js";
 import examScheduleRoomCapacityModel from "./examScheduleRoomCapacityModel.js";
 import studentModel from "./studentModel.js";
 import studentExamSeatModel from "./studentExamSeatModel.js";
-import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
-import acedmicYearModel from "./acedmicYearModel.js";
 
 const examAttendanceModel = sequelize.define(
     "exam_attendance",
     {
-                universityId: {
+        universityId: {
             type: DataTypes.INTEGER,
             allowNull: true,
             field: 'university_id',

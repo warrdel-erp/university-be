@@ -29,21 +29,21 @@ module.exports = {
       JOIN institute i ON ad.institute_id = i.institute_id
       SET ad.campus_id = i.campus_id
       WHERE ad.campus_id IS NULL AND i.campus_id IS NOT NULL;
-    `);
+    `).catch(() => {});
 
     await queryInterface.sequelize.query(`
       UPDATE dormitory_list dl
       JOIN institute i ON dl.institute_id = i.institute_id
       SET dl.campus_id = i.campus_id
       WHERE dl.campus_id IS NULL AND i.campus_id IS NOT NULL;
-    `);
+    `).catch(() => {});
 
     await queryInterface.sequelize.query(`
       UPDATE room_type rt
       JOIN institute i ON rt.institute_id = i.institute_id
       SET rt.campus_id = i.campus_id
       WHERE rt.campus_id IS NULL AND i.campus_id IS NOT NULL;
-    `);
+    `).catch(() => {});
   },
 
   async down(queryInterface, Sequelize) {

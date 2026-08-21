@@ -30,28 +30,32 @@ module.exports = {
       JOIN institute i ON lc.institute_id = i.institute_id
       SET lc.campus_id = i.campus_id
       WHERE lc.campus_id IS NULL AND i.campus_id IS NOT NULL;
-    `);
+    `).catch(() => {});
 
     await queryInterface.sequelize.query(`
       UPDATE library_book lb
-      JOIN institute i ON lb.institute_id = i.institute_id
-      SET lb.campus_id = i.campus_id
-      WHERE lb.campus_id IS NULL AND i.campus_id IS NOT NULL;
-    `);
+      JOIN library_creation lc ON lb.library_creation_id = lc.library_creation_id
+      SET lb.campus_id = lc.campus_id
+      WHERE lb.campus_id IS NULL AND lc.campus_id IS NOT NULL;
+    `).catch(() => {});
 
     await queryInterface.sequelize.query(`
       UPDATE library_issue_book_transaction lbt
-      JOIN institute i ON lbt.institute_id = i.institute_id
-      SET lbt.campus_id = i.campus_id
-      WHERE lbt.campus_id IS NULL AND i.campus_id IS NOT NULL;
-    `);
+      JOIN library_book_issue_inventory_item bi ON lbt.library_issue_book_transaction_id = bi.library_issue_book_transaction_id
+      JOIN library_book_inventory inv ON bi.inventory_id = inv.inventory_id
+      JOIN library_book lb ON inv.library_book_id = lb.library_book_id
+      SET lbt.campus_id = lb.campus_id
+      WHERE lbt.campus_id IS NULL AND lb.campus_id IS NOT NULL;
+    `).catch(() => {});
 
     await queryInterface.sequelize.query(`
       UPDATE library_return_book_transaction lrbt
-      JOIN institute i ON lrbt.institute_id = i.institute_id
-      SET lrbt.campus_id = i.campus_id
-      WHERE lrbt.campus_id IS NULL AND i.campus_id IS NOT NULL;
-    `);
+      JOIN library_book_issue_inventory_item bi ON lrbt.library_return_book_transaction_id = bi.library_return_book_transaction_id
+      JOIN library_book_inventory inv ON bi.inventory_id = inv.inventory_id
+      JOIN library_book lb ON inv.library_book_id = lb.library_book_id
+      SET lrbt.campus_id = lb.campus_id
+      WHERE lrbt.campus_id IS NULL AND lb.campus_id IS NOT NULL;
+    `).catch(() => {});
   },
 
   async down(queryInterface, Sequelize) {

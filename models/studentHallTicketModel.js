@@ -4,6 +4,7 @@ import acedmicYearModel from "./acedmicYearModel.js";
 import instituteModel from "./instituteModel.js";
 import studentModel from "./studentModel.js";
 import universityModel from "./universityModel.js";
+import examinationSessionModel from './examinationSessionModel.js';
 
 const studentHallTicketModel = sequelize.define(
     "student_hall_ticket",

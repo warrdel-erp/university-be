@@ -29,21 +29,21 @@ module.exports = {
       JOIN institute i ON tr.institute_id = i.institute_id
       SET tr.campus_id = i.campus_id
       WHERE tr.campus_id IS NULL AND i.campus_id IS NOT NULL;
-    `);
+    `).catch(() => {});
 
     await queryInterface.sequelize.query(`
       UPDATE transport_vehicle tv
       JOIN institute i ON tv.institute_id = i.institute_id
       SET tv.campus_id = i.campus_id
       WHERE tv.campus_id IS NULL AND i.campus_id IS NOT NULL;
-    `);
+    `).catch(() => {});
 
     await queryInterface.sequelize.query(`
       UPDATE assign_vehicle av
       JOIN institute i ON av.institute_id = i.institute_id
       SET av.campus_id = i.campus_id
       WHERE av.campus_id IS NULL AND i.campus_id IS NOT NULL;
-    `);
+    `).catch(() => {});
   },
 
   async down(queryInterface, Sequelize) {

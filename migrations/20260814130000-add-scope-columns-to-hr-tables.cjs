@@ -56,17 +56,28 @@ module.exports = {
       WHERE s.campus_id IS NULL AND i.campus_id IS NOT NULL;
     `);
 
-    // leave_requests scope columns backfill from staff/employee via user_id
+    // leave_requests scope columns backfill from staff/employee via employee_id
     await queryInterface.sequelize.query(`
       UPDATE leave_requests lr
-      JOIN staff s ON lr.user_id = s.created_by
+      JOIN staff s ON lr.employee_id = s.employee_id
       JOIN institute i ON s.institute_id = i.institute_id
       SET lr.university_id = COALESCE(lr.university_id, s.university_id),
           lr.institute_id = COALESCE(lr.institute_id, s.institute_id),
           lr.department_id = COALESCE(lr.department_id, s.department_id),
           lr.campus_id = COALESCE(lr.campus_id, i.campus_id)
       WHERE lr.university_id IS NULL OR lr.department_id IS NULL OR lr.campus_id IS NULL;
-    `);
+    `).catch(() => {});
+
+    await queryInterface.sequelize.query(`
+      UPDATE leave_requests lr
+      JOIN employee e ON lr.employee_id = e.employee_id
+      JOIN institute i ON e.institute_id = i.institute_id
+      SET lr.university_id = COALESCE(lr.university_id, e.university_id, i.university_id),
+          lr.institute_id = COALESCE(lr.institute_id, e.institute_id),
+          lr.department_id = COALESCE(lr.department_id, e.department_id),
+          lr.campus_id = COALESCE(lr.campus_id, e.campus_id, i.campus_id)
+      WHERE lr.university_id IS NULL OR lr.department_id IS NULL OR lr.campus_id IS NULL;
+    `).catch(() => {});
   },
 
   async down(queryInterface, Sequelize) {
