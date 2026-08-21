@@ -200,7 +200,15 @@ export async function updateExamRoomCapacityOrderKey(examScheduleRoomCapacityId,
 
 export async function getExamScheduleSlot(examScheduleId) {
   return await scoped(model.examScheduleModel).findByPk(examScheduleId, {
-    attributes: ["examScheduleId", "examDate", "examTime", "duration", "examinationSessionSlotId"],
+    attributes: [
+      "examScheduleId",
+      "examDate",
+      "examTime",
+      "duration",
+      "examinationSessionSlotId",
+      "sessionId",
+      "term"
+    ],
     include: [
       {
         model: model.examinationSessionSlotModel,
@@ -209,6 +217,12 @@ export async function getExamScheduleSlot(examScheduleId) {
         required: false,
         paranoid: true,
       },
+      {
+        model: model.subjectModel,
+        as: "subjectSchedule",
+        attributes: ["courseId"],
+        required: false,
+      }
     ],
     paranoid: true,
     nest: true,
@@ -366,6 +380,76 @@ export async function getSeatAllocationCountsByRoomCapacityIds(examScheduleRoomC
     transaction,
   });
   return rows;
+}
+
+export async function getEnrolledStudentsCount(sessionId, courseId, term, transaction = null) {
+  return await model.studentModel.count({
+    include: [
+      {
+        model: model.classSectionTermModel,
+        as: 'studentClassSectionTerm',
+        required: true,
+        where: { term },
+        include: [
+          {
+            model: model.classSectionModel,
+            as: 'classSection',
+            required: true,
+            where: { sessionId, courseId },
+          }
+        ]
+      }
+    ],
+    transaction
+  });
+}
+
+export async function getAlreadyAssignedCapacity(examScheduleId, transaction = null) {
+  return await model.examScheduleRoomCapacityModel.sum('capacity', {
+    where: { examScheduleId },
+    transaction
+  }) || 0;
+}
+
+export async function getOccupiedCapacityForRoomSlot(classRoomSectionId, examDate, examinationSessionSlotId, transaction = null) {
+  return await model.examScheduleRoomCapacityModel.sum('capacity', {
+    include: [
+      {
+        model: model.examScheduleModel,
+        as: 'examSchedule',
+        required: true,
+        where: { examDate, examinationSessionSlotId }
+      }
+    ],
+    where: { classRoomSectionId },
+    transaction
+  }) || 0;
+}
+
+export async function getOccupiedCapacitiesForDateSlot(examDate, examinationSessionSlotId, transaction = null) {
+  const rows = await model.examScheduleRoomCapacityModel.findAll({
+    attributes: [
+      'classRoomSectionId',
+      [fn('SUM', col('capacity')), 'totalUsedCapacity']
+    ],
+    include: [
+      {
+        model: model.examScheduleModel,
+        as: 'examSchedule',
+        required: true,
+        attributes: [],
+        where: { examDate, examinationSessionSlotId }
+      }
+    ],
+    group: ['classRoomSectionId'],
+    raw: true,
+    transaction
+  });
+
+  return rows.reduce((acc, r) => {
+    acc[r.classRoomSectionId] = Number(r.totalUsedCapacity || 0);
+    return acc;
+  }, {});
 }
 
 

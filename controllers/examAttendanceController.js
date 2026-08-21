@@ -157,14 +157,15 @@ export async function getExamOperationsAttendance(req, res) {
 
 export async function getExamOperationsAttendanceRoom(req, res) {
     try {
-        const { examScheduleId, examScheduleRoomCapacityId } = req.query;
-        if (!examScheduleId || !examScheduleRoomCapacityId) {
-            return ErrorResponse(res, 400, "Missing required query parameters: examScheduleId, examScheduleRoomCapacityId");
+        const { classRoomSectionId, examDate, examinationSessionSlotId } = req.query;
+        if (!classRoomSectionId || !examDate || !examinationSessionSlotId) {
+            return ErrorResponse(res, 400, "Missing required query parameters: classRoomSectionId, examDate, examinationSessionSlotId");
         }
 
         const result = await examAttendanceServices.getExamOperationsAttendanceRoom(
-            Number(examScheduleId),
-            Number(examScheduleRoomCapacityId)
+            Number(classRoomSectionId),
+            examDate,
+            Number(examinationSessionSlotId)
         );
         return SuccessResponse(res, 200, "Exam operations attendance room details fetched successfully", result);
     } catch (error) {

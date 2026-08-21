@@ -191,84 +191,93 @@ export async function getExamOperationsAttendance(filters, pagination) {
 }
 
 export async function getExamOperationsAttendanceRoom(
-  examScheduleId,
-  examScheduleRoomCapacityId,
+  classRoomSectionId,
+  examDate,
+  examinationSessionSlotId,
 ) {
-  const schedule =
-    await examAttendanceRepository.getScheduleDetails(examScheduleId);
-  if (!schedule) {
-    throw new Error("Exam schedule not found");
-  }
-
-  const roomCapacity = await examAttendanceRepository.getRoomCapacityDetails(
-    examScheduleRoomCapacityId,
-  );
-  if (!roomCapacity) {
-    throw new Error("Room capacity not found");
-  }
-
-  const classRoomSectionId = roomCapacity.classRoom
-    ? roomCapacity.classRoom.classRoomSectionId
-    : null;
-
-  const invigilators = await examAttendanceRepository.getInvigilators(
-    schedule.examinationSessionSlotId,
-    schedule.examDate,
+  const capacities = await examAttendanceRepository.getRoomCapacitiesForRoomSlot(
     classRoomSectionId,
+    examDate,
+    examinationSessionSlotId,
   );
 
-  const attendances = await examAttendanceRepository.getAttendancesWithStudent(
-    examScheduleId,
-    examScheduleRoomCapacityId,
-  );
+  if (!capacities || capacities.length === 0) {
+    throw new Error("No exam schedules found for this room, date, and slot");
+  }
 
-  const students = attendances.map((att) => {
-    const student = att.student || {};
-    const seat = att.studentExamSeat || {};
+  const capacityIds = [];
+  const capacityExamMap = {};
+  for (let i = 0; i < capacities.length; i++) {
+    const c = capacities[i];
+    capacityIds.push(c.examScheduleRoomCapacityId);
+    capacityExamMap[c.examScheduleRoomCapacityId] = c.examScheduleId;
+  }
+
+  const seats = await examAttendanceRepository.getStudentSeatsByCapacityIds(capacityIds);
+  if (!seats || seats.length === 0) {
+    throw new Error("Seat allocation is not done for this exam");
+  }
+
+  const attendances = await examAttendanceRepository.getAttendancesByCapacityIds(capacityIds);
+  const attendanceMap = new Map();
+  for (let i = 0; i < attendances.length; i++) {
+    const att = attendances[i];
+    attendanceMap.set(`${att.studentId}_${att.examScheduleRoomCapacityId}`, att.attendanceStatus);
+  }
+
+  const students = [];
+  for (let i = 0; i < seats.length; i++) {
+    const seat = seats[i];
+    const student = seat.student || {};
     const rowVal = seat.row || 0;
     const colVal = seat.column || 0;
     const rowChar = rowVal ? String.fromCharCode(64 + rowVal) : "";
     const seatNumber = rowChar ? `${rowChar}${colVal}` : "";
-    return {
-      studentId: att.studentId,
+    const status = attendanceMap.get(`${seat.studentId}_${seat.examScheduleRoomCapacityId}`) || "PENDING";
+    students.push({
+      studentId: seat.studentId,
       enrollmentNumber: student.enrollNumber || student.scholarNumber || "",
-      studentName:
-        `${student.firstName || ""} ${student.lastName || ""}`.trim(),
+      studentName: `${student.firstName || ""} ${student.lastName || ""}`.trim(),
       row: rowVal,
       column: colVal,
       seatNumber,
-      attendanceStatus: att.attendanceStatus,
-    };
-  });
+      attendanceStatus: status,
+      examScheduleId: capacityExamMap[seat.examScheduleRoomCapacityId],
+    });
+  }
 
-  const invigilatorList = invigilators.map((inv) => ({
-    userId: inv.user ? inv.user.userId : inv.userId,
-    userName: inv.user ? inv.user.userName : "",
-  }));
+  const invigilators = await examAttendanceRepository.getInvigilators(
+    examinationSessionSlotId,
+    examDate,
+    classRoomSectionId,
+  );
+
+  const invigilatorList = [];
+  for (let i = 0; i < invigilators.length; i++) {
+    const inv = invigilators[i];
+    invigilatorList.push({
+      userId: inv.user ? inv.user.userId : inv.userId,
+      userName: inv.user ? inv.user.userName : "",
+    });
+  }
+
+  const firstCap = capacities[0];
+  const firstSchedule = firstCap.examSchedule || {};
 
   return {
-    examScheduleId,
-    examScheduleRoomCapacityId,
+    examScheduleId: firstCap.examScheduleId,
+    examScheduleRoomCapacityId: firstCap.examScheduleRoomCapacityId,
     exam: {
-      subjectName: schedule.subjectSchedule
-        ? schedule.subjectSchedule.subjectName
-        : "",
-      subjectCode: schedule.subjectSchedule
-        ? schedule.subjectSchedule.subjectCode
-        : "",
-      examDate: schedule.examDate,
-      startTime: schedule.examinationSessionSlot
-        ? schedule.examinationSessionSlot.startTime
-        : "",
-      endTime: schedule.examinationSessionSlot
-        ? schedule.examinationSessionSlot.endTime
-        : "",
+      subjectId: firstSchedule.subjectSchedule ? firstSchedule.subjectSchedule.subjectId : null,
+      subjectName: firstSchedule.subjectSchedule ? firstSchedule.subjectSchedule.subjectName : "",
+      subjectCode: firstSchedule.subjectSchedule ? firstSchedule.subjectSchedule.subjectCode : "",
+      examDate: firstSchedule.examDate,
+      startTime: firstSchedule.examinationSessionSlot ? firstSchedule.examinationSessionSlot.startTime : "",
+      endTime: firstSchedule.examinationSessionSlot ? firstSchedule.examinationSessionSlot.endTime : "",
     },
     room: {
       classRoomSectionId,
-      roomNumber: roomCapacity.classRoom
-        ? roomCapacity.classRoom.roomNumber
-        : "",
+      roomNumber: firstCap.classRoom ? firstCap.classRoom.roomNumber : "",
     },
     invigilators: invigilatorList,
     students,

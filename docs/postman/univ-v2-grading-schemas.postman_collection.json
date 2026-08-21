@@ -848,17 +848,21 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examAttendance/room?examScheduleId=1&examScheduleRoomCapacityId=2",
+              "raw": "{{baseurl}}/examAttendance/room?classRoomSectionId=8&examDate=2026-12-01&examinationSessionSlotId=1",
               "host": ["{{baseurl}}"],
               "path": ["examAttendance", "room"],
               "query": [
                 {
-                  "key": "examScheduleId",
-                  "value": "1"
+                  "key": "classRoomSectionId",
+                  "value": "8"
                 },
                 {
-                  "key": "examScheduleRoomCapacityId",
-                  "value": "2"
+                  "key": "examDate",
+                  "value": "2026-12-01"
+                },
+                {
+                  "key": "examinationSessionSlotId",
+                  "value": "1"
                 }
               ]
             }

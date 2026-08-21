@@ -186,36 +186,66 @@ export async function addExamRoomCapacity(data, userId) {
 
     const busyRoomIds = new Set([...classBusyRoomIds, ...overlappingExamRoomIds]);
 
-    const assignments = [];
-    for (const candidate of newCandidates) {
-        const roomId = candidate.classRoomSectionId;
-        const room = roomLookup.get(roomId);
-
-        if (busyRoomIds.has(roomId)) {
-            throw new Error(`Room ${room.roomNumber} is not available for the selected time slot`);
-        }
-
-        const resolvedExamCapacity = room.examCapacity ?? room.capacity;
-        const resolvedExamColumns = room.examCapacityColumns ?? 1;
-
-        if (!resolvedExamCapacity || resolvedExamCapacity <= 0) {
-            throw new Error(`Room ${room.roomNumber} has invalid capacity`);
-        }
-
-        assignments.push({
-            classRoomSectionId: room.classRoomSectionId,
-            examScheduleId: validatedData.examScheduleId,
-            capacity: resolvedExamCapacity,
-            columns: resolvedExamColumns,
-            orderKey: candidate.orderKey,
-            createdBy: userId,
-            updatedBy: userId
-        });
-    }
-
     const transaction = await sequelize.transaction();
 
     try {
+        const totalStudents = await examRoomCapacityRepository.getEnrolledStudentsCount(
+            examSchedule.sessionId,
+            examSchedule.subjectSchedule?.courseId,
+            examSchedule.term,
+            transaction
+        );
+
+        const alreadyAssignedCapacity = await examRoomCapacityRepository.getAlreadyAssignedCapacity(
+            validatedData.examScheduleId,
+            transaction
+        );
+
+        let remainingStudents = Math.max(0, totalStudents - alreadyAssignedCapacity);
+
+        const assignments = [];
+        for (const candidate of newCandidates) {
+            const roomId = candidate.classRoomSectionId;
+            const room = roomLookup.get(roomId);
+
+            if (busyRoomIds.has(roomId)) {
+                throw new Error(`Room ${room.roomNumber} is not available for the selected time slot`);
+            }
+
+            const roomMaxCapacity = room.examCapacity ?? room.capacity;
+            const resolvedExamColumns = room.examCapacityColumns ?? 1;
+
+            if (!roomMaxCapacity || roomMaxCapacity <= 0) {
+                throw new Error(`Room ${room.roomNumber} has invalid capacity`);
+            }
+
+            const usedCapacity = await examRoomCapacityRepository.getOccupiedCapacityForRoomSlot(
+                roomId,
+                examDate,
+                examSchedule.examinationSessionSlotId,
+                transaction
+            );
+
+            const remainingRoomCapacity = Math.max(0, roomMaxCapacity - usedCapacity);
+            const capacityToSave = Math.min(remainingStudents, remainingRoomCapacity);
+
+            if (capacityToSave <= 0) {
+                throw new Error(`Room ${room.roomNumber} has no remaining capacity to assign`);
+            }
+
+            remainingStudents = Math.max(0, remainingStudents - capacityToSave);
+
+            assignments.push({
+                classRoomSectionId: room.classRoomSectionId,
+                examScheduleId: validatedData.examScheduleId,
+                capacity: capacityToSave,
+                columns: resolvedExamColumns,
+                orderKey: candidate.orderKey,
+                createdBy: userId,
+                updatedBy: userId
+            });
+        }
+
         const result = await examRoomCapacityRepository.bulkAddExamRoomCapacity(assignments, transaction);
         await transaction.commit();
         return result;
@@ -347,22 +377,35 @@ export async function getAvailableRoomsForExamSchedule(examScheduleId) {
         ...slot,
     };
 
-    const [classBusyRoomIds, assignedRoomIds, overlappingExamRoomIds] = await Promise.all([
+    const [classBusyRoomIds, assignedRoomIds, occupiedCapacitiesMap] = await Promise.all([
         examRoomCapacityRepository.findOccupiedRoomIdsByClassSchedule(day, startTime, endTime, examDate),
         examRoomCapacityRepository.findAssignedRoomIdsForExam(examScheduleId),
-        examRoomCapacityRepository.findOverlappingExamBusyRoomIds(examDate, examScheduleId, startMinutes, endMinutes),
+        examRoomCapacityRepository.getOccupiedCapacitiesForDateSlot(examDate, examSchedule.examinationSessionSlotId),
     ]);
 
-    const busyRoomIds = [...new Set([...classBusyRoomIds, ...assignedRoomIds, ...overlappingExamRoomIds])];
-    
-    // Retrieve all rooms and filter to return only available rooms that can be added (no conflicts/already assigned rooms)
     const allRooms = await examRoomCapacityRepository.findAllRoomsForExamSlot();
-    const availableRooms = allRooms
-        .map((room) => ({
-            ...room,
-            conflict: busyRoomIds.includes(room.classRoomSectionId),
-        }))
-        .filter((room) => !room.conflict);
+    const availableRooms = [];
+
+    for (let i = 0; i < allRooms.length; i++) {
+        const room = allRooms[i];
+        const isConflict = classBusyRoomIds.includes(room.classRoomSectionId) || assignedRoomIds.includes(room.classRoomSectionId);
+        
+        if (isConflict) {
+            continue;
+        }
+
+        const roomMaxCapacity = room.examCapacity ?? room.capacity;
+        const usedCapacity = occupiedCapacitiesMap[room.classRoomSectionId] || 0;
+        const remainingCapacity = Math.max(0, roomMaxCapacity - usedCapacity);
+
+        if (remainingCapacity > 0) {
+            availableRooms.push({
+                ...room,
+                examCapacity: remainingCapacity,
+                effectiveExamCapacity: remainingCapacity,
+            });
+        }
+    }
 
     return {
         examScheduleId: examSchedule.examScheduleId,

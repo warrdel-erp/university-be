@@ -634,3 +634,65 @@ export async function getInvigilatorAssignmentsForSchedules({ examDates, slotIds
   });
 }
 
+export async function getRoomCapacitiesForRoomSlot(classRoomSectionId, examDate, examinationSessionSlotId, transaction = null) {
+  return await model.examScheduleRoomCapacityModel.findAll({
+    where: { classRoomSectionId },
+    include: [
+      {
+        model: model.examScheduleModel,
+        as: "examSchedule",
+        required: true,
+        where: { examDate, examinationSessionSlotId },
+        include: [
+          {
+            model: model.subjectModel,
+            as: "subjectSchedule",
+            attributes: ["subjectId", "subjectName", "subjectCode"],
+            required: false,
+          },
+          {
+            model: model.examinationSessionSlotModel,
+            as: "examinationSessionSlot",
+            attributes: ["examinationSessionSlotId", "startTime", "endTime"],
+            required: false,
+          }
+        ]
+      },
+      {
+        model: model.classRoomModel,
+        as: "classRoom",
+        attributes: ["classRoomSectionId", "roomNumber"],
+        required: false,
+      }
+    ],
+    transaction
+  });
+}
+
+export async function getStudentSeatsByCapacityIds(capacityIds, transaction = null) {
+  return await model.studentExamSeatModel.findAll({
+    where: { examScheduleRoomCapacityId: { [Op.in]: capacityIds } },
+    include: [
+      {
+        model: model.studentModel,
+        as: "student",
+        attributes: [
+          "studentId",
+          "firstName",
+          "lastName",
+          "scholarNumber",
+          "enrollNumber",
+        ],
+      }
+    ],
+    transaction
+  });
+}
+
+export async function getAttendancesByCapacityIds(capacityIds, transaction = null) {
+  return await model.examAttendanceModel.findAll({
+    where: { examScheduleRoomCapacityId: { [Op.in]: capacityIds } },
+    transaction
+  });
+}
+

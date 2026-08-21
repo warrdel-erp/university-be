@@ -24,8 +24,9 @@ const querySchema = z.object({
 });
 
 const roomQuerySchema = z.object({
-  examScheduleId: z.coerce.number().int().positive(),
-  examScheduleRoomCapacityId: z.coerce.number().int().positive(),
+  classRoomSectionId: z.coerce.number().int().positive(),
+  examDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD"),
+  examinationSessionSlotId: z.coerce.number().int().positive(),
 });
 
 const markAttendanceSchema = z.object({
@@ -56,7 +57,7 @@ const updateRoomStatusSchema = z.object({
 const byRoomSchema = z.object({
   classRoomSectionId: z.coerce.number().int().positive(),
   examinationSessionId: z.coerce.number().int().positive().optional(),
-  examDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD").optional(),
+  examDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD"),
   examinationSessionSlotId: z.coerce.number().int().positive().optional(),
 });
 
