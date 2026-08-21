@@ -368,18 +368,35 @@ export async function getRoomAssignmentDetail(examScheduleId, classRoomSectionId
  * (with subject, term, courseId, sessionId) assigned to that room.
  * Filters: examinationSessionId (required), examDate (optional).
  */
+
 export async function getListOfRoomsRoomWise(filters, pagination, options = {}) {
   const { page = 1, limit = 10 } = pagination;
 
-  // Fetch all room-capacity rows matching the filters (no DB-level pagination
-  // because we need to group by classRoomSectionId first)
+  // Fetch all room-capacity rows matching the filters
   const allRows = await examInvigilatorAssignmentRepository.getRoomsWithExams(
     filters,
     options,
   );
 
-  // Group by classRoomSectionId — each unique room can appear in multiple rows
-  // (one per examScheduleId assigned to that room)
+  // Fetch assignments to calculate count and status
+  const classRoomSectionIds = [...new Set(allRows.map((rc) => rc.classRoomSectionId))];
+  const examDates = [...new Set(allRows.map((rc) => rc.examSchedule?.examDate))].filter(Boolean);
+  const slotIds = [...new Set(allRows.map((rc) => rc.examSchedule?.examinationSessionSlotId))].filter(Boolean);
+
+  const assignments = classRoomSectionIds.length && examDates.length && slotIds.length
+    ? await examInvigilatorAssignmentRepository.getAssignmentsForRooms(classRoomSectionIds, examDates, slotIds, options)
+    : [];
+
+  const assignmentsMap = new Map();
+  for (const ass of assignments) {
+    const key = `${formatDateKey(ass.examDate)}_${ass.examinationSessionSlotId}_${ass.classRoomSectionId}`;
+    if (!assignmentsMap.has(key)) {
+      assignmentsMap.set(key, []);
+    }
+    assignmentsMap.get(key).push(ass);
+  }
+
+  // Group by classRoomSectionId + examDate + examinationSessionSlotId
   const roomMap = new Map();
 
   for (const rc of allRows) {
@@ -388,42 +405,56 @@ export async function getListOfRoomsRoomWise(filters, pagination, options = {}) 
     const subject = schedule?.subjectSchedule;
     const slot = schedule?.examinationSessionSlot;
 
-    const examEntry = {
-      examScheduleRoomCapacityId: rc.examScheduleRoomCapacityId,
-      examScheduleId: schedule?.examScheduleId,
-      examDate: schedule?.examDate,
-      term: schedule?.term,
-      sessionId: schedule?.sessionId,
-      examinationSessionSlotId: schedule?.examinationSessionSlotId,
-      subjectId: subject?.subjectId,
-      subjectName: subject?.subjectName,
-      subjectCode: subject?.subjectCode,
-      courseId: subject?.courseId,
-      slot: slot
-        ? {
-            examinationSessionSlotId: slot.examinationSessionSlotId,
-            slotNumber: slot.slotNumber,
-            startTime: slot.startTime,
-            endTime: slot.endTime,
-          }
-        : null,
-      capacity: rc.capacity,
-    };
+    const examDate = schedule?.examDate;
+    const slotId = schedule?.examinationSessionSlotId;
+    const key = `${roomId}_${examDate}_${slotId}`;
 
-    if (!roomMap.has(roomId)) {
-      roomMap.set(roomId, {
+    const assKey = `${formatDateKey(examDate)}_${slotId}_${roomId}`;
+    const roomAssignments = assignmentsMap.get(assKey) || [];
+    const assignedCount = roomAssignments.length;
+
+    let invigilatorStatus = "PENDING";
+    if (assignedCount >= 2) {
+      invigilatorStatus = "READY";
+    } else if (assignedCount > 0) {
+      invigilatorStatus = "PARTIAL";
+    }
+
+    if (!roomMap.has(key)) {
+      roomMap.set(key, {
         classRoomSectionId: roomId,
         roomNumber: rc.classRoom?.roomNumber,
         roomCapacity: rc.classRoom?.capacity,
         examCapacity: rc.classRoom?.examCapacity,
+        examDate,
+        slot: slot
+          ? {
+              examinationSessionSlotId: slot.examinationSessionSlotId,
+              slotNumber: slot.slotNumber,
+              startTime: slot.startTime,
+              endTime: slot.endTime,
+            }
+          : null,
+        invigilatorCount: assignedCount,
+        invigilatorStatus,
         exams: [],
       });
     }
 
-    roomMap.get(roomId).exams.push(examEntry);
+    roomMap.get(key).exams.push({
+      examScheduleRoomCapacityId: rc.examScheduleRoomCapacityId,
+      examScheduleId: schedule?.examScheduleId,
+      term: schedule?.term,
+      sessionId: schedule?.sessionId,
+      subjectId: subject?.subjectId,
+      subjectName: subject?.subjectName,
+      subjectCode: subject?.subjectCode,
+      courseId: subject?.courseId,
+      capacity: rc.capacity,
+    });
   }
 
-  // Convert map to array — already ordered by roomNumber from the DB query
+  // Convert map to array
   const allUniqueRooms = Array.from(roomMap.values());
 
   // Paginate at the unique-room level
@@ -440,3 +471,6 @@ export async function getListOfRoomsRoomWise(filters, pagination, options = {}) 
     limit: limitNum,
   };
 }
+
+
+
