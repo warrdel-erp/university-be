@@ -1,6 +1,8 @@
 import { Op, Sequelize } from "sequelize";
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
+
+import { getCascadingGroupRoutinesRepository } from "./academicGroupScopeRepository.js";
 import {
   classSectionTermsInclude,
   studentClassSectionTermWithSectionInclude,
@@ -3469,5 +3471,52 @@ export async function deleteDateWiseTeachersByCellAndUserRepository(
   });
 }
 
-import { getCascadingGroupRoutinesRepository } from "./academicGroupScopeRepository.js";
+export async function getDateWiseCellsByMappingsAndDates(
+  mappingIds,
+  dates,
+  transaction,
+) {
+  return scoped(model.timeTableCellDateWiseModel).findAll({
+    where: {
+      timeTableCellId: { [Op.in]: mappingIds },
+      date: { [Op.in]: dates },
+    },
+    attributes: ["timeTableCellDateWiseId"],
+    transaction,
+  });
+}
+
+export async function deleteTeachersDateWiseByIds(ids, transaction) {
+  return scoped(model.timeTableCellTeachersDateWiseModel).destroy({
+    where: { timeTableCellDateWiseId: { [Op.in]: ids } },
+    transaction,
+  });
+}
+
+export async function deleteDateWiseCellsByMappingsAndDates(
+  mappingIds,
+  dates,
+  transaction,
+) {
+  return scoped(model.timeTableCellDateWiseModel).destroy({
+    where: {
+      timeTableCellId: { [Op.in]: mappingIds },
+      date: { [Op.in]: dates },
+    },
+    transaction,
+  });
+}
+
+export async function createDateWiseCell(payload, transaction) {
+  return scoped(model.timeTableCellDateWiseModel).create(payload, {
+    transaction,
+  });
+}
+
+export async function createTeacherDateWise(payload, transaction) {
+  return scoped(model.timeTableCellTeachersDateWiseModel).create(payload, {
+    transaction,
+  });
+}
+
 export { getCascadingGroupRoutinesRepository };

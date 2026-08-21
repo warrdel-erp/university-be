@@ -100,7 +100,10 @@ export async function getAssignmentById(id, options = {}) {
 export async function getAssignments(filters, options = {}) {
   const finalFilters = { ...filters };
   if (filters.examScheduleId) {
-    const schedule = await examInvigilatorAssignmentRepository.findScheduleById(Number(filters.examScheduleId), options);
+    const schedule = await examInvigilatorAssignmentRepository.findScheduleById(
+      Number(filters.examScheduleId),
+      options,
+    );
     if (schedule) {
       finalFilters.examDate = schedule.examDate;
       finalFilters.examinationSessionSlotId = schedule.examinationSessionSlotId;
@@ -139,7 +142,12 @@ export async function getInvigilatorSummary(filters, options = {}) {
     sessionId: filters.sessionId || filters.examinationSessionId,
   };
 
-  const { rows: schedules } = await examInvigilatorAssignmentRepository.getSchedulesFiltered(mappedFilters, { page: 1, limit: 999999 }, options);
+  const { rows: schedules } =
+    await examInvigilatorAssignmentRepository.getSchedulesFiltered(
+      mappedFilters,
+      { page: 1, limit: 999999 },
+      options,
+    );
   const scheduleIds = schedules.map((s) => s.examScheduleId);
   if (!scheduleIds.length) {
     return {
@@ -153,7 +161,11 @@ export async function getInvigilatorSummary(filters, options = {}) {
     };
   }
 
-  const roomCapacities = await examInvigilatorAssignmentRepository.getRoomCapacitiesForSchedules(scheduleIds, options);
+  const roomCapacities =
+    await examInvigilatorAssignmentRepository.getRoomCapacitiesForSchedules(
+      scheduleIds,
+      options,
+    );
   if (!roomCapacities.length) {
     return {
       totalRooms: 0,
@@ -181,11 +193,21 @@ export async function getInvigilatorSummary(filters, options = {}) {
     }
   }
 
-  const classRoomSectionIds = [...new Set(roomCapacities.map((rc) => rc.classRoomSectionId))];
+  const classRoomSectionIds = [
+    ...new Set(roomCapacities.map((rc) => rc.classRoomSectionId)),
+  ];
   const examDates = [...new Set(schedules.map((s) => s.examDate))];
-  const slotIds = [...new Set(schedules.map((s) => s.examinationSessionSlotId))];
+  const slotIds = [
+    ...new Set(schedules.map((s) => s.examinationSessionSlotId)),
+  ];
 
-  const assignments = await examInvigilatorAssignmentRepository.getAssignmentsForRooms(classRoomSectionIds, examDates, slotIds, options);
+  const assignments =
+    await examInvigilatorAssignmentRepository.getAssignmentsForRooms(
+      classRoomSectionIds,
+      examDates,
+      slotIds,
+      options,
+    );
 
   const assignmentsMap = new Map();
   for (const ass of assignments) {
@@ -209,7 +231,10 @@ export async function getInvigilatorSummary(filters, options = {}) {
     const roomAssignments = assignmentsMap.get(key) || [];
     const assignedCount = roomAssignments.length;
     assignedInvigilators = decimalAdd(assignedInvigilators, assignedCount);
-    pendingInvigilators = decimalAdd(pendingInvigilators, Math.max(0, requiredPerRoom - assignedCount));
+    pendingInvigilators = decimalAdd(
+      pendingInvigilators,
+      Math.max(0, requiredPerRoom - assignedCount),
+    );
 
     if (assignedCount >= requiredPerRoom) {
       readyRooms++;
@@ -233,28 +258,45 @@ export async function getInvigilatorSummary(filters, options = {}) {
   };
 }
 
-export async function getAssignmentsByUserId(userId, examinationSessionId, options = {}) {
-  return examInvigilatorAssignmentRepository.getAssignmentsByUserId(userId, examinationSessionId, options);
+export async function getAssignmentsByUserId(
+  userId,
+  examinationSessionId,
+  options = {},
+) {
+  return examInvigilatorAssignmentRepository.getAssignmentsByUserId(
+    userId,
+    examinationSessionId,
+    options,
+  );
 }
 
-export async function getAssignmentsByRoom(classRoomSectionId, filters, options = {}) {
-  const roomCapacities = await examInvigilatorAssignmentRepository.getRoomCapacitiesByRoom(
-    classRoomSectionId,
-    filters,
-    options
-  );
+export async function getAssignmentsByRoom(
+  classRoomSectionId,
+  filters,
+  options = {},
+) {
+  const roomCapacities =
+    await examInvigilatorAssignmentRepository.getRoomCapacitiesByRoom(
+      classRoomSectionId,
+      filters,
+      options,
+    );
 
   const results = [];
   for (const rc of roomCapacities) {
-    const metrics = await getRoomCentricMetrics(rc.examScheduleId, classRoomSectionId);
-    
-    // Fetch invigilators assigned to this room at this slot/date
-    const invigilators = await examInvigilatorAssignmentRepository.getAssignmentsForRooms(
-      [Number(classRoomSectionId)],
-      [rc.examSchedule.examDate],
-      [rc.examSchedule.examinationSessionSlotId],
-      options
+    const metrics = await getRoomCentricMetrics(
+      rc.examScheduleId,
+      classRoomSectionId,
     );
+
+    // Fetch invigilators assigned to this room at this slot/date
+    const invigilators =
+      await examInvigilatorAssignmentRepository.getAssignmentsForRooms(
+        [Number(classRoomSectionId)],
+        [rc.examSchedule.examDate],
+        [rc.examSchedule.examinationSessionSlotId],
+        options,
+      );
 
     results.push({
       examScheduleRoomCapacityId: rc.examScheduleRoomCapacityId,
@@ -267,20 +309,23 @@ export async function getAssignmentsByRoom(classRoomSectionId, filters, options 
       subjectName: rc.examSchedule.subjectSchedule?.subjectName,
       subjectCode: rc.examSchedule.subjectSchedule?.subjectCode,
       courseId: rc.examSchedule.subjectSchedule?.courseId,
-      slot: rc.examSchedule.examinationSessionSlot ? {
-        examinationSessionSlotId: rc.examSchedule.examinationSessionSlot.examinationSessionSlotId,
-        slotNumber: rc.examSchedule.examinationSessionSlot.slotNumber,
-        startTime: rc.examSchedule.examinationSessionSlot.startTime,
-        endTime: rc.examSchedule.examinationSessionSlot.endTime,
-      } : null,
+      slot: rc.examSchedule.examinationSessionSlot
+        ? {
+            examinationSessionSlotId:
+              rc.examSchedule.examinationSessionSlot.examinationSessionSlotId,
+            slotNumber: rc.examSchedule.examinationSessionSlot.slotNumber,
+            startTime: rc.examSchedule.examinationSessionSlot.startTime,
+            endTime: rc.examSchedule.examinationSessionSlot.endTime,
+          }
+        : null,
       roomNumber: rc.classRoom?.roomNumber,
       capacity: rc.capacity,
-      invigilators: invigilators.map(inv => ({
+      invigilators: invigilators.map((inv) => ({
         userId: inv.user ? inv.user.userId : inv.userId,
         userName: inv.user ? inv.user.userName : "",
-        role: inv.role
+        role: inv.role,
       })),
-      roomDetails: metrics
+      roomDetails: metrics,
     });
   }
 
@@ -288,7 +333,10 @@ export async function getAssignmentsByRoom(classRoomSectionId, filters, options 
 }
 
 export async function getFacultyAvailability(examScheduleId, options = {}) {
-  const schedule = await examInvigilatorAssignmentRepository.findScheduleById(examScheduleId, options);
+  const schedule = await examInvigilatorAssignmentRepository.findScheduleById(
+    examScheduleId,
+    options,
+  );
   if (!schedule) {
     const err = new Error("Exam schedule not found");
     err.statusCode = 404;
@@ -298,7 +346,11 @@ export async function getFacultyAvailability(examScheduleId, options = {}) {
   const { examDate, examinationSessionSlotId } = schedule;
 
   const [activeAssignments, allEmployees] = await Promise.all([
-    examInvigilatorAssignmentRepository.getAssignmentsByDateAndSlot(examDate, examinationSessionSlotId, options),
+    examInvigilatorAssignmentRepository.getAssignmentsByDateAndSlot(
+      examDate,
+      examinationSessionSlotId,
+      options,
+    ),
     examInvigilatorAssignmentRepository.getAllEmployeesWithUser(options),
   ]);
 
@@ -329,29 +381,60 @@ export async function getFacultyAvailability(examScheduleId, options = {}) {
   };
 }
 
-export async function getRoomAssignmentDetail(examScheduleId, classRoomSectionId, options = {}) {
-  const schedule = await examInvigilatorAssignmentRepository.findScheduleById(examScheduleId, options);
+export async function getRoomAssignmentDetail(
+  examScheduleId,
+  classRoomSectionId,
+  options = {},
+) {
+  const schedule = await examInvigilatorAssignmentRepository.findScheduleById(
+    examScheduleId,
+    options,
+  );
   if (!schedule) {
     const error = new Error("Exam schedule not found");
     error.statusCode = 404;
     throw error;
   }
 
-  const roomCapacity = await examInvigilatorAssignmentRepository.findRoomCapacityByScheduleAndSection(examScheduleId, classRoomSectionId, options);
+  const roomCapacity =
+    await examInvigilatorAssignmentRepository.findRoomCapacityByScheduleAndSection(
+      examScheduleId,
+      classRoomSectionId,
+      options,
+    );
   if (!roomCapacity) {
-    const error = new Error("Room capacity not found for this schedule and section");
+    const error = new Error(
+      "Room capacity not found for this schedule and section",
+    );
     error.statusCode = 404;
     throw error;
   }
 
   const [assignments, duplicateChecks, seatCounts] = await Promise.all([
-    examInvigilatorAssignmentRepository.getAssignmentsForRooms([classRoomSectionId], [formatDateKey(schedule.examDate)], [schedule.examinationSessionSlotId], options),
-    examInvigilatorAssignmentRepository.getDuplicateChecks([classRoomSectionId], [formatDateKey(schedule.examDate)], [schedule.examinationSessionSlotId], options),
-    examInvigilatorAssignmentRepository.getSeatCounts([roomCapacity.examScheduleRoomCapacityId], options)
+    examInvigilatorAssignmentRepository.getAssignmentsForRooms(
+      [classRoomSectionId],
+      [formatDateKey(schedule.examDate)],
+      [schedule.examinationSessionSlotId],
+      options,
+    ),
+    examInvigilatorAssignmentRepository.getDuplicateChecks(
+      [classRoomSectionId],
+      [formatDateKey(schedule.examDate)],
+      [schedule.examinationSessionSlotId],
+      options,
+    ),
+    examInvigilatorAssignmentRepository.getSeatCounts(
+      [roomCapacity.examScheduleRoomCapacityId],
+      options,
+    ),
   ]);
 
-  const seatCount = seatCounts[0] ? parseInt(seatCounts[0].studentCount, 10) || 0 : 0;
-  const duplicateExam = duplicateChecks[0] ? (parseInt(duplicateChecks[0].scheduleCount, 10) || 0) > 1 : false;
+  const seatCount = seatCounts[0]
+    ? parseInt(seatCounts[0].studentCount, 10) || 0
+    : 0;
+  const duplicateExam = duplicateChecks[0]
+    ? (parseInt(duplicateChecks[0].scheduleCount, 10) || 0) > 1
+    : false;
 
   const plainRoom = roomCapacity.get({ plain: true });
   plainRoom.studentCount = seatCount;
@@ -369,7 +452,11 @@ export async function getRoomAssignmentDetail(examScheduleId, classRoomSectionId
  * Filters: examinationSessionId (required), examDate (optional).
  */
 
-export async function getListOfRoomsRoomWise(filters, pagination, options = {}) {
+export async function getListOfRoomsRoomWise(
+  filters,
+  pagination,
+  options = {},
+) {
   const { page = 1, limit = 10 } = pagination;
 
   // Fetch all room-capacity rows matching the filters
@@ -379,13 +466,25 @@ export async function getListOfRoomsRoomWise(filters, pagination, options = {}) 
   );
 
   // Fetch assignments to calculate count and status
-  const classRoomSectionIds = [...new Set(allRows.map((rc) => rc.classRoomSectionId))];
-  const examDates = [...new Set(allRows.map((rc) => rc.examSchedule?.examDate))].filter(Boolean);
-  const slotIds = [...new Set(allRows.map((rc) => rc.examSchedule?.examinationSessionSlotId))].filter(Boolean);
+  const classRoomSectionIds = [
+    ...new Set(allRows.map((rc) => rc.classRoomSectionId)),
+  ];
+  const examDates = [
+    ...new Set(allRows.map((rc) => rc.examSchedule?.examDate)),
+  ].filter(Boolean);
+  const slotIds = [
+    ...new Set(allRows.map((rc) => rc.examSchedule?.examinationSessionSlotId)),
+  ].filter(Boolean);
 
-  const assignments = classRoomSectionIds.length && examDates.length && slotIds.length
-    ? await examInvigilatorAssignmentRepository.getAssignmentsForRooms(classRoomSectionIds, examDates, slotIds, options)
-    : [];
+  const assignments =
+    classRoomSectionIds.length && examDates.length && slotIds.length
+      ? await examInvigilatorAssignmentRepository.getAssignmentsForRooms(
+          classRoomSectionIds,
+          examDates,
+          slotIds,
+          options,
+        )
+      : [];
 
   const assignmentsMap = new Map();
   for (const ass of assignments) {
@@ -471,6 +570,3 @@ export async function getListOfRoomsRoomWise(filters, pagination, options = {}) 
     limit: limitNum,
   };
 }
-
-
-

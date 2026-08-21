@@ -87,7 +87,7 @@ export async function getBundleList(filters, pagination) {
       {
         model: model.classRoomModel,
         as: "classRoom",
-        attributes: ["classRoomSectionId", "roomNumber"],
+        attributes: ["classRoomSectionId", "roomNumber", "capacity", "examCapacity"],
         required: true,
         include: [
           {
@@ -178,12 +178,6 @@ export async function getBundleList(filters, pagination) {
             ],
           },
         ],
-      },
-      {
-        model: model.studentExamSeatModel,
-        as: "seats",
-        attributes: ["studentId"],
-        required: false,
       },
     ],
     limit,
@@ -371,5 +365,38 @@ export async function getSummaryBundles(
       examinationSessionSlotId: { [Op.in]: slotIds },
     },
     raw: true,
+  });
+}
+
+export async function getSeatCounts(capacityIds) {
+  return scoped(model.studentExamSeatModel).findAll({
+    attributes: [
+      "examScheduleRoomCapacityId",
+      [sequelize.fn("COUNT", sequelize.col("student_exam_seat_id")), "studentCount"],
+    ],
+    where: {
+      examScheduleRoomCapacityId: { [Op.in]: capacityIds },
+      ...buildScope(model.studentExamSeatModel),
+    },
+    group: ["examScheduleRoomCapacityId"],
+    raw: true,
+  });
+}
+
+export async function getActiveInvigilatorsForRoomSlot(
+  classRoomSectionId,
+  examDate,
+  examinationSessionSlotId,
+  transaction,
+) {
+  return scoped(model.examInvigilatorAssignmentModel).findAll({
+    where: {
+      classRoomSectionId,
+      examDate,
+      examinationSessionSlotId,
+      status: { [Op.notIn]: ["CANCELLED", "DECLINED"] },
+    },
+    attributes: ["userId"],
+    transaction,
   });
 }

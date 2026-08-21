@@ -67,6 +67,7 @@ const createSchema = {
       .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD"),
     examinationSessionSlotId: positiveIntegerId,
     classRoomSectionId: positiveIntegerId,
+    issuedTo: positiveIntegerQueryId,
     items: z
       .array(
         z.object({

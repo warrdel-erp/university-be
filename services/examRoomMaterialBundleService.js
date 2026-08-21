@@ -1,5 +1,6 @@
 import * as repo from "../repository/examRoomMaterialBundleRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
+import { Op } from "sequelize";
 import * as model from "../models/index.js";
 
 // Utility to generate bundle code
@@ -12,6 +13,18 @@ export async function getBundleList(filters, pagination) {
 
   // 1. Fetch paginated capacities with joins (including seats and invigilators)
   const result = await repo.getBundleList(filters, { limit, page });
+
+  // Fetch seat counts separately to prevent Sequelize join duplication bugs
+  const capacityIds = result.rows.map((rc) => rc.examScheduleRoomCapacityId);
+  const seatCounts = capacityIds.length
+    ? await repo.getSeatCounts(capacityIds)
+    : [];
+  const seatCountsMap = new Map(
+    seatCounts.map((sc) => [
+      sc.examScheduleRoomCapacityId,
+      Number(sc.studentCount || 0),
+    ]),
+  );
 
   // 2. Perform in-memory grouping on the paginated rows
   const roomMap = new Map();
@@ -37,6 +50,8 @@ export async function getBundleList(filters, pagination) {
       roomMap.set(key, {
         classRoomSectionId: roomId,
         roomNumber: plain.classRoom?.roomNumber,
+        examCapacity: plain.classRoom?.examCapacity,
+        roomCapacity: plain.classRoom?.capacity,
         examDate: schedule.examDate,
         slot: slot
           ? {
@@ -95,7 +110,8 @@ export async function getBundleList(filters, pagination) {
       };
     }
 
-    const studentCount = plain.seats?.length || 0;
+    const studentCount =
+      seatCountsMap.get(plain.examScheduleRoomCapacityId) || 0;
 
     roomMap.get(key).exams.push({
       examScheduleRoomCapacityId: plain.examScheduleRoomCapacityId,
@@ -106,10 +122,33 @@ export async function getBundleList(filters, pagination) {
       courseId: schedule.subjectSchedule?.courseId,
       sessionId: schedule.sessionId,
       term: schedule.term,
-      capacity: plain.capacity,
+      capacity: studentCount,
       studentCount,
       isRoomAllocationDone: studentCount > 0,
     });
+  }
+
+  // 3. Post-process to align student counts for same class in the same room/slot
+  for (const roomObj of roomMap.values()) {
+    const classMaxCounts = {};
+    for (const exam of roomObj.exams) {
+      const classKey = `${exam.courseId}_${exam.sessionId}_${exam.term}`;
+      if (exam.studentCount > 0) {
+        classMaxCounts[classKey] = Math.max(
+          classMaxCounts[classKey] || 0,
+          exam.studentCount,
+        );
+      }
+    }
+    for (const exam of roomObj.exams) {
+      const classKey = `${exam.courseId}_${exam.sessionId}_${exam.term}`;
+      const maxCount = classMaxCounts[classKey] || 0;
+      if (exam.studentCount === 0 && maxCount > 0) {
+        exam.studentCount = maxCount;
+        exam.capacity = maxCount;
+        exam.isRoomAllocationDone = true;
+      }
+    }
   }
 
   return {
@@ -255,8 +294,13 @@ export async function getBundleByRoomDetails(
 }
 
 export async function createBundle(payload, user) {
-  const { examDate, examinationSessionSlotId, classRoomSectionId, items } =
-    payload;
+  const {
+    examDate,
+    examinationSessionSlotId,
+    classRoomSectionId,
+    items,
+    issuedTo,
+  } = payload;
 
   return await sequelize.transaction(async (transaction) => {
     // 1. Search for existing bundle by derived fields and tenant scope
@@ -268,6 +312,30 @@ export async function createBundle(payload, user) {
     );
 
     if (existing) {
+      // Validate and update issuedTo if provided
+      if (issuedTo) {
+        const invigilators = await repo.getActiveInvigilatorsForRoomSlot(
+          classRoomSectionId,
+          examDate,
+          examinationSessionSlotId,
+          transaction,
+        );
+        const invigilatorUserIds = invigilators.map((ia) => Number(ia.userId));
+        if (!invigilatorUserIds.includes(Number(issuedTo))) {
+          const error = new Error(
+            "The recipient must be an assigned invigilator for this room slot",
+          );
+          error.statusCode = 400;
+          throw error;
+        }
+
+        existing.status = "ISSUED";
+        existing.issuedTo = issuedTo;
+        existing.issuedBy = user.userId;
+        existing.issuedAt = new Date();
+        await existing.save({ transaction });
+      }
+
       // 2. Reuse existing bundle and upsert items under it
       const itemsData = items.map((item) => ({
         examRoomMaterialBundleId: existing.examRoomMaterialBundleId,
@@ -316,6 +384,24 @@ export async function createBundle(payload, user) {
       throw error;
     }
 
+    if (issuedTo) {
+      // Validate that issuedTo is one of the invigilators
+      const invigilators = await repo.getActiveInvigilatorsForRoomSlot(
+        classRoomSectionId,
+        examDate,
+        examinationSessionSlotId,
+        transaction,
+      );
+      const invigilatorUserIds = invigilators.map((ia) => Number(ia.userId));
+      if (!invigilatorUserIds.includes(Number(issuedTo))) {
+        const error = new Error(
+          "The recipient must be an assigned invigilator for this room slot",
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+
     // Generate Bundle Code
     const maxIdResult = await model.examRoomMaterialBundleModel.findOne({
       attributes: [
@@ -336,7 +422,10 @@ export async function createBundle(payload, user) {
       examinationSessionSlotId,
       classRoomSectionId,
       bundleCode,
-      status: "PREPARING",
+      status: issuedTo ? "ISSUED" : "PREPARING",
+      issuedTo: issuedTo || null,
+      issuedBy: issuedTo ? user.userId : null,
+      issuedAt: issuedTo ? new Date() : null,
       universityId: user.universityId,
       instituteId: user.defaultInstituteId,
       academicYearId: user.defaultAcademicYearId,
@@ -386,7 +475,30 @@ export async function updateBundleItems(bundleId, payload, user) {
     if (status) {
       bundleUpdateFields.status = status;
       if (status === "ISSUED") {
-        bundleUpdateFields.issuedTo = issuedTo || null;
+        if (!issuedTo) {
+          const error = new Error("issuedTo is required to issue the bundle");
+          error.statusCode = 400;
+          throw error;
+        }
+
+        // Fetch assigned invigilators for this room, date, and slot
+        const invigilators = await repo.getActiveInvigilatorsForRoomSlot(
+          bundle.classRoomSectionId,
+          bundle.examDate,
+          bundle.examinationSessionSlotId,
+          transaction,
+        );
+
+        const invigilatorUserIds = invigilators.map((ia) => Number(ia.userId));
+        if (!invigilatorUserIds.includes(Number(issuedTo))) {
+          const error = new Error(
+            "The recipient must be an assigned invigilator for this room slot",
+          );
+          error.statusCode = 400;
+          throw error;
+        }
+
+        bundleUpdateFields.issuedTo = issuedTo;
         bundleUpdateFields.issuedBy = user.userId;
         bundleUpdateFields.issuedAt = new Date();
       } else if (status === "RECEIVED") {
@@ -494,7 +606,8 @@ export async function getBundleSummary(examinationSessionId) {
     bundles.forEach((b) => {
       const classRoomSectionId = b.examScheduleRoomCapacity?.classRoomSectionId;
       const examDate = b.examScheduleRoomCapacity?.examSchedule?.examDate;
-      const examinationSessionSlotId = b.examScheduleRoomCapacity?.examSchedule?.examinationSessionSlotId;
+      const examinationSessionSlotId =
+        b.examScheduleRoomCapacity?.examSchedule?.examinationSessionSlotId;
       const key = `${classRoomSectionId}_${examDate}_${examinationSessionSlotId}`;
       bundleMap.set(key, b.status);
     });
@@ -554,10 +667,16 @@ export async function updateBundleStatus(bundleId, status, user) {
     bundleUpdateFields.updatedBy = user.userId;
     await bundle.update(bundleUpdateFields, { transaction });
 
-    const classRoomSectionId = bundle.examScheduleRoomCapacity?.classRoomSectionId;
+    const classRoomSectionId =
+      bundle.examScheduleRoomCapacity?.classRoomSectionId;
     const examDate = bundle.examScheduleRoomCapacity?.examSchedule?.examDate;
-    const examinationSessionSlotId = bundle.examScheduleRoomCapacity?.examSchedule?.examinationSessionSlotId;
-    return getBundleByRoomDetails(classRoomSectionId, examDate, examinationSessionSlotId);
+    const examinationSessionSlotId =
+      bundle.examScheduleRoomCapacity?.examSchedule?.examinationSessionSlotId;
+    return getBundleByRoomDetails(
+      classRoomSectionId,
+      examDate,
+      examinationSessionSlotId,
+    );
   });
 }
 
