@@ -621,6 +621,14 @@ function schedulesToSubjectList(scheduleRows, mappedScheduleIds = [], roomSeatin
   return (scheduleRows || []).map((row) => {
     const plain = row.get ? row.get({ plain: true }) : row;
     const sub = plain.subjectSchedule;
+    const seatInfo = roomSeatingMap.get(plain.examScheduleId);
+    
+    let seatNumber = "";
+    if (seatInfo && seatInfo.row && seatInfo.column) {
+      const rowChar = String.fromCharCode(64 + Number(seatInfo.row));
+      seatNumber = `${rowChar}${seatInfo.column}`;
+    }
+
     return {
       examScheduleId: plain.examScheduleId,
       isMapped: plain.examScheduleId != null && mappedSet.has(plain.examScheduleId),
@@ -634,7 +642,12 @@ function schedulesToSubjectList(scheduleRows, mappedScheduleIds = [], roomSeatin
       scheduleKind: plain.type ?? null,
       slot: plain.examinationSessionSlot ?? null,
       subject: sub ?? null,
-      seating: roomSeatingMap.get(plain.examScheduleId) || null,
+      seating: seatInfo ? {
+        row: seatInfo.row,
+        column: seatInfo.column,
+        seatNumber,
+        roomNumber: seatInfo.roomNumber,
+      } : null,
     };
   });
 }

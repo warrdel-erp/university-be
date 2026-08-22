@@ -176,7 +176,7 @@ router.get(
 router.get(
   "/receivedRooms",
   userAuth,
-  validate(summarySchema),
+  validate(listSchema),
   controller.getReceivedRooms,
 );
 

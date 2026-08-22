@@ -56,7 +56,7 @@ async function resolveDurationFromAssessmentPlan(examDetail) {
     throw err;
   }
 
-  // 2. Fetch assessment plan component duration using examSetupTypeId
+  // 2. Fetch assessment plan component duration and marks using examSetupTypeId
   const component = await examinationSessionRepository.findAssessmentPlanComponentDurationBySetupTypeId(
     session.assessmentTypeId,
   );
@@ -73,8 +73,11 @@ async function resolveDurationFromAssessmentPlan(examDetail) {
     throw err;
   }
 
-  // 3. Copy duration as a snapshot value — no foreign key stored
+  // 3. Copy duration and maximumMarks as snapshot values
   examDetail.duration = String(component.duration);
+  if (component.weightagePercentage !== undefined && component.weightagePercentage !== null) {
+    examDetail.maximumMarks = Number(component.weightagePercentage);
+  }
 }
 
 async function resolveSessionId(examDetail) {

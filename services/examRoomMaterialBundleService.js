@@ -779,11 +779,10 @@ export async function getReadyBundleList(filters, pagination) {
   };
 }
 
-export async function getReceivedRooms(examinationSessionId) {
-  const roomCapacities = await repo.getReceivedRoomsQuery(examinationSessionId);
-  if (!roomCapacities.length) return [];
+export async function getReceivedRooms(filters, pagination = {}) {
+  const roomCapacities = await repo.getReceivedRoomsQuery(filters);
+  if (!roomCapacities.length) return { rows: [], count: 0 };
 
-  // Group allocations by room slot key
   const roomMap = new Map();
   for (const rc of roomCapacities) {
     const plain = rc.get({ plain: true });
@@ -802,6 +801,10 @@ export async function getReceivedRooms(examinationSessionId) {
     };
 
     if (!roomMap.has(key)) {
+      const bundle = classRoom?.materialBundles?.[0] || {};
+      const items = bundle.items || [];
+      const answerSheet = items.find((i) => i.itemType === "ANSWER_SHEET");
+
       roomMap.set(key, {
         classRoomSectionId: roomId,
         roomNumber: classRoom?.roomNumber || "",
@@ -815,6 +818,12 @@ export async function getReceivedRooms(examinationSessionId) {
         },
         exams: [],
         totalStudentCount: 0,
+        examRoomMaterialBundleId: bundle.examRoomMaterialBundleId || null,
+        bundleCode: bundle.bundleCode || null,
+        status: bundle.status || null,
+        answerSheetCount: answerSheet?.plannedQuantity || 0,
+        usedAnswerSheets: answerSheet?.usedQuantity || 0,
+        items,
       });
     }
 
@@ -823,35 +832,27 @@ export async function getReceivedRooms(examinationSessionId) {
     group.totalStudentCount += studentCount;
   }
 
-  // Fetch bundles concurrently and filter only RECEIVED rooms
-  const results = await Promise.all(
-    Array.from(roomMap.values()).map(async (roomGroup) => {
-      const bundle = await repo.findBundleByMapping(
-        roomGroup.examDate,
-        roomGroup.examinationSessionSlotId,
-        roomGroup.classRoomSectionId,
-      );
+  let results = Array.from(roomMap.values());
 
-      if (bundle?.status !== "RECEIVED") return null;
+  // Apply search filter if provided (matches roomNumber or bundleCode)
+  if (filters.search) {
+    const q = String(filters.search).toLowerCase();
+    results = results.filter(
+      (r) =>
+        (r.roomNumber && r.roomNumber.toLowerCase().includes(q)) ||
+        (r.bundleCode && r.bundleCode.toLowerCase().includes(q))
+    );
+  }
 
-      const fullBundle = await repo.getBundleById(bundle.examRoomMaterialBundleId);
-      const plainBundle = fullBundle?.get({ plain: true }) || {};
-      const items = plainBundle.items || [];
-      const answerSheet = items.find((i) => i.itemType === "ANSWER_SHEET");
+  // Apply in-memory pagination
+  const page = pagination.page || 1;
+  const limit = pagination.limit || 10;
+  const offset = (page - 1) * limit;
 
-      return {
-        ...roomGroup,
-        examRoomMaterialBundleId: bundle.examRoomMaterialBundleId,
-        bundleCode: bundle.bundleCode,
-        status: bundle.status,
-        answerSheetCount: answerSheet?.plannedQuantity || 0,
-        usedAnswerSheets: answerSheet?.usedQuantity || 0,
-        items,
-      };
-    })
-  );
-
-  return results.filter(Boolean);
+  return {
+    rows: results.slice(offset, offset + limit),
+    count: results.length,
+  };
 }
 
 // end of file

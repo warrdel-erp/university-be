@@ -117,13 +117,26 @@ export const getReadyBundleList = async (req, res) => {
 
 export const getReceivedRooms = async (req, res) => {
   try {
-    const examinationSessionId = Number(req.query.examinationSessionId);
-    const result = await service.getReceivedRooms(examinationSessionId);
+    const filters = {
+      examinationSessionId: Number(req.query.examinationSessionId),
+      examDate: req.query.examDate,
+      examinationSessionSlotId: req.query.examinationSessionSlotId ? Number(req.query.examinationSessionSlotId) : undefined,
+      search: req.query.search,
+    };
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const page = parseInt(req.query.page, 10) || 1;
+
+    const result = await service.getReceivedRooms(filters, { limit, page });
     return SuccessResponse(
       res,
       200,
       "Received rooms details fetched successfully",
-      result
+      result.rows,
+      {
+        total: result.count,
+        page,
+        limit,
+      }
     );
   } catch (error) {
     console.error(error);

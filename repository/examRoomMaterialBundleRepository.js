@@ -503,13 +503,19 @@ export async function getReadyBundleList(filters, pagination) {
   };
 }
 
-export async function getReceivedRoomsQuery(examinationSessionId) {
+export async function getReceivedRoomsQuery(filters) {
+  const { examinationSessionId, examDate, examinationSessionSlotId } = filters;
+
+  const scheduleWhere = { examinationSessionId };
+  if (examDate) scheduleWhere.examDate = examDate;
+  if (examinationSessionSlotId) scheduleWhere.examinationSessionSlotId = examinationSessionSlotId;
+
   return await model.examScheduleRoomCapacityModel.findAll({
     include: [
       {
         model: model.examScheduleModel,
         as: "examSchedule",
-        where: { examinationSessionId },
+        where: scheduleWhere,
         required: true,
         include: [
           {
@@ -531,6 +537,33 @@ export async function getReceivedRoomsQuery(examinationSessionId) {
         as: "classRoom",
         attributes: ["classRoomSectionId", "roomNumber"],
         required: true,
+        include: [
+          {
+            model: model.examRoomMaterialBundleModel,
+            as: "materialBundles",
+            required: true,
+            where: sequelize.and(
+              { status: "RECEIVED" },
+              sequelize.where(
+                sequelize.col("classRoom.materialBundles.exam_date"),
+                "=",
+                sequelize.col("examSchedule.exam_date")
+              ),
+              sequelize.where(
+                sequelize.col("classRoom.materialBundles.examination_session_slot_id"),
+                "=",
+                sequelize.col("examSchedule.examination_session_slot_id")
+              )
+            ),
+            include: [
+              {
+                model: model.examRoomMaterialItemModel,
+                as: "items",
+                required: false,
+              }
+            ]
+          }
+        ]
       },
       {
         model: model.studentExamSeatModel,
