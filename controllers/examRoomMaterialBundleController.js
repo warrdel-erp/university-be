@@ -114,3 +114,19 @@ export const getReadyBundleList = async (req, res) => {
     return ErrorResponse(res, 500, error.message);
   }
 };
+
+export const getReceivedRooms = async (req, res) => {
+  try {
+    const examinationSessionId = Number(req.query.examinationSessionId);
+    const result = await service.getReceivedRooms(examinationSessionId);
+    return SuccessResponse(
+      res,
+      200,
+      "Received rooms details fetched successfully",
+      result
+    );
+  } catch (error) {
+    console.error(error);
+    return ErrorResponse(res, 500, error.message);
+  }
+};

@@ -401,6 +401,28 @@ export async function getActiveInvigilatorsForRoomSlot(
   });
 }
 
+export async function getInvigilators(
+  examinationSessionSlotId,
+  examDate,
+  classRoomSectionId,
+) {
+  return scoped(model.examInvigilatorAssignmentModel).findAll({
+    where: {
+      examinationSessionSlotId,
+      examDate,
+      classRoomSectionId,
+      role: "INVIGILATOR",
+    },
+    include: [
+      {
+        model: model.userModel,
+        as: "user",
+        attributes: ["userId", "userName"],
+      },
+    ],
+  });
+}
+
 export async function getReadyBundleList(filters, pagination) {
   const {
     examinationSessionId,
@@ -479,4 +501,43 @@ export async function getReadyBundleList(filters, pagination) {
     rows,
     count,
   };
+}
+
+export async function getReceivedRoomsQuery(examinationSessionId) {
+  return await model.examScheduleRoomCapacityModel.findAll({
+    include: [
+      {
+        model: model.examScheduleModel,
+        as: "examSchedule",
+        where: { examinationSessionId },
+        required: true,
+        include: [
+          {
+            model: model.subjectModel,
+            as: "subjectSchedule",
+            attributes: ["subjectId", "subjectName", "subjectCode"],
+            required: false,
+          },
+          {
+            model: model.examinationSessionSlotModel,
+            as: "examinationSessionSlot",
+            attributes: ["examinationSessionSlotId", "slotNumber", "startTime", "endTime"],
+            required: false,
+          },
+        ],
+      },
+      {
+        model: model.classRoomModel,
+        as: "classRoom",
+        attributes: ["classRoomSectionId", "roomNumber"],
+        required: true,
+      },
+      {
+        model: model.studentExamSeatModel,
+        as: "seats",
+        attributes: ["studentId"],
+        required: false,
+      },
+    ],
+  });
 }

@@ -173,6 +173,12 @@ router.get(
   validate(singleQuerySchema),
   controller.getBundleByRoomDetails,
 );
+router.get(
+  "/receivedRooms",
+  userAuth,
+  validate(summarySchema),
+  controller.getReceivedRooms,
+);
 
 const updateStatusSchema = {
   params: z.object({

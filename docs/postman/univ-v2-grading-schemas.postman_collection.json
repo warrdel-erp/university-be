@@ -1199,6 +1199,29 @@
               ]
             }
           }
+        },
+        {
+          "name": "14.8 Get Received Rooms",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examRoomMaterialBundle/receivedRooms?examinationSessionId=1",
+              "host": ["{{baseurl}}"],
+              "path": ["examRoomMaterialBundle", "receivedRooms"],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
         }
       ]
     }

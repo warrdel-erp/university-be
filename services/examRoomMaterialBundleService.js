@@ -5,8 +5,11 @@ import * as model from "../models/index.js";
 import { getTenantStore } from "../utility/requestContext.js";
 
 // Utility to generate bundle code
-function generateBundleCode(seqId) {
-  return `B-${String(seqId).padStart(4, "0")}`;
+function generateBundleCode(roomNumber, seqId) {
+  const cleanRoom = String(roomNumber || "000")
+    .trim()
+    .replace(/\s+/g, "");
+  return `B-${cleanRoom}-${String(seqId).padStart(2, "0")}`;
 }
 
 export async function getBundleList(filters, pagination) {
@@ -307,16 +310,14 @@ export async function getBundleByRoomDetails(
     materialTypes,
     exams,
     bundle: bundleDetails,
-    invigilators: await repo.getInvigilators(
-      examinationSessionSlotId,
-      examDate,
-      classRoomSectionId,
-    ).then((invs) =>
-      invs.map((inv) => ({
-        userId: inv.user ? inv.user.userId : inv.userId,
-        userName: inv.user ? inv.user.userName : "",
-      }))
-    ),
+    invigilators: await repo
+      .getInvigilators(examinationSessionSlotId, examDate, classRoomSectionId)
+      .then((invs) =>
+        invs.map((inv) => ({
+          userId: inv.user ? inv.user.userId : inv.userId,
+          userName: inv.user ? inv.user.userName : "",
+        })),
+      ),
   };
 }
 
@@ -429,25 +430,20 @@ export async function createBundle(payload, user) {
       }
     }
 
-    // Generate Bundle Code
-    const maxIdResult = await model.examRoomMaterialBundleModel.findOne({
-      attributes: [
-        [
-          sequelize.fn("MAX", sequelize.col("exam_room_material_bundle_id")),
-          "maxId",
-        ],
-      ],
-      raw: true,
+    // Generate Room-Centric Sequence Bundle Code
+    const roomNumber = capacity.classRoom?.roomNumber || "";
+    const existingBundlesCount = await model.examRoomMaterialBundleModel.count({
+      where: { classRoomSectionId },
       transaction,
       paranoid: false,
     });
-    const maxId = parseInt(maxIdResult?.maxId, 10) || 0;
-    const bundleCode = generateBundleCode(maxId + 1);
+    const bundleCode = generateBundleCode(roomNumber, existingBundlesCount + 1);
 
     const tenantStore = getTenantStore();
     const universityId = tenantStore.universityId || user.universityId;
     const instituteId = tenantStore.instituteId || user.defaultInstituteId;
-    const academicYearId = tenantStore.academicYearId || user.defaultAcademicYearId;
+    const academicYearId =
+      tenantStore.academicYearId || user.defaultAcademicYearId;
 
     const bundleData = {
       examDate,
@@ -537,18 +533,24 @@ export async function updateBundleItems(bundleId, payload, user) {
         // Collect all item types that will be present in the bundle after update
         const existingItems = await repo.getBundleItemsByBundleId(bundleId);
         const itemTypes = new Set(existingItems.map((i) => i.itemType));
-        
+
         // If items are provided in payload, update the set of types with the new payload items
         if (items && items.length > 0) {
           items.forEach((item) => itemTypes.add(item.itemType));
         }
 
-        const requiredTypes = ["QUESTION_PAPER", "ANSWER_SHEET", "ATTENDANCE_SHEET"];
-        const missingTypes = requiredTypes.filter((type) => !itemTypes.has(type));
+        const requiredTypes = [
+          "QUESTION_PAPER",
+          "ANSWER_SHEET",
+          "ATTENDANCE_SHEET",
+        ];
+        const missingTypes = requiredTypes.filter(
+          (type) => !itemTypes.has(type),
+        );
 
         if (missingTypes.length > 0) {
           const error = new Error(
-            `Cannot set bundle to READY status. Missing required material items: ${missingTypes.join(", ")}`
+            `Cannot set bundle to READY status. Missing required material items: ${missingTypes.join(", ")}`,
           );
           error.statusCode = 400;
           throw error;
@@ -737,7 +739,7 @@ export async function getReadyBundleList(filters, pagination) {
 
   const formattedRows = result.rows.map((bundleRecord) => {
     const bundle = bundleRecord.get({ plain: true });
-    
+
     let TotalMaterial = 0;
     let issuedmaterial = 0;
     let materialTypes = bundle.items?.length || 0;
@@ -775,6 +777,81 @@ export async function getReadyBundleList(filters, pagination) {
     rows: formattedRows,
     count: result.count,
   };
+}
+
+export async function getReceivedRooms(examinationSessionId) {
+  const roomCapacities = await repo.getReceivedRoomsQuery(examinationSessionId);
+  if (!roomCapacities.length) return [];
+
+  // Group allocations by room slot key
+  const roomMap = new Map();
+  for (const rc of roomCapacities) {
+    const plain = rc.get({ plain: true });
+    const { classRoomSectionId: roomId, classRoom, examSchedule: sched = {} } = plain;
+    const { examDate, examinationSessionSlotId: slotId, examinationSessionSlot: slot = {} } = sched;
+    const key = `${roomId}_${examDate}_${slotId}`;
+
+    const studentCount = plain.seats?.length || 0;
+    const examEntry = {
+      examScheduleRoomCapacityId: plain.examScheduleRoomCapacityId,
+      examScheduleId: plain.examScheduleId,
+      subjectId: sched.subjectSchedule?.subjectId || null,
+      subjectName: sched.subjectSchedule?.subjectName || "",
+      subjectCode: sched.subjectSchedule?.subjectCode || "",
+      studentCount,
+    };
+
+    if (!roomMap.has(key)) {
+      roomMap.set(key, {
+        classRoomSectionId: roomId,
+        roomNumber: classRoom?.roomNumber || "",
+        examDate,
+        examinationSessionSlotId: slotId,
+        slot: {
+          examinationSessionSlotId: slot.examinationSessionSlotId || null,
+          slotNumber: slot.slotNumber || null,
+          startTime: slot.startTime || "",
+          endTime: slot.endTime || "",
+        },
+        exams: [],
+        totalStudentCount: 0,
+      });
+    }
+
+    const group = roomMap.get(key);
+    group.exams.push(examEntry);
+    group.totalStudentCount += studentCount;
+  }
+
+  // Fetch bundles concurrently and filter only RECEIVED rooms
+  const results = await Promise.all(
+    Array.from(roomMap.values()).map(async (roomGroup) => {
+      const bundle = await repo.findBundleByMapping(
+        roomGroup.examDate,
+        roomGroup.examinationSessionSlotId,
+        roomGroup.classRoomSectionId,
+      );
+
+      if (bundle?.status !== "RECEIVED") return null;
+
+      const fullBundle = await repo.getBundleById(bundle.examRoomMaterialBundleId);
+      const plainBundle = fullBundle?.get({ plain: true }) || {};
+      const items = plainBundle.items || [];
+      const answerSheet = items.find((i) => i.itemType === "ANSWER_SHEET");
+
+      return {
+        ...roomGroup,
+        examRoomMaterialBundleId: bundle.examRoomMaterialBundleId,
+        bundleCode: bundle.bundleCode,
+        status: bundle.status,
+        answerSheetCount: answerSheet?.plannedQuantity || 0,
+        usedAnswerSheets: answerSheet?.usedQuantity || 0,
+        items,
+      };
+    })
+  );
+
+  return results.filter(Boolean);
 }
 
 // end of file
