@@ -705,4 +705,49 @@ export async function updateBundleStatus(bundleId, status, user) {
   });
 }
 
+export async function getReadyBundleList(filters, pagination) {
+  const result = await repo.getReadyBundleList(filters, pagination);
+
+  const formattedRows = result.rows.map((bundleRecord) => {
+    const bundle = bundleRecord.get({ plain: true });
+    
+    let TotalMaterial = 0;
+    let issuedmaterial = 0;
+    let materialTypes = bundle.items?.length || 0;
+
+    if (bundle.items) {
+      bundle.items.forEach((item) => {
+        TotalMaterial += item.plannedQuantity || 0;
+        issuedmaterial += item.issuedQuantity || 0;
+        const planned = item.plannedQuantity || 0;
+        const issued = item.issuedQuantity || 0;
+        item.pendingQuantity = Math.max(planned - issued, 0);
+      });
+    }
+
+    return {
+      examRoomMaterialBundleId: bundle.examRoomMaterialBundleId,
+      bundleCode: bundle.bundleCode,
+      status: bundle.status,
+      examDate: bundle.examDate,
+      examinationSessionSlotId: bundle.examinationSessionSlotId,
+      classRoomSectionId: bundle.classRoomSectionId,
+      roomNumber: bundle.classRoom?.roomNumber || null,
+      totalMaterial: TotalMaterial,
+      issuedMaterial: issuedmaterial,
+      materialTypes,
+      items: bundle.items || [],
+      issuedToUser: bundle.recipientUser || null,
+      issuedByUser: bundle.issuerUser || null,
+      issuedAt: bundle.issuedAt,
+      slot: bundle.examinationSessionSlot || null,
+    };
+  });
+
+  return {
+    rows: formattedRows,
+    count: result.count,
+  };
+}
+
 // end of file

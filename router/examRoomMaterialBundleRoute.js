@@ -24,16 +24,18 @@ const positiveIntegerQueryId = z.preprocess(
     .optional(),
 );
 
-const optionalIdWithNullDefault = z.preprocess(
-  emptyToUndefined,
-  z
-    .union([
-      z.string().regex(/^\d+$/).transform(Number),
-      z.number().int().positive(),
-    ])
-    .nullable()
-    .optional(),
-).transform((val) => (val === undefined || val === null ? null : val));
+const optionalIdWithNullDefault = z
+  .preprocess(
+    emptyToUndefined,
+    z
+      .union([
+        z.string().regex(/^\d+$/).transform(Number),
+        z.number().int().positive(),
+      ])
+      .nullable()
+      .optional(),
+  )
+  .transform((val) => (val === undefined || val === null ? null : val));
 
 const listSchema = {
   query: z.object({
@@ -89,6 +91,7 @@ const createSchema = {
             "ROUGH_SHEET",
             "ATTENDANCE_SHEET",
             "ROOM_KIT",
+            "QUESTION_PAPER",
           ]),
           plannedQuantity: z.number().int().min(0).optional(),
           remarks: z.string().optional(),
@@ -119,6 +122,7 @@ const updateItemsSchema = {
             "ROUGH_SHEET",
             "ATTENDANCE_SHEET",
             "ROOM_KIT",
+            "QUESTION_PAPER",
           ]),
           plannedQuantity: z.number().int().min(0).optional(),
           issuedQuantity: z.number().int().min(0).optional(),
@@ -149,9 +153,19 @@ const summarySchema = {
   }),
 };
 
-router.get("/summary", userAuth, validate(summarySchema), controller.getBundleSummary);
+router.get(
+  "/summary",
+  userAuth,
+  validate(summarySchema),
+  controller.getBundleSummary,
+);
 router.get("/", userAuth, validate(listSchema), controller.getBundleList);
-
+router.get(
+  "/readybundles",
+  userAuth,
+  validate(listSchema),
+  controller.getReadyBundleList,
+);
 router.get(
   "/room",
   userAuth,

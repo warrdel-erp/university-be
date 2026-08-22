@@ -22,7 +22,7 @@ const examRoomMaterialItemModel = sequelize.define(
             field: "exam_room_material_bundle_id",
         },
         itemType: {
-            type: DataTypes.ENUM("ANSWER_SHEET", "EXTRA_SHEET", "GRAPH_SHEET", "ROUGH_SHEET", "ATTENDANCE_SHEET", "ROOM_KIT"),
+            type: DataTypes.ENUM("ANSWER_SHEET", "EXTRA_SHEET", "GRAPH_SHEET", "ROUGH_SHEET", "ATTENDANCE_SHEET", "ROOM_KIT", "QUESTION_PAPER"),
             allowNull: false,
             field: "item_type",
         },

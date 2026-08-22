@@ -400,3 +400,83 @@ export async function getActiveInvigilatorsForRoomSlot(
     transaction,
   });
 }
+
+export async function getReadyBundleList(filters, pagination) {
+  const {
+    examinationSessionId,
+    examDate,
+    examinationSessionSlotId,
+    search,
+  } = filters;
+
+  const { limit, page } = pagination;
+  const offset = (page - 1) * limit;
+
+  const bundleWhere = { status: "READY" };
+  if (examDate) bundleWhere.examDate = examDate;
+  if (examinationSessionSlotId) bundleWhere.examinationSessionSlotId = examinationSessionSlotId;
+  if (search) {
+    bundleWhere.bundleCode = { [Op.like]: `%${search}%` };
+  }
+
+  const { count, rows } = await scoped(
+    model.examRoomMaterialBundleModel,
+  ).findAndCountAll({
+    where: bundleWhere,
+    include: [
+      {
+        model: model.examinationSessionSlotModel,
+        as: "examinationSessionSlot",
+        where: { examinationSessionId },
+        required: true,
+        attributes: [
+          "examinationSessionSlotId",
+          "slotNumber",
+          "startTime",
+          "endTime",
+        ],
+      },
+      {
+        model: model.classRoomModel,
+        as: "classRoom",
+        attributes: ["classRoomSectionId", "roomNumber", "capacity", "examCapacity"],
+        required: true,
+      },
+      {
+        model: model.examRoomMaterialItemModel,
+        as: "items",
+        attributes: [
+          "itemType",
+          "plannedQuantity",
+          "issuedQuantity",
+          "usedQuantity",
+          "unusedQuantity",
+          "returnedQuantity",
+          "damagedQuantity",
+        ],
+        required: false,
+      },
+      {
+        model: model.users,
+        as: "issuerUser",
+        attributes: ["userId", "userName"],
+        required: false,
+      },
+      {
+        model: model.users,
+        as: "recipientUser",
+        attributes: ["userId", "userName"],
+        required: false,
+      },
+    ],
+    limit,
+    offset,
+    distinct: true,
+    order: [["examDate", "ASC"], ["bundleCode", "ASC"]],
+  });
+
+  return {
+    rows,
+    count,
+  };
+}

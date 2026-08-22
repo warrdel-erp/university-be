@@ -89,3 +89,28 @@ export const updateBundleStatus = async (req, res) => {
     return ErrorResponse(res, statusCode, error.message);
   }
 };
+
+export const getReadyBundleList = async (req, res) => {
+  try {
+    const filters = {
+      examinationSessionId: req.query.examinationSessionId,
+      examDate: req.query.examDate,
+      examinationSessionSlotId: req.query.examinationSessionSlotId,
+      search: req.query.search,
+    };
+    
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const page = parseInt(req.query.page, 10) || 1;
+    
+    const result = await service.getReadyBundleList(filters, { limit, page });
+    
+    return SuccessResponse(res, 200, "Ready bundles fetched successfully", result.rows, {
+      total: result.count,
+      page,
+      limit,
+    });
+  } catch (error) {
+    console.error(error);
+    return ErrorResponse(res, 500, error.message);
+  }
+};
