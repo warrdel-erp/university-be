@@ -160,12 +160,7 @@ router.get(
   controller.getBundleSummary,
 );
 router.get("/", userAuth, validate(listSchema), controller.getBundleList);
-router.get(
-  "/readybundles",
-  userAuth,
-  validate(listSchema),
-  controller.getReadyBundleList,
-);
+
 router.get(
   "/room",
   userAuth,

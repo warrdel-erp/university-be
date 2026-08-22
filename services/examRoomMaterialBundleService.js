@@ -526,6 +526,26 @@ export async function updateBundleItems(bundleId, payload, user) {
         bundleUpdateFields.issuedTo = issuedTo;
         bundleUpdateFields.issuedBy = user.userId;
         bundleUpdateFields.issuedAt = new Date();
+      } else if (status === "READY") {
+        // Collect all item types that will be present in the bundle after update
+        const existingItems = await repo.getBundleItemsByBundleId(bundleId);
+        const itemTypes = new Set(existingItems.map((i) => i.itemType));
+        
+        // If items are provided in payload, update the set of types with the new payload items
+        if (items && items.length > 0) {
+          items.forEach((item) => itemTypes.add(item.itemType));
+        }
+
+        const requiredTypes = ["QUESTION_PAPER", "ANSWER_SHEET", "ATTENDANCE_SHEET"];
+        const missingTypes = requiredTypes.filter((type) => !itemTypes.has(type));
+
+        if (missingTypes.length > 0) {
+          const error = new Error(
+            `Cannot set bundle to READY status. Missing required material items: ${missingTypes.join(", ")}`
+          );
+          error.statusCode = 400;
+          throw error;
+        }
       } else if (status === "RECEIVED") {
         bundleUpdateFields.receivedBy = user.userId;
         bundleUpdateFields.receivedAt = new Date();
