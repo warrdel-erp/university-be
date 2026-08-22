@@ -5,6 +5,55 @@ import { Op } from "sequelize";
 import { findRoomsByExamScheduleIds } from "./examStructureScheduleMappingRepository.js";
 import { countStudentsForTerm } from "./examStructureScheduleMappingRepository.js";
 
+async function countStudentsForSubject(subjectId, sessionId, options = {}) {
+  const subject = await scoped(model.subjectModel).findOne({
+    where: { subjectId },
+    attributes: ["courseId", "term", "academicYearId"],
+    raw: true,
+    transaction: options.transaction,
+  });
+
+  if (!subject) {
+    return 0;
+  }
+
+  const classSectionWhere = {
+    courseId: subject.courseId,
+    academicYearId: subject.academicYearId,
+  };
+  if (sessionId) {
+    classSectionWhere.sessionId = sessionId;
+  }
+
+  return await scoped(model.studentModel).count({
+    distinct: true,
+    col: "student_id",
+    where: {
+      courseId: subject.courseId,
+      ...(sessionId && { sessionId }),
+    },
+    include: [
+      {
+        model: model.classSectionTermModel,
+        as: "studentClassSectionTerm",
+        required: true,
+        attributes: [],
+        where: { term: subject.term },
+        include: [
+          {
+            model: model.classSectionModel,
+            as: "classSection",
+            required: true,
+            attributes: [],
+            where: classSectionWhere,
+          },
+        ],
+      },
+    ],
+    transaction: options.transaction,
+  });
+}
+
 export async function getMaxSlotNumber(examinationSessionId, options = {}) {
   const highestSlot = await scoped(model.examinationSessionSlotModel).findOne({
     where: { examinationSessionId: Number(examinationSessionId) },
@@ -106,28 +155,18 @@ export async function getExaminationSessionSlots(
   for (const schedule of schedules) {
     const item = schedule.get({ plain: true });
 
-    const courseId = item.subjectSchedule?.courseId;
+    const subjectId = item.subjectSchedule?.subjectId || item.subjectId;
 
-    if (
-      courseId &&
-      item.academicYearId &&
-      item.term &&
-      item.sessionId
-    ) {
-      const studentKey = `${courseId}_${item.academicYearId}_${item.term}_${item.sessionId}`;
-
-      if (!studentCountMap.has(studentKey)) {
-        const count = await countStudentsForTerm(
-          courseId,
-          item.academicYearId,
-          item.term,
-          item.sessionId
-        );
-
-        studentCountMap.set(studentKey, count);
+    if (subjectId) {
+      const cacheKey = `${subjectId}_${item.sessionId || ""}`;
+      if (!studentCountMap.has(cacheKey)) {
+        const count = await countStudentsForSubject(subjectId, item.sessionId, {
+          transaction: options.transaction,
+        });
+        studentCountMap.set(cacheKey, count);
       }
 
-      item.studentCount = studentCountMap.get(studentKey) || 0;
+      item.studentCount = studentCountMap.get(cacheKey) || 0;
     } else {
       item.studentCount = 0;
     }

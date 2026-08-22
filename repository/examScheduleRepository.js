@@ -357,3 +357,34 @@ export async function clearExistingAllocations(examScheduleRoomCapacityIds, tran
         throw error;
     }
 }
+
+export async function getExamScheduleIdBySubject(subjectId, sessionId) {
+    const schedule = await scoped(model.examScheduleModel).findOne({
+        where: {
+            subjectId,
+            ...(sessionId && { sessionId }),
+        },
+        attributes: ["examScheduleId"],
+        raw: true,
+    });
+    return schedule?.examScheduleId || null;
+}
+
+export async function getStudentSeatAllocationsBySchedule(examScheduleId) {
+    return await model.studentExamSeatModel.findAll({
+        include: [
+            {
+                model: model.examScheduleRoomCapacityModel,
+                as: "roomCapacity",
+                where: { examScheduleId },
+                include: [
+                    {
+                        model: model.classRoomModel,
+                        as: "classRoom",
+                        attributes: ["roomNumber"],
+                    }
+                ]
+            }
+        ]
+    });
+}
