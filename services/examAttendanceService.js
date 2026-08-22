@@ -210,13 +210,7 @@ export async function getExamOperationsAttendanceRoom(
     throw new Error("No exam schedules found for this room, date, and slot");
   }
 
-  const capacityIds = [];
-  const capacityExamMap = {};
-  for (let i = 0; i < capacities.length; i++) {
-    const c = capacities[i];
-    capacityIds.push(c.examScheduleRoomCapacityId);
-    capacityExamMap[c.examScheduleRoomCapacityId] = c.examScheduleId;
-  }
+  const capacityIds = capacities.map((c) => c.examScheduleRoomCapacityId);
 
   const seats =
     await examAttendanceRepository.getStudentSeatsByCapacityIds(capacityIds);
@@ -269,9 +263,12 @@ export async function getExamOperationsAttendanceRoom(
       column: colVal,
       seatNumber,
       attendanceStatus: status,
-      examScheduleId: capacityExamMap[seat.examScheduleRoomCapacityId],
+      examScheduleId: rc ? rc.examScheduleId : null,
       courseName,
       term,
+      subjectId: subject ? subject.subjectId : null,
+      subjectName: subject ? subject.subjectName : "",
+      subjectCode: subject ? subject.subjectCode : "",
     });
   }
 
@@ -291,29 +288,26 @@ export async function getExamOperationsAttendanceRoom(
   }
 
   const firstCap = capacities[0];
-  const firstSchedule = firstCap.examSchedule || {};
+
+  const exams = capacities.map((rc) => {
+    const schedule = rc.examSchedule || {};
+    const subject = schedule.subjectSchedule || {};
+    return {
+      examScheduleId: rc.examScheduleId,
+      examScheduleRoomCapacityId: rc.examScheduleRoomCapacityId,
+      subjectId: subject.subjectId || null,
+      subjectName: subject.subjectName || "",
+      subjectCode: subject.subjectCode || "",
+      examDate: schedule.examDate,
+      startTime: schedule.examinationSessionSlot ? schedule.examinationSessionSlot.startTime : "",
+      endTime: schedule.examinationSessionSlot ? schedule.examinationSessionSlot.endTime : "",
+    };
+  });
 
   return {
     examScheduleId: firstCap.examScheduleId,
     examScheduleRoomCapacityId: firstCap.examScheduleRoomCapacityId,
-    exam: {
-      subjectId: firstSchedule.subjectSchedule
-        ? firstSchedule.subjectSchedule.subjectId
-        : null,
-      subjectName: firstSchedule.subjectSchedule
-        ? firstSchedule.subjectSchedule.subjectName
-        : "",
-      subjectCode: firstSchedule.subjectSchedule
-        ? firstSchedule.subjectSchedule.subjectCode
-        : "",
-      examDate: firstSchedule.examDate,
-      startTime: firstSchedule.examinationSessionSlot
-        ? firstSchedule.examinationSessionSlot.startTime
-        : "",
-      endTime: firstSchedule.examinationSessionSlot
-        ? firstSchedule.examinationSessionSlot.endTime
-        : "",
-    },
+    exams,
     room: {
       classRoomSectionId,
       roomNumber: firstCap.classRoom ? firstCap.classRoom.roomNumber : "",
