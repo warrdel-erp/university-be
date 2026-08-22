@@ -68,7 +68,16 @@ export async function getAssignments(filters) {
     whereClause.employeeId = await resolveEmployeeIdFromUserId(filters.userId);
   }
 
-  return await teacherExamAssignmentRepository.getAssignments(whereClause);
+  const results = await teacherExamAssignmentRepository.getAssignments(whereClause);
+  return results.map((row) => {
+    const plain = row.toJSON ? row.toJSON() : row;
+    const sched = plain.examSchedule || {};
+    return {
+      ...plain,
+      duration: sched.duration != null ? Number(sched.duration) : null,
+      maximumMarks: sched.maximumMarks != null ? Number(sched.maximumMarks) : null,
+    };
+  });
 }
 
 export async function deleteAssignment(teacherExamAssignmentId) {

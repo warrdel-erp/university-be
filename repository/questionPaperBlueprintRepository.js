@@ -29,6 +29,14 @@ export async function getBlueprints(filters = {}) {
                     attributes: ["subjectId", "subjectName", "subjectCode"],
                     where: buildScope(model.subjectModel),
                     required: false,
+                    include: [
+                        {
+                            model: model.examScheduleModel,
+                            as: "scheduleSubject",
+                            attributes: ["duration", "maximumMarks", "examScheduleId"],
+                            required: false,
+                        }
+                    ]
                 },
                 {
                     model: model.userModel,

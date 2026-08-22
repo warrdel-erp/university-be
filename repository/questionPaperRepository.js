@@ -107,6 +107,19 @@ export async function getSingleQuestionPaper(id, ownerId = null) {
                     as: "creator",
                     attributes: ["userId", "userName"],
                 },
+                {
+                    model: model.examScheduleModel,
+                    as: "examSchedule",
+                    required: true,
+                    where: buildScope(model.examScheduleModel),
+                    include: [
+                        {
+                            model: model.examinationSessionModel,
+                            as: "examinationSession",
+                            attributes: ["sessionName"],
+                        }
+                    ]
+                },
             ],
         });
 
