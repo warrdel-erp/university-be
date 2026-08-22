@@ -302,14 +302,21 @@ export async function getBundleByRoomDetails(
     isRoomAllocationDone: totalStudentCount > 0,
     isBundleCreated: bundleDetails !== null,
     bundleCode: bundleDetails ? bundleDetails.bundleCode : null,
-    BundleCode: bundleDetails ? bundleDetails.bundleCode : null,
-    TotalMaterial,
     totalMaterial: TotalMaterial,
-    issuedmaterial,
     issuedMaterial: issuedmaterial,
     materialTypes,
     exams,
     bundle: bundleDetails,
+    invigilators: await repo.getInvigilators(
+      examinationSessionSlotId,
+      examDate,
+      classRoomSectionId,
+    ).then((invs) =>
+      invs.map((inv) => ({
+        userId: inv.user ? inv.user.userId : inv.userId,
+        userName: inv.user ? inv.user.userName : "",
+      }))
+    ),
   };
 }
 

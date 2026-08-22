@@ -1178,10 +1178,7 @@
             "url": {
               "raw": "{{baseurl}}/examRoomMaterialBundle/readybundles?examinationSessionId=1&examDate=2026-12-01&page=1&limit=10",
               "host": ["{{baseurl}}"],
-              "path": [
-                "examRoomMaterialBundle",
-                "readybundles"
-              ],
+              "path": ["examRoomMaterialBundle", "readybundles"],
               "query": [
                 {
                   "key": "examinationSessionId",
