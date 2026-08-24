@@ -475,8 +475,19 @@ export async function findSessionCourseMappingsByCoursesAndSessions(courseIds, s
       sessionId: { [Op.in]: sessionIds }
     },
     attributes: ["sessionCourseMappingId", "courseId", "sessionId"],
+    include: [
+      {
+        model: model.courseModel,
+        as: "courses",
+        attributes: ["courseName"],
+      },
+      {
+        model: model.sessionModel,
+        as: "session",
+        attributes: ["sessionName"],
+      }
+    ],
     transaction: options.transaction,
-    raw: true,
   });
 }
 
