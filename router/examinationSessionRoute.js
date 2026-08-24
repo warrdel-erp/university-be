@@ -250,4 +250,15 @@ router.post(
   examinationSessionController.publishExaminationSession,
 );
 
+router.get(
+  "/skuStats",
+  userAuth,
+  validate({
+    query: z.object({
+      examinationSessionId: z.coerce.number({ required_error: "examinationSessionId is required" }),
+    }),
+  }),
+  examinationSessionController.getSessionSkuStats,
+);
+
 export default router;

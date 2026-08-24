@@ -407,3 +407,44 @@ export async function findExaminationSessionTerms(examinationSessionId, options 
     transaction: options.transaction,
   });
 }
+
+export async function findSchedulesForSkuStats(examinationSessionId, options = {}) {
+  return scoped(model.examScheduleModel).findAll({
+    where: { examinationSessionId: Number(examinationSessionId) },
+    attributes: ["examScheduleId", "examDate", "examinationSessionSlotId"],
+    transaction: options.transaction,
+    raw: true,
+  });
+}
+
+export async function findQuestionPapersCountForSchedules(examScheduleIds, options = {}) {
+  const questionPapers = await scoped(model.questionPaperModel).findAll({
+    where: { examScheduleId: { [Op.in]: examScheduleIds } },
+    attributes: ["status", "finalApproval"],
+    transaction: options.transaction,
+    raw: true,
+  });
+  const total = questionPapers.length;
+  const approved = questionPapers.filter(
+    qp => qp.finalApproval === "Approved" || qp.status === "Approved"
+  ).length;
+  return { total, approved };
+}
+
+export async function countHallTicketsBySession(examinationSessionId, options = {}) {
+  return await scoped(model.studentHallTicketModel).count({
+    where: { examinationSessionId: Number(examinationSessionId) },
+    transaction: options.transaction,
+  });
+}
+
+export async function countBundlesByDatesAndSlots(uniqueDates, uniqueSlotIds, options = {}) {
+  return await scoped(model.examRoomMaterialBundleModel).count({
+    where: {
+      examDate: { [Op.in]: uniqueDates },
+      examinationSessionSlotId: { [Op.in]: uniqueSlotIds },
+    },
+    transaction: options.transaction,
+  });
+}
+

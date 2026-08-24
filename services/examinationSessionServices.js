@@ -1357,3 +1357,65 @@ export async function publishExaminationSession(examinationSessionId, userId, op
   });
 }
 
+export async function getSessionSkuStats(examinationSessionId, options = {}) {
+  const parsedSessionId = Number(examinationSessionId);
+  if (Number.isNaN(parsedSessionId)) {
+    throw new Error("Invalid examinationSessionId");
+  }
+
+  // 1. Get total mapped subjects vs scheduled
+  const mappedSubjects = await getMappedSubjectsBySessionAndTerm(
+    { examinationSessionId: parsedSessionId },
+    options
+  );
+  const totalSubjectsCount = mappedSubjects.length;
+  const scheduledSubjectsCount = mappedSubjects.filter(sub => sub.isExamScheduled === true).length;
+
+  // 2. Get total question papers vs approved
+  const schedules = await examinationSessionRepository.findSchedulesForSkuStats(parsedSessionId, options);
+  const totalExamSchedule = schedules.length;
+  const examScheduleIds = schedules.map(s => s.examScheduleId);
+
+  let totalQuestionPapers = 0;
+  let approvedQuestionPapers = 0;
+
+  if (examScheduleIds.length > 0) {
+    const qpCounts = await examinationSessionRepository.findQuestionPapersCountForSchedules(examScheduleIds, options);
+    totalQuestionPapers = qpCounts.total;
+    approvedQuestionPapers = qpCounts.approved;
+  }
+
+  // 3. Hall tickets count
+  const hallTicketsCount = await examinationSessionRepository.countHallTicketsBySession(parsedSessionId, options);
+
+  // 4. Bundles count: Match by date + slot of examSchedules
+  let totalBundles = 0;
+  if (schedules.length > 0) {
+    const uniqueDates = [...new Set(schedules.map(s => s.examDate).filter(Boolean))];
+    const uniqueSlotIds = [...new Set(schedules.map(s => s.examinationSessionSlotId).filter(Boolean))];
+    if (uniqueDates.length > 0 && uniqueSlotIds.length > 0) {
+      totalBundles = await examinationSessionRepository.countBundlesByDatesAndSlots(uniqueDates, uniqueSlotIds, options);
+    }
+  }
+
+  return {
+    subjects: {
+      total: totalSubjectsCount,
+      scheduled: scheduledSubjectsCount
+    },
+    questionPapers: {
+      total: totalQuestionPapers,
+      approved: approvedQuestionPapers
+    },
+    hallTickets: {
+      total: hallTicketsCount,
+      totalExamSchedules: totalExamSchedule
+    },
+    bundles: {
+      total: totalBundles,
+      totalExamSchedules: totalExamSchedule
+    }
+  };
+}
+
+
