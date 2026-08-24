@@ -6,40 +6,42 @@ module.exports = {
       "exam_room_material_bundle",
     );
 
-    // 1. Remove unique index from the refactored columns if it exists
+    // 1. Remove unique index from the refactored columns if it exists (use raw SQL to
+    //    avoid Sequelize introspecting column definitions for a potentially corrupt index)
     try {
-      await queryInterface.removeIndex(
-        "exam_room_material_bundle",
-        "uq_ermb_schedule_room",
+      await queryInterface.sequelize.query(
+        "ALTER TABLE `exam_room_material_bundle` DROP INDEX `uq_ermb_schedule_room`"
       );
     } catch (e) {}
 
     // 2. Remove FK constraints on refactored columns if they exist
     try {
-      await queryInterface.removeConstraint(
-        "exam_room_material_bundle",
-        "fk_ermb_exam_schedule_room_cap_id",
+      await queryInterface.sequelize.query(
+        "ALTER TABLE `exam_room_material_bundle` DROP FOREIGN KEY `fk_ermb_exam_schedule_room_cap_id`"
       );
     } catch (e) {}
     try {
-      await queryInterface.removeConstraint(
-        "exam_room_material_bundle",
-        "fk_ermb_exam_schedule_id",
+      await queryInterface.sequelize.query(
+        "ALTER TABLE `exam_room_material_bundle` DROP FOREIGN KEY `fk_ermb_exam_schedule_id`"
       );
     } catch (e) {}
 
     // 3. Remove refactored columns if they exist
     if (tableDefinition.exam_schedule_room_capacity_id) {
-      await queryInterface.removeColumn(
-        "exam_room_material_bundle",
-        "exam_schedule_room_capacity_id",
-      );
+      try {
+        await queryInterface.removeColumn(
+          "exam_room_material_bundle",
+          "exam_schedule_room_capacity_id",
+        );
+      } catch (e) {}
     }
     if (tableDefinition.exam_schedule_id) {
-      await queryInterface.removeColumn(
-        "exam_room_material_bundle",
-        "exam_schedule_id",
-      );
+      try {
+        await queryInterface.removeColumn(
+          "exam_room_material_bundle",
+          "exam_schedule_id",
+        );
+      } catch (e) {}
     }
 
     // 4. Add back original columns if they do not exist

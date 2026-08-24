@@ -191,7 +191,15 @@ export async function findSubjects(where, options = {}) {
   return scoped(model.subjectModel).findAll({
     where,
     attributes: ["subjectId", "subjectName", "subjectCode", "subjectType", "subjectCategory", "courseId", "term", "academicYearId"],
+    include: [
+      {
+        model: model.courseModel,
+        as: "course",
+        attributes: ["termType"],
+      }
+    ],
     raw: true,
+    nest: true,
     transaction: options.transaction,
   });
 }

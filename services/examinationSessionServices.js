@@ -447,6 +447,7 @@ export async function getClassSectionTermsBySetupType(examSetupTypeId, options =
 
     result.push({
       course: courseDetails,
+      termType: courseDetails.termType || null,
       session: group.sessionId ? sessionMap.get(group.sessionId) || null : null,
       academicYearId: group.academicYearId,
       terms: termDetails,
@@ -587,6 +588,7 @@ export async function getExaminationStructure(
       courseId: group.courseId,
       courseName: group.courseName,
       courseCode: group.courseCode,
+      termType: group.termType,
       sessionId: group.sessionId,
       sessionName: group.sessionName,
       academicYearId: group.academicYearId,
@@ -808,10 +810,9 @@ export async function getMappedSubjectsBySessionAndTerm(
         examinationSessionSlotId: plainSched.examinationSessionSlotId,
         roomCapacity,
         studentCount,
-        noRoom: !hasAssignedRoom,
-        needsRoom: hasAssignedRoom && roomCapacity < studentCount,
-        overCapacity: hasAssignedRoom && roomCapacity > studentCount,
+        needsRoom: roomCapacity < studentCount,
         confirmed: hasAssignedRoom && roomCapacity === studentCount,
+        published: plainSched.published || false,
         teacherAssignment,
         isModerationActive: moderationActive,
         isApproved
@@ -820,6 +821,10 @@ export async function getMappedSubjectsBySessionAndTerm(
       if (teacherAssignmentStatus === 'assigned') continue;
     }
 
+    const hasAssignedRoom = hasSchedule && schedInfo ? (schedInfo.roomCapacity > 0) : false;
+    const roomCapacity = hasSchedule && schedInfo ? schedInfo.roomCapacity : 0;
+    const studentCount = hasSchedule && schedInfo ? schedInfo.studentCount : 0;
+
     finalResponse.push({
       subjectId: subject.subjectId,
       subjectName: subject.subjectName,
@@ -827,6 +832,7 @@ export async function getMappedSubjectsBySessionAndTerm(
       subjectType: subject.subjectType,
       subjectCategory: subject.subjectCategory,
       term: subject.term,
+      termType: subject.course?.termType || null,
       courseId: subject.courseId,
       sessionId: subjectSessionMap.get(subject.subjectId) || null,
       isExamScheduled: hasSchedule,
@@ -838,10 +844,12 @@ export async function getMappedSubjectsBySessionAndTerm(
       examinationSessionSlotId: schedInfo?.examinationSessionSlotId || null,
       studentCount: schedInfo?.studentCount || 0,
       roomCapacity: schedInfo?.roomCapacity || 0,
-      noRoom: schedInfo ? schedInfo.noRoom : true,
+      needsScheduling: !hasSchedule,
+      roomPending: hasSchedule && (!hasAssignedRoom || roomCapacity < studentCount),
       needsRoom: schedInfo ? schedInfo.needsRoom : false,
-      overCapacity: schedInfo ? schedInfo.overCapacity : false,
       confirmed: schedInfo ? schedInfo.confirmed : false,
+      ready: hasSchedule && roomCapacity >= studentCount,
+      published: schedInfo ? schedInfo.published : false,
       teacherAssignment: schedInfo ? schedInfo.teacherAssignment : null,
       isModerationActive: schedInfo ? schedInfo.isModerationActive : false,
       isApproved: schedInfo ? schedInfo.isApproved : false

@@ -125,6 +125,12 @@ const examScheduleModel = sequelize.define(
                 key: 'id'
             }
         },
+        published: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+            field: 'published'
+        },
         deletedAt: {
             type: DataTypes.DATE,
             allowNull: true,
