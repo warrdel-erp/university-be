@@ -145,6 +145,17 @@ export const getMappedSubjectsBySessionAndTerm = async (req, res) => {
   }
 };
 
+export const getMappedSubjectsBySessionAndTermNeed = async (req, res) => {
+  try {
+    const result = await examinationSessionServices.getMappedSubjectsBySessionAndTermNeed(req.query);
+    return SuccessResponse(res, 200, "Mapped subjects (need) fetched successfully", result);
+  } catch (error) {
+    console.error("Error fetching mapped subjects (need):", error);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(res, statusCode, error.message || "Failed to fetch mapped subjects (need)");
+  }
+};
+
 export const getQuestionPaperSummary = async (req, res) => {
   try {
     const { examinationSessionId } = req.query;

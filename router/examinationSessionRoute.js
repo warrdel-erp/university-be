@@ -156,35 +156,29 @@ const getSubjectsBySessionAndTermSchema = {
           return undefined;
         }
       },
-      z.array(
-        z.object({
-          courseSessionMappingId: z.number().int().positive(),
-          terms: z.array(z.number().int().positive()),
-        })
-      ).optional()
+      z
+        .array(
+          z.object({
+            courseSessionMappingId: z.number().int().positive(),
+            terms: z.array(z.number().int().positive()),
+          }),
+        )
+        .optional(),
     ),
-    isExamScheduled: z
-      .union([z.boolean(), z.enum(["true", "false"])])
-      .transform((val) =>
-        val === "true" || val === true
-          ? true
-          : val === "false" || val === false
-            ? false
-            : undefined,
-      )
-      .optional(),
-    teacherAssignmentStatus: z.enum(["assigned", "notAssigned"]).optional(),
-    isModerationActive: z
-      .union([z.boolean(), z.enum(["true", "false"])])
-      .transform((val) =>
-        val === "true" || val === true
-          ? true
-          : val === "false" || val === false
-            ? false
-            : undefined,
-      )
-      .optional(),
-    filterStatus: z.enum(["all", "needsScheduling", "roomPending", "ready", "published"]).default("all"),
+
+    filterStatus: z
+      .enum([
+        "all",
+        "needsScheduling",
+        "roomPending",
+        "ready",
+        "published",
+        "notAssigned",
+        "assigned",
+        "moderationActive",
+        "approved",
+      ])
+      .default("all"),
     date: dateStringSchema.optional(),
   }),
 };
@@ -220,6 +214,13 @@ router.get(
   userAuth,
   validate(getSubjectsBySessionAndTermSchema),
   examinationSessionController.getMappedSubjectsBySessionAndTerm,
+);
+
+router.get(
+  "/questionPaper",
+  userAuth,
+  validate(getSubjectsBySessionAndTermSchema),
+  examinationSessionController.getMappedSubjectsBySessionAndTermNeed,
 );
 
 router.get(
@@ -259,7 +260,9 @@ router.post(
   userAuth,
   validate({
     query: z.object({
-      examinationSessionId: z.coerce.number({ required_error: "examinationSessionId is required" }),
+      examinationSessionId: z.coerce.number({
+        required_error: "examinationSessionId is required",
+      }),
     }),
   }),
   examinationSessionController.publishExaminationSession,
@@ -270,7 +273,9 @@ router.get(
   userAuth,
   validate({
     query: z.object({
-      examinationSessionId: z.coerce.number({ required_error: "examinationSessionId is required" }),
+      examinationSessionId: z.coerce.number({
+        required_error: "examinationSessionId is required",
+      }),
     }),
   }),
   examinationSessionController.getSessionSkuStats,

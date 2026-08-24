@@ -215,13 +215,18 @@ export async function findExamSchedulesBySubjects(examinationSessionId, subjectI
   }
   return scoped(model.examScheduleModel).findAll({
     where: whereClause,
-    attributes: ["examScheduleId", "subjectId", "sessionId", "academicYearId", "examDate", "examTime", "type", "duration", "examinationSessionSlotId", "term"],
+    attributes: ["examScheduleId", "subjectId", "sessionId", "academicYearId", "examDate", "examTime", "type", "duration", "maximumMarks", "examinationSessionSlotId", "term"],
     include: [
       {
         model: model.subjectModel,
         as: "subjectSchedule",
         attributes: ["courseId"],
       },
+      {
+        model: model.examinationSessionSlotModel,
+        as: "examinationSessionSlot",
+        attributes: ["slotNumber", "startTime", "endTime", "durationMinutes"],
+      }
     ],
     order: [["examScheduleId", "DESC"]],
     transaction: options.transaction,
@@ -266,7 +271,7 @@ export async function findQuestionPapersByExamSchedules(examScheduleIds, options
   if (!examScheduleIds.length) return [];
   return scoped(model.questionPaperModel).findAll({
     where: { examScheduleId: { [Op.in]: examScheduleIds } },
-    attributes: ["id", "examScheduleId", "createdBy", "updatedBy", "status", "createdAt", "updatedAt"],
+    attributes: ["id", "examScheduleId", "createdBy", "updatedBy", "status", "finalApproval", "createdAt", "updatedAt"],
     include: [
       {
         model: model.userModel,
