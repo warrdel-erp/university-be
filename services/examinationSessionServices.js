@@ -1390,11 +1390,14 @@ export async function getSessionSkuStats(examinationSessionId, options = {}) {
 
   // 4. Bundles count: Match by date + slot of examSchedules
   let totalBundles = 0;
+  let receivedBundles = 0;
   if (schedules.length > 0) {
     const uniqueDates = [...new Set(schedules.map(s => s.examDate).filter(Boolean))];
     const uniqueSlotIds = [...new Set(schedules.map(s => s.examinationSessionSlotId).filter(Boolean))];
     if (uniqueDates.length > 0 && uniqueSlotIds.length > 0) {
-      totalBundles = await examinationSessionRepository.countBundlesByDatesAndSlots(uniqueDates, uniqueSlotIds, options);
+      const bundleCounts = await examinationSessionRepository.countBundlesByDatesAndSlots(uniqueDates, uniqueSlotIds, options);
+      totalBundles = bundleCounts.total;
+      receivedBundles = bundleCounts.received;
     }
   }
 
@@ -1413,7 +1416,7 @@ export async function getSessionSkuStats(examinationSessionId, options = {}) {
     },
     bundles: {
       total: totalBundles,
-      totalExamSchedules: totalExamSchedule
+      received: receivedBundles
     }
   };
 }

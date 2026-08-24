@@ -439,12 +439,23 @@ export async function countHallTicketsBySession(examinationSessionId, options = 
 }
 
 export async function countBundlesByDatesAndSlots(uniqueDates, uniqueSlotIds, options = {}) {
-  return await scoped(model.examRoomMaterialBundleModel).count({
+  const total = await scoped(model.examRoomMaterialBundleModel).count({
     where: {
       examDate: { [Op.in]: uniqueDates },
       examinationSessionSlotId: { [Op.in]: uniqueSlotIds },
     },
     transaction: options.transaction,
   });
+
+  const received = await scoped(model.examRoomMaterialBundleModel).count({
+    where: {
+      examDate: { [Op.in]: uniqueDates },
+      examinationSessionSlotId: { [Op.in]: uniqueSlotIds },
+      status: "RECEIVED",
+    },
+    transaction: options.transaction,
+  });
+
+  return { total, received };
 }
 
