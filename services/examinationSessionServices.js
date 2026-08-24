@@ -1318,3 +1318,42 @@ export async function getQuestionPaperSummary(
     totalPapers: questionPapers.length,
   };
 }
+
+export async function publishExaminationSession(examinationSessionId, userId, options = {}) {
+  return sequelize.transaction(async (transaction) => {
+    const session = await examinationSessionRepository.getExaminationSessionById(examinationSessionId, { ...options, transaction });
+    if (!session) {
+      throw new Error("Examination session not found");
+    }
+
+    // Update session status to Published
+    await examinationSessionRepository.updateExaminationSession(examinationSessionId, { status: "Published", updatedBy: userId }, { ...options, transaction });
+
+    // Fetch all mapped subjects to locate those in "Ready" status
+    const mappedSubjects = await getMappedSubjectsBySessionAndTerm(
+      { examinationSessionId },
+      { ...options, transaction }
+    );
+
+    // Identify examScheduleIds of those subjects that are "Ready"
+    const readyExamScheduleIds = mappedSubjects
+      .filter((sub) => sub.ready === true && sub.examScheduleId !== null)
+      .map((sub) => sub.examScheduleId);
+
+    if (readyExamScheduleIds.length > 0) {
+      await model.examScheduleModel.update(
+        { published: true, updatedBy: userId },
+        {
+          where: { examScheduleId: { [Op.in]: readyExamScheduleIds } },
+          transaction,
+        }
+      );
+    }
+
+    return {
+      message: "Examination session published successfully",
+      publishedSchedulesCount: readyExamScheduleIds.length,
+    };
+  });
+}
+

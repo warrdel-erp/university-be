@@ -31,7 +31,7 @@ const sessionBodyObject = z.object({
   aiEvaluation: z.boolean().optional(),
   moderationWorkflow: z.boolean().optional(),
   allowRevaluation: z.boolean().optional(),
-  status: z.enum(["Draft", "Published", "Completed", "Cancelled"]).optional(),
+  status: z.enum(["Draft", "Published"]).optional(),
   classSectionTerms: z
     .array(
       z.object({
@@ -237,6 +237,17 @@ router.delete(
   userAuth,
   validate(deleteTermSchema),
   examinationSessionController.deleteExaminationSessionTerm,
+);
+
+router.post(
+  "/publish",
+  userAuth,
+  validate({
+    query: z.object({
+      examinationSessionId: z.coerce.number({ required_error: "examinationSessionId is required" }),
+    }),
+  }),
+  examinationSessionController.publishExaminationSession,
 );
 
 export default router;

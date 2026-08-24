@@ -208,7 +208,8 @@ export async function getExamScheduleSlot(examScheduleId) {
       "examinationSessionSlotId",
       "sessionId",
       "term",
-      "academicYearId"
+      "academicYearId",
+      "published",
     ],
     include: [
       {

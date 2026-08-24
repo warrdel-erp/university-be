@@ -1,6 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as examRoomCapacityRepository from "../repository/examScheduleRoomCapacityRepository.js";
 import * as examScheduleServices from "./examScheduleServices.js";
+import * as model from "../models/index.js";
 import { z } from "zod";
 import { getTimeSlotRange, minutesToTime } from "../utility/timeSlot.js";
 import { decimalSubtract } from "../utility/decimalMoney.js";
@@ -166,6 +167,9 @@ export async function addExamRoomCapacity(data, userId) {
 
     const examSchedule = await examRoomCapacityRepository.getExamScheduleSlot(validatedData.examScheduleId);
     if (!examSchedule) throw new Error("Exam schedule not found");
+    if (examSchedule.published) {
+        throw new Error("Room assignment cannot be changed because the exam schedule is already published.");
+    }
 
     const slot = getExamSlot(
         examSchedule.examDate,
@@ -245,6 +249,32 @@ export async function addExamRoomCapacity(data, userId) {
             console.error("Auto seat allocation skipped or failed:", seatErr.message);
         }
 
+        // If examination session is Published, re-evaluate and mark this schedule as published: true if it is now Ready
+        try {
+            const currentSession = await examRoomCapacityRepository.assertScopedExamSchedule(validatedData.examScheduleId, {
+                attributes: ["examinationSessionId"],
+                transaction
+            });
+            if (currentSession?.examinationSessionId) {
+                const sessionRecord = await model.examinationSessionModel.findByPk(currentSession.examinationSessionId, { transaction });
+                if (sessionRecord?.status === "Published") {
+                    const mappedSubjects = await examScheduleServices.getMappedSubjectsBySessionAndTerm(
+                        { examinationSessionId: currentSession.examinationSessionId },
+                        { transaction }
+                    );
+                    const scheduleInfo = mappedSubjects.find(sub => sub.examScheduleId === Number(validatedData.examScheduleId));
+                    if (scheduleInfo?.ready === true) {
+                        await model.examScheduleModel.update(
+                            { published: true, updatedBy: userId },
+                            { where: { examScheduleId: validatedData.examScheduleId }, transaction }
+                        );
+                    }
+                }
+            }
+        } catch (publishErr) {
+            console.error("Auto publishing schedule after room assignment failed:", publishErr.message);
+        }
+
         await transaction.commit();
         return result;
     } catch (error) {
@@ -263,6 +293,11 @@ export async function updateExamRoomCapacity(examScheduleRoomCapacityId, data, u
     const existing = await examRoomCapacityRepository.getExamRoomCapacityById(examScheduleRoomCapacityId);
     if (!existing) {
         throw new Error("Exam room capacity not found");
+    }
+
+    const schedule = await examRoomCapacityRepository.getExamScheduleSlot(existing.examScheduleId);
+    if (schedule?.published) {
+        throw new Error("Room assignment cannot be changed because the exam schedule is already published.");
     }
 
     updatePayload.updatedBy = userId;
@@ -324,6 +359,10 @@ export async function deleteExamRoomCapacity(examScheduleRoomCapacityId, userId)
     }
 
     const examScheduleId = existing.examScheduleId;
+    const schedule = await examRoomCapacityRepository.getExamScheduleSlot(examScheduleId);
+    if (schedule?.published) {
+        throw new Error("Room assignment cannot be changed because the exam schedule is already published.");
+    }
     const transaction = await sequelize.transaction();
 
     try {
