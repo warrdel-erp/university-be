@@ -184,7 +184,7 @@ const getSubjectsBySessionAndTermSchema = {
             : undefined,
       )
       .optional(),
-    filterStatus: z.enum(["all", "roomPending", "ready", "published"]).default("all"),
+    filterStatus: z.enum(["all", "needsScheduling", "roomPending", "ready", "published"]).default("all"),
     date: dateStringSchema.optional(),
   }),
 };
