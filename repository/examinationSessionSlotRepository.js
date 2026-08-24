@@ -73,7 +73,7 @@ export async function createExaminationSessionSlot(slotData, options = {}) {
 }
 
 export async function getExaminationSessionSlots(
-  { examinationSessionId, date, selections, filterStatus },
+  { examinationSessionId, date, filterCombinations, filterStatus, selections },
   options = {}
 ) {
   const slots = await scoped(model.examinationSessionSlotModel).findAll({
@@ -91,31 +91,6 @@ export async function getExaminationSessionSlots(
 
   const slotIds = slots.map((slot) => slot.examinationSessionSlotId);
 
-  // Group schedules query filters using selections combinations
-  let filterCombinations = [];
-  if (selections && selections.length > 0) {
-    const mappingIds = selections.map(s => s.courseSessionMappingId);
-    const dbMappings = await scoped(model.sessionCouseMappingModel).findAll({
-      where: { sessionCourseMappingId: { [Op.in]: mappingIds } },
-      attributes: ["sessionCourseMappingId", "courseId", "sessionId"],
-      transaction: options.transaction,
-      raw: true,
-    });
-
-    const dbMappingsMap = new Map(dbMappings.map(m => [m.sessionCourseMappingId, m]));
-
-    for (const sel of selections) {
-      const mapping = dbMappingsMap.get(sel.courseSessionMappingId);
-      if (mapping) {
-        filterCombinations.push({
-          courseId: mapping.courseId,
-          sessionId: mapping.sessionId,
-          terms: sel.terms || []
-        });
-      }
-    }
-  }
-
   const scheduleWhere = {
     examinationSessionSlotId: {
       [Op.in]: slotIds,
@@ -130,6 +105,7 @@ export async function getExaminationSessionSlots(
     {
       model: model.subjectModel,
       as: "subjectSchedule",
+      required: true,
       attributes: [
         "subjectId",
         "subjectName",
@@ -151,7 +127,7 @@ export async function getExaminationSessionSlots(
     // Group target conditions using Sequelize Op.or
     const orSchedules = filterCombinations.map(comb => ({
       sessionId: comb.sessionId,
-      "$subjectSchedule.courseId$": comb.courseId,
+      "$subjectSchedule.course_id$": comb.courseId,
       "$subjectSchedule.term$": { [Op.in]: comb.terms }
     }));
     scheduleWhere[Op.or] = orSchedules;
