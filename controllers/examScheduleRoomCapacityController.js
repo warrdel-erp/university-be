@@ -58,7 +58,7 @@ export async function getExamScheduleRooms(req, res) {
 export async function deleteExamRoomCapacity(req, res) {
   try {
     const { examScheduleRoomCapacityId } = req.params;
-    const result = await examRoomCapacityServices.deleteExamRoomCapacity(examScheduleRoomCapacityId);
+    const result = await examRoomCapacityServices.deleteExamRoomCapacity(examScheduleRoomCapacityId, req.user?.userId);
     return SuccessResponse(res, 200, "Exam room assignment deleted successfully", result);
   } catch (error) {
     return ErrorResponse(res, 400, error.message);

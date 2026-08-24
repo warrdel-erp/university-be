@@ -237,6 +237,14 @@ export async function addExamRoomCapacity(data, userId) {
         }
 
         const result = await examRoomCapacityRepository.bulkAddExamRoomCapacity(assignments, transaction);
+
+        // Auto allocate seats using "ascending" strategy within the same transaction
+        try {
+            await examScheduleServices.allocateSeatsByStrategy(validatedData.examScheduleId, userId, "ascending", { transaction });
+        } catch (seatErr) {
+            console.error("Auto seat allocation skipped or failed:", seatErr.message);
+        }
+
         await transaction.commit();
         return result;
     } catch (error) {
@@ -309,7 +317,7 @@ export async function getExamScheduleRooms(examScheduleId) {
     });
 }
 
-export async function deleteExamRoomCapacity(examScheduleRoomCapacityId) {
+export async function deleteExamRoomCapacity(examScheduleRoomCapacityId, userId) {
     const existing = await examRoomCapacityRepository.getExamRoomCapacityById(examScheduleRoomCapacityId);
     if (!existing) {
         throw new Error("Exam room capacity not found");
@@ -341,6 +349,13 @@ export async function deleteExamRoomCapacity(examScheduleRoomCapacityId) {
                 );
                 currentOrder++;
             }
+        }
+
+        // Auto allocate seats using "ascending" strategy for the remaining rooms in their updated order
+        try {
+            await examScheduleServices.allocateSeatsByStrategy(examScheduleId, userId, "ascending", { transaction });
+        } catch (seatErr) {
+            console.error("Auto seat allocation after room deletion skipped or failed:", seatErr.message);
         }
 
         await transaction.commit();

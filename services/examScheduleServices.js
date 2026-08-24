@@ -96,10 +96,11 @@ function sortRoomCapacitiesByAllocationOrder(roomCapacities) {
     return [...roomCapacities].sort((a, b) => a.orderKey - b.orderKey);
 }
 
-async function allocateSeatsByStrategy(examScheduleId, userId, strategy = "random") {
-    const transaction = await sequelize.transaction();
+export async function allocateSeatsByStrategy(examScheduleId, userId, strategy = "random", options = {}) {
+    const transaction = options.transaction || await sequelize.transaction();
+    const isLocalTransaction = !options.transaction;
     try {
-        const schedule = await examScheduleRepository.getExamScheduleById(examScheduleId);
+        const schedule = await examScheduleRepository.getExamScheduleById(examScheduleId, { transaction });
         if (!schedule) {
             throw new Error("Exam schedule not found");
         }
@@ -165,14 +166,18 @@ async function allocateSeatsByStrategy(examScheduleId, userId, strategy = "rando
 
         const result = await examScheduleRepository.allocateSeats(allocations, transaction);
 
-        await transaction.commit();
+        if (isLocalTransaction) {
+            await transaction.commit();
+        }
         return {
             allocatedCount: result.length,
             totalStudents: orderedStudents.length,
             totalCapacity
         };
     } catch (error) {
-        await transaction.rollback();
+        if (isLocalTransaction) {
+            await transaction.rollback();
+        }
         console.error(`Error in allocateSeatsByStrategy service (${strategy}):`, error);
         throw error;
     }
