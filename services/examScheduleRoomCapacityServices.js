@@ -336,7 +336,7 @@ export async function getExamScheduleRooms(examScheduleId) {
 
     const rows = await examRoomCapacityRepository.getRoomsByExamScheduleId(examScheduleId);
     if (!rows.length) {
-        throw new Error("No rooms assigned to this exam schedule");
+        return [];
     }
 
     return rows.map((plain) => {

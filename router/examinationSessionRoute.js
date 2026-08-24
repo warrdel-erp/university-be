@@ -147,7 +147,16 @@ const questionPaperSummarySchema = {
 const getSubjectsBySessionAndTermSchema = {
   query: z.object({
     examinationSessionId: positiveIntegerQueryId,
-    term: z.union([z.string(), z.number()]).optional(),
+    term: z.preprocess(
+      (val) => {
+        if (val === "" || val === null || val === undefined) return undefined;
+        if (typeof val === "string" && val.includes(",")) {
+          return val.split(",").map(Number).filter(n => !Number.isNaN(n));
+        }
+        return [Number(val)].filter(n => !Number.isNaN(n));
+      },
+      z.array(z.number().int().positive()).optional()
+    ),
     courseId: positiveIntegerQueryId.optional(),
     sessionId: positiveIntegerQueryId.optional(),
     isExamScheduled: z
@@ -171,6 +180,7 @@ const getSubjectsBySessionAndTermSchema = {
             : undefined,
       )
       .optional(),
+    filterStatus: z.enum(["needsScheduling", "roomPending", "ready", "published"]).optional(),
   }),
 };
 

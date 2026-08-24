@@ -851,22 +851,15 @@ export async function getMappedSubjectsBySessionAndTerm(
     isExamScheduled,
     teacherAssignmentStatus,
     isModerationActive,
+    filterStatus,
   },
   options = {},
 ) {
   const parsedExaminationSessionId = Number(examinationSessionId);
-  if (Number.isNaN(parsedExaminationSessionId)) return [];
 
-  const targetTerm =
-    term !== undefined && term !== null && term !== "" ? Number(term) : null;
-  const targetCourseId =
-    courseId !== undefined && courseId !== null && courseId !== ""
-      ? Number(courseId)
-      : null;
-  const targetSessionId =
-    sessionId !== undefined && sessionId !== null && sessionId !== ""
-      ? Number(sessionId)
-      : null;
+  const targetTerm = term || null;
+  const targetCourseId = courseId || null;
+  const targetSessionId = sessionId || null;
 
   const examinationSession =
     await examinationSessionRepository.findExaminationSessionAssessmentTypeById(
@@ -922,7 +915,9 @@ export async function getMappedSubjectsBySessionAndTerm(
     isActive: true,
   };
   if (targetCourseId !== null) subjectWhere.courseId = targetCourseId;
-  if (targetTerm !== null) subjectWhere.term = targetTerm;
+  if (targetTerm !== null && targetTerm.length > 0) {
+    subjectWhere.term = { [Op.in]: targetTerm };
+  }
 
   const mappedSubjects = await examinationSessionRepository.findSubjects(
     subjectWhere,
@@ -1139,39 +1134,37 @@ export async function getMappedSubjectsBySessionAndTerm(
     const roomCapacity = hasSchedule && schedInfo ? schedInfo.roomCapacity : 0;
     const studentCount = hasSchedule && schedInfo ? schedInfo.studentCount : 0;
 
+    const needsScheduling = !hasSchedule;
+    const roomPending = hasSchedule && (!hasAssignedRoom || roomCapacity < studentCount);
+    const needsRoom = false;
+    const ready = hasSchedule && roomCapacity >= studentCount;
+    const published = schedInfo ? schedInfo.published : false;
+
     finalResponse.push({
       subjectId: subject.subjectId,
       subjectName: subject.subjectName,
       subjectCode: subject.subjectCode,
-      subjectType: subject.subjectType,
-      subjectCategory: subject.subjectCategory,
       term: subject.term,
       termType: subject.course?.termType || null,
       courseId: subject.courseId,
       sessionId: subjectSessionMap.get(subject.subjectId) || null,
       isExamScheduled: hasSchedule,
       examScheduleId: schedInfo?.examScheduleId || null,
-      examDate: schedInfo?.examDate || null,
-      examTime: schedInfo?.examTime || null,
-      duration: schedInfo?.duration || null,
-      type: schedInfo?.type || null,
-      examinationSessionSlotId: schedInfo?.examinationSessionSlotId || null,
-      studentCount: schedInfo?.studentCount || 0,
-      roomCapacity: schedInfo?.roomCapacity || 0,
-      needsScheduling: !hasSchedule,
-      roomPending:
-        hasSchedule && (!hasAssignedRoom || roomCapacity < studentCount),
-      needsRoom: schedInfo ? schedInfo.needsRoom : false,
-      confirmed: schedInfo ? schedInfo.confirmed : false,
-      ready: hasSchedule && roomCapacity >= studentCount,
-      published: schedInfo ? schedInfo.published : false,
-      teacherAssignment: schedInfo ? schedInfo.teacherAssignment : null,
-      isModerationActive: schedInfo ? schedInfo.isModerationActive : false,
-      isApproved: schedInfo ? schedInfo.isApproved : false,
+      needsScheduling,
+      roomPending,
+      needsRoom,
+      ready,
+      published,
     });
   }
 
-  return finalResponse;
+  let filteredResponse = finalResponse;
+
+  if (filterStatus) {
+    filteredResponse = filteredResponse.filter(sub => sub[filterStatus] === true);
+  }
+
+  return filteredResponse;
 }
 
 export async function getQuestionPaperSummary(

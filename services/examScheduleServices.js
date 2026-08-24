@@ -1,4 +1,5 @@
 import * as examScheduleRepository from '../repository/examScheduleRepository.js';
+import * as examRoomCapacityRepository from '../repository/examScheduleRoomCapacityRepository.js';
 import sequelize from "../database/sequelizeConfig.js";
 import * as studentService from './studentService.js';
 
@@ -120,8 +121,8 @@ export async function allocateSeatsByStrategy(examScheduleId, userId, strategy =
             throw new Error("No students found for this schedule");
         }
 
-        // 2. Get room capacities
-        const roomCapacities = schedule.roomCapacities;
+        // 2. Get room capacities directly using transaction so newly assigned rooms are visible
+        const roomCapacities = await examRoomCapacityRepository.getRoomsByExamScheduleId(examScheduleId, transaction);
         if (!roomCapacities || roomCapacities.length === 0) {
             throw new Error("No rooms assigned to this exam schedule");
         }
