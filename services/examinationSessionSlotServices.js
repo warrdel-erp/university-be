@@ -1,5 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as examinationSessionSlotRepository from "../repository/examinationSessionSlotRepository.js";
+import * as examinationSessionServices from "./examinationSessionServices.js";
 
 function addMinutesToTime(timeStr, minutes) {
   if (!timeStr) return null;
@@ -58,8 +59,11 @@ export async function createExaminationSessionSlot({ payload, user }, options = 
   });
 }
 
-export async function getExaminationSessionSlots(examinationSessionId, date, options) {
-  return await examinationSessionSlotRepository.getExaminationSessionSlots(examinationSessionId, date, options);
+export async function getExaminationSessionSlots({ examinationSessionId, date, selections, filterStatus }, options = {}) {
+  return await examinationSessionSlotRepository.getExaminationSessionSlots(
+    { examinationSessionId, date, selections, filterStatus },
+    options
+  );
 }
 
 export async function getExaminationSessionSlotById(examinationSessionSlotId, options) {

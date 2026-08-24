@@ -30,6 +30,23 @@ const getSlotsSchema = {
   query: z.object({
     examinationSessionId: positiveIntegerQueryId,
     date: dateStringSchema.optional(),
+    selections: z.preprocess(
+      (val) => {
+        if (!val || val === "") return undefined;
+        try {
+          return typeof val === "string" ? JSON.parse(val) : val;
+        } catch {
+          return undefined;
+        }
+      },
+      z.array(
+        z.object({
+          courseSessionMappingId: z.number().int().positive(),
+          terms: z.array(z.number().int().positive()),
+        })
+      ).optional()
+    ),
+    filterStatus: z.enum(["all", "needsScheduling", "roomPending", "ready", "published"]).default("all"),
   }),
 };
 

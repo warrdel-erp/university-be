@@ -803,6 +803,16 @@ export async function getExaminationStructure(
     });
   }
 
+  const courseSessionMappingsList = await examinationSessionRepository.findSessionCourseMappingsByCoursesAndSessions(
+    uniqueValues([...courseSessionGroups.values()].map(g => g.courseId)),
+    uniqueValues([...courseSessionGroups.values()].map(g => g.sessionId)),
+    options
+  );
+
+  const courseSessionMappingMap = new Map(
+    courseSessionMappingsList.map(m => [`${m.courseId}_${m.sessionId}`, m.sessionCourseMappingId])
+  );
+
   return [...courseSessionGroups.values()]
     .map((group) => {
       let totalSubjects = 0;
@@ -826,6 +836,8 @@ export async function getExaminationStructure(
           return acc;
         }, []);
 
+      const courseSessionMappingId = courseSessionMappingMap.get(`${group.courseId}_${group.sessionId}`) || null;
+
       return {
         examinationSessionId: plainSession?.examinationSessionId || null,
         courseId: group.courseId,
@@ -834,6 +846,7 @@ export async function getExaminationStructure(
         termType: group.termType,
         sessionId: group.sessionId,
         sessionName: group.sessionName,
+        courseSessionMappingId,
         academicYearId: group.academicYearId,
         totalSubjects,
         terms,
@@ -845,21 +858,43 @@ export async function getExaminationStructure(
 export async function getMappedSubjectsBySessionAndTerm(
   {
     examinationSessionId,
-    term,
-    courseId,
-    sessionId,
+    selections,
     isExamScheduled,
     teacherAssignmentStatus,
     isModerationActive,
     filterStatus,
+    date,
   },
   options = {},
 ) {
   const parsedExaminationSessionId = Number(examinationSessionId);
 
-  const targetTerm = term || null;
-  const targetCourseId = courseId || null;
-  const targetSessionId = sessionId || null;
+  // Group schedules query filters using selections combinations
+  let filterCombinations = [];
+  let filterCourseIds = [];
+  let filterSessionIds = [];
+
+  if (selections && selections.length > 0) {
+    const mappingIds = selections.map(s => s.courseSessionMappingId);
+    const dbMappings = await examinationSessionRepository.findSessionCourseMappingsByIds(mappingIds, options);
+    const dbMappingsMap = new Map(dbMappings.map(m => [m.sessionCourseMappingId, m]));
+
+    for (const sel of selections) {
+      const mapping = dbMappingsMap.get(sel.courseSessionMappingId);
+      if (mapping) {
+        filterCombinations.push({
+          courseId: mapping.courseId,
+          sessionId: mapping.sessionId,
+          terms: sel.terms || []
+        });
+        filterCourseIds.push(mapping.courseId);
+        filterSessionIds.push(mapping.sessionId);
+      }
+    }
+  }
+
+  const targetCourseId = filterCourseIds.length > 0 ? filterCourseIds : null;
+  const targetSessionId = filterSessionIds.length > 0 ? filterSessionIds : null;
 
   const examinationSession =
     await examinationSessionRepository.findExaminationSessionAssessmentTypeById(
@@ -892,8 +927,12 @@ export async function getMappedSubjectsBySessionAndTerm(
   if (!assessmentPlanIds.length) return [];
 
   const mappingWhere = { assessmentPlanId: { [Op.in]: assessmentPlanIds } };
-  if (targetCourseId !== null) mappingWhere.courseId = targetCourseId;
-  if (targetSessionId !== null) mappingWhere.sessionId = targetSessionId;
+  if (targetCourseId !== null && targetCourseId.length > 0) {
+    mappingWhere.courseId = { [Op.in]: targetCourseId };
+  }
+  if (targetSessionId !== null && targetSessionId.length > 0) {
+    mappingWhere.sessionId = { [Op.in]: targetSessionId };
+  }
 
   const subjectMappings =
     await examinationSessionRepository.findAssessmentPlanSubjectMappings(
@@ -914,9 +953,13 @@ export async function getMappedSubjectsBySessionAndTerm(
     subjectId: { [Op.in]: uniqueSubjectIds },
     isActive: true,
   };
-  if (targetCourseId !== null) subjectWhere.courseId = targetCourseId;
-  if (targetTerm !== null && targetTerm.length > 0) {
-    subjectWhere.term = { [Op.in]: targetTerm };
+
+  if (filterCombinations.length > 0) {
+    const orSubjects = filterCombinations.map(comb => ({
+      courseId: comb.courseId,
+      term: { [Op.in]: comb.terms }
+    }));
+    subjectWhere[Op.or] = orSubjects;
   }
 
   const mappedSubjects = await examinationSessionRepository.findSubjects(
@@ -925,11 +968,26 @@ export async function getMappedSubjectsBySessionAndTerm(
   );
   if (!mappedSubjects.length) return [];
 
+  const courseSessionMapIds = uniqueValues(mappedSubjects.map(sub => sub.courseId));
+  const courseSessionMapSessionIds = uniqueValues(mappedSubjects.map(sub => subjectSessionMap.get(sub.subjectId)));
+
+  let courseSessionMappingMap = new Map();
+  if (courseSessionMapIds.length > 0 && courseSessionMapSessionIds.length > 0) {
+    const dbMappings = await examinationSessionRepository.findSessionCourseMappingsByCoursesAndSessions(
+      courseSessionMapIds,
+      courseSessionMapSessionIds,
+      options
+    );
+    courseSessionMappingMap = new Map(
+      dbMappings.map(m => [`${m.courseId}_${m.sessionId}`, m.sessionCourseMappingId])
+    );
+  }
+
   const allSchedules =
     await examinationSessionRepository.findExamSchedulesBySubjects(
       parsedExaminationSessionId,
       mappedSubjects.map((sub) => sub.subjectId),
-      options,
+      { ...options, date },
     );
 
   const scheduleBySubjectId = new Map();
@@ -1140,6 +1198,9 @@ export async function getMappedSubjectsBySessionAndTerm(
     const ready = hasSchedule && roomCapacity >= studentCount;
     const published = schedInfo ? schedInfo.published : false;
 
+    const subjectSessionId = subjectSessionMap.get(subject.subjectId) || null;
+    const courseSessionMappingId = subjectSessionId ? (courseSessionMappingMap.get(`${subject.courseId}_${subjectSessionId}`) || null) : null;
+
     finalResponse.push({
       subjectId: subject.subjectId,
       subjectName: subject.subjectName,
@@ -1147,7 +1208,8 @@ export async function getMappedSubjectsBySessionAndTerm(
       term: subject.term,
       termType: subject.course?.termType || null,
       courseId: subject.courseId,
-      sessionId: subjectSessionMap.get(subject.subjectId) || null,
+      sessionId: subjectSessionId,
+      courseSessionMappingId,
       isExamScheduled: hasSchedule,
       examScheduleId: schedInfo?.examScheduleId || null,
       needsScheduling,
@@ -1160,7 +1222,7 @@ export async function getMappedSubjectsBySessionAndTerm(
 
   let filteredResponse = finalResponse;
 
-  if (filterStatus) {
+  if (filterStatus && filterStatus !== "all") {
     filteredResponse = filteredResponse.filter(sub => sub[filterStatus] === true);
   }
 

@@ -73,8 +73,7 @@ export async function createExaminationSessionSlot(slotData, options = {}) {
 }
 
 export async function getExaminationSessionSlots(
-  examinationSessionId,
-  date,
+  { examinationSessionId, date, selections, filterStatus },
   options = {}
 ) {
   const slots = await scoped(model.examinationSessionSlotModel).findAll({
@@ -92,6 +91,31 @@ export async function getExaminationSessionSlots(
 
   const slotIds = slots.map((slot) => slot.examinationSessionSlotId);
 
+  // Group schedules query filters using selections combinations
+  let filterCombinations = [];
+  if (selections && selections.length > 0) {
+    const mappingIds = selections.map(s => s.courseSessionMappingId);
+    const dbMappings = await scoped(model.sessionCouseMappingModel).findAll({
+      where: { sessionCourseMappingId: { [Op.in]: mappingIds } },
+      attributes: ["sessionCourseMappingId", "courseId", "sessionId"],
+      transaction: options.transaction,
+      raw: true,
+    });
+
+    const dbMappingsMap = new Map(dbMappings.map(m => [m.sessionCourseMappingId, m]));
+
+    for (const sel of selections) {
+      const mapping = dbMappingsMap.get(sel.courseSessionMappingId);
+      if (mapping) {
+        filterCombinations.push({
+          courseId: mapping.courseId,
+          sessionId: mapping.sessionId,
+          terms: sel.terms || []
+        });
+      }
+    }
+  }
+
   const scheduleWhere = {
     examinationSessionSlotId: {
       [Op.in]: slotIds,
@@ -102,27 +126,40 @@ export async function getExaminationSessionSlots(
     scheduleWhere.examDate = date;
   }
 
+  const scheduleInclude = [
+    {
+      model: model.subjectModel,
+      as: "subjectSchedule",
+      attributes: [
+        "subjectId",
+        "subjectName",
+        "subjectCode",
+        "courseId",
+      ],
+      include: [
+        {
+          model: model.courseModel,
+          as: "course",
+          attributes: ["courseName", "termType"],
+        }
+      ]
+    },
+  ];
+
+  if (filterCombinations.length > 0) {
+    // Session is at schedule level, course and term are at subject level
+    // Group target conditions using Sequelize Op.or
+    const orSchedules = filterCombinations.map(comb => ({
+      sessionId: comb.sessionId,
+      "$subjectSchedule.courseId$": comb.courseId,
+      "$subjectSchedule.term$": { [Op.in]: comb.terms }
+    }));
+    scheduleWhere[Op.or] = orSchedules;
+  }
+
   const schedules = await scoped(model.examScheduleModel).findAll({
     where: scheduleWhere,
-    include: [
-      {
-        model: model.subjectModel,
-        as: "subjectSchedule",
-        attributes: [
-          "subjectId",
-          "subjectName",
-          "subjectCode",
-          "courseId",
-        ],
-        include: [
-          {
-            model: model.courseModel,
-            as: "course",
-            attributes: ["courseName", "termType"],
-          }
-        ]
-      },
-    ],
+    include: scheduleInclude,
     order: [
       ["examDate", "ASC"],
       ["examTime", "ASC"],
@@ -184,11 +221,15 @@ export async function getExaminationSessionSlots(
     item.roomNumbers = roomNumbersMap.get(item.examScheduleId) || [];
     item.roomCapacity = roomCapacityMap.get(item.examScheduleId) || 0;
 
-    const hasAssignedRoom = item.roomCapacity > 0;
-    item.noRoom = !hasAssignedRoom;
-    item.needsRoom = hasAssignedRoom && item.roomCapacity < item.studentCount;
-    item.overCapacity = hasAssignedRoom && item.roomCapacity > item.studentCount;
-    item.confirmed = hasAssignedRoom && item.roomCapacity === item.studentCount;
+    const roomCapacity = item.roomCapacity;
+    const studentCount = item.studentCount;
+    const hasAssignedRoom = roomCapacity > 0;
+
+    item.needsScheduling = false;
+    item.roomPending = !hasAssignedRoom || roomCapacity < studentCount;
+    item.needsRoom = false;
+    item.ready = roomCapacity >= studentCount;
+    item.published = item.published || false;
 
     if (!scheduleMap.has(item.examinationSessionSlotId)) {
       scheduleMap.set(item.examinationSessionSlotId, []);
@@ -197,10 +238,55 @@ export async function getExaminationSessionSlots(
     scheduleMap.get(item.examinationSessionSlotId).push(item);
   }
 
-  return slots.map((slot) => ({
-    ...slot,
-    schedules: scheduleMap.get(slot.examinationSessionSlotId) || [],
-  }));
+  // Retrieve unscheduled subjects (needsScheduling) for this session matching the selections criteria
+  let unscheduledSubjectsMapped = [];
+  if (filterStatus === "needsScheduling" && filterCombinations.length > 0) {
+    const examinationSessionServices = await import("../services/examinationSessionServices.js");
+    const subjectsList = await examinationSessionServices.getMappedSubjectsBySessionAndTerm({
+      examinationSessionId,
+      selections,
+      filterStatus: "needsScheduling"
+    }, options);
+
+    unscheduledSubjectsMapped = subjectsList.map(sub => ({
+      examScheduleId: null,
+      subjectId: sub.subjectId,
+      term: sub.term,
+      academicYearId: sub.academicYearId || null,
+      sessionId: sub.sessionId,
+      examDate: null,
+      examTime: null,
+      type: null,
+      duration: null,
+      examinationSessionSlotId: null,
+      studentCount: sub.studentCount || 0,
+      courseName: sub.courseName || null,
+      termType: sub.termType || null,
+      roomNumbers: [],
+      roomCapacity: 0,
+      needsScheduling: true,
+      roomPending: false,
+      needsRoom: false,
+      ready: false,
+      published: false,
+    }));
+  }
+
+  return slots.map((slot) => {
+    let list = scheduleMap.get(slot.examinationSessionSlotId) || [];
+    if (filterStatus && filterStatus !== "all" && filterStatus !== "needsScheduling") {
+      list = list.filter((sched) => sched[filterStatus] === true);
+    }
+    if (filterStatus === "needsScheduling") {
+      list = [];
+    }
+    const combinedSchedules = [...list, ...unscheduledSubjectsMapped];
+
+    return {
+      ...slot,
+      schedules: combinedSchedules,
+    };
+  });
 }
 
 export async function getExaminationSessionSlotById(examinationSessionSlotId, options = {}) {

@@ -206,11 +206,15 @@ export async function findSubjects(where, options = {}) {
 
 export async function findExamSchedulesBySubjects(examinationSessionId, subjectIds, options = {}) {
   if (!subjectIds || subjectIds.length === 0) return [];
+  const whereClause = {
+    examinationSessionId: Number(examinationSessionId),
+    subjectId: { [Op.in]: subjectIds }
+  };
+  if (options.date) {
+    whereClause.examDate = options.date;
+  }
   return scoped(model.examScheduleModel).findAll({
-    where: {
-      examinationSessionId: Number(examinationSessionId),
-      subjectId: { [Op.in]: subjectIds }
-    },
+    where: whereClause,
     attributes: ["examScheduleId", "subjectId", "sessionId", "academicYearId", "examDate", "examTime", "type", "duration", "examinationSessionSlotId", "term"],
     include: [
       {
@@ -457,5 +461,28 @@ export async function countBundlesByDatesAndSlots(uniqueDates, uniqueSlotIds, op
   });
 
   return { total, received };
+}
+
+export async function findSessionCourseMappingsByCoursesAndSessions(courseIds, sessionIds, options = {}) {
+  return scoped(model.sessionCouseMappingModel).findAll({
+    where: {
+      courseId: { [Op.in]: courseIds },
+      sessionId: { [Op.in]: sessionIds }
+    },
+    attributes: ["sessionCourseMappingId", "courseId", "sessionId"],
+    transaction: options.transaction,
+    raw: true,
+  });
+}
+
+export async function findSessionCourseMappingsByIds(sessionCourseMappingIds, options = {}) {
+  return scoped(model.sessionCouseMappingModel).findAll({
+    where: {
+      sessionCourseMappingId: { [Op.in]: sessionCourseMappingIds }
+    },
+    attributes: ["sessionCourseMappingId", "courseId", "sessionId"],
+    transaction: options.transaction,
+    raw: true,
+  });
 }
 

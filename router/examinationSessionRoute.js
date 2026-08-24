@@ -147,18 +147,22 @@ const questionPaperSummarySchema = {
 const getSubjectsBySessionAndTermSchema = {
   query: z.object({
     examinationSessionId: positiveIntegerQueryId,
-    term: z.preprocess(
+    selections: z.preprocess(
       (val) => {
-        if (val === "" || val === null || val === undefined) return undefined;
-        if (typeof val === "string" && val.includes(",")) {
-          return val.split(",").map(Number).filter(n => !Number.isNaN(n));
+        if (!val || val === "") return undefined;
+        try {
+          return typeof val === "string" ? JSON.parse(val) : val;
+        } catch {
+          return undefined;
         }
-        return [Number(val)].filter(n => !Number.isNaN(n));
       },
-      z.array(z.number().int().positive()).optional()
+      z.array(
+        z.object({
+          courseSessionMappingId: z.number().int().positive(),
+          terms: z.array(z.number().int().positive()),
+        })
+      ).optional()
     ),
-    courseId: positiveIntegerQueryId.optional(),
-    sessionId: positiveIntegerQueryId.optional(),
     isExamScheduled: z
       .union([z.boolean(), z.enum(["true", "false"])])
       .transform((val) =>
@@ -180,7 +184,8 @@ const getSubjectsBySessionAndTermSchema = {
             : undefined,
       )
       .optional(),
-    filterStatus: z.enum(["needsScheduling", "roomPending", "ready", "published"]).optional(),
+    filterStatus: z.enum(["all", "roomPending", "ready", "published"]).default("all"),
+    date: dateStringSchema.optional(),
   }),
 };
 
