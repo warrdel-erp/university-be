@@ -1,4 +1,5 @@
 import * as model from "../models/index.js";
+import { Op } from "sequelize";
 import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
 import * as academicGroupRepository from "../repository/academicGroupRepository.js";
 import {
@@ -1806,11 +1807,6 @@ export async function changeTimeTableCreate(body, updatedBy) {
     updatedBy,
   };
 
-  const result = await timeTableCreateRepository.changeTimeTableCreate(
-    timeTableRoutineId,
-    data,
-  );
-
   const isDateChanged = Boolean(
     (placementFields.startingDate &&
       placementFields.startingDate !==
@@ -1819,11 +1815,32 @@ export async function changeTimeTableCreate(body, updatedBy) {
       placementFields.endingDate !== toDateOnlyString(current.endingDate)),
   );
 
-  if (current.isPublish && isDateChanged) {
-    await publishTimeTableService(timeTableRoutineId);
-  }
+  return await sequelize.transaction(async (transaction) => {
+    const result = await timeTableCreateRepository.changeTimeTableCreate(
+      timeTableRoutineId,
+      data,
+      transaction,
+    );
 
-  return result;
+    if (current.isPublish && isDateChanged) {
+      const oldStart = toDateOnlyString(current.startingDate);
+      const oldEnd = toDateOnlyString(current.endingDate);
+      const newStart = placementFields.startingDate || oldStart;
+      const newEnd = placementFields.endingDate || oldEnd;
+
+      await adjustPublishedRoutineDates(
+        timeTableRoutineId,
+        oldStart,
+        oldEnd,
+        newStart,
+        newEnd,
+        updatedBy,
+        transaction,
+      );
+    }
+
+    return result;
+  });
 }
 
 export async function updatetimeTableCreate(
@@ -3024,6 +3041,167 @@ function eachDateInRange(startStr, endStr) {
     current = toDateOnlyString(next);
   }
   return dates;
+}
+
+export async function adjustPublishedRoutineDates(
+  timeTableRoutineId,
+  oldStart,
+  oldEnd,
+  newStart,
+  newEnd,
+  actorId,
+  transaction,
+) {
+  const routine = await timeTableCreateRepository.getRoutineForPublishRepository(
+    timeTableRoutineId,
+    { transaction },
+  );
+  if (!routine) {
+    throw new Error("Time table create ID not found");
+  }
+
+  const plain = routine.get({ plain: true });
+
+  const cells = await timeTableCreateRepository.getRoutineCellsForPublishRepository(
+    timeTableRoutineId,
+    { transaction },
+  );
+  if (!cells.length) {
+    return;
+  }
+
+  const oldDates = eachDateInRange(oldStart, oldEnd);
+  const newDates = eachDateInRange(newStart, newEnd);
+
+  const datesToDelete = [];
+  for (let i = 0; i < oldDates.length; i++) {
+    const d = oldDates[i];
+    if (newDates.indexOf(d) === -1) {
+      datesToDelete.push(d);
+    }
+  }
+
+  const datesToCreate = [];
+  for (let i = 0; i < newDates.length; i++) {
+    const d = newDates[i];
+    if (oldDates.indexOf(d) === -1) {
+      datesToCreate.push(d);
+    }
+  }
+
+  const mappingIds = [];
+  for (let i = 0; i < cells.length; i++) {
+    mappingIds.push(Number(cells[i].timeTableCellId));
+  }
+
+  // 1. Delete rows for datesToDelete
+  if (mappingIds.length > 0 && datesToDelete.length > 0) {
+    const dateWiseToDelete =
+      await timeTableCreateRepository.getDateWiseCellsByMappingsAndDates(
+        mappingIds,
+        datesToDelete,
+        transaction,
+      );
+
+    const dateWiseIdsToDelete = [];
+    for (let i = 0; i < dateWiseToDelete.length; i++) {
+      dateWiseIdsToDelete.push(dateWiseToDelete[i].timeTableCellDateWiseId);
+    }
+
+    if (dateWiseIdsToDelete.length > 0) {
+      await timeTableCreateRepository.deleteTeachersDateWiseByIds(
+        dateWiseIdsToDelete,
+        transaction,
+      );
+    }
+
+    await timeTableCreateRepository.deleteDateWiseCellsByMappingsAndDates(
+      mappingIds,
+      datesToDelete,
+      transaction,
+    );
+  }
+
+  // 2. Create rows for datesToCreate
+  if (datesToCreate.length > 0 && cells.length > 0) {
+    const weekOff = parseWeekOff(
+      plain.structureCourseMapping?.timeTableStructure?.weekOff,
+    );
+
+    const cellsByDay = {};
+    for (let i = 0; i < cells.length; i++) {
+      const cellPlain = cells[i].get({ plain: true });
+      const dayKey = normalizeWeekdayKey(cellPlain.day);
+      if (!dayKey) continue;
+      if (!cellsByDay[dayKey]) {
+        cellsByDay[dayKey] = [];
+      }
+      cellsByDay[dayKey].push(cellPlain);
+    }
+
+    const planned = [];
+    for (let i = 0; i < datesToCreate.length; i++) {
+      const dateStr = datesToCreate[i];
+      const weekday = normalizeWeekdayKey(weekdayNameFromDateOnly(dateStr));
+      if (!weekday || weekOff.indexOf(weekday) !== -1) {
+        continue;
+      }
+      const dayCells = cellsByDay[weekday];
+      if (!dayCells) continue;
+      for (let j = 0; j < dayCells.length; j++) {
+        planned.push({ cell: dayCells[j], date: dateStr });
+      }
+    }
+
+    if (planned.length > 0) {
+      const dateWisePayload = [];
+      for (let i = 0; i < planned.length; i++) {
+        const item = planned[i];
+        dateWisePayload.push({
+          timeTableCellId: item.cell.timeTableCellId,
+          date: item.date,
+          classRoomSectionId: item.cell.classRoomSectionId,
+          subjectId: item.cell.subjectId,
+          electiveSubjectId: item.cell.electiveSubjectId,
+          createdBy: actorId,
+          updatedBy: actorId,
+        });
+      }
+
+      const createdDateWise = [];
+      for (let i = 0; i < dateWisePayload.length; i++) {
+        const instance = await timeTableCreateRepository.createDateWiseCell(
+          dateWisePayload[i],
+          transaction,
+        );
+        createdDateWise.push(instance);
+      }
+
+      const teacherPayload = [];
+      for (let i = 0; i < createdDateWise.length; i++) {
+        const dateWiseRow = createdDateWise[i];
+        const teachers = planned[i].cell.timeTableCellTeachers || [];
+        for (let j = 0; j < teachers.length; j++) {
+          const teacher = teachers[j];
+          teacherPayload.push({
+            timeTableCellDateWiseId: dateWiseRow.timeTableCellDateWiseId,
+            userId: Number(teacher.userId),
+            teacherType: teacher.teacherType,
+            isAttendence: teacher.isAttendence,
+            createdBy: actorId,
+            updatedBy: actorId,
+          });
+        }
+      }
+
+      for (let i = 0; i < teacherPayload.length; i++) {
+        await timeTableCreateRepository.createTeacherDateWise(
+          teacherPayload[i],
+          transaction,
+        );
+      }
+    }
+  }
 }
 
 export async function publishTimeTableService(timeTableRoutineId) {

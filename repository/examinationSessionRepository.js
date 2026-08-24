@@ -155,7 +155,7 @@ export async function findAssessmentPlanComponentsBySetupTypeId(examSetupTypeId,
 export async function findAssessmentPlanComponentDurationBySetupTypeId(examSetupTypeId, options = {}) {
   return scoped(model.assessmentPlanComponentModel).findOne({
     where: { examSetupTypeId: Number(examSetupTypeId) },
-    attributes: ["duration"],
+    attributes: ["duration", "weightagePercentage"],
     raw: true,
     transaction: options.transaction,
   });

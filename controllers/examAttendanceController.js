@@ -132,38 +132,40 @@ export async function getExamOperationsAttendance(req, res) {
         const filters = {
             examinationSessionId: req.query.examinationSessionId,
             examDate: req.query.examDate,
-            examinationSessionSlotId: req.query.examinationSessionSlotId,
-            courseId: req.query.courseId,
-            sessionId: req.query.sessionId,
-            term: req.query.term,
             search: req.query.search,
-            page: req.query.page ? Number(req.query.page) : 1,
-            limit: req.query.limit ? Number(req.query.limit) : 10
         };
+        const page = req.query.page ? Number(req.query.page) : 1;
+        const limit = req.query.limit ? Number(req.query.limit) : 10;
 
-        const result = await examAttendanceServices.getExamOperationsAttendance(filters);
+        const result = await examAttendanceServices.getExamOperationsAttendance(filters, { page, limit });
         return SuccessResponse(
             res,
             200,
             "Exam operations attendance fetched successfully",
-            result.data,
-            result.paginationData
+            result.rooms,
+            {
+                total: result.total,
+                limit: result.limit,
+                page: result.page,
+            }
         );
     } catch (error) {
         return ErrorResponse(res, 500, error.message);
     }
 }
 
+
 export async function getExamOperationsAttendanceRoom(req, res) {
     try {
-        const { examScheduleId, examScheduleRoomCapacityId } = req.query;
-        if (!examScheduleId || !examScheduleRoomCapacityId) {
-            return ErrorResponse(res, 400, "Missing required query parameters: examScheduleId, examScheduleRoomCapacityId");
+        const { classRoomSectionId, examDate, examinationSessionSlotId } = req.query;
+        if (!classRoomSectionId || !examDate || !examinationSessionSlotId) {
+            return ErrorResponse(res, 400, "Missing required query parameters: classRoomSectionId, examDate, examinationSessionSlotId");
         }
 
         const result = await examAttendanceServices.getExamOperationsAttendanceRoom(
-            Number(examScheduleId),
-            Number(examScheduleRoomCapacityId)
+            Number(classRoomSectionId),
+            examDate,
+            Number(examinationSessionSlotId)
         );
         return SuccessResponse(res, 200, "Exam operations attendance room details fetched successfully", result);
     } catch (error) {
@@ -209,15 +211,18 @@ export async function updateRoomAttendanceStatus(req, res) {
     }
 }
 
-export async function getExamAttendanceDetails(req, res) {
+export async function getExamAttendanceDetailsByRoom(req, res) {
     try {
-        const { examScheduleId } = req.params;
-        if (!examScheduleId) {
-            return ErrorResponse(res, 400, "Missing required parameter: examScheduleId");
+        const { classRoomSectionId, examinationSessionId, examDate, examinationSessionSlotId } = req.query;
+        if (!classRoomSectionId) {
+            return ErrorResponse(res, 400, "Missing required parameter: classRoomSectionId");
         }
 
-        const result = await examAttendanceServices.getExamAttendanceDetails(Number(examScheduleId));
-        return SuccessResponse(res, 200, "Exam attendance details fetched successfully", result);
+        const result = await examAttendanceServices.getExamAttendanceDetailsByRoom(
+            Number(classRoomSectionId),
+            { examinationSessionId, examDate, examinationSessionSlotId }
+        );
+        return SuccessResponse(res, 200, "Exam attendance room details fetched successfully", result);
     } catch (error) {
         return ErrorResponse(res, 500, error.message);
     }
@@ -245,22 +250,3 @@ export async function getExamOperationsSummary(req, res) {
     }
 }
 
-export async function generateRoomAttendance(req, res) {
-    try {
-        const examScheduleId = req.body.examScheduleId || req.query.examScheduleId;
-        const examScheduleRoomCapacityId = req.body.examScheduleRoomCapacityId || req.query.examScheduleRoomCapacityId;
-
-        if (!examScheduleId || !examScheduleRoomCapacityId) {
-            return ErrorResponse(res, 400, "Missing required parameters: examScheduleId, examScheduleRoomCapacityId");
-        }
-
-        const result = await examAttendanceServices.generateRoomAttendance({
-            examScheduleId: Number(examScheduleId),
-            examScheduleRoomCapacityId: Number(examScheduleRoomCapacityId)
-        }, req.user);
-
-        return SuccessResponse(res, 200, "Exam room attendance generated successfully (kept pending)", result);
-    } catch (error) {
-        return ErrorResponse(res, 500, error.message);
-    }
-}

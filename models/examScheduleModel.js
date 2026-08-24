@@ -63,6 +63,11 @@ const examScheduleModel = sequelize.define(
             type: DataTypes.STRING,
             allowNull: false
         },
+        maximumMarks: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'maximum_marks'
+        },
         examinationSessionSlotId: {
             type: DataTypes.BIGINT,
             allowNull: false,
