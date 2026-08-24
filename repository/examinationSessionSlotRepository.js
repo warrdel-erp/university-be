@@ -114,6 +114,13 @@ export async function getExaminationSessionSlots(
           "subjectCode",
           "courseId",
         ],
+        include: [
+          {
+            model: model.courseModel,
+            as: "course",
+            attributes: ["courseName", "termType"],
+          }
+        ]
       },
     ],
     order: [
@@ -170,6 +177,9 @@ export async function getExaminationSessionSlots(
     } else {
       item.studentCount = 0;
     }
+
+    item.courseName = item.subjectSchedule?.course?.courseName || null;
+    item.termType = item.subjectSchedule?.course?.termType || null;
 
     item.roomNumbers = roomNumbersMap.get(item.examScheduleId) || [];
     item.roomCapacity = roomCapacityMap.get(item.examScheduleId) || 0;
