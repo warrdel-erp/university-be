@@ -3,6 +3,7 @@ import { buildScope, scoped } from "../utility/scoped.js";
 import { Op } from "sequelize";
 import { getStudentCountsByGroups } from "./examScheduleRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
+import * as examinationSessionRepository from "./examinationSessionRepository.js";
 
 export async function createAssignment(data, options = {}) {
   return scoped(model.examInvigilatorAssignmentModel).create(data, {
@@ -774,7 +775,7 @@ export async function findRoomCapacityByScheduleAndSection(examScheduleId, class
 
 
 export async function getRoomsWithExams(filters = {}, options = {}) {
-  const { examinationSessionId, examDate } = filters;
+  const { examinationSessionId, examDate, selections } = filters;
 
   const scheduleWhere = {
     ...buildScope(model.examScheduleModel),
@@ -782,6 +783,35 @@ export async function getRoomsWithExams(filters = {}, options = {}) {
   };
   if (examDate) {
     scheduleWhere.examDate = examDate;
+  }
+
+  const subjectWhere = {};
+  if (selections && selections.length > 0) {
+    const examinationSessionRepository = await import("./examinationSessionRepository.js");
+    const mappingIds = selections.map((s) => s.courseSessionMappingId);
+    const dbMappings = await examinationSessionRepository.findSessionCourseMappingsByIds(mappingIds, { transaction: options.transaction });
+    const dbMappingsMap = new Map(dbMappings.map((m) => [m.sessionCourseMappingId, m]));
+
+    const filterCombinations = [];
+    for (const sel of selections) {
+      const mapping = dbMappingsMap.get(sel.courseSessionMappingId);
+      if (mapping) {
+        filterCombinations.push({
+          courseId: mapping.courseId,
+          sessionId: mapping.sessionId,
+          terms: sel.terms || [],
+        });
+      }
+    }
+
+    if (filterCombinations.length > 0) {
+      const sessionIds = [...new Set(filterCombinations.map((c) => c.sessionId))];
+      scheduleWhere.sessionId = sessionIds.length === 1 ? sessionIds[0] : { [Op.in]: sessionIds };
+      subjectWhere[Op.or] = filterCombinations.map((comb) => ({
+        courseId: comb.courseId,
+        term: { [Op.in]: comb.terms },
+      }));
+    }
   }
 
   return scoped(model.examScheduleRoomCapacityModel).findAll({
@@ -818,8 +848,9 @@ export async function getRoomsWithExams(filters = {}, options = {}) {
           {
             model: model.subjectModel,
             as: "subjectSchedule",
-            attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
-            required: false,
+            attributes: ["subjectId", "subjectName", "subjectCode", "course_id"],
+            where: Object.keys(subjectWhere).length > 0 ? subjectWhere : undefined,
+            required: true,
           },
           {
             model: model.examinationSessionSlotModel,

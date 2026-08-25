@@ -123,7 +123,7 @@ export async function getBundleList(filters, pagination) {
       subjectId: schedule.subjectSchedule?.subjectId,
       subjectName: schedule.subjectSchedule?.subjectName,
       subjectCode: schedule.subjectSchedule?.subjectCode,
-      courseId: schedule.subjectSchedule?.courseId,
+      courseId: schedule.subjectSchedule?.course_id,
       sessionId: schedule.sessionId,
       term: schedule.term,
       capacity: studentCount,
@@ -132,7 +132,7 @@ export async function getBundleList(filters, pagination) {
     });
   }
 
-  // 3. Post-process to align student counts for same class in the same room/slot
+  // 3. Post-process to align student counts and assign operational statuses
   for (const roomObj of roomMap.values()) {
     const classMaxCounts = {};
     for (const exam of roomObj.exams) {
@@ -144,6 +144,8 @@ export async function getBundleList(filters, pagination) {
         );
       }
     }
+    
+    let totalStudentCount = 0;
     for (const exam of roomObj.exams) {
       const classKey = `${exam.courseId}_${exam.sessionId}_${exam.term}`;
       const maxCount = classMaxCounts[classKey] || 0;
@@ -152,6 +154,19 @@ export async function getBundleList(filters, pagination) {
         exam.capacity = maxCount;
         exam.isRoomAllocationDone = true;
       }
+      totalStudentCount += exam.studentCount;
+    }
+    
+    roomObj.studentCount = totalStudentCount;
+    roomObj.invigilatorTrue = roomObj.invigilators.length > 0;
+    
+    // Status resolution rules
+    if (!roomObj.invigilatorTrue) {
+      roomObj.operationalStatus = "Invigilator Pending";
+    } else if (!roomObj.bundle) {
+      roomObj.operationalStatus = "Bundle Not Created";
+    } else {
+      roomObj.operationalStatus = `Bundle ${roomObj.bundle.status}`;
     }
   }
 

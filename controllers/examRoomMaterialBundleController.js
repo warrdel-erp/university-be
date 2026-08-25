@@ -12,6 +12,7 @@ export const getBundleList = async (req, res) => {
       term: req.query.term,
       status: req.query.status,
       search: req.query.search,
+      selections: req.query.selections,
     };
     
     const limit = parseInt(req.query.limit, 10) || 10;
@@ -97,6 +98,7 @@ export const getReadyBundleList = async (req, res) => {
       examDate: req.query.examDate,
       examinationSessionSlotId: req.query.examinationSessionSlotId,
       search: req.query.search,
+      selections: req.query.selections,
     };
     
     const limit = parseInt(req.query.limit, 10) || 10;

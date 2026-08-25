@@ -61,6 +61,22 @@ const listSchema = {
         ])
         .optional(),
     ),
+    selections: z.preprocess(
+      (val) => {
+        if (!val || val === "") return undefined;
+        try {
+          return typeof val === "string" ? JSON.parse(val) : val;
+        } catch {
+          return undefined;
+        }
+      },
+      z.array(
+        z.object({
+          courseSessionMappingId: z.number().int().positive(),
+          terms: z.array(z.number().int().positive()),
+        })
+      ).optional()
+    ),
     search: z.preprocess(emptyToUndefined, z.string().optional()),
     page: positiveIntegerQueryId,
     limit: positiveIntegerQueryId,
@@ -159,13 +175,19 @@ router.get(
   validate(summarySchema),
   controller.getBundleSummary,
 );
-router.get("/", userAuth, validate(listSchema), controller.getBundleList);
+router.get(
+  "/examOperationall",
+  userAuth,
+  validate(listSchema),
+  controller.getBundleList,
+);
 router.get(
   "/readybundles",
   userAuth,
   validate(listSchema),
   controller.getReadyBundleList,
 );
+router.get("/", userAuth, validate(listSchema), controller.getBundleList);
 
 router.get(
   "/room",

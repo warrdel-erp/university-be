@@ -2,6 +2,7 @@ import * as model from "../models/index.js";
 import { Op } from "sequelize";
 import sequelize from "../database/sequelizeConfig.js";
 import { buildScope, scoped } from "../utility/scoped.js";
+import * as examinationSessionRepository from "./examinationSessionRepository.js";
 
 export async function getBundleList(filters, pagination) {
   const {
@@ -13,6 +14,7 @@ export async function getBundleList(filters, pagination) {
     term,
     status,
     search,
+    selections,
   } = filters;
 
   const { limit, page } = pagination;
@@ -22,8 +24,6 @@ export async function getBundleList(filters, pagination) {
   if (examDate) scheduleWhere.examDate = examDate;
   if (examinationSessionSlotId)
     scheduleWhere.examinationSessionSlotId = examinationSessionSlotId;
-  if (sessionId) scheduleWhere.sessionId = sessionId;
-  if (term) scheduleWhere.term = term;
 
   const subjectWhere = {};
   if (courseId) subjectWhere.courseId = courseId;
@@ -32,6 +32,38 @@ export async function getBundleList(filters, pagination) {
       { subjectName: { [Op.like]: `%${search}%` } },
       { subjectCode: { [Op.like]: `%${search}%` } },
     ];
+  }
+
+  if (selections && selections.length > 0) {
+    const mappingIds = selections.map((s) => s.courseSessionMappingId);
+    const dbMappings = await examinationSessionRepository.findSessionCourseMappingsByIds(mappingIds);
+    const dbMappingsMap = new Map(dbMappings.map((m) => [m.sessionCourseMappingId, m]));
+
+    const filterCombinations = [];
+    for (const sel of selections) {
+      const mapping = dbMappingsMap.get(sel.courseSessionMappingId);
+      if (mapping) {
+        filterCombinations.push({
+          courseId: mapping.courseId,
+          sessionId: mapping.sessionId,
+          terms: sel.terms || [],
+        });
+      }
+    }
+
+    if (filterCombinations.length > 0) {
+      const sessionIds = [...new Set(filterCombinations.map((c) => c.sessionId))];
+      scheduleWhere.sessionId = sessionIds.length === 1 ? sessionIds[0] : { [Op.in]: sessionIds };
+
+      const subjectOrClauses = filterCombinations.map((comb) => ({
+        courseId: comb.courseId,
+        term: { [Op.in]: comb.terms },
+      }));
+      subjectWhere[Op.or] = subjectOrClauses;
+    }
+  } else {
+    if (sessionId) scheduleWhere.sessionId = sessionId;
+    if (term) scheduleWhere.term = term;
   }
 
   const bundleWhere = {};
@@ -66,10 +98,10 @@ export async function getBundleList(filters, pagination) {
           {
             model: model.subjectModel,
             as: "subjectSchedule",
-            attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
+            attributes: ["subjectId", "subjectName", "subjectCode", "course_id"],
             where:
               Object.keys(subjectWhere).length > 0 ? subjectWhere : undefined,
-            required: Object.keys(subjectWhere).length > 0,
+            required: true,
           },
           {
             model: model.examinationSessionSlotModel,
@@ -429,6 +461,7 @@ export async function getReadyBundleList(filters, pagination) {
     examDate,
     examinationSessionSlotId,
     search,
+    selections,
   } = filters;
 
   const { limit, page } = pagination;
@@ -441,11 +474,67 @@ export async function getReadyBundleList(filters, pagination) {
     bundleWhere.bundleCode = { [Op.like]: `%${search}%` };
   }
 
+  const roomCapacityInclude = {
+    model: model.examScheduleRoomCapacityModel,
+    as: "roomCapacities",
+    required: false,
+    attributes: [],
+    include: [
+      {
+        model: model.examScheduleModel,
+        as: "examSchedule",
+        required: true,
+        attributes: [],
+        include: [
+          {
+            model: model.subjectModel,
+            as: "subjectSchedule",
+            required: true,
+            attributes: [],
+          }
+        ]
+      }
+    ]
+  };
+
+  if (selections && selections.length > 0) {
+    const mappingIds = selections.map((s) => s.courseSessionMappingId);
+    const dbMappings = await examinationSessionRepository.findSessionCourseMappingsByIds(mappingIds);
+    const dbMappingsMap = new Map(dbMappings.map((m) => [m.sessionCourseMappingId, m]));
+
+    const filterCombinations = [];
+    for (const sel of selections) {
+      const mapping = dbMappingsMap.get(sel.courseSessionMappingId);
+      if (mapping) {
+        filterCombinations.push({
+          courseId: mapping.courseId,
+          sessionId: mapping.sessionId,
+          terms: sel.terms || [],
+        });
+      }
+    }
+
+    if (filterCombinations.length > 0) {
+      roomCapacityInclude.required = true;
+      const sessionIds = [...new Set(filterCombinations.map((c) => c.sessionId))];
+      roomCapacityInclude.include[0].where = {
+        sessionId: sessionIds.length === 1 ? sessionIds[0] : { [Op.in]: sessionIds },
+      };
+      roomCapacityInclude.include[0].include[0].where = {
+        [Op.or]: filterCombinations.map((comb) => ({
+          courseId: comb.courseId,
+          term: { [Op.in]: comb.terms },
+        })),
+      };
+    }
+  }
+
   const { count, rows } = await scoped(
     model.examRoomMaterialBundleModel,
   ).findAndCountAll({
     where: bundleWhere,
     include: [
+      roomCapacityInclude,
       {
         model: model.examinationSessionSlotModel,
         as: "examinationSessionSlot",

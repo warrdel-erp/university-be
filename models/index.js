@@ -2304,6 +2304,13 @@ examRoomMaterialBundleModel.hasMany(examRoomMaterialItemModel, {
   as: "items",
 });
 
+examRoomMaterialBundleModel.hasMany(examScheduleRoomCapacityModel, {
+  foreignKey: "class_room_section_id",
+  sourceKey: "classRoomSectionId",
+  as: "roomCapacities",
+  constraints: false,
+});
+
 // semesterModel.belongsTo(courseModel, {foreignKey: "courseId",as: "course"});
 // courseModel.hasMany(semesterModel, {foreignKey: "courseId",as: "semesters"});
 
