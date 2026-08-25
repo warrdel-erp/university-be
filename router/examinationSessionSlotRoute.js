@@ -69,6 +69,7 @@ const updateSlotSchema = {
 };
 
 router.post('/', userAuth, validate(createSlotSchema), examinationSessionSlotController.createExaminationSessionSlot);
+router.get('/count', userAuth, validate(getSlotsSchema), examinationSessionSlotController.getExaminationSessionSlotsCount);
 router.get('/', userAuth, validate(getSlotsSchema), examinationSessionSlotController.getExaminationSessionSlots);
 router.get('/single', userAuth, validate(getSlotByIdSchema), examinationSessionSlotController.getExaminationSessionSlotById);
 router.patch('/', userAuth, validate(updateSlotSchema), examinationSessionSlotController.updateExaminationSessionSlot);

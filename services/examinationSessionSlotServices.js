@@ -120,6 +120,34 @@ export async function getExaminationSessionSlots(
   );
 }
 
+export async function getExaminationSessionSlotsCount(
+  { examinationSessionId, date, selections },
+  options = {},
+) {
+  let filterCombinations = [];
+  if (selections && selections.length > 0) {
+    const mappingIds = selections.map((s) => s.courseSessionMappingId);
+    const dbMappings = await examinationSessionRepository.findSessionCourseMappingsByIds(mappingIds, options);
+    const dbMappingsMap = new Map(dbMappings.map((m) => [m.sessionCourseMappingId, m]));
+
+    for (const sel of selections) {
+      const mapping = dbMappingsMap.get(sel.courseSessionMappingId);
+      if (mapping) {
+        filterCombinations.push({
+          courseId: mapping.courseId,
+          sessionId: mapping.sessionId,
+          terms: sel.terms || [],
+        });
+      }
+    }
+  }
+
+  return await examinationSessionSlotRepository.getExaminationSessionSlotsCount(
+    { examinationSessionId, date, filterCombinations, selections },
+    options
+  );
+}
+
 export async function getExaminationSessionSlotById(
   examinationSessionSlotId,
   options,

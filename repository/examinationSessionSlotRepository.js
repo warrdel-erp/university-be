@@ -202,10 +202,10 @@ export async function getExaminationSessionSlots(
     const hasAssignedRoom = roomCapacity > 0;
 
     item.needsScheduling = false;
+    item.published = item.published || false;
     item.roomPending = !hasAssignedRoom || roomCapacity < studentCount;
     item.needsRoom = false;
-    item.ready = roomCapacity >= studentCount;
-    item.published = item.published || false;
+    item.ready = !item.published && roomCapacity >= studentCount;
 
     if (!scheduleMap.has(item.examinationSessionSlotId)) {
       scheduleMap.set(item.examinationSessionSlotId, []);
@@ -300,4 +300,107 @@ export async function deleteExaminationSessionSlot(examinationSessionSlotId, opt
   }
 
   return await slot.destroy({ transaction: options.transaction });
+}
+
+export async function getExaminationSessionSlotsCount(
+  { examinationSessionId, date, filterCombinations, selections },
+  options = {}
+) {
+  // Fetch slots
+  const slots = await scoped(model.examinationSessionSlotModel).findAll({
+    where: { examinationSessionId: Number(examinationSessionId) },
+    raw: true,
+    transaction: options.transaction,
+  });
+
+  let allCount = 0;
+  let roomPendingCount = 0;
+  let readyCount = 0;
+  let publishedCount = 0;
+  let needsSchedulingCount = 0;
+
+  if (slots.length > 0) {
+    const slotIds = slots.map((s) => s.examinationSessionSlotId);
+    const scheduleWhere = { examinationSessionSlotId: { [Op.in]: slotIds } };
+    if (date) {
+      scheduleWhere.examDate = date;
+    }
+
+    if (filterCombinations.length > 0) {
+      const orSchedules = filterCombinations.map(comb => ({
+        sessionId: comb.sessionId,
+        "$subjectSchedule.course_id$": comb.courseId,
+        "$subjectSchedule.term$": { [Op.in]: comb.terms }
+      }));
+      scheduleWhere[Op.or] = orSchedules;
+    }
+
+    const schedules = await scoped(model.examScheduleModel).findAll({
+      where: scheduleWhere,
+      include: [
+        {
+          model: model.subjectModel,
+          as: "subjectSchedule",
+          required: true,
+          attributes: ["subjectId", "courseId"],
+        }
+      ],
+      transaction: options.transaction,
+    });
+
+    if (schedules.length > 0) {
+      allCount = schedules.length;
+      const examScheduleIds = schedules.map((s) => s.examScheduleId);
+      const roomRows = await findRoomsByExamScheduleIds(examScheduleIds);
+      const roomCapacityMap = new Map();
+
+      for (const room of roomRows) {
+        if (!roomCapacityMap.has(room.examScheduleId)) {
+          roomCapacityMap.set(room.examScheduleId, 0);
+        }
+        roomCapacityMap.set(room.examScheduleId, roomCapacityMap.get(room.examScheduleId) + Number(room.capacity || 0));
+      }
+
+      for (const schedule of schedules) {
+        const item = schedule.get({ plain: true });
+        const subjectId = item.subjectSchedule?.subjectId || item.subjectId;
+        const studentCount = subjectId ? await countStudentsForSubject(subjectId, item.sessionId, { transaction: options.transaction }) : 0;
+        const roomCapacity = roomCapacityMap.get(item.examScheduleId) || 0;
+        const hasAssignedRoom = roomCapacity > 0;
+        const isPublished = item.published || false;
+
+        if (isPublished) {
+          publishedCount++;
+        } else {
+          const roomPending = !hasAssignedRoom || roomCapacity < studentCount;
+          const ready = roomCapacity >= studentCount;
+          if (roomPending) {
+            roomPendingCount++;
+          }
+          if (ready) {
+            readyCount++;
+          }
+        }
+      }
+    }
+
+    // Retrieve needsScheduling (unscheduled subjects count)
+    if (filterCombinations.length > 0) {
+      const examinationSessionServices = await import("../services/examinationSessionServices.js");
+      const subjectsList = await examinationSessionServices.getMappedSubjectsBySessionAndTerm({
+        examinationSessionId,
+        selections,
+        filterStatus: "needsScheduling"
+      }, options);
+      needsSchedulingCount = subjectsList.length;
+    }
+  }
+
+  return {
+    all: allCount,
+    needsScheduling: needsSchedulingCount,
+    roomPending: roomPendingCount,
+    ready: readyCount,
+    published: publishedCount
+  };
 }
