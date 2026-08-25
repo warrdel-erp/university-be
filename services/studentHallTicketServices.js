@@ -3,6 +3,7 @@ import { getAcademicYearId } from "../utility/requestContext.js";
 import * as studentHallTicketRepository from "../repository/studentHallTicketRepository.js";
 import * as examinationSessionEligibilityRepo from "../repository/examinationSessionEligibilityRepository.js";
 import * as examinationSessionEligibilityServices from "./examinationSessionEligibilityServices.js";
+import * as examinationSessionRepository from "../repository/examinationSessionRepository.js";
 
 // -- Status helpers --
 

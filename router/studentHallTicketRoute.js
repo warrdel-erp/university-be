@@ -28,9 +28,22 @@ const reviewFilterEnum = z.enum(["REGISTRATION_PENDING", "PHOTOGRAPH_PENDING", "
 
 const reviewFilterStudentsSchema = z.object({
     examinationSessionId: z.coerce.number({ required_error: "examinationSessionId is required" }),
-    courseId: z.coerce.number().optional(),
-    sessionId: z.coerce.number().optional(),
-    term: z.coerce.number().optional(),
+    selections: z.preprocess(
+        (val) => {
+            if (!val || val === "") return undefined;
+            try {
+                return typeof val === "string" ? JSON.parse(val) : val;
+            } catch {
+                return undefined;
+            }
+        },
+        z.array(
+            z.object({
+                courseSessionMappingId: z.number().int().positive(),
+                terms: z.array(z.number().int().positive()),
+            })
+        ).optional()
+    ),
     // Accepts comma-separated string: "PHOTOGRAPH_PENDING,ATTENDANCE_PENDING" or repeated keys
     filters: z.preprocess(
         (val) => {
@@ -51,8 +64,6 @@ const listHallTicketsQuerySchema = z.object({
     page: z.coerce.number().int("page must be an integer").min(1, "page must be at least 1").optional().default(1),
     limit: z.coerce.number().int("limit must be an integer").min(1, "limit must be at least 1").optional().default(1000),
 });
-
-
 
 const publishHallTicketsSchema = z.object({
     examinationSessionId: z.number({ required_error: "examinationSessionId is required" }),
@@ -76,23 +87,23 @@ const reviewDetailsQuerySchema = z.object({
     examinationSessionId: z.string().regex(/^\d+$/, "examinationSessionId must be a number").transform((v) => Number(v)),
 });
 
-
-const queryArrayOrSingleNumberSchema = z.preprocess((val) => {
-    if (val === "" || val === null || val === undefined) return undefined;
-    if (Array.isArray(val)) return val.map(Number);
-    if (typeof val === "string") {
-        if (val.includes(",")) {
-            return val.split(",").map(Number);
-        }
-        return [Number(val)];
-    }
-    return [Number(val)];
-}, z.array(z.number()).optional());
-
 const sessionStudentsQuerySchema = z.object({
-    courseId: queryArrayOrSingleNumberSchema,
-    sessionId: queryArrayOrSingleNumberSchema,
-    term: queryArrayOrSingleNumberSchema,
+    selections: z.preprocess(
+        (val) => {
+            if (!val || val === "") return undefined;
+            try {
+                return typeof val === "string" ? JSON.parse(val) : val;
+            } catch {
+                return undefined;
+            }
+        },
+        z.array(
+            z.object({
+                courseSessionMappingId: z.number().int().positive(),
+                terms: z.array(z.number().int().positive()),
+            })
+        ).optional()
+    ),
     // Accepts single or comma-separated: "Ready,Review" or repeated ?status=Ready&status=Review
     status: z.preprocess(
         (val) => {

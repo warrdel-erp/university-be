@@ -4,6 +4,7 @@ import * as model from "../models/index.js";
 import sequelize from "../database/sequelizeConfig.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
+import * as examinationSessionRepository from "./examinationSessionRepository.js";
 
 // -- Shared query helpers --
 
@@ -287,7 +288,31 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
     transaction,
   };
 
-  if (filters.term != null) {
+  let filterCombinations = [];
+  if (filters.selections && filters.selections.length > 0) {
+    const mappingIds = filters.selections.map((s) => s.courseSessionMappingId);
+    const dbMappings = await examinationSessionRepository.findSessionCourseMappingsByIds(mappingIds, { transaction });
+    const dbMappingsMap = new Map(dbMappings.map((m) => [m.sessionCourseMappingId, m]));
+
+    for (const sel of filters.selections) {
+      const mapping = dbMappingsMap.get(sel.courseSessionMappingId);
+      if (mapping) {
+        filterCombinations.push({
+          courseId: mapping.courseId,
+          sessionId: mapping.sessionId,
+          terms: sel.terms || [],
+        });
+      }
+    }
+  }
+
+  // Resolve target terms dynamically
+  if (filterCombinations.length > 0) {
+    const termsList = Array.from(new Set(filterCombinations.flatMap(c => c.terms)));
+    termQueryOptions.include[0].where = {
+      term: { [Op.in]: termsList }
+    };
+  } else if (filters.term != null) {
     termQueryOptions.include[0].where = {
       term: Array.isArray(filters.term) ? { [Op.in]: filters.term } : filters.term,
     };
@@ -321,16 +346,39 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
 
   const combinedWhere = { [Op.and]: [studentWhere, sessionTermFilter] };
 
-  if (filters.sessionId) {
-    const allowedSessions = Array.isArray(filters.sessionId)
-      ? filters.sessionId.map(Number)
-      : [Number(filters.sessionId)];
-    combinedWhere[Op.and].push(
-      sequelize.where(
-        sequelize.fn("COALESCE", sequelize.col("studentMapped.session_id"), sequelize.col("students.session_id")),
-        { [Op.in]: allowedSessions },
-      ),
-    );
+  if (filterCombinations.length > 0) {
+    const orClauses = filterCombinations.map(comb => {
+      const termIdsForComb = termRows
+        .filter(r => r.classSectionTerm && comb.terms.includes(r.classSectionTerm.term))
+        .map(r => Number(r.classSectionTermId));
+
+      return {
+        courseId: comb.courseId,
+        [Op.or]: [
+          { classSectionTermId: { [Op.in]: termIdsForComb } },
+          { studentId: { [Op.in]: historyMatchedRows.filter(h => termIdsForComb.includes(Number(h.classSectionTermId))).map(h => Number(h.studentId)) } }
+        ],
+        [Op.and]: [
+          sequelize.where(
+            sequelize.fn("COALESCE", sequelize.col("studentMapped.session_id"), sequelize.col("students.session_id")),
+            comb.sessionId
+          )
+        ]
+      };
+    });
+    combinedWhere[Op.and].push({ [Op.or]: orClauses });
+  } else {
+    if (filters.sessionId) {
+      const allowedSessions = Array.isArray(filters.sessionId)
+        ? filters.sessionId.map(Number)
+        : [Number(filters.sessionId)];
+      combinedWhere[Op.and].push(
+        sequelize.where(
+          sequelize.fn("COALESCE", sequelize.col("studentMapped.session_id"), sequelize.col("students.session_id")),
+          { [Op.in]: allowedSessions },
+        ),
+      );
+    }
   }
 
   // Build eligibility filter.
