@@ -411,7 +411,7 @@ export async function findSubjectsWithSchedules(courseId, academicYearId, term, 
   });
 }
 
-export async function findRoomsByExamScheduleIds(examScheduleIds) {
+export async function findRoomsByExamScheduleIds(examScheduleIds, options = {}) {
   if (!examScheduleIds.length) {
     return [];
   }
@@ -420,6 +420,7 @@ export async function findRoomsByExamScheduleIds(examScheduleIds) {
     where: { examScheduleId: { [Op.in]: examScheduleIds } },
     attributes: ['examScheduleId'],
     raw: true,
+    transaction: options.transaction,
   });
   const allowedIds = scopedSchedules.map((s) => s.examScheduleId);
   if (!allowedIds.length) {
@@ -446,6 +447,7 @@ export async function findRoomsByExamScheduleIds(examScheduleIds) {
     order: [["orderKey", "ASC"]],
     raw: true,
     nest: true,
+    transaction: options.transaction,
   });
 }
 

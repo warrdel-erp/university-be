@@ -153,7 +153,7 @@ export async function getExamScheduleById(examScheduleId) {
     }
 }
 
-export async function getStudentCountsByGroups(sessions, courses, terms, acedmicYears) {
+export async function getStudentCountsByGroups(sessions, courses, terms, acedmicYears, options = {}) {
     try {
         const sectionWhere = {
             ...buildScope(model.classSectionModel),
@@ -193,6 +193,7 @@ export async function getStudentCountsByGroups(sessions, courses, terms, acedmic
                 'studentClassSectionTerm->classSection.acedmic_year_id',
             ],
             raw: true,
+            transaction: options.transaction,
         });
         return counts;
     } catch (error) {
@@ -216,34 +217,6 @@ function classTermInclude(term, academicYearId) {
     });
 }
 
-async function resolveStudentIdsByClassStudentMapper(sessionId, courseId, term, academicYearId) {
-    const rows = await model.classStudentMapperModel.findAll({
-        attributes: ["studentId"],
-        where: {
-            sessionId,
-            academicYearId,
-            isPassed: false,
-            ...buildScope(model.classStudentMapperModel),
-        },
-        include: [
-            {
-                model: model.studentModel,
-                as: "studentMapped",
-                required: true,
-                attributes: [],
-                where: {
-                    courseId,
-                    ...buildScope(model.studentModel),
-                },
-                include: [classTermInclude(term)],
-            },
-        ],
-        raw: true,
-    });
-
-    return [...new Set(rows.map((row) => row.studentId))];
-}
-
 async function resolveStudentIdsByStudentTable(sessionId, courseId, term, academicYearId) {
     const rows = await scoped(model.studentModel).findAll({
         attributes: ["studentId"],
@@ -255,12 +228,8 @@ async function resolveStudentIdsByStudentTable(sessionId, courseId, term, academ
     return rows.map((row) => row.studentId);
 }
 
-/** Enrolled students: class_student_mapper (primary) or students table, filtered by term via class section. */
+/** Enrolled students from students table (classSectionTermId / sessionId), filtered by term. */
 async function resolveStudentIdsForExamGroup(sessionId, courseId, term, academicYearId) {
-    const mapperIds = await resolveStudentIdsByClassStudentMapper(sessionId, courseId, term, academicYearId);
-    if (mapperIds.length) {
-        return mapperIds;
-    }
     return resolveStudentIdsByStudentTable(sessionId, courseId, term, academicYearId);
 }
 

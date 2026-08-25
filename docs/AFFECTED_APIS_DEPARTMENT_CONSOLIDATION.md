@@ -1,61 +1,59 @@
-# Organogram & department — API routes
+# Affected APIs — Examination Session Subjects Optimization
 
-## Current routes
+Shared function: `getMappedSubjectsBySessionAndTerm`  
+(also used via `getMappedSubjectsBySessionAndTermNeed`)
 
-| Method | URL |
-|---|---|
-| `POST` | `/department/` |
-| `GET` | `/department/` |
-| `GET` | `/department/single?departmentId=` |
-| `PATCH` | `/department/` |
-| `DELETE` | `/department/?departmentId=` |
-| `GET` | `/department/byId?departmentId=` |
-| `GET` | `/departmentPosition/cards` |
-| `POST` | `/departmentPosition/` |
-| `GET` | `/departmentPosition/` |
-| `GET` | `/departmentPosition/single?departmentPositionId=` |
-| `PATCH` | `/departmentPosition/` |
-| `POST` | `/departmentPosition/markVacant` |
-| `DELETE` | `/departmentPosition/?departmentPositionId=` |
-| `POST` | `/departmentPosition/head` |
-| `GET` | `/departmentPosition/head?departmentPositionId=` |
-| `PATCH` | `/departmentPosition/head` |
-| `DELETE` | `/departmentPosition/head?userDepartmentPositionId=` |
+Related repository changes:
+
+- `findExamSchedulesBySubjects` (added `published`)
+- `findRoomCapacitiesByExamSchedules` (`SUM(capacity) GROUP BY`)
+- `getStudentCountsByGroups` (optional `transaction`)
+
+Response/payload contracts were **not** changed. Re-test these APIs for behavior/performance regressions.
 
 ---
 
-## Replace these APIs
+## Directly affected (primary)
 
-| Old | Replace with |
-|---|---|
-| `POST /subAccount/` | `POST /department/` |
-| `GET /subAccount/` | `GET /department/` |
-| `GET /subAccount/single?subAccountId=` | `GET /department/single?departmentId=` |
-| `PATCH /subAccount/` | `PATCH /department/` |
-| `DELETE /subAccount/?subAccountId=` | `DELETE /department/?departmentId=` |
-
-| `GET /subAccount/account` | `GET /department/` |
-
-
-| `GET /department/roots` | removed — use `GET /department/` |
-| `POST /departmentStructure/` | removed — use `POST /department/` with `parentDepartmentId` |
-| `GET /departmentStructure/` | removed — use `GET /department/` |
-| `POST /departmentPosition/` with `subAccountId` | `POST /departmentPosition/` with `departmentId` |
-| `GET /departmentPosition/?subAccountId=` | `GET /departmentPosition/?departmentId=` |
-| `PATCH /departmentPosition/` with `subAccountId` | `PATCH /departmentPosition/` with `departmentId` |
-| `GET /calendar/department/:subAccountId` (jobs) | `GET /calendar/department/:departmentId` |
-| Course / intake body `subAccountId` | `departmentId` (legacy `subAccountId` alias may still work) |
-
-
-| `hod_departments` / HOD RBAC table | `POST /departmentPosition/head` on position with `departmentId` |
+| Method | Endpoint | Why affected |
+|--------|----------|--------------|
+| `GET` | `/examinationSession/subjects` | Main entry; full mapped-subjects enrichment path |
+| `GET` | `/examinationSession/questionPaper` | Wrapper forcing `isExamScheduled: true` on the same shared function |
 
 ---
 
-## Replace these keys
+## Indirectly affected (call shared logic)
 
-| Old key | New key |
-|---|---|
-| `subAccountId` | `departmentId` |
-| `accountId` | removed (use `departmentId`) |
-| `parentAccountId` (structure) | `parentDepartmentId` on `department` |
-| `departmentOrder` | removed |
+| Method | Endpoint | Why affected |
+|--------|----------|--------------|
+| `POST` | `/examinationSession/publish` | Uses mapped subjects (light enrichment) to mark ready schedules as published |
+| `GET` | `/examinationSession/skuStats` | Uses mapped subjects (light enrichment) for subject vs scheduled counts |
+| `GET` | `/examinationSessionSlot/` | Slot list optimized; uses batched student counts + shared selection filters / needsScheduling |
+| `GET` | `/examinationSessionSlot/count` | Count path optimized the same way (no per-schedule student-count queries) |
+| `POST` | `/examSchedule/roomAssignment` (add room capacity) | After assign, re-evaluates `ready` via shared function to auto-publish schedule |
+| `GET` | `/examSchedule/` | Uses updated `getStudentCountsByGroups` + Map-based student count lookup |
+
+---
+
+## Shared helpers touched (no route of their own)
+
+| Layer | Symbol | Used by |
+|-------|--------|---------|
+| Service | `getMappedSubjectsBySessionAndTerm` | subjects, questionPaper, publish, skuStats, slots, room assign |
+| Service | `getMappedSubjectsBySessionAndTermNeed` | `/examinationSession/questionPaper` |
+| Repository | `findExamSchedulesBySubjects` | mapped-subjects flow |
+| Repository | `findRoomCapacitiesByExamSchedules` | mapped-subjects flow |
+| Repository | `getStudentCountsByGroups` | mapped-subjects flow, `/examSchedule/` |
+
+---
+
+## Suggested smoke test checklist
+
+- [ ] `GET /examinationSession/subjects` — with/without `selections`, `filterStatus`, `date`
+- [ ] `GET /examinationSession/questionPaper` — only scheduled subjects
+- [ ] `POST /examinationSession/publish` — ready schedules become published
+- [ ] `GET /examinationSession/skuStats` — subject/scheduled counts look correct
+- [ ] `GET /examinationSessionSlot/?filterStatus=needsScheduling`
+- [ ] `GET /examinationSessionSlot/count`
+- [ ] `POST /examSchedule` room assignment — auto-publish when session is Published and schedule is ready
+- [ ] `GET /examSchedule/` — `studentCount` still correct

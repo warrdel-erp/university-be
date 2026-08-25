@@ -94,13 +94,75 @@ function buildStudentFilters(filters, termIds) {
   return studentWhere;
 }
 
-function buildSessionTermFilter(termIds, historyStudentIds) {
+function buildSessionTermFilter(termIds, relatedStudentIds) {
+  const orFilters = [{ classSectionTermId: { [Op.in]: termIds } }];
+  if (relatedStudentIds.length > 0) {
+    orFilters.push({ studentId: { [Op.in]: relatedStudentIds } });
+  }
+  return { [Op.or]: orFilters };
+}
+
+/**
+ * Distinct students linked to classSectionTermIds via:
+ * students.class_section_term_id (primary) or section history.
+ * Do not use class_student_mapper_depricated.
+ */
+export async function findDistinctStudentIdsByClassSectionTermIds(
+  termIds,
+  options = {},
+) {
+  if (!termIds || termIds.length === 0) {
+    return {
+      studentIds: [],
+      historyRows: [],
+      historyStudentIds: [],
+    };
+  }
+
+  const transaction = options.transaction;
+  const termIdFilter = { classSectionTermId: { [Op.in]: termIds } };
+
+  const [directRows, historyRows] = await Promise.all([
+    scoped(model.studentModel).findAll({
+      attributes: ["studentId"],
+      where: termIdFilter,
+      raw: true,
+      transaction,
+    }),
+    model.studentClassSectionsHistoryModel.findAll({
+      attributes: ["studentId", "classSectionTermId"],
+      where: termIdFilter,
+      raw: true,
+      transaction,
+    }),
+  ]);
+
+  const studentIds = new Set();
+  for (const row of directRows) {
+    studentIds.add(Number(row.studentId));
+  }
+  for (const row of historyRows) {
+    studentIds.add(Number(row.studentId));
+  }
+
   return {
-    [Op.or]: [
-      { classSectionTermId: { [Op.in]: termIds } },
-      { studentId: { [Op.in]: historyStudentIds } },
+    studentIds: [...studentIds],
+    historyRows,
+    historyStudentIds: [
+      ...new Set(historyRows.map((r) => Number(r.studentId))),
     ],
   };
+}
+
+export async function countDistinctStudentsByClassSectionTermIds(
+  termIds,
+  options = {},
+) {
+  const resolved = await findDistinctStudentIdsByClassSectionTermIds(
+    termIds,
+    options,
+  );
+  return resolved.studentIds.length;
 }
 
 function buildStudentListIncludes(examinationSessionId, termIds, eligibilityWhere, filters) {
@@ -139,13 +201,6 @@ function buildStudentListIncludes(examinationSessionId, termIds, eligibilityWher
       ],
     },
     {
-      model: model.classStudentMapperModel,
-      as: "studentMapped",
-      required: false,
-      where: { classSectionTermId: { [Op.in]: termIds } },
-      attributes: ["classStudentMapperId", "studentId", "classSectionTermId", "sessionId", "academicYearId"],
-    },
-    {
       model: model.examinationSessionEligibilityModel,
       as: "examinationSessionEligibilities",
       required: !!filters.status,
@@ -178,15 +233,13 @@ function mapStudentRowResult(raw, termIds, termToEstMap) {
   }
 
   const estId = placementTermId ? termToEstMap[placementTermId] : null;
-  const mapper = raw.studentMapped?.[0];
-  const effectiveSessionId = mapper?.sessionId || raw.sessionId;
 
   return {
     student: raw,
     classSectionTerm: { classSectionTermId: placementTermId, term: placementTerm },
     examinationSessionTerm: { examinationSessionTermId: estId, classSectionTermId: placementTermId },
     examinationSession: raw._examSession ?? null,
-    mapperSessionId: effectiveSessionId,
+    mapperSessionId: raw.sessionId ?? null,
   };
 }
 
@@ -329,56 +382,66 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
 
   // Map classSectionTermId -> examinationSessionTermId.
   const termToEstMap = {};
-  termRows.forEach((r) => { termToEstMap[r.classSectionTermId] = r.examinationSessionTermId; });
+  for (const r of termRows) {
+    termToEstMap[r.classSectionTermId] = r.examinationSessionTermId;
+  }
 
-  // Fetch student IDs from history for the matched terms.
-  const historyMatchedRows = await model.studentClassSectionsHistoryModel.findAll({
-    attributes: ["studentId"],
-    where: { classSectionTermId: { [Op.in]: termIds } },
-    raw: true,
-    transaction,
-  });
-  const historyStudentIds = historyMatchedRows.map((r) => Number(r.studentId));
+  const resolvedStudents = await findDistinctStudentIdsByClassSectionTermIds(
+    termIds,
+    { transaction },
+  );
+  const historyMatchedRows = resolvedStudents.historyRows;
+  const relatedStudentIdSet = resolvedStudents.historyStudentIds;
 
   const studentWhere = buildStudentFilters(filters, termIds);
 
-  const sessionTermFilter = buildSessionTermFilter(termIds, historyStudentIds);
+  const sessionTermFilter = buildSessionTermFilter(termIds, relatedStudentIdSet);
 
   const combinedWhere = { [Op.and]: [studentWhere, sessionTermFilter] };
 
   if (filterCombinations.length > 0) {
-    const orClauses = filterCombinations.map(comb => {
-      const termIdsForComb = termRows
-        .filter(r => r.classSectionTerm && comb.terms.includes(r.classSectionTerm.term))
-        .map(r => Number(r.classSectionTermId));
+    const orClauses = [];
+    for (const comb of filterCombinations) {
+      const termIdsForComb = [];
+      for (const r of termRows) {
+        if (
+          r.classSectionTerm &&
+          comb.terms.includes(r.classSectionTerm.term)
+        ) {
+          termIdsForComb.push(Number(r.classSectionTermId));
+        }
+      }
 
-      return {
+      const historyStudentIdsForComb = [];
+      for (const h of historyMatchedRows) {
+        if (termIdsForComb.includes(Number(h.classSectionTermId))) {
+          historyStudentIdsForComb.push(Number(h.studentId));
+        }
+      }
+
+      const termOrFilters = [
+        { classSectionTermId: { [Op.in]: termIdsForComb } },
+      ];
+      if (historyStudentIdsForComb.length > 0) {
+        termOrFilters.push({
+          studentId: { [Op.in]: [...new Set(historyStudentIdsForComb)] },
+        });
+      }
+
+      orClauses.push({
         courseId: comb.courseId,
-        [Op.or]: [
-          { classSectionTermId: { [Op.in]: termIdsForComb } },
-          { studentId: { [Op.in]: historyMatchedRows.filter(h => termIdsForComb.includes(Number(h.classSectionTermId))).map(h => Number(h.studentId)) } }
-        ],
-        [Op.and]: [
-          sequelize.where(
-            sequelize.fn("COALESCE", sequelize.col("studentMapped.session_id"), sequelize.col("students.session_id")),
-            comb.sessionId
-          )
-        ]
-      };
-    });
-    combinedWhere[Op.and].push({ [Op.or]: orClauses });
-  } else {
-    if (filters.sessionId) {
-      const allowedSessions = Array.isArray(filters.sessionId)
-        ? filters.sessionId.map(Number)
-        : [Number(filters.sessionId)];
-      combinedWhere[Op.and].push(
-        sequelize.where(
-          sequelize.fn("COALESCE", sequelize.col("studentMapped.session_id"), sequelize.col("students.session_id")),
-          { [Op.in]: allowedSessions },
-        ),
-      );
+        [Op.or]: termOrFilters,
+        sessionId: comb.sessionId,
+      });
     }
+    combinedWhere[Op.and].push({ [Op.or]: orClauses });
+  } else if (filters.sessionId) {
+    const allowedSessions = Array.isArray(filters.sessionId)
+      ? filters.sessionId.map(Number)
+      : [Number(filters.sessionId)];
+    combinedWhere[Op.and].push({
+      sessionId: { [Op.in]: allowedSessions },
+    });
   }
 
   // Build eligibility filter.

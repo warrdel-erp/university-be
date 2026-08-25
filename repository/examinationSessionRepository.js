@@ -1,4 +1,4 @@
-import { Op } from "sequelize";
+import { Op, fn, col } from "sequelize";
 import * as model from "../models/index.js";
 import { scoped } from "../utility/scoped.js";
 
@@ -215,7 +215,20 @@ export async function findExamSchedulesBySubjects(examinationSessionId, subjectI
   }
   return scoped(model.examScheduleModel).findAll({
     where: whereClause,
-    attributes: ["examScheduleId", "subjectId", "sessionId", "academicYearId", "examDate", "examTime", "type", "duration", "maximumMarks", "examinationSessionSlotId", "term"],
+    attributes: [
+      "examScheduleId",
+      "subjectId",
+      "sessionId",
+      "academicYearId",
+      "examDate",
+      "examTime",
+      "type",
+      "duration",
+      "maximumMarks",
+      "examinationSessionSlotId",
+      "term",
+      "published",
+    ],
     include: [
       {
         model: model.subjectModel,
@@ -237,7 +250,11 @@ export async function findRoomCapacitiesByExamSchedules(examScheduleIds, options
   if (!examScheduleIds.length) return [];
   return scoped(model.examScheduleRoomCapacityModel).findAll({
     where: { examScheduleId: { [Op.in]: examScheduleIds } },
-    attributes: ["examScheduleId", "capacity"],
+    attributes: [
+      "examScheduleId",
+      [fn("SUM", col("capacity")), "capacity"],
+    ],
+    group: ["examScheduleId"],
     transaction: options.transaction,
     raw: true,
   });
@@ -318,6 +335,47 @@ export async function countStudentClassSectionHistory(where, options = {}) {
     where,
     transaction: options.transaction,
   });
+}
+
+/**
+ * Distinct students for classSectionTermIds via students table + section history.
+ * Do not use class_student_mapper_depricated.
+ */
+export async function countDistinctStudentsByClassSectionTermIds(
+  classSectionTermIds,
+  options = {},
+) {
+  if (!classSectionTermIds || classSectionTermIds.length === 0) {
+    return 0;
+  }
+
+  const termIdFilter = {
+    classSectionTermId: { [Op.in]: classSectionTermIds },
+  };
+
+  const [directRows, historyRows] = await Promise.all([
+    scoped(model.studentModel).findAll({
+      attributes: ["studentId"],
+      where: termIdFilter,
+      raw: true,
+      transaction: options.transaction,
+    }),
+    model.studentClassSectionsHistoryModel.findAll({
+      attributes: ["studentId"],
+      where: termIdFilter,
+      raw: true,
+      transaction: options.transaction,
+    }),
+  ]);
+
+  const studentIds = new Set();
+  for (const row of directRows) {
+    studentIds.add(Number(row.studentId));
+  }
+  for (const row of historyRows) {
+    studentIds.add(Number(row.studentId));
+  }
+  return studentIds.size;
 }
 
 export async function findExaminationSessionSlots(examinationSessionId, options = {}) {

@@ -14,20 +14,23 @@ export async function getExamSchedules(filters) {
 
         if (sessions.length > 0 && courses.length > 0 && terms.length > 0) {
             const counts = await examScheduleRepository.getStudentCountsByGroups(sessions, courses, terms, acedmicYears);
+            const studentCountByGroup = new Map();
+            for (const c of counts) {
+                studentCountByGroup.set(
+                    `${Number(c.sessionId)}_${Number(c.courseId)}_${Number(c.term)}_${Number(c.academicYearId)}`,
+                    parseInt(c.studentCount, 10) || 0,
+                );
+            }
 
             result.forEach(schedule => {
                 const term = schedule.examSetupTypeTerm?.term || schedule.term;
                 const courseId = schedule.examSetupTypeTerm?.courseId || schedule.subjectSchedule?.courseId;
                 const sessionId = schedule.sessionId;
                 const academicYearId = schedule.academicYearId;
-
-                const countObj = counts.find(c =>
-                    c.sessionId === sessionId &&
-                    c.term === term &&
-                    c.courseId === courseId &&
-                    c.academicYearId === academicYearId
-                );
-                schedule.setDataValue('studentCount', countObj ? parseInt(countObj.studentCount) : 0);
+                const studentCount = studentCountByGroup.get(
+                    `${Number(sessionId)}_${Number(courseId)}_${Number(term)}_${Number(academicYearId)}`,
+                ) || 0;
+                schedule.setDataValue('studentCount', studentCount);
             });
         } else {
             result.forEach(schedule => {

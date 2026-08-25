@@ -6,8 +6,13 @@ import acedmicYear from "./acedmicYearModel.js";
 import sessionModel from "./sessionModel.js";
 import classSectionTermModel from "./classSectionTermModel.js";
 
+/**
+ * @deprecated Use studentModel.classSectionTermId / sessionId instead.
+ * Physical table renamed to class_student_mapper_depricated.
+ * Kept only for legacy fee/invoice references until those are migrated.
+ */
 const classSectionStudentMapperModel = sequelize.define(
-    'class_student_mapper',
+    'class_student_mapper_depricated',
     {
         classStudentMapperId: {
             type: DataTypes.INTEGER,
@@ -85,7 +90,7 @@ const classSectionStudentMapperModel = sequelize.define(
         },
     },
     {
-        tableName: 'class_student_mapper',
+        tableName: 'class_student_mapper_depricated',
         timestamps: true,
         paranoid: true
     }

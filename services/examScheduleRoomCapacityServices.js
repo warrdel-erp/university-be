@@ -1,6 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as examRoomCapacityRepository from "../repository/examScheduleRoomCapacityRepository.js";
 import * as examScheduleServices from "./examScheduleServices.js";
+import * as examinationSessionServices from "./examinationSessionServices.js";
 import * as model from "../models/index.js";
 import { z } from "zod";
 import { getTimeSlotRange, minutesToTime } from "../utility/timeSlot.js";
@@ -258,9 +259,9 @@ export async function addExamRoomCapacity(data, userId) {
             if (currentSession?.examinationSessionId) {
                 const sessionRecord = await model.examinationSessionModel.findByPk(currentSession.examinationSessionId, { transaction });
                 if (sessionRecord?.status === "Published") {
-                    const mappedSubjects = await examScheduleServices.getMappedSubjectsBySessionAndTerm(
+                    const mappedSubjects = await examinationSessionServices.getMappedSubjectsBySessionAndTerm(
                         { examinationSessionId: currentSession.examinationSessionId },
-                        { transaction }
+                        { transaction, skipTeacherAndPaperEnrichment: true }
                     );
                     const scheduleInfo = mappedSubjects.find(sub => sub.examScheduleId === Number(validatedData.examScheduleId));
                     if (scheduleInfo?.ready === true) {
