@@ -1238,7 +1238,7 @@ export async function getMappedSubjectsBySessionAndTerm(
       }
 
       const hasFullyApprovedPaper = qpList.some(
-        (qp) => qp.finalApproval === "Approved"
+        (qp) => qp.finalApproval === "Approved" || qp.status === "Approved"
       );
 
       if (hasFullyApprovedPaper) {
