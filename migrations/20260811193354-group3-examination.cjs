@@ -39,25 +39,25 @@ module.exports = {
 
     // BACKFILL QUERIES
 
-    // Backfill exam_setup FIRST, because exam_attendance depends on it
+    // Backfill exam_setup
     await queryInterface.sequelize.query(`
       UPDATE exam_setup e
       JOIN subject s ON e.subject_id = s.subject_id
       SET e.university_id = s.university_id, e.institute_id = s.institute_id, e.acedmic_year_id = s.acedmic_year_id
     `);
 
-    // Backfill exam_attendance from exam_setup
-    await queryInterface.sequelize.query(`
-      UPDATE exam_attendance a
-      JOIN exam_setup s ON a.exam_setup_id = s.exam_setup_id
-      SET a.university_id = s.university_id, a.acedmic_year_id = s.acedmic_year_id
-    `);
-
-    // Backfill exam_schedule from subject FIRST, because room_capacity depends on it
+    // Backfill exam_schedule from subject FIRST, because room_capacity and attendance depend on it
     await queryInterface.sequelize.query(`
       UPDATE exam_schedule e
       JOIN subject s ON e.subject_id = s.subject_id
       SET e.university_id = s.university_id, e.institute_id = s.institute_id
+    `);
+
+    // Backfill exam_attendance from exam_schedule
+    await queryInterface.sequelize.query(`
+      UPDATE exam_attendance a
+      JOIN exam_schedule s ON a.exam_schedule_id = s.exam_schedule_id
+      SET a.university_id = s.university_id, a.acedmic_year_id = s.acedmic_year_id
     `);
 
     // Backfill exam_schedule_room_capacity from exam_schedule
