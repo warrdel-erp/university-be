@@ -1,11 +1,14 @@
 import * as model from "../models/index.js";
 import { Op } from "sequelize";
 import { SCOPES } from "../const/scopes.js";
+import { expandPermissions } from "./permissionUtility.js";
+import { getPolicyFilter } from "./policyEngine.js";
 
 /**
  * Centrally resolves a user's permissions for a given active role.
  * Queries the single `user_role_permission_scope` table directly.
  * User can access only one role's permissions at a time (active/selected role).
+ * Automatically expands implied permissions using `dependentOn`.
  *
  * @param {number} userId - The user's ID
  * @param {number} roleId - The active role ID
@@ -16,11 +19,17 @@ export async function getUserPermissions(userId, roleId) {
     return [];
   }
 
-  // 2. Query user_role_permission_scope for this user + role
-  const entries = await model.userRolePermissionModel.findAll({
-    where: { userId, roleId },
-    attributes: ['permission', 'scope', 'resourceId']
-  });
+  let entries = [];
+  try {
+    // 2. Query user_role_permission_scope for this user + role
+    entries = await model.userRolePermissionModel.findAll({
+      where: { userId, roleId },
+      attributes: ['permission', 'scope', 'resourceId']
+    });
+  } catch (error) {
+    console.error(`[authEngine] Error fetching permissions for userId: ${userId}, roleId: ${roleId}`, error);
+    throw error;
+  }
 
   // 3. Build permission map (grouping multiple resourceIds)
   const permissionMap = {};
@@ -37,7 +46,13 @@ export async function getUserPermissions(userId, roleId) {
     }
   });
 
-  return Object.values(permissionMap);
+  // 4. Expand permissions based on 'dependentOn'
+  const expandedArray = expandPermissions(Object.values(permissionMap));
+  const resultObj = {};
+  for (const p of expandedArray) {
+    resultObj[p.permissionKey] = p;
+  }
+  return resultObj;
 }
 
 /**
@@ -138,60 +153,26 @@ const resourceScopeFields = {
  *
  * @param {object} user - The requesting user object (req.user)
  * @param {string} permissionKey - The required permission key
- * @param {string} resource - The target resource entity name
  * @param {number} activeRoleId - The role ID passed down from middleware
- * @returns {Promise<Object>} Filter object
+ * @returns {Promise<{filter: Object, scope: string|null}>} Object containing the filter and scope
  */
-export async function getAccessFilter(user, permissionKey, resource, activeRoleId) {
+export async function getAccessFilter(user, permissionKey, activeRoleId) {
   const roleId = activeRoleId || user.defaultRoleId;
   const permissions = await getUserPermissions(user.userId, roleId);
 
-  const perm = permissions.find(p => p.permissionKey === permissionKey);
+  const perm = permissions[permissionKey];
   if (!perm) {
     // Return a filter that resolves to nothing if permission is denied
-    return { id: -1 };
+    return { filter: { id: -1 }, scope: null };
   }
 
   const scope = perm.scopeKey;
   let targets = perm.resourceIds || [];
 
-  // If no explicit resourceIds are defined in the override, fallback to dynamic resolvers
-  if (targets.length === 0) {
-    const resolver = scopeResolvers[scope];
-    if (resolver) {
-      targets = await resolver(user.userId);
-    }
-  }
+  // Delegate entirely to policyEngine.js
+  const filter = getPolicyFilter(scope, targets, user, permissionKey);
 
-  if (targets === 'ALL') {
-    return {}; // No additional filters needed (multi-tenancy scoped automatically)
-  }
+  const data = { filter, scope };
 
-  if (!targets || targets.length === 0) {
-    return { id: -1 };
-  }
-
-  // Find mapping fields for this resource
-  const mapping = resourceScopeFields[resource] || resourceScopeFields.default;
-  const fieldName = mapping[scope];
-
-  if (!fieldName) {
-    // Fallback: If scope lacks explicit field mapping, resolve user IDs if possible
-    if (scope === SCOPES.DEPARTMENT) {
-      // Find all employees belonging to these departments
-      const employees = await model.employeeModel.findAll({
-        where: { departmentId: { [Op.in]: targets } },
-        attributes: ['userId']
-      });
-      const userIds = employees.map(e => e.userId);
-      return { userId: { [Op.in]: userIds } };
-    }
-    return { id: -1 };
-  }
-
-  // Build operator clause
-  if (targets.length === 1) {
-    return { [fieldName]: targets[0] };
-  }
-  return { [fieldName]: { [Op.in]: targets } };
+  return data;
 }

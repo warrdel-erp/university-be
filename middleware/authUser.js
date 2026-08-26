@@ -35,14 +35,13 @@ export default async function useAuth(req, res, next) {
 
     req.user = userDetail;
 
-    // Build the request context store with tenant scoping info
-    const headerInstituteId = req.headers["x-institute-id"];
-    const activeInstituteId = headerInstituteId ?? req.user.defaultInstituteId;
+    console.log("req.user.dataValues.defaultInstituteId", req.user.dataValues.defaultInstituteId)
 
+    // Build the request context store with tenant scoping info
     const store = await buildRequestContextStore({
-      userId: req.user.userId,
-      defaultInstituteId: activeInstituteId,
-      universityId: req.user.universityId,
+      userId: req.user.dataValues.userId,
+      defaultInstituteId: req.user.dataValues.defaultInstituteId,
+      universityId: req.user.dataValues.universityId,
       defaultRole: req.user.defaultRole,
       defaultAcademicYearId: req.user.defaultAcademicYearId,
       bypass: req.bypassScope,

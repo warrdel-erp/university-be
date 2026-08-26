@@ -1,5 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
-import { DataTypes } from "sequelize";
+import { DataTypes } from 'sequelize';
+import universityModel from "./universityModel.js";
 import feeTypeCatalogModel from "./feeTypeCatalogModel.js";
 import feePlanItemModel from "./feePlanItemModel.js";
 import instituteModel from "./instituteModel.js";
@@ -7,7 +8,16 @@ import instituteModel from "./instituteModel.js";
 const feePlanSubItemsModel = sequelize.define(
   "fee_plan_sub_items",
   {
-    feePlanSubitemId: {
+            universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        feePlanSubitemId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,

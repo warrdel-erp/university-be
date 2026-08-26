@@ -56,37 +56,13 @@ const getSingleCourseQuerySchema = z.object({
 });
 
 // Routes
-router.get(
-  "/",
-  userAuth,
-  checkAccess(PERMISSIONS.COURSES.value, null),
-  validate({ query: listCoursesSchema }),
-  courseController.listCourses,
-);
+router.get("/", userAuth, checkAccess(PERMISSIONS.COURSES.value), validate({ query: listCoursesSchema }), courseController.listCourses);
 
-router.get(
-  "/single",
-  userAuth,
-  checkAccess(PERMISSIONS.COURSES.value, null),
-  validate({ query: getSingleCourseQuerySchema }),
-  courseController.getSingleCourse,
-);
+router.get("/single", userAuth, checkAccess(PERMISSIONS.COURSES.value), validate({ query: getSingleCourseQuerySchema }), courseController.getSingleCourse);
 
-router.get(
-  "/withSubjects",
-  userAuth,
-  checkAccess(PERMISSIONS.COURSES.value, null),
-  validate({ query: courseListWithSubjectsSchema }),
-  courseController.getCourseWithSubjects,
-);
+router.get("/withSubjects", userAuth, checkAccess(PERMISSIONS.COURSES.value), validate({ query: courseListWithSubjectsSchema }), courseController.getCourseWithSubjects);
 
-router.get(
-  "/:courseId/sessions",
-  userAuth,
-  checkAccess(PERMISSIONS.COURSES.value, null),
-  validate({ query: getCourseSessionsSchema }),
-  courseController.getCourseSessions,
-);
+router.get("/:courseId/sessions", userAuth, checkAccess(PERMISSIONS.COURSES.value), validate({ query: getCourseSessionsSchema }), courseController.getCourseSessions);
 
 router.get(
   "/termsWithClassSections",

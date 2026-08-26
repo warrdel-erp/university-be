@@ -3,6 +3,15 @@ import { scoped } from '../utility/scoped.js';
 
 export async function addCo(coData) {
     try {
+        if ((!coData.departmentId || !coData.courseId) && coData.subjectId) {
+            const subject = await model.subjectModel.findByPk(coData.subjectId, {
+                include: [{ model: model.courseModel, as: 'courseInfo', attributes: ['courseId', 'departmentId'] }]
+            });
+            if (subject) {
+                if (!coData.courseId && subject.courseId) coData.courseId = subject.courseId;
+                if (!coData.departmentId && subject.courseInfo?.departmentId) coData.departmentId = subject.courseInfo.departmentId;
+            }
+        }
         return await scoped(model.coModel).create(coData);
     } catch (error) {
         console.error('Error in add co :', error);

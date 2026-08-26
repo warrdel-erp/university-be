@@ -49,6 +49,10 @@ const unitIncludes = [
 
 export async function addSyllabus(syllabusData, options = {}) {
   try {
+    if (!syllabusData.departmentId && syllabusData.courseId) {
+      const course = await model.courseModel.findByPk(syllabusData.courseId, { attributes: ['departmentId'] });
+      if (course?.departmentId) syllabusData.departmentId = course.departmentId;
+    }
     return await scoped(model.syllabusModel).create(syllabusData, options);
   } catch (error) {
     console.error('Error in add Syllabus :', error);

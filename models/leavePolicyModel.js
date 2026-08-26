@@ -25,6 +25,12 @@ const leavePolicyModel = sequelize.define(
       field: "institute_id",
       references: { model: institute, key: "institute_id" }
     },
+    campusId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "campus_id",
+      references: { model: "campus", key: "campus_id" }
+    },
     policyName: {
       type: DataTypes.STRING,
       allowNull: false,

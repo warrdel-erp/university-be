@@ -14,7 +14,8 @@ function catalogIncludeCategory() {
   ];
 }
 
-export async function createFeeTypeCatalog(data, options = {}) {  return scoped(model.feeTypeCatalogModel).create(data, { transaction: options.transaction });
+export async function createFeeTypeCatalog(data, options = {}) {
+  return scoped(model.feeTypeCatalogModel).create(data, { transaction: options.transaction });
 }
 
 export async function findFeeTypeCatalogsByInstitute(options = {}) {

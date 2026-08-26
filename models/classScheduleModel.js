@@ -1,5 +1,8 @@
 import sequelize from "../database/sequelizeConfig.js";
-import { DataTypes } from "sequelize";
+import { DataTypes } from 'sequelize';
+import universityModel from "./universityModel.js";
+import instituteModel from "./instituteModel.js";
+import acedmicYearModel from "./acedmicYearModel.js";
 import users from "./userModel.js";
 import timeTableStructureModel from "./timeTableStructureModel.js";
 import timeTableRoutineModel from "./timeTableRoutineModel.js";
@@ -12,7 +15,34 @@ import subjectModel from "./subjectModel.js";
 const classScheduleModel = sequelize.define(
   "class_schedule_item",
   {
-    timeTableMappingId: {
+            universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
+        },
+        academicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYearModel,
+                key: 'acedmic_year_id'
+            }
+        },
+        timeTableMappingId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,

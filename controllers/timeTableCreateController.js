@@ -332,13 +332,11 @@ export const ClassSubjectCount = async (req, res) => {
 export const getRoutineByClassSectionId = async (req, res) => {
   const { classSectionTermId } = req.query;
   try {
-    const result =
-      await timeTableCreateServices.getRoutineByClassSectionId(
-        classSectionTermId,
-      );
-    SuccessResponse(res, 200, "Routine fetched successfully", result);
+    const result = await timeTableCreateServices.getRoutineByClassSectionId(classSectionTermId);
+    SuccessResponse(res, 200, 'Routine fetched successfully', result);
   } catch (error) {
-    ErrorResponse(res, 500, "Internal Server Error");
+    console.error("GET ROUTINE ERROR:", error);
+    ErrorResponse(res, 500, error.message || "Internal Server Error");
   }
 };
 

@@ -3,6 +3,7 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import floor from "./floorModel.js";
 import institute from "./instituteModel.js";
+import universityModel from "./universityModel.js";
 
 const classRoomModel = sequelize.define(
     'class_room_section',
@@ -20,6 +21,15 @@ const classRoomModel = sequelize.define(
             references: {
                 model: institute,
                 key: 'institute_id'
+            }
+        },
+        universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
             }
         },
         floorId: {
