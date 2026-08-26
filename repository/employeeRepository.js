@@ -500,21 +500,21 @@ export async function createEmployeeWithDetails(employeeData, officeData, addres
     return employee;
 };
 
-export async function getPreviousEnrollNumber(instituteCode) {
+export async function getPreviousEnrollNumber(campusCode, instituteCode) {
     try {
         const attribute = ["employee_Code"];
         const result = await scoped(model.employeeModel).findOne({
             attributes: attribute,
             where: {
                 employee_Code: {
-                    [Op.regexp]: `^${instituteCode}(/|$)`
+                    [Op.regexp]: `^${campusCode}/${instituteCode}/`
                 }
             },
             order: [['employee_Code', 'DESC']]
         });
         return result;
     } catch (error) {
-        console.error(`Error in get Previous Enroll Number for institue Code ${instituteCode}:`, error);
+        console.error(`Error in get Previous Enroll Number for campus ${campusCode} and institue Code ${instituteCode}:`, error);
         throw error;
     }
 };
