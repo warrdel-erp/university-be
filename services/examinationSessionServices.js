@@ -541,79 +541,82 @@ export async function deleteExaminationSessionTerm(
   });
 }
 
+/**
+ * Courses / terms / subjects from assessment_plan_subject_mapping
+ * for an exam setup type (or the session’s assessmentTypeId).
+ */
 export async function getClassSectionTermsBySetupType(
   examSetupTypeId,
   options = {},
 ) {
   const setupTypeId = await getSetupTypeId(examSetupTypeId, options);
-  if (!setupTypeId) {
-    return [];
-  }
+  if (!setupTypeId) return [];
 
   const planIds = await getAssessmentPlanIds(setupTypeId, options);
-  if (!planIds.length) {
-    return [];
-  }
+  if (!planIds.length) return [];
 
+  // Source of truth: assessment_plan_subject_mapping for this exam type’s plans.
   const subjectMappings =
     await examinationSessionRepository.findAssessmentPlanSubjectMappings(
-      {
-        assessmentPlanId: { [Op.in]: planIds },
-      },
+      { assessmentPlanId: { [Op.in]: planIds } },
       options,
     );
-  const subjectIds = uniqueValues(
-    subjectMappings.map((mapping) => mapping.subjectId),
-  );
-  if (!subjectIds.length) {
-    return [];
-  }
+  if (!subjectMappings.length) return [];
 
+  const mappedSubjectIds = uniqueValues(
+    subjectMappings.map((m) => m.subjectId),
+  );
   const subjects = await examinationSessionRepository.findSubjects(
-    {
-      subjectId: { [Op.in]: subjectIds },
-    },
+    { subjectId: { [Op.in]: mappedSubjectIds } },
     options,
   );
-  const subjectMap = new Map(
-    subjects.map((subject) => [subject.subjectId, subject]),
-  );
-  const courseSessionMap = new Map();
+  const subjectMap = new Map();
+  for (const subject of subjects) {
+    subjectMap.set(subject.subjectId, subject);
+  }
 
+  // Group by course + session from the mapping rows.
+  const courseSessionMap = new Map();
   for (const mapping of subjectMappings) {
+    if (!mapping.courseId) continue;
     const subject = subjectMap.get(mapping.subjectId);
-    if (!mapping.courseId || !subject) continue;
+    if (!subject) continue;
 
     const key = `${mapping.courseId}_${mapping.sessionId || 0}`;
     if (!courseSessionMap.has(key)) {
       courseSessionMap.set(key, {
-        courseId: mapping.courseId,
-        sessionId: mapping.sessionId || null,
-        academicYearId: mapping.academicYearId || null,
-        subjectIds: new Set(),
-        terms: new Set(),
+        courseId: Number(mapping.courseId),
+        sessionId: mapping.sessionId != null ? Number(mapping.sessionId) : null,
+        academicYearId:
+          mapping.academicYearId != null
+            ? Number(mapping.academicYearId)
+            : null,
+        subjectsByTerm: new Map(),
       });
     }
 
     const group = courseSessionMap.get(key);
-    group.subjectIds.add(mapping.subjectId);
-    if (subject.term != null) group.terms.add(subject.term);
+    const term = Number(subject.term);
+    if (!Number.isFinite(term) || term <= 0) continue;
+
+    if (!group.subjectsByTerm.has(term)) {
+      group.subjectsByTerm.set(term, []);
+    }
+    group.subjectsByTerm.get(term).push(subject);
   }
 
   const groups = [...courseSessionMap.values()];
-  if (!groups.length) {
-    return [];
-  }
+  if (!groups.length) return [];
 
   const studentCountGroups = [];
   for (const group of groups) {
     if (group.sessionId == null || group.academicYearId == null) continue;
-    for (const term of group.terms) {
+    for (const term of group.subjectsByTerm.keys()) {
       studentCountGroups.push({
-        courseId: Number(group.courseId),
-        sessionId: Number(group.sessionId),
-        term: Number(term),
-        academicYearId: Number(group.academicYearId),
+        courseId: group.courseId,
+        sessionId: group.sessionId,
+        term,
+        academicYearId: group.academicYearId,
       });
     }
   }
@@ -622,83 +625,65 @@ export async function getClassSectionTermsBySetupType(
     options,
   );
 
-  const [courses, sessions] = await Promise.all([
+  const courseIds = [];
+  const sessionIds = [];
+  for (const group of groups) {
+    courseIds.push(group.courseId);
+    if (group.sessionId != null) sessionIds.push(group.sessionId);
+  }
+
+  const [courses, sessions, courseSessionMappings] = await Promise.all([
     examinationSessionRepository.findCoursesByIds(
-      uniqueValues(groups.map((group) => group.courseId)),
+      uniqueValues(courseIds),
       options,
     ),
     examinationSessionRepository.findSessionsByIds(
-      uniqueValues(groups.map((group) => group.sessionId)),
+      uniqueValues(sessionIds),
+      options,
+    ),
+    examinationSessionRepository.findSessionCourseMappingsByCoursesAndSessions(
+      uniqueValues(courseIds),
+      uniqueValues(sessionIds),
       options,
     ),
   ]);
-  const courseMap = new Map(courses.map((course) => [course.courseId, course]));
-  const sessionMap = new Map(
-    sessions.map((session) => [session.sessionId, session]),
-  );
-  const result = [];
 
+  const courseMap = new Map();
+  for (const course of courses) {
+    courseMap.set(course.courseId, course);
+  }
+  const sessionMap = new Map();
+  for (const session of sessions) {
+    sessionMap.set(session.sessionId, session);
+  }
+  const courseSessionMappingMap = new Map();
+  for (const row of courseSessionMappings) {
+    const plain = row.get ? row.get({ plain: true }) : row;
+    courseSessionMappingMap.set(
+      `${plain.courseId}_${plain.sessionId}`,
+      plain.sessionCourseMappingId,
+    );
+  }
+
+  const result = [];
   for (const group of groups) {
     const courseDetails = courseMap.get(group.courseId);
     if (!courseDetails) continue;
 
-    const termsArray = [...group.terms].sort((a, b) => Number(a) - Number(b));
-    const classSectionWhere = { courseId: group.courseId };
-    if (group.sessionId) classSectionWhere.sessionId = group.sessionId;
-    if (group.academicYearId)
-      classSectionWhere.academicYearId = group.academicYearId;
-
-    const classSections = await examinationSessionRepository.findClassSections(
-      classSectionWhere,
-      options,
+    const termsArray = [...group.subjectsByTerm.keys()].sort(
+      (a, b) => Number(a) - Number(b),
     );
-    const classSectionIds = uniqueValues(
-      classSections.map((section) => section.classSectionsId),
-    );
-    const allTermDetails =
-      classSectionIds.length && termsArray.length
-        ? await examinationSessionRepository.findClassSectionTerms(
-            {
-              classSectionsId: { [Op.in]: classSectionIds },
-              term: { [Op.in]: termsArray },
-            },
-            options,
-          )
-        : [];
-
     const termDetails = [];
     for (const term of termsArray) {
-      const matchingItems = [];
-      for (const item of allTermDetails) {
-        if (
-          classSectionIds.includes(item.classSectionsId) &&
-          Number(item.term) === Number(term)
-        ) {
-          matchingItems.push(item);
-        }
-      }
-
-      const termSubjects =
-        await examinationSessionRepository.findSubjects(
-          {
-            subjectId: { [Op.in]: [...group.subjectIds] },
-            courseId: group.courseId,
-            term,
-          },
-          options,
-        );
-
-      const studentCount = lookupStudentCount(studentCountMap, {
-        courseId: group.courseId,
-        sessionId: group.sessionId,
-        term: Number(term),
-        academicYearId: group.academicYearId,
-      });
-
+      const termSubjects = group.subjectsByTerm.get(term);
       termDetails.push({
-        ...(matchingItems[0] || {}),
         term,
-        studentCount,
+        studentCount: lookupStudentCount(studentCountMap, {
+          courseId: group.courseId,
+          sessionId: group.sessionId,
+          term,
+          academicYearId: group.academicYearId,
+        }),
         subjectCount: termSubjects.length,
         subjects: termSubjects,
       });
@@ -708,6 +693,12 @@ export async function getClassSectionTermsBySetupType(
       course: courseDetails,
       termType: courseDetails.termType || null,
       session: group.sessionId ? sessionMap.get(group.sessionId) || null : null,
+      courseSessionMappingId:
+        group.sessionId != null
+          ? courseSessionMappingMap.get(
+              `${group.courseId}_${group.sessionId}`,
+            ) || null
+          : null,
       academicYearId: group.academicYearId,
       terms: termDetails,
     });
@@ -960,6 +951,17 @@ export async function getMappedSubjectsBySessionAndTerm(
 
   if (!examinationSession.assessmentTypeId) return [];
 
+  const sessionTermRows =
+    await examinationSessionRepository.findExaminationSessionTerms(
+      parsedExaminationSessionId,
+      options,
+    );
+  const sessionTermSet = new Set();
+  for (const row of sessionTermRows) {
+    sessionTermSet.add(Number(row.term));
+  }
+  if (!sessionTermSet.size) return [];
+
   const assessmentPlanIds = await getAssessmentPlanIds(
     Number(examinationSession.assessmentTypeId),
     options,
@@ -990,18 +992,26 @@ export async function getMappedSubjectsBySessionAndTerm(
     subjectSessionMap.set(mapping.subjectId, mapping.sessionId);
   }
 
+  // Mapped subjects ∩ session terms (examination_session_term.term).
   const subjectWhere = {
     subjectId: { [Op.in]: uniqueSubjectIds },
     isActive: true,
+    term: { [Op.in]: [...sessionTermSet] },
   };
   if (filterCombinations.length > 0) {
     const orSubjects = [];
     for (const comb of filterCombinations) {
+      const allowedTerms = [];
+      for (const term of comb.terms) {
+        if (sessionTermSet.has(Number(term))) allowedTerms.push(Number(term));
+      }
+      if (!allowedTerms.length) continue;
       orSubjects.push({
         courseId: comb.courseId,
-        term: { [Op.in]: comb.terms },
+        term: { [Op.in]: allowedTerms },
       });
     }
+    if (!orSubjects.length) return [];
     subjectWhere[Op.or] = orSubjects;
   }
 
