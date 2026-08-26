@@ -107,6 +107,7 @@ function transformQuestionPaper(paper, schedule) {
             examTime: plainSched.examTime,
             type: plainSched.type,
             duration: plainSched.duration != null ? Number(plainSched.duration) : null,
+            maximumMarks: plainSched.maximumMarks != null ? Number(plainSched.maximumMarks) : null,
             examName: plainSched.examinationSession?.sessionName ?? null,
             examinationSessionName: plainSched.examinationSession?.sessionName ?? null
         };
@@ -119,6 +120,8 @@ function transformQuestionPaper(paper, schedule) {
         blueprintId: paper.blueprintId,
         status: paper.status,
         totalMarks: paper.totalMarks,
+        duration: transformedSchedule?.duration ?? null,
+        maximumMarks: transformedSchedule?.maximumMarks ?? null,
         sections,
         creator: paper.creator || null,
         examSchedule: transformedSchedule,
@@ -131,11 +134,7 @@ export async function getSingleQuestionPaper(id, ownerId = null) {
     const paper = await questionPaperRepository.getSingleQuestionPaper(id, ownerId);
     if (!paper) return null;
 
-    const schedule = paper.examScheduleId
-        ? await questionPaperRepository.getExamScheduleById(paper.examScheduleId)
-        : null;
-
-    return transformQuestionPaper(paper, schedule);
+    return transformQuestionPaper(paper, paper.examSchedule);
 }
 
 export async function updateQuestionPaper(id, questionPaperData, updatedBy, ownerId = null) {

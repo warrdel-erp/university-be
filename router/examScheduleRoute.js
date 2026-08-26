@@ -59,6 +59,50 @@ const getExamScheduleRoomsSchema = z.object({
   examScheduleId: z.coerce.number().int().positive(),
 });
 
+const positiveIntegerId = z.coerce
+  .number({ invalid_type_error: "id must be a number" })
+  .int({ message: "id must be an integer" })
+  .positive({ message: "id must be positive" });
+
+
+
+const optionalPositiveIntegerIdList = z.preprocess((val) => {
+  if (val === undefined || val === null || val === "" || val === "undefined") {
+    return undefined;
+  }
+  const rawItems = Array.isArray(val) ? val : String(val).split(",");
+  const ids = [];
+  for (const item of rawItems) {
+    if (item === "" || item == null) {
+      continue;
+    }
+    ids.push(item);
+  }
+  return ids.length > 0 ? ids : undefined;
+}, z.array(positiveIntegerId).min(1).optional());
+
+const getExamScheduleStudentsSchema = z.object({
+  page: z.coerce
+    .number()
+    .int("page must be an integer")
+    .min(1, "page must be at least 1")
+    .optional()
+    .default(1),
+  limit: z.coerce
+    .number()
+    .int("limit must be an integer")
+    .min(1, "limit must be at least 1")
+    .max(100, "limit must be at most 100")
+    .optional()
+    .default(10),
+  search: z.string().trim().optional(),
+  courseId: optionalPositiveIntegerIdList,
+  sessionId: optionalPositiveIntegerIdList,
+  term: optionalPositiveIntegerIdList,
+  subjectId: optionalPositiveIntegerIdList,
+  examScheduleId: z.coerce.number().int().positive().optional(),
+});
+
 router.get("/", userAuth, examScheduleController.getExamSchedules);
 
 router.get(
@@ -73,6 +117,13 @@ router.get(
   userAuth,
   validate({ query: getExamScheduleRoomsSchema }),
   examRoomCapacityController.getExamScheduleRooms,
+);
+
+router.get(
+  "/students",
+  userAuth,
+  validate({ query: getExamScheduleStudentsSchema }),
+  examScheduleController.getExamScheduleStudents,
 );
 
 router.get("/:id", userAuth, examScheduleController.getExamScheduleById);

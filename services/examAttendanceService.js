@@ -1,6 +1,15 @@
 import * as examAttendanceRepository from "../repository/examAttendanceRepository.js";
+import {
+  getRoomsWithExams,
+  getRoomCapacitiesByRoom,
+  getAssignmentsForRooms,
+} from "../repository/examInvigilatorAssignmentRepository.js";
 import { getAcademicYearId } from "../utility/requestContext.js";
+import { getRoomCentricMetrics } from "../utility/roomCentricHelper.js";
 import { Op } from "sequelize";
+import { formatDateKey } from "../utility/dateFormat.js";
+import * as model from "../models/index.js";
+import sequelize from "../database/sequelizeConfig.js";
 
 export async function addExamAttendance(data, createdBy, updatedBy) {
   const {
@@ -92,238 +101,216 @@ export async function deleteExamAttendance(examAttendanceId) {
   }
 }
 
-export async function getExamOperationsAttendance(filters) {
-  const {
-    examinationSessionId,
-    examDate,
-    examinationSessionSlotId,
-    courseId,
-    sessionId,
-    term,
-    search,
-    page = 1,
-    limit = 10,
-  } = filters;
+export async function getExamOperationsAttendance(filters, pagination) {
+  const { page = 1, limit = 10 } = pagination;
 
-  const offset = (page - 1) * limit;
+  // Reuse the same room-with-exams query from the invigilator module
+  const allRows = await getRoomsWithExams(filters);
 
-  const where = {};
-  if (examinationSessionId) {
-    where.examinationSessionId = Number(examinationSessionId);
-  }
-  if (examDate) {
-    where.examDate = examDate;
-  }
-  if (examinationSessionSlotId) {
-    where.examinationSessionSlotId = Number(examinationSessionSlotId);
-  }
-  if (sessionId) {
-    where.sessionId = Number(sessionId);
-  }
-  if (term) {
-    where.term = Number(term);
-  }
+  // Build a set of all unique examScheduleRoomCapacityIds to batch-fetch seat counts
+  const capacityIds = allRows.map((rc) => rc.examScheduleRoomCapacityId);
 
-  const subjectWhere = {};
-  if (courseId) {
-    subjectWhere.courseId = Number(courseId);
-  }
+  // Batch fetch seat counts grouped by examScheduleRoomCapacityId
+  const seatCounts = capacityIds.length
+    ? await model.studentExamSeatModel.findAll({
+        where: { examScheduleRoomCapacityId: { [Op.in]: capacityIds } },
+        attributes: [
+          "examScheduleRoomCapacityId",
+          [sequelize.fn("COUNT", sequelize.col("student_id")), "studentCount"],
+        ],
+        group: ["examScheduleRoomCapacityId"],
+        raw: true,
+      })
+    : [];
 
-  if (search) {
-    where[Op.or] = [
-      { "$subjectSchedule.subject_name$": { [Op.like]: `%${search}%` } },
-      { "$subjectSchedule.subject_code$": { [Op.like]: `%${search}%` } },
-    ];
-  }
-
-  const { count, rows } = await examAttendanceRepository.findAndCountSchedules(
-    where,
-    subjectWhere,
-    Number(limit),
-    Number(offset),
+  const seatCountMap = new Map(
+    seatCounts.map((r) => [
+      Number(r.examScheduleRoomCapacityId),
+      parseInt(r.studentCount, 10) || 0,
+    ]),
   );
 
-  const roomCapacityIds = [];
-  const examDates = [];
-  const slotIds = [];
-  const classRoomSectionIds = [];
+  // Group by classRoomSectionId + examDate + examinationSessionSlotId
+  const roomMap = new Map();
 
-  rows.forEach(schedule => {
-      if (schedule.examDate && !examDates.includes(schedule.examDate)) {
-          examDates.push(schedule.examDate);
-      }
-      if (schedule.examinationSessionSlotId && !slotIds.includes(schedule.examinationSessionSlotId)) {
-          slotIds.push(schedule.examinationSessionSlotId);
-      }
-      (schedule.roomCapacities || []).forEach(room => {
-          roomCapacityIds.push(room.examScheduleRoomCapacityId);
-          if (room.classRoomSectionId && !classRoomSectionIds.includes(room.classRoomSectionId)) {
-              classRoomSectionIds.push(room.classRoomSectionId);
-          }
+  for (const rc of allRows) {
+    const roomId = rc.classRoomSectionId;
+    const schedule = rc.examSchedule;
+    const subject = schedule?.subjectSchedule;
+    const slot = schedule?.examinationSessionSlot;
+    const studentCount = seatCountMap.get(rc.examScheduleRoomCapacityId) || 0;
+
+    const examEntry = {
+      examScheduleRoomCapacityId: rc.examScheduleRoomCapacityId,
+      examScheduleId: schedule?.examScheduleId,
+      term: schedule?.term,
+      sessionId: schedule?.sessionId,
+      subjectId: subject?.subjectId,
+      subjectName: subject?.subjectName,
+      subjectCode: subject?.subjectCode,
+      courseId: subject?.courseId,
+      capacity: rc.capacity,
+      studentCount,
+    };
+
+    const examDateStr = formatDateKey(schedule?.examDate);
+    const slotId = schedule?.examinationSessionSlotId;
+    const key = `${roomId}_${examDateStr}_${slotId}`;
+
+    if (!roomMap.has(key)) {
+      roomMap.set(key, {
+        classRoomSectionId: roomId,
+        roomNumber: rc.classRoom?.roomNumber,
+        roomCapacity: rc.classRoom?.capacity,
+        examCapacity: rc.classRoom?.examCapacity,
+        examDate: schedule?.examDate,
+        slot: slot
+          ? {
+              examinationSessionSlotId: slot.examinationSessionSlotId,
+              slotNumber: slot.slotNumber,
+              startTime: slot.startTime,
+              endTime: slot.endTime,
+            }
+          : null,
+        exams: [],
       });
-  });
+    }
 
-  const [attendanceCounts, invigilators] = await Promise.all([
-      examAttendanceRepository.getAttendanceCountsForRoomCapacities(roomCapacityIds),
-      examAttendanceRepository.getInvigilatorAssignmentsForSchedules({ examDates, slotIds, classRoomSectionIds })
-  ]);
+    roomMap.get(key).exams.push(examEntry);
+  }
 
-  const attendanceCountsMap = new Map();
-  attendanceCounts.forEach(item => {
-      const key = item.examScheduleRoomCapacityId;
-      const status = item.attendanceStatus;
-      const countVal = Number(item.count) || 0;
-      if (!attendanceCountsMap.has(key)) {
-          attendanceCountsMap.set(key, { present: 0, absent: 0, pending: 0 });
-      }
-      const countsObj = attendanceCountsMap.get(key);
-      if (status === "PRESENT") countsObj.present += countVal;
-      else if (status === "ABSENT") countsObj.absent += countVal;
-      else if (status === "PENDING") countsObj.pending += countVal;
-  });
-
-  const invigilatorMap = new Set();
-  invigilators.forEach(inv => {
-      invigilatorMap.add(`${inv.examDate}_${inv.examinationSessionSlotId}_${inv.classRoomSectionId}`);
-  });
-
-  const data = rows.map((schedule) => {
-    const scheduleData = schedule.get({ plain: true });
-
-    let submittedCount = 0;
-
-    scheduleData.roomCapacities = (scheduleData.roomCapacities || []).map(
-      (room) => {
-        const isRoomAllocationDone = (room.seats || []).length > 0;
-        const countsObj = (attendanceCountsMap && room) ? (attendanceCountsMap.get(room.examScheduleRoomCapacityId) || { present: 0, absent: 0, pending: 0 }) : { present: 0, absent: 0, pending: 0 };
-        
-        const hasAttendanceGenerated = (countsObj.present + countsObj.absent + countsObj.pending) > 0;
-        if (hasAttendanceGenerated) {
-            submittedCount++;
-        }
-
-        const key = scheduleData ? `${scheduleData.examDate || ""}_${scheduleData.examinationSessionSlotId || ""}_${room.classRoomSectionId || ""}` : "";
-        const isInvigilatorAssigned = invigilatorMap ? invigilatorMap.has(key) : false;
-
-        return {
-          examScheduleRoomCapacityId: room.examScheduleRoomCapacityId,
-          classRoomSectionId: room.classRoomSectionId,
-          capacity: room.capacity,
-          classRoom: room.classRoom,
-          status: room.status || "NOT_GENERATED",
-          isRoomAllocationDone,
-          isInvigilatorAssigned,
-          present: countsObj.present,
-          absent: countsObj.absent,
-          pending: countsObj.pending,
-          students: isRoomAllocationDone
-            ? room.seats.map((seat) => ({
-                studentExamSeatId: seat.studentExamSeatId,
-                row: seat.row,
-                column: seat.column,
-                ...seat.student,
-              }))
-            : [],
-        };
-      },
-    );
-
-    scheduleData.submittedCount = submittedCount;
-    scheduleData.totalSheets = (scheduleData.roomCapacities || []).length;
-
-    return scheduleData;
-  });
+  const allUniqueRooms = Array.from(roomMap.values());
+  const total = allUniqueRooms.length;
+  const pageNum = Number(page);
+  const limitNum = Number(limit);
+  const offset = (pageNum - 1) * limitNum;
+  const paginatedRooms = allUniqueRooms.slice(offset, offset + limitNum);
 
   return {
-    paginationData: {
-      total: count,
-      limit: Number(limit),
-      page: Number(page),
-      totalPages: Math.ceil(count / limit),
-    },
-    data,
+    rooms: paginatedRooms,
+    total,
+    page: pageNum,
+    limit: limitNum,
   };
 }
 
 export async function getExamOperationsAttendanceRoom(
-  examScheduleId,
-  examScheduleRoomCapacityId,
+  classRoomSectionId,
+  examDate,
+  examinationSessionSlotId,
 ) {
-  const schedule =
-    await examAttendanceRepository.getScheduleDetails(examScheduleId);
-  if (!schedule) {
-    throw new Error("Exam schedule not found");
+  const capacities =
+    await examAttendanceRepository.getRoomCapacitiesForRoomSlot(
+      classRoomSectionId,
+      examDate,
+      examinationSessionSlotId,
+    );
+
+  if (!capacities || capacities.length === 0) {
+    throw new Error("No exam schedules found for this room, date, and slot");
   }
 
-  const roomCapacity = await examAttendanceRepository.getRoomCapacityDetails(
-    examScheduleRoomCapacityId,
-  );
-  if (!roomCapacity) {
-    throw new Error("Room capacity not found");
+  const capacityIds = capacities.map((c) => c.examScheduleRoomCapacityId);
+
+  const seats =
+    await examAttendanceRepository.getStudentSeatsByCapacityIds(capacityIds);
+  if (!seats || seats.length === 0) {
+    throw new Error("Seat allocation is not done for this exam");
   }
 
-  const classRoomSectionId = roomCapacity.classRoom
-    ? roomCapacity.classRoom.classRoomSectionId
-    : null;
+  const attendances =
+    await examAttendanceRepository.getAttendancesByCapacityIds(capacityIds);
+  const attendanceMap = new Map();
+  for (let i = 0; i < attendances.length; i++) {
+    const att = attendances[i];
+    attendanceMap.set(
+      `${att.studentId}_${att.examScheduleRoomCapacityId}`,
+      att.attendanceStatus,
+    );
+  }
 
-  const invigilators = await examAttendanceRepository.getInvigilators(
-    schedule.examinationSessionSlotId,
-    schedule.examDate,
-    classRoomSectionId,
-  );
-
-  const attendances = await examAttendanceRepository.getAttendancesWithStudent(
-    examScheduleId,
-    examScheduleRoomCapacityId,
-  );
-
-  const students = attendances.map((att) => {
-    const student = att.student || {};
-    const seat = att.studentExamSeat || {};
+  const students = [];
+  for (let i = 0; i < seats.length; i++) {
+    const seat = seats[i];
+    const student = seat.student || {};
     const rowVal = seat.row || 0;
     const colVal = seat.column || 0;
     const rowChar = rowVal ? String.fromCharCode(64 + rowVal) : "";
     const seatNumber = rowChar ? `${rowChar}${colVal}` : "";
-    return {
-      studentId: att.studentId,
+    const status =
+      attendanceMap.get(
+        `${seat.studentId}_${seat.examScheduleRoomCapacityId}`,
+      ) || "PENDING";
+
+    const rc = capacities.find(
+      (c) =>
+        Number(c.examScheduleRoomCapacityId) ===
+        Number(seat.examScheduleRoomCapacityId),
+    );
+    const schedule = rc ? rc.examSchedule : null;
+    const subject = schedule ? schedule.subjectSchedule : null;
+    const courseName =
+      subject && subject.courseInfo ? subject.courseInfo.courseName : "";
+    const term = schedule ? schedule.term : null;
+
+    students.push({
+      studentId: seat.studentId,
       enrollmentNumber: student.enrollNumber || student.scholarNumber || "",
+      enrollment: student.enrollNumber || student.scholarNumber || "",
       studentName:
         `${student.firstName || ""} ${student.lastName || ""}`.trim(),
       row: rowVal,
       column: colVal,
       seatNumber,
-      attendanceStatus: att.attendanceStatus,
+      attendanceStatus: status,
+      examScheduleId: rc ? rc.examScheduleId : null,
+      courseName,
+      term,
+      subjectId: subject ? subject.subjectId : null,
+      subjectName: subject ? subject.subjectName : "",
+      subjectCode: subject ? subject.subjectCode : "",
+    });
+  }
+
+  const invigilators = await examAttendanceRepository.getInvigilators(
+    examinationSessionSlotId,
+    examDate,
+    classRoomSectionId,
+  );
+
+  const invigilatorList = [];
+  for (let i = 0; i < invigilators.length; i++) {
+    const inv = invigilators[i];
+    invigilatorList.push({
+      userId: inv.user ? inv.user.userId : inv.userId,
+      userName: inv.user ? inv.user.userName : "",
+    });
+  }
+
+  const firstCap = capacities[0];
+
+  const exams = capacities.map((rc) => {
+    const schedule = rc.examSchedule || {};
+    const subject = schedule.subjectSchedule || {};
+    return {
+      examScheduleId: rc.examScheduleId,
+      examScheduleRoomCapacityId: rc.examScheduleRoomCapacityId,
+      subjectId: subject.subjectId || null,
+      subjectName: subject.subjectName || "",
+      subjectCode: subject.subjectCode || "",
+      examDate: schedule.examDate,
+      startTime: schedule.examinationSessionSlot ? schedule.examinationSessionSlot.startTime : "",
+      endTime: schedule.examinationSessionSlot ? schedule.examinationSessionSlot.endTime : "",
     };
   });
 
-  const invigilatorList = invigilators.map((inv) => ({
-    userId: inv.user ? inv.user.userId : inv.userId,
-    userName: inv.user ? inv.user.userName : "",
-  }));
-
   return {
-    examScheduleId,
-    examScheduleRoomCapacityId,
-    exam: {
-      subjectName: schedule.subjectSchedule
-        ? schedule.subjectSchedule.subjectName
-        : "",
-      subjectCode: schedule.subjectSchedule
-        ? schedule.subjectSchedule.subjectCode
-        : "",
-      examDate: schedule.examDate,
-      startTime: schedule.examinationSessionSlot
-        ? schedule.examinationSessionSlot.startTime
-        : "",
-      endTime: schedule.examinationSessionSlot
-        ? schedule.examinationSessionSlot.endTime
-        : "",
-    },
+    examScheduleId: firstCap.examScheduleId,
+    examScheduleRoomCapacityId: firstCap.examScheduleRoomCapacityId,
+    exams,
     room: {
       classRoomSectionId,
-      roomNumber: roomCapacity.classRoom
-        ? roomCapacity.classRoom.roomNumber
-        : "",
+      roomNumber: firstCap.classRoom ? firstCap.classRoom.roomNumber : "",
     },
     invigilators: invigilatorList,
     students,
@@ -444,178 +431,138 @@ export async function updateRoomAttendanceStatus(statusData) {
     absent: absentCount,
   };
 }
-
-export async function getExamAttendanceDetails(examScheduleId) {
-  const examSchedule =
-    await examAttendanceRepository.getExamScheduleById(examScheduleId);
-
-  if (!examSchedule) {
-    throw new Error("Exam schedule not found");
-  }
-
-  const roomCapacities =
-    await examAttendanceRepository.getRoomCapacitiesByExamScheduleId(
-      examScheduleId,
-    );
-
-  const roomCapacityIds = roomCapacities.map(
-    (item) => item.examScheduleRoomCapacityId,
+export async function getExamAttendanceDetailsByRoom(
+  classRoomSectionId,
+  filters,
+  options = {},
+) {
+  const roomCapacities = await getRoomCapacitiesByRoom(
+    classRoomSectionId,
+    filters,
+    options,
   );
 
-  const [studentCounts, attendanceStatuses, invigilators, attendanceCounts] =
-    await Promise.all([
-      examAttendanceRepository.getStudentCountsByRoomCapacityIds(
-        roomCapacityIds,
-      ),
+  if (!roomCapacities.length) {
+    return null;
+  }
 
-      examAttendanceRepository.getAttendanceStatusByExamSchedule(
-        examScheduleId,
-        roomCapacityIds,
-      ),
+  const firstRc = roomCapacities[0];
+  const examDate = firstRc.examSchedule.examDate;
+  const slotId = firstRc.examSchedule.examinationSessionSlotId;
 
-      examAttendanceRepository.getInvigilatorsByRooms({
-        examDate: examSchedule.examDate,
-        examinationSessionSlotId: examSchedule.examinationSessionSlotId,
-        classRoomSectionIds: roomCapacities.map(
-          (item) => item.classRoomSectionId,
-        ),
-      }),
+  // 1. Fetch invigilators assigned to this room at this slot/date
+  const invigilatorsRaw = await getAssignmentsForRooms(
+    [Number(classRoomSectionId)],
+    [examDate],
+    [slotId],
+    options,
+  );
 
-      examAttendanceRepository.getAttendanceCountsByRoom(examScheduleId),
-    ]);
+  const invigilators = invigilatorsRaw.map((inv) => ({
+    examInvigilatorAssignmentId: inv.examInvigilatorAssignmentId,
+    userId: inv.user ? inv.user.userId : inv.userId,
+    userName: inv.user ? inv.user.userName : "",
+    role: inv.role,
+  }));
 
-  return buildExamAttendanceResponse({
-    examSchedule,
-    roomCapacities,
-    studentCounts,
-    attendanceStatuses,
-    invigilators,
-    attendanceCounts,
-  });
-}
+  // 2. Fetch seat counts for sibling capacities in the room to get numberOfStudentInRoom
+  const siblingCapacityIds = roomCapacities.map(
+    (rc) => rc.examScheduleRoomCapacityId,
+  );
 
-function buildExamAttendanceResponse({
-  examSchedule,
-  roomCapacities,
-  studentCounts,
-  attendanceStatuses,
-  invigilators,
-  attendanceCounts,
-}) {
-  const studentCountMap = new Map();
-  studentCounts.forEach((item) => {
-    studentCountMap.set(
-      item.examScheduleRoomCapacityId,
-      Number(item.studentCount),
-    );
-  });
+  const seatCounts = siblingCapacityIds.length
+    ? await model.studentExamSeatModel.findAll({
+        where: {
+          examScheduleRoomCapacityId: { [Op.in]: siblingCapacityIds },
+        },
+        attributes: [
+          "examScheduleRoomCapacityId",
+          [sequelize.fn("COUNT", sequelize.col("student_id")), "studentCount"],
+        ],
+        group: ["examScheduleRoomCapacityId"],
+        raw: true,
+        transaction: options.transaction,
+      })
+    : [];
 
-  const statusMap = new Map();
-  attendanceStatuses.forEach((item) => {
-    statusMap.set(item.examScheduleRoomCapacityId, item.status);
-  });
+  const seatCountMap = new Map(
+    seatCounts.map((r) => [
+      Number(r.examScheduleRoomCapacityId),
+      parseInt(r.studentCount, 10) || 0,
+    ]),
+  );
 
-  const invigilatorMap = new Map();
-  invigilators.forEach((inv) => {
-    if (!invigilatorMap.has(inv.classRoomSectionId)) {
-      invigilatorMap.set(inv.classRoomSectionId, []);
-    }
-    invigilatorMap.get(inv.classRoomSectionId).push({
-      userId: inv.user ? inv.user.userId : inv.userId,
-      userName: inv.user ? inv.user.userName : "",
-    });
-  });
+  // 3. Process exams and compute student count in this room and total count in subject across all rooms
+  const exams = [];
+  let totalStudentsAll = 0;
 
-  const attendanceCountsMap = new Map();
-  (attendanceCounts || []).forEach((item) => {
-    const capacityId = item.examScheduleRoomCapacityId;
-    const status = item.attendanceStatus;
-    const countVal = Number(item.count) || 0;
+  for (const rc of roomCapacities) {
+    const numberOfStudentInRoom =
+      seatCountMap.get(Number(rc.examScheduleRoomCapacityId)) || 0;
+    totalStudentsAll += numberOfStudentInRoom;
 
-    if (!attendanceCountsMap.has(capacityId)) {
-      attendanceCountsMap.set(capacityId, {
-        present: 0,
-        absent: 0,
-        pending: 0,
+    // Fetch total student count for this exam schedule across all rooms
+    const examScheduleCapacities =
+      await model.examScheduleRoomCapacityModel.findAll({
+        where: { examScheduleId: Number(rc.examScheduleId) },
+        transaction: options.transaction,
       });
-    }
+    const capacityIds = examScheduleCapacities.map(
+      (c) => c.examScheduleRoomCapacityId,
+    );
+    const totalStudentsInSubject = capacityIds.length
+      ? await model.studentExamSeatModel.count({
+          where: { examScheduleRoomCapacityId: { [Op.in]: capacityIds } },
+          transaction: options.transaction,
+        })
+      : 0;
 
-    const countsObj = attendanceCountsMap.get(capacityId);
-    if (status === "PRESENT") countsObj.present += countVal;
-    else if (status === "ABSENT") countsObj.absent += countVal;
-    else if (status === "PENDING") countsObj.pending += countVal;
-  });
+    exams.push({
+      examScheduleRoomCapacityId: rc.examScheduleRoomCapacityId,
+      examScheduleId: rc.examScheduleId,
+      term: rc.examSchedule?.term,
+      sessionId: rc.examSchedule?.sessionId,
+      subjectId: rc.examSchedule?.subjectSchedule?.subjectId,
+      subjectName: rc.examSchedule?.subjectSchedule?.subjectName,
+      subjectCode: rc.examSchedule?.subjectSchedule?.subjectCode,
+      courseId: rc.examSchedule?.subjectSchedule?.courseId,
+      classRoomSectionId: Number(classRoomSectionId),
+      capacity: rc.capacity,
+      numberOfStudentInRoom,
+      totalStudentsInSubject,
+      isSeatAllocationDone: numberOfStudentInRoom > 0,
+    });
+  }
 
-  let totalStudents = 0;
-  let totalInvigilatorsSet = new Set();
+  const isRoomSeatAllocationDone = roomCapacities.every(
+    (rc) => (seatCountMap.get(Number(rc.examScheduleRoomCapacityId)) || 0) > 0,
+  );
 
-  const rooms = roomCapacities.map((room) => {
-    const capacityId = room.examScheduleRoomCapacityId;
-    const studentCount = studentCountMap.get(capacityId) || 0;
-    totalStudents += studentCount;
-
-    const attendanceSheetStatus = statusMap.get(capacityId) || "NOT_GENERATED";
-
-    const roomInvigilators = invigilatorMap.get(room.classRoomSectionId) || [];
-    roomInvigilators.forEach((inv) => totalInvigilatorsSet.add(inv.userId));
-
-    const countsObj = attendanceCountsMap.get(capacityId) || {
-      present: 0,
-      absent: 0,
-      pending: 0,
-    };
-    const isGenerated = attendanceSheetStatus !== "NOT_GENERATED";
-
-    const roomObj = {
-      examScheduleRoomCapacityId: capacityId,
-      classRoomSectionId: room.classRoomSectionId,
-      roomNumber: room.classRoom ? room.classRoom.roomNumber : "",
-      studentCount,
-      attendanceSheetStatus,
-      invigilators: roomInvigilators,
-    };
-
-    if (isGenerated) {
-      roomObj.present = countsObj.present;
-      roomObj.absent = countsObj.absent;
-      roomObj.pending = countsObj.pending;
-    }
-
-    return roomObj;
-  });
-
-  const totalRooms = roomCapacities.length;
-  const submittedOrVerifiedCount = roomCapacities.filter((room) => {
-    const status = statusMap.get(room.examScheduleRoomCapacityId);
-    return status === "SUBMITTED" || status === "VERIFIED";
-  }).length;
+  // 4. Build room details
+  const roomDetails = {
+    classRoomSectionId: Number(classRoomSectionId),
+    roomNumber: firstRc.classRoom?.roomNumber,
+    numberOfExamsInRoom: roomCapacities.length,
+    numberOfInvigilatorsInRoom: invigilators.length,
+    totalStudentsAll,
+    isSeatAllocationDone: isRoomSeatAllocationDone,
+  };
 
   return {
-    examScheduleId: examSchedule.examScheduleId,
-    subjectId: examSchedule.subjectSchedule
-      ? examSchedule.subjectSchedule.subjectId
+    examDate,
+    slot: firstRc.examSchedule?.examinationSessionSlot
+      ? {
+          examinationSessionSlotId:
+            firstRc.examSchedule.examinationSessionSlot
+              .examinationSessionSlotId,
+          slotNumber: firstRc.examSchedule.examinationSessionSlot.slotNumber,
+          startTime: firstRc.examSchedule.examinationSessionSlot.startTime,
+          endTime: firstRc.examSchedule.examinationSessionSlot.endTime,
+        }
       : null,
-    subjectName: examSchedule.subjectSchedule
-      ? examSchedule.subjectSchedule.subjectName
-      : "",
-    subjectCode: examSchedule.subjectSchedule
-      ? examSchedule.subjectSchedule.subjectCode
-      : "",
-    examDate: examSchedule.examDate,
-    startTime: examSchedule.examinationSessionSlot
-      ? examSchedule.examinationSessionSlot.startTime
-      : "",
-    endTime: examSchedule.examinationSessionSlot
-      ? examSchedule.examinationSessionSlot.endTime
-      : "",
-    totalStudents,
-    totalRooms,
-    totalInvigilators: totalInvigilatorsSet.size,
-    attendanceSheets: {
-      ready: submittedOrVerifiedCount,
-      total: totalRooms,
-    },
-    rooms,
+    roomDetails,
+    invigilators,
+    exams,
   };
 }
 
@@ -677,69 +624,4 @@ export async function getExamOperationsSummary(examinationSessionId, filters) {
     totalStudentCount,
     inProgressExamCount,
   };
-}
-
-export async function generateRoomAttendance(generateData, user) {
-  const { examScheduleId, examScheduleRoomCapacityId } = generateData;
-  const { userId, universityId, defaultInstituteId, defaultAcademicYearId } =
-    user;
-
-  const roomCapacity = await examAttendanceRepository.getRoomCapacityById(
-    examScheduleRoomCapacityId,
-  );
-  if (!roomCapacity) {
-    throw new Error("Room capacity not found");
-  }
-
-  const seats = await examAttendanceRepository.getStudentSeats(
-    examScheduleRoomCapacityId,
-  );
-  if (!seats || seats.length === 0) {
-    throw new Error("No student seats allocated in this room");
-  }
-
-  const existingAttendances = await examAttendanceRepository.getAttendances(
-    examScheduleId,
-    examScheduleRoomCapacityId,
-  );
-  const existingStudentIds = new Set(
-    existingAttendances.map((att) => att.studentId),
-  );
-
-  const transaction = await examAttendanceRepository.sequelize.transaction();
-  try {
-    const results = [];
-    for (const seat of seats) {
-      if (!existingStudentIds.has(seat.studentId)) {
-        const created = await examAttendanceRepository.createAttendance(
-          {
-            examScheduleId,
-            examScheduleRoomCapacityId,
-            studentId: seat.studentId,
-            studentExamSeatId: seat.studentExamSeatId || null,
-            attendanceStatus: "PENDING",
-            universityId,
-            instituteId: defaultInstituteId,
-            academicYearId: defaultAcademicYearId,
-            createdBy: userId,
-            updatedBy: userId,
-          },
-          transaction,
-        );
-        results.push(created);
-      }
-    }
-
-    await examAttendanceRepository.updateRoomCapacityStatus(
-      examScheduleRoomCapacityId,
-      "GENERATED",
-      transaction,
-    );
-
-    await transaction.commit();
-    return results;
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
 }

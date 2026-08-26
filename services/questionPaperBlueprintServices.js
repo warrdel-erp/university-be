@@ -31,7 +31,16 @@ export async function getBlueprints(filters) {
                 // If it fails to parse, leave as is or set to empty array
             }
         }
-        return plainRow;
+        
+        // Extract duration and maximumMarks from associated subject's exam schedule
+        const schedules = plainRow.subject?.scheduleSubject || [];
+        const latestSchedule = schedules[0] || {};
+        
+        return {
+            ...plainRow,
+            duration: latestSchedule.duration != null ? Number(latestSchedule.duration) : null,
+            maximumMarks: latestSchedule.maximumMarks != null ? Number(latestSchedule.maximumMarks) : null,
+        };
     });
 }
 

@@ -739,4 +739,155 @@ export async function getAllEmployeesWithUser(options = {}) {
   });
 }
 
+export async function findRoomCapacityByScheduleAndSection(examScheduleId, classRoomSectionId, options = {}) {
+  return scoped(model.examScheduleRoomCapacityModel).findOne({
+    where: {
+      examScheduleId,
+      classRoomSectionId,
+      ...buildScope(model.examScheduleRoomCapacityModel),
+    },
+    attributes: [
+      "examScheduleRoomCapacityId",
+      "classRoomSectionId",
+      "examScheduleId",
+      "capacity",
+      "columns",
+      "orderKey",
+    ],
+    include: [
+      {
+        model: model.classRoomModel,
+        as: "classRoom",
+        required: true,
+        attributes: [
+          "classRoomSectionId",
+          "roomNumber",
+          "capacity",
+          "examCapacity",
+        ],
+        where: buildScope(model.classRoomModel),
+      },
+    ],
+    transaction: options.transaction,
+  });
+}
+
+
+export async function getRoomsWithExams(filters = {}, options = {}) {
+  const { examinationSessionId, examDate } = filters;
+
+  const scheduleWhere = {
+    ...buildScope(model.examScheduleModel),
+    examinationSessionId: Number(examinationSessionId),
+  };
+  if (examDate) {
+    scheduleWhere.examDate = examDate;
+  }
+
+  return scoped(model.examScheduleRoomCapacityModel).findAll({
+    attributes: [
+      "examScheduleRoomCapacityId",
+      "classRoomSectionId",
+      "examScheduleId",
+      "capacity",
+      "columns",
+      "orderKey",
+    ],
+    include: [
+      {
+        model: model.classRoomModel,
+        as: "classRoom",
+        required: true,
+        attributes: ["classRoomSectionId", "roomNumber", "capacity", "examCapacity"],
+        where: buildScope(model.classRoomModel),
+      },
+      {
+        model: model.examScheduleModel,
+        as: "examSchedule",
+        required: true,
+        attributes: [
+          "examScheduleId",
+          "examDate",
+          "term",
+          "sessionId",
+          "examinationSessionSlotId",
+          "subjectId",
+        ],
+        where: scheduleWhere,
+        include: [
+          {
+            model: model.subjectModel,
+            as: "subjectSchedule",
+            attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
+            required: false,
+          },
+          {
+            model: model.examinationSessionSlotModel,
+            as: "examinationSessionSlot",
+            attributes: ["examinationSessionSlotId", "slotNumber", "startTime", "endTime"],
+            where: buildScope(model.examinationSessionSlotModel),
+            required: false,
+          },
+        ],
+      },
+    ],
+    order: [
+      [{ model: model.classRoomModel, as: "classRoom" }, "roomNumber", "ASC"],
+      [{ model: model.examScheduleModel, as: "examSchedule" }, "examDate", "ASC"],
+    ],
+    transaction: options.transaction,
+  });
+}
+
+export async function getRoomCapacitiesByRoom(classRoomSectionId, filters = {}, options = {}) {
+  const { examinationSessionId, examDate, examinationSessionSlotId } = filters;
+
+  const scheduleWhere = {
+    ...buildScope(model.examScheduleModel),
+  };
+  if (examinationSessionId) {
+    scheduleWhere.examinationSessionId = Number(examinationSessionId);
+  }
+  if (examDate) {
+    scheduleWhere.examDate = examDate;
+  }
+  if (examinationSessionSlotId) {
+    scheduleWhere.examinationSessionSlotId = Number(examinationSessionSlotId);
+  }
+
+  return scoped(model.examScheduleRoomCapacityModel).findAll({
+    where: { classRoomSectionId: Number(classRoomSectionId) },
+    include: [
+      {
+        model: model.examScheduleModel,
+        as: "examSchedule",
+        where: scheduleWhere,
+        required: true,
+        include: [
+          {
+            model: model.subjectModel,
+            as: "subjectSchedule",
+            attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
+            required: false,
+          },
+          {
+            model: model.examinationSessionSlotModel,
+            as: "examinationSessionSlot",
+            attributes: ["examinationSessionSlotId", "slotNumber", "startTime", "endTime"],
+            where: buildScope(model.examinationSessionSlotModel),
+            required: false,
+          },
+        ]
+      },
+      {
+        model: model.classRoomModel,
+        as: "classRoom",
+        required: true,
+        attributes: ["classRoomSectionId", "roomNumber", "capacity", "examCapacity"],
+        where: buildScope(model.classRoomModel),
+      }
+    ],
+    transaction: options.transaction
+  });
+}
 
