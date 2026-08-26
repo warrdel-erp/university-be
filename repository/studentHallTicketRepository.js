@@ -1,18 +1,34 @@
 import crypto from "crypto";
 import { Op, fn, col } from "sequelize";
 import * as model from "../models/index.js";
-import sequelize from "../database/sequelizeConfig.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
+import { expandWholeTermClassSectionTermIds } from "../utility/studentCount.js";
 import * as examinationSessionRepository from "./examinationSessionRepository.js";
+import {
+  ELIGIBILITY_STATUS,
+  HALL_TICKET_STUDENT_QUERY_PURPOSE,
+} from "../constant.js";
+import {
+  normalizeEligibilityStatuses,
+  buildReviewReasonEligibilityClause,
+} from "../utility/hallTicketEligibility.js";
 
 // -- Shared query helpers --
 
 function buildHallTicketWhere(filters) {
   const where = {};
-  if (filters.examinationSessionId) where.examinationSessionId = filters.examinationSessionId;
-  if (filters.academicYearId) where.academicYearId = filters.academicYearId;
-  if (filters.studentId) where.studentId = filters.studentId;
+  if (filters.examinationSessionId) {
+    where.examinationSessionId = filters.examinationSessionId;
+  }
+  if (filters.academicYearId) {
+    where.academicYearId = filters.academicYearId;
+  }
+  if (filters.studentId) {
+    where.studentId = Array.isArray(filters.studentId)
+      ? { [Op.in]: filters.studentId }
+      : filters.studentId;
+  }
   return where;
 }
 
@@ -68,6 +84,34 @@ function getHallTicketIncludes() {
   ];
 }
 
+const LIST_STUDENT_ATTRIBUTES = [
+  "studentId",
+  "firstName",
+  "middleName",
+  "lastName",
+  "enrollNumber",
+  "courseId",
+  "sessionId",
+  "classSectionTermId",
+];
+
+const REVIEW_DETAIL_STUDENT_ATTRIBUTES = [
+  ...LIST_STUDENT_ATTRIBUTES,
+  "scholarNumber",
+  "fatherName",
+  "birthDate",
+  "phoneNumber",
+  "email",
+  "admisssionDate",
+  "documentStatus",
+  "studentPhoto",
+  "pAddress",
+  "pCity",
+  "pState",
+  "pCountry",
+  "pPincode",
+];
+
 function buildStudentFilters(filters, termIds) {
   const studentWhere = { ...buildScope(model.studentModel) };
 
@@ -104,7 +148,13 @@ function buildSessionTermFilter(termIds, historyStudentIds) {
 }
 
 function buildStudentListIncludes(examinationSessionId, termIds, eligibilityWhere, filters) {
-  return [
+  const purpose = filters.purpose || HALL_TICKET_STUDENT_QUERY_PURPOSE.LIST;
+  const requireEligibility =
+    !!filters.status ||
+    filters.reviewReasonFilters !== undefined ||
+    purpose === HALL_TICKET_STUDENT_QUERY_PURPOSE.REVIEW_FILTER;
+
+  const includes = [
     {
       model: model.courseModel,
       as: "course",
@@ -148,44 +198,104 @@ function buildStudentListIncludes(examinationSessionId, termIds, eligibilityWher
     {
       model: model.examinationSessionEligibilityModel,
       as: "examinationSessionEligibilities",
-      required: !!filters.status,
+      required: requireEligibility,
       where: eligibilityWhere,
       attributes: ["examinationSessionId", "status", "reviewReason", "academicYearId"],
     },
-    {
+  ];
+
+  if (purpose !== HALL_TICKET_STUDENT_QUERY_PURPOSE.SUMMARY &&
+      purpose !== HALL_TICKET_STUDENT_QUERY_PURPOSE.ELIGIBILITY_SYNC) {
+    includes.push({
       model: model.studentHallTicketModel,
       as: "hallTickets",
       required: false,
       where: { examinationSessionId: Number(examinationSessionId) },
       attributes: ["id", "examinationSessionId", "isPublished", "isBlocked", "createdAt"],
-    },
-  ];
+    });
+  }
+
+  if (purpose === HALL_TICKET_STUDENT_QUERY_PURPOSE.REVIEW_DETAIL) {
+    includes.push(
+      {
+        model: model.attendanceModel,
+        as: "attendances",
+        required: false,
+        attributes: ["attendanceId", "classSectionTermId", "attendanceStatus"],
+      },
+      {
+        model: model.studentFeeInvoiceModel,
+        as: "studentFeeInvoices",
+        required: false,
+        attributes: ["studentFeeInvoiceId", "total", "paidAmount", "paymentStatus"],
+      },
+      {
+        model: model.assessmentPlanModel,
+        as: "assessmentPlans",
+        required: false,
+        attributes: ["assessmentPlanId", "courseId", "regulationId", "isActive"],
+        include: [
+          {
+            model: model.academicRegulationModel,
+            as: "academicRegulation",
+            required: false,
+            attributes: ["academicRegulationId", "regulationCode", "minimumAttendance"],
+          },
+        ],
+      },
+    );
+  }
+
+  return includes;
 }
 
-function mapStudentRowResult(raw, termIds, termToEstMap) {
+function resolveStudentAttributes(purpose) {
+  if (purpose === HALL_TICKET_STUDENT_QUERY_PURPOSE.REVIEW_DETAIL) {
+    return REVIEW_DETAIL_STUDENT_ATTRIBUTES;
+  }
+  if (purpose === HALL_TICKET_STUDENT_QUERY_PURPOSE.ELIGIBILITY_SYNC) {
+    return [
+      ...REVIEW_DETAIL_STUDENT_ATTRIBUTES,
+      "universityId",
+      "instituteId",
+    ];
+  }
+  if (purpose === HALL_TICKET_STUDENT_QUERY_PURPOSE.SUMMARY) {
+    return ["studentId", "courseId", "sessionId", "classSectionTermId"];
+  }
+  return LIST_STUDENT_ATTRIBUTES;
+}
+
+function mapStudentRowResult(raw, termIdSet, termToEstMap) {
   let placementTermId = null;
   let placementTerm = null;
 
-  if (raw.studentClassSectionTerm && termIds.includes(Number(raw.classSectionTermId))) {
+  if (raw.studentClassSectionTerm && termIdSet.has(Number(raw.classSectionTermId))) {
     placementTermId = Number(raw.classSectionTermId);
     placementTerm = raw.studentClassSectionTerm.term;
   } else if (raw.sectionHistory && raw.sectionHistory.length > 0) {
-    const hist = raw.sectionHistory.find((h) => termIds.includes(Number(h.classSectionTermId)));
-    if (hist && hist.classSectionTerm) {
+    for (const hist of raw.sectionHistory) {
+      if (!termIdSet.has(Number(hist.classSectionTermId))) continue;
+      if (!hist.classSectionTerm) continue;
       placementTermId = Number(hist.classSectionTermId);
       placementTerm = hist.classSectionTerm.term;
+      break;
     }
   }
 
   const estId = placementTermId ? termToEstMap[placementTermId] : null;
-  const mapper = raw.studentMapped?.[0];
-  const effectiveSessionId = mapper?.sessionId || raw.sessionId;
+  const mapper =
+    raw.studentMapped && raw.studentMapped.length > 0 ? raw.studentMapped[0] : null;
+  const effectiveSessionId = mapper ? mapper.sessionId : raw.sessionId;
 
   return {
     student: raw,
     classSectionTerm: { classSectionTermId: placementTermId, term: placementTerm },
-    examinationSessionTerm: { examinationSessionTermId: estId, classSectionTermId: placementTermId },
-    examinationSession: raw._examSession ?? null,
+    examinationSessionTerm: {
+      examinationSessionTermId: estId,
+      classSectionTermId: placementTermId,
+    },
+    examinationSession: raw._examSession || null,
     mapperSessionId: effectiveSessionId,
   };
 }
@@ -195,6 +305,13 @@ function mapStudentRowResult(raw, termIds, termToEstMap) {
 export async function findExaminationSessionById(examinationSessionId, transaction) {
   return scoped(model.examinationSessionModel).findByPk(examinationSessionId, {
     transaction,
+    attributes: [
+      "examinationSessionId",
+      "sessionName",
+      "academicYearId",
+      "assessmentTypeId",
+      "status",
+    ],
     include: [
       {
         model: model.examSetupTypeModel,
@@ -211,7 +328,14 @@ export async function findExaminationSessionById(examinationSessionId, transacti
       {
         model: model.examinationSessionTermModel,
         as: "examinationSessionTerms",
-        include: [{ model: model.classSectionTermModel, as: "classSectionTerm" }],
+        attributes: ["examinationSessionTermId", "classSectionTermId"],
+        include: [
+          {
+            model: model.classSectionTermModel,
+            as: "classSectionTerm",
+            attributes: ["classSectionTermId", "term", "classSectionsId"],
+          },
+        ],
       },
     ],
   });
@@ -243,7 +367,14 @@ export async function getSchedulesWithSubjectsForExaminationSession(examinationS
         model: model.subjectModel,
         as: "subjectSchedule",
         required: courseId != null,
-        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"] },
+        attributes: [
+          "subjectId",
+          "subjectName",
+          "subjectCode",
+          "courseId",
+          "term",
+          "academicYearId",
+        ],
         where: { ...buildScope(model.subjectModel), ...(courseId != null && { courseId }) },
       },
       {
@@ -260,17 +391,48 @@ export async function getSchedulesWithSubjectsForExaminationSession(examinationS
 // -- Student list --
 
 export async function getStudentsByExaminationSessionId(examinationSessionId, filters = {}, transaction = null) {
-  const examSession = await scoped(model.examinationSessionModel).findByPk(examinationSessionId, {
-    attributes: ["examinationSessionId", "sessionName", "academicYearId"],
+  const purpose = filters.purpose || HALL_TICKET_STUDENT_QUERY_PURPOSE.LIST;
+  const isPaginated = filters.page != null || filters.limit != null;
+
+  const examSessionPromise = scoped(model.examinationSessionModel).findByPk(examinationSessionId, {
+    attributes: ["examinationSessionId", "sessionName", "academicYearId", "assessmentTypeId"],
     transaction,
   });
 
-  const isPaginated = filters?.page != null || filters?.limit != null;
+  let filterCombinations = [];
+  let mappingsPromise = Promise.resolve([]);
+  if (filters.selections && filters.selections.length > 0) {
+    const mappingIds = [];
+    for (const sel of filters.selections) {
+      mappingIds.push(sel.courseSessionMappingId);
+    }
+    mappingsPromise = examinationSessionRepository.findSessionCourseMappingsByIds(mappingIds, {
+      transaction,
+    });
+  }
+
+  const [examSession, dbMappings] = await Promise.all([examSessionPromise, mappingsPromise]);
 
   if (!examSession) {
     return isPaginated
       ? { rows: [], total: 0, page: 1, limit: 10, totalPages: 1 }
       : [];
+  }
+
+  if (filters.selections && filters.selections.length > 0) {
+    const dbMappingsMap = new Map();
+    for (const m of dbMappings) {
+      dbMappingsMap.set(m.sessionCourseMappingId, m);
+    }
+    for (const sel of filters.selections) {
+      const mapping = dbMappingsMap.get(sel.courseSessionMappingId);
+      if (!mapping) continue;
+      filterCombinations.push({
+        courseId: mapping.courseId,
+        sessionId: mapping.sessionId,
+        terms: sel.terms || [],
+      });
+    }
   }
 
   // Fetch terms for this session.
@@ -288,29 +450,19 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
     transaction,
   };
 
-  let filterCombinations = [];
-  if (filters.selections && filters.selections.length > 0) {
-    const mappingIds = filters.selections.map((s) => s.courseSessionMappingId);
-    const dbMappings = await examinationSessionRepository.findSessionCourseMappingsByIds(mappingIds, { transaction });
-    const dbMappingsMap = new Map(dbMappings.map((m) => [m.sessionCourseMappingId, m]));
-
-    for (const sel of filters.selections) {
-      const mapping = dbMappingsMap.get(sel.courseSessionMappingId);
-      if (mapping) {
-        filterCombinations.push({
-          courseId: mapping.courseId,
-          sessionId: mapping.sessionId,
-          terms: sel.terms || [],
-        });
-      }
-    }
-  }
-
   // Resolve target terms dynamically
   if (filterCombinations.length > 0) {
-    const termsList = Array.from(new Set(filterCombinations.flatMap(c => c.terms)));
+    const termsList = [];
+    const termSeen = new Set();
+    for (const comb of filterCombinations) {
+      for (const term of comb.terms) {
+        if (termSeen.has(term)) continue;
+        termSeen.add(term);
+        termsList.push(term);
+      }
+    }
     termQueryOptions.include[0].where = {
-      term: { [Op.in]: termsList }
+      term: { [Op.in]: termsList },
     };
   } else if (filters.term != null) {
     termQueryOptions.include[0].where = {
@@ -319,83 +471,154 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
   }
 
   const termRows = await scoped(model.examinationSessionTermModel).findAll(termQueryOptions);
-  const termIds = termRows.map((r) => Number(r.classSectionTermId));
+  const seedTermIds = [];
+  for (const row of termRows) {
+    seedTermIds.push(Number(row.classSectionTermId));
+  }
 
-  if (!termIds.length) {
+  if (!seedTermIds.length) {
     const page = Math.max(1, Number(filters.page) || 1);
     const limit = Math.max(1, Number(filters.limit) || 10);
     return isPaginated ? { rows: [], total: 0, page, limit, totalPages: 1 } : [];
   }
 
-  // Map classSectionTermId -> examinationSessionTermId.
+  // Include sibling sections for the same course/session/year/term.
+  const expansion = await expandWholeTermClassSectionTermIds(seedTermIds, {
+    transaction,
+  });
+  const termIds = expansion.classSectionTermIds;
+  const termIdSet = new Set(termIds);
+
+  const seedEstByCst = {};
+  for (const row of termRows) {
+    seedEstByCst[Number(row.classSectionTermId)] = row.examinationSessionTermId;
+  }
+
+  const estByGroup = new Map();
+  for (const group of expansion.seedGroups) {
+    const estId = seedEstByCst[group.classSectionTermId];
+    if (estId == null) continue;
+    estByGroup.set(
+      `${group.courseId}_${group.sessionId}_${group.academicYearId}_${group.term}`,
+      estId,
+    );
+  }
+
   const termToEstMap = {};
-  termRows.forEach((r) => { termToEstMap[r.classSectionTermId] = r.examinationSessionTermId; });
+  const expandedGroups = expansion.expandedGroups || [];
+  for (const group of expandedGroups) {
+    const key = `${group.courseId}_${group.sessionId}_${group.academicYearId}_${group.term}`;
+    const estId = estByGroup.get(key);
+    if (estId != null) {
+      termToEstMap[group.classSectionTermId] = estId;
+    }
+  }
+  for (const row of termRows) {
+    termToEstMap[Number(row.classSectionTermId)] = row.examinationSessionTermId;
+  }
 
   // Fetch student IDs from history for the matched terms.
   const historyMatchedRows = await model.studentClassSectionsHistoryModel.findAll({
-    attributes: ["studentId"],
+    attributes: ["studentId", "classSectionTermId"],
     where: { classSectionTermId: { [Op.in]: termIds } },
     raw: true,
     transaction,
   });
-  const historyStudentIds = historyMatchedRows.map((r) => Number(r.studentId));
+  const historyStudentIds = [];
+  const historyByTermId = new Map();
+  for (const row of historyMatchedRows) {
+    const sid = Number(row.studentId);
+    const cstId = Number(row.classSectionTermId);
+    historyStudentIds.push(sid);
+    const list = historyByTermId.get(cstId);
+    if (list) list.push(sid);
+    else historyByTermId.set(cstId, [sid]);
+  }
 
   const studentWhere = buildStudentFilters(filters, termIds);
-
   const sessionTermFilter = buildSessionTermFilter(termIds, historyStudentIds);
-
   const combinedWhere = { [Op.and]: [studentWhere, sessionTermFilter] };
 
   if (filterCombinations.length > 0) {
-    const orClauses = filterCombinations.map(comb => {
-      const termIdsForComb = termRows
-        .filter(r => r.classSectionTerm && comb.terms.includes(r.classSectionTerm.term))
-        .map(r => Number(r.classSectionTermId));
+    const orClauses = [];
+    for (const comb of filterCombinations) {
+      const termSet = new Set();
+      for (const term of comb.terms) {
+        termSet.add(Number(term));
+      }
 
-      return {
+      const termIdsForComb = [];
+      for (const group of expandedGroups) {
+        if (
+          group.courseId === Number(comb.courseId) &&
+          group.sessionId === Number(comb.sessionId) &&
+          termSet.has(group.term)
+        ) {
+          termIdsForComb.push(group.classSectionTermId);
+        }
+      }
+
+      const historyIdsForComb = [];
+      const historyIdSet = new Set();
+      for (const cstId of termIdsForComb) {
+        const ids = historyByTermId.get(cstId);
+        if (!ids) continue;
+        for (const sid of ids) {
+          if (historyIdSet.has(sid)) continue;
+          historyIdSet.add(sid);
+          historyIdsForComb.push(sid);
+        }
+      }
+
+      orClauses.push({
         courseId: comb.courseId,
         [Op.or]: [
           { classSectionTermId: { [Op.in]: termIdsForComb } },
-          { studentId: { [Op.in]: historyMatchedRows.filter(h => termIdsForComb.includes(Number(h.classSectionTermId))).map(h => Number(h.studentId)) } }
+          { studentId: { [Op.in]: historyIdsForComb } },
         ],
-        [Op.and]: [
-          sequelize.where(
-            sequelize.fn("COALESCE", sequelize.col("studentMapped.session_id"), sequelize.col("students.session_id")),
-            comb.sessionId
-          )
-        ]
-      };
-    });
-    combinedWhere[Op.and].push({ [Op.or]: orClauses });
-  } else {
-    if (filters.sessionId) {
-      const allowedSessions = Array.isArray(filters.sessionId)
-        ? filters.sessionId.map(Number)
-        : [Number(filters.sessionId)];
-      combinedWhere[Op.and].push(
-        sequelize.where(
-          sequelize.fn("COALESCE", sequelize.col("studentMapped.session_id"), sequelize.col("students.session_id")),
-          { [Op.in]: allowedSessions },
-        ),
-      );
+      });
     }
+    combinedWhere[Op.and].push({ [Op.or]: orClauses });
+  } else if (filters.sessionId) {
+    const allowedSessions = Array.isArray(filters.sessionId)
+      ? filters.sessionId.map(Number)
+      : [Number(filters.sessionId)];
+    combinedWhere[Op.and].push({
+      sessionId: { [Op.in]: allowedSessions },
+    });
   }
 
   // Build eligibility filter.
   const eligibilityWhere = { examinationSessionId: Number(examinationSessionId) };
-  if (filters.status) {
-    if (Array.isArray(filters.status)) {
-      const valid = filters.status.map((s) => String(s).toUpperCase()).filter((s) => ["READY", "REVIEW", "BLOCKED", "APPROVED"].includes(s));
-      if (valid.length > 0) eligibilityWhere.status = { [Op.in]: valid };
-    } else {
-      const upper = String(filters.status).toUpperCase();
-      if (["READY", "REVIEW", "BLOCKED", "APPROVED"].includes(upper)) eligibilityWhere.status = upper;
-    }
+  const normalizedStatuses = normalizeEligibilityStatuses(filters.status);
+  if (normalizedStatuses) {
+    eligibilityWhere.status = { [Op.in]: normalizedStatuses };
+  }
+  if (purpose === HALL_TICKET_STUDENT_QUERY_PURPOSE.REVIEW_FILTER && !normalizedStatuses) {
+    eligibilityWhere.status = ELIGIBILITY_STATUS.REVIEW;
   }
 
-  const include = buildStudentListIncludes(examinationSessionId, termIds, eligibilityWhere, filters);
+  const reviewReasonInput =
+    purpose === HALL_TICKET_STUDENT_QUERY_PURPOSE.REVIEW_FILTER
+      ? filters.reviewReasonFilters && filters.reviewReasonFilters.length > 0
+        ? filters.reviewReasonFilters
+        : []
+      : filters.reviewReasonFilters;
+
+  const reviewReasonClause = buildReviewReasonEligibilityClause(reviewReasonInput, Op);
+  if (reviewReasonClause) {
+    Object.assign(eligibilityWhere, reviewReasonClause);
+  }
+
+  const include = buildStudentListIncludes(
+    examinationSessionId,
+    termIds,
+    eligibilityWhere,
+    { ...filters, purpose },
+  );
 
   const queryOptions = {
+    attributes: resolveStudentAttributes(purpose),
     where: combinedWhere,
     include,
     transaction,
@@ -423,16 +646,23 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
 
   const examSessionPlain = examSession.get ? examSession.get({ plain: true }) : examSession;
 
-  const mappedRows = rows.map((raw) => {
-    const mapped = mapStudentRowResult(raw, termIds, termToEstMap);
+  const mappedRows = [];
+  for (const raw of rows) {
+    const mapped = mapStudentRowResult(raw, termIdSet, termToEstMap);
     mapped.examinationSession = examSessionPlain;
-    return mapped;
-  });
+    mappedRows.push(mapped);
+  }
 
   if (isPaginated) {
     const page = Math.max(1, Number(filters.page) || 1);
     const limit = Math.max(1, Number(filters.limit) || 10);
-    return { rows: mappedRows, total: count, page, limit, totalPages: Math.ceil(count / limit) || 1 };
+    return {
+      rows: mappedRows,
+      total: count,
+      page,
+      limit,
+      totalPages: Math.ceil(count / limit) || 1,
+    };
   }
 
   return mappedRows;
@@ -483,7 +713,7 @@ export async function countHallTickets(filters = {}, transaction) {
 }
 
 export async function countHallTicketsBySessionIds(examinationSessionIds, transaction) {
-  if (!examinationSessionIds?.length) return new Map();
+  if (!examinationSessionIds || examinationSessionIds.length === 0) return new Map();
 
   const rows = await scoped(model.studentHallTicketModel).findAll({
     attributes: [
@@ -496,7 +726,11 @@ export async function countHallTicketsBySessionIds(examinationSessionIds, transa
     transaction,
   });
 
-  return new Map(rows.map((row) => [row.examinationSessionId, Number(row.count)]));
+  const result = new Map();
+  for (const row of rows) {
+    result.set(row.examinationSessionId, Number(row.count));
+  }
+  return result;
 }
 
 // -- Hall ticket writes --
@@ -579,7 +813,12 @@ export async function getMappedExamScheduleIds(studentId, examScheduleIds, trans
     attributes: ["examScheduleId"],
     transaction,
   });
-  return answerSheetQrs.map((a) => a.examScheduleId);
+
+  const ids = [];
+  for (const row of answerSheetQrs) {
+    ids.push(row.examScheduleId);
+  }
+  return ids;
 }
 
 export async function getStudentRoomSeatingDetails(studentId, examScheduleIds, transaction) {
@@ -587,10 +826,12 @@ export async function getStudentRoomSeatingDetails(studentId, examScheduleIds, t
 
   const seats = await scoped(model.studentExamSeatModel).findAll({
     where: { studentId },
+    attributes: ["studentExamSeatId", "row", "column", "examScheduleRoomCapacityId"],
     include: [
       {
         model: model.examScheduleRoomCapacityModel,
         as: "roomCapacity",
+        attributes: ["examScheduleRoomCapacityId", "examScheduleId"],
         where: { examScheduleId: { [Op.in]: examScheduleIds } },
         include: [
           {
@@ -611,62 +852,10 @@ export async function getStudentRoomSeatingDetails(studentId, examScheduleIds, t
     seatMap.set(roomCap.examScheduleId, {
       row: seat.row,
       column: seat.column,
-      roomName: roomCap.classRoom?.roomNumber ?? null,
-      roomNumber: roomCap.classRoom?.roomNumber ?? null,
+      roomName: roomCap.classRoom ? roomCap.classRoom.roomNumber : null,
+      roomNumber: roomCap.classRoom ? roomCap.classRoom.roomNumber : null,
       block: null,
     });
   }
   return seatMap;
-}
-
-// -- Eligibility overview --
-
-export async function getEligibilityOverviewCounts(examinationSessionId, filters = {}, transaction = null) {
-  const eligibilityWhere = { examinationSessionId: Number(examinationSessionId) };
-
-  const studentWhere = {};
-  if (filters.courseId) {
-    studentWhere.courseId = Array.isArray(filters.courseId)
-      ? { [Op.in]: filters.courseId }
-      : Number(filters.courseId);
-  }
-  if (filters.sessionId) {
-    studentWhere.sessionId = Array.isArray(filters.sessionId)
-      ? { [Op.in]: filters.sessionId }
-      : Number(filters.sessionId);
-  }
-
-  const termWhere = {};
-  if (filters.term) {
-    termWhere.term = Array.isArray(filters.term) ? { [Op.in]: filters.term } : filters.term;
-  }
-
-  return scoped(model.examinationSessionEligibilityModel).findAll({
-    where: eligibilityWhere,
-    attributes: [
-      "status",
-      [fn("COUNT", col("examination_session_eligibility_id")), "count"],
-    ],
-    include: [
-      {
-        model: model.studentModel,
-        as: "student",
-        required: true,
-        where: studentWhere,
-        attributes: [],
-        include: [
-          {
-            model: model.classSectionTermModel,
-            as: "studentClassSectionTerm",
-            required: !!filters.term,
-            where: Object.keys(termWhere).length ? termWhere : undefined,
-            attributes: [],
-          },
-        ],
-      },
-    ],
-    group: ["status"],
-    raw: true,
-    transaction,
-  });
 }

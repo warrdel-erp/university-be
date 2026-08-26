@@ -3,6 +3,10 @@ import { z } from "zod";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
 import * as studentHallTicketController from "../controllers/studentHallTicketController.js";
+import {
+  ELIGIBILITY_STATUS_LABELS,
+  HALL_TICKET_REVIEW_FILTERS,
+} from "../constant.js";
 
 const router = Router();
 
@@ -24,7 +28,7 @@ const qrQuerySchema = z.object({
     qr: z.string().min(1, "qr is required")
 });
 
-const reviewFilterEnum = z.enum(["REGISTRATION_PENDING", "PHOTOGRAPH_PENDING", "INVOICE_PENDING", "ATTENDANCE_PENDING"]);
+const reviewFilterEnum = z.enum(HALL_TICKET_REVIEW_FILTERS);
 
 const reviewFilterStudentsSchema = z.object({
     examinationSessionId: z.coerce.number({ required_error: "examinationSessionId is required" }),
@@ -54,7 +58,11 @@ const reviewFilterStudentsSchema = z.object({
         z.array(reviewFilterEnum).optional()
     ),
     page: z.coerce.number().int().min(1).optional().default(1),
-    limit: z.coerce.number().int().min(1).optional().default(10)
+    limit: z.coerce.number().int().min(1).optional().default(10),
+    search: z.preprocess(
+        (val) => (val === "" || val === null ? undefined : val),
+        z.string().optional()
+    ),
 });
 
 /** Filters + optional `page` / `limit` (limit defaults 1000, clamped 10–1000 per page). */
@@ -111,7 +119,7 @@ const sessionStudentsQuerySchema = z.object({
             if (Array.isArray(val)) return val.filter(Boolean);
             return String(val).split(",").map(v => v.trim()).filter(Boolean);
         },
-        z.array(z.enum(["Ready", "Review", "Approved", "Blocked"])).optional()
+        z.array(z.enum(ELIGIBILITY_STATUS_LABELS)).optional()
     ),
     search: z.preprocess(
         (val) => (val === "" || val === null ? undefined : val),

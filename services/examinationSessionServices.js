@@ -1,11 +1,27 @@
 import { Op } from "sequelize";
 import sequelize from "../database/sequelizeConfig.js";
 import * as examinationSessionRepository from "../repository/examinationSessionRepository.js";
-import * as examScheduleRepository from "../repository/examScheduleRepository.js";
 import * as studentHallTicketRepository from "../repository/studentHallTicketRepository.js";
 import * as examinationSessionEligibilityServices from "./examinationSessionEligibilityServices.js";
 import * as examinationSessionEligibilityRepo from "../repository/examinationSessionEligibilityRepository.js";
-import { buildScope, scoped } from "../utility/scoped.js";
+import { scoped } from "../utility/scoped.js";
+import {
+  countWholeTermStudentsByClassSectionTermIds,
+  getStudentCountMapByGroups,
+  lookupStudentCount,
+} from "../utility/studentCount.js";
+import {
+  capacityMapFromRows,
+  deriveScheduleRoomFlags,
+} from "../utility/roomCapacity.js";
+import {
+  EXAMINATION_SESSION_STATUS,
+  EXAM_SCHEDULE_FILTER_STATUS,
+  QUESTION_STATUS,
+  ELIGIBILITY_STATUS,
+  ELIGIBILITY_STATUS_LABEL,
+  HALL_TICKET_STUDENT_QUERY_PURPOSE,
+} from "../constant.js";
 import * as model from "../models/index.js";
 
 function createBadRequestError(message) {
@@ -13,6 +29,80 @@ function createBadRequestError(message) {
   error.statusCode = 400;
   return error;
 }
+
+function termGroupKey(courseId, sessionId, term) {
+  return `${Number(courseId)}_${Number(sessionId)}_${Number(term)}`;
+}
+
+function getTermGroupFromSessionTerm(sessionTerm) {
+  const cst = sessionTerm.classSectionTerm;
+  const section = cst.classSection;
+  return {
+    classSectionTermId: Number(cst.classSectionTermId),
+    term: Number(cst.term),
+    courseId: Number(section.courseId),
+    sessionId: Number(section.sessionId),
+    section: section.section,
+  };
+}
+
+/**
+ * Block unmapping when it would remove the last session link for a
+ * course+session+term that already has exam schedules.
+ */
+async function assertTermsCanBeUnmapped(
+  examinationSessionId,
+  termsBeingRemoved,
+  remainingClassSectionTermIds,
+  options = {},
+) {
+  if (!termsBeingRemoved.length) return;
+
+  const remainingTerms =
+    await examinationSessionRepository.findClassSectionTermsByIdsWithSection(
+      remainingClassSectionTermIds,
+      options,
+    );
+
+  const remainingGroups = new Set();
+  for (const cst of remainingTerms) {
+    remainingGroups.add(
+      termGroupKey(
+        cst.classSection.courseId,
+        cst.classSection.sessionId,
+        cst.term,
+      ),
+    );
+  }
+
+  const checkedGroups = new Set();
+  for (const sessionTerm of termsBeingRemoved) {
+    const group = getTermGroupFromSessionTerm(sessionTerm);
+    const key = termGroupKey(group.courseId, group.sessionId, group.term);
+    if (checkedGroups.has(key)) continue;
+    checkedGroups.add(key);
+
+    if (remainingGroups.has(key)) continue;
+
+    const hasSchedules =
+      await examinationSessionRepository.hasExamSchedulesForCourseSessionTerm(
+        examinationSessionId,
+        {
+          courseId: group.courseId,
+          sessionId: group.sessionId,
+          term: group.term,
+        },
+        options,
+      );
+
+    if (hasSchedules) {
+      throw createBadRequestError(
+        `Cannot unmap term ${group.term}: exam schedule(s) already exist for subjects in this term.`,
+      );
+    }
+  }
+}
+
 
 function uniqueValues(values) {
   return [
@@ -93,44 +183,10 @@ async function buildSessionSummary(sessionRecord, options = {}) {
       ).length;
     }
 
-    const mapperStudentRows = await model.classStudentMapperModel.findAll({
-      attributes: ["studentId"],
-      where: {
-        classSectionTermId: { [Op.in]: classSectionTermIds },
-        ...buildScope(model.classStudentMapperModel),
-      },
-      raw: true,
-      transaction: options.transaction,
-    });
-    const mapperStudentIds = mapperStudentRows.map((r) => r.studentId);
-
-    const directStudentRows = await scoped(model.studentModel).findAll({
-      attributes: ["studentId"],
-      where: {
-        classSectionTermId: { [Op.in]: classSectionTermIds },
-      },
-      raw: true,
-      transaction: options.transaction,
-    });
-    const directStudentIds = directStudentRows.map((r) => r.studentId);
-
-    const historyStudentRows =
-      await model.studentClassSectionsHistoryModel.findAll({
-        attributes: ["studentId"],
-        where: {
-          classSectionTermId: { [Op.in]: classSectionTermIds },
-        },
-        raw: true,
-        transaction: options.transaction,
-      });
-    const historyStudentIds = historyStudentRows.map((r) => r.studentId);
-
-    const allStudentIds = new Set([
-      ...mapperStudentIds,
-      ...directStudentIds,
-      ...historyStudentIds,
-    ]);
-    totalStudents = allStudentIds.size;
+    totalStudents = await countWholeTermStudentsByClassSectionTermIds(
+      classSectionTermIds,
+      options,
+    );
   }
 
   return {
@@ -171,44 +227,80 @@ async function initializeEligibilityRecords(
   defaultAcademicYearId,
   transaction,
 ) {
+  const session =
+    await examinationSessionRepository.getExaminationSessionById(
+      examinationSessionId,
+      { transaction },
+    );
+  if (!session) return;
+
+  const academicYearId = Number(
+    defaultAcademicYearId != null
+      ? defaultAcademicYearId
+      : session.academicYearId,
+  );
+  if (!academicYearId) return;
+
   const rawStudentsList =
     await studentHallTicketRepository.getStudentsByExaminationSessionId(
       examinationSessionId,
-      {},
+      { purpose: HALL_TICKET_STUDENT_QUERY_PURPOSE.ELIGIBILITY_SYNC },
       transaction,
+    );
+  if (!rawStudentsList.length) return;
+
+  const existingMap =
+    await examinationSessionEligibilityRepo.getEligibilityStatusesMap(
+      examinationSessionId,
+      { transaction },
     );
 
   const eligibilityRecords = [];
   const seenStudentIds = new Set();
 
   for (const raw of rawStudentsList) {
-    if (seenStudentIds.has(raw.student.studentId)) continue;
-    seenStudentIds.add(raw.student.studentId);
+    const student = raw.student;
+    const studentId = Number(student.studentId);
+    if (seenStudentIds.has(studentId) || existingMap.has(studentId)) continue;
+    seenStudentIds.add(studentId);
 
-    const calculated =
-      examinationSessionEligibilityServices.calculateStudentEligibility(raw);
-    const initialStatus =
-      calculated.eligibilityStatus === "Ready" ? "READY" : "REVIEW";
+    let initialStatus = ELIGIBILITY_STATUS.REVIEW;
+    let reviewReason = null;
+    try {
+      const calculated =
+        examinationSessionEligibilityServices.calculateStudentEligibility(raw);
+      if (calculated.eligibilityStatus === ELIGIBILITY_STATUS_LABEL.READY) {
+        initialStatus = ELIGIBILITY_STATUS.READY;
+      } else {
+        reviewReason = calculated.reasonText;
+        if (
+          !reviewReason &&
+          calculated.reviewReasons &&
+          calculated.reviewReasons.length > 0
+        ) {
+          reviewReason = calculated.reviewReasons[0].message;
+        }
+      }
+    } catch (_error) {
+      initialStatus = ELIGIBILITY_STATUS.REVIEW;
+      reviewReason = null;
+    }
 
     eligibilityRecords.push({
-      universityId: raw.student.universityId,
-      instituteId: raw.student.instituteId,
-      academicYearId:
-        raw.examinationSession?.academicYearId ?? defaultAcademicYearId,
-      studentId: raw.student.studentId,
-      examinationSessionId: examinationSessionId,
+      universityId: student.universityId,
+      instituteId: student.instituteId,
+      academicYearId,
+      studentId,
+      examinationSessionId: Number(examinationSessionId),
       status: initialStatus,
-      reviewReason:
-        initialStatus !== "READY" ? calculated.reviewReasons[0]?.message : null,
+      reviewReason,
     });
   }
 
-  if (eligibilityRecords.length > 0) {
-    await examinationSessionEligibilityRepo.bulkCreateRecords(
-      eligibilityRecords,
-      { transaction },
-    );
-  }
+  await examinationSessionEligibilityRepo.bulkCreateRecords(
+    eligibilityRecords,
+    { transaction },
+  );
 }
 
 export async function createExaminationSession(sessionData, options = {}) {
@@ -217,9 +309,10 @@ export async function createExaminationSession(sessionData, options = {}) {
 
     if (mainData.assessmentTypeId) {
       if (Array.isArray(classSectionTerms) && classSectionTerms.length > 0) {
-        const newTermIds = classSectionTerms.map((t) =>
-          Number(t.classSectionTermId),
-        );
+        const newTermIds = [];
+        for (const term of classSectionTerms) {
+          newTermIds.push(Number(term.classSectionTermId));
+        }
         const existingOverlap =
           await examinationSessionRepository.findOverlapTermForAssessmentType(
             mainData.assessmentTypeId,
@@ -254,17 +347,21 @@ export async function createExaminationSession(sessionData, options = {}) {
       { ...options, transaction },
     );
 
-    if (Array.isArray(classSectionTerms) && classSectionTerms.length) {
-      const termsToCreate = classSectionTerms.map((term) => ({
-        ...term,
-        examinationSessionId: record.examinationSessionId,
-      }));
+    if (Array.isArray(classSectionTerms) && classSectionTerms.length > 0) {
+      const termsToCreate = [];
+      for (const term of classSectionTerms) {
+        termsToCreate.push({
+          classSectionTermId: Number(term.classSectionTermId),
+          examinationSessionId: record.examinationSessionId,
+          includeElectives: term.includeElectives,
+          remarks: term.remarks,
+        });
+      }
       await examinationSessionRepository.createExaminationSessionTerms(
         termsToCreate,
         { ...options, transaction },
       );
 
-      // Calculate initial eligibility for students in the created terms
       await initializeEligibilityRecords(
         record.examinationSessionId,
         mainData.academicYearId,
@@ -341,14 +438,14 @@ export async function updateExaminationSession(
     const sessionId = Number(id);
     const { classSectionTerms, ...mainUpdateData } = updateData;
 
+    const currentSession =
+      await examinationSessionRepository.getExaminationSessionById(sessionId, {
+        ...options,
+        transaction,
+      });
     const activeAssessmentTypeId =
       mainUpdateData.assessmentTypeId ||
-      (
-        await examinationSessionRepository.getExaminationSessionById(
-          sessionId,
-          { ...options, transaction },
-        )
-      )?.assessmentTypeId;
+      (currentSession ? currentSession.assessmentTypeId : null);
 
     if (activeAssessmentTypeId) {
       let targetTerms = classSectionTerms;
@@ -358,13 +455,17 @@ export async function updateExaminationSession(
             sessionId,
             { ...options, transaction },
           );
-        targetTerms = existingTerms.map((t) => ({
-          classSectionTermId: t.classSectionTermId,
-        }));
+        targetTerms = [];
+        for (const term of existingTerms) {
+          targetTerms.push({ classSectionTermId: term.classSectionTermId });
+        }
       }
 
       if (targetTerms.length > 0) {
-        const termIds = targetTerms.map((t) => Number(t.classSectionTermId));
+        const termIds = [];
+        for (const term of targetTerms) {
+          termIds.push(Number(term.classSectionTermId));
+        }
         const existingOverlap =
           await examinationSessionRepository.findOverlapTermForAssessmentTypeExcludingSession(
             activeAssessmentTypeId,
@@ -405,27 +506,71 @@ export async function updateExaminationSession(
         ...options,
         transaction,
       });
-      await examinationSessionRepository.deleteExaminationSessionTermsBySessionId(
+
+      const existingTerms =
+        await examinationSessionRepository.findExaminationSessionTermsWithSection(
+          sessionId,
+          { ...options, transaction },
+        );
+
+      const newClassSectionTermIds = [];
+      for (const term of classSectionTerms) {
+        newClassSectionTermIds.push(Number(term.classSectionTermId));
+      }
+      const newIdSet = new Set(newClassSectionTermIds);
+
+      const existingIdSet = new Set();
+      const termsBeingRemoved = [];
+      const removedClassSectionTermIds = [];
+      for (const existing of existingTerms) {
+        const cstId = Number(existing.classSectionTermId);
+        existingIdSet.add(cstId);
+        if (!newIdSet.has(cstId)) {
+          termsBeingRemoved.push(existing);
+          removedClassSectionTermIds.push(cstId);
+        }
+      }
+
+      await assertTermsCanBeUnmapped(
         sessionId,
+        termsBeingRemoved,
+        newClassSectionTermIds,
         { ...options, transaction },
       );
 
-      if (classSectionTerms.length) {
-        const termsToCreate = classSectionTerms.map((term) => ({
-          ...term,
+      // Bulk delete only removed mappings; bulk create only newly added ones.
+      if (removedClassSectionTermIds.length > 0) {
+        await examinationSessionRepository.deleteExaminationSessionTermsByClassSectionTermIds(
+          sessionId,
+          removedClassSectionTermIds,
+          { ...options, transaction },
+        );
+      }
+
+      const termsToCreate = [];
+      for (const term of classSectionTerms) {
+        const cstId = Number(term.classSectionTermId);
+        if (existingIdSet.has(cstId)) continue;
+        termsToCreate.push({
+          classSectionTermId: cstId,
           examinationSessionId: sessionId,
-        }));
+          includeElectives: term.includeElectives,
+          remarks: term.remarks,
+        });
+      }
+      if (termsToCreate.length > 0) {
         await examinationSessionRepository.createExaminationSessionTerms(
           termsToCreate,
           { ...options, transaction },
         );
-        await initializeEligibilityRecords(
-          sessionId,
-          mainUpdateData.academicYearId,
-          transaction,
-        );
       }
     }
+
+    await initializeEligibilityRecords(
+      sessionId,
+      mainUpdateData.academicYearId,
+      transaction,
+    );
 
     return getExaminationSessionById(sessionId, { ...options, transaction });
   });
@@ -482,6 +627,28 @@ export async function deleteExaminationSessionTerm(
     if (!existing) {
       return null;
     }
+
+    const remainingIds = [];
+    const allTerms =
+      await examinationSessionRepository.findExaminationSessionTermsWithSection(
+        existing.examinationSessionId,
+        { ...options, transaction },
+      );
+    for (const term of allTerms) {
+      if (
+        Number(term.examinationSessionTermId) !==
+        Number(examinationSessionTermId)
+      ) {
+        remainingIds.push(Number(term.classSectionTermId));
+      }
+    }
+
+    await assertTermsCanBeUnmapped(
+      existing.examinationSessionId,
+      [existing],
+      remainingIds,
+      { ...options, transaction },
+    );
 
     await examinationSessionRepository.deleteExaminationSessionTerm(
       examinationSessionTermId,
@@ -856,12 +1023,10 @@ export async function getExaminationStructure(
 }
 
 export async function getMappedSubjectsBySessionAndTermNeed(params, options = {}) {
-  // Force isExamScheduled to true to only fetch scheduled exams
-  const updatedParams = {
-    ...params,
-    isExamScheduled: true
-  };
-  return await getMappedSubjectsBySessionAndTerm(updatedParams, options);
+  return getMappedSubjectsBySessionAndTerm(
+    { ...params, isExamScheduled: true },
+    options,
+  );
 }
 
 export async function getMappedSubjectsBySessionAndTerm(
@@ -877,33 +1042,41 @@ export async function getMappedSubjectsBySessionAndTerm(
   options = {},
 ) {
   const parsedExaminationSessionId = Number(examinationSessionId);
+  const skipTeacherAndPaper = options.skipTeacherAndPaperEnrichment === true;
+  const needsSchedulingOnly =
+    filterStatus === EXAM_SCHEDULE_FILTER_STATUS.NEEDS_SCHEDULING;
 
-  // Group schedules query filters using selections combinations
   let filterCombinations = [];
   let filterCourseIds = [];
   let filterSessionIds = [];
 
   if (selections && selections.length > 0) {
-    const mappingIds = selections.map(s => s.courseSessionMappingId);
-    const dbMappings = await examinationSessionRepository.findSessionCourseMappingsByIds(mappingIds, options);
-    const dbMappingsMap = new Map(dbMappings.map(m => [m.sessionCourseMappingId, m]));
+    const mappingIds = [];
+    for (const sel of selections) {
+      mappingIds.push(sel.courseSessionMappingId);
+    }
+    const dbMappings =
+      await examinationSessionRepository.findSessionCourseMappingsByIds(
+        mappingIds,
+        options,
+      );
+    const dbMappingsMap = new Map();
+    for (const mapping of dbMappings) {
+      dbMappingsMap.set(mapping.sessionCourseMappingId, mapping);
+    }
 
     for (const sel of selections) {
       const mapping = dbMappingsMap.get(sel.courseSessionMappingId);
-      if (mapping) {
-        filterCombinations.push({
-          courseId: mapping.courseId,
-          sessionId: mapping.sessionId,
-          terms: sel.terms || []
-        });
-        filterCourseIds.push(mapping.courseId);
-        filterSessionIds.push(mapping.sessionId);
-      }
+      if (!mapping) continue;
+      filterCombinations.push({
+        courseId: mapping.courseId,
+        sessionId: mapping.sessionId,
+        terms: sel.terms || [],
+      });
+      filterCourseIds.push(mapping.courseId);
+      filterSessionIds.push(mapping.sessionId);
     }
   }
-
-  const targetCourseId = filterCourseIds.length > 0 ? filterCourseIds : null;
-  const targetSessionId = filterSessionIds.length > 0 ? filterSessionIds : null;
 
   const examinationSession =
     await examinationSessionRepository.findExaminationSessionAssessmentTypeById(
@@ -921,7 +1094,7 @@ export async function getMappedSubjectsBySessionAndTerm(
     teacherAssignmentStatus !== undefined ||
     isModerationActive !== undefined;
 
-  if (hasPublishedOnlyFilter && examinationSession.status !== "Published") {
+  if (hasPublishedOnlyFilter && examinationSession.status !== EXAMINATION_SESSION_STATUS.PUBLISHED) {
     throw createBadRequestError(
       "Exam planning filters are available only for a published examination session.",
     );
@@ -936,11 +1109,11 @@ export async function getMappedSubjectsBySessionAndTerm(
   if (!assessmentPlanIds.length) return [];
 
   const mappingWhere = { assessmentPlanId: { [Op.in]: assessmentPlanIds } };
-  if (targetCourseId !== null && targetCourseId.length > 0) {
-    mappingWhere.courseId = { [Op.in]: targetCourseId };
+  if (filterCourseIds.length > 0) {
+    mappingWhere.courseId = { [Op.in]: filterCourseIds };
   }
-  if (targetSessionId !== null && targetSessionId.length > 0) {
-    mappingWhere.sessionId = { [Op.in]: targetSessionId };
+  if (filterSessionIds.length > 0) {
+    mappingWhere.sessionId = { [Op.in]: filterSessionIds };
   }
 
   const subjectMappings =
@@ -950,11 +1123,12 @@ export async function getMappedSubjectsBySessionAndTerm(
     );
   if (!subjectMappings.length) return [];
 
-  const uniqueSubjectIds = uniqueValues(
-    subjectMappings.map((mapping) => mapping.subjectId),
-  );
+  const uniqueSubjectIds = [];
   const subjectSessionMap = new Map();
   for (const mapping of subjectMappings) {
+    if (!subjectSessionMap.has(mapping.subjectId)) {
+      uniqueSubjectIds.push(mapping.subjectId);
+    }
     subjectSessionMap.set(mapping.subjectId, mapping.sessionId);
   }
 
@@ -962,12 +1136,14 @@ export async function getMappedSubjectsBySessionAndTerm(
     subjectId: { [Op.in]: uniqueSubjectIds },
     isActive: true,
   };
-
   if (filterCombinations.length > 0) {
-    const orSubjects = filterCombinations.map(comb => ({
-      courseId: comb.courseId,
-      term: { [Op.in]: comb.terms }
-    }));
+    const orSubjects = [];
+    for (const comb of filterCombinations) {
+      orSubjects.push({
+        courseId: comb.courseId,
+        term: { [Op.in]: comb.terms },
+      });
+    }
     subjectWhere[Op.or] = orSubjects;
   }
 
@@ -977,134 +1153,159 @@ export async function getMappedSubjectsBySessionAndTerm(
   );
   if (!mappedSubjects.length) return [];
 
-  const courseSessionMapIds = uniqueValues(mappedSubjects.map(sub => sub.courseId));
-  const courseSessionMapSessionIds = uniqueValues(mappedSubjects.map(sub => subjectSessionMap.get(sub.subjectId)));
-
-  let courseSessionMappingMap = new Map();
-  if (courseSessionMapIds.length > 0 && courseSessionMapSessionIds.length > 0) {
-    const dbMappings = await examinationSessionRepository.findSessionCourseMappingsByCoursesAndSessions(
-      courseSessionMapIds,
-      courseSessionMapSessionIds,
-      options
-    );
-    courseSessionMappingMap = new Map(
-      dbMappings.map(m => {
-        const plain = m.get({ plain: true });
-        return [
-          `${plain.courseId}_${plain.sessionId}`,
-          {
-            sessionCourseMappingId: plain.sessionCourseMappingId,
-            courseName: plain.courses?.courseName || null,
-            sessionName: plain.session?.sessionName || null,
-          }
-        ];
-      })
-    );
+  const subjectIds = [];
+  const courseSessionMapIds = [];
+  const courseSessionMapSessionIds = [];
+  for (const sub of mappedSubjects) {
+    subjectIds.push(sub.subjectId);
+    courseSessionMapIds.push(sub.courseId);
+    const sid = subjectSessionMap.get(sub.subjectId);
+    if (sid != null) courseSessionMapSessionIds.push(sid);
   }
 
-  const allSchedules =
-    await examinationSessionRepository.findExamSchedulesBySubjects(
+  const [allSchedules, dbMappings] = await Promise.all([
+    examinationSessionRepository.findExamSchedulesBySubjects(
       parsedExaminationSessionId,
-      mappedSubjects.map((sub) => sub.subjectId),
+      subjectIds,
       { ...options, date },
-    );
+    ),
+    examinationSessionRepository.findSessionCourseMappingsByCoursesAndSessions(
+      uniqueValues(courseSessionMapIds),
+      uniqueValues(courseSessionMapSessionIds),
+      options,
+    ),
+  ]);
+
+  const courseSessionMappingMap = new Map();
+  for (const m of dbMappings) {
+    const plain = m.get ? m.get({ plain: true }) : m;
+    courseSessionMappingMap.set(`${plain.courseId}_${plain.sessionId}`, {
+      sessionCourseMappingId: plain.sessionCourseMappingId,
+      courseName: plain.courses ? plain.courses.courseName : null,
+      sessionName: plain.session ? plain.session.sessionName : null,
+    });
+  }
 
   const scheduleBySubjectId = new Map();
   const examScheduleIds = [];
-  const sessionsForCounts = new Set();
-  const coursesForCounts = new Set();
-  const termsForCounts = new Set();
-  const acedmicYearsForCounts = new Set();
+  const studentGroups = [];
 
   for (const sched of allSchedules) {
-    if (!scheduleBySubjectId.has(sched.subjectId)) {
-      scheduleBySubjectId.set(sched.subjectId, toPlain(sched));
-      examScheduleIds.push(sched.examScheduleId);
+    if (scheduleBySubjectId.has(sched.subjectId)) continue;
+    const plain = toPlain(sched);
+    scheduleBySubjectId.set(sched.subjectId, plain);
+    examScheduleIds.push(sched.examScheduleId);
+    studentGroups.push({
+      sessionId: plain.sessionId,
+      courseId: plain.subjectSchedule ? plain.subjectSchedule.courseId : null,
+      term: plain.term,
+      academicYearId: plain.academicYearId,
+    });
+  }
 
-      if (sched.sessionId) sessionsForCounts.add(sched.sessionId);
-      if (sched.subjectSchedule?.courseId)
-        coursesForCounts.add(sched.subjectSchedule.courseId);
-      if (sched.term) termsForCounts.add(sched.term);
-      if (sched.academicYearId) acedmicYearsForCounts.add(sched.academicYearId);
+  if (needsSchedulingOnly) {
+    const result = [];
+    for (const subject of mappedSubjects) {
+      if (scheduleBySubjectId.has(subject.subjectId)) continue;
+
+      const subjectSessionId = subjectSessionMap.get(subject.subjectId) || null;
+      const mappingInfo = subjectSessionId
+        ? courseSessionMappingMap.get(`${subject.courseId}_${subjectSessionId}`)
+        : null;
+
+      result.push({
+        subjectId: subject.subjectId,
+        subjectName: subject.subjectName,
+        subjectCode: subject.subjectCode,
+        term: subject.term,
+        termType: subject.course ? subject.course.termType : null,
+        courseId: subject.courseId,
+        courseName: mappingInfo ? mappingInfo.courseName : null,
+        sessionId: subjectSessionId,
+        sessionName: mappingInfo ? mappingInfo.sessionName : null,
+        courseSessionMappingId: mappingInfo
+          ? mappingInfo.sessionCourseMappingId
+          : null,
+        isExamScheduled: false,
+        examScheduleId: null,
+        needsScheduling: true,
+        roomPending: false,
+        needsRoom: false,
+        ready: false,
+        published: false,
+        deadline: null,
+        examDetails: null,
+        teacherAssignment: [],
+      });
     }
+    return result;
   }
 
   const roomCapacityByScheduleId = new Map();
   const teacherAssignmentByScheduleId = new Map();
   const questionPapersByScheduleId = new Map();
-  let counts = [];
+  let studentCountMap = new Map();
 
   if (examScheduleIds.length > 0) {
-    const promises = [
+    const enrichmentPromises = [
       examinationSessionRepository.findRoomCapacitiesByExamSchedules(
         examScheduleIds,
         options,
       ),
-      examinationSessionRepository.findTeacherAssignmentsByExamSchedules(
-        examScheduleIds,
-        options,
-      ),
-      examinationSessionRepository.findQuestionPapersByExamSchedules(
-        examScheduleIds,
-        options,
-      ),
+      getStudentCountMapByGroups(studentGroups, options),
     ];
 
-    if (
-      sessionsForCounts.size > 0 &&
-      coursesForCounts.size > 0 &&
-      termsForCounts.size > 0
-    ) {
-      promises.push(
-        examScheduleRepository.getStudentCountsByGroups(
-          Array.from(sessionsForCounts),
-          Array.from(coursesForCounts),
-          Array.from(termsForCounts),
-          Array.from(acedmicYearsForCounts),
+    if (!skipTeacherAndPaper) {
+      enrichmentPromises.push(
+        examinationSessionRepository.findTeacherAssignmentsByExamSchedules(
+          examScheduleIds,
+          options,
+        ),
+        examinationSessionRepository.findQuestionPapersByExamSchedules(
+          examScheduleIds,
+          options,
         ),
       );
-    } else {
-      promises.push(Promise.resolve([]));
     }
 
-    const [roomCapacities, teacherAssignments, questionPapers, resolvedCounts] =
-      await Promise.all(promises);
-    counts = resolvedCounts || [];
+    const enrichmentResults = await Promise.all(enrichmentPromises);
+    const roomCapacities = enrichmentResults[0];
+    studentCountMap = enrichmentResults[1];
+    const teacherAssignments = skipTeacherAndPaper ? [] : enrichmentResults[2];
+    const questionPapers = skipTeacherAndPaper ? [] : enrichmentResults[3];
 
-    for (const rc of roomCapacities) {
-      const current = roomCapacityByScheduleId.get(rc.examScheduleId) || 0;
-      roomCapacityByScheduleId.set(
-        rc.examScheduleId,
-        current + (rc.capacity || 0),
-      );
+    const capacityMap = capacityMapFromRows(roomCapacities);
+    for (const [scheduleId, capacity] of capacityMap) {
+      roomCapacityByScheduleId.set(scheduleId, capacity);
     }
 
     for (const qp of questionPapers) {
-      if (!questionPapersByScheduleId.has(qp.examScheduleId)) {
-        questionPapersByScheduleId.set(qp.examScheduleId, []);
-      }
-      questionPapersByScheduleId.get(qp.examScheduleId).push(qp);
+      const list = questionPapersByScheduleId.get(qp.examScheduleId) || [];
+      list.push(qp);
+      questionPapersByScheduleId.set(qp.examScheduleId, list);
     }
 
     for (const ta of teacherAssignments) {
-      if (!teacherAssignmentByScheduleId.has(ta.examScheduleId)) {
-        teacherAssignmentByScheduleId.set(ta.examScheduleId, []);
-      }
-      teacherAssignmentByScheduleId.get(ta.examScheduleId).push({
+      const list = teacherAssignmentByScheduleId.get(ta.examScheduleId) || [];
+      list.push({
         teacherExamAssignmentId: ta.teacherExamAssignmentId,
-        userId: ta.userId || ta.teacherEmployee?.userId,
+        userId:
+          ta.userId ||
+          (ta.teacherEmployee ? ta.teacherEmployee.userId : null),
         assignedAt: ta.createdAt,
         deadline: ta.deadline,
-        user: ta.teacherEmployee?.user
-          ? {
-              userId: ta.teacherEmployee.user.userId,
-              userName: ta.teacherEmployee.user.userName,
-              email: ta.teacherEmployee.user.email,
-              phone: ta.teacherEmployee.user.phone,
-              employeeCode: ta.teacherEmployee.employeeCode,
-            }
-          : null,
+        user:
+          ta.teacherEmployee && ta.teacherEmployee.user
+            ? {
+                userId: ta.teacherEmployee.user.userId,
+                userName: ta.teacherEmployee.user.userName,
+                email: ta.teacherEmployee.user.email,
+                phone: ta.teacherEmployee.user.phone,
+                employeeCode: ta.teacherEmployee.employeeCode,
+              }
+            : null,
       });
+      teacherAssignmentByScheduleId.set(ta.examScheduleId, list);
     }
   }
 
@@ -1117,65 +1318,71 @@ export async function getMappedSubjectsBySessionAndTerm(
     if (isExamScheduled === false && hasSchedule) continue;
 
     let schedInfo = null;
-    let teacherAssignment = null;
 
     if (hasSchedule) {
       const plainSched = scheduleBySubjectId.get(subject.subjectId);
-      teacherAssignment =
+      let teacherAssignment =
         teacherAssignmentByScheduleId.get(plainSched.examScheduleId) || [];
 
-      // Legacy checks removed.
-
       const roomCapacity =
-        roomCapacityByScheduleId.get(plainSched.examScheduleId) || 0;
-      const matchedCountRow = counts.find(
-        (c) =>
-          Number(c.sessionId) === Number(plainSched.sessionId) &&
-          Number(c.courseId) === Number(plainSched.subjectSchedule?.courseId) &&
-          Number(c.term) === Number(plainSched.term) &&
-          Number(c.academicYearId) === Number(plainSched.academicYearId),
-      );
-      const studentCount = matchedCountRow
-        ? parseInt(matchedCountRow.studentCount, 10) || 0
-        : 0;
-      const hasAssignedRoom = roomCapacity > 0;
+        roomCapacityByScheduleId.get(Number(plainSched.examScheduleId)) || 0;
+      const studentCount = lookupStudentCount(studentCountMap, {
+        sessionId: plainSched.sessionId,
+        courseId: plainSched.subjectSchedule
+          ? plainSched.subjectSchedule.courseId
+          : null,
+        term: plainSched.term,
+        academicYearId: plainSched.academicYearId,
+      });
+      const roomFlags = deriveScheduleRoomFlags({
+        roomCapacity,
+        studentCount,
+        published: plainSched.published || false,
+        hasSchedule: true,
+        requireUnpublishedForReady: false,
+      });
 
       let moderationActive = false;
       let isApproved = false;
       const questionPapers =
         questionPapersByScheduleId.get(plainSched.examScheduleId) || [];
 
-      if (teacherAssignment.length > 0) {
-        teacherAssignment = teacherAssignment.map((ta) => {
-          const matchingQP = questionPapers.find(
-            (qp) => qp.createdBy === ta.userId,
-          );
+      if (!skipTeacherAndPaper && teacherAssignment.length > 0) {
+        const enrichedTeachers = [];
+        for (const ta of teacherAssignment) {
+          let matchingQP = null;
+          for (const qp of questionPapers) {
+            if (qp.createdBy === ta.userId) {
+              matchingQP = qp;
+              break;
+            }
+          }
           if (matchingQP) {
             moderationActive = true;
-            if (matchingQP.status === "Approved") {
+            if (matchingQP.status === QUESTION_STATUS.APPROVED) {
               isApproved = true;
             }
-            return {
-              ...ta,
-              questionPaper: {
-                id: matchingQP.id,
-                status: matchingQP.status,
-                finalApproval: matchingQP.finalApproval,
-                createdBy: matchingQP.createdBy,
-                createdAt: matchingQP.createdAt,
-                updatedAt: matchingQP.updatedAt,
-                ...(matchingQP.status === "Approved" && {
-                  updatedBy: matchingQP.updatedBy ?? null,
-                  updatedByName: matchingQP.updater?.userName ?? null,
-                }),
-              },
+            const qpPayload = {
+              id: matchingQP.id,
+              status: matchingQP.status,
+              finalApproval: matchingQP.finalApproval,
+              createdBy: matchingQP.createdBy,
+              createdAt: matchingQP.createdAt,
+              updatedAt: matchingQP.updatedAt,
             };
+            if (matchingQP.status === "Approved") {
+              qpPayload.updatedBy = matchingQP.updatedBy ?? null;
+              qpPayload.updatedByName = matchingQP.updater
+                ? matchingQP.updater.userName
+                : matchingQP["updater.userName"] ?? null;
+            }
+            enrichedTeachers.push({ ...ta, questionPaper: qpPayload });
+          } else {
+            enrichedTeachers.push({ ...ta, questionPaper: null });
           }
-          return { ...ta, questionPaper: null };
-        });
+        }
+        teacherAssignment = enrichedTeachers;
       }
-
-      // We no longer continue/skip here. The computed flags will be used to filter the final list.
 
       schedInfo = {
         examScheduleId: plainSched.examScheduleId,
@@ -1186,10 +1393,10 @@ export async function getMappedSubjectsBySessionAndTerm(
         type: plainSched.type,
         examinationSessionSlotId: plainSched.examinationSessionSlotId,
         examinationSessionSlot: plainSched.examinationSessionSlot || null,
-        roomCapacity,
+        roomCapacity: roomFlags.roomCapacity,
         studentCount,
-        needsRoom: roomCapacity < studentCount,
-        confirmed: hasAssignedRoom && roomCapacity === studentCount,
+        needsRoom: roomFlags.roomCapacity < studentCount,
+        confirmed: roomFlags.confirmed,
         published: plainSched.published || false,
         teacherAssignment,
         isModerationActive: moderationActive,
@@ -1197,134 +1404,129 @@ export async function getMappedSubjectsBySessionAndTerm(
       };
     }
 
-    const hasAssignedRoom =
-      hasSchedule && schedInfo ? schedInfo.roomCapacity > 0 : false;
     const roomCapacity = hasSchedule && schedInfo ? schedInfo.roomCapacity : 0;
     const studentCount = hasSchedule && schedInfo ? schedInfo.studentCount : 0;
+    const published = schedInfo ? schedInfo.published : false;
+    const flags = deriveScheduleRoomFlags({
+      roomCapacity,
+      studentCount,
+      published,
+      hasSchedule,
+      requireUnpublishedForReady: false,
+    });
 
     const needsScheduling = !hasSchedule;
-    const roomPending = hasSchedule && (!hasAssignedRoom || roomCapacity < studentCount);
-    const needsRoom = false;
-    const ready = hasSchedule && roomCapacity >= studentCount;
-    const published = schedInfo ? schedInfo.published : false;
+    const roomPending = flags.roomPending;
+    const needsRoom = flags.needsRoom;
+    const ready = flags.ready;
 
     const subjectSessionId = subjectSessionMap.get(subject.subjectId) || null;
-    const mappingInfo = subjectSessionId ? courseSessionMappingMap.get(`${subject.courseId}_${subjectSessionId}`) : null;
-    const courseSessionMappingId = mappingInfo ? mappingInfo.sessionCourseMappingId : null;
-    const courseName = mappingInfo ? mappingInfo.courseName : null;
-    const sessionName = mappingInfo ? mappingInfo.sessionName : null;
+    const mappingInfo = subjectSessionId
+      ? courseSessionMappingMap.get(`${subject.courseId}_${subjectSessionId}`)
+      : null;
 
-    // Determine key-wise sections status:
-    // 1. notAssigned: no question papers generated by teacher (meaning no records in questionPaperModel)
-    // 2. assigned: teacher has generated/created a question paper, but it is not approved by teacher yet (status !== 'Approved')
-    // 3. moderationActive: paper is created by teacher, approved by teacher (status = Approved), but not final approved (finalApproval !== Approved)
-    // 4. approved: paper is fully approved (finalApproval === Approved)
     let isNotAssigned = false;
     let isAssigned = false;
     let isModerationActiveStatus = false;
     let isFullyApproved = false;
-
     let deadline = null;
-    if (hasSchedule) {
-      const qpList = questionPapersByScheduleId.get(schedInfo?.examScheduleId) || [];
-      const teacherList = schedInfo?.teacherAssignment || [];
-      
-      const deadlines = teacherList
-        .map((t) => t.deadline)
-        .filter((d) => d !== null && d !== undefined);
-      if (deadlines.length > 0) {
-        // Find nearest approaching deadline date
-        deadline = new Date(Math.min(...deadlines.map((d) => new Date(d))));
-      }
 
-      const hasFullyApprovedPaper = qpList.some(
-        (qp) => qp.finalApproval === "Approved" || qp.status === "Approved"
-      );
+    if (hasSchedule) {
+      const qpList =
+        questionPapersByScheduleId.get(schedInfo.examScheduleId) || [];
+      const teacherList = schedInfo.teacherAssignment || [];
+
+      let nearestDeadline = null;
+      for (const t of teacherList) {
+        if (t.deadline == null) continue;
+        const d = new Date(t.deadline);
+        if (nearestDeadline == null || d < nearestDeadline) {
+          nearestDeadline = d;
+        }
+      }
+      deadline = nearestDeadline;
+
+      let hasFullyApprovedPaper = false;
+      let hasModerationActivePaper = false;
+      for (const qp of qpList) {
+        if (qp.finalApproval === QUESTION_STATUS.APPROVED || qp.status === QUESTION_STATUS.APPROVED) {
+          hasFullyApprovedPaper = true;
+        }
+        if (qp.status === QUESTION_STATUS.APPROVED && qp.finalApproval !== QUESTION_STATUS.APPROVED) {
+          hasModerationActivePaper = true;
+        }
+      }
 
       if (hasFullyApprovedPaper) {
         isFullyApproved = true;
       } else if (teacherList.length === 0) {
         isNotAssigned = true;
+      } else if (hasModerationActivePaper) {
+        isModerationActiveStatus = true;
       } else {
-        const hasModerationActivePaper = qpList.some(
-          (qp) => qp.status === "Approved" && qp.finalApproval !== "Approved"
-        );
-
-        if (hasModerationActivePaper) {
-          isModerationActiveStatus = true;
-        } else {
-          isAssigned = true;
-        }
+        isAssigned = true;
       }
     }
 
-    let queryStatus = "needsScheduling";
+    let queryStatus = EXAM_SCHEDULE_FILTER_STATUS.NEEDS_SCHEDULING;
     if (hasSchedule) {
-      if (isFullyApproved) {
-        queryStatus = "approved";
-      } else if (isNotAssigned) {
-        queryStatus = "notAssigned";
-      } else if (isModerationActiveStatus) {
-        queryStatus = "moderationActive";
-      } else if (isAssigned) {
-        queryStatus = "assigned";
-      } else if (roomPending) {
-        queryStatus = "roomPending";
-      } else if (ready) {
-        queryStatus = "ready";
-      } else if (published) {
-        queryStatus = "published";
-      }
+      if (isFullyApproved) queryStatus = "approved";
+      else if (isNotAssigned) queryStatus = "notAssigned";
+      else if (isModerationActiveStatus) queryStatus = "moderationActive";
+      else if (isAssigned) queryStatus = "assigned";
+      else if (roomPending) queryStatus = EXAM_SCHEDULE_FILTER_STATUS.ROOM_PENDING;
+      else if (ready) queryStatus = EXAM_SCHEDULE_FILTER_STATUS.READY;
+      else if (published) queryStatus = EXAM_SCHEDULE_FILTER_STATUS.PUBLISHED;
     }
 
-
+    if (
+      filterStatus &&
+      filterStatus !== EXAM_SCHEDULE_FILTER_STATUS.ALL &&
+      queryStatus !== filterStatus
+    ) {
+      continue;
+    }
 
     finalResponse.push({
       subjectId: subject.subjectId,
       subjectName: subject.subjectName,
       subjectCode: subject.subjectCode,
       term: subject.term,
-      termType: subject.course?.termType || null,
+      termType: subject.course ? subject.course.termType : null,
       courseId: subject.courseId,
-      courseName,
+      courseName: mappingInfo ? mappingInfo.courseName : null,
       sessionId: subjectSessionId,
-      sessionName,
-      courseSessionMappingId,
+      sessionName: mappingInfo ? mappingInfo.sessionName : null,
+      courseSessionMappingId: mappingInfo
+        ? mappingInfo.sessionCourseMappingId
+        : null,
       isExamScheduled: hasSchedule,
-      examScheduleId: schedInfo?.examScheduleId || null,
+      examScheduleId: schedInfo ? schedInfo.examScheduleId : null,
       needsScheduling,
       roomPending,
       needsRoom,
       ready,
       published,
       deadline: deadline ? deadline.toISOString() : null,
-      examDetails: hasSchedule ? {
-        examDate: schedInfo.examDate,
-        examTime: schedInfo.examTime,
-        duration: schedInfo.duration,
-        maximumMarks: schedInfo.maximumMarks,
-        type: schedInfo.type,
-        examinationSessionSlot: schedInfo.examinationSessionSlot,
-        questionPapers: questionPapersByScheduleId.get(schedInfo.examScheduleId) || [],
-      } : null,
+      examDetails: hasSchedule
+        ? {
+            examDate: schedInfo.examDate,
+            examTime: schedInfo.examTime,
+            duration: schedInfo.duration,
+            maximumMarks: schedInfo.maximumMarks,
+            type: schedInfo.type,
+            examinationSessionSlot: schedInfo.examinationSessionSlot,
+            questionPapers:
+              questionPapersByScheduleId.get(schedInfo.examScheduleId) || [],
+          }
+        : null,
       teacherAssignment: hasSchedule ? schedInfo.teacherAssignment : [],
-      queryStatus,
     });
   }
 
-  let filteredResponse = finalResponse;
-
-  if (filterStatus && filterStatus !== "all") {
-    filteredResponse = finalResponse.filter(sub => sub.queryStatus === filterStatus);
-  }
-
-  // Remove helper queryStatus field from output
-  return filteredResponse.map(sub => {
-    const item = { ...sub };
-    delete item.queryStatus;
-    return item;
-  });
+  return finalResponse;
 }
+
 
 export async function getQuestionPaperSummary(
   examinationSessionId,
@@ -1481,24 +1683,23 @@ export async function publishExaminationSession(examinationSessionId, userId, op
     // Update session status to Published
     await examinationSessionRepository.updateExaminationSession(examinationSessionId, { status: "Published", updatedBy: userId }, { ...options, transaction });
 
-    // Fetch all mapped subjects to locate those in "Ready" status
     const mappedSubjects = await getMappedSubjectsBySessionAndTerm(
       { examinationSessionId },
-      { ...options, transaction }
+      { ...options, transaction, skipTeacherAndPaperEnrichment: true },
     );
 
-    // Identify examScheduleIds of those subjects that are "Ready"
-    const readyExamScheduleIds = mappedSubjects
-      .filter((sub) => sub.ready === true && sub.examScheduleId !== null)
-      .map((sub) => sub.examScheduleId);
+    const readyExamScheduleIds = [];
+    for (const sub of mappedSubjects) {
+      if (sub.ready === true && sub.examScheduleId !== null) {
+        readyExamScheduleIds.push(sub.examScheduleId);
+      }
+    }
 
     if (readyExamScheduleIds.length > 0) {
-      await model.examScheduleModel.update(
-        { published: true, updatedBy: userId },
-        {
-          where: { examScheduleId: { [Op.in]: readyExamScheduleIds } },
-          transaction,
-        }
+      await examinationSessionRepository.publishExamSchedulesByIds(
+        readyExamScheduleIds,
+        userId,
+        { ...options, transaction },
       );
     }
 
@@ -1515,13 +1716,15 @@ export async function getSessionSkuStats(examinationSessionId, options = {}) {
     throw new Error("Invalid examinationSessionId");
   }
 
-  // 1. Get total mapped subjects vs scheduled
   const mappedSubjects = await getMappedSubjectsBySessionAndTerm(
     { examinationSessionId: parsedSessionId },
-    options
+    { ...options, skipTeacherAndPaperEnrichment: true },
   );
   const totalSubjectsCount = mappedSubjects.length;
-  const scheduledSubjectsCount = mappedSubjects.filter(sub => sub.isExamScheduled === true).length;
+  let scheduledSubjectsCount = 0;
+  for (const sub of mappedSubjects) {
+    if (sub.isExamScheduled === true) scheduledSubjectsCount++;
+  }
 
   // 2. Get total question papers vs approved
   const schedules = await examinationSessionRepository.findSchedulesForSkuStats(parsedSessionId, options);

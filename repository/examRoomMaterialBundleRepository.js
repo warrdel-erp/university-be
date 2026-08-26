@@ -3,6 +3,57 @@ import { Op } from "sequelize";
 import sequelize from "../database/sequelizeConfig.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 import * as examinationSessionRepository from "./examinationSessionRepository.js";
+import { getSeatCountsByCapacityIds } from "../utility/roomCapacity.js";
+import { INVIGILATOR_ASSIGNMENT_INACTIVE_STATUSES } from "../constant.js";
+
+/** Resolve selections → schedule.sessionId + subject (courseId, term) filters. */
+async function applySelectionFilters(selections, scheduleWhere, subjectWhere, options = {}) {
+  if (!selections || selections.length === 0) return;
+
+  const mappingIds = [];
+  for (const sel of selections) {
+    mappingIds.push(sel.courseSessionMappingId);
+  }
+
+  const dbMappings =
+    await examinationSessionRepository.findSessionCourseMappingsByIds(
+      mappingIds,
+      options,
+    );
+  const dbMappingsMap = new Map();
+  for (const mapping of dbMappings) {
+    dbMappingsMap.set(mapping.sessionCourseMappingId, mapping);
+  }
+
+  const filterCombinations = [];
+  for (const sel of selections) {
+    const mapping = dbMappingsMap.get(sel.courseSessionMappingId);
+    if (!mapping) continue;
+    filterCombinations.push({
+      courseId: mapping.courseId,
+      sessionId: mapping.sessionId,
+      terms: sel.terms || [],
+    });
+  }
+  if (!filterCombinations.length) return;
+
+  const sessionIds = [];
+  const orSubjects = [];
+  for (const comb of filterCombinations) {
+    sessionIds.push(comb.sessionId);
+    orSubjects.push({
+      courseId: comb.courseId,
+      term: { [Op.in]: comb.terms },
+    });
+  }
+
+  const uniqueSessionIds = [...new Set(sessionIds)];
+  scheduleWhere.sessionId =
+    uniqueSessionIds.length === 1
+      ? uniqueSessionIds[0]
+      : { [Op.in]: uniqueSessionIds };
+  subjectWhere[Op.or] = orSubjects;
+}
 
 export async function getBundleList(filters, pagination) {
   const {
@@ -22,8 +73,9 @@ export async function getBundleList(filters, pagination) {
 
   const scheduleWhere = { examinationSessionId };
   if (examDate) scheduleWhere.examDate = examDate;
-  if (examinationSessionSlotId)
+  if (examinationSessionSlotId) {
     scheduleWhere.examinationSessionSlotId = examinationSessionSlotId;
+  }
 
   const subjectWhere = {};
   if (courseId) subjectWhere.courseId = courseId;
@@ -35,32 +87,7 @@ export async function getBundleList(filters, pagination) {
   }
 
   if (selections && selections.length > 0) {
-    const mappingIds = selections.map((s) => s.courseSessionMappingId);
-    const dbMappings = await examinationSessionRepository.findSessionCourseMappingsByIds(mappingIds);
-    const dbMappingsMap = new Map(dbMappings.map((m) => [m.sessionCourseMappingId, m]));
-
-    const filterCombinations = [];
-    for (const sel of selections) {
-      const mapping = dbMappingsMap.get(sel.courseSessionMappingId);
-      if (mapping) {
-        filterCombinations.push({
-          courseId: mapping.courseId,
-          sessionId: mapping.sessionId,
-          terms: sel.terms || [],
-        });
-      }
-    }
-
-    if (filterCombinations.length > 0) {
-      const sessionIds = [...new Set(filterCombinations.map((c) => c.sessionId))];
-      scheduleWhere.sessionId = sessionIds.length === 1 ? sessionIds[0] : { [Op.in]: sessionIds };
-
-      const subjectOrClauses = filterCombinations.map((comb) => ({
-        courseId: comb.courseId,
-        term: { [Op.in]: comb.terms },
-      }));
-      subjectWhere[Op.or] = subjectOrClauses;
-    }
+    await applySelectionFilters(selections, scheduleWhere, subjectWhere);
   } else {
     if (sessionId) scheduleWhere.sessionId = sessionId;
     if (term) scheduleWhere.term = term;
@@ -98,7 +125,7 @@ export async function getBundleList(filters, pagination) {
           {
             model: model.subjectModel,
             as: "subjectSchedule",
-            attributes: ["subjectId", "subjectName", "subjectCode", "course_id"],
+            attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
             where:
               Object.keys(subjectWhere).length > 0 ? subjectWhere : undefined,
             required: true,
@@ -240,7 +267,7 @@ export async function getBundleList(filters, pagination) {
   };
 }
 
-export async function getBundleById(examRoomMaterialBundleId) {
+export async function getBundleById(examRoomMaterialBundleId, options = {}) {
   return scoped(model.examRoomMaterialBundleModel).findOne({
     where: { examRoomMaterialBundleId },
     include: [
@@ -284,6 +311,7 @@ export async function getBundleById(examRoomMaterialBundleId) {
         attributes: ["userId", "userName"],
       },
     ],
+    transaction: options.transaction,
   });
 }
 
@@ -299,26 +327,85 @@ export async function findBundleByMapping(
   });
 }
 
+export async function findRoomCapacityByRoomDateSlot(
+  classRoomSectionId,
+  examDate,
+  examinationSessionSlotId,
+  options = {},
+) {
+  return scoped(model.examScheduleRoomCapacityModel).findOne({
+    where: { classRoomSectionId: Number(classRoomSectionId) },
+    attributes: ["examScheduleRoomCapacityId", "classRoomSectionId", "capacity"],
+    include: [
+      {
+        model: model.examScheduleModel,
+        as: "examSchedule",
+        where: {
+          examDate,
+          examinationSessionSlotId: Number(examinationSessionSlotId),
+        },
+        required: true,
+        attributes: ["examScheduleId", "examDate", "examinationSessionSlotId"],
+      },
+      {
+        model: model.classRoomModel,
+        as: "classRoom",
+        attributes: ["classRoomSectionId", "roomNumber"],
+        required: true,
+      },
+    ],
+    transaction: options.transaction,
+  });
+}
+
+export async function countBundlesByRoom(classRoomSectionId, options = {}) {
+  return scoped(model.examRoomMaterialBundleModel).count({
+    where: { classRoomSectionId: Number(classRoomSectionId) },
+    transaction: options.transaction,
+    paranoid: false,
+  });
+}
+
+export async function updateBundle(
+  examRoomMaterialBundleId,
+  updateData,
+  options = {},
+) {
+  await scoped(model.examRoomMaterialBundleModel).update(updateData, {
+    where: { examRoomMaterialBundleId: Number(examRoomMaterialBundleId) },
+    transaction: options.transaction,
+  });
+  return getBundleById(examRoomMaterialBundleId, options);
+}
+
 export async function createBundle(bundleData, itemsData, transaction) {
   const bundle = await scoped(model.examRoomMaterialBundleModel).create(
     bundleData,
     { transaction },
   );
 
-  const items = itemsData.map((item) => ({
-    ...item,
-    examRoomMaterialBundleId: bundle.examRoomMaterialBundleId,
-    createdBy: bundleData.createdBy,
-    updatedBy: bundleData.updatedBy,
-  }));
+  const items = [];
+  for (const item of itemsData) {
+    items.push({
+      ...item,
+      examRoomMaterialBundleId: bundle.examRoomMaterialBundleId,
+      createdBy: bundleData.createdBy,
+      updatedBy: bundleData.updatedBy,
+    });
+  }
 
   const createdItems = await model.examRoomMaterialItemModel.bulkCreate(items, {
     transaction,
   });
 
+  const plainItems = [];
+  for (const row of createdItems) {
+    plainItems.push(row.get({ plain: true }));
+  }
+
   return {
     ...bundle.get({ plain: true }),
-    items: createdItems.map((i) => i.get({ plain: true })),
+    items: plainItems,
   };
 }
 
@@ -350,9 +437,13 @@ export async function updateBundleItems(
   });
 }
 
-export async function getBundleItemsByBundleId(examRoomMaterialBundleId) {
+export async function getBundleItemsByBundleId(
+  examRoomMaterialBundleId,
+  options = {},
+) {
   return model.examRoomMaterialItemModel.findAll({
     where: { examRoomMaterialBundleId },
+    transaction: options.transaction,
   });
 }
 
@@ -400,19 +491,8 @@ export async function getSummaryBundles(
   });
 }
 
-export async function getSeatCounts(capacityIds) {
-  return scoped(model.studentExamSeatModel).findAll({
-    attributes: [
-      "examScheduleRoomCapacityId",
-      [sequelize.fn("COUNT", sequelize.col("student_exam_seat_id")), "studentCount"],
-    ],
-    where: {
-      examScheduleRoomCapacityId: { [Op.in]: capacityIds },
-      ...buildScope(model.studentExamSeatModel),
-    },
-    group: ["examScheduleRoomCapacityId"],
-    raw: true,
-  });
+export async function getSeatCounts(capacityIds, options = {}) {
+  return getSeatCountsByCapacityIds(capacityIds, options);
 }
 
 export async function getActiveInvigilatorsForRoomSlot(
@@ -426,7 +506,7 @@ export async function getActiveInvigilatorsForRoomSlot(
       classRoomSectionId,
       examDate,
       examinationSessionSlotId,
-      status: { [Op.notIn]: ["CANCELLED", "DECLINED"] },
+      status: { [Op.notIn]: INVIGILATOR_ASSIGNMENT_INACTIVE_STATUSES },
     },
     attributes: ["userId"],
     transaction,
@@ -498,34 +578,21 @@ export async function getReadyBundleList(filters, pagination) {
   };
 
   if (selections && selections.length > 0) {
-    const mappingIds = selections.map((s) => s.courseSessionMappingId);
-    const dbMappings = await examinationSessionRepository.findSessionCourseMappingsByIds(mappingIds);
-    const dbMappingsMap = new Map(dbMappings.map((m) => [m.sessionCourseMappingId, m]));
-
-    const filterCombinations = [];
-    for (const sel of selections) {
-      const mapping = dbMappingsMap.get(sel.courseSessionMappingId);
-      if (mapping) {
-        filterCombinations.push({
-          courseId: mapping.courseId,
-          sessionId: mapping.sessionId,
-          terms: sel.terms || [],
-        });
-      }
-    }
-
-    if (filterCombinations.length > 0) {
+    const scheduleWhere = {};
+    const subjectWhere = {};
+    await applySelectionFilters(selections, scheduleWhere, subjectWhere);
+    if (scheduleWhere.sessionId != null || subjectWhere[Op.or]) {
       roomCapacityInclude.required = true;
-      const sessionIds = [...new Set(filterCombinations.map((c) => c.sessionId))];
-      roomCapacityInclude.include[0].where = {
-        sessionId: sessionIds.length === 1 ? sessionIds[0] : { [Op.in]: sessionIds },
-      };
-      roomCapacityInclude.include[0].include[0].where = {
-        [Op.or]: filterCombinations.map((comb) => ({
-          courseId: comb.courseId,
-          term: { [Op.in]: comb.terms },
-        })),
-      };
+      if (scheduleWhere.sessionId != null) {
+        roomCapacityInclude.include[0].where = {
+          sessionId: scheduleWhere.sessionId,
+        };
+      }
+      if (subjectWhere[Op.or]) {
+        roomCapacityInclude.include[0].include[0].where = {
+          [Op.or]: subjectWhere[Op.or],
+        };
+      }
     }
   }
 
@@ -592,31 +659,61 @@ export async function getReadyBundleList(filters, pagination) {
   };
 }
 
-export async function getReceivedRoomsQuery(filters) {
-  const { examinationSessionId, examDate, examinationSessionSlotId } = filters;
+export async function getReceivedRoomsQuery(filters, options = {}) {
+  const {
+    examinationSessionId,
+    examDate,
+    examinationSessionSlotId,
+    selections,
+  } = filters;
 
   const scheduleWhere = { examinationSessionId };
   if (examDate) scheduleWhere.examDate = examDate;
-  if (examinationSessionSlotId) scheduleWhere.examinationSessionSlotId = examinationSessionSlotId;
+  if (examinationSessionSlotId) {
+    scheduleWhere.examinationSessionSlotId = examinationSessionSlotId;
+  }
 
-  return await model.examScheduleRoomCapacityModel.findAll({
+  const subjectWhere = {};
+  await applySelectionFilters(selections, scheduleWhere, subjectWhere, options);
+
+  return scoped(model.examScheduleRoomCapacityModel).findAll({
+    attributes: [
+      "examScheduleRoomCapacityId",
+      "examScheduleId",
+      "classRoomSectionId",
+      "capacity",
+    ],
     include: [
       {
         model: model.examScheduleModel,
         as: "examSchedule",
         where: scheduleWhere,
         required: true,
+        attributes: [
+          "examScheduleId",
+          "examDate",
+          "examinationSessionSlotId",
+          "sessionId",
+          "term",
+        ],
         include: [
           {
             model: model.subjectModel,
             as: "subjectSchedule",
-            attributes: ["subjectId", "subjectName", "subjectCode"],
-            required: false,
+            attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
+            where:
+              Object.keys(subjectWhere).length > 0 ? subjectWhere : undefined,
+            required: true,
           },
           {
             model: model.examinationSessionSlotModel,
             as: "examinationSessionSlot",
-            attributes: ["examinationSessionSlotId", "slotNumber", "startTime", "endTime"],
+            attributes: [
+              "examinationSessionSlotId",
+              "slotNumber",
+              "startTime",
+              "endTime",
+            ],
             required: false,
           },
         ],
@@ -626,6 +723,7 @@ export async function getReceivedRoomsQuery(filters) {
         as: "classRoom",
         attributes: ["classRoomSectionId", "roomNumber"],
         required: true,
+        where: buildScope(model.classRoomModel),
         include: [
           {
             model: model.examRoomMaterialBundleModel,
@@ -636,23 +734,25 @@ export async function getReceivedRoomsQuery(filters) {
               sequelize.where(
                 sequelize.col("classRoom.materialBundles.exam_date"),
                 "=",
-                sequelize.col("examSchedule.exam_date")
+                sequelize.col("examSchedule.exam_date"),
               ),
               sequelize.where(
-                sequelize.col("classRoom.materialBundles.examination_session_slot_id"),
+                sequelize.col(
+                  "classRoom.materialBundles.examination_session_slot_id",
+                ),
                 "=",
-                sequelize.col("examSchedule.examination_session_slot_id")
-              )
+                sequelize.col("examSchedule.examination_session_slot_id"),
+              ),
             ),
             include: [
               {
                 model: model.examRoomMaterialItemModel,
                 as: "items",
                 required: false,
-              }
-            ]
-          }
-        ]
+              },
+            ],
+          },
+        ],
       },
       {
         model: model.studentExamSeatModel,
@@ -661,5 +761,69 @@ export async function getReceivedRoomsQuery(filters) {
         required: false,
       },
     ],
+    transaction: options.transaction,
+  });
+}
+
+export async function findRoomCapacitiesForBundleRoom(
+  classRoomSectionId,
+  examDate,
+  examinationSessionSlotId,
+  options = {},
+) {
+  return scoped(model.examScheduleRoomCapacityModel).findAll({
+    where: { classRoomSectionId: Number(classRoomSectionId) },
+    attributes: [
+      "examScheduleRoomCapacityId",
+      "examScheduleId",
+      "classRoomSectionId",
+      "capacity",
+    ],
+    include: [
+      {
+        model: model.examScheduleModel,
+        as: "examSchedule",
+        where: {
+          examDate,
+          examinationSessionSlotId: Number(examinationSessionSlotId),
+        },
+        required: true,
+        attributes: [
+          "examScheduleId",
+          "examDate",
+          "examinationSessionSlotId",
+          "sessionId",
+          "term",
+        ],
+        include: [
+          {
+            model: model.subjectModel,
+            as: "subjectSchedule",
+            attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
+          },
+          {
+            model: model.examinationSessionSlotModel,
+            as: "examinationSessionSlot",
+            attributes: [
+              "examinationSessionSlotId",
+              "slotNumber",
+              "startTime",
+              "endTime",
+            ],
+          },
+        ],
+      },
+      {
+        model: model.classRoomModel,
+        as: "classRoom",
+        attributes: ["classRoomSectionId", "roomNumber"],
+      },
+      {
+        model: model.studentExamSeatModel,
+        as: "seats",
+        attributes: ["studentId"],
+      },
+    ],
+    transaction: options.transaction,
   });
 }

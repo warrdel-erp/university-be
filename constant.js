@@ -113,6 +113,11 @@ export const formSession = [
 
 export const documentStatus = ["Pending Documents", "Complete Documents"];
 
+export const DOCUMENT_STATUS = {
+  PENDING: "Pending Documents",
+  COMPLETE: "Complete Documents",
+};
+
 export const counselor = ["Brijesh", "Shahi Prakash"];
 
 export const registerClass = [
@@ -236,6 +241,11 @@ export const SUBJECT_CATEGORIES = [
 
 export const questionStatus = ["Pending", "Approved", "Rejected"];
 
+export const QUESTION_STATUS = {
+  PENDING: "Pending",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
+};
 export const questionTypes = {
   MCQ: "mcq",
   THEORY: "theory",
@@ -424,3 +434,110 @@ export const IMPROVEMENT_MARKS_CONSIDERED = [
   "HIGHEST",
   "LATEST",
 ];
+
+/** Examination session lifecycle */
+export const EXAMINATION_SESSION_STATUS = {
+  DRAFT: "Draft",
+  PUBLISHED: "Published",
+};
+
+export const EXAMINATION_SESSION_STATUSES = Object.values(EXAMINATION_SESSION_STATUS);
+
+/** Stored eligibility statuses (examination_session_eligibility.status) */
+export const ELIGIBILITY_STATUS = {
+  READY: "READY",
+  REVIEW: "REVIEW",
+  BLOCKED: "BLOCKED",
+  APPROVED: "APPROVED",
+};
+
+export const ELIGIBILITY_STATUSES = Object.values(ELIGIBILITY_STATUS);
+
+/** Frontend labels for eligibility status */
+export const ELIGIBILITY_STATUS_LABEL = {
+  READY: "Ready",
+  REVIEW: "Review",
+  BLOCKED: "Blocked",
+  APPROVED: "Approved",
+};
+
+export const ELIGIBILITY_STATUS_LABELS = Object.values(ELIGIBILITY_STATUS_LABEL);
+
+/** Hall ticket lifecycle labels */
+export const HALL_TICKET_STATUS = {
+  NOT_GENERATED: "Not Generated",
+  GENERATED: "Generated",
+  PUBLISHED: "Published",
+  BLOCKED: "Blocked",
+};
+
+export const HALL_TICKET_STATUSES = Object.values(HALL_TICKET_STATUS);
+
+/** Structured eligibility review reason codes */
+export const ELIGIBILITY_REVIEW_REASON_CODE = {
+  DOCUMENT_NOT_SUBMITTED: "DOCUMENT_NOT_SUBMITTED",
+  DOCUMENT_VERIFICATION_PENDING: "DOCUMENT_VERIFICATION_PENDING",
+  MISSING_PHOTOGRAPH: "MISSING_PHOTOGRAPH",
+  REGISTRATION_PENDING: "REGISTRATION_PENDING",
+  UNPAID_INVOICE: "UNPAID_INVOICE",
+  ATTENDANCE_DATA_INCOMPLETE: "ATTENDANCE_DATA_INCOMPLETE",
+  LOW_ATTENDANCE: "LOW_ATTENDANCE",
+};
+
+/** API filter keys for reviewFilterStudents */
+export const HALL_TICKET_REVIEW_FILTER = {
+  REGISTRATION_PENDING: "REGISTRATION_PENDING",
+  PHOTOGRAPH_PENDING: "PHOTOGRAPH_PENDING",
+  INVOICE_PENDING: "INVOICE_PENDING",
+  ATTENDANCE_PENDING: "ATTENDANCE_PENDING",
+};
+
+export const HALL_TICKET_REVIEW_FILTERS = Object.values(HALL_TICKET_REVIEW_FILTER);
+
+/** LIKE patterns used to match stored reviewReason text for review filters */
+export const HALL_TICKET_REVIEW_REASON_LIKE_PATTERNS = {
+  REGISTRATION_PENDING: ["document", "registration", "incomplete"],
+  PHOTOGRAPH_PENDING: ["photograph", "photo"],
+  INVOICE_PENDING: ["invoice", "unpaid", "fee", "payment"],
+  ATTENDANCE_PENDING: ["attendance"],
+};
+
+/** Student list query purposes for hall-ticket repository */
+export const HALL_TICKET_STUDENT_QUERY_PURPOSE = {
+  LIST: "list",
+  SUMMARY: "summary",
+  REVIEW_FILTER: "reviewFilter",
+  REVIEW_DETAIL: "reviewDetail",
+  ELIGIBILITY_SYNC: "eligibilitySync",
+};
+
+/** Exam schedule / slot planning filter flags */
+export const EXAM_SCHEDULE_FILTER_STATUS = {
+  ALL: "all",
+  NEEDS_SCHEDULING: "needsScheduling",
+  ROOM_PENDING: "roomPending",
+  READY: "ready",
+  PUBLISHED: "published",
+};
+
+export const EXAM_SCHEDULE_FILTER_STATUSES = Object.values(EXAM_SCHEDULE_FILTER_STATUS);
+
+/** Invigilator assignment statuses */
+export const INVIGILATOR_ASSIGNMENT_STATUS = {
+  PENDING: "PENDING",
+  ACCEPTED: "ACCEPTED",
+  DECLINED: "DECLINED",
+  CANCELLED: "CANCELLED",
+};
+
+export const INVIGILATOR_ASSIGNMENT_INACTIVE_STATUSES = [
+  INVIGILATOR_ASSIGNMENT_STATUS.CANCELLED,
+  INVIGILATOR_ASSIGNMENT_STATUS.DECLINED,
+];
+
+/** Room-level invigilator readiness for shared rooms */
+export const INVIGILATOR_ROOM_STATUS = {
+  PENDING: "PENDING",
+  PARTIAL: "PARTIAL",
+  READY: "READY",
+};

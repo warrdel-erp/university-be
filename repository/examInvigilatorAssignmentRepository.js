@@ -4,6 +4,8 @@ import { Op } from "sequelize";
 import { getStudentCountsByGroups } from "./examScheduleRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 import * as examinationSessionRepository from "./examinationSessionRepository.js";
+import { getSeatCountsByCapacityIds } from "../utility/roomCapacity.js";
+import { INVIGILATOR_ASSIGNMENT_INACTIVE_STATUSES } from "../constant.js";
 
 export async function createAssignment(data, options = {}) {
   return scoped(model.examInvigilatorAssignmentModel).create(data, {
@@ -329,7 +331,7 @@ export async function getActiveAssignmentsWithUsers(slots, options = {}) {
     where: {
       examDate: { [Op.in]: examDates },
       examinationSessionSlotId: { [Op.in]: slotIds },
-      status: { [Op.notIn]: ["CANCELLED", "DECLINED"] },
+      status: { [Op.notIn]: INVIGILATOR_ASSIGNMENT_INACTIVE_STATUSES },
     },
     attributes: [
       "examInvigilatorAssignmentId",
@@ -538,21 +540,7 @@ export async function getDuplicateChecks(classRoomSectionIds, examDates, slotIds
 }
 
 export async function getSeatCounts(roomCapacityIds, options = {}) {
-  return scoped(model.studentExamSeatModel).findAll({
-    attributes: [
-      "examScheduleRoomCapacityId",
-      [
-        sequelize.fn("COUNT", sequelize.col("student_exam_seat_id")),
-        "studentCount",
-      ],
-    ],
-    where: {
-      examScheduleRoomCapacityId: { [Op.in]: roomCapacityIds },
-      ...buildScope(model.studentExamSeatModel),
-    },
-    group: ["examScheduleRoomCapacityId"],
-    raw: true,
-  });
+  return getSeatCountsByCapacityIds(roomCapacityIds, options);
 }
 
 export async function getAssignmentsByUserId(

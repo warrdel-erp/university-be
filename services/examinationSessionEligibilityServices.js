@@ -3,17 +3,24 @@ import {
   decimalSubtract,
   decimalMax,
 } from "../utility/decimalMoney.js";
+import {
+  ATTENDANCE_PRESENT_STATUSES,
+  DOCUMENT_STATUS,
+  ELIGIBILITY_REVIEW_REASON_CODE,
+  ELIGIBILITY_STATUS_LABEL,
+} from "../constant.js";
+import { resolveHallTicketStatus } from "../utility/hallTicketEligibility.js";
 
 export function checkDocuments(st, reviewReasons) {
-  if (st.documentStatus === "Pending Documents") {
+  if (st.documentStatus === DOCUMENT_STATUS.PENDING) {
     reviewReasons.push({
-      code: "DOCUMENT_NOT_SUBMITTED",
+      code: ELIGIBILITY_REVIEW_REASON_CODE.DOCUMENT_NOT_SUBMITTED,
       title: "Required document missing",
       severity: "warning",
       message: "Required registration document has not been submitted.",
     });
     reviewReasons.push({
-      code: "DOCUMENT_VERIFICATION_PENDING",
+      code: ELIGIBILITY_REVIEW_REASON_CODE.DOCUMENT_VERIFICATION_PENDING,
       title: "Document verification pending",
       severity: "warning",
       message: "Registration document verification is pending.",
@@ -22,7 +29,7 @@ export function checkDocuments(st, reviewReasons) {
 
   if (!st.studentPhoto) {
     reviewReasons.push({
-      code: "MISSING_PHOTOGRAPH",
+      code: ELIGIBILITY_REVIEW_REASON_CODE.MISSING_PHOTOGRAPH,
       title: "Missing photograph",
       severity: "warning",
       message: "Student photograph is missing.",
@@ -52,16 +59,17 @@ export function checkRegistration(st, reviewReasons) {
     { field: "pPincode",       label: "Pincode" },
   ];
 
-  const missingFields = REQUIRED_FIELDS
-    .filter(({ field }) => {
-      const val = st[field];
-      return val === null || val === undefined || String(val).trim() === "";
-    })
-    .map(({ label }) => label);
+  const missingFields = [];
+  for (const item of REQUIRED_FIELDS) {
+    const val = st[item.field];
+    if (val === null || val === undefined || String(val).trim() === "") {
+      missingFields.push(item.label);
+    }
+  }
 
   if (missingFields.length > 0) {
     reviewReasons.push({
-      code: "REGISTRATION_PENDING",
+      code: ELIGIBILITY_REVIEW_REASON_CODE.REGISTRATION_PENDING,
       title: "Incomplete registration",
       severity: "warning",
       message: `Student registration is incomplete. Missing: ${missingFields.join(", ")}.`,
@@ -72,19 +80,23 @@ export function checkRegistration(st, reviewReasons) {
 export function checkInvoices(st, reviewReasons) {
   const invoices = st.studentFeeInvoices || [];
   const totalInvoices = invoices.length;
-  const unpaidInvoicesList = invoices.filter(
-    (inv) => inv.paymentStatus === "unpaid" || inv.paymentStatus === "partial",
-  );
+  const unpaidInvoicesList = [];
+  for (const inv of invoices) {
+    if (inv.paymentStatus === "unpaid" || inv.paymentStatus === "partial") {
+      unpaidInvoicesList.push(inv);
+    }
+  }
   const unpaidInvoices = unpaidInvoicesList.length;
   const paidInvoices = totalInvoices - unpaidInvoices;
-  const outstandingAmount = unpaidInvoicesList.reduce((sum, inv) => {
+  let outstandingAmount = 0;
+  for (const inv of unpaidInvoicesList) {
     const remaining = decimalSubtract(
       Number(inv.total) || 0,
       Number(inv.paidAmount) || 0,
     );
     const positiveRemaining = decimalMax(0, remaining);
-    return decimalAdd(sum, positiveRemaining);
-  }, 0);
+    outstandingAmount = decimalAdd(outstandingAmount, positiveRemaining);
+  }
   const hasOutstandingInvoice = unpaidInvoices > 0 && outstandingAmount > 0;
 
   const invoiceKPIs = {
@@ -97,7 +109,7 @@ export function checkInvoices(st, reviewReasons) {
 
   if (hasOutstandingInvoice) {
     reviewReasons.push({
-      code: "UNPAID_INVOICE",
+      code: ELIGIBILITY_REVIEW_REASON_CODE.UNPAID_INVOICE,
       title: "Outstanding fee payment",
       severity: "warning",
       message: `Student has ${unpaidInvoices} unpaid invoices with an outstanding amount of ₹${outstandingAmount.toLocaleString("en-IN")}.`,
@@ -112,7 +124,7 @@ export function checkAttendance(attendanceKPIs, reviewReasons) {
     attendanceKPIs;
   if (totalClasses === 0) {
     reviewReasons.push({
-      code: "ATTENDANCE_DATA_INCOMPLETE",
+      code: ELIGIBILITY_REVIEW_REASON_CODE.ATTENDANCE_DATA_INCOMPLETE,
       title: "Attendance data incomplete",
       severity: "warning",
       message: "Attendance data is incomplete for the current term.",
@@ -122,7 +134,7 @@ export function checkAttendance(attendanceKPIs, reviewReasons) {
     attendancePercentage < minimumAttendanceRequired
   ) {
     reviewReasons.push({
-      code: "LOW_ATTENDANCE",
+      code: ELIGIBILITY_REVIEW_REASON_CODE.LOW_ATTENDANCE,
       title: "Attendance below minimum",
       severity: "error",
       message: `Attendance is ${attendancePercentage}%, below the required minimum of ${minimumAttendanceRequired}%.`,
@@ -138,27 +150,26 @@ export function calculateStudentEligibility(rawRecord) {
     mapperSessionId,
   } = rawRecord;
 
-  const presentStatuses = [
-    "Present",
-    "Medical Leave",
-    "Duty Leave",
-    "Sports Leave",
-    "NCC Leave",
-    "Approved Leave",
-  ];
+  const presentStatuses = ATTENDANCE_PRESENT_STATUSES;
 
   const course = st.course;
   const session = st.studentSession;
 
-  const attendances = (st.attendances || []).filter(
-    (a) => a.classSectionTermId === cst.classSectionTermId,
-  );
+  const attendances = [];
+  for (const a of st.attendances || []) {
+    if (a.classSectionTermId === cst.classSectionTermId) {
+      attendances.push(a);
+    }
+  }
 
   const totalClasses = attendances.length;
 
-  const presentClasses = attendances.filter((a) =>
-    presentStatuses.includes(a.attendanceStatus),
-  ).length;
+  let presentClasses = 0;
+  for (const a of attendances) {
+    if (presentStatuses.includes(a.attendanceStatus)) {
+      presentClasses++;
+    }
+  }
 
   const absentClasses = totalClasses - presentClasses;
 
@@ -218,17 +229,21 @@ export function calculateStudentEligibility(rawRecord) {
   checkAttendance(attendanceKPIs, reviewReasons);
 
   // Priority resolution
-  let eligibilityStatus = "Ready";
+  let eligibilityStatus = ELIGIBILITY_STATUS_LABEL.READY;
   let reasonText = null;
 
-  const errorReason = reviewReasons.find((r) => r.severity === "error");
-  const warningReason = reviewReasons.find((r) => r.severity === "warning");
+  let errorReason = null;
+  let warningReason = null;
+  for (const r of reviewReasons) {
+    if (!errorReason && r.severity === "error") errorReason = r;
+    if (!warningReason && r.severity === "warning") warningReason = r;
+  }
 
   if (errorReason) {
-    eligibilityStatus = "Blocked";
+    eligibilityStatus = ELIGIBILITY_STATUS_LABEL.BLOCKED;
     reasonText = errorReason.message;
   } else if (warningReason) {
-    eligibilityStatus = "Review";
+    eligibilityStatus = ELIGIBILITY_STATUS_LABEL.REVIEW;
     reasonText = warningReason.message;
   }
 
@@ -242,15 +257,7 @@ export function calculateStudentEligibility(rawRecord) {
   const isPublished = hallTicket?.isPublished ?? false;
   const isBlocked = hallTicket?.isBlocked ?? false;
 
-  let hallTicketStatus = "Not Generated";
-
-  if (isBlocked) {
-    hallTicketStatus = "Blocked";
-  } else if (isPublished) {
-    hallTicketStatus = "Published";
-  } else if (isGenerated) {
-    hallTicketStatus = "Generated";
-  }
+  const hallTicketStatus = resolveHallTicketStatus(hallTicket, isBlocked);
 
   const academicContext = {
     courseId: st.courseId ?? course?.courseId ?? null,
