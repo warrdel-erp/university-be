@@ -32,10 +32,10 @@ const sessionBodyObject = z.object({
   moderationWorkflow: z.boolean().optional(),
   allowRevaluation: z.boolean().optional(),
   status: z.enum(["Draft", "Published"]).optional(),
-  classSectionTerms: z
+  terms: z
     .array(
       z.object({
-        classSectionTermId: z.number(),
+        term: z.number().int().positive(),
         includeElectives: z.boolean().optional(),
         remarks: z.string().optional(),
       }),
@@ -111,14 +111,13 @@ const createTermSchema = {
     examinationSessionId: z.number({
       required_error: "examinationSessionId is required",
     }),
-    classSectionTermId: z.number({
-      required_error: "classSectionTermId is required",
-    }),
+    term: z.number({
+      required_error: "term is required",
+    }).int().positive(),
     includeElectives: z.boolean().optional(),
     remarks: z.string().optional(),
   }),
 };
-
 const deleteTermSchema = {
   query: z.object({
     examinationSessionTermId: positiveIntegerQueryId,
@@ -189,6 +188,13 @@ router.post(
   validate(createSessionSchema),
   examinationSessionController.createExaminationSession,
 );
+
+router.patch(
+  "/",
+  userAuth,
+  validate(updateSessionSchema),
+  examinationSessionController.updateExaminationSession,
+);
 router.get("/", userAuth, examinationSessionController.getExaminationSessions);
 router.get(
   "/single",
@@ -230,12 +236,7 @@ router.get(
   examinationSessionController.getQuestionPaperSummary,
 );
 
-router.patch(
-  "/",
-  userAuth,
-  validate(updateSessionSchema),
-  examinationSessionController.updateExaminationSession,
-);
+
 router.delete(
   "/",
   userAuth,

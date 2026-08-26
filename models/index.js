@@ -343,15 +343,6 @@ examinationSessionTermModel.belongsTo(examinationSessionModel, {
   as: "examinationSession",
 });
 
-examinationSessionTermModel.belongsTo(classSectionTermModel, {
-  foreignKey: "class_section_term_id",
-  as: "classSectionTerm",
-});
-classSectionTermModel.hasMany(examinationSessionTermModel, {
-  foreignKey: "class_section_term_id",
-  as: "examinationSessionTerms",
-});
-
 // Exam Invigilator Assignment Associations
 examInvigilatorAssignmentModel.belongsTo(universityModel, {
   foreignKey: "university_id",

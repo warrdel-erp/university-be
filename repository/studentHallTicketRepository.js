@@ -3,7 +3,7 @@ import { Op, fn, col } from "sequelize";
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
-import { expandWholeTermClassSectionTermIds } from "../utility/studentCount.js";
+import { expandClassSectionTermIdsByTerms } from "../utility/studentCount.js";
 import * as examinationSessionRepository from "./examinationSessionRepository.js";
 import {
   ELIGIBILITY_STATUS,
@@ -283,7 +283,8 @@ function mapStudentRowResult(raw, termIdSet, termToEstMap) {
     }
   }
 
-  const estId = placementTermId ? termToEstMap[placementTermId] : null;
+  const estId =
+    placementTerm != null ? termToEstMap[Number(placementTerm)] : null;
   const mapper =
     raw.studentMapped && raw.studentMapped.length > 0 ? raw.studentMapped[0] : null;
   const effectiveSessionId = mapper ? mapper.sessionId : raw.sessionId;
@@ -293,7 +294,7 @@ function mapStudentRowResult(raw, termIdSet, termToEstMap) {
     classSectionTerm: { classSectionTermId: placementTermId, term: placementTerm },
     examinationSessionTerm: {
       examinationSessionTermId: estId,
-      classSectionTermId: placementTermId,
+      term: placementTerm,
     },
     examinationSession: raw._examSession || null,
     mapperSessionId: effectiveSessionId,
@@ -328,14 +329,7 @@ export async function findExaminationSessionById(examinationSessionId, transacti
       {
         model: model.examinationSessionTermModel,
         as: "examinationSessionTerms",
-        attributes: ["examinationSessionTermId", "classSectionTermId"],
-        include: [
-          {
-            model: model.classSectionTermModel,
-            as: "classSectionTerm",
-            attributes: ["classSectionTermId", "term", "classSectionsId"],
-          },
-        ],
+        attributes: ["examinationSessionTermId", "term"],
       },
     ],
   });
@@ -438,15 +432,7 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
   // Fetch terms for this session.
   const termQueryOptions = {
     where: { examinationSessionId },
-    attributes: ["classSectionTermId", "examinationSessionTermId"],
-    include: [
-      {
-        model: model.classSectionTermModel,
-        as: "classSectionTerm",
-        required: true,
-        attributes: ["term"],
-      },
-    ],
+    attributes: ["term", "examinationSessionTermId"],
     transaction,
   };
 
@@ -461,60 +447,41 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
         termsList.push(term);
       }
     }
-    termQueryOptions.include[0].where = {
-      term: { [Op.in]: termsList },
-    };
+    termQueryOptions.where.term = { [Op.in]: termsList };
   } else if (filters.term != null) {
-    termQueryOptions.include[0].where = {
-      term: Array.isArray(filters.term) ? { [Op.in]: filters.term } : filters.term,
-    };
+    termQueryOptions.where.term = Array.isArray(filters.term)
+      ? { [Op.in]: filters.term }
+      : filters.term;
   }
 
   const termRows = await scoped(model.examinationSessionTermModel).findAll(termQueryOptions);
-  const seedTermIds = [];
+  const sessionTermNumbers = [];
+  const termToEstMap = {};
   for (const row of termRows) {
-    seedTermIds.push(Number(row.classSectionTermId));
+    const termNumber = Number(row.term);
+    sessionTermNumbers.push(termNumber);
+    termToEstMap[termNumber] = row.examinationSessionTermId;
   }
 
-  if (!seedTermIds.length) {
+  if (!sessionTermNumbers.length) {
     const page = Math.max(1, Number(filters.page) || 1);
     const limit = Math.max(1, Number(filters.limit) || 10);
     return isPaginated ? { rows: [], total: 0, page, limit, totalPages: 1 } : [];
   }
 
-  // Include sibling sections for the same course/session/year/term.
-  const expansion = await expandWholeTermClassSectionTermIds(seedTermIds, {
-    transaction,
-  });
+  const expansion = await expandClassSectionTermIdsByTerms(
+    sessionTermNumbers,
+    examSession.academicYearId,
+    { transaction },
+  );
   const termIds = expansion.classSectionTermIds;
   const termIdSet = new Set(termIds);
-
-  const seedEstByCst = {};
-  for (const row of termRows) {
-    seedEstByCst[Number(row.classSectionTermId)] = row.examinationSessionTermId;
-  }
-
-  const estByGroup = new Map();
-  for (const group of expansion.seedGroups) {
-    const estId = seedEstByCst[group.classSectionTermId];
-    if (estId == null) continue;
-    estByGroup.set(
-      `${group.courseId}_${group.sessionId}_${group.academicYearId}_${group.term}`,
-      estId,
-    );
-  }
-
-  const termToEstMap = {};
   const expandedGroups = expansion.expandedGroups || [];
-  for (const group of expandedGroups) {
-    const key = `${group.courseId}_${group.sessionId}_${group.academicYearId}_${group.term}`;
-    const estId = estByGroup.get(key);
-    if (estId != null) {
-      termToEstMap[group.classSectionTermId] = estId;
-    }
-  }
-  for (const row of termRows) {
-    termToEstMap[Number(row.classSectionTermId)] = row.examinationSessionTermId;
+
+  if (!termIds.length) {
+    const page = Math.max(1, Number(filters.page) || 1);
+    const limit = Math.max(1, Number(filters.limit) || 10);
+    return isPaginated ? { rows: [], total: 0, page, limit, totalPages: 1 } : [];
   }
 
   // Fetch student IDs from history for the matched terms.

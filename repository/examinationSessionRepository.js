@@ -20,13 +20,12 @@ const sessionInclude = [
   {
     model: model.examinationSessionTermModel,
     as: "examinationSessionTerms",
-    include: [
-      {
-        model: model.classSectionTermModel,
-        as: "classSectionTerm",
-        attributes: ["classSectionTermId", "classSectionsId", "term"],
-        required: false,
-      },
+    attributes: [
+      "examinationSessionTermId",
+      "examinationSessionId",
+      "term",
+      "includeElectives",
+      "remarks",
     ],
     required: false,
   },
@@ -152,16 +151,16 @@ export async function deleteExaminationSessionTermsBySessionId(examinationSessio
   });
 }
 
-export async function deleteExaminationSessionTermsByClassSectionTermIds(
+export async function deleteExaminationSessionTermsByTerms(
   examinationSessionId,
-  classSectionTermIds,
+  terms,
   options = {},
 ) {
-  if (!classSectionTermIds.length) return 0;
+  if (!terms.length) return 0;
   return scoped(model.examinationSessionTermModel).destroy({
     where: {
       examinationSessionId: Number(examinationSessionId),
-      classSectionTermId: { [Op.in]: classSectionTermIds },
+      term: { [Op.in]: terms },
     },
     transaction: options.transaction,
   });
@@ -170,78 +169,59 @@ export async function deleteExaminationSessionTermsByClassSectionTermIds(
 export async function findExaminationSessionTermById(examinationSessionTermId, options = {}) {
   return scoped(model.examinationSessionTermModel).findOne({
     where: { examinationSessionTermId: Number(examinationSessionTermId) },
-    include: [
-      {
-        model: model.classSectionTermModel,
-        as: "classSectionTerm",
-        required: true,
-        attributes: ["classSectionTermId", "classSectionsId", "term"],
-        include: [
-          {
-            model: model.classSectionModel,
-            as: "classSection",
-            required: true,
-            attributes: ["classSectionsId", "courseId", "sessionId", "academicYearId", "section"],
-          },
-        ],
-      },
-    ],
-    transaction: options.transaction,
-  });
-}
-
-export async function findExaminationSessionTermsWithSection(examinationSessionId, options = {}) {
-  return scoped(model.examinationSessionTermModel).findAll({
-    where: { examinationSessionId: Number(examinationSessionId) },
     attributes: [
       "examinationSessionTermId",
       "examinationSessionId",
-      "classSectionTermId",
-    ],
-    include: [
-      {
-        model: model.classSectionTermModel,
-        as: "classSectionTerm",
-        required: true,
-        attributes: ["classSectionTermId", "classSectionsId", "term"],
-        include: [
-          {
-            model: model.classSectionModel,
-            as: "classSection",
-            required: true,
-            attributes: ["classSectionsId", "courseId", "sessionId", "academicYearId", "section"],
-          },
-        ],
-      },
+      "term",
+      "includeElectives",
+      "remarks",
     ],
     transaction: options.transaction,
   });
 }
 
-/** True when any exam schedule exists for this session + course + session + term. */
-export async function hasExamSchedulesForCourseSessionTerm(
+/** True when any exam schedule exists for this session + term number. */
+export async function hasExamSchedulesForTerm(
   examinationSessionId,
-  { courseId, sessionId, term },
+  term,
   options = {},
 ) {
   const count = await scoped(model.examScheduleModel).count({
     where: {
       examinationSessionId: Number(examinationSessionId),
-      sessionId: Number(sessionId),
       term: Number(term),
     },
+    transaction: options.transaction,
+  });
+  return count > 0;
+}
+
+/** Distinct courseIds that have class sections for the given term numbers in an academic year. */
+export async function findDistinctCourseIdsByTerms(
+  terms,
+  academicYearId,
+  options = {},
+) {
+  if (!terms.length || !academicYearId) return [];
+  const rows = await model.classSectionTermModel.findAll({
+    attributes: ["classSectionTermId"],
+    where: { term: { [Op.in]: terms } },
     include: [
       {
-        model: model.subjectModel,
-        as: "subjectSchedule",
+        model: model.classSectionModel,
+        as: "classSection",
         required: true,
-        attributes: [],
-        where: { courseId: Number(courseId) },
+        attributes: ["courseId"],
+        where: { academicYearId: Number(academicYearId) },
       },
     ],
     transaction: options.transaction,
   });
-  return count > 0;
+  const courseIdSet = new Set();
+  for (const row of rows) {
+    courseIdSet.add(Number(row.classSection.courseId));
+  }
+  return [...courseIdSet];
 }
 
 export async function deleteExaminationSessionTerm(examinationSessionTermId, options = {}) {
@@ -489,10 +469,10 @@ export async function findExamSchedulesBySlotIds(slotIds, options = {}) {
   });
 }
 
-export async function findOverlapTermForAssessmentType(assessmentTypeId, classSectionTermIds, options = {}) {
+export async function findOverlapTermForAssessmentType(assessmentTypeId, terms, options = {}) {
   return scoped(model.examinationSessionTermModel).findOne({
     where: {
-      classSectionTermId: { [Op.in]: classSectionTermIds },
+      term: { [Op.in]: terms },
     },
     include: [
       {
@@ -506,10 +486,10 @@ export async function findOverlapTermForAssessmentType(assessmentTypeId, classSe
   });
 }
 
-export async function findOverlapTermForAssessmentTypeExcludingSession(assessmentTypeId, sessionId, classSectionTermIds, options = {}) {
+export async function findOverlapTermForAssessmentTypeExcludingSession(assessmentTypeId, sessionId, terms, options = {}) {
   return scoped(model.examinationSessionTermModel).findOne({
     where: {
-      classSectionTermId: { [Op.in]: classSectionTermIds },
+      term: { [Op.in]: terms },
     },
     include: [
       {
@@ -529,6 +509,13 @@ export async function findOverlapTermForAssessmentTypeExcludingSession(assessmen
 export async function findExaminationSessionTerms(examinationSessionId, options = {}) {
   return scoped(model.examinationSessionTermModel).findAll({
     where: { examinationSessionId: Number(examinationSessionId) },
+    attributes: [
+      "examinationSessionTermId",
+      "examinationSessionId",
+      "term",
+      "includeElectives",
+      "remarks",
+    ],
     transaction: options.transaction,
   });
 }

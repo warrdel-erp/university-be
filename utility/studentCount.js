@@ -36,6 +36,57 @@ async function countStudentsByTermAndSections(termNumbers, sectionGroups, option
 }
 
 /**
+ * Expand term numbers (+ academic year) to every CST in that year for those terms.
+ */
+export async function expandClassSectionTermIdsByTerms(
+  terms,
+  academicYearId,
+  options = {},
+) {
+  const termNumbers = [
+    ...new Set((terms || []).map(Number).filter((t) => t > 0)),
+  ];
+  if (!termNumbers.length || !academicYearId) {
+    return { classSectionTermIds: [], seedGroups: [], expandedGroups: [] };
+  }
+
+  const expanded = await model.classSectionTermModel.findAll({
+    attributes: ["classSectionTermId", "term"],
+    where: { term: { [Op.in]: termNumbers } },
+    include: [
+      {
+        model: model.classSectionModel,
+        as: "classSection",
+        required: true,
+        attributes: ["courseId", "sessionId", "academicYearId"],
+        where: { academicYearId: Number(academicYearId) },
+      },
+    ],
+    transaction: options.transaction,
+  });
+
+  const classSectionTermIdList = [];
+  const expandedGroups = [];
+  for (const row of expanded) {
+    const classSectionTermId = Number(row.classSectionTermId);
+    classSectionTermIdList.push(classSectionTermId);
+    expandedGroups.push({
+      classSectionTermId,
+      term: Number(row.term),
+      courseId: Number(row.classSection.courseId),
+      sessionId: Number(row.classSection.sessionId),
+      academicYearId: Number(row.classSection.academicYearId),
+    });
+  }
+
+  return {
+    classSectionTermIds: classSectionTermIdList,
+    seedGroups: expandedGroups,
+    expandedGroups,
+  };
+}
+
+/**
  * Expand seed classSectionTermIds to every CST in the same
  * course + session + academic year + term (all sections).
  */
@@ -129,6 +180,24 @@ export async function expandWholeTermClassSectionTermIds(
     seedGroups,
     expandedGroups,
   };
+}
+
+/** Whole-term student count from examination session term numbers + academic year. */
+export async function countWholeTermStudentsByTerms(
+  terms,
+  academicYearId,
+  options = {},
+) {
+  const termNumbers = [
+    ...new Set((terms || []).map(Number).filter((t) => t > 0)),
+  ];
+  if (!termNumbers.length || !academicYearId) return 0;
+
+  return countStudentsByTermAndSections(
+    termNumbers,
+    [{ academicYearId: Number(academicYearId) }],
+    options,
+  );
 }
 
 /** Whole-term student count from examinationSession classSectionTermIds. */

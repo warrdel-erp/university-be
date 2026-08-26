@@ -6,7 +6,7 @@ import * as examinationSessionEligibilityServices from "./examinationSessionElig
 import * as examinationSessionEligibilityRepo from "../repository/examinationSessionEligibilityRepository.js";
 import { scoped } from "../utility/scoped.js";
 import {
-  countWholeTermStudentsByClassSectionTermIds,
+  countWholeTermStudentsByTerms,
   getStudentCountMapByGroups,
   lookupStudentCount,
 } from "../utility/studentCount.js";
@@ -30,74 +30,32 @@ function createBadRequestError(message) {
   return error;
 }
 
-function termGroupKey(courseId, sessionId, term) {
-  return `${Number(courseId)}_${Number(sessionId)}_${Number(term)}`;
-}
-
-function getTermGroupFromSessionTerm(sessionTerm) {
-  const cst = sessionTerm.classSectionTerm;
-  const section = cst.classSection;
-  return {
-    classSectionTermId: Number(cst.classSectionTermId),
-    term: Number(cst.term),
-    courseId: Number(section.courseId),
-    sessionId: Number(section.sessionId),
-    section: section.section,
-  };
-}
-
 /**
- * Block unmapping when it would remove the last session link for a
- * course+session+term that already has exam schedules.
+ * Block unmapping when exam schedules already exist for the term on this session.
  */
 async function assertTermsCanBeUnmapped(
   examinationSessionId,
   termsBeingRemoved,
-  remainingClassSectionTermIds,
   options = {},
 ) {
   if (!termsBeingRemoved.length) return;
 
-  const remainingTerms =
-    await examinationSessionRepository.findClassSectionTermsByIdsWithSection(
-      remainingClassSectionTermIds,
-      options,
-    );
-
-  const remainingGroups = new Set();
-  for (const cst of remainingTerms) {
-    remainingGroups.add(
-      termGroupKey(
-        cst.classSection.courseId,
-        cst.classSection.sessionId,
-        cst.term,
-      ),
-    );
-  }
-
-  const checkedGroups = new Set();
+  const checkedTerms = new Set();
   for (const sessionTerm of termsBeingRemoved) {
-    const group = getTermGroupFromSessionTerm(sessionTerm);
-    const key = termGroupKey(group.courseId, group.sessionId, group.term);
-    if (checkedGroups.has(key)) continue;
-    checkedGroups.add(key);
-
-    if (remainingGroups.has(key)) continue;
+    const term = Number(sessionTerm.term);
+    if (checkedTerms.has(term)) continue;
+    checkedTerms.add(term);
 
     const hasSchedules =
-      await examinationSessionRepository.hasExamSchedulesForCourseSessionTerm(
+      await examinationSessionRepository.hasExamSchedulesForTerm(
         examinationSessionId,
-        {
-          courseId: group.courseId,
-          sessionId: group.sessionId,
-          term: group.term,
-        },
+        term,
         options,
       );
 
     if (hasSchedules) {
       throw createBadRequestError(
-        `Cannot unmap term ${group.term}: exam schedule(s) already exist for subjects in this term.`,
+        `Cannot unmap term ${term}: exam schedule(s) already exist for subjects in this term.`,
       );
     }
   }
@@ -118,31 +76,56 @@ function toPlain(record) {
   return record?.get ? record.get({ plain: true }) : record;
 }
 
-async function validateClassSectionTermIds(
-  classSectionTerms = [],
-  options = {},
-) {
-  const termIds = uniqueValues(
-    classSectionTerms
-      .map((term) => Number(term.classSectionTermId))
-      .filter(Boolean),
-  );
-  if (!termIds.length) {
-    return;
+function extractTermNumbers(terms = []) {
+  const result = [];
+  for (const item of terms) {
+    result.push(Number(item.term));
   }
+  return uniqueValues(result);
+}
 
-  const validTerms =
-    await examinationSessionRepository.findClassSectionTermsByIds(
-      termIds,
-      options,
-    );
-  const validTermSet = new Set(
-    validTerms.map((term) => term.classSectionTermId),
-  );
-  const invalidTerm = termIds.find((id) => !validTermSet.has(id));
-  if (invalidTerm !== undefined) {
+/** Build term rows to insert; skips duplicates and terms already on the session. */
+function buildMissingTermRows(terms, examinationSessionId, existingTermSet = new Set()) {
+  const rows = [];
+  const seen = new Set();
+  for (const item of terms || []) {
+    const term = Number(item.term);
+    if (seen.has(term) || existingTermSet.has(term)) continue;
+    seen.add(term);
+    rows.push({
+      term,
+      examinationSessionId: Number(examinationSessionId),
+      includeElectives: item.includeElectives,
+      remarks: item.remarks,
+    });
+  }
+  return rows;
+}
+
+async function assertNoTermOverlap(
+  assessmentTypeId,
+  terms,
+  options = {},
+  excludeSessionId,
+) {
+  if (!terms.length) return;
+
+  const overlap = excludeSessionId
+    ? await examinationSessionRepository.findOverlapTermForAssessmentTypeExcludingSession(
+        assessmentTypeId,
+        excludeSessionId,
+        terms,
+        options,
+      )
+    : await examinationSessionRepository.findOverlapTermForAssessmentType(
+        assessmentTypeId,
+        terms,
+        options,
+      );
+
+  if (overlap) {
     throw createBadRequestError(
-      `The selected class section term (ID: ${invalidTerm}) is invalid or does not exist.`,
+      "An examination session for this assessment type already exists with overlapping terms.",
     );
   }
 }
@@ -156,35 +139,21 @@ async function buildSessionSummary(sessionRecord, options = {}) {
   let courseCount = 0;
   let totalStudents = 0;
   const termsList = sessionPlain.examinationSessionTerms || [];
-  const classSectionTermIds = uniqueValues(
-    termsList.map((term) => term.classSectionTermId),
-  );
+  const termNumbers = uniqueValues(termsList.map((term) => term.term));
+  const academicYearId = Number(sessionPlain.academicYearId);
 
-  if (classSectionTermIds.length) {
-    const classSectionTerms =
-      await examinationSessionRepository.findClassSectionTermsByIds(
-        classSectionTermIds,
+  if (termNumbers.length && academicYearId) {
+    const courseIds =
+      await examinationSessionRepository.findDistinctCourseIdsByTerms(
+        termNumbers,
+        academicYearId,
         options,
       );
-    const classSectionIds = uniqueValues(
-      classSectionTerms.map((term) => term.classSectionsId),
-    );
+    courseCount = courseIds.length;
 
-    if (classSectionIds.length) {
-      const classSections =
-        await examinationSessionRepository.findClassSections(
-          {
-            classSectionsId: { [Op.in]: classSectionIds },
-          },
-          options,
-        );
-      courseCount = uniqueValues(
-        classSections.map((section) => section.courseId),
-      ).length;
-    }
-
-    totalStudents = await countWholeTermStudentsByClassSectionTermIds(
-      classSectionTermIds,
+    totalStudents = await countWholeTermStudentsByTerms(
+      termNumbers,
+      academicYearId,
       options,
     );
   }
@@ -305,30 +274,22 @@ async function initializeEligibilityRecords(
 
 export async function createExaminationSession(sessionData, options = {}) {
   return sequelize.transaction(async (transaction) => {
-    const { classSectionTerms, ...mainData } = sessionData;
+    const { terms, ...mainData } = sessionData;
+    const tx = { ...options, transaction };
+    const termsToCreate = buildMissingTermRows(terms, 0);
 
     if (mainData.assessmentTypeId) {
-      if (Array.isArray(classSectionTerms) && classSectionTerms.length > 0) {
-        const newTermIds = [];
-        for (const term of classSectionTerms) {
-          newTermIds.push(Number(term.classSectionTermId));
-        }
-        const existingOverlap =
-          await examinationSessionRepository.findOverlapTermForAssessmentType(
-            mainData.assessmentTypeId,
-            newTermIds,
-            { ...options, transaction },
-          );
-        if (existingOverlap) {
-          throw createBadRequestError(
-            "An examination session for this assessment type already exists with overlapping terms.",
-          );
-        }
+      if (termsToCreate.length) {
+        await assertNoTermOverlap(
+          mainData.assessmentTypeId,
+          extractTermNumbers(termsToCreate),
+          tx,
+        );
       } else {
         const existing =
           await examinationSessionRepository.findExaminationSessionByAssessmentTypeId(
             mainData.assessmentTypeId,
-            { ...options, transaction },
+            tx,
           );
         if (existing) {
           throw createBadRequestError(
@@ -338,30 +299,19 @@ export async function createExaminationSession(sessionData, options = {}) {
       }
     }
 
-    await validateClassSectionTermIds(classSectionTerms, {
-      ...options,
-      transaction,
-    });
     const record = await examinationSessionRepository.createExaminationSession(
       mainData,
-      { ...options, transaction },
+      tx,
     );
 
-    if (Array.isArray(classSectionTerms) && classSectionTerms.length > 0) {
-      const termsToCreate = [];
-      for (const term of classSectionTerms) {
-        termsToCreate.push({
-          classSectionTermId: Number(term.classSectionTermId),
-          examinationSessionId: record.examinationSessionId,
-          includeElectives: term.includeElectives,
-          remarks: term.remarks,
-        });
+    if (termsToCreate.length) {
+      for (const row of termsToCreate) {
+        row.examinationSessionId = record.examinationSessionId;
       }
       await examinationSessionRepository.createExaminationSessionTerms(
         termsToCreate,
-        { ...options, transaction },
+        tx,
       );
-
       await initializeEligibilityRecords(
         record.examinationSessionId,
         mainData.academicYearId,
@@ -369,10 +319,7 @@ export async function createExaminationSession(sessionData, options = {}) {
       );
     }
 
-    return getExaminationSessionById(record.examinationSessionId, {
-      ...options,
-      transaction,
-    });
+    return getExaminationSessionById(record.examinationSessionId, tx);
   });
 }
 
@@ -436,132 +383,56 @@ export async function updateExaminationSession(
 ) {
   return sequelize.transaction(async (transaction) => {
     const sessionId = Number(id);
-    const { classSectionTerms, ...mainUpdateData } = updateData;
+    const { terms, ...mainUpdateData } = updateData;
+    const tx = { ...options, transaction };
 
     const currentSession =
-      await examinationSessionRepository.getExaminationSessionById(sessionId, {
-        ...options,
-        transaction,
-      });
-    const activeAssessmentTypeId =
-      mainUpdateData.assessmentTypeId ||
-      (currentSession ? currentSession.assessmentTypeId : null);
-
-    if (activeAssessmentTypeId) {
-      let targetTerms = classSectionTerms;
-      if (!Array.isArray(targetTerms)) {
-        const existingTerms =
-          await examinationSessionRepository.findExaminationSessionTerms(
-            sessionId,
-            { ...options, transaction },
-          );
-        targetTerms = [];
-        for (const term of existingTerms) {
-          targetTerms.push({ classSectionTermId: term.classSectionTermId });
-        }
-      }
-
-      if (targetTerms.length > 0) {
-        const termIds = [];
-        for (const term of targetTerms) {
-          termIds.push(Number(term.classSectionTermId));
-        }
-        const existingOverlap =
-          await examinationSessionRepository.findOverlapTermForAssessmentTypeExcludingSession(
-            activeAssessmentTypeId,
-            sessionId,
-            termIds,
-            { ...options, transaction },
-          );
-        if (existingOverlap) {
-          throw createBadRequestError(
-            "An examination session for this assessment type already exists with overlapping terms.",
-          );
-        }
-      } else {
-        const existing =
-          await examinationSessionRepository.findExaminationSessionByAssessmentTypeIdExcludingId(
-            activeAssessmentTypeId,
-            sessionId,
-            { ...options, transaction },
-          );
-        if (existing) {
-          throw createBadRequestError(
-            "An examination session for this assessment type already exists.",
-          );
-        }
-      }
-    }
+      await examinationSessionRepository.getExaminationSessionById(
+        sessionId,
+        tx,
+      );
+    if (!currentSession) return null;
 
     if (Object.keys(mainUpdateData).length) {
       await examinationSessionRepository.updateExaminationSession(
         sessionId,
         mainUpdateData,
-        { ...options, transaction },
+        tx,
       );
     }
 
-    if (Array.isArray(classSectionTerms)) {
-      await validateClassSectionTermIds(classSectionTerms, {
-        ...options,
-        transaction,
-      });
-
+    if (Array.isArray(terms) && terms.length) {
       const existingTerms =
-        await examinationSessionRepository.findExaminationSessionTermsWithSection(
+        await examinationSessionRepository.findExaminationSessionTerms(
           sessionId,
-          { ...options, transaction },
+          tx,
         );
-
-      const newClassSectionTermIds = [];
-      for (const term of classSectionTerms) {
-        newClassSectionTermIds.push(Number(term.classSectionTermId));
-      }
-      const newIdSet = new Set(newClassSectionTermIds);
-
-      const existingIdSet = new Set();
-      const termsBeingRemoved = [];
-      const removedClassSectionTermIds = [];
-      for (const existing of existingTerms) {
-        const cstId = Number(existing.classSectionTermId);
-        existingIdSet.add(cstId);
-        if (!newIdSet.has(cstId)) {
-          termsBeingRemoved.push(existing);
-          removedClassSectionTermIds.push(cstId);
-        }
+      const existingTermSet = new Set();
+      for (const row of existingTerms) {
+        existingTermSet.add(Number(row.term));
       }
 
-      await assertTermsCanBeUnmapped(
+      const termsToCreate = buildMissingTermRows(
+        terms,
         sessionId,
-        termsBeingRemoved,
-        newClassSectionTermIds,
-        { ...options, transaction },
+        existingTermSet,
       );
 
-      // Bulk delete only removed mappings; bulk create only newly added ones.
-      if (removedClassSectionTermIds.length > 0) {
-        await examinationSessionRepository.deleteExaminationSessionTermsByClassSectionTermIds(
-          sessionId,
-          removedClassSectionTermIds,
-          { ...options, transaction },
+      if (termsToCreate.length) {
+        const assessmentTypeId = Number(
+          mainUpdateData.assessmentTypeId != null
+            ? mainUpdateData.assessmentTypeId
+            : currentSession.assessmentTypeId,
         );
-      }
-
-      const termsToCreate = [];
-      for (const term of classSectionTerms) {
-        const cstId = Number(term.classSectionTermId);
-        if (existingIdSet.has(cstId)) continue;
-        termsToCreate.push({
-          classSectionTermId: cstId,
-          examinationSessionId: sessionId,
-          includeElectives: term.includeElectives,
-          remarks: term.remarks,
-        });
-      }
-      if (termsToCreate.length > 0) {
+        await assertNoTermOverlap(
+          assessmentTypeId,
+          extractTermNumbers(termsToCreate),
+          tx,
+          sessionId,
+        );
         await examinationSessionRepository.createExaminationSessionTerms(
           termsToCreate,
-          { ...options, transaction },
+          tx,
         );
       }
     }
@@ -572,7 +443,7 @@ export async function updateExaminationSession(
       transaction,
     );
 
-    return getExaminationSessionById(sessionId, { ...options, transaction });
+    return getExaminationSessionById(sessionId, tx);
   });
 }
 
@@ -597,15 +468,43 @@ export async function deleteExaminationSession(id, options = {}) {
 
 export async function createExaminationSessionTerm(termData, options = {}) {
   return sequelize.transaction(async (transaction) => {
-    await validateClassSectionTermIds([termData], { ...options, transaction });
+    const examinationSessionId = Number(termData.examinationSessionId);
+    const termNumber = Number(termData.term);
+    const tx = { ...options, transaction };
+
+    const existingTerms =
+      await examinationSessionRepository.findExaminationSessionTerms(
+        examinationSessionId,
+        tx,
+      );
+    for (const existing of existingTerms) {
+      if (Number(existing.term) === termNumber) return existing;
+    }
+
+    const session =
+      await examinationSessionRepository.getExaminationSessionById(
+        examinationSessionId,
+        tx,
+      );
+    if (!session) {
+      throw createBadRequestError("Examination session not found.");
+    }
+
+    await assertNoTermOverlap(
+      session.assessmentTypeId,
+      [termNumber],
+      tx,
+      examinationSessionId,
+    );
+
     const record =
       await examinationSessionRepository.createExaminationSessionTerm(
         termData,
-        { ...options, transaction },
+        tx,
       );
 
     await initializeEligibilityRecords(
-      termData.examinationSessionId,
+      examinationSessionId,
       undefined,
       transaction,
     );
@@ -628,25 +527,9 @@ export async function deleteExaminationSessionTerm(
       return null;
     }
 
-    const remainingIds = [];
-    const allTerms =
-      await examinationSessionRepository.findExaminationSessionTermsWithSection(
-        existing.examinationSessionId,
-        { ...options, transaction },
-      );
-    for (const term of allTerms) {
-      if (
-        Number(term.examinationSessionTermId) !==
-        Number(examinationSessionTermId)
-      ) {
-        remainingIds.push(Number(term.classSectionTermId));
-      }
-    }
-
     await assertTermsCanBeUnmapped(
       existing.examinationSessionId,
       [existing],
-      remainingIds,
       { ...options, transaction },
     );
 
@@ -722,6 +605,23 @@ export async function getClassSectionTermsBySetupType(
     return [];
   }
 
+  const studentCountGroups = [];
+  for (const group of groups) {
+    if (group.sessionId == null || group.academicYearId == null) continue;
+    for (const term of group.terms) {
+      studentCountGroups.push({
+        courseId: Number(group.courseId),
+        sessionId: Number(group.sessionId),
+        term: Number(term),
+        academicYearId: Number(group.academicYearId),
+      });
+    }
+  }
+  const studentCountMap = await getStudentCountMapByGroups(
+    studentCountGroups,
+    options,
+  );
+
   const [courses, sessions] = await Promise.all([
     examinationSessionRepository.findCoursesByIds(
       uniqueValues(groups.map((group) => group.courseId)),
@@ -766,55 +666,43 @@ export async function getClassSectionTermsBySetupType(
           )
         : [];
 
-    const termDetails = await Promise.all(
-      termsArray.map(async (term) => {
-        const matchingItems = allTermDetails.filter(
-          (item) =>
-            classSectionIds.includes(item.classSectionsId) &&
-            Number(item.term) === Number(term),
-        );
-        const studentWhere = [];
-        const allClassSectionTermIds = uniqueValues(
-          matchingItems.map((item) => item.classSectionTermId),
-        );
-        const allClassSectionIds = uniqueValues(
-          matchingItems.map((item) => item.classSectionsId),
-        );
-        if (allClassSectionTermIds.length)
-          studentWhere.push({
-            classSectionTermId: { [Op.in]: allClassSectionTermIds },
-          });
-        if (allClassSectionIds.length)
-          studentWhere.push({
-            classSectionsId: { [Op.in]: allClassSectionIds },
-          });
+    const termDetails = [];
+    for (const term of termsArray) {
+      const matchingItems = [];
+      for (const item of allTermDetails) {
+        if (
+          classSectionIds.includes(item.classSectionsId) &&
+          Number(item.term) === Number(term)
+        ) {
+          matchingItems.push(item);
+        }
+      }
 
-        const [studentCount, termSubjects] = await Promise.all([
-          studentWhere.length
-            ? examinationSessionRepository.countStudentClassSectionHistory(
-                { [Op.or]: studentWhere },
-                options,
-              )
-            : 0,
-          examinationSessionRepository.findSubjects(
-            {
-              subjectId: { [Op.in]: [...group.subjectIds] },
-              courseId: group.courseId,
-              term,
-            },
-            options,
-          ),
-        ]);
+      const termSubjects =
+        await examinationSessionRepository.findSubjects(
+          {
+            subjectId: { [Op.in]: [...group.subjectIds] },
+            courseId: group.courseId,
+            term,
+          },
+          options,
+        );
 
-        return {
-          ...(matchingItems[0] || {}),
-          term,
-          studentCount,
-          subjectCount: termSubjects.length,
-          subjects: termSubjects,
-        };
-      }),
-    );
+      const studentCount = lookupStudentCount(studentCountMap, {
+        courseId: group.courseId,
+        sessionId: group.sessionId,
+        term: Number(term),
+        academicYearId: group.academicYearId,
+      });
+
+      termDetails.push({
+        ...(matchingItems[0] || {}),
+        term,
+        studentCount,
+        subjectCount: termSubjects.length,
+        subjects: termSubjects,
+      });
+    }
 
     result.push({
       course: courseDetails,
@@ -861,26 +749,19 @@ export async function getExaminationStructure(
   if (sessionId) mappingWhere.sessionId = Number(sessionId);
 
   const plainSession = toPlain(sessionRecord);
-  const classSectionIds = plainSession?.examinationSessionTerms
-    ? uniqueValues(
-        plainSession.examinationSessionTerms.map(
-          (term) => term.classSectionTerm?.classSectionsId,
-        ),
-      )
-    : [];
+  const sessionTermSet = new Set();
+  if (plainSession?.examinationSessionTerms) {
+    for (const sessionTerm of plainSession.examinationSessionTerms) {
+      sessionTermSet.add(Number(sessionTerm.term));
+    }
+  }
+  const hasSessionTermScope = Boolean(examinationSessionId && plainSession);
 
-  const [subjectMappings, classSections] = await Promise.all([
-    examinationSessionRepository.findAssessmentPlanSubjectMappings(
+  const subjectMappings =
+    await examinationSessionRepository.findAssessmentPlanSubjectMappings(
       mappingWhere,
       options,
-    ),
-    classSectionIds.length
-      ? examinationSessionRepository.findClassSections(
-          { classSectionsId: { [Op.in]: classSectionIds } },
-          options,
-        )
-      : [],
-  ]);
+    );
 
   const subjectIds = uniqueValues(
     subjectMappings.map((mapping) => mapping.subjectId),
@@ -916,26 +797,6 @@ export async function getExaminationStructure(
       },
     ]),
   );
-  const mappedCstMap = new Map();
-
-  const classSectionMap = new Map(
-    classSections.map((section) => [section.classSectionsId, section]),
-  );
-
-  if (plainSession?.examinationSessionTerms) {
-    for (const sessionTerm of plainSession.examinationSessionTerms) {
-      const classSectionTerm = sessionTerm.classSectionTerm;
-      const classSection = classSectionMap.get(
-        classSectionTerm?.classSectionsId,
-      );
-      if (classSection) {
-        mappedCstMap.set(
-          `${classSection.courseId}_${classSectionTerm.term}`,
-          classSectionTerm.classSectionTermId,
-        );
-      }
-    }
-  }
 
   const courseSessionGroups = new Map();
   for (const subject of subjects) {
@@ -986,20 +847,17 @@ export async function getExaminationStructure(
       const terms = [...group.termsMap.keys()]
         .sort((a, b) => a - b)
         .reduce((acc, term) => {
-          const classSectionTermId = mappedCstMap.get(
-            `${group.courseId}_${term}`,
-          );
-          if (classSectionTermId) {
-            const termSubjects = group.termsMap.get(term);
-            totalSubjects += termSubjects.length;
-            acc.push({
-              term,
-              termTitle: `${group.termType === "Year" ? "Year" : "Semester"} ${term}`,
-              classSectionTermId,
-              subjectCount: termSubjects.length,
-              subjects: termSubjects,
-            });
+          if (hasSessionTermScope && !sessionTermSet.has(Number(term))) {
+            return acc;
           }
+          const termSubjects = group.termsMap.get(term);
+          totalSubjects += termSubjects.length;
+          acc.push({
+            term,
+            termTitle: `${group.termType === "Year" ? "Year" : "Semester"} ${term}`,
+            subjectCount: termSubjects.length,
+            subjects: termSubjects,
+          });
           return acc;
         }, []);
 
