@@ -67,10 +67,10 @@ module.exports = {
       SET c.university_id = s.university_id, c.institute_id = s.institute_id, c.acedmic_year_id = s.acedmic_year_id
     `);
 
-    // Backfill student_hall_ticket from session
+    // Backfill student_hall_ticket from examination_session
     await queryInterface.sequelize.query(`
       UPDATE student_hall_ticket s
-      JOIN session sn ON s.session_id = sn.session_id
+      JOIN examination_session sn ON s.examination_session_id = sn.examination_session_id
       SET s.acedmic_year_id = sn.acedmic_year_id
     `);
 
