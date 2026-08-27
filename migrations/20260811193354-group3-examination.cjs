@@ -53,10 +53,10 @@ module.exports = {
       SET e.university_id = s.university_id, e.institute_id = s.institute_id
     `);
 
-    // Backfill exam_attendance from exam_schedule
+    // Backfill exam_attendance from exam_setup
     await queryInterface.sequelize.query(`
       UPDATE exam_attendance a
-      JOIN exam_schedule s ON a.exam_schedule_id = s.exam_schedule_id
+      JOIN exam_setup s ON a.exam_setup_id = s.exam_setup_id
       SET a.university_id = s.university_id, a.acedmic_year_id = s.acedmic_year_id
     `);
 
@@ -67,10 +67,10 @@ module.exports = {
       SET c.university_id = s.university_id, c.institute_id = s.institute_id, c.acedmic_year_id = s.acedmic_year_id
     `);
 
-    // Backfill student_hall_ticket from examination_session
+    // Backfill student_hall_ticket from session
     await queryInterface.sequelize.query(`
       UPDATE student_hall_ticket s
-      JOIN examination_session sn ON s.examination_session_id = sn.examination_session_id
+      JOIN session sn ON s.session_id = sn.session_id
       SET s.acedmic_year_id = sn.acedmic_year_id
     `);
 
