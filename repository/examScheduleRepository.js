@@ -56,7 +56,11 @@ export async function getExamSchedules(filters = {}) {
                 {
                     model: model.subjectModel,
                     as: "subjectSchedule",
-                    attributes: ["subjectId", "subjectName", "subjectCode"],
+                    attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
+                    where: {
+                        ...(courseId && { courseId: Number(courseId) }),
+                    },
+                    required: !!courseId,
                 },
                 {
                     model: model.acedmicYearModel,
@@ -64,23 +68,16 @@ export async function getExamSchedules(filters = {}) {
                     attributes: ["academicYearId", "yearTitle"],
                 },
                 {
-                    model: model.examSetupTypeTermModel,
-                    as: "examSetupTypeTerm",
-                    attributes: ["examSetupTypeTermId", "term", "courseId"],
-                    where: {
-                        ...buildScope(model.examSetupTypeTermModel),
-                        ...(courseId && { courseId }),
-                        ...(term && { term }),
-                    },
-                    required: !!(courseId || term),
+                    model: model.examinationSessionModel,
+                    as: "examinationSession",
+                    attributes: ["examinationSessionId", "assessmentTypeId"],
                     include: [
                         {
                             model: model.examSetupTypeModel,
-                            as: "examSetupType",
+                            as: "assessmentType",
                             attributes: ["examSetupTypeId", "examType", "examName"],
-                            where: buildScope(model.examSetupTypeModel),
-                        },
-                    ],
+                        }
+                    ]
                 },
                 {
                     model: model.sessionModel,
@@ -134,7 +131,7 @@ export async function getExamScheduleById(examScheduleId) {
                 {
                     model: model.subjectModel,
                     as: "subjectSchedule",
-                    attributes: ["subjectId", "subjectName", "subjectCode"],
+                    attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
                 },
                 {
                     model: model.acedmicYearModel,
@@ -142,22 +139,10 @@ export async function getExamScheduleById(examScheduleId) {
                     attributes: ["academicYearId", "yearTitle"],
                 },
                 {
-                    model: model.examSetupTypeTermModel,
-                    as: "examSetupTypeTerm",
-                    attributes: ["examSetupTypeTermId", "term", "courseId"],
-                    include: [
-                        {
-                            model: model.examSetupTypeModel,
-                            as: "examSetupType",
-                            attributes: ["examSetupTypeId", "examType", "examName"],
-                        },
-                    ],
-                },
-                {
                     model: model.sessionModel,
                     as: "sessionSchedule",
                     attributes: ["sessionId", "sessionName"],
-                },
+                }
             ],
         });
 
@@ -315,9 +300,22 @@ export async function getStudentsForSchedule(sessionId, courseId, term, academic
 
 export async function allocateSeats(allocations, transaction) {
     try {
-        for (const allocation of allocations) {
-            const capacity = await assertScopedRoomCapacity(allocation.examScheduleRoomCapacityId, transaction);
-            if (!capacity) {
+        const capacityIds = [...new Set(allocations.map(a => a.examScheduleRoomCapacityId))];
+        if (capacityIds.length > 0) {
+            const count = await model.examScheduleRoomCapacityModel.count({
+                where: {
+                    examScheduleRoomCapacityId: { [Op.in]: capacityIds },
+                    ...buildScope(model.examScheduleRoomCapacityModel)
+                },
+                include: [{
+                    model: model.examScheduleModel,
+                    as: 'examSchedule',
+                    required: true,
+                    where: buildScope(model.examScheduleModel)
+                }],
+                transaction
+            });
+            if (count !== capacityIds.length) {
                 throw new Error('Exam schedule room capacity not found');
             }
         }
@@ -330,9 +328,21 @@ export async function allocateSeats(allocations, transaction) {
 
 export async function clearExistingAllocations(examScheduleRoomCapacityIds, transaction) {
     try {
-        for (const capacityId of examScheduleRoomCapacityIds) {
-            const capacity = await assertScopedRoomCapacity(capacityId, transaction);
-            if (!capacity) {
+        if (examScheduleRoomCapacityIds.length > 0) {
+            const count = await model.examScheduleRoomCapacityModel.count({
+                where: {
+                    examScheduleRoomCapacityId: { [Op.in]: examScheduleRoomCapacityIds },
+                    ...buildScope(model.examScheduleRoomCapacityModel)
+                },
+                include: [{
+                    model: model.examScheduleModel,
+                    as: 'examSchedule',
+                    required: true,
+                    where: buildScope(model.examScheduleModel)
+                }],
+                transaction
+            });
+            if (count !== examScheduleRoomCapacityIds.length) {
                 throw new Error('Exam schedule room capacity not found');
             }
         }
@@ -346,4 +356,35 @@ export async function clearExistingAllocations(examScheduleRoomCapacityIds, tran
         console.error("Error clearing existing allocations:", error);
         throw error;
     }
+}
+
+export async function getExamScheduleIdBySubject(subjectId, sessionId) {
+    const schedule = await scoped(model.examScheduleModel).findOne({
+        where: {
+            subjectId,
+            ...(sessionId && { sessionId }),
+        },
+        attributes: ["examScheduleId"],
+        raw: true,
+    });
+    return schedule?.examScheduleId || null;
+}
+
+export async function getStudentSeatAllocationsBySchedule(examScheduleId) {
+    return await model.studentExamSeatModel.findAll({
+        include: [
+            {
+                model: model.examScheduleRoomCapacityModel,
+                as: "roomCapacity",
+                where: { examScheduleId },
+                include: [
+                    {
+                        model: model.classRoomModel,
+                        as: "classRoom",
+                        attributes: ["roomNumber"],
+                    }
+                ]
+            }
+        ]
+    });
 }

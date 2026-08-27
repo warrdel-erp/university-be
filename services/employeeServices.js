@@ -34,13 +34,14 @@ import { resolveTimeTableRoutineSection } from '../utility/classSectionIncludes.
 import { ROLES } from '../const/roles.js';
 import moment from 'moment';
 import { getTenantStore } from '../utility/requestContext.js';
+import { decimalAdd } from '../utility/decimalMoney.js';
 
 async function generateEmployeeNumber(campusId, instituteId) {
   const getCampusCodeDetail = await getCampusCode(campusId);
   const getInstitueCodeDetail = await getInstituteCode(instituteId);
   const campusCode = getCampusCodeDetail.get('campusCode');
   const institueCode = getInstitueCodeDetail.get('instituteCode');
-  const getPreviousEnrollNumber = await employeeRepository.getPreviousEnrollNumber(institueCode);
+  const getPreviousEnrollNumber = await employeeRepository.getPreviousEnrollNumber(campusCode, institueCode);
   const previousEnrollNumber = getPreviousEnrollNumber ? getPreviousEnrollNumber.get('employee_Code') : null;
   let enrollNumber;
   if (previousEnrollNumber) {
@@ -245,8 +246,16 @@ export async function addEmployee(data, files, createdBy, roleId) {
     data.roleId = null;
     data.employeeCode = await generateEmployeeNumber(data.campusId, data.instituteId)
     delete data.department;
-    if (data.departmentId != null) {
-      data.departmentId = Number(data.departmentId);
+    if (data.departmentId != null && data.departmentId !== "" && data.departmentId !== 0 && data.departmentId !== "null" && data.departmentId !== "undefined") {
+      const parsedDeptId = Number(data.departmentId);
+      if (!isNaN(parsedDeptId) && parsedDeptId > 0) {
+        const deptExists = await model.departmentModel.findByPk(parsedDeptId, { transaction });
+        data.departmentId = deptExists ? parsedDeptId : null;
+      } else {
+        data.departmentId = null;
+      }
+    } else {
+      data.departmentId = null;
     }
     const employee = await employeeRepository.addEmployee(data, transaction);
     const employeeId = employee.dataValues.employeeId;
@@ -679,7 +688,6 @@ function validateEmployeeRow(employee) {
     "instituteId",
     "roleId",
     "createdBy",
-    "departmentId",
     "employmentType",
   ];
 
@@ -717,7 +725,7 @@ export async function importEmployeeData(excelData, commonData) {
         employmentType: convertedData.employmentType,
         dateOfBirth: convertedData.dateOfBirth,
         fatherName: convertedData.fatherName,
-        departmentId: convertedData.departmentId != null ? Number(convertedData.departmentId) : null,
+        departmentId: (convertedData.departmentId != null && convertedData.departmentId !== "" && convertedData.departmentId !== 0) ? Number(convertedData.departmentId) : null,
         motherName: convertedData.motherName,
         pickColor: convertedData.pickColor,
         campusId: convertedData.campusId,
@@ -816,8 +824,16 @@ export async function updateEmployee(userId, data, files, updatedBy, createdBy) 
       department: _legacyDepartment,
       ...employeeUpdateData
     } = data; // roleId is a string ("ADMIN"), not an int FK — exclude it
-    if (employeeUpdateData.departmentId != null) {
-      employeeUpdateData.departmentId = Number(employeeUpdateData.departmentId);
+    if (employeeUpdateData.departmentId != null && employeeUpdateData.departmentId !== "" && employeeUpdateData.departmentId !== 0 && employeeUpdateData.departmentId !== "null" && employeeUpdateData.departmentId !== "undefined") {
+      const parsedDeptId = Number(employeeUpdateData.departmentId);
+      if (!isNaN(parsedDeptId) && parsedDeptId > 0) {
+        const deptExists = await model.departmentModel.findByPk(parsedDeptId, { transaction });
+        employeeUpdateData.departmentId = deptExists ? parsedDeptId : null;
+      } else {
+        employeeUpdateData.departmentId = null;
+      }
+    } else {
+      employeeUpdateData.departmentId = null;
     }
     await employeeRepository.updateEmployee(userId, {
       ...employeeUpdateData,
@@ -1345,11 +1361,12 @@ function expandScheduleForExactDate(rawSchedules, currentDate) {
   return results;
 }
 
-export async function getTodayClassSchedule(userId, currentDate, sessionId, groupPeriods = false) {
-  const rawSchedules = await employeeScheduleRepository.getTodayClassScheduleForEmployee(
+export async function getTodayClassSchedule(userId, currentDate, sessionId, groupPeriods = false, pagination = {}) {
+  const { rows: rawSchedules, total } = await employeeScheduleRepository.getTodayClassScheduleForEmployee(
     Number(userId),
     currentDate,
     sessionId,
+    pagination,
   );
 
   const strippedSchedules = [];
@@ -1359,21 +1376,22 @@ export async function getTodayClassSchedule(userId, currentDate, sessionId, grou
 
   const schedules = await enrichTodayClassSchedules(strippedSchedules);
 
+  let finalSchedules = schedules;
   if (groupPeriods) {
-    return applyGroupAttendanceStatus(
+    finalSchedules = applyGroupAttendanceStatus(
       await groupConsecutivePeriods(schedules, groupPeriods === 'sessional'),
     );
   }
 
-  return schedules;
+  return { schedules: finalSchedules, total };
 }
 
 export async function getTeacherCourses(userId) {
   return await employeeRepository.getTeacherCourses(userId);
 }
 
-export async function getTeacherSubjectsFromSchedule(userId) {
-  return await employeeScheduleRepository.getTeacherSubjectsFromWeekCells(userId);
+export async function getTeacherSubjectsFromSchedule(userId, filters = {}) {
+  return await employeeScheduleRepository.getTeacherSubjectsFromWeekCells(userId, filters);
 }
 
 function getTeacherDetails(rawSchedules) {
@@ -1664,12 +1682,14 @@ export async function getPastClassSchedules(
   currentDateString,
   groupPeriods = false,
   sessionId,
+  pagination = {},
 ) {
-  const rawSchedules = await employeeScheduleRepository.getPastClassSchedulesForEmployee(
+  const { rows: rawSchedules, total } = await employeeScheduleRepository.getPastClassSchedulesForEmployee(
     userId,
     academicYearId,
     currentDateString,
     sessionId,
+    pagination,
   );
 
   const teacher = getTeacherDetails(rawSchedules);
@@ -1683,17 +1703,19 @@ export async function getPastClassSchedules(
     return {
       teacher,
       schedules: await applyGroupAttendanceStatus(grouped),
+      total,
     };
   }
 
-  return { teacher, schedules };
+  return { teacher, schedules, total };
 }
 
-export async function getUpcomingClassSchedules(userId, academicYearId, currentDateString, groupPeriods = false) {
-  const upcomingClasses = await employeeScheduleRepository.getUpcomingClassSchedulesForEmployee(
+export async function getUpcomingClassSchedules(userId, academicYearId, currentDateString, groupPeriods = false, pagination = {}) {
+  const { rows: upcomingClasses, total } = await employeeScheduleRepository.getUpcomingClassSchedulesForEmployee(
     userId,
     academicYearId,
     currentDateString,
+    pagination,
   );
 
   const strippedSchedules = [];
@@ -1703,13 +1725,14 @@ export async function getUpcomingClassSchedules(userId, academicYearId, currentD
 
   const schedules = await enrichSchedulesWithAttendance(strippedSchedules);
 
+  let finalSchedules = schedules;
   if (groupPeriods) {
     const grouped = await groupConsecutivePeriods(schedules, groupPeriods === 'sessional');
     grouped.sort((a, b) => new Date(a.date) - new Date(b.date));
-    return applyGroupAttendanceStatus(grouped);
+    finalSchedules = await applyGroupAttendanceStatus(grouped);
   }
 
-  return schedules;
+  return { schedules: finalSchedules, total };
 }
 
 async function groupConsecutivePeriods(classes, sessionalBreak = false) {
@@ -1924,7 +1947,7 @@ function processScheduleCombinations(schedules) {
     const dayStr = schedule.day;
 
     if (startDateStr && endDateStr && dayStr) {
-      entry.totalClasses += countWeekdayInRange(startDateStr, endDateStr, dayStr);
+      entry.totalClasses = decimalAdd(entry.totalClasses, countWeekdayInRange(startDateStr, endDateStr, dayStr));
     }
   }
 
@@ -1946,7 +1969,7 @@ function getEmployeeDetails(schedules) {
     employmentType: employee.employmentType,
     departmentId: employee.departmentId ?? null,
     departmentName: employee.employeeDepartment?.departmentName || employee.departmentName || "",
-    totalClasses: schedules.reduce((acc, schedule) => acc + schedule.totalClasses, 0),
+    totalClasses: schedules.reduce((acc, schedule) => decimalAdd(acc, schedule.totalClasses || 0), 0),
     totalUniqueSubjects: schedules.length
   };
 }
@@ -1957,9 +1980,12 @@ export async function getUniqueClassSectionSubjects(userId, academicYearId) {
     academicYearId,
   );
 
+  const employeeDetails = getEmployeeDetails(schedules);
+  const combinations = processScheduleCombinations(schedules);
+
   return {
-    employeeDetails: getEmployeeDetails(schedules),
-    combinations: processScheduleCombinations(schedules),
+    employeeDetails,
+    combinations,
   };
 }
 

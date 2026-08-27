@@ -1,18 +1,28 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as academicRegulationRepo from "../repository/academicRegulationRepository.js";
+import { getAcademicYearId } from "../utility/requestContext.js";
 
 export async function createAcademicRegulation(payload, user) {
   return await sequelize.transaction(async (t) => {
+    const sanitizeDate = (val) => (!val || val === "" || val === "Invalid date" ? null : val);
+    const { courseId, sessionId, courseMappings, ...restPayload } = payload;
+    
+    let finalAcademicYearId = restPayload.academicYearId ? Number(restPayload.academicYearId) : null;
+    if (!finalAcademicYearId) {
+      finalAcademicYearId = getAcademicYearId() || user?.defaultAcademicYearId || null;
+    }
+
     const regulationData = {
-      ...payload,
-      courseId: payload.courseId ? Number(payload.courseId) : null,
-      sessionId: payload.sessionId ? Number(payload.sessionId) : null,
-      academicYearId: payload.academicYearId ? Number(payload.academicYearId) : (user?.academicYearId || null),
-      gradingSchemeId: payload.gradingSchemeId ? Number(payload.gradingSchemeId) : null,
+      ...restPayload,
+      effectiveFrom: sanitizeDate(restPayload.effectiveFrom),
+      effectiveUntil: sanitizeDate(restPayload.effectiveUntil),
+      academicYearId: finalAcademicYearId,
+      gradingSchemeId: restPayload.gradingSchemeId ? Number(restPayload.gradingSchemeId) : null,
       status: payload.status || "DRAFT",
       isActive: payload.isActive !== undefined ? payload.isActive : true,
       createdBy: user?.userId || null,
       updatedBy: user?.userId || null,
+      courseMappings: courseMappings || [],
     };
 
     return await academicRegulationRepo.createAcademicRegulation(regulationData, { transaction: t });
@@ -62,13 +72,12 @@ export async function updateAcademicRegulation(academicRegulationId, payload, us
     if (payload.regulationName !== undefined) updateData.regulationName = payload.regulationName;
     if (payload.regulationCode !== undefined) updateData.regulationCode = payload.regulationCode;
     if (payload.description !== undefined) updateData.description = payload.description;
-    if (payload.courseId !== undefined) updateData.courseId = payload.courseId ? Number(payload.courseId) : null;
-    if (payload.sessionId !== undefined) updateData.sessionId = payload.sessionId ? Number(payload.sessionId) : null;
     if (payload.academicYearId !== undefined) updateData.academicYearId = payload.academicYearId ? Number(payload.academicYearId) : null;
     if (payload.academicYearRange !== undefined) updateData.academicYearRange = payload.academicYearRange;
     if (payload.applicableBatch !== undefined) updateData.applicableBatch = payload.applicableBatch;
-    if (payload.effectiveFrom !== undefined) updateData.effectiveFrom = payload.effectiveFrom;
-    if (payload.effectiveUntil !== undefined) updateData.effectiveUntil = payload.effectiveUntil;
+    const sanitizeDate = (val) => (!val || val === "" || val === "Invalid date" ? null : val);
+    if (payload.effectiveFrom !== undefined) updateData.effectiveFrom = sanitizeDate(payload.effectiveFrom);
+    if (payload.effectiveUntil !== undefined) updateData.effectiveUntil = sanitizeDate(payload.effectiveUntil);
     if (payload.gradingSchemeId !== undefined) updateData.gradingSchemeId = payload.gradingSchemeId ? Number(payload.gradingSchemeId) : null;
     if (payload.evaluationPattern !== undefined) updateData.evaluationPattern = payload.evaluationPattern;
     if (payload.internalWeightage !== undefined) updateData.internalWeightage = payload.internalWeightage;
@@ -147,6 +156,7 @@ export async function updateAcademicRegulation(academicRegulationId, payload, us
     if (payload.isAutoNumberingEnabled !== undefined) updateData.isAutoNumberingEnabled = payload.isAutoNumberingEnabled;
     if (payload.status !== undefined) updateData.status = payload.status;
     if (payload.isActive !== undefined) updateData.isActive = payload.isActive;
+    if (payload.courseMappings !== undefined) updateData.courseMappings = payload.courseMappings;
 
     return await academicRegulationRepo.updateAcademicRegulation(academicRegulationId, updateData, { transaction: t });
   });
@@ -172,6 +182,13 @@ export async function createCourseMapping({ academicRegulationId, courseId, sess
       error.statusCode = 404;
       throw error;
     }
+
+    if (!existingRegulation.isActive) {
+      const error = new Error("Academic regulation is not active");
+      error.statusCode = 400;
+      throw error;
+    }
+
     return await academicRegulationRepo.createCourseMapping(
       {
         academicRegulationId: Number(academicRegulationId),

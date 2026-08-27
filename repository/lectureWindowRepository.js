@@ -77,24 +77,33 @@ export async function getLectureWindows(filters = {}) {
   });
 }
 
-export async function getLectureWindowById(lectureWindowId, academicYearId) {
+export async function getLectureWindowById(lectureWindowId, academicYearId, userId) {
+  const where = {
+    lectureWindowId: Number(lectureWindowId),
+    academicYearId: Number(academicYearId),
+  };
+  if (userId != null) {
+    where.userId = Number(userId);
+  }
   return scoped(model.lectureWindowModel).findOne({
     attributes: { exclude: excludeMeta },
-    where: {
-      lectureWindowId: Number(lectureWindowId),
-      academicYearId: Number(academicYearId),
-    },
+    where,
     include: buildLectureWindowIncludes(),
     order: [[{ model: model.lessonModel, as: "lessons" }, "lessonId", "ASC"]],
   });
 }
 
-export async function updateLectureWindow(lectureWindowId, data, academicYearId) {
+export async function updateLectureWindow(lectureWindowId, data, academicYearId, userId) {
+  const where = {
+    lectureWindowId: Number(lectureWindowId),
+    academicYearId: Number(academicYearId),
+  };
+  if (userId != null) {
+    where.userId = Number(userId);
+  }
+
   const existing = await scoped(model.lectureWindowModel).findOne({
-    where: {
-      lectureWindowId: Number(lectureWindowId),
-      academicYearId: Number(academicYearId),
-    },
+    where,
     attributes: ["lectureWindowId"],
   });
   if (!existing) {
@@ -102,21 +111,22 @@ export async function updateLectureWindow(lectureWindowId, data, academicYearId)
   }
 
   await scoped(model.lectureWindowModel).update(data, {
-    where: {
-      lectureWindowId: Number(lectureWindowId),
-      academicYearId: Number(academicYearId),
-    },
+    where,
   });
 
-  return getLectureWindowById(lectureWindowId, academicYearId);
+  return getLectureWindowById(lectureWindowId, academicYearId, userId);
 }
 
-export async function deleteLectureWindow(lectureWindowId, academicYearId, transaction) {
+export async function deleteLectureWindow(lectureWindowId, academicYearId, userId, transaction) {
+  const where = {
+    lectureWindowId: Number(lectureWindowId),
+    academicYearId: Number(academicYearId),
+  };
+  if (userId != null) {
+    where.userId = Number(userId);
+  }
   const deleted = await scoped(model.lectureWindowModel).destroy({
-    where: {
-      lectureWindowId: Number(lectureWindowId),
-      academicYearId: Number(academicYearId),
-    },
+    where,
     transaction,
   });
   return deleted > 0;

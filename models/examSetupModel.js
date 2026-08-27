@@ -1,14 +1,43 @@
 import sequelize from "../database/sequelizeConfig.js";
-import { DataTypes } from "sequelize";
+import { DataTypes } from 'sequelize';
+import universityModel from "./universityModel.js";
+import instituteModel from "./instituteModel.js";
+import acedmicYearModel from "./acedmicYearModel.js";
 import users from "./userModel.js";
 import subjectModel from "./subjectModel.js";
-import examTypeModel from "./examTypeModel.js";
 import courseModel from "./courseModel.js";
 import classRoomModel from "./classRoomModel.js";
 
 const examSetupModel = sequelize.define(
     "exam_setup",
     {
+                universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
+        },
+        academicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYearModel,
+                key: 'acedmic_year_id'
+            }
+        },
         examSetupId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
@@ -25,8 +54,8 @@ const examSetupModel = sequelize.define(
             allowNull: false,
             field: "exam_type_id",
             references: {
-                model: examTypeModel,
-                key: "exam_type_id",
+                model: "exam_setup_type",
+                key: "exam_setup_type_id",
             },
         },
         classId: {

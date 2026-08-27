@@ -1,5 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
+import acedmicYearModel from "./acedmicYearModel.js";
 import university from './universityModel.js';
 import campus from './campusModel.js';
 import institute from './instituteModel.js';
@@ -16,6 +17,15 @@ import feePlanProfileModel from "./feePlanProfileModel.js";
 const studentModel = sequelize.define(
     'students',
     {
+                academicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYearModel,
+                key: 'acedmic_year_id'
+            }
+        },
         studentId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
@@ -83,6 +93,15 @@ const studentModel = sequelize.define(
             references: {
                 model: course,
                 key: 'course_id'
+            }
+        },
+        departmentId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'department_id',
+            references: {
+                model: 'department',
+                key: 'department_id'
             }
         },
         specializationId: {

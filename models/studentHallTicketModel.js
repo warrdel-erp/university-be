@@ -1,14 +1,23 @@
+import { DataTypes } from 'sequelize';
 import sequelize from "../database/sequelizeConfig.js";
-import { DataTypes } from "sequelize";
-import examSetupTypeTermModel from "./examSetupTypeTermModel.js";
-import sessionModel from "./sessionModel.js";
-import studentModel from "./studentModel.js";
+import acedmicYearModel from "./acedmicYearModel.js";
 import instituteModel from "./instituteModel.js";
+import studentModel from "./studentModel.js";
 import universityModel from "./universityModel.js";
+import examinationSessionModel from './examinationSessionModel.js';
 
 const studentHallTicketModel = sequelize.define(
     "student_hall_ticket",
     {
+        academicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYearModel,
+                key: 'acedmic_year_id'
+            }
+        },
         id: {
             type: DataTypes.INTEGER,
             primaryKey: true,
@@ -20,22 +29,22 @@ const studentHallTicketModel = sequelize.define(
             allowNull: false,
             field: "qr"
         },
-        examSetupTypeTermId: {
-            type: DataTypes.INTEGER,
+        examinationSessionId: {
+            type: DataTypes.BIGINT,
             allowNull: false,
-            field: "exam_setup_type_term_id",
+            field: "examination_session_id",
             references: {
-                model: examSetupTypeTermModel,
-                key: "exam_setup_type_term_id"
+                model: examinationSessionModel,
+                key: "examination_session_id"
             }
         },
-        sessionId: {
+        academicYearId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: "session_id",
+            field: "acedmic_year_id",
             references: {
-                model: sessionModel,
-                key: "session_id"
+                model: acedmicYearModel,
+                key: "acedmic_year_id"
             }
         },
         studentId: {
@@ -65,6 +74,53 @@ const studentHallTicketModel = sequelize.define(
                 key: "university_id"
             }
         },
+        isBlocked: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+            field: "is_blocked"
+        },
+        isPublished: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+            field: "is_published"
+        },
+        publishedAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field: "published_at"
+        },
+        blockedAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field: "blocked_at"
+        },
+        previousEligibilityStatus: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: "previous_eligibility_status"
+        },
+        markAsEligible: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+            field: "mark_as_eligible"
+        },
+        markedBy: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: "marked_by",
+            references: {
+                model: "users",
+                key: "user_id"
+            }
+        },
+        markedAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field: "marked_at"
+        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,
@@ -84,12 +140,12 @@ const studentHallTicketModel = sequelize.define(
         indexes: [
             {
                 unique: true,
-                fields: ["exam_setup_type_term_id", "session_id", "student_id"]
+                fields: ["examination_session_id", "student_id"]
             },
-            /** Scope hall-ticket counts/lists by institute (pairs with session + term filters). */
+            /** Scope hall-ticket counts/lists by institute. */
             {
-                name: "student_hall_ticket_inst_univ_est_session_idx",
-                fields: ["institute_id", "university_id", "exam_setup_type_term_id", "session_id"]
+                name: "student_hall_ticket_inst_univ_exam_session_idx",
+                fields: ["institute_id", "university_id", "examination_session_id", "acedmic_year_id"]
             },
             /** GET /byQr — equality on qr within tenant. */
             {

@@ -1,5 +1,6 @@
 import * as userPermissionService from "../services/userPermissionService.js";
 import * as userRoleService from "../services/userRoleService.js";
+import * as userPermissionRepository from "../repository/userPermissionRepository.js";
 import * as model from "../models/index.js";
 import { PERMISSIONS } from "../const/permissions.js";
 import { ROLES } from "../const/roles.js";
@@ -135,13 +136,10 @@ export async function getAllScopes(req, res) {
 export async function getAllPermissions(req, res) {
   try {
     const userId = req.user.userId;
-    const permissions = await model.userRolePermissionModel.findAll({
-      where: { user_id: userId },
-      attributes: ["permission", "scope", "roleId"],
-      raw: true,
-    });
+    const activeRoleId = req.user.defaultRoleId || null;
+    const permissions = await userPermissionRepository.getUserPermissionsByUserId(userId, activeRoleId);
 
-    // The frontend expects the data array directly
+    // The frontend expects the data array directly (expanded with dependentOn)
     return res.status(200).json({
       success: true,
       data: permissions,

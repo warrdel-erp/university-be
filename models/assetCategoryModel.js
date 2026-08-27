@@ -1,11 +1,21 @@
 import sequelize from "../database/sequelizeConfig.js";
-import { DataTypes } from "sequelize";
+import { DataTypes } from 'sequelize';
+import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
 
 const assetCategoryModel = sequelize.define(
   "asset_category",
   {
-    assetCategoryId: {
+            universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        assetCategoryId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,

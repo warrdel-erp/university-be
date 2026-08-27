@@ -1,46 +1,117 @@
 import { Router } from "express";
 const router = Router();
 import {
-    addExamAttendance,
-    getAllExamAttendance,
-    getSingleExamAttendance,
-    deleteExamAttendance,
-    updateExamAttendances
+  getExamOperationsAttendance,
+  getExamOperationsAttendanceRoom,
+  markExamAttendance,
+  updateRoomAttendanceStatus,
+  getExamAttendanceDetailsByRoom,
+  getExamOperationsSummary,
 } from "../controllers/examAttendanceController.js";
 import userAuth from "../middleware/authUser.js";
-import { checkAccess } from "../middleware/checkAccess.js";
-import { PERMISSIONS } from "../const/permissions.js";
 import { validate } from "../utility/validation.js";
 import { z } from "zod";
 
-const optionalAcademicYearIdQuerySchema = z.object({
-    academicYearId: z.coerce.number().int().positive().optional(),
+const querySchema = z.object({
+  examinationSessionId: z.coerce.number().int().positive(),
+  examDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD")
+    .optional(),
+  search: z.string().optional(),
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().positive().optional().default(10),
 });
 
-const examAttendanceIdQuerySchema = z.object({
-    examAttendanceId: z.coerce.number().int().positive(),
+const roomQuerySchema = z.object({
+  classRoomSectionId: z.coerce.number().int().positive(),
+  examDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD"),
+  examinationSessionSlotId: z.coerce.number().int().positive(),
 });
 
-router.post("/", userAuth, checkAccess(PERMISSIONS.EXAM_ATTENDANCE_EXECUTE.value, null), addExamAttendance);
+const markAttendanceSchema = z.object({
+  examScheduleId: z.number().int().positive(),
+  examScheduleRoomCapacityId: z.number().int().positive(),
+  students: z
+    .array(
+      z.object({
+        studentId: z.number().int().positive(),
+        attendanceStatus: z.enum(["PRESENT", "ABSENT", "PENDING"]),
+      }),
+    )
+    .min(1, "At least one student is required"),
+});
+
+const updateRoomStatusSchema = z.object({
+  examScheduleId: z.number().int().positive(),
+  examScheduleRoomCapacityId: z.number().int().positive(),
+  status: z.enum([
+    "NOT_GENERATED",
+    "GENERATED",
+    "IN_PROGRESS",
+    "SUBMITTED",
+    "VERIFIED",
+  ]),
+});
+
+const byRoomSchema = z.object({
+  classRoomSectionId: z.coerce.number().int().positive(),
+  examinationSessionId: z.coerce.number().int().positive().optional(),
+  examDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD"),
+  examinationSessionSlotId: z.coerce.number().int().positive().optional(),
+});
+
+const getSummarySchema = z.object({
+  examinationSessionId: z.coerce.number().int().positive(),
+  courseId: z.coerce.number().int().positive().optional(),
+  sessionId: z.coerce.number().int().positive().optional(),
+  term: z.coerce.number().int().positive().optional(),
+  examDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD")
+    .optional(),
+  examinationSessionSlotId: z.coerce.number().int().positive().optional(),
+});
+
+
 
 router.get(
-    "/",
-    userAuth,
-    checkAccess(PERMISSIONS.EXAM_ATTENDANCE.value, null),
-    validate({ query: optionalAcademicYearIdQuerySchema }),
-    getAllExamAttendance,
+  "/",
+  userAuth,
+  validate({ query: querySchema }),
+  getExamOperationsAttendance,
 );
 
 router.get(
-    "/single",
-    userAuth,
-    checkAccess(PERMISSIONS.EXAM_ATTENDANCE.value, null),
-    validate({ query: examAttendanceIdQuerySchema }),
-    getSingleExamAttendance,
+  "/room",
+  userAuth,
+  validate({ query: roomQuerySchema }),
+  getExamOperationsAttendanceRoom,
 );
 
-router.put("/", userAuth, checkAccess(PERMISSIONS.EXAM_ATTENDANCE_EXECUTE.value, null), updateExamAttendances);
-
-router.delete("/", userAuth, checkAccess(PERMISSIONS.EXAM_ATTENDANCE.value, null), deleteExamAttendance);
+router.get(
+  "/summary",
+  userAuth,
+  validate({ query: getSummarySchema }),
+  getExamOperationsSummary,
+);
+router.get(
+  "/byroom",
+  userAuth,
+  validate({ query: byRoomSchema }),
+  getExamAttendanceDetailsByRoom,
+);
+router.patch(
+  "/",
+  userAuth,
+  validate({ body: markAttendanceSchema }),
+  markExamAttendance,
+);
+router.post(
+  "/status",
+  userAuth,
+  validate({ body: updateRoomStatusSchema }),
+  updateRoomAttendanceStatus,
+);
 
 export default router;

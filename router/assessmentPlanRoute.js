@@ -23,10 +23,10 @@ import {
 const router = express.Router();
 
 export const createSubjectMappingBody = z.object({
-  assessmentPlanId: z.coerce.number().int().positive(),
-  subjectId: z.coerce.number().int().positive(),
-  courseId: z.coerce.number().int().positive(),
-  sessionId: z.coerce.number().int().positive().optional().nullable(),
+  assessmentPlanId: z.coerce.number().int().positive("assessmentPlanId is required"),
+  subjectId: z.coerce.number().int().positive("subjectId is required"),
+  courseId: z.coerce.number().int().positive("courseId is required"),
+  sessionId: z.coerce.number().int().positive("sessionId is required"),
 });
 
 export const listSubjectMappingQuery = z.object({
@@ -63,6 +63,7 @@ export const componentSchema = z.object({
   evaluationBy: z.enum(["Faculty", "CoE", "External"]).optional().default("Faculty"),
   weightagePercentage: z.coerce.number().nonnegative(),
   maxAssessments: z.coerce.number().int().positive().optional().default(1),
+  duration: z.coerce.number().int().positive().optional().nullable(),
 });
 
 export const createAssessmentPlanBody = z.object({

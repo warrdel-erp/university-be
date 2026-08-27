@@ -1,5 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
-import { DataTypes } from "sequelize";
+import { DataTypes } from 'sequelize';
+import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
 import assetModel from "./assetModel.js";
 import assetCategoryModel from "./assetCategoryModel.js";
@@ -13,7 +14,16 @@ import {
 const amcServiceTicketModel = sequelize.define(
   "amc_service_ticket",
   {
-    serviceTicketId: {
+            universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        serviceTicketId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,

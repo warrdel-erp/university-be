@@ -4,6 +4,10 @@ export const listCourses = async (options = {}) => {
   return courseRepository.getAllCourses(options);
 };
 
+export const getCourseByCourseId = async (courseId) => {
+  return courseRepository.getCourseByCourseId(courseId);
+};
+
 export const getCourseWithSubjects = async (academicYearId) => {
   return courseRepository.getCourseListWithSubjects(academicYearId);
 };
@@ -130,4 +134,12 @@ export const deleteCourse = async (courseId) => {
   }
 
   return result;
+};
+
+export const getSubjectsByTeacherUserId = async (userId, searchKey) => {
+  return courseRepository.getSubjectsByTeacherUserId(userId, searchKey);
+};
+
+export const getSubjectByTeacherUserIdAndSubjectId = async (userId, subjectId) => {
+  return courseRepository.getSubjectByTeacherUserIdAndSubjectId(userId, subjectId);
 };

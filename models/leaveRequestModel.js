@@ -21,6 +21,30 @@ const leaveRequestModel = sequelize.define(
                 key: 'user_id'
             }
     },
+    universityId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'university_id',
+      references: { model: 'university', key: 'university_id' }
+    },
+    campusId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'campus_id',
+      references: { model: 'campus', key: 'campus_id' }
+    },
+    instituteId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'institute_id',
+      references: { model: 'institute', key: 'institute_id' }
+    },
+    departmentId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'department_id',
+      references: { model: 'department', key: 'department_id' }
+    },
     policyId: {
       type: DataTypes.INTEGER,
       allowNull: false,

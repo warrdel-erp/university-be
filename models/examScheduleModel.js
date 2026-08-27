@@ -1,11 +1,32 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
+import universityModel from "./universityModel.js";
+import instituteModel from "./instituteModel.js";
 import users from "./userModel.js";
 import subjectModel from "./subjectModel.js";
+import examinationSessionModel from "./examinationSessionModel.js";
 
 const examScheduleModel = sequelize.define(
     'exam_schedule',
     {
+                universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
+        },
         examScheduleId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
@@ -14,7 +35,7 @@ const examScheduleModel = sequelize.define(
         },
         subjectId: {
             type: DataTypes.INTEGER,
-            allowNull: true,
+            allowNull: false,
             field: 'subject_id',
             references: {
                 model: subjectModel,
@@ -25,15 +46,6 @@ const examScheduleModel = sequelize.define(
             type: DataTypes.INTEGER,
             allowNull: true,
             comment: 'Program term number',
-        },
-        examSetupTypeTermId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'exam_setup_type_term_id',
-            references: {
-                model: 'exam_setup_type_term',
-                key: 'exam_setup_type_term_id'
-            }
         },
         academicYearId: {
             type: DataTypes.INTEGER,
@@ -70,6 +82,29 @@ const examScheduleModel = sequelize.define(
         duration: {
             type: DataTypes.STRING,
             allowNull: false
+        },
+        maximumMarks: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'maximum_marks'
+        },
+        examinationSessionSlotId: {
+            type: DataTypes.BIGINT,
+            allowNull: false,
+            field: 'examination_session_slot_id',
+            references: {
+                model: 'examination_session_slot',
+                key: 'examination_session_slot_id'
+            }
+        },
+        examinationSessionId: {
+            type: DataTypes.BIGINT,
+            allowNull: false,
+            field: 'examination_session_id',
+            references: {
+                model: examinationSessionModel,
+                key: 'examination_session_id'
+            }
         },
         createdBy: {
             type: DataTypes.INTEGER,

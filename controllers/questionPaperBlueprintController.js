@@ -1,5 +1,6 @@
 import * as questionPaperBlueprintServices from "../services/questionPaperBlueprintServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
+import { validateEmployeeUser } from "../utility/employeeValidation.js";
 
 /**
  * Add a new question paper blueprint
@@ -58,6 +59,61 @@ export async function deleteBlueprint(req, res) {
             return SuccessResponse(res, 200, `Delete successful for blueprint ID ${id}`);
         } else {
             return ErrorResponse(res, 404, "Blueprint not found in bank");
+        }
+    } catch (error) {
+        return ErrorResponse(res, 500, error.message);
+    }
+}
+
+export async function addMyBlueprint(req, res) {
+    try {
+        const validation = await validateEmployeeUser(req, res);
+        if (!validation.valid) {
+            return ErrorResponse(res, validation.status, validation.message);
+        }
+        const { userId } = validation;
+
+        const result = await questionPaperBlueprintServices.addBlueprint(req.body, userId, userId);
+        return SuccessResponse(res, 201, "Question paper blueprint added successfully", result);
+    } catch (error) {
+        return ErrorResponse(res, 500, error.message);
+    }
+}
+
+export async function getMyBlueprints(req, res) {
+    try {
+        const validation = await validateEmployeeUser(req, res);
+        if (!validation.valid) {
+            return ErrorResponse(res, validation.status, validation.message);
+        }
+        const { userId } = validation;
+        const { subjectId } = req.query;
+
+        const result = await questionPaperBlueprintServices.getBlueprints({ subjectId, ownerId: userId });
+        return SuccessResponse(res, 200, "Question paper blueprints fetched successfully", result);
+    } catch (error) {
+        return ErrorResponse(res, 500, error.message);
+    }
+}
+
+export async function deleteMyBlueprint(req, res) {
+    try {
+        const validation = await validateEmployeeUser(req, res);
+        if (!validation.valid) {
+            return ErrorResponse(res, validation.status, validation.message);
+        }
+        const { userId } = validation;
+        const { id } = req.params;
+
+        if (!id) {
+            return ErrorResponse(res, 400, "Blueprint ID is required");
+        }
+
+        const deleted = await questionPaperBlueprintServices.deleteBlueprint(id, userId);
+        if (deleted) {
+            return SuccessResponse(res, 200, `Delete successful for blueprint ID ${id}`);
+        } else {
+            return ErrorResponse(res, 404, "Blueprint not found or unauthorized");
         }
     } catch (error) {
         return ErrorResponse(res, 500, error.message);

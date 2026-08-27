@@ -15,6 +15,24 @@ const libraryReturnBookTransactionModel = sequelize.define(
       allowNull: false,
       field: "return_date",
     },
+    universityId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "university_id",
+      references: { model: "university", key: "university_id" }
+    },
+    campusId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "campus_id",
+      references: { model: "campus", key: "campus_id" }
+    },
+    instituteId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "institute_id",
+      references: { model: "institute", key: "institute_id" }
+    },
     createdAt: {
       type: DataTypes.DATE,
       allowNull: false,

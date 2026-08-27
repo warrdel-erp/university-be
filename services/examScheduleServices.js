@@ -1,21 +1,22 @@
 import * as examScheduleRepository from '../repository/examScheduleRepository.js';
 import sequelize from "../database/sequelizeConfig.js";
+import * as studentService from './studentService.js';
 
 export async function getExamSchedules(filters) {
     const result = await examScheduleRepository.getExamSchedules(filters);
 
     if (result && result.length > 0) {
         const sessions = [...new Set(result.map(r => r.sessionId))];
-        const courses = [...new Set(result.map(r => r.examSetupTypeTerm?.courseId).filter(Boolean))];
-        const terms = [...new Set(result.map(r => r.examSetupTypeTerm?.term).filter(Boolean))];
+        const courses = [...new Set(result.map(r => r.examSetupTypeTerm?.courseId || r.subjectSchedule?.courseId).filter(Boolean))];
+        const terms = [...new Set(result.map(r => r.examSetupTypeTerm?.term || r.term).filter(Boolean))];
         const acedmicYears = [...new Set(result.map(r => r.academicYearId))];
 
         if (sessions.length > 0 && courses.length > 0 && terms.length > 0) {
             const counts = await examScheduleRepository.getStudentCountsByGroups(sessions, courses, terms, acedmicYears);
 
             result.forEach(schedule => {
-                const term = schedule.examSetupTypeTerm?.term;
-                const courseId = schedule.examSetupTypeTerm?.courseId;
+                const term = schedule.examSetupTypeTerm?.term || schedule.term;
+                const courseId = schedule.examSetupTypeTerm?.courseId || schedule.subjectSchedule?.courseId;
                 const sessionId = schedule.sessionId;
                 const academicYearId = schedule.academicYearId;
 
@@ -45,8 +46,8 @@ export async function getExamScheduleById(examScheduleId) {
     const result = await examScheduleRepository.getExamScheduleById(examScheduleId);
 
     if (result) {
-        const term = result.examSetupTypeTerm?.term;
-        const courseId = result.examSetupTypeTerm?.courseId;
+        const term = result.term;
+        const courseId =  result.subjectSchedule?.courseId;
         const sessionId = result.sessionId;
         const academicYearId = result.academicYearId;
 
@@ -103,8 +104,8 @@ async function allocateSeatsByStrategy(examScheduleId, userId, strategy = "rando
             throw new Error("Exam schedule not found");
         }
 
-        const term = schedule.examSetupTypeTerm?.term;
-        const courseId = schedule.examSetupTypeTerm?.courseId;
+        const term = schedule.examSetupTypeTerm?.term || schedule.term;
+        const courseId = schedule.examSetupTypeTerm?.courseId || schedule.subjectSchedule?.courseId;
         const sessionId = schedule.sessionId;
         const academicYearId = schedule.academicYearId;
 
@@ -187,4 +188,79 @@ export async function allocateSeatsAscending(examScheduleId, userId) {
 
 export async function allocateSeatsDescending(examScheduleId, userId) {
     return allocateSeatsByStrategy(examScheduleId, userId, "descending");
+}
+
+export async function getExamScheduleStudents(filters) {
+    const {
+        page,
+        limit,
+        search,
+        courseId,
+        sessionId,
+        term,
+        subjectId,
+        examScheduleId,
+    } = filters;
+
+    let resolvedExamScheduleId = examScheduleId;
+    if (!resolvedExamScheduleId && subjectId) {
+        resolvedExamScheduleId = await examScheduleRepository.getExamScheduleIdBySubject(subjectId, sessionId);
+    }
+
+    let resolvedCourseId = courseId;
+    let resolvedSessionId = sessionId;
+    let resolvedTerm = term;
+
+    if (resolvedExamScheduleId) {
+        const schedule = await examScheduleRepository.getExamScheduleById(resolvedExamScheduleId);
+        resolvedCourseId = resolvedCourseId || schedule?.subjectSchedule?.courseId;
+        resolvedSessionId = resolvedSessionId || schedule?.sessionId;
+        resolvedTerm = resolvedTerm || schedule?.term;
+    }
+
+    const toArray = (val) => val != null ? (Array.isArray(val) ? val : [val]) : undefined;
+
+    const result = await studentService.getAllStudents({
+        page,
+        limit,
+        search,
+        courseId: toArray(resolvedCourseId),
+        sessionId: toArray(resolvedSessionId),
+        term: toArray(resolvedTerm),
+    });
+
+    const seatMap = new Map();
+    if (resolvedExamScheduleId) {
+        const seats = await examScheduleRepository.getStudentSeatAllocationsBySchedule(resolvedExamScheduleId);
+        for (const seat of seats) {
+            const rowVal = seat.row || 0;
+            const colVal = seat.column || 0;
+            const rowChar = rowVal ? String.fromCharCode(64 + rowVal) : "";
+            const seatNumber = rowChar ? `${rowChar}${colVal}` : "";
+            seatMap.set(seat.studentId, {
+                roomAllocatedSeatNumber: seatNumber,
+                roomName: seat.roomCapacity?.classRoom?.roomNumber || null,
+            });
+        }
+    }
+
+    if (result && result.result) {
+        result.result = result.result.map(student => {
+            const allocation = seatMap.get(student.studentId);
+            return {
+                studentId: student.studentId,
+                scholarNumber: student.scholarNumber,
+                enrollNumber: student.enrollNumber,
+                firstName: student.firstName,
+                middleName: student.middleName,
+                lastName: student.lastName,
+                fatherName: student.fatherName,
+                course: student.course || null,
+                roomAllocatedSeatNumber: allocation ? allocation.roomAllocatedSeatNumber : null,
+                roomName: allocation ? allocation.roomName : null,
+            };
+        });
+    }
+
+    return result;
 }

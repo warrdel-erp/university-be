@@ -5,6 +5,7 @@ import institute from './instituteModel.js';
 import users from "./userModel.js";
 import role from "./roleModel.js";
 import department from "./departmentModel.js";
+import universityModel from "./universityModel.js";
 
 const employeeModel = sequelize.define(
     'employee',
@@ -22,6 +23,15 @@ const employeeModel = sequelize.define(
             references: {
                 model: users,
                 key: 'user_id'
+            }
+        },
+        universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
             }
         },
         campusId: {

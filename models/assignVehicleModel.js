@@ -1,5 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
+import universityModel from "./universityModel.js";
+import instituteModel from "./instituteModel.js";
 import users from "./userModel.js";
 import transportRouteModel from "./transportRouteModel.js";
 import vehicleModel from "./vehicleModel.js";
@@ -7,6 +9,24 @@ import vehicleModel from "./vehicleModel.js";
 const assignVehicleModel = sequelize.define(
     'assign_vehicle',
     {
+                universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
+        },
         assignVehicleId: {
             type: DataTypes.INTEGER,
             primaryKey: true,

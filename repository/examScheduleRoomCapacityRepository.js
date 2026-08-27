@@ -1,7 +1,7 @@
-import sequelize from "../database/sequelizeConfig.js";
 import * as model from "../models/index.js";
-import { Op } from "sequelize";
+import { Op, fn, col } from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
+import { doTimeSlotsOverlap, getTimeSlotRange } from "../utility/timeSlot.js";
 
 async function assertScopedExamSchedule(examScheduleId, options = {}) {
   const { transaction, attributes = ['examScheduleId'] } = options;
@@ -54,6 +54,58 @@ const activeRoomHierarchyInclude = () => ({
   ],
 });
 
+function getScheduleRange(schedule) {
+  const slot = schedule.examSchedule?.examinationSessionSlot;
+  return getTimeSlotRange({
+    startTime: slot?.startTime || schedule.examSchedule?.examTime,
+    endTime: slot?.endTime,
+    duration: slot?.durationMinutes ?? schedule.examSchedule?.duration,
+  });
+}
+
+function isOverlappingSchedule(schedule, startMinutes, endMinutes) {
+  return doTimeSlotsOverlap(getScheduleRange(schedule), { startMinutes, endMinutes });
+}
+
+export async function findOccupiedRoomIdsByClassSchedule(day, startTime, endTime, examDate) {
+  const targetRange = getTimeSlotRange({ startTime, endTime });
+  if (!targetRange) return [];
+
+  const dateCells = await model.timeTableCellDateWiseModel.findAll({
+    where: { 
+      date: examDate,
+      classRoomSectionId: { [Op.not]: null }
+    },
+    attributes: ['classRoomSectionId'],
+    include: [{
+      model: model.timeTableCellModel,
+      as: 'timeTableCell',
+      attributes: ['timeTableCellId'],
+      required: true,
+      include: [{
+        model: model.timeTableStructurePeriodsModel,
+        as: 'timeTablecreation',
+        attributes: ['startTime', 'endTime'],
+        required: true,
+      }]
+    }],
+    raw: true,
+  });
+
+  const busyRoomIds = new Set();
+  for (const row of dateCells) {
+    const periodStart = row['timeTableCell.timeTablecreation.startTime'];
+    const periodEnd = row['timeTableCell.timeTablecreation.endTime'];
+    const periodRange = getTimeSlotRange({ startTime: periodStart, endTime: periodEnd });
+    
+    if (periodRange && doTimeSlotsOverlap(targetRange, periodRange)) {
+      busyRoomIds.add(row.classRoomSectionId);
+    }
+  }
+
+  return [...busyRoomIds];
+}
+
 export async function addExamRoomCapacity(data, transaction) {
   const schedule = await assertScopedExamSchedule(data.examScheduleId, { transaction });
   if (!schedule) {
@@ -99,8 +151,8 @@ export async function getExamRoomCapacityById(examScheduleRoomCapacityId) {
   return await assertScopedRoomCapacity(examScheduleRoomCapacityId);
 }
 
-export async function getRoomsByExamScheduleId(examScheduleId) {
-  const schedule = await assertScopedExamSchedule(examScheduleId);
+export async function getRoomsByExamScheduleId(examScheduleId, transaction = null) {
+  const schedule = await assertScopedExamSchedule(examScheduleId, { transaction });
   if (!schedule) {
     return [];
   }
@@ -130,55 +182,78 @@ export async function getRoomsByExamScheduleId(examScheduleId) {
       },
     ],
     order: [["orderKey", "ASC"]],
+    transaction,
   });
 
-  return rows.map((row) => {
-    const plain = row.get({ plain: true });
-    return {
-      examScheduleRoomCapacityId: plain.examScheduleRoomCapacityId,
-      examScheduleId: plain.examScheduleId,
-      classRoomSectionId: plain.classRoomSectionId,
-      capacity: plain.capacity,
-      columns: plain.columns,
-      orderKey: plain.orderKey,
-      classRoom: plain.classRoom ?? null,
-    };
-  });
+  return rows.map((row) => row.get({ plain: true }));
+}
+
+export async function updateExamRoomCapacityOrderKey(examScheduleRoomCapacityId, orderKey, transaction = null) {
+  await model.examScheduleRoomCapacityModel.update(
+    { orderKey },
+    {
+      where: { examScheduleRoomCapacityId },
+      transaction,
+    }
+  );
 }
 
 export async function getExamScheduleSlot(examScheduleId) {
   return await scoped(model.examScheduleModel).findByPk(examScheduleId, {
-    attributes: ["examScheduleId", "examDate", "examTime", "duration"],
+    attributes: [
+      "examScheduleId",
+      "examDate",
+      "examTime",
+      "duration",
+      "examinationSessionSlotId",
+      "sessionId",
+      "term",
+      "academicYearId"
+    ],
+    include: [
+      {
+        model: model.examinationSessionSlotModel,
+        as: "examinationSessionSlot",
+        attributes: ["examinationSessionSlotId", "startTime", "endTime", "durationMinutes"],
+        required: false,
+        paranoid: true,
+      },
+      {
+        model: model.subjectModel,
+        as: "subjectSchedule",
+        attributes: ["courseId"],
+        required: false,
+      }
+    ],
     paranoid: true,
+    nest: true,
     raw: true,
   });
 }
 
-async function findOverlappingExamBusyRoomIds(examDate, excludeExamScheduleId, startMinutes, endMinutes) {
+export async function findOverlappingExamBusyRoomIds(examDate, excludeExamScheduleId, startMinutes, endMinutes) {
   const rows = await model.examScheduleRoomCapacityModel.findAll({
     attributes: ["classRoomSectionId"],
     include: [
       {
         model: model.examScheduleModel,
         as: "examSchedule",
-        attributes: [],
+        attributes: ["examScheduleId", "examDate", "examTime", "duration"],
         required: true,
         paranoid: true,
+        include: [
+          {
+            model: model.examinationSessionSlotModel,
+            as: "examinationSessionSlot",
+            attributes: ["startTime", "endTime", "durationMinutes"],
+            required: false,
+            paranoid: true,
+          },
+        ],
         where: {
           ...buildScope(model.examScheduleModel),
           examDate,
           examScheduleId: { [Op.ne]: excludeExamScheduleId },
-          [Op.and]: [
-            sequelize.where(
-              sequelize.literal(
-                "((TIME_TO_SEC(`examSchedule`.`exam_time`) / 60) + CAST(`examSchedule`.`duration` AS UNSIGNED))",
-              ),
-              { [Op.gt]: startMinutes },
-            ),
-            sequelize.where(sequelize.literal("(TIME_TO_SEC(`examSchedule`.`exam_time`) / 60)"), {
-              [Op.lt]: endMinutes,
-            }),
-          ],
         },
       },
       {
@@ -190,13 +265,17 @@ async function findOverlappingExamBusyRoomIds(examDate, excludeExamScheduleId, s
         include: [activeRoomHierarchyInclude()],
       },
     ],
-    raw: true,
   });
 
-  return rows.map((row) => row.classRoomSectionId);
+  return rows
+    .map((row) => row.get({ plain: true }))
+    .filter((row) => isOverlappingSchedule(row, startMinutes, endMinutes))
+    .map((row) => row.classRoomSectionId);
 }
 
-async function findAssignedRoomIdsForExam(examScheduleId) {
+
+
+export async function findAssignedRoomIdsForExam(examScheduleId) {
   const rows = await model.examScheduleRoomCapacityModel.findAll({
     attributes: ["classRoomSectionId"],
     where: { examScheduleId },
@@ -212,7 +291,7 @@ async function findAvailableRoomsForExamSlot(busyRoomIds) {
     where.classRoomSectionId = { [Op.notIn]: busyRoomIds };
   }
 
-  return scoped(model.classRoomModel).findAll({
+  const rooms = await scoped(model.classRoomModel).findAll({
     where,
     attributes: [
       "classRoomSectionId",
@@ -220,105 +299,181 @@ async function findAvailableRoomsForExamSlot(busyRoomIds) {
       "capacity",
       "examCapacity",
       "examCapacityColumns",
-      [
-        sequelize.literal("COALESCE(`class_room_section`.`exam_capacity`, `class_room_section`.`capacity`)"),
-        "effectiveExamCapacity",
-      ],
     ],
     paranoid: true,
     include: [activeRoomHierarchyInclude()],
     order: [["roomNumber", "ASC"]],
     raw: true,
   });
+
+  return rooms.map((room) => ({
+    ...room,
+    effectiveExamCapacity: room.examCapacity ?? room.capacity,
+  }));
 }
 
-export async function getAvailableRoomsPayload(examScheduleId, examSchedule, slot) {
-  const { examDate, day, startTime, endTime, startMinutes, endMinutes } = {
-    examDate: examSchedule.examDate,
-    ...slot,
-  };
-
-  const [classBusyRoomIds, assignedRoomIds, overlappingExamRoomIds] = await Promise.all([
-    findOccupiedRoomIdsByClassSchedule(day, startTime, endTime, examDate),
-    findAssignedRoomIdsForExam(examScheduleId),
-    findOverlappingExamBusyRoomIds(examDate, examScheduleId, startMinutes, endMinutes),
-  ]);
-
-  const busyRoomIds = [...new Set([...classBusyRoomIds, ...assignedRoomIds, ...overlappingExamRoomIds])];
-  const availableRooms = await findAvailableRoomsForExamSlot(busyRoomIds);
-
-  return {
-    examScheduleId: examSchedule.examScheduleId,
-    examDate: examSchedule.examDate,
-    examTime: examSchedule.examTime,
-    duration: examSchedule.duration,
-    slotStartTime: startTime,
-    slotEndTime: endTime,
-    day,
-    availableRooms,
-  };
-}
-
-async function findOccupiedRoomIdsByClassSchedule(day, startTime, endTime, examDate) {
-  const schedules = await model.classScheduleModel.findAll({
-    attributes: ["classRoomSectionId"],
-    where: {
-      classRoomSectionId: { [Op.not]: null },
-      day,
-    },
-    group: ["classRoomSectionId"],
-    paranoid: true,
-    raw: true,
-    include: [
-      {
-        model: model.classRoomModel,
-        as: "classRoom",
-        attributes: [],
-        required: true,
-        paranoid: true,
-        include: [activeRoomHierarchyInclude()],
-      },
-      {
-        model: model.timeTableStructurePeriodsModel,
-        as: "timeTablecreation",
-        attributes: [],
-        required: true,
-        paranoid: true,
-        where: {
-          [Op.and]: [{ startTime: { [Op.lt]: endTime } }, { endTime: { [Op.gt]: startTime } }],
-        },
-      },
-      {
-        model: model.timeTableRoutineModel,
-        as: "timeTablecreate",
-        attributes: [],
-        required: true,
-        paranoid: true,
-        where: {
-          startingDate: { [Op.lte]: examDate },
-          endingDate: { [Op.gte]: examDate },
-          ...buildScope(model.timeTableRoutineModel),
-        },
-      },
+// New helper to fetch *all* rooms for the exam slot without filtering out busy rooms
+export async function findAllRoomsForExamSlot() {
+  const rooms = await scoped(model.classRoomModel).findAll({
+    attributes: [
+      "classRoomSectionId",
+      "roomNumber",
+      "capacity",
+      "examCapacity",
+      "examCapacityColumns",
     ],
+    paranoid: true,
+    include: [activeRoomHierarchyInclude()],
+    order: [["roomNumber", "ASC"]],
+    raw: true,
   });
 
-  return schedules.map((row) => row.classRoomSectionId);
+  return rooms.map((room) => ({
+    ...room,
+    effectiveExamCapacity: room.examCapacity ?? room.capacity,
+  }));
 }
 
+// Helper to fetch rooms for allocation lookup by IDs
 export async function getRoomsForAllocationLookup(classRoomSectionIds) {
   const rooms = await scoped(model.classRoomModel).findAll({
-    where: { classRoomSectionId: { [Op.in]: classRoomSectionIds } },
-    attributes: ["classRoomSectionId", "roomNumber", "capacity", "examCapacity", "examCapacityColumns"],
+    where: { classRoomSectionId: classRoomSectionIds },
+    attributes: [
+      "classRoomSectionId",
+      "roomNumber",
+      "capacity",
+      "examCapacity",
+      "examCapacityColumns",
+    ],
     paranoid: true,
     include: [activeRoomHierarchyInclude()],
     raw: true,
   });
 
-  const roomLookup = new Map();
-  for (const room of rooms) {
-    roomLookup.set(room.classRoomSectionId, room);
-  }
-
-  return roomLookup;
+  const roomMap = new Map();
+  rooms.forEach((room) => {
+    roomMap.set(room.classRoomSectionId, {
+      ...room,
+      effectiveExamCapacity: room.examCapacity ?? room.capacity,
+    });
+  });
+  return roomMap;
 }
+
+export async function getSeatAllocationCountByCapacityId(examScheduleRoomCapacityId, transaction = null) {
+  return await model.studentExamSeatModel.count({
+    where: { examScheduleRoomCapacityId },
+    transaction,
+  });
+}
+
+export async function getSeatAllocationCountsByRoomCapacityIds(examScheduleRoomCapacityIds, transaction = null) {
+  const rows = await model.studentExamSeatModel.findAll({
+    where: {
+      examScheduleRoomCapacityId: { [Op.in]: examScheduleRoomCapacityIds }
+    },
+    attributes: [
+      'examScheduleRoomCapacityId',
+      [fn('COUNT', col('student_exam_seat_id')), 'allocatedSeatCount']
+    ],
+    group: ['examScheduleRoomCapacityId'],
+    raw: true,
+    transaction,
+  });
+  return rows;
+}
+
+export async function getEnrolledStudentsCount(sessionId, courseId, term, academicYearId, transaction = null) {
+  return await scoped(model.studentModel).count({
+    include: [
+      {
+        model: model.classSectionTermModel,
+        as: 'studentClassSectionTerm',
+        required: true,
+        where: { term },
+        include: [
+          {
+            model: model.classSectionModel,
+            as: 'classSection',
+            required: true,
+            where: { sessionId, courseId, academicYearId },
+          }
+        ]
+      }
+    ],
+    transaction
+  });
+}
+
+export async function getAlreadyAssignedCapacity(examScheduleId, transaction = null) {
+  return await model.examScheduleRoomCapacityModel.sum('capacity', {
+    where: { examScheduleId },
+    transaction
+  }) || 0;
+}
+
+export async function getOccupiedCapacityForRoomSlot(classRoomSectionId, examDate, examinationSessionSlotId, transaction = null) {
+  const schedules = await model.examScheduleModel.findAll({
+    where: { examDate, examinationSessionSlotId },
+    attributes: ['examScheduleId'],
+    raw: true,
+    transaction
+  });
+  const scheduleIds = schedules.map(s => s.examScheduleId);
+  if (scheduleIds.length === 0) {
+    return 0;
+  }
+  return await model.examScheduleRoomCapacityModel.sum('capacity', {
+    where: {
+      classRoomSectionId,
+      examScheduleId: { [Op.in]: scheduleIds }
+    },
+    transaction
+  }) || 0;
+}
+
+export async function getOccupiedCapacitiesForDateSlot(examDate, examinationSessionSlotId, transaction = null) {
+  const schedules = await model.examScheduleModel.findAll({
+    where: { examDate, examinationSessionSlotId },
+    attributes: ['examScheduleId'],
+    raw: true,
+    transaction
+  });
+  const scheduleIds = schedules.map(s => s.examScheduleId);
+  if (scheduleIds.length === 0) {
+    return {};
+  }
+  const rows = await model.examScheduleRoomCapacityModel.findAll({
+    attributes: [
+      'classRoomSectionId',
+      [fn('SUM', col('capacity')), 'totalUsedCapacity']
+    ],
+    where: {
+      examScheduleId: { [Op.in]: scheduleIds }
+    },
+    group: ['classRoomSectionId'],
+    raw: true,
+    transaction
+  });
+
+  return rows.reduce((acc, r) => {
+    acc[r.classRoomSectionId] = Number(r.totalUsedCapacity || 0);
+    return acc;
+  }, {});
+}
+
+export async function deleteAssociatedSeatsAndAttendance(examScheduleRoomCapacityId, transaction = null) {
+  // Delete attendance records first
+  await model.examAttendanceModel.destroy({
+    where: { examScheduleRoomCapacityId },
+    transaction
+  });
+
+  // Delete seating records
+  await model.studentExamSeatModel.destroy({
+    where: { examScheduleRoomCapacityId },
+    transaction
+  });
+}
+
+

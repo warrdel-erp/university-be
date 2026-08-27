@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { getDashboard, getTeacherDashboard } from '../controllers/dashboardController.js';
+import { getDashboard, getTeacherDashboard, getMyTeacherDashboard } from '../controllers/dashboardController.js';
 import userAuth from '../middleware/authUser.js';
 import { validate } from '../utility/validation.js';
 
@@ -19,6 +19,7 @@ const teacherDashboardQuerySchema = z.object({
 });
 
 router.get('/teacher', userAuth, validate({ query: teacherDashboardQuerySchema }), getTeacherDashboard);
+router.get('/my/teacher', userAuth, getMyTeacherDashboard);
 router.get('/', userAuth, validate({ query: dashboardQuerySchema }), getDashboard);
 
 export default router;

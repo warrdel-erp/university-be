@@ -69,3 +69,13 @@ export const allocateSeatsDescending = async (req, res) => {
         return ErrorResponse(res, 500, error.message || "Internal Server Error");
     }
 };
+
+export const getExamScheduleStudents = async (req, res) => {
+    try {
+        const result = await examScheduleServices.getExamScheduleStudents(req.query);
+        return SuccessResponse(res, 200, "Students fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getExamScheduleStudents controller:", error);
+        return ErrorResponse(res, 500, error.message || "Internal Server Error");
+    }
+};

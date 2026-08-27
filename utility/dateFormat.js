@@ -46,3 +46,9 @@ export function parseCustomDate(dateValue) {
 
   return formatted.format("YYYY-MM-DD");
 }
+
+export function formatDateKey(d) {
+  if (!d) return "";
+  if (d instanceof Date) return d.toISOString().split("T")[0];
+  return String(d).split("T")[0];
+}

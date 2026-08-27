@@ -1,11 +1,21 @@
 import sequelize from "../database/sequelizeConfig.js";
-import { DataTypes } from "sequelize";
+import { DataTypes } from 'sequelize';
+import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
 
 const feeTypeCategoryModel = sequelize.define(
   "fee_type_category",
   {
-    feeTypeCategoryId: {
+            universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        feeTypeCategoryId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,

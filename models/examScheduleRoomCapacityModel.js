@@ -1,5 +1,8 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
+import universityModel from "./universityModel.js";
+import instituteModel from "./instituteModel.js";
+import acedmicYearModel from "./acedmicYearModel.js";
 import users from "./userModel.js";
 import classRoomModel from "./classRoomModel.js";
 
@@ -8,6 +11,33 @@ import examScheduleModel from "./examScheduleModel.js";
 const examScheduleRoomCapacityModel = sequelize.define(
     'exam_schedule_room_capacity',
     {
+                universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
+        },
+        academicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYearModel,
+                key: 'acedmic_year_id'
+            }
+        },
         examScheduleRoomCapacityId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
@@ -44,6 +74,12 @@ const examScheduleRoomCapacityModel = sequelize.define(
             type: DataTypes.INTEGER,
             allowNull: true,
             field: 'order_key'
+        },
+        status: {
+            type: DataTypes.ENUM("NOT_GENERATED", "GENERATED", "IN_PROGRESS", "SUBMITTED", "VERIFIED"),
+            allowNull: false,
+            defaultValue: "NOT_GENERATED",
+            field: "status"
         },
 
         createdBy: {

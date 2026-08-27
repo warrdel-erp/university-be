@@ -1,11 +1,21 @@
 import sequelize from "../database/sequelizeConfig.js";
-import { DataTypes } from "sequelize";
+import { DataTypes } from 'sequelize';
+import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
 
 const assetIssueTransactionModel = sequelize.define(
   "asset_issue_transaction",
   {
-    assetIssueTransactionId: {
+            universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        assetIssueTransactionId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,

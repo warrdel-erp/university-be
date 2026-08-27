@@ -213,6 +213,10 @@ export async function addSpecialization(data) {
 
 export async function addSubject(data) {
     try {
+        if (!data.departmentId && data.courseId) {
+            const course = await model.courseModel.findByPk(data.courseId, { attributes: ['departmentId'] });
+            if (course?.departmentId) data.departmentId = course.departmentId;
+        }
         return scoped(model.subjectModel).create(data);
     } catch (error) {
         console.error("Error in add subject :", error);
@@ -240,6 +244,22 @@ export async function updateSubject(subjectId, data) {
 
 export async function subjectBulkCreate(data, options = {}) {
     try {
+        if (Array.isArray(data) && data.length > 0) {
+            const courseIds = [...new Set(data.filter(r => !r.departmentId && r.courseId).map(r => r.courseId))];
+            if (courseIds.length > 0) {
+                const courses = await model.courseModel.findAll({
+                    where: { courseId: { [Op.in]: courseIds } },
+                    attributes: ['courseId', 'departmentId'],
+                    raw: true
+                });
+                const map = new Map(courses.map(c => [c.courseId, c.departmentId]));
+                for (const r of data) {
+                    if (!r.departmentId && r.courseId && map.has(r.courseId)) {
+                        r.departmentId = map.get(r.courseId);
+                    }
+                }
+            }
+        }
         return scoped(model.subjectModel).bulkCreate(data, options);
     } catch (error) {
         console.error("Error in subject bulk create:", error);
@@ -249,6 +269,22 @@ export async function subjectBulkCreate(data, options = {}) {
 
 export async function addClassSections(data) {
     try {
+        if (Array.isArray(data) && data.length > 0) {
+            const courseIds = [...new Set(data.filter(r => !r.departmentId && r.courseId).map(r => r.courseId))];
+            if (courseIds.length > 0) {
+                const courses = await model.courseModel.findAll({
+                    where: { courseId: { [Op.in]: courseIds } },
+                    attributes: ['courseId', 'departmentId'],
+                    raw: true
+                });
+                const map = new Map(courses.map(c => [c.courseId, c.departmentId]));
+                for (const r of data) {
+                    if (!r.departmentId && r.courseId && map.has(r.courseId)) {
+                        r.departmentId = map.get(r.courseId);
+                    }
+                }
+            }
+        }
         return scoped(model.classSectionModel).bulkCreate(data);
     } catch (error) {
         console.error("Error in add class/section creation :", error);
@@ -290,6 +326,11 @@ export async function createClassSectionRow(data, options = {}) {
         const sectionName = String(data.section).trim();
         if (!sectionName) {
             throw new Error('section is required to create class sections');
+        }
+
+        if (!data.departmentId && data.courseId) {
+            const course = await model.courseModel.findByPk(data.courseId, { attributes: ['departmentId'] });
+            if (course?.departmentId) data.departmentId = course.departmentId;
         }
 
         return scoped(model.classSectionModel).create(

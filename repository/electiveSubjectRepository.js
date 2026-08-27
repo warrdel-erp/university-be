@@ -7,6 +7,10 @@ const excludeMeta = ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'update
 
 export async function addElectiveSubject(electiveSubjectData) {
     try {
+        if (!electiveSubjectData.departmentId && electiveSubjectData.courseId) {
+            const course = await model.courseModel.findByPk(electiveSubjectData.courseId, { attributes: ['departmentId'] });
+            if (course?.departmentId) electiveSubjectData.departmentId = course.departmentId;
+        }
         return await scoped(model.electiveSubjectModel).create(electiveSubjectData);
     } catch (error) {
         console.error('Error in add electiveSubject :', error);
@@ -16,6 +20,22 @@ export async function addElectiveSubject(electiveSubjectData) {
 
 export async function addBulkElectiveSubject(electiveSubjectData, options = {}) {
     try {
+        if (Array.isArray(electiveSubjectData) && electiveSubjectData.length > 0) {
+            const courseIds = [...new Set(electiveSubjectData.filter(r => !r.departmentId && r.courseId).map(r => r.courseId))];
+            if (courseIds.length > 0) {
+                const courses = await model.courseModel.findAll({
+                    where: { courseId: { [Op.in]: courseIds } },
+                    attributes: ['courseId', 'departmentId'],
+                    raw: true
+                });
+                const map = new Map(courses.map(c => [c.courseId, c.departmentId]));
+                for (const r of electiveSubjectData) {
+                    if (!r.departmentId && r.courseId && map.has(r.courseId)) {
+                        r.departmentId = map.get(r.courseId);
+                    }
+                }
+            }
+        }
         return await scoped(model.electiveSubjectModel).bulkCreate(electiveSubjectData, options);
     } catch (error) {
         console.error('Error in add electiveSubject :', error);

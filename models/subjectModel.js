@@ -144,6 +144,15 @@ const subjectModel = sequelize.define(
         //         key: 'user_id'
         //     }
         // },
+        departmentId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'department_id',
+            references: {
+                model: 'department',
+                key: 'department_id'
+            }
+        },
         deletedAt: {
             type: DataTypes.DATE,
             allowNull: true,
