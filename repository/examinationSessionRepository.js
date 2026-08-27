@@ -1,4 +1,4 @@
-import { Op } from "sequelize";
+import { Op, fn, col } from "sequelize";
 import * as model from "../models/index.js";
 import { scoped } from "../utility/scoped.js";
 import { getAllocatedCapacityByExamScheduleIds } from "../utility/roomCapacity.js";
@@ -523,9 +523,85 @@ export async function findExaminationSessionTerms(examinationSessionId, options 
 export async function findSchedulesForSkuStats(examinationSessionId, options = {}) {
   return scoped(model.examScheduleModel).findAll({
     where: { examinationSessionId: Number(examinationSessionId) },
-    attributes: ["examScheduleId", "examDate", "examinationSessionSlotId"],
+    attributes: [
+      "examScheduleId",
+      "examDate",
+      "examTime",
+      "examinationSessionSlotId",
+      "subjectId",
+      "term",
+      "sessionId",
+      "academicYearId",
+    ],
     transaction: options.transaction,
     raw: true,
+  });
+}
+
+/** Up to `limit` exam schedules for a given date (today's timeline). */
+export async function findExamSchedulesForTimeline(
+  examinationSessionId,
+  examDate,
+  limit = 5,
+  options = {},
+) {
+  return scoped(model.examScheduleModel).findAll({
+    where: {
+      examinationSessionId: Number(examinationSessionId),
+      examDate,
+    },
+    attributes: [
+      "examScheduleId",
+      "examDate",
+      "examTime",
+      "duration",
+      "term",
+      "sessionId",
+      "subjectId",
+      "academicYearId",
+      "examinationSessionSlotId",
+      "published",
+    ],
+    include: [
+      {
+        model: model.subjectModel,
+        as: "subjectSchedule",
+        required: true,
+        attributes: ["subjectId", "subjectName", "subjectCode", "courseId", "term"],
+      },
+      {
+        model: model.examinationSessionSlotModel,
+        as: "examinationSessionSlot",
+        required: false,
+        attributes: [
+          "examinationSessionSlotId",
+          "slotNumber",
+          "startTime",
+          "endTime",
+          "durationMinutes",
+        ],
+      },
+      {
+        model: model.examScheduleRoomCapacityModel,
+        as: "roomCapacities",
+        required: false,
+        attributes: ["examScheduleRoomCapacityId", "capacity", "classRoomSectionId"],
+        include: [
+          {
+            model: model.classRoomModel,
+            as: "classRoom",
+            required: false,
+            attributes: ["classRoomSectionId", "roomNumber"],
+          },
+        ],
+      },
+    ],
+    order: [
+      ["examTime", "ASC"],
+      ["examScheduleId", "ASC"],
+    ],
+    limit: Number(limit),
+    transaction: options.transaction,
   });
 }
 
@@ -566,31 +642,67 @@ export async function findQuestionPapersCountForSchedules(examScheduleIds, optio
 }
 
 export async function countHallTicketsBySession(examinationSessionId, options = {}) {
-  return await scoped(model.studentHallTicketModel).count({
-    where: { examinationSessionId: Number(examinationSessionId) },
+  const where = { examinationSessionId: Number(examinationSessionId) };
+  if (options.publishedOnly === true) {
+    where.isPublished = true;
+  }
+  return scoped(model.studentHallTicketModel).count({
+    where,
     transaction: options.transaction,
   });
 }
 
 export async function countBundlesByDatesAndSlots(uniqueDates, uniqueSlotIds, options = {}) {
-  const total = await scoped(model.examRoomMaterialBundleModel).count({
-    where: {
-      examDate: { [Op.in]: uniqueDates },
-      examinationSessionSlotId: { [Op.in]: uniqueSlotIds },
-    },
-    transaction: options.transaction,
-  });
+  if (!uniqueDates.length || !uniqueSlotIds.length) {
+    return { total: 0, received: 0 };
+  }
 
-  const received = await scoped(model.examRoomMaterialBundleModel).count({
-    where: {
-      examDate: { [Op.in]: uniqueDates },
-      examinationSessionSlotId: { [Op.in]: uniqueSlotIds },
-      status: "RECEIVED",
-    },
-    transaction: options.transaction,
-  });
+  const baseWhere = {
+    examDate: { [Op.in]: uniqueDates },
+    examinationSessionSlotId: { [Op.in]: uniqueSlotIds },
+  };
+
+  const [total, received] = await Promise.all([
+    scoped(model.examRoomMaterialBundleModel).count({
+      where: baseWhere,
+      transaction: options.transaction,
+    }),
+    scoped(model.examRoomMaterialBundleModel).count({
+      where: { ...baseWhere, status: "RECEIVED" },
+      transaction: options.transaction,
+    }),
+  ]);
 
   return { total, received };
+}
+
+export async function countSeatsByExamScheduleIds(examScheduleIds, options = {}) {
+  if (!examScheduleIds.length) return new Map();
+
+  const rows = await model.studentExamSeatModel.findAll({
+    attributes: [
+      [col("roomCapacity.exam_schedule_id"), "examScheduleId"],
+      [fn("COUNT", col("student_exam_seat_id")), "seatCount"],
+    ],
+    include: [
+      {
+        model: model.examScheduleRoomCapacityModel,
+        as: "roomCapacity",
+        required: true,
+        attributes: [],
+        where: { examScheduleId: { [Op.in]: examScheduleIds } },
+      },
+    ],
+    group: ["roomCapacity.exam_schedule_id"],
+    raw: true,
+    transaction: options.transaction,
+  });
+
+  const map = new Map();
+  for (const row of rows) {
+    map.set(Number(row.examScheduleId), Number(row.seatCount) || 0);
+  }
+  return map;
 }
 
 export async function findSessionCourseMappingsByCoursesAndSessions(courseIds, sessionIds, options = {}) {

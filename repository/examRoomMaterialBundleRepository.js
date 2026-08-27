@@ -816,7 +816,12 @@ export async function findRoomCapacitiesForBundleRoom(
       {
         model: model.classRoomModel,
         as: "classRoom",
-        attributes: ["classRoomSectionId", "roomNumber"],
+        attributes: [
+          "classRoomSectionId",
+          "roomNumber",
+          "capacity",
+          "examCapacity",
+        ],
       },
       {
         model: model.studentExamSeatModel,

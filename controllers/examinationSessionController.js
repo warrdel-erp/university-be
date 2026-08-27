@@ -186,11 +186,11 @@ export const publishExaminationSession = async (req, res) => {
 
 export const getSessionSkuStats = async (req, res) => {
   try {
-    const { examinationSessionId } = req.query;
-    if (!examinationSessionId) {
-      return ErrorResponse(res, 400, "examinationSessionId query parameter is required");
-    }
-    const result = await examinationSessionServices.getSessionSkuStats(Number(examinationSessionId));
+    const { examinationSessionId, date } = req.query;
+    const result = await examinationSessionServices.getSessionSkuStats(
+      Number(examinationSessionId),
+      { date },
+    );
     return SuccessResponse(res, 200, "SKU data fetched successfully", result);
   } catch (error) {
     console.error("Error fetching SKU data:", error);

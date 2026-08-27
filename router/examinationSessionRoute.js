@@ -274,9 +274,8 @@ router.get(
   userAuth,
   validate({
     query: z.object({
-      examinationSessionId: z.coerce.number({
-        required_error: "examinationSessionId is required",
-      }),
+      examinationSessionId: positiveIntegerQueryId,
+      date: dateStringSchema.optional(),
     }),
   }),
   examinationSessionController.getSessionSkuStats,

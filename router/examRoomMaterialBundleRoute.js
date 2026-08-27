@@ -118,6 +118,17 @@ const createSchema = {
   }),
 };
 
+const createAutoSchema = {
+  body: z.object({
+    examDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD"),
+    examinationSessionSlotId: positiveIntegerId,
+    classRoomSectionId: positiveIntegerId,
+    issuedTo: optionalIdWithNullDefault,
+  }),
+};
+
 const updateItemsSchema = {
   params: z.object({
     examRoomMaterialBundleId: positiveIntegerId,
@@ -212,6 +223,12 @@ const updateStatusSchema = {
 };
 
 router.post("/", userAuth, validate(createSchema), controller.createBundle);
+router.post(
+  "/auto",
+  userAuth,
+  validate(createAutoSchema),
+  controller.createBundleAuto,
+);
 router.patch(
   "/items/:examRoomMaterialBundleId",
   userAuth,

@@ -52,6 +52,20 @@ export const createBundle = async (req, res) => {
   }
 };
 
+export const createBundleAuto = async (req, res) => {
+  try {
+    const result = await service.createBundleAuto(req.body, req.user);
+    return SuccessResponse(
+      res,
+      201,
+      "Bundle created with default items successfully",
+      result,
+    );
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message);
+  }
+};
+
 export const updateBundleItems = async (req, res) => {
   try {
     const result = await service.updateBundleItems(

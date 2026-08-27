@@ -487,6 +487,77 @@ export async function createBundle(payload, user) {
   });
 }
 
+/**
+ * Create bundle without items payload.
+ * Auto-adds QUESTION_PAPER (room capacity), ANSWER_SHEET (seated students),
+ * and ATTENDANCE_SHEET (1).
+ */
+export async function createBundleAuto(payload, user) {
+  const { examDate, examinationSessionSlotId, classRoomSectionId, issuedTo } =
+    payload;
+
+  const sharingCapacities = await repo.findRoomCapacitiesForBundleRoom(
+    classRoomSectionId,
+    examDate,
+    examinationSessionSlotId,
+  );
+
+  if (!sharingCapacities.length) {
+    const error = new Error(
+      "No exam schedule capacity found for the given date, slot, and room",
+    );
+    error.statusCode = 404;
+    throw error;
+  }
+
+  let seatedStudents = 0;
+  let allottedCapacity = 0;
+  let roomCapacity = 0;
+
+  for (const rc of sharingCapacities) {
+    const plain = rc.get ? rc.get({ plain: true }) : rc;
+    allottedCapacity += Number(plain.capacity) || 0;
+    seatedStudents += plain.seats ? plain.seats.length : 0;
+
+    if (!roomCapacity && plain.classRoom) {
+      roomCapacity =
+        Number(plain.classRoom.examCapacity) ||
+        Number(plain.classRoom.capacity) ||
+        0;
+    }
+  }
+
+  if (!roomCapacity) {
+    roomCapacity = allottedCapacity;
+  }
+
+  const answerSheetQty = seatedStudents > 0 ? seatedStudents : allottedCapacity;
+
+  return createBundle(
+    {
+      examDate,
+      examinationSessionSlotId,
+      classRoomSectionId,
+      issuedTo,
+      items: [
+        {
+          itemType: "QUESTION_PAPER",
+          plannedQuantity: roomCapacity,
+        },
+        {
+          itemType: "ANSWER_SHEET",
+          plannedQuantity: answerSheetQty,
+        },
+        {
+          itemType: "ATTENDANCE_SHEET",
+          plannedQuantity: 1,
+        },
+      ],
+    },
+    user,
+  );
+}
+
 export async function updateBundleItems(bundleId, payload, user) {
   const { status, remarks, issuedTo, items } = payload;
 
