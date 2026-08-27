@@ -68,9 +68,6 @@ export async function getBundleList(filters, pagination) {
     selections,
   } = filters;
 
-  const { limit, page } = pagination;
-  const offset = (page - 1) * limit;
-
   const scheduleWhere = { examinationSessionId };
   if (examDate) scheduleWhere.examDate = examDate;
   if (examinationSessionSlotId) {
@@ -99,9 +96,9 @@ export async function getBundleList(filters, pagination) {
     bundleWhere.bundleCode = { [Op.like]: `%${search}%` };
   }
 
-  const { count, rows } = await scoped(
-    model.examScheduleRoomCapacityModel,
-  ).findAndCountAll({
+  // Fetch all matching capacity rows; room-level pagination happens in the service
+  // so page size matches unique room+date+slot (same as examAttendance list).
+  const rows = await scoped(model.examScheduleRoomCapacityModel).findAll({
     subQuery: false,
     attributes: [
       "examScheduleRoomCapacityId",
@@ -178,6 +175,7 @@ export async function getBundleList(filters, pagination) {
                 model: model.users,
                 as: "user",
                 attributes: ["userId", "userName"],
+                required: false,
               },
             ],
           },
@@ -194,6 +192,7 @@ export async function getBundleList(filters, pagination) {
             ],
             required: false,
             where: sequelize.and(
+              ...(Object.keys(bundleWhere).length ? [bundleWhere] : []),
               sequelize.where(
                 sequelize.col("classRoom.materialBundles.exam_date"),
                 "=",
@@ -239,9 +238,6 @@ export async function getBundleList(filters, pagination) {
         ],
       },
     ],
-    limit,
-    offset,
-    distinct: true,
     order: [
       [
         { model: model.examScheduleModel, as: "examSchedule" },
@@ -261,10 +257,7 @@ export async function getBundleList(filters, pagination) {
     ],
   });
 
-  return {
-    rows,
-    count,
-  };
+  return { rows };
 }
 
 export async function getBundleById(examRoomMaterialBundleId, options = {}) {

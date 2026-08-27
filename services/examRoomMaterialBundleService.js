@@ -18,21 +18,6 @@ export async function getBundleList(filters, pagination) {
 
   const result = await repo.getBundleList(filters, { limit, page });
 
-  const capacityIds = [];
-  for (const rc of result.rows) {
-    capacityIds.push(rc.examScheduleRoomCapacityId);
-  }
-  const seatCounts = capacityIds.length
-    ? await repo.getSeatCounts(capacityIds)
-    : [];
-  const seatCountsMap = new Map();
-  for (const sc of seatCounts) {
-    seatCountsMap.set(
-      sc.examScheduleRoomCapacityId,
-      Number(sc.studentCount || 0),
-    );
-  }
-
   const roomMap = new Map();
 
   for (const rc of result.rows) {
@@ -74,13 +59,17 @@ export async function getBundleList(filters, pagination) {
         invigilators,
         exams: [],
         bundle: null,
+        _capacityIds: [],
       });
     }
+
+    const roomObj = roomMap.get(key);
+    roomObj._capacityIds.push(plain.examScheduleRoomCapacityId);
 
     const bundles = plain.classRoom.materialBundles || [];
     const bundle = bundles.length > 0 ? bundles[0] : null;
 
-    if (bundle && !roomMap.get(key).bundle) {
+    if (bundle && !roomObj.bundle) {
       const quantities = {
         ANSWER_SHEET: 0,
         EXTRA_SHEET: 0,
@@ -96,7 +85,7 @@ export async function getBundleList(filters, pagination) {
         }
       }
 
-      roomMap.get(key).bundle = {
+      roomObj.bundle = {
         examRoomMaterialBundleId: bundle.examRoomMaterialBundleId,
         bundleCode: bundle.bundleCode,
         status: bundle.status,
@@ -117,11 +106,8 @@ export async function getBundleList(filters, pagination) {
       };
     }
 
-    const studentCount =
-      seatCountsMap.get(plain.examScheduleRoomCapacityId) || 0;
     const subject = schedule.subjectSchedule;
-
-    roomMap.get(key).exams.push({
+    roomObj.exams.push({
       examScheduleRoomCapacityId: plain.examScheduleRoomCapacityId,
       examScheduleId: plain.examScheduleId,
       subjectId: subject ? subject.subjectId : null,
@@ -130,14 +116,47 @@ export async function getBundleList(filters, pagination) {
       courseId: subject ? subject.courseId : null,
       sessionId: schedule.sessionId,
       term: schedule.term,
-      capacity: studentCount,
-      studentCount,
-      isRoomAllocationDone: studentCount > 0,
+      capacity: 0,
+      studentCount: 0,
+      isRoomAllocationDone: false,
     });
   }
 
+  const allRooms = [...roomMap.values()];
+  const total = allRooms.length;
+  const pageNum = Math.max(1, Number(page) || 1);
+  const limitNum = Math.max(1, Number(limit) || 10);
+  const offset = (pageNum - 1) * limitNum;
+  const pageRooms = allRooms.slice(offset, offset + limitNum);
+
+  const capacityIds = [];
+  for (const roomObj of pageRooms) {
+    for (const id of roomObj._capacityIds) {
+      capacityIds.push(id);
+    }
+  }
+
+  const seatCounts = capacityIds.length
+    ? await repo.getSeatCounts(capacityIds)
+    : [];
+  const seatCountsMap = new Map();
+  for (const sc of seatCounts) {
+    seatCountsMap.set(
+      sc.examScheduleRoomCapacityId,
+      Number(sc.studentCount || 0),
+    );
+  }
+
   const rows = [];
-  for (const roomObj of roomMap.values()) {
+  for (const roomObj of pageRooms) {
+    for (const exam of roomObj.exams) {
+      const studentCount =
+        seatCountsMap.get(exam.examScheduleRoomCapacityId) || 0;
+      exam.capacity = studentCount;
+      exam.studentCount = studentCount;
+      exam.isRoomAllocationDone = studentCount > 0;
+    }
+
     const classMaxCounts = {};
     for (const exam of roomObj.exams) {
       const classKey = `${exam.courseId}_${exam.sessionId}_${exam.term}`;
@@ -172,12 +191,13 @@ export async function getBundleList(filters, pagination) {
       roomObj.operationalStatus = `Bundle ${roomObj.bundle.status}`;
     }
 
+    delete roomObj._capacityIds;
     rows.push(roomObj);
   }
 
   return {
     rows,
-    count: result.count,
+    count: total,
   };
 }
 
