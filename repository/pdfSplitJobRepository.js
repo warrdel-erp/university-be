@@ -42,6 +42,21 @@ export async function getJobByBullmqId(bullmqJobId) {
   }
 }
 
+export async function findSuccessfulJobByAnswerSheetId(examSessionAnswerSheetId) {
+  try {
+    const { Op } = await import("sequelize");
+    return scoped(model.pdfSplitJobModel).findOne({
+      where: {
+        examSessionAnswerSheetId,
+        status: { [Op.in]: ["COMPLETED", "PARTIALLY_COMPLETED"] },
+      },
+    });
+  } catch (error) {
+    console.error("Error in pdfSplitJobRepository.findSuccessfulJobByAnswerSheetId:", error);
+    throw error;
+  }
+}
+
 export async function incrementCompletedBatches(id, segmentCount) {
   try {
     const existing = await scoped(model.pdfSplitJobModel).findByPk(id);

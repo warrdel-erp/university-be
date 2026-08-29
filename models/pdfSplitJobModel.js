@@ -15,6 +15,11 @@ const pdfSplitJobModel = sequelize.define(
       allowNull: true,
       field: "bullmq_job_id",
     },
+    examSessionAnswerSheetId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "exam_session_answer_sheet_id",
+    },
     s3Key: {
       type: DataTypes.STRING(512),
       allowNull: false,

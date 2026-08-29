@@ -20,7 +20,8 @@ export async function findByExaminationSession(examinationSessionId) {
             },
             {
                 model: model.pdfSplitJobModel,
-                as: 'splitJob',
+                as: 'splitJobs',
+                order: [['created_at', 'DESC']],
             },
         ],
         order: [['created_at', 'DESC']],

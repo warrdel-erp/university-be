@@ -4,6 +4,7 @@ import { ErrorResponse, SuccessResponse } from "../utility/response.js";
 import * as s3Helper from "../utility/s3Helper.js";
 import * as s3FileRepository from "../repository/s3FileRepository.js";
 import * as examSessionAnswerSheetRepository from "../repository/examSessionAnswerSheetRepository.js";
+import * as pdfSplitJobRepository from "../repository/pdfSplitJobRepository.js";
 
 export async function generateAnswerSheetQrBulk(req, res) {
   try {
@@ -200,8 +201,21 @@ export async function splitAnswerSheetPdf(req, res) {
       );
     }
 
-    // ── Resolve answer-sheet row (to write pdfSplitJobId FK back) ─────────────
+    // ── Resolve answer-sheet row ───────────────────────────────────────────────
     const answerSheet = await examSessionAnswerSheetRepository.findByS3FileId(fileUploadId);
+
+    // ── Guard: block re-split if already completed successfully ───────────────
+    if (answerSheet) {
+      const successJob = await pdfSplitJobRepository.findSuccessfulJobByAnswerSheetId(answerSheet.id);
+      if (successJob) {
+        return ErrorResponse(
+          res,
+          409,
+          `This file has already been split successfully (job: ${successJob.id}, status: ${successJob.status}). ` +
+          `Re-splitting a completed answer sheet is not allowed.`
+        );
+      }
+    }
 
     // ── Enqueue the job ───────────────────────────────────────────────────────
     const { jobId, jobDbId } = await answerSheetSplitterServices.enqueuePdfSplitJob(

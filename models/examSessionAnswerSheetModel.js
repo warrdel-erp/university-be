@@ -5,7 +5,6 @@ import s3FileModel from './s3FileModel.js';
 import userModel from './userModel.js';
 import universityModel from './universityModel.js';
 import instituteModel from './instituteModel.js';
-import pdfSplitJobModel from './pdfSplitJobModel.js';
 
 const examSessionAnswerSheetModel = sequelize.define(
     'exam_session_answer_sheets',
@@ -32,16 +31,6 @@ const examSessionAnswerSheetModel = sequelize.define(
             field: 's3_file_id',
             references: {
                 model: s3FileModel,
-                key: 'id',
-            },
-        },
-        pdfSplitJobId: {
-            type: DataTypes.UUID,
-            allowNull: true,
-            defaultValue: null,
-            field: 'pdf_split_job_id',
-            references: {
-                model: pdfSplitJobModel,
                 key: 'id',
             },
         },

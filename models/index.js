@@ -3879,12 +3879,13 @@ examSessionAnswerSheetModel.belongsTo(userModel, {
   foreignKey: "createdBy",
   as: "creator",
 });
-examSessionAnswerSheetModel.belongsTo(pdfSplitJobModel, {
-  foreignKey: "pdfSplitJobId",
-  as: "splitJob",
+// One answer sheet → many split job attempts
+examSessionAnswerSheetModel.hasMany(pdfSplitJobModel, {
+  foreignKey: "examSessionAnswerSheetId",
+  as: "splitJobs",
 });
-pdfSplitJobModel.hasOne(examSessionAnswerSheetModel, {
-  foreignKey: "pdfSplitJobId",
+pdfSplitJobModel.belongsTo(examSessionAnswerSheetModel, {
+  foreignKey: "examSessionAnswerSheetId",
   as: "answerSheet",
 });
 

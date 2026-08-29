@@ -10,7 +10,6 @@ import { PDFDocument } from "pdf-lib";
 import * as s3Helper from "../utility/s3Helper.js";
 import * as s3FileRepository from "../repository/s3FileRepository.js";
 import * as pdfSplitJobRepository from "../repository/pdfSplitJobRepository.js";
-import * as examSessionAnswerSheetRepository from "../repository/examSessionAnswerSheetRepository.js";
 import { getPdfSplitQueue, getPdfSplitBatchQueue } from "../queue/pdfSplitQueue.js";
 import sequelize from "../database/sequelizeConfig.js";
 
@@ -73,8 +72,7 @@ export async function checkDiskSpace(requiredBytes) {
  *
  * @param {string} s3Key
  * @param {number} createdBy
- * @param {number|null} [examSessionAnswerSheetId]  - When provided, writes the
- *   pdfSplitJobId FK back to the answer-sheet row so it can be joined directly.
+ * @param {number|null} [examSessionAnswerSheetId]  - Links this attempt to the answer-sheet row.
  * @returns {Promise<{ jobId: string, jobDbId: string }>}
  */
 export async function enqueuePdfSplitJob(s3Key, createdBy, examSessionAnswerSheetId = null) {
@@ -84,6 +82,7 @@ export async function enqueuePdfSplitJob(s3Key, createdBy, examSessionAnswerShee
     status: "PENDING",
     progress: 0,
     processedStudents: 0,
+    ...(examSessionAnswerSheetId ? { examSessionAnswerSheetId } : {}),
   });
 
   const queue = getPdfSplitQueue();
@@ -101,13 +100,6 @@ export async function enqueuePdfSplitJob(s3Key, createdBy, examSessionAnswerShee
 
   // Persist BullMQ job id back to DB record
   await pdfSplitJobRepository.updateJob(dbJob.id, { bullmqJobId: bullmqJob.id });
-
-  // Link split job to the answer-sheet row so it can be joined directly
-  if (examSessionAnswerSheetId) {
-    await examSessionAnswerSheetRepository.update(examSessionAnswerSheetId, {
-      pdfSplitJobId: dbJob.id,
-    });
-  }
 
   return { jobId: bullmqJob.id, jobDbId: dbJob.id };
 }
