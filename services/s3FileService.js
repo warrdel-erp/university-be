@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import path from "path";
 import * as s3FileRepository from "../repository/s3FileRepository.js";
+import * as examSessionAnswerSheetRepository from "../repository/examSessionAnswerSheetRepository.js";
 import * as s3Helper from "../utility/s3Helper.js";
 import * as model from "../models/index.js";
 import { getTenantStore } from "../utility/requestContext.js";
@@ -15,8 +16,8 @@ export const UPLOAD_CONFIGS = {
     maxSizeBytes: 20 * 1024 * 1024, // 20MB
     allowedMimes: ["application/pdf", "image/jpeg", "image/png", "image/jpg"],
   },
-  FULL_EXAM_ANSWER_SHEET_PDF: {
-    maxSizeBytes: 10 * 1024 * 1024 * 1024, // 10GB
+  EXAM_SESSION_PDF_UPLOAD: {
+    maxSizeBytes: 10 * 1024 * 1024 * 1024, // 10 GB (large bulk scanned exam sheets)
     allowedMimes: ["application/pdf"],
   },
   general: {
@@ -49,20 +50,13 @@ const MIME_TO_EXT = {
 export async function generateUploadUrl(user, fileData) {
   const { entityType, entityId, fileName, fileSize, mimeType, companyId } = fileData;
 
-  // Check if ExamSchedule already has an answer sheet PDF attached
-  if (entityType === "FULL_EXAM_ANSWER_SHEET_PDF" && entityId) {
-    const examScheduleId = Number(entityId);
-    const examSchedule = await model.examScheduleModel.findByPk(examScheduleId);
-    if (!examSchedule) {
-      const err = new Error(`Exam schedule with ID ${examScheduleId} not found.`);
+  // Validate that examinationSession exists when uploading a bulk answer sheet PDF
+  if (entityType === "EXAM_SESSION_PDF_UPLOAD" && entityId) {
+    const examinationSessionId = Number(entityId);
+    const examinationSession = await model.examinationSessionModel.findByPk(examinationSessionId);
+    if (!examinationSession) {
+      const err = new Error(`Examination session with ID ${examinationSessionId} not found.`);
       err.statusCode = 404;
-      throw err;
-    }
-    if (examSchedule.answerSheetS3FileId) {
-      const err = new Error(
-        `Exam schedule ID ${examScheduleId} already has an answer sheet PDF attached (S3 File ID: ${examSchedule.answerSheetS3FileId}). Please remove the existing file before uploading a new one.`
-      );
-      err.statusCode = 409;
       throw err;
     }
   }
@@ -184,24 +178,6 @@ export async function confirmUpload(user, fileUploadId) {
     throw err;
   }
 
-  // If this is a main answer sheet PDF, check if the ExamSchedule already has an answer sheet
-  let examSchedule = null;
-  if (fileRecord.entityType === "FULL_EXAM_ANSWER_SHEET_PDF" && fileRecord.entityId) {
-    const examScheduleId = Number(fileRecord.entityId);
-    examSchedule = await model.examScheduleModel.findByPk(examScheduleId);
-    if (!examSchedule) {
-      const err = new Error(`Exam schedule with ID ${examScheduleId} not found.`);
-      err.statusCode = 404;
-      throw err;
-    }
-    if (examSchedule.answerSheetS3FileId) {
-      const err = new Error(
-        `Exam schedule ID ${examScheduleId} already has an answer sheet PDF attached (S3 File ID: ${examSchedule.answerSheetS3FileId}). Please remove the existing file before uploading a new one.`
-      );
-      err.statusCode = 409;
-      throw err;
-    }
-  }
 
   // 5. Update database record with final size, type and mark status as active
   await s3FileRepository.updateS3File(fileUploadId, {
@@ -210,12 +186,28 @@ export async function confirmUpload(user, fileUploadId) {
     mime: s3Metadata.mime || fileRecord.mime, // use verified mime if returned, or keep original
   });
 
-  // Attach to ExamSchedule if applicable
-  if (examSchedule) {
-    await examSchedule.update({ answerSheetS3FileId: fileUploadId });
-    console.log(
-      `[confirmUpload] Successfully attached S3 File ID ${fileUploadId} to Exam Schedule ID ${examSchedule.examScheduleId}`,
-    );
+  // Link to ExaminationSession if this is a bulk answer sheet PDF
+  if (fileRecord.entityType === "EXAM_SESSION_PDF_UPLOAD" && fileRecord.entityId) {
+    const examinationSessionId = Number(fileRecord.entityId);
+    const { instituteId, universityId } = getTenantStore();
+
+    const existingLink = await examSessionAnswerSheetRepository.findByS3FileId(fileUploadId);
+    if (existingLink) {
+      console.log(
+        `[confirmUpload] S3 File ID ${fileUploadId} is already linked to an examination session. Skipping duplicate link.`,
+      );
+    } else {
+      await examSessionAnswerSheetRepository.create({
+        examinationSessionId,
+        s3FileId: fileUploadId,
+        instituteId: Number(instituteId),
+        universityId: Number(universityId),
+        createdBy: user.userId,
+      });
+      console.log(
+        `[confirmUpload] Successfully linked S3 File ID ${fileUploadId} to Examination Session ID ${examinationSessionId}`,
+      );
+    }
   }
 
   // Fetch and return the updated record

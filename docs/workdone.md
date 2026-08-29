@@ -136,3 +136,9 @@
 4. permission policies for course, session, codeMaster, academicYear.
 5. data only permission not working.
 6. id correction of scopes.
+
+---
+
+1. DB backup.
+2. server roles & permission deployment error resolved.
+3. research on testing.

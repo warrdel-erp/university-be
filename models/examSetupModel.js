@@ -11,7 +11,7 @@ import classRoomModel from "./classRoomModel.js";
 const examSetupModel = sequelize.define(
     "exam_setup",
     {
-                universityId: {
+        universityId: {
             type: DataTypes.INTEGER,
             allowNull: true,
             field: 'university_id',
