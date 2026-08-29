@@ -65,7 +65,14 @@ export async function getAssignments(filters) {
   };
 
   if (filters.userId) {
-    whereClause.employeeId = await resolveEmployeeIdFromUserId(filters.userId);
+    const employee = await scoped(model.employeeModel).findOne({
+      where: { userId: Number(filters.userId) },
+      attributes: ["employeeId"],
+    });
+    if (!employee) {
+      return [];
+    }
+    whereClause.employeeId = Number(employee.employeeId);
   }
 
   const results = await teacherExamAssignmentRepository.getAssignments(whereClause);
