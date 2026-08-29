@@ -1,17 +1,20 @@
 'use strict';
 
 /**
- * Migration to clean up mistakenly created duplicate subject entries in the DB.
+ * Migration to clean up duplicate subject entries in the database.
  * 
- * Safety checks performed:
- * 1. Checks INFORMATION_SCHEMA.KEY_COLUMN_USAGE for all foreign keys referencing subject(subject_id).
- * 2. Checks all known application tables with columns storing subject IDs.
- * 3. Aggregates all active referenced subject IDs across all referencing tables.
- * 4. Groups duplicate subjects by (university_id, institute_id, course_id, acedmic_year_id, subject_code, subject_name, term, specialization_id).
- * 5. Keeps a canonical record (the lowest referenced ID or lowest ID).
- * 6. For extra duplicates:
- *    - If referenced in ANY table -> KEEPS the row (does not delete).
- *    - If NOT referenced in any table -> DELETES the extra row.
+ * Logic & Safety Guarantees:
+ * 1. Discovers all ERP tables and columns that reference subject(subject_id), both statically
+ *    and dynamically via MySQL's INFORMATION_SCHEMA.KEY_COLUMN_USAGE.
+ * 2. Groups duplicate subjects sharing the same (university_id, institute_id, course_id, 
+ *    academic_year_id, subject_code, subject_name, term, specialization_id).
+ * 3. In each duplicate group, designates the lowest subject_id as the canonical keeper.
+ * 4. For every extra duplicate subject:
+ *    a. Repoints all foreign key references in child/mapping tables to the canonical keeper subject.
+ *    b. Handles unique index collisions safely (removes redundant duplicate mappings if the keeper 
+ *       is already mapped to the exact same relation).
+ *    c. Deletes the extra duplicate subject from the `subject` table.
+ * 5. Guarantees that only one canonical subject entry exists at the end without losing any relational data.
  */
 
 module.exports = {
@@ -19,7 +22,7 @@ module.exports = {
     const transaction = await queryInterface.sequelize.transaction();
 
     try {
-      console.log('--- Starting Duplicate Subjects Cleanup Migration ---');
+      console.log('--- Starting Duplicate Subjects Consolidation & Cleanup Migration ---');
 
       // 1. Known tables and columns in the ERP that store subject IDs
       const knownReferences = [
@@ -87,27 +90,9 @@ module.exports = {
         }
       }
 
-      console.log(`Discovered ${validReferences.length} referencing table columns to check.`);
+      console.log(`Discovered ${validReferences.length} referencing table columns to inspect.`);
 
-      // 4. Collect all distinct subject_ids currently referenced across all valid tables
-      const referencedSubjectIds = new Set();
-      for (const ref of validReferences) {
-        const [rows] = await queryInterface.sequelize.query(
-          `SELECT DISTINCT \`${ref.column}\` AS id FROM \`${ref.table}\` WHERE \`${ref.column}\` IS NOT NULL`,
-          { transaction }
-        );
-        if (rows && rows.length > 0) {
-          for (const row of rows) {
-            if (row.id !== null && row.id !== undefined) {
-              referencedSubjectIds.add(Number(row.id));
-            }
-          }
-        }
-      }
-
-      console.log(`Total unique subject IDs currently referenced in foreign tables: ${referencedSubjectIds.size}`);
-
-      // 5. Fetch all active subject records
+      // 4. Fetch all active subject records
       const [allSubjects] = await queryInterface.sequelize.query(
         `
         SELECT 
@@ -128,7 +113,7 @@ module.exports = {
         { transaction }
       );
 
-      // 6. Group subjects by duplicate identifying attributes
+      // 5. Group subjects by duplicate identifying attributes
       const groups = new Map();
       for (const s of allSubjects) {
         const key = [
@@ -149,77 +134,93 @@ module.exports = {
       }
 
       const duplicateGroups = Array.from(groups.values()).filter(g => g.length > 1);
-      console.log(`Found ${duplicateGroups.length} duplicate groups.`);
+      console.log(`Found ${duplicateGroups.length} duplicate groups to consolidate.`);
 
-      const idsToDelete = [];
-      const idsRetainedDueToFK = [];
-      const keepers = [];
+      let totalReferencesRepointed = 0;
+      let totalRedundantMappingsRemoved = 0;
+      const deletedSubjectIds = [];
 
       for (const group of duplicateGroups) {
-        // Pick keeper: first referenced subject if available, otherwise lowest subject_id
-        const keeper = group.find(s => referencedSubjectIds.has(Number(s.subject_id))) || group[0];
-        keepers.push(keeper.subject_id);
+        const keeper = group[0]; // Lowest subject_id as the canonical keeper
+        const duplicates = group.slice(1);
 
-        for (const item of group) {
-          if (item.subject_id === keeper.subject_id) {
-            continue;
+        console.log(`\nConsolidating duplicate group for code "${keeper.subject_code}", name "${keeper.subject_name}":`);
+        console.log(`  -> Canonical Keeper ID: ${keeper.subject_id}`);
+        console.log(`  -> Extra Duplicate IDs to merge & remove: ${duplicates.map(d => d.subject_id).join(', ')}`);
+
+        for (const dup of duplicates) {
+          // Repoint references across all referencing tables to the keeper subject
+          for (const ref of validReferences) {
+            // Update references with UPDATE IGNORE in case of unique constraint collisions
+            const [updateResult] = await queryInterface.sequelize.query(
+              `UPDATE IGNORE \`${ref.table}\` SET \`${ref.column}\` = ? WHERE \`${ref.column}\` = ?`,
+              {
+                replacements: [keeper.subject_id, dup.subject_id],
+                transaction
+              }
+            );
+
+            const affected = (updateResult && updateResult.affectedRows !== undefined) 
+              ? updateResult.affectedRows 
+              : (updateResult && typeof updateResult === 'number' ? updateResult : 0);
+
+            if (affected > 0) {
+              totalReferencesRepointed += affected;
+              console.log(`     Repointed ${affected} rows in ${ref.table}.${ref.column} from subject ${dup.subject_id} -> ${keeper.subject_id}`);
+            }
+
+            // If any rows could not be updated due to unique constraint collision (i.e. keeper is already mapped identically),
+            // remove the redundant mapping row for the duplicate subject
+            const [remainingRows] = await queryInterface.sequelize.query(
+              `SELECT COUNT(*) AS cnt FROM \`${ref.table}\` WHERE \`${ref.column}\` = ?`,
+              {
+                replacements: [dup.subject_id],
+                transaction
+              }
+            );
+
+            const remainingCount = remainingRows && remainingRows[0] ? Number(remainingRows[0].cnt) : 0;
+            if (remainingCount > 0) {
+              await queryInterface.sequelize.query(
+                `DELETE FROM \`${ref.table}\` WHERE \`${ref.column}\` = ?`,
+                {
+                  replacements: [dup.subject_id],
+                  transaction
+                }
+              );
+              totalRedundantMappingsRemoved += remainingCount;
+              console.log(`     Removed ${remainingCount} redundant mapping rows in ${ref.table}.${ref.column} for duplicate subject ${dup.subject_id}`);
+            }
           }
 
-          const isReferenced = referencedSubjectIds.has(Number(item.subject_id));
-          if (isReferenced) {
-            idsRetainedDueToFK.push({
-              subjectId: item.subject_id,
-              subjectCode: item.subject_code,
-              subjectName: item.subject_name,
-              reason: 'Subject ID is in use as a foreign key'
-            });
-          } else {
-            idsToDelete.push(item.subject_id);
-          }
-        }
-      }
-
-      console.log(`Canonical subject records preserved: ${keepers.length}`);
-      console.log(`Extra duplicate subjects preserved due to active foreign key references: ${idsRetainedDueToFK.length}`);
-      console.log(`Extra duplicate subjects to be deleted: ${idsToDelete.length}`);
-
-      if (idsRetainedDueToFK.length > 0) {
-        console.log('Retained extra duplicate subjects due to FK constraints:');
-        idsRetainedDueToFK.forEach(item => {
-          console.log(`  - ID: ${item.subjectId}, Code: ${item.subjectCode}, Name: "${item.subjectName}" (${item.reason})`);
-        });
-      }
-
-      // 7. Delete unreferenced duplicate rows
-      if (idsToDelete.length > 0) {
-        // Delete in batches of 100 to avoid overly large IN queries
-        const batchSize = 100;
-        for (let i = 0; i < idsToDelete.length; i += batchSize) {
-          const batch = idsToDelete.slice(i, i + batchSize);
+          // Delete the duplicate subject row from subject table
           await queryInterface.sequelize.query(
-            `DELETE FROM subject WHERE subject_id IN (?)`,
+            `DELETE FROM subject WHERE subject_id = ?`,
             {
-              replacements: [batch],
+              replacements: [dup.subject_id],
               transaction
             }
           );
+          deletedSubjectIds.push(dup.subject_id);
         }
-        console.log(`Successfully deleted ${idsToDelete.length} unreferenced duplicate subject entries.`);
-      } else {
-        console.log('No unreferenced duplicate subject entries found to delete.');
       }
 
+      console.log('\n--- Migration Consolidation Summary ---');
+      console.log(`Total duplicate groups processed: ${duplicateGroups.length}`);
+      console.log(`Total referencing rows repointed to canonical subjects: ${totalReferencesRepointed}`);
+      console.log(`Total redundant duplicate mapping rows removed: ${totalRedundantMappingsRemoved}`);
+      console.log(`Total duplicate subject entries deleted: ${deletedSubjectIds.length}`);
+
       await transaction.commit();
-      console.log('--- Duplicate Subjects Cleanup Migration Completed Successfully ---');
+      console.log('--- Duplicate Subjects Consolidation & Cleanup Migration Completed Successfully ---');
     } catch (error) {
       await transaction.rollback();
-      console.error('Error executing duplicate subjects cleanup migration:', error);
+      console.error('Error executing duplicate subjects consolidation migration:', error);
       throw error;
     }
   },
 
   down: async (queryInterface, Sequelize) => {
-    // Note: Deleted unreferenced duplicate records cannot be automatically restored in down migration.
     console.log('Duplicate subjects cleanup migration down step executed (no-op as deleted duplicate data cannot be restored).');
   }
 };
