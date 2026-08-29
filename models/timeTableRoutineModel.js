@@ -8,6 +8,7 @@ import classSectionTermModel from "./classSectionTermModel.js";
 import users from "./userModel.js";
 import timeTableStructureCourseModel from "./timeTableStructureCourseModel.js";
 import academicGroupModel from "./academicGroupModel.js";
+import universityModel from "./universityModel.js";
 
 const timeTableRoutineModel = sequelize.define(
     'time_table_routine',
@@ -78,6 +79,15 @@ const timeTableRoutineModel = sequelize.define(
                 key: 'campus_id'
             }
         },
+        universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
         instituteId: {
             type: DataTypes.INTEGER,
             allowNull: true,
@@ -131,6 +141,15 @@ const timeTableRoutineModel = sequelize.define(
             references: {
                 model: users,
                 key: 'user_id'
+            }
+        },
+        departmentId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'department_id',
+            references: {
+                model: 'department',
+                key: 'department_id'
             }
         },
     },

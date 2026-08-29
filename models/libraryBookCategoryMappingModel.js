@@ -1,5 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
-import { DataTypes } from "sequelize";
+import { DataTypes } from 'sequelize';
+import universityModel from "./universityModel.js";
+import acedmicYearModel from "./acedmicYearModel.js";
 import libraryBookModel from "./libraryBookModel.js";
 import libraryCategoryModel from "./libraryCategoryModel.js";
 import instituteModel from "./instituteModel.js";
@@ -7,7 +9,25 @@ import instituteModel from "./instituteModel.js";
 const libraryBookCategoryMappingModel = sequelize.define(
   "library_book_category_mappings",
   {
-    libraryCategoryMappingId: {
+                    universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        academicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYearModel,
+                key: 'acedmic_year_id'
+            }
+        },
+        libraryCategoryMappingId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,

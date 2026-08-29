@@ -1,5 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
+import acedmicYearModel from "./acedmicYearModel.js";
 import university from "./universityModel.js";
 import users from "./userModel.js";
 import instituteModel from "./instituteModel.js";
@@ -9,6 +10,15 @@ import courseModel from "./courseModel.js";
 const sessionCouseMappingModel = sequelize.define(
     'session_course_mapping',
     {
+                academicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYearModel,
+                key: 'acedmic_year_id'
+            }
+        },
         sessionCourseMappingId: {
             type: DataTypes.INTEGER,
             primaryKey: true,

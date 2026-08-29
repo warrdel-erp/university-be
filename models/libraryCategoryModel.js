@@ -1,12 +1,32 @@
 import sequelize from "../database/sequelizeConfig.js";
-import { DataTypes } from "sequelize";
+import { DataTypes } from 'sequelize';
+import universityModel from "./universityModel.js";
+import acedmicYearModel from "./acedmicYearModel.js";
 import instituteModel from "./instituteModel.js";
 import users from "./userModel.js";
 
 const libraryCategoryModel = sequelize.define(
   "library_category",
   {
-    libraryCategoryId: {
+                    universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        academicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYearModel,
+                key: 'acedmic_year_id'
+            }
+        },
+        libraryCategoryId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,

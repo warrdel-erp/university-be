@@ -33,8 +33,9 @@ export async function getRolePermissions(roleId) {
 
   const permissionMap = {};
   mappings.forEach(m => {
-    if (!permissionMap[m.permission]) {
-      permissionMap[m.permission] = {
+    const key = `${m.permission}:${m.scope}`;
+    if (!permissionMap[key]) {
+      permissionMap[key] = {
         rolePermissionMappingId: m.rolePermissionMappingId,
         roleId: m.roleId,
         permission: m.permission,
@@ -43,7 +44,7 @@ export async function getRolePermissions(roleId) {
       };
     }
     if (m.resourceId) {
-      permissionMap[m.permission].resourceIds.push(m.resourceId);
+      permissionMap[key].resourceIds.push(m.resourceId);
     }
   });
 
@@ -95,6 +96,47 @@ export async function assignRolePermissions(roleId, permissions, transaction = n
     const result = await model.rolePermissionMappingModel.bulkCreate(dataToInsert, {
       transaction: activeTransaction
     });
+
+    // SYNC WITH ASSIGNED USERS
+    // 1. Find all users who currently have this role
+    const usersWithRole = await model.userRolePermissionModel.findAll({
+      attributes: ['userId'],
+      where: { roleId },
+      group: ['userId'],
+      transaction: activeTransaction
+    });
+
+    const userIds = usersWithRole.map(u => u.userId);
+
+    if (userIds.length > 0) {
+      // 2. Delete all existing user permissions for this role
+      await model.userRolePermissionModel.destroy({
+        where: { roleId },
+        transaction: activeTransaction
+      });
+
+      // 3. Insert new user permissions for all these users
+      const userPermissionsToInsert = [];
+      userIds.forEach(userId => {
+        dataToInsert.forEach(dp => {
+          if (dp.permission !== "perm_access_inst") {
+            userPermissionsToInsert.push({
+              userId,
+              roleId,
+              permission: dp.permission,
+              scope: dp.scope,
+              resourceId: dp.resourceId
+            });
+          }
+        });
+      });
+
+      if (userPermissionsToInsert.length > 0) {
+        await model.userRolePermissionModel.bulkCreate(userPermissionsToInsert, {
+          transaction: activeTransaction
+        });
+      }
+    }
 
     if (internalTransaction) await internalTransaction.commit();
     return result;

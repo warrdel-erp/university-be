@@ -1,5 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
+import universityModel from "./universityModel.js";
 import institute from './instituteModel.js';
 import acedmicYear from './acedmicYearModel.js';
 import course from './courseModel.js';
@@ -9,6 +10,15 @@ import sessionModel from "./sessionModel.js";
 const syllabusModel = sequelize.define(
     'syllabus',
     {
+                universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
         syllabusId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
@@ -80,6 +90,24 @@ const syllabusModel = sequelize.define(
             allowNull: false,
             defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
             field: 'updated_at'
+        },
+        campusId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'campus_id',
+            references: {
+                model: 'campus',
+                key: 'campus_id'
+            }
+        },
+        departmentId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'department_id',
+            references: {
+                model: 'department',
+                key: 'department_id'
+            }
         },
         deletedAt: {
             type: DataTypes.DATE,

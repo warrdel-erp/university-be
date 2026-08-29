@@ -200,7 +200,7 @@ export async function getTeacherOptions(campusId, subjectId) {
                 as: 'user',
                 attributes: [],
                 required: true,
-                where: { isTeacher: true },
+                // where: { isTeacher: true },
             },
         ],
     });

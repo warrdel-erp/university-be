@@ -1,5 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
+import universityModel from "./universityModel.js";
 import users from "./userModel.js";
 import acedmicYear from "./acedmicYearModel.js";
 import instituteModel from "./instituteModel.js";
@@ -7,6 +8,15 @@ import instituteModel from "./instituteModel.js";
 const feeGroupModel = sequelize.define(
     'fee_group',
     {
+                universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
         feeGroupId: {
             type: DataTypes.INTEGER,
             primaryKey: true,

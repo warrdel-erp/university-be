@@ -1,8 +1,25 @@
 import * as model from '../models/index.js';
 import { scoped } from '../utility/scoped.js';
+import { Op } from 'sequelize';
 
 export async function addCredit(creditData) {
   try {
+    if (Array.isArray(creditData) && creditData.length > 0) {
+      const courseIds = [...new Set(creditData.filter(r => !r.departmentId && r.courseId).map(r => r.courseId))];
+      if (courseIds.length > 0) {
+        const courses = await model.courseModel.findAll({
+          where: { courseId: { [Op.in]: courseIds } },
+          attributes: ['courseId', 'departmentId'],
+          raw: true
+        });
+        const map = new Map(courses.map(c => [c.courseId, c.departmentId]));
+        for (const r of creditData) {
+          if (!r.departmentId && r.courseId && map.has(r.courseId)) {
+            r.departmentId = map.get(r.courseId);
+          }
+        }
+      }
+    }
     return await scoped(model.creditModel).bulkCreate(creditData);
   } catch (error) {
     console.error('Error in add Credit:', error);

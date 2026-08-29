@@ -22,6 +22,9 @@ import {
   ELIGIBILITY_STATUS_LABEL,
   HALL_TICKET_STUDENT_QUERY_PURPOSE,
 } from "../constant.js";
+import * as examSessionAnswerSheetRepository from "../repository/examSessionAnswerSheetRepository.js";
+import * as s3Helper from "../utility/s3Helper.js";
+import { buildScope, scoped } from "../utility/scoped.js";
 import * as model from "../models/index.js";
 
 function createBadRequestError(message) {
@@ -1786,4 +1789,42 @@ export async function getSessionSkuStats(
   };
 }
 
+
+export async function getExaminationSessionAnswerSheets(examinationSessionId) {
+  if (!examinationSessionId) {
+    throw createBadRequestError("examinationSessionId is required");
+  }
+  const session = await examinationSessionRepository.findExaminationSessionById(examinationSessionId);
+  if (!session) {
+    const error = new Error(`Examination session with ID ${examinationSessionId} not found`);
+    error.statusCode = 404;
+    throw error;
+  }
+  const records = await examSessionAnswerSheetRepository.findByExaminationSession(examinationSessionId);
+
+  const result = await Promise.all(
+    records.map(async (record) => {
+      const plain = toPlain(record);
+      let downloadUrl = null;
+      if (plain.s3File?.s3Key) {
+        try {
+          downloadUrl = await s3Helper.getDownloadSignedUrl(plain.s3File.s3Key);
+        } catch (err) {
+          console.error("Error generating signed download URL for file:", err);
+        }
+      }
+      return {
+        ...plain,
+        s3File: plain.s3File
+          ? {
+              ...plain.s3File,
+              downloadUrl,
+            }
+          : null,
+      };
+    })
+  );
+
+  return result;
+}
 

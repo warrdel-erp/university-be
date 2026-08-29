@@ -1,11 +1,31 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
+import universityModel from "./universityModel.js";
+import instituteModel from "./instituteModel.js";
 import employee from "./employeeModel.js";
 import users from "./userModel.js";
 
 const employeeCorAddressModel = sequelize.define(
     'employee_cor_address',
     {
+                universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
+        },
         employeeCorAddressId: {
             type: DataTypes.INTEGER,
             primaryKey: true,

@@ -1,14 +1,23 @@
+import { DataTypes } from 'sequelize';
 import sequelize from "../database/sequelizeConfig.js";
-import { DataTypes } from "sequelize";
-import examinationSessionModel from "./examinationSessionModel.js";
 import acedmicYearModel from "./acedmicYearModel.js";
-import studentModel from "./studentModel.js";
 import instituteModel from "./instituteModel.js";
+import studentModel from "./studentModel.js";
 import universityModel from "./universityModel.js";
+import examinationSessionModel from './examinationSessionModel.js';
 
 const studentHallTicketModel = sequelize.define(
     "student_hall_ticket",
     {
+        academicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYearModel,
+                key: 'acedmic_year_id'
+            }
+        },
         id: {
             type: DataTypes.INTEGER,
             primaryKey: true,

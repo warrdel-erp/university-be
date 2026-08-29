@@ -121,4 +121,24 @@
 ---
 
 1. error in results.
-2. BE url change
+2. BE url change on server
+
+---
+
+1. permission dependency.
+2. nested checkbox tree structure for Target User Base Access Level (University -> Campus -> Institute -> Department -> Course/Class).
+
+---
+
+1. permission scopes binding.
+2. program creation error resolved.
+3. system to add department permission.
+4. permission policies for course, session, codeMaster, academicYear.
+5. data only permission not working.
+6. id correction of scopes.
+
+---
+
+1. DB backup.
+2. server roles & permission deployment error resolved.
+3. research on testing.

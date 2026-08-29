@@ -41,7 +41,7 @@ async function generateEmployeeNumber(campusId, instituteId) {
   const getInstitueCodeDetail = await getInstituteCode(instituteId);
   const campusCode = getCampusCodeDetail.get('campusCode');
   const institueCode = getInstitueCodeDetail.get('instituteCode');
-  const getPreviousEnrollNumber = await employeeRepository.getPreviousEnrollNumber(institueCode);
+  const getPreviousEnrollNumber = await employeeRepository.getPreviousEnrollNumber(campusCode, institueCode);
   const previousEnrollNumber = getPreviousEnrollNumber ? getPreviousEnrollNumber.get('employee_Code') : null;
   let enrollNumber;
   if (previousEnrollNumber) {
@@ -246,8 +246,16 @@ export async function addEmployee(data, files, createdBy, roleId) {
     data.roleId = null;
     data.employeeCode = await generateEmployeeNumber(data.campusId, data.instituteId)
     delete data.department;
-    if (data.departmentId != null) {
-      data.departmentId = Number(data.departmentId);
+    if (data.departmentId != null && data.departmentId !== "" && data.departmentId !== 0 && data.departmentId !== "null" && data.departmentId !== "undefined") {
+      const parsedDeptId = Number(data.departmentId);
+      if (!isNaN(parsedDeptId) && parsedDeptId > 0) {
+        const deptExists = await model.departmentModel.findByPk(parsedDeptId, { transaction });
+        data.departmentId = deptExists ? parsedDeptId : null;
+      } else {
+        data.departmentId = null;
+      }
+    } else {
+      data.departmentId = null;
     }
     const employee = await employeeRepository.addEmployee(data, transaction);
     const employeeId = employee.dataValues.employeeId;
@@ -680,7 +688,6 @@ function validateEmployeeRow(employee) {
     "instituteId",
     "roleId",
     "createdBy",
-    "departmentId",
     "employmentType",
   ];
 
@@ -718,7 +725,7 @@ export async function importEmployeeData(excelData, commonData) {
         employmentType: convertedData.employmentType,
         dateOfBirth: convertedData.dateOfBirth,
         fatherName: convertedData.fatherName,
-        departmentId: convertedData.departmentId != null ? Number(convertedData.departmentId) : null,
+        departmentId: (convertedData.departmentId != null && convertedData.departmentId !== "" && convertedData.departmentId !== 0) ? Number(convertedData.departmentId) : null,
         motherName: convertedData.motherName,
         pickColor: convertedData.pickColor,
         campusId: convertedData.campusId,
@@ -817,8 +824,16 @@ export async function updateEmployee(userId, data, files, updatedBy, createdBy) 
       department: _legacyDepartment,
       ...employeeUpdateData
     } = data; // roleId is a string ("ADMIN"), not an int FK — exclude it
-    if (employeeUpdateData.departmentId != null) {
-      employeeUpdateData.departmentId = Number(employeeUpdateData.departmentId);
+    if (employeeUpdateData.departmentId != null && employeeUpdateData.departmentId !== "" && employeeUpdateData.departmentId !== 0 && employeeUpdateData.departmentId !== "null" && employeeUpdateData.departmentId !== "undefined") {
+      const parsedDeptId = Number(employeeUpdateData.departmentId);
+      if (!isNaN(parsedDeptId) && parsedDeptId > 0) {
+        const deptExists = await model.departmentModel.findByPk(parsedDeptId, { transaction });
+        employeeUpdateData.departmentId = deptExists ? parsedDeptId : null;
+      } else {
+        employeeUpdateData.departmentId = null;
+      }
+    } else {
+      employeeUpdateData.departmentId = null;
     }
     await employeeRepository.updateEmployee(userId, {
       ...employeeUpdateData,

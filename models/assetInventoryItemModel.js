@@ -1,5 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
-import { DataTypes } from "sequelize";
+import { DataTypes } from 'sequelize';
+import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
 import assetModel from "./assetModel.js";
 import classRoomModel from "./classRoomModel.js";
@@ -8,7 +9,16 @@ import { assetInventoryStatuses } from "../constant.js";
 const assetInventoryItemModel = sequelize.define(
   "asset_inventory_item",
   {
-    assetInventoryItemId: {
+            universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        assetInventoryItemId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,

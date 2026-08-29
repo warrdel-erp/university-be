@@ -290,6 +290,10 @@ export async function assertStudentInRequestAcademicYear(studentId, options = {}
 
 export async function addStudent(data, transaction) {
     try {
+        if (!data.departmentId && data.courseId) {
+            const crs = await model.courseModel.findByPk(data.courseId, { attributes: ['departmentId'] });
+            if (crs?.departmentId) data.departmentId = crs.departmentId;
+        }
         const result = await scoped(model.studentModel).create(data, { transaction });
         return result;
     } catch (error) {
@@ -300,6 +304,10 @@ export async function addStudent(data, transaction) {
 
 export async function addStudentExcel(data, transaction) {
     try {
+        if (!data.departmentId && data.courseId) {
+            const crs = await model.courseModel.findByPk(data.courseId, { attributes: ['departmentId'] });
+            if (crs?.departmentId) data.departmentId = crs.departmentId;
+        }
         const result = await scoped(model.studentModel).create(data, { transaction });
         return result;
     } catch (error) {

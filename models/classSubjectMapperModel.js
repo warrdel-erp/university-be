@@ -1,5 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
+import universityModel from "./universityModel.js";
+import acedmicYearModel from "./acedmicYearModel.js";
 import subject from "./subjectModel.js";
 import users from "./userModel.js";
 import instituteModel from "./instituteModel.js";
@@ -7,6 +9,24 @@ import instituteModel from "./instituteModel.js";
 const classSubjectMapperModel = sequelize.define(
     'class_subject_mapper',
     {
+                universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        academicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYearModel,
+                key: 'acedmic_year_id'
+            }
+        },
         classSubjectMapperId: {
             type: DataTypes.INTEGER,
             primaryKey: true,

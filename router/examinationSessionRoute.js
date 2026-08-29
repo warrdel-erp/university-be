@@ -143,6 +143,12 @@ const questionPaperSummarySchema = {
   }),
 };
 
+const getAnswerSheetsSchema = {
+  query: z.object({
+    examinationSessionId: positiveIntegerQueryId,
+  }),
+};
+
 const getSubjectsBySessionAndTermSchema = {
   query: z.object({
     examinationSessionId: positiveIntegerQueryId,
@@ -236,7 +242,19 @@ router.get(
   examinationSessionController.getQuestionPaperSummary,
 );
 
+router.get(
+  "/answerSheets",
+  userAuth,
+  validate(getAnswerSheetsSchema),
+  examinationSessionController.getExaminationSessionAnswerSheets,
+);
 
+router.patch(
+  "/",
+  userAuth,
+  validate(updateSessionSchema),
+  examinationSessionController.updateExaminationSession,
+);
 router.delete(
   "/",
   userAuth,

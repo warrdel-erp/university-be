@@ -108,11 +108,11 @@ router.post('/institute', userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_ADD.v
 
 router.post('/affiliatedUniversity', userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_ADD.value, 'institute'), addAffiliatedUniversity);
 
-router.post('/course', userAuth, checkAccess(PERMISSIONS.COURSES_ADD.value, null), validate({ body: addCourseSchema }), addCourse);
+router.post('/course', userAuth, checkAccess(PERMISSIONS.COURSES_ADD.value), validate({ body: addCourseSchema }), addCourse);
 
-router.patch('/course', userAuth, checkAccess(PERMISSIONS.COURSES_EDIT.value, null), validate({ body: updateCourseSchema }), updateCourse);
+router.patch('/course', userAuth, checkAccess(PERMISSIONS.COURSES_EDIT.value), validate({ body: updateCourseSchema }), updateCourse);
 
-router.patch('/course/status', userAuth, checkAccess(PERMISSIONS.COURSES_CHANGE_STATUS.value, null), validate({ body: changeCourseStatusSchema }), changeCourseStatus);
+router.patch('/course/status', userAuth, checkAccess(PERMISSIONS.COURSES_CHANGE_STATUS.value), validate({ body: changeCourseStatusSchema }), changeCourseStatus);
 
 router.post('/specialization', userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_ADD.value, 'specialization'), addSpecialization);
 

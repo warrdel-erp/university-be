@@ -200,3 +200,15 @@ export const getSessionSkuStats = async (req, res) => {
 };
 
 
+export const getExaminationSessionAnswerSheets = async (req, res) => {
+  try {
+    const id = req.query.examinationSessionId || req.query.id || req.params.examinationSessionId || req.params.id;
+    const result = await examinationSessionServices.getExaminationSessionAnswerSheets(id);
+    return SuccessResponse(res, 200, "Examination session answer sheets fetched successfully", result);
+  } catch (error) {
+    console.error("Error fetching examination session answer sheets:", error);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(res, statusCode, error.message || "Failed to fetch examination session answer sheets");
+  }
+};
+
