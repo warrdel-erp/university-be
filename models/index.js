@@ -3879,6 +3879,14 @@ examSessionAnswerSheetModel.belongsTo(userModel, {
   foreignKey: "createdBy",
   as: "creator",
 });
+examSessionAnswerSheetModel.belongsTo(pdfSplitJobModel, {
+  foreignKey: "pdfSplitJobId",
+  as: "splitJob",
+});
+pdfSplitJobModel.hasOne(examSessionAnswerSheetModel, {
+  foreignKey: "pdfSplitJobId",
+  as: "answerSheet",
+});
 
 studentHallTicketModel.belongsTo(examinationSessionModel, {
   foreignKey: "examination_session_id",

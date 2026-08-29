@@ -75,6 +75,18 @@ export async function incrementFailedBatches(id) {
   }
 }
 
+export async function getJobsByS3Keys(s3Keys) {
+  try {
+    const { Op } = await import("sequelize");
+    return scoped(model.pdfSplitJobModel).findAll({
+      where: { s3Key: { [Op.in]: s3Keys } },
+    });
+  } catch (error) {
+    console.error("Error in pdfSplitJobRepository.getJobsByS3Keys:", error);
+    throw error;
+  }
+}
+
 export async function appendFailedBatchDetail(id, batchDetail) {
   try {
     const existing = await scoped(model.pdfSplitJobModel).findByPk(id);

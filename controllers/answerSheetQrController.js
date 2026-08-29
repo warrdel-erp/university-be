@@ -3,6 +3,7 @@ import * as answerSheetSplitterServices from "../services/answerSheetSplitterSer
 import { ErrorResponse, SuccessResponse } from "../utility/response.js";
 import * as s3Helper from "../utility/s3Helper.js";
 import * as s3FileRepository from "../repository/s3FileRepository.js";
+import * as examSessionAnswerSheetRepository from "../repository/examSessionAnswerSheetRepository.js";
 
 export async function generateAnswerSheetQrBulk(req, res) {
   try {
@@ -199,10 +200,14 @@ export async function splitAnswerSheetPdf(req, res) {
       );
     }
 
+    // ── Resolve answer-sheet row (to write pdfSplitJobId FK back) ─────────────
+    const answerSheet = await examSessionAnswerSheetRepository.findByS3FileId(fileUploadId);
+
     // ── Enqueue the job ───────────────────────────────────────────────────────
     const { jobId, jobDbId } = await answerSheetSplitterServices.enqueuePdfSplitJob(
       s3Key,
       req.user.userId,
+      answerSheet?.id ?? null,
     );
 
     return SuccessResponse(res, 202, "PDF split job queued successfully. Poll the status endpoint to track progress.", {
