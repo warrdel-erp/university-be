@@ -54,6 +54,13 @@ const pdfSplitJobModel = sequelize.define(
       allowNull: false,
       defaultValue: "PENDING",
     },
+    /** Ordered list of status transitions with timestamps — appended on every status change. */
+    statusLog: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: null,
+      field: "status_log",
+    },
     progress: {
       type: DataTypes.INTEGER,
       allowNull: false,

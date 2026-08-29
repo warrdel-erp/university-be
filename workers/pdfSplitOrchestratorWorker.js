@@ -161,26 +161,44 @@ async function processOrchestratorJob(bullmqJob) {
     await pdfSplitJobRepository.updateJob(jobDbId, { status: "DOWNLOADING", progress: 0 });
     await bullmqJob.updateProgress({ stage: "DOWNLOADING", percent: 0 });
     console.log(`[Orchestrator] ${jobDbId}: Downloading PDF from S3 → ${tempPdfPath}`);
+    const downloadStart = Date.now();
     await downloadPdfToTemp(s3Key, tempPdfPath);
+    await pdfSplitJobRepository.appendLog(jobDbId, {
+      event: "DOWNLOADING_DONE",
+      durationMs: Date.now() - downloadStart,
+    });
     console.log(`[Orchestrator] ${jobDbId}: Download complete.`);
 
     // ── Stage 2: SCANNING_QR ─────────────────────────────────────────────────
     await pdfSplitJobRepository.updateJob(jobDbId, { status: "SCANNING_QR", progress: 5 });
     await bullmqJob.updateProgress({ stage: "SCANNING_QR", percent: 5 });
     console.log(`[Orchestrator] ${jobDbId}: Scanning QR codes...`);
+    const scanStart = Date.now();
     const totalPages = await getPdfPageCount(tempPdfPath);
+    await pdfSplitJobRepository.appendLog(jobDbId, { event: "SCANNING_QR_START", totalPages });
     const scannedQrs = await scanQrCodesFromFile(tempPdfPath, totalPages, jobDbId);
     const totalStudents = scannedQrs.length;
     console.log(`[Orchestrator] ${jobDbId}: Found ${totalStudents} student segments.`);
-
     await pdfSplitJobRepository.updateJob(jobDbId, { totalStudents, progress: 20 });
+    await pdfSplitJobRepository.appendLog(jobDbId, {
+      event: "SCANNING_QR_DONE",
+      totalPages,
+      totalStudents,
+      durationMs: Date.now() - scanStart,
+    });
 
     // ── Stage 3: VALIDATING_DB ───────────────────────────────────────────────
     await pdfSplitJobRepository.updateJob(jobDbId, { status: "VALIDATING_DB", progress: 25 });
     await bullmqJob.updateProgress({ stage: "VALIDATING_DB", percent: 25 });
     console.log(`[Orchestrator] ${jobDbId}: Validating QR codes against DB...`);
+    const validateStart = Date.now();
     const dbMap = await validateScannedQrs(scannedQrs, instituteId, universityId);
     console.log(`[Orchestrator] ${jobDbId}: Validation passed.`);
+    await pdfSplitJobRepository.appendLog(jobDbId, {
+      event: "VALIDATING_DB_DONE",
+      validatedCount: dbMap.size,
+      durationMs: Date.now() - validateStart,
+    });
 
     // ── Stage 4: FAN-OUT → Enqueue independent batch jobs ────────────────────
     const batches = [];
@@ -222,6 +240,12 @@ async function processOrchestratorJob(bullmqJob) {
       );
 
       batchJobIds.push(batchJob.id);
+      await pdfSplitJobRepository.appendLog(jobDbId, {
+        event: "BATCH_ENQUEUED",
+        batchIndex,
+        batchJobId: batchJob.id,
+        segmentCount: segments.length,
+      });
     }
 
     // Persist batch metadata to parent job record
@@ -232,6 +256,11 @@ async function processOrchestratorJob(bullmqJob) {
       completedBatches: 0,
       failedBatches: 0,
       batchJobIds,
+    });
+    await pdfSplitJobRepository.appendLog(jobDbId, {
+      event: "SPLITTING_START",
+      totalBatches,
+      totalStudents,
     });
     await bullmqJob.updateProgress({ stage: "SPLITTING", percent: 30, totalBatches });
 
@@ -249,6 +278,11 @@ async function processOrchestratorJob(bullmqJob) {
       status: "FAILED",
       errorMessage: err.message,
       errorDetails: err.scanErrors || err.validationErrors || null,
+    });
+    await pdfSplitJobRepository.appendLog(jobDbId, {
+      event: "JOB_FAILED",
+      error: err.message,
+      details: err.scanErrors || err.validationErrors || null,
     });
 
     console.error(`[Orchestrator] ${jobDbId} FAILED:`, err.message);
