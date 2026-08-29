@@ -3,6 +3,7 @@ import { UniqueConstraintError } from "sequelize";
 import * as answerSheetQrRepository from "../repository/answerSheetQrRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 import { buildTermName } from "../utility/courseTerms.js";
+import * as s3Helper from "../utility/s3Helper.js";
 
 const MAX_UNUSED_QR_PER_INSTITUTE = 5000;
 
@@ -458,6 +459,55 @@ export async function assignObtainedMarksToAnswerSheet(
   }
 }
 
+export async function getMappedAnswerSheetsByExamSession({
+  examinationSessionId,
+  page = 1,
+  limit = 20,
+  examScheduleId,
+  term,
+  selections,
+  search,
+}) {
+  const offset = (page - 1) * limit;
+  const { count, rows } =
+    await answerSheetQrRepository.getMappedAnswerSheetsByExamSession(
+      examinationSessionId,
+      { examScheduleId, term, selections, search },
+      limit,
+      offset,
+    );
 
+  const items = [];
+  const urlJobs = [];
+  for (const row of rows) {
+    const plain = row.get({ plain: true });
+    items.push(plain);
+    if (plain.s3File && plain.s3File.s3Key) {
+      urlJobs.push(
+        s3Helper.getDownloadSignedUrl(plain.s3File.s3Key).then((url) => {
+          plain.s3File.url = url;
+        }),
+      );
+    }
+  }
+  await Promise.all(urlJobs);
 
-
+  return {
+    data: {
+      filters: {
+        examinationSessionId,
+        examScheduleId: examScheduleId || [],
+        term: term || [],
+        selections: selections || [],
+        search: search || null,
+      },
+      items,
+    },
+    pagination: {
+      page,
+      limit,
+      total: count,
+      totalPages: Math.ceil(count / limit) || 0,
+    },
+  };
+}
