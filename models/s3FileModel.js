@@ -14,7 +14,7 @@ const s3FileModel = sequelize.define(
       type: DataTypes.ENUM(
         "student_photo",
         "employee_document",
-        "FULL_EXAM_ANSWER_SHEET_PDF",
+        "EXAM_SESSION_PDF_UPLOAD",
         "answer_sheet",
         "student"
       ),

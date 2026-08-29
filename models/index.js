@@ -175,6 +175,7 @@ import studentFeeInvoiceItemsModel from "./studentFeeInvoiceItemsModel.js";
 import answerSheetQrModel from "./answerSheetQrModel.js";
 import s3FileModel from "./s3FileModel.js";
 import pdfSplitJobModel from "./pdfSplitJobModel.js";
+import examSessionAnswerSheetModel from "./examSessionAnswerSheetModel.js";
 import examinationSessionModel from "./examinationSessionModel.js";
 import examinationSessionTermModel from "./examinationSessionTermModel.js";
 import examinationSessionSlotModel from "./examinationSessionSlotModel.js";
@@ -3856,13 +3857,27 @@ s3FileModel.hasOne(answerSheetQrModel, {
   as: "answerSheetQr",
 });
 
-examScheduleModel.belongsTo(s3FileModel, {
-  foreignKey: "answerSheetS3FileId",
-  as: "answerSheetS3File",
+
+
+examSessionAnswerSheetModel.belongsTo(examinationSessionModel, {
+  foreignKey: "examinationSessionId",
+  as: "examinationSession",
 });
-s3FileModel.hasMany(examScheduleModel, {
-  foreignKey: "answerSheetS3FileId",
-  as: "examSchedules",
+examinationSessionModel.hasMany(examSessionAnswerSheetModel, {
+  foreignKey: "examinationSessionId",
+  as: "answerSheetUploads",
+});
+examSessionAnswerSheetModel.belongsTo(s3FileModel, {
+  foreignKey: "s3FileId",
+  as: "s3File",
+});
+s3FileModel.hasMany(examSessionAnswerSheetModel, {
+  foreignKey: "s3FileId",
+  as: "examSessionAnswerSheets",
+});
+examSessionAnswerSheetModel.belongsTo(userModel, {
+  foreignKey: "createdBy",
+  as: "creator",
 });
 
 studentHallTicketModel.belongsTo(examinationSessionModel, {
@@ -4283,6 +4298,7 @@ export {
   studentHallTicketModel,
   s3FileModel,
   pdfSplitJobModel,
+  examSessionAnswerSheetModel,
   examinationSessionModel,
   examinationSessionTermModel,
   examinationSessionSlotModel,
