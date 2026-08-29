@@ -173,7 +173,6 @@ const splitPdfSchema = z.object({
 router.post(
   "/splitPdf",
   userAuth,
-  checkAccessAny([PERMISSIONS.ANSWER_SHEET_QRS_ADD.value, PERMISSIONS.EXAM_TIME_TABLE_CREATE_SPLIT_SHEET.value], null),
   validate({ body: splitPdfSchema }),
   splitAnswerSheetPdf
 );
@@ -183,7 +182,6 @@ router.post(
 router.get(
   "/splitPdf/job/:jobDbId",
   userAuth,
-  checkAccessAny([PERMISSIONS.ANSWER_SHEET_QRS.value, PERMISSIONS.EXAM_TIME_TABLE_CREATE_SPLIT_SHEET.value], null),
   getSplitPdfJobStatus
 );
 
