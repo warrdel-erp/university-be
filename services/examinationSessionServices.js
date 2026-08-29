@@ -984,7 +984,7 @@ export async function getExaminationSessionAnswerSheets(examinationSessionId) {
   if (!examinationSessionId) {
     throw createBadRequestError("examinationSessionId is required");
   }
-  const session = await examinationSessionRepository.findExaminationSessionById(examinationSessionId);
+  const session = await examinationSessionRepository.getExaminationSessionById(examinationSessionId);
   if (!session) {
     const error = new Error(`Examination session with ID ${examinationSessionId} not found`);
     error.statusCode = 404;
