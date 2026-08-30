@@ -20,23 +20,19 @@ function getStudentDisplayName(student) {
 
 function resolveExamScheduleTerm(examSchedule) {
   if (examSchedule?.term != null) return Number(examSchedule.term);
-  if (examSchedule?.examSetupTypeTerm?.term != null) {
-    return Number(examSchedule.examSetupTypeTerm.term);
-  }
   return null;
 }
 
 function resolveExamTermName(examSchedule) {
   const term = resolveExamScheduleTerm(examSchedule);
   if (term == null) return null;
-  const termType = examSchedule?.examSetupTypeTerm?.course?.termType;
+  const termType = examSchedule?.subjectSchedule?.courseInfo?.termType;
   return buildTermName(termType, term);
 }
 
 function buildExamContext(item, options = {}) {
   const { includeStudentIdentity = true } = options;
   const examSchedule = item?.examSchedule;
-  const examSetupType = examSchedule?.examSetupTypeTerm?.examSetupType;
   const subject = examSchedule?.subjectSchedule;
   const student = item?.student;
   const term = resolveExamScheduleTerm(examSchedule);
@@ -52,8 +48,8 @@ function buildExamContext(item, options = {}) {
       : {}),
     subjectName: subject?.subjectName || null,
     subjectCode: subject?.subjectCode || null,
-    examType: examSetupType?.examType || null,
-    examName: examSetupType?.examName || null,
+    examType: examSchedule?.type || null,
+    examName: null,
     examDate: examSchedule?.examDate || null,
     examTime: examSchedule?.examTime || null,
     term,
@@ -108,15 +104,14 @@ export async function mapAnswerSheetQr(qr, studentId, examScheduleId) {
       if (!student) throw createServiceError("Student not found in your institute.", 404);
       if (!examSchedule) throw createServiceError("Exam schedule not found in your institute.", 404);
 
-      const hasHallTicket = await answerSheetQrRepository.hasStudentHallTicketForExamTerm(
+      const hasHallTicket = await answerSheetQrRepository.hasStudentHallTicketForExamSession(
         studentId,
-        examSchedule.examSetupTypeTermId,
-        examSchedule.sessionId,
+        examSchedule.examinationSessionId,
         transaction
       );
       if (!hasHallTicket) {
         throw createServiceError(
-          "Student does not have a hall ticket for this exam setup type term.",
+          "Student does not have a hall ticket for this examination session.",
           400
         );
       }
@@ -287,8 +282,8 @@ export async function getAnswerSheetQrsByRequestId(
       scholarNumber: item.student?.scholarNumber || null,
       subjectName: item.examSchedule?.subjectSchedule?.subjectName || null,
       subjectCode: item.examSchedule?.subjectSchedule?.subjectCode || null,
-      examType: item.examSchedule?.examSetupTypeTerm?.examSetupType?.examType || null,
-      examName: item.examSchedule?.examSetupTypeTerm?.examSetupType?.examName || null,
+      examType: item.examSchedule?.type || null,
+      examName: null,
       examDate: item.examSchedule?.examDate || null,
       examTime: item.examSchedule?.examTime || null,
       term,
@@ -392,8 +387,8 @@ export async function getScriptsAssignedToTeacher(
       scholarNumber: item.student?.scholarNumber || null,
       subjectName: item.examSchedule?.subjectSchedule?.subjectName || null,
       subjectCode: item.examSchedule?.subjectSchedule?.subjectCode || null,
-      examType: item.examSchedule?.examSetupTypeTerm?.examSetupType?.examType || null,
-      examName: item.examSchedule?.examSetupTypeTerm?.examSetupType?.examName || null,
+      examType: item.examSchedule?.type || null,
+      examName: null,
       examDate: item.examSchedule?.examDate || null,
       examTime: item.examSchedule?.examTime || null,
       term,

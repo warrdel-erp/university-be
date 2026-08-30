@@ -186,10 +186,9 @@ export const publishExaminationSession = async (req, res) => {
 
 export const getSessionSkuStats = async (req, res) => {
   try {
-    const { examinationSessionId, date } = req.query;
+    const { examinationSessionId } = req.query;
     const result = await examinationSessionServices.getSessionSkuStats(
       Number(examinationSessionId),
-      { date },
     );
     return SuccessResponse(res, 200, "SKU data fetched successfully", result);
   } catch (error) {
