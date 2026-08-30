@@ -1,10 +1,7 @@
 import * as repo from "../repository/examRoomMaterialBundleRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
-import { Op } from "sequelize";
-import * as model from "../models/index.js";
 import { getTenantStore } from "../utility/requestContext.js";
 
-// Utility to generate bundle code
 function generateBundleCode(roomNumber, seqId) {
   const cleanRoom = String(roomNumber || "000")
     .trim()
@@ -12,50 +9,44 @@ function generateBundleCode(roomNumber, seqId) {
   return `B-${cleanRoom}-${String(seqId).padStart(2, "0")}`;
 }
 
+function roomOccurrenceKey(classRoomSectionId, examDate, examinationSessionSlotId) {
+  return `${classRoomSectionId}_${examDate}_${examinationSessionSlotId}`;
+}
+
 export async function getBundleList(filters, pagination) {
   const { limit = 10, page = 1 } = pagination;
 
-  // 1. Fetch paginated capacities with joins (including seats and invigilators)
   const result = await repo.getBundleList(filters, { limit, page });
 
-  // Fetch seat counts separately to prevent Sequelize join duplication bugs
-  const capacityIds = result.rows.map((rc) => rc.examScheduleRoomCapacityId);
-  const seatCounts = capacityIds.length
-    ? await repo.getSeatCounts(capacityIds)
-    : [];
-  const seatCountsMap = new Map(
-    seatCounts.map((sc) => [
-      sc.examScheduleRoomCapacityId,
-      Number(sc.studentCount || 0),
-    ]),
-  );
-
-  // 2. Perform in-memory grouping on the paginated rows
   const roomMap = new Map();
 
   for (const rc of result.rows) {
     const plain = rc.get({ plain: true });
     const roomId = plain.classRoomSectionId;
     const schedule = plain.examSchedule;
-    const slot = schedule?.examinationSessionSlot;
-
-    // Grouping key: classRoomSectionId + examDate + examinationSessionSlotId
-    const key = `${roomId}_${schedule.examDate}_${schedule.examinationSessionSlotId}`;
+    const slot = schedule.examinationSessionSlot;
+    const key = roomOccurrenceKey(
+      roomId,
+      schedule.examDate,
+      schedule.examinationSessionSlotId,
+    );
 
     if (!roomMap.has(key)) {
-      // Extract invigilators from classroom join
-      const invigilators = (plain.classRoom?.examInvigilatorAssignments || [])
-        .map((ia) => ({
-          userId: ia.user?.userId,
-          userName: ia.user?.userName,
-        }))
-        .filter((u) => u.userId);
+      const invigilators = [];
+      const assignments = plain.classRoom.examInvigilatorAssignments || [];
+      for (const ia of assignments) {
+        if (!ia.user || !ia.user.userId) continue;
+        invigilators.push({
+          userId: ia.user.userId,
+          userName: ia.user.userName,
+        });
+      }
 
       roomMap.set(key, {
         classRoomSectionId: roomId,
-        roomNumber: plain.classRoom?.roomNumber,
-        examCapacity: plain.classRoom?.examCapacity,
-        roomCapacity: plain.classRoom?.capacity,
+        roomNumber: plain.classRoom.roomNumber,
+        examCapacity: plain.classRoom.examCapacity,
+        roomCapacity: plain.classRoom.capacity,
         examDate: schedule.examDate,
         slot: slot
           ? {
@@ -68,16 +59,17 @@ export async function getBundleList(filters, pagination) {
         invigilators,
         exams: [],
         bundle: null,
+        _capacityIds: [],
       });
     }
 
-    const bundle =
-      plain.classRoom?.materialBundles &&
-      plain.classRoom.materialBundles.length > 0
-        ? plain.classRoom.materialBundles[0]
-        : null;
+    const roomObj = roomMap.get(key);
+    roomObj._capacityIds.push(plain.examScheduleRoomCapacityId);
 
-    if (bundle && !roomMap.get(key).bundle) {
+    const bundles = plain.classRoom.materialBundles || [];
+    const bundle = bundles.length > 0 ? bundles[0] : null;
+
+    if (bundle && !roomObj.bundle) {
       const quantities = {
         ANSWER_SHEET: 0,
         EXTRA_SHEET: 0,
@@ -88,12 +80,12 @@ export async function getBundleList(filters, pagination) {
       };
 
       if (bundle.items) {
-        bundle.items.forEach((item) => {
+        for (const item of bundle.items) {
           quantities[item.itemType] = item.plannedQuantity || 0;
-        });
+        }
       }
 
-      roomMap.get(key).bundle = {
+      roomObj.bundle = {
         examRoomMaterialBundleId: bundle.examRoomMaterialBundleId,
         bundleCode: bundle.bundleCode,
         status: bundle.status,
@@ -114,26 +106,57 @@ export async function getBundleList(filters, pagination) {
       };
     }
 
-    const studentCount =
-      seatCountsMap.get(plain.examScheduleRoomCapacityId) || 0;
-
-    roomMap.get(key).exams.push({
+    const subject = schedule.subjectSchedule;
+    roomObj.exams.push({
       examScheduleRoomCapacityId: plain.examScheduleRoomCapacityId,
       examScheduleId: plain.examScheduleId,
-      subjectId: schedule.subjectSchedule?.subjectId,
-      subjectName: schedule.subjectSchedule?.subjectName,
-      subjectCode: schedule.subjectSchedule?.subjectCode,
-      courseId: schedule.subjectSchedule?.courseId,
+      subjectId: subject ? subject.subjectId : null,
+      subjectName: subject ? subject.subjectName : null,
+      subjectCode: subject ? subject.subjectCode : null,
+      courseId: subject ? subject.courseId : null,
       sessionId: schedule.sessionId,
       term: schedule.term,
-      capacity: studentCount,
-      studentCount,
-      isRoomAllocationDone: studentCount > 0,
+      capacity: 0,
+      studentCount: 0,
+      isRoomAllocationDone: false,
     });
   }
 
-  // 3. Post-process to align student counts for same class in the same room/slot
-  for (const roomObj of roomMap.values()) {
+  const allRooms = [...roomMap.values()];
+  const total = allRooms.length;
+  const pageNum = Math.max(1, Number(page) || 1);
+  const limitNum = Math.max(1, Number(limit) || 10);
+  const offset = (pageNum - 1) * limitNum;
+  const pageRooms = allRooms.slice(offset, offset + limitNum);
+
+  const capacityIds = [];
+  for (const roomObj of pageRooms) {
+    for (const id of roomObj._capacityIds) {
+      capacityIds.push(id);
+    }
+  }
+
+  const seatCounts = capacityIds.length
+    ? await repo.getSeatCounts(capacityIds)
+    : [];
+  const seatCountsMap = new Map();
+  for (const sc of seatCounts) {
+    seatCountsMap.set(
+      sc.examScheduleRoomCapacityId,
+      Number(sc.studentCount || 0),
+    );
+  }
+
+  const rows = [];
+  for (const roomObj of pageRooms) {
+    for (const exam of roomObj.exams) {
+      const studentCount =
+        seatCountsMap.get(exam.examScheduleRoomCapacityId) || 0;
+      exam.capacity = studentCount;
+      exam.studentCount = studentCount;
+      exam.isRoomAllocationDone = studentCount > 0;
+    }
+
     const classMaxCounts = {};
     for (const exam of roomObj.exams) {
       const classKey = `${exam.courseId}_${exam.sessionId}_${exam.term}`;
@@ -144,6 +167,8 @@ export async function getBundleList(filters, pagination) {
         );
       }
     }
+
+    let totalStudentCount = 0;
     for (const exam of roomObj.exams) {
       const classKey = `${exam.courseId}_${exam.sessionId}_${exam.term}`;
       const maxCount = classMaxCounts[classKey] || 0;
@@ -152,12 +177,27 @@ export async function getBundleList(filters, pagination) {
         exam.capacity = maxCount;
         exam.isRoomAllocationDone = true;
       }
+      totalStudentCount += exam.studentCount;
     }
+
+    roomObj.studentCount = totalStudentCount;
+    roomObj.invigilatorTrue = roomObj.invigilators.length > 0;
+
+    if (!roomObj.invigilatorTrue) {
+      roomObj.operationalStatus = "Invigilator Pending";
+    } else if (!roomObj.bundle) {
+      roomObj.operationalStatus = "Bundle Not Created";
+    } else {
+      roomObj.operationalStatus = `Bundle ${roomObj.bundle.status}`;
+    }
+
+    delete roomObj._capacityIds;
+    rows.push(roomObj);
   }
 
   return {
-    rows: Array.from(roomMap.values()),
-    count: result.count,
+    rows,
+    count: total,
   };
 }
 
@@ -166,45 +206,11 @@ export async function getBundleByRoomDetails(
   examDate,
   examinationSessionSlotId,
 ) {
-  // 1. Find all room capacity records sharing this room, date, and slot
-  const sharingCapacities = await model.examScheduleRoomCapacityModel.findAll({
-    where: { classRoomSectionId },
-    include: [
-      {
-        model: model.examScheduleModel,
-        as: "examSchedule",
-        where: { examDate, examinationSessionSlotId },
-        required: true,
-        include: [
-          {
-            model: model.subjectModel,
-            as: "subjectSchedule",
-            attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
-          },
-          {
-            model: model.examinationSessionSlotModel,
-            as: "examinationSessionSlot",
-            attributes: [
-              "examinationSessionSlotId",
-              "slotNumber",
-              "startTime",
-              "endTime",
-            ],
-          },
-        ],
-      },
-      {
-        model: model.classRoomModel,
-        as: "classRoom",
-        attributes: ["classRoomSectionId", "roomNumber"],
-      },
-      {
-        model: model.studentExamSeatModel,
-        as: "seats",
-        attributes: ["studentId"],
-      },
-    ],
-  });
+  const sharingCapacities = await repo.findRoomCapacitiesForBundleRoom(
+    classRoomSectionId,
+    examDate,
+    examinationSessionSlotId,
+  );
 
   if (sharingCapacities.length === 0) {
     const error = new Error(
@@ -217,26 +223,28 @@ export async function getBundleByRoomDetails(
   const firstRc = sharingCapacities[0].get({ plain: true });
 
   let totalStudentCount = 0;
-  const exams = sharingCapacities.map((rc) => {
+  const exams = [];
+  for (const rc of sharingCapacities) {
     const plainRc = rc.get({ plain: true });
-    const count = plainRc.seats?.length || 0;
+    const seats = plainRc.seats || [];
+    const count = seats.length;
     totalStudentCount += count;
-    return {
+    const subject = plainRc.examSchedule.subjectSchedule;
+    exams.push({
       examScheduleRoomCapacityId: plainRc.examScheduleRoomCapacityId,
       examScheduleId: plainRc.examScheduleId,
-      subjectId: plainRc.examSchedule?.subjectSchedule?.subjectId,
-      subjectName: plainRc.examSchedule?.subjectSchedule?.subjectName,
-      subjectCode: plainRc.examSchedule?.subjectSchedule?.subjectCode,
-      courseId: plainRc.examSchedule?.subjectSchedule?.courseId,
-      sessionId: plainRc.examSchedule?.sessionId,
-      term: plainRc.examSchedule?.term,
+      subjectId: subject ? subject.subjectId : null,
+      subjectName: subject ? subject.subjectName : null,
+      subjectCode: subject ? subject.subjectCode : null,
+      courseId: subject ? subject.courseId : null,
+      sessionId: plainRc.examSchedule.sessionId,
+      term: plainRc.examSchedule.term,
       capacity: plainRc.capacity,
       studentCount: count,
       isRoomAllocationDone: count > 0,
-    };
-  });
+    });
+  }
 
-  // 2. Find if bundle exists
   const bundle = await repo.findBundleByMapping(
     examDate,
     examinationSessionSlotId,
@@ -250,18 +258,17 @@ export async function getBundleByRoomDetails(
     );
     if (fullBundle) {
       const plainBundle = fullBundle.get({ plain: true });
-      if (plainBundle.items) {
-        plainBundle.items.forEach((item) => {
-          const planned = item.plannedQuantity || 0;
-          const issued = item.issuedQuantity || 0;
-          item.pendingQuantity = Math.max(planned - issued, 0);
-        });
+      const items = plainBundle.items || [];
+      for (const item of items) {
+        const planned = item.plannedQuantity || 0;
+        const issued = item.issuedQuantity || 0;
+        item.pendingQuantity = Math.max(planned - issued, 0);
       }
       bundleDetails = {
         examRoomMaterialBundleId: plainBundle.examRoomMaterialBundleId,
         bundleCode: plainBundle.bundleCode,
         status: plainBundle.status,
-        items: plainBundle.items || [],
+        items,
         issuedToUser: plainBundle.recipientUser,
         issuedByUser: plainBundle.issuerUser,
         issuedAt: plainBundle.issuedAt,
@@ -279,26 +286,39 @@ export async function getBundleByRoomDetails(
   let materialTypes = 0;
 
   if (bundleDetails) {
-    materialTypes = bundleDetails.items?.length || 0;
-    bundleDetails.items?.forEach((item) => {
+    materialTypes = bundleDetails.items.length;
+    for (const item of bundleDetails.items) {
       TotalMaterial += item.plannedQuantity || 0;
       issuedmaterial += item.issuedQuantity || 0;
+    }
+  }
+
+  const invigilatorsRaw = await repo.getInvigilators(
+    examinationSessionSlotId,
+    examDate,
+    classRoomSectionId,
+  );
+  const invigilators = [];
+  for (const inv of invigilatorsRaw) {
+    invigilators.push({
+      userId: inv.user ? inv.user.userId : inv.userId,
+      userName: inv.user ? inv.user.userName : "",
     });
   }
 
+  const slot = firstRc.examSchedule.examinationSessionSlot;
+
   return {
     classRoomSectionId,
-    roomNumber: firstRc.classRoom?.roomNumber,
+    roomNumber: firstRc.classRoom.roomNumber,
     examDate,
     examinationSessionSlotId,
-    slot: firstRc.examSchedule?.examinationSessionSlot
+    slot: slot
       ? {
-          examinationSessionSlotId:
-            firstRc.examSchedule.examinationSessionSlot
-              .examinationSessionSlotId,
-          slotNumber: firstRc.examSchedule.examinationSessionSlot.slotNumber,
-          startTime: firstRc.examSchedule.examinationSessionSlot.startTime,
-          endTime: firstRc.examSchedule.examinationSessionSlot.endTime,
+          examinationSessionSlotId: slot.examinationSessionSlotId,
+          slotNumber: slot.slotNumber,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
         }
       : null,
     studentCount: totalStudentCount,
@@ -310,14 +330,7 @@ export async function getBundleByRoomDetails(
     materialTypes,
     exams,
     bundle: bundleDetails,
-    invigilators: await repo
-      .getInvigilators(examinationSessionSlotId, examDate, classRoomSectionId)
-      .then((invs) =>
-        invs.map((inv) => ({
-          userId: inv.user ? inv.user.userId : inv.userId,
-          userName: inv.user ? inv.user.userName : "",
-        })),
-      ),
+    invigilators,
   };
 }
 
@@ -330,8 +343,7 @@ export async function createBundle(payload, user) {
     issuedTo,
   } = payload;
 
-  return await sequelize.transaction(async (transaction) => {
-    // 1. Search for existing bundle by derived fields and tenant scope
+  return sequelize.transaction(async (transaction) => {
     const existing = await repo.findBundleByMapping(
       examDate,
       examinationSessionSlotId,
@@ -340,7 +352,6 @@ export async function createBundle(payload, user) {
     );
 
     if (existing) {
-      // Validate and update issuedTo if provided
       if (issuedTo) {
         const invigilators = await repo.getActiveInvigilatorsForRoomSlot(
           classRoomSectionId,
@@ -348,8 +359,14 @@ export async function createBundle(payload, user) {
           examinationSessionSlotId,
           transaction,
         );
-        const invigilatorUserIds = invigilators.map((ia) => Number(ia.userId));
-        if (!invigilatorUserIds.includes(Number(issuedTo))) {
+        let isInvigilator = false;
+        for (const ia of invigilators) {
+          if (Number(ia.userId) === Number(issuedTo)) {
+            isInvigilator = true;
+            break;
+          }
+        }
+        if (!isInvigilator) {
           const error = new Error(
             "The recipient must be an assigned invigilator for this room slot",
           );
@@ -357,27 +374,35 @@ export async function createBundle(payload, user) {
           throw error;
         }
 
-        existing.status = "ISSUED";
-        existing.issuedTo = issuedTo;
-        existing.issuedBy = user.userId;
-        existing.issuedAt = new Date();
-        await existing.save({ transaction });
+        await repo.updateBundle(
+          existing.examRoomMaterialBundleId,
+          {
+            status: "ISSUED",
+            issuedTo,
+            issuedBy: user.userId,
+            issuedAt: new Date(),
+            updatedBy: user.userId,
+          },
+          { transaction },
+        );
       }
 
-      // 2. Reuse existing bundle and upsert items under it
-      const itemsData = items.map((item) => ({
-        examRoomMaterialBundleId: existing.examRoomMaterialBundleId,
-        itemType: item.itemType,
-        plannedQuantity: item.plannedQuantity || 0,
-        issuedQuantity: 0,
-        usedQuantity: 0,
-        unusedQuantity: 0,
-        returnedQuantity: 0,
-        damagedQuantity: 0,
-        remarks: item.remarks || null,
-        createdBy: user.userId,
-        updatedBy: user.userId,
-      }));
+      const itemsData = [];
+      for (const item of items) {
+        itemsData.push({
+          examRoomMaterialBundleId: existing.examRoomMaterialBundleId,
+          itemType: item.itemType,
+          plannedQuantity: item.plannedQuantity || 0,
+          issuedQuantity: 0,
+          usedQuantity: 0,
+          unusedQuantity: 0,
+          returnedQuantity: 0,
+          damagedQuantity: 0,
+          remarks: item.remarks || null,
+          createdBy: user.userId,
+          updatedBy: user.userId,
+        });
+      }
 
       await repo.updateBundleItems(
         existing.examRoomMaterialBundleId,
@@ -391,19 +416,12 @@ export async function createBundle(payload, user) {
       );
     }
 
-    // Check if there is an exam schedule capacity for this combo to make sure it's valid
-    const capacity = await model.examScheduleRoomCapacityModel.findOne({
-      where: { classRoomSectionId },
-      include: [
-        {
-          model: model.examScheduleModel,
-          as: "examSchedule",
-          where: { examDate, examinationSessionSlotId },
-          required: true,
-        },
-      ],
-      transaction,
-    });
+    const capacity = await repo.findRoomCapacityByRoomDateSlot(
+      classRoomSectionId,
+      examDate,
+      examinationSessionSlotId,
+      { transaction },
+    );
     if (!capacity) {
       const error = new Error(
         "No exam schedule capacity found for the given date, slot, and room",
@@ -413,15 +431,20 @@ export async function createBundle(payload, user) {
     }
 
     if (issuedTo) {
-      // Validate that issuedTo is one of the invigilators
       const invigilators = await repo.getActiveInvigilatorsForRoomSlot(
         classRoomSectionId,
         examDate,
         examinationSessionSlotId,
         transaction,
       );
-      const invigilatorUserIds = invigilators.map((ia) => Number(ia.userId));
-      if (!invigilatorUserIds.includes(Number(issuedTo))) {
+      let isInvigilator = false;
+      for (const ia of invigilators) {
+        if (Number(ia.userId) === Number(issuedTo)) {
+          isInvigilator = true;
+          break;
+        }
+      }
+      if (!isInvigilator) {
         const error = new Error(
           "The recipient must be an assigned invigilator for this room slot",
         );
@@ -430,13 +453,13 @@ export async function createBundle(payload, user) {
       }
     }
 
-    // Generate Room-Centric Sequence Bundle Code
-    const roomNumber = capacity.classRoom?.roomNumber || "";
-    const existingBundlesCount = await model.examRoomMaterialBundleModel.count({
-      where: { classRoomSectionId },
-      transaction,
-      paranoid: false,
-    });
+    const roomNumber = capacity.classRoom
+      ? capacity.classRoom.roomNumber || ""
+      : "";
+    const existingBundlesCount = await repo.countBundlesByRoom(
+      classRoomSectionId,
+      { transaction },
+    );
     const bundleCode = generateBundleCode(roomNumber, existingBundlesCount + 1);
 
     const tenantStore = getTenantStore();
@@ -461,16 +484,19 @@ export async function createBundle(payload, user) {
       updatedBy: user.userId,
     };
 
-    const itemsData = items.map((item) => ({
-      itemType: item.itemType,
-      plannedQuantity: item.plannedQuantity || 0,
-      issuedQuantity: 0,
-      usedQuantity: 0,
-      unusedQuantity: 0,
-      returnedQuantity: 0,
-      damagedQuantity: 0,
-      remarks: item.remarks || null,
-    }));
+    const itemsData = [];
+    for (const item of items) {
+      itemsData.push({
+        itemType: item.itemType,
+        plannedQuantity: item.plannedQuantity || 0,
+        issuedQuantity: 0,
+        usedQuantity: 0,
+        unusedQuantity: 0,
+        returnedQuantity: 0,
+        damagedQuantity: 0,
+        remarks: item.remarks || null,
+      });
+    }
 
     await repo.createBundle(bundleData, itemsData, transaction);
     return getBundleByRoomDetails(
@@ -481,11 +507,82 @@ export async function createBundle(payload, user) {
   });
 }
 
+/**
+ * Create bundle without items payload.
+ * Auto-adds QUESTION_PAPER (room capacity), ANSWER_SHEET (seated students),
+ * and ATTENDANCE_SHEET (1).
+ */
+export async function createBundleAuto(payload, user) {
+  const { examDate, examinationSessionSlotId, classRoomSectionId, issuedTo } =
+    payload;
+
+  const sharingCapacities = await repo.findRoomCapacitiesForBundleRoom(
+    classRoomSectionId,
+    examDate,
+    examinationSessionSlotId,
+  );
+
+  if (!sharingCapacities.length) {
+    const error = new Error(
+      "No exam schedule capacity found for the given date, slot, and room",
+    );
+    error.statusCode = 404;
+    throw error;
+  }
+
+  let seatedStudents = 0;
+  let allottedCapacity = 0;
+  let roomCapacity = 0;
+
+  for (const rc of sharingCapacities) {
+    const plain = rc.get ? rc.get({ plain: true }) : rc;
+    allottedCapacity += Number(plain.capacity) || 0;
+    seatedStudents += plain.seats ? plain.seats.length : 0;
+
+    if (!roomCapacity && plain.classRoom) {
+      roomCapacity =
+        Number(plain.classRoom.examCapacity) ||
+        Number(plain.classRoom.capacity) ||
+        0;
+    }
+  }
+
+  if (!roomCapacity) {
+    roomCapacity = allottedCapacity;
+  }
+
+  const answerSheetQty = seatedStudents > 0 ? seatedStudents : allottedCapacity;
+
+  return createBundle(
+    {
+      examDate,
+      examinationSessionSlotId,
+      classRoomSectionId,
+      issuedTo,
+      items: [
+        {
+          itemType: "QUESTION_PAPER",
+          plannedQuantity: roomCapacity,
+        },
+        {
+          itemType: "ANSWER_SHEET",
+          plannedQuantity: answerSheetQty,
+        },
+        {
+          itemType: "ATTENDANCE_SHEET",
+          plannedQuantity: 1,
+        },
+      ],
+    },
+    user,
+  );
+}
+
 export async function updateBundleItems(bundleId, payload, user) {
   const { status, remarks, issuedTo, items } = payload;
 
-  return await sequelize.transaction(async (transaction) => {
-    const bundle = await repo.getBundleById(bundleId);
+  return sequelize.transaction(async (transaction) => {
+    const bundle = await repo.getBundleById(bundleId, { transaction });
     if (!bundle) {
       const error = new Error("Bundle not found");
       error.statusCode = 404;
@@ -498,7 +595,6 @@ export async function updateBundleItems(bundleId, payload, user) {
       throw error;
     }
 
-    // 1. Update bundle properties if provided
     const bundleUpdateFields = {};
     if (status) {
       bundleUpdateFields.status = status;
@@ -509,7 +605,6 @@ export async function updateBundleItems(bundleId, payload, user) {
           throw error;
         }
 
-        // Fetch assigned invigilators for this room, date, and slot
         const invigilators = await repo.getActiveInvigilatorsForRoomSlot(
           bundle.classRoomSectionId,
           bundle.examDate,
@@ -517,8 +612,14 @@ export async function updateBundleItems(bundleId, payload, user) {
           transaction,
         );
 
-        const invigilatorUserIds = invigilators.map((ia) => Number(ia.userId));
-        if (!invigilatorUserIds.includes(Number(issuedTo))) {
+        let isInvigilator = false;
+        for (const ia of invigilators) {
+          if (Number(ia.userId) === Number(issuedTo)) {
+            isInvigilator = true;
+            break;
+          }
+        }
+        if (!isInvigilator) {
           const error = new Error(
             "The recipient must be an assigned invigilator for this room slot",
           );
@@ -530,13 +631,17 @@ export async function updateBundleItems(bundleId, payload, user) {
         bundleUpdateFields.issuedBy = user.userId;
         bundleUpdateFields.issuedAt = new Date();
       } else if (status === "READY") {
-        // Collect all item types that will be present in the bundle after update
-        const existingItems = await repo.getBundleItemsByBundleId(bundleId);
-        const itemTypes = new Set(existingItems.map((i) => i.itemType));
-
-        // If items are provided in payload, update the set of types with the new payload items
+        const existingItems = await repo.getBundleItemsByBundleId(bundleId, {
+          transaction,
+        });
+        const itemTypes = new Set();
+        for (const item of existingItems) {
+          itemTypes.add(item.itemType);
+        }
         if (items && items.length > 0) {
-          items.forEach((item) => itemTypes.add(item.itemType));
+          for (const item of items) {
+            itemTypes.add(item.itemType);
+          }
         }
 
         const requiredTypes = [
@@ -544,9 +649,10 @@ export async function updateBundleItems(bundleId, payload, user) {
           "ANSWER_SHEET",
           "ATTENDANCE_SHEET",
         ];
-        const missingTypes = requiredTypes.filter(
-          (type) => !itemTypes.has(type),
-        );
+        const missingTypes = [];
+        for (const type of requiredTypes) {
+          if (!itemTypes.has(type)) missingTypes.push(type);
+        }
 
         if (missingTypes.length > 0) {
           const error = new Error(
@@ -568,26 +674,33 @@ export async function updateBundleItems(bundleId, payload, user) {
     }
     if (Object.keys(bundleUpdateFields).length > 0) {
       bundleUpdateFields.updatedBy = user.userId;
-      await bundle.update(bundleUpdateFields, { transaction });
+      await repo.updateBundle(bundleId, bundleUpdateFields, { transaction });
     }
 
-    // 2. Update child items if provided
     if (items && items.length > 0) {
-      // Check for duplicate itemTypes in payload
-      const itemTypes = items.map((i) => i.itemType);
-      if (new Set(itemTypes).size !== itemTypes.length) {
-        const error = new Error("Duplicate material types are not allowed");
-        error.statusCode = 400;
-        throw error;
+      const seenTypes = new Set();
+      for (const item of items) {
+        if (seenTypes.has(item.itemType)) {
+          const error = new Error("Duplicate material types are not allowed");
+          error.statusCode = 400;
+          throw error;
+        }
+        seenTypes.add(item.itemType);
       }
 
-      const existingItems = await repo.getBundleItemsByBundleId(bundleId);
+      const existingItems = await repo.getBundleItemsByBundleId(bundleId, {
+        transaction,
+      });
       const existingItemMap = new Map();
-      existingItems.forEach((i) =>
-        existingItemMap.set(i.itemType, i.examRoomMaterialItemId),
-      );
+      for (const existing of existingItems) {
+        existingItemMap.set(
+          existing.itemType,
+          existing.examRoomMaterialItemId,
+        );
+      }
 
-      const itemsToUpsert = items.map((item) => {
+      const itemsToUpsert = [];
+      for (const item of items) {
         const data = {
           examRoomMaterialBundleId: bundleId,
           itemType: item.itemType,
@@ -600,16 +713,13 @@ export async function updateBundleItems(bundleId, payload, user) {
           remarks: item.remarks,
           updatedBy: user.userId,
           updatedAt: new Date(),
+          createdBy: user.userId,
         };
-
-        // If it exists, provide the ID for bulkCreate updateOnDuplicate to work properly
         if (existingItemMap.has(item.itemType)) {
           data.examRoomMaterialItemId = existingItemMap.get(item.itemType);
         }
-        data.createdBy = user.userId;
-
-        return data;
-      });
+        itemsToUpsert.push(data);
+      }
 
       await repo.updateBundleItems(bundleId, itemsToUpsert, transaction);
     }
@@ -623,20 +733,20 @@ export async function updateBundleItems(bundleId, payload, user) {
 }
 
 export async function getBundleSummary(examinationSessionId) {
-  const scheduleWhere = { examinationSessionId };
-
-  // 1. Fetch classroom capacities matching our filters using repository
-  const capacities = await repo.getSummaryCapacities(scheduleWhere);
+  const capacities = await repo.getSummaryCapacities({
+    examinationSessionId,
+  });
 
   const uniqueRooms = new Map();
-  capacities.forEach((c) => {
-    const key = `${c.classRoomSectionId}_${c["examSchedule.examDate"]}_${c["examSchedule.examinationSessionSlotId"]}`;
+  for (const capacity of capacities) {
+    const key = `${capacity.classRoomSectionId}_${capacity["examSchedule.examDate"]}_${capacity["examSchedule.examinationSessionSlotId"]}`;
     uniqueRooms.set(key, {
-      classRoomSectionId: c.classRoomSectionId,
-      examDate: c["examSchedule.examDate"],
-      examinationSessionSlotId: c["examSchedule.examinationSessionSlotId"],
+      classRoomSectionId: capacity.classRoomSectionId,
+      examDate: capacity["examSchedule.examDate"],
+      examinationSessionSlotId:
+        capacity["examSchedule.examinationSessionSlotId"],
     });
-  });
+  }
 
   let roomCount = uniqueRooms.size;
   let pendingCount = 0;
@@ -644,12 +754,15 @@ export async function getBundleSummary(examinationSessionId) {
   let closedCount = 0;
 
   if (roomCount > 0) {
-    const roomList = Array.from(uniqueRooms.values());
-    const classRoomSectionIds = roomList.map((r) => r.classRoomSectionId);
-    const examDates = roomList.map((r) => r.examDate);
-    const slotIds = roomList.map((r) => r.examinationSessionSlotId);
+    const classRoomSectionIds = [];
+    const examDates = [];
+    const slotIds = [];
+    for (const room of uniqueRooms.values()) {
+      classRoomSectionIds.push(room.classRoomSectionId);
+      examDates.push(room.examDate);
+      slotIds.push(room.examinationSessionSlotId);
+    }
 
-    // 2. Fetch all bundles using repository
     const bundles = await repo.getSummaryBundles(
       classRoomSectionIds,
       examDates,
@@ -657,16 +770,12 @@ export async function getBundleSummary(examinationSessionId) {
     );
 
     const bundleMap = new Map();
-    bundles.forEach((b) => {
-      const classRoomSectionId = b.examScheduleRoomCapacity?.classRoomSectionId;
-      const examDate = b.examScheduleRoomCapacity?.examSchedule?.examDate;
-      const examinationSessionSlotId =
-        b.examScheduleRoomCapacity?.examSchedule?.examinationSessionSlotId;
-      const key = `${classRoomSectionId}_${examDate}_${examinationSessionSlotId}`;
-      bundleMap.set(key, b.status);
-    });
+    for (const bundle of bundles) {
+      const key = `${bundle.classRoomSectionId}_${bundle.examDate}_${bundle.examinationSessionSlotId}`;
+      bundleMap.set(key, bundle.status);
+    }
 
-    uniqueRooms.forEach((room, key) => {
+    for (const [key] of uniqueRooms) {
       const status = bundleMap.get(key);
       if (!status || status === "PREPARING" || status === "READY") {
         pendingCount++;
@@ -679,7 +788,7 @@ export async function getBundleSummary(examinationSessionId) {
       } else if (status === "CLOSED") {
         closedCount++;
       }
-    });
+    }
   }
 
   return {
@@ -691,8 +800,8 @@ export async function getBundleSummary(examinationSessionId) {
 }
 
 export async function updateBundleStatus(bundleId, status, user) {
-  return await sequelize.transaction(async (transaction) => {
-    const bundle = await repo.getBundleById(bundleId);
+  return sequelize.transaction(async (transaction) => {
+    const bundle = await repo.getBundleById(bundleId, { transaction });
     if (!bundle) {
       const error = new Error("Bundle not found");
       error.statusCode = 404;
@@ -719,17 +828,12 @@ export async function updateBundleStatus(bundleId, status, user) {
     }
 
     bundleUpdateFields.updatedBy = user.userId;
-    await bundle.update(bundleUpdateFields, { transaction });
+    await repo.updateBundle(bundleId, bundleUpdateFields, { transaction });
 
-    const classRoomSectionId =
-      bundle.examScheduleRoomCapacity?.classRoomSectionId;
-    const examDate = bundle.examScheduleRoomCapacity?.examSchedule?.examDate;
-    const examinationSessionSlotId =
-      bundle.examScheduleRoomCapacity?.examSchedule?.examinationSessionSlotId;
     return getBundleByRoomDetails(
-      classRoomSectionId,
-      examDate,
-      examinationSessionSlotId,
+      bundle.classRoomSectionId,
+      bundle.examDate,
+      bundle.examinationSessionSlotId,
     );
   });
 }
@@ -737,41 +841,39 @@ export async function updateBundleStatus(bundleId, status, user) {
 export async function getReadyBundleList(filters, pagination) {
   const result = await repo.getReadyBundleList(filters, pagination);
 
-  const formattedRows = result.rows.map((bundleRecord) => {
+  const formattedRows = [];
+  for (const bundleRecord of result.rows) {
     const bundle = bundleRecord.get({ plain: true });
+    const items = bundle.items || [];
 
     let TotalMaterial = 0;
     let issuedmaterial = 0;
-    let materialTypes = bundle.items?.length || 0;
-
-    if (bundle.items) {
-      bundle.items.forEach((item) => {
-        TotalMaterial += item.plannedQuantity || 0;
-        issuedmaterial += item.issuedQuantity || 0;
-        const planned = item.plannedQuantity || 0;
-        const issued = item.issuedQuantity || 0;
-        item.pendingQuantity = Math.max(planned - issued, 0);
-      });
+    for (const item of items) {
+      TotalMaterial += item.plannedQuantity || 0;
+      issuedmaterial += item.issuedQuantity || 0;
+      const planned = item.plannedQuantity || 0;
+      const issued = item.issuedQuantity || 0;
+      item.pendingQuantity = Math.max(planned - issued, 0);
     }
 
-    return {
+    formattedRows.push({
       examRoomMaterialBundleId: bundle.examRoomMaterialBundleId,
       bundleCode: bundle.bundleCode,
       status: bundle.status,
       examDate: bundle.examDate,
       examinationSessionSlotId: bundle.examinationSessionSlotId,
       classRoomSectionId: bundle.classRoomSectionId,
-      roomNumber: bundle.classRoom?.roomNumber || null,
+      roomNumber: bundle.classRoom ? bundle.classRoom.roomNumber : null,
       totalMaterial: TotalMaterial,
       issuedMaterial: issuedmaterial,
-      materialTypes,
-      items: bundle.items || [],
+      materialTypes: items.length,
+      items,
       issuedToUser: bundle.recipientUser || null,
       issuedByUser: bundle.issuerUser || null,
       issuedAt: bundle.issuedAt,
       slot: bundle.examinationSessionSlot || null,
-    };
-  });
+    });
+  }
 
   return {
     rows: formattedRows,
@@ -779,80 +881,109 @@ export async function getReadyBundleList(filters, pagination) {
   };
 }
 
+function findAnswerSheetItem(items) {
+  for (const item of items) {
+    if (item.itemType === "ANSWER_SHEET") return item;
+  }
+  return null;
+}
+
+function buildReceivedRoomGroup(plain) {
+  const classRoom = plain.classRoom;
+  const schedule = plain.examSchedule;
+  const slot = schedule.examinationSessionSlot || {};
+  const bundles = classRoom.materialBundles || [];
+  const bundle = bundles.length > 0 ? bundles[0] : {};
+  const items = bundle.items || [];
+  const answerSheet = findAnswerSheetItem(items);
+
+  return {
+    classRoomSectionId: plain.classRoomSectionId,
+    roomNumber: classRoom.roomNumber || "",
+    examDate: schedule.examDate,
+    examinationSessionSlotId: schedule.examinationSessionSlotId,
+    slot: {
+      examinationSessionSlotId: slot.examinationSessionSlotId || null,
+      slotNumber: slot.slotNumber || null,
+      startTime: slot.startTime || "",
+      endTime: slot.endTime || "",
+    },
+    exams: [],
+    totalStudentCount: 0,
+    examRoomMaterialBundleId: bundle.examRoomMaterialBundleId || null,
+    bundleCode: bundle.bundleCode || null,
+    status: bundle.status || null,
+    answerSheetCount: answerSheet ? answerSheet.plannedQuantity || 0 : 0,
+    usedAnswerSheets: answerSheet ? answerSheet.usedQuantity || 0 : 0,
+    items,
+  };
+}
+
+function buildReceivedExamEntry(plain) {
+  const schedule = plain.examSchedule;
+  const subject = schedule.subjectSchedule;
+  const seats = plain.seats || [];
+
+  return {
+    examScheduleRoomCapacityId: plain.examScheduleRoomCapacityId,
+    examScheduleId: plain.examScheduleId,
+    subjectId: subject ? subject.subjectId : null,
+    subjectName: subject ? subject.subjectName : "",
+    subjectCode: subject ? subject.subjectCode : "",
+    studentCount: seats.length,
+  };
+}
+
+function matchesReceivedRoomSearch(room, search) {
+  const q = String(search).toLowerCase();
+  if (room.roomNumber && room.roomNumber.toLowerCase().includes(q)) return true;
+  if (room.bundleCode && room.bundleCode.toLowerCase().includes(q)) return true;
+  return false;
+}
+
+/** Group RECEIVED bundles by room + date + slot (same shape as /rooms grouping). */
 export async function getReceivedRooms(filters, pagination = {}) {
   const roomCapacities = await repo.getReceivedRoomsQuery(filters);
   if (!roomCapacities.length) return { rows: [], count: 0 };
 
   const roomMap = new Map();
-  for (const rc of roomCapacities) {
-    const plain = rc.get({ plain: true });
-    const { classRoomSectionId: roomId, classRoom, examSchedule: sched = {} } = plain;
-    const { examDate, examinationSessionSlotId: slotId, examinationSessionSlot: slot = {} } = sched;
-    const key = `${roomId}_${examDate}_${slotId}`;
-
-    const studentCount = plain.seats?.length || 0;
-    const examEntry = {
-      examScheduleRoomCapacityId: plain.examScheduleRoomCapacityId,
-      examScheduleId: plain.examScheduleId,
-      subjectId: sched.subjectSchedule?.subjectId || null,
-      subjectName: sched.subjectSchedule?.subjectName || "",
-      subjectCode: sched.subjectSchedule?.subjectCode || "",
-      studentCount,
-    };
+  for (const capacity of roomCapacities) {
+    const plain = capacity.get({ plain: true });
+    const schedule = plain.examSchedule;
+    const key = roomOccurrenceKey(
+      plain.classRoomSectionId,
+      schedule.examDate,
+      schedule.examinationSessionSlotId,
+    );
 
     if (!roomMap.has(key)) {
-      const bundle = classRoom?.materialBundles?.[0] || {};
-      const items = bundle.items || [];
-      const answerSheet = items.find((i) => i.itemType === "ANSWER_SHEET");
-
-      roomMap.set(key, {
-        classRoomSectionId: roomId,
-        roomNumber: classRoom?.roomNumber || "",
-        examDate,
-        examinationSessionSlotId: slotId,
-        slot: {
-          examinationSessionSlotId: slot.examinationSessionSlotId || null,
-          slotNumber: slot.slotNumber || null,
-          startTime: slot.startTime || "",
-          endTime: slot.endTime || "",
-        },
-        exams: [],
-        totalStudentCount: 0,
-        examRoomMaterialBundleId: bundle.examRoomMaterialBundleId || null,
-        bundleCode: bundle.bundleCode || null,
-        status: bundle.status || null,
-        answerSheetCount: answerSheet?.plannedQuantity || 0,
-        usedAnswerSheets: answerSheet?.usedQuantity || 0,
-        items,
-      });
+      roomMap.set(key, buildReceivedRoomGroup(plain));
     }
 
     const group = roomMap.get(key);
-    group.exams.push(examEntry);
-    group.totalStudentCount += studentCount;
+    const exam = buildReceivedExamEntry(plain);
+    group.exams.push(exam);
+    group.totalStudentCount += exam.studentCount;
   }
 
-  let results = Array.from(roomMap.values());
-
-  // Apply search filter if provided (matches roomNumber or bundleCode)
-  if (filters.search) {
-    const q = String(filters.search).toLowerCase();
-    results = results.filter(
-      (r) =>
-        (r.roomNumber && r.roomNumber.toLowerCase().includes(q)) ||
-        (r.bundleCode && r.bundleCode.toLowerCase().includes(q))
-    );
+  const rooms = [];
+  for (const room of roomMap.values()) {
+    if (filters.search && !matchesReceivedRoomSearch(room, filters.search)) {
+      continue;
+    }
+    rooms.push(room);
   }
 
-  // Apply in-memory pagination
   const page = pagination.page || 1;
   const limit = pagination.limit || 10;
   const offset = (page - 1) * limit;
+  const pageRows = [];
+  for (let i = offset; i < offset + limit && i < rooms.length; i++) {
+    pageRows.push(rooms[i]);
+  }
 
   return {
-    rows: results.slice(offset, offset + limit),
-    count: results.length,
+    rows: pageRows,
+    count: rooms.length,
   };
 }
-
-// end of file

@@ -344,15 +344,6 @@ examinationSessionTermModel.belongsTo(examinationSessionModel, {
   as: "examinationSession",
 });
 
-examinationSessionTermModel.belongsTo(classSectionTermModel, {
-  foreignKey: "class_section_term_id",
-  as: "classSectionTerm",
-});
-classSectionTermModel.hasMany(examinationSessionTermModel, {
-  foreignKey: "class_section_term_id",
-  as: "examinationSessionTerms",
-});
-
 // Exam Invigilator Assignment Associations
 examInvigilatorAssignmentModel.belongsTo(universityModel, {
   foreignKey: "university_id",
@@ -2303,6 +2294,13 @@ examRoomMaterialItemModel.belongsTo(examRoomMaterialBundleModel, {
 examRoomMaterialBundleModel.hasMany(examRoomMaterialItemModel, {
   foreignKey: "examRoomMaterialBundleId",
   as: "items",
+});
+
+examRoomMaterialBundleModel.hasMany(examScheduleRoomCapacityModel, {
+  foreignKey: "class_room_section_id",
+  sourceKey: "classRoomSectionId",
+  as: "roomCapacities",
+  constraints: false,
 });
 
 // semesterModel.belongsTo(courseModel, {foreignKey: "courseId",as: "course"});

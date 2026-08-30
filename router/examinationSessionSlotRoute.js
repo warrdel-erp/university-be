@@ -30,6 +30,23 @@ const getSlotsSchema = {
   query: z.object({
     examinationSessionId: positiveIntegerQueryId,
     date: dateStringSchema.optional(),
+    selections: z.preprocess(
+      (val) => {
+        if (!val || val === "") return undefined;
+        try {
+          return typeof val === "string" ? JSON.parse(val) : val;
+        } catch {
+          return undefined;
+        }
+      },
+      z.array(
+        z.object({
+          courseSessionMappingId: z.number().int().positive(),
+          terms: z.array(z.number().int().positive()),
+        })
+      ).optional()
+    ),
+    filterStatus: z.enum(["all", "needsScheduling", "roomPending", "ready", "published"]).default("all"),
   }),
 };
 
@@ -52,6 +69,7 @@ const updateSlotSchema = {
 };
 
 router.post('/', userAuth, validate(createSlotSchema), examinationSessionSlotController.createExaminationSessionSlot);
+router.get('/count', userAuth, validate(getSlotsSchema), examinationSessionSlotController.getExaminationSessionSlotsCount);
 router.get('/', userAuth, validate(getSlotsSchema), examinationSessionSlotController.getExaminationSessionSlots);
 router.get('/single', userAuth, validate(getSlotByIdSchema), examinationSessionSlotController.getExaminationSessionSlotById);
 router.patch('/', userAuth, validate(updateSlotSchema), examinationSessionSlotController.updateExaminationSessionSlot);

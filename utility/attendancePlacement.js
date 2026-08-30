@@ -328,7 +328,9 @@ export async function resolveSourcePeriodByDateWiseId(sourceDateWiseId, options 
   });
 
   if (!row) {
-    throw new Error('Invalid timeTableCellDateWiseId');
+    const error = new Error('Invalid timeTableCellDateWiseId');
+    error.statusCode = 400;
+    throw error;
   }
 
   const plain = row.get({ plain: true });
@@ -337,7 +339,9 @@ export async function resolveSourcePeriodByDateWiseId(sourceDateWiseId, options 
   const placement = resolveDateWiseRoutinePlacement(row);
 
   if (!placement.classSectionTermId && !placement.academicGroupId) {
-    throw new Error('Period could not be resolved to a class section term or academic group');
+    const error = new Error('Period could not be resolved to a class section term or academic group');
+    error.statusCode = 400;
+    throw error;
   }
 
   return {

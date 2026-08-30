@@ -31,11 +31,11 @@ const sessionBodyObject = z.object({
   aiEvaluation: z.boolean().optional(),
   moderationWorkflow: z.boolean().optional(),
   allowRevaluation: z.boolean().optional(),
-  status: z.enum(["Draft", "Published", "Completed", "Cancelled"]).optional(),
-  classSectionTerms: z
+  status: z.enum(["Draft", "Published"]).optional(),
+  terms: z
     .array(
       z.object({
-        classSectionTermId: z.number(),
+        term: z.number().int().positive(),
         includeElectives: z.boolean().optional(),
         remarks: z.string().optional(),
       }),
@@ -111,14 +111,13 @@ const createTermSchema = {
     examinationSessionId: z.number({
       required_error: "examinationSessionId is required",
     }),
-    classSectionTermId: z.number({
-      required_error: "classSectionTermId is required",
-    }),
+    term: z.number({
+      required_error: "term is required",
+    }).int().positive(),
     includeElectives: z.boolean().optional(),
     remarks: z.string().optional(),
   }),
 };
-
 const deleteTermSchema = {
   query: z.object({
     examinationSessionTermId: positiveIntegerQueryId,
@@ -153,30 +152,39 @@ const getAnswerSheetsSchema = {
 const getSubjectsBySessionAndTermSchema = {
   query: z.object({
     examinationSessionId: positiveIntegerQueryId,
-    term: z.union([z.string(), z.number()]).optional(),
-    courseId: positiveIntegerQueryId.optional(),
-    sessionId: positiveIntegerQueryId.optional(),
-    isExamScheduled: z
-      .union([z.boolean(), z.enum(["true", "false"])])
-      .transform((val) =>
-        val === "true" || val === true
-          ? true
-          : val === "false" || val === false
-            ? false
-            : undefined,
-      )
-      .optional(),
-    teacherAssignmentStatus: z.enum(["assigned", "notAssigned"]).optional(),
-    isModerationActive: z
-      .union([z.boolean(), z.enum(["true", "false"])])
-      .transform((val) =>
-        val === "true" || val === true
-          ? true
-          : val === "false" || val === false
-            ? false
-            : undefined,
-      )
-      .optional(),
+    selections: z.preprocess(
+      (val) => {
+        if (!val || val === "") return undefined;
+        try {
+          return typeof val === "string" ? JSON.parse(val) : val;
+        } catch {
+          return undefined;
+        }
+      },
+      z
+        .array(
+          z.object({
+            courseSessionMappingId: z.number().int().positive(),
+            terms: z.array(z.number().int().positive()),
+          }),
+        )
+        .optional(),
+    ),
+
+    filterStatus: z
+      .enum([
+        "all",
+        "needsScheduling",
+        "roomPending",
+        "ready",
+        "published",
+        "notAssigned",
+        "assigned",
+        "moderationActive",
+        "approved",
+      ])
+      .default("all"),
+    date: dateStringSchema.optional(),
   }),
 };
 
@@ -185,6 +193,13 @@ router.post(
   userAuth,
   validate(createSessionSchema),
   examinationSessionController.createExaminationSession,
+);
+
+router.patch(
+  "/",
+  userAuth,
+  validate(updateSessionSchema),
+  examinationSessionController.updateExaminationSession,
 );
 router.get("/", userAuth, examinationSessionController.getExaminationSessions);
 router.get(
@@ -211,6 +226,13 @@ router.get(
   userAuth,
   validate(getSubjectsBySessionAndTermSchema),
   examinationSessionController.getMappedSubjectsBySessionAndTerm,
+);
+
+router.get(
+  "/questionPaper",
+  userAuth,
+  validate(getSubjectsBySessionAndTermSchema),
+  examinationSessionController.getMappedSubjectsBySessionAndTermNeed,
 );
 
 router.get(
@@ -250,6 +272,31 @@ router.delete(
   userAuth,
   validate(deleteTermSchema),
   examinationSessionController.deleteExaminationSessionTerm,
+);
+
+router.post(
+  "/publish",
+  userAuth,
+  validate({
+    query: z.object({
+      examinationSessionId: z.coerce.number({
+        required_error: "examinationSessionId is required",
+      }),
+    }),
+  }),
+  examinationSessionController.publishExaminationSession,
+);
+
+router.get(
+  "/skuStats",
+  userAuth,
+  validate({
+    query: z.object({
+      examinationSessionId: positiveIntegerQueryId,
+      date: dateStringSchema.optional(),
+    }),
+  }),
+  examinationSessionController.getSessionSkuStats,
 );
 
 export default router;

@@ -1,6 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as examRoomCapacityRepository from "../repository/examScheduleRoomCapacityRepository.js";
 import * as examScheduleServices from "./examScheduleServices.js";
+import * as model from "../models/index.js";
 import { z } from "zod";
 import { getTimeSlotRange, minutesToTime } from "../utility/timeSlot.js";
 import { decimalSubtract } from "../utility/decimalMoney.js";
@@ -166,6 +167,9 @@ export async function addExamRoomCapacity(data, userId) {
 
     const examSchedule = await examRoomCapacityRepository.getExamScheduleSlot(validatedData.examScheduleId);
     if (!examSchedule) throw new Error("Exam schedule not found");
+    if (examSchedule.published) {
+        throw new Error("Room assignment cannot be changed because the exam schedule is already published.");
+    }
 
     const slot = getExamSlot(
         examSchedule.examDate,
@@ -237,6 +241,40 @@ export async function addExamRoomCapacity(data, userId) {
         }
 
         const result = await examRoomCapacityRepository.bulkAddExamRoomCapacity(assignments, transaction);
+
+        // Auto allocate seats using "ascending" strategy within the same transaction
+        try {
+            await examScheduleServices.allocateSeatsByStrategy(validatedData.examScheduleId, userId, "ascending", { transaction });
+        } catch (seatErr) {
+            console.error("Auto seat allocation skipped or failed:", seatErr.message);
+        }
+
+        // If examination session is Published, re-evaluate and mark this schedule as published: true if it is now Ready
+        try {
+            const currentSession = await examRoomCapacityRepository.assertScopedExamSchedule(validatedData.examScheduleId, {
+                attributes: ["examinationSessionId"],
+                transaction
+            });
+            if (currentSession?.examinationSessionId) {
+                const sessionRecord = await model.examinationSessionModel.findByPk(currentSession.examinationSessionId, { transaction });
+                if (sessionRecord?.status === "Published") {
+                    const mappedSubjects = await examScheduleServices.getMappedSubjectsBySessionAndTerm(
+                        { examinationSessionId: currentSession.examinationSessionId },
+                        { transaction }
+                    );
+                    const scheduleInfo = mappedSubjects.find(sub => sub.examScheduleId === Number(validatedData.examScheduleId));
+                    if (scheduleInfo?.ready === true) {
+                        await model.examScheduleModel.update(
+                            { published: true, updatedBy: userId },
+                            { where: { examScheduleId: validatedData.examScheduleId }, transaction }
+                        );
+                    }
+                }
+            }
+        } catch (publishErr) {
+            console.error("Auto publishing schedule after room assignment failed:", publishErr.message);
+        }
+
         await transaction.commit();
         return result;
     } catch (error) {
@@ -255,6 +293,11 @@ export async function updateExamRoomCapacity(examScheduleRoomCapacityId, data, u
     const existing = await examRoomCapacityRepository.getExamRoomCapacityById(examScheduleRoomCapacityId);
     if (!existing) {
         throw new Error("Exam room capacity not found");
+    }
+
+    const schedule = await examRoomCapacityRepository.getExamScheduleSlot(existing.examScheduleId);
+    if (schedule?.published) {
+        throw new Error("Room assignment cannot be changed because the exam schedule is already published.");
     }
 
     updatePayload.updatedBy = userId;
@@ -293,7 +336,7 @@ export async function getExamScheduleRooms(examScheduleId) {
 
     const rows = await examRoomCapacityRepository.getRoomsByExamScheduleId(examScheduleId);
     if (!rows.length) {
-        throw new Error("No rooms assigned to this exam schedule");
+        return [];
     }
 
     return rows.map((plain) => {
@@ -309,13 +352,17 @@ export async function getExamScheduleRooms(examScheduleId) {
     });
 }
 
-export async function deleteExamRoomCapacity(examScheduleRoomCapacityId) {
+export async function deleteExamRoomCapacity(examScheduleRoomCapacityId, userId) {
     const existing = await examRoomCapacityRepository.getExamRoomCapacityById(examScheduleRoomCapacityId);
     if (!existing) {
         throw new Error("Exam room capacity not found");
     }
 
     const examScheduleId = existing.examScheduleId;
+    const schedule = await examRoomCapacityRepository.getExamScheduleSlot(examScheduleId);
+    if (schedule?.published) {
+        throw new Error("Room assignment cannot be changed because the exam schedule is already published.");
+    }
     const transaction = await sequelize.transaction();
 
     try {
@@ -341,6 +388,13 @@ export async function deleteExamRoomCapacity(examScheduleRoomCapacityId) {
                 );
                 currentOrder++;
             }
+        }
+
+        // Auto allocate seats using "ascending" strategy for the remaining rooms in their updated order
+        try {
+            await examScheduleServices.allocateSeatsByStrategy(examScheduleId, userId, "ascending", { transaction });
+        } catch (seatErr) {
+            console.error("Auto seat allocation after room deletion skipped or failed:", seatErr.message);
         }
 
         await transaction.commit();

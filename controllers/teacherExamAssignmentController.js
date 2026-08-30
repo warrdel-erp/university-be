@@ -31,7 +31,7 @@ export async function getAllExamAssignments(req, res) {
         });
         return SuccessResponse(res, 200, "Assignments retrieved successfully", assignments);
     } catch (error) {
-        return ErrorResponse(res, 500, error.message);
+        return ErrorResponse(res, error.statusCode || 500, error.message);
     }
 }
 
@@ -47,7 +47,7 @@ export async function removeTeacherFromExam(req, res) {
             return ErrorResponse(res, 404, "Assignment not found");
         }
     } catch (error) {
-        return ErrorResponse(res, 500, error.message);
+        return ErrorResponse(res, error.statusCode || 500, error.message);
     }
 }
 
@@ -65,6 +65,6 @@ export async function getMyExamAssignments(req, res) {
         });
         return SuccessResponse(res, 200, "Assignments retrieved successfully", assignments);
     } catch (error) {
-        return ErrorResponse(res, 500, error.message);
+        return ErrorResponse(res, error.statusCode || 500, error.message);
     }
 }

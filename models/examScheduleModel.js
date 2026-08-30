@@ -136,6 +136,21 @@ const examScheduleModel = sequelize.define(
             defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
             field: 'updated_at'
         },
+        answerSheetS3FileId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'answer_sheet_s3_file_id',
+            references: {
+                model: 's3_files',
+                key: 'id'
+            }
+        },
+        published: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+            field: 'published'
+        },
         deletedAt: {
             type: DataTypes.DATE,
             allowNull: true,

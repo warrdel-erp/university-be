@@ -108,6 +108,22 @@ const getRoomsRoomWiseSchema = {
         .optional()
         .default(10),
     ),
+    selections: z.preprocess(
+      (val) => {
+        if (!val || val === "") return undefined;
+        try {
+          return typeof val === "string" ? JSON.parse(val) : val;
+        } catch {
+          return undefined;
+        }
+      },
+      z.array(
+        z.object({
+          courseSessionMappingId: z.number().int().positive(),
+          terms: z.array(z.number().int().positive()),
+        })
+      ).optional()
+    ),
   }),
 };
 

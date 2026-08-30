@@ -145,6 +145,17 @@ export const getMappedSubjectsBySessionAndTerm = async (req, res) => {
   }
 };
 
+export const getMappedSubjectsBySessionAndTermNeed = async (req, res) => {
+  try {
+    const result = await examinationSessionServices.getMappedSubjectsBySessionAndTermNeed(req.query);
+    return SuccessResponse(res, 200, "Mapped subjects (need) fetched successfully", result);
+  } catch (error) {
+    console.error("Error fetching mapped subjects (need):", error);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(res, statusCode, error.message || "Failed to fetch mapped subjects (need)");
+  }
+};
+
 export const getQuestionPaperSummary = async (req, res) => {
   try {
     const { examinationSessionId } = req.query;
@@ -156,6 +167,38 @@ export const getQuestionPaperSummary = async (req, res) => {
     return ErrorResponse(res, statusCode, error.message || "Failed to fetch question paper summary stats");
   }
 };
+
+export const publishExaminationSession = async (req, res) => {
+  try {
+    const { examinationSessionId } = req.query;
+    if (!examinationSessionId) {
+      return ErrorResponse(res, 400, "examinationSessionId is required");
+    }
+    const userId = req.user?.userId || req.user?.id;
+    const result = await examinationSessionServices.publishExaminationSession(Number(examinationSessionId), userId);
+    return SuccessResponse(res, 200, "Examination session published successfully", result);
+  } catch (error) {
+    console.error("Error publishing examination session:", error);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(res, statusCode, error.message || "Failed to publish examination session");
+  }
+};
+
+export const getSessionSkuStats = async (req, res) => {
+  try {
+    const { examinationSessionId, date } = req.query;
+    const result = await examinationSessionServices.getSessionSkuStats(
+      Number(examinationSessionId),
+      { date },
+    );
+    return SuccessResponse(res, 200, "SKU data fetched successfully", result);
+  } catch (error) {
+    console.error("Error fetching SKU data:", error);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(res, statusCode, error.message || "Failed to fetch SKU data");
+  }
+};
+
 
 export const getExaminationSessionAnswerSheets = async (req, res) => {
   try {

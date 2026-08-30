@@ -15,11 +15,33 @@ export const createExaminationSessionSlot = async (req, res) => {
   }
 };
 
+export const getExaminationSessionSlotsCount = async (req, res) => {
+  try {
+    const { examinationSessionId, date, selections } = req.query;
+
+    const result = await examinationSessionSlotServices.getExaminationSessionSlotsCount({
+      examinationSessionId,
+      date,
+      selections,
+    });
+    return SuccessResponse(res, 200, "Examination session slots counts fetched successfully", result);
+  } catch (error) {
+    console.error("Error fetching examination session slots counts:", error);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(res, statusCode, error.message || "Failed to fetch examination session slots counts");
+  }
+};
+
 export const getExaminationSessionSlots = async (req, res) => {
   try {
-    const { examinationSessionId ,date } = req.query;
+    const { examinationSessionId, date, selections, filterStatus } = req.query;
 
-    const result = await examinationSessionSlotServices.getExaminationSessionSlots(examinationSessionId ,date);
+    const result = await examinationSessionSlotServices.getExaminationSessionSlots({
+      examinationSessionId,
+      date,
+      selections,
+      filterStatus,
+    });
     return SuccessResponse(res, 200, "Examination session slots fetched successfully", result);
   } catch (error) {
     console.error("Error fetching examination session slots:", error);
