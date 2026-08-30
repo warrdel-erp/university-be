@@ -4,7 +4,6 @@ import * as examinationSessionRepository from "../repository/examinationSessionR
 import * as studentHallTicketRepository from "../repository/studentHallTicketRepository.js";
 import * as examinationSessionEligibilityServices from "./examinationSessionEligibilityServices.js";
 import * as examinationSessionEligibilityRepo from "../repository/examinationSessionEligibilityRepository.js";
-import { scoped } from "../utility/scoped.js";
 import {
   countWholeTermStudentsByTerms,
   getStudentCountMapByGroups,
