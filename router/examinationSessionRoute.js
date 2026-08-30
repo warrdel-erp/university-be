@@ -293,7 +293,6 @@ router.get(
   validate({
     query: z.object({
       examinationSessionId: positiveIntegerQueryId,
-      date: dateStringSchema.optional(),
     }),
   }),
   examinationSessionController.getSessionSkuStats,

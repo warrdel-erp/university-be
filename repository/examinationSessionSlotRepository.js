@@ -42,7 +42,6 @@ const scheduleInclude = (date, filterCombinations) => {
       "updatedBy",
       "createdAt",
       "updatedAt",
-      "answerSheetS3FileId",
       "deletedAt",
     ],
     include: [

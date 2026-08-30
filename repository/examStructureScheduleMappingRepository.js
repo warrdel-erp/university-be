@@ -316,7 +316,7 @@ export async function getExamDetailByStudentId(studentId) {
 
     const examSchedules = await scoped(model.examScheduleModel).findAll({
       where: { term: Number(term) },
-      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "answerSheetS3FileId"] },
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       include: [
         {
           model: model.subjectModel,

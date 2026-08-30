@@ -1,6 +1,6 @@
 import { Op, fn, col } from "sequelize";
 import * as model from "../models/index.js";
-import { scoped } from "../utility/scoped.js";
+import { buildScope, scoped } from "../utility/scoped.js";
 import { getAllocatedCapacityByExamScheduleIds } from "../utility/roomCapacity.js";
 import { QUESTION_STATUS } from "../constant.js";
 
@@ -674,6 +674,90 @@ export async function countBundlesByDatesAndSlots(uniqueDates, uniqueSlotIds, op
   ]);
 
   return { total, received };
+}
+
+/**
+ * Invigilator coverage for session schedules.
+ * total    = distinct room + date + slot from exam_schedule_room_capacity
+ * assigned = those units with at least one invigilator assignment
+ */
+export async function countInvigilatorStatsForSchedules(examScheduleIds, options = {}) {
+  if (!examScheduleIds.length) {
+    return { total: 0, assigned: 0 };
+  }
+
+  const roomRows = await scoped(model.examScheduleRoomCapacityModel).findAll({
+    where: { examScheduleId: { [Op.in]: examScheduleIds } },
+    attributes: ["classRoomSectionId"],
+    include: [
+      {
+        model: model.examScheduleModel,
+        as: "examSchedule",
+        required: true,
+        attributes: ["examDate", "examinationSessionSlotId"],
+        where: buildScope(model.examScheduleModel),
+      },
+    ],
+    transaction: options.transaction,
+  });
+
+  const roomUnitKeys = new Set();
+  const dates = [];
+  const slotIds = [];
+  const roomIds = [];
+  const dateSeen = new Set();
+  const slotSeen = new Set();
+  const roomSeen = new Set();
+
+  for (const row of roomRows) {
+    const examDate = row.examSchedule.examDate;
+    const examinationSessionSlotId = row.examSchedule.examinationSessionSlotId;
+    const classRoomSectionId = row.classRoomSectionId;
+    const key = `${examDate}|${examinationSessionSlotId}|${classRoomSectionId}`;
+
+    if (!roomUnitKeys.has(key)) {
+      roomUnitKeys.add(key);
+    }
+    if (!dateSeen.has(examDate)) {
+      dateSeen.add(examDate);
+      dates.push(examDate);
+    }
+    if (!slotSeen.has(examinationSessionSlotId)) {
+      slotSeen.add(examinationSessionSlotId);
+      slotIds.push(examinationSessionSlotId);
+    }
+    if (!roomSeen.has(classRoomSectionId)) {
+      roomSeen.add(classRoomSectionId);
+      roomIds.push(classRoomSectionId);
+    }
+  }
+
+  if (roomUnitKeys.size === 0) {
+    return { total: 0, assigned: 0 };
+  }
+
+  const assignmentRows = await scoped(model.examInvigilatorAssignmentModel).findAll({
+    where: {
+      examDate: { [Op.in]: dates },
+      examinationSessionSlotId: { [Op.in]: slotIds },
+      classRoomSectionId: { [Op.in]: roomIds },
+    },
+    attributes: ["examDate", "examinationSessionSlotId", "classRoomSectionId"],
+    transaction: options.transaction,
+  });
+
+  const assignedKeys = new Set();
+  for (const row of assignmentRows) {
+    const key = `${row.examDate}|${row.examinationSessionSlotId}|${row.classRoomSectionId}`;
+    if (roomUnitKeys.has(key)) {
+      assignedKeys.add(key);
+    }
+  }
+
+  return {
+    total: roomUnitKeys.size,
+    assigned: assignedKeys.size,
+  };
 }
 
 export async function countSeatsByExamScheduleIds(examScheduleIds, options = {}) {

@@ -1580,211 +1580,118 @@ export async function publishExaminationSession(examinationSessionId, userId, op
   });
 }
 
-export async function getSessionSkuStats(
-  examinationSessionId,
-  { date } = {},
-  options = {},
-) {
+export async function getSessionSkuStats(examinationSessionId, options = {}) {
   const parsedSessionId = Number(examinationSessionId);
   if (Number.isNaN(parsedSessionId)) {
     throw createBadRequestError("Invalid examinationSessionId");
   }
 
-  const session =
-    await examinationSessionRepository.getExaminationSessionById(
-      parsedSessionId,
-      options,
-    );
-  if (!session) {
-    const error = new Error("Examination session not found");
-    error.statusCode = 404;
-    throw error;
-  }
-
-  const today =
-    date ||
-    new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
-
-  const sessionPlain = toPlain(session);
-  const sessionTerms = [];
-  for (const row of sessionPlain.examinationSessionTerms || []) {
-    sessionTerms.push(Number(row.term));
-  }
-
-  const [
-    mappedSubjects,
-    schedules,
-    hallTicketsGenerated,
-    totalStudents,
-    todaySchedules,
-  ] = await Promise.all([
-    getMappedSubjectsBySessionAndTerm(
-      { examinationSessionId: parsedSessionId },
-      { ...options, skipTeacherAndPaperEnrichment: true },
-    ),
-    examinationSessionRepository.findSchedulesForSkuStats(
-      parsedSessionId,
-      options,
-    ),
-    examinationSessionRepository.countHallTicketsBySession(parsedSessionId, {
-      ...options,
-      publishedOnly: false,
-    }),
-    countWholeTermStudentsByTerms(
-      sessionTerms,
-      sessionPlain.academicYearId,
-      options,
-    ),
-    examinationSessionRepository.findExamSchedulesForTimeline(
-      parsedSessionId,
-      today,
-      5,
-      options,
-    ),
-  ]);
+  const mappedSubjects = await getMappedSubjectsBySessionAndTerm(
+    { examinationSessionId: parsedSessionId },
+    { ...options, skipTeacherAndPaperEnrichment: true },
+  );
 
   let scheduledSubjectsCount = 0;
   for (const sub of mappedSubjects) {
-    if (sub.isExamScheduled === true) scheduledSubjectsCount++;
+    if (sub.isExamScheduled === true) {
+      scheduledSubjectsCount++;
+    }
   }
   const totalSubjectsCount = mappedSubjects.length;
 
-  const uniqueDates = [];
-  const uniqueSlotIds = [];
-  const dateSeen = new Set();
-  const slotSeen = new Set();
-  for (const s of schedules) {
-    if (s.examDate && !dateSeen.has(s.examDate)) {
-      dateSeen.add(s.examDate);
-      uniqueDates.push(s.examDate);
-    }
-    if (s.examinationSessionSlotId && !slotSeen.has(s.examinationSessionSlotId)) {
-      slotSeen.add(s.examinationSessionSlotId);
-      uniqueSlotIds.push(s.examinationSessionSlotId);
-    }
-  }
-
-  const bundleCounts = await examinationSessionRepository.countBundlesByDatesAndSlots(
-    uniqueDates,
-    uniqueSlotIds,
+  const schedules = await examinationSessionRepository.findSchedulesForSkuStats(
+    parsedSessionId,
     options,
   );
-
-  const subjectsPercent =
-    totalSubjectsCount > 0
-      ? Math.round((scheduledSubjectsCount / totalSubjectsCount) * 100)
-      : 0;
-  const hallTicketPercent =
-    totalStudents > 0
-      ? Math.round((hallTicketsGenerated / totalStudents) * 100)
-      : 0;
-  const bundlePercent =
-    bundleCounts.total > 0
-      ? Math.round((bundleCounts.received / bundleCounts.total) * 100)
-      : 0;
-
-  // Three SKU cards for the dashboard.
-  const skus = [
-    {
-      key: "subjects",
-      label: "Total Subjects",
-      value: totalSubjectsCount,
-      percent: subjectsPercent,
-      subtext: `${scheduledSubjectsCount} scheduled`,
-      total: totalSubjectsCount,
-      scheduled: scheduledSubjectsCount,
-    },
-    {
-      key: "hallTickets",
-      label: "Hall Tickets",
-      value: `${hallTicketsGenerated}/${totalStudents}`,
-      percent: hallTicketPercent,
-      subtext: `${hallTicketPercent}% generated`,
-      generated: hallTicketsGenerated,
-      totalStudents,
-    },
-    {
-      key: "bundles",
-      label: "Bundles",
-      value: `${bundleCounts.received}/${bundleCounts.total}`,
-      percent: bundlePercent,
-      subtext: `${bundleCounts.received} received`,
-      created: bundleCounts.total,
-      received: bundleCounts.received,
-    },
-  ];
-
-  const timelineIds = [];
-  for (const row of todaySchedules) {
-    timelineIds.push(Number(row.examScheduleId));
+  const totalExamSchedule = schedules.length;
+  const examScheduleIds = [];
+  for (const schedule of schedules) {
+    examScheduleIds.push(schedule.examScheduleId);
   }
-  const seatCountMap =
-    await examinationSessionRepository.countSeatsByExamScheduleIds(
-      timelineIds,
+
+  let totalQuestionPapers = 0;
+  let approvedQuestionPapers = 0;
+  if (examScheduleIds.length > 0) {
+    const qpCounts =
+      await examinationSessionRepository.findQuestionPapersCountForSchedules(
+        examScheduleIds,
+        options,
+      );
+    totalQuestionPapers = qpCounts.total;
+    approvedQuestionPapers = qpCounts.approved;
+  }
+
+  const hallTicketsCount =
+    await examinationSessionRepository.countHallTicketsBySession(
+      parsedSessionId,
       options,
     );
 
-  const now = new Date();
-  const currentTime = now.toLocaleTimeString("en-GB", {
-    timeZone: "Asia/Kolkata",
-    hour12: false,
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+  let totalBundles = 0;
+  let receivedBundles = 0;
+  let invigilatorsTotal = 0;
+  let invigilatorsAssigned = 0;
 
-  const todayTimeline = [];
-  for (const row of todaySchedules) {
-    const plain = toPlain(row);
-    const slot = plain.examinationSessionSlot;
-    const startTime = slot && slot.startTime ? String(slot.startTime).slice(0, 8) : null;
-    const endTime = slot && slot.endTime ? String(slot.endTime).slice(0, 8) : null;
-
-    let status = "UPCOMING";
-    if (startTime && endTime) {
-      if (currentTime >= startTime && currentTime <= endTime) status = "LIVE";
-      else if (currentTime > endTime) status = "COMPLETED";
-    } else if (plain.examTime) {
-      const examTime = String(plain.examTime).slice(0, 8);
-      if (currentTime >= examTime) status = "LIVE";
-    }
-
-    const rooms = [];
-    let roomCapacityTotal = 0;
-    for (const rc of plain.roomCapacities || []) {
-      roomCapacityTotal += Number(rc.capacity) || 0;
-      if (rc.classRoom && rc.classRoom.roomNumber) {
-        rooms.push(rc.classRoom.roomNumber);
+  if (schedules.length > 0) {
+    const uniqueDates = [];
+    const uniqueSlotIds = [];
+    const dateSeen = new Set();
+    const slotSeen = new Set();
+    for (const schedule of schedules) {
+      if (schedule.examDate && !dateSeen.has(schedule.examDate)) {
+        dateSeen.add(schedule.examDate);
+        uniqueDates.push(schedule.examDate);
+      }
+      if (
+        schedule.examinationSessionSlotId &&
+        !slotSeen.has(schedule.examinationSessionSlotId)
+      ) {
+        slotSeen.add(schedule.examinationSessionSlotId);
+        uniqueSlotIds.push(schedule.examinationSessionSlotId);
       }
     }
 
-    const allocatedSeats = seatCountMap.get(Number(plain.examScheduleId)) || 0;
-    const subject = plain.subjectSchedule;
+    const [bundleCounts, invigilatorCounts] = await Promise.all([
+      uniqueDates.length > 0 && uniqueSlotIds.length > 0
+        ? examinationSessionRepository.countBundlesByDatesAndSlots(
+            uniqueDates,
+            uniqueSlotIds,
+            options,
+          )
+        : Promise.resolve({ total: 0, received: 0 }),
+      examinationSessionRepository.countInvigilatorStatsForSchedules(
+        examScheduleIds,
+        options,
+      ),
+    ]);
 
-    todayTimeline.push({
-      examScheduleId: plain.examScheduleId,
-      examDate: plain.examDate,
-      examTime: plain.examTime,
-      startTime,
-      endTime,
-      status,
-      subjectId: subject ? subject.subjectId : plain.subjectId,
-      subjectName: subject ? subject.subjectName : null,
-      subjectCode: subject ? subject.subjectCode : null,
-      term: plain.term,
-      roomNumber: rooms.length ? rooms[0] : null,
-      rooms,
-      studentsAllocated: allocatedSeats,
-      roomCapacity: roomCapacityTotal,
-      studentsDisplay: `${allocatedSeats}/${roomCapacityTotal || allocatedSeats}`,
-    });
+    totalBundles = bundleCounts.total;
+    receivedBundles = bundleCounts.received;
+    invigilatorsTotal = invigilatorCounts.total;
+    invigilatorsAssigned = invigilatorCounts.assigned;
   }
 
   return {
-    examinationSessionId: parsedSessionId,
-    date: today,
-    skus,
-    todayTimeline,
+    subjects: {
+      total: totalSubjectsCount,
+      scheduled: scheduledSubjectsCount,
+    },
+    questionPapers: {
+      total: totalQuestionPapers,
+      approved: approvedQuestionPapers,
+    },
+    hallTickets: {
+      total: hallTicketsCount,
+      totalExamSchedules: totalExamSchedule,
+    },
+    bundles: {
+      total: totalBundles,
+      received: receivedBundles,
+    },
+    invigilators: {
+      assigned: invigilatorsAssigned,
+      total: invigilatorsTotal,
+    },
   };
 }
 

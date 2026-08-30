@@ -6,30 +6,27 @@ function examScheduleDetailInclude() {
   return {
     model: model.examScheduleModel,
     as: "examSchedule",
-    attributes: ["examScheduleId", "examDate", "examTime", "duration", "term", "sessionId", "type"],
+    attributes: [
+      "examScheduleId",
+      "examDate",
+      "examTime",
+      "duration",
+      "term",
+      "sessionId",
+      "type",
+      "examinationSessionId",
+    ],
     required: false,
     include: [
       {
         model: model.subjectModel,
         as: "subjectSchedule",
-        attributes: ["subjectId", "subjectName", "subjectCode"],
-        required: false,
-      },
-      {
-        model: model.examSetupTypeTermModel,
-        as: "examSetupTypeTerm",
-        attributes: ["examSetupTypeTermId", "term", "courseId"],
+        attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
         required: false,
         include: [
           {
-            model: model.examSetupTypeModel,
-            as: "examSetupType",
-            attributes: ["examSetupTypeId", "examType", "examName"],
-            required: false,
-          },
-          {
             model: model.courseModel,
-            as: "course",
+            as: "courseInfo",
             attributes: ["courseId", "courseName", "courseCode", "termType"],
             required: false,
           },
@@ -151,32 +148,20 @@ export async function getScopedStudent(studentId, transaction) {
 }
 
 export async function getScopedExamSchedule(examScheduleId, transaction) {
-  const termScope = buildScope(model.examSetupTypeTermModel);
-
   return scoped(model.examScheduleModel).findOne({
     where: { examScheduleId },
-    attributes: ["examScheduleId", "examSetupTypeTermId", "sessionId"],
-    include: [
-      {
-        model: model.examSetupTypeTermModel,
-        as: "examSetupTypeTerm",
-        attributes: ["examSetupTypeTermId", "instituteId", "universityId"],
-        where: termScope,
-        required: true,
-      },
-    ],
+    attributes: ["examScheduleId", "examinationSessionId", "sessionId", "term"],
     transaction,
   });
 }
 
-export async function hasStudentHallTicketForExamTerm(
+export async function hasStudentHallTicketForExamSession(
   studentId,
-  examSetupTypeTermId,
-  sessionId,
+  examinationSessionId,
   transaction
 ) {
   const row = await scoped(model.studentHallTicketModel).findOne({
-    where: { studentId, examSetupTypeTermId, sessionId },
+    where: { studentId, examinationSessionId },
     attributes: ["id"],
     transaction,
   });
