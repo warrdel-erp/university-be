@@ -255,3 +255,25 @@ export async function getSplitPdfJobStatus(req, res) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
 }
+
+export async function getMappedAnswerSheetsByExamSession(req, res) {
+  try {
+    const { data, pagination } =
+      await answerSheetQrServices.getMappedAnswerSheetsByExamSession(req.query);
+
+    return SuccessResponse(
+      res,
+      200,
+      "Mapped answer sheets fetched successfully",
+      data,
+      pagination,
+    );
+  } catch (error) {
+    console.error("Error in getMappedAnswerSheetsByExamSession:", error);
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch mapped answer sheets",
+    );
+  }
+}
