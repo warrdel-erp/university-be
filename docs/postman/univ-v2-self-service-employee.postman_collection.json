@@ -1263,6 +1263,262 @@
       ]
     },
     {
+      "name": "Leave Requests & Balance",
+      "item": [
+        {
+          "name": "GET My Leave Requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/leave-requests/my",
+              "host": ["{{baseurl}}"],
+              "path": ["leave-requests", "my"]
+            },
+            "description": "Returns [] when user has no employee record (not 404)."
+          }
+        },
+        {
+          "name": "POST My Leave Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"policyId\": 1,\n  \"startDate\": \"2026-09-01\",\n  \"endDate\": \"2026-09-02\",\n  \"totalDays\": 2,\n  \"reason\": \"Personal\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/leave-requests/my",
+              "host": ["{{baseurl}}"],
+              "path": ["leave-requests", "my"]
+            }
+          }
+        },
+        {
+          "name": "PATCH Cancel My Leave Request",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"requestId\": 1,\n  \"status\": \"cancelled\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/leave-requests/status/my",
+              "host": ["{{baseurl}}"],
+              "path": ["leave-requests", "status", "my"]
+            }
+          }
+        },
+        {
+          "name": "GET My Leave Balance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/leave-balance/my",
+              "host": ["{{baseurl}}"],
+              "path": ["leave-balance", "my"]
+            },
+            "description": "Returns [] when user has no employee record (not 404)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Assets & Service Tickets",
+      "item": [
+        {
+          "name": "GET My Asset Issues",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/assetIssue/my?page=1&limit=10",
+              "host": ["{{baseurl}}"],
+              "path": ["assetIssue", "my"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Returns empty list with pagination when user has no employee record (not 404)."
+          }
+        },
+        {
+          "name": "GET My Service Tickets",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/serviceTicket/my?page=1&limit=20",
+              "host": ["{{baseurl}}"],
+              "path": ["serviceTicket", "my"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Returns empty list when user has no employee record (not 404)."
+          }
+        },
+        {
+          "name": "GET My Service Ticket Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/serviceTicket/my/summary",
+              "host": ["{{baseurl}}"],
+              "path": ["serviceTicket", "my", "summary"]
+            },
+            "description": "Returns zero counts when user has no employee record (not 404)."
+          }
+        },
+        {
+          "name": "GET My Service Ticket Number Preview",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/serviceTicket/my/numberpreview",
+              "host": ["{{baseurl}}"],
+              "path": ["serviceTicket", "my", "numberpreview"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Evaluation",
+      "item": [
+        {
+          "name": "GET My Assigned Answer Sheets",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/my?page=1&limit=20",
+              "host": ["{{baseurl}}"],
+              "path": ["answerSheetQr", "my"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Returns empty filteredrows when user has no employee record (not 404)."
+          }
+        },
+        {
+          "name": "GET My Evaluation Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/my/summary",
+              "host": ["{{baseurl}}"],
+              "path": ["answerSheetQr", "my", "summary"]
+            },
+            "description": "Returns zero counts when user has no employee record (not 404)."
+          }
+        },
+        {
+          "name": "GET My Evaluations (evalution)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/evalution/my",
+              "host": ["{{baseurl}}"],
+              "path": ["evalution", "my"]
+            },
+            "description": "Returns [] when user has no employee record (not 404)."
+          }
+        }
+      ]
+    },
+    {
       "name": "Library",
       "item": [
         {

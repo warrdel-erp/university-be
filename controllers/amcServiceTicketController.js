@@ -1,5 +1,10 @@
 import * as amcServiceTicketService from "../services/amcServiceTicketServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
+import {
+  emptyPagination,
+  emptyServiceTicketSummary,
+  validateEmployeeUser,
+} from "../utility/employeeValidation.js";
 
 export async function addServiceTicket(req, res) {
   try {
@@ -61,6 +66,46 @@ export async function previewServiceTicketNumber(req, res) {
   try {
     const row = await amcServiceTicketService.previewTicketNumber();
     return SuccessResponse(res, 200, "Service ticket number preview fetched successfully", row);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function getMyServiceTickets(req, res) {
+  try {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return ErrorResponse(res, validation.status, validation.message);
+    }
+    if (!validation.employeeRecord) {
+      const { page = 1, limit = 20 } = req.query;
+      return SuccessResponse(
+        res,
+        200,
+        "Service tickets fetched successfully",
+        { rows: [], total: 0, page: parseInt(page, 10) || 1, limit: parseInt(limit, 10) || 20 },
+      );
+    }
+
+    const result = await amcServiceTicketService.listServiceTickets(req.query);
+    return SuccessResponse(res, 200, "Service tickets fetched successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function getMyServiceTicketSummary(req, res) {
+  try {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return ErrorResponse(res, validation.status, validation.message);
+    }
+    if (!validation.employeeRecord) {
+      return SuccessResponse(res, 200, "Service ticket summary fetched successfully", emptyServiceTicketSummary());
+    }
+
+    const data = await amcServiceTicketService.getServiceTicketSummary();
+    return SuccessResponse(res, 200, "Service ticket summary fetched successfully", data);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }

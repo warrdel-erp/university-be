@@ -1,6 +1,7 @@
 import * as assetIssueService from "../services/assetIssueServices.js";
 import * as assetReturnService from "../services/assetReturnServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
+import { emptyPagination, validateEmployeeUser } from "../utility/employeeValidation.js";
 
 export async function addAssetIssue(req, res) {
   try {
@@ -22,7 +23,16 @@ export async function getAllAssetIssues(req, res) {
 
 export async function getMyAssetIssues(req, res) {
   try {
-    const query = { ...req.query, memberId: req.user.userId };
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return ErrorResponse(res, validation.status, validation.message);
+    }
+    if (!validation.employeeRecord) {
+      const { page = 1, limit = 10 } = req.query;
+      return SuccessResponse(res, 200, "Asset issues fetched successfully", [], emptyPagination(page, limit));
+    }
+
+    const query = { ...req.query, memberId: validation.userId };
     const { data, pagination } = await assetIssueService.listAssetIssues(query);
     return SuccessResponse(res, 200, "Asset issues fetched successfully", data, pagination);
   } catch (error) {

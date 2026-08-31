@@ -1,6 +1,5 @@
 import * as service from "../services/leaveRequestService.js";
-import * as model from "../models/index.js";
-import { scoped } from "../utility/scoped.js";
+import { validateEmployeeUser } from "../utility/employeeValidation.js";
 
 export async function addRequest(req, res) {
   const requiredFields = ["userId", "policyId", "startDate", "endDate", "totalDays"];
@@ -46,8 +45,15 @@ export async function getAllRequests(req, res) {
 
 export async function getMyRequests(req, res) {
   try {
-    const userId = req.user.userId;
-    const requests = await service.getRequests({ userId });
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return res.status(validation.status).json({ message: validation.message });
+    }
+    if (!validation.employeeRecord) {
+      return res.status(200).json([]);
+    }
+
+    const requests = await service.getRequests({ userId: validation.userId });
     res.status(200).json(requests);
   } catch (err) {
     res.status(500).json({ error: err.message });

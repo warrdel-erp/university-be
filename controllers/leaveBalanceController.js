@@ -1,4 +1,5 @@
 import * as service from "../services/leaveBalanceService.js";
+import { validateEmployeeUser } from "../utility/employeeValidation.js";
 
 export async function addBalance(req, res) {
   const requiredFields = ["userId", "policyId", "year", "totalAllocated", "remainingLeaves"];
@@ -27,7 +28,15 @@ export async function getBalancesByEmployee(req, res) {
 
 export async function getMyBalances(req, res) {
   try {
-    const balances = await service.getBalancesByEmployee(req.user.userId);
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return res.status(validation.status).json({ message: validation.message });
+    }
+    if (!validation.employeeRecord) {
+      return res.status(200).json([]);
+    }
+
+    const balances = await service.getBalancesByEmployee(validation.userId);
     res.status(200).json(balances);
   } catch (err) {
     res.status(500).json({ error: err.message });
