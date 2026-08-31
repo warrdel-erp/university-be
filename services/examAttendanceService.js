@@ -604,10 +604,13 @@ export async function getExamOperationsSummary(examinationSessionId, filters) {
 
     (schedule.roomCapacities || []).forEach((room) => {
       const hasSeats = (room.seats || []).length > 0;
-      if (hasSeats) {
-        assignedRoomCount++;
-        totalStudentCount += room.seats.length;
+      // Only count rooms that have seat allocation (scheduled + room + seats).
+      if (!hasSeats) {
+        return;
       }
+
+      assignedRoomCount++;
+      totalStudentCount += room.seats.length;
 
       const status = room.status || "NOT_GENERATED";
       if (status !== "SUBMITTED" && status !== "VERIFIED") {

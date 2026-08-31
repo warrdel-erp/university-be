@@ -550,11 +550,13 @@ export async function getSchedulesForSummary(examinationSessionId, filters) {
         model: model.examScheduleRoomCapacityModel,
         as: "roomCapacities",
         attributes: ["examScheduleRoomCapacityId", "status"],
+        required: false,
         include: [
           {
             model: model.studentExamSeatModel,
             as: "seats",
             attributes: ["studentExamSeatId"],
+            required: true,
           },
         ],
       },

@@ -1209,7 +1209,6 @@ export async function getMappedSubjectsBySessionAndTerm(
         studentCount,
         published: plainSched.published || false,
         hasSchedule: true,
-        requireUnpublishedForReady: false,
       });
 
       let moderationActive = false;
@@ -1282,12 +1281,12 @@ export async function getMappedSubjectsBySessionAndTerm(
       studentCount,
       published,
       hasSchedule,
-      requireUnpublishedForReady: false,
     });
 
     const needsScheduling = !hasSchedule;
     const roomPending = flags.roomPending;
     const needsRoom = flags.needsRoom;
+    // ready = scheduled + enough room capacity + not yet published (publishable only)
     const ready = flags.ready;
 
     const subjectSessionId = subjectSessionMap.get(subject.subjectId) || null;
@@ -1338,23 +1337,28 @@ export async function getMappedSubjectsBySessionAndTerm(
       }
     }
 
-    let queryStatus = EXAM_SCHEDULE_FILTER_STATUS.NEEDS_SCHEDULING;
-    if (hasSchedule) {
-      if (isFullyApproved) queryStatus = "approved";
-      else if (isNotAssigned) queryStatus = "notAssigned";
-      else if (isModerationActiveStatus) queryStatus = "moderationActive";
-      else if (isAssigned) queryStatus = "assigned";
-      else if (roomPending) queryStatus = EXAM_SCHEDULE_FILTER_STATUS.ROOM_PENDING;
-      else if (ready) queryStatus = EXAM_SCHEDULE_FILTER_STATUS.READY;
-      else if (published) queryStatus = EXAM_SCHEDULE_FILTER_STATUS.PUBLISHED;
-    }
-
-    if (
-      filterStatus &&
-      filterStatus !== EXAM_SCHEDULE_FILTER_STATUS.ALL &&
-      queryStatus !== filterStatus
-    ) {
-      continue;
+    // Room filters use boolean flags; paper filters use assignment/paper state.
+    // They are independent so a room-ready subject stays ready even if teachers are assigned.
+    if (filterStatus && filterStatus !== EXAM_SCHEDULE_FILTER_STATUS.ALL) {
+      let matchesFilter = false;
+      if (filterStatus === EXAM_SCHEDULE_FILTER_STATUS.NEEDS_SCHEDULING) {
+        matchesFilter = needsScheduling;
+      } else if (filterStatus === EXAM_SCHEDULE_FILTER_STATUS.ROOM_PENDING) {
+        matchesFilter = roomPending;
+      } else if (filterStatus === EXAM_SCHEDULE_FILTER_STATUS.READY) {
+        matchesFilter = ready;
+      } else if (filterStatus === EXAM_SCHEDULE_FILTER_STATUS.PUBLISHED) {
+        matchesFilter = published;
+      } else if (filterStatus === "approved") {
+        matchesFilter = isFullyApproved;
+      } else if (filterStatus === "notAssigned") {
+        matchesFilter = isNotAssigned;
+      } else if (filterStatus === "moderationActive") {
+        matchesFilter = isModerationActiveStatus;
+      } else if (filterStatus === "assigned") {
+        matchesFilter = isAssigned;
+      }
+      if (!matchesFilter) continue;
     }
 
     finalResponse.push({
@@ -1550,28 +1554,38 @@ export async function publishExaminationSession(examinationSessionId, userId, op
       throw new Error("Examination session not found");
     }
 
-    // Update session status to Published
-    await examinationSessionRepository.updateExaminationSession(examinationSessionId, { status: "Published", updatedBy: userId }, { ...options, transaction });
-
+    // Only subjects with ready=true (scheduled + room capacity OK + not yet published) are publishable.
     const mappedSubjects = await getMappedSubjectsBySessionAndTerm(
-      { examinationSessionId },
+      { examinationSessionId, filterStatus: EXAM_SCHEDULE_FILTER_STATUS.READY },
       { ...options, transaction, skipTeacherAndPaperEnrichment: true },
     );
 
     const readyExamScheduleIds = [];
     for (const sub of mappedSubjects) {
-      if (sub.ready === true && sub.examScheduleId !== null) {
+      if (sub.examScheduleId !== null) {
         readyExamScheduleIds.push(sub.examScheduleId);
       }
     }
 
-    if (readyExamScheduleIds.length > 0) {
-      await examinationSessionRepository.publishExamSchedulesByIds(
-        readyExamScheduleIds,
-        userId,
-        { ...options, transaction },
+    if (readyExamScheduleIds.length === 0) {
+      const error = new Error(
+        "No ready subjects to publish. Subjects need a schedule and enough room capacity before they can be published.",
       );
+      error.statusCode = 400;
+      throw error;
     }
+
+    await examinationSessionRepository.updateExaminationSession(
+      examinationSessionId,
+      { status: "Published", updatedBy: userId },
+      { ...options, transaction },
+    );
+
+    await examinationSessionRepository.publishExamSchedulesByIds(
+      readyExamScheduleIds,
+      userId,
+      { ...options, transaction },
+    );
 
     return {
       message: "Examination session published successfully",

@@ -98,6 +98,7 @@ export async function getBundleList(filters, pagination) {
 
   // Fetch all matching capacity rows; room-level pagination happens in the service
   // so page size matches unique room+date+slot (same as examAttendance list).
+  // Only show when exam scheduled + room assigned + seats allocated (no QP/hall-ticket gate).
   const rows = await scoped(model.examScheduleRoomCapacityModel).findAll({
     subQuery: false,
     attributes: [
@@ -139,6 +140,12 @@ export async function getBundleList(filters, pagination) {
             required: true,
           },
         ],
+      },
+      {
+        model: model.studentExamSeatModel,
+        as: "seats",
+        attributes: ["studentExamSeatId"],
+        required: true,
       },
       {
         model: model.classRoomModel,
@@ -257,7 +264,16 @@ export async function getBundleList(filters, pagination) {
     ],
   });
 
-  return { rows };
+  const uniqueRows = [];
+  const seenCapacityIds = new Set();
+  for (const row of rows) {
+    const id = row.examScheduleRoomCapacityId;
+    if (seenCapacityIds.has(id)) continue;
+    seenCapacityIds.add(id);
+    uniqueRows.push(row);
+  }
+
+  return { rows: uniqueRows };
 }
 
 export async function getBundleById(examRoomMaterialBundleId, options = {}) {
@@ -455,7 +471,7 @@ export async function getStudentCountForRoomCapacity(
 
 export async function getSummaryCapacities(scheduleWhere) {
   return await scoped(model.examScheduleRoomCapacityModel).findAll({
-    attributes: ["classRoomSectionId"],
+    attributes: ["classRoomSectionId", "examScheduleRoomCapacityId"],
     include: [
       {
         model: model.examScheduleModel,
@@ -464,8 +480,28 @@ export async function getSummaryCapacities(scheduleWhere) {
         where: scheduleWhere,
         required: true,
       },
+      {
+        model: model.studentExamSeatModel,
+        as: "seats",
+        attributes: ["studentExamSeatId"],
+        required: true,
+      },
     ],
-    raw: true,
+  }).then((rows) => {
+    const unique = new Map();
+    for (const row of rows) {
+      const plain = row.get ? row.get({ plain: true }) : row;
+      const key = `${plain.classRoomSectionId}_${plain.examSchedule?.examDate}_${plain.examSchedule?.examinationSessionSlotId}`;
+      if (!unique.has(key)) {
+        unique.set(key, {
+          classRoomSectionId: plain.classRoomSectionId,
+          "examSchedule.examDate": plain.examSchedule?.examDate,
+          "examSchedule.examinationSessionSlotId":
+            plain.examSchedule?.examinationSessionSlotId,
+        });
+      }
+    }
+    return Array.from(unique.values());
   });
 }
 
