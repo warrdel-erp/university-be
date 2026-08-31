@@ -1,4 +1,6 @@
 import * as service from "../services/leaveRequestService.js";
+import * as model from "../models/index.js";
+import { scoped } from "../utility/scoped.js";
 
 export async function addRequest(req, res) {
   const requiredFields = ["userId", "policyId", "startDate", "endDate", "totalDays"];

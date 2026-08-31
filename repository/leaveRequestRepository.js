@@ -38,8 +38,8 @@ export async function getRequests(filters = {}) {
         attributes: ["policyId", "policyName", "totalLeavesPerYear"],
       },
       {
-        model: model.users, as: "user",
-        where: buildScope(model.employeeModel),
+        model: model.users,
+        where: buildScope(model.users),
         required: true,
       },
     ],
@@ -59,8 +59,8 @@ export async function getRequestById(requestId) {
         attributes: ["policyId", "policyName", "totalLeavesPerYear"],
       },
       {
-        model: model.users, as: "user",
-        where: buildScope(model.employeeModel),
+        model: model.users,
+        where: buildScope(model.users),
         required: true,
       },
     ],
