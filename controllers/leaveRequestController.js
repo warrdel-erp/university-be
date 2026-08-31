@@ -26,6 +26,16 @@ export async function getAllRequests(req, res) {
   }
 }
 
+export async function getMyRequests(req, res) {
+  try {
+    const userId = req.user.userId;
+    const requests = await service.getRequests({ userId });
+    res.status(200).json(requests);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 export async function getRequestById(req, res) {
   try {
     const { requestId } = req.query;

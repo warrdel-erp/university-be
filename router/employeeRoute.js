@@ -149,12 +149,7 @@ router.get(
   checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
   getSectionCounts,
 );
-router.get(
-  "/my",
-  userAuth,
-  checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
-  getMyEmployeeDetails,
-);
+router.get("/my", userAuth, getMyEmployeeDetails);
 
 router.get(
   "/my/uniqueClassSectionSubjects",

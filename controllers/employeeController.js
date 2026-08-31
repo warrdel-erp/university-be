@@ -801,20 +801,21 @@ export const getMyEmployeeSectionDates = async (req, res) => {
   }
 };
 
+/** Self-service alias of GET /employee/:id — uses userId from token. */
 export const getMyEmployeeDetails = async (req, res) => {
   try {
     const validation = await validateEmployeeUser(req, res);
-    if (!validation.valid) {
-      return ErrorResponse(res, validation.status, validation.message);
+    if (!validation.valid || !validation.employeeRecord?.employeeId) {
+      return res.status(200).send([]);
     }
-    const { employeeRecord } = validation;
-    const employeeId = employeeRecord?.employeeId;
 
-    const result = await employee.getSingleEmployeeDetails(employeeId);
-    return SuccessResponse(res, 200, "Employee details fetched successfully", result);
+    const result = await employee.getSingleEmployeeDetails(
+      validation.employeeRecord.employeeId,
+    );
+    return res.status(200).send(result ?? []);
   } catch (error) {
     console.error("Error in getMyEmployeeDetails:", error);
-    return ErrorResponse(res, 500, "Internal Server Error");
+    return res.status(500).send("Internal Server Error");
   }
 };
 
