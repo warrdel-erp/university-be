@@ -18,8 +18,16 @@ export async function addRequest(req, res) {
 }
 
 export async function addMyRequest(req, res) {
+  const validation = await validateEmployeeUser(req, res);
+  if (!validation.valid) {
+    return res.status(validation.status).json({ message: validation.message });
+  }
+  if (!validation.employeeRecord) {
+    return res.status(200).json({});
+  }
+
   const requiredFields = ["policyId", "startDate", "endDate", "totalDays"];
-  const data = { ...req.body, userId: req.user.userId };
+  const data = { ...req.body, userId: validation.userId };
 
   try {
     for (const f of requiredFields) {
@@ -83,15 +91,23 @@ export async function updateRequestStatus(req, res) {
 }
 
 export async function updateMyRequestStatus(req, res) {
+  const validation = await validateEmployeeUser(req, res);
+  if (!validation.valid) {
+    return res.status(validation.status).json({ message: validation.message });
+  }
+  if (!validation.employeeRecord) {
+    return res.status(200).json({});
+  }
+
   try {
     const { requestId, status } = req.body;
     if (!requestId || !status) return res.status(400).json({ message: "requestId and status are required" });
 
     const request = await service.getRequestById(requestId);
     if (!request) return res.status(404).json({ message: "Request not found" });
-    if (request.userId !== req.user.userId) return res.status(403).json({ message: "Forbidden" });
+    if (request.userId !== validation.userId) return res.status(403).json({ message: "Forbidden" });
 
-    const updated = await service.updateRequestStatus(requestId, status, req.user.userId);
+    const updated = await service.updateRequestStatus(requestId, status, validation.userId);
     res.status(200).json({ message: "Request status updated", updated });
   } catch (err) {
     res.status(500).json({ error: err.message });
