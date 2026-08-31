@@ -134,6 +134,12 @@ const byUserIdSchema = {
   }),
 };
 
+const myAssignmentsSchema = {
+  query: z.object({
+    examinationSessionId: positiveIntegerQueryId,
+  }),
+};
+
 const byRoomSchema = {
   query: z.object({
     classRoomSectionId: positiveIntegerId,
@@ -175,7 +181,7 @@ router.get(
   getAssignmentsByUserId,
 );
 
-router.get("/my", userAuth, getMyAssignments);
+router.get("/my", userAuth, validate(myAssignmentsSchema), getMyAssignments);
 
 router.get(
   "/byroom",

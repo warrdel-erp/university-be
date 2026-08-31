@@ -159,10 +159,7 @@ export async function getFacultyAvailability(req, res) {
 
 export async function getMyAssignments(req, res) {
     try {
-        const userId = req.user?.userId;
-        if (!userId) {
-            return ErrorResponse(res, 404, "User ID not found");
-        }
+        const userId = req.user.userId;
         const { examinationSessionId } = req.query;
         const result = await examInvigilatorAssignmentServices.getAssignmentsByUserId(userId, examinationSessionId);
         return SuccessResponse(res, 200, "Invigilator assignments fetched successfully", result);
