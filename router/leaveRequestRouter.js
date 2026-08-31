@@ -1,7 +1,7 @@
 import { Router } from "express";
 const router = Router();
 import userAuth from "../middleware/authUser.js";
-import { addRequest, getAllRequests, getMyRequests, getRequestById, updateRequestStatus } from "../controllers/leaveRequestController.js";
+import { addRequest, getAllRequests, getMyRequests, getRequestById, updateRequestStatus, updateMyRequestStatus } from "../controllers/leaveRequestController.js";
 
 import { checkAccess, checkAccessAny } from "../middleware/checkAccess.js";
 import { PERMISSIONS } from "../const/permissions.js";
@@ -11,5 +11,6 @@ router.get("/my", userAuth, checkAccess(PERMISSIONS.APPLY_LEAVE.value, null), ge
 router.get("/", userAuth, checkAccessAny([PERMISSIONS.PENDING_LEAVE_REQUEST.value, PERMISSIONS.APPLY_LEAVE.value], null), getAllRequests);
 router.get("/single", userAuth, checkAccessAny([PERMISSIONS.PENDING_LEAVE_REQUEST.value, PERMISSIONS.APPLY_LEAVE.value], null), getRequestById);
 router.patch("/status", userAuth, checkAccess(PERMISSIONS.PENDING_LEAVE_REQUEST.value, null), updateRequestStatus);
+router.patch("/status/my", userAuth, checkAccess(PERMISSIONS.APPLY_LEAVE.value, null), updateMyRequestStatus);
 
 export default router;

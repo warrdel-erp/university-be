@@ -25,6 +25,15 @@ export async function getBalancesByEmployee(req, res) {
   }
 }
 
+export async function getMyBalances(req, res) {
+  try {
+    const balances = await service.getBalancesByEmployee(req.user.userId);
+    res.status(200).json(balances);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 export async function updateBalance(req, res) {
   try {
     const { balanceId } = req.body;
