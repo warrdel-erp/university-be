@@ -1,160 +1,156 @@
 import * as model from "../models/index.js";
 import { Op } from "sequelize";
 import { scoped } from "../utility/scoped.js";
+import { ELIGIBILITY_STATUS } from "../constant.js";
 
 /**
  * Bulk approve students whose current status is REVIEW.
- * Updates status to APPROVED and sets approval audit fields.
- * Returns [numberOfAffectedRows].
+ * Returns number of affected rows.
  */
-export async function bulkApproveEligibility(examinationSessionId, studentIds, userId, options = {}) {
-    try {
-        const [affectedCount] = await model.examinationSessionEligibilityModel.update(
-            {
-                status: 'APPROVED',
-                approvedBy: userId,
-                approvedAt: new Date(),
-                updatedBy: userId
-            },
-            {
-                where: {
-                    examinationSessionId,
-                    studentId: {
-                        [Op.in]: studentIds
-                    },
-                    status: 'REVIEW'
-                },
-                ...options
-            }
-        );
-        return affectedCount;
-    } catch (error) {
-        console.error("Error in bulkApproveEligibility:", error);
-        throw error;
-    }
+export async function bulkApproveEligibility(
+  examinationSessionId,
+  studentIds,
+  userId,
+  options = {},
+) {
+  const [affectedCount] = await scoped(
+    model.examinationSessionEligibilityModel,
+  ).update(
+    {
+      status: ELIGIBILITY_STATUS.APPROVED,
+      approvedBy: userId,
+      approvedAt: new Date(),
+      updatedBy: userId,
+    },
+    {
+      where: {
+        examinationSessionId,
+        studentId: { [Op.in]: studentIds },
+        status: ELIGIBILITY_STATUS.REVIEW,
+      },
+      transaction: options.transaction,
+    },
+  );
+  return affectedCount;
 }
 
 /**
- * Fetch eligible student IDs (READY or APPROVED) for a given examination session.
- * Optionally filter by a specific list of student IDs.
- * Checks for BLOCKED/REVIEW statuses to throw explicit errors if specific students were requested.
+ * Fetch eligible student IDs (READY or APPROVED) for hall-ticket generation.
  */
-export async function getEligibleStudentIdsForGeneration(examinationSessionId, requestedStudentIds = null, options = {}) {
-    try {
-        const whereClause = { 
-            examinationSessionId,
-            status: { [Op.in]: ['READY', 'APPROVED'] }
-        };
-        
-        if (requestedStudentIds && requestedStudentIds.length > 0) {
-            whereClause.studentId = { [Op.in]: requestedStudentIds };
-        }
+export async function getEligibleStudentIdsForGeneration(
+  examinationSessionId,
+  requestedStudentIds = null,
+  options = {},
+) {
+  const whereClause = {
+    examinationSessionId,
+    status: {
+      [Op.in]: [ELIGIBILITY_STATUS.READY, ELIGIBILITY_STATUS.APPROVED],
+    },
+  };
 
-        const records = await model.examinationSessionEligibilityModel.findAll({
-            where: whereClause,
-            attributes: ['studentId'],
-            ...options
-        });
+  if (requestedStudentIds && requestedStudentIds.length > 0) {
+    whereClause.studentId = { [Op.in]: requestedStudentIds };
+  }
 
-        return records.map(r => r.studentId);
-    } catch (error) {
-        console.error("Error in getEligibleStudentIdsForGeneration:", error);
-        throw error;
-    }
+  const records = await scoped(model.examinationSessionEligibilityModel).findAll({
+    where: whereClause,
+    attributes: ["studentId"],
+    transaction: options.transaction,
+    raw: true,
+  });
+
+  const ids = [];
+  for (const row of records) {
+    ids.push(row.studentId);
+  }
+  return ids;
 }
 
-/**
- * Fetch a single student's eligibility record for an examination session.
- */
-export async function getSingleEligibilityRecord(examinationSessionId, studentId, options = {}) {
-    try {
-        const record = await model.examinationSessionEligibilityModel.findOne({
-            where: {
-                examinationSessionId,
-                studentId
-            },
-            ...options
-        });
-        return record;
-    } catch (error) {
-        console.error("Error in getSingleEligibilityRecord:", error);
-        throw error;
-    }
+export async function getSingleEligibilityRecord(
+  examinationSessionId,
+  studentId,
+  options = {},
+) {
+  return scoped(model.examinationSessionEligibilityModel).findOne({
+    where: {
+      examinationSessionId,
+      studentId,
+    },
+    attributes: [
+      "examinationSessionEligibilityId",
+      "studentId",
+      "examinationSessionId",
+      "status",
+      "reviewReason",
+      "approvedBy",
+      "approvedAt",
+    ],
+    transaction: options.transaction,
+  });
 }
 
-/**
- * Fetches existing eligibility records and returns a map of studentId -> status.
- */
-export async function getEligibilityStatusesMap(examinationSessionId, options = {}) {
-    try {
-        const existingRecords = await model.examinationSessionEligibilityModel.findAll({
-            where: { examinationSessionId },
-            attributes: ['studentId', 'status'],
-            ...options
-        });
+export async function getEligibilityStatusesMap(
+  examinationSessionId,
+  options = {},
+) {
+  const existingRecords = await scoped(
+    model.examinationSessionEligibilityModel,
+  ).findAll({
+    where: { examinationSessionId },
+    attributes: ["studentId", "status"],
+    transaction: options.transaction,
+    raw: true,
+  });
 
-        const existingMap = new Map();
-        existingRecords.forEach(r => existingMap.set(r.studentId, r.status));
-        return existingMap;
-    } catch (error) {
-        console.error("Error in getEligibilityStatusesMap:", error);
-        throw error;
-    }
+  const existingMap = new Map();
+  for (const row of existingRecords) {
+    existingMap.set(row.studentId, row.status);
+  }
+  return existingMap;
 }
 
-/**
- * Fetches existing eligibility records (only studentId, status).
- * Creates entries for any missing students.
- * Returns a map of studentId -> status.
- */
-export async function syncEligibilityRecords(examinationSessionId, studentsData, options = {}) {
-    try {
-        const existingRecords = await model.examinationSessionEligibilityModel.findAll({
-            where: { examinationSessionId },
-            attributes: ['studentId', 'status'],
-            ...options
-        });
+export async function syncEligibilityRecords(
+  examinationSessionId,
+  studentsData,
+  options = {},
+) {
+  const existingMap = await getEligibilityStatusesMap(
+    examinationSessionId,
+    options,
+  );
 
-        const existingMap = new Map();
-        existingRecords.forEach(r => existingMap.set(r.studentId, r.status));
+  const recordsToCreate = [];
+  for (const student of studentsData) {
+    if (existingMap.has(student.studentId)) continue;
 
-        const recordsToCreate = [];
+    const isReady = student.calculatedStatus === "Ready";
+    recordsToCreate.push({
+      universityId: student.universityId,
+      instituteId: student.instituteId,
+      academicYearId: student.academicYearId,
+      studentId: student.studentId,
+      examinationSessionId: Number(examinationSessionId),
+      status: isReady ? ELIGIBILITY_STATUS.READY : ELIGIBILITY_STATUS.REVIEW,
+      reviewReason: isReady ? null : student.reviewReason,
+    });
+    existingMap.set(
+      student.studentId,
+      isReady ? ELIGIBILITY_STATUS.READY : ELIGIBILITY_STATUS.REVIEW,
+    );
+  }
 
-        for (const student of studentsData) {
-            if (!existingMap.has(student.studentId)) {
-                recordsToCreate.push({
-                    universityId: student.universityId,
-                    instituteId: student.instituteId,
-                    academicYearId: student.academicYearId,
-                    studentId: student.studentId,
-                    examinationSessionId: Number(examinationSessionId),
-                    status: student.calculatedStatus === 'Ready' ? 'READY' : 'REVIEW',
-                    reviewReason: student.calculatedStatus !== 'Ready' ? student.reviewReason : null
-                });
-                // Optimistically add to map
-                existingMap.set(student.studentId, student.calculatedStatus === 'Ready' ? 'READY' : 'REVIEW');
-            }
-        }
+  if (recordsToCreate.length > 0) {
+    await bulkCreateRecords(recordsToCreate, options);
+  }
 
-        if (recordsToCreate.length > 0) {
-            await model.examinationSessionEligibilityModel.bulkCreate(recordsToCreate, { ...options });
-        }
-
-        return existingMap;
-    } catch (error) {
-        console.error("Error in syncEligibilityRecords:", error);
-        throw error;
-    }
+  return existingMap;
 }
 
 export async function bulkCreateRecords(records, options = {}) {
-    try {
-        return await model.examinationSessionEligibilityModel.bulkCreate(records, {
-            ignoreDuplicates: true,
-            ...options
-        });
-    } catch (error) {
-        console.error("Error in bulkCreateRecords:", error);
-        throw error;
-    }
+  if (!records.length) return [];
+  return scoped(model.examinationSessionEligibilityModel).bulkCreate(records, {
+    ignoreDuplicates: true,
+    transaction: options.transaction,
+  });
 }

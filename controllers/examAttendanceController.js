@@ -133,6 +133,7 @@ export async function getExamOperationsAttendance(req, res) {
             examinationSessionId: req.query.examinationSessionId,
             examDate: req.query.examDate,
             search: req.query.search,
+            selections: req.query.selections,
         };
         const page = req.query.page ? Number(req.query.page) : 1;
         const limit = req.query.limit ? Number(req.query.limit) : 10;

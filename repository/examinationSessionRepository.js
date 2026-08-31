@@ -1,6 +1,8 @@
-import { Op } from "sequelize";
+import { Op, fn, col } from "sequelize";
 import * as model from "../models/index.js";
-import { scoped } from "../utility/scoped.js";
+import { buildScope, scoped } from "../utility/scoped.js";
+import { getAllocatedCapacityByExamScheduleIds } from "../utility/roomCapacity.js";
+import { QUESTION_STATUS } from "../constant.js";
 
 const sessionInclude = [
   {
@@ -18,13 +20,12 @@ const sessionInclude = [
   {
     model: model.examinationSessionTermModel,
     as: "examinationSessionTerms",
-    include: [
-      {
-        model: model.classSectionTermModel,
-        as: "classSectionTerm",
-        attributes: ["classSectionTermId", "classSectionsId", "term"],
-        required: false,
-      },
+    attributes: [
+      "examinationSessionTermId",
+      "examinationSessionId",
+      "term",
+      "includeElectives",
+      "remarks",
     ],
     required: false,
   },
@@ -103,6 +104,26 @@ export async function findClassSectionTermsByIds(classSectionTermIds, options = 
   });
 }
 
+export async function findClassSectionTermsByIdsWithSection(
+  classSectionTermIds,
+  options = {},
+) {
+  if (!classSectionTermIds.length) return [];
+  return model.classSectionTermModel.findAll({
+    where: { classSectionTermId: { [Op.in]: classSectionTermIds } },
+    attributes: ["classSectionTermId", "classSectionsId", "term"],
+    include: [
+      {
+        model: model.classSectionModel,
+        as: "classSection",
+        required: true,
+        attributes: ["classSectionsId", "courseId", "sessionId", "academicYearId", "section"],
+      },
+    ],
+    transaction: options.transaction,
+  });
+}
+
 export async function findClassSectionTerms(where, options = {}) {
   return model.classSectionTermModel.findAll({
     where,
@@ -113,6 +134,7 @@ export async function findClassSectionTerms(where, options = {}) {
 }
 
 export async function createExaminationSessionTerms(termData, options = {}) {
+  if (!termData.length) return [];
   return scoped(model.examinationSessionTermModel).bulkCreate(termData, {
     transaction: options.transaction,
   });
@@ -129,11 +151,77 @@ export async function deleteExaminationSessionTermsBySessionId(examinationSessio
   });
 }
 
+export async function deleteExaminationSessionTermsByTerms(
+  examinationSessionId,
+  terms,
+  options = {},
+) {
+  if (!terms.length) return 0;
+  return scoped(model.examinationSessionTermModel).destroy({
+    where: {
+      examinationSessionId: Number(examinationSessionId),
+      term: { [Op.in]: terms },
+    },
+    transaction: options.transaction,
+  });
+}
+
 export async function findExaminationSessionTermById(examinationSessionTermId, options = {}) {
   return scoped(model.examinationSessionTermModel).findOne({
     where: { examinationSessionTermId: Number(examinationSessionTermId) },
+    attributes: [
+      "examinationSessionTermId",
+      "examinationSessionId",
+      "term",
+      "includeElectives",
+      "remarks",
+    ],
     transaction: options.transaction,
   });
+}
+
+/** True when any exam schedule exists for this session + term number. */
+export async function hasExamSchedulesForTerm(
+  examinationSessionId,
+  term,
+  options = {},
+) {
+  const count = await scoped(model.examScheduleModel).count({
+    where: {
+      examinationSessionId: Number(examinationSessionId),
+      term: Number(term),
+    },
+    transaction: options.transaction,
+  });
+  return count > 0;
+}
+
+/** Distinct courseIds that have class sections for the given term numbers in an academic year. */
+export async function findDistinctCourseIdsByTerms(
+  terms,
+  academicYearId,
+  options = {},
+) {
+  if (!terms.length || !academicYearId) return [];
+  const rows = await model.classSectionTermModel.findAll({
+    attributes: ["classSectionTermId"],
+    where: { term: { [Op.in]: terms } },
+    include: [
+      {
+        model: model.classSectionModel,
+        as: "classSection",
+        required: true,
+        attributes: ["courseId"],
+        where: { academicYearId: Number(academicYearId) },
+      },
+    ],
+    transaction: options.transaction,
+  });
+  const courseIdSet = new Set();
+  for (const row of rows) {
+    courseIdSet.add(Number(row.classSection.courseId));
+  }
+  return [...courseIdSet];
 }
 
 export async function deleteExaminationSessionTerm(examinationSessionTermId, options = {}) {
@@ -191,39 +279,64 @@ export async function findSubjects(where, options = {}) {
   return scoped(model.subjectModel).findAll({
     where,
     attributes: ["subjectId", "subjectName", "subjectCode", "subjectType", "subjectCategory", "courseId", "term", "academicYearId"],
+    include: [
+      {
+        model: model.courseModel,
+        as: "course",
+        attributes: ["termType"],
+      }
+    ],
     raw: true,
+    nest: true,
     transaction: options.transaction,
   });
 }
 
 export async function findExamSchedulesBySubjects(examinationSessionId, subjectIds, options = {}) {
   if (!subjectIds || subjectIds.length === 0) return [];
+  const whereClause = {
+    examinationSessionId: Number(examinationSessionId),
+    subjectId: { [Op.in]: subjectIds }
+  };
+  if (options.date) {
+    whereClause.examDate = options.date;
+  }
   return scoped(model.examScheduleModel).findAll({
-    where: {
-      examinationSessionId: Number(examinationSessionId),
-      subjectId: { [Op.in]: subjectIds }
-    },
-    attributes: ["examScheduleId", "subjectId", "sessionId", "academicYearId", "examDate", "examTime", "type", "duration", "examinationSessionSlotId", "term"],
+    where: whereClause,
+    attributes: [
+      "examScheduleId",
+      "subjectId",
+      "sessionId",
+      "academicYearId",
+      "examDate",
+      "examTime",
+      "type",
+      "duration",
+      "maximumMarks",
+      "examinationSessionSlotId",
+      "term",
+      "published",
+    ],
     include: [
       {
         model: model.subjectModel,
         as: "subjectSchedule",
         attributes: ["courseId"],
       },
+      {
+        model: model.examinationSessionSlotModel,
+        as: "examinationSessionSlot",
+        attributes: ["slotNumber", "startTime", "endTime", "durationMinutes"],
+      }
     ],
     order: [["examScheduleId", "DESC"]],
     transaction: options.transaction,
   });
 }
 
+/** Sum allocated capacity per examScheduleId (DB-level GROUP BY). */
 export async function findRoomCapacitiesByExamSchedules(examScheduleIds, options = {}) {
-  if (!examScheduleIds.length) return [];
-  return scoped(model.examScheduleRoomCapacityModel).findAll({
-    where: { examScheduleId: { [Op.in]: examScheduleIds } },
-    attributes: ["examScheduleId", "capacity"],
-    transaction: options.transaction,
-    raw: true,
-  });
+  return getAllocatedCapacityByExamScheduleIds(examScheduleIds, options);
 }
 
 export async function findTeacherAssignmentsByExamSchedules(examScheduleIds, options = {}) {
@@ -254,7 +367,7 @@ export async function findQuestionPapersByExamSchedules(examScheduleIds, options
   if (!examScheduleIds.length) return [];
   return scoped(model.questionPaperModel).findAll({
     where: { examScheduleId: { [Op.in]: examScheduleIds } },
-    attributes: ["id", "examScheduleId", "createdBy", "updatedBy", "status", "createdAt", "updatedAt"],
+    attributes: ["id", "examScheduleId", "createdBy", "updatedBy", "status", "finalApproval", "createdAt", "updatedAt"],
     include: [
       {
         model: model.userModel,
@@ -356,10 +469,10 @@ export async function findExamSchedulesBySlotIds(slotIds, options = {}) {
   });
 }
 
-export async function findOverlapTermForAssessmentType(assessmentTypeId, classSectionTermIds, options = {}) {
+export async function findOverlapTermForAssessmentType(assessmentTypeId, terms, options = {}) {
   return scoped(model.examinationSessionTermModel).findOne({
     where: {
-      classSectionTermId: { [Op.in]: classSectionTermIds },
+      term: { [Op.in]: terms },
     },
     include: [
       {
@@ -373,10 +486,10 @@ export async function findOverlapTermForAssessmentType(assessmentTypeId, classSe
   });
 }
 
-export async function findOverlapTermForAssessmentTypeExcludingSession(assessmentTypeId, sessionId, classSectionTermIds, options = {}) {
+export async function findOverlapTermForAssessmentTypeExcludingSession(assessmentTypeId, sessionId, terms, options = {}) {
   return scoped(model.examinationSessionTermModel).findOne({
     where: {
-      classSectionTermId: { [Op.in]: classSectionTermIds },
+      term: { [Op.in]: terms },
     },
     include: [
       {
@@ -396,6 +509,317 @@ export async function findOverlapTermForAssessmentTypeExcludingSession(assessmen
 export async function findExaminationSessionTerms(examinationSessionId, options = {}) {
   return scoped(model.examinationSessionTermModel).findAll({
     where: { examinationSessionId: Number(examinationSessionId) },
+    attributes: [
+      "examinationSessionTermId",
+      "examinationSessionId",
+      "term",
+      "includeElectives",
+      "remarks",
+    ],
     transaction: options.transaction,
   });
 }
+
+export async function findSchedulesForSkuStats(examinationSessionId, options = {}) {
+  return scoped(model.examScheduleModel).findAll({
+    where: { examinationSessionId: Number(examinationSessionId) },
+    attributes: [
+      "examScheduleId",
+      "examDate",
+      "examTime",
+      "examinationSessionSlotId",
+      "subjectId",
+      "term",
+      "sessionId",
+      "academicYearId",
+    ],
+    transaction: options.transaction,
+    raw: true,
+  });
+}
+
+/** Up to `limit` exam schedules for a given date (today's timeline). */
+export async function findExamSchedulesForTimeline(
+  examinationSessionId,
+  examDate,
+  limit = 5,
+  options = {},
+) {
+  return scoped(model.examScheduleModel).findAll({
+    where: {
+      examinationSessionId: Number(examinationSessionId),
+      examDate,
+    },
+    attributes: [
+      "examScheduleId",
+      "examDate",
+      "examTime",
+      "duration",
+      "term",
+      "sessionId",
+      "subjectId",
+      "academicYearId",
+      "examinationSessionSlotId",
+      "published",
+    ],
+    include: [
+      {
+        model: model.subjectModel,
+        as: "subjectSchedule",
+        required: true,
+        attributes: ["subjectId", "subjectName", "subjectCode", "courseId", "term"],
+      },
+      {
+        model: model.examinationSessionSlotModel,
+        as: "examinationSessionSlot",
+        required: false,
+        attributes: [
+          "examinationSessionSlotId",
+          "slotNumber",
+          "startTime",
+          "endTime",
+          "durationMinutes",
+        ],
+      },
+      {
+        model: model.examScheduleRoomCapacityModel,
+        as: "roomCapacities",
+        required: false,
+        attributes: ["examScheduleRoomCapacityId", "capacity", "classRoomSectionId"],
+        include: [
+          {
+            model: model.classRoomModel,
+            as: "classRoom",
+            required: false,
+            attributes: ["classRoomSectionId", "roomNumber"],
+          },
+        ],
+      },
+    ],
+    order: [
+      ["examTime", "ASC"],
+      ["examScheduleId", "ASC"],
+    ],
+    limit: Number(limit),
+    transaction: options.transaction,
+  });
+}
+
+export async function publishExamSchedulesByIds(examScheduleIds, userId, options = {}) {
+  if (!examScheduleIds.length) return 0;
+  const [affected] = await scoped(model.examScheduleModel).update(
+    { published: true, updatedBy: userId },
+    {
+      where: { examScheduleId: { [Op.in]: examScheduleIds } },
+      transaction: options.transaction,
+    },
+  );
+  return affected;
+}
+
+export async function findQuestionPapersCountForSchedules(examScheduleIds, options = {}) {
+  if (!examScheduleIds.length) return { total: 0, approved: 0 };
+
+  const whereBase = { examScheduleId: { [Op.in]: examScheduleIds } };
+  const [total, approved] = await Promise.all([
+    scoped(model.questionPaperModel).count({
+      where: whereBase,
+      transaction: options.transaction,
+    }),
+    scoped(model.questionPaperModel).count({
+      where: {
+        ...whereBase,
+        [Op.or]: [
+          { finalApproval: QUESTION_STATUS.APPROVED },
+          { status: QUESTION_STATUS.APPROVED },
+        ],
+      },
+      transaction: options.transaction,
+    }),
+  ]);
+
+  return { total, approved };
+}
+
+export async function countHallTicketsBySession(examinationSessionId, options = {}) {
+  const where = { examinationSessionId: Number(examinationSessionId) };
+  if (options.publishedOnly === true) {
+    where.isPublished = true;
+  }
+  return scoped(model.studentHallTicketModel).count({
+    where,
+    transaction: options.transaction,
+  });
+}
+
+export async function countBundlesByDatesAndSlots(uniqueDates, uniqueSlotIds, options = {}) {
+  if (!uniqueDates.length || !uniqueSlotIds.length) {
+    return { total: 0, received: 0 };
+  }
+
+  const baseWhere = {
+    examDate: { [Op.in]: uniqueDates },
+    examinationSessionSlotId: { [Op.in]: uniqueSlotIds },
+  };
+
+  const [total, received] = await Promise.all([
+    scoped(model.examRoomMaterialBundleModel).count({
+      where: baseWhere,
+      transaction: options.transaction,
+    }),
+    scoped(model.examRoomMaterialBundleModel).count({
+      where: { ...baseWhere, status: "RECEIVED" },
+      transaction: options.transaction,
+    }),
+  ]);
+
+  return { total, received };
+}
+
+/**
+ * Invigilator coverage for session schedules.
+ * total    = distinct room + date + slot from exam_schedule_room_capacity
+ * assigned = those units with at least one invigilator assignment
+ */
+export async function countInvigilatorStatsForSchedules(examScheduleIds, options = {}) {
+  if (!examScheduleIds.length) {
+    return { total: 0, assigned: 0 };
+  }
+
+  const roomRows = await scoped(model.examScheduleRoomCapacityModel).findAll({
+    where: { examScheduleId: { [Op.in]: examScheduleIds } },
+    attributes: ["classRoomSectionId"],
+    include: [
+      {
+        model: model.examScheduleModel,
+        as: "examSchedule",
+        required: true,
+        attributes: ["examDate", "examinationSessionSlotId"],
+        where: buildScope(model.examScheduleModel),
+      },
+    ],
+    transaction: options.transaction,
+  });
+
+  const roomUnitKeys = new Set();
+  const dates = [];
+  const slotIds = [];
+  const roomIds = [];
+  const dateSeen = new Set();
+  const slotSeen = new Set();
+  const roomSeen = new Set();
+
+  for (const row of roomRows) {
+    const examDate = row.examSchedule.examDate;
+    const examinationSessionSlotId = row.examSchedule.examinationSessionSlotId;
+    const classRoomSectionId = row.classRoomSectionId;
+    const key = `${examDate}|${examinationSessionSlotId}|${classRoomSectionId}`;
+
+    if (!roomUnitKeys.has(key)) {
+      roomUnitKeys.add(key);
+    }
+    if (!dateSeen.has(examDate)) {
+      dateSeen.add(examDate);
+      dates.push(examDate);
+    }
+    if (!slotSeen.has(examinationSessionSlotId)) {
+      slotSeen.add(examinationSessionSlotId);
+      slotIds.push(examinationSessionSlotId);
+    }
+    if (!roomSeen.has(classRoomSectionId)) {
+      roomSeen.add(classRoomSectionId);
+      roomIds.push(classRoomSectionId);
+    }
+  }
+
+  if (roomUnitKeys.size === 0) {
+    return { total: 0, assigned: 0 };
+  }
+
+  const assignmentRows = await scoped(model.examInvigilatorAssignmentModel).findAll({
+    where: {
+      examDate: { [Op.in]: dates },
+      examinationSessionSlotId: { [Op.in]: slotIds },
+      classRoomSectionId: { [Op.in]: roomIds },
+    },
+    attributes: ["examDate", "examinationSessionSlotId", "classRoomSectionId"],
+    transaction: options.transaction,
+  });
+
+  const assignedKeys = new Set();
+  for (const row of assignmentRows) {
+    const key = `${row.examDate}|${row.examinationSessionSlotId}|${row.classRoomSectionId}`;
+    if (roomUnitKeys.has(key)) {
+      assignedKeys.add(key);
+    }
+  }
+
+  return {
+    total: roomUnitKeys.size,
+    assigned: assignedKeys.size,
+  };
+}
+
+export async function countSeatsByExamScheduleIds(examScheduleIds, options = {}) {
+  if (!examScheduleIds.length) return new Map();
+
+  const rows = await model.studentExamSeatModel.findAll({
+    attributes: [
+      [col("roomCapacity.exam_schedule_id"), "examScheduleId"],
+      [fn("COUNT", col("student_exam_seat_id")), "seatCount"],
+    ],
+    include: [
+      {
+        model: model.examScheduleRoomCapacityModel,
+        as: "roomCapacity",
+        required: true,
+        attributes: [],
+        where: { examScheduleId: { [Op.in]: examScheduleIds } },
+      },
+    ],
+    group: ["roomCapacity.exam_schedule_id"],
+    raw: true,
+    transaction: options.transaction,
+  });
+
+  const map = new Map();
+  for (const row of rows) {
+    map.set(Number(row.examScheduleId), Number(row.seatCount) || 0);
+  }
+  return map;
+}
+
+export async function findSessionCourseMappingsByCoursesAndSessions(courseIds, sessionIds, options = {}) {
+  return scoped(model.sessionCouseMappingModel).findAll({
+    where: {
+      courseId: { [Op.in]: courseIds },
+      sessionId: { [Op.in]: sessionIds }
+    },
+    attributes: ["sessionCourseMappingId", "courseId", "sessionId"],
+    include: [
+      {
+        model: model.courseModel,
+        as: "courses",
+        attributes: ["courseName"],
+      },
+      {
+        model: model.sessionModel,
+        as: "session",
+        attributes: ["sessionName"],
+      }
+    ],
+    transaction: options.transaction,
+  });
+}
+
+export async function findSessionCourseMappingsByIds(sessionCourseMappingIds, options = {}) {
+  return scoped(model.sessionCouseMappingModel).findAll({
+    where: {
+      sessionCourseMappingId: { [Op.in]: sessionCourseMappingIds }
+    },
+    attributes: ["sessionCourseMappingId", "courseId", "sessionId"],
+    transaction: options.transaction,
+    raw: true,
+  });
+}
+

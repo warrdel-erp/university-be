@@ -19,6 +19,22 @@ const querySchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD")
     .optional(),
   search: z.string().optional(),
+  selections: z.preprocess(
+    (val) => {
+      if (!val || val === "") return undefined;
+      try {
+        return typeof val === "string" ? JSON.parse(val) : val;
+      } catch {
+        return undefined;
+      }
+    },
+    z.array(
+      z.object({
+        courseSessionMappingId: z.number().int().positive(),
+        terms: z.array(z.number().int().positive()),
+      })
+    ).optional()
+  ),
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().optional().default(10),
 });

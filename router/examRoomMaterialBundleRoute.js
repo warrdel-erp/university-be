@@ -61,6 +61,22 @@ const listSchema = {
         ])
         .optional(),
     ),
+    selections: z.preprocess(
+      (val) => {
+        if (!val || val === "") return undefined;
+        try {
+          return typeof val === "string" ? JSON.parse(val) : val;
+        } catch {
+          return undefined;
+        }
+      },
+      z.array(
+        z.object({
+          courseSessionMappingId: z.number().int().positive(),
+          terms: z.array(z.number().int().positive()),
+        })
+      ).optional()
+    ),
     search: z.preprocess(emptyToUndefined, z.string().optional()),
     page: positiveIntegerQueryId,
     limit: positiveIntegerQueryId,
@@ -99,6 +115,17 @@ const createSchema = {
       )
       .optional()
       .default([]),
+  }),
+};
+
+const createAutoSchema = {
+  body: z.object({
+    examDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD"),
+    examinationSessionSlotId: positiveIntegerId,
+    classRoomSectionId: positiveIntegerId,
+    issuedTo: optionalIdWithNullDefault,
   }),
 };
 
@@ -159,13 +186,19 @@ router.get(
   validate(summarySchema),
   controller.getBundleSummary,
 );
-router.get("/", userAuth, validate(listSchema), controller.getBundleList);
+router.get(
+  "/examOperationall",
+  userAuth,
+  validate(listSchema),
+  controller.getBundleList,
+);
 router.get(
   "/readybundles",
   userAuth,
   validate(listSchema),
   controller.getReadyBundleList,
 );
+router.get("/", userAuth, validate(listSchema), controller.getBundleList);
 
 router.get(
   "/room",
@@ -190,6 +223,12 @@ const updateStatusSchema = {
 };
 
 router.post("/", userAuth, validate(createSchema), controller.createBundle);
+router.post(
+  "/auto",
+  userAuth,
+  validate(createAutoSchema),
+  controller.createBundleAuto,
+);
 router.patch(
   "/items/:examRoomMaterialBundleId",
   userAuth,

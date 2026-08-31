@@ -18,6 +18,11 @@ export async function findByExaminationSession(examinationSessionId) {
                 as: 'creator',
                 attributes: ['userId', 'userName', 'email'],
             },
+            {
+                model: model.pdfSplitJobModel,
+                as: 'splitJobs',
+                order: [['created_at', 'DESC']],
+            },
         ],
         order: [['created_at', 'DESC']],
     });
@@ -27,4 +32,8 @@ export async function findByS3FileId(s3FileId) {
     return model.examSessionAnswerSheetModel.findOne({
         where: { s3FileId },
     });
+}
+
+export async function update(id, data) {
+    return model.examSessionAnswerSheetModel.update(data, { where: { id } });
 }

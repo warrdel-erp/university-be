@@ -344,15 +344,6 @@ examinationSessionTermModel.belongsTo(examinationSessionModel, {
   as: "examinationSession",
 });
 
-examinationSessionTermModel.belongsTo(classSectionTermModel, {
-  foreignKey: "class_section_term_id",
-  as: "classSectionTerm",
-});
-classSectionTermModel.hasMany(examinationSessionTermModel, {
-  foreignKey: "class_section_term_id",
-  as: "examinationSessionTerms",
-});
-
 // Exam Invigilator Assignment Associations
 examInvigilatorAssignmentModel.belongsTo(universityModel, {
   foreignKey: "university_id",
@@ -2305,6 +2296,13 @@ examRoomMaterialBundleModel.hasMany(examRoomMaterialItemModel, {
   as: "items",
 });
 
+examRoomMaterialBundleModel.hasMany(examScheduleRoomCapacityModel, {
+  foreignKey: "class_room_section_id",
+  sourceKey: "classRoomSectionId",
+  as: "roomCapacities",
+  constraints: false,
+});
+
 // semesterModel.belongsTo(courseModel, {foreignKey: "courseId",as: "course"});
 // courseModel.hasMany(semesterModel, {foreignKey: "courseId",as: "semesters"});
 
@@ -3878,6 +3876,15 @@ s3FileModel.hasMany(examSessionAnswerSheetModel, {
 examSessionAnswerSheetModel.belongsTo(userModel, {
   foreignKey: "createdBy",
   as: "creator",
+});
+// One answer sheet → many split job attempts
+examSessionAnswerSheetModel.hasMany(pdfSplitJobModel, {
+  foreignKey: "examSessionAnswerSheetId",
+  as: "splitJobs",
+});
+pdfSplitJobModel.belongsTo(examSessionAnswerSheetModel, {
+  foreignKey: "examSessionAnswerSheetId",
+  as: "answerSheet",
 });
 
 studentHallTicketModel.belongsTo(examinationSessionModel, {

@@ -126,6 +126,16 @@ export async function finalizeParentJobIfDone(jobRecord) {
   };
 
   await pdfSplitJobRepository.updateJob(id, { status, progress, resultSummary });
+  await pdfSplitJobRepository.appendLog(id, {
+    event: "JOB_FINALIZED",
+    status,
+    processedStudents: freshJob.processedStudents,
+    totalStudents,
+    failedStudentsCount: failedSegments.length,
+    completedBatches: freshJob.completedBatches,
+    failedBatches: freshJob.failedBatches,
+    totalBatches: freshJob.totalBatches,
+  });
 
   console.log(
     `[PdfWorker] Parent job ${id} finalized → ${status} ` +

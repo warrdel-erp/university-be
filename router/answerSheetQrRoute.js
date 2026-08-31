@@ -13,6 +13,7 @@ import {
   assignObtainedMarksToAnswerSheet,
   splitAnswerSheetPdf,
   getSplitPdfJobStatus,
+  getMappedAnswerSheetsByExamSession,
 } from "../controllers/answerSheetQrController.js";
 
 const router = Router();
@@ -112,6 +113,44 @@ router.get(
   getAnswerSheetQrGenerationRequests
 );
 
+const numberList = z.preprocess(
+  (val) => (Array.isArray(val) ? val : String(val).split(",")),
+  z.array(z.coerce.number()),
+).optional();
+
+const optionalSelections = z.preprocess(
+  (val) => (typeof val === "string" ? JSON.parse(val) : val),
+  z.array(
+    z.object({
+      sessionCourseMappingId: z.coerce.number().optional(),
+      courseSessionMappingId: z.coerce.number().optional(),
+      terms: z.array(z.coerce.number()).optional(),
+    }).transform((item) => ({
+      sessionCourseMappingId:
+        item.sessionCourseMappingId ?? item.courseSessionMappingId,
+      terms: item.terms,
+    })),
+  ),
+).optional();
+
+const mappedByExamSessionSchema = z.object({
+  examinationSessionId: z.coerce.number(),
+  examScheduleId: numberList,
+  term: numberList,
+  selections: optionalSelections,
+  search: z.string().optional(),
+  page: z.coerce.number().default(1),
+  limit: z.coerce.number().default(20),
+});
+
+router.get(
+  "/mappedByExamSession",
+  userAuth,
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, null),
+  validate({ query: mappedByExamSessionSchema }),
+  getMappedAnswerSheetsByExamSession
+);
+
 router.get(
   "/requests/:requestId/qrs",
   userAuth,
@@ -173,7 +212,6 @@ const splitPdfSchema = z.object({
 router.post(
   "/splitPdf",
   userAuth,
-  checkAccessAny([PERMISSIONS.ANSWER_SHEET_QRS_ADD.value, PERMISSIONS.EXAM_TIME_TABLE_CREATE_SPLIT_SHEET.value], null),
   validate({ body: splitPdfSchema }),
   splitAnswerSheetPdf
 );
@@ -183,7 +221,6 @@ router.post(
 router.get(
   "/splitPdf/job/:jobDbId",
   userAuth,
-  checkAccessAny([PERMISSIONS.ANSWER_SHEET_QRS.value, PERMISSIONS.EXAM_TIME_TABLE_CREATE_SPLIT_SHEET.value], null),
   getSplitPdfJobStatus
 );
 

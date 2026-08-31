@@ -142,3 +142,6 @@
 1. DB backup.
 2. server roles & permission deployment error resolved.
 3. research on testing.
+4. changes for PDF upload for exam session in BE
+5. migrations error.
+6. error in create staff.

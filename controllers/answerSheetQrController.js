@@ -3,6 +3,8 @@ import * as answerSheetSplitterServices from "../services/answerSheetSplitterSer
 import { ErrorResponse, SuccessResponse } from "../utility/response.js";
 import * as s3Helper from "../utility/s3Helper.js";
 import * as s3FileRepository from "../repository/s3FileRepository.js";
+import * as examSessionAnswerSheetRepository from "../repository/examSessionAnswerSheetRepository.js";
+import * as pdfSplitJobRepository from "../repository/pdfSplitJobRepository.js";
 
 export async function generateAnswerSheetQrBulk(req, res) {
   try {
@@ -199,10 +201,27 @@ export async function splitAnswerSheetPdf(req, res) {
       );
     }
 
+    // ── Resolve answer-sheet row ───────────────────────────────────────────────
+    const answerSheet = await examSessionAnswerSheetRepository.findByS3FileId(fileUploadId);
+
+    // ── Guard: block re-split if already completed successfully ───────────────
+    if (answerSheet) {
+      const successJob = await pdfSplitJobRepository.findSuccessfulJobByAnswerSheetId(answerSheet.id);
+      if (successJob) {
+        return ErrorResponse(
+          res,
+          409,
+          `This file has already been split successfully (job: ${successJob.id}, status: ${successJob.status}). ` +
+          `Re-splitting a completed answer sheet is not allowed.`
+        );
+      }
+    }
+
     // ── Enqueue the job ───────────────────────────────────────────────────────
     const { jobId, jobDbId } = await answerSheetSplitterServices.enqueuePdfSplitJob(
       s3Key,
       req.user.userId,
+      answerSheet?.id ?? null,
     );
 
     return SuccessResponse(res, 202, "PDF split job queued successfully. Poll the status endpoint to track progress.", {
@@ -234,5 +253,27 @@ export async function getSplitPdfJobStatus(req, res) {
   } catch (error) {
     console.error("Error in getSplitPdfJobStatus controller:", error);
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function getMappedAnswerSheetsByExamSession(req, res) {
+  try {
+    const { data, pagination } =
+      await answerSheetQrServices.getMappedAnswerSheetsByExamSession(req.query);
+
+    return SuccessResponse(
+      res,
+      200,
+      "Mapped answer sheets fetched successfully",
+      data,
+      pagination,
+    );
+  } catch (error) {
+    console.error("Error in getMappedAnswerSheetsByExamSession:", error);
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch mapped answer sheets",
+    );
   }
 }

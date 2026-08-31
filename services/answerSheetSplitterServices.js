@@ -72,15 +72,17 @@ export async function checkDiskSpace(requiredBytes) {
  *
  * @param {string} s3Key
  * @param {number} createdBy
+ * @param {number|null} [examSessionAnswerSheetId]  - Links this attempt to the answer-sheet row.
  * @returns {Promise<{ jobId: string, jobDbId: string }>}
  */
-export async function enqueuePdfSplitJob(s3Key, createdBy) {
+export async function enqueuePdfSplitJob(s3Key, createdBy, examSessionAnswerSheetId = null) {
   const dbJob = await pdfSplitJobRepository.createJob({
     s3Key,
     createdBy,
     status: "PENDING",
     progress: 0,
     processedStudents: 0,
+    ...(examSessionAnswerSheetId ? { examSessionAnswerSheetId } : {}),
   });
 
   const queue = getPdfSplitQueue();

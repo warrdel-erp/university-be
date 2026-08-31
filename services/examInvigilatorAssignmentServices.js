@@ -5,6 +5,7 @@ import { formatDateKey } from "../utility/dateFormat.js";
 import { getRoomCentricMetrics } from "../utility/roomCentricHelper.js";
 import * as model from "../models/index.js";
 import { Op } from "sequelize";
+import { INVIGILATOR_ROOM_STATUS } from "../constant.js";
 
 function createBadRequestError(message) {
   const error = new Error(message);
@@ -582,11 +583,11 @@ export async function getListOfRoomsRoomWise(
     const roomAssignments = assignmentsMap.get(assKey) || [];
     const assignedCount = roomAssignments.length;
 
-    let invigilatorStatus = "PENDING";
+    let invigilatorStatus = INVIGILATOR_ROOM_STATUS.PENDING;
     if (assignedCount >= 2) {
-      invigilatorStatus = "READY";
+      invigilatorStatus = INVIGILATOR_ROOM_STATUS.READY;
     } else if (assignedCount > 0) {
-      invigilatorStatus = "PARTIAL";
+      invigilatorStatus = INVIGILATOR_ROOM_STATUS.PARTIAL;
     }
 
     if (!roomMap.has(key)) {

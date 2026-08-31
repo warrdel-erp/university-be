@@ -136,6 +136,12 @@ const examScheduleModel = sequelize.define(
             defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
             field: 'updated_at'
         },
+        published: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+            field: 'published'
+        },
         deletedAt: {
             type: DataTypes.DATE,
             allowNull: true,

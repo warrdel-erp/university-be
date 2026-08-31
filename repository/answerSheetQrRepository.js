@@ -6,30 +6,27 @@ function examScheduleDetailInclude() {
   return {
     model: model.examScheduleModel,
     as: "examSchedule",
-    attributes: ["examScheduleId", "examDate", "examTime", "duration", "term", "sessionId", "type"],
+    attributes: [
+      "examScheduleId",
+      "examDate",
+      "examTime",
+      "duration",
+      "term",
+      "sessionId",
+      "type",
+      "examinationSessionId",
+    ],
     required: false,
     include: [
       {
         model: model.subjectModel,
         as: "subjectSchedule",
-        attributes: ["subjectId", "subjectName", "subjectCode"],
-        required: false,
-      },
-      {
-        model: model.examSetupTypeTermModel,
-        as: "examSetupTypeTerm",
-        attributes: ["examSetupTypeTermId", "term", "courseId"],
+        attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
         required: false,
         include: [
           {
-            model: model.examSetupTypeModel,
-            as: "examSetupType",
-            attributes: ["examSetupTypeId", "examType", "examName"],
-            required: false,
-          },
-          {
             model: model.courseModel,
-            as: "course",
+            as: "courseInfo",
             attributes: ["courseId", "courseName", "courseCode", "termType"],
             required: false,
           },
@@ -151,32 +148,20 @@ export async function getScopedStudent(studentId, transaction) {
 }
 
 export async function getScopedExamSchedule(examScheduleId, transaction) {
-  const termScope = buildScope(model.examSetupTypeTermModel);
-
   return scoped(model.examScheduleModel).findOne({
     where: { examScheduleId },
-    attributes: ["examScheduleId", "examSetupTypeTermId", "sessionId"],
-    include: [
-      {
-        model: model.examSetupTypeTermModel,
-        as: "examSetupTypeTerm",
-        attributes: ["examSetupTypeTermId", "instituteId", "universityId"],
-        where: termScope,
-        required: true,
-      },
-    ],
+    attributes: ["examScheduleId", "examinationSessionId", "sessionId", "term"],
     transaction,
   });
 }
 
-export async function hasStudentHallTicketForExamTerm(
+export async function hasStudentHallTicketForExamSession(
   studentId,
-  examSetupTypeTermId,
-  sessionId,
+  examinationSessionId,
   transaction
 ) {
   const row = await scoped(model.studentHallTicketModel).findOne({
-    where: { studentId, examSetupTypeTermId, sessionId },
+    where: { studentId, examinationSessionId },
     attributes: ["id"],
     transaction,
   });
@@ -295,5 +280,206 @@ export async function getScriptsAssignedToTeacher(
     order: [["id", "DESC"]],
     limit,
     offset,
+  });
+}
+
+/**
+ * Resolve sessionCourseMappingId → courseId + sessionId, then matching exam_schedule ids.
+ */
+async function findExamScheduleIdsForSelections(
+  examinationSessionId,
+  selections,
+) {
+  const mappingIds = [];
+  for (const selection of selections) {
+    mappingIds.push(selection.sessionCourseMappingId);
+  }
+
+  const mappings = await scoped(model.sessionCouseMappingModel).findAll({
+    where: { sessionCourseMappingId: { [Op.in]: mappingIds } },
+    attributes: ["sessionCourseMappingId", "courseId", "sessionId"],
+  });
+
+  const mappingById = new Map();
+  for (const mapping of mappings) {
+    mappingById.set(mapping.sessionCourseMappingId, mapping);
+  }
+
+  const selectionOr = [];
+  for (const selection of selections) {
+    const mapping = mappingById.get(selection.sessionCourseMappingId);
+    if (!mapping) {
+      continue;
+    }
+
+    const clause = {
+      sessionId: mapping.sessionId,
+      "$subjectSchedule.course_id$": mapping.courseId,
+    };
+    if (selection.terms && selection.terms.length > 0) {
+      clause.term = { [Op.in]: selection.terms };
+    }
+    selectionOr.push(clause);
+  }
+
+  if (selectionOr.length === 0) {
+    return [];
+  }
+
+  const rows = await scoped(model.examScheduleModel).findAll({
+    where: {
+      examinationSessionId,
+      ...buildScope(model.examScheduleModel),
+      [Op.or]: selectionOr,
+    },
+    attributes: ["examScheduleId"],
+    include: [
+      {
+        model: model.subjectModel,
+        as: "subjectSchedule",
+        attributes: [],
+        required: true,
+      },
+    ],
+  });
+
+  const examScheduleIds = [];
+  for (const row of rows) {
+    examScheduleIds.push(row.examScheduleId);
+  }
+  return examScheduleIds;
+}
+
+/**
+ * Answer sheets that have a mapped S3 file and belong to schedules
+ * under the given examination session.
+ */
+export async function getMappedAnswerSheetsByExamSession(
+  examinationSessionId,
+  filters,
+  limit,
+  offset,
+) {
+  const examScheduleWhere = {
+    examinationSessionId,
+    ...buildScope(model.examScheduleModel),
+  };
+
+  if (filters.examScheduleId && filters.examScheduleId.length > 0) {
+    examScheduleWhere.examScheduleId = { [Op.in]: filters.examScheduleId };
+  }
+
+  if (filters.term && filters.term.length > 0) {
+    examScheduleWhere.term = { [Op.in]: filters.term };
+  }
+
+  if (filters.selections && filters.selections.length > 0) {
+    const selectionScheduleIds = await findExamScheduleIdsForSelections(
+      examinationSessionId,
+      filters.selections,
+    );
+    if (selectionScheduleIds.length === 0) {
+      return { count: 0, rows: [] };
+    }
+
+    if (examScheduleWhere.examScheduleId) {
+      const allowed = new Set(selectionScheduleIds);
+      const intersected = [];
+      for (const id of examScheduleWhere.examScheduleId[Op.in]) {
+        if (allowed.has(id)) {
+          intersected.push(id);
+        }
+      }
+      if (intersected.length === 0) {
+        return { count: 0, rows: [] };
+      }
+      examScheduleWhere.examScheduleId = { [Op.in]: intersected };
+    } else {
+      examScheduleWhere.examScheduleId = { [Op.in]: selectionScheduleIds };
+    }
+  }
+
+  const qrWhere = {
+    fileUploadId: { [Op.ne]: null },
+  };
+
+  if (filters.search) {
+    const like = `%${filters.search}%`;
+    qrWhere[Op.or] = [
+      { "$student.first_name$": { [Op.like]: like } },
+      { "$student.middle_name$": { [Op.like]: like } },
+      { "$student.last_name$": { [Op.like]: like } },
+      { "$examSchedule.subjectSchedule.subject_name$": { [Op.like]: like } },
+    ];
+  }
+
+  return scoped(model.answerSheetQrModel).findAndCountAll({
+    where: qrWhere,
+    attributes: [
+      "id",
+      "qr",
+      "studentId",
+      "examScheduleId",
+      "assignedToUser",
+      "evaluatedAt",
+      "obtainedMarks",
+      "fileUploadId",
+      "createdAt",
+    ],
+    include: [
+      {
+        model: model.examScheduleModel,
+        as: "examSchedule",
+        required: true,
+        where: examScheduleWhere,
+        attributes: [
+          "examScheduleId",
+          "examinationSessionId",
+          "examDate",
+          "examTime",
+          "term",
+          "type",
+          "subjectId",
+        ],
+        include: [
+          {
+            model: model.subjectModel,
+            as: "subjectSchedule",
+            attributes: ["subjectId", "subjectName", "subjectCode"],
+            required: false,
+          },
+        ],
+      },
+      {
+        model: model.studentModel,
+        as: "student",
+        attributes: [
+          "studentId",
+          "firstName",
+          "middleName",
+          "lastName",
+          "enrollNumber",
+          "scholarNumber",
+        ],
+        required: false,
+      },
+      {
+        model: model.s3FileModel,
+        as: "s3File",
+        required: true,
+        attributes: ["id", "status", "s3Key"],
+      },
+      {
+        model: model.userModel,
+        as: "assignedTeacher",
+        attributes: ["userId", "userName", "email"],
+        required: false,
+      },
+    ],
+    order: [["id", "DESC"]],
+    limit,
+    offset,
+    distinct: true,
+    subQuery: false,
   });
 }

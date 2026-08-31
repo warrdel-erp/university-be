@@ -104,33 +104,8 @@ export async function deleteExamAttendance(examAttendanceId) {
 export async function getExamOperationsAttendance(filters, pagination) {
   const { page = 1, limit = 10 } = pagination;
 
-  // Reuse the same room-with-exams query from the invigilator module
   const allRows = await getRoomsWithExams(filters);
 
-  // Build a set of all unique examScheduleRoomCapacityIds to batch-fetch seat counts
-  const capacityIds = allRows.map((rc) => rc.examScheduleRoomCapacityId);
-
-  // Batch fetch seat counts grouped by examScheduleRoomCapacityId
-  const seatCounts = capacityIds.length
-    ? await model.studentExamSeatModel.findAll({
-        where: { examScheduleRoomCapacityId: { [Op.in]: capacityIds } },
-        attributes: [
-          "examScheduleRoomCapacityId",
-          [sequelize.fn("COUNT", sequelize.col("student_id")), "studentCount"],
-        ],
-        group: ["examScheduleRoomCapacityId"],
-        raw: true,
-      })
-    : [];
-
-  const seatCountMap = new Map(
-    seatCounts.map((r) => [
-      Number(r.examScheduleRoomCapacityId),
-      parseInt(r.studentCount, 10) || 0,
-    ]),
-  );
-
-  // Group by classRoomSectionId + examDate + examinationSessionSlotId
   const roomMap = new Map();
 
   for (const rc of allRows) {
@@ -138,7 +113,6 @@ export async function getExamOperationsAttendance(filters, pagination) {
     const schedule = rc.examSchedule;
     const subject = schedule?.subjectSchedule;
     const slot = schedule?.examinationSessionSlot;
-    const studentCount = seatCountMap.get(rc.examScheduleRoomCapacityId) || 0;
 
     const examEntry = {
       examScheduleRoomCapacityId: rc.examScheduleRoomCapacityId,
@@ -150,7 +124,7 @@ export async function getExamOperationsAttendance(filters, pagination) {
       subjectCode: subject?.subjectCode,
       courseId: subject?.courseId,
       capacity: rc.capacity,
-      studentCount,
+      studentCount: 0,
     };
 
     const examDateStr = formatDateKey(schedule?.examDate);
@@ -185,6 +159,40 @@ export async function getExamOperationsAttendance(filters, pagination) {
   const limitNum = Number(limit);
   const offset = (pageNum - 1) * limitNum;
   const paginatedRooms = allUniqueRooms.slice(offset, offset + limitNum);
+
+  const capacityIds = [];
+  for (const room of paginatedRooms) {
+    for (const exam of room.exams) {
+      capacityIds.push(exam.examScheduleRoomCapacityId);
+    }
+  }
+
+  const seatCounts = capacityIds.length
+    ? await model.studentExamSeatModel.findAll({
+        where: { examScheduleRoomCapacityId: { [Op.in]: capacityIds } },
+        attributes: [
+          "examScheduleRoomCapacityId",
+          [sequelize.fn("COUNT", sequelize.col("student_id")), "studentCount"],
+        ],
+        group: ["examScheduleRoomCapacityId"],
+        raw: true,
+      })
+    : [];
+
+  const seatCountMap = new Map();
+  for (const row of seatCounts) {
+    seatCountMap.set(
+      Number(row.examScheduleRoomCapacityId),
+      parseInt(row.studentCount, 10) || 0,
+    );
+  }
+
+  for (const room of paginatedRooms) {
+    for (const exam of room.exams) {
+      exam.studentCount =
+        seatCountMap.get(exam.examScheduleRoomCapacityId) || 0;
+    }
+  }
 
   return {
     rooms: paginatedRooms,

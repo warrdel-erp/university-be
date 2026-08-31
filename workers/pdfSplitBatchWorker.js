@@ -69,6 +69,14 @@ async function processBatchJob(bullmqJob) {
       `batch ${batchIndex + 1}/${totalBatches} (${segments.length} students)`
   );
 
+  await pdfSplitJobRepository.appendLog(jobDbId, {
+    event: "BATCH_STARTED",
+    batchIndex,
+    batchJobId: bullmqJob.id,
+    segmentCount: segments.length,
+    attempt: bullmqJob.attemptsMade + 1,
+  });
+
   // ── Ensure source PDF is available ───────────────────────────────────────
   // May be missing if the server restarted after orchestration but before this batch ran.
   let resolvedTempPath = tempPdfPath;
@@ -78,8 +86,15 @@ async function processBatchJob(bullmqJob) {
     );
     resolvedTempPath = getTempPdfPath(jobDbId);
     await downloadPdfToTemp(s3Key, resolvedTempPath);
+    await pdfSplitJobRepository.appendLog(jobDbId, {
+      event: "TEMP_PDF_REDOWNLOADED",
+      batchIndex,
+      reason: "Temp file missing — server likely restarted between orchestration and batch execution",
+    });
     console.log(`[BatchWorker] Re-download complete → ${resolvedTempPath}`);
   }
+
+  const batchStart = Date.now();
 
   const results = [];
   const transaction = await sequelize.transaction();
@@ -165,6 +180,18 @@ async function processBatchJob(bullmqJob) {
         `${updatedJob.processedStudents}/${totalStudents} students`
     );
 
+    await pdfSplitJobRepository.appendLog(jobDbId, {
+      event: "BATCH_COMPLETED",
+      batchIndex,
+      batchJobId: bullmqJob.id,
+      segmentCount: segments.length,
+      processedStudents: updatedJob.processedStudents,
+      totalStudents,
+      completedBatches: updatedJob.completedBatches,
+      totalBatches,
+      durationMs: Date.now() - batchStart,
+    });
+
     // ── Check if this was the last batch ─────────────────────────────────
     await finalizeParentJobIfDone(updatedJob);
 
@@ -207,6 +234,16 @@ batchWorker.on("failed", async (job, err) => {
     console.warn(
       `[BatchWorker] Job ${job.id} failed (attempt ${job.attemptsMade}/${job.opts?.attempts}) — will retry.`
     );
+    const { jobDbId, batchIndex } = job.data;
+    // Fire-and-forget — retry warning should never block the retry itself
+    pdfSplitJobRepository.appendLog(jobDbId, {
+      event: "BATCH_ATTEMPT_FAILED",
+      batchIndex,
+      batchJobId: job.id,
+      attempt: job.attemptsMade,
+      maxAttempts: job.opts?.attempts,
+      error: err.message,
+    }).catch(() => {});
     return;
   }
 
@@ -224,6 +261,15 @@ batchWorker.on("failed", async (job, err) => {
       failedReason: err.message,
       attemptsMade: job.attemptsMade,
       segments, // { pageIndex, qrValue, dbRowId, studentId, examScheduleId }
+    });
+
+    await pdfSplitJobRepository.appendLog(jobDbId, {
+      event: "BATCH_PERMANENTLY_FAILED",
+      batchIndex,
+      batchJobId: job.id,
+      attempts: job.attemptsMade,
+      error: err.message,
+      segmentCount: segments?.length ?? 0,
     });
 
     // Step 2: atomic counter + finalization

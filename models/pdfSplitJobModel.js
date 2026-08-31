@@ -15,6 +15,11 @@ const pdfSplitJobModel = sequelize.define(
       allowNull: true,
       field: "bullmq_job_id",
     },
+    examSessionAnswerSheetId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "exam_session_answer_sheet_id",
+    },
     s3Key: {
       type: DataTypes.STRING(512),
       allowNull: false,
@@ -48,6 +53,13 @@ const pdfSplitJobModel = sequelize.define(
       ),
       allowNull: false,
       defaultValue: "PENDING",
+    },
+    /** Ordered list of status transitions with timestamps — appended on every status change. */
+    statusLog: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: null,
+      field: "status_log",
     },
     progress: {
       type: DataTypes.INTEGER,

@@ -174,9 +174,9 @@ export async function getMyAssignments(req, res) {
 
 export async function getListOfRoomsRoomWise(req, res) {
     try {
-        const { examinationSessionId, examDate, page = 1, limit = 10 } = req.query;
+        const { examinationSessionId, examDate, page = 1, limit = 10, selections } = req.query;
         const result = await examInvigilatorAssignmentServices.getListOfRoomsRoomWise(
-            { examinationSessionId, examDate },
+            { examinationSessionId, examDate, selections },
             { page: Number(page), limit: Number(limit) },
         );
         return SuccessResponse(res, 200, "Rooms list fetched successfully", result.rooms, {
