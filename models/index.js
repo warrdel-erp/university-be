@@ -3102,6 +3102,8 @@ userModel.hasMany(scheduleAssignModel, {
   as: "assignedSchedules",
 });
 scheduleAssignModel.belongsTo(userModel, { foreignKey: "userId", as: "user" });
+scheduleAssignModel.belongsTo(employeeModel, { foreignKey: "userId", targetKey: "userId", as: "employeeSchedule" });
+employeeModel.hasMany(scheduleAssignModel, { foreignKey: "userId", sourceKey: "userId", as: "employeeScheduleAssigns" });
 
 scheduleAssignModel.hasMany(teacherAttendeceModel, {
   foreignKey: "scheduleAssignId",
