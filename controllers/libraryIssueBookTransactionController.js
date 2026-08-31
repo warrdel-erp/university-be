@@ -32,14 +32,24 @@ export async function getMyLibraryIssueBookTransactions(req, res) {
     if (!validation.valid) {
       return ErrorResponse(res, validation.status, validation.message);
     }
-    const { userId } = validation;
+    if (!validation.employeeRecord) {
+      const page = Number(req.query.page ?? 1);
+      const limit = Number(req.query.limit ?? 20);
+      return SuccessResponse(
+        res,
+        200,
+        "Library issue book transactions fetched successfully",
+        [],
+        { total: 0, page, limit },
+      );
+    }
 
     const { page, limit, search } = req.query;
     const { data, paginationData } = await services.getLibraryIssueBookTransactions({
       page,
       limit,
       search,
-      memberId: userId,
+      memberId: validation.userId,
       memberType: "TEACHER",
     });
 

@@ -2,15 +2,6 @@ import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 
 export async function addBalance(data, options = {}) {
-  const employee = await scoped(model.employeeModel).findOne({
-    attributes: ["userId"],
-    where: { userId: data.userId },
-    transaction: options.transaction,
-  });
-  if (!employee) {
-    throw new Error("Employee not found");
-  }
-
   const policy = await scoped(model.leavePolicyModel).findOne({
     attributes: ["policyId"],
     where: { policyId: data.policyId },
@@ -24,14 +15,6 @@ export async function addBalance(data, options = {}) {
 }
 
 export async function getBalancesByEmployee(userId) {
-  const employee = await scoped(model.employeeModel).findOne({
-    attributes: ["userId"],
-    where: { userId },
-  });
-  if (!employee) {
-    return [];
-  }
-
   return scoped(model.leaveBalanceModel).findAll({
     where: { userId },
     include: [
@@ -46,14 +29,6 @@ export async function getBalancesByEmployee(userId) {
 }
 
 export async function getBalance(userId, policyId) {
-  const employee = await scoped(model.employeeModel).findOne({
-    attributes: ["userId"],
-    where: { userId },
-  });
-  if (!employee) {
-    return null;
-  }
-
   return scoped(model.leaveBalanceModel).findOne({
     where: { userId, policyId },
     include: [
@@ -82,15 +57,6 @@ export async function updateBalance(balanceId, data, options = {}) {
     transaction: options.transaction,
   });
   if (!balance) {
-    return [0];
-  }
-
-  const employee = await scoped(model.employeeModel).findOne({
-    attributes: ["userId"],
-    where: { userId: balance.userId },
-    transaction: options.transaction,
-  });
-  if (!employee) {
     return [0];
   }
 

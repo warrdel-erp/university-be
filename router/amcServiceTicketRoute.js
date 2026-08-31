@@ -97,9 +97,10 @@ import { PERMISSIONS } from "../const/permissions.js";
 
 router.post("/", userAuth, checkAccess(PERMISSIONS.SERVICE_TICKETS_ADD.value, 'amcServiceTicket'), validate({ body: addServiceTicketSchema }), addServiceTicket);
 router.get("/numberpreview", userAuth, checkAccess(PERMISSIONS.SERVICE_TICKETS_ADD.value, 'amcServiceTicket'), previewServiceTicketNumber);
-router.get("/my/numberpreview", userAuth, checkAccess(PERMISSIONS.SERVICE_TICKETS_ADD.value, 'amcServiceTicket'), previewServiceTicketNumber);
-router.get("/my/summary", userAuth, checkAccess(PERMISSIONS.SERVICE_TICKETS.value, 'amcServiceTicket'), getMyServiceTicketSummary);
-router.get("/my", userAuth, checkAccess(PERMISSIONS.SERVICE_TICKETS.value, 'amcServiceTicket'), validate({ query: listQuerySchema }), getMyServiceTickets);
+router.get("/my/numberpreview", userAuth,  previewServiceTicketNumber);
+router.get("/my/summary", userAuth, getMyServiceTicketSummary);
+router.get("/my", userAuth, validate({ query: listQuerySchema }), getMyServiceTickets);
+
 router.get("/summary", userAuth, checkAccess(PERMISSIONS.SERVICE_TICKETS.value, 'amcServiceTicket'), getServiceTicketSummary);
 router.get("/", userAuth, checkAccess(PERMISSIONS.SERVICE_TICKETS.value, 'amcServiceTicket'), validate({ query: listQuerySchema }), getAllServiceTickets);
 router.get(

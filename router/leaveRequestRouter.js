@@ -7,11 +7,11 @@ import { checkAccess, checkAccessAny } from "../middleware/checkAccess.js";
 import { PERMISSIONS } from "../const/permissions.js";
 
 router.post("/", userAuth, checkAccessAny([PERMISSIONS.PENDING_LEAVE_REQUEST.value, PERMISSIONS.APPLY_LEAVE_ADD.value], null), addRequest);
-router.post("/my", userAuth, checkAccessAny([PERMISSIONS.PENDING_LEAVE_REQUEST.value, PERMISSIONS.APPLY_LEAVE_ADD.value], null), addMyRequest);
-router.get("/my", userAuth, checkAccess(PERMISSIONS.APPLY_LEAVE.value, null), getMyRequests);
+router.post("/my", userAuth, addMyRequest);
+router.get("/my", userAuth, getMyRequests);
 router.get("/", userAuth, checkAccessAny([PERMISSIONS.PENDING_LEAVE_REQUEST.value, PERMISSIONS.APPLY_LEAVE.value], null), getAllRequests);
 router.get("/single", userAuth, checkAccessAny([PERMISSIONS.PENDING_LEAVE_REQUEST.value, PERMISSIONS.APPLY_LEAVE.value], null), getRequestById);
 router.patch("/status", userAuth, checkAccess(PERMISSIONS.PENDING_LEAVE_REQUEST.value, null), updateRequestStatus);
-router.patch("/status/my", userAuth, checkAccess(PERMISSIONS.APPLY_LEAVE.value, null), updateMyRequestStatus);
+router.patch("/status/my", userAuth, updateMyRequestStatus);
 
 export default router;

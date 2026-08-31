@@ -1,5 +1,4 @@
 import * as service from "../services/leaveRequestService.js";
-import { validateEmployeeUser } from "../utility/employeeValidation.js";
 
 export async function addRequest(req, res) {
   const requiredFields = ["userId", "policyId", "startDate", "endDate", "totalDays"];
@@ -18,16 +17,13 @@ export async function addRequest(req, res) {
 }
 
 export async function addMyRequest(req, res) {
-  const validation = await validateEmployeeUser(req, res);
-  if (!validation.valid) {
-    return res.status(validation.status).json({ message: validation.message });
-  }
-  if (!validation.employeeRecord) {
-    return res.status(200).json({});
+  const userId = req.user?.userId;
+  if (!userId) {
+    return res.status(404).json({ message: "User ID not found" });
   }
 
   const requiredFields = ["policyId", "startDate", "endDate", "totalDays"];
-  const data = { ...req.body, userId: validation.userId };
+  const data = { ...req.body, userId };
 
   try {
     for (const f of requiredFields) {
@@ -53,15 +49,12 @@ export async function getAllRequests(req, res) {
 
 export async function getMyRequests(req, res) {
   try {
-    const validation = await validateEmployeeUser(req, res);
-    if (!validation.valid) {
-      return res.status(validation.status).json({ message: validation.message });
-    }
-    if (!validation.employeeRecord) {
-      return res.status(200).json([]);
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(404).json({ message: "User ID not found" });
     }
 
-    const requests = await service.getRequests({ userId: validation.userId });
+    const requests = await service.getRequests({ userId });
     res.status(200).json(requests);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -91,12 +84,9 @@ export async function updateRequestStatus(req, res) {
 }
 
 export async function updateMyRequestStatus(req, res) {
-  const validation = await validateEmployeeUser(req, res);
-  if (!validation.valid) {
-    return res.status(validation.status).json({ message: validation.message });
-  }
-  if (!validation.employeeRecord) {
-    return res.status(200).json({});
+  const userId = req.user?.userId;
+  if (!userId) {
+    return res.status(404).json({ message: "User ID not found" });
   }
 
   try {
@@ -105,9 +95,9 @@ export async function updateMyRequestStatus(req, res) {
 
     const request = await service.getRequestById(requestId);
     if (!request) return res.status(404).json({ message: "Request not found" });
-    if (request.userId !== validation.userId) return res.status(403).json({ message: "Forbidden" });
+    if (request.userId !== userId) return res.status(403).json({ message: "Forbidden" });
 
-    const updated = await service.updateRequestStatus(requestId, status, validation.userId);
+    const updated = await service.updateRequestStatus(requestId, status, userId);
     res.status(200).json({ message: "Request status updated", updated });
   } catch (err) {
     res.status(500).json({ error: err.message });
