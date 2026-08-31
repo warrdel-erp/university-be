@@ -526,10 +526,13 @@ export async function listAssetReturnTransactions(query) {
     settlementByReturnId,
     securityAmountByIssueId,
     issueTransactionIdsByReturnId,
-  } = await returnRepo.findAssetReturnTransactionsListBundle({
-    page: query.page,
-    limit: query.limit,
-  });
+  } = await returnRepo.findAssetReturnTransactionsListBundle(
+    { memberId: query.memberId },
+    {
+      page: query.page,
+      limit: query.limit,
+    }
+  );
 
   const returnRows = rows.map(toPlain);
   const itemsByReturnId = new Map();

@@ -20,6 +20,16 @@ export async function getAllAssetIssues(req, res) {
   }
 }
 
+export async function getMyAssetIssues(req, res) {
+  try {
+    const query = { ...req.query, memberId: req.user.userId };
+    const { data, pagination } = await assetIssueService.listAssetIssues(query);
+    return SuccessResponse(res, 200, "Asset issues fetched successfully", data, pagination);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
 export async function getAssetIssuePaymentsById(req, res) {
   try {
     const { assetIssueTransactionId } = req.query;
@@ -63,6 +73,16 @@ export async function getAllAssetReturnTransactions(req, res) {
   try {
     const { data, pagination } = await assetReturnService.listAssetReturnTransactions(req.query);
     return SuccessResponse(res, 200, "Asset return transactions fetched successfully", data, pagination);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function getMyAssetReturnTransactions(req, res) {
+  try {
+    const query = { ...req.query, memberId: req.user.userId };
+    const { data, pagination } = await assetReturnService.listAssetReturnTransactions(query);
+    return SuccessResponse(res, 200, "Asset returns fetched successfully", data, pagination);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }

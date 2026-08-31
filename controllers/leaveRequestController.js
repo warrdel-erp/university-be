@@ -18,6 +18,22 @@ export async function addRequest(req, res) {
   }
 }
 
+export async function addMyRequest(req, res) {
+  const requiredFields = ["policyId", "startDate", "endDate", "totalDays"];
+  const data = { ...req.body, userId: req.user.userId };
+
+  try {
+    for (const f of requiredFields) {
+      if (!data[f]) return res.status(400).json({ message: `${f} is required` });
+    }
+
+    const request = await service.addRequest(data);
+    res.status(201).json({ message: "Leave request submitted", request });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
 export async function getAllRequests(req, res) {
   try {
     const { userId } = req.query;

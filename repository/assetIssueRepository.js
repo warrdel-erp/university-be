@@ -359,9 +359,15 @@ export async function updateAssetIssueInventoryItemById(
 }
 
 function buildAssetIssueWhere(filters = {}) {
+  const where = {};
+  
+  if (filters.memberId !== undefined) {
+    where.memberId = filters.memberId;
+  }
+  
   const search = filters.search?.trim();
   if (!search) {
-    return {};
+    return where;
   }
 
   const pattern = { [Op.like]: `%${search}%` };
@@ -379,6 +385,7 @@ function buildAssetIssueWhere(filters = {}) {
   }
 
   return {
+    ...where,
     [Op.or]: orParts,
   };
 }

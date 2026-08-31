@@ -415,7 +415,7 @@ export async function listAssetIssues(query) {
     itemStatsByIssueId,
     securityAmountByIssueId,
   } = await repo.findAssetIssuesPaginated(
-    { search: query.search },
+    { search: query.search, memberId: query.memberId },
     { page: query.page, limit: query.limit }
   );
 

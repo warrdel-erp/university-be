@@ -384,6 +384,7 @@ export async function findAssetReturnTransactionByIdForInstitute(
 }
 
 export async function findAssetReturnTransactionsPaginated(
+  filters = {},
   pagination = {},
   options = {}
 ) {
@@ -391,6 +392,9 @@ export async function findAssetReturnTransactionsPaginated(
   const limit = Number(pagination.limit) || 20;
   const offset = (page - 1) * limit;
   const issueScope = buildScope(model.assetIssueTransactionModel);
+  if (filters.memberId !== undefined) {
+    issueScope.memberId = filters.memberId;
+  }
 
   const { count, rows } = await scoped(model.assetReturnTransactionModel).findAndCountAll({
     attributes: ["assetReturnTransactionId", "returnDate"],
@@ -453,10 +457,12 @@ export async function findReturnedIssueItemsByReturnTransactionIds(
 }
 
 export async function findAssetReturnTransactionsListBundle(
+  filters = {},
   pagination = {},
   options = {}
 ) {
   const { rows, total, page, limit } = await findAssetReturnTransactionsPaginated(
+    filters,
     pagination,
     options
   );
