@@ -993,7 +993,14 @@ export async function checkRoomConflictRepository(
       classRoomSectionId,
       day,
     },
+    attributes: ["timeTableCellId", "day", "period", "classRoomSectionId"],
     include: [
+      {
+        model: model.classRoomModel,
+        as: "classRoom",
+        attributes: ["roomNumber"],
+        required: false,
+      },
       {
         model: model.timeTableStructurePeriodsModel,
         as: "timeTablecreation",

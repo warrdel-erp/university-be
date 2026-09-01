@@ -25,6 +25,7 @@ import { buildTermName, termsForYear } from "../utility/courseTerms.js";
 import { formatQueryDate } from "../utility/helper.js";
 import { randomUUID } from "crypto";
 import { getTenantStore } from "../utility/requestContext.js";
+import { scoped } from "../utility/scoped.js";
 
 const DAYS = [
   "Monday",
@@ -663,8 +664,15 @@ async function assertNoSlotConflicts({
         transaction,
       );
     if (conflict) {
+      const employee = await model.employeeModel.findOne({
+        where: { userId: Number(userId) },
+        attributes: ["employeeName"],
+        transaction,
+      });
+      const teacherName = employee?.employeeName || `User #${userId}`;
+      const slot = `${day} (${periodInfo.startTime}-${periodInfo.endTime})`;
       throwSlotConflictError(
-        "Teacher conflict: teacher already scheduled for this slot",
+        `Teacher conflict: ${teacherName} already scheduled on ${slot}`,
       );
     }
   }
@@ -682,9 +690,24 @@ async function assertNoSlotConflicts({
         transaction,
       );
     if (conflict) {
-      throwSlotConflictError(
-        "Room conflict: classroom already occupied for this slot",
-      );
+      const conflictPlain = conflict?.get
+        ? conflict.get({ plain: true })
+        : conflict;
+      let roomLabel;
+      if (conflictPlain?.classRoom?.roomNumber) {
+        roomLabel = `Room ${conflictPlain.classRoom.roomNumber}`;
+      } else {
+        const room = await scoped(model.classRoomModel).findOne({
+          where: { classRoomSectionId: Number(classRoomSectionId) },
+          attributes: ["roomNumber"],
+          transaction,
+        });
+        roomLabel = room?.roomNumber
+          ? `Room ${room.roomNumber}`
+          : `Room #${classRoomSectionId}`;
+      }
+      const slot = `${day} (${periodInfo.startTime}-${periodInfo.endTime})`;
+      throwSlotConflictError(`Room conflict: ${roomLabel} occupied on ${slot}`);
     }
   }
 
@@ -1396,19 +1419,44 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
         );
       }
 
-      await assertNoSlotConflicts({
-        userId,
-        classRoomSectionId,
-        day,
-        periodInfo,
-        startingDate: routine.startingDate,
-        endingDate: routine.endingDate,
-        conflictOptions,
-        electiveSubjectId: payload.electiveSubjectId,
-        courseId: routine.courseId,
-        excludeRoutineId: routine.timeTableRoutineId,
-        transaction,
-      });
+      const teacherList = Array.isArray(payload.teachers)
+        ? payload.teachers
+        : [];
+      if (teacherList.length === 0 && userId != null) {
+        teacherList.push({ userId });
+      }
+
+      for (const teacher of teacherList) {
+        await assertNoSlotConflicts({
+          userId: teacher.userId,
+          classRoomSectionId,
+          day,
+          periodInfo,
+          startingDate: routine.startingDate,
+          endingDate: routine.endingDate,
+          conflictOptions,
+          electiveSubjectId: payload.electiveSubjectId,
+          courseId: routine.courseId,
+          excludeRoutineId: routine.timeTableRoutineId,
+          transaction,
+        });
+      }
+
+      if (teacherList.length === 0) {
+        await assertNoSlotConflicts({
+          userId: null,
+          classRoomSectionId,
+          day,
+          periodInfo,
+          startingDate: routine.startingDate,
+          endingDate: routine.endingDate,
+          conflictOptions,
+          electiveSubjectId: payload.electiveSubjectId,
+          courseId: routine.courseId,
+          excludeRoutineId: routine.timeTableRoutineId,
+          transaction,
+        });
+      }
 
       for (const target of routineTargets) {
         const rowData = stripMappingRow({
@@ -2054,9 +2102,24 @@ export async function updateSimpleTeacherMapping(
         );
 
       if (roomConflict) {
-        throw new Error(
-          "Room conflict: classroom already occupied for this slot",
-        );
+        const conflictPlain = roomConflict?.get
+          ? roomConflict.get({ plain: true })
+          : roomConflict;
+        let roomLabel;
+        if (conflictPlain?.classRoom?.roomNumber) {
+          roomLabel = `Room ${conflictPlain.classRoom.roomNumber}`;
+        } else {
+          const room = await scoped(model.classRoomModel).findOne({
+            where: { classRoomSectionId: Number(effectiveRoomId) },
+            attributes: ["roomNumber"],
+            transaction,
+          });
+          roomLabel = room?.roomNumber
+            ? `Room ${room.roomNumber}`
+            : `Room #${effectiveRoomId}`;
+        }
+        const slot = `${baseRow.day} (${periodInfo.startTime}-${periodInfo.endTime})`;
+        throwSlotConflictError(`Room conflict: ${roomLabel} occupied on ${slot}`);
       }
     }
 
@@ -2074,8 +2137,16 @@ export async function updateSimpleTeacherMapping(
           );
 
         if (conflict) {
-          throw new Error(
-            "Teacher conflict: teacher already scheduled for this slot",
+          const employee = await model.employeeModel.findOne({
+            where: { userId: Number(item.userId) },
+            attributes: ["employeeName"],
+            transaction,
+          });
+          const teacherName =
+            employee?.employeeName || `User #${item.userId}`;
+          const slot = `${baseRow.day} (${periodInfo.startTime}-${periodInfo.endTime})`;
+          throwSlotConflictError(
+            `Teacher conflict: ${teacherName} already scheduled on ${slot}`,
           );
         }
       }
