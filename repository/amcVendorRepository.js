@@ -146,8 +146,17 @@ export async function findAmcVendorByName(vendorName, options = {}) {
 }
 
 export async function findAmcVendors(options = {}) {
-  const { search, page = 1, limit = 20 } = options;
+  const { search, page = 1, limit = 20, assetCategoryIds } = options;
+
+  if (assetCategoryIds !== undefined && !assetCategoryIds.length) {
+    return { rows: [], total: 0, page, limit };
+  }
+
   const where = {};
+
+  if (assetCategoryIds !== undefined && assetCategoryIds.length) {
+    where.assetCategoryId = { [Op.in]: assetCategoryIds };
+  }
 
   if (search) {
     const term = `%${search}%`;
@@ -186,6 +195,27 @@ export async function findAmcVendors(options = {}) {
     page,
     limit,
   };
+}
+
+export async function findAssetCategoryIdsByAssetIds(assetIds, options = {}) {
+  if (!assetIds.length) {
+    return [];
+  }
+
+  const rows = await scoped(model.assetModel).findAll({
+    attributes: ["assetCategoryId"],
+    where: { assetId: { [Op.in]: assetIds } },
+    group: ["assetCategoryId"],
+    raw: true,
+    transaction: options.transaction,
+  });
+
+  const assetCategoryIds = [];
+  for (const row of rows) {
+    assetCategoryIds.push(row.assetCategoryId);
+  }
+
+  return assetCategoryIds;
 }
 
 export async function findAmcVendorById(amcVendorId, options = {}) {

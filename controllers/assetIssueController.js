@@ -32,7 +32,7 @@ export async function getMyAssetIssues(req, res) {
       return SuccessResponse(res, 200, "Asset issues fetched successfully", [], emptyPagination(page, limit));
     }
 
-    const query = { ...req.query, memberId: validation.userId };
+    const query = { ...req.query, memberId: validation.userId, memberType: "TEACHER" };
     const { data, pagination } = await assetIssueService.listAssetIssues(query);
     return SuccessResponse(res, 200, "Asset issues fetched successfully", data, pagination);
   } catch (error) {

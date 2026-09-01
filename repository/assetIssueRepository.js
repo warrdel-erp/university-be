@@ -364,6 +364,10 @@ function buildAssetIssueWhere(filters = {}) {
   if (filters.memberId !== undefined) {
     where.memberId = filters.memberId;
   }
+
+  if (filters.memberType !== undefined) {
+    where.memberType = filters.memberType;
+  }
   
   const search = filters.search?.trim();
   if (!search) {

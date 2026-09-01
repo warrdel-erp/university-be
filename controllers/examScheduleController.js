@@ -1,4 +1,5 @@
 import * as examScheduleServices from '../services/examScheduleServices.js';
+import * as teacherExamAssignmentServices from '../services/teacherExamAssignmentServices.js';
 import { SuccessResponse, ErrorResponse } from '../utility/response.js';
 
 export const getExamSchedules = async (req, res) => {
@@ -33,6 +34,33 @@ export const getExamScheduleById = async (req, res) => {
         return SuccessResponse(res, 200, "Exam schedule fetched successfully", result);
     } catch (error) {
         console.error("Error in getExamScheduleById controller:", error);
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
+    }
+};
+
+export const getMyExamScheduleById = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { id } = req.params;
+
+        const assignments = await teacherExamAssignmentServices.getAssignments({
+            examScheduleId: Number(id),
+            userId,
+        });
+
+        if (!assignments.length) {
+            return ErrorResponse(res, 404, "Exam schedule not found or not assigned to you");
+        }
+
+        const result = await examScheduleServices.getExamScheduleById(id);
+
+        if (!result) {
+            return ErrorResponse(res, 404, "Exam schedule not found");
+        }
+
+        return SuccessResponse(res, 200, "Exam schedule fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getMyExamScheduleById controller:", error);
         return ErrorResponse(res, 500, "Internal Server Error", error.message);
     }
 };

@@ -1,5 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as repo from "../repository/amcVendorRepository.js";
+import * as serviceTicketRepo from "../repository/amcServiceTicketRepository.js";
 import {
   buildVendorCodeFromSlug,
   deriveVendorSlugCandidates,
@@ -133,6 +134,16 @@ export async function listAmcVendors(query = {}) {
     return await sequelize.transaction(async (transaction) =>
       repo.findAmcVendors({ ...query, transaction })
     );
+  } catch (error) {
+    throw new Error(`Failed to fetch AMC vendors: ${error.message}`);
+  }
+}
+
+export async function listMyAmcVendors(userId, query = {}) {
+  try {
+    const assetIds = await serviceTicketRepo.findAssetIdsIssuedToMember(userId);
+    const assetCategoryIds = await repo.findAssetCategoryIdsByAssetIds(assetIds);
+    return await listAmcVendors({ ...query, assetCategoryIds });
   } catch (error) {
     throw new Error(`Failed to fetch AMC vendors: ${error.message}`);
   }

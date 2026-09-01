@@ -4,6 +4,7 @@ import { validate } from "../utility/validation.js";
 import {
   addAmcVendor,
   getAllAmcVendor,
+  getMyAmcVendors,
   getSingleAmcVendorDetails,
   updateAmcVendor,
   deleteAmcVendor,
@@ -90,6 +91,7 @@ router.post(
   previewAmcVendorCode
 );
 router.get("/", userAuth, checkAccess(PERMISSIONS.AMC_VENDORS.value, 'amcVendor'), validate({ query: listQuerySchema }), getAllAmcVendor);
+router.get("/my", userAuth, validate({ query: listQuerySchema }), getMyAmcVendors);
 router.get(
   "/single",
   userAuth,

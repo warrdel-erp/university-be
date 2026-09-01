@@ -103,6 +103,10 @@ const getExamScheduleStudentsSchema = z.object({
   examScheduleId: z.coerce.number().int().positive().optional(),
 });
 
+const examScheduleIdParamSchema = z.object({
+  id: z.coerce.number().int().positive(),
+});
+
 router.get("/", userAuth, examScheduleController.getExamSchedules);
 
 router.get(
@@ -124,6 +128,13 @@ router.get(
   userAuth,
   validate({ query: getExamScheduleStudentsSchema }),
   examScheduleController.getExamScheduleStudents,
+);
+
+router.get(
+  "/my/:id",
+  userAuth,
+  validate({ params: examScheduleIdParamSchema }),
+  examScheduleController.getMyExamScheduleById,
 );
 
 router.get("/:id", userAuth, examScheduleController.getExamScheduleById);

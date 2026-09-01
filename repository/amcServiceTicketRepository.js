@@ -1,7 +1,7 @@
 import { Op } from "sequelize";
 import sequelize from "../database/sequelizeConfig.js";
 import * as model from "../models/index.js";
-import { scoped } from "../utility/scoped.js";
+import { buildScope, scoped } from "../utility/scoped.js";
 
 const ticketListInclude = [
   {
@@ -24,7 +24,7 @@ const ticketListInclude = [
   },
 ];
 
-function buildTicketWhere({ search, status, priority, amcVendorId } = {}) {
+function buildTicketWhere({ search, status, priority, amcVendorId, assetIds } = {}) {
   const where = {};
 
   if (status) {
@@ -37,6 +37,10 @@ function buildTicketWhere({ search, status, priority, amcVendorId } = {}) {
 
   if (amcVendorId) {
     where.amcVendorId = amcVendorId;
+  }
+
+  if (assetIds !== undefined && assetIds.length) {
+    where.assetId = { [Op.in]: assetIds };
   }
 
   if (search) {
@@ -114,20 +118,73 @@ export async function createServiceTicket(data, options = {}) {
   return scoped(model.amcServiceTicketModel).create(data, { transaction: options.transaction });
 }
 
+export async function findAssetIdsIssuedToMember(userId, options = {}) {
+  const rows = await scoped(model.assetIssueInventoryItemModel).findAll({
+    attributes: [[sequelize.col("inventoryItem.asset_id"), "assetId"]],
+    where: { assetReturnTransactionId: null },
+    include: [
+      {
+        model: model.assetIssueTransactionModel,
+        as: "transaction",
+        attributes: [],
+        required: true,
+        where: {
+          memberId: userId,
+          memberType: "TEACHER",
+          ...buildScope(model.assetIssueTransactionModel),
+        },
+      },
+      {
+        model: model.assetInventoryItemModel,
+        as: "inventoryItem",
+        attributes: [],
+        required: true,
+        where: buildScope(model.assetInventoryItemModel),
+      },
+    ],
+    group: [sequelize.col("inventoryItem.asset_id")],
+    raw: true,
+    subQuery: false,
+    transaction: options.transaction,
+  });
+
+  const assetIds = [];
+  for (const row of rows) {
+    assetIds.push(row.assetId);
+  }
+
+  return assetIds;
+}
+
 export async function findAndCountServiceTickets(options = {}) {
-  const { search, status, priority, amcVendorId, page = 1, limit = 20, transaction } = options;
+  const { search, status, priority, amcVendorId, assetIds, page = 1, limit = 20, transaction } =
+    options;
+
+  if (assetIds !== undefined && !assetIds.length) {
+    return { rows: [], count: 0 };
+  }
 
   return scoped(model.amcServiceTicketModel).findAndCountAll({
-    ...ticketListQuery({ search, status, priority, amcVendorId }, { transaction }),
+    ...ticketListQuery({ search, status, priority, amcVendorId, assetIds }, { transaction }),
     limit,
     offset: (page - 1) * limit,
   });
 }
 
 export async function findServiceTicketById(serviceTicketId, options = {}) {
+  const { assetIds, transaction } = options;
+  const where = { serviceTicketId };
+
+  if (assetIds !== undefined) {
+    if (!assetIds.length) {
+      return null;
+    }
+    where.assetId = { [Op.in]: assetIds };
+  }
+
   return scoped(model.amcServiceTicketModel).findOne({
-    ...ticketListQuery({}, options),
-    where: { serviceTicketId },
+    ...ticketListQuery({}, { transaction }),
+    where,
   });
 }
 
@@ -157,9 +214,26 @@ export async function deleteServiceTicket(serviceTicketId, options = {}) {
 }
 
 export async function findServiceTicketSummaryStats(options = {}) {
+  const { assetIds, transaction } = options;
+
+  if (assetIds !== undefined && !assetIds.length) {
+    return {
+      openTickets: 0,
+      assignedTickets: 0,
+      inProgressTickets: 0,
+      escalatedTickets: 0,
+      resolvedMtd: 0,
+    };
+  }
+
   const monthStart = new Date();
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
+
+  const where = {};
+  if (assetIds !== undefined && assetIds.length) {
+    where.assetId = { [Op.in]: assetIds };
+  }
 
   const row = await scoped(model.amcServiceTicketModel).findOne({
     attributes: [
@@ -192,8 +266,9 @@ export async function findServiceTicketSummaryStats(options = {}) {
         "resolvedMtd",
       ],
     ],
+    where,
     raw: true,
-    transaction: options.transaction,
+    transaction,
   });
 
   return {

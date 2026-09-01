@@ -164,14 +164,12 @@ router.get(
 router.get(
   "/my/summary",
   userAuth,
-  checkAccess(PERMISSIONS.TEACHER_EVALUATION.value, null),
   getMyEvaluationSummary,
 );
 
 router.get(
   "/my",
   userAuth,
-  checkAccess(PERMISSIONS.TEACHER_EVALUATION.value, null),
   validate({ query: paginationSchema }),
   getMyAssignedScripts,
 );

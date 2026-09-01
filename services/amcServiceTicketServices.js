@@ -55,6 +55,24 @@ function assertTicketExists(row) {
   return row;
 }
 
+function assertAssetIssuedToMember(assetId, assetIds) {
+  const numericAssetId = Number(assetId);
+  let found = false;
+
+  for (const id of assetIds) {
+    if (Number(id) === numericAssetId) {
+      found = true;
+      break;
+    }
+  }
+
+  if (!found) {
+    const err = new Error("assetId not found in your issued assets");
+    err.statusCode = 400;
+    throw err;
+  }
+}
+
 export async function addServiceTicket(body) {
   try {
     return await sequelize.transaction(async (transaction) => {
@@ -89,6 +107,19 @@ export async function addServiceTicket(body) {
   }
 }
 
+export async function addMyServiceTicket(userId, body) {
+  try {
+    const assetIds = await repo.findAssetIdsIssuedToMember(userId);
+    assertAssetIssuedToMember(body.assetId, assetIds);
+    return await addServiceTicket(body);
+  } catch (error) {
+    if (error.statusCode) {
+      throw error;
+    }
+    throw new Error(`Failed to create service ticket: ${error.message}`);
+  }
+}
+
 export async function listServiceTickets(query = {}) {
   try {
     const page = query.page ?? 1;
@@ -105,9 +136,27 @@ export async function listServiceTickets(query = {}) {
   }
 }
 
+export async function listMyServiceTickets(userId, query = {}) {
+  try {
+    const assetIds = await repo.findAssetIdsIssuedToMember(userId);
+    return await listServiceTickets({ ...query, assetIds });
+  } catch (error) {
+    throw new Error(`Failed to fetch service tickets: ${error.message}`);
+  }
+}
+
 export async function getSingleServiceTicket(serviceTicketId) {
   try {
     return await repo.findServiceTicketById(serviceTicketId);
+  } catch (error) {
+    throw new Error(`Failed to fetch service ticket: ${error.message}`);
+  }
+}
+
+export async function getMySingleServiceTicket(userId, serviceTicketId) {
+  try {
+    const assetIds = await repo.findAssetIdsIssuedToMember(userId);
+    return await repo.findServiceTicketById(serviceTicketId, { assetIds });
   } catch (error) {
     throw new Error(`Failed to fetch service ticket: ${error.message}`);
   }
@@ -184,6 +233,15 @@ export async function previewTicketNumber() {
     });
   } catch (error) {
     throw new Error(`Failed to preview ticket number: ${error.message}`);
+  }
+}
+
+export async function getMyServiceTicketSummary(userId) {
+  try {
+    const assetIds = await repo.findAssetIdsIssuedToMember(userId);
+    return await repo.findServiceTicketSummaryStats({ assetIds });
+  } catch (error) {
+    throw new Error(`Failed to fetch service ticket summary: ${error.message}`);
   }
 }
 

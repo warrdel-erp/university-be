@@ -62,6 +62,15 @@ router.get("/single", userAuth, checkAccess(PERMISSIONS.COURSES.value), validate
 
 router.get("/withSubjects", userAuth, checkAccess(PERMISSIONS.COURSES.value), validate({ query: courseListWithSubjectsSchema }), courseController.getCourseWithSubjects);
 
+router.get("/my/single", userAuth, courseController.getMyMappedSubjectById);
+router.get("/my/subjects", userAuth, courseController.getMyMappedSubjects);
+router.get(
+  "/my/:courseId/sessions",
+  userAuth,
+  validate({ params: courseIdParamSchema, query: getCourseSessionsSchema }),
+  courseController.getMyCourseSessions
+);
+
 router.get("/:courseId/sessions", userAuth, checkAccess(PERMISSIONS.COURSES.value), validate({ query: getCourseSessionsSchema }), courseController.getCourseSessions);
 
 router.get(
@@ -78,9 +87,6 @@ router.get(
   checkAccess(PERMISSIONS.COURSES.value, null),
   courseController.getTermOptionsByCourse,
 );
-
-router.get("/my/single", userAuth, courseController.getMyMappedSubjectById);
-router.get("/my/subjects", userAuth, courseController.getMyMappedSubjects);
 
 router.delete(
   "/:courseId",

@@ -154,7 +154,6 @@ router.get("/my", userAuth, getMyEmployeeDetails);
 router.get(
   "/my/uniqueClassSectionSubjects",
   userAuth,
-  checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
   validate({ query: uniqueClassSectionSubjectsQuerySchemaWithoutUserId }),
   getMyUniqueClassSectionSubjects,
 );
@@ -162,7 +161,6 @@ router.get(
 router.get(
   "/my/schedule",
   userAuth,
-  checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
   validate({ query: scheduleQuerySchemaWithoutUserId }),
   getMyTodayClassSchedule,
 );
@@ -170,7 +168,6 @@ router.get(
 router.get(
   "/my/pastSchedule",
   userAuth,
-  checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
   validate({ query: scheduleQuerySchemaWithoutUserId }),
   getMyPastClassSchedules,
 );
@@ -178,21 +175,18 @@ router.get(
 router.get(
   "/my/upcomingSchedule",
   userAuth,
-  checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
   getMyUpcomingClassSchedules,
 );
 
 router.get(
   "/my/sectionCounts",
   userAuth,
-  checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
   getMySectionCounts,
 );
 
 router.get(
   "/my/sectionDates",
   userAuth,
-  checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
   validate({ query: sectionDatesQuerySchemaWithoutUserId }),
   getMyEmployeeSectionDates,
 );
@@ -200,7 +194,6 @@ router.get(
 router.get(
   "/my/coursesFromSchedule",
   userAuth,
-  checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
   getMyTeacherSubjectsFromSchedule,
 );
 

@@ -8,8 +8,10 @@ import {
 } from "../constant.js";
 import {
   addServiceTicket,
+  addMyServiceTicket,
   getAllServiceTickets,
   getSingleServiceTicketDetails,
+  getMySingleServiceTicketDetails,
   updateServiceTicket,
   deleteServiceTicket,
   previewServiceTicketNumber,
@@ -96,9 +98,16 @@ import { checkAccess } from "../middleware/checkAccess.js";
 import { PERMISSIONS } from "../const/permissions.js";
 
 router.post("/", userAuth, checkAccess(PERMISSIONS.SERVICE_TICKETS_ADD.value, 'amcServiceTicket'), validate({ body: addServiceTicketSchema }), addServiceTicket);
+router.post("/my", userAuth, validate({ body: addServiceTicketSchema }), addMyServiceTicket);
 router.get("/numberpreview", userAuth, checkAccess(PERMISSIONS.SERVICE_TICKETS_ADD.value, 'amcServiceTicket'), previewServiceTicketNumber);
 router.get("/my/numberpreview", userAuth,  previewServiceTicketNumber);
 router.get("/my/summary", userAuth, getMyServiceTicketSummary);
+router.get(
+  "/my/single",
+  userAuth,
+  validate({ query: serviceTicketIdQuerySchema }),
+  getMySingleServiceTicketDetails
+);
 router.get("/my", userAuth, validate({ query: listQuerySchema }), getMyServiceTickets);
 
 router.get("/summary", userAuth, checkAccess(PERMISSIONS.SERVICE_TICKETS.value, 'amcServiceTicket'), getServiceTicketSummary);

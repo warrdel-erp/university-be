@@ -1,14 +1,19 @@
 import * as amcServiceTicketService from "../services/amcServiceTicketServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
-import {
-  emptyPagination,
-  emptyServiceTicketSummary,
-  validateEmployeeUser,
-} from "../utility/employeeValidation.js";
 
 export async function addServiceTicket(req, res) {
   try {
     const row = await amcServiceTicketService.addServiceTicket(req.body);
+    return SuccessResponse(res, 201, "Service ticket raised successfully", row);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function addMyServiceTicket(req, res) {
+  try {
+    const userId = req.user.userId;
+    const row = await amcServiceTicketService.addMyServiceTicket(userId, req.body);
     return SuccessResponse(res, 201, "Service ticket raised successfully", row);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
@@ -28,6 +33,20 @@ export async function getSingleServiceTicketDetails(req, res) {
   try {
     const { serviceTicketId } = req.query;
     const row = await amcServiceTicketService.getSingleServiceTicket(serviceTicketId);
+    if (!row) {
+      return ErrorResponse(res, 404, "Service ticket not found");
+    }
+    return SuccessResponse(res, 200, "Service ticket fetched successfully", row);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function getMySingleServiceTicketDetails(req, res) {
+  try {
+    const userId = req.user.userId;
+    const { serviceTicketId } = req.query;
+    const row = await amcServiceTicketService.getMySingleServiceTicket(userId, serviceTicketId);
     if (!row) {
       return ErrorResponse(res, 404, "Service ticket not found");
     }
@@ -73,21 +92,8 @@ export async function previewServiceTicketNumber(req, res) {
 
 export async function getMyServiceTickets(req, res) {
   try {
-    const validation = await validateEmployeeUser(req, res);
-    if (!validation.valid) {
-      return ErrorResponse(res, validation.status, validation.message);
-    }
-    if (!validation.employeeRecord) {
-      const { page = 1, limit = 20 } = req.query;
-      return SuccessResponse(
-        res,
-        200,
-        "Service tickets fetched successfully",
-        { rows: [], total: 0, page: parseInt(page, 10) || 1, limit: parseInt(limit, 10) || 20 },
-      );
-    }
-
-    const result = await amcServiceTicketService.listServiceTickets(req.query);
+    const userId = req.user.userId;
+    const result = await amcServiceTicketService.listMyServiceTickets(userId, req.query);
     return SuccessResponse(res, 200, "Service tickets fetched successfully", result);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
@@ -96,15 +102,8 @@ export async function getMyServiceTickets(req, res) {
 
 export async function getMyServiceTicketSummary(req, res) {
   try {
-    const validation = await validateEmployeeUser(req, res);
-    if (!validation.valid) {
-      return ErrorResponse(res, validation.status, validation.message);
-    }
-    if (!validation.employeeRecord) {
-      return SuccessResponse(res, 200, "Service ticket summary fetched successfully", emptyServiceTicketSummary());
-    }
-
-    const data = await amcServiceTicketService.getServiceTicketSummary();
+    const userId = req.user.userId;
+    const data = await amcServiceTicketService.getMyServiceTicketSummary(userId);
     return SuccessResponse(res, 200, "Service ticket summary fetched successfully", data);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");

@@ -29,6 +29,15 @@ export async function getAllPolicies(req, res) {
   }
 }
 
+export async function getMyPolicies(req, res) {
+  try {
+    const policies = await service.getActivePolicies();
+    res.status(200).json(policies);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 export async function getPolicyById(req, res) {
   try {
     const { policyId } = req.query;

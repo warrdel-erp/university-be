@@ -246,6 +246,24 @@
           }
         },
         {
+          "name": "GET My Course Sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/course/my/{{courseId}}/sessions",
+              "host": ["{{baseurl}}"],
+              "path": ["course", "my", "{{courseId}}", "sessions"]
+            },
+            "description": "Returns course sessions when the course is mapped to the logged-in teacher via subject mapping or timetable."
+          }
+        },
+        {
           "name": "GET My Exam Assignments",
           "request": {
             "method": "GET",
@@ -260,6 +278,24 @@
               "host": ["{{baseurl}}"],
               "path": ["teacherExamAssignment", "my"]
             }
+          }
+        },
+        {
+          "name": "GET My Exam Schedule by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examSchedule/my/{{examScheduleId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["examSchedule", "my", "{{examScheduleId}}"]
+            },
+            "description": "Returns exam schedule details when assigned to the logged-in teacher via teacherExamAssignment."
           }
         },
         {
@@ -1123,6 +1159,30 @@
           }
         },
         {
+          "name": "GET My Course Options",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/options/my/courses?courseLevelId=",
+              "host": ["{{baseurl}}"],
+              "path": ["options", "my", "courses"],
+              "query": [
+                {
+                  "key": "courseLevelId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Returns { label, value } course options for the logged-in teacher. Returns [] when not mapped."
+          }
+        },
+        {
           "name": "POST My Lecture Window",
           "request": {
             "method": "POST",
@@ -1265,6 +1325,24 @@
     {
       "name": "Leave Requests & Balance",
       "item": [
+        {
+          "name": "GET My Leave Policies",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/leave-policies/my",
+              "host": ["{{baseurl}}"],
+              "path": ["leave-policies", "my"]
+            },
+            "description": "Returns active leave policies for the logged-in user (no LEAVE_POLICY admin permission required). Use for apply-leave policy dropdown."
+          }
+        },
         {
           "name": "GET My Leave Requests",
           "request": {
@@ -1409,7 +1487,57 @@
                 }
               ]
             },
-            "description": "Returns empty list when user has no employee record (not 404)."
+            "description": "Returns tickets for assets currently issued to the logged-in user. Empty when no issued assets."
+          }
+        },
+        {
+          "name": "POST My Service Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assetId\": 1,\n  \"issue\": \"Device not powering on\",\n  \"issueType\": \"HARDWARE\",\n  \"problemDescription\": \"Laptop does not turn on after charging.\",\n  \"downtimeStartedAt\": \"2026-09-01T09:00:00+05:30\",\n  \"priority\": \"MEDIUM\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/serviceTicket/my",
+              "host": ["{{baseurl}}"],
+              "path": ["serviceTicket", "my"]
+            },
+            "description": "Raises a ticket only for an asset currently issued to the logged-in user."
+          }
+        },
+        {
+          "name": "GET My Single Service Ticket",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/serviceTicket/my/single?serviceTicketId=2",
+              "host": ["{{baseurl}}"],
+              "path": ["serviceTicket", "my", "single"],
+              "query": [
+                {
+                  "key": "serviceTicketId",
+                  "value": "2"
+                }
+              ]
+            },
+            "description": "Returns ticket details only when it belongs to an asset issued to the logged-in user."
           }
         },
         {
@@ -1427,7 +1555,7 @@
               "host": ["{{baseurl}}"],
               "path": ["serviceTicket", "my", "summary"]
             },
-            "description": "Returns zero counts when user has no employee record (not 404)."
+            "description": "Returns zero counts for tickets on assets issued to the logged-in user."
           }
         },
         {
@@ -1445,6 +1573,34 @@
               "host": ["{{baseurl}}"],
               "path": ["serviceTicket", "my", "numberpreview"]
             }
+          }
+        },
+        {
+          "name": "GET My AMC Vendors",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/amcVendor/my?page=1&limit=100",
+              "host": ["{{baseurl}}"],
+              "path": ["amcVendor", "my"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "100"
+                }
+              ]
+            },
+            "description": "Returns AMC vendors for asset categories of assets currently issued to the logged-in teacher."
           }
         }
       ]
@@ -1569,6 +1725,16 @@
     },
     {
       "key": "blueprintId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "courseId",
+      "value": "34",
+      "type": "string"
+    },
+    {
+      "key": "examScheduleId",
       "value": "1",
       "type": "string"
     }

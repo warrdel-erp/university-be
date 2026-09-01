@@ -24,6 +24,28 @@ export const getCourseOptions = async (req, res) => {
     }
 };
 
+export async function getMyCourseOptions(req, res) {
+    try {
+        const validation = await validateEmployeeUser(req, res);
+        if (!validation.valid) {
+            return ErrorResponse(res, validation.status, validation.message);
+        }
+        if (!validation.employeeRecord) {
+            return SuccessResponse(res, 200, "Course options fetched successfully", []);
+        }
+
+        const { courseLevelId } = req.query;
+        const result = await optionsServices.getMyCourseOptions(
+            courseLevelId,
+            validation.userId,
+        );
+        return SuccessResponse(res, 200, "Course options fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getMyCourseOptions:", error);
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
+    }
+}
+
 export const getTermOptions = async (req, res) => {
     try {
         const { courseId } = req.query;

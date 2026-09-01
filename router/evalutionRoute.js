@@ -25,7 +25,7 @@ const getEvaluationQuerySchema = z.object({
 
 router.post('/', userAuth, checkAccess(PERMISSIONS.EVALUATION.value, null), addEvaluation);
 
-router.get('/my', userAuth, checkAccess(PERMISSIONS.TEACHER_EVALUATION.value, null), validate({ query: getEvaluationQuerySchema }), getMyEvaluation);
+router.get('/my', userAuth, validate({ query: getEvaluationQuerySchema }), getMyEvaluation);
 
 router.get('/', userAuth, checkAccess(PERMISSIONS.EVALUATION.value, null), validate({ query: getEvaluationQuerySchema }), getAllEvaluation);
 

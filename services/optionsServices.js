@@ -12,6 +12,10 @@ export async function getCourseOptions(courseLevelId) {
     return await optionsRepository.getCourseOptions(courseLevelId);
 }
 
+export async function getMyCourseOptions(courseLevelId, userId) {
+    return await optionsRepository.getMyCourseOptions(courseLevelId, userId);
+}
+
 export async function getTermOptions(courseId) {
     const course = await optionsRepository.getCourseData(courseId);
     if (!course) return [];
