@@ -2,6 +2,8 @@ import { Op } from "sequelize";
 import * as model from "../models/index.js";
 import { scoped } from "../utility/scoped.js";
 
+import { requestContext } from "../utility/requestContext.js";
+
 const excludeMeta = ["createdAt", "updatedAt", "deletedAt", "createdBy"];
 
 function toCampusRecord(campus, createdBy) {
@@ -21,7 +23,10 @@ function toCampusRecord(campus, createdBy) {
 
 export async function createCampus(campus, createdBy) {
   try {
-    return scoped(model.campusModel).create(toCampusRecord(campus, createdBy));
+    const record = toCampusRecord(campus, createdBy);
+    record.universityId = requestContext.getStore()?.universityId;
+    
+    return model.campusModel.create(record);
   } catch (error) {
     console.error("Error in Campus Repository (createCampus):", error);
     throw error;
