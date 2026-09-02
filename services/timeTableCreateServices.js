@@ -4695,12 +4695,21 @@ export async function getRoutineByTeacherAndAcademicYear(
   courseId,
   sessionId,
   subjectId,
+  options = {},
 ) {
+  const weekStart = options.weekStart || null;
+  const weekEnd = options.weekEnd || null;
+
   const bundle = await timeTableCreateRepository.getTeacherRoutineBundle(
     userId,
     courseId,
     sessionId,
     subjectId,
+    {
+      weekStart,
+      weekEnd,
+      publishedOnly: options.publishedOnly === true,
+    },
   );
 
   const employee = bundle.employee;
@@ -4832,6 +4841,12 @@ export async function getRoutineByTeacherAndAcademicYear(
     }
 
     for (const seg of segments) {
+      if (weekStart != null && weekEnd != null) {
+        if (seg.startDate > weekEnd || seg.endDate < weekStart) {
+          continue;
+        }
+      }
+
       const activeElectiveCells = [];
       for (const er of electiveRoutines) {
         if (er.startDate <= seg.endDate && er.endDate >= seg.startDate) {
@@ -4875,6 +4890,7 @@ export async function getRoutineByTeacherAndAcademicYear(
             formattedDays.push({
               name: daysName,
               isDayOff: true,
+              scheduleItems: [],
             });
             continue;
           }
@@ -4883,6 +4899,7 @@ export async function getRoutineByTeacherAndAcademicYear(
             formattedDays.push({
               name: daysName,
               isBreak: true,
+              scheduleItems: [],
             });
             continue;
           }

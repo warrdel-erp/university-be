@@ -2644,6 +2644,7 @@ async function fetchNormalRoutinesForTeacher(
   courseId,
   sessionId,
   subjectId,
+  options = {},
 ) {
   const cellSubjectWhere = await buildCellSubjectWhere(subjectId);
   const routineWhere = {
@@ -2654,6 +2655,14 @@ async function fetchNormalRoutinesForTeacher(
       { courseId: courseId },
       { academicGroupId: { [Op.not]: null } },
     ];
+  }
+  if (options.publishedOnly === true) {
+    routineWhere.isPublish = true;
+  }
+  if (options.weekStart != null && options.weekEnd != null) {
+    // Overlap: routine.startingDate <= weekEnd AND routine.endingDate >= weekStart
+    routineWhere.startingDate = { [Op.lte]: options.weekEnd };
+    routineWhere.endingDate = { [Op.gte]: options.weekStart };
   }
 
   return scoped(model.timeTableRoutineModel).findAll({
@@ -2849,11 +2858,12 @@ export async function getTeacherRoutineBundle(
   courseId,
   sessionId,
   subjectId,
+  options = {},
 ) {
   const [[employee, course, session, classSections], normalRoutines] =
     await Promise.all([
       fetchTeacherRoutineContext(userId, courseId, sessionId),
-      fetchNormalRoutinesForTeacher(userId, courseId, sessionId, subjectId),
+      fetchNormalRoutinesForTeacher(userId, courseId, sessionId, subjectId, options),
     ]);
 
   const timeTableNameIds = [];
