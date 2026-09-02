@@ -288,16 +288,40 @@ function assertMappingRoutineEditable(routine) {
   }
 }
 
+function throwPublishedWeekMappingBlock(action) {
+  const error = new Error(
+    `Cannot ${action} week mapping on a published routine. Use PATCH /timeTableCreate/dateWiseCells with timeTableCellDateWiseId instead.`,
+  );
+  error.statusCode = 400;
+  throw error;
+}
+
+function assertMappingAddAllowed(routine) {
+  if (routine.isPublish) {
+    const error = new Error(
+      "Cannot add mapping to a published routine. Update date-wise cells instead.",
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+}
+
+function assertWeekMappingChangeAllowed(routine, action) {
+  if (routine.isPublish) {
+    throwPublishedWeekMappingBlock(action);
+  }
+  assertMappingRoutineEditable(routine);
+}
+
 /**
  * Unpublished draft: week cell (+ teachers) may be deleted anytime.
- * Published: only before/on start date per assertMappingRoutineEditable;
- * date-wise rows (if any) are removed with the cell graph.
+ * Published: week mapping delete is blocked; use date-wise cell APIs.
  */
 function assertMappingDeletable(routine) {
   if (!routine.isPublish) {
     return;
   }
-  assertMappingRoutineEditable(routine);
+  throwPublishedWeekMappingBlock("delete");
 }
 
 function assertRoutineEditable(startingDate) {
@@ -624,6 +648,164 @@ function throwSlotConflictError(message) {
   throw error;
 }
 
+async function resolveSlotConflictContext(
+  conflict,
+  fallbackPeriodInfo,
+  transaction,
+) {
+  const conflictPlain = conflict?.get
+    ? conflict.get({ plain: true })
+    : conflict;
+  const periodFromConflict =
+    conflictPlain?.timeTablecreation || fallbackPeriodInfo;
+  const routine = conflictPlain?.timeTableRoutine;
+  const day = conflictPlain?.day || fallbackPeriodInfo?.day;
+  const period = conflictPlain?.period;
+  const startTime =
+    periodFromConflict?.startTime || fallbackPeriodInfo?.startTime;
+  const endTime = periodFromConflict?.endTime || fallbackPeriodInfo?.endTime;
+  const slot =
+    day && startTime && endTime
+      ? `${day} (${startTime}-${endTime})`
+      : day || "unknown slot";
+
+  let classSectionLabel = "N/A";
+  let yearLabel = "N/A";
+  let termLabel = "N/A";
+
+  if (routine?.classSectionTermId) {
+    const termRow = await findClassSectionTermById(routine.classSectionTermId, {
+      transaction,
+    });
+    const termPlain = termRow?.get ? termRow.get({ plain: true }) : termRow;
+    if (termPlain) {
+      termLabel = String(termPlain.term ?? "N/A");
+      const section = termPlain.classSection;
+      if (section) {
+        classSectionLabel = section.section ?? "N/A";
+        yearLabel = section.year != null ? String(section.year) : "N/A";
+      }
+    }
+  }
+
+  let academicYearLabel = "N/A";
+  if (routine?.academicYearId) {
+    const academicYear = await scoped(model.acedmicYearModel).findOne({
+      where: { academicYearId: Number(routine.academicYearId) },
+      attributes: ["yearTitle"],
+      transaction,
+    });
+    academicYearLabel =
+      academicYear?.yearTitle ?? String(routine.academicYearId);
+  }
+
+  let dateLabel = "N/A";
+  if (routine?.isPublish && conflictPlain?.timeTableCellId) {
+    const firstDate =
+      await timeTableCreateRepository.findFirstDateWiseDateForCell(
+        conflictPlain.timeTableCellId,
+        { transaction },
+      );
+    if (firstDate) {
+      dateLabel = firstDate;
+    }
+  }
+  if (dateLabel === "N/A" && routine?.startingDate && routine?.endingDate) {
+    dateLabel = `${toDateOnlyString(routine.startingDate)} to ${toDateOnlyString(routine.endingDate)}`;
+  }
+
+  const periodLabel = period != null ? String(period) : "N/A";
+
+  return {
+    slot,
+    classSectionLabel,
+    yearLabel,
+    termLabel,
+    periodLabel,
+    dateLabel,
+    academicYearLabel,
+  };
+}
+
+function formatSlotConflictDetails(context) {
+  return (
+    ` (classSection: ${context.classSectionLabel}, year: ${context.yearLabel},` +
+    ` term: ${context.termLabel}, period: ${context.periodLabel},` +
+    ` date: ${context.dateLabel}, academicYear: ${context.academicYearLabel})`
+  );
+}
+
+async function resolveRoomLabel(conflict, classRoomSectionId, transaction) {
+  const conflictPlain = conflict?.get
+    ? conflict.get({ plain: true })
+    : conflict;
+
+  if (conflictPlain?.classRoom?.roomNumber) {
+    return `Room ${conflictPlain.classRoom.roomNumber}`;
+  }
+
+  const lookupRoomSectionId =
+    conflictPlain?.classRoomSectionId ?? classRoomSectionId;
+  const room = await scoped(model.classRoomModel).findOne({
+    where: { classRoomSectionId: Number(lookupRoomSectionId) },
+    attributes: ["roomNumber"],
+    transaction,
+  });
+
+  if (room?.roomNumber) {
+    return `Room ${room.roomNumber}`;
+  }
+
+  return `Room #${lookupRoomSectionId}`;
+}
+
+async function buildTeacherConflictMessage(
+  userId,
+  conflict,
+  fallbackPeriodInfo,
+  transaction,
+) {
+  const employee = await model.employeeModel.findOne({
+    where: { userId: Number(userId) },
+    attributes: ["employeeName"],
+    transaction,
+  });
+  const teacherName = employee?.employeeName || `User #${userId}`;
+  const context = await resolveSlotConflictContext(
+    conflict,
+    fallbackPeriodInfo,
+    transaction,
+  );
+
+  return (
+    `Teacher conflict: ${teacherName} already scheduled on ${context.slot}` +
+    formatSlotConflictDetails(context)
+  );
+}
+
+async function buildRoomConflictMessage(
+  conflict,
+  classRoomSectionId,
+  fallbackPeriodInfo,
+  transaction,
+) {
+  const roomLabel = await resolveRoomLabel(
+    conflict,
+    classRoomSectionId,
+    transaction,
+  );
+  const context = await resolveSlotConflictContext(
+    conflict,
+    fallbackPeriodInfo,
+    transaction,
+  );
+
+  return (
+    `Room conflict: ${roomLabel} occupied on ${context.slot}` +
+    formatSlotConflictDetails(context)
+  );
+}
+
 async function assertNoSlotConflicts({
   userId,
   classRoomSectionId,
@@ -664,16 +846,13 @@ async function assertNoSlotConflicts({
         transaction,
       );
     if (conflict) {
-      const employee = await model.employeeModel.findOne({
-        where: { userId: Number(userId) },
-        attributes: ["employeeName"],
+      const message = await buildTeacherConflictMessage(
+        userId,
+        conflict,
+        { day, ...periodInfo },
         transaction,
-      });
-      const teacherName = employee?.employeeName || `User #${userId}`;
-      const slot = `${day} (${periodInfo.startTime}-${periodInfo.endTime})`;
-      throwSlotConflictError(
-        `Teacher conflict: ${teacherName} already scheduled on ${slot}`,
       );
+      throwSlotConflictError(message);
     }
   }
 
@@ -690,24 +869,13 @@ async function assertNoSlotConflicts({
         transaction,
       );
     if (conflict) {
-      const conflictPlain = conflict?.get
-        ? conflict.get({ plain: true })
-        : conflict;
-      let roomLabel;
-      if (conflictPlain?.classRoom?.roomNumber) {
-        roomLabel = `Room ${conflictPlain.classRoom.roomNumber}`;
-      } else {
-        const room = await scoped(model.classRoomModel).findOne({
-          where: { classRoomSectionId: Number(classRoomSectionId) },
-          attributes: ["roomNumber"],
-          transaction,
-        });
-        roomLabel = room?.roomNumber
-          ? `Room ${room.roomNumber}`
-          : `Room #${classRoomSectionId}`;
-      }
-      const slot = `${day} (${periodInfo.startTime}-${periodInfo.endTime})`;
-      throwSlotConflictError(`Room conflict: ${roomLabel} occupied on ${slot}`);
+      const message = await buildRoomConflictMessage(
+        conflict,
+        classRoomSectionId,
+        { day, ...periodInfo },
+        transaction,
+      );
+      throwSlotConflictError(message);
     }
   }
 
@@ -1236,7 +1404,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
         throw new Error("Invalid timeTableRoutineId");
       }
 
-      assertMappingRoutineEditable(routine);
+      assertMappingAddAllowed(routine);
 
       const periodInfo =
         await timeTableCreateRepository.getPeriodInfoRepository(
@@ -1368,7 +1536,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
 
     const termIds = resolveTermIds(payload, routine);
 
-    assertMappingRoutineEditable(routine);
+    assertMappingAddAllowed(routine);
 
     if (payload.timeTableType === "elective" && !payload.electiveSubjectId) {
       throw new Error("electiveSubjectId is required for elective mapping");
@@ -1911,7 +2079,7 @@ export async function updatetimeTableCreate(
     throw new Error(`Routine ${cellPlain.timeTableRoutineId} not found`);
   }
 
-  assertMappingRoutineEditable(routine);
+  assertWeekMappingChangeAllowed(routine, "update");
 
   const data = { timeTableType, updatedBy };
   const result = await timeTableCreateRepository.updatetimeTableCreate(
@@ -2069,7 +2237,7 @@ export async function updateSimpleTeacherMapping(
     }
     const { startingDate, endingDate } = routineInfo;
 
-    assertMappingRoutineEditable(routineInfo);
+    assertWeekMappingChangeAllowed(routineInfo, "update");
 
     const periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(
       baseRow.timeTableCreationId,
@@ -2102,24 +2270,13 @@ export async function updateSimpleTeacherMapping(
         );
 
       if (roomConflict) {
-        const conflictPlain = roomConflict?.get
-          ? roomConflict.get({ plain: true })
-          : roomConflict;
-        let roomLabel;
-        if (conflictPlain?.classRoom?.roomNumber) {
-          roomLabel = `Room ${conflictPlain.classRoom.roomNumber}`;
-        } else {
-          const room = await scoped(model.classRoomModel).findOne({
-            where: { classRoomSectionId: Number(effectiveRoomId) },
-            attributes: ["roomNumber"],
-            transaction,
-          });
-          roomLabel = room?.roomNumber
-            ? `Room ${room.roomNumber}`
-            : `Room #${effectiveRoomId}`;
-        }
-        const slot = `${baseRow.day} (${periodInfo.startTime}-${periodInfo.endTime})`;
-        throwSlotConflictError(`Room conflict: ${roomLabel} occupied on ${slot}`);
+        const message = await buildRoomConflictMessage(
+          roomConflict,
+          effectiveRoomId,
+          { day: baseRow.day, ...periodInfo },
+          transaction,
+        );
+        throwSlotConflictError(message);
       }
     }
 
@@ -2137,17 +2294,13 @@ export async function updateSimpleTeacherMapping(
           );
 
         if (conflict) {
-          const employee = await model.employeeModel.findOne({
-            where: { userId: Number(item.userId) },
-            attributes: ["employeeName"],
+          const message = await buildTeacherConflictMessage(
+            item.userId,
+            conflict,
+            { day: baseRow.day, ...periodInfo },
             transaction,
-          });
-          const teacherName =
-            employee?.employeeName || `User #${item.userId}`;
-          const slot = `${baseRow.day} (${periodInfo.startTime}-${periodInfo.endTime})`;
-          throwSlotConflictError(
-            `Teacher conflict: ${teacherName} already scheduled on ${slot}`,
           );
+          throwSlotConflictError(message);
         }
       }
 
@@ -5511,7 +5664,7 @@ export async function deleteTimeTableTeacher(timeTableCellTeacherId) {
       throw error;
     }
 
-    assertMappingDeletable(routineInfo);
+    assertWeekMappingChangeAllowed(routineInfo, "delete");
 
     await timeTableCreateRepository.deleteCellTeacherRepository(
       timeTableCellTeacherId,

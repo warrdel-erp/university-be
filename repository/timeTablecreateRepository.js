@@ -10,6 +10,7 @@ import {
   stripRoutinePersistPayload,
   routineStructureInclude,
 } from "../utility/classSectionIncludes.js";
+import { formatQueryDate } from "../utility/helper.js";
 
 async function assertScopedRoutine(timeTableRoutineId, options = {}) {
   if (timeTableRoutineId == null) return null;
@@ -629,6 +630,8 @@ export async function checkTeacherConflictRepository(
           "endingDate",
           "classSectionTermId",
           "timeTableRoutineId",
+          "academicYearId",
+          "isPublish",
         ],
         required: true,
         where: {
@@ -718,6 +721,26 @@ export async function checkElectiveSubjectConflictRepository(
   });
 
   return scopedConflict;
+}
+
+export async function findFirstDateWiseDateForCell(timeTableCellId, options = {}) {
+  const row = await model.timeTableCellDateWiseModel.findOne({
+    where: { timeTableCellId: Number(timeTableCellId) },
+    attributes: ["date"],
+    order: [["date", "ASC"]],
+    transaction: options.transaction,
+  });
+  if (!row?.date) {
+    return null;
+  }
+  const dateValue = row.date;
+  if (typeof dateValue === "string") {
+    const match = dateValue.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (match) {
+      return match[1];
+    }
+  }
+  return formatQueryDate(dateValue);
 }
 
 export async function getRoutineByIdRepository(
@@ -1020,6 +1043,8 @@ export async function checkRoomConflictRepository(
           "endingDate",
           "classSectionTermId",
           "timeTableRoutineId",
+          "academicYearId",
+          "isPublish",
         ],
         required: true,
         where: {
