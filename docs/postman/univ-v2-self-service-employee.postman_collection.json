@@ -27,6 +27,37 @@
           }
         },
         {
+          "name": "GET My Class Section Students",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/student/my/classSectionStudents?timeTableCellDateWiseId[]=55543&date=2026-08-26&groupPeriods=true",
+              "host": ["{{baseurl}}"],
+              "path": ["student", "my", "classSectionStudents"],
+              "query": [
+                {
+                  "key": "timeTableCellDateWiseId[]",
+                  "value": "55543"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-08-26"
+                },
+                {
+                  "key": "groupPeriods",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
           "name": "GET My Unique Class Section Subjects",
           "request": {
             "method": "GET",

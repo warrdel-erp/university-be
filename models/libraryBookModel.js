@@ -25,19 +25,19 @@ const libraryBookModel = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
       field: "university_id",
-      references: { model: "university", key: "university_id" }
+      references: { model: "university", key: "university_id" },
+    },
+    instituteId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "institute_id",
+      references: { model: "institute", key: "institute_id" },
     },
     campusId: {
       type: DataTypes.INTEGER,
       allowNull: true,
       field: "campus_id",
       references: { model: "campus", key: "campus_id" }
-    },
-    instituteId: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      field: "institute_id",
-      references: { model: "institute", key: "institute_id" }
     },
     bookImage: {
       type: DataTypes.STRING,
@@ -182,6 +182,6 @@ const libraryBookModel = sequelize.define(
   },
 );
 
-libraryBookModel.scopeConfig = { university: false, institute: false, academicYear: false };
+libraryBookModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
 export default libraryBookModel;

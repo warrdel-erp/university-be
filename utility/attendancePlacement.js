@@ -319,21 +319,8 @@ export async function assertCopyPeriodDateWiseMatch(
   return sourcePlacement;
 }
 
-export async function resolveSourcePeriodByDateWiseId(sourceDateWiseId, options = {}) {
-  const row = await model.timeTableCellDateWiseModel.findOne({
-    where: { timeTableCellDateWiseId: Number(sourceDateWiseId) },
-    attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
-    include: dateWiseCellInclude(),
-    transaction: options.transaction,
-  });
-
-  if (!row) {
-    const error = new Error('Invalid timeTableCellDateWiseId');
-    error.statusCode = 400;
-    throw error;
-  }
-
-  const plain = row.get({ plain: true });
+function mapDateWiseRowToResolvedPeriod(row) {
+  const plain = row.get ? row.get({ plain: true }) : row;
   const cell = plain.timeTableCell;
   const routine = cell.timeTableRoutine;
   const placement = resolveDateWiseRoutinePlacement(row);
@@ -346,7 +333,7 @@ export async function resolveSourcePeriodByDateWiseId(sourceDateWiseId, options 
 
   return {
     ...placement,
-    timeTableCellDateWiseId: Number(sourceDateWiseId),
+    timeTableCellDateWiseId: Number(plain.timeTableCellDateWiseId),
     timeTableCellId: Number(plain.timeTableCellId),
     date: plain.date,
     day: cell.day,
@@ -364,6 +351,52 @@ export async function resolveSourcePeriodByDateWiseId(sourceDateWiseId, options 
     academicGroupId: routine.academicGroupId ?? null,
     academicGroup: routine.academicGroup ?? null,
   };
+}
+
+export async function resolveSourcePeriodsByDateWiseIds(sourceDateWiseIds, options = {}) {
+  const uniqueIds = [];
+  const raw = Array.isArray(sourceDateWiseIds) ? sourceDateWiseIds : [sourceDateWiseIds];
+  for (const id of raw) {
+    const num = Number(id);
+    if (num && !uniqueIds.includes(num)) {
+      uniqueIds.push(num);
+    }
+  }
+
+  if (!uniqueIds.length) {
+    const error = new Error('timeTableCellDateWiseId is required');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const rows = await model.timeTableCellDateWiseModel.findAll({
+    where: { timeTableCellDateWiseId: { [Op.in]: uniqueIds } },
+    attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
+    include: dateWiseCellInclude(),
+    transaction: options.transaction,
+  });
+
+  if (rows.length !== uniqueIds.length) {
+    const error = new Error('Invalid timeTableCellDateWiseId');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const byId = new Map();
+  for (const row of rows) {
+    byId.set(Number(row.timeTableCellDateWiseId), mapDateWiseRowToResolvedPeriod(row));
+  }
+
+  const resolved = [];
+  for (const id of uniqueIds) {
+    resolved.push(byId.get(id));
+  }
+  return resolved;
+}
+
+export async function resolveSourcePeriodByDateWiseId(sourceDateWiseId, options = {}) {
+  const [period] = await resolveSourcePeriodsByDateWiseIds([sourceDateWiseId], options);
+  return period;
 }
 
 export function canCopyPeriodToTarget(sourcePlacement, targetPlacement) {

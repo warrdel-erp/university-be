@@ -2,6 +2,29 @@ import * as studentService from '../services/studentService.js'
 import * as fileHandler from '../utility/fileHandler.js';
 import { SuccessResponse, ErrorResponse } from '../utility/response.js';
 import { getAcademicYearId } from '../utility/requestContext.js';
+import {
+  validateEmployeeUser,
+  assertTeacherAssignedToDateWiseIds,
+} from '../utility/employeeValidation.js';
+
+function buildClassSectionStudentsResponse(result) {
+    let count = 0;
+    if (Array.isArray(result.periods) && Array.isArray(result.students)) {
+        count = result.students.length;
+    } else if (Array.isArray(result.periods)) {
+        for (const block of result.periods) {
+            count += block.students.length;
+        }
+    } else {
+        count = result.students?.length || 0;
+    }
+
+    return {
+        success: true,
+        count,
+        data: result,
+    };
+}
 export const addStudentWithFeePlanProfile = async (req, res) => {
     try {
         const result = await studentService.addStudentWithFeePlanProfile({
@@ -456,22 +479,75 @@ export async function getStudentsByClassSection(req, res) {
             attendanceStatus,
         });
 
-        let count = 0;
-        if (Array.isArray(result.periods) && Array.isArray(result.students)) {
-            count = result.students.length;
-        } else if (Array.isArray(result.periods)) {
-            for (const block of result.periods) {
-                count += block.students.length;
-            }
-        } else {
-            count = result.students?.length || 0;
+        return res.status(200).json(buildClassSectionStudentsResponse(result));
+    } catch (error) {
+        console.error("Controller Error:", error);
+
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+}
+
+export async function getMyStudentsByClassSection(req, res) {
+    try {
+        const validation = await validateEmployeeUser(req, res);
+        if (!validation.valid) {
+            return res.status(validation.status || 404).json({
+                success: false,
+                message: validation.message,
+            });
         }
 
-        return res.status(200).json({
-            success: true,
-            count,
-            data: result,
-        });
+        const access = await assertTeacherAssignedToDateWiseIds(
+            validation.userId,
+            req.query.timeTableCellDateWiseId,
+        );
+        if (!access.valid) {
+            return res.status(access.status).json({
+                success: false,
+                message: access.message,
+            });
+        }
+
+        const { timeTableCellDateWiseId, groupPeriods, date, academicYearId, attendanceStatus } = req.query;
+
+        // Check if the first provided period is an elective
+        let isElective = false;
+        if (access.dateWiseIds && access.dateWiseIds.length > 0) {
+            const { timeTableCellDateWiseModel, timeTableCellModel } = await import('../models/index.js');
+            const samplePeriod = await timeTableCellDateWiseModel.findOne({
+                where: { timeTableCellDateWiseId: access.dateWiseIds[0] },
+                include: [{
+                    model: timeTableCellModel,
+                    as: 'timeTableCell',
+                    attributes: ['electiveSubjectId', 'timeTableType'],
+                }],
+            });
+            if (samplePeriod?.timeTableCell?.electiveSubjectId != null || samplePeriod?.timeTableCell?.timeTableType === 'elective') {
+                isElective = true;
+            }
+        }
+
+        let result;
+        if (isElective) {
+            result = await studentService.getStudentsByElectiveSubject({
+                timeTableCellDateWiseId,
+                groupPeriods,
+                attendanceStatus,
+            });
+        } else {
+            result = await studentService.getStudentsByClassSection({
+                timeTableCellDateWiseId,
+                groupPeriods,
+                date,
+                academicYearId,
+                attendanceStatus,
+            });
+        }
+
+        return res.status(200).json(buildClassSectionStudentsResponse(result));
     } catch (error) {
         console.error("Controller Error:", error);
 

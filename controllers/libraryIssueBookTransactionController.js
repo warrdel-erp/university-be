@@ -1,6 +1,5 @@
 import * as services from "../services/libraryIssueBookTransactionServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
-import { validateEmployeeUser } from "../utility/employeeValidation.js";
 
 export async function createLibraryIssueBookTransaction(req, res) {
   try {
@@ -28,30 +27,15 @@ export async function getLibraryIssueBookTransactions(req, res) {
 
 export async function getMyLibraryIssueBookTransactions(req, res) {
   try {
-    const validation = await validateEmployeeUser(req, res);
-    if (!validation.valid) {
-      return ErrorResponse(res, validation.status, validation.message);
-    }
-    if (!validation.employeeRecord) {
-      const page = Number(req.query.page ?? 1);
-      const limit = Number(req.query.limit ?? 20);
-      return SuccessResponse(
-        res,
-        200,
-        "Library issue book transactions fetched successfully",
-        [],
-        { total: 0, page, limit },
-      );
+    const userId = req.user?.userId;
+    if (!userId) {
+      return ErrorResponse(res, 404, "User ID not found");
     }
 
-    const { page, limit, search } = req.query;
-    const { data, paginationData } = await services.getLibraryIssueBookTransactions({
-      page,
-      limit,
-      search,
-      memberId: validation.userId,
-      memberType: "TEACHER",
-    });
+    const { data, paginationData } = await services.getMyLibraryIssueBookTransactions(
+      userId,
+      req.query,
+    );
 
     return SuccessResponse(
       res,

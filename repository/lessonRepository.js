@@ -439,6 +439,22 @@ export async function getDateWiseCellById(timeTableCellDateWiseId, transaction) 
   });
 }
 
+export async function getDateWiseCellByCellIdAndDate(timeTableCellId, date, transaction) {
+  return model.timeTableCellDateWiseModel.findOne({
+    where: {
+      timeTableCellId: Number(timeTableCellId),
+      [Op.and]: [
+        Sequelize.where(
+          Sequelize.fn("DATE", Sequelize.col("time_table_cell_date_wise.date")),
+          date,
+        ),
+      ],
+    },
+    attributes: ["timeTableCellDateWiseId", "timeTableCellId", "date"],
+    transaction,
+  });
+}
+
 export async function getMapping(academicYearId) {
   try {
     const lessonWhereClause = {
@@ -1015,7 +1031,7 @@ async function buildLessonCellSubjectWhere(subjectId) {
     mappingIds.push(Number(row.teacherSubjectMappingId));
   }
 
-  const orConditions = [{ subjectId: subjectIdNum }];
+  const orConditions = [{ subjectId: subjectIdNum }, { electiveSubjectId: subjectIdNum }];
   if (mappingIds.length > 0) {
     orConditions.push({ teacherSubjectMappingId: { [Op.in]: mappingIds } });
   }
@@ -1107,6 +1123,7 @@ export async function getTeacherWeekDateWiseCells({
           'day',
           'period',
           'subjectId',
+          'electiveSubjectId',
           'timeTableType',
         ],
         include: [

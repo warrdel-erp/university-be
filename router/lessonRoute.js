@@ -90,7 +90,9 @@ const copyMappingBodySchema = z.object({
 
 const addMappingBodySchema = z.object({
     topicId: positiveIntegerId,
-    timeTableCellDateWiseId: positiveIntegerId,
+    timeTableCellDateWiseId: optionalPositiveId,
+    timeTableCellId: optionalPositiveId,
+    date: optionalDateOnly,
     completeDate: dateOnly.optional().nullable(),
     note: z.string().optional().nullable(),
     lectureUrl: z.string().optional().nullable(),
@@ -100,7 +102,15 @@ const addMappingBodySchema = z.object({
         name: z.string(),
         description: z.string().optional().nullable(),
     })).optional(),
-}).passthrough();
+}).passthrough().refine(
+    (data) =>
+        data.timeTableCellDateWiseId != null
+        || (data.timeTableCellId != null && data.date != null),
+    {
+        message: 'Provide timeTableCellDateWiseId or timeTableCellId with date',
+        path: ['timeTableCellDateWiseId'],
+    },
+);
 
 const getRoutineByTeacherSchema = z
     .object({

@@ -12,6 +12,6 @@ router.get("/my", userAuth, getMyRequests);
 router.get("/", userAuth, checkAccessAny([PERMISSIONS.PENDING_LEAVE_REQUEST.value, PERMISSIONS.APPLY_LEAVE.value], null), getAllRequests);
 router.get("/single", userAuth, checkAccessAny([PERMISSIONS.PENDING_LEAVE_REQUEST.value, PERMISSIONS.APPLY_LEAVE.value], null), getRequestById);
 router.patch("/status", userAuth, checkAccess(PERMISSIONS.PENDING_LEAVE_REQUEST.value, null), updateRequestStatus);
-router.patch("/status/my", userAuth, updateMyRequestStatus);
+router.patch("/my/status", userAuth, updateMyRequestStatus);
 
 export default router;

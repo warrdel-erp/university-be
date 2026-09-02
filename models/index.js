@@ -3260,7 +3260,7 @@ libraryBookInventoryModel.belongsTo(libraryBookModel, {
   foreignKey: "library_book_id",
   as: "bookDetails",
 });
-// member_id → students.student_id (STUDENT) or employee.employee_id (TEACHER) per member_type
+// member_id → students.student_id (STUDENT) or employee.user_id (TEACHER) per member_type
 studentModel.hasMany(libraryIssueBookTransactionModel, {
   foreignKey: "memberId",
   scope: { memberType: "STUDENT" },

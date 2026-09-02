@@ -147,12 +147,7 @@ export async function resolveMembersForTransactions(transactions) {
 
   const teacherList = teacherUserIds.size
     ? await scoped(model.employeeModel).findAll({
-        where: {
-          [Op.or]: [
-            { employeeId: { [Op.in]: Array.from(teacherUserIds) } },
-            { userId: { [Op.in]: Array.from(teacherUserIds) } }
-          ]
-        },
+        where: { userId: { [Op.in]: Array.from(teacherUserIds) } },
         attributes: ["employeeId", "userId", "employeeName", "employeeCode", "departmentId"],
         include: [
           {
@@ -182,9 +177,6 @@ export async function resolveMembersForTransactions(transactions) {
     };
     if (plain.userId != null) {
       teacherById.set(plain.userId, teacherData);
-    }
-    if (plain.employeeId != null) {
-      teacherById.set(plain.employeeId, teacherData);
     }
   }
 
@@ -281,20 +273,66 @@ export async function countStudentMemberById(studentId, transaction) {
   });
 }
 
+export async function resolveStudentIssueMemberId(memberId, transaction) {
+  const id = Number(memberId);
+
+  const byStudentId = await scoped(model.studentModel).findOne({
+    where: { studentId: id },
+    attributes: ["studentId"],
+    transaction,
+  });
+  if (byStudentId) {
+    return byStudentId.studentId;
+  }
+
+  const byUserId = await scoped(model.studentModel).findOne({
+    where: { userId: id },
+    attributes: ["studentId"],
+    transaction,
+  });
+  if (byUserId) {
+    return byUserId.studentId;
+  }
+
+  return null;
+}
+
 export async function countTeacherMemberById(memberId, transaction) {
   return scoped(model.employeeModel).count({
-    where: { employeeId: Number(memberId) },
+    where: { userId: Number(memberId) },
     transaction,
   });
 }
 
-export async function findEmployeeIdByUserId(memberId, transaction) {
+export async function findEmployeeIdByUserId(userId, transaction) {
   const employee = await scoped(model.employeeModel).findOne({
-    where: { employeeId: Number(memberId) },
+    where: { userId: Number(userId) },
     attributes: ["employeeId"],
     transaction,
   });
   return employee ? employee.employeeId : null;
+}
+
+export async function resolveIssueMemberFromUserId(userId, transaction) {
+  const employee = await scoped(model.employeeModel).findOne({
+    where: { userId: Number(userId) },
+    attributes: ["userId"],
+    transaction,
+  });
+  if (employee) {
+    return { memberId: employee.userId, memberType: "TEACHER" };
+  }
+
+  const student = await scoped(model.studentModel).findOne({
+    where: { userId: Number(userId) },
+    attributes: ["studentId"],
+    transaction,
+  });
+  if (student) {
+    return { memberId: student.studentId, memberType: "STUDENT" };
+  }
+
+  return null;
 }
 
 export async function findInventoriesByIds(inventoryIds, transaction) {
@@ -571,12 +609,18 @@ export async function createLibraryIssueBookTransaction(data, transaction) {
 }
 
 export async function createLibraryReturnBookTransaction(data, transaction) {
-  const [row] = await model.libraryReturnBookTransactionModel.findOrCreate({
+  const existing = await scoped(model.libraryReturnBookTransactionModel).findOne({
     where: { returnDate: data.returnDate },
-    defaults: { returnDate: data.returnDate },
     transaction,
   });
-  return row;
+  if (existing) {
+    return existing;
+  }
+
+  return scoped(model.libraryReturnBookTransactionModel).create(
+    { returnDate: data.returnDate },
+    { transaction },
+  );
 }
 
 export async function bulkCreateLibraryBookIssueInventoryItems(rows, transaction) {
@@ -631,11 +675,9 @@ export async function getLibraryIssueBookTransactions(query = {}) {
       },
       attributes: ["employeeId", "userId"]
     });
-    const matchedTeacherIds = [];
-    for (const t of matchedTeachers) {
-      if (t.employeeId) matchedTeacherIds.push(t.employeeId);
-      if (t.userId) matchedTeacherIds.push(t.userId);
-    }
+    const matchedTeacherIds = matchedTeachers
+      .map((teacher) => teacher.userId)
+      .filter((userId) => userId != null);
 
     where[Op.or] = [
       { memberType: { [Op.like]: likeSearch } },
@@ -997,12 +1039,7 @@ export async function getLibraryReturnBookTransactions(query = {}) {
 
   const teacherList = teacherUserIds.size
     ? await scoped(model.employeeModel).findAll({
-        where: {
-          [Op.or]: [
-            { employeeId: { [Op.in]: Array.from(teacherUserIds) } },
-            { userId: { [Op.in]: Array.from(teacherUserIds) } }
-          ]
-        },
+        where: { userId: { [Op.in]: Array.from(teacherUserIds) } },
         attributes: ["employeeId", "userId", "employeeName", "employeeCode", "departmentId"],
         include: [
           {
@@ -1032,9 +1069,6 @@ export async function getLibraryReturnBookTransactions(query = {}) {
     };
     if (plain.userId != null) {
       teacherById.set(plain.userId, teacherData);
-    }
-    if (plain.employeeId != null) {
-      teacherById.set(plain.employeeId, teacherData);
     }
   }
 

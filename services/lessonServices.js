@@ -3,7 +3,7 @@ import * as lectureWindowRepository from "../repository/lectureWindowRepository.
 import sequelize from '../database/sequelizeConfig.js';
 import { resolveSourcePeriodByDateWiseId } from '../utility/attendancePlacement.js';
 import * as timeTableCreateServices from './timeTableCreateServices.js';
-
+import { timeTableCellDateWiseModel } from '../models/index.js';
 const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 function toDateOnlyString(date) {
@@ -405,14 +405,40 @@ export async function deleteLesson(lessonId) {
   }
 }
 
+export async function resolveMappingDateWiseIdFromPayload(data, transaction) {
+  if (data.timeTableCellDateWiseId != null) {
+    return Number(data.timeTableCellDateWiseId);
+  }
+
+  if (data.timeTableCellId != null && data.date != null) {
+    const dateWiseRow = await lesson.getDateWiseCellByCellIdAndDate(
+      data.timeTableCellId,
+      data.date,
+      transaction,
+    );
+    return dateWiseRow?.timeTableCellDateWiseId ?? null;
+  }
+
+  return null;
+}
+
 export async function addMapping(data, createdBy, updatedBy) {
   const transaction = await sequelize.transaction();
 
   try {
-    const period = await resolveSourcePeriodByDateWiseId(
-      Number(data.timeTableCellDateWiseId),
-      { transaction },
-    );
+    const resolvedDateWiseId = await resolveMappingDateWiseIdFromPayload(data, transaction);
+
+    if (!resolvedDateWiseId) {
+      throw Object.assign(
+        new Error("timeTableCellDateWiseId is required"),
+        { statusCode: 400 },
+      );
+    }
+
+    const period = await timeTableCellDateWiseModel.findByPk(resolvedDateWiseId, { transaction });
+    if (!period) {
+      throw Object.assign(new Error("Scheduled period not found"), { statusCode: 404 });
+    }
 
     const payload = {
       topicId: data.topicId,
