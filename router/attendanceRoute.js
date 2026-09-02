@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { z } from "zod";
 const router = Router();
-import { addAttendance, addMyAttendance, copyAttendancePeriod, getCopyAttendancePeriod, getAttendanceDetails, updateAttendance, updateMyAttendance, importAttendance, importBulkAttendance, getAttendanceByDate, getPreviousSessions, getStudentAttendanceReport, getStudentsBatchAttendance, getMyStudentsBatchAttendance, getEmployeeSectionDates } from "../controllers/attendanceController.js";
+import { addAttendance, addMyAttendance, copyAttendancePeriod, getCopyAttendancePeriod, getAttendanceDetails, updateAttendance, updateMyAttendance, importAttendance, importMyAttendance, importBulkAttendance, importMyBulkAttendance, getAttendanceByDate, getPreviousSessions, getStudentAttendanceReport, getStudentsBatchAttendance, getMyStudentsBatchAttendance, getEmployeeSectionDates } from "../controllers/attendanceController.js";
 import userAuth from "../middleware/authUser.js"
 import { validate } from "../utility/validation.js";
 
@@ -118,5 +118,8 @@ router.post(
 // @deprecated
 router.post('/import', userAuth, importAttendance);
 router.post('/excelImport', userAuth, importBulkAttendance);
+
+router.post('/my/import', userAuth, importMyAttendance);
+router.post('/my/excelImport', userAuth, importMyBulkAttendance);
 
 export default router;

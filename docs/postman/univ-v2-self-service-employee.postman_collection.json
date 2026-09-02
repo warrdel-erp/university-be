@@ -453,6 +453,64 @@
               "path": ["attendance", "my", "getStudentAttendance", "batch"]
             }
           }
+        },
+        {
+          "name": "POST My Attendance Import",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "attendance",
+                  "type": "file",
+                  "src": [],
+                  "description": "Excel attendance file"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/attendance/my/import",
+              "host": ["{{baseurl}}"],
+              "path": ["attendance", "my", "import"]
+            },
+            "description": "POST /attendance/my/import — teacher self-service attendance import (file field: attendance)."
+          }
+        },
+        {
+          "name": "POST My Attendance Excel Import",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "attendance",
+                  "type": "file",
+                  "src": [],
+                  "description": "Excel attendance file"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/attendance/my/excelImport",
+              "host": ["{{baseurl}}"],
+              "path": ["attendance", "my", "excelImport"]
+            },
+            "description": "POST /attendance/my/excelImport — teacher self-service bulk excel attendance import (file field: attendance)."
+          }
         }
       ]
     },
@@ -1375,6 +1433,54 @@
               ]
             }
           }
+        },
+        {
+          "name": "GET My Lesson Options",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/options/my/lessons?lectureWindowId={{lectureWindowId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["options", "my", "lessons"],
+              "query": [
+                {
+                  "key": "lectureWindowId",
+                  "value": "{{lectureWindowId}}"
+                }
+              ]
+            },
+            "description": "GET /options/my/lessons?lectureWindowId=10 — lesson options for a lecture window owned by the logged-in teacher."
+          }
+        },
+        {
+          "name": "GET My Topic Options",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/options/my/topics?lessonId=19",
+              "host": ["{{baseurl}}"],
+              "path": ["options", "my", "topics"],
+              "query": [
+                {
+                  "key": "lessonId",
+                  "value": "19"
+                }
+              ]
+            },
+            "description": "GET /options/my/topics?lessonId=19 — topic options for a lesson owned by the logged-in teacher."
+          }
         }
       ]
     },
@@ -1663,6 +1769,7 @@
     },
     {
       "name": "Evaluation",
+      "description": "Teacher self-service answer-sheet evaluation APIs from answerSheetQrRoute (/my).",
       "item": [
         {
           "name": "GET My Assigned Answer Sheets",
@@ -1689,7 +1796,7 @@
                 }
               ]
             },
-            "description": "Returns empty filteredrows when user has no employee record (not 404)."
+            "description": "GET /answerSheetQr/my — scripts assigned to the logged-in teacher.\n\nResponse data:\n- filteredrows[]\n- teacher { userId, userName, email }\n\nReturns empty filteredrows when user has no employee record (not 404)."
           }
         },
         {
@@ -1707,7 +1814,7 @@
               "host": ["{{baseurl}}"],
               "path": ["answerSheetQr", "my", "summary"]
             },
-            "description": "Returns zero counts when user has no employee record (not 404)."
+            "description": "GET /answerSheetQr/my/summary — evaluation counts for the logged-in teacher.\n\nResponse:\n- totalAssigned\n- evaluated\n- pending\n\nReturns zero counts when user has no employee record (not 404)."
           }
         },
         {

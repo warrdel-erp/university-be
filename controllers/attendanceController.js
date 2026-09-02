@@ -2,7 +2,10 @@ import * as AttendanceCreation from "../services/attendanceServices.js";
 import * as fileHandler from '../utility/fileHandler.js';
 import { ErrorResponse, SuccessResponse } from "../utility/response.js";
 import * as model from "../models/index.js";
-import { assertTeacherAssignedToDateWiseIds } from "../utility/employeeValidation.js";
+import {
+  assertTeacherAssignedToDateWiseIds,
+  validateEmployeeUser,
+} from "../utility/employeeValidation.js";
 
 export async function addAttendance(req, res) {
   const createdBy = req.user.userId;
@@ -205,6 +208,20 @@ export const importAttendance = async (req, res) => {
   }
 };
 
+export const importMyAttendance = async (req, res) => {
+  try {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return res.status(validation.status).json({ error: validation.message });
+    }
+
+    return importAttendance(req, res);
+  } catch (error) {
+    console.error("Controller Error:", error);
+    res.status(500).json({ error: error.message || "An unexpected error occurred" });
+  }
+};
+
 export const importBulkAttendance = async (req, res) => {
   try {
     const createdBy = req.user.userId;
@@ -229,6 +246,20 @@ export const importBulkAttendance = async (req, res) => {
   } catch (error) {
     console.error("Controller Error:", error);
     res.status(500).json({ error: error.message || 'An unexpected error occurred' });
+  }
+};
+
+export const importMyBulkAttendance = async (req, res) => {
+  try {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return res.status(validation.status).json({ error: validation.message });
+    }
+
+    return importBulkAttendance(req, res);
+  } catch (error) {
+    console.error("Controller Error:", error);
+    res.status(500).json({ error: error.message || "An unexpected error occurred" });
   }
 };
 
