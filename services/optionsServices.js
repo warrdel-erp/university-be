@@ -154,10 +154,10 @@ export async function getLectureWindowOptions(userId, employeeId, subjectId, aca
     };
 }
 
-export async function getLessonOptions(lectureWindowId, academicYearId) {
+export async function getLessonOptions(lectureWindowId, academicYearId, userId) {
     const [lectureWindow, options] = await Promise.all([
-        optionsRepository.getLectureWindowOptionDetail(lectureWindowId, academicYearId),
-        optionsRepository.getLessonOptionRows({ lectureWindowId, academicYearId }),
+        optionsRepository.getLectureWindowOptionDetail(lectureWindowId, academicYearId, userId),
+        optionsRepository.getLessonOptionRows({ lectureWindowId, academicYearId, userId }),
     ]);
 
     if (!lectureWindow) {
@@ -170,9 +170,9 @@ export async function getLessonOptions(lectureWindowId, academicYearId) {
     };
 }
 
-export async function getTopicOptions(lessonId, academicYearId) {
+export async function getTopicOptions(lessonId, academicYearId, userId) {
     const [lesson, options] = await Promise.all([
-        optionsRepository.getLessonOptionDetail(lessonId, academicYearId),
+        optionsRepository.getLessonOptionDetail(lessonId, academicYearId, userId),
         optionsRepository.getTopicOptionRows(lessonId),
     ]);
 

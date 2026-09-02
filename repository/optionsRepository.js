@@ -369,15 +369,20 @@ export async function getLectureWindowOptionRows(filters) {
     });
 }
 
-export async function getLectureWindowOptionDetail(lectureWindowId, academicYearId) {
+export async function getLectureWindowOptionDetail(lectureWindowId, academicYearId, userId) {
+    const where = {
+        lectureWindowId: Number(lectureWindowId),
+        academicYearId: Number(academicYearId),
+    };
+    if (userId != null) {
+        where.userId = Number(userId);
+    }
+
     return scoped(model.lectureWindowModel).findOne({
         raw: true,
         nest: true,
         attributes: lectureWindowOptionAttributes,
-        where: {
-            lectureWindowId: Number(lectureWindowId),
-            academicYearId: Number(academicYearId),
-        },
+        where,
         include: [
             {
                 model: model.subjectModel,
@@ -399,27 +404,37 @@ export async function getLectureWindowOptionDetail(lectureWindowId, academicYear
 }
 
 export async function getLessonOptionRows(filters) {
+    const where = {
+        lectureWindowId: Number(filters.lectureWindowId),
+        academicYearId: Number(filters.academicYearId),
+    };
+    if (filters.userId != null) {
+        where.userId = Number(filters.userId);
+    }
+
     return scoped(model.lessonModel).findAll({
         raw: true,
         nest: true,
         attributes: ['lessonId', 'name'],
-        where: {
-            lectureWindowId: Number(filters.lectureWindowId),
-            academicYearId: Number(filters.academicYearId),
-        },
+        where,
         order: [['lessonId', 'ASC']],
     });
 }
 
-export async function getLessonOptionDetail(lessonId, academicYearId) {
+export async function getLessonOptionDetail(lessonId, academicYearId, userId) {
+    const where = {
+        lessonId: Number(lessonId),
+        academicYearId: Number(academicYearId),
+    };
+    if (userId != null) {
+        where.userId = Number(userId);
+    }
+
     return scoped(model.lessonModel).findOne({
         raw: true,
         nest: true,
         attributes: lessonOptionAttributes,
-        where: {
-            lessonId: Number(lessonId),
-            academicYearId: Number(academicYearId),
-        },
+        where,
         include: [
             {
                 model: model.lectureWindowModel,

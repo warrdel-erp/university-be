@@ -238,6 +238,32 @@ export const getLessonOptions = async (req, res) => {
     }
 };
 
+export const getMyLessonOptions = async (req, res) => {
+    try {
+        const validation = await validateEmployeeUser(req, res);
+        if (!validation.valid) {
+            return ErrorResponse(res, validation.status, validation.message);
+        }
+
+        const { lectureWindowId } = req.query;
+        const academicYearId = getAcademicYearId();
+        if (!academicYearId) {
+            return ErrorResponse(res, 400, "academicYearId not found in user session");
+        }
+
+        const result = await optionsServices.getLessonOptions(
+            Number(lectureWindowId),
+            Number(academicYearId),
+            validation.userId,
+        );
+        return SuccessResponse(res, 200, "Lesson options fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getMyLessonOptions:", error);
+        const status = error.message?.includes('not found') ? 404 : 500;
+        return ErrorResponse(res, status, error.message || "Internal Server Error");
+    }
+};
+
 export const getTopicOptions = async (req, res) => {
     try {
         const { lessonId } = req.query;
@@ -253,6 +279,32 @@ export const getTopicOptions = async (req, res) => {
         return SuccessResponse(res, 200, "Topic options fetched successfully", result);
     } catch (error) {
         console.error("Error in getTopicOptions:", error);
+        const status = error.message?.includes('not found') ? 404 : 500;
+        return ErrorResponse(res, status, error.message || "Internal Server Error");
+    }
+};
+
+export const getMyTopicOptions = async (req, res) => {
+    try {
+        const validation = await validateEmployeeUser(req, res);
+        if (!validation.valid) {
+            return ErrorResponse(res, validation.status, validation.message);
+        }
+
+        const { lessonId } = req.query;
+        const academicYearId = getAcademicYearId();
+        if (!academicYearId) {
+            return ErrorResponse(res, 400, "academicYearId not found in user session");
+        }
+
+        const result = await optionsServices.getTopicOptions(
+            Number(lessonId),
+            Number(academicYearId),
+            validation.userId,
+        );
+        return SuccessResponse(res, 200, "Topic options fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getMyTopicOptions:", error);
         const status = error.message?.includes('not found') ? 404 : 500;
         return ErrorResponse(res, status, error.message || "Internal Server Error");
     }

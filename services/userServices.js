@@ -1,4 +1,5 @@
 import * as registerRepository from "../repository/userRepository.js";
+import * as userRoleRepository from "../repository/userRoleRepository.js";
 import { Op } from "sequelize";
 import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
@@ -444,7 +445,27 @@ export const forgotSendLink = async (email) => {
 
 export const getAllUsers = async (page = 1, limit = 10, search = "") => {
   try {
-    return registerRepository.getAllUsers(page, limit, search);
+    const { totalCount, users } = await registerRepository.getAllUsers(page, limit, search);
+    const userIds = [];
+    for (const user of users) {
+      userIds.push(user.userId);
+    }
+
+    const rolesByUserId = await userRoleRepository.findDistinctRolesByUserIds(userIds);
+    const usersWithRoles = [];
+
+    for (const user of users) {
+      const plain = user.get({ plain: true });
+      const roles = rolesByUserId.get(plain.userId) || [];
+      usersWithRoles.push({
+        ...plain,
+        roles,
+        role: roles[0]?.roleName || null,
+        roleId: roles[0]?.roleId ?? null,
+      });
+    }
+
+    return { totalCount, users: usersWithRoles };
   } catch (error) {
     console.error("Error in getAllUsers service:", error);
     throw error;

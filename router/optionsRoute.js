@@ -236,10 +236,24 @@ router.get(
 );
 
 router.get(
+  "/my/lessons",
+  userAuth,
+  validate({ query: lessonsQuerySchema }),
+  optionsController.getMyLessonOptions,
+);
+
+router.get(
   "/topics",
   userAuth,
   validate({ query: topicsQuerySchema }),
   optionsController.getTopicOptions,
+);
+
+router.get(
+  "/my/topics",
+  userAuth,
+  validate({ query: topicsQuerySchema }),
+  optionsController.getMyTopicOptions,
 );
 
 router.get(
