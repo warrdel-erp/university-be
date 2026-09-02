@@ -1,0 +1,512 @@
+{
+  "info": {
+    "_postman_id": "evaluations-api-collection-v2",
+    "name": "Evaluations Module (Simplified)",
+    "description": "Simplified Postman collection focusing only on the core Answer Sheet evaluation workflow (Mapping, Assigning, and Grading).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Admin: Mapping & Assignment",
+      "description": "Admin APIs to map answer sheets and assign evaluators.",
+      "item": [
+        {
+          "name": "1.1 PATCH Map QR To Student",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr\": \"{{evaluation_qr}}\",\n  \"studentId\": {{evaluation_studentId}},\n  \"examScheduleId\": {{evaluation_examScheduleId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/map",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "map"
+              ]
+            },
+            "description": "PATCH /answerSheetQr/map"
+          }
+        },
+        {
+          "name": "1.2 GET Mapped Answer Sheets",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/mapped?examinationSessionId=1&selections=%5B%7B%22courseSessionMappingId%22%3A34%2C%22terms%22%3A%5B1%2C2%2C4%5D%7D%5D&page=1&limit=20",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "mapped"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "1"
+                },
+                {
+                  "key": "examScheduleId",
+                  "value": "{{evaluation_examScheduleId}}"
+                },
+                {
+                  "key": "selections",
+                  "value": "%5B%7B%22courseSessionMappingId%22%3A34%2C%22terms%22%3A%5B1%2C2%2C4%5D%7D%5D",
+                  "description": "JSON array: [{\"courseSessionMappingId\":34,\"terms\":[1,2,4]}]"
+                },
+                {
+                  "key": "examDate",
+                  "value": "2026-06-15",
+                  "disabled": true
+                },
+                {
+                  "key": "examinationSessionSlotId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "subjectId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "unassigned",
+                  "description": "unassigned | withEvaluator (omit for all)",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "GET /answerSheetQr/mapped — optional status: unassigned (no evaluator) or withEvaluator (assigned)."
+          }
+        },
+        {
+          "name": "1.3 POST Assign Evaluator",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assignedToUserId\": {{evaluation_assignedToUserId}},\n  \"answerSheetQrIds\": [\n    {{evaluation_answerSheetQrId}}\n  ],\n  \"deadlineDate\": \"{{evaluation_deadline}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/assign/evaluator",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "assign",
+                "evaluator"
+              ]
+            },
+            "description": "POST /answerSheetQr/assign/evaluator — bulk assign one user to many answer sheets."
+          }
+        },
+        {
+          "name": "1.4 GET Scripts By Evaluator",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/evaluator/{{evaluation_assignedToUserId}}?page=1&limit=20",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "evaluator",
+                "{{evaluation_assignedToUserId}}"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "GET /answerSheetQr/evaluator/:assignedToUserId — admin view of scripts assigned to a specific evaluator. Requires ANSWER_SHEET_QRS.\n\nResponse data: { items: [...], teacher: { userId, userName, email } }"
+          }
+        },
+        {
+          "name": "1.5 GET Answer Sheet QR By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/{{evaluation_answerSheetQrId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "{{evaluation_answerSheetQrId}}"
+              ]
+            },
+            "description": "GET /answerSheetQr/:id — admin detail view. Requires ANSWER_SHEET_QRS."
+          }
+        },
+        {
+          "name": "1.6 PATCH Assign Obtained Marks (admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"obtained_marks\": {{evaluation_obtainedMarks}}\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/{{evaluation_answerSheetQrId}}/obtainedMarks",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "{{evaluation_answerSheetQrId}}",
+                "obtainedMarks"
+              ]
+            },
+            "description": "PATCH /answerSheetQr/:id/obtainedMarks — admin marks entry. Requires EVALUATION_EXECUTE."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Evaluator: Self-Service (/my)",
+      "description": "Endpoints for the assigned evaluator to view their scripts and submit marks.",
+      "item": [
+        {
+          "name": "2.1 GET My SKU Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/my/skuStats",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "my",
+                "skuStats"
+              ]
+            },
+            "description": "GET /answerSheetQr/my/skuStats — teacher dashboard SKU counts.\n\nResponse data.sku:\n- totalAssigned\n- graded\n- notChecked\n- overdue (pending past deadline)\n- dueToday (pending due today)"
+          }
+        },
+        {
+          "name": "2.2 GET My Evaluation Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/my/summary",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "my",
+                "summary"
+              ]
+            },
+            "description": "GET /answerSheetQr/my/summary"
+          }
+        },
+        {
+          "name": "2.3 GET My Assigned Scripts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/my?page=1&limit=20",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "my"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "GET /answerSheetQr/my"
+          }
+        },
+        {
+          "name": "2.4 GET My Single Script",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/my/single?id=2",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "my",
+                "single"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "2"
+                }
+              ]
+            },
+            "description": "GET /answerSheetQr/my/single?id=2 - Fetch single script data without student details."
+          }
+        },
+        {
+          "name": "2.5 PATCH My Obtained Marks",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"obtained_marks\": {{evaluation_obtainedMarks}}\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/my/{{evaluation_answerSheetQrId}}/obtainedMarks",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "my",
+                "{{evaluation_answerSheetQrId}}",
+                "obtainedMarks"
+              ]
+            },
+            "description": "PATCH /answerSheetQr/my/:id/obtainedMarks"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseurl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_qr_count",
+      "value": "10",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_requestId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_answerSheetQrId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_qr",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_studentId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_examScheduleId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_examinationSessionId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_selections",
+      "value": "[{\"courseSessionMappingId\":1,\"terms\":[1]}]",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_assignedToUserId",
+      "value": "56",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_obtainedMarks",
+      "value": "75",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_answerSheetS3FileId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_splitJobDbId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_examSetupTypeId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_subjectId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_evalutionId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_examAssessmentId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_assessmentEvalutionId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_term",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_internalAssessment_type",
+      "value": "Assignment",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_totalMarks",
+      "value": "100",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_teacherExamAssignmentId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_deadline",
+      "value": "2026-08-30",
+      "type": "string"
+    }
+  ]
+}

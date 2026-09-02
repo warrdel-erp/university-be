@@ -1,4 +1,4 @@
-import { Op, fn, col } from "sequelize";
+import { Op, fn, col, literal } from "sequelize";
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 
@@ -15,6 +15,7 @@ function examScheduleDetailInclude() {
       "sessionId",
       "type",
       "examinationSessionId",
+      "maximumMarks",
     ],
     required: false,
     include: [
@@ -53,7 +54,7 @@ export async function bulkCreateAnswerSheetQr(rows, transaction) {
 export async function getAnswerSheetQrById(id, transaction) {
   return scoped(model.answerSheetQrModel).findOne({
     where: { id },
-    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "evaluatedAt", "obtainedMarks", "fileUploadId", "instituteId", "universityId", "createdAt"],
+    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "deadlineDate", "evaluatedAt", "obtainedMarks", "fileUploadId", "instituteId", "universityId", "createdAt"],
     include: [
       {
         model: model.studentModel,
@@ -116,7 +117,7 @@ export async function getAnswerSheetQrsByRequestId(
 ) {
   return scoped(model.answerSheetQrModel).findAndCountAll({
     where: { requestId },
-    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "evaluatedAt", "obtainedMarks", "fileUploadId", "instituteId", "universityId", "createdAt"],
+    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "deadlineDate", "evaluatedAt", "obtainedMarks", "fileUploadId", "instituteId", "universityId", "createdAt"],
     include: [
       {
         model: model.studentModel,
@@ -224,10 +225,11 @@ export async function getAnswerSheetQrsByIds(ids, transaction) {
 export async function assignTeacherByAnswerSheetIds(
   ids,
   assignedToUserId,
+  deadlineDate,
   transaction
 ) {
   const [affectedCount] = await scoped(model.answerSheetQrModel).update(
-    { assignedToUser: assignedToUserId },
+    { assignedToUser: assignedToUserId, deadlineDate },
     {
       where: { id: { [Op.in]: ids } },
       transaction,
@@ -261,7 +263,7 @@ export async function getScriptsAssignedToTeacher(
     where: {
       assignedToUser: assignedToUserId,
     },
-    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "evaluatedAt", "obtainedMarks", "fileUploadId", "createdAt"],
+    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "deadlineDate", "evaluatedAt", "obtainedMarks", "fileUploadId", "createdAt"],
     include: [
       {
         model: model.studentModel,
@@ -283,144 +285,63 @@ export async function getScriptsAssignedToTeacher(
   });
 }
 
-/**
- * Resolve sessionCourseMappingId → courseId + sessionId, then matching exam_schedule ids.
- */
-async function findExamScheduleIdsForSelections(
-  examinationSessionId,
-  selections,
-) {
-  const mappingIds = [];
-  for (const selection of selections) {
-    mappingIds.push(selection.sessionCourseMappingId);
-  }
-
-  const mappings = await scoped(model.sessionCouseMappingModel).findAll({
-    where: { sessionCourseMappingId: { [Op.in]: mappingIds } },
-    attributes: ["sessionCourseMappingId", "courseId", "sessionId"],
-  });
-
-  const mappingById = new Map();
-  for (const mapping of mappings) {
-    mappingById.set(mapping.sessionCourseMappingId, mapping);
-  }
-
-  const selectionOr = [];
-  for (const selection of selections) {
-    const mapping = mappingById.get(selection.sessionCourseMappingId);
-    if (!mapping) {
-      continue;
-    }
-
-    const clause = {
-      sessionId: mapping.sessionId,
-      "$subjectSchedule.course_id$": mapping.courseId,
-    };
-    if (selection.terms && selection.terms.length > 0) {
-      clause.term = { [Op.in]: selection.terms };
-    }
-    selectionOr.push(clause);
-  }
-
-  if (selectionOr.length === 0) {
-    return [];
-  }
-
-  const rows = await scoped(model.examScheduleModel).findAll({
+export async function getMySingleAssignedScript(id, assignedToUserId) {
+  return scoped(model.answerSheetQrModel).findOne({
     where: {
-      examinationSessionId,
-      ...buildScope(model.examScheduleModel),
-      [Op.or]: selectionOr,
+      id,
+      assignedToUser: assignedToUserId,
     },
-    attributes: ["examScheduleId"],
+    attributes: [
+      "id",
+      "qr",
+      "requestId",
+      "examScheduleId",
+      "assignedToUser",
+      "deadlineDate",
+      "evaluatedAt",
+      "obtainedMarks",
+      "fileUploadId",
+      "createdAt",
+    ],
     include: [
+      examScheduleDetailInclude(),
       {
-        model: model.subjectModel,
-        as: "subjectSchedule",
-        attributes: [],
-        required: true,
+        model: model.s3FileModel,
+        as: "s3File",
+        required: false,
+        attributes: ["id", "status", "s3Key"],
       },
     ],
   });
-
-  const examScheduleIds = [];
-  for (const row of rows) {
-    examScheduleIds.push(row.examScheduleId);
-  }
-  return examScheduleIds;
 }
 
 /**
- * Answer sheets that have a mapped S3 file and belong to schedules
- * under the given examination session.
+ * Answer sheets mapped to a student + exam schedule under the given session.
  */
-export async function getMappedAnswerSheetsByExamSession(
-  examinationSessionId,
-  filters,
+export async function findExamScheduleIdsByWhere(where, options = {}) {
+  return scoped(model.examScheduleModel).findAll({
+    where,
+    attributes: ["examScheduleId"],
+    include: options.include,
+    transaction: options.transaction,
+  });
+}
+
+export async function findAndCountMappedAnswerSheets(
+  qrWhere,
+  examScheduleWhere,
   limit,
   offset,
+  options = {},
 ) {
-  const examScheduleWhere = {
-    examinationSessionId,
-    ...buildScope(model.examScheduleModel),
-  };
-
-  if (filters.examScheduleId && filters.examScheduleId.length > 0) {
-    examScheduleWhere.examScheduleId = { [Op.in]: filters.examScheduleId };
-  }
-
-  if (filters.term && filters.term.length > 0) {
-    examScheduleWhere.term = { [Op.in]: filters.term };
-  }
-
-  if (filters.selections && filters.selections.length > 0) {
-    const selectionScheduleIds = await findExamScheduleIdsForSelections(
-      examinationSessionId,
-      filters.selections,
-    );
-    if (selectionScheduleIds.length === 0) {
-      return { count: 0, rows: [] };
-    }
-
-    if (examScheduleWhere.examScheduleId) {
-      const allowed = new Set(selectionScheduleIds);
-      const intersected = [];
-      for (const id of examScheduleWhere.examScheduleId[Op.in]) {
-        if (allowed.has(id)) {
-          intersected.push(id);
-        }
-      }
-      if (intersected.length === 0) {
-        return { count: 0, rows: [] };
-      }
-      examScheduleWhere.examScheduleId = { [Op.in]: intersected };
-    } else {
-      examScheduleWhere.examScheduleId = { [Op.in]: selectionScheduleIds };
-    }
-  }
-
-  const qrWhere = {
-    fileUploadId: { [Op.ne]: null },
-  };
-
-  if (filters.search) {
-    const like = `%${filters.search}%`;
-    qrWhere[Op.or] = [
-      { "$student.first_name$": { [Op.like]: like } },
-      { "$student.middle_name$": { [Op.like]: like } },
-      { "$student.last_name$": { [Op.like]: like } },
-      { "$examSchedule.subjectSchedule.subject_name$": { [Op.like]: like } },
-    ];
-  }
-
   return scoped(model.answerSheetQrModel).findAndCountAll({
     where: qrWhere,
     attributes: [
       "id",
       "qr",
-      "studentId",
       "examScheduleId",
       "assignedToUser",
+      "deadlineDate",
       "evaluatedAt",
       "obtainedMarks",
       "fileUploadId",
@@ -451,22 +372,9 @@ export async function getMappedAnswerSheetsByExamSession(
         ],
       },
       {
-        model: model.studentModel,
-        as: "student",
-        attributes: [
-          "studentId",
-          "firstName",
-          "middleName",
-          "lastName",
-          "enrollNumber",
-          "scholarNumber",
-        ],
-        required: false,
-      },
-      {
         model: model.s3FileModel,
         as: "s3File",
-        required: true,
+        required: false,
         attributes: ["id", "status", "s3Key"],
       },
       {
@@ -481,5 +389,60 @@ export async function getMappedAnswerSheetsByExamSession(
     offset,
     distinct: true,
     subQuery: false,
+    transaction: options.transaction,
   });
+}
+
+export async function findMyAnswerSheetSkuStats(assignedToUserId) {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const row = await scoped(model.answerSheetQrModel).findOne({
+    attributes: [
+      [fn("COUNT", col("id")), "totalAssigned"],
+      [
+        fn(
+          "SUM",
+          literal("CASE WHEN evaluated_at IS NOT NULL THEN 1 ELSE 0 END"),
+        ),
+        "graded",
+      ],
+      [
+        fn(
+          "SUM",
+          literal("CASE WHEN evaluated_at IS NULL THEN 1 ELSE 0 END"),
+        ),
+        "notChecked",
+      ],
+      [
+        fn(
+          "SUM",
+          literal(
+            `CASE WHEN evaluated_at IS NULL AND deadline_date IS NOT NULL AND deadline_date < '${today}' THEN 1 ELSE 0 END`,
+          ),
+        ),
+        "overdue",
+      ],
+      [
+        fn(
+          "SUM",
+          literal(
+            `CASE WHEN evaluated_at IS NULL AND deadline_date = '${today}' THEN 1 ELSE 0 END`,
+          ),
+        ),
+        "dueToday",
+      ],
+    ],
+    where: {
+      assignedToUser: assignedToUserId,
+    },
+    raw: true,
+  });
+
+  return {
+    totalAssigned: Number(row?.totalAssigned ?? 0),
+    graded: Number(row?.graded ?? 0),
+    notChecked: Number(row?.notChecked ?? 0),
+    overdue: Number(row?.overdue ?? 0),
+    dueToday: Number(row?.dueToday ?? 0),
+  };
 }

@@ -1,6 +1,8 @@
 import { v4 as uuidv4 } from "uuid";
-import { UniqueConstraintError } from "sequelize";
+import { Op, UniqueConstraintError } from "sequelize";
+import * as model from "../models/index.js";
 import * as answerSheetQrRepository from "../repository/answerSheetQrRepository.js";
+import * as examinationSessionRepository from "../repository/examinationSessionRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 import { buildTermName } from "../utility/courseTerms.js";
 import * as s3Helper from "../utility/s3Helper.js";
@@ -23,6 +25,12 @@ function resolveExamScheduleTerm(examSchedule) {
   return null;
 }
 
+function resolveExamScheduleTermType(examSchedule) {
+  const termType = examSchedule?.subjectSchedule?.courseInfo?.termType;
+  if (termType == null || String(termType).trim() === "") return null;
+  return String(termType).trim();
+}
+
 function resolveExamTermName(examSchedule) {
   const term = resolveExamScheduleTerm(examSchedule);
   if (term == null) return null;
@@ -34,9 +42,10 @@ function buildExamContext(item, options = {}) {
   const { includeStudentIdentity = true } = options;
   const examSchedule = item?.examSchedule;
   const subject = examSchedule?.subjectSchedule;
+  const course = subject?.courseInfo;
   const student = item?.student;
   const term = resolveExamScheduleTerm(examSchedule);
-  const termName = resolveExamTermName(examSchedule);
+  const termType = resolveExamScheduleTermType(examSchedule);
 
   return {
     ...(includeStudentIdentity
@@ -46,18 +55,181 @@ function buildExamContext(item, options = {}) {
         scholarNumber: student?.scholarNumber || null,
       }
       : {}),
+    courseId: course?.courseId ?? null,
+    courseName: course?.courseName || null,
+    courseCode: course?.courseCode || null,
     subjectName: subject?.subjectName || null,
     subjectCode: subject?.subjectCode || null,
     examType: examSchedule?.type || null,
     examName: null,
     examDate: examSchedule?.examDate || null,
     examTime: examSchedule?.examTime || null,
+    maximumMarks:
+      examSchedule?.maximumMarks != null
+        ? Number(examSchedule.maximumMarks)
+        : null,
     term,
-    termName,
-    semesterId: null,
-    semesterName: termName,
+    termType,
     sessionId: examSchedule?.sessionId || null,
   };
+}
+
+const examScheduleSubjectInclude = [
+  {
+    model: model.subjectModel,
+    as: "subjectSchedule",
+    attributes: [],
+    required: true,
+  },
+];
+
+function intersectExamScheduleIds(scheduleIds, examScheduleId) {
+  if (!examScheduleId || !examScheduleId.length) {
+    return scheduleIds;
+  }
+
+  const allowed = new Set();
+  for (const id of examScheduleId) {
+    allowed.add(Number(id));
+  }
+
+  const filtered = [];
+  for (const scheduleId of scheduleIds) {
+    if (allowed.has(Number(scheduleId))) {
+      filtered.push(scheduleId);
+    }
+  }
+
+  return filtered;
+}
+
+async function resolveExamScheduleIdsFromSelections(
+  examinationSessionId,
+  selections,
+) {
+  const mappingIds = [];
+  for (const selection of selections) {
+    mappingIds.push(selection.courseSessionMappingId);
+  }
+
+  const mappings =
+    await examinationSessionRepository.findSessionCourseMappingsByIds(mappingIds);
+  const mappingById = new Map();
+  for (const mapping of mappings) {
+    mappingById.set(mapping.sessionCourseMappingId, mapping);
+  }
+
+  const selectionOr = [];
+  for (const selection of selections) {
+    const mapping = mappingById.get(selection.courseSessionMappingId);
+    if (!mapping) {
+      continue;
+    }
+
+    const clause = {
+      sessionId: mapping.sessionId,
+      "$subjectSchedule.course_id$": mapping.courseId,
+    };
+    if (selection.terms.length > 0) {
+      clause.term = { [Op.in]: selection.terms };
+    }
+    selectionOr.push(clause);
+  }
+
+  if (!selectionOr.length) {
+    return [];
+  }
+
+  const rows = await answerSheetQrRepository.findExamScheduleIdsByWhere(
+    {
+      examinationSessionId: Number(examinationSessionId),
+      [Op.or]: selectionOr,
+    },
+    { include: examScheduleSubjectInclude },
+  );
+
+  const examScheduleIds = [];
+  for (const row of rows) {
+    examScheduleIds.push(row.examScheduleId);
+  }
+
+  return examScheduleIds;
+}
+
+async function resolveMappedListExamScheduleIds(
+  examinationSessionId,
+  { selections, examScheduleId },
+) {
+  if (selections && selections.length > 0) {
+    const scheduleIds = await resolveExamScheduleIdsFromSelections(
+      examinationSessionId,
+      selections,
+    );
+    if (!scheduleIds.length) {
+      return null;
+    }
+
+    const resolved = intersectExamScheduleIds(scheduleIds, examScheduleId);
+    return resolved.length ? resolved : null;
+  }
+
+  if (examScheduleId && examScheduleId.length > 0) {
+    return examScheduleId;
+  }
+
+  return undefined;
+}
+
+function buildMappedExamScheduleWhere(
+  examinationSessionId,
+  { examDate, examinationSessionSlotId, examScheduleIds, term, subjectId, selections },
+) {
+  const where = { examinationSessionId: Number(examinationSessionId) };
+
+  if (examDate) {
+    where.examDate = examDate;
+  }
+
+  if (examinationSessionSlotId) {
+    where.examinationSessionSlotId = Number(examinationSessionSlotId);
+  }
+
+  if (examScheduleIds && examScheduleIds.length > 0) {
+    where.examScheduleId = { [Op.in]: examScheduleIds };
+  }
+
+  if (!selections?.length && term && term.length > 0) {
+    where.term = { [Op.in]: term };
+  }
+
+  if (subjectId && subjectId.length > 0) {
+    where.subjectId = { [Op.in]: subjectId };
+  }
+
+  return where;
+}
+
+function buildMappedAnswerSheetQrWhere(search, status) {
+  const qrWhere = {
+    studentId: { [Op.ne]: null },
+    examScheduleId: { [Op.ne]: null },
+  };
+
+  if (status === "unassigned") {
+    qrWhere.assignedToUser = null;
+  } else if (status === "withEvaluator") {
+    qrWhere.assignedToUser = { [Op.ne]: null };
+  }
+
+  if (search) {
+    const like = `%${search}%`;
+    qrWhere[Op.or] = [
+      { "$examSchedule.subjectSchedule.subject_name$": { [Op.like]: like } },
+      { "$examSchedule.subjectSchedule.subject_code$": { [Op.like]: like } },
+    ];
+  }
+
+  return qrWhere;
 }
 
 export async function generateBulkAnswerSheetQr(count) {
@@ -165,16 +337,18 @@ export async function getAnswerSheetQrDetailById(id) {
     const examContext = isMapped
       ? buildExamContext(row, { includeStudentIdentity: false })
       : {
+        courseId: null,
+        courseName: null,
+        courseCode: null,
         subjectName: null,
         subjectCode: null,
         examType: null,
         examName: null,
         examDate: null,
         examTime: null,
+        maximumMarks: null,
         term: null,
-        termName: null,
-        semesterId: null,
-        semesterName: null,
+        termType: null,
         sessionId: null,
       };
 
@@ -185,6 +359,7 @@ export async function getAnswerSheetQrDetailById(id) {
       studentId: row.studentId,
       examScheduleId: row.examScheduleId,
       assignedToUser: row.assignedToUser ?? null,
+      deadlineDate: row.deadlineDate ?? null,
       assignedTeacherName: row.assignedTeacher?.userName || null,
       evaluatedAt: row.evaluatedAt ?? null,
       obtainedMarks: row.obtainedMarks ?? null,
@@ -307,7 +482,19 @@ export async function getAnswerSheetQrsByRequestId(
 export async function assignAnswerSheetsToTeachers(
   assignedToUserId,
   answerSheetQrIds,
+  deadlineDate,
 ) {
+  const uniqueAnswerSheetQrIds = [];
+  const seenIds = new Set();
+  for (const answerSheetQrId of answerSheetQrIds) {
+    const id = Number(answerSheetQrId);
+    if (seenIds.has(id)) {
+      continue;
+    }
+    seenIds.add(id);
+    uniqueAnswerSheetQrIds.push(id);
+  }
+
   const transaction = await sequelize.transaction();
   try {
     const teacher = await answerSheetQrRepository.getScopedUser(
@@ -319,27 +506,37 @@ export async function assignAnswerSheetsToTeachers(
     }
 
     const answerSheets = await answerSheetQrRepository.getAnswerSheetQrsByIds(
-      answerSheetQrIds,
+      uniqueAnswerSheetQrIds,
       transaction
     );
 
-    if (answerSheets.length !== answerSheetQrIds.length) {
+    if (answerSheets.length !== uniqueAnswerSheetQrIds.length) {
       throw createServiceError("One or more answer sheet QR records were not found.", 404);
     }
 
+    const unmappedIds = [];
+
+    for (const answerSheet of answerSheets) {
+      if (!answerSheet.studentId || !answerSheet.examScheduleId) {
+        unmappedIds.push(answerSheet.id);
+      }
+    }
+
+    if (unmappedIds.length > 0) {
+      throw createServiceError(
+        `Answer sheet QR records must be mapped before evaluator assignment: ${unmappedIds.join(", ")}`,
+        400,
+      );
+    }
+
     await answerSheetQrRepository.assignTeacherByAnswerSheetIds(
-      answerSheetQrIds,
+      uniqueAnswerSheetQrIds,
       assignedToUserId,
+      deadlineDate,
       transaction
     );
 
-    const result = {
-      assignedCount: answerSheetQrIds.length,
-      assignedToUserId,
-      answerSheetQrIds,
-    };
     await transaction.commit();
-    return result;
   } catch (error) {
     await transaction.rollback();
     throw error;
@@ -363,9 +560,8 @@ export async function getScriptsAssignedToTeacher(
     offset
   );
 
-  const filteredrows = rows.map((item) => {
-    const term = resolveExamScheduleTerm(item.examSchedule);
-    const termName = resolveExamTermName(item.examSchedule);
+  const items = rows.map((item) => {
+    const examContext = buildExamContext(item, { includeStudentIdentity: true });
 
     return {
       id: item.id,
@@ -374,35 +570,19 @@ export async function getScriptsAssignedToTeacher(
       studentId: item.studentId,
       examScheduleId: item.examScheduleId,
       assignedToUser: item.assignedToUser ?? null,
+      deadlineDate: item.deadlineDate ?? null,
       assignedTeacherName: item.assignedTeacher?.userName || null,
       assignedTeacherEmail: item.assignedTeacher?.email || null,
       evaluatedAt: item.evaluatedAt ?? null,
       obtainedMarks: item.obtainedMarks ?? null,
-      studentDisplayName:
-        [item.student?.firstName, item.student?.middleName, item.student?.lastName]
-          .filter(Boolean)
-          .join(" ")
-          .trim() || null,
-      enrollNumber: item.student?.enrollNumber || null,
-      scholarNumber: item.student?.scholarNumber || null,
-      subjectName: item.examSchedule?.subjectSchedule?.subjectName || null,
-      subjectCode: item.examSchedule?.subjectSchedule?.subjectCode || null,
-      examType: item.examSchedule?.type || null,
-      examName: null,
-      examDate: item.examSchedule?.examDate || null,
-      examTime: item.examSchedule?.examTime || null,
-      term,
-      termName,
-      semesterId: null,
-      semesterName: termName,
-      sessionId: item.examSchedule?.sessionId || null,
+      ...examContext,
       createdAt: item.createdAt,
     };
   });
 
   return {
     data: {
-      filteredrows,
+      items,
       teacher: {
         userId: teacher.userId,
         userName: teacher.userName,
@@ -416,6 +596,33 @@ export async function getScriptsAssignedToTeacher(
       totalPages: Math.ceil(count / limit),
     },
   };
+}
+
+const MY_ANSWER_SHEET_SKU_LABELS = {
+  totalAssigned: "Total Assigned",
+  graded: "Graded",
+  notChecked: "Not Checked",
+  overdue: "Overdue",
+  dueToday: "Due Today",
+};
+
+function buildMyAnswerSheetSkuResponse(stats) {
+  const sku = [];
+  for (const key of Object.keys(MY_ANSWER_SHEET_SKU_LABELS)) {
+    sku.push({
+      key,
+      label: MY_ANSWER_SHEET_SKU_LABELS[key],
+      value: stats[key] ?? 0,
+    });
+  }
+  return { sku };
+}
+
+export async function getMyAnswerSheetSkuStats(assignedToUserId) {
+  const stats = await answerSheetQrRepository.findMyAnswerSheetSkuStats(
+    assignedToUserId,
+  );
+  return buildMyAnswerSheetSkuResponse(stats);
 }
 
 export async function assignObtainedMarksToAnswerSheet(
@@ -433,16 +640,17 @@ export async function assignObtainedMarksToAnswerSheet(
       throw createServiceError("Answer sheet QR not found.", 404);
     }
 
+    const evaluatedAt = new Date();
     await answerSheetQrRepository.assignMarksByAnswerSheetId(
       answerSheetQrId,
       obtainedMarks,
-      new Date(),
+      evaluatedAt,
       transaction
     );
 
     const result = {
       answerSheetQrId,
-      evaluatedAt: new Date(),
+      evaluatedAt,
       obtained_marks: obtainedMarks,
       updated: true,
     };
@@ -460,14 +668,59 @@ export async function getMappedAnswerSheetsByExamSession({
   limit = 20,
   examScheduleId,
   term,
-  selections,
+  subjectId,
   search,
+  examDate,
+  examinationSessionSlotId,
+  selections,
+  status,
 }) {
   const offset = (page - 1) * limit;
+
+  const resolvedExamScheduleIds = await resolveMappedListExamScheduleIds(
+    examinationSessionId,
+    { selections, examScheduleId },
+  );
+
+  if (resolvedExamScheduleIds === null) {
+    return {
+      data: {
+        filters: {
+          examinationSessionId,
+          examScheduleId: examScheduleId || [],
+          term: term || [],
+          selections: selections || [],
+          examDate: examDate || null,
+          examinationSessionSlotId: examinationSessionSlotId || null,
+          subjectId: subjectId || [],
+          search: search || null,
+          status: status || null,
+        },
+        items: [],
+      },
+      pagination: {
+        page,
+        limit,
+        total: 0,
+        totalPages: 0,
+      },
+    };
+  }
+
+  const examScheduleWhere = buildMappedExamScheduleWhere(examinationSessionId, {
+    examDate,
+    examinationSessionSlotId,
+    examScheduleIds: resolvedExamScheduleIds,
+    term,
+    subjectId,
+    selections,
+  });
+  const qrWhere = buildMappedAnswerSheetQrWhere(search, status);
+
   const { count, rows } =
-    await answerSheetQrRepository.getMappedAnswerSheetsByExamSession(
-      examinationSessionId,
-      { examScheduleId, term, selections, search },
+    await answerSheetQrRepository.findAndCountMappedAnswerSheets(
+      qrWhere,
+      examScheduleWhere,
       limit,
       offset,
     );
@@ -494,7 +747,11 @@ export async function getMappedAnswerSheetsByExamSession({
         examScheduleId: examScheduleId || [],
         term: term || [],
         selections: selections || [],
+        examDate: examDate || null,
+        examinationSessionSlotId: examinationSessionSlotId || null,
+        subjectId: subjectId || [],
         search: search || null,
+        status: status || null,
       },
       items,
     },
@@ -504,5 +761,32 @@ export async function getMappedAnswerSheetsByExamSession({
       total: count,
       totalPages: Math.ceil(count / limit) || 0,
     },
+  };
+}
+
+export async function getMySingleAssignedScript(id, assignedToUserId) {
+  const row = await answerSheetQrRepository.getMySingleAssignedScript(id, assignedToUserId);
+  if (!row) {
+    throw createServiceError("Assigned script not found", 404);
+  }
+
+  const plain = row.get({ plain: true });
+  if (plain.s3File && plain.s3File.s3Key) {
+    plain.s3File.url = await s3Helper.getDownloadSignedUrl(plain.s3File.s3Key);
+  }
+
+  return {
+    id: plain.id,
+    qr: plain.qr,
+    requestId: plain.requestId ?? null,
+    examScheduleId: plain.examScheduleId,
+    assignedToUser: plain.assignedToUser ?? null,
+    deadlineDate: plain.deadlineDate ?? null,
+    evaluatedAt: plain.evaluatedAt ?? null,
+    obtainedMarks: plain.obtainedMarks ?? null,
+    fileUploadId: plain.fileUploadId,
+    createdAt: plain.createdAt,
+    ...buildExamContext(plain, { includeStudentIdentity: false }),
+    s3File: plain.s3File ?? null,
   };
 }

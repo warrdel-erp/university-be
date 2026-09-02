@@ -47,6 +47,11 @@ const answerSheetQrModel = sequelize.define(
         key: "user_id",
       },
     },
+    deadlineDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+      field: "deadline_date",
+    },
     evaluatedAt: {
       type: DataTypes.DATE,
       allowNull: true,

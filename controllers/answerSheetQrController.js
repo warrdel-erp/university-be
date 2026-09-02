@@ -3,6 +3,7 @@ import * as answerSheetSplitterServices from "../services/answerSheetSplitterSer
 import { ErrorResponse, SuccessResponse } from "../utility/response.js";
 import {
   emptyEvaluationSummary,
+  emptyMyAnswerSheetSkuStats,
   emptyPagination,
   validateEmployeeUser,
 } from "../utility/employeeValidation.js";
@@ -14,12 +15,23 @@ import * as pdfSplitJobRepository from "../repository/pdfSplitJobRepository.js";
 export async function generateAnswerSheetQrBulk(req, res) {
   try {
     const { count } = req.body;
-    const result = await answerSheetQrServices.generateBulkAnswerSheetQr(Number(count));
+    const result = await answerSheetQrServices.generateBulkAnswerSheetQr(
+      Number(count),
+    );
 
-    return SuccessResponse(res, 201, "Answer sheet QR codes generated successfully", result);
+    return SuccessResponse(
+      res,
+      201,
+      "Answer sheet QR codes generated successfully",
+      result,
+    );
   } catch (error) {
     console.error("Error in generateAnswerSheetQrBulk controller:", error);
-    return ErrorResponse(res, error.statusCode || 500, error.message || "Unable to generate answer sheet QR codes");
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Unable to generate answer sheet QR codes",
+    );
   }
 }
 
@@ -36,7 +48,11 @@ export async function mapAnswerSheetQr(req, res) {
     return SuccessResponse(res, 200, "QR code mapped successfully", result);
   } catch (error) {
     console.error("Error in mapAnswerSheetQr controller:", error);
-    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error",
+    );
   }
 }
 
@@ -44,22 +60,34 @@ export async function getAnswerSheetQrById(req, res) {
   try {
     const { id } = req.params;
 
-    const result = await answerSheetQrServices.getAnswerSheetQrDetailById(Number(id));
+    const result = await answerSheetQrServices.getAnswerSheetQrDetailById(
+      Number(id),
+    );
 
-    return SuccessResponse(res, 200, "Answer sheet QR details fetched successfully", result);
+    return SuccessResponse(
+      res,
+      200,
+      "Answer sheet QR details fetched successfully",
+      result,
+    );
   } catch (error) {
     console.error("Error in getAnswerSheetQrById controller:", error);
-    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error",
+    );
   }
 }
 
 export async function getAnswerSheetQrGenerationRequests(req, res) {
   try {
     const { page = 1, limit = 10 } = req.query;
-    const result = await answerSheetQrServices.getAnswerSheetQrGenerationRequests(
-      page,
-      limit,
-    );
+    const result =
+      await answerSheetQrServices.getAnswerSheetQrGenerationRequests(
+        page,
+        limit,
+      );
 
     return SuccessResponse(
       res,
@@ -69,9 +97,16 @@ export async function getAnswerSheetQrGenerationRequests(req, res) {
       result.paginationData,
     );
   } catch (error) {
-    console.error("Error in getAnswerSheetQrGenerationRequests controller:", error);
+    console.error(
+      "Error in getAnswerSheetQrGenerationRequests controller:",
+      error,
+    );
 
-    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error",
+    );
   }
 }
 
@@ -94,23 +129,32 @@ export async function getAnswerSheetQrsByRequestId(req, res) {
     );
   } catch (error) {
     console.error("Error in getAnswerSheetQrsByRequestId controller:", error);
-    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error",
+    );
   }
 }
 
 export async function assignAnswerSheetsToTeachers(req, res) {
   try {
-    const { assignedToUserId, answerSheetQrIds } = req.body;
+    const { assignedToUserId, answerSheetQrIds, deadlineDate } = req.body;
 
-    const result = await answerSheetQrServices.assignAnswerSheetsToTeachers(
+    await answerSheetQrServices.assignAnswerSheetsToTeachers(
       assignedToUserId,
       answerSheetQrIds,
+      deadlineDate,
     );
 
-    return SuccessResponse(res, 200, "Answer sheets assigned to teachers successfully", result);
+    return SuccessResponse(res, 200, "Answer sheets mapped");
   } catch (error) {
     console.error("Error in assignAnswerSheetsToTeachers controller:", error);
-    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error",
+    );
   }
 }
 
@@ -128,7 +172,7 @@ export async function getMyAssignedScripts(req, res) {
         200,
         "Assigned scripts fetched successfully",
         {
-          filteredrows: [],
+          items: [],
           teacher: {
             userId: validation.userId,
             userName: req.user?.userName || null,
@@ -145,10 +189,55 @@ export async function getMyAssignedScripts(req, res) {
       limit,
     );
 
-    return SuccessResponse(res, 200, "Assigned scripts fetched successfully", result.data, result.pagination);
+    return SuccessResponse(
+      res,
+      200,
+      "Assigned scripts fetched successfully",
+      result.data,
+      result.pagination,
+    );
   } catch (error) {
     console.error("Error in getMyAssignedScripts controller:", error);
-    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error",
+    );
+  }
+}
+
+export async function getMyAnswerSheetSkuStats(req, res) {
+  try {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return ErrorResponse(res, validation.status, validation.message);
+    }
+    if (!validation.employeeRecord) {
+      return SuccessResponse(
+        res,
+        200,
+        "Answer sheet SKU data fetched successfully",
+        emptyMyAnswerSheetSkuStats(),
+      );
+    }
+
+    const result = await answerSheetQrServices.getMyAnswerSheetSkuStats(
+      validation.userId,
+    );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Answer sheet SKU data fetched successfully",
+      result,
+    );
+  } catch (error) {
+    console.error("Error in getMyAnswerSheetSkuStats controller:", error);
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error",
+    );
   }
 }
 
@@ -159,11 +248,20 @@ export async function getMyEvaluationSummary(req, res) {
       return ErrorResponse(res, validation.status, validation.message);
     }
     if (!validation.employeeRecord) {
-      return SuccessResponse(res, 200, "Evaluation summary fetched successfully", emptyEvaluationSummary());
+      return SuccessResponse(
+        res,
+        200,
+        "Evaluation summary fetched successfully",
+        emptyEvaluationSummary(),
+      );
     }
 
-    const result = await answerSheetQrServices.getScriptsAssignedToTeacher(validation.userId, 1, 10000);
-    const rows = result.data?.filteredrows || [];
+    const result = await answerSheetQrServices.getScriptsAssignedToTeacher(
+      validation.userId,
+      1,
+      10000,
+    );
+    const rows = result.data?.items || [];
     let evaluated = 0;
 
     for (const row of rows) {
@@ -172,14 +270,23 @@ export async function getMyEvaluationSummary(req, res) {
       }
     }
 
-    return SuccessResponse(res, 200, "Evaluation summary fetched successfully", {
-      totalAssigned: rows.length,
-      evaluated,
-      pending: rows.length - evaluated,
-    });
+    return SuccessResponse(
+      res,
+      200,
+      "Evaluation summary fetched successfully",
+      {
+        totalAssigned: rows.length,
+        evaluated,
+        pending: rows.length - evaluated,
+      },
+    );
   } catch (error) {
     console.error("Error in getMyEvaluationSummary controller:", error);
-    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error",
+    );
   }
 }
 
@@ -194,10 +301,20 @@ export async function getScriptsAssignedToTeacher(req, res) {
       limit,
     );
 
-    return SuccessResponse(res, 200, "Assigned scripts fetched successfully", result.data, result.pagination);
+    return SuccessResponse(
+      res,
+      200,
+      "Assigned scripts fetched successfully",
+      result.data,
+      result.pagination,
+    );
   } catch (error) {
     console.error("Error in getScriptsAssignedToTeacher controller:", error);
-    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error",
+    );
   }
 }
 
@@ -208,13 +325,62 @@ export async function assignObtainedMarksToAnswerSheet(req, res) {
 
     const result = await answerSheetQrServices.assignObtainedMarksToAnswerSheet(
       Number(id),
-      Number(obtained_marks),
+      obtained_marks,
     );
 
-    return SuccessResponse(res, 200, "Obtained marks assigned successfully", result);
+    return SuccessResponse(
+      res,
+      200,
+      "Obtained marks assigned successfully",
+      result,
+    );
   } catch (error) {
-    console.error("Error in assignObtainedMarksToAnswerSheet controller:", error);
-    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+    console.error(
+      "Error in assignObtainedMarksToAnswerSheet controller:",
+      error,
+    );
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error",
+    );
+  }
+}
+
+export async function assignMyObtainedMarksToAnswerSheet(req, res) {
+  try {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return ErrorResponse(res, validation.status, validation.message);
+    }
+    if (!validation.employeeRecord) {
+      return ErrorResponse(res, 403, "Employee record not found.");
+    }
+
+    const { id } = req.params;
+    const { obtained_marks } = req.body;
+
+    const result = await answerSheetQrServices.assignObtainedMarksToAnswerSheet(
+      Number(id),
+      obtained_marks,
+    );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Obtained marks assigned successfully",
+      result,
+    );
+  } catch (error) {
+    console.error(
+      "Error in assignMyObtainedMarksToAnswerSheet controller:",
+      error,
+    );
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error",
+    );
   }
 }
 
@@ -241,7 +407,8 @@ export async function splitAnswerSheetPdf(req, res) {
     const s3Key = fileRecord.s3Key;
 
     // ── Pre-flight Check 1: No other split job currently in progress ─────────
-    const activeTempFiles = answerSheetSplitterServices.checkActiveSplitTempFiles();
+    const activeTempFiles =
+      answerSheetSplitterServices.checkActiveSplitTempFiles();
     if (activeTempFiles) {
       return ErrorResponse(
         res,
@@ -257,12 +424,17 @@ export async function splitAnswerSheetPdf(req, res) {
     try {
       fileInfo = await s3Helper.verifyFileInS3(s3Key);
     } catch {
-      return ErrorResponse(res, 404, "The specified PDF file was not found in storage.");
+      return ErrorResponse(
+        res,
+        404,
+        "The specified PDF file was not found in storage.",
+      );
     }
 
     // ── Pre-flight Check 3: Ensure ≥ 2× file size of free disk space ─────────
     const requiredBytes = fileInfo.size * 2;
-    const diskCheck = await answerSheetSplitterServices.checkDiskSpace(requiredBytes);
+    const diskCheck =
+      await answerSheetSplitterServices.checkDiskSpace(requiredBytes);
     if (!diskCheck.sufficient) {
       const freeMB = Math.round(diskCheck.freeBytes / (1024 * 1024));
       const requiredMB = Math.round(requiredBytes / (1024 * 1024));
@@ -276,39 +448,50 @@ export async function splitAnswerSheetPdf(req, res) {
     }
 
     // ── Resolve answer-sheet row ───────────────────────────────────────────────
-    const answerSheet = await examSessionAnswerSheetRepository.findByS3FileId(fileUploadId);
+    const answerSheet =
+      await examSessionAnswerSheetRepository.findByS3FileId(fileUploadId);
 
     // ── Guard: block re-split if already completed successfully ───────────────
     if (answerSheet) {
-      const successJob = await pdfSplitJobRepository.findSuccessfulJobByAnswerSheetId(answerSheet.id);
+      const successJob =
+        await pdfSplitJobRepository.findSuccessfulJobByAnswerSheetId(
+          answerSheet.id,
+        );
       if (successJob) {
         return ErrorResponse(
           res,
           409,
           `This file has already been split successfully (job: ${successJob.id}, status: ${successJob.status}). ` +
-          `Re-splitting a completed answer sheet is not allowed.`
+            `Re-splitting a completed answer sheet is not allowed.`,
         );
       }
     }
 
     // ── Enqueue the job ───────────────────────────────────────────────────────
-    const { jobId, jobDbId } = await answerSheetSplitterServices.enqueuePdfSplitJob(
-      s3Key,
-      req.user.userId,
-      answerSheet?.id ?? null,
-    );
+    const { jobId, jobDbId } =
+      await answerSheetSplitterServices.enqueuePdfSplitJob(
+        s3Key,
+        req.user.userId,
+        answerSheet?.id ?? null,
+      );
 
-    return SuccessResponse(res, 202, "PDF split job queued successfully. Poll the status endpoint to track progress.", {
-      jobId,
-      jobDbId,
-      statusUrl: `/answerSheetQr/splitPdf/job/${jobDbId}`,
-    });
+    return SuccessResponse(
+      res,
+      202,
+      "PDF split job queued successfully. Poll the status endpoint to track progress.",
+      {
+        jobId,
+        jobDbId,
+        statusUrl: `/answerSheetQr/splitPdf/job/${jobDbId}`,
+      },
+    );
   } catch (error) {
     console.error("Error in splitAnswerSheetPdf controller:", error);
     return ErrorResponse(
       res,
       error.statusCode || 500,
-      error.message || "An unexpected error occurred while queuing the PDF split job.",
+      error.message ||
+        "An unexpected error occurred while queuing the PDF split job.",
     );
   }
 }
@@ -317,16 +500,30 @@ export async function getSplitPdfJobStatus(req, res) {
   try {
     const { jobDbId } = req.params;
 
-    const jobStatus = await answerSheetSplitterServices.getPdfSplitJobStatus(jobDbId);
+    const jobStatus =
+      await answerSheetSplitterServices.getPdfSplitJobStatus(jobDbId);
 
     if (!jobStatus) {
-      return ErrorResponse(res, 404, `No PDF split job found with ID: ${jobDbId}`);
+      return ErrorResponse(
+        res,
+        404,
+        `No PDF split job found with ID: ${jobDbId}`,
+      );
     }
 
-    return SuccessResponse(res, 200, "PDF split job status fetched successfully.", jobStatus);
+    return SuccessResponse(
+      res,
+      200,
+      "PDF split job status fetched successfully.",
+      jobStatus,
+    );
   } catch (error) {
     console.error("Error in getSplitPdfJobStatus controller:", error);
-    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error",
+    );
   }
 }
 
@@ -348,6 +545,35 @@ export async function getMappedAnswerSheetsByExamSession(req, res) {
       res,
       error.statusCode || 500,
       error.message || "Failed to fetch mapped answer sheets",
+    );
+  }
+}
+
+export async function getMySingleAssignedScript(req, res) {
+  try {
+    const { id } = req.query;
+
+    if (!id) {
+      return ErrorResponse(res, 400, "Answer sheet ID is required");
+    }
+
+    const data = await answerSheetQrServices.getMySingleAssignedScript(
+      Number(id),
+      req.user.userId,
+    );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Single assigned script fetched successfully",
+      data,
+    );
+  } catch (error) {
+    console.error("Error in getMySingleAssignedScript:", error);
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch assigned script",
     );
   }
 }
