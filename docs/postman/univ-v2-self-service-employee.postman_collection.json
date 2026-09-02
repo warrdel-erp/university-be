@@ -428,6 +428,31 @@
               "path": ["attendance", "my"]
             }
           }
+        },
+        {
+          "name": "POST My Student Attendance Batch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"classSectionTermId\": 1,\n  \"filters\": [\n    {\n      \"date\": \"2026-09-02\",\n      \"timeTableCellDateWiseId\": 55535\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/attendance/my/getStudentAttendance/batch",
+              "host": ["{{baseurl}}"],
+              "path": ["attendance", "my", "getStudentAttendance", "batch"]
+            }
+          }
         }
       ]
     },

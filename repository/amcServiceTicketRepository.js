@@ -118,7 +118,7 @@ export async function createServiceTicket(data, options = {}) {
   return scoped(model.amcServiceTicketModel).create(data, { transaction: options.transaction });
 }
 
-export async function findAssetIdsIssuedToMember(userId, options = {}) {
+export async function findAssetIdsIssuedToMember(memberId, memberType, options = {}) {
   const rows = await scoped(model.assetIssueInventoryItemModel).findAll({
     attributes: [[sequelize.col("inventoryItem.asset_id"), "assetId"]],
     where: { assetReturnTransactionId: null },
@@ -129,8 +129,8 @@ export async function findAssetIdsIssuedToMember(userId, options = {}) {
         attributes: [],
         required: true,
         where: {
-          memberId: userId,
-          memberType: "TEACHER",
+          memberId,
+          memberType,
           ...buildScope(model.assetIssueTransactionModel),
         },
       },

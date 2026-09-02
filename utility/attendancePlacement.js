@@ -235,6 +235,7 @@ export function resolveDateWiseRoutinePlacement(dateWiseRow) {
   return {
     classSectionTermId: resolvedClassSectionTermId,
     academicGroupId: routine.academicGroupId ?? null,
+    electiveSubjectId: cell.electiveSubjectId ?? null,
     term: routine.academicGroup?.scope?.term ?? termRow?.term ?? null,
     year: section?.year ?? null,
     classSectionsId: section?.classSectionsId ?? termRow?.classSectionsId ?? null,
@@ -325,8 +326,8 @@ function mapDateWiseRowToResolvedPeriod(row) {
   const routine = cell.timeTableRoutine;
   const placement = resolveDateWiseRoutinePlacement(row);
 
-  if (!placement.classSectionTermId && !placement.academicGroupId) {
-    const error = new Error('Period could not be resolved to a class section term or academic group');
+  if (!placement.classSectionTermId && !placement.academicGroupId && !placement.electiveSubjectId) {
+    const error = new Error('Period could not be resolved to a class section term, academic group, or elective subject');
     error.statusCode = 400;
     throw error;
   }

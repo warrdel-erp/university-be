@@ -242,7 +242,7 @@ function resolvePayeeDetailsFromPayment(payment) {
     return buildMemberDetailsFromStudent(payment.payeeId, payment.studentPayee);
   }
 
-  return buildMemberDetailsFromEmployee(payment.payeeId, payment.employeePayee);
+  return buildMemberDetailsFromEmployee(payment.payeeId, payment.employeeUserPayee);
 }
 
 function extractPaymentAmount(paymentItemRow) {
@@ -527,7 +527,10 @@ export async function listAssetReturnTransactions(query) {
     securityAmountByIssueId,
     issueTransactionIdsByReturnId,
   } = await returnRepo.findAssetReturnTransactionsListBundle(
-    { memberId: query.memberId },
+    {
+      memberId: query.memberId,
+      memberType: query.memberType,
+    },
     {
       page: query.page,
       limit: query.limit,
@@ -578,6 +581,25 @@ export async function listAssetReturnTransactions(query) {
     data: { assetReturnTransactions },
     pagination: { page, limit, total },
   };
+}
+
+export async function listMyAssetReturnTransactions(userId, query) {
+  const page = Number(query.page ?? 1);
+  const limit = Number(query.limit ?? 20);
+  const member = await issueRepo.resolveIssueMemberFromUserId(userId);
+
+  if (!member) {
+    return {
+      data: { assetReturnTransactions: [] },
+      pagination: { page, limit, total: 0 },
+    };
+  }
+
+  return listAssetReturnTransactions({
+    ...query,
+    memberId: member.memberId,
+    memberType: member.memberType,
+  });
 }
 
 export async function getAssetReturnPaymentsById(assetReturnTransactionId) {

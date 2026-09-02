@@ -63,7 +63,7 @@ const paymentPayeeIncludes = [
   },
   {
     model: model.employeeModel,
-    as: "employeePayee",
+    as: "employeeUserPayee",
     attributes: ["userId", "employeeName", "employeeCode", "departmentId"],
     required: false,
   },
@@ -394,6 +394,9 @@ export async function findAssetReturnTransactionsPaginated(
   const issueScope = buildScope(model.assetIssueTransactionModel);
   if (filters.memberId !== undefined) {
     issueScope.memberId = filters.memberId;
+  }
+  if (filters.memberType !== undefined) {
+    issueScope.memberType = filters.memberType;
   }
 
   const { count, rows } = await scoped(model.assetReturnTransactionModel).findAndCountAll({

@@ -1883,13 +1883,14 @@ assetIssueTransactionModel.belongsTo(studentModel, {
 
 employeeModel.hasMany(assetIssueTransactionModel, {
   foreignKey: "memberId",
+  sourceKey: "userId",
   scope: { memberType: "TEACHER" },
   constraints: false,
   as: "assetIssueTransactions",
 });
 assetIssueTransactionModel.belongsTo(employeeModel, {
   foreignKey: "memberId",
-  targetKey: "employeeId",
+  targetKey: "userId",
   constraints: false,
   as: "teacherMember",
 });
@@ -2936,6 +2937,12 @@ studentFeePaymentModel.belongsTo(employeeModel, {
   targetKey: "employeeId",
   constraints: false,
   as: "employeePayee",
+});
+studentFeePaymentModel.belongsTo(employeeModel, {
+  foreignKey: "payeeId",
+  targetKey: "userId",
+  constraints: false,
+  as: "employeeUserPayee",
 });
 
 studentFeeInvoiceItemsModel.belongsTo(feeTypeCatalogModel, {

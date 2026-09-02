@@ -2,6 +2,7 @@ import * as AttendanceCreation from "../services/attendanceServices.js";
 import * as fileHandler from '../utility/fileHandler.js';
 import { ErrorResponse, SuccessResponse } from "../utility/response.js";
 import * as model from "../models/index.js";
+import { assertTeacherAssignedToDateWiseIds } from "../utility/employeeValidation.js";
 
 export async function addAttendance(req, res) {
   const createdBy = req.user.userId;
@@ -298,6 +299,33 @@ export async function getStudentsBatchAttendance(req, res) {
     ErrorResponse(res, 500, error.message || 'An unexpected error occurred');
   }
 };
+
+export async function getMyStudentsBatchAttendance(req, res) {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return ErrorResponse(res, 404, "User ID not found");
+    }
+
+    const { classSectionTermId, filters } = req.body;
+    const dateWiseIds = (filters || []).map((filter) => filter.timeTableCellDateWiseId);
+
+    const assignmentCheck = await assertTeacherAssignedToDateWiseIds(userId, dateWiseIds);
+    if (!assignmentCheck.valid) {
+      return ErrorResponse(res, assignmentCheck.status, assignmentCheck.message);
+    }
+
+    const data = await AttendanceCreation.getStudentsBatchAttendance(
+      classSectionTermId,
+      filters,
+    );
+
+    return SuccessResponse(res, 200, "Student attendance fetched successfully", data);
+  } catch (error) {
+    console.error("Controller Error:", error);
+    return ErrorResponse(res, 500, error.message || "An unexpected error occurred");
+  }
+}
 
 export async function getEmployeeSectionDates(req, res) {
   try {

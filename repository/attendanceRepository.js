@@ -733,6 +733,103 @@ export async function getStudentsBatchAttendance(classSectionTermId, filters = [
     }
 }
 
+export async function getStudentsByElectiveSubjectWithBatchAttendance(electiveSubjectId, filters = []) {
+    try {
+        const dateWiseIds = (filters || [])
+            .map((f) => Number(f.timeTableCellDateWiseId))
+            .filter(Boolean);
+
+        const attendanceWhere = dateWiseIds.length > 0
+            ? { timeTableCellDateWiseId: { [Op.in]: dateWiseIds } }
+            : undefined;
+
+        return await scoped(model.studentModel).findAll({
+            where: { deletedAt: null },
+            attributes: ['studentId', 'firstName', 'middleName', 'lastName', 'scholarNumber', 'enrollNumber', 'classSectionTermId'],
+            include: [
+                {
+                    model: model.studentElectiveSubjectModel,
+                    as: 'electiveSubjectMappings',
+                    attributes: [],
+                    where: { electiveSubjectId: Number(electiveSubjectId) },
+                    required: true,
+                },
+                {
+                    model: model.attendanceModel,
+                    as: 'studentAttendance',
+                    required: false,
+                    attributes: [
+                        'attendanceId',
+                        'date',
+                        'attendanceStatus',
+                        'timeTableCellDateWiseId',
+                        'timeTableCellId',
+                        'notes',
+                        'description',
+                    ],
+                    where: attendanceWhere,
+                },
+            ],
+            order: [
+                ['scholarNumber', 'ASC'],
+                ['firstName', 'ASC'],
+            ],
+        });
+    } catch (error) {
+        console.error("Error in getStudentsByElectiveSubjectWithBatchAttendance:", error);
+        throw error;
+    }
+}
+
+export async function getStudentsByAcademicGroupWithBatchAttendance(academicGroupId, filters = []) {
+    try {
+        const dateWiseIds = (filters || [])
+            .map((f) => Number(f.timeTableCellDateWiseId))
+            .filter(Boolean);
+
+        const attendanceWhere = dateWiseIds.length > 0
+            ? { timeTableCellDateWiseId: { [Op.in]: dateWiseIds } }
+            : undefined;
+
+        return await scoped(model.studentModel).findAll({
+            where: { deletedAt: null },
+            attributes: ['studentId', 'firstName', 'middleName', 'lastName', 'scholarNumber', 'enrollNumber', 'classSectionTermId'],
+            include: [
+                {
+                    model: model.studentAcademicGroupModel,
+                    as: 'studentAcademicGroup',
+                    attributes: [],
+                    where: { academicGroupId: Number(academicGroupId) },
+                    required: true,
+                },
+                {
+                    model: model.attendanceModel,
+                    as: 'studentAttendance',
+                    required: false,
+                    attributes: [
+                        'attendanceId',
+                        'date',
+                        'attendanceStatus',
+                        'timeTableCellDateWiseId',
+                        'timeTableCellId',
+                        'notes',
+                        'description',
+                    ],
+                    where: attendanceWhere,
+                },
+            ],
+            order: [
+                ['scholarNumber', 'ASC'],
+                ['firstName', 'ASC'],
+            ],
+        });
+    } catch (error) {
+        console.error("Error in getStudentsByAcademicGroupWithBatchAttendance:", error);
+        throw error;
+    }
+}
+
+
 export async function getStudentsByScholarNumbers(scholarNumbers) {
     try {
         return await scoped(model.studentModel).findAll({

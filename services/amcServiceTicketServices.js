@@ -1,5 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as repo from "../repository/amcServiceTicketRepository.js";
+import { resolveIssueMemberFromUserId } from "../repository/assetIssueRepository.js";
 import {
   currentTicketYear,
   formatTicketNumber,
@@ -107,9 +108,21 @@ export async function addServiceTicket(body) {
   }
 }
 
+async function resolveMemberDetails(userId) {
+  const member = await resolveIssueMemberFromUserId(userId);
+  if (!member) {
+    return { memberId: null, memberType: null };
+  }
+  return member;
+}
+
 export async function addMyServiceTicket(userId, body) {
   try {
-    const assetIds = await repo.findAssetIdsIssuedToMember(userId);
+    const { memberId, memberType } = await resolveMemberDetails(userId);
+    if (!memberId) {
+      throw new Error("User does not have a valid member record.");
+    }
+    const assetIds = await repo.findAssetIdsIssuedToMember(memberId, memberType);
     assertAssetIssuedToMember(body.assetId, assetIds);
     return await addServiceTicket(body);
   } catch (error) {
@@ -138,7 +151,11 @@ export async function listServiceTickets(query = {}) {
 
 export async function listMyServiceTickets(userId, query = {}) {
   try {
-    const assetIds = await repo.findAssetIdsIssuedToMember(userId);
+    const { memberId, memberType } = await resolveMemberDetails(userId);
+    if (!memberId) {
+      return { rows: [], total: 0, page: query.page ?? 1, limit: query.limit ?? 20 };
+    }
+    const assetIds = await repo.findAssetIdsIssuedToMember(memberId, memberType);
     return await listServiceTickets({ ...query, assetIds });
   } catch (error) {
     throw new Error(`Failed to fetch service tickets: ${error.message}`);
@@ -155,7 +172,11 @@ export async function getSingleServiceTicket(serviceTicketId) {
 
 export async function getMySingleServiceTicket(userId, serviceTicketId) {
   try {
-    const assetIds = await repo.findAssetIdsIssuedToMember(userId);
+    const { memberId, memberType } = await resolveMemberDetails(userId);
+    if (!memberId) {
+      return null;
+    }
+    const assetIds = await repo.findAssetIdsIssuedToMember(memberId, memberType);
     return await repo.findServiceTicketById(serviceTicketId, { assetIds });
   } catch (error) {
     throw new Error(`Failed to fetch service ticket: ${error.message}`);
@@ -238,7 +259,11 @@ export async function previewTicketNumber() {
 
 export async function getMyServiceTicketSummary(userId) {
   try {
-    const assetIds = await repo.findAssetIdsIssuedToMember(userId);
+    const { memberId, memberType } = await resolveMemberDetails(userId);
+    if (!memberId) {
+      return await repo.findServiceTicketSummaryStats({ assetIds: [] });
+    }
+    const assetIds = await repo.findAssetIdsIssuedToMember(memberId, memberType);
     return await repo.findServiceTicketSummaryStats({ assetIds });
   } catch (error) {
     throw new Error(`Failed to fetch service ticket summary: ${error.message}`);

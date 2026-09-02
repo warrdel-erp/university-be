@@ -1,7 +1,6 @@
 import * as assetIssueService from "../services/assetIssueServices.js";
 import * as assetReturnService from "../services/assetReturnServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
-import { emptyPagination, validateEmployeeUser } from "../utility/employeeValidation.js";
 
 export async function addAssetIssue(req, res) {
   try {
@@ -23,17 +22,12 @@ export async function getAllAssetIssues(req, res) {
 
 export async function getMyAssetIssues(req, res) {
   try {
-    const validation = await validateEmployeeUser(req, res);
-    if (!validation.valid) {
-      return ErrorResponse(res, validation.status, validation.message);
-    }
-    if (!validation.employeeRecord) {
-      const { page = 1, limit = 10 } = req.query;
-      return SuccessResponse(res, 200, "Asset issues fetched successfully", [], emptyPagination(page, limit));
+    const userId = req.user?.userId;
+    if (!userId) {
+      return ErrorResponse(res, 404, "User ID not found");
     }
 
-    const query = { ...req.query, memberId: validation.userId, memberType: "TEACHER" };
-    const { data, pagination } = await assetIssueService.listAssetIssues(query);
+    const { data, pagination } = await assetIssueService.listMyAssetIssues(userId, req.query);
     return SuccessResponse(res, 200, "Asset issues fetched successfully", data, pagination);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
@@ -90,8 +84,15 @@ export async function getAllAssetReturnTransactions(req, res) {
 
 export async function getMyAssetReturnTransactions(req, res) {
   try {
-    const query = { ...req.query, memberId: req.user.userId };
-    const { data, pagination } = await assetReturnService.listAssetReturnTransactions(query);
+    const userId = req.user?.userId;
+    if (!userId) {
+      return ErrorResponse(res, 404, "User ID not found");
+    }
+
+    const { data, pagination } = await assetReturnService.listMyAssetReturnTransactions(
+      userId,
+      req.query,
+    );
     return SuccessResponse(res, 200, "Asset returns fetched successfully", data, pagination);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
