@@ -11,6 +11,13 @@ export async function getPolicies() {
   });
 }
 
+export async function getActivePolicies() {
+  return scoped(model.leavePolicyModel).findAll({
+    attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] },
+    where: { isActive: true },
+  });
+}
+
 export async function getPolicyById(policyId) {
   return scoped(model.leavePolicyModel).findOne({
     where: { policyId },

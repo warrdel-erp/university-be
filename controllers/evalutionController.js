@@ -1,4 +1,15 @@
 import * as evaluationService from "../services/evalutionService.js";
+import { validateEmployeeUser } from "../utility/employeeValidation.js";
+
+function belongsToUser(evaluation, userId) {
+    if (!evaluation) {
+        return false;
+    }
+
+    const row = evaluation.get ? evaluation.get({ plain: true }) : evaluation;
+    const evaluationUserId = row.userId || (row.user ? row.user.userId : null);
+    return Number(evaluationUserId) === Number(userId);
+}
 
 export async function addEvaluation(req, res) {
     const { evalutions } = req.body;
@@ -21,7 +32,6 @@ export async function addEvaluation(req, res) {
     }
 }
 
-
 export async function getAllEvaluation(req, res) {
     const { examSetupTypeId } = req.query;
     try {
@@ -30,7 +40,33 @@ export async function getAllEvaluation(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-};
+}
+
+export async function getMyEvaluation(req, res) {
+    const { examSetupTypeId } = req.query;
+    try {
+        const validation = await validateEmployeeUser(req, res);
+        if (!validation.valid) {
+            return res.status(validation.status).json({ message: validation.message });
+        }
+        if (!validation.employeeRecord) {
+            return res.status(200).json([]);
+        }
+
+        const evaluations = await evaluationService.getEvaluationDetails(examSetupTypeId);
+        const myEvaluations = [];
+
+        for (const item of evaluations) {
+            if (belongsToUser(item, validation.userId)) {
+                myEvaluations.push(item);
+            }
+        }
+
+        res.status(200).json(myEvaluations);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
 
 export async function getSingleEvaluationDetails(req, res) {
     try {
@@ -44,7 +80,7 @@ export async function getSingleEvaluationDetails(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-};
+}
 
 export async function updateEvaluation(req, res) {
     try {

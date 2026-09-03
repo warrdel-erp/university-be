@@ -22,6 +22,7 @@ import {
   getBooksIssuedToStudent,
   getStudentTimeTable,
   getStudentsByClassSection,
+  getMyStudentsByClassSection,
   getStudentsByElectiveSubject,
   getAllAnswerSheets,
 } from "../controllers/studentController.js";
@@ -659,9 +660,14 @@ router.get("/:studentId/feeDetails", userAuth, checkAccess(PERMISSIONS.STUDENT_L
 router.get("/issuedBook", userAuth, checkAccess(PERMISSIONS.STUDENT_LIST.value, null), getBooksIssuedToStudent);
 router.get("/studentTimetable", userAuth, checkAccess(PERMISSIONS.STUDENT_LIST.value, null), getStudentTimeTable);
 router.get(
+  "/my/classSectionStudents",
+  userAuth,
+  validate({ query: classSectionStudentsQuerySchema }),
+  getMyStudentsByClassSection,
+);
+router.get(
   "/classSectionStudents",
   userAuth,
-  checkAccess(PERMISSIONS.STUDENT_LIST.value, null),
   validate({ query: classSectionStudentsQuerySchema }),
   getStudentsByClassSection,
 );

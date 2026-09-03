@@ -1883,13 +1883,14 @@ assetIssueTransactionModel.belongsTo(studentModel, {
 
 employeeModel.hasMany(assetIssueTransactionModel, {
   foreignKey: "memberId",
+  sourceKey: "userId",
   scope: { memberType: "TEACHER" },
   constraints: false,
   as: "assetIssueTransactions",
 });
 assetIssueTransactionModel.belongsTo(employeeModel, {
   foreignKey: "memberId",
-  targetKey: "employeeId",
+  targetKey: "userId",
   constraints: false,
   as: "teacherMember",
 });
@@ -2937,6 +2938,12 @@ studentFeePaymentModel.belongsTo(employeeModel, {
   constraints: false,
   as: "employeePayee",
 });
+studentFeePaymentModel.belongsTo(employeeModel, {
+  foreignKey: "payeeId",
+  targetKey: "userId",
+  constraints: false,
+  as: "employeeUserPayee",
+});
 
 studentFeeInvoiceItemsModel.belongsTo(feeTypeCatalogModel, {
   foreignKey: "feeTypeId",
@@ -3102,6 +3109,8 @@ userModel.hasMany(scheduleAssignModel, {
   as: "assignedSchedules",
 });
 scheduleAssignModel.belongsTo(userModel, { foreignKey: "userId", as: "user" });
+scheduleAssignModel.belongsTo(employeeModel, { foreignKey: "userId", targetKey: "userId", as: "employeeSchedule" });
+employeeModel.hasMany(scheduleAssignModel, { foreignKey: "userId", sourceKey: "userId", as: "employeeScheduleAssigns" });
 
 scheduleAssignModel.hasMany(teacherAttendeceModel, {
   foreignKey: "scheduleAssignId",
@@ -3258,7 +3267,7 @@ libraryBookInventoryModel.belongsTo(libraryBookModel, {
   foreignKey: "library_book_id",
   as: "bookDetails",
 });
-// member_id → students.student_id (STUDENT) or employee.employee_id (TEACHER) per member_type
+// member_id → students.student_id (STUDENT) or employee.user_id (TEACHER) per member_type
 studentModel.hasMany(libraryIssueBookTransactionModel, {
   foreignKey: "memberId",
   scope: { memberType: "STUDENT" },

@@ -21,7 +21,8 @@ function toCampusRecord(campus, createdBy) {
 
 export async function createCampus(campus, createdBy) {
   try {
-    return scoped(model.campusModel).create(toCampusRecord(campus, createdBy));
+    const record = toCampusRecord(campus, createdBy);
+    return scoped(model.campusModel).create(record);
   } catch (error) {
     console.error("Error in Campus Repository (createCampus):", error);
     throw error;

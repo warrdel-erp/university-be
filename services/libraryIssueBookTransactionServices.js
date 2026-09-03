@@ -39,6 +39,26 @@ function assertUniqueInventoryIdsInPayload(inventoryItems) {
   }
 }
 
+async function normalizeIssueMember(memberId, memberType, transaction) {
+  if (memberType === "STUDENT") {
+    const studentId = await repo.resolveStudentIssueMemberId(memberId, transaction);
+    if (!studentId) {
+      throw httpError("Student not found", 404);
+    }
+    return { memberId: studentId, memberType };
+  }
+
+  if (memberType === "TEACHER") {
+    const count = await repo.countTeacherMemberById(memberId, transaction);
+    if (!count) {
+      throw httpError("Teacher not found", 404);
+    }
+    return { memberId: Number(memberId), memberType };
+  }
+
+  throw httpError("memberType must be STUDENT or TEACHER");
+}
+
 async function buildMemberInventoryFields(memberId, memberType, transaction) {
   if (memberType === "STUDENT") {
     return { studentId: memberId, employeeId: null };
@@ -52,22 +72,6 @@ async function buildMemberInventoryFields(memberId, memberType, transaction) {
   return { studentId: null, employeeId };
 }
 
-async function assertMemberExists(memberId, memberType, transaction) {
-  if (memberType === "STUDENT") {
-    const count = await repo.countStudentMemberById(memberId, transaction);
-    if (!count) throw httpError("Student not found", 404);
-    return;
-  }
-
-  if (memberType === "TEACHER") {
-    const count = await repo.countTeacherMemberById(memberId, transaction);
-    if (!count) throw httpError("Teacher not found", 404);
-    return;
-  }
-
-  throw httpError("memberType must be STUDENT or TEACHER");
-}
-
 async function assertInventoryItemsIssuable(inventoryItems, transaction) {
   if (!inventoryItems?.length) return;
 
@@ -78,7 +82,6 @@ async function assertInventoryItemsIssuable(inventoryItems, transaction) {
   if (existingCount !== inventoryIds.length) {
     throw httpError("One or more inventoryId values were not found", 404);
   }
-
 }
 
 async function issueInventoryCopies(
@@ -124,14 +127,14 @@ async function processReturnItems(libraryIssueBookTransactionId, returnItems, is
 export async function createLibraryIssueBookTransaction(body) {
   const transaction = await sequelize.transaction();
   try {
-    await assertMemberExists(body.memberId, body.memberType, transaction);
+    const member = await normalizeIssueMember(body.memberId, body.memberType, transaction);
     assertDueDateOnOrAfterIssueDate(body.issueDate, body.dueDate);
     await assertInventoryItemsIssuable(body.inventoryItems, transaction);
 
     const created = await repo.createLibraryIssueBookTransaction(
       {
-        memberId: body.memberId,
-        memberType: body.memberType,
+        memberId: member.memberId,
+        memberType: member.memberType,
         issueDate: body.issueDate,
         dueDate: body.dueDate,
       },
@@ -152,8 +155,8 @@ export async function createLibraryIssueBookTransaction(body) {
       await issueInventoryCopies(
         inventoryIds,
         {
-          memberId: body.memberId,
-          memberType: body.memberType,
+          memberId: member.memberId,
+          memberType: member.memberType,
           issueDate: body.issueDate,
           dueDate: body.dueDate,
         },
@@ -170,6 +173,24 @@ export async function createLibraryIssueBookTransaction(body) {
 
 export async function getLibraryIssueBookTransactions(query) {
   return repo.getLibraryIssueBookTransactions(query);
+}
+
+export async function getMyLibraryIssueBookTransactions(userId, query) {
+  const member = await repo.resolveIssueMemberFromUserId(userId);
+  if (!member) {
+    const page = Number(query.page ?? 1);
+    const limit = Number(query.limit ?? 20);
+    return {
+      data: [],
+      paginationData: { total: 0, page, limit },
+    };
+  }
+
+  return repo.getLibraryIssueBookTransactions({
+    ...query,
+    memberId: member.memberId,
+    memberType: member.memberType,
+  });
 }
 
 export async function getLibraryIssueBookTransactionById(libraryIssueBookTransactionId) {
@@ -192,13 +213,17 @@ export async function updateLibraryIssueBookTransaction(body) {
     );
     if (!existing) throw httpError("Library issue book transaction not found", 404);
 
-    const memberId = updateFields.memberId ?? existing.memberId;
-    const memberType = updateFields.memberType ?? existing.memberType;
+    let memberId = updateFields.memberId ?? existing.memberId;
+    let memberType = updateFields.memberType ?? existing.memberType;
     const issueDate = updateFields.issueDate ?? existing.issueDate;
     const dueDate = updateFields.dueDate ?? existing.dueDate;
 
     if (updateFields.memberId !== undefined || updateFields.memberType !== undefined) {
-      await assertMemberExists(memberId, memberType, transaction);
+      const member = await normalizeIssueMember(memberId, memberType, transaction);
+      memberId = member.memberId;
+      memberType = member.memberType;
+      updateFields.memberId = member.memberId;
+      updateFields.memberType = member.memberType;
     }
 
     assertDueDateOnOrAfterIssueDate(issueDate, dueDate);

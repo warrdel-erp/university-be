@@ -182,7 +182,13 @@ export const updatetimeTableCreate = async (req, res) => {
     res.status(200).send(result);
   } catch (error) {
     console.error(`Error in updating time table type`, error);
-    res.status(500).send("Internal Server Error");
+    const message = error.message || "Internal Server Error";
+    const statusCode =
+      error.statusCode ||
+      (/not found|published routine|date-wise|conflict|required/i.test(message)
+        ? 400
+        : 500);
+    return ErrorResponse(res, statusCode, message);
   }
 };
 
@@ -198,7 +204,13 @@ export const updateSimpleTeacherMappingController = async (req, res) => {
     res.status(200).send(result);
   } catch (err) {
     console.error("Error in updateSimpleTeacherMappingController:", err);
-    res.status(500).send({ success: false, message: err.message });
+    const message = err.message || "Internal Server Error";
+    const statusCode =
+      err.statusCode ||
+      (/not found|published routine|date-wise|conflict|required/i.test(message)
+        ? 400
+        : 500);
+    return ErrorResponse(res, statusCode, message);
   }
 };
 

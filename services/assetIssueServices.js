@@ -144,7 +144,7 @@ function resolvePayeeDetailsFromPayment(payment) {
     return buildMemberDetailsFromStudent(payment.payeeId, payment.studentPayee);
   }
 
-  return buildMemberDetailsFromEmployee(payment.payeeId, payment.employeePayee);
+  return buildMemberDetailsFromEmployee(payment.payeeId, payment.employeeUserPayee);
 }
 
 function resolveIssueItemStatus(itemPlain) {
@@ -243,19 +243,21 @@ function formatAssetIssuePaymentRecord(paymentItemRow, meta, payeeDetails = null
   };
 }
 
-async function validateMember(memberType, memberId, transaction) {
+async function normalizeIssueMember(memberType, memberId, transaction) {
   if (memberType === "STUDENT") {
-    const student = await repo.findStudentById(memberId, { transaction });
-    if (!student) {
+    const studentId = await repo.resolveStudentIssueMemberId(memberId, { transaction });
+    if (!studentId) {
       throw httpError("memberId student not found in your institute", 404);
     }
-    return;
+    return { memberId: studentId, memberType };
   }
 
   const teacher = await repo.findTeacherById(memberId, { transaction });
   if (!teacher) {
-    throw httpError("memberId employee not found in your institute", 404);
+    throw httpError("memberId teacher not found in your institute", 404);
   }
+
+  return { memberId: teacher.userId, memberType };
 }
 
 function assertDueDateOnOrAfterIssueDate(issueDate, dueDate) {
@@ -350,7 +352,7 @@ async function createSecurityPaymentForAssetIssue(
 export async function createAssetIssue(body, createdBy) {
   const row = await sequelize.transaction(async (transaction) => {
     assertDueDateOnOrAfterIssueDate(body.issueDate, body.dueDate);
-    await validateMember(body.memberType, body.memberId, transaction);
+    const member = await normalizeIssueMember(body.memberType, body.memberId, transaction);
     await validateIssueInventoryItems(body.items, transaction);
 
     const inventoryItemIds = repo.extractInventoryItemIds(body.items);
@@ -360,8 +362,8 @@ export async function createAssetIssue(body, createdBy) {
 
     const issue = await repo.createAssetIssue(
       {
-        memberId: body.memberId,
-        memberType: body.memberType,
+        memberId: member.memberId,
+        memberType: member.memberType,
         issueDate: body.issueDate,
         dueDate: body.dueDate,
       },
@@ -378,8 +380,8 @@ export async function createAssetIssue(body, createdBy) {
       await createSecurityPaymentForAssetIssue(
         {
           assetIssueTransactionId: issue.assetIssueTransactionId,
-          memberId: body.memberId,
-          memberType: body.memberType,
+          memberId: member.memberId,
+          memberType: member.memberType,
           securityAmount: body.securityAmount,
           paymentMethod: body.paymentMethod,
           createdBy,
@@ -415,7 +417,11 @@ export async function listAssetIssues(query) {
     itemStatsByIssueId,
     securityAmountByIssueId,
   } = await repo.findAssetIssuesPaginated(
-    { search: query.search },
+    {
+      search: query.search,
+      memberId: query.memberId,
+      memberType: query.memberType,
+    },
     { page: query.page, limit: query.limit }
   );
 
@@ -440,6 +446,25 @@ export async function listAssetIssues(query) {
     data: { assetIssues: enrichedAssetIssues },
     pagination: { page, limit, total },
   };
+}
+
+export async function listMyAssetIssues(userId, query) {
+  const page = Number(query.page ?? 1);
+  const limit = Number(query.limit ?? 20);
+  const member = await repo.resolveIssueMemberFromUserId(userId);
+
+  if (!member) {
+    return {
+      data: { assetIssues: [] },
+      pagination: { page, limit, total: 0 },
+    };
+  }
+
+  return listAssetIssues({
+    ...query,
+    memberId: member.memberId,
+    memberType: member.memberType,
+  });
 }
 
 export async function getAssetIssuePaymentsById(assetIssueTransactionId) {
@@ -524,11 +549,15 @@ export async function updateAssetIssue(assetIssueTransactionId, body) {
 
     const existingPlain = toPlain(existing);
     const issuePayload = buildIssueUpdatePayload(body);
-    const finalMemberType = issuePayload.memberType ?? existingPlain.memberType;
-    const finalMemberId = issuePayload.memberId ?? existingPlain.memberId;
+    let finalMemberType = issuePayload.memberType ?? existingPlain.memberType;
+    let finalMemberId = issuePayload.memberId ?? existingPlain.memberId;
 
     if (issuePayload.memberType !== undefined || issuePayload.memberId !== undefined) {
-      await validateMember(finalMemberType, finalMemberId, transaction);
+      const member = await normalizeIssueMember(finalMemberType, finalMemberId, transaction);
+      finalMemberType = member.memberType;
+      finalMemberId = member.memberId;
+      issuePayload.memberType = member.memberType;
+      issuePayload.memberId = member.memberId;
     }
 
     const finalIssueDate = issuePayload.issueDate ?? existingPlain.issueDate;

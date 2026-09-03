@@ -11,6 +11,8 @@ import {
   getSingleAssetIssue,
   updateAssetIssue,
   returnAssetIssueItems,
+  getMyAssetIssues,
+  getMyAssetReturnTransactions,
 } from "../controllers/assetIssueController.js";
 import userAuth from "../middleware/authUser.js";
 
@@ -151,6 +153,9 @@ router.get(
   validate({ query: assetReturnPaymentsQuerySchema }),
   getAssetReturnPaymentsById
 );
+
+router.get("/return/my", userAuth, validate({ query: listAssetReturnQuerySchema }), getMyAssetReturnTransactions);
+
 router.get("/return", userAuth, checkAccess(PERMISSIONS.ASSET_ISSUE_RETURN.value, 'assetIssueReturn'), validate({ query: listAssetReturnQuerySchema }), getAllAssetReturnTransactions);
 router.get(
   "/payments",
@@ -160,6 +165,8 @@ router.get(
   getAssetIssuePaymentsById
 );
 router.get("/", userAuth, checkAccess(PERMISSIONS.ASSET_ISSUE.value, 'assetIssue'), validate({ query: listAssetIssueQuerySchema }), getAllAssetIssues);
+
+router.get("/my", userAuth, validate({ query: listAssetIssueQuerySchema }), getMyAssetIssues);
 
 router.get("/single", userAuth, checkAccess(PERMISSIONS.ASSET_ISSUE.value, 'assetIssue'), validate({ query: singleAssetIssueQuerySchema }), getSingleAssetIssue);
 router.patch("/", userAuth, checkAccess(PERMISSIONS.ASSET_ISSUE_EDIT.value, 'assetIssue'), validate({ body: updateAssetIssueSchema }), updateAssetIssue);

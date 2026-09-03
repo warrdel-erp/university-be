@@ -377,10 +377,8 @@ router.get(
   getRoutineByTeacherAndAcademicYear,
 );
 
-router.get(
-  "/my/getRoutineByTeacher",
+router.get( "/my/getRoutineByTeacher",
   userAuth,
-  checkAccess(PERMISSIONS.CREATE_TIME_TABLE_VIEW.value, null),
   validate({ query: getMyRoutineByTeacherSchema }),
   getMyRoutineByTeacherAndAcademicYear,
 );

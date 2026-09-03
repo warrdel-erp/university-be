@@ -1,6 +1,11 @@
 import * as answerSheetQrServices from "../services/answerSheetQrServices.js";
 import * as answerSheetSplitterServices from "../services/answerSheetSplitterServices.js";
 import { ErrorResponse, SuccessResponse } from "../utility/response.js";
+import {
+  emptyEvaluationSummary,
+  emptyPagination,
+  validateEmployeeUser,
+} from "../utility/employeeValidation.js";
 import * as s3Helper from "../utility/s3Helper.js";
 import * as s3FileRepository from "../repository/s3FileRepository.js";
 import * as examSessionAnswerSheetRepository from "../repository/examSessionAnswerSheetRepository.js";
@@ -105,6 +110,75 @@ export async function assignAnswerSheetsToTeachers(req, res) {
     return SuccessResponse(res, 200, "Answer sheets assigned to teachers successfully", result);
   } catch (error) {
     console.error("Error in assignAnswerSheetsToTeachers controller:", error);
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function getMyAssignedScripts(req, res) {
+  try {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return ErrorResponse(res, validation.status, validation.message);
+    }
+
+    const { page = 1, limit = 20 } = req.query;
+    if (!validation.employeeRecord) {
+      return SuccessResponse(
+        res,
+        200,
+        "Assigned scripts fetched successfully",
+        {
+          filteredrows: [],
+          teacher: {
+            userId: validation.userId,
+            userName: req.user?.userName || null,
+            email: req.user?.email || null,
+          },
+        },
+        emptyPagination(page, limit),
+      );
+    }
+
+    const result = await answerSheetQrServices.getScriptsAssignedToTeacher(
+      validation.userId,
+      page,
+      limit,
+    );
+
+    return SuccessResponse(res, 200, "Assigned scripts fetched successfully", result.data, result.pagination);
+  } catch (error) {
+    console.error("Error in getMyAssignedScripts controller:", error);
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function getMyEvaluationSummary(req, res) {
+  try {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return ErrorResponse(res, validation.status, validation.message);
+    }
+    if (!validation.employeeRecord) {
+      return SuccessResponse(res, 200, "Evaluation summary fetched successfully", emptyEvaluationSummary());
+    }
+
+    const result = await answerSheetQrServices.getScriptsAssignedToTeacher(validation.userId, 1, 10000);
+    const rows = result.data?.filteredrows || [];
+    let evaluated = 0;
+
+    for (const row of rows) {
+      if (row.evaluatedAt != null) {
+        evaluated += 1;
+      }
+    }
+
+    return SuccessResponse(res, 200, "Evaluation summary fetched successfully", {
+      totalAssigned: rows.length,
+      evaluated,
+      pending: rows.length - evaluated,
+    });
+  } catch (error) {
+    console.error("Error in getMyEvaluationSummary controller:", error);
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
 }

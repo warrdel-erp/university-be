@@ -125,17 +125,21 @@ export async function deleteLesson(req, res) {
 };
 
 export async function addMapping(req, res) {
-    const { topicId, timeTableCellDateWiseId } = req.body
+    const { topicId, timeTableCellDateWiseId, timeTableCellId, date } = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if (!(topicId && timeTableCellDateWiseId)) {
-            return res.status(400).send('topicId and timeTableCellDateWiseId are required')
+        if (!topicId) {
+            return res.status(400).send('topicId is required')
+        }
+        if (!timeTableCellDateWiseId && !(timeTableCellId && date)) {
+            return res.status(400).send('Provide timeTableCellDateWiseId or timeTableCellId with date')
         }
         const lessonData = await lesson.addMapping(req.body, createdBy, updatedBy);
         res.status(201).json({ message: "Data added successfully", lessonData });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).json({ error: error.message });
     }
 };
 
@@ -629,16 +633,25 @@ export async function deleteMyTopic(req, res) {
 }
 
 export async function addMyMapping(req, res) {
-    const { topicId, timeTableCellDateWiseId } = req.body;
+    const { topicId, timeTableCellDateWiseId, timeTableCellId, date } = req.body;
     const userId = req.user.userId;
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if (!(topicId && timeTableCellDateWiseId)) {
-            return res.status(400).send("topicId and timeTableCellDateWiseId are required");
+        if (!topicId) {
+            return res.status(400).send("topicId is required");
         }
+        if (!timeTableCellDateWiseId && !(timeTableCellId && date)) {
+            return res.status(400).send("Provide timeTableCellDateWiseId or timeTableCellId with date");
+        }
+
+        const resolvedDateWiseId = await lesson.resolveMappingDateWiseIdFromPayload(req.body);
+        if (!resolvedDateWiseId) {
+            return res.status(400).send("timeTableCellDateWiseId could not be resolved for this period");
+        }
+
         await verifyTopicOwnership(topicId, userId);
-        await verifyDateWiseCellAssignment(timeTableCellDateWiseId, userId);
+        await verifyDateWiseCellAssignment(resolvedDateWiseId, userId);
 
         const lessonData = await lesson.addMapping(req.body, createdBy, updatedBy);
         res.status(201).json({ message: "Data added successfully", lessonData });

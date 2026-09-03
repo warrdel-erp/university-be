@@ -2,15 +2,6 @@ import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 
 export async function addRequest(data, options = {}) {
-  const employee = await scoped(model.employeeModel).findOne({
-    attributes: ["userId"],
-    where: { userId: data.userId },
-    transaction: options.transaction,
-  });
-  if (!employee) {
-    throw new Error("Employee not found");
-  }
-
   const policy = await scoped(model.leavePolicyModel).findOne({
     attributes: ["policyId"],
     where: { policyId: data.policyId },
@@ -39,7 +30,7 @@ export async function getRequests(filters = {}) {
       },
       {
         model: model.users, as: "user",
-        where: buildScope(model.employeeModel),
+        where: buildScope(model.users),
         required: true,
       },
     ],
@@ -60,7 +51,7 @@ export async function getRequestById(requestId) {
       },
       {
         model: model.users, as: "user",
-        where: buildScope(model.employeeModel),
+        where: buildScope(model.users),
         required: true,
       },
     ],

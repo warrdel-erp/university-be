@@ -10,6 +10,8 @@ import {
   getAnswerSheetQrsByRequestId,
   assignAnswerSheetsToTeachers,
   getScriptsAssignedToTeacher,
+  getMyAssignedScripts,
+  getMyEvaluationSummary,
   assignObtainedMarksToAnswerSheet,
   splitAnswerSheetPdf,
   getSplitPdfJobStatus,
@@ -157,6 +159,19 @@ router.get(
   checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, null),
   validate({ params: requestIdParamSchema, query: paginationSchema }),
   getAnswerSheetQrsByRequestId
+);
+
+router.get(
+  "/my/summary",
+  userAuth,
+  getMyEvaluationSummary,
+);
+
+router.get(
+  "/my",
+  userAuth,
+  validate({ query: paginationSchema }),
+  getMyAssignedScripts,
 );
 
 router.get(

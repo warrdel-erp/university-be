@@ -2765,6 +2765,7 @@ export async function getStudentsByPlacement(placement, timeTableCellDateWiseId,
                 {
                     model: model.attendanceModel,
                     as: "studentAttendance",
+                    separate: true,
                     attributes: [
                         "attendanceId",
                         "attendanceStatus",

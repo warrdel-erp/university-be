@@ -12,6 +12,10 @@ export async function getCourseOptions(courseLevelId) {
     return await optionsRepository.getCourseOptions(courseLevelId);
 }
 
+export async function getMyCourseOptions(courseLevelId, userId) {
+    return await optionsRepository.getMyCourseOptions(courseLevelId, userId);
+}
+
 export async function getTermOptions(courseId) {
     const course = await optionsRepository.getCourseData(courseId);
     if (!course) return [];
@@ -150,10 +154,10 @@ export async function getLectureWindowOptions(userId, employeeId, subjectId, aca
     };
 }
 
-export async function getLessonOptions(lectureWindowId, academicYearId) {
+export async function getLessonOptions(lectureWindowId, academicYearId, userId) {
     const [lectureWindow, options] = await Promise.all([
-        optionsRepository.getLectureWindowOptionDetail(lectureWindowId, academicYearId),
-        optionsRepository.getLessonOptionRows({ lectureWindowId, academicYearId }),
+        optionsRepository.getLectureWindowOptionDetail(lectureWindowId, academicYearId, userId),
+        optionsRepository.getLessonOptionRows({ lectureWindowId, academicYearId, userId }),
     ]);
 
     if (!lectureWindow) {
@@ -166,9 +170,9 @@ export async function getLessonOptions(lectureWindowId, academicYearId) {
     };
 }
 
-export async function getTopicOptions(lessonId, academicYearId) {
+export async function getTopicOptions(lessonId, academicYearId, userId) {
     const [lesson, options] = await Promise.all([
-        optionsRepository.getLessonOptionDetail(lessonId, academicYearId),
+        optionsRepository.getLessonOptionDetail(lessonId, academicYearId, userId),
         optionsRepository.getTopicOptionRows(lessonId),
     ]);
 

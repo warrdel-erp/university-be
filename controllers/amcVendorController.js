@@ -19,6 +19,16 @@ export async function getAllAmcVendor(req, res) {
   }
 }
 
+export async function getMyAmcVendors(req, res) {
+  try {
+    const userId = req.user.userId;
+    const result = await amcVendorService.listMyAmcVendors(userId, req.query);
+    return SuccessResponse(res, 200, "AMC vendors fetched successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
 export async function getSingleAmcVendorDetails(req, res) {
   try {
     const { amcVendorId } = req.query;

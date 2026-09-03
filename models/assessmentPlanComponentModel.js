@@ -37,12 +37,6 @@ const assessmentPlanComponentModel = sequelize.define(
                 key: 'assessment_plan_id'
             }
         },
-        evaluationBy: {
-            type: DataTypes.ENUM('Faculty', 'CoE', 'External'),
-            allowNull: false,
-            defaultValue: 'Faculty',
-            field: 'evaluation_by'
-        },
         weightagePercentage: {
             type: DataTypes.DECIMAL(5, 2),
             allowNull: false,
