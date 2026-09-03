@@ -42,7 +42,16 @@ function buildDateCutoffWhere(dateExpression, cutoffDate) {
 
 // Total count plus weekly/monthly growth from a historical baseline.
 export async function getCountWithGrowth(modelRef, dateField, options = {}) {
-  const { where: extraWhere = {}, include } = options;
+  const { where: extraWhere = {}, include, distinct, col } = options;
+
+  const buildCountOptions = (whereClause) => {
+    const countOptions = { where: whereClause, include };
+    if (distinct) {
+      countOptions.distinct = true;
+      countOptions.col = col;
+    }
+    return countOptions;
+  };
 
   const countAtCutoff = async (periodKey) => {
     const cutoff = subtractDays(new Date(), GROWTH_PERIODS[periodKey]);
@@ -54,11 +63,11 @@ export async function getCountWithGrowth(modelRef, dateField, options = {}) {
       whereClause[dateField] = { [Op.lte]: cutoff };
     }
 
-    return scoped(modelRef).count({ where: whereClause, include });
+    return scoped(modelRef).count(buildCountOptions(whereClause));
   };
 
   const [count, weeklyBaseline, monthlyBaseline] = await Promise.all([
-    scoped(modelRef).count({ where: extraWhere, include }),
+    scoped(modelRef).count(buildCountOptions(extraWhere)),
     countAtCutoff('weekly'),
     countAtCutoff('monthly'),
   ]);
@@ -70,30 +79,15 @@ export async function getCountWithGrowth(modelRef, dateField, options = {}) {
   };
 }
 
-// Restricts employees to users with TEACHER role.
+// Teachers = employees linked to users with isTeacher = true
+// (TEACHER is not stored in user_role_permission_scope).
 const teacherUserInclude = [
   {
     model: model.userModel,
     as: 'user',
     attributes: [],
     required: true,
-    include: [
-      {
-        model: model.userRolePermissionModel,
-        as: 'userRolePermissions',
-        attributes: [],
-        required: true,
-        include: [
-          {
-            model: model.roleModel,
-            as: 'userRole',
-            attributes: [],
-            where: { role: ROLES.TEACHER },
-            required: true,
-          },
-        ],
-      },
-    ],
+    where: { isTeacher: true },
   },
 ];
 
@@ -105,14 +99,18 @@ export async function getStudentOverviewStats() {
   return getCountWithGrowth(model.studentModel, studentEnrollmentDate);
 }
 
-// Teacher KPI count and growth for the dashboard card.
+// Teacher KPI: employees whose linked user has isTeacher = true.
 export async function getTeacherOverviewStats() {
-  return getCountWithGrowth(model.employeeModel, 'createdAt', { include: teacherUserInclude });
+  return getCountWithGrowth(model.employeeModel, 'createdAt', {
+    include: teacherUserInclude,
+    distinct: true,
+    col: 'employee_id',
+  });
 }
 
-// Staff KPI count and growth for the dashboard card.
+// Staff KPI count and growth — all employees from employeeModel.
 export async function getStaffOverviewStats() {
-  return getCountWithGrowth(model.staffModel, 'createdAt');
+  return getCountWithGrowth(model.employeeModel, 'createdAt');
 }
 
 // College department count from scoped department rows.
@@ -159,6 +157,36 @@ function resolveSubjectName(schedule) {
     return schedule.timeTableTeacherSubject.employeeSubject.subjectName;
   }
   return '';
+}
+
+function resolvePrimaryTeacherName(teachers) {
+  if (!teachers || teachers.length === 0) {
+    return '';
+  }
+
+  let primary = null;
+  for (const teacher of teachers) {
+    if (String(teacher.teacherType ?? '').toLowerCase() === 'primary') {
+      primary = teacher;
+      break;
+    }
+  }
+
+  const chosen = primary || teachers[0];
+  return chosen.employeeDetails?.employeeName ?? '';
+}
+
+function resolvePrimaryTeacherType(teachers) {
+  if (!teachers || teachers.length === 0) {
+    return null;
+  }
+
+  for (const teacher of teachers) {
+    if (String(teacher.teacherType ?? '').toLowerCase() === 'primary') {
+      return teacher.teacherType;
+    }
+  }
+  return teachers[0].teacherType ?? null;
 }
 
 // Upcoming, In Progress, or Completed from selected date and clock time.
@@ -259,7 +287,7 @@ function buildClassesTodayStats(todayItems, now) {
   };
 }
 
-// Single timetable fetch returning classesToday stats and class timeline.
+// Published date-wise classes for today stats + upcoming timeline.
 export async function getTimetableDayData(currentDate) {
   const now = new Date();
   const horizon = parseLocalDateOnly(currentDate);
@@ -267,152 +295,163 @@ export async function getTimetableDayData(currentDate) {
   const horizonDate = formatQueryDate(horizon);
   const todayDateString = formatQueryDate(currentDate);
 
-  const schedules = await scoped(model.classScheduleModel).findAll({
-    raw: true,
-    nest: true,
+  const dateWiseRows = await model.timeTableCellDateWiseModel.findAll({
     attributes: [
-      'timeTableMappingId',
-      'timeTableRoutineId',
-      'timeTableCreationId',
-      'period',
-      'timeTableType',
-      'day',
-      'teacherType',
+      'timeTableCellDateWiseId',
+      'timeTableCellId',
+      'date',
+      'classRoomSectionId',
     ],
+    where: {
+      date: {
+        [Op.gte]: todayDateString,
+        [Op.lte]: horizonDate,
+      },
+    },
     include: [
       {
-        model: model.timeTableRoutineModel,
-        as: 'timeTablecreate',
-        required: true,
-        attributes: ['startingDate', 'endingDate'],
-        where: {
-          isPublish: true,
-          [Op.and]: [
-            Sequelize.where(Sequelize.fn('DATE', Sequelize.col('starting_date')), { [Op.lte]: horizonDate }),
-            Sequelize.where(Sequelize.fn('DATE', Sequelize.col('ending_date')), { [Op.gte]: currentDate }),
-          ],
-          ...buildScope(model.timeTableRoutineModel),
-        },
-      },
-      {
-        model: model.timeTableStructurePeriodsModel,
-        as: 'timeTablecreation',
-        required: true,
-        attributes: ['startTime', 'endTime'],
-        where: {
-          [Op.or]: [{ isBreak: false }, { isBreak: { [Op.is]: null } }],
-        },
-      },
-      {
-        model: model.employeeModel,
-        as: 'employeeDetails',
+        model: model.timeTableCellTeachersDateWiseModel,
+        as: 'timeTableCellTeachersDateWise',
         required: false,
-        attributes: ['employeeName'],
-      },
-      {
-        model: model.teacherSubjectMappingModel,
-        as: 'timeTableTeacherSubject',
-        required: false,
-        attributes: ['teacherSubjectMappingId'],
+        attributes: [
+          'timeTableCellTeachersDateWiseId',
+          'userId',
+          'teacherType',
+        ],
         include: [
           {
-            model: model.subjectModel,
-            as: 'employeeSubject',
-            attributes: ['subjectName'],
+            model: model.employeeModel,
+            as: 'employeeDetails',
+            required: false,
+            attributes: ['employeeId', 'employeeName', 'userId'],
           },
         ],
-      },
-      {
-        model: model.subjectModel,
-        as: 'timeTableSubject',
-        required: false,
-        attributes: ['subjectName'],
-      },
-      {
-        model: model.electiveSubjectModel,
-        as: 'timeTableElective',
-        required: false,
-        attributes: ['electiveSubjectName'],
       },
       {
         model: model.classRoomModel,
         as: 'classRoom',
         required: false,
-        attributes: ['roomNumber'],
+        attributes: ['classRoomSectionId', 'roomNumber'],
       },
+      {
+        model: model.timeTableCellModel,
+        as: 'timeTableCell',
+        required: true,
+        attributes: [
+          'timeTableCellId',
+          'timeTableRoutineId',
+          'timeTableCreationId',
+          'period',
+          'day',
+          'subjectId',
+          'electiveSubjectId',
+          'timeTableType',
+        ],
+        include: [
+          {
+            model: model.timeTableRoutineModel,
+            as: 'timeTableRoutine',
+            required: true,
+            attributes: [
+              'timeTableRoutineId',
+              'startingDate',
+              'endingDate',
+              'isPublish',
+            ],
+            where: {
+              isPublish: true,
+              ...buildScope(model.timeTableRoutineModel),
+            },
+          },
+          {
+            model: model.timeTableStructurePeriodsModel,
+            as: 'timeTablecreation',
+            required: true,
+            attributes: ['timeTableCreationId', 'startTime', 'endTime', 'isBreak'],
+            where: {
+              [Op.or]: [{ isBreak: false }, { isBreak: { [Op.is]: null } }],
+            },
+          },
+          {
+            model: model.subjectModel,
+            as: 'timeTableSubject',
+            required: false,
+            attributes: ['subjectId', 'subjectName'],
+          },
+          {
+            model: model.electiveSubjectModel,
+            as: 'timeTableElective',
+            required: false,
+            attributes: ['electiveSubjectId', 'electiveSubjectName'],
+          },
+          {
+            model: model.teacherSubjectMappingModel,
+            as: 'timeTableTeacherSubject',
+            required: false,
+            attributes: ['teacherSubjectMappingId'],
+            include: [
+              {
+                model: model.subjectModel,
+                as: 'employeeSubject',
+                required: false,
+                attributes: ['subjectId', 'subjectName'],
+              },
+            ],
+          },
+          {
+            model: model.classRoomModel,
+            as: 'classRoom',
+            required: false,
+            attributes: ['classRoomSectionId', 'roomNumber'],
+          },
+        ],
+      },
+    ],
+    order: [
+      ['date', 'ASC'],
+      ['timeTableCellDateWiseId', 'ASC'],
     ],
   });
 
-  schedules.sort((a, b) => {
-    const aPrimary = String(a.teacherType ?? '').toLowerCase() === 'primary';
-    const bPrimary = String(b.teacherType ?? '').toLowerCase() === 'primary';
-    if (aPrimary && !bPrimary) {
-      return -1;
-    }
-    if (!aPrimary && bPrimary) {
-      return 1;
-    }
-    return 0;
-  });
-
-  const from = parseLocalDateOnly(currentDate);
-  const to = parseLocalDateOnly(horizonDate);
   const todayBySlot = new Map();
   const futureBySlot = new Map();
 
-  for (const schedule of schedules) {
-    const routine = schedule.timeTablecreate;
-    if (!routine?.startingDate || !routine?.endingDate) {
+  for (const row of dateWiseRows) {
+    const plain = row.get ? row.get({ plain: true }) : row;
+    const cell = plain.timeTableCell;
+    if (!cell || Number(cell.timeTableCellId) !== Number(plain.timeTableCellId)) {
       continue;
     }
 
-    const dayIndex = {
-      sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
-      thursday: 4, friday: 5, saturday: 6,
-    }[String(schedule.day ?? '').toLowerCase()];
-    if (dayIndex === undefined) {
+    const occurrenceDate = formatQueryDate(plain.date);
+    if (!occurrenceDate) {
       continue;
     }
 
-    const routineStart = parseLocalDateOnly(routine.startingDate);
-    const routineEnd = parseLocalDateOnly(routine.endingDate);
-    let occurrence = new Date(routineStart);
-    while (occurrence.getDay() !== dayIndex && occurrence <= routineEnd) {
-      occurrence.setDate(occurrence.getDate() + 1);
-    }
+    const period = cell.timeTablecreation;
+    const startTime = period?.startTime;
+    const endTime = period?.endTime;
+    const teachers = plain.timeTableCellTeachersDateWise || [];
+    const teacherType = resolvePrimaryTeacherType(teachers);
+    const slotKey = `${occurrenceDate}|${plain.timeTableCellDateWiseId}`;
 
-    while (occurrence <= routineEnd) {
-      if (occurrence >= from && occurrence <= to) {
-        const occurrenceDate = formatQueryDate(occurrence);
-        const period = schedule.timeTablecreation;
-        const startTime = period?.startTime;
-        const slotKey = `${occurrenceDate}|${schedule.timeTableRoutineId}|${schedule.period}`;
-        const targetMap = occurrenceDate === todayDateString
-          ? todayBySlot
-          : occurrenceDate > todayDateString
-            ? futureBySlot
-            : null;
+    const classItem = {
+      time: formatClassStartTime(startTime),
+      subject: resolveSubjectName(cell),
+      teacher: resolvePrimaryTeacherName(teachers),
+      room: plain.classRoom?.roomNumber
+        ?? cell.classRoom?.roomNumber
+        ?? '',
+      status: getClassTimelineStatus(startTime, endTime, now, occurrenceDate),
+      sortMinutes: startTime ? timeToMinutes(startTime) : 0,
+      sortDate: occurrenceDate,
+      teacherType,
+    };
 
-        if (targetMap) {
-          const existing = targetMap.get(slotKey);
-          const isPrimary = String(schedule.teacherType ?? '').toLowerCase() === 'primary';
-          const existingIsPrimary = existing
-            && String(existing.teacherType ?? '').toLowerCase() === 'primary';
-          if (!existing || (isPrimary && !existingIsPrimary)) {
-            targetMap.set(slotKey, {
-              time: formatClassStartTime(startTime),
-              subject: resolveSubjectName(schedule),
-              teacher: schedule.employeeDetails?.employeeName ?? '',
-              room: schedule.classRoom?.roomNumber ?? '',
-              status: getClassTimelineStatus(startTime, period?.endTime, now, occurrenceDate),
-              sortMinutes: timeToMinutes(startTime),
-              sortDate: occurrenceDate,
-              teacherType: schedule.teacherType,
-            });
-          }
-        }
-      }
-      occurrence.setDate(occurrence.getDate() + 7);
+    if (occurrenceDate === todayDateString) {
+      todayBySlot.set(slotKey, classItem);
+    } else if (occurrenceDate > todayDateString) {
+      futureBySlot.set(slotKey, classItem);
     }
   }
 

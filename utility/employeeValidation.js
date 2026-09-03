@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import * as model from "../models/index.js";
 
 export const validateEmployeeUser = async (req, res) => {
@@ -35,7 +36,7 @@ export async function assertTeacherAssignedToDateWiseIds(userId, dateWiseIds) {
 
   const assignments = await model.timeTableCellTeachersDateWiseModel.findAll({
     where: {
-      timeTableCellDateWiseId: uniqueIds,
+      timeTableCellDateWiseId: { [Op.in]: uniqueIds },
       userId: Number(userId),
     },
     attributes: ["timeTableCellDateWiseId"],

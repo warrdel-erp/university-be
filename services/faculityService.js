@@ -1,17 +1,27 @@
 import * as faculityLoadRepository from "../repository/faculityLoadRepository.js";
+import { toIntegerNumber } from "../utility/decimalMoney.js";
 
-function formatFaculityLoad(row) {
-  const plain = row?.get ? row.get({ plain: true }) : row;
-  if (!plain) return plain;
+function formatFaculityLoad(row, currentLoadOverride) {
+  const plain = row.get ? row.get({ plain: true }) : row;
+  if (!plain) {
+    return plain;
+  }
 
-  const { employee, employeeFaculity, ...rest } = plain;
+  const employee = plain.employee;
+  const currentLoad = currentLoadOverride != null
+    ? currentLoadOverride
+    : plain.currentLoad;
+
   return {
-    ...rest,
-    userId: employee?.userId || rest.userId, // map employee's userId back to the root level
-    definedLoad: rest.definedLoad == null ? null : Math.trunc(Number(rest.definedLoad)),
-    currentLoad: rest.currentLoad == null ? 0 : Math.round(Number(rest.currentLoad)),
-    ...(employee ? { employee } : {}),
-    ...(employeeFaculity ? { employeeFaculity } : {}),
+    faculityLoadId: plain.faculityLoadId,
+    employeeId: plain.employeeId,
+    universityId: plain.universityId,
+    instituteId: plain.instituteId,
+    academicYearId: plain.academicYearId,
+    userId: employee ? employee.userId : plain.userId,
+    definedLoad: plain.definedLoad == null ? null : toIntegerNumber(plain.definedLoad),
+    currentLoad: toIntegerNumber(currentLoad),
+    employee: employee || undefined,
   };
 }
 
@@ -19,26 +29,47 @@ function normalizeLoadWritePayload(data) {
   const payload = { ...data };
 
   if ("definedLoad" in payload && payload.definedLoad != null) {
-    const definedLoad = Number(payload.definedLoad);
-    if (!Number.isFinite(definedLoad) || Math.trunc(definedLoad) !== definedLoad) {
+    const raw = Number(payload.definedLoad);
+    if (!Number.isFinite(raw) || Math.trunc(raw) !== raw) {
       throw new Error("Invalid definedLoad");
     }
-    payload.definedLoad = Math.trunc(definedLoad);
+    payload.definedLoad = toIntegerNumber(raw);
   }
 
   if ("currentLoad" in payload) {
     if (payload.currentLoad == null || payload.currentLoad === "") {
       payload.currentLoad = 0;
     } else {
-      const currentLoad = Number(payload.currentLoad);
-      if (!Number.isFinite(currentLoad) || Math.trunc(currentLoad) !== currentLoad) {
+      const raw = Number(payload.currentLoad);
+      if (!Number.isFinite(raw) || Math.trunc(raw) !== raw) {
         throw new Error("Invalid currentLoad");
       }
-      payload.currentLoad = Math.trunc(currentLoad);
+      payload.currentLoad = toIntegerNumber(raw);
     }
   }
 
   return payload;
+}
+
+async function attachLiveClassCounts(rows) {
+  const userIds = [];
+  for (const row of rows) {
+    const plain = row.get ? row.get({ plain: true }) : row;
+    const userId = plain.employee ? plain.employee.userId : plain.userId;
+    if (userId != null) {
+      userIds.push(Number(userId));
+    }
+  }
+
+  const counts = await faculityLoadRepository.countPublishedDateWiseClassesByUserIds(userIds);
+  const formatted = [];
+  for (const row of rows) {
+    const plain = row.get ? row.get({ plain: true }) : row;
+    const userId = plain.employee ? plain.employee.userId : plain.userId;
+    const classCount = userId != null ? (counts.get(Number(userId)) || 0) : 0;
+    formatted.push(formatFaculityLoad(row, classCount));
+  }
+  return formatted;
 }
 
 export async function addFaculityLoad(data, createdBy, updatedBy) {
@@ -46,17 +77,17 @@ export async function addFaculityLoad(data, createdBy, updatedBy) {
   payload.createdBy = createdBy;
   payload.updatedBy = updatedBy;
   const result = await faculityLoadRepository.addFaculityLoad(payload);
-  return formatFaculityLoad(result);
+  return formatFaculityLoad(result, 0);
 }
 
-export async function getFaculityLoadDetails() {
-  const rows = await faculityLoadRepository.getFaculityLoadDetails();
-  return rows.map(formatFaculityLoad);
+export async function getFaculityLoadDetails(academicYearId) {
+  const rows = await faculityLoadRepository.getFaculityLoadDetails(academicYearId);
+  return attachLiveClassCounts(rows);
 }
 
 export async function getSingleFaculityLoadDetails(userId) {
   const rows = await faculityLoadRepository.getSingleFaculityLoadDetails(userId);
-  return rows.map(formatFaculityLoad);
+  return attachLiveClassCounts(rows);
 }
 
 export async function updateFaculityLoad(faculityLoadId, info, updatedBy) {

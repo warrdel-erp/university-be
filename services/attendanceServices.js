@@ -806,52 +806,20 @@ export async function getEmployeeSectionDates(classSectionTermId, subjectId, use
 
 const LEAVE_STATUS_SET = new Set(["Approved Leave", "Duty Leave", "Sports Leave", "NCC Leave"]);
 
-export async function getStudentsBatchAttendance(classSectionTermId, filters = []) {
-  const dateWiseIds = [];
-  const templateAttendance = {};
-  if (Array.isArray(filters)) {
-    for (let i = 0; i < filters.length; i++) {
-      const id = Number(filters[i]?.timeTableCellDateWiseId);
-      if (id) {
-        dateWiseIds.push(id);
-        templateAttendance[id] = null;
-      }
-    }
+function formatAttendanceDateKey(value) {
+  if (value == null) {
+    return null;
   }
-
-  let sourcePeriod = null;
-  if (dateWiseIds.length > 0) {
-    sourcePeriod = await resolveSourcePeriodByDateWiseId(dateWiseIds[0]);
-  } else if (classSectionTermId) {
-    sourcePeriod = { classSectionTermId };
-  } else {
-    throw new Error('Missing filters or classSectionTermId');
+  if (typeof value === 'string') {
+    return value.slice(0, 10);
   }
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
-  let rawStudents;
-  if (sourcePeriod.electiveSubjectId) {
-    rawStudents = await attendanceService.getStudentsByElectiveSubjectWithBatchAttendance(
-      sourcePeriod.electiveSubjectId,
-      filters,
-    );
-  } else if (sourcePeriod.academicGroupId) {
-    rawStudents = await attendanceService.getStudentsByAcademicGroupWithBatchAttendance(
-      sourcePeriod.academicGroupId,
-      filters,
-    );
-  } else {
-    const placement = await resolveAttendancePlacement(sourcePeriod.classSectionTermId);
-
-    if (dateWiseIds.length > 0) {
-      await assertDateWiseCellsBelongToTerm(dateWiseIds, placement.classSectionTermId);
-    }
-
-    rawStudents = await attendanceService.getStudentsBatchAttendance(
-      placement.classSectionTermId,
-      filters,
-    );
-  }
-
+function buildBatchStudentRows(rawStudents, templateAttendance) {
   const len = rawStudents.length;
   const students = new Array(len);
 
@@ -867,26 +835,29 @@ export async function getStudentsBatchAttendance(classSectionTermId, filters = [
     let medical = 0;
     let holiday = 0;
 
-    const rLen = records.length;
-    for (let j = 0; j < rLen; j++) {
+    for (let j = 0; j < records.length; j++) {
       const rec = records[j];
-      const cellId = rec.timeTableCellDateWiseId;
+      const cellId = rec.timeTableCellDateWiseId != null
+        ? Number(rec.timeTableCellDateWiseId)
+        : null;
       const status = rec.attendanceStatus;
 
-      if (cellId && status) {
-        attendance[cellId] = status.toUpperCase();
+      if (cellId == null || status == null || !(cellId in attendance)) {
+        continue;
+      }
 
-        if (status === "Present") {
-          present++;
-        } else if (status === "Absent") {
-          absent++;
-        } else if (status === "Medical Leave") {
-          medical++;
-        } else if (status === "Holiday") {
-          holiday++;
-        } else if (LEAVE_STATUS_SET.has(status)) {
-          leave++;
-        }
+      attendance[cellId] = status.toUpperCase();
+
+      if (status === "Present") {
+        present++;
+      } else if (status === "Absent") {
+        absent++;
+      } else if (status === "Medical Leave") {
+        medical++;
+      } else if (status === "Holiday") {
+        holiday++;
+      } else if (LEAVE_STATUS_SET.has(status)) {
+        leave++;
       }
     }
 
@@ -918,7 +889,147 @@ export async function getStudentsBatchAttendance(classSectionTermId, filters = [
     };
   }
 
-  return { students };
+  return students;
+}
+
+/**
+ * Batch student attendance for exact timeTableCellDateWiseIds.
+ * Missing date-wise rows / attendance stay null/empty — never fabricate relations.
+ */
+export async function getStudentsBatchAttendance(classSectionTermId, filters = []) {
+  if (classSectionTermId == null || classSectionTermId === '') {
+    const error = new Error('classSectionTermId is required');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!Array.isArray(filters) || filters.length === 0) {
+    const error = new Error('filters must be a non-empty array');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const requestedIds = [];
+  const filterByDateWiseId = new Map();
+  for (const filter of filters) {
+    const id = Number(filter.timeTableCellDateWiseId);
+    if (!id) {
+      continue;
+    }
+    if (!filterByDateWiseId.has(id)) {
+      requestedIds.push(id);
+      filterByDateWiseId.set(id, filter);
+    }
+  }
+
+  if (requestedIds.length === 0) {
+    const error = new Error('Each filter requires a valid timeTableCellDateWiseId');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const dateWiseRows = await attendanceService.findDateWiseCellsByIds(requestedIds);
+  const dateWiseById = new Map();
+  for (const row of dateWiseRows) {
+    const plain = row.get ? row.get({ plain: true }) : row;
+    // Integrity: date-wise must resolve through its real timeTableCell FK.
+    if (!plain.timeTableCell || Number(plain.timeTableCell.timeTableCellId) !== Number(plain.timeTableCellId)) {
+      continue;
+    }
+    dateWiseById.set(Number(plain.timeTableCellDateWiseId), row);
+  }
+
+  const validFilters = [];
+  const templateAttendance = {};
+  let electiveSubjectId = null;
+  let academicGroupId = null;
+  let mixedStudentSource = false;
+
+  for (const id of requestedIds) {
+    const row = dateWiseById.get(id);
+    if (!row) {
+      // Unknown / detached date-wise id — skip safely, no fabricated attendance.
+      continue;
+    }
+
+    const plain = row.get ? row.get({ plain: true }) : row;
+    const filter = filterByDateWiseId.get(id);
+    const dbDate = formatAttendanceDateKey(plain.date);
+
+    // When the client sends a date, it must match the DB date-wise record.
+    if (filter.date && dbDate && filter.date !== dbDate) {
+      continue;
+    }
+
+    const placement = resolveDateWiseRoutinePlacement(row);
+    if (
+      placement.classSectionTermId != null
+      && Number(placement.classSectionTermId) !== Number(classSectionTermId)
+      && placement.academicGroupId == null
+      && placement.electiveSubjectId == null
+    ) {
+      // Date-wise cell is for a different term — do not attach it here.
+      continue;
+    }
+
+    if (placement.electiveSubjectId != null) {
+      if (electiveSubjectId == null) {
+        electiveSubjectId = Number(placement.electiveSubjectId);
+      } else if (electiveSubjectId !== Number(placement.electiveSubjectId)) {
+        mixedStudentSource = true;
+      }
+    } else if (placement.academicGroupId != null) {
+      if (academicGroupId == null) {
+        academicGroupId = Number(placement.academicGroupId);
+      } else if (academicGroupId !== Number(placement.academicGroupId)) {
+        mixedStudentSource = true;
+      }
+    } else if (electiveSubjectId != null || academicGroupId != null) {
+      mixedStudentSource = true;
+    }
+
+    validFilters.push({
+      timeTableCellDateWiseId: id,
+      date: dbDate || filter.date || null,
+      periodName: filter.periodName || plain.timeTableCell?.timeTablecreation?.periodName || null,
+    });
+    templateAttendance[id] = null;
+  }
+
+  if (validFilters.length === 0) {
+    return { students: [] };
+  }
+
+  let rawStudents = [];
+  try {
+    if (!mixedStudentSource && electiveSubjectId != null) {
+      rawStudents = await attendanceService.getStudentsByElectiveSubjectWithBatchAttendance(
+        electiveSubjectId,
+        validFilters,
+      );
+    } else if (!mixedStudentSource && academicGroupId != null) {
+      rawStudents = await attendanceService.getStudentsByAcademicGroupWithBatchAttendance(
+        academicGroupId,
+        validFilters,
+      );
+    } else {
+      await resolveAttendancePlacement(Number(classSectionTermId));
+      rawStudents = await attendanceService.getStudentsBatchAttendance(
+        Number(classSectionTermId),
+        validFilters,
+      );
+    }
+  } catch (error) {
+    // Invalid term / student mapping must not 500 — return empty student list.
+    if (/required|not found|could not be resolved/i.test(error.message || '')) {
+      return { students: [] };
+    }
+    throw error;
+  }
+
+  return {
+    students: buildBatchStudentRows(rawStudents, templateAttendance),
+  };
 }
 
 /* ----------------  Extract Student ID from Name ---------------- */

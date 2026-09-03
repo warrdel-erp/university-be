@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { z } from "zod";
 const router = Router();
-import { addAttendance, addMyAttendance, copyAttendancePeriod, getCopyAttendancePeriod, getAttendanceDetails, updateAttendance, updateMyAttendance, importAttendance, importMyAttendance, importBulkAttendance, importMyBulkAttendance, getAttendanceByDate, getPreviousSessions, getStudentAttendanceReport, getStudentsBatchAttendance, getMyStudentsBatchAttendance, getEmployeeSectionDates } from "../controllers/attendanceController.js";
+import { addAttendance, addMyAttendance, copyAttendancePeriod, copyMyAttendancePeriod, getCopyAttendancePeriod, getMyCopyAttendancePeriod, getAttendanceDetails, updateAttendance, updateMyAttendance, importAttendance, importMyAttendance, importBulkAttendance, importMyBulkAttendance, getAttendanceByDate, getPreviousSessions, getStudentAttendanceReport, getStudentsBatchAttendance, getMyStudentsBatchAttendance, getEmployeeSectionDates } from "../controllers/attendanceController.js";
 import userAuth from "../middleware/authUser.js"
 import { validate } from "../utility/validation.js";
 
@@ -24,11 +24,12 @@ const bulkAttendanceReportSchema = z.object({
 });
 
 const batchAttendanceSchema = z.object({
-    classSectionTermId: positiveIntegerId.optional().nullable(),
+    classSectionTermId: positiveIntegerId,
     filters: z.array(z.object({
         date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD").optional(),
-        timeTableCellDateWiseId: z.number()
-    })).min(1)
+        timeTableCellDateWiseId: z.coerce.number().int().positive(),
+        periodName: z.string().optional(),
+    })).min(1),
 });
 
 const attendanceStatusEnum = z.enum([
@@ -91,6 +92,9 @@ router.patch('/my', userAuth, updateMyAttendance);
 // ---------------------------------------------------------------------------
 router.post('/copyPeriod', userAuth, validate({ body: copyAttendancePeriodSchema }), copyAttendancePeriod);
 router.get('/copyPeriod', userAuth, validate({ query: copyAttendancePeriodQuerySchema }), getCopyAttendancePeriod);
+
+router.post('/my/copyPeriod', userAuth, validate({ body: copyAttendancePeriodSchema }), copyMyAttendancePeriod);
+router.get('/my/copyPeriod', userAuth, validate({ query: copyAttendancePeriodQuerySchema }), getMyCopyAttendancePeriod);
 
 // ---------------------------------------------------------------------------
 // 3. List / lookup
