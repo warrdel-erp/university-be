@@ -196,14 +196,19 @@ async function attachLiveWeeklyLoad(rows) {
   );
   const hoursByUserId = buildWeeklyLoadHoursByUserId(dateWiseRows);
 
-  const formatted = [];
+  const data = [];
   for (const row of rows) {
     const plain = row.get ? row.get({ plain: true }) : row;
     const userId = plain.employee ? plain.employee.userId : plain.userId;
     const weeklyLoad = userId != null ? (hoursByUserId.get(Number(userId)) || 0) : 0;
-    formatted.push(formatFaculityLoad(row, weeklyLoad));
+    data.push(formatFaculityLoad(row, weeklyLoad));
   }
-  return formatted;
+
+  return {
+    startDate: week.startDate,
+    endDate: week.endDate,
+    data,
+  };
 }
 
 export async function addFaculityLoad(data, createdBy, updatedBy) {
