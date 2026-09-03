@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 
@@ -20,21 +21,38 @@ export async function addFaculityLoad(data) {
   }
 }
 
-export async function getFaculityLoadDetails() {
+export async function getFaculityLoadDetails(academicYearId) {
   try {
+    const where = {};
+    if (academicYearId != null && academicYearId !== "") {
+      where.academicYearId = Number(academicYearId);
+    }
+
     return scoped(model.faculityLoadModel).findAll({
-      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      where,
+      attributes: [
+        "faculityLoadId",
+        "employeeId",
+        "definedLoad",
+        "currentLoad",
+        "universityId",
+        "instituteId",
+        "academicYearId",
+      ],
       include: [
         {
-          model: model.employeeModel, as: "employee",
-          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+          model: model.employeeModel,
+          as: "employee",
+          attributes: [
+            "employeeId",
+            "userId",
+            "employeeName",
+            "employeeCode",
+            "departmentId",
+            "employmentType",
+            "pickColor",
+          ],
           required: true,
-          include: [
-            {
-              model: model.userModel, as: "user",
-              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "password"] },
-            }
-          ]
         },
       ],
     });
@@ -55,14 +73,23 @@ export async function getSingleFaculityLoadDetails(userId) {
     }
 
     return scoped(model.faculityLoadModel).findAll({
-      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      attributes: [
+        "faculityLoadId",
+        "employeeId",
+        "definedLoad",
+        "currentLoad",
+        "universityId",
+        "instituteId",
+        "academicYearId",
+      ],
       where: { employeeId: employee.employeeId },
       include: [
         {
-          model: model.employeeModel, as: "employee",
-          attributes: ["employeeId", "userId"],
-        }
-      ]
+          model: model.employeeModel,
+          as: "employee",
+          attributes: ["employeeId", "userId", "employeeName", "employeeCode"],
+        },
+      ],
     });
   } catch (error) {
     console.error("Error in getting faculity load:", error);
@@ -77,7 +104,8 @@ export async function updateFaculityLoad(faculityLoadId, info) {
       where: { faculityLoadId },
       include: [
         {
-          model: model.employeeModel, as: "employee",
+          model: model.employeeModel,
+          as: "employee",
           attributes: ["employeeId", "userId"],
           required: true,
         },
@@ -103,7 +131,8 @@ export async function deleteFaculityLoad(faculityLoadId) {
       where: { faculityLoadId },
       include: [
         {
-          model: model.employeeModel, as: "employee",
+          model: model.employeeModel,
+          as: "employee",
           attributes: ["employeeId", "userId"],
           required: true,
         },
@@ -146,11 +175,80 @@ export async function updateFaculityLoadByEmployeeId(userId, info, transaction) 
 }
 
 /**
- * Recompute current_load as integer hours from load distribution:
- * ROUND(SUM(structure.period_length minutes) / 60)
- * for all week-template cell teacher rows for this userId.
+ * Published date-wise classes in [startDate, endDate] for the given teacher userIds.
+ * Returns period start/end times via timeTableCell -> timeTablecreation.
+ * One query for all faculty (no per-faculty DB calls).
  */
-export async function recomputeFaculityCurrentLoadHours(userId, transaction) {
+export async function findPublishedWeekDateWiseTeacherPeriods(
+  userIds,
+  startDate,
+  endDate,
+  transaction,
+) {
+  const ids = [];
+  const seen = new Set();
+  for (const raw of userIds || []) {
+    const id = Number(raw);
+    if (!id || seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    ids.push(id);
+  }
+
+  if (ids.length === 0) {
+    return [];
+  }
+
+  return model.timeTableCellDateWiseModel.findAll({
+    attributes: ["timeTableCellDateWiseId", "date", "timeTableCellId"],
+    where: {
+      date: {
+        [Op.between]: [startDate, endDate],
+      },
+    },
+    include: [
+      {
+        model: model.timeTableCellTeachersDateWiseModel,
+        as: "timeTableCellTeachersDateWise",
+        required: true,
+        attributes: ["timeTableCellTeachersDateWiseId", "userId", "timeTableCellDateWiseId"],
+        where: { userId: { [Op.in]: ids } },
+      },
+      {
+        model: model.timeTableCellModel,
+        as: "timeTableCell",
+        required: true,
+        attributes: ["timeTableCellId", "timeTableCreationId"],
+        include: [
+          {
+            model: model.timeTableRoutineModel,
+            as: "timeTableRoutine",
+            required: true,
+            attributes: ["timeTableRoutineId", "isPublish"],
+            where: {
+              isPublish: true,
+              ...buildScope(model.timeTableRoutineModel),
+            },
+          },
+          {
+            model: model.timeTableStructurePeriodsModel,
+            as: "timeTablecreation",
+            required: true,
+            attributes: ["timeTableCreationId", "startTime", "endTime", "periodName"],
+          },
+        ],
+      },
+    ],
+    transaction,
+  });
+}
+
+/**
+ * Persist current_load for a faculty from current-week date-wise teaching hours.
+ * currentLoadHours must already be decimal hours (minutes / 60).
+ */
+export async function updateFaculityCurrentLoadByUserId(userId, currentLoadHours, transaction) {
   const userIdNum = Number(userId);
   if (!Number.isFinite(userIdNum) || userIdNum <= 0) {
     return [0];
@@ -165,48 +263,8 @@ export async function recomputeFaculityCurrentLoadHours(userId, transaction) {
     return [0];
   }
 
-  const teacherRows = await model.timeTableCellTeachersModel.findAll({
-    attributes: ["timeTableCellTeacherId"],
-    where: { userId: userIdNum },
-    include: [
-      {
-        model: model.timeTableCellModel,
-        as: "timeTableCell",
-        required: true,
-        attributes: ["timeTableCellId"],
-        include: [
-          {
-            model: model.timeTableStructurePeriodsModel,
-            as: "timeTablecreation",
-            required: true,
-            attributes: ["timeTableCreationId"],
-            include: [
-              {
-                model: model.timeTableStructureModel,
-                as: "timeTableName",
-                required: true,
-                attributes: ["periodLength"],
-                where: buildScope(model.timeTableStructureModel),
-              },
-            ],
-          },
-        ],
-      },
-    ],
-    transaction,
-  });
-
-  let totalMinutes = 0;
-  for (const row of teacherRows) {
-    const plain = row.get({ plain: true });
-    const periodLength = Number(plain.timeTableCell.timeTablecreation.timeTableName.periodLength);
-    totalMinutes += periodLength;
-  }
-
-  const hours = Math.round(totalMinutes / 60);
-
   return scoped(model.faculityLoadModel).update(
-    { currentLoad: hours },
+    { currentLoad: currentLoadHours },
     {
       where: { employeeId: employee.employeeId },
       transaction,

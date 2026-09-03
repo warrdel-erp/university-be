@@ -19,7 +19,8 @@ export const addFaculityLoad = async (req, res) => {
 
 export const getFaculityLoadDetails = async (req, res) => {
   try {
-    const result = await faculityLoadServices.getFaculityLoadDetails();
+    const { academicYearId } = req.query;
+    const result = await faculityLoadServices.getFaculityLoadDetails(academicYearId);
     res.status(200).send(result);
   } catch (error) {
     console.error("Error in getting faculity load:", error);

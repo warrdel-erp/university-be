@@ -683,45 +683,60 @@ export async function getStudentAttendanceReport(classSectionsId, subjectId, use
 
 export async function getStudentsBatchAttendance(classSectionTermId, filters = []) {
     try {
-        const dateWiseIds = (filters || [])
-            .map((f) => Number(f.timeTableCellDateWiseId))
-            .filter(Boolean);
+        const dateWiseIds = [];
+        const seen = new Set();
+        for (const filter of filters || []) {
+            const id = Number(filter.timeTableCellDateWiseId);
+            if (!id || seen.has(id)) {
+                continue;
+            }
+            seen.add(id);
+            dateWiseIds.push(id);
+        }
 
-        const attendanceWhere = dateWiseIds.length > 0
-            ? { timeTableCellDateWiseId: { [Op.in]: dateWiseIds } }
-            : undefined;
+        const termId = Number(classSectionTermId);
+        const includes = [
+            studentClassSectionTermWithSectionInclude({
+                classSectionTermId: termId,
+                termRequired: false,
+                sectionRequired: false,
+                includeSectionTerms: false,
+            }),
+            {
+                model: model.attendanceModel,
+                as: 'studentAttendance',
+                required: false,
+                separate: true,
+                attributes: [
+                    'attendanceId',
+                    'date',
+                    'attendanceStatus',
+                    'timeTableCellDateWiseId',
+                    'timeTableCellId',
+                    'notes',
+                    'description',
+                ],
+                ...(dateWiseIds.length > 0
+                    ? { where: { timeTableCellDateWiseId: { [Op.in]: dateWiseIds } } }
+                    : {}),
+            },
+        ];
 
         return await scoped(model.studentModel).findAll({
             where: {
-                [Op.or]: [
-                    { classSectionTermId: Number(classSectionTermId) },
-                    { '$studentClassSectionTerm.class_section_term_id$': Number(classSectionTermId) },
-                ],
+                classSectionTermId: termId,
                 deletedAt: null,
             },
-            attributes: ['studentId', 'firstName', 'middleName', 'lastName', 'scholarNumber', 'enrollNumber', 'classSectionTermId'],
-            include: [
-                studentClassSectionTermWithSectionInclude({
-                    classSectionTermId: Number(classSectionTermId),
-                    termRequired: false,
-                    sectionRequired: false,
-                }),
-                {
-                    model: model.attendanceModel,
-                    as: 'studentAttendance',
-                    required: false,
-                    attributes: [
-                        'attendanceId',
-                        'date',
-                        'attendanceStatus',
-                        'timeTableCellDateWiseId',
-                        'timeTableCellId',
-                        'notes',
-                        'description',
-                    ],
-                    where: attendanceWhere,
-                },
+            attributes: [
+                'studentId',
+                'firstName',
+                'middleName',
+                'lastName',
+                'scholarNumber',
+                'enrollNumber',
+                'classSectionTermId',
             ],
+            include: includes,
             order: [
                 ['scholarNumber', 'ASC'],
                 ['firstName', 'ASC'],
@@ -735,22 +750,33 @@ export async function getStudentsBatchAttendance(classSectionTermId, filters = [
 
 export async function getStudentsByElectiveSubjectWithBatchAttendance(electiveSubjectId, filters = []) {
     try {
-        const dateWiseIds = (filters || [])
-            .map((f) => Number(f.timeTableCellDateWiseId))
-            .filter(Boolean);
-
-        const attendanceWhere = dateWiseIds.length > 0
-            ? { timeTableCellDateWiseId: { [Op.in]: dateWiseIds } }
-            : undefined;
+        const dateWiseIds = [];
+        const seen = new Set();
+        for (const filter of filters || []) {
+            const id = Number(filter.timeTableCellDateWiseId);
+            if (!id || seen.has(id)) {
+                continue;
+            }
+            seen.add(id);
+            dateWiseIds.push(id);
+        }
 
         return await scoped(model.studentModel).findAll({
             where: { deletedAt: null },
-            attributes: ['studentId', 'firstName', 'middleName', 'lastName', 'scholarNumber', 'enrollNumber', 'classSectionTermId'],
+            attributes: [
+                'studentId',
+                'firstName',
+                'middleName',
+                'lastName',
+                'scholarNumber',
+                'enrollNumber',
+                'classSectionTermId',
+            ],
             include: [
                 {
                     model: model.studentElectiveSubjectModel,
                     as: 'electiveSubjectMappings',
-                    attributes: [],
+                    attributes: ['studentElectiveSubjectId', 'electiveSubjectId'],
                     where: { electiveSubjectId: Number(electiveSubjectId) },
                     required: true,
                 },
@@ -758,6 +784,7 @@ export async function getStudentsByElectiveSubjectWithBatchAttendance(electiveSu
                     model: model.attendanceModel,
                     as: 'studentAttendance',
                     required: false,
+                    separate: true,
                     attributes: [
                         'attendanceId',
                         'date',
@@ -767,7 +794,9 @@ export async function getStudentsByElectiveSubjectWithBatchAttendance(electiveSu
                         'notes',
                         'description',
                     ],
-                    where: attendanceWhere,
+                    ...(dateWiseIds.length > 0
+                        ? { where: { timeTableCellDateWiseId: { [Op.in]: dateWiseIds } } }
+                        : {}),
                 },
             ],
             order: [
@@ -783,22 +812,33 @@ export async function getStudentsByElectiveSubjectWithBatchAttendance(electiveSu
 
 export async function getStudentsByAcademicGroupWithBatchAttendance(academicGroupId, filters = []) {
     try {
-        const dateWiseIds = (filters || [])
-            .map((f) => Number(f.timeTableCellDateWiseId))
-            .filter(Boolean);
-
-        const attendanceWhere = dateWiseIds.length > 0
-            ? { timeTableCellDateWiseId: { [Op.in]: dateWiseIds } }
-            : undefined;
+        const dateWiseIds = [];
+        const seen = new Set();
+        for (const filter of filters || []) {
+            const id = Number(filter.timeTableCellDateWiseId);
+            if (!id || seen.has(id)) {
+                continue;
+            }
+            seen.add(id);
+            dateWiseIds.push(id);
+        }
 
         return await scoped(model.studentModel).findAll({
             where: { deletedAt: null },
-            attributes: ['studentId', 'firstName', 'middleName', 'lastName', 'scholarNumber', 'enrollNumber', 'classSectionTermId'],
+            attributes: [
+                'studentId',
+                'firstName',
+                'middleName',
+                'lastName',
+                'scholarNumber',
+                'enrollNumber',
+                'classSectionTermId',
+            ],
             include: [
                 {
-                    model: model.studentAcademicGroupModel,
-                    as: 'studentAcademicGroup',
-                    attributes: [],
+                    model: model.academicGroupStudentModel,
+                    as: 'academicGroupStudents',
+                    attributes: ['academicGroupStudentId', 'academicGroupId'],
                     where: { academicGroupId: Number(academicGroupId) },
                     required: true,
                 },
@@ -806,6 +846,7 @@ export async function getStudentsByAcademicGroupWithBatchAttendance(academicGrou
                     model: model.attendanceModel,
                     as: 'studentAttendance',
                     required: false,
+                    separate: true,
                     attributes: [
                         'attendanceId',
                         'date',
@@ -815,7 +856,9 @@ export async function getStudentsByAcademicGroupWithBatchAttendance(academicGrou
                         'notes',
                         'description',
                     ],
-                    where: attendanceWhere,
+                    ...(dateWiseIds.length > 0
+                        ? { where: { timeTableCellDateWiseId: { [Op.in]: dateWiseIds } } }
+                        : {}),
                 },
             ],
             order: [
@@ -827,6 +870,121 @@ export async function getStudentsByAcademicGroupWithBatchAttendance(academicGrou
         console.error("Error in getStudentsByAcademicGroupWithBatchAttendance:", error);
         throw error;
     }
+}
+
+/**
+ * Batch-load date-wise cells with their real timeTableCell FK parent.
+ * Missing ids simply omit rows — callers must not invent replacements.
+ */
+export async function findDateWiseCellsByIds(timeTableCellDateWiseIds) {
+    const ids = [];
+    const seen = new Set();
+    for (const raw of timeTableCellDateWiseIds || []) {
+        const id = Number(raw);
+        if (!id || seen.has(id)) {
+            continue;
+        }
+        seen.add(id);
+        ids.push(id);
+    }
+
+    if (ids.length === 0) {
+        return [];
+    }
+
+    return model.timeTableCellDateWiseModel.findAll({
+        where: { timeTableCellDateWiseId: { [Op.in]: ids } },
+        attributes: [
+            'timeTableCellDateWiseId',
+            'timeTableCellId',
+            'date',
+            'classRoomSectionId',
+            'subjectId',
+            'electiveSubjectId',
+        ],
+        include: [
+            {
+                model: model.timeTableCellModel,
+                as: 'timeTableCell',
+                required: true,
+                attributes: [
+                    'timeTableCellId',
+                    'timeTableRoutineId',
+                    'timeTableCreationId',
+                    'period',
+                    'day',
+                    'subjectId',
+                    'electiveSubjectId',
+                    'timeTableType',
+                ],
+                include: [
+                    {
+                        model: model.timeTableStructurePeriodsModel,
+                        as: 'timeTablecreation',
+                        required: false,
+                        attributes: [
+                            'timeTableCreationId',
+                            'periodName',
+                            'startTime',
+                            'endTime',
+                        ],
+                    },
+                    {
+                        model: model.timeTableRoutineModel,
+                        as: 'timeTableRoutine',
+                        required: true,
+                        attributes: [
+                            'timeTableRoutineId',
+                            'classSectionTermId',
+                            'academicGroupId',
+                            'courseId',
+                            'startingDate',
+                            'endingDate',
+                        ],
+                        include: [
+                            timeTableRoutineClassSectionInclude({
+                                termAttributes: [
+                                    'classSectionTermId',
+                                    'term',
+                                    'classSectionsId',
+                                ],
+                                sectionAttributes: [
+                                    'classSectionsId',
+                                    'year',
+                                    'section',
+                                ],
+                            }),
+                            {
+                                model: model.academicGroupModel,
+                                as: 'academicGroup',
+                                required: false,
+                                attributes: [
+                                    'academicGroupId',
+                                    'groupName',
+                                    'groupCode',
+                                    'academicGroupScopeId',
+                                ],
+                                include: [
+                                    {
+                                        model: model.academicGroupScopeModel,
+                                        as: 'scope',
+                                        required: false,
+                                        attributes: [
+                                            'academicGroupScopeId',
+                                            'courseId',
+                                            'sessionId',
+                                            'term',
+                                            'classSectionTermId',
+                                        ],
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            },
+        ],
+    });
 }
 
 
