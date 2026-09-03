@@ -29,12 +29,6 @@ const noticeModel = sequelize.define(
             field: 'campus_id',
             references: { model: 'campus', key: 'campus_id' }
         },
-        departmentId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'department_id',
-            references: { model: 'department', key: 'department_id' }
-        }, 
         universityId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -73,12 +67,12 @@ const noticeModel = sequelize.define(
         },
         messageTo:{
             type:DataTypes.JSON,
-            allowNull:false,
+            allowNull:true,
             field:'message_to'
         },
         role:{
             type:DataTypes.STRING,
-            allowNull:'false',
+            allowNull:true,
         },
         createdBy: {
             type: DataTypes.INTEGER,

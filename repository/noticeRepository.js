@@ -1,17 +1,30 @@
-import { literal, Op } from "sequelize";
 import * as model from "../models/index.js";
-import { buildScope, scoped } from "../utility/scoped.js";
-import { ROLES } from "../const/roles.js";
+import { scoped } from "../utility/scoped.js";
 
-const excludeMeta = ["createdAt", "updatedAt", "deletedAt"];
+const noticeListAttributes = [
+  "noticeId",
+  "instituteId",
+  "campusId",
+  "universityId",
+  "academicYearId",
+  "title",
+  "notice",
+  "noticeDate",
+  "publishDate",
+  "createdBy",
+  "updatedBy",
+];
 
-const stripTenantFields = (data = {}) => {
+const stripWriteFields = (data = {}) => {
   const {
     noticeId,
     instituteId,
     universityId,
     academicYearId,
     campusId,
+    messageTo,
+    role,
+    departmentId,
     ...rest
   } = data;
   return rest;
@@ -19,74 +32,29 @@ const stripTenantFields = (data = {}) => {
 
 export async function addNotice(data, transaction) {
   try {
-    return scoped(model.noticeModel).create(stripTenantFields(data), { transaction });
+    return scoped(model.noticeModel).create(stripWriteFields(data), { transaction });
   } catch (error) {
     console.error("Error in add notice :", error);
     throw error;
   }
 }
 
-function messageToContains(target) {
-  return literal(`JSON_CONTAINS(message_to, '"${target}"')`);
-}
-
-function buildInstituteUniversityScope() {
-  return buildScope(model.noticeModel, { scopeConfig: { academicYear: false } });
-}
-
-function buildStudentNoticeWhere(role) {
-  const isTeacher = String(role ?? "").toUpperCase() === ROLES.TEACHER;
-
-  const targets = isTeacher
-    ? [ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT]
-    : [ROLES.STUDENT, "Student"];
-
-  return {
-    [Op.or]: targets.map((target) => messageToContains(target)),
-  };
-}
-
-export async function getAllStudentNotice(role) {
+/** All notices for current tenant (university + institute). */
+export async function getAllNotices(academicYearId) {
   try {
-    const tenantWhere = buildInstituteUniversityScope();
+    const scopeOptions = { scopeConfig: { academicYear: false } };
+    const where = {};
+    if (academicYearId != null && academicYearId !== "") {
+      where.academicYearId = Number(academicYearId);
+    }
 
-    return model.noticeModel.findAll({
-      attributes: { exclude: excludeMeta },
-      where: {
-        [Op.and]: [buildStudentNoticeWhere(role), tenantWhere],
-      },
+    return scoped(model.noticeModel, scopeOptions).findAll({
+      attributes: noticeListAttributes,
+      where,
       order: [["noticeId", "DESC"]],
     });
   } catch (error) {
-    console.error("Error fetching student notices:", error);
-    throw error;
-  }
-}
-
-export async function getAllEmployeeNotice(createdBy, role, academicYearId) {
-  try {
-    const scopeOptions = academicYearId ? { scopeConfig: { academicYear: false } } : {};
-    const whereAcademicYear = academicYearId ? { academicYearId } : {};
-
-    const noticeCreated = await scoped(model.noticeModel, scopeOptions).findAll({
-      attributes: { exclude: excludeMeta },
-      where: {
-        ...(createdBy && { createdBy }),
-        ...whereAcademicYear,
-      },
-    });
-
-    const noticeAll = await scoped(model.noticeModel, scopeOptions).findAll({
-      attributes: { exclude: excludeMeta },
-      where: {
-        [Op.and]: [messageToContains(role || ROLES.TEACHER)],
-        ...whereAcademicYear,
-      },
-    });
-
-    return { noticeCreated, noticeAll };
-  } catch (error) {
-    console.error("Error fetching employee notices:", error);
+    console.error("Error fetching notices:", error);
     throw error;
   }
 }
@@ -101,7 +69,7 @@ export async function updateNotice(noticeId, data) {
       return [0];
     }
 
-    return scoped(model.noticeModel).update(stripTenantFields(data), { where: { noticeId } });
+    return scoped(model.noticeModel).update(stripWriteFields(data), { where: { noticeId } });
   } catch (error) {
     console.error(`Error updating Notice creation ${noticeId}:`, error);
     throw error;
