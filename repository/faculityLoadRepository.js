@@ -1,7 +1,6 @@
 import { Op } from "sequelize";
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
-import { decimalAdd, toIntegerNumber } from "../utility/decimalMoney.js";
 
 export async function addFaculityLoad(data) {
   try {
@@ -176,10 +175,16 @@ export async function updateFaculityLoadByEmployeeId(userId, info, transaction) 
 }
 
 /**
- * currentLoad: +1 for each published date-wise class the teacher is on.
- * Source: timeTableCellDateWise -> timeTableCellTeachersDateWise
+ * Published date-wise classes in [startDate, endDate] for the given teacher userIds.
+ * Returns period start/end times via timeTableCell -> timeTablecreation.
+ * One query for all faculty (no per-faculty DB calls).
  */
-export async function countPublishedDateWiseClassesByUserIds(userIds, transaction) {
+export async function findPublishedWeekDateWiseTeacherPeriods(
+  userIds,
+  startDate,
+  endDate,
+  transaction,
+) {
   const ids = [];
   const seen = new Set();
   for (const raw of userIds || []) {
@@ -191,67 +196,59 @@ export async function countPublishedDateWiseClassesByUserIds(userIds, transactio
     ids.push(id);
   }
 
-  const counts = new Map();
-  for (const id of ids) {
-    counts.set(id, 0);
-  }
-
   if (ids.length === 0) {
-    return counts;
+    return [];
   }
 
-  const rows = await model.timeTableCellDateWiseModel.findAll({
-    attributes: ["timeTableCellDateWiseId"],
+  return model.timeTableCellDateWiseModel.findAll({
+    attributes: ["timeTableCellDateWiseId", "date", "timeTableCellId"],
+    where: {
+      date: {
+        [Op.between]: [startDate, endDate],
+      },
+    },
     include: [
       {
         model: model.timeTableCellTeachersDateWiseModel,
         as: "timeTableCellTeachersDateWise",
         required: true,
-        attributes: ["userId"],
+        attributes: ["timeTableCellTeachersDateWiseId", "userId", "timeTableCellDateWiseId"],
         where: { userId: { [Op.in]: ids } },
       },
       {
         model: model.timeTableCellModel,
         as: "timeTableCell",
         required: true,
-        attributes: [],
+        attributes: ["timeTableCellId", "timeTableCreationId"],
         include: [
           {
             model: model.timeTableRoutineModel,
             as: "timeTableRoutine",
             required: true,
-            attributes: [],
+            attributes: ["timeTableRoutineId", "isPublish"],
             where: {
               isPublish: true,
               ...buildScope(model.timeTableRoutineModel),
             },
+          },
+          {
+            model: model.timeTableStructurePeriodsModel,
+            as: "timeTablecreation",
+            required: true,
+            attributes: ["timeTableCreationId", "startTime", "endTime", "periodName"],
           },
         ],
       },
     ],
     transaction,
   });
-
-  for (const row of rows) {
-    const plain = row.get({ plain: true });
-    const teachers = plain.timeTableCellTeachersDateWise || [];
-    for (const teacher of teachers) {
-      const userId = Number(teacher.userId);
-      if (!counts.has(userId)) {
-        continue;
-      }
-      // One date-wise class = +1 faculty load
-      counts.set(userId, toIntegerNumber(decimalAdd(counts.get(userId), 1)));
-    }
-  }
-
-  return counts;
 }
 
 /**
- * Persist current_load as date-wise class count (+1 each).
+ * Persist current_load for a faculty from current-week date-wise teaching hours.
+ * currentLoadHours must already be decimal hours (minutes / 60).
  */
-export async function recomputeFaculityCurrentLoadHours(userId, transaction) {
+export async function updateFaculityCurrentLoadByUserId(userId, currentLoadHours, transaction) {
   const userIdNum = Number(userId);
   if (!Number.isFinite(userIdNum) || userIdNum <= 0) {
     return [0];
@@ -266,11 +263,8 @@ export async function recomputeFaculityCurrentLoadHours(userId, transaction) {
     return [0];
   }
 
-  const counts = await countPublishedDateWiseClassesByUserIds([userIdNum], transaction);
-  const classCount = counts.get(userIdNum) || 0;
-
   return scoped(model.faculityLoadModel).update(
-    { currentLoad: classCount },
+    { currentLoad: currentLoadHours },
     {
       where: { employeeId: employee.employeeId },
       transaction,

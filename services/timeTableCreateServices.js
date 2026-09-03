@@ -8,7 +8,7 @@ import {
   getMappedStructuresForCourseSession,
 } from "../repository/timeTableRepository.js";
 import { getTeacherDetailsByTeacherSubjectId } from "../repository/teacherSubjectMappingRepository.js";
-import { recomputeFaculityCurrentLoadHours } from "../repository/faculityLoadRepository.js";
+import { recomputeFaculityCurrentLoadHours } from "./faculityService.js";
 import sequelize from "../database/sequelizeConfig.js";
 import { getHolidayStartEndDate } from "../repository/holidayRepository.js";
 import {
