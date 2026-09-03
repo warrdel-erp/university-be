@@ -21,6 +21,24 @@ export async function addFaculityLoad(data) {
   }
 }
 
+export async function getEmployeesByUserIds(userIds) {
+  if (!userIds || userIds.length === 0) {
+    return [];
+  }
+  return scoped(model.employeeModel).findAll({
+    where: { userId: { [Op.in]: userIds } },
+    attributes: [
+      "employeeId",
+      "userId",
+      "employeeName",
+      "employeeCode",
+      "departmentId",
+      "employmentType",
+      "pickColor",
+    ],
+  });
+}
+
 export async function getFaculityLoadDetails(academicYearId) {
   try {
     const where = {};
@@ -185,20 +203,24 @@ export async function findPublishedWeekDateWiseTeacherPeriods(
   endDate,
   transaction,
 ) {
-  const ids = [];
-  const seen = new Set();
-  for (const raw of userIds || []) {
-    const id = Number(raw);
-    if (!id || seen.has(id)) {
-      continue;
+  let ids = null;
+  if (userIds != null) {
+    ids = [];
+    const seen = new Set();
+    for (const raw of userIds || []) {
+      const id = Number(raw);
+      if (!id || seen.has(id)) {
+        continue;
+      }
+      seen.add(id);
+      ids.push(id);
     }
-    seen.add(id);
-    ids.push(id);
+    if (ids.length === 0) {
+      return [];
+    }
   }
 
-  if (ids.length === 0) {
-    return [];
-  }
+  const teacherWhere = ids ? { userId: { [Op.in]: ids } } : {};
 
   return model.timeTableCellDateWiseModel.findAll({
     attributes: ["timeTableCellDateWiseId", "date", "timeTableCellId"],
@@ -213,7 +235,7 @@ export async function findPublishedWeekDateWiseTeacherPeriods(
         as: "timeTableCellTeachersDateWise",
         required: true,
         attributes: ["timeTableCellTeachersDateWiseId", "userId", "timeTableCellDateWiseId"],
-        where: { userId: { [Op.in]: ids } },
+        where: teacherWhere,
       },
       {
         model: model.timeTableCellModel,
