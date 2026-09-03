@@ -60,6 +60,8 @@ jobs:
             sudo docker run \
               --network host \
               --env-file /home/support/envs/.be.env \
+              -e NODE_OPTIONS="--max-old-space-size=16384" \
+              --memory="24g" \
               -d \
               --name university-erp-be \
               --restart unless-stopped \
