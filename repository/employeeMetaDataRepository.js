@@ -1,21 +1,34 @@
 import * as model from '../models/index.js';
 import { scoped } from '../utility/scoped.js';
 
-async function assertScopedEmployee(employeeId, transaction) {
-    return scoped(model.employeeModel).findOne({
-        where: { employeeId },
+async function assertScopedEmployee(id, transaction) {
+    if (!id) return null;
+    const numId = Number(id);
+    if (isNaN(numId)) return null;
+    let employee = await scoped(model.employeeModel).findOne({
+        where: { employeeId: numId },
         attributes: ['employeeId'],
         transaction,
     });
+    if (!employee) {
+        employee = await scoped(model.employeeModel).findOne({
+            where: { userId: numId },
+            attributes: ['employeeId'],
+            transaction,
+        });
+    }
+    return employee;
 }
 
 export async function employeeMetaData(data, transaction) {
     try {
         for (const entry of data) {
-            const employee = await assertScopedEmployee(entry.employeeId, transaction);
+            const rawId = entry.employeeId || entry.userId;
+            const employee = await assertScopedEmployee(rawId, transaction);
             if (!employee) {
-                throw new Error(`Employee not found: ${entry.employeeId}`);
+                throw new Error(`Employee not found: ${rawId}`);
             }
+            entry.employeeId = employee.employeeId;
         }
         return await model.employeeMetaDataModel.bulkCreate(data, { transaction });
     } catch (error) {
@@ -31,7 +44,7 @@ export async function deleteEmployeeMetaData(employeeId) {
             throw new Error('Employee not found');
         }
         await model.employeeMetaDataModel.destroy({
-            where: { employeeId },
+            where: { employeeId: employee.employeeId },
             individualHooks: true,
         });
         return { message: 'employee meta data deleted successfully' };
@@ -48,45 +61,44 @@ export async function updateEmployeeMetaData(entries, transaction) {
 
     try {
         for (const entry of entries) {
-            if (!entry.employeeId || !entry.types || !entry.codes) {
+            const rawId = entry.employeeId || entry.userId;
+            if (!rawId || !entry.types || !entry.codes) {
                 console.warn(" Skipping invalid entry →", entry);
                 skipped++;
                 continue;
             }
 
-            const employee = await assertScopedEmployee(entry.employeeId, transaction);
+            const employee = await assertScopedEmployee(rawId, transaction);
             if (!employee) {
-                console.warn(` Skipping out-of-scope employeeId=${entry.employeeId}`);
+                console.warn(` Skipping out-of-scope employeeId=${rawId}`);
                 skipped++;
                 continue;
             }
 
-            try {
-                const [affectedCount] = await model.employeeMetaDataModel.update(
-                    {
-                        types: entry.types,
-                        created_by: entry.createdBy,
-                        updated_by: entry.updatedBy || null,
-                    },
-                    {
-                        where: {
-                            employee_id: entry.employeeId,
-                            codes: entry.codes,
-                        },
-                        transaction,
-                    },
-                );
+            const targetEmployeeId = employee.employeeId;
 
-                if (affectedCount > 0) {
+            try {
+                const existing = await model.employeeMetaDataModel.findOne({
+                    where: {
+                        employeeId: targetEmployeeId,
+                        codes: entry.codes,
+                    },
+                    transaction,
+                });
+
+                if (existing) {
+                    await existing.update(
+                        { types: entry.types },
+                        { transaction },
+                    );
                     updated++;
                 } else {
                     await model.employeeMetaDataModel.create(
                         {
-                            employeeId: entry.employeeId,
+                            employeeId: targetEmployeeId,
                             types: entry.types,
                             codes: entry.codes,
-                            createdBy: entry.createdBy,
-                            updatedBy: entry.updatedBy,
+                            createdBy: entry.createdBy || 1,
                         },
                         { transaction },
                     );
@@ -94,7 +106,7 @@ export async function updateEmployeeMetaData(entries, transaction) {
                 }
             } catch (innerError) {
                 console.error(
-                    `Error processing entry → employeeId=${entry.employeeId}, types=${entry.types}, codes=${entry.codes}`,
+                    `Error processing entry → employeeId=${targetEmployeeId}, types=${entry.types}, codes=${entry.codes}`,
                     innerError,
                 );
                 throw innerError;

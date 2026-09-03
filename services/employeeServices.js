@@ -788,10 +788,16 @@ export async function importEmployeeData(excelData, commonData) {
     return { success: false, error: error.message };
   }
 };
-export async function updateEmployee(userId, data, files, updatedBy, createdBy) {
+export async function updateEmployee(identifier, data, files, updatedBy, createdBy) {
 
   const transaction = await sequelize.transaction();
   try {
+    const existingEmployee = await employeeRepository.assertScopedEmployee(identifier, { transaction });
+    if (!existingEmployee) {
+      throw new Error(`Employee not found for id: ${identifier}`);
+    }
+    const employeeId = existingEmployee.employeeId;
+    const userId = existingEmployee.userId;
 
     const address = typeof data.address === 'string' && data.address ? JSON.parse(data.address) : data.address || null;
     const corsAddress = typeof data.corsAddress === 'string' && data.corsAddress ? JSON.parse(data.corsAddress) : data.corsAddress || null;
@@ -835,19 +841,15 @@ export async function updateEmployee(userId, data, files, updatedBy, createdBy) 
     } else {
       employeeUpdateData.departmentId = null;
     }
-    await employeeRepository.updateEmployee(userId, {
+    await employeeRepository.updateEmployee(employeeId, {
       ...employeeUpdateData,
       roleId: null,  // role_id in employee table is always null; role is managed via user_roles table
       updatedBy
     }, transaction);
 
     // Sync officialEmailId with user table email
-    if (data.officalEmailId) {
-      const employeeDetails = await employeeRepository.getSingleEmployeeDetails(userId);
-      const userId = employeeDetails?.[0]?.userId;
-      if (userId) {
-        await registerRepository.updateUser(userId, { email: data.officalEmailId }, transaction);
-      }
+    if (data.officalEmailId && userId) {
+      await registerRepository.updateUser(userId, { email: data.officalEmailId }, transaction);
     }
 
     //  Upload/update files
@@ -856,8 +858,8 @@ export async function updateEmployee(userId, data, files, updatedBy, createdBy) 
         const file = files[key];
         const s3Response = await uploadFile(file);
         const url = s3Response.Location;
-        const fileData = { key, url, userId, updatedBy };
-        await employeeFilesRepository.updateEmployee(userId, fileData, transaction);
+        const fileData = { key, url, employeeId, userId, updatedBy };
+        await employeeFilesRepository.updateEmployee(employeeId, fileData, transaction);
       });
       await Promise.all(uploadPromises);
     }
@@ -869,13 +871,14 @@ export async function updateEmployee(userId, data, files, updatedBy, createdBy) 
         ...address
       };
       const addressUpdateResult = await employeeAddressRepository.updateAddress(
-        userId,
+        employeeId,
         addressPayload,
         transaction
       );
       const updatedAddressCount = Array.isArray(addressUpdateResult) ? (addressUpdateResult[0] || 0) : 0;
       if (updatedAddressCount === 0) {
         await employeeAddressRepository.addAddress({
+          employeeId,
           userId,
           createdBy,
           ...address
@@ -895,13 +898,14 @@ export async function updateEmployee(userId, data, files, updatedBy, createdBy) 
         ...normalizedCorsAddress
       };
       const corsUpdateResult = await employeeAddressRepository.updateCorsAddress(
-        userId,
+        employeeId,
         corsAddressPayload,
         transaction
       );
       const updatedCorsCount = Array.isArray(corsUpdateResult) ? (corsUpdateResult[0] || 0) : 0;
       if (updatedCorsCount === 0) {
         await employeeAddressRepository.addCorsAddress({
+          employeeId,
           userId,
           createdBy,
           ...normalizedCorsAddress
@@ -916,7 +920,7 @@ export async function updateEmployee(userId, data, files, updatedBy, createdBy) 
         ...normalizedOffice
       };
 
-      const existingOffice = await employeeOfficeRepository.getEmployeeOfficeByEmployeeId(userId);
+      const existingOffice = await employeeOfficeRepository.getEmployeeOfficeByEmployeeId(employeeId);
 
       if (existingOffice?.employeeOfficeId) {
         await employeeOfficeRepository.updateOfficeDetailsById(
@@ -926,6 +930,7 @@ export async function updateEmployee(userId, data, files, updatedBy, createdBy) 
         );
       } else {
         await employeeOfficeRepository.addOfficeDetails({
+          employeeId,
           userId,
           createdBy,
           ...normalizedOffice
@@ -947,7 +952,7 @@ export async function updateEmployee(userId, data, files, updatedBy, createdBy) 
     const hasLongLeaveField = Object.prototype.hasOwnProperty.call(data, 'longLeave');
     if (hasSkillField) {
       await employeeSkillRepository.refreshEmployeeSkills(
-        userId,
+        employeeId,
         skills,
         createdBy,
         updatedBy,
@@ -959,7 +964,7 @@ export async function updateEmployee(userId, data, files, updatedBy, createdBy) 
     const validDocsForQualification = normalizeDocumentAttachments(documents || []).filter((doc) => doc?.receivedDate);
     if (hasDocumentsField) {
       await employeeQualificationRepository.refreshEmployeeQualifications(
-        userId,
+        employeeId,
         validDocsForQualification,
         createdBy,
         updatedBy,
@@ -976,7 +981,7 @@ export async function updateEmployee(userId, data, files, updatedBy, createdBy) 
       }));
     if (hasQualificationField) {
       await employeeDocumentRepository.refreshEmployeeDocuments(
-        userId,
+        employeeId,
         validQualificationsForDocuments,
         createdBy,
         updatedBy,
@@ -987,7 +992,7 @@ export async function updateEmployee(userId, data, files, updatedBy, createdBy) 
     // Update Experiences
     if (hasExperienceField) {
       await employeeExperianceRepository.refreshEmployeeExperiences(
-        userId,
+        employeeId,
         experiences,
         createdBy,
         updatedBy,
@@ -998,7 +1003,7 @@ export async function updateEmployee(userId, data, files, updatedBy, createdBy) 
     // Update Achievements
     if (hasAchievementsField) {
       await employeeAchivementRepository.refreshEmployeeAchievements(
-        userId,
+        employeeId,
         achievements,
         createdBy,
         updatedBy,
@@ -1009,7 +1014,7 @@ export async function updateEmployee(userId, data, files, updatedBy, createdBy) 
     // Update Wards
     if (hasWardField) {
       await employeeWardRepository.refreshEmployeeWards(
-        userId,
+        employeeId,
         wards,
         createdBy,
         updatedBy,
@@ -1020,7 +1025,7 @@ export async function updateEmployee(userId, data, files, updatedBy, createdBy) 
     // Update Activities
     if (hasActivityField) {
       await employeeActivityRepository.refreshEmployeeActivities(
-        userId,
+        employeeId,
         activities,
         createdBy,
         updatedBy,
@@ -1031,7 +1036,7 @@ export async function updateEmployee(userId, data, files, updatedBy, createdBy) 
     // Update References
     if (hasReferenceField) {
       await employeeReferenceRepository.refreshEmployeeReferences(
-        userId,
+        employeeId,
         references,
         createdBy,
         updatedBy,
@@ -1042,7 +1047,7 @@ export async function updateEmployee(userId, data, files, updatedBy, createdBy) 
     // Update Research
     if (hasResearchField) {
       await employeeResearchRepository.refreshEmployeeResearch(
-        userId,
+        employeeId,
         research,
         createdBy,
         updatedBy,
@@ -1053,7 +1058,7 @@ export async function updateEmployee(userId, data, files, updatedBy, createdBy) 
     //  Update Long Leaves
     if (hasLongLeaveField) {
       await employeeLongLeaveRepository.refreshEmployeeLongLeaves(
-        userId,
+        employeeId,
         longLeaves,
         createdBy,
         updatedBy,
@@ -1072,6 +1077,7 @@ export async function updateEmployee(userId, data, files, updatedBy, createdBy) 
         const code = allDropDownDataObject.code;
 
         const entries = type.map((types, index) => ({
+          employeeId,
           userId,
           createdBy,
           updatedBy,

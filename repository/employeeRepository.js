@@ -6,13 +6,27 @@ import {
     teacherSubjectWhere,
 } from './teacherSubjectMappingRepository.js';
 
-async function assertScopedEmployee(userId, options = {}) {
-    return scoped(model.employeeModel).findOne({
-        where: { userId: Number(userId) },
-        attributes: ['userId', 'employeeId'],
+export async function assertScopedEmployee(id, options = {}) {
+    if (!id) return null;
+    const numId = Number(id);
+    if (isNaN(numId)) return null;
+    let employee = await scoped(model.employeeModel).findOne({
+        where: { employeeId: numId },
+        attributes: options.attributes || ['userId', 'employeeId'],
         transaction: options.transaction,
     });
+    if (!employee) {
+        employee = await scoped(model.employeeModel).findOne({
+            where: { userId: numId },
+            attributes: options.attributes || ['userId', 'employeeId'],
+            transaction: options.transaction,
+        });
+    }
+    return employee;
 }
+
+export const getEmployeeById = assertScopedEmployee;
+export const getEmployeeByUserId = assertScopedEmployee;
 
 export async function resolveEmployeeIdForAuth({ userId, employeeId } = {}) {
     if (employeeId != null && employeeId !== '') {
@@ -59,7 +73,7 @@ export async function updateEmployee(employeeId, data, transaction) {
 
         const result = await scoped(model.employeeModel).update(
             data,
-            { where: { userId: existing.userId }, transaction },
+            { where: { employeeId: existing.employeeId }, transaction },
         );
         return result;
     } catch (error) {
