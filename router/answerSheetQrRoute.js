@@ -12,6 +12,7 @@ import {
   getScriptsAssignedToTeacher,
   getMyAssignedScripts,
   getMyAnswerSheetSkuStats,
+  getAnswerSheetSkuStats,
   getMyEvaluationSummary,
   assignObtainedMarksToAnswerSheet,
   assignMyObtainedMarksToAnswerSheet,
@@ -279,6 +280,18 @@ router.patch(
   checkAccess(PERMISSIONS.ANSWER_SHEET_MAPPING.value, null),
   validate({ body: mapSchema }),
   mapAnswerSheetQr
+);
+
+router.get(
+  "/skuStats",
+  userAuth,
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, null),
+  validate({
+    query: z.object({
+      examinationSessionId: positiveIntegerId,
+    }),
+  }),
+  getAnswerSheetSkuStats
 );
 
 router.get(

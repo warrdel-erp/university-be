@@ -624,7 +624,7 @@ const MY_ANSWER_SHEET_SKU_LABELS = {
   dueToday: "Due Today",
 };
 
-function buildMyAnswerSheetSkuResponse(stats) {
+function buildSkuResponse(stats) {
   const sku = [];
   for (const key of Object.keys(MY_ANSWER_SHEET_SKU_LABELS)) {
     sku.push({
@@ -640,7 +640,17 @@ export async function getMyAnswerSheetSkuStats(assignedToUserId) {
   const stats = await answerSheetQrRepository.findMyAnswerSheetSkuStats(
     assignedToUserId,
   );
-  return buildMyAnswerSheetSkuResponse(stats);
+  return buildSkuResponse(stats);
+}
+
+export async function getAnswerSheetSkuStatsByExaminationSession(
+  examinationSessionId,
+) {
+  const stats =
+    await answerSheetQrRepository.findAnswerSheetSkuStatsByExaminationSession(
+      Number(examinationSessionId),
+    );
+  return buildSkuResponse(stats);
 }
 
 export async function assignObtainedMarksToAnswerSheet(

@@ -244,6 +244,31 @@ export async function getMyAnswerSheetSkuStats(req, res) {
   }
 }
 
+export async function getAnswerSheetSkuStats(req, res) {
+  try {
+    const { examinationSessionId } = req.query;
+
+    const result =
+      await answerSheetQrServices.getAnswerSheetSkuStatsByExaminationSession(
+        examinationSessionId,
+      );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Answer sheet SKU data fetched successfully",
+      result,
+    );
+  } catch (error) {
+    console.error("Error in getAnswerSheetSkuStats controller:", error);
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error",
+    );
+  }
+}
+
 export async function getMyEvaluationSummary(req, res) {
   try {
     const validation = await validateEmployeeUser(req, res);

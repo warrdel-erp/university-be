@@ -640,6 +640,73 @@ export async function findAssignmentAnswerSheetStats(assignmentId) {
   };
 }
 
+export async function findAnswerSheetSkuStatsByExaminationSession(
+  examinationSessionId,
+) {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const row = await scoped(model.answerSheetQrModel).findOne({
+    attributes: [
+      [fn("COUNT", col("answer_sheet_qr.id")), "totalAssigned"],
+      [
+        fn(
+          "SUM",
+          literal("CASE WHEN evaluated_at IS NOT NULL THEN 1 ELSE 0 END"),
+        ),
+        "graded",
+      ],
+      [
+        fn(
+          "SUM",
+          literal("CASE WHEN evaluated_at IS NULL THEN 1 ELSE 0 END"),
+        ),
+        "notChecked",
+      ],
+      [
+        fn(
+          "SUM",
+          literal(
+            `CASE WHEN evaluated_at IS NULL AND deadline_date IS NOT NULL AND deadline_date < '${today}' THEN 1 ELSE 0 END`,
+          ),
+        ),
+        "overdue",
+      ],
+      [
+        fn(
+          "SUM",
+          literal(
+            `CASE WHEN evaluated_at IS NULL AND deadline_date = '${today}' THEN 1 ELSE 0 END`,
+          ),
+        ),
+        "dueToday",
+      ],
+    ],
+    where: {
+      studentId: { [Op.ne]: null },
+      examScheduleId: { [Op.ne]: null },
+    },
+    include: [
+      {
+        model: model.examScheduleModel,
+        as: "examSchedule",
+        required: true,
+        attributes: [],
+        where: { examinationSessionId },
+      },
+    ],
+    raw: true,
+    subQuery: false,
+  });
+
+  return {
+    totalAssigned: Number(row?.totalAssigned ?? 0),
+    graded: Number(row?.graded ?? 0),
+    notChecked: Number(row?.notChecked ?? 0),
+    overdue: Number(row?.overdue ?? 0),
+    dueToday: Number(row?.dueToday ?? 0),
+  };
+}
+
 export async function findMyAnswerSheetSkuStats(assignedToUserId) {
   const today = new Date().toISOString().slice(0, 10);
 

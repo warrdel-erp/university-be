@@ -233,6 +233,35 @@
             },
             "description": "PATCH /answerSheetQr/:id/obtainedMarks — admin marks entry. Requires EVALUATION_EXECUTE."
           }
+        },
+        {
+          "name": "1.7 GET Answer Sheet SKU Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/skuStats?examinationSessionId={{evaluation_examinationSessionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "skuStats"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "{{evaluation_examinationSessionId}}"
+                }
+              ]
+            },
+            "description": "GET /answerSheetQr/skuStats?examinationSessionId= — session-level answer sheet SKU counts for mapped scripts.\n\nResponse format matches /my/skuStats — data.sku:\n- totalAssigned\n- graded\n- notChecked\n- overdue\n- dueToday"
+          }
         }
       ]
     },
