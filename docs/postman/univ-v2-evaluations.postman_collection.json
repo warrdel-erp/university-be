@@ -97,7 +97,7 @@
                 {
                   "key": "status",
                   "value": "unassigned",
-                  "description": "unassigned | graded (omit for all)",
+                  "description": "unassigned | graded | withEvaluator (omit for all). NOTE: withEvaluator returns data grouped by assignment.",
                   "disabled": true
                 },
                 {
@@ -110,7 +110,7 @@
                 }
               ]
             },
-            "description": "GET /answerSheetQr/mapped — optional status: unassigned (no evaluator) or graded (evaluated)."
+            "description": "GET /answerSheetQr/mapped — optional status: unassigned (no evaluator), graded (evaluated), or withEvaluator (assigned, returns aggregated assignments)."
           }
         },
         {
