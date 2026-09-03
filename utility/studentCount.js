@@ -2,6 +2,7 @@ import { Op } from "sequelize";
 import sequelize from "../database/sequelizeConfig.js";
 import * as model from "../models/index.js";
 import { scoped } from "./scoped.js";
+import { getStudentCountByGroup } from "../repository/examScheduleRepository.js";
 
 function groupKey(sessionId, courseId, term, academicYearId) {
   return `${Number(sessionId)}_${Number(courseId)}_${Number(term)}_${Number(academicYearId)}`;
@@ -249,7 +250,7 @@ export async function countWholeTermStudentsByClassSectionTermIds(
  */
 export async function getStudentCountMapByGroups(groups, options = {}) {
   const countMap = new Map();
-  const unique = [];
+  const uniqueGroups = [];
   const seen = new Set();
 
   for (const g of groups || []) {
@@ -263,65 +264,24 @@ export async function getStudentCountMapByGroups(groups, options = {}) {
     }
     const key = groupKey(g.sessionId, g.courseId, g.term, g.academicYearId);
     if (seen.has(key)) continue;
-    unique.push({
-      sessionId: Number(g.sessionId),
-      courseId: Number(g.courseId),
-      term: Number(g.term),
-      academicYearId: Number(g.academicYearId),
-    });
-    countMap.set(key, 0);
+    seen.add(key);
+    uniqueGroups.push(g);
+    countMap.set(key, 0); // initialize
   }
 
-  if (!unique.length) return countMap;
+  if (!uniqueGroups.length) return countMap;
 
-  const rows = await scoped(model.studentModel).findAll({
-    attributes: [
-      [sequelize.col("studentClassSectionTerm->classSection.session_id"), "sessionId"],
-      [sequelize.col("studentClassSectionTerm.term"), "term"],
-      [sequelize.col("studentClassSectionTerm->classSection.course_id"), "courseId"],
-      [sequelize.col("studentClassSectionTerm->classSection.acedmic_year_id"), "academicYearId"],
-      [sequelize.fn("COUNT", sequelize.col("students.student_id")), "studentCount"],
-    ],
-    include: [
-      {
-        model: model.classSectionTermModel,
-        as: "studentClassSectionTerm",
-        attributes: [],
-        required: true,
-        where: { term: { [Op.in]: [...new Set(unique.map((g) => g.term))] } },
-        include: [
-          {
-            model: model.classSectionModel,
-            as: "classSection",
-            attributes: [],
-            required: true,
-            where: {
-              sessionId: { [Op.in]: [...new Set(unique.map((g) => g.sessionId))] },
-              courseId: { [Op.in]: [...new Set(unique.map((g) => g.courseId))] },
-              academicYearId: {
-                [Op.in]: [...new Set(unique.map((g) => g.academicYearId))],
-              },
-            },
-          },
-        ],
-      },
-    ],
-    group: [
-      "studentClassSectionTerm->classSection.session_id",
-      "studentClassSectionTerm.term",
-      "studentClassSectionTerm->classSection.course_id",
-      "studentClassSectionTerm->classSection.acedmic_year_id",
-    ],
-    raw: true,
-    transaction: options.transaction,
-  });
-
-  for (const row of rows) {
-    countMap.set(
-      groupKey(row.sessionId, row.courseId, row.term, row.academicYearId),
-      parseInt(row.studentCount, 10) || 0,
-    );
-  }
+  // Use the canonical getStudentCountByGroup for accurate counts (checks both student_mapper and students table)
+  await Promise.all(
+    uniqueGroups.map(async (g) => {
+      try {
+        const count = await getStudentCountByGroup(g.sessionId, g.courseId, g.term, g.academicYearId);
+        countMap.set(groupKey(g.sessionId, g.courseId, g.term, g.academicYearId), count);
+      } catch (err) {
+        console.error("Error getting accurate student count in map", err);
+      }
+    })
+  );
 
   return countMap;
 }

@@ -1,6 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as examRoomCapacityRepository from "../repository/examScheduleRoomCapacityRepository.js";
 import * as examScheduleServices from "./examScheduleServices.js";
+import * as examScheduleRepository from "../repository/examScheduleRepository.js";
 import * as model from "../models/index.js";
 import { z } from "zod";
 import { getTimeSlotRange, minutesToTime } from "../utility/timeSlot.js";
@@ -186,12 +187,11 @@ export async function addExamRoomCapacity(data, userId) {
     const transaction = await sequelize.transaction();
 
     try {
-        const totalStudents = await examRoomCapacityRepository.getEnrolledStudentsCount(
+        const totalStudents = await examScheduleRepository.getStudentCountByGroup(
             examSchedule.sessionId,
             examSchedule.subjectSchedule?.courseId,
             examSchedule.term,
-            examSchedule.academicYearId,
-            transaction
+            examSchedule.academicYearId
         );
 
         const alreadyAssignedCapacity = await examRoomCapacityRepository.getAlreadyAssignedCapacity(
@@ -235,6 +235,9 @@ export async function addExamRoomCapacity(data, userId) {
                 capacity: capacityToSave,
                 columns: resolvedExamColumns,
                 orderKey: candidate.orderKey,
+                universityId: examSchedule.universityId,
+                instituteId: examSchedule.instituteId,
+                academicYearId: examSchedule.academicYearId,
                 createdBy: userId,
                 updatedBy: userId
             });
@@ -243,12 +246,9 @@ export async function addExamRoomCapacity(data, userId) {
         const result = await examRoomCapacityRepository.bulkAddExamRoomCapacity(assignments, transaction);
 
         // Auto allocate seats using "ascending" strategy within the same transaction
-        try {
-            await examScheduleServices.allocateSeatsByStrategy(validatedData.examScheduleId, userId, "ascending", { transaction });
-        } catch (seatErr) {
-            console.error("Auto seat allocation skipped or failed:", seatErr.message);
-        }
-
+        // If seat allocation fails (e.g. insufficient capacity), it will throw an error and rollback the transaction
+        await examScheduleServices.allocateSeatsByStrategy(validatedData.examScheduleId, userId, "ascending", { transaction });
+        
         // If examination session is Published, re-evaluate and mark this schedule as published: true if it is now Ready
         try {
             const currentSession = await examRoomCapacityRepository.assertScopedExamSchedule(validatedData.examScheduleId, {

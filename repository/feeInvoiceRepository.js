@@ -99,26 +99,18 @@ function feeInvoiceListIncludes(filters = {}) {
   return [
     userFeeInvoiceInclude(),
     feePlanInclude(),
-    classStudentMapperInclude(mapperWhere),
     feeInvoiceDetailsInclude(),
   ];
 }
 
 async function assertScopedClassStudentMapper(classStudentMapperId, transaction) {
-  return scoped(model.classStudentMapperModel).findOne({
-    attributes: ["classStudentMapperId", "studentId"],
-    where: { classStudentMapperId },
-    include: [
-      {
-        model: model.studentModel,
-        as: "studentMapped",
-        attributes: [],
-        where: buildScope(model.studentModel),
-        required: true,
-      },
-    ],
+  // We treat classStudentMapperId as studentId to avoid breaking the frontend
+  const student = await scoped(model.studentModel).findOne({
+    attributes: ["studentId"],
+    where: { studentId: classStudentMapperId },
     transaction,
   });
+  return student ? { studentId: student.studentId } : null;
 }
 
 async function assertScopedFeeInvoice(feeInvoiceId, transaction) {
@@ -149,7 +141,10 @@ export async function addFeeInvoice(feeInvoiceData, transaction) {
       throw new Error("Class student mapper not found");
     }
 
-    return scoped(model.feeInvoiceModel).create(feeInvoiceData, { transaction });
+    return scoped(model.feeInvoiceModel).create({
+      ...feeInvoiceData,
+      classStudentMapperId: null // We don't save this deprecated field anymore
+    }, { transaction });
   } catch (error) {
     console.error("Error in add Fee Invoice :", error);
     throw error;

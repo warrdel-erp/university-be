@@ -2,7 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import feeGroup from "./feeGroupModel.js";
-import classStudentMapper from "./classSectionStudentMapperModel.js";
+
 import studentModel from "./studentModel.js";
 import feePlanModel from "./feePlanModel.js";
 
@@ -31,12 +31,8 @@ const feeInvoiceModel = sequelize.define(
         },
         classStudentMapperId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'class_student_mapper_id',
-            references: {
-                model: classStudentMapper,
-                key: 'class_student_mapper_id'
-            }
+            allowNull: true,
+            field: 'class_student_mapper_id'
         },
         studentId: {
             type: DataTypes.INTEGER,

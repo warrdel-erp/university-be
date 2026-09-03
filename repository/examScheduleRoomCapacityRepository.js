@@ -121,7 +121,7 @@ export async function bulkAddExamRoomCapacity(data, transaction) {
       throw new Error('Exam schedule not found');
     }
   }
-  return await model.examScheduleRoomCapacityModel.bulkCreate(data, { transaction });
+  return await scoped(model.examScheduleRoomCapacityModel).bulkCreate(data, { transaction });
 }
 
 export async function updateExamRoomCapacity(examScheduleRoomCapacityId, data, transaction) {
@@ -209,6 +209,8 @@ export async function getExamScheduleSlot(examScheduleId) {
       "sessionId",
       "term",
       "academicYearId",
+      "universityId",
+      "instituteId",
       "published",
     ],
     include: [
