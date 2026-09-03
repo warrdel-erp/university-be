@@ -10,6 +10,7 @@ import * as s3Helper from "../utility/s3Helper.js";
 import * as s3FileRepository from "../repository/s3FileRepository.js";
 import * as examSessionAnswerSheetRepository from "../repository/examSessionAnswerSheetRepository.js";
 import * as pdfSplitJobRepository from "../repository/pdfSplitJobRepository.js";
+import { getRedisConnection } from "../queue/redisConnection.js";
 
 export async function generateAnswerSheetQrBulk(req, res) {
   try {
@@ -226,6 +227,16 @@ export async function splitAnswerSheetPdf(req, res) {
     const fileRecord = await s3FileRepository.getS3FileById(fileUploadId);
     if (!fileRecord) {
       return ErrorResponse(res, 404, "File upload record not found.");
+    }
+
+    // ── Pre-flight Check: Ensure Redis is up ──────────────
+    const redisClient = getRedisConnection();
+    if (redisClient.status !== "ready") {
+      return ErrorResponse(
+        res,
+        503,
+        "Redis server is currently unavailable. Please start the Redis server and try again.",
+      );
     }
 
     // ── Pre-flight Check 0: Ensure the file is actually a PDF ──────────────
