@@ -217,7 +217,25 @@ export async function getAnswerSheetQrsByIds(ids, transaction) {
     where: {
       id: { [Op.in]: ids },
     },
-    attributes: ["id", "qr", "studentId", "examScheduleId", "assignedToUser", "evaluatedAt", "obtainedMarks", "fileUploadId", "instituteId", "universityId"],
+    attributes: [
+      "id",
+      "qr",
+      "studentId",
+      "examScheduleId",
+      "assignedToUser",
+      "assignmentId",
+      "evaluatedAt",
+      "obtainedMarks",
+      "fileUploadId",
+      "instituteId",
+      "universityId",
+    ],
+    transaction,
+  });
+}
+
+export async function createEvaluationUserAssignment(payload, transaction) {
+  return scoped(model.answersheetEvalutionUserAssignmentModel).create(payload, {
     transaction,
   });
 }
@@ -226,10 +244,15 @@ export async function assignTeacherByAnswerSheetIds(
   ids,
   assignedToUserId,
   deadlineDate,
+  assignmentId,
   transaction
 ) {
   const [affectedCount] = await scoped(model.answerSheetQrModel).update(
-    { assignedToUser: assignedToUserId, deadlineDate },
+    {
+      assignedToUser: assignedToUserId,
+      deadlineDate,
+      assignmentId,
+    },
     {
       where: { id: { [Op.in]: ids } },
       transaction,
@@ -391,6 +414,89 @@ export async function findAndCountMappedAnswerSheets(
     subQuery: false,
     transaction: options.transaction,
   });
+}
+
+export async function findAndCountMappedAssignments(
+  qrWhere,
+  examScheduleWhere,
+  limit,
+  offset,
+  options = {},
+) {
+  const result = await scoped(model.answerSheetQrModel).findAndCountAll({
+    where: qrWhere,
+    attributes: [
+      "assignmentId",
+      "assignedToUser",
+      "examScheduleId",
+      [fn("MAX", col("deadline_date")), "deadlineDate"],
+      [fn("COUNT", col("answer_sheet_qr.id")), "totalScripts"],
+      [
+        fn("SUM", literal("CASE WHEN evaluated_at IS NOT NULL THEN 1 ELSE 0 END")),
+        "gradedScripts",
+      ],
+      [
+        fn("SUM", literal("CASE WHEN evaluated_at IS NULL THEN 1 ELSE 0 END")),
+        "remainingScripts",
+      ],
+      [fn("MIN", col("answer_sheet_qr.updated_at")), "assignedAt"],
+    ],
+    include: [
+      {
+        model: model.examScheduleModel,
+        as: "examSchedule",
+        required: true,
+        where: examScheduleWhere,
+        attributes: [
+          "examScheduleId",
+          "examinationSessionId",
+          "examDate",
+          "examTime",
+          "term",
+          "type",
+          "subjectId",
+        ],
+        include: [
+          {
+            model: model.subjectModel,
+            as: "subjectSchedule",
+            attributes: ["subjectId", "subjectName", "subjectCode"],
+            required: false,
+          },
+        ],
+      },
+      {
+        model: model.userModel,
+        as: "assignedTeacher",
+        attributes: ["userId", "userName", "email"],
+        required: false,
+      },
+      {
+        model: model.answersheetEvalutionUserAssignmentModel,
+        as: "evaluationAssignment",
+        required: false,
+      },
+    ],
+    group: [
+      "assignmentId",
+      "assignedToUser",
+      "examScheduleId",
+      "examSchedule.exam_schedule_id",
+      "examSchedule->subjectSchedule.subject_id",
+      "assignedTeacher.user_id",
+      "evaluationAssignment.assignment_id",
+    ],
+    order: [["assignmentId", "DESC"]],
+    limit,
+    offset,
+    subQuery: false,
+    transaction: options.transaction,
+  });
+
+  return {
+    count: Array.isArray(result.count) ? result.count.length : result.count,
+    rows: result.rows,
+  };
 }
 
 export async function findMyAnswerSheetSkuStats(assignedToUserId) {

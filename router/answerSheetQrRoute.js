@@ -86,6 +86,10 @@ const assignTeachersSchema = z.object({
   deadlineDate: z
     .string({ required_error: "deadlineDate is required." })
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD"),
+  notes: z.preprocess(
+    (val) => (val === "" || val == null ? undefined : val),
+    z.string().trim().max(5000, "notes must be at most 5000 characters").optional(),
+  ),
 });
 
 const teacherIdParamSchema = z.object({
@@ -178,7 +182,7 @@ const listMappedAnswerSheetsSchema = z.object({
   search: z.preprocess(emptyToUndefined, z.string().optional()),
   status: z.preprocess(
     emptyToUndefined,
-    z.enum(["unassigned", "withEvaluator"]).optional(),
+    z.enum(["unassigned", "graded", "withEvaluator"]).optional(),
   ),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).optional().default(20),

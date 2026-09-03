@@ -173,6 +173,7 @@ import studentFeePaymentModel from "./studentFeePaymentModel.js";
 import paymentItemModel from "./paymentItemModel.js";
 import studentFeeInvoiceItemsModel from "./studentFeeInvoiceItemsModel.js";
 import answerSheetQrModel from "./answerSheetQrModel.js";
+import answersheetEvalutionUserAssignmentModel from "./answersheetEvalutionUserAssignmentModel.js";
 import s3FileModel from "./s3FileModel.js";
 import pdfSplitJobModel from "./pdfSplitJobModel.js";
 import examSessionAnswerSheetModel from "./examSessionAnswerSheetModel.js";
@@ -3855,6 +3856,24 @@ userModel.hasMany(answerSheetQrModel, {
   as: "assignedAnswerSheetQrs",
 });
 
+answerSheetQrModel.belongsTo(answersheetEvalutionUserAssignmentModel, {
+  foreignKey: "assignmentId",
+  as: "evaluationAssignment",
+});
+answersheetEvalutionUserAssignmentModel.hasMany(answerSheetQrModel, {
+  foreignKey: "assignmentId",
+  as: "answerSheetQrs",
+});
+
+answersheetEvalutionUserAssignmentModel.belongsTo(userModel, {
+  foreignKey: "assignedToUserId",
+  as: "assignedEvaluator",
+});
+userModel.hasMany(answersheetEvalutionUserAssignmentModel, {
+  foreignKey: "assignedToUserId",
+  as: "answerSheetEvaluationAssignments",
+});
+
 answerSheetQrModel.belongsTo(s3FileModel, {
   foreignKey: "file_upload_id",
   as: "s3File",
@@ -4189,6 +4208,7 @@ export {
   libraryCreationModel,
   libraryAuthorityModel,
   answerSheetQrModel,
+  answersheetEvalutionUserAssignmentModel,
   timeTableStructureModel,
   timeTableStructureCourseModel,
   timeTableStructurePeriodsModel,

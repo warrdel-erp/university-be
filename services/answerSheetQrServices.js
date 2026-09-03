@@ -217,6 +217,8 @@ function buildMappedAnswerSheetQrWhere(search, status) {
 
   if (status === "unassigned") {
     qrWhere.assignedToUser = null;
+  } else if (status === "graded") {
+    qrWhere.evaluatedAt = { [Op.ne]: null };
   } else if (status === "withEvaluator") {
     qrWhere.assignedToUser = { [Op.ne]: null };
   }
@@ -483,6 +485,8 @@ export async function assignAnswerSheetsToTeachers(
   assignedToUserId,
   answerSheetQrIds,
   deadlineDate,
+  notes,
+  createdBy,
 ) {
   const uniqueAnswerSheetQrIds = [];
   const seenIds = new Set();
@@ -529,10 +533,24 @@ export async function assignAnswerSheetsToTeachers(
       );
     }
 
+    const assignment = await answerSheetQrRepository.createEvaluationUserAssignment(
+      {
+        assignedToUserId: Number(assignedToUserId),
+        notes: notes || null,
+        timestamp: new Date(),
+        createdBy,
+        updatedBy: createdBy,
+      },
+      transaction,
+    );
+
+    const assignmentId = assignment.assignmentId;
+
     await answerSheetQrRepository.assignTeacherByAnswerSheetIds(
       uniqueAnswerSheetQrIds,
       assignedToUserId,
       deadlineDate,
+      assignmentId,
       transaction
     );
 
@@ -717,28 +735,69 @@ export async function getMappedAnswerSheetsByExamSession({
   });
   const qrWhere = buildMappedAnswerSheetQrWhere(search, status);
 
-  const { count, rows } =
-    await answerSheetQrRepository.findAndCountMappedAnswerSheets(
+  let count = 0;
+  let rows = [];
+
+  if (status === "withEvaluator") {
+    const result = await answerSheetQrRepository.findAndCountMappedAssignments(
       qrWhere,
       examScheduleWhere,
       limit,
       offset,
     );
-
-  const items = [];
-  const urlJobs = [];
-  for (const row of rows) {
-    const plain = row.get({ plain: true });
-    items.push(plain);
-    if (plain.s3File && plain.s3File.s3Key) {
-      urlJobs.push(
-        s3Helper.getDownloadSignedUrl(plain.s3File.s3Key).then((url) => {
-          plain.s3File.url = url;
-        }),
-      );
-    }
+    count = result.count;
+    rows = result.rows;
+  } else {
+    const result = await answerSheetQrRepository.findAndCountMappedAnswerSheets(
+      qrWhere,
+      examScheduleWhere,
+      limit,
+      offset,
+    );
+    count = result.count;
+    rows = result.rows;
   }
-  await Promise.all(urlJobs);
+
+  let items = [];
+  if (status === "withEvaluator") {
+    items = rows.map((row) => {
+      const plain = row.get({ plain: true });
+      let assignmentStatus = "pending";
+      const graded = Number(plain.gradedScripts || 0);
+      const total = Number(plain.totalScripts || 0);
+      if (graded === total && total > 0) assignmentStatus = "completed";
+      else if (graded > 0) assignmentStatus = "inprogress";
+      
+      return {
+        assignmentId: plain.assignmentId,
+        assignedToUser: plain.assignedToUser,
+        examScheduleId: plain.examScheduleId,
+        deadlineDate: plain.deadlineDate,
+        totalScripts: total,
+        gradedScripts: graded,
+        remainingScripts: Number(plain.remainingScripts || 0),
+        assignedAt: plain.assignedAt,
+        assignmentStatus,
+        examSchedule: plain.examSchedule,
+        assignedTeacher: plain.assignedTeacher,
+        assignment: plain.evaluationAssignment,
+      };
+    });
+  } else {
+    const urlJobs = [];
+    for (const row of rows) {
+      const plain = row.get({ plain: true });
+      items.push(plain);
+      if (plain.s3File && plain.s3File.s3Key) {
+        urlJobs.push(
+          s3Helper.getDownloadSignedUrl(plain.s3File.s3Key).then((url) => {
+            plain.s3File.url = url;
+          }),
+        );
+      }
+    }
+    await Promise.all(urlJobs);
+  }
 
   return {
     data: {

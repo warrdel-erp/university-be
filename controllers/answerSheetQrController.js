@@ -139,12 +139,15 @@ export async function getAnswerSheetQrsByRequestId(req, res) {
 
 export async function assignAnswerSheetsToTeachers(req, res) {
   try {
-    const { assignedToUserId, answerSheetQrIds, deadlineDate } = req.body;
+    const { assignedToUserId, answerSheetQrIds, deadlineDate, notes } = req.body;
+    const createdBy = req.user.userId;
 
     await answerSheetQrServices.assignAnswerSheetsToTeachers(
       assignedToUserId,
       answerSheetQrIds,
       deadlineDate,
+      notes,
+      createdBy,
     );
 
     return SuccessResponse(res, 200, "Answer sheets mapped");
