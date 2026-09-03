@@ -61,6 +61,8 @@ jobs:
               --network host \
               --env-file /home/support/envs/.be.env \
               -v university_erp_logs:/app/logs \
+              -e NODE_OPTIONS="--max-old-space-size=16384" \
+              --memory="24g" \
               -d \
               --name university-erp-be \
               --restart unless-stopped \
