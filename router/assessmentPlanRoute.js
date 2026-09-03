@@ -60,7 +60,6 @@ export const overviewQuerySchema = z.object({
 
 export const componentSchema = z.object({
   examSetupTypeId: z.coerce.number().int().positive().optional().nullable(),
-  evaluationBy: z.enum(["Faculty", "CoE", "External"]).optional().default("Faculty"),
   weightagePercentage: z.coerce.number().nonnegative(),
   maxAssessments: z.coerce.number().int().positive().optional().default(1),
   duration: z.coerce.number().int().positive().optional().nullable(),

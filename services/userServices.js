@@ -1,4 +1,5 @@
 import * as registerRepository from "../repository/userRepository.js";
+import * as userRoleRepository from "../repository/userRoleRepository.js";
 import { Op } from "sequelize";
 import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
@@ -444,7 +445,27 @@ export const forgotSendLink = async (email) => {
 
 export const getAllUsers = async (page = 1, limit = 10, search = "") => {
   try {
-    return registerRepository.getAllUsers(page, limit, search);
+    const { totalCount, users } = await registerRepository.getAllUsers(page, limit, search);
+    const userIds = [];
+    for (const user of users) {
+      userIds.push(user.userId);
+    }
+
+    const rolesByUserId = await userRoleRepository.findDistinctRolesByUserIds(userIds);
+    const usersWithRoles = [];
+
+    for (const user of users) {
+      const plain = user.get({ plain: true });
+      const roles = rolesByUserId.get(plain.userId) || [];
+      usersWithRoles.push({
+        ...plain,
+        roles,
+        role: roles[0]?.roleName || null,
+        roleId: roles[0]?.roleId ?? null,
+      });
+    }
+
+    return { totalCount, users: usersWithRoles };
   } catch (error) {
     console.error("Error in getAllUsers service:", error);
     throw error;
@@ -675,114 +696,152 @@ export async function initialSetup(info) {
   }
 }
 
-export async function getGrantedAccess(userId) {
-  const user = await model.userModel.findByPk(userId);
-  if (!user) {
-    throw new Error("User not found");
-  }
-
-  // ── Teacher special case ────────────────────────────────────────────────────
-  // Teachers have no perm_access_inst entries, so we derive their campus,
-  // institute and academic years directly from their employee record.
-  if (user.isTeacher === true) {
-    const employee = await model.employeeModel.findOne({
-      where: { userId },
-      attributes: ['campusId', 'instituteId'],
-    });
-
-    const campuses = employee?.campusId
-      ? await model.campusModel.findAll({ where: { campusId: employee.campusId } })
-      : [];
-
-    const institutes = employee?.instituteId
-      ? await model.instituteModel.findAll({ where: { instituteId: employee.instituteId } })
-      : [];
-
-    const academicYears = employee?.instituteId
-      ? await model.acedmicYearModel.findAll({
-        where: { instituteId: employee.instituteId, isActive: true },
-      })
-      : [];
-
-    const university = await model.universityModel.findByPk(user.universityId);
-
-    return { university, campuses, institutes, academicYears, roles: [] };
-  }
-  // ────────────────────────────────────────────────────────────────────────────
-
-  // 1. Fetch user's permission scopes for perm_access_inst
-  const accessEntries = await model.userRolePermissionModel.findAll({
-    where: {
-      userId,
-      permission: 'perm_access_inst'
-    }
+async function fetchGrantedAccessRoles(userId) {
+  const roleEntries = await model.userRolePermissionModel.findAll({
+    attributes: [
+      [sequelize.fn("DISTINCT", sequelize.col("userRole.role")), "roleName"],
+      [sequelize.col("userRole.role_id"), "roleId"],
+    ],
+    where: { userId },
+    include: [
+      {
+        model: model.roleModel,
+        as: "userRole",
+        attributes: [],
+      },
+    ],
+    raw: true,
   });
 
+  const roles = [];
+  for (const entry of roleEntries) {
+    if (entry.roleName != null && entry.roleName !== "") {
+      roles.push({
+        roleId: entry.roleId,
+        roleName: entry.roleName,
+      });
+    }
+  }
+
+  return roles;
+}
+
+async function buildGrantedAccessFromUserContext(user, userId) {
+  const employee = await model.employeeModel.findOne({
+    where: { userId },
+    attributes: ["campusId", "instituteId"],
+  });
+
+  const instituteId = employee?.instituteId ?? user.defaultInstituteId;
+  let campusId = employee?.campusId ?? null;
+
+  const institutes = instituteId
+    ? await model.instituteModel.findAll({ where: { instituteId } })
+    : [];
+
+  if (!campusId && institutes.length > 0) {
+    campusId = institutes[0].campusId;
+  }
+
+  const campuses = campusId
+    ? await model.campusModel.findAll({ where: { campusId } })
+    : [];
+
+  const academicYears = instituteId
+    ? await model.acedmicYearModel.findAll({
+        where: { instituteId, isActive: true },
+      })
+    : [];
+
+  const university = await model.universityModel.findByPk(user.universityId);
+  const roles = await fetchGrantedAccessRoles(userId);
+
+  return { university, campuses, institutes, academicYears, roles };
+}
+
+async function buildGrantedAccessFromPermissions(user, userId, accessEntries) {
   const allowedCampusIds = new Set();
   const allowedInstituteIds = new Set();
   let hasUniversityAccess = false;
 
   for (const entry of accessEntries) {
-    if (entry.scope === 'UNIVERSITY') {
+    if (entry.scope === "UNIVERSITY") {
       hasUniversityAccess = true;
-    } else if (entry.scope === 'CAMPUS' && entry.resourceId) {
-      allowedCampusIds.add(entry.resourceId);
-    } else if (entry.scope === 'INSTITUTE' && entry.resourceId) {
-      allowedInstituteIds.add(entry.resourceId);
+    } else if (entry.scope === "CAMPUS") {
+      if (entry.resourceId) {
+        allowedCampusIds.add(entry.resourceId);
+      } else if (user.defaultInstituteId) {
+        allowedInstituteIds.add(user.defaultInstituteId);
+      }
+    } else if (entry.scope === "INSTITUTE") {
+      if (entry.resourceId) {
+        allowedInstituteIds.add(entry.resourceId);
+      } else if (user.defaultInstituteId) {
+        allowedInstituteIds.add(user.defaultInstituteId);
+      }
     }
   }
 
-  // If UNIVERSITY scope is granted, they get all campuses and institutes under that university
+  if (!hasUniversityAccess && allowedCampusIds.size === 0 && allowedInstituteIds.size === 0) {
+    return buildGrantedAccessFromUserContext(user, userId);
+  }
+
   if (hasUniversityAccess) {
     const campuses = await model.campusModel.findAll({
-      where: { universityId: user.universityId }
+      where: { universityId: user.universityId },
     });
-    campuses.forEach(c => allowedCampusIds.add(c.campusId));
-
-    const institutes = await model.instituteModel.findAll({
-      where: { universityId: user.universityId }
-    });
-    institutes.forEach(i => allowedInstituteIds.add(i.instituteId));
-  } else {
-    // If they have CAMPUS scope, they get all institutes in those campuses
-    if (allowedCampusIds.size > 0) {
-      const campusInstitutes = await model.instituteModel.findAll({
-        where: { campusId: { [Op.in]: Array.from(allowedCampusIds) } }
-      });
-      campusInstitutes.forEach(i => allowedInstituteIds.add(i.instituteId));
+    for (const campus of campuses) {
+      allowedCampusIds.add(campus.campusId);
     }
 
-    // If they have INSTITUTE scope, they must also see the parent campuses of those institutes
+    const institutes = await model.instituteModel.findAll({
+      where: { universityId: user.universityId },
+    });
+    for (const institute of institutes) {
+      allowedInstituteIds.add(institute.instituteId);
+    }
+  } else {
+    if (allowedCampusIds.size > 0) {
+      const campusInstitutes = await model.instituteModel.findAll({
+        where: { campusId: { [Op.in]: Array.from(allowedCampusIds) } },
+      });
+      for (const institute of campusInstitutes) {
+        allowedInstituteIds.add(institute.instituteId);
+      }
+    }
+
     if (allowedInstituteIds.size > 0) {
       const institutes = await model.instituteModel.findAll({
-        where: { instituteId: { [Op.in]: Array.from(allowedInstituteIds) } }
+        where: { instituteId: { [Op.in]: Array.from(allowedInstituteIds) } },
       });
-      institutes.forEach(i => allowedCampusIds.add(i.campusId));
+      for (const institute of institutes) {
+        allowedCampusIds.add(institute.campusId);
+      }
     }
   }
 
-  // Fetch the final details of campuses and institutes
-  const campuses = allowedCampusIds.size > 0
-    ? await model.campusModel.findAll({
-      where: { campusId: { [Op.in]: Array.from(allowedCampusIds) } }
-    })
-    : [];
+  const campuses =
+    allowedCampusIds.size > 0
+      ? await model.campusModel.findAll({
+          where: { campusId: { [Op.in]: Array.from(allowedCampusIds) } },
+        })
+      : [];
 
-  const institutes = allowedInstituteIds.size > 0
-    ? await model.instituteModel.findAll({
-      where: { instituteId: { [Op.in]: Array.from(allowedInstituteIds) } }
-    })
-    : [];
+  const institutes =
+    allowedInstituteIds.size > 0
+      ? await model.instituteModel.findAll({
+          where: { instituteId: { [Op.in]: Array.from(allowedInstituteIds) } },
+        })
+      : [];
 
-  // Get university from the allowed institutes or fallback to user.universityId
   let university = null;
   const universityIds = new Set();
   if (institutes.length > 0) {
-    institutes.forEach(i => {
-      if (i.universityId) {
-        universityIds.add(i.universityId);
+    for (const institute of institutes) {
+      if (institute.universityId) {
+        universityIds.add(institute.universityId);
       }
-    });
+    }
   }
 
   if (universityIds.size > 0) {
@@ -791,47 +850,45 @@ export async function getGrantedAccess(userId) {
     university = await model.universityModel.findByPk(user.universityId);
   }
 
-  // Fetch active academic years for the allowed institutes
-  const academicYears = allowedInstituteIds.size > 0
-    ? await model.acedmicYearModel.findAll({
-      where: {
-        instituteId: { [Op.in]: Array.from(allowedInstituteIds) },
-        isActive: true
-      }
-    })
-    : [];
+  const academicYears =
+    allowedInstituteIds.size > 0
+      ? await model.acedmicYearModel.findAll({
+          where: {
+            instituteId: { [Op.in]: Array.from(allowedInstituteIds) },
+            isActive: true,
+          },
+        })
+      : [];
 
-  // Fetch distinct roles for the user
-  const roleEntries = await model.userRolePermissionModel.findAll({
-    attributes: [
-      [sequelize.fn('DISTINCT', sequelize.col('userRole.role')), 'roleName'],
-      [sequelize.col('userRole.role_id'), 'roleId']
-    ],
-    where: { user_id: userId },
-    include: [
-      {
-        model: model.roleModel,
-        as: 'userRole',
-        attributes: []
-      }
-    ],
-    raw: true
-  });
-
-  const roles = roleEntries
-    .filter(entry => entry.roleName != null && entry.roleName !== '')
-    .map(entry => ({
-      roleId: entry.roleId,
-      roleName: entry.roleName
-    }));
+  const roles = await fetchGrantedAccessRoles(userId);
 
   return {
     university,
     campuses,
     institutes,
     academicYears,
-    roles
+    roles,
   };
+}
+
+export async function getGrantedAccess(userId) {
+  const user = await model.userModel.findByPk(userId);
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const accessEntries = await model.userRolePermissionModel.findAll({
+    where: {
+      userId,
+      permission: "perm_access_inst",
+    },
+  });
+
+  if (!accessEntries.length) {
+    return buildGrantedAccessFromUserContext(user, userId);
+  }
+
+  return buildGrantedAccessFromPermissions(user, userId, accessEntries);
 }
 
 export async function giveFullAccess(info) {

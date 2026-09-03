@@ -42,7 +42,10 @@ import {
   resolveTimeTableRoutineSection,
   studentClassSectionTermWithSectionInclude,
 } from "../utility/classSectionIncludes.js";
-import { resolveSourcePeriodByDateWiseId } from "../utility/attendancePlacement.js";
+import {
+  resolveSourcePeriodByDateWiseId,
+  resolveSourcePeriodsByDateWiseIds,
+} from "../utility/attendancePlacement.js";
 
 function normalizeAffiliatedUniversityId(value) {
   if (value == null || value === '') return null;
@@ -2809,9 +2812,7 @@ export function parseAttendanceStatus(val) {
   return cleaned.length > 0 ? Array.from(new Set(cleaned)) : null;
 }
 
-async function buildClassSectionStudentsBlock(dateWiseId, options = {}) {
-  const period = await resolveSourcePeriodByDateWiseId(Number(dateWiseId));
-
+async function buildClassSectionStudentsBlockFromPeriod(period, options = {}) {
   const classSectionTermId = period.classSectionTermId;
   const academicGroupId = period.academicGroupId;
   if (!classSectionTermId && !academicGroupId) {
@@ -2846,6 +2847,11 @@ async function buildClassSectionStudentsBlock(dateWiseId, options = {}) {
   };
 }
 
+async function buildClassSectionStudentsBlock(dateWiseId, options = {}) {
+  const period = await resolveSourcePeriodByDateWiseId(Number(dateWiseId));
+  return buildClassSectionStudentsBlockFromPeriod(period, options);
+}
+
 export async function getStudentsByClassSection({
   timeTableCellDateWiseId,
   groupPeriods,
@@ -2874,11 +2880,14 @@ export async function getStudentsByClassSection({
     }
 
     const group = isGroupPeriodsEnabled(groupPeriods);
+    const resolvedPeriods = await resolveSourcePeriodsByDateWiseIds(uniqueIds);
 
     if (uniqueIds.length === 1 || !group) {
       const periods = [];
-      for (const dateWiseId of uniqueIds) {
-        periods.push(await buildClassSectionStudentsBlock(dateWiseId, options));
+      for (const period of resolvedPeriods) {
+        periods.push(
+          await buildClassSectionStudentsBlockFromPeriod(period, options),
+        );
       }
 
       if (periods.length === 1) {
@@ -2886,11 +2895,6 @@ export async function getStudentsByClassSection({
       }
 
       return { periods };
-    }
-
-    const resolvedPeriods = [];
-    for (const dateWiseId of uniqueIds) {
-      resolvedPeriods.push(await resolveSourcePeriodByDateWiseId(dateWiseId));
     }
 
     const classSectionTermId = resolvedPeriods[0].classSectionTermId;

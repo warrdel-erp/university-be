@@ -439,6 +439,22 @@ export async function getDateWiseCellById(timeTableCellDateWiseId, transaction) 
   });
 }
 
+export async function getDateWiseCellByCellIdAndDate(timeTableCellId, date, transaction) {
+  return model.timeTableCellDateWiseModel.findOne({
+    where: {
+      timeTableCellId: Number(timeTableCellId),
+      [Op.and]: [
+        Sequelize.where(
+          Sequelize.fn("DATE", Sequelize.col("time_table_cell_date_wise.date")),
+          date,
+        ),
+      ],
+    },
+    attributes: ["timeTableCellDateWiseId", "timeTableCellId", "date"],
+    transaction,
+  });
+}
+
 export async function getMapping(academicYearId) {
   try {
     const lessonWhereClause = {
@@ -1015,7 +1031,7 @@ async function buildLessonCellSubjectWhere(subjectId) {
     mappingIds.push(Number(row.teacherSubjectMappingId));
   }
 
-  const orConditions = [{ subjectId: subjectIdNum }];
+  const orConditions = [{ subjectId: subjectIdNum }, { electiveSubjectId: subjectIdNum }];
   if (mappingIds.length > 0) {
     orConditions.push({ teacherSubjectMappingId: { [Op.in]: mappingIds } });
   }
@@ -1107,6 +1123,7 @@ export async function getTeacherWeekDateWiseCells({
           'day',
           'period',
           'subjectId',
+          'electiveSubjectId',
           'timeTableType',
         ],
         include: [
@@ -1165,6 +1182,415 @@ export async function getTeacherWeekDateWiseCells({
     ],
     order: [['date', 'ASC'], ['timeTableCellDateWiseId', 'ASC']],
   });
+}
+
+/**
+ * Date-wise class instances for known week-template cell ids in a date range.
+ * Used to attach exact timeTableCellDateWiseId onto routine schedule items.
+ */
+export async function getDateWiseCellsByCellIdsAndDateRange(
+  cellIds,
+  startDate,
+  endDate,
+) {
+  if (!cellIds || cellIds.length === 0) {
+    return [];
+  }
+
+  const uniqueIds = [];
+  const seen = new Set();
+  for (const id of cellIds) {
+    const num = Number(id);
+    if (!num || seen.has(num)) {
+      continue;
+    }
+    seen.add(num);
+    uniqueIds.push(num);
+  }
+
+  if (uniqueIds.length === 0) {
+    return [];
+  }
+
+  return model.timeTableCellDateWiseModel.findAll({
+    attributes: ['timeTableCellDateWiseId', 'timeTableCellId', 'date', 'classRoomSectionId'],
+    where: {
+      timeTableCellId: { [Op.in]: uniqueIds },
+      [Op.and]: [
+        Sequelize.where(
+          Sequelize.fn('DATE', Sequelize.col('time_table_cell_date_wise.date')),
+          { [Op.gte]: startDate },
+        ),
+        Sequelize.where(
+          Sequelize.fn('DATE', Sequelize.col('time_table_cell_date_wise.date')),
+          { [Op.lte]: endDate },
+        ),
+      ],
+    },
+    include: [
+      {
+        model: model.timeTableCellModel,
+        as: 'timeTableCell',
+        required: true,
+        attributes: ['timeTableCellId', 'day', 'period', 'timeTableCreationId'],
+      },
+    ],
+    order: [['date', 'ASC'], ['timeTableCellDateWiseId', 'ASC']],
+  });
+}
+
+/**
+ * Published teacher week hierarchy via real associations only:
+ * routine -> timeTableCells -> timeTableCellDateWise -> lessonMappings
+ * Date-wise rows are never inferred; missing relations stay empty.
+ */
+export async function findTeacherPublishedWeekDateWiseHierarchy({
+  userId,
+  subjectId,
+  courseId,
+  sessionId,
+  weekStart,
+  weekEnd,
+}) {
+  const cellSubjectWhere = await buildLessonCellSubjectWhere(subjectId);
+
+  const routineWhere = {
+    isPublish: true,
+    startingDate: { [Op.lte]: weekEnd },
+    endingDate: { [Op.gte]: weekStart },
+  };
+  if (courseId != null) {
+    routineWhere[Op.or] = [
+      { courseId: Number(courseId) },
+      { academicGroupId: { [Op.not]: null } },
+    ];
+  }
+
+  const sectionWhere = { ...buildScope(model.classSectionModel) };
+  if (courseId != null) {
+    sectionWhere.courseId = Number(courseId);
+  }
+  if (sessionId != null) {
+    sectionWhere.sessionId = Number(sessionId);
+  }
+  const requireSection = courseId != null || sessionId != null;
+
+  const classSectionWhere = {};
+  if (courseId != null) {
+    classSectionWhere.courseId = Number(courseId);
+  }
+  if (sessionId != null) {
+    classSectionWhere.sessionId = Number(sessionId);
+  }
+
+  const [employee, course, session, classSections, routines] = await Promise.all([
+    scoped(model.employeeModel).findOne({
+      where: { userId: Number(userId) },
+      attributes: [
+        'userId',
+        'employeeId',
+        'employeeName',
+        'employeeCode',
+        'pickColor',
+      ],
+    }),
+    courseId != null
+      ? scoped(model.courseModel).findOne({
+          where: { courseId: Number(courseId) },
+          attributes: ['courseId', 'courseName', 'courseCode'],
+        })
+      : Promise.resolve(null),
+    sessionId != null
+      ? scoped(model.sessionModel).findOne({
+          where: { sessionId: Number(sessionId) },
+          attributes: [
+            'sessionId',
+            'sessionName',
+            'startingDate',
+            'endingDate',
+            'academicYearId',
+          ],
+        })
+      : Promise.resolve(null),
+    courseId != null && sessionId != null
+      ? scoped(model.classSectionModel).findAll({
+          where: classSectionWhere,
+          attributes: [
+            'classSectionsId',
+            'section',
+            'year',
+            'courseId',
+            'sessionId',
+          ],
+          include: [classSectionTermsInclude()],
+          order: [
+            ['year', 'ASC'],
+            ['section', 'ASC'],
+          ],
+        })
+      : Promise.resolve([]),
+    scoped(model.timeTableRoutineModel).findAll({
+      where: routineWhere,
+      subQuery: false,
+      attributes: [
+        'timeTableRoutineId',
+        'timetableStructureCourseMapperId',
+        'startingDate',
+        'endingDate',
+        'isPublish',
+        'timeTableType',
+        'classSectionTermId',
+        'academicGroupId',
+        'courseId',
+      ],
+      include: [
+        {
+          model: model.timeTableStructureCourseModel,
+          as: 'structureCourseMapping',
+          required: false,
+          attributes: [
+            'timetableStructureCourseMapperId',
+            'timeTableNameId',
+            'courseId',
+            'sessionId',
+          ],
+          include: [
+            {
+              model: model.timeTableStructureModel,
+              as: 'timeTableStructure',
+              required: false,
+              attributes: ['timeTableNameId', 'name', 'weekOff'],
+              include: [
+                {
+                  model: model.timeTableStructurePeriodsModel,
+                  as: 'timeTableName',
+                  required: false,
+                  attributes: [
+                    'timeTableCreationId',
+                    'periodName',
+                    'startTime',
+                    'endTime',
+                    'isBreak',
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        timeTableRoutineClassSectionInclude({
+          termRequired: false,
+          sectionRequired: requireSection,
+          sectionWhere,
+          termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
+          sectionAttributes: [
+            'classSectionsId',
+            'section',
+            'year',
+            'sessionId',
+            'courseId',
+          ],
+          sectionNestedIncludes: [
+            {
+              model: model.courseModel,
+              as: 'courseSection',
+              attributes: ['courseId', 'courseName', 'courseCode'],
+              where: buildScope(model.courseModel),
+              required: false,
+            },
+            classSectionTermsInclude(),
+          ],
+        }),
+        {
+          model: model.timeTableCellModel,
+          as: 'timeTableCells',
+          required: true,
+          attributes: [
+            'timeTableCellId',
+            'timeTableRoutineId',
+            'timeTableCreationId',
+            'subjectId',
+            'electiveSubjectId',
+            'teacherSubjectMappingId',
+            'classRoomSectionId',
+            'day',
+            'period',
+            'timeTableType',
+          ],
+          ...(subjectId != null ? { where: cellSubjectWhere } : {}),
+          include: [
+            {
+              model: model.timeTableStructurePeriodsModel,
+              as: 'timeTablecreation',
+              required: false,
+              attributes: [
+                'timeTableCreationId',
+                'periodName',
+                'startTime',
+                'endTime',
+              ],
+            },
+            {
+              model: model.subjectModel,
+              as: 'timeTableSubject',
+              required: false,
+              attributes: ['subjectId', 'subjectName', 'subjectCode'],
+            },
+            {
+              model: model.electiveSubjectModel,
+              as: 'timeTableElective',
+              required: false,
+              attributes: [
+                'electiveSubjectId',
+                'electiveSubjectName',
+                'electiveSubjectCode',
+              ],
+            },
+            {
+              model: model.classRoomModel,
+              as: 'classRoom',
+              required: false,
+              attributes: ['classRoomSectionId', 'roomNumber'],
+            },
+            {
+              model: model.timeTableCellDateWiseModel,
+              as: 'timeTableCellDateWise',
+              required: true,
+              attributes: [
+                'timeTableCellDateWiseId',
+                'timeTableCellId',
+                'date',
+                'classRoomSectionId',
+                'subjectId',
+                'electiveSubjectId',
+              ],
+              where: {
+                date: {
+                  [Op.gte]: weekStart,
+                  [Op.lte]: weekEnd,
+                },
+              },
+              include: [
+                {
+                  model: model.timeTableCellTeachersDateWiseModel,
+                  as: 'timeTableCellTeachersDateWise',
+                  required: true,
+                  where: { userId: Number(userId) },
+                  attributes: [
+                    'timeTableCellTeachersDateWiseId',
+                    'userId',
+                    'teacherType',
+                    'isAttendence',
+                  ],
+                  include: [
+                    {
+                      model: model.employeeModel,
+                      as: 'employeeDetails',
+                      required: false,
+                      attributes: [
+                        'userId',
+                        'employeeId',
+                        'employeeName',
+                        'employeeCode',
+                        'pickColor',
+                      ],
+                    },
+                  ],
+                },
+                {
+                  model: model.classRoomModel,
+                  as: 'classRoom',
+                  required: false,
+                  attributes: ['classRoomSectionId', 'roomNumber'],
+                },
+                {
+                  model: model.lessonMappingModel,
+                  as: 'lessonMappings',
+                  required: false,
+                  where: buildScope(model.lessonMappingModel),
+                  attributes: [
+                    'lessonMappingId',
+                    'topicId',
+                    'timeTableCellDateWiseId',
+                    'timeTableCellId',
+                    'date',
+                    'completeDate',
+                    'note',
+                    'lectureUrl',
+                    'file',
+                    'status',
+                  ],
+                  include: [
+                    {
+                      model: model.topicModel,
+                      as: 'mappingTopic',
+                      required: true,
+                      attributes: ['topicId', 'name', 'lessonId'],
+                      include: [
+                        {
+                          model: model.lessonModel,
+                          as: 'lessonTopic',
+                          required: true,
+                          attributes: ['lessonId', 'name', 'lectureWindowId'],
+                          where: buildScope(model.lessonModel),
+                          include: [
+                            {
+                              model: model.lectureWindowModel,
+                              as: 'lectureWindow',
+                              required: false,
+                              attributes: ['lectureWindowId', 'name'],
+                            },
+                          ],
+                        },
+                        {
+                          model: model.subTopicModel,
+                          as: 'subTopic',
+                          required: false,
+                          attributes: ['subTopicId', 'name'],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      order: [
+        ['timeTableRoutineId', 'ASC'],
+        [
+          { model: model.timeTableCellModel, as: 'timeTableCells' },
+          'period',
+          'ASC',
+        ],
+        [
+          { model: model.timeTableCellModel, as: 'timeTableCells' },
+          'timeTableCellId',
+          'ASC',
+        ],
+        [
+          { model: model.timeTableCellModel, as: 'timeTableCells' },
+          { model: model.timeTableCellDateWiseModel, as: 'timeTableCellDateWise' },
+          'date',
+          'ASC',
+        ],
+        [
+          { model: model.timeTableCellModel, as: 'timeTableCells' },
+          { model: model.timeTableCellDateWiseModel, as: 'timeTableCellDateWise' },
+          'timeTableCellDateWiseId',
+          'ASC',
+        ],
+      ],
+    }),
+  ]);
+
+  return {
+    employee,
+    course,
+    session,
+    classSections,
+    routines,
+  };
 }
 
 /**

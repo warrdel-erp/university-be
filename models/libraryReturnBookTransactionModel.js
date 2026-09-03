@@ -53,6 +53,6 @@ const libraryReturnBookTransactionModel = sequelize.define(
   },
 );
 
-libraryReturnBookTransactionModel.scopeConfig = { university: false, institute: false, academicYear: false };
+libraryReturnBookTransactionModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
 export default libraryReturnBookTransactionModel;

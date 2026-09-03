@@ -2,7 +2,8 @@ import * as lesson from "../repository/lessonRepository.js";
 import * as lectureWindowRepository from "../repository/lectureWindowRepository.js";
 import sequelize from '../database/sequelizeConfig.js';
 import { resolveSourcePeriodByDateWiseId } from '../utility/attendancePlacement.js';
-import * as timeTableCreateServices from './timeTableCreateServices.js';
+import { resolveProgramTerm } from '../utility/classSectionIncludes.js';
+import { timeTableCellDateWiseModel } from '../models/index.js';
 
 const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -59,60 +60,14 @@ function formatDateKey(value) {
 
 function resolveViewerTeacher(teachers, userId) {
   if (userId == null) {
-    return teachers?.[0] || null;
+    return teachers[0] || null;
   }
-  for (const teacher of teachers || []) {
+  for (const teacher of teachers) {
     if (Number(teacher.userId) === Number(userId)) {
       return teacher;
     }
   }
-  return teachers?.[0] || null;
-}
-
-function mapDateWiseRow(row, userId) {
-  const plain = row.get ? row.get({ plain: true }) : row;
-  const cell = plain.timeTableCell || {};
-  const routine = cell.timeTableRoutine || {};
-  const termRow = routine.timeTableClassSectionTerm || {};
-  const section = termRow.classSection || {};
-  const viewerTeacher = resolveViewerTeacher(plain.timeTableCellTeachersDateWise, userId);
-
-  return {
-    timeTableCellDateWiseId: plain.timeTableCellDateWiseId,
-    timeTableCellId: Number(plain.timeTableCellId),
-    date: formatDateKey(plain.date),
-    day: cell.day || null,
-    period: cell.period || null,
-    timeTableCreationId: cell.timeTableCreationId || null,
-    periodName: cell.timeTablecreation?.periodName || null,
-    startTime: cell.timeTablecreation?.startTime || null,
-    endTime: cell.timeTablecreation?.endTime || null,
-    subjectId: cell.subjectId || cell.timeTableSubject?.subjectId || null,
-    subjectName: cell.timeTableSubject?.subjectName || null,
-    timeTableType: cell.timeTableType || null,
-    teacherType: viewerTeacher?.teacherType || null,
-    isAttendence: viewerTeacher?.isAttendence ?? null,
-    userId: viewerTeacher?.userId != null
-      ? Number(viewerTeacher.userId)
-      : (userId != null ? Number(userId) : null),
-    classRoomSectionId: plain.classRoomSectionId ?? null,
-    roomNumber: plain.classRoom?.roomNumber ?? null,
-    timeTableRoutineId: cell.timeTableRoutineId || routine.timeTableRoutineId || null,
-    classSectionTermId: routine.classSectionTermId ?? termRow.classSectionTermId ?? null,
-    classSectionsId: termRow.classSectionsId ?? section.classSectionsId ?? null,
-    year: section.year ?? null,
-    section: section.section ?? null,
-    term: termRow.term ?? null,
-  };
-}
-
-function buildDateWiseLookup(dateWiseCells) {
-  const lookup = new Map();
-  for (const item of dateWiseCells) {
-    if (!item.timeTableCellId || !item.date) continue;
-    lookup.set(`${item.timeTableCellId}|${item.date}`, item);
-  }
-  return lookup;
+  return teachers[0] || null;
 }
 
 function mapLessonPlanSummary(row) {
@@ -154,117 +109,394 @@ function mapLessonPlanSummary(row) {
   };
 }
 
-function buildLessonPlanLookup(rows) {
-  const lookup = new Map();
-  for (const row of rows || []) {
-    const plain = row.get ? row.get({ plain: true }) : row;
-    const dateWiseId = Number(plain.timeTableCellDateWiseId);
-    if (!dateWiseId || lookup.has(dateWiseId)) {
-      continue;
-    }
-    lookup.set(dateWiseId, mapLessonPlanSummary(plain));
+function parseWeekOffList(weekOff) {
+  if (weekOff == null || weekOff === '') {
+    return [];
   }
-  return lookup;
+  if (Array.isArray(weekOff)) {
+    return weekOff;
+  }
+  try {
+    const parsed = JSON.parse(weekOff);
+    if (Array.isArray(parsed)) {
+      return parsed;
+    }
+  } catch {
+    // fall through
+  }
+  const parts = String(weekOff).split(',');
+  const days = [];
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (trimmed) {
+      days.push(trimmed);
+    }
+  }
+  return days;
 }
 
-function enrichPublishedRoutines(routines, week, dateWiseLookup, lessonPlanLookup, userId) {
-  const published = [];
+function dayNameFromDateKey(dateKey) {
+  const date = new Date(`${dateKey}T00:00:00`);
+  return WEEK_DAYS[(date.getDay() + 6) % 7];
+}
 
-  for (const routine of routines || []) {
-    if (!routine.isPublished) {
-      continue;
+function mapRoutineClassSection(routine) {
+  const termRow = routine.timeTableClassSectionTerm || {};
+  const section = termRow.classSection || null;
+  if (!section) {
+    return null;
+  }
+  return {
+    classSectionsId: section.classSectionsId,
+    section: section.section,
+    class: section.year != null ? String(section.year) : null,
+    semesterId: null,
+    term: termRow.term != null ? Number(termRow.term) : resolveProgramTerm(section),
+    course: section.courseSection
+      ? {
+          courseId: section.courseSection.courseId,
+          courseName: section.courseSection.courseName,
+          courseCode: section.courseSection.courseCode,
+        }
+      : null,
+  };
+}
+
+function mapClassSectionSummary(classSection) {
+  const plain = classSection.get ? classSection.get({ plain: true }) : classSection;
+  return {
+    classSectionsId: plain.classSectionsId,
+    section: plain.section,
+    class: plain.year != null ? String(plain.year) : null,
+    semesterId: null,
+    term: resolveProgramTerm(plain),
+  };
+}
+
+function mapCellSubject(cell) {
+  if (cell.timeTableType === 'elective' || cell.timeTableElective) {
+    const elective = cell.timeTableElective;
+    return {
+      electiveSubjectId: elective?.electiveSubjectId ?? cell.electiveSubjectId ?? null,
+      name: elective?.electiveSubjectName ?? 'N/A',
+      subjectCode: elective?.electiveSubjectCode ?? null,
+    };
+  }
+
+  const subject = cell.timeTableSubject;
+  return {
+    subjectId: subject?.subjectId ?? cell.subjectId ?? null,
+    name: subject?.subjectName ?? 'N/A',
+    subjectCode: subject?.subjectCode ?? null,
+  };
+}
+
+function mapDateWiseTeachers(cell, dateWise) {
+  const teachers = [];
+  for (const teacherRow of dateWise.timeTableCellTeachersDateWise || []) {
+    const employee = teacherRow.employeeDetails || null;
+    teachers.push({
+      employeeId: employee?.employeeId ?? null,
+      userId: teacherRow.userId != null ? Number(teacherRow.userId) : null,
+      name: employee?.employeeName ?? 'N/A',
+      color: employee?.pickColor ?? null,
+      timeTableCellId: Number(cell.timeTableCellId),
+      timeTableCellTeachersDateWiseId:
+        teacherRow.timeTableCellTeachersDateWiseId != null
+          ? Number(teacherRow.timeTableCellTeachersDateWiseId)
+          : null,
+      teacherType: teacherRow.teacherType || null,
+      isAttendence: teacherRow.isAttendence ?? null,
+    });
+  }
+  return teachers;
+}
+
+function mapLessonPlanFromDateWise(dateWise) {
+  const mappings = dateWise.lessonMappings || [];
+  if (mappings.length === 0) {
+    return null;
+  }
+  return mapLessonPlanSummary(mappings[0]);
+}
+
+function mapScheduleItemFromDateWise(cell, dateWise, userId) {
+  const teachers = mapDateWiseTeachers(cell, dateWise);
+  const viewerTeacher = resolveViewerTeacher(teachers, userId);
+  const room = dateWise.classRoom || cell.classRoom || null;
+  const itemType =
+    cell.timeTableType === 'elective' || cell.timeTableElective
+      ? 'elective'
+      : 'normal';
+
+  return {
+    timeTableCellId: Number(cell.timeTableCellId),
+    timeTableCellDateWiseId: Number(dateWise.timeTableCellDateWiseId),
+    date: formatDateKey(dateWise.date),
+    period: cell.period,
+    type: itemType,
+    teachers,
+    subject: mapCellSubject(cell),
+    room: {
+      classRoomSectionId:
+        room?.classRoomSectionId ?? dateWise.classRoomSectionId ?? null,
+      name: room?.roomNumber ?? 'N/A',
+    },
+    teacherType: viewerTeacher?.teacherType || null,
+    userId: viewerTeacher?.userId != null
+      ? Number(viewerTeacher.userId)
+      : Number(userId),
+    lessonPlan: mapLessonPlanFromDateWise(dateWise),
+  };
+}
+
+function buildPeriodShells(periodDefs, weekOffList, week) {
+  const weekOffLower = [];
+  for (const day of weekOffList) {
+    weekOffLower.push(String(day).toLowerCase());
+  }
+
+  const periods = [];
+  for (const period of periodDefs) {
+    const days = [];
+    for (const dayName of WEEK_DAYS) {
+      const dayDate = week.dayDates[dayName];
+      if (weekOffLower.includes(dayName.toLowerCase())) {
+        days.push({
+          name: dayName,
+          date: dayDate,
+          isDayOff: true,
+          scheduleItems: [],
+          timeTableCellId: null,
+          timeTableCellDateWiseId: null,
+          teacherType: null,
+        });
+        continue;
+      }
+
+      if (period.isBreak) {
+        days.push({
+          name: dayName,
+          date: dayDate,
+          isBreak: true,
+          scheduleItems: [],
+          timeTableCellId: null,
+          timeTableCellDateWiseId: null,
+          teacherType: null,
+        });
+        continue;
+      }
+
+      days.push({
+        name: dayName,
+        date: dayDate,
+        scheduleItems: [],
+        timeTableCellId: null,
+        timeTableCellDateWiseId: null,
+        teacherType: null,
+      });
     }
 
-    for (const period of routine.periods || []) {
-      for (const day of period.days || []) {
-        const dayDate = week.dayDates[day.name] || null;
-        day.date = dayDate;
-        day.timeTableCellId = null;
-        day.timeTableCellDateWiseId = null;
-        day.teacherType = null;
+    periods.push({
+      timeTableCreationId: period.timeTableCreationId,
+      name: period.periodName,
+      startTime: period.startTime,
+      endTime: period.endTime,
+      days,
+    });
+  }
+  return periods;
+}
 
-        for (const item of day.scheduleItems || []) {
-          const viewerTeacher = resolveViewerTeacher(item.teachers, userId);
-          const cellId = item.timeTableCellId != null
-            ? Number(item.timeTableCellId)
-            : (viewerTeacher?.timeTableCellId != null
-              ? Number(viewerTeacher.timeTableCellId)
-              : null);
+function ensurePeriodShell(periodsByCreationId, orderedPeriods, cell, week) {
+  const creationId =
+    cell.timeTableCreationId != null ? Number(cell.timeTableCreationId) : null;
+  if (creationId == null) {
+    return null;
+  }
 
-          let dateWiseId = null;
-          let matched = null;
-          if (cellId != null && dayDate != null) {
-            matched = dateWiseLookup.get(`${cellId}|${dayDate}`);
-            if (matched) {
-              dateWiseId = matched.timeTableCellDateWiseId;
-            }
+  let period = periodsByCreationId.get(creationId);
+  if (period) {
+    return period;
+  }
+
+  const periodMeta = cell.timeTablecreation || {};
+  const days = [];
+  for (const dayName of WEEK_DAYS) {
+    days.push({
+      name: dayName,
+      date: week.dayDates[dayName],
+      scheduleItems: [],
+      timeTableCellId: null,
+      timeTableCellDateWiseId: null,
+      teacherType: null,
+    });
+  }
+
+  period = {
+    timeTableCreationId: creationId,
+    name: periodMeta.periodName || null,
+    startTime: periodMeta.startTime || null,
+    endTime: periodMeta.endTime || null,
+    days,
+  };
+  periodsByCreationId.set(creationId, period);
+  orderedPeriods.push(period);
+  return period;
+}
+
+function shapePublishedDateWiseRoutines(routines, week, userId) {
+  const shaped = [];
+
+  for (const routineRow of routines || []) {
+    const routine = routineRow.get ? routineRow.get({ plain: true }) : routineRow;
+    const mapping = routine.structureCourseMapping || {};
+    const structure = mapping.timeTableStructure || {};
+    const weekOffList = parseWeekOffList(structure.weekOff);
+    const periodDefs = structure.timeTableName || [];
+
+    const orderedPeriods = buildPeriodShells(periodDefs, weekOffList, week);
+    const periodsByCreationId = new Map();
+    for (const period of orderedPeriods) {
+      periodsByCreationId.set(Number(period.timeTableCreationId), period);
+    }
+
+    for (const cell of routine.timeTableCells || []) {
+      const period = ensurePeriodShell(
+        periodsByCreationId,
+        orderedPeriods,
+        cell,
+        week,
+      );
+      if (!period) {
+        continue;
+      }
+
+      for (const dateWise of cell.timeTableCellDateWise || []) {
+        // Integrity: date-wise row must belong to this cell only.
+        if (Number(dateWise.timeTableCellId) !== Number(cell.timeTableCellId)) {
+          continue;
+        }
+
+        const dateKey = formatDateKey(dateWise.date);
+        if (
+          !dateKey
+          || dateKey < week.startDate
+          || dateKey > week.endDate
+        ) {
+          continue;
+        }
+
+        const dayName = dayNameFromDateKey(dateKey);
+        let day = null;
+        for (const candidate of period.days) {
+          if (candidate.name === dayName) {
+            day = candidate;
+            break;
           }
+        }
+        if (!day || day.isDayOff || day.isBreak) {
+          continue;
+        }
 
-          item.timeTableCellId = cellId;
-          item.timeTableCellDateWiseId = dateWiseId;
-          item.teacherType = viewerTeacher?.teacherType || null;
-          item.userId = viewerTeacher?.userId != null
-            ? Number(viewerTeacher.userId)
-            : (userId != null ? Number(userId) : null);
-          item.lessonPlan = dateWiseId != null
-            ? (lessonPlanLookup.get(Number(dateWiseId)) || null)
-            : null;
+        const scheduleItem = mapScheduleItemFromDateWise(cell, dateWise, userId);
+        day.scheduleItems.push(scheduleItem);
+
+        if (day.timeTableCellDateWiseId == null) {
+          day.timeTableCellDateWiseId = scheduleItem.timeTableCellDateWiseId;
+          day.timeTableCellId = scheduleItem.timeTableCellId;
+          day.teacherType = scheduleItem.teacherType;
         }
       }
     }
 
-    published.push(routine);
+    // Drop period shells that never received a real date-wise class.
+    const periodsWithData = [];
+    for (const period of orderedPeriods) {
+      let hasItems = false;
+      for (const day of period.days) {
+        if (day.scheduleItems.length > 0) {
+          hasItems = true;
+          break;
+        }
+      }
+      if (hasItems) {
+        periodsWithData.push(period);
+      }
+    }
+
+    if (periodsWithData.length === 0) {
+      continue;
+    }
+
+    shaped.push({
+      timeTableRoutineId: routine.timeTableRoutineId,
+      isPublished: routine.isPublish === true,
+      timeTableNameId: mapping.timeTableNameId ?? null,
+      name: structure.name || 'N/A',
+      startDate: formatDateKey(routine.startingDate),
+      endDate: formatDateKey(routine.endingDate),
+      classSection: mapRoutineClassSection(routine),
+      academicGroup: null,
+      periods: periodsWithData,
+    });
   }
 
-  return published;
+  return shaped;
 }
 
+/**
+ * Teacher week view built only from real published date-wise hierarchy:
+ * routine -> timeTableCell -> timeTableCellDateWise -> lessonMapping
+ */
 export async function getRoutineByTeacherForLesson(userId, courseId, sessionId, subjectId, date) {
   const week = getCurrentWeekRange(date || toDateOnlyString(new Date()));
 
-  const [result, dateWiseRows] = await Promise.all([
-    timeTableCreateServices.getRoutineByTeacherAndAcademicYear(
-      userId,
-      courseId,
-      sessionId,
-      subjectId,
-    ),
-    lesson.getTeacherWeekDateWiseCells({
-      userId,
-      courseId,
-      sessionId,
-      subjectId,
-      startDate: week.startDate,
-      endDate: week.endDate,
-    }),
-  ]);
+  const bundle = await lesson.findTeacherPublishedWeekDateWiseHierarchy({
+    userId,
+    subjectId,
+    courseId,
+    sessionId,
+    weekStart: week.startDate,
+    weekEnd: week.endDate,
+  });
 
-  const dateWiseCells = [];
-  const dateWiseIds = [];
-  for (const row of dateWiseRows) {
-    const mapped = mapDateWiseRow(row, userId);
-    dateWiseCells.push(mapped);
-    if (mapped.timeTableCellDateWiseId != null) {
-      dateWiseIds.push(mapped.timeTableCellDateWiseId);
-    }
+  const classSectionSummaries = [];
+  for (const classSection of bundle.classSections || []) {
+    classSectionSummaries.push(mapClassSectionSummary(classSection));
   }
 
-  const lessonPlanRows = await lesson.getLessonPlanSummariesByDateWiseIds(dateWiseIds);
-  const dateWiseLookup = buildDateWiseLookup(dateWiseCells);
-  const lessonPlanLookup = buildLessonPlanLookup(lessonPlanRows);
-  const routines = enrichPublishedRoutines(
-    result.routines || [],
-    week,
-    dateWiseLookup,
-    lessonPlanLookup,
-    userId,
-  );
+  const employee = bundle.employee;
+  const course = bundle.course;
+  const session = bundle.session;
 
   return {
-    employee: result.employee,
-    course: result.course,
-    session: result.session,
-    classSections: result.classSections,
+    employee: employee
+      ? {
+          employeeId: employee.employeeId,
+          userId: employee.userId,
+          employeeName: employee.employeeName,
+          employeeCode: employee.employeeCode,
+          pickColor: employee.pickColor,
+        }
+      : null,
+    course: course
+      ? {
+          courseId: course.courseId,
+          courseName: course.courseName,
+          courseCode: course.courseCode,
+        }
+      : null,
+    session: session
+      ? {
+          sessionId: session.sessionId,
+          sessionName: session.sessionName,
+          startingDate: session.startingDate,
+          endingDate: session.endingDate,
+          academicYearId: session.academicYearId,
+        }
+      : null,
+    classSections: classSectionSummaries,
     week: {
       week: 'current',
       startDate: week.startDate,
@@ -273,7 +505,7 @@ export async function getRoutineByTeacherForLesson(userId, courseId, sessionId, 
       previousWeekDate: week.previousWeekDate,
       nextWeekDate: week.nextWeekDate,
     },
-    routines,
+    routines: shapePublishedDateWiseRoutines(bundle.routines, week, userId),
   };
 }
 
@@ -405,14 +637,40 @@ export async function deleteLesson(lessonId) {
   }
 }
 
+export async function resolveMappingDateWiseIdFromPayload(data, transaction) {
+  if (data.timeTableCellDateWiseId != null) {
+    return Number(data.timeTableCellDateWiseId);
+  }
+
+  if (data.timeTableCellId != null && data.date != null) {
+    const dateWiseRow = await lesson.getDateWiseCellByCellIdAndDate(
+      data.timeTableCellId,
+      data.date,
+      transaction,
+    );
+    return dateWiseRow?.timeTableCellDateWiseId ?? null;
+  }
+
+  return null;
+}
+
 export async function addMapping(data, createdBy, updatedBy) {
   const transaction = await sequelize.transaction();
 
   try {
-    const period = await resolveSourcePeriodByDateWiseId(
-      Number(data.timeTableCellDateWiseId),
-      { transaction },
-    );
+    const resolvedDateWiseId = await resolveMappingDateWiseIdFromPayload(data, transaction);
+
+    if (!resolvedDateWiseId) {
+      throw Object.assign(
+        new Error("timeTableCellDateWiseId is required"),
+        { statusCode: 400 },
+      );
+    }
+
+    const period = await timeTableCellDateWiseModel.findByPk(resolvedDateWiseId, { transaction });
+    if (!period) {
+      throw Object.assign(new Error("Scheduled period not found"), { statusCode: 404 });
+    }
 
     const payload = {
       topicId: data.topicId,

@@ -438,7 +438,7 @@ export async function getSchedulesFiltered(filters = {}, pagination = {}, option
 }
 
 export async function getRoomCapacitiesForSchedules(scheduleIds, options = {}) {
-  return scoped(model.examScheduleRoomCapacityModel).findAll({
+  const rows = await scoped(model.examScheduleRoomCapacityModel).findAll({
     where: {
       examScheduleId: { [Op.in]: scheduleIds },
       ...buildScope(model.examScheduleRoomCapacityModel),
@@ -464,9 +464,24 @@ export async function getRoomCapacitiesForSchedules(scheduleIds, options = {}) {
         ],
         where: buildScope(model.classRoomModel),
       },
+      {
+        model: model.studentExamSeatModel,
+        as: "seats",
+        attributes: ["studentExamSeatId"],
+        required: true,
+      },
     ],
     transaction: options.transaction,
   });
+
+  const unique = new Map();
+  for (const row of rows) {
+    const id = row.examScheduleRoomCapacityId;
+    if (!unique.has(id)) {
+      unique.set(id, row);
+    }
+  }
+  return Array.from(unique.values());
 }
 
 export async function getAssignmentsForRooms(classRoomSectionIds, examDates, slotIds, options = {}) {
@@ -849,12 +864,29 @@ export async function getRoomsWithExams(filters = {}, options = {}) {
           },
         ],
       },
+      // Only rooms with seat allocation done (no QP / hall-ticket gate).
+      {
+        model: model.studentExamSeatModel,
+        as: "seats",
+        attributes: ["studentExamSeatId"],
+        required: true,
+      },
     ],
     order: [
       [{ model: model.classRoomModel, as: "classRoom" }, "roomNumber", "ASC"],
       [{ model: model.examScheduleModel, as: "examSchedule" }, "examDate", "ASC"],
     ],
     transaction: options.transaction,
+  }).then((rows) => {
+    // INNER JOIN on seats can duplicate capacity rows — keep one per capacity.
+    const unique = new Map();
+    for (const row of rows) {
+      const id = row.examScheduleRoomCapacityId;
+      if (!unique.has(id)) {
+        unique.set(id, row);
+      }
+    }
+    return Array.from(unique.values());
   });
 }
 

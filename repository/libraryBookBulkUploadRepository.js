@@ -79,7 +79,7 @@ export async function bulkInsertLibraryBooks(bookPayloadList, transaction) {
     }
   }
 
-  return model.libraryBookModel.bulkCreate(bookPayloadList, { transaction });
+  return scoped(model.libraryBookModel).bulkCreate(bookPayloadList, { transaction });
 }
 
 export async function bulkInsertLibraryBookInventory(inventoryPayloadList, transaction) {

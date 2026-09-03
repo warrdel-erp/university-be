@@ -807,8 +807,6 @@ export async function getEmployeeSectionDates(classSectionTermId, subjectId, use
 const LEAVE_STATUS_SET = new Set(["Approved Leave", "Duty Leave", "Sports Leave", "NCC Leave"]);
 
 export async function getStudentsBatchAttendance(classSectionTermId, filters = []) {
-  const placement = await resolveAttendancePlacement(classSectionTermId);
-
   const dateWiseIds = [];
   const templateAttendance = {};
   if (Array.isArray(filters)) {
@@ -821,14 +819,38 @@ export async function getStudentsBatchAttendance(classSectionTermId, filters = [
     }
   }
 
+  let sourcePeriod = null;
   if (dateWiseIds.length > 0) {
-    await assertDateWiseCellsBelongToTerm(dateWiseIds, placement.classSectionTermId);
+    sourcePeriod = await resolveSourcePeriodByDateWiseId(dateWiseIds[0]);
+  } else if (classSectionTermId) {
+    sourcePeriod = { classSectionTermId };
+  } else {
+    throw new Error('Missing filters or classSectionTermId');
   }
 
-  const rawStudents = await attendanceService.getStudentsBatchAttendance(
-    placement.classSectionTermId,
-    filters,
-  );
+  let rawStudents;
+  if (sourcePeriod.electiveSubjectId) {
+    rawStudents = await attendanceService.getStudentsByElectiveSubjectWithBatchAttendance(
+      sourcePeriod.electiveSubjectId,
+      filters,
+    );
+  } else if (sourcePeriod.academicGroupId) {
+    rawStudents = await attendanceService.getStudentsByAcademicGroupWithBatchAttendance(
+      sourcePeriod.academicGroupId,
+      filters,
+    );
+  } else {
+    const placement = await resolveAttendancePlacement(sourcePeriod.classSectionTermId);
+
+    if (dateWiseIds.length > 0) {
+      await assertDateWiseCellsBelongToTerm(dateWiseIds, placement.classSectionTermId);
+    }
+
+    rawStudents = await attendanceService.getStudentsBatchAttendance(
+      placement.classSectionTermId,
+      filters,
+    );
+  }
 
   const len = rawStudents.length;
   const students = new Array(len);

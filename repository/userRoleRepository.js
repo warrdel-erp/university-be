@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import * as model from "../models/index.js";
 import { scoped } from "../utility/scoped.js";
 import sequelize from "../database/sequelizeConfig.js";
@@ -121,6 +122,49 @@ export async function getUserRoles(userId) {
     console.error("Repository: Error in getUserRoles:", error);
     throw error;
   }
+}
+
+export async function findDistinctRolesByUserIds(userIds) {
+  if (!userIds.length) {
+    return new Map();
+  }
+
+  const entries = await model.userRolePermissionModel.findAll({
+    where: { userId: { [Op.in]: userIds } },
+    attributes: ["userId"],
+    include: [
+      {
+        model: model.roleModel,
+        as: "userRole",
+        attributes: ["roleId", "role"],
+        required: true,
+      },
+    ],
+  });
+
+  const rolesByUserId = new Map();
+  for (const entry of entries) {
+    if (!entry.userRole) {
+      continue;
+    }
+
+    if (!rolesByUserId.has(entry.userId)) {
+      rolesByUserId.set(entry.userId, new Map());
+    }
+
+    const userRoles = rolesByUserId.get(entry.userId);
+    userRoles.set(entry.userRole.roleId, {
+      roleId: entry.userRole.roleId,
+      roleName: entry.userRole.role,
+    });
+  }
+
+  const result = new Map();
+  for (const [userId, userRoles] of rolesByUserId) {
+    result.set(userId, Array.from(userRoles.values()));
+  }
+
+  return result;
 }
 
 /**

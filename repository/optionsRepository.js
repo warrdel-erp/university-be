@@ -19,6 +19,67 @@ export async function getCourseOptions(courseLevelId) {
     });
 }
 
+export async function getMyCourseOptions(courseLevelId, userId) {
+    const courseIds = new Set();
+
+    const mappingRows = await scoped(model.teacherSubjectMappingModel).findAll({
+        attributes: ['subjectId'],
+        where: { userId: Number(userId) },
+        include: [{
+            model: model.subjectModel,
+            as: 'employeeSubject',
+            attributes: ['courseId'],
+            required: true,
+        }],
+    });
+
+    for (const row of mappingRows) {
+      const plain = row.get ? row.get({ plain: true }) : row;
+      if (plain.employeeSubject?.courseId != null) {
+        courseIds.add(Number(plain.employeeSubject.courseId));
+      }
+    }
+
+    const cellTeachers = await scoped(model.timeTableCellTeachersModel).findAll({
+        attributes: [],
+        where: { userId: Number(userId) },
+        include: [{
+            model: model.timeTableCellModel,
+            as: 'timeTableCell',
+            attributes: [],
+            required: true,
+            include: [{
+                model: model.timeTableRoutineModel,
+                as: 'timeTableRoutine',
+                attributes: ['courseId'],
+                required: true,
+            }],
+        }],
+        raw: true,
+    });
+
+    for (const row of cellTeachers) {
+        const courseId = row['timeTableCell.timeTableRoutine.courseId']
+            || row.timeTableCell?.timeTableRoutine?.courseId;
+        if (courseId != null) {
+            courseIds.add(Number(courseId));
+        }
+    }
+
+    if (courseIds.size === 0) {
+        return [];
+    }
+
+    return scoped(model.courseModel).findAll({
+        attributes: [['course_name', 'label'], ['course_id', 'value']],
+        where: {
+            courseId: { [Op.in]: [...courseIds] },
+            ...(courseLevelId != null && { course_levelId: Number(courseLevelId) }),
+        },
+        order: [['course_name', 'ASC']],
+    });
+}
+
 export async function getCourseData(courseId) {
     return await scoped(model.courseModel).findByPk(courseId, {
         attributes: ['totalTerms', 'termType'],
@@ -308,15 +369,20 @@ export async function getLectureWindowOptionRows(filters) {
     });
 }
 
-export async function getLectureWindowOptionDetail(lectureWindowId, academicYearId) {
+export async function getLectureWindowOptionDetail(lectureWindowId, academicYearId, userId) {
+    const where = {
+        lectureWindowId: Number(lectureWindowId),
+        academicYearId: Number(academicYearId),
+    };
+    if (userId != null) {
+        where.userId = Number(userId);
+    }
+
     return scoped(model.lectureWindowModel).findOne({
         raw: true,
         nest: true,
         attributes: lectureWindowOptionAttributes,
-        where: {
-            lectureWindowId: Number(lectureWindowId),
-            academicYearId: Number(academicYearId),
-        },
+        where,
         include: [
             {
                 model: model.subjectModel,
@@ -338,27 +404,37 @@ export async function getLectureWindowOptionDetail(lectureWindowId, academicYear
 }
 
 export async function getLessonOptionRows(filters) {
+    const where = {
+        lectureWindowId: Number(filters.lectureWindowId),
+        academicYearId: Number(filters.academicYearId),
+    };
+    if (filters.userId != null) {
+        where.userId = Number(filters.userId);
+    }
+
     return scoped(model.lessonModel).findAll({
         raw: true,
         nest: true,
         attributes: ['lessonId', 'name'],
-        where: {
-            lectureWindowId: Number(filters.lectureWindowId),
-            academicYearId: Number(filters.academicYearId),
-        },
+        where,
         order: [['lessonId', 'ASC']],
     });
 }
 
-export async function getLessonOptionDetail(lessonId, academicYearId) {
+export async function getLessonOptionDetail(lessonId, academicYearId, userId) {
+    const where = {
+        lessonId: Number(lessonId),
+        academicYearId: Number(academicYearId),
+    };
+    if (userId != null) {
+        where.userId = Number(userId);
+    }
+
     return scoped(model.lessonModel).findOne({
         raw: true,
         nest: true,
         attributes: lessonOptionAttributes,
-        where: {
-            lessonId: Number(lessonId),
-            academicYearId: Number(academicYearId),
-        },
+        where,
         include: [
             {
                 model: model.lectureWindowModel,

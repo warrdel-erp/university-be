@@ -25,6 +25,20 @@ export async function getBalancesByEmployee(req, res) {
   }
 }
 
+export async function getMyBalances(req, res) {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(404).json({ message: "User ID not found" });
+    }
+
+    const balances = await service.getBalancesByEmployee(userId);
+    res.status(200).json(balances);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 export async function updateBalance(req, res) {
   try {
     const { balanceId } = req.body;

@@ -34,24 +34,45 @@ function scopeFieldsForModel(model) {
   const config = model.scopeConfig || {};
   const store = requestContext.getStore();
   const filtered = {};
+  const pk = model.primaryKeyAttribute;
 
   if (!store) {
     return filtered;
   }
 
-  if (config.university && "universityId" in attrs && store.universityId != null) {
+  if (
+    config.university &&
+    "universityId" in attrs &&
+    store.universityId != null &&
+    pk !== "universityId"
+  ) {
     filtered.universityId = store.universityId;
   }
 
-  if (config.institute && "instituteId" in attrs && store.instituteId != null) {
+  if (
+    config.institute &&
+    "instituteId" in attrs &&
+    store.instituteId != null &&
+    pk !== "instituteId"
+  ) {
     filtered.instituteId = store.instituteId;
   }
 
-  if ("campusId" in attrs && store.campusId != null) {
+  if (
+    config.campus !== false &&
+    "campusId" in attrs &&
+    store.campusId != null &&
+    pk !== "campusId"
+  ) {
     filtered.campusId = store.campusId;
   }
 
-  if (config.academicYear && ACADEMIC_YEAR_FIELD in attrs && store.academicYearId != null) {
+  if (
+    config.academicYear &&
+    ACADEMIC_YEAR_FIELD in attrs &&
+    store.academicYearId != null &&
+    pk !== ACADEMIC_YEAR_FIELD
+  ) {
     filtered[ACADEMIC_YEAR_FIELD] = store.academicYearId;
   }
 
@@ -102,9 +123,16 @@ export const buildScope = (model, options = {}) => {
 
   if (store?.accessFilter) {
     for (const [key, value] of Object.entries(store.accessFilter)) {
-      if (key in attrs) {
-        where[key] = value;
+      if (!(key in attrs)) {
+        continue;
       }
+      if (key === "campusId" && config.campus === false) {
+        continue;
+      }
+      if (key === "instituteId" && config.institute === false) {
+        continue;
+      }
+      where[key] = value;
     }
   }
 

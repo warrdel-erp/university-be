@@ -1,4 +1,5 @@
 import * as courseService from '../services/courseService.js';
+import * as optionsServices from '../services/optionsServices.js';
 import { ErrorResponse, SuccessResponse } from '../utility/response.js';
 import { getAcademicYearId } from '../utility/requestContext.js';
 
@@ -87,6 +88,50 @@ export const getCourseSessions = async (req, res) => {
     });
   } catch (error) {
     console.error('Error in Get Course Sessions Controller:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Internal Server Error',
+      error: error.message,
+    });
+  }
+};
+
+export const getMyCourseSessions = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const courseId = Number(req.params.courseId);
+
+    const courses = await optionsServices.getMyCourseOptions(undefined, userId);
+    let isMapped = false;
+    for (const course of courses) {
+      if (Number(course.get('value')) === courseId) {
+        isMapped = true;
+        break;
+      }
+    }
+
+    if (!isMapped) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Course not found or not mapped to you',
+      });
+    }
+
+    const result = await courseService.getCourseWithSessions(courseId);
+
+    if (!result) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Course not found',
+      });
+    }
+
+    return res.status(200).json({
+      status: 'success',
+      data: result,
+    });
+  } catch (error) {
+    console.error('Error in Get My Course Sessions Controller:', error);
     return res.status(500).json({
       status: 'error',
       message: 'Internal Server Error',

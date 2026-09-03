@@ -34,6 +34,7 @@ const assetIssueTransactionModel = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       field: "member_id",
+      // STUDENT → students.student_id; TEACHER → employee.user_id
     },
     memberType: {
       type: DataTypes.ENUM("STUDENT", "TEACHER"),

@@ -272,23 +272,16 @@ export async function getExaminationSessionSlots(
 ) {
   // Unscheduled-only list does not need room/student enrichment on existing schedules.
   if (filterStatus === EXAM_SCHEDULE_FILTER_STATUS.NEEDS_SCHEDULING) {
-    const filterCombinations = await resolveSelectionFilters(
-      selections,
-      options,
-    );
     const slotRows =
       await examinationSessionSlotRepository.findSlotsWithoutSchedules(
         { examinationSessionId },
         options,
       );
 
-    const unscheduled =
-      filterCombinations.length > 0
-        ? await buildUnscheduledSchedules(
-            { examinationSessionId, selections },
-            options,
-          )
-        : [];
+    const unscheduled = await buildUnscheduledSchedules(
+      { examinationSessionId, selections },
+      options,
+    );
 
     const result = [];
     for (const slotRow of slotRows) {
@@ -306,12 +299,27 @@ export async function getExaminationSessionSlots(
     options,
   );
 
+  // filterStatus=all also includes subjects that still need scheduling.
+  const includeUnscheduled =
+    !filterStatus || filterStatus === EXAM_SCHEDULE_FILTER_STATUS.ALL;
+  const unscheduled = includeUnscheduled
+    ? await buildUnscheduledSchedules(
+        { examinationSessionId, selections },
+        options,
+      )
+    : [];
+
   const result = [];
   for (const slot of slots) {
     const schedules = [];
     for (const schedule of slot.schedules) {
       if (matchesFilterStatus(schedule, filterStatus)) {
         schedules.push(schedule);
+      }
+    }
+    if (includeUnscheduled) {
+      for (const subject of unscheduled) {
+        schedules.push(subject);
       }
     }
     result.push({
@@ -327,7 +335,7 @@ export async function getExaminationSessionSlotsCount(
   { examinationSessionId, date, selections },
   options = {},
 ) {
-  const { slots, filterCombinations } = await loadEnrichedSlotSchedules(
+  const { slots } = await loadEnrichedSlotSchedules(
     { examinationSessionId, date, selections },
     options,
   );
@@ -336,7 +344,6 @@ export async function getExaminationSessionSlotsCount(
   let roomPendingCount = 0;
   let readyCount = 0;
   let publishedCount = 0;
-  let needsSchedulingCount = 0;
 
   for (const slot of slots) {
     for (const schedule of slot.schedules) {
@@ -350,13 +357,12 @@ export async function getExaminationSessionSlotsCount(
     }
   }
 
-  if (filterCombinations.length > 0) {
-    const unscheduled = await buildUnscheduledSchedules(
-      { examinationSessionId, selections },
-      options,
-    );
-    needsSchedulingCount = unscheduled.length;
-  }
+  const unscheduled = await buildUnscheduledSchedules(
+    { examinationSessionId, selections },
+    options,
+  );
+  const needsSchedulingCount = unscheduled.length;
+  allCount += needsSchedulingCount;
 
   return {
     all: allCount,

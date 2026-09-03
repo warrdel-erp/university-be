@@ -74,6 +74,6 @@ const libraryIssueBookTransactionModel = sequelize.define(
   },
 );
 
-libraryIssueBookTransactionModel.scopeConfig = { university: false, institute: false, academicYear: false };
+libraryIssueBookTransactionModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
 export default libraryIssueBookTransactionModel;

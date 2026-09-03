@@ -96,7 +96,7 @@ const paymentPayeeIncludes = [
   },
   {
     model: model.employeeModel,
-    as: "employeePayee",
+    as: "employeeUserPayee",
     attributes: ["userId", "employeeName", "employeeCode", "departmentId"],
     required: false,
   },
@@ -359,9 +359,19 @@ export async function updateAssetIssueInventoryItemById(
 }
 
 function buildAssetIssueWhere(filters = {}) {
+  const where = {};
+  
+  if (filters.memberId !== undefined) {
+    where.memberId = filters.memberId;
+  }
+
+  if (filters.memberType !== undefined) {
+    where.memberType = filters.memberType;
+  }
+  
   const search = filters.search?.trim();
   if (!search) {
-    return {};
+    return where;
   }
 
   const pattern = { [Op.like]: `%${search}%` };
@@ -379,6 +389,7 @@ function buildAssetIssueWhere(filters = {}) {
   }
 
   return {
+    ...where,
     [Op.or]: orParts,
   };
 }
@@ -503,6 +514,30 @@ export async function findStudentById(studentId, options = {}) {
   });
 }
 
+export async function resolveStudentIssueMemberId(memberId, options = {}) {
+  const id = Number(memberId);
+
+  const byStudentId = await scoped(model.studentModel).findOne({
+    attributes: ["studentId"],
+    where: { studentId: id },
+    transaction: options.transaction,
+  });
+  if (byStudentId) {
+    return byStudentId.studentId;
+  }
+
+  const byUserId = await scoped(model.studentModel).findOne({
+    attributes: ["studentId"],
+    where: { userId: id },
+    transaction: options.transaction,
+  });
+  if (byUserId) {
+    return byUserId.studentId;
+  }
+
+  return null;
+}
+
 export async function findStudentMemberDetailsById(studentId, options = {}) {
   return scoped(model.studentModel).findOne({
     attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "courseId"],
@@ -524,6 +559,28 @@ export async function findTeacherById(userId, options = {}) {
     where: { userId },
     transaction: options.transaction,
   });
+}
+
+export async function resolveIssueMemberFromUserId(userId, options = {}) {
+  const employee = await scoped(model.employeeModel).findOne({
+    where: { userId: Number(userId) },
+    attributes: ["userId"],
+    transaction: options.transaction,
+  });
+  if (employee) {
+    return { memberId: employee.userId, memberType: "TEACHER" };
+  }
+
+  const student = await scoped(model.studentModel).findOne({
+    where: { userId: Number(userId) },
+    attributes: ["studentId"],
+    transaction: options.transaction,
+  });
+  if (student) {
+    return { memberId: student.studentId, memberType: "STUDENT" };
+  }
+
+  return null;
 }
 
 export async function findEmployeeMemberDetailsById(userId, options = {}) {

@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { z } from "zod";
 const router = Router();
-import { addAttendance, addMyAttendance, copyAttendancePeriod, getCopyAttendancePeriod, getAttendanceDetails, updateAttendance, updateMyAttendance, importAttendance, importBulkAttendance, getAttendanceByDate, getPreviousSessions, getStudentAttendanceReport, getStudentsBatchAttendance, getEmployeeSectionDates } from "../controllers/attendanceController.js";
+import { addAttendance, addMyAttendance, copyAttendancePeriod, getCopyAttendancePeriod, getAttendanceDetails, updateAttendance, updateMyAttendance, importAttendance, importMyAttendance, importBulkAttendance, importMyBulkAttendance, getAttendanceByDate, getPreviousSessions, getStudentAttendanceReport, getStudentsBatchAttendance, getMyStudentsBatchAttendance, getEmployeeSectionDates } from "../controllers/attendanceController.js";
 import userAuth from "../middleware/authUser.js"
 import { validate } from "../utility/validation.js";
 
@@ -24,7 +24,7 @@ const bulkAttendanceReportSchema = z.object({
 });
 
 const batchAttendanceSchema = z.object({
-    classSectionTermId: positiveIntegerId,
+    classSectionTermId: positiveIntegerId.optional().nullable(),
     filters: z.array(z.object({
         date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD").optional(),
         timeTableCellDateWiseId: z.number()
@@ -105,6 +105,12 @@ router.get('/sectionDates', userAuth, validate({ query: sectionDatesQuerySchema 
 // ---------------------------------------------------------------------------
 router.get("/studentAttendance/bulk", userAuth, validate({ query: bulkAttendanceReportSchema }), getStudentAttendanceReport);
 router.post('/getStudentAttendance/batch', userAuth, validate({ body: batchAttendanceSchema }), getStudentsBatchAttendance);
+router.post(
+  '/my/getStudentAttendance/batch',
+  userAuth,
+  validate({ body: batchAttendanceSchema }),
+  getMyStudentsBatchAttendance,
+);
 
 // ---------------------------------------------------------------------------
 // 5. Import
@@ -112,5 +118,8 @@ router.post('/getStudentAttendance/batch', userAuth, validate({ body: batchAtten
 // @deprecated
 router.post('/import', userAuth, importAttendance);
 router.post('/excelImport', userAuth, importBulkAttendance);
+
+router.post('/my/import', userAuth, importMyAttendance);
+router.post('/my/excelImport', userAuth, importMyBulkAttendance);
 
 export default router;

@@ -12,6 +12,10 @@ export async function getPolicies() {
   return repo.getPolicies();
 }
 
+export async function getActivePolicies() {
+  return repo.getActivePolicies();
+}
+
 export async function getPolicyById(policyId) {
   return repo.getPolicyById(policyId);
 }

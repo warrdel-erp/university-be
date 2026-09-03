@@ -27,6 +27,37 @@
           }
         },
         {
+          "name": "GET My Class Section Students",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/student/my/classSectionStudents?timeTableCellDateWiseId[]=55543&date=2026-08-26&groupPeriods=true",
+              "host": ["{{baseurl}}"],
+              "path": ["student", "my", "classSectionStudents"],
+              "query": [
+                {
+                  "key": "timeTableCellDateWiseId[]",
+                  "value": "55543"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-08-26"
+                },
+                {
+                  "key": "groupPeriods",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
           "name": "GET My Unique Class Section Subjects",
           "request": {
             "method": "GET",
@@ -246,6 +277,24 @@
           }
         },
         {
+          "name": "GET My Course Sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/course/my/{{courseId}}/sessions",
+              "host": ["{{baseurl}}"],
+              "path": ["course", "my", "{{courseId}}", "sessions"]
+            },
+            "description": "Returns course sessions when the course is mapped to the logged-in teacher via subject mapping or timetable."
+          }
+        },
+        {
           "name": "GET My Exam Assignments",
           "request": {
             "method": "GET",
@@ -260,6 +309,24 @@
               "host": ["{{baseurl}}"],
               "path": ["teacherExamAssignment", "my"]
             }
+          }
+        },
+        {
+          "name": "GET My Exam Schedule by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examSchedule/my/{{examScheduleId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["examSchedule", "my", "{{examScheduleId}}"]
+            },
+            "description": "Returns exam schedule details when assigned to the logged-in teacher via teacherExamAssignment."
           }
         },
         {
@@ -360,6 +427,89 @@
               "host": ["{{baseurl}}"],
               "path": ["attendance", "my"]
             }
+          }
+        },
+        {
+          "name": "POST My Student Attendance Batch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"classSectionTermId\": 1,\n  \"filters\": [\n    {\n      \"date\": \"2026-09-02\",\n      \"timeTableCellDateWiseId\": 55535\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/attendance/my/getStudentAttendance/batch",
+              "host": ["{{baseurl}}"],
+              "path": ["attendance", "my", "getStudentAttendance", "batch"]
+            }
+          }
+        },
+        {
+          "name": "POST My Attendance Import",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "attendance",
+                  "type": "file",
+                  "src": [],
+                  "description": "Excel attendance file"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/attendance/my/import",
+              "host": ["{{baseurl}}"],
+              "path": ["attendance", "my", "import"]
+            },
+            "description": "POST /attendance/my/import — teacher self-service attendance import (file field: attendance)."
+          }
+        },
+        {
+          "name": "POST My Attendance Excel Import",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "attendance",
+                  "type": "file",
+                  "src": [],
+                  "description": "Excel attendance file"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/attendance/my/excelImport",
+              "host": ["{{baseurl}}"],
+              "path": ["attendance", "my", "excelImport"]
+            },
+            "description": "POST /attendance/my/excelImport — teacher self-service bulk excel attendance import (file field: attendance)."
           }
         }
       ]
@@ -1123,6 +1273,30 @@
           }
         },
         {
+          "name": "GET My Course Options",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/options/my/courses?courseLevelId=",
+              "host": ["{{baseurl}}"],
+              "path": ["options", "my", "courses"],
+              "query": [
+                {
+                  "key": "courseLevelId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Returns { label, value } course options for the logged-in teacher. Returns [] when not mapped."
+          }
+        },
+        {
           "name": "POST My Lecture Window",
           "request": {
             "method": "POST",
@@ -1259,6 +1433,407 @@
               ]
             }
           }
+        },
+        {
+          "name": "GET My Lesson Options",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/options/my/lessons?lectureWindowId={{lectureWindowId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["options", "my", "lessons"],
+              "query": [
+                {
+                  "key": "lectureWindowId",
+                  "value": "{{lectureWindowId}}"
+                }
+              ]
+            },
+            "description": "GET /options/my/lessons?lectureWindowId=10 — lesson options for a lecture window owned by the logged-in teacher."
+          }
+        },
+        {
+          "name": "GET My Topic Options",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/options/my/topics?lessonId=19",
+              "host": ["{{baseurl}}"],
+              "path": ["options", "my", "topics"],
+              "query": [
+                {
+                  "key": "lessonId",
+                  "value": "19"
+                }
+              ]
+            },
+            "description": "GET /options/my/topics?lessonId=19 — topic options for a lesson owned by the logged-in teacher."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Leave Requests & Balance",
+      "item": [
+        {
+          "name": "GET My Leave Policies",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/leave-policies/my",
+              "host": ["{{baseurl}}"],
+              "path": ["leave-policies", "my"]
+            },
+            "description": "Returns active leave policies for the logged-in user (no LEAVE_POLICY admin permission required). Use for apply-leave policy dropdown."
+          }
+        },
+        {
+          "name": "GET My Leave Requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/leave-requests/my",
+              "host": ["{{baseurl}}"],
+              "path": ["leave-requests", "my"]
+            },
+            "description": "Returns [] when user has no employee record (not 404)."
+          }
+        },
+        {
+          "name": "POST My Leave Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"policyId\": 1,\n  \"startDate\": \"2026-09-01\",\n  \"endDate\": \"2026-09-02\",\n  \"totalDays\": 2,\n  \"reason\": \"Personal\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/leave-requests/my",
+              "host": ["{{baseurl}}"],
+              "path": ["leave-requests", "my"]
+            }
+          }
+        },
+        {
+          "name": "PATCH Cancel My Leave Request",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"requestId\": 1,\n  \"status\": \"cancelled\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/leave-requests/status/my",
+              "host": ["{{baseurl}}"],
+              "path": ["leave-requests", "status", "my"]
+            }
+          }
+        },
+        {
+          "name": "GET My Leave Balance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/leave-balance/my",
+              "host": ["{{baseurl}}"],
+              "path": ["leave-balance", "my"]
+            },
+            "description": "Returns [] when user has no employee record (not 404)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Assets & Service Tickets",
+      "item": [
+        {
+          "name": "GET My Asset Issues",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/assetIssue/my?page=1&limit=10",
+              "host": ["{{baseurl}}"],
+              "path": ["assetIssue", "my"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Returns empty list with pagination when user has no employee record (not 404)."
+          }
+        },
+        {
+          "name": "GET My Service Tickets",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/serviceTicket/my?page=1&limit=20",
+              "host": ["{{baseurl}}"],
+              "path": ["serviceTicket", "my"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Returns tickets for assets currently issued to the logged-in user. Empty when no issued assets."
+          }
+        },
+        {
+          "name": "POST My Service Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assetId\": 1,\n  \"issue\": \"Device not powering on\",\n  \"issueType\": \"HARDWARE\",\n  \"problemDescription\": \"Laptop does not turn on after charging.\",\n  \"downtimeStartedAt\": \"2026-09-01T09:00:00+05:30\",\n  \"priority\": \"MEDIUM\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/serviceTicket/my",
+              "host": ["{{baseurl}}"],
+              "path": ["serviceTicket", "my"]
+            },
+            "description": "Raises a ticket only for an asset currently issued to the logged-in user."
+          }
+        },
+        {
+          "name": "GET My Single Service Ticket",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/serviceTicket/my/single?serviceTicketId=2",
+              "host": ["{{baseurl}}"],
+              "path": ["serviceTicket", "my", "single"],
+              "query": [
+                {
+                  "key": "serviceTicketId",
+                  "value": "2"
+                }
+              ]
+            },
+            "description": "Returns ticket details only when it belongs to an asset issued to the logged-in user."
+          }
+        },
+        {
+          "name": "GET My Service Ticket Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/serviceTicket/my/summary",
+              "host": ["{{baseurl}}"],
+              "path": ["serviceTicket", "my", "summary"]
+            },
+            "description": "Returns zero counts for tickets on assets issued to the logged-in user."
+          }
+        },
+        {
+          "name": "GET My Service Ticket Number Preview",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/serviceTicket/my/numberpreview",
+              "host": ["{{baseurl}}"],
+              "path": ["serviceTicket", "my", "numberpreview"]
+            }
+          }
+        },
+        {
+          "name": "GET My AMC Vendors",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/amcVendor/my?page=1&limit=100",
+              "host": ["{{baseurl}}"],
+              "path": ["amcVendor", "my"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "100"
+                }
+              ]
+            },
+            "description": "Returns AMC vendors for asset categories of assets currently issued to the logged-in teacher."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Evaluation",
+      "description": "Teacher self-service answer-sheet evaluation APIs from answerSheetQrRoute (/my).",
+      "item": [
+        {
+          "name": "GET My Assigned Answer Sheets",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/my?page=1&limit=20",
+              "host": ["{{baseurl}}"],
+              "path": ["answerSheetQr", "my"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "GET /answerSheetQr/my — scripts assigned to the logged-in teacher.\n\nResponse data:\n- filteredrows[]\n- teacher { userId, userName, email }\n\nReturns empty filteredrows when user has no employee record (not 404)."
+          }
+        },
+        {
+          "name": "GET My Evaluation Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/my/summary",
+              "host": ["{{baseurl}}"],
+              "path": ["answerSheetQr", "my", "summary"]
+            },
+            "description": "GET /answerSheetQr/my/summary — evaluation counts for the logged-in teacher.\n\nResponse:\n- totalAssigned\n- evaluated\n- pending\n\nReturns zero counts when user has no employee record (not 404)."
+          }
+        },
+        {
+          "name": "GET My Evaluations (evalution)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/evalution/my",
+              "host": ["{{baseurl}}"],
+              "path": ["evalution", "my"]
+            },
+            "description": "Returns [] when user has no employee record (not 404)."
+          }
         }
       ]
     },
@@ -1293,7 +1868,7 @@
     },
     {
       "key": "token",
-      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjU2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlSWQiOm51bGwsImRlZmF1bHRBY2FkZW1pY1llYXJJZCI6NTksInVzZXJOYW1lIjoiUGF5YWwgTHVsbGEiLCJ1bmlxdWVJZCI6IjE0NWQ5ODU2LTYyYzctNDY4ZS1hNzYyLTI2ZTkzYjdmYzgyZiIsInBhc3N3b3JkIjoiJDJhJDEwJEVzMmlldHdab0FBNHhTRnBKbGYzRmUuQmR1eDIuanVtR3BUMmZaUEtYaHEubTVxR2dhaEJPIiwiZHVtbXlQYXNzd29yZCI6IiIsInN0YXR1cyI6ImFjdGl2ZSIsInBob25lIjoiNzYwMDc5ODMwNyIsImVtYWlsIjoicGx1QGFheW9qYW4uZWR1LmluIiwiaXNUZWFjaGVyIjp0cnVlLCJjcmVhdGVkQXQiOiIyMDI1LTA5LTMwVDExOjUyOjA5LjAwMFoiLCJ1cGRhdGVkQXQiOiIyMDI2LTA4LTExVDE5OjUyOjE0LjAwMFoiLCJkZWxldGVkQXQiOm51bGwsImRlZmF1bHRfcm9sZV9pZCI6bnVsbCwiaW5zdGl0dXRlTmFtZSI6IkFheW9qYW4gU2Nob29sIG9mIEFyY2hpdGVjdHVyZSIsImlhdCI6MTc4NjgxMTY2OSwiZXhwIjoxNzg5NDAzNjY5fQ.9rEUibo0Al-3x8p03oMRGZGNMeJH4ml17xl31ZHPIlg",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjU2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlSWQiOm51bGwsImRlZmF1bHRBY2FkZW1pY1llYXJJZCI6NTksInVzZXJOYW1lIjoiUGF5YWwgTHVsbGEiLCJ1bmlxdWVJZCI6IjE0NWQ5ODU2LTYyYzctNDY4ZS1hNzYyLTI2ZTkzYjdmYzgyZiIsInBhc3N3b3JkIjoiJDJhJDEwJEVzMmlldHdab0FBNHhTRnBKbGYzRmUuQmR1eDIuanVtR3BUMmZaUEtYaHEubTVxR2dhaEJPIiwiZHVtbXlQYXNzd29yZCI6IiIsInN0YXR1cyI6ImFjdGl2ZSIsInBob25lIjoiNzYwMDc5ODMwNyIsImVtYWlsIjoicGx1QGFheW9qYW4uZWR1LmluIiwiaXNUZWFjaGVyIjpmYWxzZSwiY3JlYXRlZEF0IjoiMjAyNS0wOS0zMFQxMTo1MjowOS4wMDBaIiwidXBkYXRlZEF0IjoiMjAyNi0wOS0wMVQwNjo1MDowNS4wMDBaIiwiZGVsZXRlZEF0IjpudWxsLCJkZWZhdWx0X3JvbGVfaWQiOm51bGwsImluc3RpdHV0ZU5hbWUiOiJBYXlvamFuIFNjaG9vbCBvZiBBcmNoaXRlY3R1cmUiLCJpYXQiOjE3ODgyNTYzOTgsImV4cCI6MTc5MDg0ODM5OH0.QeDF5vmjXfWIANyxPq4S9H2Pkfj4XUt4xl8z3DJLJmU",
       "type": "string"
     },
     {
@@ -1313,6 +1888,16 @@
     },
     {
       "key": "blueprintId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "courseId",
+      "value": "34",
+      "type": "string"
+    },
+    {
+      "key": "examScheduleId",
       "value": "1",
       "type": "string"
     }
