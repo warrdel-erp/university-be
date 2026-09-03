@@ -57,7 +57,7 @@ const faculityLoadModel = sequelize.define(
             field:'defined_load'
 		},
         currentLoad:{
-            type: DataTypes.INTEGER,
+            type: DataTypes.DECIMAL(10, 2),
             allowNull: true,
             defaultValue: 0,
             field:'current_load'

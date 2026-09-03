@@ -60,6 +60,67 @@ export async function getCopyAttendancePeriod(req, res) {
   }
 }
 
+export async function copyMyAttendancePeriod(req, res) {
+  const createdBy = req.user.userId;
+  const updatedBy = req.user.userId;
+
+  try {
+    const sourceId = Number(req.body.timeTableCellDateWiseId);
+    const targetIds = Array.isArray(req.body.copyToTimeTableCellDateWiseId)
+      ? req.body.copyToTimeTableCellDateWiseId.map(Number)
+      : [Number(req.body.copyToTimeTableCellDateWiseId)];
+
+    const dateWiseIds = [sourceId];
+    for (const id of targetIds) {
+      dateWiseIds.push(id);
+    }
+
+    const assignmentCheck = await assertTeacherAssignedToDateWiseIds(createdBy, dateWiseIds);
+    if (!assignmentCheck.valid) {
+      return res.status(assignmentCheck.status).json({ error: assignmentCheck.message });
+    }
+
+    const result = await AttendanceCreation.copyAttendancePeriod(req.body, createdBy, updatedBy);
+    const response = {
+      message: "Attendance copied successfully",
+      copiedFrom: result.copiedFrom,
+      markedPeriods: result.markedPeriods,
+    };
+
+    if (result.skippedPeriods?.length) {
+      response.skippedPeriods = result.skippedPeriods;
+    }
+
+    res.status(201).json(response);
+  } catch (error) {
+    const statusCode = /not found|required|already marked|Invalid|does not belong|No attendance|not a valid copy target/i.test(error.message)
+      ? 400
+      : 500;
+    res.status(statusCode).json({ error: error.message });
+  }
+}
+
+export async function getMyCopyAttendancePeriod(req, res) {
+  try {
+    const userId = req.user.userId;
+    const assignmentCheck = await assertTeacherAssignedToDateWiseIds(
+      userId,
+      req.query.timeTableCellDateWiseId,
+    );
+    if (!assignmentCheck.valid) {
+      return ErrorResponse(res, assignmentCheck.status, assignmentCheck.message);
+    }
+
+    const result = await AttendanceCreation.getCopyAttendanceNextPeriods(req.query);
+    return SuccessResponse(res, 200, "Next copyable periods fetched successfully", result);
+  } catch (error) {
+    const statusCode = /not found|required|Invalid|does not belong|No attendance/i.test(error.message)
+      ? 400
+      : 500;
+    return ErrorResponse(res, statusCode, error.message);
+  }
+}
+
 export async function getAttendanceDetails(req, res) {
   try {
     const Attendance = await AttendanceCreation.getAttendanceDetails();
@@ -327,7 +388,8 @@ export async function getStudentsBatchAttendance(req, res) {
     return SuccessResponse(res, 200, "Student attendance fetched successfully", data);
   } catch (error) {
     console.error("Controller Error:", error);
-    ErrorResponse(res, 500, error.message || 'An unexpected error occurred');
+    const status = error.statusCode || (/required|must be/i.test(error.message || '') ? 400 : 500);
+    return ErrorResponse(res, status, error.message || 'An unexpected error occurred');
   }
 };
 
@@ -339,7 +401,13 @@ export async function getMyStudentsBatchAttendance(req, res) {
     }
 
     const { classSectionTermId, filters } = req.body;
-    const dateWiseIds = (filters || []).map((filter) => filter.timeTableCellDateWiseId);
+    const dateWiseIds = [];
+    for (const filter of filters || []) {
+      const id = Number(filter.timeTableCellDateWiseId);
+      if (id) {
+        dateWiseIds.push(id);
+      }
+    }
 
     const assignmentCheck = await assertTeacherAssignedToDateWiseIds(userId, dateWiseIds);
     if (!assignmentCheck.valid) {
@@ -354,7 +422,8 @@ export async function getMyStudentsBatchAttendance(req, res) {
     return SuccessResponse(res, 200, "Student attendance fetched successfully", data);
   } catch (error) {
     console.error("Controller Error:", error);
-    return ErrorResponse(res, 500, error.message || "An unexpected error occurred");
+    const status = error.statusCode || (/required|must be/i.test(error.message || '') ? 400 : 500);
+    return ErrorResponse(res, status, error.message || "An unexpected error occurred");
   }
 }
 

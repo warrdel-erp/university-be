@@ -119,6 +119,22 @@ export function toMoneyNumber(value) {
 }
 
 /**
+ * Coerce a count / load value to a whole number; invalid → 0
+ * @param {unknown} value
+ * @returns {number}
+ */
+export function toIntegerNumber(value) {
+  if (value == null || value === "") return 0;
+  try {
+    const d = new Decimal(value);
+    if (!d.isFinite()) return 0;
+    return d.toDecimalPlaces(0, Decimal.ROUND_DOWN).toNumber();
+  } catch {
+    return 0;
+  }
+}
+
+/**
  * Parse money from request body: empty → null, invalid → NaN, else 2 DP number
  * @param {unknown} value
  * @returns {number | null}
