@@ -334,3 +334,98 @@ export function lookupStudentCount(countMap, group) {
     ) || 0
   );
 }
+
+function examEnrollmentInclude(sessionId, courseId, term, academicYearId) {
+  const sectionWhere = { sessionId, courseId };
+  if (academicYearId != null) {
+    sectionWhere.academicYearId = academicYearId;
+  }
+
+  return {
+    model: model.classSectionTermModel,
+    as: "studentClassSectionTerm",
+    attributes: [],
+    required: true,
+    where: { term },
+    include: [
+      {
+        model: model.classSectionModel,
+        as: "classSection",
+        attributes: [],
+        required: true,
+        where: sectionWhere,
+      },
+    ],
+  };
+}
+
+export async function countStudentsForExamGroup(
+  sessionId,
+  courseId,
+  term,
+  academicYearId,
+  options = {},
+) {
+  const map = await getStudentCountMapByGroups(
+    [{ sessionId, courseId, term, academicYearId }],
+    options,
+  );
+  return lookupStudentCount(map, { sessionId, courseId, term, academicYearId });
+}
+
+export async function findStudentsForExamGroup(
+  sessionId,
+  courseId,
+  term,
+  academicYearId,
+  options = {},
+) {
+  const { page, limit, search, transaction } = options;
+  const where = {};
+  if (search) {
+    const like = `%${search}%`;
+    where[Op.or] = [
+      { firstName: { [Op.like]: like } },
+      { lastName: { [Op.like]: like } },
+      { middleName: { [Op.like]: like } },
+      { scholarNumber: { [Op.like]: like } },
+      { enrollNumber: { [Op.like]: like } },
+      { fatherName: { [Op.like]: like } },
+    ];
+  }
+
+  const query = {
+    attributes: [
+      "studentId",
+      "firstName",
+      "middleName",
+      "lastName",
+      "scholarNumber",
+      "enrollNumber",
+      "fatherName",
+    ],
+    where,
+    include: [
+      examEnrollmentInclude(sessionId, courseId, term, academicYearId),
+      {
+        model: model.courseModel,
+        as: "course",
+        attributes: ["courseId", "courseName", "termType"],
+        required: false,
+      },
+    ],
+    order: [["firstName", "ASC"]],
+    transaction,
+  };
+
+  if (page != null && limit != null) {
+    query.offset = (Number(page) - 1) * Number(limit);
+    query.limit = Number(limit);
+    query.distinct = true;
+    query.col = "student_id";
+    const { count, rows } = await scoped(model.studentModel).findAndCountAll(query);
+    return { rows, totalCount: count };
+  }
+
+  return scoped(model.studentModel).findAll(query);
+}

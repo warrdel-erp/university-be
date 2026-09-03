@@ -1,7 +1,14 @@
 import * as examScheduleRepository from '../repository/examScheduleRepository.js';
 import * as examRoomCapacityRepository from '../repository/examScheduleRoomCapacityRepository.js';
 import sequelize from "../database/sequelizeConfig.js";
-import * as studentService from './studentService.js';
+
+function firstId(value) {
+    if (value == null) return null;
+    if (Array.isArray(value)) {
+        return value[0] != null ? Number(value[0]) : null;
+    }
+    return Number(value);
+}
 
 export async function getExamSchedules(filters) {
     const result = await examScheduleRepository.getExamSchedules(filters);
@@ -198,8 +205,8 @@ export async function allocateSeatsDescending(examScheduleId, userId) {
 
 export async function getExamScheduleStudents(filters) {
     const {
-        page,
-        limit,
+        page = 1,
+        limit = 10,
         search,
         courseId,
         sessionId,
@@ -208,32 +215,49 @@ export async function getExamScheduleStudents(filters) {
         examScheduleId,
     } = filters;
 
-    let resolvedExamScheduleId = examScheduleId;
+    let resolvedExamScheduleId = firstId(examScheduleId);
     if (!resolvedExamScheduleId && subjectId) {
-        resolvedExamScheduleId = await examScheduleRepository.getExamScheduleIdBySubject(subjectId, sessionId);
+        resolvedExamScheduleId = await examScheduleRepository.getExamScheduleIdBySubject(
+            firstId(subjectId),
+            firstId(sessionId),
+        );
     }
 
-    let resolvedCourseId = courseId;
-    let resolvedSessionId = sessionId;
-    let resolvedTerm = term;
+    let resolvedCourseId = firstId(courseId);
+    let resolvedSessionId = firstId(sessionId);
+    let resolvedTerm = firstId(term);
+    let resolvedAcademicYearId = null;
 
     if (resolvedExamScheduleId) {
         const schedule = await examScheduleRepository.getExamScheduleById(resolvedExamScheduleId);
-        resolvedCourseId = resolvedCourseId || schedule?.subjectSchedule?.courseId;
-        resolvedSessionId = resolvedSessionId || schedule?.sessionId;
-        resolvedTerm = resolvedTerm || schedule?.term;
+        resolvedCourseId = resolvedCourseId || schedule?.subjectSchedule?.courseId || null;
+        resolvedSessionId = resolvedSessionId || schedule?.sessionId || null;
+        resolvedTerm = resolvedTerm || schedule?.term || null;
+        resolvedAcademicYearId = schedule?.academicYearId || null;
     }
 
-    const toArray = (val) => val != null ? (Array.isArray(val) ? val : [val]) : undefined;
+    if (
+        resolvedSessionId == null ||
+        resolvedCourseId == null ||
+        resolvedTerm == null ||
+        resolvedAcademicYearId == null
+    ) {
+        return {
+            result: [],
+            totalCount: 0,
+            page: Number(page),
+            limit: Number(limit),
+            totalPages: 0,
+        };
+    }
 
-    const result = await studentService.getAllStudents({
-        page,
-        limit,
-        search,
-        courseId: toArray(resolvedCourseId),
-        sessionId: toArray(resolvedSessionId),
-        term: toArray(resolvedTerm),
-    });
+    const result = await examScheduleRepository.getStudentsForSchedulePaginated(
+        resolvedSessionId,
+        resolvedCourseId,
+        resolvedTerm,
+        resolvedAcademicYearId,
+        { page, limit, search },
+    );
 
     const seatMap = new Map();
     if (resolvedExamScheduleId) {
@@ -250,23 +274,24 @@ export async function getExamScheduleStudents(filters) {
         }
     }
 
-    if (result && result.result) {
-        result.result = result.result.map(student => {
-            const allocation = seatMap.get(student.studentId);
-            return {
-                studentId: student.studentId,
-                scholarNumber: student.scholarNumber,
-                enrollNumber: student.enrollNumber,
-                firstName: student.firstName,
-                middleName: student.middleName,
-                lastName: student.lastName,
-                fatherName: student.fatherName,
-                course: student.course || null,
-                roomAllocatedSeatNumber: allocation ? allocation.roomAllocatedSeatNumber : null,
-                roomName: allocation ? allocation.roomName : null,
-            };
+    const mapped = [];
+    for (const student of result.result) {
+        const plain = student.get ? student.get({ plain: true }) : student;
+        const allocation = seatMap.get(plain.studentId);
+        mapped.push({
+            studentId: plain.studentId,
+            scholarNumber: plain.scholarNumber,
+            enrollNumber: plain.enrollNumber,
+            firstName: plain.firstName,
+            middleName: plain.middleName,
+            lastName: plain.lastName,
+            fatherName: plain.fatherName,
+            course: plain.course || null,
+            roomAllocatedSeatNumber: allocation ? allocation.roomAllocatedSeatNumber : null,
+            roomName: allocation ? allocation.roomName : null,
         });
     }
+    result.result = mapped;
 
     return result;
 }
