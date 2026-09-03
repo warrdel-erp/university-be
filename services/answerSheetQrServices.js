@@ -849,3 +849,100 @@ export async function getMySingleAssignedScript(id, assignedToUserId) {
     s3File: plain.s3File ?? null,
   };
 }
+
+function resolveAssignmentStatus(counts) {
+  const graded = counts.graded;
+  const total = counts.totalAssigned;
+  if (graded === total && total > 0) {
+    return "completed";
+  }
+  if (graded > 0) {
+    return "inprogress";
+  }
+  return "pending";
+}
+
+export async function getEvaluationAssignmentDetail(assignmentId) {
+  const assignment = await answerSheetQrRepository.getEvaluationAssignmentById(
+    assignmentId,
+  );
+  if (!assignment) {
+    throw createServiceError("Evaluation assignment not found", 404);
+  }
+
+  const [stats, answerSheetRows] = await Promise.all([
+    answerSheetQrRepository.findAssignmentAnswerSheetStats(assignmentId),
+    answerSheetQrRepository.findAnswerSheetsByAssignmentId(assignmentId),
+  ]);
+
+  const urlJobs = [];
+  const answerSheets = [];
+  for (const row of answerSheetRows) {
+    const plain = row.get({ plain: true });
+    answerSheets.push({
+      id: plain.id,
+      qr: plain.qr,
+      requestId: plain.requestId ?? null,
+      examScheduleId: plain.examScheduleId,
+      assignedToUser: plain.assignedToUser ?? null,
+      assignmentId: plain.assignmentId ?? null,
+      deadlineDate: plain.deadlineDate ?? null,
+      evaluatedAt: plain.evaluatedAt ?? null,
+      obtainedMarks: plain.obtainedMarks ?? null,
+      fileUploadId: plain.fileUploadId,
+      createdAt: plain.createdAt,
+      updatedAt: plain.updatedAt,
+      assignedTeacher: plain.assignedTeacher ?? null,
+      examSchedule: plain.examSchedule ?? null,
+      ...buildExamContext(plain, { includeStudentIdentity: false }),
+      s3File: plain.s3File ?? null,
+    });
+    if (plain.s3File && plain.s3File.s3Key) {
+      urlJobs.push(
+        s3Helper.getDownloadSignedUrl(plain.s3File.s3Key).then((url) => {
+          answerSheets[answerSheets.length - 1].s3File.url = url;
+        }),
+      );
+    }
+  }
+  await Promise.all(urlJobs);
+
+  const assignmentPlain = assignment.get({ plain: true });
+  const counts = {
+    ...stats,
+    remaining: stats.notChecked,
+    assignmentStatus: resolveAssignmentStatus(stats),
+  };
+
+  return {
+    assignment: assignmentPlain,
+    counts,
+    deadlineDate: stats.deadlineDate,
+    answerSheets,
+  };
+}
+
+export async function getEvaluationAssignmentById(assignmentId) {
+  const assignment = await answerSheetQrRepository.getEvaluationAssignmentById(assignmentId);
+  if (!assignment) throw createServiceError("Assignment not found", 404);
+
+  const stats = await answerSheetQrRepository.findAssignmentAnswerSheetStats(assignmentId);
+  const answerSheets = await answerSheetQrRepository.findAnswerSheetsByAssignmentId(assignmentId);
+
+  const plainAnswerSheets = answerSheets.map((row) => row.get({ plain: true }));
+  const urlJobs = plainAnswerSheets.map((sheet) => {
+    if (sheet.s3File && sheet.s3File.s3Key) {
+      return s3Helper.getDownloadSignedUrl(sheet.s3File.s3Key).then((url) => {
+        sheet.s3File.url = url;
+      });
+    }
+    return Promise.resolve();
+  });
+  await Promise.all(urlJobs);
+
+  return {
+    assignment: assignment.get({ plain: true }),
+    stats,
+    answerSheets: plainAnswerSheets,
+  };
+}

@@ -580,3 +580,27 @@ export async function getMySingleAssignedScript(req, res) {
     );
   }
 }
+
+export async function getEvaluationAssignmentById(req, res) {
+  try {
+    const { assignmentId } = req.params;
+
+    const data = await answerSheetQrServices.getEvaluationAssignmentById(
+      Number(assignmentId),
+    );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Evaluation assignment fetched successfully",
+      data,
+    );
+  } catch (error) {
+    console.error("Error in getEvaluationAssignmentById:", error);
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch evaluation assignment",
+    );
+  }
+}

@@ -19,6 +19,7 @@ import {
   getSplitPdfJobStatus,
   getMappedAnswerSheetsByExamSession,
   getMySingleAssignedScript,
+  getEvaluationAssignmentById,
 } from "../controllers/answerSheetQrController.js";
 
 const router = Router();
@@ -97,6 +98,13 @@ const teacherIdParamSchema = z.object({
     .number()
     .int("assignedToUserId must be an integer")
     .positive("assignedToUserId must be greater than 0"),
+});
+
+const assignmentIdParamSchema = z.object({
+  assignmentId: z.coerce
+    .number()
+    .int("assignmentId must be an integer")
+    .positive("assignmentId must be greater than 0"),
 });
 
 const assignObtainedMarksSchema = z.object({
@@ -279,6 +287,14 @@ router.get(
   checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, null),
   validate({ query: listMappedAnswerSheetsSchema }),
   getMappedAnswerSheetsByExamSession
+);
+
+router.get(
+  "/assignment/:assignmentId",
+  userAuth,
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, null),
+  validate({ params: assignmentIdParamSchema }),
+  getEvaluationAssignmentById
 );
 
 router.get(

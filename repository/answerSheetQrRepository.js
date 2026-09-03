@@ -499,6 +499,147 @@ export async function findAndCountMappedAssignments(
   };
 }
 
+export async function getEvaluationAssignmentById(assignmentId) {
+  return scoped(model.answersheetEvalutionUserAssignmentModel).findOne({
+    where: { assignmentId },
+    attributes: [
+      "assignmentId",
+      "universityId",
+      "instituteId",
+      "academicYearId",
+      "assignedToUserId",
+      "notes",
+      "timestamp",
+      "createdBy",
+      "updatedBy",
+      "createdAt",
+      "updatedAt",
+    ],
+    include: [
+      {
+        model: model.userModel,
+        as: "assignedEvaluator",
+        attributes: ["userId", "userName", "email"],
+        required: false,
+      },
+      {
+        model: model.userModel,
+        as: "createdByUser",
+        attributes: ["userId", "userName", "email"],
+        required: false,
+      },
+      {
+        model: model.userModel,
+        as: "updatedByUser",
+        attributes: ["userId", "userName", "email"],
+        required: false,
+      },
+      {
+        model: model.acedmicYearModel,
+        as: "academicYear",
+        attributes: [
+          "academicYearId",
+          "yearTitle",
+          "startingDate",
+          "endingDate",
+          "isActive",
+        ],
+        required: false,
+      },
+    ],
+  });
+}
+
+export async function findAnswerSheetsByAssignmentId(assignmentId) {
+  return scoped(model.answerSheetQrModel).findAll({
+    where: { assignmentId },
+    attributes: [
+      "id",
+      "qr",
+      "requestId",
+      "examScheduleId",
+      "assignedToUser",
+      "assignmentId",
+      "deadlineDate",
+      "evaluatedAt",
+      "obtainedMarks",
+      "fileUploadId",
+      "createdAt",
+      "updatedAt",
+    ],
+    include: [
+      examScheduleDetailInclude(),
+      {
+        model: model.s3FileModel,
+        as: "s3File",
+        required: false,
+        attributes: ["id", "status", "s3Key"],
+      },
+      {
+        model: model.userModel,
+        as: "assignedTeacher",
+        attributes: ["userId", "userName", "email"],
+        required: false,
+      },
+    ],
+    order: [["id", "ASC"]],
+  });
+}
+
+export async function findAssignmentAnswerSheetStats(assignmentId) {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const row = await scoped(model.answerSheetQrModel).findOne({
+    attributes: [
+      [fn("COUNT", col("id")), "totalAssigned"],
+      [
+        fn(
+          "SUM",
+          literal("CASE WHEN evaluated_at IS NOT NULL THEN 1 ELSE 0 END"),
+        ),
+        "graded",
+      ],
+      [
+        fn(
+          "SUM",
+          literal("CASE WHEN evaluated_at IS NULL THEN 1 ELSE 0 END"),
+        ),
+        "notChecked",
+      ],
+      [
+        fn(
+          "SUM",
+          literal(
+            `CASE WHEN evaluated_at IS NULL AND deadline_date IS NOT NULL AND deadline_date < '${today}' THEN 1 ELSE 0 END`,
+          ),
+        ),
+        "overdue",
+      ],
+      [
+        fn(
+          "SUM",
+          literal(
+            `CASE WHEN evaluated_at IS NULL AND deadline_date = '${today}' THEN 1 ELSE 0 END`,
+          ),
+        ),
+        "dueToday",
+      ],
+      [fn("MAX", col("deadline_date")), "deadlineDate"],
+    ],
+    where: { assignmentId },
+    raw: true,
+  });
+
+  return {
+    totalAssigned: Number(row?.totalAssigned ?? 0),
+    graded: Number(row?.graded ?? 0),
+    notChecked: Number(row?.notChecked ?? 0),
+    overdue: Number(row?.overdue ?? 0),
+    dueToday: Number(row?.dueToday ?? 0),
+    deadlineDate: row?.deadlineDate ?? null,
+  };
+}
+
 export async function findMyAnswerSheetSkuStats(assignedToUserId) {
   const today = new Date().toISOString().slice(0, 10);
 

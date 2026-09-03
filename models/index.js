@@ -3874,6 +3874,19 @@ userModel.hasMany(answersheetEvalutionUserAssignmentModel, {
   as: "answerSheetEvaluationAssignments",
 });
 
+answersheetEvalutionUserAssignmentModel.belongsTo(acedmicYearModel, {
+  foreignKey: "academicYearId",
+  as: "academicYear",
+});
+answersheetEvalutionUserAssignmentModel.belongsTo(userModel, {
+  foreignKey: "createdBy",
+  as: "createdByUser",
+});
+answersheetEvalutionUserAssignmentModel.belongsTo(userModel, {
+  foreignKey: "updatedBy",
+  as: "updatedByUser",
+});
+
 answerSheetQrModel.belongsTo(s3FileModel, {
   foreignKey: "file_upload_id",
   as: "s3File",
