@@ -166,6 +166,14 @@ const positiveIntegerQueryId = z.preprocess(
 const myAssignedScriptsQuerySchema = paginationSchema.extend({
   examinationSessionId: positiveIntegerQueryId,
   examScheduleId: positiveIntegerQueryId,
+  status: z.preprocess(
+    emptyToUndefined,
+    z
+      .enum(["saved", "submitted"], {
+        errorMap: () => ({ message: "status must be saved or submitted" }),
+      })
+      .optional(),
+  ),
 });
 
 const positiveIntegerId = z.preprocess(

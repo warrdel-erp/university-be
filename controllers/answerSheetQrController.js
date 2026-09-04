@@ -168,7 +168,13 @@ export async function getMyAssignedScripts(req, res) {
       return ErrorResponse(res, validation.status, validation.message);
     }
 
-    const { page = 1, limit = 20, examinationSessionId, examScheduleId } = req.query;
+    const {
+      page = 1,
+      limit = 20,
+      examinationSessionId,
+      examScheduleId,
+      status,
+    } = req.query;
     if (!validation.employeeRecord) {
       return SuccessResponse(
         res,
@@ -192,6 +198,7 @@ export async function getMyAssignedScripts(req, res) {
       limit,
       examinationSessionId,
       examScheduleId,
+      status,
     );
 
     return SuccessResponse(
@@ -334,7 +341,8 @@ export async function getMyEvaluationSummary(req, res) {
     let evaluated = 0;
 
     for (const row of rows) {
-      if (row.evaluatedAt != null) {
+      // checked = markingStatus submit
+      if (row.markingStatus === "submit") {
         evaluated += 1;
       }
     }

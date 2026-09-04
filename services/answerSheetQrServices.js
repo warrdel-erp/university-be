@@ -218,7 +218,8 @@ function buildMappedAnswerSheetQrWhere(status) {
   if (status === "unassigned") {
     qrWhere.assignedToUser = null;
   } else if (status === "graded") {
-    qrWhere.evaluatedAt = { [Op.ne]: null };
+    // checked = final submit
+    qrWhere.markingStatus = "submit";
   }
 
   return qrWhere;
@@ -651,6 +652,7 @@ export async function getScriptsAssignedToTeacher(
   limit = 20,
   examinationSessionId,
   examScheduleId,
+  status,
 ) {
   const teacher = await answerSheetQrRepository.getScopedUser(assignedToUserId);
   if (!teacher) {
@@ -664,6 +666,7 @@ export async function getScriptsAssignedToTeacher(
     offset,
     examinationSessionId,
     examScheduleId,
+    status,
   );
 
   const items = [];
@@ -918,6 +921,7 @@ export async function getMappedAnswerSheetsByExamSession(params) {
   const urlJobs = [];
   for (const row of rows) {
     const plain = row.get({ plain: true });
+    plain.markingStatus = plain.markingStatus ?? "pending";
     items.push(plain);
     if (plain.s3File && plain.s3File.s3Key) {
       urlJobs.push(
@@ -981,7 +985,7 @@ export async function listEvaluationAssignmentsByExamSession(params) {
     for (const sheet of answerSheets) {
       total += 1;
 
-      if (sheet.evaluatedAt) {
+      if (sheet.markingStatus === "submit") {
         graded += 1;
       }
 
@@ -1022,7 +1026,7 @@ export async function listEvaluationAssignmentsByExamSession(params) {
       }
 
       scheduleGroup.totalScripts += 1;
-      if (sheet.evaluatedAt) {
+      if (sheet.markingStatus === "submit") {
         scheduleGroup.gradedScripts += 1;
       }
     }
@@ -1283,7 +1287,7 @@ export async function getMyEvaluationExaminationSessions(assignedToUserId) {
       const sheets = schedule.answerSheetQrs || [];
       let graded = 0;
       for (const sheet of sheets) {
-        if (sheet.evaluatedAt) {
+        if (sheet.markingStatus === "submit") {
           graded += 1;
         }
       }

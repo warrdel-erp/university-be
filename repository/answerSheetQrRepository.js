@@ -384,12 +384,21 @@ export async function getScriptsAssignedToTeacher(
   offset,
   examinationSessionId,
   examScheduleId,
+  status,
 ) {
   const where = {
     assignedToUser: assignedToUserId,
   };
   if (examScheduleId != null) {
     where.examScheduleId = Number(examScheduleId);
+  }
+  // submitted = checked (markingStatus submit)
+  // saved = draft marks filled (pending + obtainedMarks set, including 0)
+  if (status === "submitted") {
+    where.markingStatus = "submit";
+  } else if (status === "saved") {
+    where.markingStatus = "pending";
+    where.obtainedMarks = { [Op.ne]: null };
   }
 
   const examScheduleInclude = examScheduleDetailInclude();
@@ -693,6 +702,7 @@ export async function findAndCountMappedAssignments(
           "examScheduleId",
           "deadlineDate",
           "evaluatedAt",
+          "markingStatus",
           "updatedAt",
         ],
         include: [
@@ -817,14 +827,14 @@ export async function findAssignmentAnswerSheetStats(assignmentId) {
       [
         fn(
           "SUM",
-          literal("CASE WHEN evaluated_at IS NOT NULL THEN 1 ELSE 0 END"),
+          literal("CASE WHEN marking_status = 'submit' THEN 1 ELSE 0 END"),
         ),
         "graded",
       ],
       [
         fn(
           "SUM",
-          literal("CASE WHEN evaluated_at IS NULL THEN 1 ELSE 0 END"),
+          literal("CASE WHEN marking_status <> 'submit' THEN 1 ELSE 0 END"),
         ),
         "notChecked",
       ],
@@ -832,7 +842,7 @@ export async function findAssignmentAnswerSheetStats(assignmentId) {
         fn(
           "SUM",
           literal(
-            `CASE WHEN evaluated_at IS NULL AND deadline_date IS NOT NULL AND deadline_date < '${today}' THEN 1 ELSE 0 END`,
+            `CASE WHEN marking_status <> 'submit' AND deadline_date IS NOT NULL AND deadline_date < '${today}' THEN 1 ELSE 0 END`,
           ),
         ),
         "overdue",
@@ -841,7 +851,7 @@ export async function findAssignmentAnswerSheetStats(assignmentId) {
         fn(
           "SUM",
           literal(
-            `CASE WHEN evaluated_at IS NULL AND deadline_date = '${today}' THEN 1 ELSE 0 END`,
+            `CASE WHEN marking_status <> 'submit' AND deadline_date = '${today}' THEN 1 ELSE 0 END`,
           ),
         ),
         "dueToday",
@@ -873,14 +883,18 @@ export async function findAnswerSheetSkuStatsByExaminationSession(
       [
         fn(
           "SUM",
-          literal("CASE WHEN evaluated_at IS NOT NULL THEN 1 ELSE 0 END"),
+          literal(
+            "CASE WHEN answer_sheet_qr.marking_status = 'submit' THEN 1 ELSE 0 END",
+          ),
         ),
         "graded",
       ],
       [
         fn(
           "SUM",
-          literal("CASE WHEN evaluated_at IS NULL THEN 1 ELSE 0 END"),
+          literal(
+            "CASE WHEN answer_sheet_qr.marking_status <> 'submit' THEN 1 ELSE 0 END",
+          ),
         ),
         "notChecked",
       ],
@@ -888,7 +902,7 @@ export async function findAnswerSheetSkuStatsByExaminationSession(
         fn(
           "SUM",
           literal(
-            `CASE WHEN evaluated_at IS NULL AND deadline_date IS NOT NULL AND deadline_date < '${today}' THEN 1 ELSE 0 END`,
+            `CASE WHEN answer_sheet_qr.marking_status <> 'submit' AND answer_sheet_qr.deadline_date IS NOT NULL AND answer_sheet_qr.deadline_date < '${today}' THEN 1 ELSE 0 END`,
           ),
         ),
         "overdue",
@@ -897,7 +911,7 @@ export async function findAnswerSheetSkuStatsByExaminationSession(
         fn(
           "SUM",
           literal(
-            `CASE WHEN evaluated_at IS NULL AND deadline_date = '${today}' THEN 1 ELSE 0 END`,
+            `CASE WHEN answer_sheet_qr.marking_status <> 'submit' AND answer_sheet_qr.deadline_date = '${today}' THEN 1 ELSE 0 END`,
           ),
         ),
         "dueToday",
@@ -938,14 +952,14 @@ export async function findMyAnswerSheetSkuStats(assignedToUserId) {
       [
         fn(
           "SUM",
-          literal("CASE WHEN evaluated_at IS NOT NULL THEN 1 ELSE 0 END"),
+          literal("CASE WHEN marking_status = 'submit' THEN 1 ELSE 0 END"),
         ),
         "graded",
       ],
       [
         fn(
           "SUM",
-          literal("CASE WHEN evaluated_at IS NULL THEN 1 ELSE 0 END"),
+          literal("CASE WHEN marking_status <> 'submit' THEN 1 ELSE 0 END"),
         ),
         "notChecked",
       ],
@@ -953,7 +967,7 @@ export async function findMyAnswerSheetSkuStats(assignedToUserId) {
         fn(
           "SUM",
           literal(
-            `CASE WHEN evaluated_at IS NULL AND deadline_date IS NOT NULL AND deadline_date < '${today}' THEN 1 ELSE 0 END`,
+            `CASE WHEN marking_status <> 'submit' AND deadline_date IS NOT NULL AND deadline_date < '${today}' THEN 1 ELSE 0 END`,
           ),
         ),
         "overdue",
@@ -962,7 +976,7 @@ export async function findMyAnswerSheetSkuStats(assignedToUserId) {
         fn(
           "SUM",
           literal(
-            `CASE WHEN evaluated_at IS NULL AND deadline_date = '${today}' THEN 1 ELSE 0 END`,
+            `CASE WHEN marking_status <> 'submit' AND deadline_date = '${today}' THEN 1 ELSE 0 END`,
           ),
         ),
         "dueToday",
@@ -1031,7 +1045,7 @@ export async function findMyEvaluationExaminationSessions(assignedToUserId) {
             as: "answerSheetQrs",
             required: true,
             where: { assignedToUser: assignedToUserId },
-            attributes: ["id", "evaluatedAt"],
+            attributes: ["id", "evaluatedAt", "markingStatus"],
           },
           {
             model: model.subjectModel,

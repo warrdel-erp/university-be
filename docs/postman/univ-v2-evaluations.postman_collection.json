@@ -97,7 +97,7 @@
                 {
                   "key": "status",
                   "value": "unassigned",
-                  "description": "unassigned | graded (omit for all)",
+                  "description": "unassigned | graded (markingStatus=submit; omit for all)",
                   "disabled": true
                 },
                 {
@@ -110,7 +110,7 @@
                 }
               ]
             },
-            "description": "GET /answerSheetQr/list — optional status: unassigned (no evaluator) or graded (evaluated). Assignment-wise rows: GET /answerSheetQr/assignmentslist."
+            "description": "GET /answerSheetQr/list — optional status: unassigned (no evaluator) or graded (markingStatus=submit). Each item includes markingStatus (submit = checked). Assignment-wise rows: GET /answerSheetQr/assignmentslist."
           }
         },
         {
@@ -162,7 +162,7 @@
                 }
               ]
             },
-            "description": "GET /answerSheetQr/assignmentslist — one row per assignment. Nested examSchedules[] with subject name/code, exam dates, and SKU counts (no answerSheet id lists)."
+            "description": "GET /answerSheetQr/assignmentslist — one row per assignment. Nested examSchedules[] with subject name/code, exam dates, and SKU counts.\n\ngradedScripts / remainingScripts use markingStatus=submit as checked."
           }
         },
         {
@@ -402,7 +402,7 @@
                 "skuStats"
               ]
             },
-            "description": "GET /answerSheetQr/my/skuStats — teacher dashboard SKU counts.\n\nResponse data.sku:\n- totalAssigned\n- graded\n- notChecked\n- overdue (pending past deadline)\n- dueToday (pending due today)"
+            "description": "GET /answerSheetQr/my/skuStats — teacher dashboard SKU counts.\n\nChecked = markingStatus submit.\n\nResponse data.sku:\n- totalAssigned\n- graded (markingStatus=submit)\n- notChecked (markingStatus pending)\n- overdue (pending past deadline)\n- dueToday (pending due today)"
           }
         },
         {
@@ -426,7 +426,7 @@
                 "summary"
               ]
             },
-            "description": "GET /answerSheetQr/my/summary"
+            "description": "GET /answerSheetQr/my/summary — totalAssigned, evaluated (markingStatus=submit), pending (not submit)."
           }
         },
         {
@@ -440,7 +440,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/answerSheetQr/my?page=1&limit=20&examinationSessionId={{evaluation_examinationSessionId}}&examScheduleId={{evaluation_examScheduleId}}",
+              "raw": "{{baseurl}}/answerSheetQr/my?page=1&limit=20&examinationSessionId={{evaluation_examinationSessionId}}&examScheduleId={{evaluation_examScheduleId}}&status=saved",
               "host": [
                 "{{baseurl}}"
               ],
@@ -464,10 +464,15 @@
                 {
                   "key": "examScheduleId",
                   "value": "{{evaluation_examScheduleId}}"
+                },
+                {
+                  "key": "status",
+                  "value": "saved",
+                  "description": "Optional. saved | submitted\n- submitted: markingStatus=submit (checked)\n- saved: markingStatus=pending AND obtainedMarks is not null (draft marks, including 0)"
                 }
               ]
             },
-            "description": "GET /answerSheetQr/my — optional examinationSessionId and examScheduleId filters. Each item includes fileUploadId and s3File (id, status, s3Key, signed url)."
+            "description": "GET /answerSheetQr/my — optional examinationSessionId, examScheduleId, status (saved|submitted). Each item includes markingStatus, obtainedMarks, fileUploadId and s3File."
           }
         },
         {
@@ -521,7 +526,7 @@
                 }
               ]
             },
-            "description": "GET /answerSheetQr/my/single?id=2 - Fetch single script data without student details."
+            "description": "GET /answerSheetQr/my/single?id=2 — single script without student details. Includes markingStatus (submit = checked)."
           }
         },
         {
@@ -623,10 +628,10 @@
     },
     {
       "name": "3. Exam Result",
-      "description": "Exam result readiness from applicable exam_schedules vs submitted answer_sheet_qr (markingStatus=submit).",
+      "description": "Result readiness for an examination session.\n\nREADY only when every applicable exam_schedule for the student (course + session + term) has an answer_sheet_qr with markingStatus=submit.\nMissing sheet or pending marks => NOT_READY.\nNo applicable schedules => NOT_READY with totalExams=0.\n\nList and getOne share the same readiness calculation.",
       "item": [
         {
-          "name": "3.1 GET Exam Result Students",
+          "name": "3.1 GET Exam Result Students (list)",
           "request": {
             "method": "GET",
             "header": [
@@ -653,11 +658,12 @@
                 {
                   "key": "selections",
                   "value": "{{evaluation_selections}}",
-                  "description": "JSON array: [{\"courseSessionMappingId\":34,\"terms\":[1,2]}]"
+                  "description": "Optional JSON: [{\"courseSessionMappingId\":34,\"terms\":[1,2]}]"
                 },
                 {
                   "key": "search",
                   "value": "",
+                  "description": "Optional. Matches name / scholarNumber / enrollNumber",
                   "disabled": true
                 },
                 {
@@ -670,11 +676,11 @@
                 }
               ]
             },
-            "description": "GET /examResult/students\n\nItem fields:\n- studentId, studentName, scholarNo, enrollNumber, courseId, sessionId, term\n- totalExams, submittedExams, pendingExams\n- readinessStatus: READY | NOT_READY\n\nSame readiness calculation as getOne (shared calculateResultReadiness)."
+            "description": "GET /examResult/students\n\nAuth: Bearer token\n\nQuery:\n- examinationSessionId (optional → latest)\n- selections (optional JSON course/session/term filter)\n- search, page, limit\n\nResponse data:\n{\n  \"examinationSession\": { examinationSessionId, sessionName, academicYearId, assessmentTypeId, status },\n  \"items\": [\n    {\n      \"studentId\": 2,\n      \"studentName\": \"Ada Lovelace\",\n      \"scholarNo\": \"SCH001\",\n      \"enrollNumber\": \"ENR001\",\n      \"courseId\": 1,\n      \"sessionId\": 1,\n      \"term\": 1,\n      \"totalExams\": 3,\n      \"submittedExams\": 2,\n      \"pendingExams\": 1,\n      \"readinessStatus\": \"NOT_READY\"\n    }\n  ]\n}\n\nPagination: page, limit, total, totalPages\n\nreadinessStatus: READY | NOT_READY (same rules as 3.2)"
           }
         },
         {
-          "name": "3.2 GET Exam Result Student (getOne)",
+          "name": "3.2 GET Exam Result Student (detail)",
           "request": {
             "method": "GET",
             "header": [
@@ -684,7 +690,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examResult/students/{{evaluation_studentId}}?examinationSessionId={{evaluation_examinationSessionId}}&selections={{evaluation_selections}}",
+              "raw": "{{baseurl}}/examResult/students/{{evaluation_studentId}}?examinationSessionId={{evaluation_examinationSessionId}}",
               "host": [
                 "{{baseurl}}"
               ],
@@ -697,16 +703,17 @@
                 {
                   "key": "examinationSessionId",
                   "value": "{{evaluation_examinationSessionId}}",
-                  "description": "Optional. Defaults to latest examination session when omitted."
+                  "description": "Optional. Defaults to latest examination session when omitted. Example: 1"
                 },
                 {
                   "key": "selections",
                   "value": "{{evaluation_selections}}",
-                  "description": "JSON array: [{\"courseSessionMappingId\":34,\"terms\":[1,2]}]"
+                  "description": "Optional JSON: [{\"courseSessionMappingId\":34,\"terms\":[1,2]}]",
+                  "disabled": true
                 }
               ]
             },
-            "description": "GET /examResult/students/:studentId?examinationSessionId=\n\nReturns:\n- student { studentId, studentName, scholarNo, courseId, sessionId, term }\n- readiness { status READY|NOT_READY, totalExams, submittedExams, pendingExams }\n- exams[] { examScheduleId, subject*, examDate, answerSheetQrId, answerSheetStatus, isSubmitted }\n\nMissing answerSheetQr => null + NOT_READY. No applicable schedules => NOT_READY, totalExams=0."
+            "description": "GET /examResult/students/:studentId?examinationSessionId=1\n\nExample: GET /examResult/students/2?examinationSessionId=1\n\nAuth: Bearer token\n\nParams:\n- studentId (required)\n\nQuery:\n- examinationSessionId (optional → latest)\n- selections (optional)\n\nResponse data:\n{\n  \"examinationSession\": { examinationSessionId, sessionName, academicYearId, assessmentTypeId, status },\n  \"student\": {\n    \"studentId\": 2,\n    \"studentName\": \"Ada Lovelace\",\n    \"scholarNo\": \"SCH001\",\n    \"enrollNumber\": \"ENR001\",\n    \"courseId\": 1,\n    \"sessionId\": 1,\n    \"term\": 1\n  },\n  \"readiness\": {\n    \"status\": \"READY\",\n    \"totalExams\": 2,\n    \"submittedExams\": 2,\n    \"pendingExams\": 0\n  },\n  \"exams\": [\n    {\n      \"examScheduleId\": 10,\n      \"subjectId\": 5,\n      \"subjectName\": \"Mathematics\",\n      \"subjectCode\": \"MATH101\",\n      \"examDate\": \"2026-06-15\",\n      \"answerSheetQrId\": 101,\n      \"answerSheetStatus\": \"submit\",\n      \"isSubmitted\": true,\n      \"obtainedMarks\": \"75.00\",\n      \"evaluatedAt\": \"2026-06-20T10:00:00.000Z\"\n    },\n    {\n      \"examScheduleId\": 11,\n      \"subjectId\": 6,\n      \"subjectName\": \"Physics\",\n      \"subjectCode\": \"PHY101\",\n      \"examDate\": \"2026-06-16\",\n      \"answerSheetQrId\": null,\n      \"answerSheetStatus\": null,\n      \"isSubmitted\": false,\n      \"obtainedMarks\": null,\n      \"evaluatedAt\": null\n    }\n  ]\n}\n\nRules:\n- Only exam schedules for this student's courseId + sessionId + term\n- Match answerSheetQr by studentId + examScheduleId\n- No fake sheets; missing sheet => null fields, exam counts as pending\n- READY iff totalExams > 0 AND submittedExams === totalExams\n- 404 if examination session or student not found for filters"
           }
         }
       ]
@@ -745,7 +752,7 @@
     },
     {
       "key": "evaluation_studentId",
-      "value": "1",
+      "value": "2",
       "type": "string"
     },
     {
