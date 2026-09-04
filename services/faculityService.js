@@ -86,6 +86,16 @@ function classDurationMinutes(startTime, endTime) {
   return endMinutes - startMinutes;
 }
 
+function formatLoadToTimeObject(decimalHours) {
+  if (decimalHours == null) return { hour: 0, minutes: 0 };
+  const totalMinutes = Math.round(Number(decimalHours) * 60);
+  if (totalMinutes === 0) return { hour: 0, minutes: 0 };
+  const hour = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  
+  return { hour, minutes };
+}
+
 /**
  * Sum teaching minutes per userId for current-week date-wise classes.
  * Each (userId, timeTableCellDateWiseId) is counted once.
@@ -155,7 +165,7 @@ function formatFaculityLoad(row, currentLoadOverride) {
     userId: employee ? employee.userId : plain.userId,
     definedLoad:
       plain.definedLoad == null ? null : toIntegerNumber(plain.definedLoad),
-    currentLoad: toMoneyNumber(currentLoad),
+    currentLoad: formatLoadToTimeObject(currentLoad),
     employee: employee || undefined,
   };
 }
