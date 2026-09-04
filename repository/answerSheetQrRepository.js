@@ -1,6 +1,7 @@
 import { Op, fn, col, literal } from "sequelize";
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
+import { QUESTION_STATUS } from "../constant.js";
 
 function examScheduleDetailInclude() {
   return {
@@ -451,6 +452,61 @@ export async function getMySingleAssignedScript(id, assignedToUserId) {
         as: "s3File",
         required: false,
         attributes: ["id", "status", "s3Key"],
+      },
+    ],
+  });
+}
+
+export async function findAnswerSheetByIdForQuestionPaper(
+  answerSheetQrId,
+  assignedToUserId,
+) {
+  const where = { id: Number(answerSheetQrId) };
+  if (assignedToUserId != null) {
+    where.assignedToUser = Number(assignedToUserId);
+  }
+
+  return scoped(model.answerSheetQrModel).findOne({
+    where,
+    attributes: ["id", "examScheduleId", "assignedToUser"],
+  });
+}
+
+export async function findApprovedQuestionPaperByExamScheduleId(examScheduleId) {
+  return model.questionPaperModel.findOne({
+    where: {
+      examScheduleId: Number(examScheduleId),
+      finalApproval: QUESTION_STATUS.APPROVED,
+    },
+    attributes: [
+      "id",
+      "name",
+      "examScheduleId",
+      "blueprintId",
+      "status",
+      "finalApproval",
+      "questionPaper",
+      "totalMarks",
+      "remarks",
+      "createdAt",
+      "updatedAt",
+    ],
+    include: [
+      {
+        model: model.examScheduleModel,
+        as: "examSchedule",
+        required: true,
+        where: buildScope(model.examScheduleModel),
+        attributes: [
+          "examScheduleId",
+          "examinationSessionId",
+          "subjectId",
+          "examDate",
+          "examTime",
+          "maximumMarks",
+          "term",
+          "type",
+        ],
       },
     ],
   });

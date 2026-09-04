@@ -25,6 +25,8 @@ import {
   listEvaluationAssignmentsByExamSession,
   getMySingleAssignedScript,
   getEvaluationAssignmentById,
+  getApprovedQuestionPaperByAnswerSheetId,
+  getMyApprovedQuestionPaperByAnswerSheetId,
 } from "../controllers/answerSheetQrController.js";
 
 const router = Router();
@@ -55,6 +57,13 @@ const idParamSchema = z.object({
     .number()
     .int("id must be an integer")
     .positive("id must be greater than 0"),
+});
+
+const answerSheetQrIdQuerySchema = z.object({
+  answerSheetQrId: z.coerce
+    .number()
+    .int("answerSheetQrId must be an integer")
+    .positive("answerSheetQrId must be greater than 0"),
 });
 
 const requestIdParamSchema = z.object({
@@ -335,6 +344,13 @@ router.get(
   getMyAssignedScripts,
 );
 
+router.get(
+  "/my/questionPaper",
+  userAuth,
+  validate({ query: answerSheetQrIdQuerySchema }),
+  getMyApprovedQuestionPaperByAnswerSheetId,
+);
+
 router.post(
   "/my/finalSubmit",
   userAuth,
@@ -355,6 +371,14 @@ router.patch(
   checkAccess(PERMISSIONS.ANSWER_SHEET_MAPPING.value, null),
   validate({ body: mapSchema }),
   mapAnswerSheetQr
+);
+
+router.get(
+  "/questionPaper",
+  userAuth,
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, null),
+  validate({ query: answerSheetQrIdQuerySchema }),
+  getApprovedQuestionPaperByAnswerSheetId,
 );
 
 router.get(

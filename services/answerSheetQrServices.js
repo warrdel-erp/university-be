@@ -1087,6 +1087,56 @@ export async function getMySingleAssignedScript(id, assignedToUserId) {
   };
 }
 
+/**
+ * Approved question paper for an answer sheet's exam schedule.
+ * When assignedToUserId is set, the sheet must belong to that evaluator.
+ */
+export async function getApprovedQuestionPaperByAnswerSheetId(
+  answerSheetQrId,
+  assignedToUserId,
+) {
+  const answerSheet =
+    await answerSheetQrRepository.findAnswerSheetByIdForQuestionPaper(
+      answerSheetQrId,
+      assignedToUserId,
+    );
+
+  if (!answerSheet) {
+    throw createServiceError(
+      assignedToUserId != null
+        ? "Assigned answer sheet not found."
+        : "Answer sheet QR not found.",
+      404,
+    );
+  }
+
+  if (answerSheet.examScheduleId == null) {
+    throw createServiceError(
+      "Answer sheet is not mapped to an exam schedule.",
+      404,
+    );
+  }
+
+  const questionPaper =
+    await answerSheetQrRepository.findApprovedQuestionPaperByExamScheduleId(
+      answerSheet.examScheduleId,
+    );
+
+  if (!questionPaper) {
+    throw createServiceError(
+      "Approved question paper not found for this answer sheet.",
+      404,
+    );
+  }
+
+  const plain = questionPaper.get({ plain: true });
+  if (typeof plain.questionPaper === "string") {
+    plain.questionPaper = JSON.parse(plain.questionPaper);
+  }
+
+  return plain;
+}
+
 function resolveAssignmentStatus(counts) {
   const graded = counts.graded;
   const total = counts.totalAssigned;

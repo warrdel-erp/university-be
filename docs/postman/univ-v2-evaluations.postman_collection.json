@@ -255,6 +255,35 @@
           }
         },
         {
+          "name": "1.5b GET Approved Question Paper By Answer Sheet",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/questionPaper?answerSheetQrId={{evaluation_answerSheetQrId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "questionPaper"
+              ],
+              "query": [
+                {
+                  "key": "answerSheetQrId",
+                  "value": "{{evaluation_answerSheetQrId}}"
+                }
+              ]
+            },
+            "description": "GET /answerSheetQr/questionPaper?answerSheetQrId= — approved question paper (finalApproval=Approved) for the answer sheet's exam schedule. Requires ANSWER_SHEET_QRS."
+          }
+        },
+        {
           "name": "1.6 PATCH Assign Obtained Marks (admin)",
           "request": {
             "method": "PATCH",
@@ -526,6 +555,36 @@
               ]
             },
             "description": "PATCH /answerSheetQr/my/:id/obtainedMarks — draft save; sets markingStatus to pending."
+          }
+        },
+        {
+          "name": "2.5b GET My Approved Question Paper",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/my/questionPaper?answerSheetQrId={{evaluation_answerSheetQrId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "my",
+                "questionPaper"
+              ],
+              "query": [
+                {
+                  "key": "answerSheetQrId",
+                  "value": "{{evaluation_answerSheetQrId}}"
+                }
+              ]
+            },
+            "description": "GET /answerSheetQr/my/questionPaper?answerSheetQrId= — approved question paper (finalApproval=Approved) for the answer sheet's exam schedule. Sheet must be assigned to the current evaluator."
           }
         },
         {

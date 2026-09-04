@@ -715,6 +715,68 @@ export async function getMySingleAssignedScript(req, res) {
   }
 }
 
+export async function getApprovedQuestionPaperByAnswerSheetId(req, res) {
+  try {
+    const { answerSheetQrId } = req.query;
+
+    const data =
+      await answerSheetQrServices.getApprovedQuestionPaperByAnswerSheetId(
+        Number(answerSheetQrId),
+      );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Approved question paper fetched successfully",
+      data,
+    );
+  } catch (error) {
+    console.error("Error in getApprovedQuestionPaperByAnswerSheetId:", error);
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch question paper",
+    );
+  }
+}
+
+export async function getMyApprovedQuestionPaperByAnswerSheetId(req, res) {
+  try {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return ErrorResponse(res, validation.status, validation.message);
+    }
+    if (!validation.employeeRecord) {
+      return ErrorResponse(res, 403, "Employee record not found.");
+    }
+
+    const { answerSheetQrId } = req.query;
+
+    const data =
+      await answerSheetQrServices.getApprovedQuestionPaperByAnswerSheetId(
+        Number(answerSheetQrId),
+        validation.userId,
+      );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Approved question paper fetched successfully",
+      data,
+    );
+  } catch (error) {
+    console.error(
+      "Error in getMyApprovedQuestionPaperByAnswerSheetId:",
+      error,
+    );
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch question paper",
+    );
+  }
+}
+
 export async function getEvaluationAssignmentById(req, res) {
   try {
     const { assignmentId } = req.params;
