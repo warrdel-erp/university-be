@@ -467,7 +467,7 @@
                 }
               ]
             },
-            "description": "GET /answerSheetQr/my — optional examinationSessionId and examScheduleId filters."
+            "description": "GET /answerSheetQr/my — optional examinationSessionId and examScheduleId filters. Each item includes fileUploadId and s3File (id, status, s3Key, signed url)."
           }
         },
         {

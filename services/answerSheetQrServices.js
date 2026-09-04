@@ -666,10 +666,30 @@ export async function getScriptsAssignedToTeacher(
     examScheduleId,
   );
 
-  const items = rows.map((item) => {
-    const examContext = buildExamContext(item, { includeStudentIdentity: true });
+  const items = [];
+  const urlJobs = [];
 
-    return {
+  for (const row of rows) {
+    const item = row.get({ plain: true });
+    const examContext = buildExamContext(item, { includeStudentIdentity: true });
+    const s3File = item.s3File
+      ? {
+          id: item.s3File.id,
+          status: item.s3File.status,
+          s3Key: item.s3File.s3Key,
+          url: null,
+        }
+      : null;
+
+    if (s3File && s3File.s3Key) {
+      urlJobs.push(
+        s3Helper.getDownloadSignedUrl(s3File.s3Key).then((url) => {
+          s3File.url = url;
+        }),
+      );
+    }
+
+    items.push({
       id: item.id,
       qr: item.qr,
       requestId: item.requestId ?? null,
@@ -682,10 +702,16 @@ export async function getScriptsAssignedToTeacher(
       evaluatedAt: item.evaluatedAt ?? null,
       obtainedMarks: item.obtainedMarks ?? null,
       markingStatus: item.markingStatus ?? "pending",
+      fileUploadId: item.fileUploadId ?? null,
+      s3File,
       ...examContext,
       createdAt: item.createdAt,
-    };
-  });
+    });
+  }
+
+  if (urlJobs.length > 0) {
+    await Promise.all(urlJobs);
+  }
 
   return {
     data: {
