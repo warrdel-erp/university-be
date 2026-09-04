@@ -552,6 +552,30 @@ export async function getMappedAnswerSheetsByExamSession(req, res) {
   }
 }
 
+export async function listEvaluationAssignmentsByExamSession(req, res) {
+  try {
+    const { data, pagination } =
+      await answerSheetQrServices.listEvaluationAssignmentsByExamSession(
+        req.query,
+      );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Evaluation assignments fetched successfully",
+      data,
+      pagination,
+    );
+  } catch (error) {
+    console.error("Error in listEvaluationAssignmentsByExamSession:", error);
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch evaluation assignments",
+    );
+  }
+}
+
 export async function getMySingleAssignedScript(req, res) {
   try {
     const { id } = req.query;

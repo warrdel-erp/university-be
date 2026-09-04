@@ -37,6 +37,52 @@ function examScheduleDetailInclude() {
   };
 }
 
+function mappedListExamScheduleInclude(
+  examScheduleWhere,
+  search,
+  { selectAttributes = true } = {},
+) {
+  const subjectInclude = {
+    model: model.subjectModel,
+    as: "subjectSchedule",
+    attributes: selectAttributes
+      ? ["subjectId", "subjectName", "subjectCode"]
+      : [],
+    required: Boolean(search),
+  };
+
+  if (search) {
+    const like = `%${search}%`;
+    subjectInclude.where = {
+      [Op.or]: [
+        { subjectName: { [Op.like]: like } },
+        { subjectCode: { [Op.like]: like } },
+      ],
+    };
+  }
+
+  return {
+    model: model.examScheduleModel,
+    as: "examSchedule",
+    required: true,
+    where: examScheduleWhere,
+    attributes: selectAttributes
+      ? [
+          "examScheduleId",
+          "examinationSessionId",
+          "examDate",
+          "examTime",
+          "duration",
+          "term",
+          "type",
+          "subjectId",
+          "maximumMarks",
+        ]
+      : [],
+    include: [subjectInclude],
+  };
+}
+
 export async function countUnusedByInstitute(transaction) {
   return scoped(model.answerSheetQrModel).count({
     where: {
@@ -362,36 +408,30 @@ export async function findAndCountMappedAnswerSheets(
     attributes: [
       "id",
       "qr",
+      "studentId",
       "examScheduleId",
       "assignedToUser",
+      "assignmentId",
       "deadlineDate",
       "evaluatedAt",
       "obtainedMarks",
       "fileUploadId",
       "createdAt",
+      "updatedAt",
     ],
     include: [
+      mappedListExamScheduleInclude(examScheduleWhere, options.search),
       {
-        model: model.examScheduleModel,
-        as: "examSchedule",
-        required: true,
-        where: examScheduleWhere,
+        model: model.studentModel,
+        as: "student",
+        required: false,
         attributes: [
-          "examScheduleId",
-          "examinationSessionId",
-          "examDate",
-          "examTime",
-          "term",
-          "type",
-          "subjectId",
-        ],
-        include: [
-          {
-            model: model.subjectModel,
-            as: "subjectSchedule",
-            attributes: ["subjectId", "subjectName", "subjectCode"],
-            required: false,
-          },
+          "studentId",
+          "firstName",
+          "middleName",
+          "lastName",
+          "enrollNumber",
+          "scholarNumber",
         ],
       },
       {
@@ -406,6 +446,18 @@ export async function findAndCountMappedAnswerSheets(
         attributes: ["userId", "userName", "email"],
         required: false,
       },
+      {
+        model: model.answersheetEvalutionUserAssignmentModel,
+        as: "evaluationAssignment",
+        required: false,
+        attributes: [
+          "assignmentId",
+          "assignedToUserId",
+          "notes",
+          "timestamp",
+          "createdAt",
+        ],
+      },
     ],
     order: [["id", "DESC"]],
     limit,
@@ -416,6 +468,10 @@ export async function findAndCountMappedAnswerSheets(
   });
 }
 
+/**
+ * One row per assignment. An assignment may cover multiple examScheduleIds
+ * and answerSheetIds; those are nested under the assignment.
+ */
 export async function findAndCountMappedAssignments(
   qrWhere,
   examScheduleWhere,
@@ -423,80 +479,110 @@ export async function findAndCountMappedAssignments(
   offset,
   options = {},
 ) {
-  const result = await scoped(model.answerSheetQrModel).findAndCountAll({
+  const matchingQrInclude = {
+    model: model.answerSheetQrModel,
+    as: "answerSheetQrs",
+    required: true,
+    attributes: [],
     where: qrWhere,
-    attributes: [
-      "assignmentId",
-      "assignedToUser",
-      "examScheduleId",
-      [fn("MAX", col("deadline_date")), "deadlineDate"],
-      [fn("COUNT", col("answer_sheet_qr.id")), "totalScripts"],
-      [
-        fn("SUM", literal("CASE WHEN evaluated_at IS NOT NULL THEN 1 ELSE 0 END")),
-        "gradedScripts",
-      ],
-      [
-        fn("SUM", literal("CASE WHEN evaluated_at IS NULL THEN 1 ELSE 0 END")),
-        "remainingScripts",
-      ],
-      [fn("MIN", col("answer_sheet_qr.updated_at")), "assignedAt"],
-    ],
     include: [
-      {
-        model: model.examScheduleModel,
-        as: "examSchedule",
-        required: true,
-        where: examScheduleWhere,
-        attributes: [
-          "examScheduleId",
-          "examinationSessionId",
-          "examDate",
-          "examTime",
-          "term",
-          "type",
-          "subjectId",
-        ],
-        include: [
-          {
-            model: model.subjectModel,
-            as: "subjectSchedule",
-            attributes: ["subjectId", "subjectName", "subjectCode"],
-            required: false,
-          },
-        ],
-      },
-      {
-        model: model.userModel,
-        as: "assignedTeacher",
-        attributes: ["userId", "userName", "email"],
-        required: false,
-      },
-      {
-        model: model.answersheetEvalutionUserAssignmentModel,
-        as: "evaluationAssignment",
-        required: false,
-      },
+      mappedListExamScheduleInclude(examScheduleWhere, options.search, {
+        selectAttributes: false,
+      }),
     ],
-    group: [
-      "assignmentId",
-      "assignedToUser",
-      "examScheduleId",
-      "examSchedule.exam_schedule_id",
-      "examSchedule->subjectSchedule.subject_id",
-      "assignedTeacher.user_id",
-      "evaluationAssignment.assignment_id",
-    ],
-    order: [["assignmentId", "DESC"]],
-    limit,
-    offset,
-    subQuery: false,
+  };
+
+  const count = await scoped(
+    model.answersheetEvalutionUserAssignmentModel,
+  ).count({
+    distinct: true,
+    col: "assignment_id",
+    include: [matchingQrInclude],
     transaction: options.transaction,
   });
 
-  return {
-    count: Array.isArray(result.count) ? result.count.length : result.count,
-    rows: result.rows,
-  };
+  if (!count) {
+    return { count: 0, rows: [] };
+  }
+
+  const idRows = await scoped(
+    model.answersheetEvalutionUserAssignmentModel,
+  ).findAll({
+    attributes: ["assignmentId"],
+    include: [matchingQrInclude],
+    group: ["answersheet_evalution_user_assignment.assignment_id"],
+    order: [[col("answersheet_evalution_user_assignment.assignment_id"), "DESC"]],
+    limit,
+    offset,
+    subQuery: false,
+    raw: true,
+    transaction: options.transaction,
+  });
+
+  const assignmentIds = [];
+  for (const row of idRows) {
+    assignmentIds.push(row.assignmentId ?? row.assignment_id);
+  }
+
+  if (!assignmentIds.length) {
+    return { count, rows: [] };
+  }
+
+  const rows = await scoped(
+    model.answersheetEvalutionUserAssignmentModel,
+  ).findAll({
+    where: { assignmentId: { [Op.in]: assignmentIds } },
+    attributes: [
+      "assignmentId",
+      "assignedToUserId",
+      "notes",
+      "timestamp",
+      "academicYearId",
+      "createdBy",
+      "createdAt",
+      "updatedAt",
+    ],
+    include: [
+      {
+        model: model.userModel,
+        as: "assignedEvaluator",
+        attributes: ["userId", "userName", "email"],
+        required: true,
+      },
+      {
+        model: model.answerSheetQrModel,
+        as: "answerSheetQrs",
+        required: true,
+        where: qrWhere,
+        attributes: [
+          "examScheduleId",
+          "deadlineDate",
+          "evaluatedAt",
+          "updatedAt",
+        ],
+        include: [
+          mappedListExamScheduleInclude(examScheduleWhere, options.search),
+        ],
+      },
+    ],
+    order: [["assignmentId", "DESC"]],
+    transaction: options.transaction,
+  });
+
+  const rowsById = new Map();
+  for (const row of rows) {
+    rowsById.set(row.assignmentId, row);
+  }
+
+  const orderedRows = [];
+  for (const assignmentId of assignmentIds) {
+    const row = rowsById.get(assignmentId);
+    if (row) {
+      orderedRows.push(row);
+    }
+  }
+
+  return { count, rows: orderedRows };
 }
 
 export async function getEvaluationAssignmentById(assignmentId) {

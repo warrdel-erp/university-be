@@ -52,13 +52,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/answerSheetQr/mapped?examinationSessionId=1&selections=%5B%7B%22courseSessionMappingId%22%3A34%2C%22terms%22%3A%5B1%2C2%2C4%5D%7D%5D&page=1&limit=20",
+              "raw": "{{baseurl}}/answerSheetQr/list?examinationSessionId=1&selections=%5B%7B%22courseSessionMappingId%22%3A34%2C%22terms%22%3A%5B1%2C2%2C4%5D%7D%5D&page=1&limit=20",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "answerSheetQr",
-                "mapped"
+                "list"
               ],
               "query": [
                 {
@@ -110,7 +110,59 @@
                 }
               ]
             },
-            "description": "GET /answerSheetQr/mapped — optional status: unassigned (no evaluator) or graded (evaluated)."
+            "description": "GET /answerSheetQr/list — optional status: unassigned (no evaluator) or graded (evaluated). Assignment-wise rows: GET /answerSheetQr/assignmentslist."
+          }
+        },
+        {
+          "name": "1.2b GET Evaluation Assignments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/assignmentslist?examinationSessionId={{evaluation_examinationSessionId}}&page=1&limit=20",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "assignmentslist"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "{{evaluation_examinationSessionId}}"
+                },
+                {
+                  "key": "examScheduleId",
+                  "value": "{{evaluation_examScheduleId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "selections",
+                  "value": "{{evaluation_selections}}",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "GET /answerSheetQr/assignmentslist — one row per assignment. Nested examSchedules[] with subject name/code, exam dates, and SKU counts (no answerSheet id lists)."
           }
         },
         {

@@ -209,7 +209,7 @@ function buildMappedExamScheduleWhere(
   return where;
 }
 
-function buildMappedAnswerSheetQrWhere(search, status) {
+function buildMappedAnswerSheetQrWhere(status) {
   const qrWhere = {
     studentId: { [Op.ne]: null },
     examScheduleId: { [Op.ne]: null },
@@ -219,19 +219,103 @@ function buildMappedAnswerSheetQrWhere(search, status) {
     qrWhere.assignedToUser = null;
   } else if (status === "graded") {
     qrWhere.evaluatedAt = { [Op.ne]: null };
-  } else if (status === "withEvaluator") {
-    qrWhere.assignedToUser = { [Op.ne]: null };
-  }
-
-  if (search) {
-    const like = `%${search}%`;
-    qrWhere[Op.or] = [
-      { "$examSchedule.subjectSchedule.subject_name$": { [Op.like]: like } },
-      { "$examSchedule.subjectSchedule.subject_code$": { [Op.like]: like } },
-    ];
   }
 
   return qrWhere;
+}
+
+function buildMappedListFilters({
+  examinationSessionId,
+  examScheduleId,
+  term,
+  selections,
+  examDate,
+  examinationSessionSlotId,
+  subjectId,
+  search,
+  status,
+}) {
+  return {
+    examinationSessionId,
+    examScheduleId: examScheduleId || [],
+    term: term || [],
+    selections: selections || [],
+    examDate: examDate || null,
+    examinationSessionSlotId: examinationSessionSlotId || null,
+    subjectId: subjectId || [],
+    search: search || null,
+    status: status || null,
+  };
+}
+
+function emptyMappedListResponse(filters, page, limit) {
+  return {
+    data: {
+      filters,
+      items: [],
+    },
+    pagination: {
+      page,
+      limit,
+      total: 0,
+      totalPages: 0,
+    },
+  };
+}
+
+async function resolveMappedListQueryContext({
+  examinationSessionId,
+  page = 1,
+  limit = 20,
+  examScheduleId,
+  term,
+  subjectId,
+  search,
+  examDate,
+  examinationSessionSlotId,
+  selections,
+  status,
+}) {
+  const filters = buildMappedListFilters({
+    examinationSessionId,
+    examScheduleId,
+    term,
+    selections,
+    examDate,
+    examinationSessionSlotId,
+    subjectId,
+    search,
+    status,
+  });
+
+  const resolvedExamScheduleIds = await resolveMappedListExamScheduleIds(
+    examinationSessionId,
+    { selections, examScheduleId },
+  );
+
+  if (resolvedExamScheduleIds === null) {
+    return {
+      empty: true,
+      response: emptyMappedListResponse(filters, page, limit),
+    };
+  }
+
+  return {
+    empty: false,
+    page,
+    limit,
+    filters,
+    search: search || null,
+    examScheduleWhere: buildMappedExamScheduleWhere(examinationSessionId, {
+      examDate,
+      examinationSessionSlotId,
+      examScheduleIds: resolvedExamScheduleIds,
+      term,
+      subjectId,
+      selections,
+    }),
+    qrWhere: buildMappedAnswerSheetQrWhere(status),
+  };
 }
 
 export async function generateBulkAnswerSheetQr(count) {
@@ -680,137 +764,182 @@ export async function assignObtainedMarksToAnswerSheet(
   }
 }
 
-export async function getMappedAnswerSheetsByExamSession({
-  examinationSessionId,
-  page = 1,
-  limit = 20,
-  examScheduleId,
-  term,
-  subjectId,
-  search,
-  examDate,
-  examinationSessionSlotId,
-  selections,
-  status,
-}) {
+export async function getMappedAnswerSheetsByExamSession(params) {
+  const context = await resolveMappedListQueryContext(params);
+  if (context.empty) {
+    return context.response;
+  }
+
+  const { page, limit, filters, examScheduleWhere, qrWhere, search } = context;
   const offset = (page - 1) * limit;
 
-  const resolvedExamScheduleIds = await resolveMappedListExamScheduleIds(
-    examinationSessionId,
-    { selections, examScheduleId },
+  const { count, rows } = await answerSheetQrRepository.findAndCountMappedAnswerSheets(
+    qrWhere,
+    examScheduleWhere,
+    limit,
+    offset,
+    { search },
   );
 
-  if (resolvedExamScheduleIds === null) {
-    return {
-      data: {
-        filters: {
-          examinationSessionId,
-          examScheduleId: examScheduleId || [],
-          term: term || [],
-          selections: selections || [],
-          examDate: examDate || null,
-          examinationSessionSlotId: examinationSessionSlotId || null,
-          subjectId: subjectId || [],
-          search: search || null,
-          status: status || null,
-        },
-        items: [],
-      },
-      pagination: {
-        page,
-        limit,
-        total: 0,
-        totalPages: 0,
-      },
-    };
+  const items = [];
+  const urlJobs = [];
+  for (const row of rows) {
+    const plain = row.get({ plain: true });
+    items.push(plain);
+    if (plain.s3File && plain.s3File.s3Key) {
+      urlJobs.push(
+        s3Helper.getDownloadSignedUrl(plain.s3File.s3Key).then((url) => {
+          plain.s3File.url = url;
+        }),
+      );
+    }
   }
+  await Promise.all(urlJobs);
 
-  const examScheduleWhere = buildMappedExamScheduleWhere(examinationSessionId, {
-    examDate,
-    examinationSessionSlotId,
-    examScheduleIds: resolvedExamScheduleIds,
-    term,
-    subjectId,
-    selections,
+  return {
+    data: {
+      filters,
+      items,
+    },
+    pagination: {
+      page,
+      limit,
+      total: count,
+      totalPages: Math.ceil(count / limit) || 0,
+    },
+  };
+}
+
+export async function listEvaluationAssignmentsByExamSession(params) {
+  const context = await resolveMappedListQueryContext({
+    ...params,
+    status: null,
   });
-  const qrWhere = buildMappedAnswerSheetQrWhere(search, status);
-
-  let count = 0;
-  let rows = [];
-
-  if (status === "withEvaluator") {
-    const result = await answerSheetQrRepository.findAndCountMappedAssignments(
-      qrWhere,
-      examScheduleWhere,
-      limit,
-      offset,
-    );
-    count = result.count;
-    rows = result.rows;
-  } else {
-    const result = await answerSheetQrRepository.findAndCountMappedAnswerSheets(
-      qrWhere,
-      examScheduleWhere,
-      limit,
-      offset,
-    );
-    count = result.count;
-    rows = result.rows;
+  if (context.empty) {
+    return context.response;
   }
 
-  let items = [];
-  if (status === "withEvaluator") {
-    items = rows.map((row) => {
-      const plain = row.get({ plain: true });
-      let assignmentStatus = "pending";
-      const graded = Number(plain.gradedScripts || 0);
-      const total = Number(plain.totalScripts || 0);
-      if (graded === total && total > 0) assignmentStatus = "completed";
-      else if (graded > 0) assignmentStatus = "inprogress";
-      
-      return {
-        assignmentId: plain.assignmentId,
-        assignedToUser: plain.assignedToUser,
-        examScheduleId: plain.examScheduleId,
-        deadlineDate: plain.deadlineDate,
-        totalScripts: total,
-        gradedScripts: graded,
-        remainingScripts: Number(plain.remainingScripts || 0),
-        assignedAt: plain.assignedAt,
-        assignmentStatus,
-        examSchedule: plain.examSchedule,
-        assignedTeacher: plain.assignedTeacher,
-        assignment: plain.evaluationAssignment,
-      };
-    });
-  } else {
-    const urlJobs = [];
-    for (const row of rows) {
-      const plain = row.get({ plain: true });
-      items.push(plain);
-      if (plain.s3File && plain.s3File.s3Key) {
-        urlJobs.push(
-          s3Helper.getDownloadSignedUrl(plain.s3File.s3Key).then((url) => {
-            plain.s3File.url = url;
-          }),
-        );
+  const { page, limit, filters, examScheduleWhere, search } = context;
+  const offset = (page - 1) * limit;
+
+  const qrWhere = buildMappedAnswerSheetQrWhere(null);
+  qrWhere.assignedToUser = { [Op.ne]: null };
+  qrWhere.assignmentId = { [Op.ne]: null };
+
+  const { count, rows } = await answerSheetQrRepository.findAndCountMappedAssignments(
+    qrWhere,
+    examScheduleWhere,
+    limit,
+    offset,
+    { search },
+  );
+
+  const items = [];
+  for (const row of rows) {
+    const plain = row.get({ plain: true });
+    const answerSheets = plain.answerSheetQrs || [];
+
+    const examScheduleById = new Map();
+    let total = 0;
+    let graded = 0;
+    let deadlineDate = null;
+    let assignedAt = null;
+
+    for (const sheet of answerSheets) {
+      total += 1;
+
+      if (sheet.evaluatedAt) {
+        graded += 1;
+      }
+
+      if (
+        sheet.deadlineDate &&
+        (!deadlineDate || sheet.deadlineDate > deadlineDate)
+      ) {
+        deadlineDate = sheet.deadlineDate;
+      }
+
+      if (
+        sheet.updatedAt &&
+        (!assignedAt || sheet.updatedAt < assignedAt)
+      ) {
+        assignedAt = sheet.updatedAt;
+      }
+
+      const scheduleId = sheet.examScheduleId;
+      let scheduleGroup = examScheduleById.get(scheduleId);
+      if (!scheduleGroup) {
+        const schedule = sheet.examSchedule;
+        scheduleGroup = {
+          examScheduleId: schedule.examScheduleId,
+          examDate: schedule.examDate,
+          examTime: schedule.examTime,
+          term: schedule.term,
+          type: schedule.type,
+          subjectSchedule: schedule.subjectSchedule
+            ? {
+                subjectName: schedule.subjectSchedule.subjectName,
+                subjectCode: schedule.subjectSchedule.subjectCode,
+              }
+            : null,
+          totalScripts: 0,
+          gradedScripts: 0,
+        };
+        examScheduleById.set(scheduleId, scheduleGroup);
+      }
+
+      scheduleGroup.totalScripts += 1;
+      if (sheet.evaluatedAt) {
+        scheduleGroup.gradedScripts += 1;
       }
     }
-    await Promise.all(urlJobs);
+
+    const examSchedules = [];
+    for (const scheduleGroup of examScheduleById.values()) {
+      examSchedules.push({
+        examScheduleId: scheduleGroup.examScheduleId,
+        examDate: scheduleGroup.examDate,
+        examTime: scheduleGroup.examTime,
+        term: scheduleGroup.term,
+        type: scheduleGroup.type,
+        subjectSchedule: scheduleGroup.subjectSchedule,
+        totalScripts: scheduleGroup.totalScripts,
+        gradedScripts: scheduleGroup.gradedScripts,
+        remainingScripts:
+          scheduleGroup.totalScripts - scheduleGroup.gradedScripts,
+      });
+    }
+
+    items.push({
+      assignmentId: plain.assignmentId,
+      deadlineDate,
+      assignedAt,
+      totalScripts: total,
+      gradedScripts: graded,
+      remainingScripts: total - graded,
+      assignmentStatus: resolveAssignmentStatus({
+        graded,
+        totalAssigned: total,
+      }),
+      examSchedules,
+      assignment: {
+        assignmentId: plain.assignmentId,
+        notes: plain.notes,
+        timestamp: plain.timestamp,
+        academicYearId: plain.academicYearId,
+        createdBy: plain.createdBy,
+        createdAt: plain.createdAt,
+        updatedAt: plain.updatedAt,
+        assignedEvaluator: plain.assignedEvaluator,
+      },
+    });
   }
 
   return {
     data: {
       filters: {
-        examinationSessionId,
-        examScheduleId: examScheduleId || [],
-        term: term || [],
-        selections: selections || [],
-        examDate: examDate || null,
-        examinationSessionSlotId: examinationSessionSlotId || null,
-        subjectId: subjectId || [],
-        search: search || null,
-        status: status || null,
+        ...filters,
+        status: "withEvaluator",
       },
       items,
     },
