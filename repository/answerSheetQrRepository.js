@@ -846,3 +846,84 @@ export async function findMyAnswerSheetSkuStats(assignedToUserId) {
     dueToday: Number(row?.dueToday ?? 0),
   };
 }
+
+/**
+ * Examination sessions for an evaluator, reverse-populated from assigned answer sheets.
+ * Nesting comes from associations: session → terms + examSchedules → subject → course.
+ */
+export async function findMyEvaluationExaminationSessions(assignedToUserId) {
+  return scoped(model.examinationSessionModel).findAll({
+    attributes: [
+      "examinationSessionId",
+      "sessionName",
+      "examStartDate",
+      "examEndDate",
+      "evaluationStartDate",
+      "evaluationDeadline",
+      "assessmentTypeId",
+    ],
+    include: [
+      {
+        model: model.examinationSessionTermModel,
+        as: "examinationSessionTerms",
+        required: false,
+        attributes: [
+          "examinationSessionTermId",
+          "examinationSessionId",
+          "term",
+          "includeElectives",
+          "remarks",
+        ],
+      },
+      {
+        model: model.examScheduleModel,
+        as: "examSchedules",
+        required: true,
+        attributes: [
+          "examScheduleId",
+          "examDate",
+          "examTime",
+          "term",
+          "type",
+          "subjectId",
+          "sessionId",
+          "maximumMarks",
+        ],
+        include: [
+          {
+            model: model.answerSheetQrModel,
+            as: "answerSheetQrs",
+            required: true,
+            where: { assignedToUser: assignedToUserId },
+            attributes: ["id", "evaluatedAt"],
+          },
+          {
+            model: model.subjectModel,
+            as: "subjectSchedule",
+            required: true,
+            attributes: [
+              "subjectId",
+              "subjectName",
+              "subjectCode",
+              "courseId",
+            ],
+            include: [
+              {
+                model: model.courseModel,
+                as: "courseInfo",
+                required: true,
+                attributes: [
+                  "courseId",
+                  "courseName",
+                  "courseCode",
+                  "termType",
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    order: [["examinationSessionId", "DESC"]],
+  });
+}

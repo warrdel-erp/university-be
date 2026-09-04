@@ -14,6 +14,7 @@ import {
   getMyAnswerSheetSkuStats,
   getAnswerSheetSkuStats,
   getMyEvaluationSummary,
+  getMyEvaluationExaminationSessions,
   assignObtainedMarksToAnswerSheet,
   assignMyObtainedMarksToAnswerSheet,
   splitAnswerSheetPdf,
@@ -288,6 +289,12 @@ router.get(
   "/my/single",
   userAuth,
   getMySingleAssignedScript,
+);
+
+router.get(
+  "/my/evaluationExaminationSessions",
+  userAuth,
+  getMyEvaluationExaminationSessions,
 );
 
 router.get(

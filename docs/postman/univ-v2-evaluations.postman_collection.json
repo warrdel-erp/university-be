@@ -403,6 +403,30 @@
           }
         },
         {
+          "name": "2.3b GET My Evaluation Examination Sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/my/evaluationExaminationSessions",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "my",
+                "evaluationExaminationSessions"
+              ]
+            },
+            "description": "GET /answerSheetQr/my/evaluationExaminationSessions — reverse populate from assigned scripts via Sequelize joins.\n\nShape: examinationSession → examinationSessionTerms[] + examSchedules[] (subjectSchedule.courseInfo, totalAssigned/graded/remaining).\n\nexaminationSessionTerms only include terms that appear on the evaluator's assigned examSchedules (e.g. only term 1 when all schedules are term 1)."
+          }
+        },
+        {
           "name": "2.4 GET My Single Script",
           "request": {
             "method": "GET",

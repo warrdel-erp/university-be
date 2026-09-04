@@ -209,6 +209,45 @@ export async function getMyAssignedScripts(req, res) {
   }
 }
 
+export async function getMyEvaluationExaminationSessions(req, res) {
+  try {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return ErrorResponse(res, validation.status, validation.message);
+    }
+    if (!validation.employeeRecord) {
+      return SuccessResponse(
+        res,
+        200,
+        "Evaluation examination sessions fetched successfully",
+        { items: [] },
+      );
+    }
+
+    const result =
+      await answerSheetQrServices.getMyEvaluationExaminationSessions(
+        validation.userId,
+      );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Evaluation examination sessions fetched successfully",
+      result,
+    );
+  } catch (error) {
+    console.error(
+      "Error in getMyEvaluationExaminationSessions controller:",
+      error,
+    );
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error",
+    );
+  }
+}
+
 export async function getMyAnswerSheetSkuStats(req, res) {
   try {
     const validation = await validateEmployeeUser(req, res);

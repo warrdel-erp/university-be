@@ -1085,3 +1085,53 @@ export async function getEvaluationAssignmentById(assignmentId) {
     answerSheets: plainAnswerSheets,
   };
 }
+
+/**
+ * Reverse-populate examination sessions for the logged-in evaluator.
+ * Shape is association-driven: session → terms + examSchedules → subject → course.
+ * examinationSessionTerms are limited to terms present on assigned examSchedules
+ * (same courseId / sessionId context as those schedules).
+ */
+export async function getMyEvaluationExaminationSessions(assignedToUserId) {
+  const rows =
+    await answerSheetQrRepository.findMyEvaluationExaminationSessions(
+      assignedToUserId,
+    );
+
+  const items = [];
+  for (const row of rows) {
+    const plain = row.get({ plain: true });
+    const examSchedules = plain.examSchedules || [];
+    const scheduleTerms = new Set();
+
+    for (const schedule of examSchedules) {
+      const sheets = schedule.answerSheetQrs || [];
+      let graded = 0;
+      for (const sheet of sheets) {
+        if (sheet.evaluatedAt) {
+          graded += 1;
+        }
+      }
+      schedule.totalAssigned = sheets.length;
+      schedule.graded = graded;
+      schedule.remaining = sheets.length - graded;
+      delete schedule.answerSheetQrs;
+
+      if (schedule.term != null) {
+        scheduleTerms.add(Number(schedule.term));
+      }
+    }
+
+    const examinationSessionTerms = [];
+    for (const sessionTerm of plain.examinationSessionTerms || []) {
+      if (scheduleTerms.has(Number(sessionTerm.term))) {
+        examinationSessionTerms.push(sessionTerm);
+      }
+    }
+    plain.examinationSessionTerms = examinationSessionTerms;
+
+    items.push(plain);
+  }
+
+  return { items };
+}
