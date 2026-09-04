@@ -9,12 +9,6 @@ import * as s3Helper from "../utility/s3Helper.js";
 
 const MAX_UNUSED_QR_PER_INSTITUTE = 5000;
 
-function createServiceError(message, statusCode = 400) {
-  const error = new Error(message);
-  error.statusCode = statusCode;
-  return error;
-}
-
 function getStudentDisplayName(student) {
   if (!student) return null;
   return [student.firstName, student.middleName, student.lastName].filter(Boolean).join(" ").trim() || null;
@@ -322,16 +316,21 @@ async function resolveMappedListQueryContext({
 export async function generateBulkAnswerSheetQr(count) {
   const result = await sequelize.transaction(async (transaction) => {
     if (!Number.isInteger(count) || count <= 0) {
-      throw createServiceError("Please provide a valid positive integer for count.", 400);
+      {
+        const err = new Error("Please provide a valid positive integer for count.");
+        err.statusCode = 400;
+        throw err;
+      }
     }
 
     const unusedCount = await answerSheetQrRepository.countUnusedByInstitute(transaction);
 
     if (unusedCount + count > MAX_UNUSED_QR_PER_INSTITUTE) {
-      throw createServiceError(
-        `Cannot generate QR codes. This institute already has ${unusedCount} unused codes. Maximum allowed unused codes is ${MAX_UNUSED_QR_PER_INSTITUTE}.`,
-        409
-      );
+      {
+        const err = new Error(`Cannot generate QR codes. This institute already has ${unusedCount} unused codes. Maximum allowed unused codes is ${MAX_UNUSED_QR_PER_INSTITUTE}.`);
+        err.statusCode = 409;
+        throw err;
+      }
     }
 
     const requestId = uuidv4();
@@ -360,8 +359,16 @@ export async function mapAnswerSheetQr(qr, studentId, examScheduleId) {
         answerSheetQrRepository.getScopedExamSchedule(examScheduleId, transaction),
       ]);
 
-      if (!student) throw createServiceError("Student not found in your institute.", 404);
-      if (!examSchedule) throw createServiceError("Exam schedule not found in your institute.", 404);
+      if (!student) {
+        const err = new Error("Student not found in your institute.");
+        err.statusCode = 404;
+        throw err;
+      }
+      if (!examSchedule) {
+        const err = new Error("Exam schedule not found in your institute.");
+        err.statusCode = 404;
+        throw err;
+      }
 
       const hasHallTicket = await answerSheetQrRepository.hasStudentHallTicketForExamSession(
         studentId,
@@ -369,10 +376,11 @@ export async function mapAnswerSheetQr(qr, studentId, examScheduleId) {
         transaction
       );
       if (!hasHallTicket) {
-        throw createServiceError(
-          "Student does not have a hall ticket for this examination session.",
-          400
-        );
+        {
+          const err = new Error("Student does not have a hall ticket for this examination session.");
+          err.statusCode = 400;
+          throw err;
+        }
       }
 
       const result = await answerSheetQrRepository.mapAnswerSheetQrOnce(
@@ -382,12 +390,24 @@ export async function mapAnswerSheetQr(qr, studentId, examScheduleId) {
         transaction
       );
 
-      if (!result) throw createServiceError("QR code not found.", 404);
+      if (!result) {
+        const err = new Error("QR code not found.");
+        err.statusCode = 404;
+        throw err;
+      }
       if (result.answerSheetAlreadyMapped) {
-        throw createServiceError("This answer sheet is already mapped", 409);
+        {
+          const err = new Error("This answer sheet is already mapped");
+          err.statusCode = 409;
+          throw err;
+        }
       }
       if (result.studentExamAlreadyMapped) {
-        throw createServiceError("This student is already assigned to this exam schedule", 409);
+        {
+          const err = new Error("This student is already assigned to this exam schedule");
+          err.statusCode = 409;
+          throw err;
+        }
       }
 
       const { row } = result;
@@ -406,7 +426,11 @@ export async function mapAnswerSheetQr(qr, studentId, examScheduleId) {
     });
   } catch (error) {
     if (error instanceof UniqueConstraintError) {
-      throw createServiceError("This student is already assigned to this exam schedule", 409);
+      {
+        const err = new Error("This student is already assigned to this exam schedule");
+        err.statusCode = 409;
+        throw err;
+      }
     }
     throw error;
   }
@@ -417,7 +441,11 @@ export async function getAnswerSheetQrDetailById(id) {
     const row = await answerSheetQrRepository.getAnswerSheetQrById(id, transaction);
 
     if (!row) {
-      throw createServiceError("Answer sheet QR not found.", 404);
+      {
+        const err = new Error("Answer sheet QR not found.");
+        err.statusCode = 404;
+        throw err;
+      }
     }
 
     const isMapped = row.studentId !== null && row.examScheduleId !== null;
@@ -591,7 +619,11 @@ export async function assignAnswerSheetsToTeachers(
       transaction
     );
     if (!teacher) {
-      throw createServiceError(`User not found for userId: ${assignedToUserId}`, 404);
+      {
+        const err = new Error(`User not found for userId: ${assignedToUserId}`);
+        err.statusCode = 404;
+        throw err;
+      }
     }
 
     const answerSheets = await answerSheetQrRepository.getAnswerSheetQrsByIds(
@@ -600,7 +632,11 @@ export async function assignAnswerSheetsToTeachers(
     );
 
     if (answerSheets.length !== uniqueAnswerSheetQrIds.length) {
-      throw createServiceError("One or more answer sheet QR records were not found.", 404);
+      {
+        const err = new Error("One or more answer sheet QR records were not found.");
+        err.statusCode = 404;
+        throw err;
+      }
     }
 
     const unmappedIds = [];
@@ -612,10 +648,13 @@ export async function assignAnswerSheetsToTeachers(
     }
 
     if (unmappedIds.length > 0) {
-      throw createServiceError(
-        `Answer sheet QR records must be mapped before evaluator assignment: ${unmappedIds.join(", ")}`,
-        400,
-      );
+      {
+        const err = new Error(
+          `Answer sheet QR records must be mapped before evaluator assignment: ${unmappedIds.join(", ")}`,
+        );
+        err.statusCode = 400;
+        throw err;
+      }
     }
 
     const assignment = await answerSheetQrRepository.createEvaluationUserAssignment(
@@ -656,7 +695,11 @@ export async function getScriptsAssignedToTeacher(
 ) {
   const teacher = await answerSheetQrRepository.getScopedUser(assignedToUserId);
   if (!teacher) {
-    throw createServiceError("Teacher user not found in your institute.", 404);
+    {
+      const err = new Error("Teacher user not found in your institute.");
+      err.statusCode = 404;
+      throw err;
+    }
   }
 
   const offset = (page - 1) * limit;
@@ -783,7 +826,11 @@ export async function assignObtainedMarksToAnswerSheet(
     );
 
     if (!answerSheet) {
-      throw createServiceError("Answer sheet QR not found.", 404);
+      {
+        const err = new Error("Answer sheet QR not found.");
+        err.statusCode = 404;
+        throw err;
+      }
     }
 
     const evaluatedAt = new Date();
@@ -841,10 +888,11 @@ export async function bulkFinalSubmitObtainedMarks(items, assignedToUserId) {
       transaction,
     );
     if (existingCount !== uniqueIds.length) {
-      throw createServiceError(
-        "One or more answer sheet QR records were not found.",
-        404,
-      );
+      {
+        const err = new Error("One or more answer sheet QR records were not found.");
+        err.statusCode = 404;
+        throw err;
+      }
     }
 
     const evaluatedAt = new Date();
@@ -865,12 +913,15 @@ export async function bulkFinalSubmitObtainedMarks(items, assignedToUserId) {
           transaction,
         );
       if (affected !== 1) {
-        throw createServiceError(
-          assignedToUserId != null
-            ? `Answer sheet ${answerSheetQrId} is not assigned to the current user.`
-            : `Answer sheet ${answerSheetQrId} could not be submitted.`,
-          assignedToUserId != null ? 403 : 404,
-        );
+        {
+          const err = new Error(
+            assignedToUserId != null
+              ? `Answer sheet ${answerSheetQrId} is not assigned to the current user.`
+              : `Answer sheet ${answerSheetQrId} could not be submitted.`,
+          );
+          err.statusCode = assignedToUserId != null ? 403 : 404;
+          throw err;
+        }
       }
     }
 
@@ -884,12 +935,15 @@ export async function bulkFinalSubmitObtainedMarks(items, assignedToUserId) {
         );
 
       if (submittedCount !== idsStatusOnly.length) {
-        throw createServiceError(
-          assignedToUserId != null
-            ? "One or more answer sheets are not assigned to the current user."
-            : "One or more answer sheet QR records could not be submitted.",
-          assignedToUserId != null ? 403 : 404,
-        );
+        {
+          const err = new Error(
+            assignedToUserId != null
+              ? "One or more answer sheets are not assigned to the current user."
+              : "One or more answer sheet QR records could not be submitted.",
+          );
+          err.statusCode = assignedToUserId != null ? 403 : 404;
+          throw err;
+        }
       }
     }
 
@@ -1092,7 +1146,11 @@ export async function listEvaluationAssignmentsByExamSession(params) {
 export async function getMySingleAssignedScript(id, assignedToUserId) {
   const row = await answerSheetQrRepository.getMySingleAssignedScript(id, assignedToUserId);
   if (!row) {
-    throw createServiceError("Assigned script not found", 404);
+    {
+      const err = new Error("Assigned script not found");
+      err.statusCode = 404;
+      throw err;
+    }
   }
 
   const plain = row.get({ plain: true });
@@ -1132,19 +1190,23 @@ export async function getApprovedQuestionPaperByAnswerSheetId(
     );
 
   if (!answerSheet) {
-    throw createServiceError(
-      assignedToUserId != null
-        ? "Assigned answer sheet not found."
-        : "Answer sheet QR not found.",
-      404,
-    );
+    {
+      const err = new Error(
+        assignedToUserId != null
+          ? "Assigned answer sheet not found."
+          : "Answer sheet QR not found.",
+      );
+      err.statusCode = 404;
+      throw err;
+    }
   }
 
   if (answerSheet.examScheduleId == null) {
-    throw createServiceError(
-      "Answer sheet is not mapped to an exam schedule.",
-      404,
-    );
+    {
+      const err = new Error("Answer sheet is not mapped to an exam schedule.");
+      err.statusCode = 404;
+      throw err;
+    }
   }
 
   const questionPaper =
@@ -1153,10 +1215,11 @@ export async function getApprovedQuestionPaperByAnswerSheetId(
     );
 
   if (!questionPaper) {
-    throw createServiceError(
-      "Approved question paper not found for this answer sheet.",
-      404,
-    );
+    {
+      const err = new Error("Approved question paper not found for this answer sheet.");
+      err.statusCode = 404;
+      throw err;
+    }
   }
 
   const plain = questionPaper.get({ plain: true });
@@ -1184,7 +1247,11 @@ export async function getEvaluationAssignmentDetail(assignmentId) {
     assignmentId,
   );
   if (!assignment) {
-    throw createServiceError("Evaluation assignment not found", 404);
+    {
+      const err = new Error("Evaluation assignment not found");
+      err.statusCode = 404;
+      throw err;
+    }
   }
 
   const [stats, answerSheetRows] = await Promise.all([
@@ -1242,7 +1309,11 @@ export async function getEvaluationAssignmentDetail(assignmentId) {
 
 export async function getEvaluationAssignmentById(assignmentId) {
   const assignment = await answerSheetQrRepository.getEvaluationAssignmentById(assignmentId);
-  if (!assignment) throw createServiceError("Assignment not found", 404);
+  if (!assignment) {
+    const err = new Error("Assignment not found");
+    err.statusCode = 404;
+    throw err;
+  }
 
   const stats = await answerSheetQrRepository.findAssignmentAnswerSheetStats(assignmentId);
   const answerSheets = await answerSheetQrRepository.findAnswerSheetsByAssignmentId(assignmentId);
