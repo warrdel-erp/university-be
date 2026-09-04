@@ -5,15 +5,25 @@ export async function up(queryInterface, Sequelize) {
   const transaction = await queryInterface.sequelize.transaction();
   try {
     await queryInterface.changeColumn(
-      "faculity_load",
-      "current_load",
+      "notice",
+      "message_to",
       {
-        type: Sequelize.DECIMAL(10, 2),
+        type: Sequelize.JSON,
         allowNull: true,
-        defaultValue: 0,
       },
       { transaction },
     );
+
+    await queryInterface.changeColumn(
+      "notice",
+      "role",
+      {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      { transaction },
+    );
+
     await transaction.commit();
   } catch (error) {
     await transaction.rollback();
@@ -25,15 +35,25 @@ export async function down(queryInterface, Sequelize) {
   const transaction = await queryInterface.sequelize.transaction();
   try {
     await queryInterface.changeColumn(
-      "faculity_load",
-      "current_load",
+      "notice",
+      "message_to",
       {
-        type: Sequelize.INTEGER,
-        allowNull: true,
-        defaultValue: 0,
+        type: Sequelize.JSON,
+        allowNull: false,
       },
       { transaction },
     );
+
+    await queryInterface.changeColumn(
+      "notice",
+      "role",
+      {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+      { transaction },
+    );
+
     await transaction.commit();
   } catch (error) {
     await transaction.rollback();

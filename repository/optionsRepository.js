@@ -117,6 +117,100 @@ export async function getSpecializationOptions(courseId) {
     });
 }
 
+async function findSubjectIdsFromTeacherMapping(userId, courseId, term) {
+    const mappingRows = await scoped(model.teacherSubjectMappingModel).findAll({
+        attributes: ['subjectId'],
+        where: { userId: Number(userId) },
+        include: [{
+            model: model.subjectModel,
+            as: 'employeeSubject',
+            attributes: ['subjectId'],
+            required: true,
+            where: {
+                ...(courseId != null && { courseId: Number(courseId) }),
+                ...(term != null && { term: Number(term) }),
+                ...buildScope(model.subjectModel),
+            },
+        }],
+    });
+
+    const subjectIds = [];
+    const seen = new Set();
+    for (const row of mappingRows) {
+        const plain = row.get({ plain: true });
+        const subjectId = Number(plain.subjectId);
+        if (!subjectId || seen.has(subjectId)) {
+            continue;
+        }
+        seen.add(subjectId);
+        subjectIds.push(subjectId);
+    }
+    return subjectIds;
+}
+
+async function findSubjectIdsFromTimeTableCells(userId, courseId, term, sessionId) {
+    const sectionRequired = term != null || sessionId != null;
+    const classSectionRequired = sessionId != null;
+
+    const cellRows = await model.timeTableCellModel.findAll({
+        attributes: ['timeTableCellId', 'subjectId'],
+        where: {
+            subjectId: { [Op.ne]: null },
+        },
+        include: [
+            {
+                model: model.timeTableCellTeachersModel,
+                as: 'timeTableCellTeachers',
+                required: true,
+                attributes: ['userId'],
+                where: { userId: Number(userId) },
+            },
+            {
+                model: model.timeTableRoutineModel,
+                as: 'timeTableRoutine',
+                required: true,
+                attributes: ['timeTableRoutineId', 'courseId'],
+                where: {
+                    ...buildScope(model.timeTableRoutineModel),
+                    ...(courseId != null && { courseId: Number(courseId) }),
+                },
+                include: [{
+                    model: model.classSectionTermModel,
+                    as: 'timeTableClassSectionTerm',
+                    attributes: ['classSectionTermId', 'term'],
+                    required: sectionRequired,
+                    where: {
+                        ...(term != null && { term: Number(term) }),
+                    },
+                    include: [{
+                        model: model.classSectionModel,
+                        as: 'classSection',
+                        attributes: ['classSectionsId', 'sessionId'],
+                        required: classSectionRequired,
+                        where: {
+                            ...(sessionId != null && { sessionId: Number(sessionId) }),
+                            ...(sessionId != null ? buildScope(model.classSectionModel) : {}),
+                        },
+                    }],
+                }],
+            },
+        ],
+    });
+
+    const subjectIds = [];
+    const seen = new Set();
+    for (const row of cellRows) {
+        const plain = row.get({ plain: true });
+        const subjectId = Number(plain.subjectId);
+        if (!subjectId || seen.has(subjectId)) {
+            continue;
+        }
+        seen.add(subjectId);
+        subjectIds.push(subjectId);
+    }
+    return subjectIds;
+}
+
 export async function getSubjectOptions(courseId, term, academicYearId, userId, sessionId = null) {
     const subjectWhere = {
         ...(courseId != null && { courseId: Number(courseId) }),
@@ -124,62 +218,29 @@ export async function getSubjectOptions(courseId, term, academicYearId, userId, 
         ...(academicYearId != null && { academicYearId: Number(academicYearId) }),
     };
 
-    // Teacher dropdown: subjects of course (+ session year) mapped to userId
     if (userId != null) {
-        // Case 1: Direct subject mapping
-        const mappingRows = await scoped(model.teacherSubjectMappingModel).findAll({
-            attributes: ['subjectId'],
-            where: { userId: Number(userId) },
-            raw: true,
-        });
-        const mappedSubjectIds = mappingRows.map(row => Number(row.subjectId));
+        const mappedSubjectIds = await findSubjectIdsFromTeacherMapping(userId, courseId, term);
+        const timetableSubjectIds = await findSubjectIdsFromTimeTableCells(
+            userId,
+            courseId,
+            term,
+            sessionId,
+        );
 
-        // Case 2: Timetable/class assignment
-        const cellTeachers = await scoped(model.timeTableCellTeachersModel).findAll({
-            attributes: [],
-            where: { userId: Number(userId) },
-            include: [{
-                model: model.timeTableCellModel,
-                as: 'timeTableCell',
-                attributes: ['subjectId'],
-                required: true,
-                include: [{
-                    model: model.timeTableRoutineModel,
-                    as: 'timeTableRoutine',
-                    attributes: [],
-                    required: true,
-                    where: {
-                        ...(courseId != null && { courseId: Number(courseId) }),
-                    },
-                    include: [{
-                        model: model.classSectionTermModel,
-                        as: 'timeTableClassSectionTerm',
-                        attributes: [],
-                        required: (term != null || sessionId != null),
-                        where: {
-                            ...(term != null && { term: Number(term) }),
-                        },
-                        include: [{
-                            model: model.classSectionModel,
-                            as: 'classSection',
-                            attributes: [],
-                            required: (sessionId != null),
-                            where: {
-                                ...(sessionId != null && { sessionId: Number(sessionId) }),
-                            },
-                        }],
-                    }],
-                }],
-            }],
-            raw: true,
-        });
-
-        const timetableSubjectIds = cellTeachers
-            .map(row => row['timeTableCell.subjectId'] || row.timeTableCell?.subjectId)
-            .filter(id => id != null)
-            .map(Number);
-
-        const combinedIds = [...new Set([...mappedSubjectIds, ...timetableSubjectIds])];
+        const combinedIds = [];
+        const seen = new Set();
+        for (const id of mappedSubjectIds) {
+            if (!seen.has(id)) {
+                seen.add(id);
+                combinedIds.push(id);
+            }
+        }
+        for (const id of timetableSubjectIds) {
+            if (!seen.has(id)) {
+                seen.add(id);
+                combinedIds.push(id);
+            }
+        }
 
         if (combinedIds.length === 0) {
             return [];
@@ -188,8 +249,9 @@ export async function getSubjectOptions(courseId, term, academicYearId, userId, 
         return scoped(model.subjectModel).findAll({
             attributes: [['subject_name', 'label'], ['subject_id', 'value']],
             where: {
-                ...subjectWhere,
                 subjectId: { [Op.in]: combinedIds },
+                ...(courseId != null && { courseId: Number(courseId) }),
+                ...(term != null && { term: Number(term) }),
             },
             order: [['subject_name', 'ASC']],
         });
