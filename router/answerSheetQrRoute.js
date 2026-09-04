@@ -19,6 +19,7 @@ import {
   splitAnswerSheetPdf,
   getSplitPdfJobStatus,
   getMappedAnswerSheetsByExamSession,
+  listEvaluationAssignmentsByExamSession,
   getMySingleAssignedScript,
   getEvaluationAssignmentById,
 } from "../controllers/answerSheetQrController.js";
@@ -191,8 +192,37 @@ const listMappedAnswerSheetsSchema = z.object({
   search: z.preprocess(emptyToUndefined, z.string().optional()),
   status: z.preprocess(
     emptyToUndefined,
-    z.enum(["unassigned", "graded", "withEvaluator"]).optional(),
+    z.enum(["unassigned", "graded"]).optional(),
   ),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).optional().default(20),
+});
+
+const listEvaluationAssignmentsSchema = z.object({
+  examinationSessionId: positiveIntegerId,
+  examDate: z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD")
+      .optional(),
+  ),
+  examinationSessionSlotId: positiveIntegerQueryId,
+  examScheduleId: numberList,
+  selections: mappedSelectionsSchema,
+  subjectId: z.preprocess(
+    (val) => {
+      if (!val || val === "") return undefined;
+      try {
+        const parsed = typeof val === "string" ? JSON.parse(val) : val;
+        return Array.isArray(parsed) ? parsed : [parsed];
+      } catch {
+        return [val];
+      }
+    },
+    z.array(z.coerce.number().int().positive()).optional()
+  ),
+  search: z.preprocess(emptyToUndefined, z.string().optional()),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).optional().default(20),
 });
@@ -295,11 +325,19 @@ router.get(
 );
 
 router.get(
-  "/mapped",
+  "/list",
   userAuth,
   checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, null),
   validate({ query: listMappedAnswerSheetsSchema }),
   getMappedAnswerSheetsByExamSession
+);
+
+router.get(
+  "/assignmentslist",
+  userAuth,
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, null),
+  validate({ query: listEvaluationAssignmentsSchema }),
+  listEvaluationAssignmentsByExamSession
 );
 
 router.get(
@@ -310,14 +348,6 @@ router.get(
   getEvaluationAssignmentById
 );
 
-router.get(
-  "/:id",
-  userAuth,
-  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, null),
-  validate({ params: idParamSchema }),
-  getAnswerSheetQrById
-);
-
 router.post(
   "/assign/evaluator",
   userAuth,
@@ -325,7 +355,6 @@ router.post(
   validate({ body: assignTeachersSchema }),
   assignAnswerSheetsToTeachers
 );
-
 
 router.get(
   "/evaluator/:assignedToUserId",
@@ -335,14 +364,6 @@ router.get(
   getScriptsAssignedToTeacher
 );
 
-router.patch(
-  "/:id/obtainedMarks",
-  userAuth,
-  checkAccess(PERMISSIONS.EVALUATION_EXECUTE.value, null),
-  validate({ params: idParamSchema, body: assignObtainedMarksSchema }),
-  assignObtainedMarksToAnswerSheet
-);
-
 const splitPdfSchema = z.object({
   answerSheetS3FileId: z
     .number({ required_error: "answerSheetS3FileId is required." })
@@ -350,9 +371,6 @@ const splitPdfSchema = z.object({
     .positive("answerSheetS3FileId must be a positive integer."),
 });
 
-// ─── POST /answerSheetQr/splitPdf ───────────────────────────────────────────────────────
-// Queues a large answer-sheet PDF split job (BullMQ + Redis).
-// Returns 202 { jobId, jobDbId, statusUrl }.
 router.post(
   "/splitPdf",
   userAuth,
@@ -360,12 +378,26 @@ router.post(
   splitAnswerSheetPdf
 );
 
-// ─── GET /answerSheetQr/splitPdf/job/:jobDbId ─────────────────────────────────────────
-// Poll the status of a queued PDF split job (reads from DB — persistent).
 router.get(
   "/splitPdf/job/:jobDbId",
   userAuth,
   getSplitPdfJobStatus
+);
+
+router.patch(
+  "/:id(\\d+)/obtainedMarks",
+  userAuth,
+  checkAccess(PERMISSIONS.EVALUATION_EXECUTE.value, null),
+  validate({ params: idParamSchema, body: assignObtainedMarksSchema }),
+  assignObtainedMarksToAnswerSheet
+);
+
+router.get(
+  "/:id(\\d+)",
+  userAuth,
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, null),
+  validate({ params: idParamSchema }),
+  getAnswerSheetQrById
 );
 
 export default router;
