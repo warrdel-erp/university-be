@@ -620,6 +620,96 @@
           }
         }
       ]
+    },
+    {
+      "name": "3. Exam Result",
+      "description": "Exam result readiness from applicable exam_schedules vs submitted answer_sheet_qr (markingStatus=submit).",
+      "item": [
+        {
+          "name": "3.1 GET Exam Result Students",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examResult/students?examinationSessionId={{evaluation_examinationSessionId}}&selections={{evaluation_selections}}&page=1&limit=20",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examResult",
+                "students"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "{{evaluation_examinationSessionId}}",
+                  "description": "Optional. Defaults to latest examination session when omitted."
+                },
+                {
+                  "key": "selections",
+                  "value": "{{evaluation_selections}}",
+                  "description": "JSON array: [{\"courseSessionMappingId\":34,\"terms\":[1,2]}]"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "GET /examResult/students\n\nItem fields:\n- studentId, studentName, scholarNo, enrollNumber, courseId, sessionId, term\n- totalExams, submittedExams, pendingExams\n- readinessStatus: READY | NOT_READY\n\nSame readiness calculation as getOne (shared calculateResultReadiness)."
+          }
+        },
+        {
+          "name": "3.2 GET Exam Result Student (getOne)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examResult/students/{{evaluation_studentId}}?examinationSessionId={{evaluation_examinationSessionId}}&selections={{evaluation_selections}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examResult",
+                "students",
+                "{{evaluation_studentId}}"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "{{evaluation_examinationSessionId}}",
+                  "description": "Optional. Defaults to latest examination session when omitted."
+                },
+                {
+                  "key": "selections",
+                  "value": "{{evaluation_selections}}",
+                  "description": "JSON array: [{\"courseSessionMappingId\":34,\"terms\":[1,2]}]"
+                }
+              ]
+            },
+            "description": "GET /examResult/students/:studentId?examinationSessionId=\n\nReturns:\n- student { studentId, studentName, scholarNo, courseId, sessionId, term }\n- readiness { status READY|NOT_READY, totalExams, submittedExams, pendingExams }\n- exams[] { examScheduleId, subject*, examDate, answerSheetQrId, answerSheetStatus, isSubmitted }\n\nMissing answerSheetQr => null + NOT_READY. No applicable schedules => NOT_READY, totalExams=0."
+          }
+        }
+      ]
     }
   ],
   "variable": [
