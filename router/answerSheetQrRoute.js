@@ -17,6 +17,8 @@ import {
   getMyEvaluationExaminationSessions,
   assignObtainedMarksToAnswerSheet,
   assignMyObtainedMarksToAnswerSheet,
+  bulkFinalSubmitObtainedMarks,
+  bulkMyFinalSubmitObtainedMarks,
   splitAnswerSheetPdf,
   getSplitPdfJobStatus,
   getMappedAnswerSheetsByExamSession,
@@ -117,6 +119,30 @@ const assignObtainedMarksSchema = z.object({
     .max(999.99, "obtained_marks must be less than or equal to 999.99"),
 });
 
+const bulkFinalSubmitSchema = z.object({
+  items: z
+    .array(
+      z.union([
+        z.coerce
+          .number()
+          .int("answerSheetQrId must be an integer")
+          .positive("answerSheetQrId must be greater than 0"),
+        z.object({
+          answerSheetQrId: z.coerce
+            .number()
+            .int("answerSheetQrId must be an integer")
+            .positive("answerSheetQrId must be greater than 0"),
+          obtained_marks: z.coerce
+            .number()
+            .min(0, "obtained_marks must be greater than or equal to 0")
+            .max(999.99, "obtained_marks must be less than or equal to 999.99")
+            .optional(),
+        }),
+      ]),
+    )
+    .min(1, "At least one item is required"),
+});
+
 const emptyToUndefined = (val) => (val === "" ? undefined : val);
 const positiveIntegerQueryId = z.preprocess(
   (val) => (typeof val === "string" ? parseInt(val, 10) : val),
@@ -127,6 +153,11 @@ const positiveIntegerQueryId = z.preprocess(
     .nullable()
     .optional(),
 ).transform((val) => (val === undefined || val === null ? null : val));
+
+const myAssignedScriptsQuerySchema = paginationSchema.extend({
+  examinationSessionId: positiveIntegerQueryId,
+  examScheduleId: positiveIntegerQueryId,
+});
 
 const positiveIntegerId = z.preprocess(
   (val) => (typeof val === "string" ? parseInt(val, 10) : val),
@@ -300,8 +331,15 @@ router.get(
 router.get(
   "/my",
   userAuth,
-  validate({ query: paginationSchema }),
+  validate({ query: myAssignedScriptsQuerySchema }),
   getMyAssignedScripts,
+);
+
+router.post(
+  "/my/finalSubmit",
+  userAuth,
+  validate({ body: bulkFinalSubmitSchema }),
+  bulkMyFinalSubmitObtainedMarks,
 );
 
 router.patch(
@@ -361,6 +399,14 @@ router.post(
   checkAccess(PERMISSIONS.EVALUATION_EXECUTE.value, null),
   validate({ body: assignTeachersSchema }),
   assignAnswerSheetsToTeachers
+);
+
+router.post(
+  "/finalSubmit",
+  userAuth,
+  checkAccess(PERMISSIONS.EVALUATION_EXECUTE.value, null),
+  validate({ body: bulkFinalSubmitSchema }),
+  bulkFinalSubmitObtainedMarks,
 );
 
 router.get(

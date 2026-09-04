@@ -71,6 +71,12 @@ deadlineDate: {
       allowNull: true,
       field: "obtained_marks",
     },
+    markingStatus: {
+      type: DataTypes.ENUM("pending", "submit"),
+      allowNull: false,
+      defaultValue: "pending",
+      field: "marking_status",
+    },
     fileUploadId: {
       type: DataTypes.INTEGER,
       allowNull: true,

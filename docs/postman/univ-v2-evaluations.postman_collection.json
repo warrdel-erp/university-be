@@ -283,11 +283,42 @@
                 "obtainedMarks"
               ]
             },
-            "description": "PATCH /answerSheetQr/:id/obtainedMarks — admin marks entry. Requires EVALUATION_EXECUTE."
+            "description": "PATCH /answerSheetQr/:id/obtainedMarks — admin draft marks entry. Sets markingStatus to pending. Requires EVALUATION_EXECUTE."
           }
         },
         {
-          "name": "1.7 GET Answer Sheet SKU Stats",
+          "name": "1.7 POST Final Submit (bulk, admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {{evaluation_answerSheetQrId}}\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/finalSubmit",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "finalSubmit"
+              ]
+            },
+            "description": "POST /answerSheetQr/finalSubmit — admin bulk final submit. Sets markingStatus to submit; keeps existing obtained_marks unless provided.\n\nPayload: { \"items\": [1, 2, 3] } or { \"items\": [{ \"answerSheetQrId\": 1 }, { \"answerSheetQrId\": 2, \"obtained_marks\": 75 }] }\n\nRequires EVALUATION_EXECUTE."
+          }
+        },
+        {
+          "name": "1.8 GET Answer Sheet SKU Stats",
           "request": {
             "method": "GET",
             "header": [
@@ -380,7 +411,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/answerSheetQr/my?page=1&limit=20",
+              "raw": "{{baseurl}}/answerSheetQr/my?page=1&limit=20&examinationSessionId={{evaluation_examinationSessionId}}&examScheduleId={{evaluation_examScheduleId}}",
               "host": [
                 "{{baseurl}}"
               ],
@@ -396,10 +427,18 @@
                 {
                   "key": "limit",
                   "value": "20"
+                },
+                {
+                  "key": "examinationSessionId",
+                  "value": "{{evaluation_examinationSessionId}}"
+                },
+                {
+                  "key": "examScheduleId",
+                  "value": "{{evaluation_examScheduleId}}"
                 }
               ]
             },
-            "description": "GET /answerSheetQr/my"
+            "description": "GET /answerSheetQr/my — optional examinationSessionId and examScheduleId filters."
           }
         },
         {
@@ -486,7 +525,39 @@
                 "obtainedMarks"
               ]
             },
-            "description": "PATCH /answerSheetQr/my/:id/obtainedMarks"
+            "description": "PATCH /answerSheetQr/my/:id/obtainedMarks — draft save; sets markingStatus to pending."
+          }
+        },
+        {
+          "name": "2.6 POST My Final Submit (bulk)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {{evaluation_answerSheetQrId}}\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/my/finalSubmit",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "my",
+                "finalSubmit"
+              ]
+            },
+            "description": "POST /answerSheetQr/my/finalSubmit — bulk final submit for sheets assigned to the current evaluator. Sets markingStatus to submit; keeps existing obtained_marks unless provided.\n\nPayload: { \"items\": [1, 2, 3] } or { \"items\": [{ \"answerSheetQrId\": 1 }, { \"answerSheetQrId\": 2, \"obtained_marks\": 75 }] }"
           }
         }
       ]

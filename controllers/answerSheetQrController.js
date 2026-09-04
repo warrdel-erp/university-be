@@ -168,7 +168,7 @@ export async function getMyAssignedScripts(req, res) {
       return ErrorResponse(res, validation.status, validation.message);
     }
 
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, examinationSessionId, examScheduleId } = req.query;
     if (!validation.employeeRecord) {
       return SuccessResponse(
         res,
@@ -190,6 +190,8 @@ export async function getMyAssignedScripts(req, res) {
       validation.userId,
       page,
       limit,
+      examinationSessionId,
+      examScheduleId,
     );
 
     return SuccessResponse(
@@ -441,6 +443,50 @@ export async function assignMyObtainedMarksToAnswerSheet(req, res) {
   } catch (error) {
     console.error(
       "Error in assignMyObtainedMarksToAnswerSheet controller:",
+      error,
+    );
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error",
+    );
+  }
+}
+
+export async function bulkFinalSubmitObtainedMarks(req, res) {
+  try {
+    await answerSheetQrServices.bulkFinalSubmitObtainedMarks(req.body.items);
+
+    return SuccessResponse(res, 200, "Marks submitted");
+  } catch (error) {
+    console.error("Error in bulkFinalSubmitObtainedMarks controller:", error);
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error",
+    );
+  }
+}
+
+export async function bulkMyFinalSubmitObtainedMarks(req, res) {
+  try {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return ErrorResponse(res, validation.status, validation.message);
+    }
+    if (!validation.employeeRecord) {
+      return ErrorResponse(res, 403, "Employee record not found.");
+    }
+
+    await answerSheetQrServices.bulkFinalSubmitObtainedMarks(
+      req.body.items,
+      validation.userId,
+    );
+
+    return SuccessResponse(res, 200, "Marks submitted");
+  } catch (error) {
+    console.error(
+      "Error in bulkMyFinalSubmitObtainedMarks controller:",
       error,
     );
     return ErrorResponse(

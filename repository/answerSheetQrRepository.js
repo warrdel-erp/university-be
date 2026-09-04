@@ -100,7 +100,7 @@ export async function bulkCreateAnswerSheetQr(rows, transaction) {
 export async function getAnswerSheetQrById(id, transaction) {
   return scoped(model.answerSheetQrModel).findOne({
     where: { id },
-    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "deadlineDate", "evaluatedAt", "obtainedMarks", "fileUploadId", "instituteId", "universityId", "createdAt"],
+    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "deadlineDate", "evaluatedAt", "obtainedMarks", "markingStatus", "fileUploadId", "instituteId", "universityId", "createdAt"],
     include: [
       {
         model: model.studentModel,
@@ -272,6 +272,7 @@ export async function getAnswerSheetQrsByIds(ids, transaction) {
       "assignmentId",
       "evaluatedAt",
       "obtainedMarks",
+      "markingStatus",
       "fileUploadId",
       "instituteId",
       "universityId",
@@ -314,7 +315,7 @@ export async function assignMarksByAnswerSheetId(
   transaction
 ) {
   const [affectedCount] = await scoped(model.answerSheetQrModel).update(
-    { obtainedMarks, evaluatedAt },
+    { obtainedMarks, evaluatedAt, markingStatus: "pending" },
     {
       where: { id },
       transaction,
@@ -323,16 +324,85 @@ export async function assignMarksByAnswerSheetId(
   return affectedCount;
 }
 
+/**
+ * Bulk final-submit: set markingStatus to submit for the given IDs.
+ * Keeps existing obtained_marks. Optionally scopes to assignedToUserId.
+ */
+export async function bulkFinalSubmitByIds(
+  ids,
+  assignedToUserId,
+  evaluatedAt,
+  transaction,
+) {
+  const where = {
+    id: { [Op.in]: ids },
+  };
+  if (assignedToUserId != null) {
+    where.assignedToUser = Number(assignedToUserId);
+  }
+
+  const [affectedCount] = await scoped(model.answerSheetQrModel).update(
+    { markingStatus: "submit", evaluatedAt },
+    { where, transaction },
+  );
+  return affectedCount;
+}
+
+/**
+ * Final-submit one sheet and overwrite obtained_marks.
+ */
+export async function finalSubmitWithObtainedMarksById(
+  id,
+  obtainedMarks,
+  assignedToUserId,
+  evaluatedAt,
+  transaction,
+) {
+  const where = { id };
+  if (assignedToUserId != null) {
+    where.assignedToUser = Number(assignedToUserId);
+  }
+
+  const [affectedCount] = await scoped(model.answerSheetQrModel).update(
+    { obtainedMarks, markingStatus: "submit", evaluatedAt },
+    { where, transaction },
+  );
+  return affectedCount;
+}
+
+export async function countAnswerSheetQrsByIds(ids, transaction) {
+  return scoped(model.answerSheetQrModel).count({
+    where: { id: { [Op.in]: ids } },
+    transaction,
+  });
+}
+
 export async function getScriptsAssignedToTeacher(
   assignedToUserId,
   limit,
-  offset
+  offset,
+  examinationSessionId,
+  examScheduleId,
 ) {
+  const where = {
+    assignedToUser: assignedToUserId,
+  };
+  if (examScheduleId != null) {
+    where.examScheduleId = Number(examScheduleId);
+  }
+
+  const examScheduleInclude = examScheduleDetailInclude();
+  if (examinationSessionId != null) {
+    examScheduleInclude.required = true;
+    examScheduleInclude.where = {
+      examinationSessionId: Number(examinationSessionId),
+      ...buildScope(model.examScheduleModel),
+    };
+  }
+
   return scoped(model.answerSheetQrModel).findAndCountAll({
-    where: {
-      assignedToUser: assignedToUserId,
-    },
-    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "deadlineDate", "evaluatedAt", "obtainedMarks", "fileUploadId", "createdAt"],
+    where,
+    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "deadlineDate", "evaluatedAt", "obtainedMarks", "markingStatus", "fileUploadId", "createdAt"],
     include: [
       {
         model: model.studentModel,
@@ -340,7 +410,7 @@ export async function getScriptsAssignedToTeacher(
         attributes: ["studentId", "firstName", "middleName", "lastName", "enrollNumber", "scholarNumber"],
         required: false,
       },
-      examScheduleDetailInclude(),
+      examScheduleInclude,
       {
         model: model.userModel,
         as: "assignedTeacher",
@@ -351,6 +421,7 @@ export async function getScriptsAssignedToTeacher(
     order: [["id", "DESC"]],
     limit,
     offset,
+    distinct: true,
   });
 }
 
@@ -369,6 +440,7 @@ export async function getMySingleAssignedScript(id, assignedToUserId) {
       "deadlineDate",
       "evaluatedAt",
       "obtainedMarks",
+      "markingStatus",
       "fileUploadId",
       "createdAt",
     ],
@@ -415,6 +487,7 @@ export async function findAndCountMappedAnswerSheets(
       "deadlineDate",
       "evaluatedAt",
       "obtainedMarks",
+      "markingStatus",
       "fileUploadId",
       "createdAt",
       "updatedAt",
@@ -649,6 +722,7 @@ export async function findAnswerSheetsByAssignmentId(assignmentId) {
       "deadlineDate",
       "evaluatedAt",
       "obtainedMarks",
+      "markingStatus",
       "fileUploadId",
       "createdAt",
       "updatedAt",

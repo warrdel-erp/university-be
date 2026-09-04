@@ -648,7 +648,9 @@ export async function assignAnswerSheetsToTeachers(
 export async function getScriptsAssignedToTeacher(
   assignedToUserId,
   page = 1,
-  limit = 20
+  limit = 20,
+  examinationSessionId,
+  examScheduleId,
 ) {
   const teacher = await answerSheetQrRepository.getScopedUser(assignedToUserId);
   if (!teacher) {
@@ -659,7 +661,9 @@ export async function getScriptsAssignedToTeacher(
   const { count, rows } = await answerSheetQrRepository.getScriptsAssignedToTeacher(
     assignedToUserId,
     limit,
-    offset
+    offset,
+    examinationSessionId,
+    examScheduleId,
   );
 
   const items = rows.map((item) => {
@@ -677,6 +681,7 @@ export async function getScriptsAssignedToTeacher(
       assignedTeacherEmail: item.assignedTeacher?.email || null,
       evaluatedAt: item.evaluatedAt ?? null,
       obtainedMarks: item.obtainedMarks ?? null,
+      markingStatus: item.markingStatus ?? "pending",
       ...examContext,
       createdAt: item.createdAt,
     };
@@ -764,10 +769,102 @@ export async function assignObtainedMarksToAnswerSheet(
       answerSheetQrId,
       evaluatedAt,
       obtained_marks: obtainedMarks,
+      markingStatus: "pending",
       updated: true,
     };
     await transaction.commit();
     return result;
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+/**
+ * Bulk final-submit answer sheets.
+ * Sets markingStatus to "submit". Existing obtained_marks are kept unless an item
+ * optionally sends obtained_marks. When assignedToUserId is provided, only that
+ * user's sheets are updated.
+ */
+export async function bulkFinalSubmitObtainedMarks(items, assignedToUserId) {
+  const seenIds = new Set();
+  const uniqueIds = [];
+  const marksById = new Map();
+
+  for (const item of items) {
+    const answerSheetQrId =
+      typeof item === "number" ? item : Number(item.answerSheetQrId);
+    if (seenIds.has(answerSheetQrId)) {
+      continue;
+    }
+    seenIds.add(answerSheetQrId);
+    uniqueIds.push(answerSheetQrId);
+
+    if (typeof item === "object" && item.obtained_marks !== undefined) {
+      marksById.set(answerSheetQrId, item.obtained_marks);
+    }
+  }
+
+  const transaction = await sequelize.transaction();
+  try {
+    const existingCount = await answerSheetQrRepository.countAnswerSheetQrsByIds(
+      uniqueIds,
+      transaction,
+    );
+    if (existingCount !== uniqueIds.length) {
+      throw createServiceError(
+        "One or more answer sheet QR records were not found.",
+        404,
+      );
+    }
+
+    const evaluatedAt = new Date();
+    const idsStatusOnly = [];
+
+    for (const answerSheetQrId of uniqueIds) {
+      if (!marksById.has(answerSheetQrId)) {
+        idsStatusOnly.push(answerSheetQrId);
+        continue;
+      }
+
+      const affected =
+        await answerSheetQrRepository.finalSubmitWithObtainedMarksById(
+          answerSheetQrId,
+          marksById.get(answerSheetQrId),
+          assignedToUserId,
+          evaluatedAt,
+          transaction,
+        );
+      if (affected !== 1) {
+        throw createServiceError(
+          assignedToUserId != null
+            ? `Answer sheet ${answerSheetQrId} is not assigned to the current user.`
+            : `Answer sheet ${answerSheetQrId} could not be submitted.`,
+          assignedToUserId != null ? 403 : 404,
+        );
+      }
+    }
+
+    if (idsStatusOnly.length > 0) {
+      const submittedCount =
+        await answerSheetQrRepository.bulkFinalSubmitByIds(
+          idsStatusOnly,
+          assignedToUserId,
+          evaluatedAt,
+          transaction,
+        );
+
+      if (submittedCount !== idsStatusOnly.length) {
+        throw createServiceError(
+          assignedToUserId != null
+            ? "One or more answer sheets are not assigned to the current user."
+            : "One or more answer sheet QR records could not be submitted.",
+          assignedToUserId != null ? 403 : 404,
+        );
+      }
+    }
+
+    await transaction.commit();
   } catch (error) {
     await transaction.rollback();
     throw error;
@@ -982,6 +1079,7 @@ export async function getMySingleAssignedScript(id, assignedToUserId) {
     deadlineDate: plain.deadlineDate ?? null,
     evaluatedAt: plain.evaluatedAt ?? null,
     obtainedMarks: plain.obtainedMarks ?? null,
+    markingStatus: plain.markingStatus ?? "pending",
     fileUploadId: plain.fileUploadId,
     createdAt: plain.createdAt,
     ...buildExamContext(plain, { includeStudentIdentity: false }),
@@ -1028,6 +1126,7 @@ export async function getEvaluationAssignmentDetail(assignmentId) {
       deadlineDate: plain.deadlineDate ?? null,
       evaluatedAt: plain.evaluatedAt ?? null,
       obtainedMarks: plain.obtainedMarks ?? null,
+      markingStatus: plain.markingStatus ?? "pending",
       fileUploadId: plain.fileUploadId,
       createdAt: plain.createdAt,
       updatedAt: plain.updatedAt,
