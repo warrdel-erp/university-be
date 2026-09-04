@@ -223,3 +223,162 @@ export async function findOneStudent(filters) {
     subQuery: false,
   });
 }
+
+/** Count exam schedules for an examination session. */
+export async function countExamSchedulesByExaminationSessionId(
+  examinationSessionId,
+) {
+  return scoped(model.examScheduleModel).count({
+    where: {
+      examinationSessionId: Number(examinationSessionId),
+    },
+  });
+}
+
+/**
+ * Answer-sheet SKU for a session.
+ * checked = markingStatus submit; notChecked = total - checked.
+ */
+export async function countAnswerSheetSkuByExaminationSessionId(
+  examinationSessionId,
+) {
+  const examScheduleInclude = {
+    model: model.examScheduleModel,
+    as: "examSchedule",
+    required: true,
+    attributes: [],
+    where: {
+      examinationSessionId: Number(examinationSessionId),
+      ...buildScope(model.examScheduleModel),
+    },
+  };
+
+  const baseWhere = {
+    studentId: { [Op.ne]: null },
+    examScheduleId: { [Op.ne]: null },
+  };
+
+  const [totalAnswerSheets, checked] = await Promise.all([
+    scoped(model.answerSheetQrModel).count({
+      where: baseWhere,
+      include: [examScheduleInclude],
+      distinct: true,
+      col: "id",
+    }),
+    scoped(model.answerSheetQrModel).count({
+      where: {
+        ...baseWhere,
+        markingStatus: "submit",
+      },
+      include: [examScheduleInclude],
+      distinct: true,
+      col: "id",
+    }),
+  ]);
+
+  return {
+    totalAnswerSheets: Number(totalAnswerSheets) || 0,
+    checked: Number(checked) || 0,
+    notChecked: Math.max(0, Number(totalAnswerSheets) - Number(checked)),
+  };
+}
+
+/** Lightweight schedule contexts: examScheduleId, sessionId, term, courseId. */
+export async function findExamScheduleContextsByExaminationSessionId(
+  examinationSessionId,
+) {
+  return scoped(model.examScheduleModel).findAll({
+    where: { examinationSessionId: Number(examinationSessionId) },
+    attributes: ["examScheduleId", "sessionId", "term"],
+    include: [
+      {
+        model: model.subjectModel,
+        as: "subjectSchedule",
+        required: true,
+        attributes: ["courseId"],
+        where: buildScope(model.subjectModel),
+      },
+    ],
+    raw: true,
+    nest: true,
+  });
+}
+
+/**
+ * Students applicable to session schedules (course/session/term).
+ * Returns only ids + courseId/sessionId/term.
+ */
+export async function findApplicableStudentContexts(filters) {
+  const studentWhere = { ...buildScope(model.studentModel) };
+
+  const classSectionWhere = {
+    academicYearId: Number(filters.academicYearId),
+    ...buildScope(model.classSectionModel),
+  };
+  if (filters.classSectionOr?.length) {
+    classSectionWhere[Op.or] = filters.classSectionOr;
+  }
+
+  const courseSessionOr = [];
+  for (const combo of filters.courseSessionCombos || []) {
+    courseSessionOr.push({
+      courseId: Number(combo.courseId),
+      sessionId: Number(combo.sessionId),
+    });
+  }
+  if (courseSessionOr.length) {
+    studentWhere[Op.or] = courseSessionOr;
+  }
+
+  return scoped(model.studentModel).findAll({
+    attributes: ["studentId", "courseId", "sessionId"],
+    where: studentWhere,
+    include: [
+      {
+        model: model.classSectionTermModel,
+        as: "studentClassSectionTerm",
+        required: true,
+        attributes: ["term"],
+        where: { term: { [Op.in]: filters.terms } },
+        include: [
+          {
+            model: model.classSectionModel,
+            as: "classSection",
+            required: true,
+            attributes: [],
+            where: classSectionWhere,
+          },
+        ],
+      },
+    ],
+    raw: true,
+    nest: true,
+  });
+}
+
+/** Submitted (checked) answer sheets for a session: studentId + examScheduleId only. */
+export async function findSubmittedAnswerSheetPairsByExaminationSessionId(
+  examinationSessionId,
+) {
+  return scoped(model.answerSheetQrModel).findAll({
+    where: {
+      studentId: { [Op.ne]: null },
+      examScheduleId: { [Op.ne]: null },
+      markingStatus: "submit",
+    },
+    attributes: ["studentId", "examScheduleId"],
+    include: [
+      {
+        model: model.examScheduleModel,
+        as: "examSchedule",
+        required: true,
+        attributes: [],
+        where: {
+          examinationSessionId: Number(examinationSessionId),
+          ...buildScope(model.examScheduleModel),
+        },
+      },
+    ],
+    raw: true,
+  });
+}

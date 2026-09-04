@@ -28,6 +28,11 @@ const query = z.object({
   limit: id.optional().default(20),
 });
 
+const skuQuery = z.object({
+  examinationSessionId: id,
+});
+
+router.get("/sku", userAuth, validate({ query: skuQuery }), examResultController.getSku);
 router.get("/students", userAuth, validate({ query }), examResultController.listStudents);
 router.get("/students/:studentId", userAuth, validate({ params: z.object({ studentId: id }), query }), examResultController.getStudentById);
 

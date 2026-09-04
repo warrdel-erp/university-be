@@ -628,8 +628,38 @@
     },
     {
       "name": "3. Exam Result",
-      "description": "Result readiness for an examination session.\n\nREADY only when every applicable exam_schedule for the student (course + session + term) has an answer_sheet_qr with markingStatus=submit.\nMissing sheet or pending marks => NOT_READY.\nNo applicable schedules => NOT_READY with totalExams=0.\n\nList and getOne share the same readiness calculation.",
+      "description": "Result readiness for an examination session.\n\nREADY only when every applicable exam_schedule for the student (course + session + term) has an answer_sheet_qr with markingStatus=submit.\nMissing sheet or pending marks => NOT_READY.\nNo applicable schedules => NOT_READY with totalExams=0.\n\nList and getOne share the same readiness calculation.\nSKU returns flat card counts only for a required examinationSessionId.",
       "item": [
+        {
+          "name": "3.0 GET Exam Result SKU",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examResult/sku?examinationSessionId={{evaluation_examinationSessionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examResult",
+                "sku"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "{{evaluation_examinationSessionId}}",
+                  "description": "Required. Example: 1"
+                }
+              ]
+            },
+            "description": "GET /examResult/sku?examinationSessionId=1\n\nAuth: Bearer token\n\nQuery:\n- examinationSessionId (required)\n\nResponse data (flat only):\n{\n  \"examinationSessionId\": 1,\n  \"totalExams\": 0,\n  \"totalStudents\": 0,\n  \"totalAnswerSheets\": 0,\n  \"checked\": 0,\n  \"notChecked\": 0,\n  \"ready\": 0,\n  \"notReady\": 0\n}\n\nCounts:\n- totalExams: exam_schedule rows for this session\n- totalStudents: same as examination session list — distinct students in session terms + academicYearId (countWholeTermStudentsByTerms)\n- totalAnswerSheets / checked / notChecked: answer_sheet_qr linked to those schedules; checked = markingStatus=submit\n- ready / notReady: students with every applicable schedule submitted vs not (notReady = totalStudents - ready)\n- Missing session => 404; no schedules => ready=0, notReady=totalStudents"
+          }
+        },
         {
           "name": "3.1 GET Exam Result Students (list)",
           "request": {

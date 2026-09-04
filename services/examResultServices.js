@@ -1,4 +1,11 @@
 import * as examResultRepository from "../repository/examResultRepository.js";
+import { countWholeTermStudentsByTerms } from "../utility/studentCount.js";
+import {
+  decimalAdd,
+  decimalMax,
+  decimalSubtract,
+  toMoneyNumber,
+} from "../utility/decimalMoney.js";
 
 /**
  * Shared readiness from applicable exam schedules + this student's answer sheets.
@@ -15,7 +22,7 @@ export function calculateResultReadiness(applicableSchedules, sheetByExamSchedul
     const sheet = sheetByExamScheduleId.get(examScheduleId) || null;
     const isSubmitted = Boolean(sheet && sheet.markingStatus === "submit");
 
-    if (isSubmitted) submittedExams += 1;
+    if (isSubmitted) submittedExams = decimalAdd(submittedExams, 1);
 
     exams.push({
       examScheduleId,
@@ -26,13 +33,16 @@ export function calculateResultReadiness(applicableSchedules, sheetByExamSchedul
       answerSheetQrId: sheet ? sheet.id : null,
       answerSheetStatus: sheet ? sheet.markingStatus : null,
       isSubmitted,
-      obtainedMarks: sheet ? sheet.obtainedMarks : null,
+      obtainedMarks:
+        sheet == null || sheet.obtainedMarks == null
+          ? null
+          : toMoneyNumber(sheet.obtainedMarks),
       evaluatedAt: sheet ? sheet.evaluatedAt : null,
     });
   }
 
   const totalExams = exams.length;
-  const pendingExams = totalExams - submittedExams;
+  const pendingExams = decimalSubtract(totalExams, submittedExams);
 
   return {
     readiness: {
@@ -300,5 +310,144 @@ export async function getStudentById(studentId, query) {
     },
     readiness,
     exams,
+  };
+}
+
+function emptySku(examinationSessionId) {
+  return {
+    examinationSessionId: Number(examinationSessionId),
+    totalExams: 0,
+    totalStudents: 0,
+    totalAnswerSheets: 0,
+    checked: 0,
+    notChecked: 0,
+    ready: 0,
+    notReady: 0,
+  };
+}
+
+/**
+ * Flat SKU card for an examination session.
+ * totalStudents = same whole-term count as examination session list
+ * checked = answerSheetQr.markingStatus submit
+ * ready = student has every applicable schedule submitted
+ */
+export async function getSku(query) {
+  const examinationSessionId = Number(query.examinationSessionId);
+
+  const examSession = await examResultRepository.findExaminationSession(
+    examinationSessionId,
+  );
+  if (!examSession) {
+    const err = new Error("Examination session not found.");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const terms = [];
+  for (const row of examSession.examinationSessionTerms) {
+    terms.push(Number(row.term));
+  }
+
+  const academicYearId = examSession.academicYearId;
+  if (academicYearId == null || !terms.length) {
+    return emptySku(examinationSessionId);
+  }
+
+  const [totalExams, sheetSku, totalStudents, scheduleRows] = await Promise.all([
+    examResultRepository.countExamSchedulesByExaminationSessionId(
+      examinationSessionId,
+    ),
+    examResultRepository.countAnswerSheetSkuByExaminationSessionId(
+      examinationSessionId,
+    ),
+    countWholeTermStudentsByTerms(terms, academicYearId),
+    examResultRepository.findExamScheduleContextsByExaminationSessionId(
+      examinationSessionId,
+    ),
+  ]);
+
+  const studentTotal = Number(totalStudents) || 0;
+
+  if (!totalExams || !scheduleRows.length) {
+    return {
+      examinationSessionId,
+      totalExams: Number(totalExams) || 0,
+      totalStudents: studentTotal,
+      totalAnswerSheets: sheetSku.totalAnswerSheets,
+      checked: sheetSku.checked,
+      notChecked: sheetSku.notChecked,
+      ready: 0,
+      notReady: studentTotal,
+    };
+  }
+
+  const schedules = [];
+  for (const row of scheduleRows) {
+    schedules.push({
+      examScheduleId: Number(row.examScheduleId),
+      courseId: Number(row.subjectSchedule.courseId),
+      sessionId: Number(row.sessionId),
+      term: row.term == null ? null : Number(row.term),
+    });
+  }
+
+  const [studentRows, submitPairs] = await Promise.all([
+    examResultRepository.findApplicableStudentContexts({
+      academicYearId,
+      terms,
+    }),
+    examResultRepository.findSubmittedAnswerSheetPairsByExaminationSessionId(
+      examinationSessionId,
+    ),
+  ]);
+
+  const submitSet = new Set();
+  for (const pair of submitPairs) {
+    submitSet.add(`${Number(pair.studentId)}-${Number(pair.examScheduleId)}`);
+  }
+
+  let ready = 0;
+  const studentSeen = new Set();
+
+  for (const row of studentRows) {
+    const studentId = Number(row.studentId);
+    if (studentSeen.has(studentId)) continue;
+    studentSeen.add(studentId);
+
+    const courseId = Number(row.courseId);
+    const sessionId = Number(row.sessionId);
+    const term = Number(row.studentClassSectionTerm.term);
+
+    const applicable = [];
+    for (const schedule of schedules) {
+      if (schedule.courseId !== courseId) continue;
+      if (schedule.sessionId !== sessionId) continue;
+      if (schedule.term != null && schedule.term !== term) continue;
+      applicable.push(schedule);
+    }
+
+    // No applicable exams => NOT_READY (same as list/detail readiness)
+    if (!applicable.length) continue;
+
+    let isReady = true;
+    for (const schedule of applicable) {
+      if (!submitSet.has(`${studentId}-${schedule.examScheduleId}`)) {
+        isReady = false;
+        break;
+      }
+    }
+    if (isReady) ready = decimalAdd(ready, 1);
+  }
+
+  return {
+    examinationSessionId,
+    totalExams: Number(totalExams) || 0,
+    totalStudents: studentTotal,
+    totalAnswerSheets: sheetSku.totalAnswerSheets,
+    checked: sheetSku.checked,
+    notChecked: sheetSku.notChecked,
+    ready,
+    notReady: decimalMax(0, decimalSubtract(studentTotal, ready)),
   };
 }

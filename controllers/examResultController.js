@@ -18,3 +18,12 @@ export async function getStudentById(req, res) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to fetch exam result student");
   }
 }
+
+export async function getSku(req, res) {
+  try {
+    const result = await examResultServices.getSku(req.query);
+    return SuccessResponse(res, 200, "Exam result SKU fetched successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to fetch exam result SKU");
+  }
+}
