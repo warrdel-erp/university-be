@@ -111,6 +111,7 @@ import subjectWeightage from "./router/subjectWeightageRoute.js";
 import libraryIssueBookTransaction from "./router/libraryIssueBookTransactionRoute.js";
 import answerSheetQr from "./router/answerSheetQrRoute.js";
 import examResult from "./router/examResultRoute.js";
+import examOperations from "./router/examOperationsRoute.js";
 import s3FileRoute from "./router/s3FileRoute.js";
 // middleware
 app.use((req, res, next) => {
@@ -246,6 +247,7 @@ app.use("/transportRoute", transportRoute);
 app.use("/answerSheetQr", answerSheetQr);
 
 app.use("/examResult", examResult);
+app.use("/examOperations", examOperations);
 
 app.use("/fileUpload", s3FileRoute);
 
