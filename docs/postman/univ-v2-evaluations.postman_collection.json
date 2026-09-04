@@ -1,0 +1,874 @@
+{
+  "info": {
+    "_postman_id": "evaluations-api-collection-v2",
+    "name": "Evaluations Module (Simplified)",
+    "description": "Simplified Postman collection focusing only on the core Answer Sheet evaluation workflow (Mapping, Assigning, and Grading).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Admin: Mapping & Assignment",
+      "description": "Admin APIs to map answer sheets and assign evaluators.",
+      "item": [
+        {
+          "name": "1.1 PATCH Map QR To Student",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr\": \"{{evaluation_qr}}\",\n  \"studentId\": {{evaluation_studentId}},\n  \"examScheduleId\": {{evaluation_examScheduleId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/map",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "map"
+              ]
+            },
+            "description": "PATCH /answerSheetQr/map"
+          }
+        },
+        {
+          "name": "1.2 GET Mapped Answer Sheets",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/list?examinationSessionId=1&selections=%5B%7B%22courseSessionMappingId%22%3A34%2C%22terms%22%3A%5B1%2C2%2C4%5D%7D%5D&page=1&limit=20",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "list"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "1"
+                },
+                {
+                  "key": "examScheduleId",
+                  "value": "{{evaluation_examScheduleId}}"
+                },
+                {
+                  "key": "selections",
+                  "value": "%5B%7B%22courseSessionMappingId%22%3A34%2C%22terms%22%3A%5B1%2C2%2C4%5D%7D%5D",
+                  "description": "JSON array: [{\"courseSessionMappingId\":34,\"terms\":[1,2,4]}]"
+                },
+                {
+                  "key": "examDate",
+                  "value": "2026-06-15",
+                  "disabled": true
+                },
+                {
+                  "key": "examinationSessionSlotId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "subjectId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "unassigned",
+                  "description": "unassigned | graded (markingStatus=submit; omit for all)",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "GET /answerSheetQr/list — optional status: unassigned (no evaluator) or graded (markingStatus=submit). Each item includes markingStatus (submit = checked). Assignment-wise rows: GET /answerSheetQr/assignmentslist."
+          }
+        },
+        {
+          "name": "1.2b GET Evaluation Assignments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/assignmentslist?examinationSessionId={{evaluation_examinationSessionId}}&page=1&limit=20",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "assignmentslist"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "{{evaluation_examinationSessionId}}"
+                },
+                {
+                  "key": "examScheduleId",
+                  "value": "{{evaluation_examScheduleId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "selections",
+                  "value": "{{evaluation_selections}}",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "GET /answerSheetQr/assignmentslist — one row per assignment. Nested examSchedules[] with subject name/code, exam dates, and SKU counts.\n\ngradedScripts / remainingScripts use markingStatus=submit as checked."
+          }
+        },
+        {
+          "name": "1.3 POST Assign Evaluator",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assignedToUserId\": {{evaluation_assignedToUserId}},\n  \"answerSheetQrIds\": [\n    {{evaluation_answerSheetQrId}}\n  ],\n  \"deadlineDate\": \"{{evaluation_deadline}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/assign/evaluator",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "assign",
+                "evaluator"
+              ]
+            },
+            "description": "POST /answerSheetQr/assign/evaluator — bulk assign one user to many answer sheets."
+          }
+        },
+        {
+          "name": "1.4 GET Scripts By Evaluator",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/evaluator/{{evaluation_assignedToUserId}}?page=1&limit=20",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "evaluator",
+                "{{evaluation_assignedToUserId}}"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "GET /answerSheetQr/evaluator/:assignedToUserId — admin view of scripts assigned to a specific evaluator. Requires ANSWER_SHEET_QRS.\n\nResponse data: { items: [...], teacher: { userId, userName, email } }"
+          }
+        },
+        {
+          "name": "1.5 GET Answer Sheet QR By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/{{evaluation_answerSheetQrId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "{{evaluation_answerSheetQrId}}"
+              ]
+            },
+            "description": "GET /answerSheetQr/:id — admin detail view. Requires ANSWER_SHEET_QRS."
+          }
+        },
+        {
+          "name": "1.5b GET Approved Question Paper By Answer Sheet",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/questionPaper?answerSheetQrId={{evaluation_answerSheetQrId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "questionPaper"
+              ],
+              "query": [
+                {
+                  "key": "answerSheetQrId",
+                  "value": "{{evaluation_answerSheetQrId}}"
+                }
+              ]
+            },
+            "description": "GET /answerSheetQr/questionPaper?answerSheetQrId= — approved question paper (finalApproval=Approved) for the answer sheet's exam schedule. Requires ANSWER_SHEET_QRS."
+          }
+        },
+        {
+          "name": "1.6 PATCH Assign Obtained Marks (admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"obtained_marks\": {{evaluation_obtainedMarks}}\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/{{evaluation_answerSheetQrId}}/obtainedMarks",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "{{evaluation_answerSheetQrId}}",
+                "obtainedMarks"
+              ]
+            },
+            "description": "PATCH /answerSheetQr/:id/obtainedMarks — admin draft marks entry. Sets markingStatus to pending. Requires EVALUATION_EXECUTE."
+          }
+        },
+        {
+          "name": "1.7 POST Final Submit (bulk, admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {{evaluation_answerSheetQrId}}\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/finalSubmit",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "finalSubmit"
+              ]
+            },
+            "description": "POST /answerSheetQr/finalSubmit — admin bulk final submit. Sets markingStatus to submit; keeps existing obtained_marks unless provided.\n\nPayload: { \"items\": [1, 2, 3] } or { \"items\": [{ \"answerSheetQrId\": 1 }, { \"answerSheetQrId\": 2, \"obtained_marks\": 75 }] }\n\nRequires EVALUATION_EXECUTE."
+          }
+        },
+        {
+          "name": "1.8 GET Answer Sheet SKU Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/skuStats?examinationSessionId={{evaluation_examinationSessionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "skuStats"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "{{evaluation_examinationSessionId}}"
+                }
+              ]
+            },
+            "description": "GET /answerSheetQr/skuStats?examinationSessionId= — session-level answer sheet SKU counts for mapped scripts.\n\nResponse format matches /my/skuStats — data.sku:\n- totalAssigned\n- graded\n- notChecked\n- overdue\n- dueToday"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Evaluator: Self-Service (/my)",
+      "description": "Endpoints for the assigned evaluator to view their scripts and submit marks.",
+      "item": [
+        {
+          "name": "2.1 GET My SKU Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/my/skuStats",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "my",
+                "skuStats"
+              ]
+            },
+            "description": "GET /answerSheetQr/my/skuStats — teacher dashboard SKU counts.\n\nChecked = markingStatus submit.\n\nResponse data.sku:\n- totalAssigned\n- graded (markingStatus=submit)\n- notChecked (markingStatus pending)\n- overdue (pending past deadline)\n- dueToday (pending due today)"
+          }
+        },
+        {
+          "name": "2.2 GET My Evaluation Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/my/summary",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "my",
+                "summary"
+              ]
+            },
+            "description": "GET /answerSheetQr/my/summary — totalAssigned, evaluated (markingStatus=submit), pending (not submit)."
+          }
+        },
+        {
+          "name": "2.3 GET My Assigned Scripts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/my?page=1&limit=20&examinationSessionId={{evaluation_examinationSessionId}}&examScheduleId={{evaluation_examScheduleId}}&status=saved",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "my"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "examinationSessionId",
+                  "value": "{{evaluation_examinationSessionId}}"
+                },
+                {
+                  "key": "examScheduleId",
+                  "value": "{{evaluation_examScheduleId}}"
+                },
+                {
+                  "key": "status",
+                  "value": "saved",
+                  "description": "Optional. saved | submitted\n- submitted: markingStatus=submit (checked)\n- saved: markingStatus=pending AND obtainedMarks is not null (draft marks, including 0)"
+                }
+              ]
+            },
+            "description": "GET /answerSheetQr/my — optional examinationSessionId, examScheduleId, status (saved|submitted). Each item includes markingStatus, obtainedMarks, fileUploadId and s3File."
+          }
+        },
+        {
+          "name": "2.3b GET My Evaluation Examination Sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/my/evaluationExaminationSessions",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "my",
+                "evaluationExaminationSessions"
+              ]
+            },
+            "description": "GET /answerSheetQr/my/evaluationExaminationSessions — reverse populate from assigned scripts via Sequelize joins.\n\nShape: examinationSession → examinationSessionTerms[] + examSchedules[] (subjectSchedule.courseInfo, totalAssigned/graded/remaining).\n\nexaminationSessionTerms only include terms that appear on the evaluator's assigned examSchedules (e.g. only term 1 when all schedules are term 1)."
+          }
+        },
+        {
+          "name": "2.4 GET My Single Script",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/my/single?id=2",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "my",
+                "single"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "2"
+                }
+              ]
+            },
+            "description": "GET /answerSheetQr/my/single?id=2 — single script without student details. Includes markingStatus (submit = checked)."
+          }
+        },
+        {
+          "name": "2.5 PATCH My Obtained Marks",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"obtained_marks\": {{evaluation_obtainedMarks}}\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/my/{{evaluation_answerSheetQrId}}/obtainedMarks",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "my",
+                "{{evaluation_answerSheetQrId}}",
+                "obtainedMarks"
+              ]
+            },
+            "description": "PATCH /answerSheetQr/my/:id/obtainedMarks — draft save; sets markingStatus to pending."
+          }
+        },
+        {
+          "name": "2.5b GET My Approved Question Paper",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/my/questionPaper?answerSheetQrId={{evaluation_answerSheetQrId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "my",
+                "questionPaper"
+              ],
+              "query": [
+                {
+                  "key": "answerSheetQrId",
+                  "value": "{{evaluation_answerSheetQrId}}"
+                }
+              ]
+            },
+            "description": "GET /answerSheetQr/my/questionPaper?answerSheetQrId= — approved question paper (finalApproval=Approved) for the answer sheet's exam schedule. Sheet must be assigned to the current evaluator."
+          }
+        },
+        {
+          "name": "2.6 POST My Final Submit (bulk)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {{evaluation_answerSheetQrId}}\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/my/finalSubmit",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "my",
+                "finalSubmit"
+              ]
+            },
+            "description": "POST /answerSheetQr/my/finalSubmit — bulk final submit for sheets assigned to the current evaluator. Sets markingStatus to submit; keeps existing obtained_marks unless provided.\n\nPayload: { \"items\": [1, 2, 3] } or { \"items\": [{ \"answerSheetQrId\": 1 }, { \"answerSheetQrId\": 2, \"obtained_marks\": 75 }] }"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Exam Result",
+      "description": "Result readiness for an examination session.\n\nREADY only when every applicable exam_schedule for the student (course + session + term) has an answer_sheet_qr with markingStatus=submit.\nMissing sheet or pending marks => NOT_READY.\nNo applicable schedules => NOT_READY with totalExams=0.\n\nList and getOne share the same readiness calculation.\nSKU returns flat card counts only for a required examinationSessionId.",
+      "item": [
+        {
+          "name": "3.0 GET Exam Result SKU",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examResult/sku?examinationSessionId={{evaluation_examinationSessionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examResult",
+                "sku"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "{{evaluation_examinationSessionId}}",
+                  "description": "Required. Example: 1"
+                }
+              ]
+            },
+            "description": "GET /examResult/sku?examinationSessionId=1\n\nAuth: Bearer token\n\nQuery:\n- examinationSessionId (required)\n\nResponse data (flat only):\n{\n  \"examinationSessionId\": 1,\n  \"totalExams\": 0,\n  \"totalStudents\": 0,\n  \"totalAnswerSheets\": 0,\n  \"checked\": 0,\n  \"notChecked\": 0,\n  \"ready\": 0,\n  \"notReady\": 0\n}\n\nCounts:\n- totalExams: exam_schedule rows for this session\n- totalStudents: same as examination session list — distinct students in session terms + academicYearId (countWholeTermStudentsByTerms)\n- totalAnswerSheets / checked / notChecked: answer_sheet_qr linked to those schedules; checked = markingStatus=submit\n- ready / notReady: students with every applicable schedule submitted vs not (notReady = totalStudents - ready)\n- Missing session => 404; no schedules => ready=0, notReady=totalStudents"
+          }
+        },
+        {
+          "name": "3.1 GET Exam Result Students (list)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examResult/students?examinationSessionId={{evaluation_examinationSessionId}}&selections={{evaluation_selections}}&page=1&limit=20",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examResult",
+                "students"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "{{evaluation_examinationSessionId}}",
+                  "description": "Optional. Defaults to latest examination session when omitted."
+                },
+                {
+                  "key": "selections",
+                  "value": "{{evaluation_selections}}",
+                  "description": "Optional JSON: [{\"courseSessionMappingId\":34,\"terms\":[1,2]}]"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Optional. Matches name / scholarNumber / enrollNumber",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "GET /examResult/students\n\nAuth: Bearer token\n\nQuery:\n- examinationSessionId (optional → latest)\n- selections (optional JSON course/session/term filter)\n- search, page, limit\n\nResponse data:\n{\n  \"examinationSession\": { examinationSessionId, sessionName, academicYearId, assessmentTypeId, status },\n  \"items\": [\n    {\n      \"studentId\": 2,\n      \"studentName\": \"Ada Lovelace\",\n      \"scholarNo\": \"SCH001\",\n      \"enrollNumber\": \"ENR001\",\n      \"courseId\": 1,\n      \"sessionId\": 1,\n      \"term\": 1,\n      \"totalExams\": 3,\n      \"submittedExams\": 2,\n      \"pendingExams\": 1,\n      \"readinessStatus\": \"NOT_READY\"\n    }\n  ]\n}\n\nPagination: page, limit, total, totalPages\n\nreadinessStatus: READY | NOT_READY (same rules as 3.2)"
+          }
+        },
+        {
+          "name": "3.2 GET Exam Result Student (detail)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examResult/students/{{evaluation_studentId}}?examinationSessionId={{evaluation_examinationSessionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examResult",
+                "students",
+                "{{evaluation_studentId}}"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "{{evaluation_examinationSessionId}}",
+                  "description": "Optional. Defaults to latest examination session when omitted. Example: 1"
+                },
+                {
+                  "key": "selections",
+                  "value": "{{evaluation_selections}}",
+                  "description": "Optional JSON: [{\"courseSessionMappingId\":34,\"terms\":[1,2]}]",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "GET /examResult/students/:studentId?examinationSessionId=1\n\nExample: GET /examResult/students/2?examinationSessionId=1\n\nAuth: Bearer token\n\nParams:\n- studentId (required)\n\nQuery:\n- examinationSessionId (optional → latest)\n- selections (optional)\n\nResponse data:\n{\n  \"examinationSession\": { examinationSessionId, sessionName, academicYearId, assessmentTypeId, status },\n  \"student\": {\n    \"studentId\": 2,\n    \"studentName\": \"Ada Lovelace\",\n    \"scholarNo\": \"SCH001\",\n    \"enrollNumber\": \"ENR001\",\n    \"courseId\": 1,\n    \"sessionId\": 1,\n    \"term\": 1\n  },\n  \"readiness\": {\n    \"status\": \"READY\",\n    \"totalExams\": 2,\n    \"submittedExams\": 2,\n    \"pendingExams\": 0\n  },\n  \"exams\": [\n    {\n      \"examScheduleId\": 10,\n      \"subjectId\": 5,\n      \"subjectName\": \"Mathematics\",\n      \"subjectCode\": \"MATH101\",\n      \"examDate\": \"2026-06-15\",\n      \"answerSheetQrId\": 101,\n      \"answerSheetStatus\": \"submit\",\n      \"isSubmitted\": true,\n      \"obtainedMarks\": \"75.00\",\n      \"evaluatedAt\": \"2026-06-20T10:00:00.000Z\"\n    },\n    {\n      \"examScheduleId\": 11,\n      \"subjectId\": 6,\n      \"subjectName\": \"Physics\",\n      \"subjectCode\": \"PHY101\",\n      \"examDate\": \"2026-06-16\",\n      \"answerSheetQrId\": null,\n      \"answerSheetStatus\": null,\n      \"isSubmitted\": false,\n      \"obtainedMarks\": null,\n      \"evaluatedAt\": null\n    }\n  ]\n}\n\nRules:\n- Only exam schedules for this student's courseId + sessionId + term\n- Match answerSheetQr by studentId + examScheduleId\n- No fake sheets; missing sheet => null fields, exam counts as pending\n- READY iff totalExams > 0 AND submittedExams === totalExams\n- 404 if examination session or student not found for filters"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseurl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_qr_count",
+      "value": "10",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_requestId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_answerSheetQrId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_qr",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_studentId",
+      "value": "2",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_examScheduleId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_examinationSessionId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_selections",
+      "value": "[{\"courseSessionMappingId\":1,\"terms\":[1]}]",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_assignedToUserId",
+      "value": "56",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_obtainedMarks",
+      "value": "75",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_answerSheetS3FileId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_splitJobDbId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_examSetupTypeId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_subjectId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_evalutionId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_examAssessmentId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_assessmentEvalutionId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_term",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_internalAssessment_type",
+      "value": "Assignment",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_totalMarks",
+      "value": "100",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_teacherExamAssignmentId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "evaluation_deadline",
+      "value": "2026-08-30",
+      "type": "string"
+    }
+  ]
+}

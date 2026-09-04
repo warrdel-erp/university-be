@@ -1635,16 +1635,19 @@ export async function getSessionSkuStats(examinationSessionId, options = {}) {
     approvedQuestionPapers = qpCounts.approved;
   }
 
-  const hallTicketsCount =
-    await examinationSessionRepository.countHallTicketsBySession(
+  const [hallTicketsCount, answerSheetScan] = await Promise.all([
+    examinationSessionRepository.countHallTicketsBySession(
       parsedSessionId,
       options,
-    );
+    ),
+    examinationSessionRepository.countAnswerSheetScanStatsBySession(
+      parsedSessionId,
+      options,
+    ),
+  ]);
 
   let totalBundles = 0;
   let receivedBundles = 0;
-  let invigilatorsTotal = 0;
-  let invigilatorsAssigned = 0;
 
   if (schedules.length > 0) {
     const uniqueDates = [];
@@ -1665,24 +1668,16 @@ export async function getSessionSkuStats(examinationSessionId, options = {}) {
       }
     }
 
-    const [bundleCounts, invigilatorCounts] = await Promise.all([
-      uniqueDates.length > 0 && uniqueSlotIds.length > 0
-        ? examinationSessionRepository.countBundlesByDatesAndSlots(
-            uniqueDates,
-            uniqueSlotIds,
-            options,
-          )
-        : Promise.resolve({ total: 0, received: 0 }),
-      examinationSessionRepository.countInvigilatorStatsForSchedules(
-        examScheduleIds,
-        options,
-      ),
-    ]);
-
-    totalBundles = bundleCounts.total;
-    receivedBundles = bundleCounts.received;
-    invigilatorsTotal = invigilatorCounts.total;
-    invigilatorsAssigned = invigilatorCounts.assigned;
+    if (uniqueDates.length > 0 && uniqueSlotIds.length > 0) {
+      const bundleCounts =
+        await examinationSessionRepository.countBundlesByDatesAndSlots(
+          uniqueDates,
+          uniqueSlotIds,
+          options,
+        );
+      totalBundles = bundleCounts.total;
+      receivedBundles = bundleCounts.received;
+    }
   }
 
   return {
@@ -1702,9 +1697,13 @@ export async function getSessionSkuStats(examinationSessionId, options = {}) {
       total: totalBundles,
       received: receivedBundles,
     },
-    invigilators: {
-      assigned: invigilatorsAssigned,
-      total: invigilatorsTotal,
+    scanned: {
+      total: answerSheetScan.total,
+      scanned: answerSheetScan.scanned,
+    },
+    submit: {
+      total: answerSheetScan.total,
+      submit: answerSheetScan.submit,
     },
   };
 }

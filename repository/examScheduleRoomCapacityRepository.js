@@ -2,8 +2,9 @@ import * as model from "../models/index.js";
 import { Op, fn, col } from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { doTimeSlotsOverlap, getTimeSlotRange } from "../utility/timeSlot.js";
+import { countStudentsForExamGroup } from "../utility/studentCount.js";
 
-async function assertScopedExamSchedule(examScheduleId, options = {}) {
+export async function assertScopedExamSchedule(examScheduleId, options = {}) {
   const { transaction, attributes = ['examScheduleId'] } = options;
   return scoped(model.examScheduleModel).findOne({
     where: { examScheduleId },
@@ -111,7 +112,7 @@ export async function addExamRoomCapacity(data, transaction) {
   if (!schedule) {
     throw new Error('Exam schedule not found');
   }
-  return await model.examScheduleRoomCapacityModel.create(data, { transaction });
+  return scoped(model.examScheduleRoomCapacityModel).create(data, { transaction });
 }
 
 export async function bulkAddExamRoomCapacity(data, transaction) {
@@ -121,7 +122,7 @@ export async function bulkAddExamRoomCapacity(data, transaction) {
       throw new Error('Exam schedule not found');
     }
   }
-  return await model.examScheduleRoomCapacityModel.bulkCreate(data, { transaction });
+  return scoped(model.examScheduleRoomCapacityModel).bulkCreate(data, { transaction });
 }
 
 export async function updateExamRoomCapacity(examScheduleRoomCapacityId, data, transaction) {
@@ -385,25 +386,7 @@ export async function getSeatAllocationCountsByRoomCapacityIds(examScheduleRoomC
 }
 
 export async function getEnrolledStudentsCount(sessionId, courseId, term, academicYearId, transaction = null) {
-  return await scoped(model.studentModel).count({
-    include: [
-      {
-        model: model.classSectionTermModel,
-        as: 'studentClassSectionTerm',
-        required: true,
-        where: { term },
-        include: [
-          {
-            model: model.classSectionModel,
-            as: 'classSection',
-            required: true,
-            where: { sessionId, courseId, academicYearId },
-          }
-        ]
-      }
-    ],
-    transaction
-  });
+  return countStudentsForExamGroup(sessionId, courseId, term, academicYearId, { transaction });
 }
 
 export async function getAlreadyAssignedCapacity(examScheduleId, transaction = null) {

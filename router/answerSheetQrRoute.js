@@ -11,11 +11,22 @@ import {
   assignAnswerSheetsToTeachers,
   getScriptsAssignedToTeacher,
   getMyAssignedScripts,
+  getMyAnswerSheetSkuStats,
+  getAnswerSheetSkuStats,
   getMyEvaluationSummary,
+  getMyEvaluationExaminationSessions,
   assignObtainedMarksToAnswerSheet,
+  assignMyObtainedMarksToAnswerSheet,
+  bulkFinalSubmitObtainedMarks,
+  bulkMyFinalSubmitObtainedMarks,
   splitAnswerSheetPdf,
   getSplitPdfJobStatus,
   getMappedAnswerSheetsByExamSession,
+  listEvaluationAssignmentsByExamSession,
+  getMySingleAssignedScript,
+  getEvaluationAssignmentById,
+  getApprovedQuestionPaperByAnswerSheetId,
+  getMyApprovedQuestionPaperByAnswerSheetId,
 } from "../controllers/answerSheetQrController.js";
 
 const router = Router();
@@ -46,6 +57,13 @@ const idParamSchema = z.object({
     .number()
     .int("id must be an integer")
     .positive("id must be greater than 0"),
+});
+
+const answerSheetQrIdQuerySchema = z.object({
+  answerSheetQrId: z.coerce
+    .number()
+    .int("answerSheetQrId must be an integer")
+    .positive("answerSheetQrId must be greater than 0"),
 });
 
 const requestIdParamSchema = z.object({
@@ -80,6 +98,13 @@ const assignTeachersSchema = z.object({
         .positive("answerSheetQrId must be greater than 0")
     )
     .min(1, "At least one answerSheetQrId is required"),
+  deadlineDate: z
+    .string({ required_error: "deadlineDate is required." })
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD"),
+  notes: z.preprocess(
+    (val) => (val === "" || val == null ? undefined : val),
+    z.string().trim().max(5000, "notes must be at most 5000 characters").optional(),
+  ),
 });
 
 const teacherIdParamSchema = z.object({
@@ -89,11 +114,166 @@ const teacherIdParamSchema = z.object({
     .positive("assignedToUserId must be greater than 0"),
 });
 
+const assignmentIdParamSchema = z.object({
+  assignmentId: z.coerce
+    .number()
+    .int("assignmentId must be an integer")
+    .positive("assignmentId must be greater than 0"),
+});
+
 const assignObtainedMarksSchema = z.object({
   obtained_marks: z.coerce
     .number()
     .min(0, "obtained_marks must be greater than or equal to 0")
     .max(999.99, "obtained_marks must be less than or equal to 999.99"),
+});
+
+const bulkFinalSubmitSchema = z.object({
+  items: z
+    .array(
+      z.union([
+        z.coerce
+          .number()
+          .int("answerSheetQrId must be an integer")
+          .positive("answerSheetQrId must be greater than 0"),
+        z.object({
+          answerSheetQrId: z.coerce
+            .number()
+            .int("answerSheetQrId must be an integer")
+            .positive("answerSheetQrId must be greater than 0"),
+          obtained_marks: z.coerce
+            .number()
+            .min(0, "obtained_marks must be greater than or equal to 0")
+            .max(999.99, "obtained_marks must be less than or equal to 999.99")
+            .optional(),
+        }),
+      ]),
+    )
+    .min(1, "At least one item is required"),
+});
+
+const emptyToUndefined = (val) => (val === "" ? undefined : val);
+const positiveIntegerQueryId = z.preprocess(
+  (val) => (typeof val === "string" ? parseInt(val, 10) : val),
+  z
+    .number({ invalid_type_error: "Must be an integer" })
+    .int()
+    .positive()
+    .nullable()
+    .optional(),
+).transform((val) => (val === undefined || val === null ? null : val));
+
+const myAssignedScriptsQuerySchema = paginationSchema.extend({
+  examinationSessionId: positiveIntegerQueryId,
+  examScheduleId: positiveIntegerQueryId,
+  status: z.preprocess(
+    emptyToUndefined,
+    z
+      .enum(["saved", "submitted"], {
+        errorMap: () => ({ message: "status must be saved or submitted" }),
+      })
+      .optional(),
+  ),
+});
+
+const positiveIntegerId = z.preprocess(
+  (val) => (typeof val === "string" ? parseInt(val, 10) : val),
+  z
+    .number({
+      required_error: "ID is required",
+      invalid_type_error: "ID must be a number",
+    })
+    .int()
+    .positive(),
+);
+
+const numberList = z.preprocess(
+  (val) => {
+    if (val === undefined || val === null || val === "") return undefined;
+    return Array.isArray(val) ? val : String(val).split(",");
+  },
+  z.array(z.coerce.number().int().positive()).optional(),
+);
+
+const mappedSelectionsSchema = z.preprocess(
+  (val) => {
+    if (!val || val === "") return undefined;
+    try {
+      return typeof val === "string" ? JSON.parse(val) : val;
+    } catch {
+      return undefined;
+    }
+  },
+  z
+    .array(
+      z.object({
+        courseSessionMappingId: z.coerce.number().int().positive(),
+        terms: z.array(z.coerce.number().int().positive()),
+      }),
+    )
+    .optional(),
+);
+
+const listMappedAnswerSheetsSchema = z.object({
+  examinationSessionId: positiveIntegerId,
+  examDate: z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD")
+      .optional(),
+  ),
+  examinationSessionSlotId: positiveIntegerQueryId,
+  examScheduleId: numberList,
+  selections: mappedSelectionsSchema,
+  subjectId: z.preprocess(
+    (val) => {
+      if (!val || val === "") return undefined;
+      try {
+        const parsed = typeof val === "string" ? JSON.parse(val) : val;
+        return Array.isArray(parsed) ? parsed : [parsed];
+      } catch {
+        return [val];
+      }
+    },
+    z.array(z.coerce.number().int().positive()).optional()
+  ),
+  search: z.preprocess(emptyToUndefined, z.string().optional()),
+  status: z.preprocess(
+    emptyToUndefined,
+    z.enum(["unassigned", "graded"]).optional(),
+  ),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).optional().default(20),
+});
+
+const listEvaluationAssignmentsSchema = z.object({
+  examinationSessionId: positiveIntegerId,
+  examDate: z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD")
+      .optional(),
+  ),
+  examinationSessionSlotId: positiveIntegerQueryId,
+  examScheduleId: numberList,
+  selections: mappedSelectionsSchema,
+  subjectId: z.preprocess(
+    (val) => {
+      if (!val || val === "") return undefined;
+      try {
+        const parsed = typeof val === "string" ? JSON.parse(val) : val;
+        return Array.isArray(parsed) ? parsed : [parsed];
+      } catch {
+        return [val];
+      }
+    },
+    z.array(z.coerce.number().int().positive()).optional()
+  ),
+  search: z.preprocess(emptyToUndefined, z.string().optional()),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).optional().default(20),
 });
 
 import { checkAccess, checkAccessAny } from "../middleware/checkAccess.js";
@@ -115,31 +295,11 @@ router.get(
   getAnswerSheetQrGenerationRequests
 );
 
-const numberList = z.preprocess(
-  (val) => (Array.isArray(val) ? val : String(val).split(",")),
-  z.array(z.coerce.number()),
-).optional();
-
-const optionalSelections = z.preprocess(
-  (val) => (typeof val === "string" ? JSON.parse(val) : val),
-  z.array(
-    z.object({
-      sessionCourseMappingId: z.coerce.number().optional(),
-      courseSessionMappingId: z.coerce.number().optional(),
-      terms: z.array(z.coerce.number()).optional(),
-    }).transform((item) => ({
-      sessionCourseMappingId:
-        item.sessionCourseMappingId ?? item.courseSessionMappingId,
-      terms: item.terms,
-    })),
-  ),
-).optional();
-
 const mappedByExamSessionSchema = z.object({
   examinationSessionId: z.coerce.number(),
   examScheduleId: numberList,
   term: numberList,
-  selections: optionalSelections,
+  selections: mappedSelectionsSchema,
   search: z.string().optional(),
   page: z.coerce.number().default(1),
   limit: z.coerce.number().default(20),
@@ -162,24 +322,55 @@ router.get(
 );
 
 router.get(
+  "/my/skuStats",
+  userAuth,
+  getMyAnswerSheetSkuStats,
+);
+
+router.get(
   "/my/summary",
   userAuth,
   getMyEvaluationSummary,
 );
 
 router.get(
+  "/my/single",
+  userAuth,
+  getMySingleAssignedScript,
+);
+
+router.get(
+  "/my/evaluationExaminationSessions",
+  userAuth,
+  getMyEvaluationExaminationSessions,
+);
+
+router.get(
   "/my",
   userAuth,
-  validate({ query: paginationSchema }),
+  validate({ query: myAssignedScriptsQuerySchema }),
   getMyAssignedScripts,
 );
 
 router.get(
-  "/:id",
+  "/my/questionPaper",
   userAuth,
-  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, null),
-  validate({ params: idParamSchema }),
-  getAnswerSheetQrById
+  validate({ query: answerSheetQrIdQuerySchema }),
+  getMyApprovedQuestionPaperByAnswerSheetId,
+);
+
+router.post(
+  "/my/finalSubmit",
+  userAuth,
+  validate({ body: bulkFinalSubmitSchema }),
+  bulkMyFinalSubmitObtainedMarks,
+);
+
+router.patch(
+  "/my/:id/obtainedMarks",
+  userAuth,
+  validate({ params: idParamSchema, body: assignObtainedMarksSchema }),
+  assignMyObtainedMarksToAnswerSheet,
 );
 
 router.patch(
@@ -190,12 +381,64 @@ router.patch(
   mapAnswerSheetQr
 );
 
+router.get(
+  "/questionPaper",
+  userAuth,
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, null),
+  validate({ query: answerSheetQrIdQuerySchema }),
+  getApprovedQuestionPaperByAnswerSheetId,
+);
+
+router.get(
+  "/skuStats",
+  userAuth,
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, null),
+  validate({
+    query: z.object({
+      examinationSessionId: positiveIntegerId,
+    }),
+  }),
+  getAnswerSheetSkuStats
+);
+
+router.get(
+  "/list",
+  userAuth,
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, null),
+  validate({ query: listMappedAnswerSheetsSchema }),
+  getMappedAnswerSheetsByExamSession
+);
+
+router.get(
+  "/assignmentslist",
+  userAuth,
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, null),
+  validate({ query: listEvaluationAssignmentsSchema }),
+  listEvaluationAssignmentsByExamSession
+);
+
+router.get(
+  "/assignment/:assignmentId",
+  userAuth,
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, null),
+  validate({ params: assignmentIdParamSchema }),
+  getEvaluationAssignmentById
+);
+
 router.post(
   "/assign/evaluator",
   userAuth,
   checkAccess(PERMISSIONS.EVALUATION_EXECUTE.value, null),
   validate({ body: assignTeachersSchema }),
   assignAnswerSheetsToTeachers
+);
+
+router.post(
+  "/finalSubmit",
+  userAuth,
+  checkAccess(PERMISSIONS.EVALUATION_EXECUTE.value, null),
+  validate({ body: bulkFinalSubmitSchema }),
+  bulkFinalSubmitObtainedMarks,
 );
 
 router.get(
@@ -206,14 +449,6 @@ router.get(
   getScriptsAssignedToTeacher
 );
 
-router.patch(
-  "/:id/obtainedMarks",
-  userAuth,
-  checkAccess(PERMISSIONS.EVALUATION_EXECUTE.value, null),
-  validate({ params: idParamSchema, body: assignObtainedMarksSchema }),
-  assignObtainedMarksToAnswerSheet
-);
-
 const splitPdfSchema = z.object({
   answerSheetS3FileId: z
     .number({ required_error: "answerSheetS3FileId is required." })
@@ -221,9 +456,6 @@ const splitPdfSchema = z.object({
     .positive("answerSheetS3FileId must be a positive integer."),
 });
 
-// ─── POST /answerSheetQr/splitPdf ───────────────────────────────────────────────────────
-// Queues a large answer-sheet PDF split job (BullMQ + Redis).
-// Returns 202 { jobId, jobDbId, statusUrl }.
 router.post(
   "/splitPdf",
   userAuth,
@@ -231,12 +463,26 @@ router.post(
   splitAnswerSheetPdf
 );
 
-// ─── GET /answerSheetQr/splitPdf/job/:jobDbId ─────────────────────────────────────────
-// Poll the status of a queued PDF split job (reads from DB — persistent).
 router.get(
   "/splitPdf/job/:jobDbId",
   userAuth,
   getSplitPdfJobStatus
+);
+
+router.patch(
+  "/:id(\\d+)/obtainedMarks",
+  userAuth,
+  checkAccess(PERMISSIONS.EVALUATION_EXECUTE.value, null),
+  validate({ params: idParamSchema, body: assignObtainedMarksSchema }),
+  assignObtainedMarksToAnswerSheet
+);
+
+router.get(
+  "/:id(\\d+)",
+  userAuth,
+  checkAccess(PERMISSIONS.ANSWER_SHEET_QRS.value, null),
+  validate({ params: idParamSchema }),
+  getAnswerSheetQrById
 );
 
 export default router;

@@ -47,6 +47,20 @@ const answerSheetQrModel = sequelize.define(
         key: "user_id",
       },
     },
+deadlineDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+      field: "deadline_date",
+    },
+    assignmentId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "assignment_id",
+      references: {
+        model: "answersheet_evalution_user_assignment",
+        key: "assignment_id",
+      },
+    },
     evaluatedAt: {
       type: DataTypes.DATE,
       allowNull: true,
@@ -56,6 +70,12 @@ const answerSheetQrModel = sequelize.define(
       type: DataTypes.DECIMAL(5, 2),
       allowNull: true,
       field: "obtained_marks",
+    },
+    markingStatus: {
+      type: DataTypes.ENUM("pending", "submit"),
+      allowNull: false,
+      defaultValue: "pending",
+      field: "marking_status",
     },
     fileUploadId: {
       type: DataTypes.INTEGER,
