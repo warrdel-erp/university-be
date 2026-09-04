@@ -3,25 +3,37 @@ import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { getSeatCountsByCapacityIds } from "../utility/roomCapacity.js";
 
-const scheduleIncludeForSession = (examinationSessionId) => ({
-  model: model.examScheduleModel,
-  as: "examSchedule",
-  attributes: [],
-  required: true,
-  where: {
-    examinationSessionId: Number(examinationSessionId),
-    ...buildScope(model.examScheduleModel),
-  },
-});
+function examScheduleInclude(scheduleWhere, subjectWhere) {
+  return {
+    model: model.examScheduleModel,
+    as: "examSchedule",
+    attributes: [],
+    required: true,
+    where: {
+      ...scheduleWhere,
+      ...buildScope(model.examScheduleModel),
+    },
+    include: [
+      {
+        model: model.subjectModel,
+        as: "subjectSchedule",
+        attributes: [],
+        required: true,
+        where: {
+          ...subjectWhere,
+          ...buildScope(model.subjectModel),
+        },
+      },
+    ],
+  };
+}
 
-/** Distinct physical rooms for a session (pagination total). */
-export async function countDistinctRoomsByExaminationSessionId(
-  examinationSessionId,
-) {
+/** Distinct physical rooms matching schedule/subject filters. */
+export async function countDistinctRooms(scheduleWhere, subjectWhere) {
   return scoped(model.examScheduleRoomCapacityModel).count({
     distinct: true,
     col: "class_room_section_id",
-    include: [scheduleIncludeForSession(examinationSessionId)],
+    include: [examScheduleInclude(scheduleWhere, subjectWhere)],
   });
 }
 
@@ -29,8 +41,9 @@ export async function countDistinctRoomsByExaminationSessionId(
  * Distinct rooms ordered by roomNumber.
  * Optional limit/offset for room-wise pagination.
  */
-export async function findPaginatedRoomsByExaminationSessionId(
-  examinationSessionId,
+export async function findPaginatedRooms(
+  scheduleWhere,
+  subjectWhere,
   { limit, offset } = {},
 ) {
   const options = {
@@ -48,7 +61,7 @@ export async function findPaginatedRoomsByExaminationSessionId(
         required: true,
         where: buildScope(model.classRoomModel),
       },
-      scheduleIncludeForSession(examinationSessionId),
+      examScheduleInclude(scheduleWhere, subjectWhere),
     ],
     group: [
       "exam_schedule_room_capacity.class_room_section_id",
@@ -69,9 +82,10 @@ export async function findPaginatedRoomsByExaminationSessionId(
   return scoped(model.examScheduleRoomCapacityModel).findAll(options);
 }
 
-/** All room-capacity rows for given rooms within a session (with schedule/subject/slot). */
+/** Room-capacity rows for given rooms with schedule/subject/slot details. */
 export async function findRoomCapacitiesForRooms(
-  examinationSessionId,
+  scheduleWhere,
+  subjectWhere,
   classRoomSectionIds,
 ) {
   if (!classRoomSectionIds.length) return [];
@@ -112,7 +126,7 @@ export async function findRoomCapacitiesForRooms(
           "subjectId",
         ],
         where: {
-          examinationSessionId: Number(examinationSessionId),
+          ...scheduleWhere,
           ...buildScope(model.examScheduleModel),
         },
         include: [
@@ -126,7 +140,10 @@ export async function findRoomCapacitiesForRooms(
               "subjectCode",
               "courseId",
             ],
-            where: buildScope(model.subjectModel),
+            where: {
+              ...subjectWhere,
+              ...buildScope(model.subjectModel),
+            },
           },
           {
             model: model.examinationSessionSlotModel,

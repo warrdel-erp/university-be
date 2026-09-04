@@ -1,4 +1,6 @@
+import { Op } from "sequelize";
 import * as examOperationsRepository from "../repository/examOperationsRepository.js";
+import * as examinationSessionRepository from "../repository/examinationSessionRepository.js";
 import { formatDateKey } from "../utility/dateFormat.js";
 
 function operationKey(classRoomSectionId, examDate, examinationSessionSlotId) {
@@ -67,6 +69,70 @@ function operationStatus(invigilators, materialBundle) {
   return "NOT_READY";
 }
 
+/** Resolve query filters → scheduleWhere / subjectWhere for repository queries. */
+async function resolveScheduleFilters(query) {
+  const scheduleWhere = {
+    examinationSessionId: Number(query.examinationSessionId),
+  };
+  if (query.examDate) {
+    scheduleWhere.examDate = query.examDate;
+  }
+
+  const subjectWhere = {};
+
+  if (!query.selections?.length) {
+    return { scheduleWhere, subjectWhere };
+  }
+
+  const mappingIds = [];
+  for (const sel of query.selections) {
+    mappingIds.push(sel.courseSessionMappingId);
+  }
+
+  const dbMappings =
+    await examinationSessionRepository.findSessionCourseMappingsByIds(
+      mappingIds,
+    );
+  const dbMappingsMap = new Map();
+  for (const mapping of dbMappings) {
+    dbMappingsMap.set(Number(mapping.sessionCourseMappingId), mapping);
+  }
+
+  const filterCombinations = [];
+  for (const sel of query.selections) {
+    const mapping = dbMappingsMap.get(Number(sel.courseSessionMappingId));
+    if (!mapping) continue;
+    filterCombinations.push({
+      courseId: Number(mapping.courseId),
+      sessionId: Number(mapping.sessionId),
+      terms: sel.terms,
+    });
+  }
+
+  if (!filterCombinations.length) {
+    return { scheduleWhere, subjectWhere };
+  }
+
+  const sessionIds = [];
+  const orSubjects = [];
+  for (const comb of filterCombinations) {
+    sessionIds.push(comb.sessionId);
+    orSubjects.push({
+      courseId: comb.courseId,
+      term: { [Op.in]: comb.terms },
+    });
+  }
+
+  const uniqueSessionIds = [...new Set(sessionIds)];
+  scheduleWhere.sessionId =
+    uniqueSessionIds.length === 1
+      ? uniqueSessionIds[0]
+      : { [Op.in]: uniqueSessionIds };
+  subjectWhere[Op.or] = orSubjects;
+
+  return { scheduleWhere, subjectWhere };
+}
+
 /**
  * Room-wise exam operations for an examination session.
  * Top-level: one entry per classRoomSectionId.
@@ -75,26 +141,27 @@ function operationStatus(invigilators, materialBundle) {
  * Optional query.status filters operations (and rooms with no matching ops).
  */
 export async function listRooms(query) {
-  const examinationSessionId = Number(query.examinationSessionId);
   const page = Number(query.page) || 1;
   const limit = Number(query.limit) || 10;
   const offset = (page - 1) * limit;
   const statusFilter = query.status;
 
+  const { scheduleWhere, subjectWhere } = await resolveScheduleFilters(query);
+
   // Status is derived after merge — load all rooms, filter, then paginate.
   const roomPagination = statusFilter ? {} : { limit, offset };
 
-  const roomRows =
-    await examOperationsRepository.findPaginatedRoomsByExaminationSessionId(
-      examinationSessionId,
-      roomPagination,
-    );
+  const roomRows = await examOperationsRepository.findPaginatedRooms(
+    scheduleWhere,
+    subjectWhere,
+    roomPagination,
+  );
 
   if (!roomRows.length && !statusFilter) {
-    const total =
-      await examOperationsRepository.countDistinctRoomsByExaminationSessionId(
-        examinationSessionId,
-      );
+    const total = await examOperationsRepository.countDistinctRooms(
+      scheduleWhere,
+      subjectWhere,
+    );
     return {
       rows: [],
       pagination: {
@@ -127,7 +194,8 @@ export async function listRooms(query) {
 
   const capacityRows =
     await examOperationsRepository.findRoomCapacitiesForRooms(
-      examinationSessionId,
+      scheduleWhere,
+      subjectWhere,
       classRoomSectionIds,
     );
 
@@ -305,10 +373,10 @@ export async function listRooms(query) {
     };
   }
 
-  const total =
-    await examOperationsRepository.countDistinctRoomsByExaminationSessionId(
-      examinationSessionId,
-    );
+  const total = await examOperationsRepository.countDistinctRooms(
+    scheduleWhere,
+    subjectWhere,
+  );
 
   return {
     rows: allRows,
