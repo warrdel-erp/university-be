@@ -6,6 +6,7 @@ const studentListAttributes = [
   "studentId",
   "scholarNumber",
   "enrollNumber",
+  "admisssionDate",
   [
     fn(
       "TRIM",
