@@ -1,4 +1,5 @@
 import { UniqueConstraintError } from "sequelize";
+import crypto from "crypto";
 import sequelize from "../database/sequelizeConfig.js";
 import * as examResultRepository from "../repository/examResultRepository.js";
 import { countWholeTermStudentsByTerms } from "../utility/studentCount.js";
@@ -269,7 +270,7 @@ export async function listStudents(query) {
 
       // Published wins; otherwise use answer-sheet readiness
       if (published) {
-        item.filterStatus = "Published";
+        item.filterStatus = published.resultStatus === "Generated" ? "Generated" : "Published";
       } else if (readiness.status === "READY") {
         item.filterStatus = "Ready";
       } else {
@@ -659,7 +660,7 @@ export async function createExaminationSessionResult(body) {
           totalMarks,
           obtainedMarks,
           percentage,
-          resultStatus: "Published",
+          resultStatus: "Generated",
           academicYearId,
         },
         transaction,
@@ -827,4 +828,83 @@ export async function getStudentResultDetails(query) {
     readiness,
     exams,
   };
+}
+
+export async function publishExaminationSessionResults(body) {
+  const examinationSessionId = Number(body.examinationSessionId);
+  const studentIds = [];
+  const studentIdSeen = new Set();
+  for (const studentId of body.studentIds) {
+    const id = Number(studentId);
+    if (studentIdSeen.has(id)) continue;
+    studentIdSeen.add(id);
+    studentIds.push(id);
+  }
+
+  if (!studentIds.length) {
+    const err = new Error("No valid student IDs provided.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const transaction = await sequelize.transaction();
+  try {
+    const results = await examResultRepository.findStudentResultsByExaminationSessionAndStudentIds(
+      examinationSessionId,
+      studentIds,
+      transaction,
+    );
+
+    if (results.length !== studentIds.length) {
+      const err = new Error("Some student results are not generated yet.");
+      err.statusCode = 400;
+      throw err;
+    }
+
+    for (const result of results) {
+      if (result.resultStatus === "Published") {
+        const err = new Error(`Student result already published for studentId=${result.studentId}`);
+        err.statusCode = 400;
+        throw err;
+      }
+    }
+
+    const publishBatchId = crypto.randomUUID();
+    const publishedAt = new Date();
+
+    await examResultRepository.updateStudentResults(
+      {
+        examinationSessionId,
+        studentId: studentIds,
+      },
+      {
+        resultStatus: "Published",
+        publishedAt,
+        publishBatchId,
+      },
+      transaction,
+    );
+
+    await transaction.commit();
+
+    return {
+      message: "Results published successfully.",
+      publishBatchId,
+      publishedCount: results.length,
+    };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+export async function getPublishHistory(query) {
+  const examinationSessionId = Number(query.examinationSessionId);
+  const batches = await examResultRepository.findPublishBatches(examinationSessionId);
+  return batches;
+}
+
+export async function getPublishHistoryByBatchId(publishBatchId) {
+  const results = await examResultRepository.findStudentResultsByBatchId(publishBatchId);
+  return results;
 }
