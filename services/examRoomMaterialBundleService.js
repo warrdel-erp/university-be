@@ -856,6 +856,20 @@ export async function getReadyBundleList(filters, pagination) {
       item.pendingQuantity = Math.max(planned - issued, 0);
     }
 
+    const invigilators = [];
+    const assignments =
+      bundle.classRoom && bundle.classRoom.examInvigilatorAssignments
+        ? bundle.classRoom.examInvigilatorAssignments
+        : [];
+    for (const assignment of assignments) {
+      if (!assignment.user) continue;
+      invigilators.push({
+        userId: assignment.user.userId,
+        userName: assignment.user.userName,
+        role: assignment.role,
+      });
+    }
+
     formattedRows.push({
       examRoomMaterialBundleId: bundle.examRoomMaterialBundleId,
       bundleCode: bundle.bundleCode,
@@ -872,6 +886,7 @@ export async function getReadyBundleList(filters, pagination) {
       issuedByUser: bundle.issuerUser || null,
       issuedAt: bundle.issuedAt,
       slot: bundle.examinationSessionSlot || null,
+      invigilators,
     });
   }
 

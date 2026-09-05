@@ -274,21 +274,30 @@ export async function getStudentCountMapByGroups(groups, options = {}) {
 
   if (!unique.length) return countMap;
 
+  const sessionIds = [...new Set(unique.map((g) => g.sessionId))];
+  const courseIds = [...new Set(unique.map((g) => g.courseId))];
+  const terms = [...new Set(unique.map((g) => g.term))];
+  const academicYearIds = [...new Set(unique.map((g) => g.academicYearId))];
+
   const rows = await scoped(model.studentModel).findAll({
     attributes: [
-      [sequelize.col("studentClassSectionTerm->classSection.session_id"), "sessionId"],
+      [sequelize.col("students.session_id"), "sessionId"],
       [sequelize.col("studentClassSectionTerm.term"), "term"],
-      [sequelize.col("studentClassSectionTerm->classSection.course_id"), "courseId"],
+      [sequelize.col("students.course_id"), "courseId"],
       [sequelize.col("studentClassSectionTerm->classSection.acedmic_year_id"), "academicYearId"],
-      [sequelize.fn("COUNT", sequelize.col("students.student_id")), "studentCount"],
+      [sequelize.fn("COUNT", sequelize.fn("DISTINCT", sequelize.col("students.student_id"))), "studentCount"],
     ],
+    where: {
+      sessionId: { [Op.in]: sessionIds },
+      courseId: { [Op.in]: courseIds },
+    },
     include: [
       {
         model: model.classSectionTermModel,
         as: "studentClassSectionTerm",
         attributes: [],
         required: true,
-        where: { term: { [Op.in]: [...new Set(unique.map((g) => g.term))] } },
+        where: { term: { [Op.in]: terms } },
         include: [
           {
             model: model.classSectionModel,
@@ -296,20 +305,18 @@ export async function getStudentCountMapByGroups(groups, options = {}) {
             attributes: [],
             required: true,
             where: {
-              sessionId: { [Op.in]: [...new Set(unique.map((g) => g.sessionId))] },
-              courseId: { [Op.in]: [...new Set(unique.map((g) => g.courseId))] },
-              academicYearId: {
-                [Op.in]: [...new Set(unique.map((g) => g.academicYearId))],
-              },
+              sessionId: { [Op.in]: sessionIds },
+              courseId: { [Op.in]: courseIds },
+              academicYearId: { [Op.in]: academicYearIds },
             },
           },
         ],
       },
     ],
     group: [
-      "studentClassSectionTerm->classSection.session_id",
+      "students.session_id",
       "studentClassSectionTerm.term",
-      "studentClassSectionTerm->classSection.course_id",
+      "students.course_id",
       "studentClassSectionTerm->classSection.acedmic_year_id",
     ],
     raw: true,
@@ -381,7 +388,10 @@ export async function findStudentsForExamGroup(
   options = {},
 ) {
   const { page, limit, search, transaction } = options;
-  const where = {};
+  const where = {
+    sessionId: Number(sessionId),
+    courseId: Number(courseId),
+  };
   if (search) {
     const like = `%${search}%`;
     where[Op.or] = [
