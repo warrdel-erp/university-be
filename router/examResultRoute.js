@@ -32,8 +32,19 @@ const skuQuery = z.object({
   examinationSessionId: id,
 });
 
+const createExaminationSessionResultBody = z.object({
+  examinationSessionId: id,
+  studentId: id,
+});
+
 router.get("/sku", userAuth, validate({ query: skuQuery }), examResultController.getSku);
 router.get("/students", userAuth, validate({ query }), examResultController.listStudents);
 router.get("/students/:studentId", userAuth, validate({ params: z.object({ studentId: id }), query }), examResultController.getStudentById);
+router.post(
+  "/examinationSessionResult",
+  userAuth,
+  validate({ body: createExaminationSessionResultBody }),
+  examResultController.createExaminationSessionResult,
+);
 
 export default router;

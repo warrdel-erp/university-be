@@ -129,6 +129,7 @@ export async function findExamSchedulesByExaminationSessionId(
       "term",
       "subjectId",
       "examDate",
+      "maximumMarks",
     ],
     include: [
       {
@@ -381,4 +382,40 @@ export async function findSubmittedAnswerSheetPairsByExaminationSessionId(
     ],
     raw: true,
   });
+}
+
+export async function findStudentResult(where, transaction) {
+  return scoped(model.studentResultModel).findOne({
+    where: {
+      examinationSessionId: Number(where.examinationSessionId),
+      studentId: Number(where.studentId),
+      courseId: Number(where.courseId),
+      sessionId: Number(where.sessionId),
+      term: Number(where.term),
+    },
+    attributes: [
+      "studentResultId",
+      "examinationSessionId",
+      "studentId",
+      "courseId",
+      "sessionId",
+      "term",
+      "totalCredits",
+      "earnedCredits",
+      "totalMarks",
+      "obtainedMarks",
+      "percentage",
+      "sgpa",
+      "cgpa",
+      "resultStatus",
+      "academicYearId",
+      "createdAt",
+      "updatedAt",
+    ],
+    transaction,
+  });
+}
+
+export async function createStudentResult(payload, transaction) {
+  return scoped(model.studentResultModel).create(payload, { transaction });
 }

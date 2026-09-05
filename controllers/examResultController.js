@@ -27,3 +27,16 @@ export async function getSku(req, res) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to fetch exam result SKU");
   }
 }
+
+export async function createExaminationSessionResult(req, res) {
+  try {
+    const result = await examResultServices.createExaminationSessionResult(req.body);
+    return SuccessResponse(res, 201, "Examination session result created successfully", result);
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to create examination session result",
+    );
+  }
+}

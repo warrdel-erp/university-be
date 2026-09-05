@@ -1,8 +1,12 @@
+import { UniqueConstraintError } from "sequelize";
+import sequelize from "../database/sequelizeConfig.js";
 import * as examResultRepository from "../repository/examResultRepository.js";
 import { countWholeTermStudentsByTerms } from "../utility/studentCount.js";
 import {
   decimalAdd,
+  decimalDivide,
   decimalMax,
+  decimalMultiply,
   decimalSubtract,
   toMoneyNumber,
 } from "../utility/decimalMoney.js";
@@ -11,7 +15,10 @@ import {
  * Shared readiness from applicable exam schedules + this student's answer sheets.
  * sheetByExamScheduleId: Map(examScheduleId -> answerSheet plain row | undefined)
  */
-export function calculateResultReadiness(applicableSchedules, sheetByExamScheduleId) {
+export function calculateResultReadiness(
+  applicableSchedules,
+  sheetByExamScheduleId,
+) {
   const exams = [];
   let submittedExams = 0;
 
@@ -46,7 +53,8 @@ export function calculateResultReadiness(applicableSchedules, sheetByExamSchedul
 
   return {
     readiness: {
-      status: totalExams > 0 && submittedExams === totalExams ? "READY" : "NOT_READY",
+      status:
+        totalExams > 0 && submittedExams === totalExams ? "READY" : "NOT_READY",
       totalExams,
       submittedExams,
       pendingExams,
@@ -198,7 +206,8 @@ export async function listStudents(query) {
   }
 
   if (items.length) {
-    const examinationSessionId = context.examinationSession.examinationSessionId;
+    const examinationSessionId =
+      context.examinationSession.examinationSessionId;
 
     const [schedules, sheets] = await Promise.all([
       examResultRepository.findExamSchedulesByExaminationSessionId(
@@ -335,9 +344,8 @@ function emptySku(examinationSessionId) {
 export async function getSku(query) {
   const examinationSessionId = Number(query.examinationSessionId);
 
-  const examSession = await examResultRepository.findExaminationSession(
-    examinationSessionId,
-  );
+  const examSession =
+    await examResultRepository.findExaminationSession(examinationSessionId);
   if (!examSession) {
     const err = new Error("Examination session not found.");
     err.statusCode = 404;
@@ -354,18 +362,20 @@ export async function getSku(query) {
     return emptySku(examinationSessionId);
   }
 
-  const [totalExams, sheetSku, totalStudents, scheduleRows] = await Promise.all([
-    examResultRepository.countExamSchedulesByExaminationSessionId(
-      examinationSessionId,
-    ),
-    examResultRepository.countAnswerSheetSkuByExaminationSessionId(
-      examinationSessionId,
-    ),
-    countWholeTermStudentsByTerms(terms, academicYearId),
-    examResultRepository.findExamScheduleContextsByExaminationSessionId(
-      examinationSessionId,
-    ),
-  ]);
+  const [totalExams, sheetSku, totalStudents, scheduleRows] = await Promise.all(
+    [
+      examResultRepository.countExamSchedulesByExaminationSessionId(
+        examinationSessionId,
+      ),
+      examResultRepository.countAnswerSheetSkuByExaminationSessionId(
+        examinationSessionId,
+      ),
+      countWholeTermStudentsByTerms(terms, academicYearId),
+      examResultRepository.findExamScheduleContextsByExaminationSessionId(
+        examinationSessionId,
+      ),
+    ],
+  );
 
   const studentTotal = Number(totalStudents) || 0;
 
@@ -450,4 +460,170 @@ export async function getSku(query) {
     ready,
     notReady: decimalMax(0, decimalSubtract(studentTotal, ready)),
   };
+}
+
+/**
+ * Create student_result header for an examination session student.
+ * Subject marks live on answerSheetQr (student_result_subject).
+ * Requires readiness READY (every applicable schedule submitted).
+ */
+export async function createExaminationSessionResult(body) {
+  const examinationSessionId = Number(body.examinationSessionId);
+  const studentId = Number(body.studentId);
+
+  const context = await resolveContext({ examinationSessionId });
+  if (context.empty) {
+    const err = new Error("Examination session has no applicable terms.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const row = await examResultRepository.findOneStudent({
+    studentId,
+    terms: context.terms,
+    academicYearId: context.examinationSession.academicYearId,
+    classSectionOr: context.classSectionOr,
+  });
+  if (!row) {
+    const err = new Error("Student not found for exam result.");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const student = toStudentSummary(row);
+
+  const [schedules, sheets] = await Promise.all([
+    examResultRepository.findExamSchedulesByExaminationSessionId(
+      examinationSessionId,
+      {
+        courseIds: [student.courseId],
+        sessionIds: [student.sessionId],
+        terms: [student.term],
+      },
+    ),
+    examResultRepository.findAnswerSheetsByStudentsAndExaminationSession(
+      [student.studentId],
+      examinationSessionId,
+    ),
+  ]);
+
+  const applicable = schedulesForStudent(
+    schedules,
+    student.courseId,
+    student.sessionId,
+    student.term,
+  );
+  const { readiness, exams } = calculateResultReadiness(
+    applicable,
+    sheetMapForStudent(sheets, student.studentId),
+  );
+
+  if (!applicable.length) {
+    const err = new Error("No applicable exams found for this student.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (readiness.status !== "READY") {
+    const err = new Error(
+      "Student result is not ready. All answer sheets must be submitted.",
+    );
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const maximumByScheduleId = new Map();
+  for (const schedule of applicable) {
+    maximumByScheduleId.set(
+      Number(schedule.examScheduleId),
+      toMoneyNumber(schedule.maximumMarks),
+    );
+  }
+
+  let totalMarks = 0;
+  let obtainedMarks = 0;
+  for (const exam of exams) {
+    totalMarks = decimalAdd(
+      totalMarks,
+      maximumByScheduleId.get(exam.examScheduleId) || 0,
+    );
+    obtainedMarks = decimalAdd(
+      obtainedMarks,
+      toMoneyNumber(exam.obtainedMarks),
+    );
+  }
+
+  const percentage =
+    totalMarks === 0
+      ? null
+      : decimalMultiply(decimalDivide(obtainedMarks, totalMarks), 100);
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    const existing = await examResultRepository.findStudentResult(
+      {
+        examinationSessionId,
+        studentId: student.studentId,
+        courseId: student.courseId,
+        sessionId: student.sessionId,
+        term: student.term,
+      },
+      transaction,
+    );
+    if (existing) {
+      const err = new Error(
+        "Student result already exists for this examination session.",
+      );
+      err.statusCode = 409;
+      throw err;
+    }
+
+    const created = await examResultRepository.createStudentResult(
+      {
+        examinationSessionId,
+        studentId: student.studentId,
+        courseId: student.courseId,
+        sessionId: student.sessionId,
+        term: student.term,
+        totalMarks,
+        obtainedMarks,
+        percentage,
+        academicYearId: context.examinationSession.academicYearId,
+      },
+      transaction,
+    );
+
+    await transaction.commit();
+
+    const plain = created.get({ plain: true });
+    return {
+      examinationSession: context.examinationSession,
+      studentResult: {
+        studentResultId: Number(plain.studentResultId),
+        examinationSessionId: Number(plain.examinationSessionId),
+        studentId: Number(plain.studentId),
+        courseId: Number(plain.courseId),
+        sessionId: Number(plain.sessionId),
+        term: Number(plain.term),
+        totalMarks: toMoneyNumber(plain.totalMarks),
+        obtainedMarks: toMoneyNumber(plain.obtainedMarks),
+        percentage:
+          plain.percentage == null ? null : toMoneyNumber(plain.percentage),
+        resultStatus: plain.resultStatus,
+      },
+      readiness,
+      subjects: exams,
+    };
+  } catch (error) {
+    await transaction.rollback();
+    if (error instanceof UniqueConstraintError) {
+      const err = new Error(
+        "Student result already exists for this examination session.",
+      );
+      err.statusCode = 409;
+      throw err;
+    }
+    throw error;
+  }
 }

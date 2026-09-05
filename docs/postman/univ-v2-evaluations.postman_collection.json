@@ -745,6 +745,37 @@
             },
             "description": "GET /examResult/students/:studentId?examinationSessionId=1\n\nExample: GET /examResult/students/2?examinationSessionId=1\n\nAuth: Bearer token\n\nParams:\n- studentId (required)\n\nQuery:\n- examinationSessionId (optional → latest)\n- selections (optional)\n\nResponse data:\n{\n  \"examinationSession\": { examinationSessionId, sessionName, academicYearId, assessmentTypeId, status },\n  \"student\": {\n    \"studentId\": 2,\n    \"studentName\": \"Ada Lovelace\",\n    \"scholarNo\": \"SCH001\",\n    \"enrollNumber\": \"ENR001\",\n    \"courseId\": 1,\n    \"sessionId\": 1,\n    \"term\": 1\n  },\n  \"readiness\": {\n    \"status\": \"READY\",\n    \"totalExams\": 2,\n    \"submittedExams\": 2,\n    \"pendingExams\": 0\n  },\n  \"exams\": [\n    {\n      \"examScheduleId\": 10,\n      \"subjectId\": 5,\n      \"subjectName\": \"Mathematics\",\n      \"subjectCode\": \"MATH101\",\n      \"examDate\": \"2026-06-15\",\n      \"answerSheetQrId\": 101,\n      \"answerSheetStatus\": \"submit\",\n      \"isSubmitted\": true,\n      \"obtainedMarks\": \"75.00\",\n      \"evaluatedAt\": \"2026-06-20T10:00:00.000Z\"\n    },\n    {\n      \"examScheduleId\": 11,\n      \"subjectId\": 6,\n      \"subjectName\": \"Physics\",\n      \"subjectCode\": \"PHY101\",\n      \"examDate\": \"2026-06-16\",\n      \"answerSheetQrId\": null,\n      \"answerSheetStatus\": null,\n      \"isSubmitted\": false,\n      \"obtainedMarks\": null,\n      \"evaluatedAt\": null\n    }\n  ]\n}\n\nRules:\n- Only exam schedules for this student's courseId + sessionId + term\n- Match answerSheetQr by studentId + examScheduleId\n- No fake sheets; missing sheet => null fields, exam counts as pending\n- READY iff totalExams > 0 AND submittedExams === totalExams\n- 404 if examination session or student not found for filters"
           }
+        },
+        {
+          "name": "3.3 POST Create Examination Session Result",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examinationSessionId\": {{evaluation_examinationSessionId}},\n  \"studentId\": {{evaluation_studentId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/examResult/examinationSessionResult",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examResult",
+                "examinationSessionResult"
+              ]
+            },
+            "description": "POST /examResult/examinationSessionResult\n\nCreates a student result record."
+          }
         }
       ]
     }
