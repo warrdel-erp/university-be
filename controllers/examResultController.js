@@ -40,3 +40,18 @@ export async function createExaminationSessionResult(req, res) {
     );
   }
 }
+
+export async function getStudentResultDetails(req, res) {
+  try {
+    const result = await examResultServices.getStudentResultDetails(req.query);
+    return SuccessResponse(res, 200, "Student result fetched successfully", result);
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch student result",
+    );
+  }
+}
+
+

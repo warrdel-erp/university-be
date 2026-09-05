@@ -75,7 +75,7 @@ export async function getExaminationSessionById(id, options = {}) {
 export async function findExaminationSessionAssessmentTypeById(id, options = {}) {
   return scoped(model.examinationSessionModel).findOne({
     where: { examinationSessionId: Number(id) },
-    attributes: ["assessmentTypeId", "status"],
+    attributes: ["assessmentTypeId", "status", "academicYearId"],
     raw: true,
     transaction: options.transaction,
   });

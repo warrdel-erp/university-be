@@ -988,9 +988,8 @@ export async function getMappedSubjectsBySessionAndTerm(
   const uniqueSubjectIds = [];
   const subjectSessionMap = new Map();
   for (const mapping of subjectMappings) {
-    if (!subjectSessionMap.has(mapping.subjectId)) {
-      uniqueSubjectIds.push(mapping.subjectId);
-    }
+    if (subjectSessionMap.has(mapping.subjectId)) continue;
+    uniqueSubjectIds.push(mapping.subjectId);
     subjectSessionMap.set(mapping.subjectId, mapping.sessionId);
   }
 
@@ -1096,6 +1095,7 @@ export async function getMappedSubjectsBySessionAndTerm(
         courseSessionMappingId: mappingInfo
           ? mappingInfo.sessionCourseMappingId
           : null,
+        studentCount: 0,
         isExamScheduled: false,
         examScheduleId: null,
         needsScheduling: true,

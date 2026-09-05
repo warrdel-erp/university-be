@@ -703,3 +703,128 @@ export async function createExaminationSessionResult(body) {
     throw error;
   }
 }
+
+export async function getStudentResultDetails(query) {
+  const examinationSessionId = Number(query.examinationSessionId);
+  const studentId = Number(query.studentId);
+
+  const examSession =
+    await examResultRepository.findExaminationSession(examinationSessionId);
+  if (!examSession) {
+    const err = new Error("Examination session not found.");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const result = await examResultRepository.findStudentResult({
+    studentId,
+    examinationSessionId,
+  });
+  if (!result) {
+    const err = new Error("Student result not found.");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const plainResult = result.get({ plain: true });
+
+  const studentRow = await examResultRepository.findOneStudent({
+    studentId,
+    terms: [Number(plainResult.term)],
+    academicYearId: examSession.academicYearId,
+    classSectionOr: [
+      {
+        courseId: Number(plainResult.courseId),
+        sessionId: Number(plainResult.sessionId),
+      },
+    ],
+  });
+
+  const [schedules, sheets] = await Promise.all([
+    examResultRepository.findExamSchedulesByExaminationSessionId(
+      examinationSessionId,
+      {
+        courseIds: [Number(plainResult.courseId)],
+        sessionIds: [Number(plainResult.sessionId)],
+        terms: [Number(plainResult.term)],
+      },
+    ),
+    examResultRepository.findAnswerSheetsByStudentsAndExaminationSession(
+      [studentId],
+      examinationSessionId,
+    ),
+  ]);
+
+  const applicable = schedulesForStudent(
+    schedules,
+    plainResult.courseId,
+    plainResult.sessionId,
+    plainResult.term,
+  );
+  const { readiness, exams } = calculateResultReadiness(
+    applicable,
+    sheetMapForStudent(sheets, studentId),
+  );
+
+  const student = studentRow
+    ? toStudentSummary(studentRow)
+    : {
+        studentId,
+        studentName: null,
+        scholarNo: null,
+        enrollNumber: null,
+        admissionDate: null,
+        courseId: Number(plainResult.courseId),
+        sessionId: Number(plainResult.sessionId),
+        term: Number(plainResult.term),
+        course: null,
+        session: null,
+      };
+
+  return {
+    examinationSession: {
+      examinationSessionId: examSession.examinationSessionId,
+      sessionName: examSession.sessionName,
+      academicYearId: examSession.academicYearId,
+      assessmentTypeId: examSession.assessmentTypeId,
+      status: examSession.status,
+    },
+    student: {
+      studentId: student.studentId,
+      studentName: student.studentName,
+      scholarNo: student.scholarNo,
+      enrollNumber: student.enrollNumber,
+      admissionDate: student.admissionDate,
+      courseId: student.courseId,
+      sessionId: student.sessionId,
+      term: student.term,
+      course: student.course,
+      session: student.session,
+    },
+    studentResult: {
+      studentResultId: Number(plainResult.studentResultId),
+      examinationSessionId: Number(plainResult.examinationSessionId),
+      studentId: Number(plainResult.studentId),
+      courseId: Number(plainResult.courseId),
+      sessionId: Number(plainResult.sessionId),
+      term: Number(plainResult.term),
+      totalMarks:
+        plainResult.totalMarks == null
+          ? null
+          : toMoneyNumber(plainResult.totalMarks),
+      obtainedMarks:
+        plainResult.obtainedMarks == null
+          ? null
+          : toMoneyNumber(plainResult.obtainedMarks),
+      percentage:
+        plainResult.percentage == null
+          ? null
+          : toMoneyNumber(plainResult.percentage),
+      sgpa: plainResult.sgpa == null ? null : toMoneyNumber(plainResult.sgpa),
+      cgpa: plainResult.cgpa == null ? null : toMoneyNumber(plainResult.cgpa),
+      resultStatus: plainResult.resultStatus,
+    },
+    readiness,
+    exams,
+  };
+}

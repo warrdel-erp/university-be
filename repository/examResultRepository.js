@@ -386,14 +386,16 @@ export async function findSubmittedAnswerSheetPairsByExaminationSessionId(
 }
 
 export async function findStudentResult(where, transaction) {
+  const resultWhere = {
+    examinationSessionId: Number(where.examinationSessionId),
+    studentId: Number(where.studentId),
+  };
+  if (where.courseId != null) resultWhere.courseId = Number(where.courseId);
+  if (where.sessionId != null) resultWhere.sessionId = Number(where.sessionId);
+  if (where.term != null) resultWhere.term = Number(where.term);
+
   return scoped(model.studentResultModel).findOne({
-    where: {
-      examinationSessionId: Number(where.examinationSessionId),
-      studentId: Number(where.studentId),
-      courseId: Number(where.courseId),
-      sessionId: Number(where.sessionId),
-      term: Number(where.term),
-    },
+    where: resultWhere,
     attributes: [
       "studentResultId",
       "examinationSessionId",
