@@ -5,7 +5,6 @@ import * as studentHallTicketRepository from "../repository/studentHallTicketRep
 import * as examinationSessionEligibilityServices from "./examinationSessionEligibilityServices.js";
 import * as examinationSessionEligibilityRepo from "../repository/examinationSessionEligibilityRepository.js";
 import {
-  countWholeTermStudentsByTerms,
   getStudentCountMapByGroups,
   lookupStudentCount,
 } from "../utility/studentCount.js";
@@ -143,21 +142,52 @@ async function buildSessionSummary(sessionRecord, options = {}) {
   const termsList = sessionPlain.examinationSessionTerms || [];
   const termNumbers = uniqueValues(termsList.map((term) => term.term));
   const academicYearId = Number(sessionPlain.academicYearId);
+  const assessmentTypeId = Number(sessionPlain.assessmentTypeId);
 
-  if (termNumbers.length && academicYearId) {
-    const courseIds =
-      await examinationSessionRepository.findDistinctCourseIdsByTerms(
-        termNumbers,
-        academicYearId,
-        options,
-      );
-    courseCount = courseIds.length;
+  if (termNumbers.length && academicYearId && assessmentTypeId) {
+    const planIds = await getAssessmentPlanIds(assessmentTypeId, options);
+    if (planIds.length) {
+      const mappings =
+        await examinationSessionRepository.findAssessmentPlanSubjectMappings(
+          { assessmentPlanId: { [Op.in]: planIds } },
+          options,
+        );
 
-    totalStudents = await countWholeTermStudentsByTerms(
-      termNumbers,
-      academicYearId,
-      options,
-    );
+      const courseIds = new Set();
+      const studentGroups = [];
+      const seen = new Set();
+
+      for (const mapping of mappings) {
+        if (mapping.courseId == null || mapping.sessionId == null) continue;
+        const courseId = Number(mapping.courseId);
+        const sessionId = Number(mapping.sessionId);
+        courseIds.add(courseId);
+
+        for (const term of termNumbers) {
+          const key = `${sessionId}_${courseId}_${term}_${academicYearId}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          studentGroups.push({
+            sessionId,
+            courseId,
+            term: Number(term),
+            academicYearId,
+          });
+        }
+      }
+
+      courseCount = courseIds.size;
+
+      if (studentGroups.length) {
+        const countMap = await getStudentCountMapByGroups(
+          studentGroups,
+          options,
+        );
+        for (const group of studentGroups) {
+          totalStudents += lookupStudentCount(countMap, group);
+        }
+      }
+    }
   }
 
   return {
