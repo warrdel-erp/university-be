@@ -24,14 +24,9 @@ module.exports = {
         }
       }
 
-      if (hasOldSessionStudentIndex) {
-        await queryInterface.removeIndex(
-          "student_result",
-          "idx_student_result_session_student",
-          { transaction },
-        );
-      }
-
+      // Add unique index first — MySQL needs an index on examination_session_id
+      // for its FK; the unique key starts with that column, so it can replace
+      // idx_student_result_session_student before the old index is dropped.
       if (!hasUniqueNaturalKey) {
         await queryInterface.addIndex(
           "student_result",
@@ -47,6 +42,14 @@ module.exports = {
             unique: true,
             transaction,
           },
+        );
+      }
+
+      if (hasOldSessionStudentIndex) {
+        await queryInterface.removeIndex(
+          "student_result",
+          "idx_student_result_session_student",
+          { transaction },
         );
       }
 
@@ -79,14 +82,6 @@ module.exports = {
         }
       }
 
-      if (hasUniqueNaturalKey) {
-        await queryInterface.removeIndex(
-          "student_result",
-          "uq_student_result_session_student_course_session_term",
-          { transaction },
-        );
-      }
-
       if (!hasOldSessionStudentIndex) {
         await queryInterface.addIndex(
           "student_result",
@@ -95,6 +90,14 @@ module.exports = {
             name: "idx_student_result_session_student",
             transaction,
           },
+        );
+      }
+
+      if (hasUniqueNaturalKey) {
+        await queryInterface.removeIndex(
+          "student_result",
+          "uq_student_result_session_student_course_session_term",
+          { transaction },
         );
       }
 
