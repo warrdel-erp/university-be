@@ -34,7 +34,7 @@ const skuQuery = z.object({
 
 const createExaminationSessionResultBody = z.object({
   examinationSessionId: id,
-  studentId: id,
+  studentIds: z.array(id).min(1),
 });
 
 router.get("/sku", userAuth, validate({ query: skuQuery }), examResultController.getSku);

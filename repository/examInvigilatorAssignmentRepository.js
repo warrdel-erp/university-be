@@ -3,9 +3,10 @@ import { buildScope, scoped } from "../utility/scoped.js";
 import { Op } from "sequelize";
 import { getStudentCountsByGroups } from "./examScheduleRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
-import * as examinationSessionRepository from "./examinationSessionRepository.js";
 import { getSeatCountsByCapacityIds } from "../utility/roomCapacity.js";
 import { INVIGILATOR_ASSIGNMENT_INACTIVE_STATUSES } from "../constant.js";
+import { findExamScheduleIdsBySelections } from "../utility/examScheduleSelection.js";
+import { formatDateKey } from "../utility/dateFormat.js";
 
 export async function createAssignment(data, options = {}) {
   return scoped(model.examInvigilatorAssignmentModel).create(data, {
@@ -780,6 +781,19 @@ export async function findRoomCapacityByScheduleAndSection(examScheduleId, class
 export async function getRoomsWithExams(filters = {}, options = {}) {
   const { examinationSessionId, examDate, selections } = filters;
 
+  // 1) Selections → exam schedules first
+  const matchingScheduleIds = await findExamScheduleIdsBySelections(
+    {
+      examinationSessionId,
+      examDate,
+      selections,
+    },
+    options,
+  );
+  if (Array.isArray(matchingScheduleIds) && !matchingScheduleIds.length) {
+    return [];
+  }
+
   const scheduleWhere = {
     ...buildScope(model.examScheduleModel),
     examinationSessionId: Number(examinationSessionId),
@@ -787,37 +801,76 @@ export async function getRoomsWithExams(filters = {}, options = {}) {
   if (examDate) {
     scheduleWhere.examDate = examDate;
   }
+  if (matchingScheduleIds) {
+    scheduleWhere.examScheduleId = { [Op.in]: matchingScheduleIds };
+  }
 
-  const subjectWhere = {};
-  if (selections && selections.length > 0) {
-    const examinationSessionRepository = await import("./examinationSessionRepository.js");
-    const mappingIds = selections.map((s) => s.courseSessionMappingId);
-    const dbMappings = await examinationSessionRepository.findSessionCourseMappingsByIds(mappingIds, { transaction: options.transaction });
-    const dbMappingsMap = new Map(dbMappings.map((m) => [m.sessionCourseMappingId, m]));
+  const matchingRows = await fetchRoomCapacityRows(scheduleWhere, options);
+  if (!matchingScheduleIds || !matchingRows.length) {
+    return matchingRows;
+  }
 
-    const filterCombinations = [];
-    for (const sel of selections) {
-      const mapping = dbMappingsMap.get(sel.courseSessionMappingId);
-      if (mapping) {
-        filterCombinations.push({
-          courseId: mapping.courseId,
-          sessionId: mapping.sessionId,
-          terms: sel.terms || [],
-        });
-      }
+  // 2) Rooms that have a matching exam — include sibling exams in same room+date+slot
+  const roomOccurrenceKeys = new Set();
+  const classRoomSectionIds = [];
+  const examDates = [];
+  const slotIds = [];
+  const roomIdSeen = new Set();
+  const dateSeen = new Set();
+  const slotSeen = new Set();
+
+  for (const rc of matchingRows) {
+    const schedule = rc.examSchedule;
+    const dateKey = formatDateKey(schedule.examDate);
+    const slotId = Number(schedule.examinationSessionSlotId);
+    const roomId = Number(rc.classRoomSectionId);
+    roomOccurrenceKeys.add(`${roomId}_${dateKey}_${slotId}`);
+
+    if (!roomIdSeen.has(roomId)) {
+      roomIdSeen.add(roomId);
+      classRoomSectionIds.push(roomId);
     }
-
-    if (filterCombinations.length > 0) {
-      const sessionIds = [...new Set(filterCombinations.map((c) => c.sessionId))];
-      scheduleWhere.sessionId = sessionIds.length === 1 ? sessionIds[0] : { [Op.in]: sessionIds };
-      subjectWhere[Op.or] = filterCombinations.map((comb) => ({
-        courseId: comb.courseId,
-        term: { [Op.in]: comb.terms },
-      }));
+    if (!dateSeen.has(dateKey)) {
+      dateSeen.add(dateKey);
+      examDates.push(schedule.examDate);
+    }
+    if (!slotSeen.has(slotId)) {
+      slotSeen.add(slotId);
+      slotIds.push(slotId);
     }
   }
 
-  return scoped(model.examScheduleRoomCapacityModel).findAll({
+  const expandedWhere = {
+    ...buildScope(model.examScheduleModel),
+    examinationSessionId: Number(examinationSessionId),
+    examDate: { [Op.in]: examDates },
+    examinationSessionSlotId: { [Op.in]: slotIds },
+  };
+
+  const expandedRows = await fetchRoomCapacityRows(expandedWhere, {
+    ...options,
+    classRoomSectionIds,
+  });
+
+  const filtered = [];
+  for (const rc of expandedRows) {
+    const schedule = rc.examSchedule;
+    const key = `${Number(rc.classRoomSectionId)}_${formatDateKey(schedule.examDate)}_${Number(schedule.examinationSessionSlotId)}`;
+    if (roomOccurrenceKeys.has(key)) {
+      filtered.push(rc);
+    }
+  }
+  return filtered;
+}
+
+async function fetchRoomCapacityRows(scheduleWhere, options = {}) {
+  const capacityWhere = {};
+  if (options.classRoomSectionIds?.length) {
+    capacityWhere.classRoomSectionId = { [Op.in]: options.classRoomSectionIds };
+  }
+
+  const rows = await scoped(model.examScheduleRoomCapacityModel).findAll({
+    where: capacityWhere,
     attributes: [
       "examScheduleRoomCapacityId",
       "classRoomSectionId",
@@ -831,7 +884,12 @@ export async function getRoomsWithExams(filters = {}, options = {}) {
         model: model.classRoomModel,
         as: "classRoom",
         required: true,
-        attributes: ["classRoomSectionId", "roomNumber", "capacity", "examCapacity"],
+        attributes: [
+          "classRoomSectionId",
+          "roomNumber",
+          "capacity",
+          "examCapacity",
+        ],
         where: buildScope(model.classRoomModel),
       },
       {
@@ -851,20 +909,28 @@ export async function getRoomsWithExams(filters = {}, options = {}) {
           {
             model: model.subjectModel,
             as: "subjectSchedule",
-            attributes: ["subjectId", "subjectName", "subjectCode", "course_id"],
-            where: Object.keys(subjectWhere).length > 0 ? subjectWhere : undefined,
+            attributes: [
+              "subjectId",
+              "subjectName",
+              "subjectCode",
+              "courseId",
+            ],
             required: true,
           },
           {
             model: model.examinationSessionSlotModel,
             as: "examinationSessionSlot",
-            attributes: ["examinationSessionSlotId", "slotNumber", "startTime", "endTime"],
+            attributes: [
+              "examinationSessionSlotId",
+              "slotNumber",
+              "startTime",
+              "endTime",
+            ],
             where: buildScope(model.examinationSessionSlotModel),
             required: false,
           },
         ],
       },
-      // Only rooms with seat allocation done (no QP / hall-ticket gate).
       {
         model: model.studentExamSeatModel,
         as: "seats",
@@ -874,20 +940,23 @@ export async function getRoomsWithExams(filters = {}, options = {}) {
     ],
     order: [
       [{ model: model.classRoomModel, as: "classRoom" }, "roomNumber", "ASC"],
-      [{ model: model.examScheduleModel, as: "examSchedule" }, "examDate", "ASC"],
+      [
+        { model: model.examScheduleModel, as: "examSchedule" },
+        "examDate",
+        "ASC",
+      ],
     ],
     transaction: options.transaction,
-  }).then((rows) => {
-    // INNER JOIN on seats can duplicate capacity rows — keep one per capacity.
-    const unique = new Map();
-    for (const row of rows) {
-      const id = row.examScheduleRoomCapacityId;
-      if (!unique.has(id)) {
-        unique.set(id, row);
-      }
-    }
-    return Array.from(unique.values());
   });
+
+  const unique = new Map();
+  for (const row of rows) {
+    const id = row.examScheduleRoomCapacityId;
+    if (!unique.has(id)) {
+      unique.set(id, row);
+    }
+  }
+  return Array.from(unique.values());
 }
 
 export async function getRoomCapacitiesByRoom(classRoomSectionId, filters = {}, options = {}) {

@@ -1315,13 +1315,17 @@ export async function getMappedSubjectsBySessionAndTerm(
       }
       deadline = nearestDeadline;
 
+      // Paper workflow:
+      // - approved: finalApproval = Approved
+      // - moderationActive: paper exists but not finally approved (Pending / awaiting final)
+      // - assigned: teachers assigned, no paper yet
+      // - notAssigned: no teachers
       let hasFullyApprovedPaper = false;
       let hasModerationActivePaper = false;
       for (const qp of qpList) {
-        if (qp.finalApproval === QUESTION_STATUS.APPROVED || qp.status === QUESTION_STATUS.APPROVED) {
+        if (qp.finalApproval === QUESTION_STATUS.APPROVED) {
           hasFullyApprovedPaper = true;
-        }
-        if (qp.status === QUESTION_STATUS.APPROVED && qp.finalApproval !== QUESTION_STATUS.APPROVED) {
+        } else {
           hasModerationActivePaper = true;
         }
       }
@@ -1512,23 +1516,25 @@ export async function getQuestionPaperSummary(
       continue;
     }
 
-    const isApproved = papers.some(
-      (p) => p.finalApproval === "Approved" || p.status === "Approved",
+    const isFinalApproved = papers.some(
+      (p) => p.finalApproval === QUESTION_STATUS.APPROVED,
     );
     const isRejected = papers.some(
-      (p) => p.finalApproval === "Rejected" || p.status === "Rejected",
+      (p) =>
+        p.finalApproval === QUESTION_STATUS.REJECTED ||
+        p.status === QUESTION_STATUS.REJECTED,
     );
-    const isPending = papers.some(
-      (p) => p.finalApproval === "Pending" || p.status === "Pending",
+    const isWithModerator = papers.some(
+      (p) => p.finalApproval !== QUESTION_STATUS.APPROVED,
     );
 
-    if (isApproved) {
+    if (isFinalApproved) {
       approved++;
       readyForEncryption++;
       readyToPrint++;
     } else if (isRejected) {
       changesRequested++;
-    } else if (isPending) {
+    } else if (isWithModerator) {
       withModerator++;
     }
   }

@@ -2,57 +2,34 @@ import * as model from "../models/index.js";
 import { Op } from "sequelize";
 import sequelize from "../database/sequelizeConfig.js";
 import { buildScope, scoped } from "../utility/scoped.js";
-import * as examinationSessionRepository from "./examinationSessionRepository.js";
 import { getSeatCountsByCapacityIds } from "../utility/roomCapacity.js";
 import { INVIGILATOR_ASSIGNMENT_INACTIVE_STATUSES } from "../constant.js";
+import { findExamScheduleIdsBySelections } from "../utility/examScheduleSelection.js";
 
-/** Resolve selections → schedule.sessionId + subject (courseId, term) filters. */
-async function applySelectionFilters(selections, scheduleWhere, subjectWhere, options = {}) {
-  if (!selections || selections.length === 0) return;
+/**
+ * Selections → examScheduleIds, then filter capacities by those ids.
+ * Returns false when selections match no schedules (caller should return empty).
+ */
+async function applyExamScheduleSelectionFilter(
+  filters,
+  scheduleWhere,
+  options = {},
+) {
+  const matchingScheduleIds = await findExamScheduleIdsBySelections(
+    {
+      examinationSessionId: filters.examinationSessionId,
+      examDate: filters.examDate,
+      examinationSessionSlotId: filters.examinationSessionSlotId,
+      selections: filters.selections,
+    },
+    options,
+  );
 
-  const mappingIds = [];
-  for (const sel of selections) {
-    mappingIds.push(sel.courseSessionMappingId);
-  }
+  if (matchingScheduleIds === null) return true;
+  if (!matchingScheduleIds.length) return false;
 
-  const dbMappings =
-    await examinationSessionRepository.findSessionCourseMappingsByIds(
-      mappingIds,
-      options,
-    );
-  const dbMappingsMap = new Map();
-  for (const mapping of dbMappings) {
-    dbMappingsMap.set(mapping.sessionCourseMappingId, mapping);
-  }
-
-  const filterCombinations = [];
-  for (const sel of selections) {
-    const mapping = dbMappingsMap.get(sel.courseSessionMappingId);
-    if (!mapping) continue;
-    filterCombinations.push({
-      courseId: mapping.courseId,
-      sessionId: mapping.sessionId,
-      terms: sel.terms || [],
-    });
-  }
-  if (!filterCombinations.length) return;
-
-  const sessionIds = [];
-  const orSubjects = [];
-  for (const comb of filterCombinations) {
-    sessionIds.push(comb.sessionId);
-    orSubjects.push({
-      courseId: comb.courseId,
-      term: { [Op.in]: comb.terms },
-    });
-  }
-
-  const uniqueSessionIds = [...new Set(sessionIds)];
-  scheduleWhere.sessionId =
-    uniqueSessionIds.length === 1
-      ? uniqueSessionIds[0]
-      : { [Op.in]: uniqueSessionIds };
-  subjectWhere[Op.or] = orSubjects;
+  scheduleWhere.examScheduleId = { [Op.in]: matchingScheduleIds };
+  return true;
 }
 
 export async function getBundleList(filters, pagination) {
@@ -84,7 +61,10 @@ export async function getBundleList(filters, pagination) {
   }
 
   if (selections && selections.length > 0) {
-    await applySelectionFilters(selections, scheduleWhere, subjectWhere);
+    const ok = await applyExamScheduleSelectionFilter(filters, scheduleWhere);
+    if (!ok) {
+      return { rows: [], count: 0 };
+    }
   } else {
     if (sessionId) scheduleWhere.sessionId = sessionId;
     if (term) scheduleWhere.term = term;
@@ -608,21 +588,14 @@ export async function getReadyBundleList(filters, pagination) {
 
   if (selections && selections.length > 0) {
     const scheduleWhere = {};
-    const subjectWhere = {};
-    await applySelectionFilters(selections, scheduleWhere, subjectWhere);
-    if (scheduleWhere.sessionId != null || subjectWhere[Op.or]) {
-      roomCapacityInclude.required = true;
-      if (scheduleWhere.sessionId != null) {
-        roomCapacityInclude.include[0].where = {
-          sessionId: scheduleWhere.sessionId,
-        };
-      }
-      if (subjectWhere[Op.or]) {
-        roomCapacityInclude.include[0].include[0].where = {
-          [Op.or]: subjectWhere[Op.or],
-        };
-      }
+    const ok = await applyExamScheduleSelectionFilter(filters, scheduleWhere);
+    if (!ok) {
+      return { rows: [], count: 0 };
     }
+    roomCapacityInclude.required = true;
+    roomCapacityInclude.include[0].where = {
+      examScheduleId: scheduleWhere.examScheduleId,
+    };
   }
 
   const { count, rows } = await scoped(
@@ -702,8 +675,12 @@ export async function getReceivedRoomsQuery(filters, options = {}) {
     scheduleWhere.examinationSessionSlotId = examinationSessionSlotId;
   }
 
-  const subjectWhere = {};
-  await applySelectionFilters(selections, scheduleWhere, subjectWhere, options);
+  const ok = await applyExamScheduleSelectionFilter(
+    filters,
+    scheduleWhere,
+    options,
+  );
+  if (!ok) return [];
 
   return scoped(model.examScheduleRoomCapacityModel).findAll({
     attributes: [
@@ -730,8 +707,6 @@ export async function getReceivedRoomsQuery(filters, options = {}) {
             model: model.subjectModel,
             as: "subjectSchedule",
             attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
-            where:
-              Object.keys(subjectWhere).length > 0 ? subjectWhere : undefined,
             required: true,
           },
           {

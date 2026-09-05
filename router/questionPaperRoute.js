@@ -145,7 +145,7 @@ router.delete("/:id", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_D
 
 router.put("/approve", userAuth, checkAccessAny([PERMISSIONS.QUESTION_APPROVAL_EDIT.value, PERMISSIONS.EXAM_TIME_TABLE_CREATE_PAPER_APPROVAL.value], null), validate({ body: approveQuestionPaperSchema }), approveQuestionPaper);
 
-router.patch("/finalApproved", userAuth, validate({ query: finalApprovalSchema }), approvefinalpaper);
+router.patch("/finalApproved", userAuth, validate({ body: finalApprovalSchema }), approvefinalpaper);
 
 
 export default router;
