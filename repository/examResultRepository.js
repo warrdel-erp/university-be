@@ -416,6 +416,33 @@ export async function findStudentResult(where, transaction) {
   });
 }
 
+export async function findStudentResultsByExaminationSessionAndStudentIds(
+  examinationSessionId,
+  studentIds,
+  transaction,
+) {
+  if (!studentIds.length) return [];
+
+  return scoped(model.studentResultModel).findAll({
+    where: {
+      examinationSessionId: Number(examinationSessionId),
+      studentId: { [Op.in]: studentIds },
+    },
+    attributes: [
+      "studentResultId",
+      "studentId",
+      "courseId",
+      "sessionId",
+      "term",
+      "resultStatus",
+      "totalMarks",
+      "obtainedMarks",
+      "percentage",
+    ],
+    transaction,
+  });
+}
+
 export async function createStudentResult(payload, transaction) {
   return scoped(model.studentResultModel).create(payload, { transaction });
 }

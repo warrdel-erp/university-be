@@ -172,6 +172,7 @@ async function resolveContext(query) {
 export async function listStudents(query) {
   const page = query.page;
   const limit = query.limit;
+  const filterStatus = query.filterStatus;
   const context = await resolveContext(query);
 
   if (context.empty) {
@@ -181,14 +182,20 @@ export async function listStudents(query) {
     };
   }
 
-  const { rows, count } = await examResultRepository.findStudents({
+  const studentQuery = {
     search: query.search,
     terms: context.terms,
     academicYearId: context.examinationSession.academicYearId,
     classSectionOr: context.classSectionOr,
-    limit,
-    offset: (page - 1) * limit,
-  });
+  };
+
+  // Status filter needs readiness + published flags before paging
+  if (!filterStatus) {
+    studentQuery.limit = limit;
+    studentQuery.offset = (page - 1) * limit;
+  }
+
+  const { rows, count } = await examResultRepository.findStudents(studentQuery);
 
   const items = [];
   const studentIds = [];
@@ -209,7 +216,7 @@ export async function listStudents(query) {
     const examinationSessionId =
       context.examinationSession.examinationSessionId;
 
-    const [schedules, sheets] = await Promise.all([
+    const [schedules, sheets, publishedRows] = await Promise.all([
       examResultRepository.findExamSchedulesByExaminationSessionId(
         examinationSessionId,
         {
@@ -222,7 +229,18 @@ export async function listStudents(query) {
         studentIds,
         examinationSessionId,
       ),
+      examResultRepository.findStudentResultsByExaminationSessionAndStudentIds(
+        examinationSessionId,
+        studentIds,
+      ),
     ]);
+
+    const publishedByKey = new Map();
+    for (const result of publishedRows) {
+      const plain = result.get ? result.get({ plain: true }) : result;
+      const key = `${Number(plain.studentId)}_${Number(plain.courseId)}_${Number(plain.sessionId)}_${Number(plain.term)}`;
+      publishedByKey.set(key, plain);
+    }
 
     for (const item of items) {
       const applicable = schedulesForStudent(
@@ -236,23 +254,56 @@ export async function listStudents(query) {
         sheetMapForStudent(sheets, item.studentId),
       );
 
+      const published = publishedByKey.get(
+        `${Number(item.studentId)}_${Number(item.courseId)}_${Number(item.sessionId)}_${Number(item.term)}`,
+      );
       item.totalExams = readiness.totalExams;
       item.submittedExams = readiness.submittedExams;
       item.pendingExams = readiness.pendingExams;
       item.readinessStatus = readiness.status;
+      item.isPublished = Boolean(published);
+      item.studentResultId = published
+        ? Number(published.studentResultId)
+        : null;
+
+      // Published wins; otherwise use answer-sheet readiness
+      if (published) {
+        item.filterStatus = "Published";
+      } else if (readiness.status === "READY") {
+        item.filterStatus = "Ready";
+      } else {
+        item.filterStatus = "NotReady";
+      }
 
       delete item.course;
       delete item.session;
     }
   }
 
+  let filteredItems = items;
+  let total = count;
+
+  if (filterStatus) {
+    filteredItems = [];
+    for (const item of items) {
+      if (item.filterStatus !== filterStatus) continue;
+      filteredItems.push(item);
+    }
+    total = filteredItems.length;
+    const offset = (page - 1) * limit;
+    filteredItems = filteredItems.slice(offset, offset + limit);
+  }
+
   return {
-    data: { examinationSession: context.examinationSession, items },
+    data: {
+      examinationSession: context.examinationSession,
+      items: filteredItems,
+    },
     pagination: {
       page,
       limit,
-      total: count,
-      totalPages: Math.ceil(count / limit) || 0,
+      total,
+      totalPages: Math.ceil(total / limit) || 0,
     },
   };
 }
@@ -604,6 +655,7 @@ export async function createExaminationSessionResult(body) {
           totalMarks,
           obtainedMarks,
           percentage,
+          resultStatus: "Published",
           academicYearId,
         },
         transaction,

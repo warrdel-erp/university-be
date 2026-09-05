@@ -556,46 +556,28 @@ export async function getReadyBundleList(filters, pagination) {
   const { limit, page } = pagination;
   const offset = (page - 1) * limit;
 
-  const bundleWhere = { status: "READY" };
+  // Created bundles in PREPARING or READY
+  const bundleWhere = { status: { [Op.in]: ["PREPARING", "READY"] } };
   if (examDate) bundleWhere.examDate = examDate;
-  if (examinationSessionSlotId) bundleWhere.examinationSessionSlotId = examinationSessionSlotId;
+  if (examinationSessionSlotId) {
+    bundleWhere.examinationSessionSlotId = examinationSessionSlotId;
+  }
   if (search) {
     bundleWhere.bundleCode = { [Op.like]: `%${search}%` };
   }
 
-  const roomCapacityInclude = {
-    model: model.examScheduleRoomCapacityModel,
-    as: "roomCapacities",
-    required: false,
-    attributes: [],
-    include: [
-      {
-        model: model.examScheduleModel,
-        as: "examSchedule",
-        required: true,
-        attributes: [],
-        include: [
-          {
-            model: model.subjectModel,
-            as: "subjectSchedule",
-            required: true,
-            attributes: [],
-          }
-        ]
-      }
-    ]
+  // Exams first (session + optional selections) → rooms linked via capacities
+  const scheduleWhere = {
+    examinationSessionId: Number(examinationSessionId),
   };
+  if (examDate) scheduleWhere.examDate = examDate;
+  if (examinationSessionSlotId) {
+    scheduleWhere.examinationSessionSlotId = Number(examinationSessionSlotId);
+  }
 
-  if (selections && selections.length > 0) {
-    const scheduleWhere = {};
-    const ok = await applyExamScheduleSelectionFilter(filters, scheduleWhere);
-    if (!ok) {
-      return { rows: [], count: 0 };
-    }
-    roomCapacityInclude.required = true;
-    roomCapacityInclude.include[0].where = {
-      examScheduleId: scheduleWhere.examScheduleId,
-    };
+  const ok = await applyExamScheduleSelectionFilter(filters, scheduleWhere);
+  if (!ok) {
+    return { rows: [], count: 0 };
   }
 
   const { count, rows } = await scoped(
@@ -603,11 +585,10 @@ export async function getReadyBundleList(filters, pagination) {
   ).findAndCountAll({
     where: bundleWhere,
     include: [
-      roomCapacityInclude,
       {
         model: model.examinationSessionSlotModel,
         as: "examinationSessionSlot",
-        where: { examinationSessionId },
+        where: { examinationSessionId: Number(examinationSessionId) },
         required: true,
         attributes: [
           "examinationSessionSlotId",
@@ -619,8 +600,76 @@ export async function getReadyBundleList(filters, pagination) {
       {
         model: model.classRoomModel,
         as: "classRoom",
-        attributes: ["classRoomSectionId", "roomNumber", "capacity", "examCapacity"],
+        attributes: [
+          "classRoomSectionId",
+          "roomNumber",
+          "capacity",
+          "examCapacity",
+        ],
         required: true,
+        include: [
+          {
+            // At least one invigilator for this room + date + slot
+            model: model.examInvigilatorAssignmentModel,
+            as: "examInvigilatorAssignments",
+            attributes: ["examInvigilatorAssignmentId", "userId", "role"],
+            required: true,
+            where: sequelize.and(
+              sequelize.where(
+                sequelize.col("classRoom.examInvigilatorAssignments.exam_date"),
+                "=",
+                sequelize.col("exam_room_material_bundle.exam_date"),
+              ),
+              sequelize.where(
+                sequelize.col(
+                  "classRoom.examInvigilatorAssignments.examination_session_slot_id",
+                ),
+                "=",
+                sequelize.col(
+                  "exam_room_material_bundle.examination_session_slot_id",
+                ),
+              ),
+            ),
+            include: [
+              {
+                model: model.users,
+                as: "user",
+                attributes: ["userId", "userName"],
+                required: false,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        // Bundle room must have exam schedule capacity for this session/selections
+        model: model.examScheduleRoomCapacityModel,
+        as: "roomCapacities",
+        attributes: ["examScheduleRoomCapacityId", "examScheduleId"],
+        required: true,
+        include: [
+          {
+            model: model.examScheduleModel,
+            as: "examSchedule",
+            attributes: [
+              "examScheduleId",
+              "examDate",
+              "examinationSessionSlotId",
+            ],
+            required: true,
+            where: {
+              ...scheduleWhere,
+              examDate: {
+                [Op.eq]: sequelize.col("exam_room_material_bundle.exam_date"),
+              },
+              examinationSessionSlotId: {
+                [Op.eq]: sequelize.col(
+                  "exam_room_material_bundle.examination_session_slot_id",
+                ),
+              },
+            },
+          },
+        ],
       },
       {
         model: model.examRoomMaterialItemModel,
@@ -652,7 +701,11 @@ export async function getReadyBundleList(filters, pagination) {
     limit,
     offset,
     distinct: true,
-    order: [["examDate", "ASC"], ["bundleCode", "ASC"]],
+    subQuery: false,
+    order: [
+      ["examDate", "ASC"],
+      ["bundleCode", "ASC"],
+    ],
   });
 
   return {

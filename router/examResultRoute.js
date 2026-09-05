@@ -20,10 +20,20 @@ const selections = z.preprocess((val) => {
   terms: z.array(z.number().int().positive()),
 })).optional());
 
+const filterStatusQuery = z.preprocess((val) => {
+  if (val == null || val === "") return undefined;
+  const normalized = String(val).trim().toLowerCase().replace(/[_\s-]/g, "");
+  if (normalized === "ready") return "Ready";
+  if (normalized === "notready") return "NotReady";
+  if (normalized === "published") return "Published";
+  return val;
+}, z.enum(["Ready", "NotReady", "Published"]).optional());
+
 const query = z.object({
   examinationSessionId: id.optional(),
   selections,
   search: z.string().trim().optional(),
+  filterStatus: filterStatusQuery,
   page: id.optional().default(1),
   limit: id.optional().default(20),
 });
