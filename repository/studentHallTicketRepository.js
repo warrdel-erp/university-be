@@ -285,9 +285,6 @@ function mapStudentRowResult(raw, termIdSet, termToEstMap) {
 
   const estId =
     placementTerm != null ? termToEstMap[Number(placementTerm)] : null;
-  const mapper =
-    raw.studentMapped && raw.studentMapped.length > 0 ? raw.studentMapped[0] : null;
-  const effectiveSessionId = mapper ? mapper.sessionId : raw.sessionId;
 
   return {
     student: raw,
@@ -297,7 +294,7 @@ function mapStudentRowResult(raw, termIdSet, termToEstMap) {
       term: placementTerm,
     },
     examinationSession: raw._examSession || null,
-    mapperSessionId: effectiveSessionId,
+    mapperSessionId: raw.sessionId,
   };
 }
 
@@ -539,6 +536,7 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
 
       orClauses.push({
         courseId: comb.courseId,
+        sessionId: comb.sessionId,
         [Op.or]: [
           { classSectionTermId: { [Op.in]: termIdsForComb } },
           { studentId: { [Op.in]: historyIdsForComb } },
