@@ -42,7 +42,7 @@ import userRolePermission from "./router/userRolePermissionRoute.js";
 import dormitoryRoomType from "./router/roomTypeRoute.js";
 import dormitoryList from "./router/dormitoryListRoute.js";
 import addDormitory from "./router/addDormitoryRoute.js";
-import examSetup from "./router/examSetupRoute.js";
+
 import examAttendance from "./router/examAttendanceRoute.js";
 import examRoomMaterialBundle from "./router/examRoomMaterialBundleRoute.js";
 import transportRoute from "./router/transportRoute.js";
@@ -201,7 +201,7 @@ app.use("/examStructure", examStructure);
 app.use("/examScheduleMapping", examScheduleMapping);
 
 app.use("/internalAssessment", internalAssessment);
-app.use("/examSetup", examSetup);
+
 app.use("/examAttendance", examAttendance);
 app.use("/examRoomMaterialBundle", examRoomMaterialBundle);
 app.use("/studentHallTicket", studentHallTicket);

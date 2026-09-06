@@ -99,7 +99,7 @@ const examSetupTypeTermModel = sequelize.define(
 
     },
     {
-        tableName: 'exam_setup_type_term',
+        tableName: 'exam_setup_type_term_depricated',
         timestamps: true,
         paranoid: false,
         indexes: [

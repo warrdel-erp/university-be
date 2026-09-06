@@ -161,7 +161,7 @@ const examSetupModel = sequelize.define(
         },
     },
     {
-        tableName: "exam_setup",
+        tableName: "exam_setup_depricated",
         timestamps: true,
         paranoid: true,
     }
