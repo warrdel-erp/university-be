@@ -22,7 +22,7 @@
           "host": ["{{base_url}}"],
           "path": ["internalAssessment", "my"]
         },
-        "description": "Fetches faculty courses for the logged-in user with continuous assessment weightage."
+        "description": "Faculty My Courses rows for CONTINUOUS_ASSESSMENT only. Includes course/department/term, studentCount, IA weightage, graded/pending assessment counts, marks progress, and submissionStatus (ready|not_ready)."
       },
       "response": []
     },
@@ -188,7 +188,7 @@
             }
           ]
         },
-        "description": "Fetches one internal assessment with student evaluations."
+        "description": "Fetches one internal assessment with subject/course/session details and marking progress counts (no studentEvaluations)."
       },
       "response": []
     },
@@ -229,6 +229,36 @@
           ]
         },
         "description": "Updates assessment fields / weightage. All body fields are optional."
+      },
+      "response": []
+    },
+    {
+      "name": "GET Marks Table",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/internalAssessment/my/marks/table?subjectId={{subjectId}}&classSectionTermId={{classSectionTermId}}",
+          "host": ["{{base_url}}"],
+          "path": ["internalAssessment", "my", "marks", "table"],
+          "query": [
+            {
+              "key": "subjectId",
+              "value": "{{subjectId}}"
+            },
+            {
+              "key": "classSectionTermId",
+              "value": "{{classSectionTermId}}"
+            }
+          ]
+        },
+        "description": "Marks matrix for Faculty Workspace: assessments as columns, students as rows with marks[] aligned to assessments order."
       },
       "response": []
     },

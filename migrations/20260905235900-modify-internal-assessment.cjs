@@ -386,6 +386,10 @@ async function migrateStudentEvaluationTable(queryInterface, Sequelize, transact
           type: Sequelize.DECIMAL(5, 2),
           allowNull: true,
         },
+        document_url: {
+          type: Sequelize.STRING,
+          allowNull: true,
+        },
         university_id: {
           type: Sequelize.INTEGER,
           allowNull: true,

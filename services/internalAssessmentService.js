@@ -115,6 +115,13 @@ export async function getStudentEvaluations(internalAssessmentId) {
   );
 }
 
+export async function getMarksTableBySubject(filters) {
+  return InternalAssessmentRepository.getMarksTableBySubject({
+    subjectId: Number(filters.subjectId),
+    classSectionTermId: Number(filters.classSectionTermId),
+  });
+}
+
 export async function getStudentsByClassSectionTermId(classSectionTermId) {
   return InternalAssessmentRepository.getStudentsByClassSectionTermId(
     Number(classSectionTermId),

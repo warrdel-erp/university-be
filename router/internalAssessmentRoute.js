@@ -11,6 +11,7 @@ import {
   getUserDashboardSku,
   updateInternalAssessment,
   getStudentEvaluations,
+  getMarksTableBySubject,
   upsertStudentEvaluations,
   getStudentsByClassSectionTermId,
 } from "../controllers/internalAssessmentController.js";
@@ -110,6 +111,12 @@ router.patch(
     body: updateInternalAssessmentSchema,
   }),
   updateInternalAssessment,
+);
+router.get(
+  "/my/marks/table",
+  userAuth,
+  validate({ query: listInternalAssessmentsQuerySchema }),
+  getMarksTableBySubject,
 );
 router.get(
   "/my/marks",

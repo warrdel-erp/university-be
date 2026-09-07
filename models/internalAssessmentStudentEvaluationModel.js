@@ -38,6 +38,11 @@ const internalAssessmentStudentEvaluationModel = sequelize.define(
       allowNull: true,
       field: "obtained_marks",
     },
+    documentUrl: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "document_url",
+    },
     universityId: {
       type: DataTypes.INTEGER,
       allowNull: true,

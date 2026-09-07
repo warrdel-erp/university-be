@@ -184,6 +184,28 @@ export async function getStudentEvaluations(req, res) {
   }
 }
 
+export async function getMarksTableBySubject(req, res) {
+  try {
+    const table = await InternalAssessmentServices.getMarksTableBySubject(
+      req.query,
+    );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Fetched marks table successfully",
+      table,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch marks table",
+      error,
+    );
+  }
+}
+
 export async function getStudentsByClassSectionTermId(req, res) {
   try {
     const students =

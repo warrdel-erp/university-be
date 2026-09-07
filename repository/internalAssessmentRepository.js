@@ -31,6 +31,7 @@ const studentEvaluationAttributes = [
   "studentId",
   "internalAssessmentId",
   "obtainedMarks",
+  "documentUrl",
   "createdAt",
   "updatedAt",
 ];
@@ -122,8 +123,9 @@ async function getAssessmentPlanWeightage(
   subjectId,
   courseId,
   sessionId,
-  transaction,
+  options = {},
 ) {
+  const { transaction, continuousOnly = false } = options;
   const mappingWhere = { subjectId, courseId };
   if (sessionId) {
     mappingWhere.sessionId = sessionId;
@@ -171,6 +173,10 @@ async function getAssessmentPlanWeightage(
     return continuousComponent;
   }
 
+  if (continuousOnly) {
+    return null;
+  }
+
   // Fallback: use the exam type linked on the subject mapping
   if (!mapping.examSetupTypeId) {
     return null;
@@ -198,137 +204,313 @@ async function getAssessmentPlanWeightage(
   });
 }
 
-export async function getUserInternalAssessments(userId) {
-  const teacherCells = await scoped(model.timeTableCellTeachersModel).findAll({
-    where: {
-      userId,
-      teacherType: "Primary",
-    },
-    attributes: ["timeTableCellTeacherId", "timeTableCellId"],
+async function getContinuousAssessmentPlanMap() {
+  const mappings = await scoped(
+    model.assessmentPlanSubjectMappingModel,
+  ).findAll({
+    attributes: [
+      "assessmentPlanSubjectMappingId",
+      "assessmentPlanId",
+      "subjectId",
+      "courseId",
+      "sessionId",
+    ],
     include: [
       {
-        model: model.timeTableCellModel,
-        as: "timeTableCell",
+        model: model.assessmentPlanModel,
+        as: "assessmentPlan",
+        attributes: ["assessmentPlanId"],
         required: true,
-        attributes: ["timeTableCellId", "subjectId"],
         include: [
           {
-            model: model.subjectModel,
-            as: "timeTableSubject",
-            attributes: ["subjectId", "subjectName", "subjectCode"],
+            model: model.assessmentPlanComponentModel,
+            as: "components",
+            attributes: ["examSetupTypeId", "weightagePercentage"],
             required: true,
-          },
-          {
-            model: model.timeTableRoutineModel,
-            as: "timeTableRoutine",
-            required: true,
-            attributes: ["timeTableRoutineId", "courseId", "classSectionTermId"],
+            include: [
+              {
+                model: model.examSetupTypeModel,
+                as: "examSetupType",
+                attributes: examSetupTypeAttributes,
+                required: true,
+                where: { examCategory: "CONTINUOUS_ASSESSMENT" },
+              },
+            ],
           },
         ],
       },
     ],
   });
 
+  const planMap = new Map();
+
+  for (const mapping of mappings) {
+    const component = mapping.assessmentPlan.components[0];
+    const key = `${mapping.subjectId}:${mapping.courseId}:${mapping.sessionId}`;
+    planMap.set(key, {
+      fetchedWeightage: Math.round(Number(component.weightagePercentage)),
+      assessmentExamType: {
+        examSetupTypeId: component.examSetupType.examSetupTypeId,
+        examName: component.examSetupType.examName,
+        examCategory: component.examSetupType.examCategory,
+      },
+    });
+  }
+
+  return planMap;
+}
+
+async function getStudentCountByTermAndSession(termSessionPairs) {
+  const countMap = new Map();
+
+  if (termSessionPairs.length === 0) {
+    return countMap;
+  }
+
+  const rows = await scoped(model.studentModel).findAll({
+    where: { [Op.or]: termSessionPairs },
+    attributes: [
+      "classSectionTermId",
+      "sessionId",
+      [fn("COUNT", col("student_id")), "studentCount"],
+    ],
+    group: ["classSectionTermId", "sessionId"],
+    raw: true,
+  });
+
+  for (const row of rows) {
+    const key = `${row.classSectionTermId}:${row.sessionId}`;
+    countMap.set(key, Number(row.studentCount));
+  }
+
+  return countMap;
+}
+
+export async function getUserInternalAssessments(userId) {
+  const [continuousPlanMap, teacherCells] = await Promise.all([
+    getContinuousAssessmentPlanMap(),
+    scoped(model.timeTableCellTeachersModel).findAll({
+      where: {
+        userId,
+        teacherType: "Primary",
+      },
+      attributes: ["timeTableCellTeacherId", "timeTableCellId"],
+      include: [
+        {
+          model: model.timeTableCellModel,
+          as: "timeTableCell",
+          required: true,
+          attributes: ["timeTableCellId", "subjectId"],
+          include: [
+            {
+              model: model.subjectModel,
+              as: "timeTableSubject",
+              attributes: ["subjectId", "subjectName", "subjectCode"],
+              required: true,
+            },
+            {
+              model: model.timeTableRoutineModel,
+              as: "timeTableRoutine",
+              required: true,
+              attributes: [
+                "timeTableRoutineId",
+                "courseId",
+                "classSectionTermId",
+              ],
+              include: [
+                {
+                  model: model.courseModel,
+                  as: "timeTableCourse",
+                  attributes: ["courseId", "courseName", "courseCode"],
+                  required: false,
+                  include: [
+                    {
+                      model: model.departmentModel,
+                      as: "courseProgram",
+                      attributes: ["departmentId", "departmentName"],
+                      required: false,
+                    },
+                  ],
+                },
+                {
+                  model: model.classSectionTermModel,
+                  as: "timeTableClassSectionTerm",
+                  attributes: ["classSectionTermId", "term"],
+                  required: true,
+                  include: [
+                    {
+                      model: model.classSectionModel,
+                      as: "classSection",
+                      attributes: ["classSectionsId", "sessionId"],
+                      required: true,
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }),
+  ]);
+
   const subjectsMap = new Map();
-  const classSectionTermIds = new Set();
+  const termSessionPairs = [];
+  const termSessionKeySet = new Set();
 
   for (const cell of teacherCells) {
     const timeTableCell = cell.timeTableCell;
     const routine = timeTableCell.timeTableRoutine;
-    const classSectionTermId = routine.classSectionTermId;
+    const classSectionTerm = routine.timeTableClassSectionTerm;
     const subjectId = timeTableCell.subjectId;
+    const courseId = routine.courseId;
+    const classSectionTermId = routine.classSectionTermId;
+    const sessionId = classSectionTerm.classSection.sessionId;
 
-    if (!classSectionTermId || !subjectId) {
+    if (!subjectId || !courseId || !classSectionTermId || !sessionId) {
       continue;
     }
 
-    classSectionTermIds.add(classSectionTermId);
-
-    // One entry per subject within a classSectionTerm
-    const key = `${subjectId}-${classSectionTermId}`;
-    if (!subjectsMap.has(key)) {
-      subjectsMap.set(key, {
-        userId,
-        subjectId,
-        courseId: routine.courseId,
-        classSectionTermId,
-        sessionId: null,
-        studentCount: 0,
-        assessmentSubject: timeTableCell.timeTableSubject,
-        assessmentExamType: {
-          examSetupTypeId: null,
-          examName: null,
-          examCategory: null,
-        },
-        fetchedWeightage: 0,
-      });
+    const plan = continuousPlanMap.get(
+      `${subjectId}:${courseId}:${sessionId}`,
+    );
+    if (!plan) {
+      continue;
     }
+
+    const key = `${subjectId}-${classSectionTermId}`;
+    if (subjectsMap.has(key)) {
+      continue;
+    }
+
+    const termSessionKey = `${classSectionTermId}:${sessionId}`;
+    if (!termSessionKeySet.has(termSessionKey)) {
+      termSessionKeySet.add(termSessionKey);
+      termSessionPairs.push({ classSectionTermId, sessionId });
+    }
+
+    const course = routine.timeTableCourse
+      ? routine.timeTableCourse.get({ plain: true })
+      : null;
+    const department = course && course.courseProgram
+      ? course.courseProgram
+      : null;
+
+    subjectsMap.set(key, {
+      userId,
+      subjectId,
+      courseId,
+      classSectionTermId,
+      sessionId,
+      term: classSectionTerm.term,
+      studentCount: 0,
+      assessmentSubject: timeTableCell.timeTableSubject.get({ plain: true }),
+      course: course
+        ? {
+            courseId: course.courseId,
+            courseName: course.courseName,
+            courseCode: course.courseCode,
+          }
+        : null,
+      department: department
+        ? {
+            departmentId: department.departmentId,
+            departmentName: department.departmentName,
+          }
+        : null,
+      assessmentExamType: plan.assessmentExamType,
+      fetchedWeightage: plan.fetchedWeightage,
+      assessmentCount: 0,
+      gradedAssessmentCount: 0,
+      pendingAssessmentCount: 0,
+      marksEnteredStudentCount: 0,
+      marksStatus: "in_progress",
+      submissionStatus: "not_ready",
+    });
   }
 
-  const sessionByTermId = new Map();
-  const studentCountByTermId = new Map();
+  if (subjectsMap.size === 0) {
+    return [];
+  }
 
-  if (classSectionTermIds.size > 0) {
-    const termRows = await scoped(model.classSectionTermModel).findAll({
-      where: {
-        classSectionTermId: Array.from(classSectionTermIds),
-      },
-      attributes: ["classSectionTermId", "classSectionsId"],
-      include: [
-        {
-          model: model.classSectionModel,
-          as: "classSection",
-          attributes: ["classSectionsId", "sessionId"],
-          required: true,
-        },
-      ],
+  const continuousEntries = Array.from(subjectsMap.values());
+  const assessmentWhere = [];
+
+  for (const entry of continuousEntries) {
+    assessmentWhere.push({
+      subjectId: entry.subjectId,
+      classSectionTermId: entry.classSectionTermId,
+      userId,
     });
+  }
 
-    for (const termRow of termRows) {
-      sessionByTermId.set(
-        termRow.classSectionTermId,
-        termRow.classSection.sessionId,
-      );
+  const [studentCountMap, assessments] = await Promise.all([
+    getStudentCountByTermAndSession(termSessionPairs),
+    scoped(model.internalAssessmentModel).findAll({
+      where: { [Op.or]: assessmentWhere },
+      attributes: ["internalAssessmentId", "subjectId", "classSectionTermId"],
+    }),
+  ]);
+
+  for (const entry of continuousEntries) {
+    entry.studentCount =
+      studentCountMap.get(`${entry.classSectionTermId}:${entry.sessionId}`) ||
+      0;
+  }
+
+  const assessmentIds = [];
+  const assessmentsByCourseKey = new Map();
+
+  for (const assessment of assessments) {
+    const key = `${assessment.subjectId}-${assessment.classSectionTermId}`;
+    assessmentIds.push(assessment.internalAssessmentId);
+
+    if (!assessmentsByCourseKey.has(key)) {
+      assessmentsByCourseKey.set(key, []);
     }
+    assessmentsByCourseKey.get(key).push(assessment.internalAssessmentId);
+  }
 
-    for (const classSectionTermId of classSectionTermIds) {
-      const sessionId = sessionByTermId.get(classSectionTermId);
-      if (!sessionId) {
-        studentCountByTermId.set(classSectionTermId, 0);
-        continue;
+  const progressMap = await getMarkingProgressMap(assessmentIds);
+
+  for (const entry of continuousEntries) {
+    const key = `${entry.subjectId}-${entry.classSectionTermId}`;
+    const courseAssessmentIds = assessmentsByCourseKey.get(key) || [];
+    entry.assessmentCount = courseAssessmentIds.length;
+
+    let gradedAssessmentCount = 0;
+    let marksEnteredStudentCount =
+      courseAssessmentIds.length === 0 ? 0 : entry.studentCount;
+
+    for (const internalAssessmentId of courseAssessmentIds) {
+      const progress = progressMap.get(internalAssessmentId);
+
+      if (
+        progress.studentCount > 0 &&
+        progress.checked === progress.studentCount
+      ) {
+        gradedAssessmentCount += 1;
       }
 
-      const studentCount = await scoped(model.studentModel).count({
-        where: { classSectionTermId, sessionId },
-      });
-      studentCountByTermId.set(classSectionTermId, studentCount);
+      if (progress.checked < marksEnteredStudentCount) {
+        marksEnteredStudentCount = progress.checked;
+      }
     }
+
+    entry.gradedAssessmentCount = gradedAssessmentCount;
+    entry.pendingAssessmentCount =
+      entry.assessmentCount - gradedAssessmentCount;
+    entry.marksEnteredStudentCount = marksEnteredStudentCount;
+    entry.marksStatus =
+      entry.assessmentCount > 0 &&
+      gradedAssessmentCount === entry.assessmentCount
+        ? "complete"
+        : "in_progress";
+    entry.submissionStatus =
+      entry.marksStatus === "complete" ? "ready" : "not_ready";
   }
 
-  for (const entry of subjectsMap.values()) {
-    entry.sessionId = sessionByTermId.get(entry.classSectionTermId) || null;
-    entry.studentCount =
-      studentCountByTermId.get(entry.classSectionTermId) || 0;
-
-    const planComponent = await getAssessmentPlanWeightage(
-      entry.subjectId,
-      entry.courseId,
-      entry.sessionId,
-    );
-
-    if (planComponent) {
-      entry.fetchedWeightage = Math.round(
-        Number(planComponent.weightagePercentage),
-      );
-      entry.assessmentExamType.examSetupTypeId =
-        planComponent.examSetupType.examSetupTypeId;
-      entry.assessmentExamType.examName = planComponent.examSetupType.examName;
-      entry.assessmentExamType.examCategory =
-        planComponent.examSetupType.examCategory;
-    }
-  }
-
-  return Array.from(subjectsMap.values());
+  return continuousEntries;
 }
 
 export async function createInternalAssessment(payload, transaction) {
@@ -361,7 +543,7 @@ export async function createInternalAssessment(payload, transaction) {
     subjectId,
     courseId,
     sessionId,
-    transaction,
+    { transaction, continuousOnly: true },
   );
 
   if (continuousComponent) {
@@ -474,21 +656,6 @@ export async function getInternalAssessmentById(internalAssessmentId) {
         as: "assessmentExamType",
         attributes: ["examSetupTypeId", "examName", "examCategory"],
         required: false,
-      },
-      {
-        model: model.internalAssessmentStudentEvaluationModel,
-        as: "studentEvaluations",
-        attributes: studentEvaluationAttributes,
-        required: false,
-        where: buildScope(model.internalAssessmentStudentEvaluationModel),
-        include: [
-          {
-            model: model.studentModel,
-            as: "student",
-            attributes: studentAttributes,
-            required: false,
-          },
-        ],
       },
     ],
   });
@@ -676,6 +843,108 @@ export async function updateInternalAssessment(
     where: { internalAssessmentId },
     transaction,
   });
+}
+
+export async function getMarksTableBySubject(filters) {
+  const { subjectId, classSectionTermId } = filters;
+
+  const assessments = await scoped(model.internalAssessmentModel).findAll({
+    where: {
+      subjectId,
+      classSectionTermId,
+    },
+    attributes: [
+      "internalAssessmentId",
+      "title",
+      "type",
+      "maximumMarks",
+      "issueDate",
+      "dueDate",
+      "mode",
+      "documentUrl",
+    ],
+    order: [
+      ["issueDate", "ASC"],
+      ["internalAssessmentId", "ASC"],
+    ],
+  });
+
+  const students = await getStudentsByClassSectionTermId(classSectionTermId);
+
+  const assessmentIds = [];
+  const assessmentColumns = [];
+  for (const assessment of assessments) {
+    const plain = assessment.get({ plain: true });
+    assessmentIds.push(plain.internalAssessmentId);
+    assessmentColumns.push(plain);
+  }
+
+  const evaluationByStudentAndAssessment = new Map();
+
+  if (assessmentIds.length > 0) {
+    const evaluations = await scoped(
+      model.internalAssessmentStudentEvaluationModel,
+    ).findAll({
+      where: {
+        internalAssessmentId: { [Op.in]: assessmentIds },
+      },
+      attributes: studentEvaluationAttributes,
+    });
+
+    for (const evaluation of evaluations) {
+      const plain = evaluation.get({ plain: true });
+      const key = `${plain.studentId}:${plain.internalAssessmentId}`;
+      evaluationByStudentAndAssessment.set(key, {
+        internalAssessmentStudentEvaluationId:
+          plain.internalAssessmentStudentEvaluationId,
+        internalAssessmentId: plain.internalAssessmentId,
+        obtainedMarks: plain.obtainedMarks,
+        documentUrl: plain.documentUrl,
+        updatedAt: plain.updatedAt,
+      });
+    }
+  }
+
+  const studentRows = [];
+  for (const student of students) {
+    const plainStudent = student.get({ plain: true });
+    const marks = [];
+
+    for (const assessment of assessmentColumns) {
+      const key = `${plainStudent.studentId}:${assessment.internalAssessmentId}`;
+      const evaluation = evaluationByStudentAndAssessment.get(key);
+
+      if (evaluation) {
+        marks.push(evaluation);
+      } else {
+        marks.push({
+          internalAssessmentStudentEvaluationId: null,
+          internalAssessmentId: assessment.internalAssessmentId,
+          obtainedMarks: null,
+          documentUrl: null,
+          updatedAt: null,
+        });
+      }
+    }
+
+    studentRows.push({
+      studentId: plainStudent.studentId,
+      scholarNumber: plainStudent.scholarNumber,
+      enrollNumber: plainStudent.enrollNumber,
+      firstName: plainStudent.firstName,
+      middleName: plainStudent.middleName,
+      lastName: plainStudent.lastName,
+      marks,
+    });
+  }
+
+  return {
+    subjectId,
+    classSectionTermId,
+    studentCount: studentRows.length,
+    assessments: assessmentColumns,
+    students: studentRows,
+  };
 }
 
 export async function getStudentEvaluationsByAssessmentId(
