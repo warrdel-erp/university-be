@@ -7,6 +7,7 @@ import {
   createInternalAssessment,
   getInternalAssessmentsBySubject,
   getInternalAssessmentById,
+  getAssessmentStatusCounts,
   updateInternalAssessment,
   getStudentEvaluations,
   upsertStudentEvaluations,
@@ -37,6 +38,11 @@ const classSectionTermIdQuerySchema = z.object({
 
 const internalAssessmentIdQuerySchema = z.object({
   internalAssessmentId: z.coerce.number().int().positive(),
+});
+
+const assessmentStatusCountsQuerySchema = z.object({
+  subjectId: z.coerce.number().int().positive(),
+  classSectionTermId: z.coerce.number().int().positive(),
 });
 
 const updateInternalAssessmentSchema = z.object({
@@ -73,6 +79,12 @@ router.get(
   userAuth,
   validate({ query: listInternalAssessmentsQuerySchema }),
   getInternalAssessmentsBySubject,
+);
+router.get(
+  "/my/summary",
+  userAuth,
+  validate({ query: assessmentStatusCountsQuerySchema }),
+  getAssessmentStatusCounts,
 );
 router.get(
   "/my/students",

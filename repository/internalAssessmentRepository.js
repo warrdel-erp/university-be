@@ -325,10 +325,55 @@ export async function getInternalAssessmentsBySubject(filters) {
 }
 
 export async function getInternalAssessmentById(internalAssessmentId) {
-  return scoped(model.internalAssessmentModel).findOne({
+  const assessment = await scoped(model.internalAssessmentModel).findOne({
     where: { internalAssessmentId },
     attributes: internalAssessmentAttributes,
     include: [
+      {
+        model: model.subjectModel,
+        as: "assessmentSubject",
+        attributes: ["subjectId", "subjectName", "subjectCode"],
+        required: false,
+      },
+      {
+        model: model.sessionModel,
+        as: "assessmentSession",
+        attributes: [
+          "sessionId",
+          "sessionName",
+          "startingDate",
+          "endingDate",
+          "classTillDate",
+        ],
+        required: false,
+      },
+      {
+        model: model.classSectionTermModel,
+        as: "assessmentClassSectionTerm",
+        attributes: ["classSectionTermId", "classSectionsId", "term"],
+        required: false,
+        include: [
+          {
+            model: model.classSectionModel,
+            as: "classSection",
+            attributes: [
+              "classSectionsId",
+              "courseId",
+              "sessionId",
+              "section",
+            ],
+            required: false,
+            include: [
+              {
+                model: model.courseModel,
+                as: "courseSection",
+                attributes: ["courseId", "courseName", "courseCode"],
+                required: false,
+              },
+            ],
+          },
+        ],
+      },
       {
         model: model.examSetupTypeModel,
         as: "assessmentExamType",
@@ -352,6 +397,80 @@ export async function getInternalAssessmentById(internalAssessmentId) {
       },
     ],
   });
+
+  if (!assessment) {
+    return null;
+  }
+
+  const plain = assessment.get({ plain: true });
+  const studentEvaluations = plain.studentEvaluations || [];
+  let marksEnteredCount = 0;
+  for (const evaluation of studentEvaluations) {
+    if (evaluation.obtainedMarks !== null && evaluation.obtainedMarks !== undefined) {
+      marksEnteredCount += 1;
+    }
+  }
+
+  plain.studentCount = studentEvaluations.length;
+  plain.marksEnteredCount = marksEnteredCount;
+  plain.course =
+    plain.assessmentClassSectionTerm &&
+    plain.assessmentClassSectionTerm.classSection &&
+    plain.assessmentClassSectionTerm.classSection.courseSection
+      ? plain.assessmentClassSectionTerm.classSection.courseSection
+      : null;
+  plain.session = plain.assessmentSession || null;
+
+  return plain;
+}
+
+export async function getAssessmentStatusCounts(filters) {
+  const { subjectId, classSectionTermId, userId } = filters;
+
+  const assessments = await scoped(model.internalAssessmentModel).findAll({
+    where: {
+      subjectId,
+      classSectionTermId,
+      userId,
+    },
+    attributes: ["internalAssessmentId", "issueDate", "dueDate"],
+  });
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let completed = 0;
+  let open = 0;
+  let upcoming = 0;
+
+  for (const assessment of assessments) {
+    const issueDate = assessment.issueDate
+      ? new Date(assessment.issueDate)
+      : null;
+    const dueDate = assessment.dueDate ? new Date(assessment.dueDate) : null;
+
+    if (issueDate) {
+      issueDate.setHours(0, 0, 0, 0);
+    }
+    if (dueDate) {
+      dueDate.setHours(0, 0, 0, 0);
+    }
+
+    if (issueDate && issueDate > today) {
+      upcoming += 1;
+    } else if (dueDate && dueDate < today) {
+      completed += 1;
+    } else {
+      open += 1;
+    }
+  }
+
+  return {
+    total: assessments.length,
+    completed,
+    open,
+    upcoming,
+  };
 }
 
 export async function updateInternalAssessment(
@@ -383,7 +502,10 @@ export async function getStudentEvaluationsByAssessmentId(
   });
 }
 
-export async function getStudentsByClassSectionTermId(classSectionTermId) {
+export async function getStudentsByClassSectionTermId(
+  classSectionTermId,
+  transaction,
+) {
   return scoped(model.studentModel).findAll({
     where: { classSectionTermId },
     attributes: studentAttributes,
@@ -391,7 +513,25 @@ export async function getStudentsByClassSectionTermId(classSectionTermId) {
       ["scholarNumber", "ASC"],
       ["studentId", "ASC"],
     ],
+    transaction,
   });
+}
+
+export async function createStudentEvaluationPlaceholders(
+  rows,
+  transaction,
+) {
+  if (!rows.length) {
+    return [];
+  }
+
+  return scoped(model.internalAssessmentStudentEvaluationModel).bulkCreate(
+    rows,
+    {
+      transaction,
+      ignoreDuplicates: true,
+    },
+  );
 }
 
 export async function upsertStudentEvaluations(rows, transaction) {

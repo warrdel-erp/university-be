@@ -3436,6 +3436,24 @@ subjectModel.hasMany(internalAssessmentModel, {
   as: "subjectAssessments",
 });
 
+internalAssessmentModel.belongsTo(sessionModel, {
+  foreignKey: "sessionId",
+  as: "assessmentSession",
+});
+sessionModel.hasMany(internalAssessmentModel, {
+  foreignKey: "sessionId",
+  as: "sessionInternalAssessments",
+});
+
+internalAssessmentModel.belongsTo(classSectionTermModel, {
+  foreignKey: "classSectionTermId",
+  as: "assessmentClassSectionTerm",
+});
+classSectionTermModel.hasMany(internalAssessmentModel, {
+  foreignKey: "classSectionTermId",
+  as: "classSectionTermInternalAssessments",
+});
+
 internalAssessmentModel.belongsTo(examSetupTypeModel, {
   foreignKey: "examSetupTypeId",
   as: "assessmentExamType",

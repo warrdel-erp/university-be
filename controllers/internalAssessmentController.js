@@ -92,6 +92,30 @@ export async function getInternalAssessmentById(req, res) {
   }
 }
 
+export async function getAssessmentStatusCounts(req, res) {
+  try {
+    const counts = await InternalAssessmentServices.getAssessmentStatusCounts({
+      subjectId: req.query.subjectId,
+      classSectionTermId: req.query.classSectionTermId,
+      userId: req.user.userId,
+    });
+
+    return SuccessResponse(
+      res,
+      200,
+      "Fetched assessment status counts successfully",
+      counts,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch assessment status counts",
+      error,
+    );
+  }
+}
+
 export async function updateInternalAssessment(req, res) {
   try {
     const assessment =

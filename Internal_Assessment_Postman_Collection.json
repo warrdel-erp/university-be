@@ -117,6 +117,36 @@
       "response": []
     },
     {
+      "name": "GET Assessment Status Summary",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/internalAssessment/my/summary?subjectId={{subjectId}}&classSectionTermId={{classSectionTermId}}",
+          "host": ["{{base_url}}"],
+          "path": ["internalAssessment", "my", "summary"],
+          "query": [
+            {
+              "key": "subjectId",
+              "value": "{{subjectId}}"
+            },
+            {
+              "key": "classSectionTermId",
+              "value": "{{classSectionTermId}}"
+            }
+          ]
+        },
+        "description": "Returns total / completed / open / upcoming assessment counts for subjectId + logged-in userId + classSectionTermId."
+      },
+      "response": []
+    },
+    {
       "name": "GET Single Assessment",
       "request": {
         "method": "GET",

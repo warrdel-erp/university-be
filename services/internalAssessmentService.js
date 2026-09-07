@@ -6,7 +6,47 @@ export async function getUserInternalAssessments(userId) {
 }
 
 export async function createInternalAssessment(payload) {
-  return InternalAssessmentRepository.createInternalAssessment(payload);
+  const transaction = await sequelize.transaction();
+
+  try {
+    const assessment =
+      await InternalAssessmentRepository.createInternalAssessment(
+        payload,
+        transaction,
+      );
+
+    const students =
+      await InternalAssessmentRepository.getStudentsByClassSectionTermId(
+        payload.classSectionTermId,
+        transaction,
+      );
+
+    const evaluationRows = [];
+    for (const student of students) {
+      evaluationRows.push({
+        studentId: student.studentId,
+        internalAssessmentId: assessment.internalAssessmentId,
+        obtainedMarks: null,
+        universityId: assessment.universityId,
+        instituteId: assessment.instituteId,
+        academicYearId: assessment.academicYearId,
+      });
+    }
+
+    await InternalAssessmentRepository.createStudentEvaluationPlaceholders(
+      evaluationRows,
+      transaction,
+    );
+
+    await transaction.commit();
+
+    return InternalAssessmentRepository.getInternalAssessmentById(
+      assessment.internalAssessmentId,
+    );
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
 }
 
 export async function getInternalAssessmentsBySubject(filters) {
@@ -26,6 +66,10 @@ export async function getInternalAssessmentById(internalAssessmentId) {
   }
 
   return assessment;
+}
+
+export async function getAssessmentStatusCounts(filters) {
+  return InternalAssessmentRepository.getAssessmentStatusCounts(filters);
 }
 
 export async function updateInternalAssessment(internalAssessmentId, payload) {
