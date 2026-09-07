@@ -1,3 +1,4 @@
+import { Op, fn, col } from "sequelize";
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 
@@ -48,6 +49,74 @@ const examSetupTypeAttributes = [
   "examName",
   "examCategory",
 ];
+
+async function getMarkingProgressMap(internalAssessmentIds) {
+  const progressMap = new Map();
+
+  for (const internalAssessmentId of internalAssessmentIds) {
+    progressMap.set(internalAssessmentId, {
+      studentCount: 0,
+      checked: 0,
+      pendingForMarking: 0,
+    });
+  }
+
+  if (internalAssessmentIds.length === 0) {
+    return progressMap;
+  }
+
+  const where = {
+    internalAssessmentId: { [Op.in]: internalAssessmentIds },
+  };
+
+  const [totalRows, checkedRows] = await Promise.all([
+    scoped(model.internalAssessmentStudentEvaluationModel).findAll({
+      where,
+      attributes: [
+        "internalAssessmentId",
+        [
+          fn("COUNT", col("internal_assessment_student_evaluation_id")),
+          "studentCount",
+        ],
+      ],
+      group: ["internalAssessmentId"],
+      raw: true,
+    }),
+    scoped(model.internalAssessmentStudentEvaluationModel).findAll({
+      where: {
+        ...where,
+        obtainedMarks: { [Op.not]: null },
+      },
+      attributes: [
+        "internalAssessmentId",
+        [
+          fn("COUNT", col("internal_assessment_student_evaluation_id")),
+          "checked",
+        ],
+      ],
+      group: ["internalAssessmentId"],
+      raw: true,
+    }),
+  ]);
+
+  for (const row of totalRows) {
+    const internalAssessmentId = Number(row.internalAssessmentId);
+    const entry = progressMap.get(internalAssessmentId);
+    entry.studentCount = Number(row.studentCount);
+  }
+
+  for (const row of checkedRows) {
+    const internalAssessmentId = Number(row.internalAssessmentId);
+    const entry = progressMap.get(internalAssessmentId);
+    entry.checked = Number(row.checked);
+  }
+
+  for (const entry of progressMap.values()) {
+    entry.pendingForMarking = entry.studentCount - entry.checked;
+  }
+
+  return progressMap;
+}
 
 async function getAssessmentPlanWeightage(
   subjectId,
@@ -310,7 +379,7 @@ export async function createInternalAssessment(payload, transaction) {
 export async function getInternalAssessmentsBySubject(filters) {
   const { subjectId, classSectionTermId } = filters;
 
-  return scoped(model.internalAssessmentModel).findAll({
+  const assessments = await scoped(model.internalAssessmentModel).findAll({
     where: {
       subjectId,
       classSectionTermId,
@@ -329,6 +398,25 @@ export async function getInternalAssessmentsBySubject(filters) {
       ["internalAssessmentId", "ASC"],
     ],
   });
+
+  const internalAssessmentIds = [];
+  for (const assessment of assessments) {
+    internalAssessmentIds.push(assessment.internalAssessmentId);
+  }
+
+  const progressMap = await getMarkingProgressMap(internalAssessmentIds);
+
+  const result = [];
+  for (const assessment of assessments) {
+    const plain = assessment.get({ plain: true });
+    const progress = progressMap.get(plain.internalAssessmentId);
+    plain.studentCount = progress.studentCount;
+    plain.checked = progress.checked;
+    plain.pendingForMarking = progress.pendingForMarking;
+    result.push(plain);
+  }
+
+  return result;
 }
 
 export async function getInternalAssessmentById(internalAssessmentId) {
@@ -410,16 +498,13 @@ export async function getInternalAssessmentById(internalAssessmentId) {
   }
 
   const plain = assessment.get({ plain: true });
-  const studentEvaluations = plain.studentEvaluations || [];
-  let marksEnteredCount = 0;
-  for (const evaluation of studentEvaluations) {
-    if (evaluation.obtainedMarks !== null && evaluation.obtainedMarks !== undefined) {
-      marksEnteredCount += 1;
-    }
-  }
-
-  plain.studentCount = studentEvaluations.length;
-  plain.marksEnteredCount = marksEnteredCount;
+  const progressMap = await getMarkingProgressMap([
+    plain.internalAssessmentId,
+  ]);
+  const progress = progressMap.get(plain.internalAssessmentId);
+  plain.studentCount = progress.studentCount;
+  plain.checked = progress.checked;
+  plain.pendingForMarking = progress.pendingForMarking;
   plain.course =
     plain.assessmentClassSectionTerm &&
     plain.assessmentClassSectionTerm.classSection &&
