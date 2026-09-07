@@ -1,202 +1,302 @@
 import * as InternalAssessmentServices from "../services/internalAssessmentService.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
-export async function addInternalAssessment(req, res) {
-  const {
-    subjectId,
-    term,
-    examSetupTypeId,
-    type,
-    totalMarks,
-    weightage,
-    publishDate,
-    dueDate,
-    description,
-    userId,
-  } = req.body;
-  const createdBy = req.user.userId;
-  const updatedBy = req.user.userId;
-  const file = req.files;
-
-  if (
-    !subjectId ||
-    term == null ||
-    !examSetupTypeId ||
-    !type ||
-    !totalMarks ||
-    !publishDate ||
-    !dueDate ||
-    !description
-  ) {
-    return ErrorResponse(res, 400, "Required fields are missing");
-  }
+export async function getUserInternalAssessments(req, res) {
   try {
-    const data = {
-      subjectId,
-      term: Number(term),
-      examSetupTypeId,
-      type,
-      totalMarks,
-      weightage,
-      publishDate,
-      dueDate,
-      description,
-      createdBy,
-      updatedBy,
-      userId,
-    };
-    const assessment = await InternalAssessmentServices.addInternalAssessment(
-      data,
-      file,
+    const userId = req.user.userId;
+    const assessments =
+      await InternalAssessmentServices.getUserInternalAssessments(userId, {
+        search: req.query.search,
+      });
+    return SuccessResponse(
+      res,
+      200,
+      "Fetched user internal assessments successfully",
+      assessments,
     );
-    return SuccessResponse(res, 201, "Internal Assessment created", assessment);
   } catch (error) {
-    return ErrorResponse(res, 500, error.message);
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      "Failed to fetch user internal assessments",
+      error,
+    );
   }
 }
 
-export async function getAllInternalAssessment(req, res) {
-  const { examSetupTypeId } = req.query;
-  try {
-    const list =
-      await InternalAssessmentServices.getAllInternalAssessment(
-        examSetupTypeId,
-      );
-    return SuccessResponse(res, 200, "Internal Assessment list", list);
-  } catch (error) {
-    return ErrorResponse(res, 500, error.message);
-  }
-}
-
-export async function getSingleInternalAssessment(req, res) {
-  const { examAssessmentId } = req.query;
-  if (!examAssessmentId)
-    return res.status(400).json({ message: "examAssessmentId is required" });
-  try {
-    const record =
-      await InternalAssessmentServices.getInternalAssessmentById(
-        examAssessmentId,
-      );
-    if (record)
-      return SuccessResponse(res, 200, "Internal Assessment record", record);
-    else return ErrorResponse(res, 404, "Not found");
-  } catch (error) {
-    return ErrorResponse(res, 500, error.message);
-  }
-}
-
-export async function updateInternalAssessments(req, res) {
+export async function createInternalAssessment(req, res) {
   try {
     const payload = req.body;
+    payload.userId = req.user.userId;
 
-    if (!Array.isArray(payload) || payload.length === 0) {
-      return ErrorResponse(res, 400, "Request body must be a non-empty array.");
-    }
+    const assessment =
+      await InternalAssessmentServices.createInternalAssessment(payload);
 
-    for (const item of payload) {
-      if (!item.examAssessmentId) {
-        return ErrorResponse(
-          res,
-          400,
-          "Each item must include examAssessmentId.",
-        );
-      }
-    }
+    return SuccessResponse(
+      res,
+      201,
+      "Created internal assessment successfully",
+      assessment,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      "Failed to create internal assessment",
+      error,
+    );
+  }
+}
 
-    const updated =
-      await InternalAssessmentServices.updateInternalAssessment(payload);
+export async function getInternalAssessmentsBySubject(req, res) {
+  try {
+    const assessments =
+      await InternalAssessmentServices.getInternalAssessmentsBySubject(
+        req.query,
+      );
 
     return SuccessResponse(
       res,
       200,
-      "Internal assessments updated successfully.",
-      updated,
+      "Fetched internal assessments successfully",
+      assessments,
     );
   } catch (error) {
-    return ErrorResponse(res, 500, error.message || "Something went wrong.");
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      "Failed to fetch internal assessments",
+      error,
+    );
   }
 }
 
-export async function deleteInternalAssessment(req, res) {
-  const { examAssessmentId } = req.query;
-  if (!examAssessmentId)
-    return res.status(400).json({ message: "examAssessmentId is required" });
+export async function getInternalAssessmentById(req, res) {
   try {
-    const deleted =
-      await InternalAssessmentServices.deleteInternalAssessment(
-        examAssessmentId,
+    const assessment =
+      await InternalAssessmentServices.getInternalAssessmentById(
+        req.query.internalAssessmentId,
       );
-    if (deleted) return SuccessResponse(res, 200, "Deleted");
-    else return ErrorResponse(res, 404, "Not found");
-  } catch (error) {
-    return ErrorResponse(res, 500, error.message);
-  }
-}
-
-export async function evaluationInternalAssessment(req, res) {
-  const { subjectId, userId } = req.query;
-  if (!(subjectId && userId))
-    return res
-      .status(400)
-      .json({ message: "subjectId,userId is required" });
-  try {
-    const record =
-      await InternalAssessmentServices.evaluationInternalAssessment(
-        subjectId,
-        userId,
-      );
-    if (record) return SuccessResponse(res, 200, "Evaluation record", record);
-    else return ErrorResponse(res, 404, "Not found data");
-  } catch (error) {
-    return ErrorResponse(res, 500, error.message);
-  }
-}
-
-export async function createAssessmentEvaluation(req, res) {
-  try {
-    const body = req.body;
-    const createdBy = req.user.userId;
-    const updatedBy = req.user.userId;
-
-    if (!body.subjectId || !body.userId || !body.examAssessmentId) {
-      return ErrorResponse(
-        res,
-        400,
-        "subjectId, userId, examAssessmentId are required",
-      );
-    }
-
-    if (!Array.isArray(body.students) || body.students.length === 0) {
-      return ErrorResponse(res, 400, "students array is required");
-    }
-
-    const response =
-      await InternalAssessmentServices.createAssessmentEvaluation(
-        body,
-        createdBy,
-        updatedBy,
-      );
-
-    return SuccessResponse(res, 201, "Evaluation saved successfully", response);
-  } catch (error) {
-    return ErrorResponse(res, 500, error.message);
-  }
-}
-
-export async function updateAssessmentEvaluation(req, res) {
-  try {
-    const body = req.body;
-
-    const result =
-      await InternalAssessmentServices.updateAssessmentEvaluation(body);
 
     return SuccessResponse(
       res,
       200,
-      "Assessment Evaluation updated successfully",
-      result,
+      "Fetched internal assessment successfully",
+      assessment,
     );
   } catch (error) {
-    return ErrorResponse(res, 500, error.message);
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch internal assessment",
+      error,
+    );
+  }
+}
+
+export async function getAssessmentStatusCounts(req, res) {
+  try {
+    const counts = await InternalAssessmentServices.getAssessmentStatusCounts({
+      subjectId: req.query.subjectId,
+      classSectionTermId: req.query.classSectionTermId,
+      userId: req.user.userId,
+    });
+
+    return SuccessResponse(
+      res,
+      200,
+      "Fetched assessment status counts successfully",
+      counts,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch assessment status counts",
+      error,
+    );
+  }
+}
+
+export async function getUserDashboardSku(req, res) {
+  try {
+    const sku = await InternalAssessmentServices.getUserDashboardSku(
+      req.user.userId,
+    );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Fetched user dashboard SKU successfully",
+      sku,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch user dashboard SKU",
+      error,
+    );
+  }
+}
+
+export async function updateInternalAssessment(req, res) {
+  try {
+    const assessment =
+      await InternalAssessmentServices.updateInternalAssessment(
+        req.query.internalAssessmentId,
+        req.body,
+      );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Updated internal assessment successfully",
+      assessment,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to update internal assessment",
+      error,
+    );
+  }
+}
+
+export async function getStudentEvaluations(req, res) {
+  try {
+    const evaluations = await InternalAssessmentServices.getStudentEvaluations(
+      req.query.internalAssessmentId,
+      req.query.studentId,
+    );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Fetched student evaluations successfully",
+      evaluations,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch student evaluations",
+      error,
+    );
+  }
+}
+
+export async function getMarksTableBySubject(req, res) {
+  try {
+    const table = await InternalAssessmentServices.getMarksTableBySubject(
+      req.query,
+    );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Fetched marks table successfully",
+      table,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch marks table",
+      error,
+    );
+  }
+}
+
+export async function getMarksCellBySubject(req, res) {
+  try {
+    const table = await InternalAssessmentServices.getMarksCellBySubject(
+      req.query,
+    );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Fetched marks cell successfully",
+      table,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch marks cell",
+      error,
+    );
+  }
+}
+
+export async function getStudentEvaluationByStudentAndAssessment(req, res) {
+  try {
+    const evaluation =
+      await InternalAssessmentServices.getStudentEvaluationByStudentAndAssessment(
+        req.query,
+      );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Fetched student evaluation successfully",
+      evaluation,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch student evaluation",
+      error,
+    );
+  }
+}
+
+export async function getStudentsByClassSectionTermId(req, res) {
+  try {
+    const students =
+      await InternalAssessmentServices.getStudentsByClassSectionTermId(
+        req.query.classSectionTermId,
+      );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Fetched students successfully",
+      students,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch students",
+      error,
+    );
+  }
+}
+
+export async function upsertStudentEvaluations(req, res) {
+  try {
+    const evaluations =
+      await InternalAssessmentServices.upsertStudentEvaluations(
+        req.query.internalAssessmentId,
+        req.body.marks,
+      );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Saved student evaluations successfully",
+      evaluations,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to save student evaluations",
+      error,
+    );
   }
 }

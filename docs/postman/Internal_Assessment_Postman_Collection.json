@@ -1,0 +1,432 @@
+{
+  "info": {
+    "_postman_id": "b1a1c3e4-f8d9-4a7c-9b1d-2e3f4a5b6c7d",
+    "name": "Internal Assessment APIs",
+    "description": "Faculty Workspace Internal Assessment APIs.\n\nBase path: `/internalAssessment/my`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "GET My Courses",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/internalAssessment/my?search={{search}}",
+          "host": ["{{base_url}}"],
+          "path": ["internalAssessment", "my"],
+          "query": [
+            {
+              "key": "search",
+              "value": "{{search}}",
+              "description": "Optional. Filters by subjectName, subjectCode, courseName, or term.",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "All Primary timetable userId ↔ subjectId mappings. Optional search filters by subjectName, subjectCode, courseName, and term. Subjects without CONTINUOUS_ASSESSMENT mapping have isContinuousAssessmentMapped=false and fetchedWeightage=null."
+      },
+      "response": []
+    },
+    {
+      "name": "GET My Dashboard SKU",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/internalAssessment/my/sku",
+          "host": ["{{base_url}}"],
+          "path": ["internalAssessment", "my", "sku"]
+        },
+        "description": "User dashboard KPIs with assessment titles: totalSubjects, totalAssessments, remaining, readyToSubmit, remainingAssessments, readyToSubmitAssessments."
+      },
+      "response": []
+    },
+    {
+      "name": "POST Create Assessment",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"subjectId\": 1,\n  \"classSectionTermId\": 1,\n  \"type\": \"Assignment\",\n  \"title\": \"Assignment 1 - Introduction to Fluid Properties\",\n  \"maximumMarks\": 30,\n  \"issueDate\": \"2026-09-01\",\n  \"dueDate\": \"2026-09-08\",\n  \"documentUrl\": \"https://example.com/Assignment_3_Questions.pdf\",\n  \"mode\": \"online\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/internalAssessment/my",
+          "host": ["{{base_url}}"],
+          "path": ["internalAssessment", "my"]
+        },
+        "description": "Creates a new internal assessment (Assignment / Quiz / Class Test)."
+      },
+      "response": []
+    },
+    {
+      "name": "GET List Assessments By Subject",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/internalAssessment/my/list?subjectId={{subjectId}}&classSectionTermId={{classSectionTermId}}",
+          "host": ["{{base_url}}"],
+          "path": ["internalAssessment", "my", "list"],
+          "query": [
+            {
+              "key": "subjectId",
+              "value": "{{subjectId}}"
+            },
+            {
+              "key": "classSectionTermId",
+              "value": "{{classSectionTermId}}"
+            }
+          ]
+        },
+        "description": "Lists all internal assessments for a subject + classSectionTerm."
+      },
+      "response": []
+    },
+    {
+      "name": "GET Students By Class Section Term",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/internalAssessment/my/students?classSectionTermId={{classSectionTermId}}",
+          "host": ["{{base_url}}"],
+          "path": ["internalAssessment", "my", "students"],
+          "query": [
+            {
+              "key": "classSectionTermId",
+              "value": "{{classSectionTermId}}"
+            }
+          ]
+        },
+        "description": "Fetches students by classSectionTermId, scoped to that term's class-section sessionId (studentModel only)."
+      },
+      "response": []
+    },
+    {
+      "name": "GET Assessment Status Summary",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/internalAssessment/my/summary?subjectId={{subjectId}}&classSectionTermId={{classSectionTermId}}",
+          "host": ["{{base_url}}"],
+          "path": ["internalAssessment", "my", "summary"],
+          "query": [
+            {
+              "key": "subjectId",
+              "value": "{{subjectId}}"
+            },
+            {
+              "key": "classSectionTermId",
+              "value": "{{classSectionTermId}}"
+            }
+          ]
+        },
+        "description": "Returns total / completed / open / upcoming counts plus assessments list with title and status."
+      },
+      "response": []
+    },
+    {
+      "name": "GET Single Assessment",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/internalAssessment/my/single?internalAssessmentId={{internalAssessmentId}}",
+          "host": ["{{base_url}}"],
+          "path": ["internalAssessment", "my", "single"],
+          "query": [
+            {
+              "key": "internalAssessmentId",
+              "value": "{{internalAssessmentId}}"
+            }
+          ]
+        },
+        "description": "Fetches one internal assessment with subject/course/session details and marking progress counts (no studentEvaluations)."
+      },
+      "response": []
+    },
+    {
+      "name": "PATCH Update Assessment",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"Assignment\",\n  \"title\": \"Assignment 1 - Introduction to Fluid Properties\",\n  \"maximumMarks\": 30,\n  \"issueDate\": \"2026-09-01\",\n  \"dueDate\": \"2026-09-08\",\n  \"documentUrl\": \"https://example.com/Assignment_3_Questions.pdf\",\n  \"mode\": \"online\",\n  \"weightagePercentage\": 10,\n  \"normalizedMaxMarks\": 2,\n  \"isIncludeInFinalResult\": true\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/internalAssessment/my?internalAssessmentId={{internalAssessmentId}}",
+          "host": ["{{base_url}}"],
+          "path": ["internalAssessment", "my"],
+          "query": [
+            {
+              "key": "internalAssessmentId",
+              "value": "{{internalAssessmentId}}"
+            }
+          ]
+        },
+        "description": "Updates assessment fields / weightage. All body fields are optional."
+      },
+      "response": []
+    },
+    {
+      "name": "GET Marks Table",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/internalAssessment/my/marks/table?subjectId={{subjectId}}&classSectionTermId={{classSectionTermId}}",
+          "host": ["{{base_url}}"],
+          "path": ["internalAssessment", "my", "marks", "table"],
+          "query": [
+            {
+              "key": "subjectId",
+              "value": "{{subjectId}}"
+            },
+            {
+              "key": "classSectionTermId",
+              "value": "{{classSectionTermId}}"
+            }
+          ]
+        },
+        "description": "All internal assessments for subjectId + classSectionTermId. Returns common subject/term/course/session data and assessments with title, weightage, type, maximumMarks, dueDate, issueDate, mode, weightagePercentage, normalizedMaxMarks, isIncludeInFinalResult."
+      },
+      "response": []
+    },
+    {
+      "name": "GET Marks Cell",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/internalAssessment/my/marks/cell?subjectId={{subjectId}}&classSectionTermId={{classSectionTermId}}&page=1&limit=10",
+          "host": ["{{base_url}}"],
+          "path": ["internalAssessment", "my", "marks", "cell"],
+          "query": [
+            {
+              "key": "subjectId",
+              "value": "{{subjectId}}"
+            },
+            {
+              "key": "classSectionTermId",
+              "value": "{{classSectionTermId}}"
+            },
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        },
+        "description": "Paginated marks grid by subjectId + classSectionTermId. Students are paginated (default page=1, limit=10). assessments[] each include the current page of students."
+      },
+      "response": []
+    },
+    {
+      "name": "GET Student Marks",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/internalAssessment/my/marks?internalAssessmentId={{internalAssessmentId}}&studentId={{studentId}}",
+          "host": ["{{base_url}}"],
+          "path": ["internalAssessment", "my", "marks"],
+          "query": [
+            {
+              "key": "internalAssessmentId",
+              "value": "{{internalAssessmentId}}"
+            },
+            {
+              "key": "studentId",
+              "value": "{{studentId}}",
+              "description": "Optional. When set, returns only that student's evaluation.",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "Fetches student evaluations for an assessment. Pass optional studentId to return only one student."
+      },
+      "response": []
+    },
+    {
+      "name": "PUT Upsert Student Marks",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"marks\": [\n    {\n      \"studentId\": 1,\n      \"obtainedMarks\": 25\n    },\n    {\n      \"studentId\": 2,\n      \"obtainedMarks\": null\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/internalAssessment/my/marks?internalAssessmentId={{internalAssessmentId}}",
+          "host": ["{{base_url}}"],
+          "path": ["internalAssessment", "my", "marks"],
+          "query": [
+            {
+              "key": "internalAssessmentId",
+              "value": "{{internalAssessmentId}}"
+            }
+          ]
+        },
+        "description": "Creates or updates student marks for an assessment. Use null obtainedMarks for absent / not entered."
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjU2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlSWQiOjE3LCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IlBheWFsIEx1bGxhIiwidW5pcXVlSWQiOiIxNDVkOTg1Ni02MmM3LTQ2OGUtYTc2Mi0yNmU5M2I3ZmM4MmYiLCJwYXNzd29yZCI6IiQyYSQxMCRFczJpZXR3Wm9BQTR4U0ZwSmxmM0ZlLkJkdXgyLmp1bUdwVDJmWlBLWGhxLm01cUdnYWhCTyIsImR1bW15UGFzc3dvcmQiOiIiLCJzdGF0dXMiOiJhY3RpdmUiLCJwaG9uZSI6Ijc2MDA3OTgzMDciLCJlbWFpbCI6InBsdUBhYXlvamFuLmVkdS5pbiIsImlzVGVhY2hlciI6ZmFsc2UsImNyZWF0ZWRBdCI6IjIwMjUtMDktMzBUMTE6NTI6MDkuMDAwWiIsInVwZGF0ZWRBdCI6IjIwMjYtMDktMDNUMDk6MDg6MTYuMDAwWiIsImRlbGV0ZWRBdCI6bnVsbCwiZGVmYXVsdF9yb2xlX2lkIjoxNywiaW5zdGl0dXRlTmFtZSI6IkFheW9qYW4gU2Nob29sIG9mIEFyY2hpdGVjdHVyZSIsImlhdCI6MTc4ODYyNzAxOCwiZXhwIjoxNzkxMjE5MDE4fQ.0NNCxQJZN1hqx8KSX_30qhWOiveVqy7ZySWF0Es6KSE",
+      "type": "string"
+    },
+    {
+      "key": "subjectId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "classSectionTermId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "sessionId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "internalAssessmentId",
+      "value": "1",
+      "type": "string"
+    }
+  ]
+}
