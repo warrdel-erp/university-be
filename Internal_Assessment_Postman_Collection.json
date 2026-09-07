@@ -2,12 +2,12 @@
   "info": {
     "_postman_id": "b1a1c3e4-f8d9-4a7c-9b1d-2e3f4a5b6c7d",
     "name": "Internal Assessment APIs",
-    "description": "Collection for testing Internal Assessment endpoints in the University Backend.\n\nBase path: `/internalAssessment`",
+    "description": "Faculty Workspace Internal Assessment APIs.\n\nBase path: `/internalAssessment/my`",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "Get User Internal Assessments (My Courses)",
+      "name": "GET My Courses",
       "request": {
         "method": "GET",
         "header": [
@@ -27,7 +27,7 @@
       "response": []
     },
     {
-      "name": "Create Internal Assessment",
+      "name": "POST Create Assessment",
       "request": {
         "method": "POST",
         "header": [
@@ -52,16 +52,16 @@
           }
         },
         "url": {
-          "raw": "{{base_url}}/internalAssessment",
+          "raw": "{{base_url}}/internalAssessment/my",
           "host": ["{{base_url}}"],
-          "path": ["internalAssessment"]
+          "path": ["internalAssessment", "my"]
         },
         "description": "Creates a new internal assessment (Assignment / Quiz / Class Test)."
       },
       "response": []
     },
     {
-      "name": "List Internal Assessments By Subject",
+      "name": "GET List Assessments By Subject",
       "request": {
         "method": "GET",
         "header": [
@@ -72,9 +72,9 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/internalAssessment?subjectId={{subjectId}}&classSectionTermId={{classSectionTermId}}",
+          "raw": "{{base_url}}/internalAssessment/my/list?subjectId={{subjectId}}&classSectionTermId={{classSectionTermId}}",
           "host": ["{{base_url}}"],
-          "path": ["internalAssessment"],
+          "path": ["internalAssessment", "my", "list"],
           "query": [
             {
               "key": "subjectId",
@@ -91,7 +91,7 @@
       "response": []
     },
     {
-      "name": "Get Single Internal Assessment",
+      "name": "GET Single Assessment",
       "request": {
         "method": "GET",
         "header": [
@@ -102,9 +102,9 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/internalAssessment/single?internalAssessmentId={{internalAssessmentId}}",
+          "raw": "{{base_url}}/internalAssessment/my/single?internalAssessmentId={{internalAssessmentId}}",
           "host": ["{{base_url}}"],
-          "path": ["internalAssessment", "single"],
+          "path": ["internalAssessment", "my", "single"],
           "query": [
             {
               "key": "internalAssessmentId",
@@ -117,7 +117,7 @@
       "response": []
     },
     {
-      "name": "Update Internal Assessment",
+      "name": "PATCH Update Assessment",
       "request": {
         "method": "PATCH",
         "header": [
@@ -142,9 +142,9 @@
           }
         },
         "url": {
-          "raw": "{{base_url}}/internalAssessment?internalAssessmentId={{internalAssessmentId}}",
+          "raw": "{{base_url}}/internalAssessment/my?internalAssessmentId={{internalAssessmentId}}",
           "host": ["{{base_url}}"],
-          "path": ["internalAssessment"],
+          "path": ["internalAssessment", "my"],
           "query": [
             {
               "key": "internalAssessmentId",
@@ -157,7 +157,7 @@
       "response": []
     },
     {
-      "name": "Get Student Marks",
+      "name": "GET Student Marks",
       "request": {
         "method": "GET",
         "header": [
@@ -168,9 +168,9 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/internalAssessment/marks?internalAssessmentId={{internalAssessmentId}}",
+          "raw": "{{base_url}}/internalAssessment/my/marks?internalAssessmentId={{internalAssessmentId}}",
           "host": ["{{base_url}}"],
-          "path": ["internalAssessment", "marks"],
+          "path": ["internalAssessment", "my", "marks"],
           "query": [
             {
               "key": "internalAssessmentId",
@@ -183,7 +183,7 @@
       "response": []
     },
     {
-      "name": "Upsert Student Marks",
+      "name": "PUT Upsert Student Marks",
       "request": {
         "method": "PUT",
         "header": [
@@ -208,9 +208,9 @@
           }
         },
         "url": {
-          "raw": "{{base_url}}/internalAssessment/marks?internalAssessmentId={{internalAssessmentId}}",
+          "raw": "{{base_url}}/internalAssessment/my/marks?internalAssessmentId={{internalAssessmentId}}",
           "host": ["{{base_url}}"],
-          "path": ["internalAssessment", "marks"],
+          "path": ["internalAssessment", "my", "marks"],
           "query": [
             {
               "key": "internalAssessmentId",

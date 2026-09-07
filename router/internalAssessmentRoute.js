@@ -56,27 +56,27 @@ const upsertStudentEvaluationsSchema = z.object({
     .min(1),
 });
 
+router.get("/my", userAuth, getUserInternalAssessments);
 router.post(
-  "/",
+  "/my",
   userAuth,
   validate({ body: createInternalAssessmentSchema }),
   createInternalAssessment,
 );
-router.get("/my", userAuth, getUserInternalAssessments);
 router.get(
-  "/",
+  "/my/list",
   userAuth,
   validate({ query: listInternalAssessmentsQuerySchema }),
   getInternalAssessmentsBySubject,
 );
 router.get(
-  "/single",
+  "/my/single",
   userAuth,
   validate({ query: internalAssessmentIdQuerySchema }),
   getInternalAssessmentById,
 );
 router.patch(
-  "/",
+  "/my",
   userAuth,
   validate({
     query: internalAssessmentIdQuerySchema,
@@ -85,13 +85,13 @@ router.patch(
   updateInternalAssessment,
 );
 router.get(
-  "/marks",
+  "/my/marks",
   userAuth,
   validate({ query: internalAssessmentIdQuerySchema }),
   getStudentEvaluations,
 );
 router.put(
-  "/marks",
+  "/my/marks",
   userAuth,
   validate({
     query: internalAssessmentIdQuerySchema,
