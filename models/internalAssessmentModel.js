@@ -135,6 +135,12 @@ const internalAssessmentModel = sequelize.define(
       allowNull: true,
       field: "normalized_max_marks",
     },
+    isIncludeInFinalResult: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      field: "is_include_in_final_result",
+    },
     createdAt: {
       type: DataTypes.DATE,
       allowNull: false,

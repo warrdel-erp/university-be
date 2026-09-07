@@ -15,10 +15,10 @@ export async function createInternalAssessment(payload) {
         transaction,
       );
 
-    const students =
+    const { students } =
       await InternalAssessmentRepository.getStudentsByClassSectionTermId(
         payload.classSectionTermId,
-        transaction,
+        { transaction },
       );
 
     const evaluationRows = [];
@@ -123,6 +123,15 @@ export async function getMarksTableBySubject(filters) {
   });
 }
 
+export async function getMarksCellBySubject(filters) {
+  return InternalAssessmentRepository.getMarksCellBySubject({
+    subjectId: Number(filters.subjectId),
+    classSectionTermId: Number(filters.classSectionTermId),
+    page: filters.page ? Number(filters.page) : undefined,
+    limit: filters.limit ? Number(filters.limit) : undefined,
+  });
+}
+
 export async function getStudentEvaluationByStudentAndAssessment(filters) {
   const result =
     await InternalAssessmentRepository.getStudentEvaluationByStudentAndAssessment(
@@ -146,9 +155,11 @@ export async function getStudentEvaluationByStudentAndAssessment(filters) {
 }
 
 export async function getStudentsByClassSectionTermId(classSectionTermId) {
-  return InternalAssessmentRepository.getStudentsByClassSectionTermId(
-    Number(classSectionTermId),
-  );
+  const result =
+    await InternalAssessmentRepository.getStudentsByClassSectionTermId(
+      Number(classSectionTermId),
+    );
+  return result.students;
 }
 
 export async function upsertStudentEvaluations(internalAssessmentId, marks) {

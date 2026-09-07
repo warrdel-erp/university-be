@@ -12,7 +12,7 @@ import {
   updateInternalAssessment,
   getStudentEvaluations,
   getMarksTableBySubject,
-  getStudentEvaluationByStudentAndAssessment,
+  getMarksCellBySubject,
   upsertStudentEvaluations,
   getStudentsByClassSectionTermId,
 } from "../controllers/internalAssessmentController.js";
@@ -52,8 +52,8 @@ const getMarksQuerySchema = z.object({
 const marksCellQuerySchema = z.object({
   subjectId: z.coerce.number().int().positive(),
   classSectionTermId: z.coerce.number().int().positive(),
-  studentId: z.coerce.number().int().positive(),
-  internalAssessmentId: z.coerce.number().int().positive(),
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().positive().max(100).optional().default(10),
 });
 
 const assessmentStatusCountsQuerySchema = z.object({
@@ -71,6 +71,7 @@ const updateInternalAssessmentSchema = z.object({
   mode: z.enum(["online", "offline"]).optional(),
   weightagePercentage: z.number().min(0).max(100).optional(),
   normalizedMaxMarks: z.number().min(0).optional(),
+  isIncludeInFinalResult: z.boolean().optional(),
 });
 
 const upsertStudentEvaluationsSchema = z.object({
@@ -144,7 +145,7 @@ router.get(
   "/my/marks/cell",
   userAuth,
   validate({ query: marksCellQuerySchema }),
-  getStudentEvaluationByStudentAndAssessment,
+  getMarksCellBySubject,
 );
 router.get(
   "/my/marks",

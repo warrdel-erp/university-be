@@ -209,6 +209,28 @@ export async function getMarksTableBySubject(req, res) {
   }
 }
 
+export async function getMarksCellBySubject(req, res) {
+  try {
+    const table = await InternalAssessmentServices.getMarksCellBySubject(
+      req.query,
+    );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Fetched marks cell successfully",
+      table,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch marks cell",
+      error,
+    );
+  }
+}
+
 export async function getStudentEvaluationByStudentAndAssessment(req, res) {
   try {
     const evaluation =

@@ -22,6 +22,7 @@ const internalAssessmentAttributes = [
   "weightage",
   "weightagePercentage",
   "normalizedMaxMarks",
+  "isIncludeInFinalResult",
   "createdAt",
   "updatedAt",
 ];
@@ -911,6 +912,141 @@ export async function updateInternalAssessment(
 export async function getMarksTableBySubject(filters) {
   const { subjectId, classSectionTermId } = filters;
 
+  const classSectionTerm = await scoped(model.classSectionTermModel).findOne({
+    where: { classSectionTermId },
+    attributes: ["classSectionTermId", "term", "classSectionsId"],
+    include: [
+      {
+        model: model.classSectionModel,
+        as: "classSection",
+        attributes: ["classSectionsId", "courseId", "sessionId", "section"],
+        required: false,
+        include: [
+          {
+            model: model.courseModel,
+            as: "courseSection",
+            attributes: ["courseId", "courseName", "courseCode"],
+            required: false,
+            include: [
+              {
+                model: model.departmentModel,
+                as: "courseProgram",
+                attributes: ["departmentId", "departmentName"],
+                required: false,
+              },
+            ],
+          },
+          {
+            model: model.sessionModel,
+            as: "classSession",
+            attributes: [
+              "sessionId",
+              "sessionName",
+              "startingDate",
+              "endingDate",
+            ],
+            required: false,
+          },
+        ],
+      },
+    ],
+  });
+
+  const subject = await scoped(model.subjectModel).findOne({
+    where: { subjectId },
+    attributes: ["subjectId", "subjectName", "subjectCode"],
+  });
+
+  const assessments = await scoped(model.internalAssessmentModel).findAll({
+    where: {
+      subjectId,
+      classSectionTermId,
+    },
+    attributes: [
+      "internalAssessmentId",
+      "title",
+      "weightage",
+      "type",
+      "maximumMarks",
+      "dueDate",
+      "issueDate",
+      "mode",
+      "weightagePercentage",
+      "normalizedMaxMarks",
+      "isIncludeInFinalResult",
+    ],
+    order: [
+      ["issueDate", "ASC"],
+      ["internalAssessmentId", "ASC"],
+    ],
+  });
+
+  let sessionId = null;
+  let course = null;
+  let department = null;
+  let section = null;
+  let session = null;
+  let term = null;
+
+  if (classSectionTerm) {
+    term = classSectionTerm.term;
+    if (classSectionTerm.classSection) {
+      sessionId = classSectionTerm.classSection.sessionId;
+      section = classSectionTerm.classSection.section;
+      if (classSectionTerm.classSection.courseSection) {
+        const plainCourse = classSectionTerm.classSection.courseSection.get({
+          plain: true,
+        });
+        course = {
+          courseId: plainCourse.courseId,
+          courseName: plainCourse.courseName,
+          courseCode: plainCourse.courseCode,
+        };
+        department = plainCourse.courseProgram
+          ? {
+              departmentId: plainCourse.courseProgram.departmentId,
+              departmentName: plainCourse.courseProgram.departmentName,
+            }
+          : null;
+      }
+      if (classSectionTerm.classSection.classSession) {
+        session = classSectionTerm.classSection.classSession.get({
+          plain: true,
+        });
+      }
+    }
+  }
+
+  let studentCount = 0;
+  if (sessionId) {
+    const studentResult = await getStudentsByClassSectionTermId(
+      classSectionTermId,
+    );
+    studentCount = studentResult.total;
+  }
+
+  const assessmentList = [];
+  for (const assessment of assessments) {
+    assessmentList.push(assessment.get({ plain: true }));
+  }
+
+  return {
+    subjectId,
+    classSectionTermId,
+    term,
+    section,
+    studentCount,
+    subject: subject ? subject.get({ plain: true }) : null,
+    course,
+    department,
+    session,
+    assessments: assessmentList,
+  };
+}
+
+export async function getMarksCellBySubject(filters) {
+  const { subjectId, classSectionTermId, page, limit } = filters;
+
   const assessments = await scoped(model.internalAssessmentModel).findAll({
     where: {
       subjectId,
@@ -932,7 +1068,16 @@ export async function getMarksTableBySubject(filters) {
     ],
   });
 
-  const students = await getStudentsByClassSectionTermId(classSectionTermId);
+  const studentQuery = {};
+  if (page && limit) {
+    studentQuery.page = page;
+    studentQuery.limit = limit;
+  }
+
+  const { students, total } = await getStudentsByClassSectionTermId(
+    classSectionTermId,
+    studentQuery,
+  );
 
   const assessmentIds = [];
   const assessmentColumns = [];
@@ -943,18 +1088,22 @@ export async function getMarksTableBySubject(filters) {
   }
 
   const plainStudents = [];
+  const studentIds = [];
   for (const student of students) {
-    plainStudents.push(student.get({ plain: true }));
+    const plain = student.get({ plain: true });
+    plainStudents.push(plain);
+    studentIds.push(plain.studentId);
   }
 
   const evaluationByStudentAndAssessment = new Map();
 
-  if (assessmentIds.length > 0) {
+  if (assessmentIds.length > 0 && studentIds.length > 0) {
     const evaluations = await scoped(
       model.internalAssessmentStudentEvaluationModel,
     ).findAll({
       where: {
         internalAssessmentId: { [Op.in]: assessmentIds },
+        studentId: { [Op.in]: studentIds },
       },
       attributes: studentEvaluationAttributes,
     });
@@ -974,8 +1123,6 @@ export async function getMarksTableBySubject(filters) {
     }
   }
 
-  const studentIds = [];
-  const matrix = [];
   const assessmentsWithStudents = [];
 
   for (const assessment of assessmentColumns) {
@@ -1007,28 +1154,23 @@ export async function getMarksTableBySubject(filters) {
     });
   }
 
-  for (const plainStudent of plainStudents) {
-    const matrixRow = [];
-
-    for (const assessment of assessmentColumns) {
-      const key = `${plainStudent.studentId}:${assessment.internalAssessmentId}`;
-      const evaluation = evaluationByStudentAndAssessment.get(key);
-      matrixRow.push(evaluation ? evaluation.obtainedMarks : null);
-    }
-
-    studentIds.push(plainStudent.studentId);
-    matrix.push(matrixRow);
-  }
-
-  return {
+  const response = {
     subjectId,
     classSectionTermId,
-    studentCount: plainStudents.length,
+    studentCount: total,
     assessments: assessmentsWithStudents,
-    studentIds,
-    internalAssessmentIds: assessmentIds,
-    matrix,
   };
+
+  if (page && limit) {
+    response.pagination = {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit) || 0,
+    };
+  }
+
+  return response;
 }
 
 export async function getStudentEvaluationByStudentAndAssessment(filters) {
@@ -1152,8 +1294,10 @@ export async function getStudentEvaluationsByAssessmentId(
 
 export async function getStudentsByClassSectionTermId(
   classSectionTermId,
-  transaction,
+  options = {},
 ) {
+  const { transaction, page, limit } = options;
+
   const classSectionTerm = await scoped(model.classSectionTermModel).findOne({
     where: { classSectionTermId },
     attributes: ["classSectionTermId", "classSectionsId"],
@@ -1169,12 +1313,11 @@ export async function getStudentsByClassSectionTermId(
   });
 
   if (!classSectionTerm || !classSectionTerm.classSection) {
-    return [];
+    return { students: [], total: 0 };
   }
 
   const sessionId = classSectionTerm.classSection.sessionId;
-
-  return scoped(model.studentModel).findAll({
+  const query = {
     where: {
       classSectionTermId,
       sessionId,
@@ -1185,7 +1328,24 @@ export async function getStudentsByClassSectionTermId(
       ["studentId", "ASC"],
     ],
     transaction,
-  });
+  };
+
+  if (page && limit) {
+    query.limit = limit;
+    query.offset = (page - 1) * limit;
+
+    const result = await scoped(model.studentModel).findAndCountAll(query);
+    return {
+      students: result.rows,
+      total: result.count,
+    };
+  }
+
+  const students = await scoped(model.studentModel).findAll(query);
+  return {
+    students,
+    total: students.length,
+  };
 }
 
 export async function createStudentEvaluationPlaceholders(

@@ -218,7 +218,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"type\": \"Assignment\",\n  \"title\": \"Assignment 1 - Introduction to Fluid Properties\",\n  \"maximumMarks\": 30,\n  \"issueDate\": \"2026-09-01\",\n  \"dueDate\": \"2026-09-08\",\n  \"documentUrl\": \"https://example.com/Assignment_3_Questions.pdf\",\n  \"mode\": \"online\",\n  \"weightagePercentage\": 10,\n  \"normalizedMaxMarks\": 2\n}",
+          "raw": "{\n  \"type\": \"Assignment\",\n  \"title\": \"Assignment 1 - Introduction to Fluid Properties\",\n  \"maximumMarks\": 30,\n  \"issueDate\": \"2026-09-01\",\n  \"dueDate\": \"2026-09-08\",\n  \"documentUrl\": \"https://example.com/Assignment_3_Questions.pdf\",\n  \"mode\": \"online\",\n  \"weightagePercentage\": 10,\n  \"normalizedMaxMarks\": 2,\n  \"isIncludeInFinalResult\": true\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -266,7 +266,7 @@
             }
           ]
         },
-        "description": "Marks by subjectId + classSectionTermId. assessments[] each include all students (internalAssessmentId-wise). Also returns studentIds / internalAssessmentIds / matrix for 2D grid: matrix[studentIndex][assessmentIndex] = obtainedMarks."
+        "description": "All internal assessments for subjectId + classSectionTermId. Returns common subject/term/course/session data and assessments with title, weightage, type, maximumMarks, dueDate, issueDate, mode, weightagePercentage, normalizedMaxMarks, isIncludeInFinalResult."
       },
       "response": []
     },
@@ -282,7 +282,7 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/internalAssessment/my/marks/cell?subjectId={{subjectId}}&classSectionTermId={{classSectionTermId}}&studentId={{studentId}}&internalAssessmentId={{internalAssessmentId}}",
+          "raw": "{{base_url}}/internalAssessment/my/marks/cell?subjectId={{subjectId}}&classSectionTermId={{classSectionTermId}}&page=1&limit=10",
           "host": ["{{base_url}}"],
           "path": ["internalAssessment", "my", "marks", "cell"],
           "query": [
@@ -295,16 +295,16 @@
               "value": "{{classSectionTermId}}"
             },
             {
-              "key": "studentId",
-              "value": "{{studentId}}"
+              "key": "page",
+              "value": "1"
             },
             {
-              "key": "internalAssessmentId",
-              "value": "{{internalAssessmentId}}"
+              "key": "limit",
+              "value": "10"
             }
           ]
         },
-        "description": "Single student × assessment cell scoped to subjectId + classSectionTermId."
+        "description": "Paginated marks grid by subjectId + classSectionTermId. Students are paginated (default page=1, limit=10). assessments[] each include the current page of students."
       },
       "response": []
     },
