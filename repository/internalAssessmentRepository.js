@@ -222,8 +222,14 @@ export async function getUserInternalAssessments(userId) {
     }
 
     for (const classSectionTermId of classSectionTermIds) {
+      const sessionId = sessionByTermId.get(classSectionTermId);
+      if (!sessionId) {
+        studentCountByTermId.set(classSectionTermId, 0);
+        continue;
+      }
+
       const studentCount = await scoped(model.studentModel).count({
-        where: { classSectionTermId },
+        where: { classSectionTermId, sessionId },
       });
       studentCountByTermId.set(classSectionTermId, studentCount);
     }
@@ -564,8 +570,31 @@ export async function getStudentsByClassSectionTermId(
   classSectionTermId,
   transaction,
 ) {
-  return scoped(model.studentModel).findAll({
+  const classSectionTerm = await scoped(model.classSectionTermModel).findOne({
     where: { classSectionTermId },
+    attributes: ["classSectionTermId", "classSectionsId"],
+    include: [
+      {
+        model: model.classSectionModel,
+        as: "classSection",
+        attributes: ["classSectionsId", "sessionId"],
+        required: true,
+      },
+    ],
+    transaction,
+  });
+
+  if (!classSectionTerm || !classSectionTerm.classSection) {
+    return [];
+  }
+
+  const sessionId = classSectionTerm.classSection.sessionId;
+
+  return scoped(model.studentModel).findAll({
+    where: {
+      classSectionTermId,
+      sessionId,
+    },
     attributes: studentAttributes,
     order: [
       ["scholarNumber", "ASC"],

@@ -132,7 +132,7 @@
             }
           ]
         },
-        "description": "Fetches student list by classSectionTermId only."
+        "description": "Fetches students by classSectionTermId, scoped to that term's class-section sessionId (studentModel only)."
       },
       "response": []
     },
@@ -318,12 +318,12 @@
   "variable": [
     {
       "key": "base_url",
-      "value": "http://localhost:5000",
+      "value": "http://localhost:8080",
       "type": "string"
     },
     {
       "key": "token",
-      "value": "your_jwt_token_here",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjU2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlSWQiOjE3LCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IlBheWFsIEx1bGxhIiwidW5pcXVlSWQiOiIxNDVkOTg1Ni02MmM3LTQ2OGUtYTc2Mi0yNmU5M2I3ZmM4MmYiLCJwYXNzd29yZCI6IiQyYSQxMCRFczJpZXR3Wm9BQTR4U0ZwSmxmM0ZlLkJkdXgyLmp1bUdwVDJmWlBLWGhxLm01cUdnYWhCTyIsImR1bW15UGFzc3dvcmQiOiIiLCJzdGF0dXMiOiJhY3RpdmUiLCJwaG9uZSI6Ijc2MDA3OTgzMDciLCJlbWFpbCI6InBsdUBhYXlvamFuLmVkdS5pbiIsImlzVGVhY2hlciI6ZmFsc2UsImNyZWF0ZWRBdCI6IjIwMjUtMDktMzBUMTE6NTI6MDkuMDAwWiIsInVwZGF0ZWRBdCI6IjIwMjYtMDktMDNUMDk6MDg6MTYuMDAwWiIsImRlbGV0ZWRBdCI6bnVsbCwiZGVmYXVsdF9yb2xlX2lkIjoxNywiaW5zdGl0dXRlTmFtZSI6IkFheW9qYW4gU2Nob29sIG9mIEFyY2hpdGVjdHVyZSIsImlhdCI6MTc4ODYyNzAxOCwiZXhwIjoxNzkxMjE5MDE4fQ.0NNCxQJZN1hqx8KSX_30qhWOiveVqy7ZySWF0Es6KSE",
       "type": "string"
     },
     {
@@ -333,6 +333,11 @@
     },
     {
       "key": "classSectionTermId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "sessionId",
       "value": "1",
       "type": "string"
     },
