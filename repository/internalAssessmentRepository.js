@@ -12,6 +12,7 @@ const internalAssessmentAttributes = [
   "userId",
   "examSetupTypeId",
   "type",
+  "title",
   "maximumMarks",
   "issueDate",
   "dueDate",
@@ -439,7 +440,19 @@ export async function getAssessmentStatusCounts(filters) {
       classSectionTermId,
       userId,
     },
-    attributes: ["internalAssessmentId", "issueDate", "dueDate"],
+    attributes: [
+      "internalAssessmentId",
+      "title",
+      "type",
+      "issueDate",
+      "dueDate",
+      "maximumMarks",
+      "mode",
+    ],
+    order: [
+      ["issueDate", "ASC"],
+      ["internalAssessmentId", "ASC"],
+    ],
   });
 
   const today = new Date();
@@ -448,6 +461,7 @@ export async function getAssessmentStatusCounts(filters) {
   let completed = 0;
   let open = 0;
   let upcoming = 0;
+  const assessmentList = [];
 
   for (const assessment of assessments) {
     const issueDate = assessment.issueDate
@@ -462,13 +476,27 @@ export async function getAssessmentStatusCounts(filters) {
       dueDate.setHours(0, 0, 0, 0);
     }
 
+    let status = "open";
     if (issueDate && issueDate > today) {
+      status = "upcoming";
       upcoming += 1;
     } else if (dueDate && dueDate < today) {
+      status = "completed";
       completed += 1;
     } else {
       open += 1;
     }
+
+    assessmentList.push({
+      internalAssessmentId: assessment.internalAssessmentId,
+      title: assessment.title,
+      type: assessment.type,
+      maximumMarks: assessment.maximumMarks,
+      mode: assessment.mode,
+      issueDate: assessment.issueDate,
+      dueDate: assessment.dueDate,
+      status,
+    });
   }
 
   return {
@@ -476,6 +504,7 @@ export async function getAssessmentStatusCounts(filters) {
     completed,
     open,
     upcoming,
+    assessments: assessmentList,
   };
 }
 
@@ -486,6 +515,8 @@ export async function getUserDashboardSku(userId) {
     where: { userId },
     attributes: [
       "internalAssessmentId",
+      "title",
+      "type",
       "subjectId",
       "classSectionTermId",
     ],
@@ -502,12 +533,22 @@ export async function getUserDashboardSku(userId) {
 
   let remaining = 0;
   let readyToSubmit = 0;
+  const remainingAssessments = [];
+  const readyToSubmitAssessments = [];
 
   for (const assessment of assessments) {
     const evaluations = assessment.studentEvaluations || [];
+    const item = {
+      internalAssessmentId: assessment.internalAssessmentId,
+      title: assessment.title,
+      type: assessment.type,
+      subjectId: assessment.subjectId,
+      classSectionTermId: assessment.classSectionTermId,
+    };
 
     if (evaluations.length === 0) {
       remaining += 1;
+      remainingAssessments.push(item);
       continue;
     }
 
@@ -524,8 +565,10 @@ export async function getUserDashboardSku(userId) {
 
     if (allMarked) {
       readyToSubmit += 1;
+      readyToSubmitAssessments.push(item);
     } else {
       remaining += 1;
+      remainingAssessments.push(item);
     }
   }
 
@@ -534,6 +577,8 @@ export async function getUserDashboardSku(userId) {
     totalAssessments: assessments.length,
     remaining,
     readyToSubmit,
+    remainingAssessments,
+    readyToSubmitAssessments,
   };
 }
 
@@ -551,7 +596,22 @@ export async function updateInternalAssessment(
 export async function getStudentEvaluationsByAssessmentId(
   internalAssessmentId,
 ) {
-  return scoped(model.internalAssessmentStudentEvaluationModel).findAll({
+  const assessment = await scoped(model.internalAssessmentModel).findOne({
+    where: { internalAssessmentId },
+    attributes: [
+      "internalAssessmentId",
+      "title",
+      "type",
+      "maximumMarks",
+      "mode",
+      "issueDate",
+      "dueDate",
+    ],
+  });
+
+  const evaluations = await scoped(
+    model.internalAssessmentStudentEvaluationModel,
+  ).findAll({
     where: { internalAssessmentId },
     attributes: studentEvaluationAttributes,
     include: [
@@ -564,6 +624,17 @@ export async function getStudentEvaluationsByAssessmentId(
     ],
     order: [["studentId", "ASC"]],
   });
+
+  return {
+    internalAssessmentId,
+    title: assessment ? assessment.title : null,
+    type: assessment ? assessment.type : null,
+    maximumMarks: assessment ? assessment.maximumMarks : null,
+    mode: assessment ? assessment.mode : null,
+    issueDate: assessment ? assessment.issueDate : null,
+    dueDate: assessment ? assessment.dueDate : null,
+    evaluations,
+  };
 }
 
 export async function getStudentsByClassSectionTermId(

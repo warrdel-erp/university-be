@@ -21,6 +21,7 @@ const createInternalAssessmentSchema = z.object({
   subjectId: z.number().int().positive(),
   classSectionTermId: z.number().int().positive(),
   type: z.string().min(1),
+  title: z.string().min(1),
   maximumMarks: z.number().int().positive(),
   issueDate: z.string(),
   dueDate: z.string(),
@@ -48,6 +49,7 @@ const assessmentStatusCountsQuerySchema = z.object({
 
 const updateInternalAssessmentSchema = z.object({
   type: z.string().min(1).optional(),
+  title: z.string().min(1).optional(),
   maximumMarks: z.number().int().positive().optional(),
   issueDate: z.string().optional(),
   dueDate: z.string().optional(),

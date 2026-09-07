@@ -97,6 +97,10 @@ const internalAssessmentModel = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    title: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     maximumMarks: {
       type: DataTypes.INTEGER,
       allowNull: true,

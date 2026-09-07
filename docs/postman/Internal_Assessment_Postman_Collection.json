@@ -42,7 +42,7 @@
           "host": ["{{base_url}}"],
           "path": ["internalAssessment", "my", "sku"]
         },
-        "description": "User dashboard KPIs: totalSubjects, totalAssessments, remaining (marks incomplete), readyToSubmit (all evaluation marks saved)."
+        "description": "User dashboard KPIs with assessment titles: totalSubjects, totalAssessments, remaining, readyToSubmit, remainingAssessments, readyToSubmitAssessments."
       },
       "response": []
     },
@@ -64,7 +64,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"subjectId\": 1,\n  \"classSectionTermId\": 1,\n  \"type\": \"Assignment\",\n  \"maximumMarks\": 30,\n  \"issueDate\": \"2026-09-01\",\n  \"dueDate\": \"2026-09-08\",\n  \"documentUrl\": \"https://example.com/Assignment_3_Questions.pdf\",\n  \"mode\": \"online\"\n}",
+          "raw": "{\n  \"subjectId\": 1,\n  \"classSectionTermId\": 1,\n  \"type\": \"Assignment\",\n  \"title\": \"Assignment 1 - Introduction to Fluid Properties\",\n  \"maximumMarks\": 30,\n  \"issueDate\": \"2026-09-01\",\n  \"dueDate\": \"2026-09-08\",\n  \"documentUrl\": \"https://example.com/Assignment_3_Questions.pdf\",\n  \"mode\": \"online\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -162,7 +162,7 @@
             }
           ]
         },
-        "description": "Returns total / completed / open / upcoming assessment counts for subjectId + logged-in userId + classSectionTermId."
+        "description": "Returns total / completed / open / upcoming counts plus assessments list with title and status."
       },
       "response": []
     },
@@ -210,7 +210,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"type\": \"Assignment\",\n  \"maximumMarks\": 30,\n  \"issueDate\": \"2026-09-01\",\n  \"dueDate\": \"2026-09-08\",\n  \"documentUrl\": \"https://example.com/Assignment_3_Questions.pdf\",\n  \"mode\": \"online\",\n  \"weightagePercentage\": 10,\n  \"normalizedMaxMarks\": 2\n}",
+          "raw": "{\n  \"type\": \"Assignment\",\n  \"title\": \"Assignment 1 - Introduction to Fluid Properties\",\n  \"maximumMarks\": 30,\n  \"issueDate\": \"2026-09-01\",\n  \"dueDate\": \"2026-09-08\",\n  \"documentUrl\": \"https://example.com/Assignment_3_Questions.pdf\",\n  \"mode\": \"online\",\n  \"weightagePercentage\": 10,\n  \"normalizedMaxMarks\": 2\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -254,7 +254,7 @@
             }
           ]
         },
-        "description": "Fetches student evaluations (marks) for an assessment."
+        "description": "Fetches student evaluations with assessment title/type/max marks."
       },
       "response": []
     },
