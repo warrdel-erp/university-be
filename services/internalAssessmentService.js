@@ -98,7 +98,7 @@ export async function updateInternalAssessment(internalAssessmentId, payload) {
   );
 }
 
-export async function getStudentEvaluations(internalAssessmentId) {
+export async function getStudentEvaluations(internalAssessmentId, studentId) {
   const assessment =
     await InternalAssessmentRepository.getInternalAssessmentById(
       Number(internalAssessmentId),
@@ -112,6 +112,7 @@ export async function getStudentEvaluations(internalAssessmentId) {
 
   return InternalAssessmentRepository.getStudentEvaluationsByAssessmentId(
     Number(internalAssessmentId),
+    studentId ? Number(studentId) : undefined,
   );
 }
 
@@ -120,6 +121,22 @@ export async function getMarksTableBySubject(filters) {
     subjectId: Number(filters.subjectId),
     classSectionTermId: Number(filters.classSectionTermId),
   });
+}
+
+export async function getStudentEvaluationByStudentAndAssessment(filters) {
+  const result =
+    await InternalAssessmentRepository.getStudentEvaluationByStudentAndAssessment(
+      Number(filters.studentId),
+      Number(filters.internalAssessmentId),
+    );
+
+  if (!result) {
+    const error = new Error("Internal assessment not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return result;
 }
 
 export async function getStudentsByClassSectionTermId(classSectionTermId) {

@@ -12,6 +12,7 @@ import {
   updateInternalAssessment,
   getStudentEvaluations,
   getMarksTableBySubject,
+  getStudentEvaluationByStudentAndAssessment,
   upsertStudentEvaluations,
   getStudentsByClassSectionTermId,
 } from "../controllers/internalAssessmentController.js";
@@ -40,6 +41,16 @@ const classSectionTermIdQuerySchema = z.object({
 });
 
 const internalAssessmentIdQuerySchema = z.object({
+  internalAssessmentId: z.coerce.number().int().positive(),
+});
+
+const getMarksQuerySchema = z.object({
+  internalAssessmentId: z.coerce.number().int().positive(),
+  studentId: z.coerce.number().int().positive().optional(),
+});
+
+const studentEvaluationQuerySchema = z.object({
+  studentId: z.coerce.number().int().positive(),
   internalAssessmentId: z.coerce.number().int().positive(),
 });
 
@@ -119,9 +130,15 @@ router.get(
   getMarksTableBySubject,
 );
 router.get(
+  "/my/marks/cell",
+  userAuth,
+  validate({ query: studentEvaluationQuerySchema }),
+  getStudentEvaluationByStudentAndAssessment,
+);
+router.get(
   "/my/marks",
   userAuth,
-  validate({ query: internalAssessmentIdQuerySchema }),
+  validate({ query: getMarksQuerySchema }),
   getStudentEvaluations,
 );
 router.put(

@@ -125,11 +125,12 @@ async function getAssessmentPlanWeightage(
   sessionId,
   options = {},
 ) {
-  const { transaction, continuousOnly = false } = options;
-  const mappingWhere = { subjectId, courseId };
-  if (sessionId) {
-    mappingWhere.sessionId = sessionId;
-  }
+  const { transaction } = options;
+  const mappingWhere = {
+    subjectId,
+    courseId,
+    [Op.or]: [{ sessionId }, { sessionId: null }],
+  };
 
   const mapping = await scoped(
     model.assessmentPlanSubjectMappingModel,
@@ -138,8 +139,9 @@ async function getAssessmentPlanWeightage(
     attributes: [
       "assessmentPlanSubjectMappingId",
       "assessmentPlanId",
-      "examSetupTypeId",
+      "sessionId",
     ],
+    order: [["sessionId", "DESC"]],
     transaction,
   });
 
@@ -147,15 +149,14 @@ async function getAssessmentPlanWeightage(
     return null;
   }
 
-  // Prefer CONTINUOUS_ASSESSMENT component on the plan
-  const continuousComponent = await scoped(
-    model.assessmentPlanComponentModel,
-  ).findOne({
+  return scoped(model.assessmentPlanComponentModel).findOne({
     where: { assessmentPlanId: mapping.assessmentPlanId },
     attributes: [
       "assessmentPlanComponentId",
       "examSetupTypeId",
       "weightagePercentage",
+      "maxAssessments",
+      "duration",
     ],
     include: [
       {
@@ -168,29 +169,19 @@ async function getAssessmentPlanWeightage(
     ],
     transaction,
   });
+}
 
-  if (continuousComponent) {
-    return continuousComponent;
-  }
-
-  if (continuousOnly) {
-    return null;
-  }
-
-  // Fallback: use the exam type linked on the subject mapping
-  if (!mapping.examSetupTypeId) {
-    return null;
-  }
-
-  return scoped(model.assessmentPlanComponentModel).findOne({
-    where: {
-      assessmentPlanId: mapping.assessmentPlanId,
-      examSetupTypeId: mapping.examSetupTypeId,
-    },
+async function getContinuousAssessmentPlanMap() {
+  const components = await scoped(
+    model.assessmentPlanComponentModel,
+  ).findAll({
     attributes: [
       "assessmentPlanComponentId",
+      "assessmentPlanId",
       "examSetupTypeId",
       "weightagePercentage",
+      "maxAssessments",
+      "duration",
     ],
     include: [
       {
@@ -198,24 +189,8 @@ async function getAssessmentPlanWeightage(
         as: "examSetupType",
         attributes: examSetupTypeAttributes,
         required: true,
+        where: { examCategory: "CONTINUOUS_ASSESSMENT" },
       },
-    ],
-    transaction,
-  });
-}
-
-async function getContinuousAssessmentPlanMap() {
-  const mappings = await scoped(
-    model.assessmentPlanSubjectMappingModel,
-  ).findAll({
-    attributes: [
-      "assessmentPlanSubjectMappingId",
-      "assessmentPlanId",
-      "subjectId",
-      "courseId",
-      "sessionId",
-    ],
-    include: [
       {
         model: model.assessmentPlanModel,
         as: "assessmentPlan",
@@ -223,19 +198,16 @@ async function getContinuousAssessmentPlanMap() {
         required: true,
         include: [
           {
-            model: model.assessmentPlanComponentModel,
-            as: "components",
-            attributes: ["examSetupTypeId", "weightagePercentage"],
-            required: true,
-            include: [
-              {
-                model: model.examSetupTypeModel,
-                as: "examSetupType",
-                attributes: examSetupTypeAttributes,
-                required: true,
-                where: { examCategory: "CONTINUOUS_ASSESSMENT" },
-              },
+            model: model.assessmentPlanSubjectMappingModel,
+            as: "subjectMappings",
+            attributes: [
+              "assessmentPlanSubjectMappingId",
+              "subjectId",
+              "courseId",
+              "sessionId",
             ],
+            required: true,
+            where: buildScope(model.assessmentPlanSubjectMappingModel),
           },
         ],
       },
@@ -244,20 +216,51 @@ async function getContinuousAssessmentPlanMap() {
 
   const planMap = new Map();
 
-  for (const mapping of mappings) {
-    const component = mapping.assessmentPlan.components[0];
-    const key = `${mapping.subjectId}:${mapping.courseId}:${mapping.sessionId}`;
-    planMap.set(key, {
-      fetchedWeightage: Math.round(Number(component.weightagePercentage)),
-      assessmentExamType: {
+  for (const component of components) {
+    const plainComponent = {
+      assessmentPlanComponentId: component.assessmentPlanComponentId,
+      assessmentPlanId: component.assessmentPlanId,
+      examSetupTypeId: component.examSetupTypeId,
+      weightagePercentage: component.weightagePercentage,
+      maxAssessments: component.maxAssessments,
+      duration: component.duration,
+      examSetupType: {
         examSetupTypeId: component.examSetupType.examSetupTypeId,
         examName: component.examSetupType.examName,
         examCategory: component.examSetupType.examCategory,
       },
-    });
+    };
+
+    const fetchedWeightage = Math.round(
+      Number(component.weightagePercentage),
+    );
+
+    for (const mapping of component.assessmentPlan.subjectMappings) {
+      const sessionKey =
+        mapping.sessionId === null || mapping.sessionId === undefined
+          ? "null"
+          : mapping.sessionId;
+      const key = `${mapping.subjectId}:${mapping.courseId}:${sessionKey}`;
+
+      if (!planMap.has(key)) {
+        planMap.set(key, {
+          fetchedWeightage,
+          assessmentPlanComponent: plainComponent,
+        });
+      }
+    }
   }
 
   return planMap;
+}
+
+function resolveContinuousPlan(planMap, subjectId, courseId, sessionId) {
+  const exact = planMap.get(`${subjectId}:${courseId}:${sessionId}`);
+  if (exact) {
+    return exact;
+  }
+
+  return planMap.get(`${subjectId}:${courseId}:null`) || null;
 }
 
 async function getStudentCountByTermAndSession(termSessionPairs) {
@@ -371,12 +374,12 @@ export async function getUserInternalAssessments(userId) {
       continue;
     }
 
-    const plan = continuousPlanMap.get(
-      `${subjectId}:${courseId}:${sessionId}`,
+    const plan = resolveContinuousPlan(
+      continuousPlanMap,
+      subjectId,
+      courseId,
+      sessionId,
     );
-    if (!plan) {
-      continue;
-    }
 
     const key = `${subjectId}-${classSectionTermId}`;
     if (subjectsMap.has(key)) {
@@ -395,6 +398,8 @@ export async function getUserInternalAssessments(userId) {
     const department = course && course.courseProgram
       ? course.courseProgram
       : null;
+
+    const isContinuousAssessmentMapped = Boolean(plan);
 
     subjectsMap.set(key, {
       userId,
@@ -418,8 +423,16 @@ export async function getUserInternalAssessments(userId) {
             departmentName: department.departmentName,
           }
         : null,
-      assessmentExamType: plan.assessmentExamType,
-      fetchedWeightage: plan.fetchedWeightage,
+      isContinuousAssessmentMapped,
+      assessmentPlanComponent: plan ? plan.assessmentPlanComponent : null,
+      assessmentExamType: plan
+        ? plan.assessmentPlanComponent.examSetupType
+        : {
+            examSetupTypeId: null,
+            examName: null,
+            examCategory: null,
+          },
+      fetchedWeightage: plan ? plan.fetchedWeightage : null,
       assessmentCount: 0,
       gradedAssessmentCount: 0,
       pendingAssessmentCount: 0,
@@ -543,7 +556,7 @@ export async function createInternalAssessment(payload, transaction) {
     subjectId,
     courseId,
     sessionId,
-    { transaction, continuousOnly: true },
+    { transaction },
   );
 
   if (continuousComponent) {
@@ -906,9 +919,13 @@ export async function getMarksTableBySubject(filters) {
   }
 
   const studentRows = [];
+  const studentIds = [];
+  const matrix = [];
+
   for (const student of students) {
     const plainStudent = student.get({ plain: true });
     const marks = [];
+    const matrixRow = [];
 
     for (const assessment of assessmentColumns) {
       const key = `${plainStudent.studentId}:${assessment.internalAssessmentId}`;
@@ -916,6 +933,7 @@ export async function getMarksTableBySubject(filters) {
 
       if (evaluation) {
         marks.push(evaluation);
+        matrixRow.push(evaluation.obtainedMarks);
       } else {
         marks.push({
           internalAssessmentStudentEvaluationId: null,
@@ -924,9 +942,12 @@ export async function getMarksTableBySubject(filters) {
           documentUrl: null,
           updatedAt: null,
         });
+        matrixRow.push(null);
       }
     }
 
+    studentIds.push(plainStudent.studentId);
+    matrix.push(matrixRow);
     studentRows.push({
       studentId: plainStudent.studentId,
       scholarNumber: plainStudent.scholarNumber,
@@ -944,11 +965,78 @@ export async function getMarksTableBySubject(filters) {
     studentCount: studentRows.length,
     assessments: assessmentColumns,
     students: studentRows,
+    studentIds,
+    internalAssessmentIds: assessmentIds,
+    matrix,
+  };
+}
+
+export async function getStudentEvaluationByStudentAndAssessment(
+  studentId,
+  internalAssessmentId,
+) {
+  const assessment = await scoped(model.internalAssessmentModel).findOne({
+    where: { internalAssessmentId },
+    attributes: [
+      "internalAssessmentId",
+      "title",
+      "type",
+      "maximumMarks",
+      "mode",
+      "issueDate",
+      "dueDate",
+      "documentUrl",
+    ],
+  });
+
+  if (!assessment) {
+    return null;
+  }
+
+  const evaluation = await scoped(
+    model.internalAssessmentStudentEvaluationModel,
+  ).findOne({
+    where: {
+      studentId,
+      internalAssessmentId,
+    },
+    attributes: studentEvaluationAttributes,
+    include: [
+      {
+        model: model.studentModel,
+        as: "student",
+        attributes: studentAttributes,
+        required: false,
+      },
+    ],
+  });
+
+  const plainAssessment = assessment.get({ plain: true });
+
+  if (!evaluation) {
+    return {
+      ...plainAssessment,
+      evaluation: {
+        internalAssessmentStudentEvaluationId: null,
+        studentId,
+        internalAssessmentId,
+        obtainedMarks: null,
+        documentUrl: null,
+        updatedAt: null,
+        student: null,
+      },
+    };
+  }
+
+  return {
+    ...plainAssessment,
+    evaluation: evaluation.get({ plain: true }),
   };
 }
 
 export async function getStudentEvaluationsByAssessmentId(
   internalAssessmentId,
+  studentId,
 ) {
   const assessment = await scoped(model.internalAssessmentModel).findOne({
     where: { internalAssessmentId },
@@ -963,10 +1051,15 @@ export async function getStudentEvaluationsByAssessmentId(
     ],
   });
 
+  const evaluationWhere = { internalAssessmentId };
+  if (studentId) {
+    evaluationWhere.studentId = studentId;
+  }
+
   const evaluations = await scoped(
     model.internalAssessmentStudentEvaluationModel,
   ).findAll({
-    where: { internalAssessmentId },
+    where: evaluationWhere,
     attributes: studentEvaluationAttributes,
     include: [
       {

@@ -22,7 +22,7 @@
           "host": ["{{base_url}}"],
           "path": ["internalAssessment", "my"]
         },
-        "description": "Faculty My Courses rows for CONTINUOUS_ASSESSMENT only. Includes course/department/term, studentCount, IA weightage, graded/pending assessment counts, marks progress, and submissionStatus (ready|not_ready)."
+        "description": "All Primary timetable userId ↔ subjectId mappings. Subjects without assessment-plan CONTINUOUS_ASSESSMENT mapping are included with isContinuousAssessmentMapped=false, assessmentPlanComponent=null, fetchedWeightage=null. When mapped, fetchedWeightage comes only from CONTINUOUS_ASSESSMENT component."
       },
       "response": []
     },
@@ -258,7 +258,37 @@
             }
           ]
         },
-        "description": "Marks matrix for Faculty Workspace: assessments as columns, students as rows with marks[] aligned to assessments order."
+        "description": "Marks matrix for Faculty Workspace.\n\n- assessments: column headers\n- students[].marks: row cells aligned to assessments\n- studentIds / internalAssessmentIds / matrix: 2D array where matrix[studentIndex][assessmentIndex] = obtainedMarks"
+      },
+      "response": []
+    },
+    {
+      "name": "GET Marks Cell",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/internalAssessment/my/marks/cell?studentId={{studentId}}&internalAssessmentId={{internalAssessmentId}}",
+          "host": ["{{base_url}}"],
+          "path": ["internalAssessment", "my", "marks", "cell"],
+          "query": [
+            {
+              "key": "studentId",
+              "value": "{{studentId}}"
+            },
+            {
+              "key": "internalAssessmentId",
+              "value": "{{internalAssessmentId}}"
+            }
+          ]
+        },
+        "description": "Single student × assessment cell for the marks sidebar (student, obtainedMarks, documentUrl, assessment max marks)."
       },
       "response": []
     },
@@ -274,17 +304,23 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/internalAssessment/my/marks?internalAssessmentId={{internalAssessmentId}}",
+          "raw": "{{base_url}}/internalAssessment/my/marks?internalAssessmentId={{internalAssessmentId}}&studentId={{studentId}}",
           "host": ["{{base_url}}"],
           "path": ["internalAssessment", "my", "marks"],
           "query": [
             {
               "key": "internalAssessmentId",
               "value": "{{internalAssessmentId}}"
+            },
+            {
+              "key": "studentId",
+              "value": "{{studentId}}",
+              "description": "Optional. When set, returns only that student's evaluation.",
+              "disabled": true
             }
           ]
         },
-        "description": "Fetches student evaluations with assessment title/type/max marks."
+        "description": "Fetches student evaluations for an assessment. Pass optional studentId to return only one student."
       },
       "response": []
     },

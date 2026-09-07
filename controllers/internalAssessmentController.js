@@ -166,6 +166,7 @@ export async function getStudentEvaluations(req, res) {
   try {
     const evaluations = await InternalAssessmentServices.getStudentEvaluations(
       req.query.internalAssessmentId,
+      req.query.studentId,
     );
 
     return SuccessResponse(
@@ -201,6 +202,29 @@ export async function getMarksTableBySubject(req, res) {
       res,
       error.statusCode || 500,
       error.message || "Failed to fetch marks table",
+      error,
+    );
+  }
+}
+
+export async function getStudentEvaluationByStudentAndAssessment(req, res) {
+  try {
+    const evaluation =
+      await InternalAssessmentServices.getStudentEvaluationByStudentAndAssessment(
+        req.query,
+      );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Fetched student evaluation successfully",
+      evaluation,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch student evaluation",
       error,
     );
   }
