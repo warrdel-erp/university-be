@@ -178,7 +178,15 @@ module.exports = {
         onDelete: "CASCADE"
       },
       item_type: {
-        type: Sequelize.ENUM("ANSWER_SHEET", "EXTRA_SHEET", "GRAPH_SHEET", "ROUGH_SHEET", "ATTENDANCE_SHEET", "ROOM_KIT"),
+        type: Sequelize.ENUM(
+          "ANSWER_SHEET",
+          "EXTRA_SHEET",
+          "GRAPH_SHEET",
+          "ROUGH_SHEET",
+          "ATTENDANCE_SHEET",
+          "ROOM_KIT",
+          "QUESTION_PAPER",
+        ),
         allowNull: false
       },
       planned_quantity: {
