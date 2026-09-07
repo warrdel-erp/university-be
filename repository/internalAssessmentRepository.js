@@ -892,6 +892,11 @@ export async function getMarksTableBySubject(filters) {
     assessmentColumns.push(plain);
   }
 
+  const plainStudents = [];
+  for (const student of students) {
+    plainStudents.push(student.get({ plain: true }));
+  }
+
   const evaluationByStudentAndAssessment = new Map();
 
   if (assessmentIds.length > 0) {
@@ -910,6 +915,7 @@ export async function getMarksTableBySubject(filters) {
       evaluationByStudentAndAssessment.set(key, {
         internalAssessmentStudentEvaluationId:
           plain.internalAssessmentStudentEvaluationId,
+        studentId: plain.studentId,
         internalAssessmentId: plain.internalAssessmentId,
         obtainedMarks: plain.obtainedMarks,
         documentUrl: plain.documentUrl,
@@ -918,67 +924,77 @@ export async function getMarksTableBySubject(filters) {
     }
   }
 
-  const studentRows = [];
   const studentIds = [];
   const matrix = [];
+  const assessmentsWithStudents = [];
 
-  for (const student of students) {
-    const plainStudent = student.get({ plain: true });
-    const marks = [];
+  for (const assessment of assessmentColumns) {
+    const assessmentStudents = [];
+
+    for (const plainStudent of plainStudents) {
+      const key = `${plainStudent.studentId}:${assessment.internalAssessmentId}`;
+      const evaluation = evaluationByStudentAndAssessment.get(key);
+
+      assessmentStudents.push({
+        studentId: plainStudent.studentId,
+        scholarNumber: plainStudent.scholarNumber,
+        enrollNumber: plainStudent.enrollNumber,
+        firstName: plainStudent.firstName,
+        middleName: plainStudent.middleName,
+        lastName: plainStudent.lastName,
+        internalAssessmentStudentEvaluationId: evaluation
+          ? evaluation.internalAssessmentStudentEvaluationId
+          : null,
+        obtainedMarks: evaluation ? evaluation.obtainedMarks : null,
+        documentUrl: evaluation ? evaluation.documentUrl : null,
+        updatedAt: evaluation ? evaluation.updatedAt : null,
+      });
+    }
+
+    assessmentsWithStudents.push({
+      ...assessment,
+      students: assessmentStudents,
+    });
+  }
+
+  for (const plainStudent of plainStudents) {
     const matrixRow = [];
 
     for (const assessment of assessmentColumns) {
       const key = `${plainStudent.studentId}:${assessment.internalAssessmentId}`;
       const evaluation = evaluationByStudentAndAssessment.get(key);
-
-      if (evaluation) {
-        marks.push(evaluation);
-        matrixRow.push(evaluation.obtainedMarks);
-      } else {
-        marks.push({
-          internalAssessmentStudentEvaluationId: null,
-          internalAssessmentId: assessment.internalAssessmentId,
-          obtainedMarks: null,
-          documentUrl: null,
-          updatedAt: null,
-        });
-        matrixRow.push(null);
-      }
+      matrixRow.push(evaluation ? evaluation.obtainedMarks : null);
     }
 
     studentIds.push(plainStudent.studentId);
     matrix.push(matrixRow);
-    studentRows.push({
-      studentId: plainStudent.studentId,
-      scholarNumber: plainStudent.scholarNumber,
-      enrollNumber: plainStudent.enrollNumber,
-      firstName: plainStudent.firstName,
-      middleName: plainStudent.middleName,
-      lastName: plainStudent.lastName,
-      marks,
-    });
   }
 
   return {
     subjectId,
     classSectionTermId,
-    studentCount: studentRows.length,
-    assessments: assessmentColumns,
-    students: studentRows,
+    studentCount: plainStudents.length,
+    assessments: assessmentsWithStudents,
     studentIds,
     internalAssessmentIds: assessmentIds,
     matrix,
   };
 }
 
-export async function getStudentEvaluationByStudentAndAssessment(
-  studentId,
-  internalAssessmentId,
-) {
+export async function getStudentEvaluationByStudentAndAssessment(filters) {
+  const { subjectId, classSectionTermId, studentId, internalAssessmentId } =
+    filters;
+
   const assessment = await scoped(model.internalAssessmentModel).findOne({
-    where: { internalAssessmentId },
+    where: {
+      internalAssessmentId,
+      subjectId,
+      classSectionTermId,
+    },
     attributes: [
       "internalAssessmentId",
+      "subjectId",
+      "classSectionTermId",
       "title",
       "type",
       "maximumMarks",

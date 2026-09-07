@@ -258,7 +258,7 @@
             }
           ]
         },
-        "description": "Marks matrix for Faculty Workspace.\n\n- assessments: column headers\n- students[].marks: row cells aligned to assessments\n- studentIds / internalAssessmentIds / matrix: 2D array where matrix[studentIndex][assessmentIndex] = obtainedMarks"
+        "description": "Marks by subjectId + classSectionTermId. assessments[] each include all students (internalAssessmentId-wise). Also returns studentIds / internalAssessmentIds / matrix for 2D grid: matrix[studentIndex][assessmentIndex] = obtainedMarks."
       },
       "response": []
     },
@@ -274,10 +274,18 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/internalAssessment/my/marks/cell?studentId={{studentId}}&internalAssessmentId={{internalAssessmentId}}",
+          "raw": "{{base_url}}/internalAssessment/my/marks/cell?subjectId={{subjectId}}&classSectionTermId={{classSectionTermId}}&studentId={{studentId}}&internalAssessmentId={{internalAssessmentId}}",
           "host": ["{{base_url}}"],
           "path": ["internalAssessment", "my", "marks", "cell"],
           "query": [
+            {
+              "key": "subjectId",
+              "value": "{{subjectId}}"
+            },
+            {
+              "key": "classSectionTermId",
+              "value": "{{classSectionTermId}}"
+            },
             {
               "key": "studentId",
               "value": "{{studentId}}"
@@ -288,7 +296,7 @@
             }
           ]
         },
-        "description": "Single student × assessment cell for the marks sidebar (student, obtainedMarks, documentUrl, assessment max marks)."
+        "description": "Single student × assessment cell scoped to subjectId + classSectionTermId."
       },
       "response": []
     },

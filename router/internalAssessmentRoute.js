@@ -49,7 +49,9 @@ const getMarksQuerySchema = z.object({
   studentId: z.coerce.number().int().positive().optional(),
 });
 
-const studentEvaluationQuerySchema = z.object({
+const marksCellQuerySchema = z.object({
+  subjectId: z.coerce.number().int().positive(),
+  classSectionTermId: z.coerce.number().int().positive(),
   studentId: z.coerce.number().int().positive(),
   internalAssessmentId: z.coerce.number().int().positive(),
 });
@@ -132,7 +134,7 @@ router.get(
 router.get(
   "/my/marks/cell",
   userAuth,
-  validate({ query: studentEvaluationQuerySchema }),
+  validate({ query: marksCellQuerySchema }),
   getStudentEvaluationByStudentAndAssessment,
 );
 router.get(

@@ -126,12 +126,18 @@ export async function getMarksTableBySubject(filters) {
 export async function getStudentEvaluationByStudentAndAssessment(filters) {
   const result =
     await InternalAssessmentRepository.getStudentEvaluationByStudentAndAssessment(
-      Number(filters.studentId),
-      Number(filters.internalAssessmentId),
+      {
+        subjectId: Number(filters.subjectId),
+        classSectionTermId: Number(filters.classSectionTermId),
+        studentId: Number(filters.studentId),
+        internalAssessmentId: Number(filters.internalAssessmentId),
+      },
     );
 
   if (!result) {
-    const error = new Error("Internal assessment not found");
+    const error = new Error(
+      "Internal assessment not found for subjectId and classSectionTermId",
+    );
     error.statusCode = 404;
     throw error;
   }
