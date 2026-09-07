@@ -289,7 +289,43 @@ async function getStudentCountByTermAndSession(termSessionPairs) {
   return countMap;
 }
 
-export async function getUserInternalAssessments(userId) {
+function filterUserInternalAssessmentsBySearch(entries, search) {
+  const query = search.trim().toLowerCase();
+  if (!query) {
+    return entries;
+  }
+
+  const filtered = [];
+  for (const entry of entries) {
+    const subjectName = entry.assessmentSubject.subjectName
+      ? entry.assessmentSubject.subjectName.toLowerCase()
+      : "";
+    const subjectCode = entry.assessmentSubject.subjectCode
+      ? entry.assessmentSubject.subjectCode.toLowerCase()
+      : "";
+    const courseName =
+      entry.course && entry.course.courseName
+        ? entry.course.courseName.toLowerCase()
+        : "";
+    const term = entry.term === null || entry.term === undefined
+      ? ""
+      : String(entry.term);
+
+    if (
+      subjectName.includes(query) ||
+      subjectCode.includes(query) ||
+      courseName.includes(query) ||
+      term.includes(query)
+    ) {
+      filtered.push(entry);
+    }
+  }
+
+  return filtered;
+}
+
+export async function getUserInternalAssessments(userId, options = {}) {
+  const search = options.search;
   const [continuousPlanMap, teacherCells] = await Promise.all([
     getContinuousAssessmentPlanMap(),
     scoped(model.timeTableCellTeachersModel).findAll({
@@ -358,8 +394,6 @@ export async function getUserInternalAssessments(userId) {
   ]);
 
   const subjectsMap = new Map();
-  const termSessionPairs = [];
-  const termSessionKeySet = new Set();
 
   for (const cell of teacherCells) {
     const timeTableCell = cell.timeTableCell;
@@ -384,12 +418,6 @@ export async function getUserInternalAssessments(userId) {
     const key = `${subjectId}-${classSectionTermId}`;
     if (subjectsMap.has(key)) {
       continue;
-    }
-
-    const termSessionKey = `${classSectionTermId}:${sessionId}`;
-    if (!termSessionKeySet.has(termSessionKey)) {
-      termSessionKeySet.add(termSessionKey);
-      termSessionPairs.push({ classSectionTermId, sessionId });
     }
 
     const course = routine.timeTableCourse
@@ -446,7 +474,20 @@ export async function getUserInternalAssessments(userId) {
     return [];
   }
 
-  const continuousEntries = Array.from(subjectsMap.values());
+  let continuousEntries = Array.from(subjectsMap.values());
+  if (search) {
+    continuousEntries = filterUserInternalAssessmentsBySearch(
+      continuousEntries,
+      search,
+    );
+  }
+
+  if (continuousEntries.length === 0) {
+    return [];
+  }
+
+  const filteredTermSessionPairs = [];
+  const filteredTermSessionKeySet = new Set();
   const assessmentWhere = [];
 
   for (const entry of continuousEntries) {
@@ -455,10 +496,19 @@ export async function getUserInternalAssessments(userId) {
       classSectionTermId: entry.classSectionTermId,
       userId,
     });
+
+    const termSessionKey = `${entry.classSectionTermId}:${entry.sessionId}`;
+    if (!filteredTermSessionKeySet.has(termSessionKey)) {
+      filteredTermSessionKeySet.add(termSessionKey);
+      filteredTermSessionPairs.push({
+        classSectionTermId: entry.classSectionTermId,
+        sessionId: entry.sessionId,
+      });
+    }
   }
 
   const [studentCountMap, assessments] = await Promise.all([
-    getStudentCountByTermAndSession(termSessionPairs),
+    getStudentCountByTermAndSession(filteredTermSessionPairs),
     scoped(model.internalAssessmentModel).findAll({
       where: { [Op.or]: assessmentWhere },
       attributes: ["internalAssessmentId", "subjectId", "classSectionTermId"],

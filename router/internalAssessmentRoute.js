@@ -84,7 +84,16 @@ const upsertStudentEvaluationsSchema = z.object({
     .min(1),
 });
 
-router.get("/my", userAuth, getUserInternalAssessments);
+const myCoursesQuerySchema = z.object({
+  search: z.string().trim().min(1).optional(),
+});
+
+router.get(
+  "/my",
+  userAuth,
+  validate({ query: myCoursesQuerySchema }),
+  getUserInternalAssessments,
+);
 router.get("/my/sku", userAuth, getUserDashboardSku);
 router.post(
   "/my",

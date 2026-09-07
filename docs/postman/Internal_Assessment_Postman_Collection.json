@@ -18,11 +18,19 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/internalAssessment/my",
+          "raw": "{{base_url}}/internalAssessment/my?search={{search}}",
           "host": ["{{base_url}}"],
-          "path": ["internalAssessment", "my"]
+          "path": ["internalAssessment", "my"],
+          "query": [
+            {
+              "key": "search",
+              "value": "{{search}}",
+              "description": "Optional. Filters by subjectName, subjectCode, courseName, or term.",
+              "disabled": true
+            }
+          ]
         },
-        "description": "All Primary timetable userId ↔ subjectId mappings. Subjects without assessment-plan CONTINUOUS_ASSESSMENT mapping are included with isContinuousAssessmentMapped=false, assessmentPlanComponent=null, fetchedWeightage=null. When mapped, fetchedWeightage comes only from CONTINUOUS_ASSESSMENT component."
+        "description": "All Primary timetable userId ↔ subjectId mappings. Optional search filters by subjectName, subjectCode, courseName, and term. Subjects without CONTINUOUS_ASSESSMENT mapping have isContinuousAssessmentMapped=false and fetchedWeightage=null."
       },
       "response": []
     },

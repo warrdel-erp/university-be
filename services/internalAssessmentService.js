@@ -1,8 +1,8 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as InternalAssessmentRepository from "../repository/internalAssessmentRepository.js";
 
-export async function getUserInternalAssessments(userId) {
-  return InternalAssessmentRepository.getUserInternalAssessments(userId);
+export async function getUserInternalAssessments(userId, options = {}) {
+  return InternalAssessmentRepository.getUserInternalAssessments(userId, options);
 }
 
 export async function createInternalAssessment(payload) {

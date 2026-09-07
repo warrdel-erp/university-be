@@ -5,7 +5,9 @@ export async function getUserInternalAssessments(req, res) {
   try {
     const userId = req.user.userId;
     const assessments =
-      await InternalAssessmentServices.getUserInternalAssessments(userId);
+      await InternalAssessmentServices.getUserInternalAssessments(userId, {
+        search: req.query.search,
+      });
     return SuccessResponse(
       res,
       200,
