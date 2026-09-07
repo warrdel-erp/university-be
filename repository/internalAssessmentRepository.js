@@ -48,7 +48,7 @@ const examSetupTypeAttributes = [
   "examCategory",
 ];
 
-async function getContinuousAssessmentComponent(
+async function getAssessmentPlanWeightage(
   subjectId,
   courseId,
   sessionId,
@@ -63,7 +63,11 @@ async function getContinuousAssessmentComponent(
     model.assessmentPlanSubjectMappingModel,
   ).findOne({
     where: mappingWhere,
-    attributes: ["assessmentPlanSubjectMappingId", "assessmentPlanId"],
+    attributes: [
+      "assessmentPlanSubjectMappingId",
+      "assessmentPlanId",
+      "examSetupTypeId",
+    ],
     transaction,
   });
 
@@ -71,7 +75,10 @@ async function getContinuousAssessmentComponent(
     return null;
   }
 
-  return scoped(model.assessmentPlanComponentModel).findOne({
+  // Prefer CONTINUOUS_ASSESSMENT component on the plan
+  const continuousComponent = await scoped(
+    model.assessmentPlanComponentModel,
+  ).findOne({
     where: { assessmentPlanId: mapping.assessmentPlanId },
     attributes: [
       "assessmentPlanComponentId",
@@ -85,6 +92,36 @@ async function getContinuousAssessmentComponent(
         attributes: examSetupTypeAttributes,
         required: true,
         where: { examCategory: "CONTINUOUS_ASSESSMENT" },
+      },
+    ],
+    transaction,
+  });
+
+  if (continuousComponent) {
+    return continuousComponent;
+  }
+
+  // Fallback: use the exam type linked on the subject mapping
+  if (!mapping.examSetupTypeId) {
+    return null;
+  }
+
+  return scoped(model.assessmentPlanComponentModel).findOne({
+    where: {
+      assessmentPlanId: mapping.assessmentPlanId,
+      examSetupTypeId: mapping.examSetupTypeId,
+    },
+    attributes: [
+      "assessmentPlanComponentId",
+      "examSetupTypeId",
+      "weightagePercentage",
+    ],
+    include: [
+      {
+        model: model.examSetupTypeModel,
+        as: "examSetupType",
+        attributes: examSetupTypeAttributes,
+        required: true,
       },
     ],
     transaction,
@@ -129,16 +166,20 @@ export async function getUserInternalAssessments(userId) {
     const timeTableCell = cell.timeTableCell;
     const routine = timeTableCell.timeTableRoutine;
     const classSectionTermId = routine.classSectionTermId;
+    const subjectId = timeTableCell.subjectId;
 
-    if (classSectionTermId) {
-      classSectionTermIds.add(classSectionTermId);
+    if (!classSectionTermId || !subjectId) {
+      continue;
     }
 
-    const key = `${timeTableCell.subjectId}-${routine.courseId}-${classSectionTermId}`;
+    classSectionTermIds.add(classSectionTermId);
+
+    // One entry per subject within a classSectionTerm
+    const key = `${subjectId}-${classSectionTermId}`;
     if (!subjectsMap.has(key)) {
       subjectsMap.set(key, {
         userId,
-        subjectId: timeTableCell.subjectId,
+        subjectId,
         courseId: routine.courseId,
         classSectionTermId,
         sessionId: null,
@@ -147,7 +188,7 @@ export async function getUserInternalAssessments(userId) {
         assessmentExamType: {
           examSetupTypeId: null,
           examName: null,
-          examCategory: "CONTINUOUS_ASSESSMENT",
+          examCategory: null,
         },
         fetchedWeightage: 0,
       });
@@ -155,6 +196,8 @@ export async function getUserInternalAssessments(userId) {
   }
 
   const sessionByTermId = new Map();
+  const studentCountByTermId = new Map();
+
   if (classSectionTermIds.size > 0) {
     const termRows = await scoped(model.classSectionTermModel).findAll({
       where: {
@@ -177,31 +220,35 @@ export async function getUserInternalAssessments(userId) {
         termRow.classSection.sessionId,
       );
     }
+
+    for (const classSectionTermId of classSectionTermIds) {
+      const studentCount = await scoped(model.studentModel).count({
+        where: { classSectionTermId },
+      });
+      studentCountByTermId.set(classSectionTermId, studentCount);
+    }
   }
 
   for (const entry of subjectsMap.values()) {
     entry.sessionId = sessionByTermId.get(entry.classSectionTermId) || null;
+    entry.studentCount =
+      studentCountByTermId.get(entry.classSectionTermId) || 0;
 
-    const continuousComponent = await getContinuousAssessmentComponent(
+    const planComponent = await getAssessmentPlanWeightage(
       entry.subjectId,
       entry.courseId,
       entry.sessionId,
     );
 
-    if (continuousComponent) {
+    if (planComponent) {
       entry.fetchedWeightage = Math.round(
-        Number(continuousComponent.weightagePercentage),
+        Number(planComponent.weightagePercentage),
       );
       entry.assessmentExamType.examSetupTypeId =
-        continuousComponent.examSetupType.examSetupTypeId;
-      entry.assessmentExamType.examName =
-        continuousComponent.examSetupType.examName;
-    }
-
-    if (entry.classSectionTermId) {
-      entry.studentCount = await scoped(model.studentModel).count({
-        where: { classSectionTermId: entry.classSectionTermId },
-      });
+        planComponent.examSetupType.examSetupTypeId;
+      entry.assessmentExamType.examName = planComponent.examSetupType.examName;
+      entry.assessmentExamType.examCategory =
+        planComponent.examSetupType.examCategory;
     }
   }
 
@@ -234,7 +281,7 @@ export async function createInternalAssessment(payload, transaction) {
   const { courseId, sessionId } = classSectionTerm.classSection;
   payload.sessionId = sessionId;
 
-  const continuousComponent = await getContinuousAssessmentComponent(
+  const continuousComponent = await getAssessmentPlanWeightage(
     subjectId,
     courseId,
     sessionId,
@@ -333,6 +380,17 @@ export async function getStudentEvaluationsByAssessmentId(
       },
     ],
     order: [["studentId", "ASC"]],
+  });
+}
+
+export async function getStudentsByClassSectionTermId(classSectionTermId) {
+  return scoped(model.studentModel).findAll({
+    where: { classSectionTermId },
+    attributes: studentAttributes,
+    order: [
+      ["scholarNumber", "ASC"],
+      ["studentId", "ASC"],
+    ],
   });
 }
 

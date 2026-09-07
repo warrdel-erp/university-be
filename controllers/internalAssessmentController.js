@@ -138,6 +138,29 @@ export async function getStudentEvaluations(req, res) {
   }
 }
 
+export async function getStudentsByClassSectionTermId(req, res) {
+  try {
+    const students =
+      await InternalAssessmentServices.getStudentsByClassSectionTermId(
+        req.query.classSectionTermId,
+      );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Fetched students successfully",
+      students,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch students",
+      error,
+    );
+  }
+}
+
 export async function upsertStudentEvaluations(req, res) {
   try {
     const evaluations =

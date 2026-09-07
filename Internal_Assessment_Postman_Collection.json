@@ -91,6 +91,32 @@
       "response": []
     },
     {
+      "name": "GET Students By Class Section Term",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/internalAssessment/my/students?classSectionTermId={{classSectionTermId}}",
+          "host": ["{{base_url}}"],
+          "path": ["internalAssessment", "my", "students"],
+          "query": [
+            {
+              "key": "classSectionTermId",
+              "value": "{{classSectionTermId}}"
+            }
+          ]
+        },
+        "description": "Fetches student list by classSectionTermId only."
+      },
+      "response": []
+    },
+    {
       "name": "GET Single Assessment",
       "request": {
         "method": "GET",

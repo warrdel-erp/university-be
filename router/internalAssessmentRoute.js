@@ -10,6 +10,7 @@ import {
   updateInternalAssessment,
   getStudentEvaluations,
   upsertStudentEvaluations,
+  getStudentsByClassSectionTermId,
 } from "../controllers/internalAssessmentController.js";
 
 const router = Router();
@@ -27,6 +28,10 @@ const createInternalAssessmentSchema = z.object({
 
 const listInternalAssessmentsQuerySchema = z.object({
   subjectId: z.coerce.number().int().positive(),
+  classSectionTermId: z.coerce.number().int().positive(),
+});
+
+const classSectionTermIdQuerySchema = z.object({
   classSectionTermId: z.coerce.number().int().positive(),
 });
 
@@ -68,6 +73,12 @@ router.get(
   userAuth,
   validate({ query: listInternalAssessmentsQuerySchema }),
   getInternalAssessmentsBySubject,
+);
+router.get(
+  "/my/students",
+  userAuth,
+  validate({ query: classSectionTermIdQuerySchema }),
+  getStudentsByClassSectionTermId,
 );
 router.get(
   "/my/single",

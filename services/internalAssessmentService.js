@@ -67,6 +67,12 @@ export async function getStudentEvaluations(internalAssessmentId) {
   );
 }
 
+export async function getStudentsByClassSectionTermId(classSectionTermId) {
+  return InternalAssessmentRepository.getStudentsByClassSectionTermId(
+    Number(classSectionTermId),
+  );
+}
+
 export async function upsertStudentEvaluations(internalAssessmentId, marks) {
   const assessment =
     await InternalAssessmentRepository.getInternalAssessmentById(
