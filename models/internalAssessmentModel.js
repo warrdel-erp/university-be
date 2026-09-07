@@ -37,6 +37,24 @@ const internalAssessmentModel = sequelize.define(
         key: "acedmic_year_id",
       },
     },
+    classSectionTermId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "class_section_term_id",
+      references: {
+        model: "class_section_term",
+        key: "class_section_term_id",
+      },
+    },
+    sessionId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "session_id",
+      references: {
+        model: "session",
+        key: "session_id",
+      },
+    },
     internalAssessmentId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
@@ -61,11 +79,7 @@ const internalAssessmentModel = sequelize.define(
         key: "user_id",
       },
     },
-    term: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      comment: "Program term number",
-    },
+
     examSetupTypeId: {
       type: DataTypes.INTEGER,
       allowNull: true,
@@ -78,6 +92,44 @@ const internalAssessmentModel = sequelize.define(
     weightage: {
       type: DataTypes.INTEGER,
       allowNull: true,
+    },
+    type: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    maximumMarks: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "maximum_marks",
+    },
+    issueDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: "issue_date",
+    },
+    dueDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: "due_date",
+    },
+    documentUrl: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "document_url",
+    },
+    mode: {
+      type: DataTypes.ENUM("online", "offline"),
+      allowNull: true,
+    },
+    weightagePercentage: {
+      type: DataTypes.DECIMAL(5, 2),
+      allowNull: true,
+      field: "weightage_percentage",
+    },
+    normalizedMaxMarks: {
+      type: DataTypes.DECIMAL(5, 2),
+      allowNull: true,
+      field: "normalized_max_marks",
     },
     createdAt: {
       type: DataTypes.DATE,

@@ -150,6 +150,7 @@ import libraryIssueBookTransactionModel from "./libraryIssueBookTransactionModel
 import libraryBookIssueInventoryItemModel from "./libraryBookIssueInventoryItemModel.js";
 import libraryReturnBookTransactionModel from "./libraryReturnBookTransactionModel.js";
 import internalAssessmentModel from "./internalAssessmentModel.js";
+import internalAssessmentStudentEvaluationModel from "./internalAssessmentStudentEvaluationModel.js";
 import assessmentEvaluationModel from "./assessmentEvaluationModel.js";
 import jobSettingModel from "./jobSettingModel.js";
 import jobModel from "./jobModel.js";
@@ -3453,6 +3454,24 @@ userModel.hasMany(internalAssessmentModel, {
   as: "assessments",
 });
 
+internalAssessmentModel.hasMany(internalAssessmentStudentEvaluationModel, {
+  foreignKey: "internalAssessmentId",
+  as: "studentEvaluations",
+});
+internalAssessmentStudentEvaluationModel.belongsTo(internalAssessmentModel, {
+  foreignKey: "internalAssessmentId",
+  as: "internalAssessment",
+});
+
+internalAssessmentStudentEvaluationModel.belongsTo(studentModel, {
+  foreignKey: "studentId",
+  as: "student",
+});
+studentModel.hasMany(internalAssessmentStudentEvaluationModel, {
+  foreignKey: "studentId",
+  as: "internalAssessmentStudentEvaluations",
+});
+
 internalAssessmentModel.hasMany(assessmentEvaluationModel, {
   foreignKey: "examAssessmentId",
   as: "evaluations",
@@ -4368,6 +4387,7 @@ export {
   libraryBookIssueInventoryItemModel,
   libraryReturnBookTransactionModel,
   internalAssessmentModel,
+  internalAssessmentStudentEvaluationModel,
   assessmentEvaluationModel,
   jobSettingModel,
   jobModel,
