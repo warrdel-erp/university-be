@@ -6,6 +6,7 @@ const studentListAttributes = [
   "studentId",
   "scholarNumber",
   "enrollNumber",
+  "admisssionDate",
   [
     fn(
       "TRIM",
@@ -129,6 +130,7 @@ export async function findExamSchedulesByExaminationSessionId(
       "term",
       "subjectId",
       "examDate",
+      "maximumMarks",
     ],
     include: [
       {
@@ -382,3 +384,113 @@ export async function findSubmittedAnswerSheetPairsByExaminationSessionId(
     raw: true,
   });
 }
+
+export async function findStudentResult(where, transaction) {
+  const resultWhere = {
+    examinationSessionId: Number(where.examinationSessionId),
+    studentId: Number(where.studentId),
+  };
+  if (where.courseId != null) resultWhere.courseId = Number(where.courseId);
+  if (where.sessionId != null) resultWhere.sessionId = Number(where.sessionId);
+  if (where.term != null) resultWhere.term = Number(where.term);
+
+  return scoped(model.studentResultModel).findOne({
+    where: resultWhere,
+    attributes: [
+      "studentResultId",
+      "examinationSessionId",
+      "studentId",
+      "courseId",
+      "sessionId",
+      "term",
+      "totalCredits",
+      "earnedCredits",
+      "totalMarks",
+      "obtainedMarks",
+      "percentage",
+      "sgpa",
+      "cgpa",
+      "resultStatus",
+      "publishedAt",
+      "publishBatchId",
+      "academicYearId",
+      "createdAt",
+      "updatedAt",
+    ],
+    transaction,
+  });
+}
+
+export async function findStudentResultsByExaminationSessionAndStudentIds(
+  examinationSessionId,
+  studentIds,
+  transaction,
+) {
+  if (!studentIds.length) return [];
+
+  return scoped(model.studentResultModel).findAll({
+    where: {
+      examinationSessionId: Number(examinationSessionId),
+      studentId: { [Op.in]: studentIds },
+    },
+    attributes: [
+      "studentResultId",
+      "studentId",
+      "courseId",
+      "sessionId",
+      "term",
+      "resultStatus",
+      "totalMarks",
+      "obtainedMarks",
+      "percentage",
+    ],
+    transaction,
+  });
+}
+
+export async function createStudentResult(payload, transaction) {
+  return scoped(model.studentResultModel).create(payload, { transaction });
+}
+
+export async function updateStudentResults(where, payload, transaction) {
+  return scoped(model.studentResultModel).update(payload, { where, transaction });
+}
+
+export async function findPublishBatches(examinationSessionId) {
+  return scoped(model.studentResultModel).findAll({
+    where: {
+      examinationSessionId: Number(examinationSessionId),
+      publishBatchId: { [Op.ne]: null },
+    },
+    attributes: [
+      "publishBatchId",
+      "publishedAt",
+      [fn("COUNT", col("student_result_id")), "studentCount"],
+    ],
+    group: ["publish_batch_id", "published_at"],
+    order: [["published_at", "DESC"]],
+    raw: true,
+  });
+}
+
+export async function findStudentResultsByBatchId(publishBatchId) {
+  return scoped(model.studentResultModel).findAll({
+    where: { publishBatchId },
+    attributes: [
+      "studentResultId",
+      "examinationSessionId",
+      "studentId",
+      "courseId",
+      "sessionId",
+      "term",
+      "totalMarks",
+      "obtainedMarks",
+      "percentage",
+      "resultStatus",
+      "publishedAt",
+      "publishBatchId",
+    ],
+    raw: true,
+  });
+}
+

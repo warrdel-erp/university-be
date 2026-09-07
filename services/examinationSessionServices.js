@@ -5,7 +5,6 @@ import * as studentHallTicketRepository from "../repository/studentHallTicketRep
 import * as examinationSessionEligibilityServices from "./examinationSessionEligibilityServices.js";
 import * as examinationSessionEligibilityRepo from "../repository/examinationSessionEligibilityRepository.js";
 import {
-  countWholeTermStudentsByTerms,
   getStudentCountMapByGroups,
   lookupStudentCount,
 } from "../utility/studentCount.js";
@@ -143,21 +142,52 @@ async function buildSessionSummary(sessionRecord, options = {}) {
   const termsList = sessionPlain.examinationSessionTerms || [];
   const termNumbers = uniqueValues(termsList.map((term) => term.term));
   const academicYearId = Number(sessionPlain.academicYearId);
+  const assessmentTypeId = Number(sessionPlain.assessmentTypeId);
 
-  if (termNumbers.length && academicYearId) {
-    const courseIds =
-      await examinationSessionRepository.findDistinctCourseIdsByTerms(
-        termNumbers,
-        academicYearId,
-        options,
-      );
-    courseCount = courseIds.length;
+  if (termNumbers.length && academicYearId && assessmentTypeId) {
+    const planIds = await getAssessmentPlanIds(assessmentTypeId, options);
+    if (planIds.length) {
+      const mappings =
+        await examinationSessionRepository.findAssessmentPlanSubjectMappings(
+          { assessmentPlanId: { [Op.in]: planIds } },
+          options,
+        );
 
-    totalStudents = await countWholeTermStudentsByTerms(
-      termNumbers,
-      academicYearId,
-      options,
-    );
+      const courseIds = new Set();
+      const studentGroups = [];
+      const seen = new Set();
+
+      for (const mapping of mappings) {
+        if (mapping.courseId == null || mapping.sessionId == null) continue;
+        const courseId = Number(mapping.courseId);
+        const sessionId = Number(mapping.sessionId);
+        courseIds.add(courseId);
+
+        for (const term of termNumbers) {
+          const key = `${sessionId}_${courseId}_${term}_${academicYearId}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          studentGroups.push({
+            sessionId,
+            courseId,
+            term: Number(term),
+            academicYearId,
+          });
+        }
+      }
+
+      courseCount = courseIds.size;
+
+      if (studentGroups.length) {
+        const countMap = await getStudentCountMapByGroups(
+          studentGroups,
+          options,
+        );
+        for (const group of studentGroups) {
+          totalStudents += lookupStudentCount(countMap, group);
+        }
+      }
+    }
   }
 
   return {
@@ -988,9 +1018,8 @@ export async function getMappedSubjectsBySessionAndTerm(
   const uniqueSubjectIds = [];
   const subjectSessionMap = new Map();
   for (const mapping of subjectMappings) {
-    if (!subjectSessionMap.has(mapping.subjectId)) {
-      uniqueSubjectIds.push(mapping.subjectId);
-    }
+    if (subjectSessionMap.has(mapping.subjectId)) continue;
+    uniqueSubjectIds.push(mapping.subjectId);
     subjectSessionMap.set(mapping.subjectId, mapping.sessionId);
   }
 
@@ -1096,6 +1125,7 @@ export async function getMappedSubjectsBySessionAndTerm(
         courseSessionMappingId: mappingInfo
           ? mappingInfo.sessionCourseMappingId
           : null,
+        studentCount: 0,
         isExamScheduled: false,
         examScheduleId: null,
         needsScheduling: true,
@@ -1315,13 +1345,17 @@ export async function getMappedSubjectsBySessionAndTerm(
       }
       deadline = nearestDeadline;
 
+      // Paper workflow:
+      // - approved: finalApproval = Approved
+      // - moderationActive: paper exists but not finally approved (Pending / awaiting final)
+      // - assigned: teachers assigned, no paper yet
+      // - notAssigned: no teachers
       let hasFullyApprovedPaper = false;
       let hasModerationActivePaper = false;
       for (const qp of qpList) {
-        if (qp.finalApproval === QUESTION_STATUS.APPROVED || qp.status === QUESTION_STATUS.APPROVED) {
+        if (qp.finalApproval === QUESTION_STATUS.APPROVED) {
           hasFullyApprovedPaper = true;
-        }
-        if (qp.status === QUESTION_STATUS.APPROVED && qp.finalApproval !== QUESTION_STATUS.APPROVED) {
+        } else {
           hasModerationActivePaper = true;
         }
       }
@@ -1512,23 +1546,25 @@ export async function getQuestionPaperSummary(
       continue;
     }
 
-    const isApproved = papers.some(
-      (p) => p.finalApproval === "Approved" || p.status === "Approved",
+    const isFinalApproved = papers.some(
+      (p) => p.finalApproval === QUESTION_STATUS.APPROVED,
     );
     const isRejected = papers.some(
-      (p) => p.finalApproval === "Rejected" || p.status === "Rejected",
+      (p) =>
+        p.finalApproval === QUESTION_STATUS.REJECTED ||
+        p.status === QUESTION_STATUS.REJECTED,
     );
-    const isPending = papers.some(
-      (p) => p.finalApproval === "Pending" || p.status === "Pending",
+    const isWithModerator = papers.some(
+      (p) => p.finalApproval !== QUESTION_STATUS.APPROVED,
     );
 
-    if (isApproved) {
+    if (isFinalApproved) {
       approved++;
       readyForEncryption++;
       readyToPrint++;
     } else if (isRejected) {
       changesRequested++;
-    } else if (isPending) {
+    } else if (isWithModerator) {
       withModerator++;
     }
   }

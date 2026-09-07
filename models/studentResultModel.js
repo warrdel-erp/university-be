@@ -98,6 +98,16 @@ const studentResultModel = sequelize.define(
       allowNull: true,
       field: "result_status",
     },
+    publishedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: "published_at",
+    },
+    publishBatchId: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      field: "publish_batch_id",
+    },
     universityId: {
       type: DataTypes.INTEGER,
       allowNull: false,

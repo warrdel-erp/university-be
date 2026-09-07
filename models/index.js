@@ -184,6 +184,7 @@ import examinationSessionEligibilityModel from "./examinationSessionEligibilityM
 import examInvigilatorAssignmentModel from "./examInvigilatorAssignmentModel.js";
 import examRoomMaterialBundleModel from "./examRoomMaterialBundleModel.js";
 import examRoomMaterialItemModel from "./examRoomMaterialItemModel.js";
+import studentResultModel from "./studentResultModel.js";
 
 // Examination Session associations
 examinationSessionSlotModel.belongsTo(examinationSessionModel, {
@@ -3896,7 +3897,50 @@ s3FileModel.hasOne(answerSheetQrModel, {
   as: "answerSheetQr",
 });
 
-
+studentResultModel.belongsTo(examinationSessionModel, {
+  foreignKey: "examinationSessionId",
+  as: "examinationSession",
+});
+examinationSessionModel.hasMany(studentResultModel, {
+  foreignKey: "examinationSessionId",
+  as: "studentResults",
+});
+studentResultModel.belongsTo(studentModel, {
+  foreignKey: "studentId",
+  as: "student",
+});
+studentModel.hasMany(studentResultModel, {
+  foreignKey: "studentId",
+  as: "studentResults",
+});
+studentResultModel.belongsTo(courseModel, {
+  foreignKey: "courseId",
+  as: "course",
+});
+courseModel.hasMany(studentResultModel, {
+  foreignKey: "courseId",
+  as: "studentResults",
+});
+studentResultModel.belongsTo(sessionModel, {
+  foreignKey: "sessionId",
+  as: "session",
+});
+sessionModel.hasMany(studentResultModel, {
+  foreignKey: "sessionId",
+  as: "studentResults",
+});
+studentResultModel.belongsTo(universityModel, {
+  foreignKey: "universityId",
+  as: "university",
+});
+studentResultModel.belongsTo(instituteModel, {
+  foreignKey: "instituteId",
+  as: "institute",
+});
+studentResultModel.belongsTo(acedmicYearModel, {
+  foreignKey: "academicYearId",
+  as: "academicYear",
+});
 
 examSessionAnswerSheetModel.belongsTo(examinationSessionModel, {
   foreignKey: "examinationSessionId",
@@ -4355,6 +4399,7 @@ export {
   examInvigilatorAssignmentModel,
   examRoomMaterialBundleModel,
   examRoomMaterialItemModel,
+  studentResultModel,
   userModel as users,
 };
 
