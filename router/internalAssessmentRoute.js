@@ -8,6 +8,7 @@ import {
   getInternalAssessmentsBySubject,
   getInternalAssessmentById,
   getAssessmentStatusCounts,
+  getUserDashboardSku,
   updateInternalAssessment,
   getStudentEvaluations,
   upsertStudentEvaluations,
@@ -68,6 +69,7 @@ const upsertStudentEvaluationsSchema = z.object({
 });
 
 router.get("/my", userAuth, getUserInternalAssessments);
+router.get("/my/sku", userAuth, getUserDashboardSku);
 router.post(
   "/my",
   userAuth,

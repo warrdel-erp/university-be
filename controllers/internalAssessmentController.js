@@ -116,6 +116,28 @@ export async function getAssessmentStatusCounts(req, res) {
   }
 }
 
+export async function getUserDashboardSku(req, res) {
+  try {
+    const sku = await InternalAssessmentServices.getUserDashboardSku(
+      req.user.userId,
+    );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Fetched user dashboard SKU successfully",
+      sku,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch user dashboard SKU",
+      error,
+    );
+  }
+}
+
 export async function updateInternalAssessment(req, res) {
   try {
     const assessment =

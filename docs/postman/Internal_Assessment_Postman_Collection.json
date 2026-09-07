@@ -27,6 +27,26 @@
       "response": []
     },
     {
+      "name": "GET My Dashboard SKU",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/internalAssessment/my/sku",
+          "host": ["{{base_url}}"],
+          "path": ["internalAssessment", "my", "sku"]
+        },
+        "description": "User dashboard KPIs: totalSubjects, totalAssessments, remaining (marks incomplete), readyToSubmit (all evaluation marks saved)."
+      },
+      "response": []
+    },
+    {
       "name": "POST Create Assessment",
       "request": {
         "method": "POST",

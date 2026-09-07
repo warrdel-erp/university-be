@@ -72,6 +72,10 @@ export async function getAssessmentStatusCounts(filters) {
   return InternalAssessmentRepository.getAssessmentStatusCounts(filters);
 }
 
+export async function getUserDashboardSku(userId) {
+  return InternalAssessmentRepository.getUserDashboardSku(userId);
+}
+
 export async function updateInternalAssessment(internalAssessmentId, payload) {
   const existing =
     await InternalAssessmentRepository.getInternalAssessmentById(

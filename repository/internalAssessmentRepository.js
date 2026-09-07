@@ -473,6 +473,64 @@ export async function getAssessmentStatusCounts(filters) {
   };
 }
 
+export async function getUserDashboardSku(userId) {
+  const subjects = await getUserInternalAssessments(userId);
+
+  const assessments = await scoped(model.internalAssessmentModel).findAll({
+    where: { userId },
+    attributes: [
+      "internalAssessmentId",
+      "subjectId",
+      "classSectionTermId",
+    ],
+    include: [
+      {
+        model: model.internalAssessmentStudentEvaluationModel,
+        as: "studentEvaluations",
+        attributes: ["obtainedMarks"],
+        required: false,
+        where: buildScope(model.internalAssessmentStudentEvaluationModel),
+      },
+    ],
+  });
+
+  let remaining = 0;
+  let readyToSubmit = 0;
+
+  for (const assessment of assessments) {
+    const evaluations = assessment.studentEvaluations || [];
+
+    if (evaluations.length === 0) {
+      remaining += 1;
+      continue;
+    }
+
+    let allMarked = true;
+    for (const evaluation of evaluations) {
+      if (
+        evaluation.obtainedMarks === null ||
+        evaluation.obtainedMarks === undefined
+      ) {
+        allMarked = false;
+        break;
+      }
+    }
+
+    if (allMarked) {
+      readyToSubmit += 1;
+    } else {
+      remaining += 1;
+    }
+  }
+
+  return {
+    totalSubjects: subjects.length,
+    totalAssessments: assessments.length,
+    remaining,
+    readyToSubmit,
+  };
+}
+
 export async function updateInternalAssessment(
   internalAssessmentId,
   payload,
