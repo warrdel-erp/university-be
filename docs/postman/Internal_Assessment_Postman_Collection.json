@@ -218,7 +218,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"type\": \"Assignment\",\n  \"title\": \"Assignment 1 - Introduction to Fluid Properties\",\n  \"maximumMarks\": 30,\n  \"issueDate\": \"2026-09-01\",\n  \"dueDate\": \"2026-09-08\",\n  \"documentUrl\": \"https://example.com/Assignment_3_Questions.pdf\",\n  \"mode\": \"online\",\n  \"weightagePercentage\": 10,\n  \"normalizedMaxMarks\": 2,\n  \"isIncludeInFinalResult\": true\n}",
+          "raw": "{\n  \"type\": \"Assignment\",\n  \"title\": \"Assignment 1 - Introduction to Fluid Properties\",\n  \"maximumMarks\": 30,\n  \"issueDate\": \"2026-09-01\",\n  \"dueDate\": \"2026-09-08\",\n  \"documentUrl\": \"https://example.com/Assignment_3_Questions.pdf\",\n  \"mode\": \"online\",\n  \"weightagePercentage\": 10,\n  \"isIncludeInFinalResult\": true\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -236,7 +236,7 @@
             }
           ]
         },
-        "description": "Updates assessment fields / weightage. All body fields are optional."
+        "description": "Updates assessment fields / weightage. All body fields are optional. normalizedMaxMarks is auto-calculated as weightage × (weightagePercentage / 100)."
       },
       "response": []
     },
