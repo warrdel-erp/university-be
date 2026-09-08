@@ -379,6 +379,110 @@
         "description": "Creates or updates student marks for an assessment. Use null obtainedMarks for absent / not entered."
       },
       "response": []
+    },
+    {
+      "name": "POST Calculate Final Result",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"subjectId\": {{subjectId}},\n  \"classSectionTermId\": {{classSectionTermId}},\n  \"iaMaximumMarks\": {{iaMaximumMarks}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/internalAssessment/my/finalResult",
+          "host": ["{{base_url}}"],
+          "path": ["internalAssessment", "my", "finalResult"]
+        },
+        "description": "Calculates weighted final IA for all students from assessments with isIncludeInFinalResult=true (weightage sum must be 100). Upserts into assessment_evalution as status=pending. iaMaximumMarks is optional when all included assessments already have normalizedMaxMarks. Blocked if already submitted."
+      },
+      "response": []
+    },
+    {
+      "name": "POST Submit Final Result",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"subjectId\": {{subjectId}},\n  \"classSectionTermId\": {{classSectionTermId}},\n  \"iaMaximumMarks\": {{iaMaximumMarks}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/internalAssessment/my/finalResult/submit",
+          "host": ["{{base_url}}"],
+          "path": ["internalAssessment", "my", "finalResult", "submit"]
+        },
+        "description": "Fully automated CoE submit: validates isIncludeInFinalResult assessments, requires weightage sum=100, recalculates final marks, upserts existing student rows (creates only if missing), sets status=submitted + submittedAt. Blocked if already submitted. iaMaximumMarks optional when normalizedMaxMarks are set on all included assessments."
+      },
+      "response": []
+    },
+    {
+      "name": "GET Final Result",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/internalAssessment/my/finalResult?subjectId={{subjectId}}&classSectionTermId={{classSectionTermId}}&studentId={{studentId}}",
+          "host": ["{{base_url}}"],
+          "path": ["internalAssessment", "my", "finalResult"],
+          "query": [
+            {
+              "key": "subjectId",
+              "value": "{{subjectId}}"
+            },
+            {
+              "key": "classSectionTermId",
+              "value": "{{classSectionTermId}}"
+            },
+            {
+              "key": "studentId",
+              "value": "{{studentId}}",
+              "description": "Optional. When set, returns only that student's final IA row.",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "Fetches stored final IA rows from assessment_evalution for subjectId + classSectionTermId. Optional studentId filters to one student."
+      },
+      "response": []
     }
   ],
   "event": [
@@ -426,6 +530,16 @@
     {
       "key": "internalAssessmentId",
       "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "studentId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "iaMaximumMarks",
+      "value": "20",
       "type": "string"
     }
   ]

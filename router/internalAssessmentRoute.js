@@ -15,6 +15,9 @@ import {
   getMarksCellBySubject,
   upsertStudentEvaluations,
   getStudentsByClassSectionTermId,
+  calculateAndStoreFinalResults,
+  getFinalResults,
+  submitFinalResults,
 } from "../controllers/internalAssessmentController.js";
 
 const router = Router();
@@ -85,6 +88,24 @@ const upsertStudentEvaluationsSchema = z.object({
       }),
     )
     .min(1),
+});
+
+const finalResultBodySchema = z.object({
+  subjectId: z.number().int().positive(),
+  classSectionTermId: z.number().int().positive(),
+  iaMaximumMarks: z.number().positive().optional(),
+});
+
+const submitFinalResultBodySchema = z.object({
+  subjectId: z.number().int().positive(),
+  classSectionTermId: z.number().int().positive(),
+  iaMaximumMarks: z.number().positive().optional(),
+});
+
+const finalResultQuerySchema = z.object({
+  subjectId: z.coerce.number().int().positive(),
+  classSectionTermId: z.coerce.number().int().positive(),
+  studentId: z.coerce.number().int().positive().optional(),
 });
 
 const myCoursesQuerySchema = z.object({
@@ -163,6 +184,26 @@ router.put(
     body: upsertStudentEvaluationsSchema,
   }),
   upsertStudentEvaluations,
+);
+
+
+router.post(
+  "/my/calculate",
+  userAuth,
+  validate({ body: finalResultBodySchema }),
+  calculateAndStoreFinalResults,
+);
+router.post(
+  "/my/finalResult/submit",
+  userAuth,
+  validate({ body: submitFinalResultBodySchema }),
+  submitFinalResults,
+);
+router.get(
+  "/my/results",
+  userAuth,
+  validate({ query: finalResultQuerySchema }),
+  getFinalResults,
 );
 
 export default router;
