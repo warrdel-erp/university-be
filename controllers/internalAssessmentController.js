@@ -303,18 +303,12 @@ export async function upsertStudentEvaluations(req, res) {
 
 export async function calculateAndStoreFinalResults(req, res) {
   try {
-    const result =
-      await InternalAssessmentServices.calculateAndStoreFinalResults({
-        ...req.body,
-        userId: req.user.userId,
-      });
+    await InternalAssessmentServices.calculateAndStoreFinalResults({
+      ...req.body,
+      userId: req.user.userId,
+    });
 
-    return SuccessResponse(
-      res,
-      200,
-      "Calculated and stored final IA marks successfully",
-      result,
-    );
+    return SuccessResponse(res, 200, "final result created");
   } catch (error) {
     return ErrorResponse(
       res,
@@ -347,17 +341,12 @@ export async function getFinalResults(req, res) {
 
 export async function submitFinalResults(req, res) {
   try {
-    const result = await InternalAssessmentServices.submitFinalResults({
+    await InternalAssessmentServices.submitFinalResults({
       ...req.body,
       userId: req.user.userId,
     });
 
-    return SuccessResponse(
-      res,
-      200,
-      "Submitted final IA marks successfully",
-      result,
-    );
+    return SuccessResponse(res, 200, "submitted");
   } catch (error) {
     return ErrorResponse(
       res,
