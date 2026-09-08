@@ -62,12 +62,15 @@ export const login = async (req, res) => {
       return res.status(400).send("Incorrect password");
     }
 
-    // const employeePermission = await getEmployeeRolePermissionByUserId(existingEmail.dataValues.userId)
-    const token = jwt.sign(existingEmail.dataValues, process.env.JWT_SECRET, {
+    const {
+      password: _password,
+      dummyPassword: _dummyPassword,
+      ...tokenPayload
+    } = existingEmail.dataValues;
+
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
       expiresIn: process.env.TOKEN_TIME || undefined,
     });
-
-
 
     res.cookie("token", token);
 
