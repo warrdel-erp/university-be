@@ -300,3 +300,70 @@ export async function upsertStudentEvaluations(req, res) {
     );
   }
 }
+
+export async function calculateAndStoreFinalResults(req, res) {
+  try {
+    const result =
+      await InternalAssessmentServices.calculateAndStoreFinalResults({
+        ...req.body,
+        userId: req.user.userId,
+      });
+
+    return SuccessResponse(
+      res,
+      200,
+      "Calculated and stored final IA marks successfully",
+      result,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to calculate final IA marks",
+      error,
+    );
+  }
+}
+
+export async function getFinalResults(req, res) {
+  try {
+    const results = await InternalAssessmentServices.getFinalResults(req.query);
+
+    return SuccessResponse(
+      res,
+      200,
+      "Fetched final IA marks successfully",
+      results,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch final IA marks",
+      error,
+    );
+  }
+}
+
+export async function submitFinalResults(req, res) {
+  try {
+    const result = await InternalAssessmentServices.submitFinalResults({
+      ...req.body,
+      userId: req.user.userId,
+    });
+
+    return SuccessResponse(
+      res,
+      200,
+      "Submitted final IA marks successfully",
+      result,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to submit final IA marks",
+      error,
+    );
+  }
+}
