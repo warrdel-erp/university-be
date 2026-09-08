@@ -3952,6 +3952,15 @@ s3FileModel.hasOne(answerSheetQrModel, {
   as: "answerSheetQr",
 });
 
+answerSheetQrModel.belongsTo(s3FileModel, {
+  foreignKey: "annotated_file_upload_id",
+  as: "annotatedS3File",
+});
+s3FileModel.hasOne(answerSheetQrModel, {
+  foreignKey: "annotated_file_upload_id",
+  as: "annotatedAnswerSheetQr",
+});
+
 studentResultModel.belongsTo(examinationSessionModel, {
   foreignKey: "examinationSessionId",
   as: "examinationSession",
