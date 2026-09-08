@@ -172,17 +172,9 @@ router.get(
   getMyPastClassSchedules,
 );
 
-router.get(
-  "/my/upcomingSchedule",
-  userAuth,
-  getMyUpcomingClassSchedules,
-);
+router.get("/my/upcomingSchedule", userAuth, getMyUpcomingClassSchedules);
 
-router.get(
-  "/my/sectionCounts",
-  userAuth,
-  getMySectionCounts,
-);
+router.get("/my/sectionCounts", userAuth, getMySectionCounts);
 
 router.get(
   "/my/sectionDates",
