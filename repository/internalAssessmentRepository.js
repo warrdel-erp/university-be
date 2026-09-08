@@ -50,6 +50,7 @@ const examSetupTypeAttributes = [
   "examSetupTypeId",
   "examName",
   "examCategory",
+  "managedBy",
 ];
 
 async function getMarkingProgressMap(internalAssessmentIds) {
@@ -635,7 +636,7 @@ export async function getInternalAssessmentsBySubject(filters) {
       {
         model: model.examSetupTypeModel,
         as: "assessmentExamType",
-        attributes: ["examSetupTypeId", "examName", "examCategory"],
+        attributes: ["examSetupTypeId", "examName", "examCategory", "managedBy"],
         required: false,
       },
     ],
@@ -718,7 +719,7 @@ export async function getInternalAssessmentById(internalAssessmentId) {
       {
         model: model.examSetupTypeModel,
         as: "assessmentExamType",
-        attributes: ["examSetupTypeId", "examName", "examCategory"],
+        attributes: ["examSetupTypeId", "examName", "examCategory", "managedBy"],
         required: false,
       },
     ],

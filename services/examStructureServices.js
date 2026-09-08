@@ -28,6 +28,10 @@ export async function updateExamStructure(examStructureId, examDetail, updatedBy
 export async function addExamType(examDetail, user) {
     const payload = { ...examDetail };
     delete payload.scheduledBy;
+
+    if (payload.examCategory === "CONTINUOUS_ASSESSMENT") {
+        payload.managedBy = "FACULTY";
+    }
     
     if (typeof user === 'object' && user !== null) {
         payload.createdBy = user.userId || payload.createdBy;
@@ -156,6 +160,11 @@ export async function deleteExamType(examSetupTypeId) {
 };
 
 export async function updateExamType(examSetupTypeId, examDetail, updatedBy) {
-    examDetail.updatedBy = updatedBy;
-    await examStructureRepository.updateExamType(examSetupTypeId, examDetail);
+    const payload = { ...examDetail, updatedBy };
+
+    if (payload.examCategory === "CONTINUOUS_ASSESSMENT") {
+        payload.managedBy = "FACULTY";
+    }
+
+    await examStructureRepository.updateExamType(examSetupTypeId, payload);
 };

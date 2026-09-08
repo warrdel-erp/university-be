@@ -56,6 +56,12 @@ const examSetupTypeModel = sequelize.define(
             field: 'exam_category',
             allowNull: true
         },
+        managedBy: {
+            type: DataTypes.ENUM("FACULTY", "COE"),
+            field: "managed_by",
+            allowNull: false,
+            defaultValue: "COE",
+        },
         examSubcategory: {
             type: DataTypes.STRING(100),
             field: 'exam_subcategory',

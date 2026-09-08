@@ -346,6 +346,8 @@ export const ASSESSMENT_CATEGORIES = [
   "PARTICIPATION_ENGAGEMENT",
 ];
 
+export const EXAM_MANAGED_BY = ["FACULTY", "COE"];
+
 export const ASSESSMENT_CATEGORY_DETAILS = {
   EXAMINATION: {
     category: "Examination",
