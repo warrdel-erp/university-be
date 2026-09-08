@@ -72,7 +72,7 @@ function getHallTicketIncludes() {
         {
           model: model.examSetupTypeModel,
           as: "assessmentType",
-          attributes: ["examSetupTypeId", "examName", "examCode", "examCategory"],
+          attributes: ["examSetupTypeId", "examName", "examCode", "examCategory", "managedBy"],
         },
         {
           model: model.acedmicYearModel,
@@ -314,7 +314,7 @@ export async function findExaminationSessionById(examinationSessionId, transacti
       {
         model: model.examSetupTypeModel,
         as: "assessmentType",
-        attributes: ["examSetupTypeId", "examName", "examCode", "examCategory"],
+        attributes: ["examSetupTypeId", "examName", "examCode", "examCategory", "managedBy"],
         where: buildScope(model.examSetupTypeModel),
         required: false,
       },

@@ -14,7 +14,7 @@ const sessionInclude = [
   {
     model: model.examSetupTypeModel,
     as: "assessmentType",
-    attributes: ["examSetupTypeId", "examName", "examCode", "examCategory"],
+    attributes: ["examSetupTypeId", "examName", "examCode", "examCategory", "managedBy"],
     required: false,
   },
   {

@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "b1a1c3e4-f8d9-4a7c-9b1d-2e3f4a5b6c7d",
     "name": "Internal Assessment APIs",
-    "description": "Faculty Workspace Internal Assessment APIs.\n\nBase path: `/internalAssessment/my`",
+    "description": "Faculty Workspace Internal Assessment APIs.\n\nBase paths:\n- `/internalAssessment/my`\n- `/examStructure/examType` (managedBy: FACULTY | COE; CONTINUOUS_ASSESSMENT auto FACULTY)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -483,6 +483,245 @@
         "description": "Fetches stored final IA rows from assessment_evalution for subjectId + classSectionTermId. Optional studentId filters to one student."
       },
       "response": []
+    },
+    {
+      "name": "Exam Type (examStructure)",
+      "item": [
+        {
+          "name": "POST Create Exam Type (Continuous Assessment)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examName\": \"Continuous Assessment\",\n  \"examCode\": \"CA\",\n  \"examCategory\": \"CONTINUOUS_ASSESSMENT\",\n  \"examSubcategory\": \"Assignment\",\n  \"examDescription\": \"Ongoing academic evaluation\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/examStructure/examType",
+              "host": ["{{base_url}}"],
+              "path": ["examStructure", "examType"]
+            },
+            "description": "Creates exam setup type. For CONTINUOUS_ASSESSMENT, managedBy is auto-set to FACULTY (do not send managedBy)."
+          },
+          "response": []
+        },
+        {
+          "name": "POST Create Exam Type (with managedBy)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examName\": \"End Term\",\n  \"examCode\": \"ET\",\n  \"examCategory\": \"EXAMINATION\",\n  \"examSubcategory\": \"End Term\",\n  \"examDescription\": \"Scheduled formal assessment\",\n  \"managedBy\": \"COE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/examStructure/examType",
+              "host": ["{{base_url}}"],
+              "path": ["examStructure", "examType"]
+            },
+            "description": "Creates exam setup type for non-continuous categories. managedBy is required: FACULTY | COE."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Exam Type (list / by id)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/examStructure/examType?examSetupTypeId={{examSetupTypeId}}&page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["examStructure", "examType"],
+              "query": [
+                {
+                  "key": "examSetupTypeId",
+                  "value": "{{examSetupTypeId}}",
+                  "description": "Optional. When set, returns single exam type.",
+                  "disabled": true
+                },
+                {
+                  "key": "termNumber",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Without examSetupTypeId: paginated list. With examSetupTypeId: single detail. Includes managedBy."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Exam Type Single",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/examStructure/examType/single?examSetupTypeId={{examSetupTypeId}}",
+              "host": ["{{base_url}}"],
+              "path": ["examStructure", "examType", "single"],
+              "query": [
+                {
+                  "key": "examSetupTypeId",
+                  "value": "{{examSetupTypeId}}"
+                }
+              ]
+            },
+            "description": "Same handler as GET /examType. Prefer passing examSetupTypeId."
+          },
+          "response": []
+        },
+        {
+          "name": "GET All Exam Types",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/examStructure/examType/all?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["examStructure", "examType", "all"],
+              "query": [
+                {
+                  "key": "termNumber",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Lists all exam setup types (includes managedBy)."
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH Update Exam Type",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examSetupTypeId\": {{examSetupTypeId}},\n  \"examName\": \"End Term\",\n  \"examCode\": \"ET\",\n  \"examCategory\": \"EXAMINATION\",\n  \"examSubcategory\": \"End Term\",\n  \"examDescription\": \"Updated description\",\n  \"managedBy\": \"COE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/examStructure/examType",
+              "host": ["{{base_url}}"],
+              "path": ["examStructure", "examType"]
+            },
+            "description": "Updates exam type. If examCategory is CONTINUOUS_ASSESSMENT, managedBy is forced to FACULTY. For other categories, send managedBy when changing category."
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Exam Type",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/examStructure/examType/{{examSetupTypeId}}",
+              "host": ["{{base_url}}"],
+              "path": ["examStructure", "examType", "{{examSetupTypeId}}"]
+            },
+            "description": "Deletes exam setup type if not used in an assessment plan."
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "event": [
@@ -540,6 +779,11 @@
     {
       "key": "iaMaximumMarks",
       "value": "20",
+      "type": "string"
+    },
+    {
+      "key": "examSetupTypeId",
+      "value": "1",
       "type": "string"
     }
   ]
