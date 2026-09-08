@@ -298,45 +298,21 @@ export async function updateInternalAssessment(internalAssessmentId, payload) {
     throw error;
   }
 
-  const touchesFinalResultWeightage =
-    payload.weightagePercentage !== undefined ||
-    payload.isIncludeInFinalResult !== undefined;
+  const weightagePercentage =
+    payload.weightagePercentage !== undefined
+      ? Number(payload.weightagePercentage)
+      : existing.weightagePercentage != null
+        ? Number(existing.weightagePercentage)
+        : null;
 
-  if (touchesFinalResultWeightage) {
-    const willInclude =
-      payload.isIncludeInFinalResult !== undefined
-        ? payload.isIncludeInFinalResult
-        : Boolean(existing.isIncludeInFinalResult);
+  const weightage =
+    existing.weightage != null ? Number(existing.weightage) : null;
 
-    const nextWeightage =
-      payload.weightagePercentage !== undefined
-        ? Number(payload.weightagePercentage)
-        : Number(existing.weightagePercentage || 0);
-
-    const otherIncludedSum =
-      await InternalAssessmentRepository.getIncludedWeightageSum({
-        subjectId: existing.subjectId,
-        classSectionTermId: existing.classSectionTermId,
-        excludeInternalAssessmentId: Number(internalAssessmentId),
-      });
-
-    const totalIncludedWeightage = willInclude
-      ? decimalAdd(otherIncludedSum, nextWeightage)
-      : otherIncludedSum;
-
-    const hasIncludedAssessments =
-      willInclude || decimalCompare(otherIncludedSum, 0) > 0;
-
-    if (
-      hasIncludedAssessments &&
-      decimalCompare(totalIncludedWeightage, 100) !== 0
-    ) {
-      const error = new Error(
-        `Sum of weightagePercentage for assessments with isIncludeInFinalResult=true must be 100. Current total would be ${totalIncludedWeightage}`,
-      );
-      error.statusCode = 400;
-      throw error;
-    }
+  if (weightagePercentage != null && weightage != null) {
+    payload.normalizedMaxMarks = decimalMultiply(
+      weightage,
+      decimalDivide(weightagePercentage, 100),
+    );
   }
 
   await InternalAssessmentRepository.updateInternalAssessment(

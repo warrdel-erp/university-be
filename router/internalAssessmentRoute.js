@@ -75,7 +75,6 @@ const updateInternalAssessmentSchema = z.object({
   documentUrl: z.string().nullable().optional(),
   mode: z.enum(["online", "offline"]).optional(),
   weightagePercentage: z.number().min(0).max(100).optional(),
-  normalizedMaxMarks: z.number().min(0).optional(),
   isIncludeInFinalResult: z.boolean().optional(),
 });
 
