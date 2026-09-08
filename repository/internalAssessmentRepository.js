@@ -909,6 +909,34 @@ export async function updateInternalAssessment(
   });
 }
 
+export async function getIncludedWeightageSum({
+  subjectId,
+  classSectionTermId,
+  excludeInternalAssessmentId,
+  transaction,
+}) {
+  const where = {
+    subjectId: Number(subjectId),
+    classSectionTermId: Number(classSectionTermId),
+    isIncludeInFinalResult: true,
+  };
+
+  if (excludeInternalAssessmentId) {
+    where.internalAssessmentId = {
+      [Op.ne]: Number(excludeInternalAssessmentId),
+    };
+  }
+
+  const result = await scoped(model.internalAssessmentModel).findOne({
+    where,
+    attributes: [[fn("SUM", col("weightage_percentage")), "totalWeightage"]],
+    raw: true,
+    transaction,
+  });
+
+  return Number(result?.totalWeightage || 0);
+}
+
 export async function getMarksTableBySubject(filters) {
   const { subjectId, classSectionTermId } = filters;
 

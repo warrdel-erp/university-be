@@ -19,13 +19,15 @@ import {
 
 const router = Router();
 
+const subCategories = ["Assignment", "Quiz", "Presentation", "Test"];
+
 const createInternalAssessmentSchema = z.object({
   subjectId: z.number().int().positive(),
   classSectionTermId: z.number().int().positive(),
-  type: z.string().min(1),
+  type: z.enum(subCategories),
   title: z.string().min(1),
   maximumMarks: z.number().int().positive(),
-  issueDate: z.string(),
+  issueDate: z.string().optional(),
   dueDate: z.string(),
   documentUrl: z.string().optional(),
   mode: z.enum(["online", "offline"]),

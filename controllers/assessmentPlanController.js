@@ -16,7 +16,7 @@ export async function createAssessmentPlan(req, res) {
 
 export async function getAssessmentPlans(req, res) {
   try {
-    const result = await assessmentPlanService.getAssessmentPlans(req.query, req.user);
+    const result = await assessmentPlanService.getAssessmentPlans(req.query);
     return SuccessResponse(res, 200, "Assessment plans fetched successfully", result);
   } catch (error) {
     console.error("Error in getAssessmentPlans:", error.message);
@@ -27,7 +27,9 @@ export async function getAssessmentPlans(req, res) {
 export async function getAssessmentPlanById(req, res) {
   try {
     const { assessmentPlanId } = req.params;
-    const result = await assessmentPlanService.getAssessmentPlanById(assessmentPlanId);
+    const result = await assessmentPlanService.getAssessmentPlanById(
+      assessmentPlanId,
+    );
     return SuccessResponse(res, 200, "Assessment plan fetched successfully", result);
   } catch (error) {
     console.error("Error in getAssessmentPlanById:", error.message);

@@ -39,10 +39,7 @@ export async function getAssessmentPlans({
   courseId,
   sessionId,
   regulationId,
-  academicYearId,
   gradingId,
-  universityId,
-  instituteId,
   term,
   page = 1,
   limit = 10,
@@ -64,17 +61,8 @@ export async function getAssessmentPlans({
   if (regulationId) {
     where.regulationId = Number(regulationId);
   }
-  if (academicYearId) {
-    where.academicYearId = Number(academicYearId);
-  }
   if (gradingId) {
     where.gradingId = Number(gradingId);
-  }
-  if (universityId) {
-    where.universityId = Number(universityId);
-  }
-  if (instituteId) {
-    where.instituteId = Number(instituteId);
   }
   if (term !== undefined && term !== null && term !== "") {
     where.term = Number(term);
@@ -570,12 +558,7 @@ export async function createAssessmentPlanSubjectMapping(data, options = {}) {
   try {
     const mapping = await scoped(model.assessmentPlanSubjectMappingModel).create(data, { transaction });
     
-    // Now create internal assessment entries automatically
-    // 1. Fetch term from subject
-    const subject = await model.subjectModel.findByPk(mapping.subjectId, { transaction });
-    const term = subject ? subject.term : null;
-
-    // 2. Fetch weightage from assessment_plan_component where category = 'continuous assessment'
+    // Create internal assessment placeholder rows for primary teachers of this subject
     const component = await model.assessmentPlanComponentModel.findOne({
       where: { assessmentPlanId: mapping.assessmentPlanId },
       include: [
@@ -593,6 +576,10 @@ export async function createAssessmentPlanSubjectMapping(data, options = {}) {
     
     const examSetupTypeId = component ? component.examSetupTypeId : null;
     const weightage = component && component.weightagePercentage ? toIntegerNumber(component.weightagePercentage) : 0;
+    const assessmentType =
+      component && component.examSetupType && component.examSetupType.examName
+        ? component.examSetupType.examName
+        : "Continuous Assessment";
 
     // 3. Query timetable cells to get primary teachers using Sequelize includes
     let courseMappingWhere = { courseId: mapping.courseId };
@@ -639,12 +626,13 @@ export async function createAssessmentPlanSubjectMapping(data, options = {}) {
             instituteId: mapping.instituteId,
             academicYearId: mapping.academicYearId,
             subjectId: mapping.subjectId,
-            courseId: mapping.courseId,
             sessionId: mapping.sessionId,
-            term: term,
             userId: teacher.userId,
             examSetupTypeId: examSetupTypeId,
             weightage: weightage,
+            type: assessmentType,
+            title: assessmentType,
+            isIncludeInFinalResult: false,
           });
         }
       }
