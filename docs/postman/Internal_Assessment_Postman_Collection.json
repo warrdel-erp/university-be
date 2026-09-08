@@ -406,9 +406,9 @@
           }
         },
         "url": {
-          "raw": "{{base_url}}/internalAssessment/my/finalResult",
+          "raw": "{{base_url}}/internalAssessment/my/calculate",
           "host": ["{{base_url}}"],
-          "path": ["internalAssessment", "my", "finalResult"]
+          "path": ["internalAssessment", "my", "calculate"]
         },
         "description": "Calculates weighted final IA for all students from assessments with isIncludeInFinalResult=true (weightage sum must be 100). Upserts into assessment_evalution as status=pending. iaMaximumMarks is optional when all included assessments already have normalizedMaxMarks. Blocked if already submitted."
       },
@@ -460,9 +460,9 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/internalAssessment/my/finalResult?subjectId={{subjectId}}&classSectionTermId={{classSectionTermId}}&studentId={{studentId}}",
+          "raw": "{{base_url}}/internalAssessment/my/results?subjectId={{subjectId}}&classSectionTermId={{classSectionTermId}}&studentId={{studentId}}",
           "host": ["{{base_url}}"],
-          "path": ["internalAssessment", "my", "finalResult"],
+          "path": ["internalAssessment", "my", "results"],
           "query": [
             {
               "key": "subjectId",
