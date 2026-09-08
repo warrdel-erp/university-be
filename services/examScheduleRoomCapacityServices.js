@@ -5,6 +5,7 @@ import * as model from "../models/index.js";
 import { z } from "zod";
 import { getTimeSlotRange, minutesToTime } from "../utility/timeSlot.js";
 import { decimalSubtract } from "../utility/decimalMoney.js";
+import { scoped } from "../utility/scoped.js";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -264,7 +265,7 @@ export async function addExamRoomCapacity(data, userId) {
                     );
                     const scheduleInfo = mappedSubjects.find(sub => sub.examScheduleId === Number(validatedData.examScheduleId));
                     if (scheduleInfo?.ready === true) {
-                        await model.examScheduleModel.update(
+                        await scoped(model.examScheduleModel).update(
                             { published: true, updatedBy: userId },
                             { where: { examScheduleId: validatedData.examScheduleId }, transaction }
                         );

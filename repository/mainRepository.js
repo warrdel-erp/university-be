@@ -1,5 +1,5 @@
 import * as model from '../models/index.js';
-import sequelize from "sequelize";
+import sequelize, { Op } from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { getTenantStore } from "../utility/requestContext.js";
 import { getCampusIdByInstituteId } from "./buildingRepository.js";
@@ -547,62 +547,102 @@ export async function addSectionSubjectMapper(data) {
     }
 }
 
-export async function getSectionSubjectMapper(term, academicYearId) {
+export async function getSectionSubjectMapper(arg1, arg2) {
     try {
-        return scoped(model.classSubjectMapperModel).findAll({
-            attributes: ['classSubjectMapperId', 'subjectId'],
-            include: [
-                {
-                    model: model.userModel,
-                    as: "userClassSubjectMapper",
-                    attributes: ["universityId", "userId"],
-                    where: buildScope(model.userModel),
-                    required: true,
-                },
-                {
-                    model: model.subjectModel,
-                    as: "subjects",
-                    attributes: ["subjectName", "subjectId", "subjectType", "subjectCode", "term", "courseId"],
-                    where: {
-                        ...buildScope(model.subjectModel),
-                        ...(academicYearId && { academicYearId }),
-                        ...(term && { term: Number(term) }),
+        let opts = {};
+        if (typeof arg1 === "object" && arg1 !== null) {
+            opts = arg1;
+        } else {
+            opts = {
+                term: arg1,
+                academicYearId: arg2,
+            };
+        }
+
+        const { term, courseId, search, page, limit, academicYearId } = opts;
+
+        const where = {
+            ...(academicYearId && { academicYearId: Number(academicYearId) }),
+            ...(term && { term: Number(term) }),
+            ...(courseId && { courseId: Number(courseId) }),
+        };
+
+        if (search) {
+            where[Op.or] = [
+                { subjectName: { [Op.like]: `%${search}%` } },
+                { subjectCode: { [Op.like]: `%${search}%` } },
+            ];
+        }
+
+        const include = [
+            {
+                model: model.courseModel,
+                as: "courseInfo",
+                attributes: ["courseId", "courseName", "termType", "totalTerms"],
+                where: buildScope(model.courseModel),
+                required: false,
+            },
+        ];
+
+        const order = [
+            ["courseId", "ASC"],
+            ["term", "ASC"],
+            ["subjectName", "ASC"],
+        ];
+
+        const isPaginated = page != null && limit != null;
+        if (isPaginated) {
+            const parsedPage = Number(page);
+            const parsedLimit = Number(limit);
+            const pageNum = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+            const limitNum = Number.isInteger(parsedLimit) && parsedLimit > 0 ? parsedLimit : 10;
+            const offset = (pageNum - 1) * limitNum;
+
+            const { count, rows } = await scoped(model.subjectModel).findAndCountAll({
+                where,
+                include,
+                order,
+                limit: limitNum,
+                offset,
+                distinct: true,
+            });
+
+            const formattedRows = rows.map((sub) => {
+                const plain = sub.toJSON ? sub.toJSON() : sub;
+                return {
+                    ...plain,
+                    course: plain.courseInfo || null,
+                    subjects: {
+                        ...plain,
                     },
-                    required: true,
-                    include: [
-                        {
-                            model: model.courseModel,
-                            as: "courseInfo",
-                            attributes: ["courseName", "capacity", "courseId", "termType", "totalTerms"],
-                            where: buildScope(model.courseModel),
-                            required: false,
-                            include: [
-                                {
-                                    model: model.affiliatedIniversityModel,
-                                    as: "affiliated",
-                                    attributes: ["affiliatedUniversityName"],
-                                    include: [
-                                        {
-                                            model: model.instituteModel,
-                                            as: "institut",
-                                            attributes: ["instituteName", "instituteId"],
-                                            where: buildScope(model.instituteModel),
-                                            include: [
-                                                {
-                                                    model: model.campusModel,
-                                                    as: "campues",
-                                                    attributes: ["campusName", "campusId"],
-                                                    where: buildScope(model.campusModel),
-                                                },
-                                            ],
-                                        },
-                                    ],
-                                },
-                            ],
-                        },
-                    ],
+                };
+            });
+
+            return {
+                data: formattedRows,
+                pagination: {
+                    page: pageNum,
+                    limit: limitNum,
+                    total: count,
                 },
-            ],
+            };
+        }
+
+        const rows = await scoped(model.subjectModel).findAll({
+            where,
+            include,
+            order,
+        });
+
+        return rows.map((sub) => {
+            const plain = sub.toJSON ? sub.toJSON() : sub;
+            return {
+                ...plain,
+                course: plain.courseInfo || null,
+                subjects: {
+                    ...plain,
+                },
+            };
         });
     } catch (error) {
         console.error("Error fetching class subject mapper details:", error.message);

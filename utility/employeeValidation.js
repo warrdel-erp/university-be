@@ -72,6 +72,18 @@ export function emptyEvaluationSummary() {
   };
 }
 
+export function emptyMyAnswerSheetSkuStats() {
+  return {
+    sku: [
+      { key: "totalAssigned", label: "Total Assigned", value: 0 },
+      { key: "graded", label: "Graded", value: 0 },
+      { key: "notChecked", label: "Not Checked", value: 0 },
+      { key: "overdue", label: "Overdue", value: 0 },
+      { key: "dueToday", label: "Due Today", value: 0 },
+    ],
+  };
+}
+
 export function emptyPagination(page = 1, limit = 20) {
   const parsedPage = parseInt(page, 10) || 1;
   const parsedLimit = parseInt(limit, 10) || 20;

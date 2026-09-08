@@ -150,6 +150,7 @@ import libraryIssueBookTransactionModel from "./libraryIssueBookTransactionModel
 import libraryBookIssueInventoryItemModel from "./libraryBookIssueInventoryItemModel.js";
 import libraryReturnBookTransactionModel from "./libraryReturnBookTransactionModel.js";
 import internalAssessmentModel from "./internalAssessmentModel.js";
+import internalAssessmentStudentEvaluationModel from "./internalAssessmentStudentEvaluationModel.js";
 import assessmentEvaluationModel from "./assessmentEvaluationModel.js";
 import jobSettingModel from "./jobSettingModel.js";
 import jobModel from "./jobModel.js";
@@ -173,6 +174,7 @@ import studentFeePaymentModel from "./studentFeePaymentModel.js";
 import paymentItemModel from "./paymentItemModel.js";
 import studentFeeInvoiceItemsModel from "./studentFeeInvoiceItemsModel.js";
 import answerSheetQrModel from "./answerSheetQrModel.js";
+import answersheetEvalutionUserAssignmentModel from "./answersheetEvalutionUserAssignmentModel.js";
 import s3FileModel from "./s3FileModel.js";
 import pdfSplitJobModel from "./pdfSplitJobModel.js";
 import examSessionAnswerSheetModel from "./examSessionAnswerSheetModel.js";
@@ -183,6 +185,7 @@ import examinationSessionEligibilityModel from "./examinationSessionEligibilityM
 import examInvigilatorAssignmentModel from "./examInvigilatorAssignmentModel.js";
 import examRoomMaterialBundleModel from "./examRoomMaterialBundleModel.js";
 import examRoomMaterialItemModel from "./examRoomMaterialItemModel.js";
+import studentResultModel from "./studentResultModel.js";
 
 // Examination Session associations
 examinationSessionSlotModel.belongsTo(examinationSessionModel, {
@@ -3433,6 +3436,24 @@ subjectModel.hasMany(internalAssessmentModel, {
   as: "subjectAssessments",
 });
 
+internalAssessmentModel.belongsTo(sessionModel, {
+  foreignKey: "sessionId",
+  as: "assessmentSession",
+});
+sessionModel.hasMany(internalAssessmentModel, {
+  foreignKey: "sessionId",
+  as: "sessionInternalAssessments",
+});
+
+internalAssessmentModel.belongsTo(classSectionTermModel, {
+  foreignKey: "classSectionTermId",
+  as: "assessmentClassSectionTerm",
+});
+classSectionTermModel.hasMany(internalAssessmentModel, {
+  foreignKey: "classSectionTermId",
+  as: "classSectionTermInternalAssessments",
+});
+
 internalAssessmentModel.belongsTo(examSetupTypeModel, {
   foreignKey: "examSetupTypeId",
   as: "assessmentExamType",
@@ -3449,6 +3470,24 @@ internalAssessmentModel.belongsTo(userModel, {
 userModel.hasMany(internalAssessmentModel, {
   foreignKey: "userId",
   as: "assessments",
+});
+
+internalAssessmentModel.hasMany(internalAssessmentStudentEvaluationModel, {
+  foreignKey: "internalAssessmentId",
+  as: "studentEvaluations",
+});
+internalAssessmentStudentEvaluationModel.belongsTo(internalAssessmentModel, {
+  foreignKey: "internalAssessmentId",
+  as: "internalAssessment",
+});
+
+internalAssessmentStudentEvaluationModel.belongsTo(studentModel, {
+  foreignKey: "studentId",
+  as: "student",
+});
+studentModel.hasMany(internalAssessmentStudentEvaluationModel, {
+  foreignKey: "studentId",
+  as: "internalAssessmentStudentEvaluations",
 });
 
 internalAssessmentModel.hasMany(assessmentEvaluationModel, {
@@ -3855,6 +3894,37 @@ userModel.hasMany(answerSheetQrModel, {
   as: "assignedAnswerSheetQrs",
 });
 
+answerSheetQrModel.belongsTo(answersheetEvalutionUserAssignmentModel, {
+  foreignKey: "assignmentId",
+  as: "evaluationAssignment",
+});
+answersheetEvalutionUserAssignmentModel.hasMany(answerSheetQrModel, {
+  foreignKey: "assignmentId",
+  as: "answerSheetQrs",
+});
+
+answersheetEvalutionUserAssignmentModel.belongsTo(userModel, {
+  foreignKey: "assignedToUserId",
+  as: "assignedEvaluator",
+});
+userModel.hasMany(answersheetEvalutionUserAssignmentModel, {
+  foreignKey: "assignedToUserId",
+  as: "answerSheetEvaluationAssignments",
+});
+
+answersheetEvalutionUserAssignmentModel.belongsTo(acedmicYearModel, {
+  foreignKey: "academicYearId",
+  as: "academicYear",
+});
+answersheetEvalutionUserAssignmentModel.belongsTo(userModel, {
+  foreignKey: "createdBy",
+  as: "createdByUser",
+});
+answersheetEvalutionUserAssignmentModel.belongsTo(userModel, {
+  foreignKey: "updatedBy",
+  as: "updatedByUser",
+});
+
 answerSheetQrModel.belongsTo(s3FileModel, {
   foreignKey: "file_upload_id",
   as: "s3File",
@@ -3864,7 +3934,50 @@ s3FileModel.hasOne(answerSheetQrModel, {
   as: "answerSheetQr",
 });
 
-
+studentResultModel.belongsTo(examinationSessionModel, {
+  foreignKey: "examinationSessionId",
+  as: "examinationSession",
+});
+examinationSessionModel.hasMany(studentResultModel, {
+  foreignKey: "examinationSessionId",
+  as: "studentResults",
+});
+studentResultModel.belongsTo(studentModel, {
+  foreignKey: "studentId",
+  as: "student",
+});
+studentModel.hasMany(studentResultModel, {
+  foreignKey: "studentId",
+  as: "studentResults",
+});
+studentResultModel.belongsTo(courseModel, {
+  foreignKey: "courseId",
+  as: "course",
+});
+courseModel.hasMany(studentResultModel, {
+  foreignKey: "courseId",
+  as: "studentResults",
+});
+studentResultModel.belongsTo(sessionModel, {
+  foreignKey: "sessionId",
+  as: "session",
+});
+sessionModel.hasMany(studentResultModel, {
+  foreignKey: "sessionId",
+  as: "studentResults",
+});
+studentResultModel.belongsTo(universityModel, {
+  foreignKey: "universityId",
+  as: "university",
+});
+studentResultModel.belongsTo(instituteModel, {
+  foreignKey: "instituteId",
+  as: "institute",
+});
+studentResultModel.belongsTo(acedmicYearModel, {
+  foreignKey: "academicYearId",
+  as: "academicYear",
+});
 
 examSessionAnswerSheetModel.belongsTo(examinationSessionModel, {
   foreignKey: "examinationSessionId",
@@ -4189,6 +4302,7 @@ export {
   libraryCreationModel,
   libraryAuthorityModel,
   answerSheetQrModel,
+  answersheetEvalutionUserAssignmentModel,
   timeTableStructureModel,
   timeTableStructureCourseModel,
   timeTableStructurePeriodsModel,
@@ -4291,6 +4405,7 @@ export {
   libraryBookIssueInventoryItemModel,
   libraryReturnBookTransactionModel,
   internalAssessmentModel,
+  internalAssessmentStudentEvaluationModel,
   assessmentEvaluationModel,
   jobSettingModel,
   jobModel,
@@ -4322,6 +4437,7 @@ export {
   examInvigilatorAssignmentModel,
   examRoomMaterialBundleModel,
   examRoomMaterialItemModel,
+  studentResultModel,
   userModel as users,
 };
 

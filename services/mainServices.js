@@ -466,8 +466,8 @@ export async function addSectionSubjectMapper(data, createdBy) {
     }
 }
 
-export async function getSectionSubjectMapper(term, academicYearId) {
-    return await mainRepository.getSectionSubjectMapper(term, academicYearId)
+export async function getSectionSubjectMapper(options, academicYearId) {
+    return await mainRepository.getSectionSubjectMapper(options, academicYearId);
 }
 
 export async function subjectExcel(excelData, courseId, academicYearId, specializationId, createdBy) {

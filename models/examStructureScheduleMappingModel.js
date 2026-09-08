@@ -107,7 +107,7 @@ const examStructureScheduleMappingModel = sequelize.define(
         }
     },
     {
-        tableName: 'exam_structure_schedule_mapper',
+        tableName: 'exam_structure_schedule_mapper_depricated',
         timestamps: true,
         paranoid: true
     }

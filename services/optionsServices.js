@@ -59,7 +59,7 @@ export async function getSpecializationOptions(courseId) {
     return await optionsRepository.getSpecializationOptions(courseId);
 }
 
-export async function getSubjectOptions(courseId, term, academicYearId, sessionId, userId) {
+export async function getSubjectOptions(courseId, term, academicYearId, sessionId, userId, unmapped = false) {
     let resolvedAcademicYearId = academicYearId;
 
     if (sessionId != null) {
@@ -89,6 +89,7 @@ export async function getSubjectOptions(courseId, term, academicYearId, sessionI
         resolvedAcademicYearId,
         userId,
         sessionId,
+        unmapped,
     );
 }
 

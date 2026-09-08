@@ -1,4 +1,4 @@
-import { Op } from "sequelize";
+import { Op, col, where } from "sequelize";
 import * as model from "../models/index.js";
 import { scoped } from "../utility/scoped.js";
 
@@ -11,9 +11,13 @@ const scheduleInclude = (date, filterCombinations) => {
     const orSchedules = [];
     for (const comb of filterCombinations) {
       orSchedules.push({
-        sessionId: comb.sessionId,
-        "$subjectSchedule.course_id$": comb.courseId,
-        "$subjectSchedule.term$": { [Op.in]: comb.terms },
+        [Op.and]: [
+          { sessionId: comb.sessionId },
+          where(col("examSchedules->subjectSchedule.course_id"), comb.courseId),
+          where(col("examSchedules->subjectSchedule.term"), {
+            [Op.in]: comb.terms,
+          }),
+        ],
       });
     }
     scheduleWhere[Op.or] = orSchedules;
@@ -23,12 +27,16 @@ const scheduleInclude = (date, filterCombinations) => {
     model: model.examScheduleModel,
     as: "examSchedules",
     required: false,
-    where: Object.keys(scheduleWhere).length ? scheduleWhere : undefined,
+    where:
+      Object.keys(scheduleWhere).length > 0 ||
+      Object.getOwnPropertySymbols(scheduleWhere).length > 0
+        ? scheduleWhere
+        : undefined,
     attributes: [
       "examScheduleId",
       "examinationSessionSlotId",
       "subjectId",
-      "sessionId",
+      "sessionId",  
       "academicYearId",
       "term",
       "examDate",
@@ -123,7 +131,7 @@ export async function findSlotsWithSchedules(
       ],
     ],
     include: [scheduleInclude(date, filterCombinations)],
-    transaction: options.transaction,
+    ...options,
   });
 }
 

@@ -47,6 +47,7 @@ const subjectsQuerySchema = z.object({
   term: optionalPositiveIntegerId,
   sessionId: optionalPositiveIntegerId,
   userId: optionalPositiveIntegerId,
+  unmapped: z.coerce.boolean().optional(),
 });
 
 const getMySubjectsQuerySchema = z.object({

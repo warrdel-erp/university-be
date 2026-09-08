@@ -42,7 +42,7 @@ import userRolePermission from "./router/userRolePermissionRoute.js";
 import dormitoryRoomType from "./router/roomTypeRoute.js";
 import dormitoryList from "./router/dormitoryListRoute.js";
 import addDormitory from "./router/addDormitoryRoute.js";
-import examSetup from "./router/examSetupRoute.js";
+
 import examAttendance from "./router/examAttendanceRoute.js";
 import examRoomMaterialBundle from "./router/examRoomMaterialBundleRoute.js";
 import transportRoute from "./router/transportRoute.js";
@@ -110,6 +110,7 @@ import timetableAcademicGroup from "./router/timetableAcademicGroupRoute.js";
 import subjectWeightage from "./router/subjectWeightageRoute.js";
 import libraryIssueBookTransaction from "./router/libraryIssueBookTransactionRoute.js";
 import answerSheetQr from "./router/answerSheetQrRoute.js";
+import examResult from "./router/examResultRoute.js";
 import s3FileRoute from "./router/s3FileRoute.js";
 // middleware
 app.use((req, res, next) => {
@@ -200,7 +201,7 @@ app.use("/examStructure", examStructure);
 app.use("/examScheduleMapping", examScheduleMapping);
 
 app.use("/internalAssessment", internalAssessment);
-app.use("/examSetup", examSetup);
+
 app.use("/examAttendance", examAttendance);
 app.use("/examRoomMaterialBundle", examRoomMaterialBundle);
 app.use("/studentHallTicket", studentHallTicket);
@@ -243,6 +244,8 @@ app.use("/dormitoryList", dormitoryList);
 app.use("/addDormitory", addDormitory);
 app.use("/transportRoute", transportRoute);
 app.use("/answerSheetQr", answerSheetQr);
+
+app.use("/examResult", examResult);
 
 app.use("/fileUpload", s3FileRoute);
 

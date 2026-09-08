@@ -1,12 +1,11 @@
 import * as notice from "../repository/noticeRepository.js";
 
-export async function addNotice(data, createdBy, updatedBy, role) {
+export async function addNotice(data, createdBy, updatedBy) {
   try {
     const payload = {
       ...data,
       createdBy,
       updatedBy,
-      role,
     };
     return notice.addNotice(payload);
   } catch (error) {
@@ -15,12 +14,12 @@ export async function addNotice(data, createdBy, updatedBy, role) {
   }
 }
 
-export async function getAllStudentNotice(role) {
-  return notice.getAllStudentNotice(role);
+export async function getAllStudentNotice(academicYearId) {
+  return notice.getAllNotices(academicYearId);
 }
 
-export async function getAllEmployeeNotice(createdBy, role, academicYearId) {
-  return notice.getAllEmployeeNotice(createdBy, role, academicYearId);
+export async function getAllEmployeeNotice(academicYearId) {
+  return notice.getAllNotices(academicYearId);
 }
 
 export async function updateNotice(noticeId, data, updatedBy) {

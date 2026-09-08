@@ -1,5 +1,10 @@
 import * as faculityLoadRepository from "../repository/faculityLoadRepository.js";
-import { decimalAdd, decimalDivide, toIntegerNumber, toMoneyNumber } from "../utility/decimalMoney.js";
+import {
+  decimalAdd,
+  decimalDivide,
+  toIntegerNumber,
+  toMoneyNumber,
+} from "../utility/decimalMoney.js";
 
 function toDateOnlyString(date) {
   const year = date.getFullYear();
@@ -81,6 +86,16 @@ function classDurationMinutes(startTime, endTime) {
   return endMinutes - startMinutes;
 }
 
+function formatLoadToTimeObject(decimalHours) {
+  if (decimalHours == null) return { hour: 0, minutes: 0 };
+  const totalMinutes = Math.round(Number(decimalHours) * 60);
+  if (totalMinutes === 0) return { hour: 0, minutes: 0 };
+  const hour = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  
+  return { hour, minutes };
+}
+
 /**
  * Sum teaching minutes per userId for current-week date-wise classes.
  * Each (userId, timeTableCellDateWiseId) is counted once.
@@ -92,9 +107,10 @@ export function buildWeeklyLoadHoursByUserId(dateWiseRows) {
   for (const row of dateWiseRows || []) {
     const plain = row.get ? row.get({ plain: true }) : row;
     const dateWiseId = Number(plain.timeTableCellDateWiseId);
-    const period = plain.timeTableCell && plain.timeTableCell.timeTablecreation
-      ? plain.timeTableCell.timeTablecreation
-      : null;
+    const period =
+      plain.timeTableCell && plain.timeTableCell.timeTablecreation
+        ? plain.timeTableCell.timeTablecreation
+        : null;
     const durationMinutes = classDurationMinutes(
       period ? period.startTime : null,
       period ? period.endTime : null,
@@ -116,7 +132,9 @@ export function buildWeeklyLoadHoursByUserId(dateWiseRows) {
       }
       countedKeys.add(key);
 
-      const prev = minutesByUserId.has(userId) ? minutesByUserId.get(userId) : 0;
+      const prev = minutesByUserId.has(userId)
+        ? minutesByUserId.get(userId)
+        : 0;
       minutesByUserId.set(userId, decimalAdd(prev, durationMinutes));
     }
   }
@@ -135,9 +153,8 @@ function formatFaculityLoad(row, currentLoadOverride) {
   }
 
   const employee = plain.employee;
-  const currentLoad = currentLoadOverride != null
-    ? currentLoadOverride
-    : plain.currentLoad;
+  const currentLoad =
+    currentLoadOverride != null ? currentLoadOverride : plain.currentLoad;
 
   return {
     faculityLoadId: plain.faculityLoadId,
@@ -146,8 +163,9 @@ function formatFaculityLoad(row, currentLoadOverride) {
     instituteId: plain.instituteId,
     academicYearId: plain.academicYearId,
     userId: employee ? employee.userId : plain.userId,
-    definedLoad: plain.definedLoad == null ? null : toIntegerNumber(plain.definedLoad),
-    currentLoad: toMoneyNumber(currentLoad),
+    definedLoad:
+      plain.definedLoad == null ? null : toIntegerNumber(plain.definedLoad),
+    currentLoad: formatLoadToTimeObject(currentLoad),
     employee: employee || undefined,
   };
 }
@@ -189,18 +207,20 @@ async function attachLiveWeeklyLoad(rows) {
   }
 
   const week = getCurrentWeekRange();
-  const dateWiseRows = await faculityLoadRepository.findPublishedWeekDateWiseTeacherPeriods(
-    userIds,
-    week.startDate,
-    week.endDate,
-  );
+  const dateWiseRows =
+    await faculityLoadRepository.findPublishedWeekDateWiseTeacherPeriods(
+      userIds,
+      week.startDate,
+      week.endDate,
+    );
   const hoursByUserId = buildWeeklyLoadHoursByUserId(dateWiseRows);
 
   const data = [];
   for (const row of rows) {
     const plain = row.get ? row.get({ plain: true }) : row;
     const userId = plain.employee ? plain.employee.userId : plain.userId;
-    const weeklyLoad = userId != null ? (hoursByUserId.get(Number(userId)) || 0) : 0;
+    const weeklyLoad =
+      userId != null ? hoursByUserId.get(Number(userId)) || 0 : 0;
     data.push(formatFaculityLoad(row, weeklyLoad));
   }
 
@@ -220,12 +240,14 @@ export async function addFaculityLoad(data, createdBy, updatedBy) {
 }
 
 export async function getFaculityLoadDetails(academicYearId) {
-  const rows = await faculityLoadRepository.getFaculityLoadDetails(academicYearId);
+  const rows =
+    await faculityLoadRepository.getFaculityLoadDetails(academicYearId);
   return attachLiveWeeklyLoad(rows);
 }
 
 export async function getSingleFaculityLoadDetails(userId) {
-  const rows = await faculityLoadRepository.getSingleFaculityLoadDetails(userId);
+  const rows =
+    await faculityLoadRepository.getSingleFaculityLoadDetails(userId);
   return attachLiveWeeklyLoad(rows);
 }
 
@@ -236,7 +258,8 @@ export async function updateFaculityLoad(faculityLoadId, info, updatedBy) {
     return faculityLoadRepository.updateFaculityLoad(faculityLoadId, payload);
   } catch (error) {
     console.error("Error updating faculity load:", error);
-    throw error.message === "Invalid currentLoad" || error.message === "Invalid definedLoad"
+    throw error.message === "Invalid currentLoad" ||
+      error.message === "Invalid definedLoad"
       ? error
       : new Error("Failed to update time table");
   }
@@ -256,12 +279,13 @@ export async function recomputeFaculityCurrentLoadHours(userId, transaction) {
   }
 
   const week = getCurrentWeekRange();
-  const dateWiseRows = await faculityLoadRepository.findPublishedWeekDateWiseTeacherPeriods(
-    [userIdNum],
-    week.startDate,
-    week.endDate,
-    transaction,
-  );
+  const dateWiseRows =
+    await faculityLoadRepository.findPublishedWeekDateWiseTeacherPeriods(
+      [userIdNum],
+      week.startDate,
+      week.endDate,
+      transaction,
+    );
   const hoursByUserId = buildWeeklyLoadHoursByUserId(dateWiseRows);
   const weeklyLoad = hoursByUserId.get(userIdNum) || 0;
 

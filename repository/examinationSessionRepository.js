@@ -75,7 +75,7 @@ export async function getExaminationSessionById(id, options = {}) {
 export async function findExaminationSessionAssessmentTypeById(id, options = {}) {
   return scoped(model.examinationSessionModel).findOne({
     where: { examinationSessionId: Number(id) },
-    attributes: ["assessmentTypeId", "status"],
+    attributes: ["assessmentTypeId", "status", "academicYearId"],
     raw: true,
     transaction: options.transaction,
   });
@@ -757,6 +757,69 @@ export async function countInvigilatorStatsForSchedules(examScheduleIds, options
   return {
     total: roomUnitKeys.size,
     assigned: assignedKeys.size,
+  };
+}
+
+/**
+ * Answer sheets mapped to a student for schedules in this examination session.
+ * total   = studentId IS NOT NULL
+ * scanned = those with fileUploadId (s3 file) set
+ * submit  = those with markingStatus submit
+ */
+export async function countAnswerSheetScanStatsBySession(
+  examinationSessionId,
+  options = {},
+) {
+  const examScheduleInclude = {
+    model: model.examScheduleModel,
+    as: "examSchedule",
+    required: true,
+    attributes: [],
+    where: {
+      examinationSessionId: Number(examinationSessionId),
+      ...buildScope(model.examScheduleModel),
+    },
+  };
+
+  const mappedWhere = {
+    studentId: { [Op.ne]: null },
+    examScheduleId: { [Op.ne]: null },
+  };
+
+  const [total, scanned, submit] = await Promise.all([
+    scoped(model.answerSheetQrModel).count({
+      where: mappedWhere,
+      include: [examScheduleInclude],
+      distinct: true,
+      col: "id",
+      transaction: options.transaction,
+    }),
+    scoped(model.answerSheetQrModel).count({
+      where: {
+        ...mappedWhere,
+        fileUploadId: { [Op.ne]: null },
+      },
+      include: [examScheduleInclude],
+      distinct: true,
+      col: "id",
+      transaction: options.transaction,
+    }),
+    scoped(model.answerSheetQrModel).count({
+      where: {
+        ...mappedWhere,
+        markingStatus: "submit",
+      },
+      include: [examScheduleInclude],
+      distinct: true,
+      col: "id",
+      transaction: options.transaction,
+    }),
+  ]);
+
+  return {
+    total: Number(total) || 0,
+    scanned: Number(scanned) || 0,
+    submit: Number(submit) || 0,
   };
 }
 

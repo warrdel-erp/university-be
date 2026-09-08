@@ -274,21 +274,30 @@ export async function getStudentCountMapByGroups(groups, options = {}) {
 
   if (!unique.length) return countMap;
 
+  const sessionIds = [...new Set(unique.map((g) => g.sessionId))];
+  const courseIds = [...new Set(unique.map((g) => g.courseId))];
+  const terms = [...new Set(unique.map((g) => g.term))];
+  const academicYearIds = [...new Set(unique.map((g) => g.academicYearId))];
+
   const rows = await scoped(model.studentModel).findAll({
     attributes: [
-      [sequelize.col("studentClassSectionTerm->classSection.session_id"), "sessionId"],
+      [sequelize.col("students.session_id"), "sessionId"],
       [sequelize.col("studentClassSectionTerm.term"), "term"],
-      [sequelize.col("studentClassSectionTerm->classSection.course_id"), "courseId"],
+      [sequelize.col("students.course_id"), "courseId"],
       [sequelize.col("studentClassSectionTerm->classSection.acedmic_year_id"), "academicYearId"],
-      [sequelize.fn("COUNT", sequelize.col("students.student_id")), "studentCount"],
+      [sequelize.fn("COUNT", sequelize.fn("DISTINCT", sequelize.col("students.student_id"))), "studentCount"],
     ],
+    where: {
+      sessionId: { [Op.in]: sessionIds },
+      courseId: { [Op.in]: courseIds },
+    },
     include: [
       {
         model: model.classSectionTermModel,
         as: "studentClassSectionTerm",
         attributes: [],
         required: true,
-        where: { term: { [Op.in]: [...new Set(unique.map((g) => g.term))] } },
+        where: { term: { [Op.in]: terms } },
         include: [
           {
             model: model.classSectionModel,
@@ -296,20 +305,18 @@ export async function getStudentCountMapByGroups(groups, options = {}) {
             attributes: [],
             required: true,
             where: {
-              sessionId: { [Op.in]: [...new Set(unique.map((g) => g.sessionId))] },
-              courseId: { [Op.in]: [...new Set(unique.map((g) => g.courseId))] },
-              academicYearId: {
-                [Op.in]: [...new Set(unique.map((g) => g.academicYearId))],
-              },
+              sessionId: { [Op.in]: sessionIds },
+              courseId: { [Op.in]: courseIds },
+              academicYearId: { [Op.in]: academicYearIds },
             },
           },
         ],
       },
     ],
     group: [
-      "studentClassSectionTerm->classSection.session_id",
+      "students.session_id",
       "studentClassSectionTerm.term",
-      "studentClassSectionTerm->classSection.course_id",
+      "students.course_id",
       "studentClassSectionTerm->classSection.acedmic_year_id",
     ],
     raw: true,
@@ -333,4 +340,102 @@ export function lookupStudentCount(countMap, group) {
       groupKey(group.sessionId, group.courseId, group.term, group.academicYearId),
     ) || 0
   );
+}
+
+function examEnrollmentInclude(sessionId, courseId, term, academicYearId) {
+  const sectionWhere = { sessionId, courseId };
+  if (academicYearId != null) {
+    sectionWhere.academicYearId = academicYearId;
+  }
+
+  return {
+    model: model.classSectionTermModel,
+    as: "studentClassSectionTerm",
+    attributes: [],
+    required: true,
+    where: { term },
+    include: [
+      {
+        model: model.classSectionModel,
+        as: "classSection",
+        attributes: [],
+        required: true,
+        where: sectionWhere,
+      },
+    ],
+  };
+}
+
+export async function countStudentsForExamGroup(
+  sessionId,
+  courseId,
+  term,
+  academicYearId,
+  options = {},
+) {
+  const map = await getStudentCountMapByGroups(
+    [{ sessionId, courseId, term, academicYearId }],
+    options,
+  );
+  return lookupStudentCount(map, { sessionId, courseId, term, academicYearId });
+}
+
+export async function findStudentsForExamGroup(
+  sessionId,
+  courseId,
+  term,
+  academicYearId,
+  options = {},
+) {
+  const { page, limit, search, transaction } = options;
+  const where = {
+    sessionId: Number(sessionId),
+    courseId: Number(courseId),
+  };
+  if (search) {
+    const like = `%${search}%`;
+    where[Op.or] = [
+      { firstName: { [Op.like]: like } },
+      { lastName: { [Op.like]: like } },
+      { middleName: { [Op.like]: like } },
+      { scholarNumber: { [Op.like]: like } },
+      { enrollNumber: { [Op.like]: like } },
+      { fatherName: { [Op.like]: like } },
+    ];
+  }
+
+  const query = {
+    attributes: [
+      "studentId",
+      "firstName",
+      "middleName",
+      "lastName",
+      "scholarNumber",
+      "enrollNumber",
+      "fatherName",
+    ],
+    where,
+    include: [
+      examEnrollmentInclude(sessionId, courseId, term, academicYearId),
+      {
+        model: model.courseModel,
+        as: "course",
+        attributes: ["courseId", "courseName", "termType"],
+        required: false,
+      },
+    ],
+    order: [["firstName", "ASC"]],
+    transaction,
+  };
+
+  if (page != null && limit != null) {
+    query.offset = (Number(page) - 1) * Number(limit);
+    query.limit = Number(limit);
+    query.distinct = true;
+    query.col = "student_id";
+    const { count, rows } = await scoped(model.studentModel).findAndCountAll(query);
+    return { rows, totalCount: count };
+  }
+
+  return scoped(model.studentModel).findAll(query);
 }

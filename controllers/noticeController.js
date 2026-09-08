@@ -4,9 +4,8 @@ export async function addNotice(req, res) {
   try {
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
-    const role = req.user.defaultRole;
 
-    const noticeData = await notice.addNotice(req.body, createdBy, updatedBy, role);
+    const noticeData = await notice.addNotice(req.body, createdBy, updatedBy);
     res.status(201).json({ message: 'Data added successfully', noticeData });
   } catch (error) {
     const statusCode = /scope|required|not found/i.test(error.message) ? 400 : 500;
@@ -16,8 +15,7 @@ export async function addNotice(req, res) {
 
 export async function getAllStudentNotice(req, res) {
   try {
-    const role = req.user.defaultRole;
-    const notices = await notice.getAllStudentNotice(role);
+    const notices = await notice.getAllStudentNotice(req.query.academicYearId);
     res.status(200).json(notices);
   } catch (error) {
     const statusCode = /scope/i.test(error.message) ? 400 : 500;
@@ -27,11 +25,11 @@ export async function getAllStudentNotice(req, res) {
 
 export async function getAllEmployeeNotice(req, res) {
   try {
-    const createdBy = req.user.userId;
-    const role = req.user.defaultRole;
-    const academicYearId = req.query.academicYearId;
-    const notices = await notice.getAllEmployeeNotice(createdBy, role, academicYearId);
-    res.status(200).json(notices);
+    const notices = await notice.getAllEmployeeNotice(req.query.academicYearId);
+    res.status(200).json({
+      noticeCreated: notices,
+      noticeAll: notices,
+    });
   } catch (error) {
     const statusCode = /scope/i.test(error.message) ? 400 : 500;
     res.status(statusCode).json({ error: error.message });

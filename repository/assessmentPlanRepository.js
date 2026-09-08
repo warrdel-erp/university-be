@@ -4,13 +4,17 @@ import { scoped } from "../utility/scoped.js";
 
 export async function createAssessmentPlan(planData, options = {}) {
   const { components, ...mainPlanData } = planData;
-  const record = await scoped(model.assessmentPlanModel).create(mainPlanData, options);
+  const record = await scoped(model.assessmentPlanModel).create(
+    mainPlanData,
+    options,
+  );
 
   if (Array.isArray(components) && components.length > 0) {
     const componentsToCreate = components.map((comp) => ({
       ...comp,
       assessmentPlanId: record.assessmentPlanId,
-      academicYearId: comp.academicYearId || mainPlanData.academicYearId || null,
+      academicYearId:
+        comp.academicYearId || mainPlanData.academicYearId || null,
       universityId: mainPlanData.universityId,
       instituteId: mainPlanData.instituteId,
       createdBy: mainPlanData.createdBy,
@@ -19,8 +23,10 @@ export async function createAssessmentPlan(planData, options = {}) {
 
     await Promise.all(
       componentsToCreate.map((comp) =>
-        scoped(model.assessmentPlanComponentModel).create(comp, { transaction: options.transaction })
-      )
+        scoped(model.assessmentPlanComponentModel).create(comp, {
+          transaction: options.transaction,
+        }),
+      ),
     );
   }
 
@@ -80,7 +86,9 @@ export async function getAssessmentPlans({
     ];
   }
 
-  const { count, rows } = await scoped(model.assessmentPlanModel).findAndCountAll({
+  const { count, rows } = await scoped(
+    model.assessmentPlanModel,
+  ).findAndCountAll({
     where,
     include: [
       {
@@ -98,13 +106,22 @@ export async function getAssessmentPlans({
       {
         model: model.academicRegulationModel,
         as: "academicRegulation",
-        attributes: ["academicRegulationId", "regulationCode", "regulationName"],
+        attributes: [
+          "academicRegulationId",
+          "regulationCode",
+          "regulationName",
+        ],
         required: false,
       },
       {
         model: model.acedmicYearModel,
         as: "academicYear",
-        attributes: ["academicYearId", "yearTitle", "startingDate", "endingDate"],
+        attributes: [
+          "academicYearId",
+          "yearTitle",
+          "startingDate",
+          "endingDate",
+        ],
         required: false,
       },
       {
@@ -166,13 +183,22 @@ export async function getAssessmentPlanById(assessmentPlanId, options = {}) {
       {
         model: model.academicRegulationModel,
         as: "academicRegulation",
-        attributes: ["academicRegulationId", "regulationCode", "regulationName"],
+        attributes: [
+          "academicRegulationId",
+          "regulationCode",
+          "regulationName",
+        ],
         required: false,
       },
       {
         model: model.acedmicYearModel,
         as: "academicYear",
-        attributes: ["academicYearId", "yearTitle", "startingDate", "endingDate"],
+        attributes: [
+          "academicYearId",
+          "yearTitle",
+          "startingDate",
+          "endingDate",
+        ],
         required: false,
       },
       {
@@ -194,10 +220,21 @@ export async function getAssessmentPlanById(assessmentPlanId, options = {}) {
   });
 }
 
-export async function updateAssessmentPlan(assessmentPlanId, updateData = {}, options = {}) {
-  const planId = typeof assessmentPlanId === "object" ? Number(assessmentPlanId.assessmentPlanId) : Number(assessmentPlanId);
-  const dataPayload = typeof assessmentPlanId === "object" ? (assessmentPlanId.payload || {}) : (updateData || {});
-  const opts = typeof assessmentPlanId === "object" ? (updateData || {}) : options;
+export async function updateAssessmentPlan(
+  assessmentPlanId,
+  updateData = {},
+  options = {},
+) {
+  const planId =
+    typeof assessmentPlanId === "object"
+      ? Number(assessmentPlanId.assessmentPlanId)
+      : Number(assessmentPlanId);
+  const dataPayload =
+    typeof assessmentPlanId === "object"
+      ? assessmentPlanId.payload || {}
+      : updateData || {};
+  const opts =
+    typeof assessmentPlanId === "object" ? updateData || {} : options;
 
   const { components, ...mainUpdateData } = dataPayload;
 
@@ -219,16 +256,20 @@ export async function updateAssessmentPlan(assessmentPlanId, updateData = {}, op
       const componentsToCreate = components.map((comp) => ({
         ...comp,
         assessmentPlanId: planId,
-        academicYearId: comp.academicYearId || existingPlan?.academicYearId || null,
+        academicYearId:
+          comp.academicYearId || existingPlan?.academicYearId || null,
         universityId: existingPlan?.universityId,
         instituteId: existingPlan?.instituteId,
         createdBy: mainUpdateData.updatedBy || null,
         updatedBy: mainUpdateData.updatedBy || null,
       }));
 
-      await scoped(model.assessmentPlanComponentModel).bulkCreate(componentsToCreate, {
-        transaction: opts.transaction,
-      });
+      await scoped(model.assessmentPlanComponentModel).bulkCreate(
+        componentsToCreate,
+        {
+          transaction: opts.transaction,
+        },
+      );
     }
   }
 
@@ -252,7 +293,7 @@ export async function deleteAssessmentPlan(assessmentPlanId, options = {}) {
     {
       where: { assessmentPlanId: Number(assessmentPlanId) },
       transaction: options.transaction,
-    }
+    },
   );
 
   return {
@@ -262,18 +303,35 @@ export async function deleteAssessmentPlan(assessmentPlanId, options = {}) {
   };
 }
 
-export async function createAssessmentPlanComponent(componentData, options = {}) {
-  const record = await scoped(model.assessmentPlanComponentModel).create(componentData, options);
+export async function createAssessmentPlanComponent(
+  componentData,
+  options = {},
+) {
+  const record = await scoped(model.assessmentPlanComponentModel).create(
+    componentData,
+    options,
+  );
   return await scoped(model.assessmentPlanComponentModel).findOne({
     where: { assessmentPlanComponentId: record.assessmentPlanComponentId },
     transaction: options.transaction,
   });
 }
 
-export async function updateAssessmentPlanComponent(assessmentPlanComponentId, updateData = {}, options = {}) {
-  const compId = typeof assessmentPlanComponentId === "object" ? Number(assessmentPlanComponentId.assessmentPlanComponentId) : Number(assessmentPlanComponentId);
-  const dataPayload = typeof assessmentPlanComponentId === "object" ? (assessmentPlanComponentId.payload || {}) : (updateData || {});
-  const opts = typeof assessmentPlanComponentId === "object" ? (updateData || {}) : options;
+export async function updateAssessmentPlanComponent(
+  assessmentPlanComponentId,
+  updateData = {},
+  options = {},
+) {
+  const compId =
+    typeof assessmentPlanComponentId === "object"
+      ? Number(assessmentPlanComponentId.assessmentPlanComponentId)
+      : Number(assessmentPlanComponentId);
+  const dataPayload =
+    typeof assessmentPlanComponentId === "object"
+      ? assessmentPlanComponentId.payload || {}
+      : updateData || {};
+  const opts =
+    typeof assessmentPlanComponentId === "object" ? updateData || {} : options;
 
   await scoped(model.assessmentPlanComponentModel).update(dataPayload, {
     where: { assessmentPlanComponentId: compId },
@@ -286,7 +344,10 @@ export async function updateAssessmentPlanComponent(assessmentPlanComponentId, u
   });
 }
 
-export async function deleteAssessmentPlanComponent(assessmentPlanComponentId, options = {}) {
+export async function deleteAssessmentPlanComponent(
+  assessmentPlanComponentId,
+  options = {},
+) {
   const existing = await scoped(model.assessmentPlanComponentModel).findOne({
     where: { assessmentPlanComponentId: Number(assessmentPlanComponentId) },
     transaction: options.transaction,
@@ -321,7 +382,15 @@ export async function getCourseAssessmentPlanOverview({
   const offset = (pageNum - 1) * limitNum;
 
   const parseId = (val) => {
-    if (val === undefined || val === null || val === "" || val === "undefined" || val === "null" || val === "NaN") return undefined;
+    if (
+      val === undefined ||
+      val === null ||
+      val === "" ||
+      val === "undefined" ||
+      val === "null" ||
+      val === "NaN"
+    )
+      return undefined;
     const num = Number(val);
     return Number.isInteger(num) && num > 0 ? num : undefined;
   };
@@ -344,12 +413,14 @@ export async function getCourseAssessmentPlanOverview({
   const mappingWhere = {};
   const parsedAssessmentPlanId = parseId(assessmentPlanId);
   const parsedSessionId = parseId(sessionId);
-  if (parsedAssessmentPlanId !== undefined) mappingWhere.assessmentPlanId = parsedAssessmentPlanId;
+  if (parsedAssessmentPlanId !== undefined)
+    mappingWhere.assessmentPlanId = parsedAssessmentPlanId;
   if (parsedSessionId !== undefined) mappingWhere.sessionId = parsedSessionId;
 
   const planWhere = {};
   const parsedAcademicRegulationId = parseId(academicRegulationId);
-  if (parsedAcademicRegulationId !== undefined) planWhere.regulationId = parsedAcademicRegulationId;
+  if (parsedAcademicRegulationId !== undefined)
+    planWhere.regulationId = parsedAcademicRegulationId;
 
   let mappingRequired = false;
   if (assignmentStatus === "assigned") {
@@ -357,7 +428,9 @@ export async function getCourseAssessmentPlanOverview({
   }
 
   if (assignmentStatus === "unassigned") {
-    subjectWhere["$assessmentPlanMappings.assessment_plan_subject_mapping_id$"] = null;
+    subjectWhere[
+      "$assessmentPlanMappings.assessment_plan_subject_mapping_id$"
+    ] = null;
   }
 
   const include = [
@@ -446,7 +519,9 @@ export async function getAssessmentPlanStats() {
 
   const subjectIds = subjects.map((s) => s.subjectId);
 
-  const mappings = await scoped(model.assessmentPlanSubjectMappingModel).findAll({
+  const mappings = await scoped(
+    model.assessmentPlanSubjectMappingModel,
+  ).findAll({
     where: subjectIds.length > 0 ? { subjectId: { [Op.in]: subjectIds } } : {},
     attributes: ["subjectId", "assessmentPlanId"],
   });
@@ -468,21 +543,123 @@ export async function getAssessmentPlanStats() {
     attributes: ["assessmentPlanId", "status", "isActive"],
   });
 
-  const overriddenSubjects = plans.filter((p) => p.status === "Draft" || p.isActive === false).length;
+  const overriddenSubjects = plans.filter(
+    (p) => p.status === "Draft" || p.isActive === false,
+  ).length;
 
   return {
     totalSubjects,
     assignedSubjects,
     unassignedSubjects,
     overriddenSubjects,
-    coveragePercentage: totalSubjects > 0 ? Number(((assignedSubjects / totalSubjects) * 100).toFixed(2)) : 0,
+    coveragePercentage:
+      totalSubjects > 0
+        ? decimalMultiply(decimalDivide(assignedSubjects, totalSubjects), 100)
+        : 0
   };
 }
 
+import sequelize from "../database/sequelizeConfig.js";
+import { ASSESSMENT_CATEGORY_DETAILS } from "../constant.js";
+import { toIntegerNumber, decimalDivide, decimalMultiply } from "../utility/decimalMoney.js";
+
 export async function createAssessmentPlanSubjectMapping(data, options = {}) {
-  return await scoped(model.assessmentPlanSubjectMappingModel).create(data, {
-    transaction: options.transaction,
-  });
+  const transaction = options.transaction || await sequelize.transaction();
+  let commitTransaction = !options.transaction;
+  
+  try {
+    const mapping = await scoped(model.assessmentPlanSubjectMappingModel).create(data, { transaction });
+    
+    // Now create internal assessment entries automatically
+    // 1. Fetch term from subject
+    const subject = await model.subjectModel.findByPk(mapping.subjectId, { transaction });
+    const term = subject ? subject.term : null;
+
+    // 2. Fetch weightage from assessment_plan_component where category = 'continuous assessment'
+    const component = await model.assessmentPlanComponentModel.findOne({
+      where: { assessmentPlanId: mapping.assessmentPlanId },
+      include: [
+        {
+          model: model.examSetupTypeModel,
+          as: 'examSetupType',
+          where: {
+            examCategory: 'CONTINUOUS_ASSESSMENT'
+          },
+          required: true
+        }
+      ],
+      transaction
+    });
+    
+    const examSetupTypeId = component ? component.examSetupTypeId : null;
+    const weightage = component && component.weightagePercentage ? toIntegerNumber(component.weightagePercentage) : 0;
+
+    // 3. Query timetable cells to get primary teachers using Sequelize includes
+    let courseMappingWhere = { courseId: mapping.courseId };
+    if (mapping.sessionId) {
+      courseMappingWhere.sessionId = mapping.sessionId;
+    }
+
+    const timeTableCells = await model.timeTableCellModel.findAll({
+      where: { subjectId: mapping.subjectId },
+      include: [
+        {
+          model: model.timeTableCellTeachersModel,
+          as: 'timeTableCellTeachers',
+          where: { teacherType: 'Primary' },
+          attributes: ['userId'],
+          required: true
+        },
+        {
+          model: model.timeTableStructureModel,
+          as: 'timeTableStructure',
+          required: true,
+          include: [
+            {
+              model: model.timeTableStructureCourseModel,
+              as: 'courseMappings',
+              where: courseMappingWhere,
+              required: true
+            }
+          ]
+        }
+      ],
+      transaction
+    });
+
+    const entriesToInsert = [];
+    const uniqueUserIds = new Set();
+    
+    for (const cell of timeTableCells) {
+      for (const teacher of cell.timeTableCellTeachers) {
+        if (!uniqueUserIds.has(teacher.userId)) {
+          uniqueUserIds.add(teacher.userId);
+          entriesToInsert.push({
+            universityId: mapping.universityId,
+            instituteId: mapping.instituteId,
+            academicYearId: mapping.academicYearId,
+            subjectId: mapping.subjectId,
+            courseId: mapping.courseId,
+            sessionId: mapping.sessionId,
+            term: term,
+            userId: teacher.userId,
+            examSetupTypeId: examSetupTypeId,
+            weightage: weightage,
+          });
+        }
+      }
+    }
+
+    if (entriesToInsert.length > 0) {
+      await model.internalAssessmentModel.bulkCreate(entriesToInsert, { transaction });
+    }
+
+    if (commitTransaction) await transaction.commit();
+    return mapping;
+  } catch (error) {
+    if (commitTransaction) await transaction.rollback();
+    throw error;
+  }
 }
 
 export async function getAssessmentPlanSubjectMappings({
@@ -493,43 +670,50 @@ export async function getAssessmentPlanSubjectMappings({
   const limitNum = Math.max(1, Number(limit) || 10);
   const offset = (pageNum - 1) * limitNum;
 
-  const { count, rows } = await model.assessmentPlanSubjectMappingModel.findAndCountAll({
-    include: [
-      {
-        model: model.assessmentPlanModel,
-        as: "assessmentPlan",
-        attributes: ["assessmentPlanId", "planName", "planCode", "status", "isActive"],
-        required: false,
-      },
-      {
-        model: model.subjectModel,
-        as: "subject",
-        attributes: ["subjectId", "subjectName", "subjectCode", "term"],
-        required: false,
-      },
-      {
-        model: model.courseModel,
-        as: "course",
-        attributes: ["courseId", "courseName"],
-        required: false,
-      },
-      {
-        model: model.sessionModel,
-        as: "session",
-        attributes: ["sessionId", "sessionName"],
-        required: false,
-      },
-      {
-        model: model.acedmicYearModel,
-        as: "academicYear",
-        attributes: ["academicYearId", "yearTitle"],
-        required: false,
-      },
-    ],
-    limit: limitNum,
-    offset,
-    order: [["assessmentPlanSubjectMappingId", "DESC"]],
-  });
+  const { count, rows } =
+    await model.assessmentPlanSubjectMappingModel.findAndCountAll({
+      include: [
+        {
+          model: model.assessmentPlanModel,
+          as: "assessmentPlan",
+          attributes: [
+            "assessmentPlanId",
+            "planName",
+            "planCode",
+            "status",
+            "isActive",
+          ],
+          required: false,
+        },
+        {
+          model: model.subjectModel,
+          as: "subject",
+          attributes: ["subjectId", "subjectName", "subjectCode", "term"],
+          required: false,
+        },
+        {
+          model: model.courseModel,
+          as: "course",
+          attributes: ["courseId", "courseName"],
+          required: false,
+        },
+        {
+          model: model.sessionModel,
+          as: "session",
+          attributes: ["sessionId", "sessionName"],
+          required: false,
+        },
+        {
+          model: model.acedmicYearModel,
+          as: "academicYear",
+          attributes: ["academicYearId", "yearTitle"],
+          required: false,
+        },
+      ],
+      limit: limitNum,
+      offset,
+      order: [["assessmentPlanSubjectMappingId", "DESC"]],
+    });
 
   return {
     totalRecords: count,
@@ -540,8 +724,13 @@ export async function getAssessmentPlanSubjectMappings({
   };
 }
 
-export async function deleteAssessmentPlanSubjectMapping(mappingId, options = {}) {
-  const existing = await scoped(model.assessmentPlanSubjectMappingModel).findOne({
+export async function deleteAssessmentPlanSubjectMapping(
+  mappingId,
+  options = {},
+) {
+  const existing = await scoped(
+    model.assessmentPlanSubjectMappingModel,
+  ).findOne({
     where: { assessmentPlanSubjectMappingId: Number(mappingId) },
     transaction: options.transaction,
   });

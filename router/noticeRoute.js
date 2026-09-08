@@ -33,8 +33,6 @@ const addNoticeSchema = z.object({
   notice: z.string().optional(),
   noticeDate: z.string().optional(),
   publishDate: z.string().optional(),
-  messageTo: z.union([z.array(z.string()), z.string()]),
-  role: z.string().optional(),
   ...optionalTenantFields,
 }).passthrough();
 
@@ -48,8 +46,6 @@ const updateNoticeSchema = z.object({
   notice: z.string().optional(),
   noticeDate: z.string().optional(),
   publishDate: z.string().optional(),
-  messageTo: z.union([z.array(z.string()), z.string()]).optional(),
-  role: z.string().optional(),
   ...optionalTenantFields,
 }).passthrough();
 
