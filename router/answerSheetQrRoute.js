@@ -27,6 +27,8 @@ import {
   getEvaluationAssignmentById,
   getApprovedQuestionPaperByAnswerSheetId,
   getMyApprovedQuestionPaperByAnswerSheetId,
+  saveMyAnnotatedAnswerSheetPdf,
+  saveAnnotatedAnswerSheetPdf,
 } from "../controllers/answerSheetQrController.js";
 
 const router = Router();
@@ -126,6 +128,13 @@ const assignObtainedMarksSchema = z.object({
     .number()
     .min(0, "obtained_marks must be greater than or equal to 0")
     .max(999.99, "obtained_marks must be less than or equal to 999.99"),
+});
+
+const saveAnnotatedPdfSchema = z.object({
+  fileUploadId: z
+    .number({ required_error: "fileUploadId is required." })
+    .int("fileUploadId must be an integer.")
+    .positive("fileUploadId must be a positive integer."),
 });
 
 const bulkFinalSubmitSchema = z.object({
@@ -373,6 +382,13 @@ router.patch(
   assignMyObtainedMarksToAnswerSheet,
 );
 
+router.post(
+  "/my/:id(\\d+)/annotatedPdf",
+  userAuth,
+  validate({ params: idParamSchema, body: saveAnnotatedPdfSchema }),
+  saveMyAnnotatedAnswerSheetPdf,
+);
+
 router.patch(
   "/map",
   userAuth,
@@ -475,6 +491,14 @@ router.patch(
   checkAccess(PERMISSIONS.EVALUATION_EXECUTE.value, null),
   validate({ params: idParamSchema, body: assignObtainedMarksSchema }),
   assignObtainedMarksToAnswerSheet
+);
+
+router.post(
+  "/:id(\\d+)/annotatedPdf",
+  userAuth,
+  checkAccess(PERMISSIONS.EVALUATION_EXECUTE.value, null),
+  validate({ params: idParamSchema, body: saveAnnotatedPdfSchema }),
+  saveAnnotatedAnswerSheetPdf,
 );
 
 router.get(
