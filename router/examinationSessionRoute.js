@@ -307,8 +307,6 @@ const dashboardSessionQuerySchema = {
 const timelineQuerySchema = {
   query: z.object({
     examinationSessionId: positiveIntegerQueryId,
-    date: dateStringSchema.optional(),
-    limit: z.coerce.number().int().positive().max(100).optional(),
   }),
 };
 

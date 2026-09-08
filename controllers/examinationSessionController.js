@@ -213,10 +213,9 @@ export const getExaminationSessionAnswerSheets = async (req, res) => {
 
 export const getExaminationTimeline = async (req, res) => {
   try {
-    const { examinationSessionId, date, limit } = req.query;
+    const { examinationSessionId } = req.query;
     const result = await examinationSessionServices.getExaminationTimeline(
       Number(examinationSessionId),
-      { date, limit },
     );
     return SuccessResponse(
       res,

@@ -29,7 +29,7 @@
             }
           ]
         },
-        "description": "GET /examinationSession/planningOverview?examinationSessionId=\n\nReturns Examination Progress stepper:\n- planning — published schedules / total schedules\n- preExam — published hall tickets / total\n- operations — invigilator coverage + todayExamCount\n- digitization — received bundles / total bundles\n- evaluation — submitted scripts / total scripts\n- results — published student results\n\nEach stage includes percentage, status (Completed | In Progress | Not Started), completed, total, subtitle."
+        "description": "GET /examinationSession/planningOverview?examinationSessionId=\n\nSession-level progress only (no exams array). Calculates per exam then averages:\n1. roomsAssigned 2. invigilators 3. bundles READY+ 4. hallTickets 5. answerSheets scanned+marked 6. results published\n\nResponse: percentage, totalExams, stages{}."
       },
       "response": []
     },
@@ -45,7 +45,7 @@
           }
         ],
         "url": {
-          "raw": "{{base_url}}/examinationSession/timeline?examinationSessionId={{examinationSessionId}}&date={{examDate}}&limit={{limit}}",
+          "raw": "{{base_url}}/examinationSession/timeline?examinationSessionId={{examinationSessionId}}",
           "host": ["{{base_url}}"],
           "path": ["examinationSession", "timeline"],
           "query": [
@@ -53,20 +53,10 @@
               "key": "examinationSessionId",
               "value": "{{examinationSessionId}}",
               "description": "Required. Examination session id."
-            },
-            {
-              "key": "date",
-              "value": "{{examDate}}",
-              "description": "Optional. YYYY-MM-DD. Defaults to today."
-            },
-            {
-              "key": "limit",
-              "value": "{{limit}}",
-              "description": "Optional. Max rows (1–100). Default 20."
             }
           ]
         },
-        "description": "GET /examinationSession/timeline?examinationSessionId=&date=&limit=\n\nPublished exam_schedule rows for the session, ordered by examDate ASC, examTime ASC.\n\nEach item includes:\n- subject, slot, rooms, capacity, seated\n- attendance (present / absent / pending / total)\n- isLive + status (LIVE | UPCOMING)"
+        "description": "GET /examinationSession/timeline?examinationSessionId=\n\nFetches all exam_schedule rows for the session (with exam_schedule_room_capacity rooms), ordered by examDate ASC, examTime ASC.\n\ncapacity / studentCount = booked student_exam_seat count for that examSchedule (not room capacity)."
       },
       "response": []
     },
