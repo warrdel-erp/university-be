@@ -24,6 +24,7 @@ import * as examSessionAnswerSheetRepository from "../repository/examSessionAnsw
 import * as s3Helper from "../utility/s3Helper.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 import * as model from "../models/index.js";
+import { decimalDivide, decimalMultiply } from "../utility/decimalMoney.js";
 
 function createBadRequestError(message) {
   const error = new Error(message);
@@ -1781,5 +1782,420 @@ export async function getExaminationSessionAnswerSheets(examinationSessionId) {
   );
 
   return result;
+}
+
+function percentOf(part, total) {
+  if (!total) {
+    return 0;
+  }
+  return decimalMultiply(decimalDivide(part, total), 100);
+}
+
+function stageStatus(percentage) {
+  if (percentage >= 100) {
+    return "Completed";
+  }
+  if (percentage <= 0) {
+    return "Not Started";
+  }
+  return "In Progress";
+}
+
+function todayDateString() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function currentTimeString() {
+  return new Date().toTimeString().slice(0, 8);
+}
+
+function isScheduleLive(schedule) {
+  const today = todayDateString();
+  if (schedule.examDate !== today) {
+    return false;
+  }
+
+  const rooms = schedule.roomCapacities || [];
+  for (const room of rooms) {
+    if (room.status === "IN_PROGRESS") {
+      return true;
+    }
+  }
+
+  const slot = schedule.examinationSessionSlot;
+  if (slot && slot.startTime && slot.endTime) {
+    const nowTime = currentTimeString();
+    return nowTime >= slot.startTime && nowTime <= slot.endTime;
+  }
+
+  return false;
+}
+
+function collectScheduleDateSlotKeys(schedules) {
+  const uniqueDates = [];
+  const uniqueSlotIds = [];
+  const dateSeen = new Set();
+  const slotSeen = new Set();
+
+  for (const schedule of schedules) {
+    if (schedule.examDate && !dateSeen.has(schedule.examDate)) {
+      dateSeen.add(schedule.examDate);
+      uniqueDates.push(schedule.examDate);
+    }
+    if (
+      schedule.examinationSessionSlotId &&
+      !slotSeen.has(schedule.examinationSessionSlotId)
+    ) {
+      slotSeen.add(schedule.examinationSessionSlotId);
+      uniqueSlotIds.push(schedule.examinationSessionSlotId);
+    }
+  }
+
+  return { uniqueDates, uniqueSlotIds };
+}
+
+export async function getExaminationTimeline(examinationSessionId, filters = {}) {
+  const parsedSessionId = Number(examinationSessionId);
+  if (Number.isNaN(parsedSessionId)) {
+    throw createBadRequestError("Invalid examinationSessionId");
+  }
+
+  const session =
+    await examinationSessionRepository.getExaminationSessionById(
+      parsedSessionId,
+    );
+  if (!session) {
+    const error = new Error(
+      `Examination session with ID ${parsedSessionId} not found`,
+    );
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const examDate = filters.date || todayDateString();
+  const limit = filters.limit ? Number(filters.limit) : 20;
+
+  const schedules =
+    await examinationSessionRepository.findExamSchedulesForTimeline(
+      parsedSessionId,
+      examDate,
+      limit,
+    );
+
+  const examScheduleIds = [];
+  for (const schedule of schedules) {
+    examScheduleIds.push(schedule.examScheduleId);
+  }
+
+  const [seatMap, attendanceMap] = await Promise.all([
+    examinationSessionRepository.countSeatsByExamScheduleIds(examScheduleIds),
+    examinationSessionRepository.countAttendanceByExamScheduleIds(
+      examScheduleIds,
+    ),
+  ]);
+
+  const data = [];
+  for (const schedule of schedules) {
+    const plain = toPlain(schedule);
+    const rooms = plain.roomCapacities || [];
+    let capacity = 0;
+    const roomNumbers = [];
+    for (const room of rooms) {
+      capacity += Number(room.capacity) || 0;
+      if (room.classRoom && room.classRoom.roomNumber) {
+        roomNumbers.push(room.classRoom.roomNumber);
+      }
+    }
+
+    const attendance = attendanceMap.get(Number(plain.examScheduleId)) || {
+      present: 0,
+      absent: 0,
+      pending: 0,
+      total: 0,
+    };
+    const seated = seatMap.get(Number(plain.examScheduleId)) || 0;
+    const live = isScheduleLive(plain);
+
+    data.push({
+      examScheduleId: plain.examScheduleId,
+      examDate: plain.examDate,
+      examTime: plain.examTime,
+      duration: plain.duration,
+      published: plain.published,
+      isLive: live,
+      status: live ? "LIVE" : "UPCOMING",
+      subject: plain.subjectSchedule
+        ? {
+            subjectId: plain.subjectSchedule.subjectId,
+            subjectName: plain.subjectSchedule.subjectName,
+            subjectCode: plain.subjectSchedule.subjectCode,
+          }
+        : null,
+      slot: plain.examinationSessionSlot || null,
+      rooms: roomNumbers,
+      capacity,
+      seated,
+      attendance: {
+        present: attendance.present,
+        absent: attendance.absent,
+        pending: attendance.pending,
+        total: attendance.total || seated,
+      },
+    });
+  }
+
+  return {
+    examinationSessionId: parsedSessionId,
+    date: examDate,
+    total: data.length,
+    data,
+  };
+}
+
+export async function getPlanningOverview(examinationSessionId) {
+  const parsedSessionId = Number(examinationSessionId);
+  if (Number.isNaN(parsedSessionId)) {
+    throw createBadRequestError("Invalid examinationSessionId");
+  }
+
+  const session =
+    await examinationSessionRepository.getExaminationSessionById(
+      parsedSessionId,
+    );
+  if (!session) {
+    const error = new Error(
+      `Examination session with ID ${parsedSessionId} not found`,
+    );
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const today = todayDateString();
+  const schedules =
+    await examinationSessionRepository.findSchedulesForSkuStats(
+      parsedSessionId,
+    );
+
+  const examScheduleIds = [];
+  for (const schedule of schedules) {
+    examScheduleIds.push(schedule.examScheduleId);
+  }
+
+  const { uniqueDates, uniqueSlotIds } =
+    collectScheduleDateSlotKeys(schedules);
+
+  const [
+    publishedScheduleCount,
+    hallTickets,
+    answerSheetScan,
+    bundles,
+    todayExamCount,
+    invigilatorStats,
+    results,
+  ] = await Promise.all([
+    examinationSessionRepository.countPublishedSchedulesBySession(
+      parsedSessionId,
+    ),
+    examinationSessionRepository.countHallTicketStatsBySession(parsedSessionId),
+    examinationSessionRepository.countAnswerSheetScanStatsBySession(
+      parsedSessionId,
+    ),
+    examinationSessionRepository.countBundleStatusStatsByDatesAndSlots(
+      uniqueDates,
+      uniqueSlotIds,
+    ),
+    examinationSessionRepository.countTodayPublishedSchedules(
+      parsedSessionId,
+      today,
+    ),
+    examinationSessionRepository.countInvigilatorStatsForSchedules(
+      examScheduleIds,
+    ),
+    examinationSessionRepository.countStudentResultStatsBySession(
+      parsedSessionId,
+    ),
+  ]);
+
+  const planningTotal = schedules.length || 0;
+  const planningDone = publishedScheduleCount;
+  const planningPct = percentOf(planningDone, planningTotal);
+
+  const preExamPct = percentOf(hallTickets.published, hallTickets.total);
+  const operationsPct = percentOf(
+    invigilatorStats.assigned,
+    invigilatorStats.total,
+  );
+  const digitizationPct = percentOf(bundles.received, bundles.total);
+  const evaluationPct = percentOf(
+    answerSheetScan.submit,
+    answerSheetScan.total,
+  );
+
+  return {
+    examinationSessionId: parsedSessionId,
+    sessionName: session.sessionName,
+    status: session.status,
+    publishedAt: session.publishedAt,
+    stages: {
+      planning: {
+        percentage: planningPct,
+        status: stageStatus(planningPct),
+        completed: planningDone,
+        total: planningTotal,
+        subtitle:
+          session.publishedAt != null
+            ? `Published ${session.publishedAt}`
+            : session.status,
+      },
+      preExam: {
+        percentage: preExamPct,
+        status: stageStatus(preExamPct),
+        completed: hallTickets.published,
+        total: hallTickets.total,
+        subtitle:
+          preExamPct >= 100
+            ? "Hall Tickets Published"
+            : "Hall Tickets Pending",
+      },
+      operations: {
+        percentage: operationsPct,
+        status: stageStatus(operationsPct),
+        completed: invigilatorStats.assigned,
+        total: invigilatorStats.total,
+        subtitle: `Today ${todayExamCount} Exams`,
+        todayExamCount,
+      },
+      digitization: {
+        percentage: digitizationPct,
+        status: stageStatus(digitizationPct),
+        completed: bundles.received,
+        total: bundles.total,
+        subtitle: `${bundles.received}/${bundles.total} Bundles`,
+      },
+      evaluation: {
+        percentage: evaluationPct,
+        status: stageStatus(evaluationPct),
+        completed: answerSheetScan.submit,
+        total: answerSheetScan.total,
+        subtitle: `${answerSheetScan.submit}/${answerSheetScan.total} Scripts`,
+      },
+    },
+    results: {
+      percentage: percentOf(results.published, results.total),
+      published: results.published,
+      total: results.total,
+    },
+  };
+}
+
+export async function getProgressMetrics(examinationSessionId) {
+  const parsedSessionId = Number(examinationSessionId);
+  if (Number.isNaN(parsedSessionId)) {
+    throw createBadRequestError("Invalid examinationSessionId");
+  }
+
+  const session =
+    await examinationSessionRepository.getExaminationSessionById(
+      parsedSessionId,
+    );
+  if (!session) {
+    const error = new Error(
+      `Examination session with ID ${parsedSessionId} not found`,
+    );
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const schedules =
+    await examinationSessionRepository.findSchedulesForSkuStats(
+      parsedSessionId,
+    );
+
+  const examScheduleIds = [];
+  for (const schedule of schedules) {
+    examScheduleIds.push(schedule.examScheduleId);
+  }
+
+  const [roomBundleMap, answerSheetBySchedule, hallTicketBySchedule] =
+    await Promise.all([
+      examinationSessionRepository.countRoomBundleReadyByExamScheduleIds(
+        examScheduleIds,
+      ),
+      examinationSessionRepository.countAnswerSheetStatsByExamScheduleIds(
+        examScheduleIds,
+      ),
+      examinationSessionRepository.countHallTicketCoverageByExamScheduleIds(
+        parsedSessionId,
+        examScheduleIds,
+      ),
+    ]);
+
+  let totalRooms = 0;
+  let totalBundlesReady = 0;
+  let totalSeatStudents = 0;
+  let totalHallTicketsGenerated = 0;
+  let totalStudents = 0;
+  let totalScanned = 0;
+  let totalMarked = 0;
+
+  for (const schedule of schedules) {
+    const roomStats = roomBundleMap.get(Number(schedule.examScheduleId)) || {
+      rooms: 0,
+      bundlesReady: 0,
+    };
+    const sheetStats = answerSheetBySchedule.get(
+      Number(schedule.examScheduleId),
+    ) || {
+      students: 0,
+      scanned: 0,
+      marked: 0,
+    };
+    const hallTicketStats = hallTicketBySchedule.get(
+      Number(schedule.examScheduleId),
+    ) || {
+      students: 0,
+      generated: 0,
+    };
+
+    totalRooms += roomStats.rooms;
+    totalBundlesReady += roomStats.bundlesReady;
+    totalSeatStudents += hallTicketStats.students;
+    totalHallTicketsGenerated += hallTicketStats.generated;
+    totalStudents += sheetStats.students;
+    totalScanned += sheetStats.scanned;
+    totalMarked += sheetStats.marked;
+  }
+
+  const sessionBundlePct = percentOf(totalBundlesReady, totalRooms);
+  const sessionHallTicketPct = percentOf(
+    totalHallTicketsGenerated,
+    totalSeatStudents,
+  );
+  const sessionOperationsPercentage =
+    totalRooms > 0 && totalSeatStudents > 0
+      ? percentOf(sessionBundlePct + sessionHallTicketPct, 200)
+      : totalRooms > 0
+        ? sessionBundlePct
+        : sessionHallTicketPct;
+
+  return {
+    examinationSessionId: parsedSessionId,
+    operations: {
+      percentage: sessionOperationsPercentage,
+      rooms: totalRooms,
+      bundlesReady: totalBundlesReady,
+      hallTickets: {
+        percentage: sessionHallTicketPct,
+        generated: totalHallTicketsGenerated,
+        students: totalSeatStudents,
+      },
+    },
+    digitization: {
+      percentage: percentOf(totalScanned, totalStudents),
+      students: totalStudents,
+      scanned: totalScanned,
+      marked: totalMarked,
+    },
+  };
 }
 
