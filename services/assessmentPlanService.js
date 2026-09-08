@@ -1,7 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as assessmentPlanRepo from "../repository/assessmentPlanRepository.js";
 import * as model from "../models/index.js";
-import { getAcademicYearId } from "../utility/requestContext.js";
 
 export async function createAssessmentPlan({ payload, user }) {
   return await sequelize.transaction(async (t) => {
@@ -24,14 +23,8 @@ export async function createAssessmentPlan({ payload, user }) {
   });
 }
 
-export async function getAssessmentPlans(queryParams, user) {
-  const filters = {
-    ...queryParams,
-    universityId: queryParams.universityId || user?.universityId || null,
-    instituteId: queryParams.instituteId || user?.instituteId || null,
-    academicYearId: queryParams.academicYearId ? Number(queryParams.academicYearId) : (user?.academicYearId || null),
-  };
-  return await assessmentPlanRepo.getAssessmentPlans(filters);
+export async function getAssessmentPlans(queryParams) {
+  return await assessmentPlanRepo.getAssessmentPlans(queryParams);
 }
 
 export async function getAssessmentPlanById(assessmentPlanId) {
@@ -167,6 +160,7 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
         subjectId: Number(payload.subjectId),
         courseId: Number(payload.courseId),
       },
+      attributes: ["subjectId", "courseId", "academicYearId"],
       transaction: t,
     });
     if (!subjectRecord) {
@@ -190,39 +184,45 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
     }
 
     let sessionId = Number(payload.sessionId);
-    const sessionRecord = await model.sessionModel.findByPk(sessionId, { transaction: t });
+    const sessionRecord = await model.sessionModel.findByPk(sessionId, {
+      attributes: ["sessionId", "academicYearId"],
+      transaction: t,
+    });
     if (!sessionRecord) {
       const error = new Error(`Session (ID: ${sessionId}) does not exist`);
       error.statusCode = 400;
       throw error;
     }
 
-    // Auto save active academicYearId strictly from requestContext / active user or session / plan
-    let academicYearId = getAcademicYearId() || (user?.academicYearId ? Number(user.academicYearId) : null);
-    if (!academicYearId && sessionRecord?.academicYearId) {
-      academicYearId = Number(sessionRecord.academicYearId);
-    }
-    if (!academicYearId && plan?.academicYearId) {
-      academicYearId = Number(plan.academicYearId);
-    }
-
-    if (academicYearId) {
-      const yearRecord = await model.acedmicYearModel.findByPk(academicYearId, { transaction: t });
-      if (!yearRecord) {
-        academicYearId = null;
-      }
-    }
-
-    // Verify session belongs to active academicYearId
-    if (academicYearId && sessionRecord.academicYearId && Number(sessionRecord.academicYearId) !== Number(academicYearId)) {
-      const error = new Error(`Session (ID: ${sessionId}) belongs to Academic Year ID ${sessionRecord.academicYearId}, which does not match active Academic Year ID ${academicYearId}`);
+    if (!plan.academicYearId) {
+      const error = new Error(
+        `Assessment Plan (ID: ${payload.assessmentPlanId}) has no Academic Year. Cannot create subject mapping.`,
+      );
       error.statusCode = 400;
       throw error;
     }
 
-    // Verify assessment plan belongs to active academicYearId
-    if (academicYearId && plan.academicYearId && Number(plan.academicYearId) !== Number(academicYearId)) {
-      const error = new Error(`Assessment Plan (ID: ${payload.assessmentPlanId}) belongs to Academic Year ID ${plan.academicYearId}, which does not match active Academic Year ID ${academicYearId}`);
+    const academicYearId = Number(plan.academicYearId);
+
+    // No cross-year mapping: plan, subject, and session must share the same academic year
+    if (
+      !subjectRecord.academicYearId ||
+      Number(subjectRecord.academicYearId) !== academicYearId
+    ) {
+      const error = new Error(
+        `Assessment Plan (ID: ${payload.assessmentPlanId}) belongs to Academic Year ID ${academicYearId}, which does not match Subject (ID: ${payload.subjectId}) Academic Year ID ${subjectRecord.academicYearId}`,
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (
+      !sessionRecord.academicYearId ||
+      Number(sessionRecord.academicYearId) !== academicYearId
+    ) {
+      const error = new Error(
+        `Assessment Plan (ID: ${payload.assessmentPlanId}) belongs to Academic Year ID ${academicYearId}, which does not match Session (ID: ${sessionId}) Academic Year ID ${sessionRecord.academicYearId}`,
+      );
       error.statusCode = 400;
       throw error;
     }
@@ -248,7 +248,7 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
       subjectId: Number(payload.subjectId),
       courseId: Number(payload.courseId),
       sessionId: sessionId || null,
-      academicYearId: academicYearId || null,
+      academicYearId: academicYearId,
       examSetupTypeId: examSetupTypeId || null,
       universityId: user?.universityId ? Number(user.universityId) : null,
       instituteId: user?.instituteId ? Number(user.instituteId) : null,

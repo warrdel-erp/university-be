@@ -1,11 +1,16 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as InternalAssessmentRepository from "../repository/internalAssessmentRepository.js";
+import { decimalAdd, decimalCompare } from "../utility/decimalMoney.js";
 
 export async function getUserInternalAssessments(userId, options = {}) {
   return InternalAssessmentRepository.getUserInternalAssessments(userId, options);
 }
 
 export async function createInternalAssessment(payload) {
+  if (!payload.issueDate) {
+    payload.issueDate = new Date();
+  }
+
   const transaction = await sequelize.transaction();
 
   try {
@@ -86,6 +91,47 @@ export async function updateInternalAssessment(internalAssessmentId, payload) {
     const error = new Error("Internal assessment not found");
     error.statusCode = 404;
     throw error;
+  }
+
+  const touchesFinalResultWeightage =
+    payload.weightagePercentage !== undefined ||
+    payload.isIncludeInFinalResult !== undefined;
+
+  if (touchesFinalResultWeightage) {
+    const willInclude =
+      payload.isIncludeInFinalResult !== undefined
+        ? payload.isIncludeInFinalResult
+        : Boolean(existing.isIncludeInFinalResult);
+
+    const nextWeightage =
+      payload.weightagePercentage !== undefined
+        ? Number(payload.weightagePercentage)
+        : Number(existing.weightagePercentage || 0);
+
+    const otherIncludedSum =
+      await InternalAssessmentRepository.getIncludedWeightageSum({
+        subjectId: existing.subjectId,
+        classSectionTermId: existing.classSectionTermId,
+        excludeInternalAssessmentId: Number(internalAssessmentId),
+      });
+
+    const totalIncludedWeightage = willInclude
+      ? decimalAdd(otherIncludedSum, nextWeightage)
+      : otherIncludedSum;
+
+    const hasIncludedAssessments =
+      willInclude || decimalCompare(otherIncludedSum, 0) > 0;
+
+    if (
+      hasIncludedAssessments &&
+      decimalCompare(totalIncludedWeightage, 100) !== 0
+    ) {
+      const error = new Error(
+        `Sum of weightagePercentage for assessments with isIncludeInFinalResult=true must be 100. Current total would be ${totalIncludedWeightage}`,
+      );
+      error.statusCode = 400;
+      throw error;
+    }
   }
 
   await InternalAssessmentRepository.updateInternalAssessment(

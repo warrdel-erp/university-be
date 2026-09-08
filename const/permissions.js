@@ -146,6 +146,9 @@ export const PERMISSIONS = {
     EXAM_ROOM_ALLOCATE: {
         value: "EXAM_ROOM_ALLOCATE",
     },
+    USER_INTERNAL_ASSESSMENT: {
+        value: "USER_INTERNAL_ASSESSMENT",
+    },
     EXAM_ATTENDANCE: {
         value: "EXAM_ATTENDANCE",
     },

@@ -148,6 +148,10 @@ const assessmentPlanModel = sequelize.define(
     }
 );
 
-assessmentPlanModel.scopeConfig = { university: true, institute: true };
+assessmentPlanModel.scopeConfig = {
+  university: true,
+  institute: true,
+  academicYear: true,
+};
 
 export default assessmentPlanModel;
