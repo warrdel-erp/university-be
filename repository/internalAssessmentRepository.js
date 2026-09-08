@@ -1,6 +1,7 @@
 import { Op, fn, col } from "sequelize";
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
+import { getFinalSubmissionStatus } from "./assessmentEvaluationRepository.js";
 
 const internalAssessmentAttributes = [
   "internalAssessmentId",
@@ -663,7 +664,15 @@ export async function getInternalAssessmentsBySubject(filters) {
     result.push(plain);
   }
 
-  return result;
+  const status = await getFinalSubmissionStatus({
+    subjectId,
+    classSectionTermId,
+  });
+
+  return {
+    status,
+    assessments: result,
+  };
 }
 
 export async function getInternalAssessmentById(internalAssessmentId) {
@@ -817,6 +826,10 @@ export async function getAssessmentStatusCounts(filters) {
   }
 
   return {
+    status: await getFinalSubmissionStatus({
+      subjectId,
+      classSectionTermId,
+    }),
     total: assessments.length,
     completed,
     open,
@@ -1059,7 +1072,13 @@ export async function getMarksTableBySubject(filters) {
     assessmentList.push(assessment.get({ plain: true }));
   }
 
+  const status = await getFinalSubmissionStatus({
+    subjectId,
+    classSectionTermId,
+  });
+
   return {
+    status,
     subjectId,
     classSectionTermId,
     term,
@@ -1184,6 +1203,10 @@ export async function getMarksCellBySubject(filters) {
   }
 
   const response = {
+    status: await getFinalSubmissionStatus({
+      subjectId,
+      classSectionTermId,
+    }),
     subjectId,
     classSectionTermId,
     studentCount: total,
