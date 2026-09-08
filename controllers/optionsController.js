@@ -93,14 +93,16 @@ export const getSpecializationOptions = async (req, res) => {
 
 export async function getSubjectOptions(req, res) {
     try {
-        const { courseId, term, sessionId, userId } = req.query;
+        const { courseId, term, sessionId, userId, unmapped } = req.query;
         const academicYearId = getAcademicYearId();
+        const isUnmapped = unmapped === true || unmapped === 'true';
         const result = await optionsServices.getSubjectOptions(
             courseId,
             term,
             academicYearId,
             sessionId,
             userId,
+            isUnmapped,
         );
         return SuccessResponse(res, 200, "Subject options fetched successfully", result);
     } catch (error) {

@@ -1,6 +1,7 @@
 import * as mainServices from '../services/mainServices.js';
 import * as fileHandler from '../utility/fileHandler.js';
 import { getTenantStore, getAcademicYearId } from '../utility/requestContext.js';
+import { SuccessResponse, ErrorResponse } from '../utility/response.js';
 
 export const getAllCollegesAndCourses = async (req, res) => {
     try {
@@ -193,12 +194,23 @@ export const addSectionSubjectMapper = async (req, res) => {
 
 export const getSectionSubjectMapper = async (req, res) => {
     try {
-        const term = req.query.term ? Number(req.query.term) : undefined;
-        const result = await mainServices.getSectionSubjectMapper(term);
+        const { term, courseId, search, page, limit, academicYearId } = req.query;
+        const result = await mainServices.getSectionSubjectMapper({
+            term: term ? Number(term) : undefined,
+            courseId: courseId ? Number(courseId) : undefined,
+            search: search ? String(search).trim() : undefined,
+            page: page ? Number(page) : undefined,
+            limit: limit ? Number(limit) : undefined,
+            academicYearId: academicYearId ? Number(academicYearId) : undefined,
+        });
+
+        if (result && result.pagination) {
+            return SuccessResponse(res, 200, "Subjects fetched successfully", result.data, result.pagination);
+        }
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting section subject mapper:", error);
-        return res.status(500).send("Internal Server Error");
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
     }
 };
 

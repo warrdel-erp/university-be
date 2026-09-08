@@ -211,12 +211,16 @@ async function findSubjectIdsFromTimeTableCells(userId, courseId, term, sessionI
     return subjectIds;
 }
 
-export async function getSubjectOptions(courseId, term, academicYearId, userId, sessionId = null) {
+export async function getSubjectOptions(courseId, term, academicYearId, userId, sessionId = null, unmapped = false) {
     const subjectWhere = {
         ...(courseId != null && { courseId: Number(courseId) }),
         ...(term != null && { term: Number(term) }),
         ...(academicYearId != null && { academicYearId: Number(academicYearId) }),
     };
+
+    if (unmapped) {
+        subjectWhere.term = null;
+    }
 
     if (userId != null) {
         const mappedSubjectIds = await findSubjectIdsFromTeacherMapping(userId, courseId, term);
@@ -250,41 +254,15 @@ export async function getSubjectOptions(courseId, term, academicYearId, userId, 
             attributes: [['subject_name', 'label'], ['subject_id', 'value']],
             where: {
                 subjectId: { [Op.in]: combinedIds },
-                ...(courseId != null && { courseId: Number(courseId) }),
-                ...(term != null && { term: Number(term) }),
+                ...subjectWhere,
             },
             order: [['subject_name', 'ASC']],
         });
     }
 
-    const mappedRows = await scoped(model.classSubjectMapperModel).findAll({
-        attributes: ['subjectId'],
-        include: [{
-            model: model.subjectModel,
-            as: 'subjects',
-            attributes: [],
-            required: true,
-            where: {
-                ...subjectWhere,
-                ...buildScope(model.subjectModel),
-            },
-        }],
-    });
-
-    const classMappedSubjectIds = [];
-    for (const row of mappedRows) {
-        classMappedSubjectIds.push(Number(row.subjectId));
-    }
-    const uniqueClassMappedIds = [...new Set(classMappedSubjectIds)];
-
     return scoped(model.subjectModel).findAll({
         attributes: [['subject_name', 'label'], ['subject_id', 'value']],
-        where: {
-            ...subjectWhere,
-            ...(uniqueClassMappedIds.length > 0 && {
-                subjectId: { [Op.notIn]: uniqueClassMappedIds },
-            }),
-        },
+        where: subjectWhere,
         order: [['subject_name', 'ASC']],
     });
 }
