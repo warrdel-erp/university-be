@@ -24,7 +24,7 @@ import * as examSessionAnswerSheetRepository from "../repository/examSessionAnsw
 import * as s3Helper from "../utility/s3Helper.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 import * as model from "../models/index.js";
-import { decimalDivide, decimalMultiply } from "../utility/decimalMoney.js";
+import { decimalAdd, decimalDivide, decimalMultiply } from "../utility/decimalMoney.js";
 
 function createBadRequestError(message) {
   const error = new Error(message);
@@ -1801,60 +1801,18 @@ function stageStatus(percentage) {
   return "In Progress";
 }
 
-function todayDateString() {
-  return new Date().toISOString().slice(0, 10);
+function averagePercentages(percentages) {
+  if (!percentages.length) {
+    return 0;
+  }
+  let sum = 0;
+  for (const value of percentages) {
+    sum = decimalAdd(sum, value);
+  }
+  return percentOf(sum, percentages.length * 100);
 }
 
-function currentTimeString() {
-  return new Date().toTimeString().slice(0, 8);
-}
-
-function isScheduleLive(schedule) {
-  const today = todayDateString();
-  if (schedule.examDate !== today) {
-    return false;
-  }
-
-  const rooms = schedule.roomCapacities || [];
-  for (const room of rooms) {
-    if (room.status === "IN_PROGRESS") {
-      return true;
-    }
-  }
-
-  const slot = schedule.examinationSessionSlot;
-  if (slot && slot.startTime && slot.endTime) {
-    const nowTime = currentTimeString();
-    return nowTime >= slot.startTime && nowTime <= slot.endTime;
-  }
-
-  return false;
-}
-
-function collectScheduleDateSlotKeys(schedules) {
-  const uniqueDates = [];
-  const uniqueSlotIds = [];
-  const dateSeen = new Set();
-  const slotSeen = new Set();
-
-  for (const schedule of schedules) {
-    if (schedule.examDate && !dateSeen.has(schedule.examDate)) {
-      dateSeen.add(schedule.examDate);
-      uniqueDates.push(schedule.examDate);
-    }
-    if (
-      schedule.examinationSessionSlotId &&
-      !slotSeen.has(schedule.examinationSessionSlotId)
-    ) {
-      slotSeen.add(schedule.examinationSessionSlotId);
-      uniqueSlotIds.push(schedule.examinationSessionSlotId);
-    }
-  }
-
-  return { uniqueDates, uniqueSlotIds };
-}
-
-export async function getExaminationTimeline(examinationSessionId, filters = {}) {
+export async function getExaminationTimeline(examinationSessionId) {
   const parsedSessionId = Number(examinationSessionId);
   if (Number.isNaN(parsedSessionId)) {
     throw createBadRequestError("Invalid examinationSessionId");
@@ -1872,14 +1830,9 @@ export async function getExaminationTimeline(examinationSessionId, filters = {})
     throw error;
   }
 
-  const examDate = filters.date || todayDateString();
-  const limit = filters.limit ? Number(filters.limit) : 20;
-
   const schedules =
     await examinationSessionRepository.findExamSchedulesForTimeline(
       parsedSessionId,
-      examDate,
-      limit,
     );
 
   const examScheduleIds = [];
@@ -1887,66 +1840,47 @@ export async function getExaminationTimeline(examinationSessionId, filters = {})
     examScheduleIds.push(schedule.examScheduleId);
   }
 
-  const [seatMap, attendanceMap] = await Promise.all([
-    examinationSessionRepository.countSeatsByExamScheduleIds(examScheduleIds),
-    examinationSessionRepository.countAttendanceByExamScheduleIds(
+  const seatCountBySchedule =
+    await examinationSessionRepository.countSeatsByExamScheduleIds(
       examScheduleIds,
-    ),
-  ]);
+    );
 
   const data = [];
   for (const schedule of schedules) {
     const plain = toPlain(schedule);
     const rooms = plain.roomCapacities || [];
-    let capacity = 0;
     const roomNumbers = [];
     for (const room of rooms) {
-      capacity += Number(room.capacity) || 0;
       if (room.classRoom && room.classRoom.roomNumber) {
         roomNumbers.push(room.classRoom.roomNumber);
       }
     }
 
-    const attendance = attendanceMap.get(Number(plain.examScheduleId)) || {
-      present: 0,
-      absent: 0,
-      pending: 0,
-      total: 0,
-    };
-    const seated = seatMap.get(Number(plain.examScheduleId)) || 0;
-    const live = isScheduleLive(plain);
+    const studentCount =
+      seatCountBySchedule.get(Number(plain.examScheduleId)) || 0;
 
     data.push({
       examScheduleId: plain.examScheduleId,
       examDate: plain.examDate,
       examTime: plain.examTime,
       duration: plain.duration,
+      type: plain.type,
+      maximumMarks: plain.maximumMarks,
+      term: plain.term,
+      sessionId: plain.sessionId,
+      subjectId: plain.subjectId,
+      academicYearId: plain.academicYearId,
+      examinationSessionSlotId: plain.examinationSessionSlotId,
       published: plain.published,
-      isLive: live,
-      status: live ? "LIVE" : "UPCOMING",
-      subject: plain.subjectSchedule
-        ? {
-            subjectId: plain.subjectSchedule.subjectId,
-            subjectName: plain.subjectSchedule.subjectName,
-            subjectCode: plain.subjectSchedule.subjectCode,
-          }
-        : null,
+      subject: plain.subjectSchedule || null,
       slot: plain.examinationSessionSlot || null,
       rooms: roomNumbers,
-      capacity,
-      seated,
-      attendance: {
-        present: attendance.present,
-        absent: attendance.absent,
-        pending: attendance.pending,
-        total: attendance.total || seated,
-      },
+      capacity: studentCount,
     });
   }
 
   return {
     examinationSessionId: parsedSessionId,
-    date: examDate,
     total: data.length,
     data,
   };
@@ -1970,7 +1904,6 @@ export async function getPlanningOverview(examinationSessionId) {
     throw error;
   }
 
-  const today = todayDateString();
   const schedules =
     await examinationSessionRepository.findSchedulesForSkuStats(
       parsedSessionId,
@@ -1978,112 +1911,122 @@ export async function getPlanningOverview(examinationSessionId) {
 
   const examScheduleIds = [];
   for (const schedule of schedules) {
-    examScheduleIds.push(schedule.examScheduleId);
+    examScheduleIds.push(toPlain(schedule).examScheduleId);
   }
 
-  const { uniqueDates, uniqueSlotIds } =
-    collectScheduleDateSlotKeys(schedules);
-
-  const [
-    publishedScheduleCount,
-    hallTickets,
-    answerSheetScan,
-    bundles,
-    todayExamCount,
-    invigilatorStats,
-    results,
-  ] = await Promise.all([
-    examinationSessionRepository.countPublishedSchedulesBySession(
-      parsedSessionId,
-    ),
-    examinationSessionRepository.countHallTicketStatsBySession(parsedSessionId),
-    examinationSessionRepository.countAnswerSheetScanStatsBySession(
-      parsedSessionId,
-    ),
-    examinationSessionRepository.countBundleStatusStatsByDatesAndSlots(
-      uniqueDates,
-      uniqueSlotIds,
-    ),
-    examinationSessionRepository.countTodayPublishedSchedules(
-      parsedSessionId,
-      today,
-    ),
-    examinationSessionRepository.countInvigilatorStatsForSchedules(
+  const [roomOpsMap, hallTicketMap, answerSheetMap] = await Promise.all([
+    examinationSessionRepository.countRoomBundleReadyByExamScheduleIds(
       examScheduleIds,
     ),
-    examinationSessionRepository.countStudentResultStatsBySession(
+    examinationSessionRepository.countHallTicketCoverageByExamScheduleIds(
       parsedSessionId,
+      examScheduleIds,
+    ),
+    examinationSessionRepository.countAnswerSheetStatsByExamScheduleIds(
+      examScheduleIds,
     ),
   ]);
 
-  const planningTotal = schedules.length || 0;
-  const planningDone = publishedScheduleCount;
-  const planningPct = percentOf(planningDone, planningTotal);
+  const examPercentages = [];
+  const stepTotals = {
+    roomsAssigned: [],
+    invigilators: [],
+    bundles: [],
+    hallTickets: [],
+    answerSheets: [],
+    results: [],
+  };
 
-  const preExamPct = percentOf(hallTickets.published, hallTickets.total);
-  const operationsPct = percentOf(
-    invigilatorStats.assigned,
-    invigilatorStats.total,
-  );
-  const digitizationPct = percentOf(bundles.received, bundles.total);
-  const evaluationPct = percentOf(
-    answerSheetScan.submit,
-    answerSheetScan.total,
-  );
+  for (const schedule of schedules) {
+    const plain = toPlain(schedule);
+    const scheduleId = Number(plain.examScheduleId);
+    const roomOps = roomOpsMap.get(scheduleId) || {
+      rooms: 0,
+      bundlesReady: 0,
+      invigilatorsAssigned: 0,
+    };
+    const hallTickets = hallTicketMap.get(scheduleId) || {
+      students: 0,
+      generated: 0,
+      resultsPublished: 0,
+    };
+    const sheets = answerSheetMap.get(scheduleId) || {
+      students: 0,
+      scanned: 0,
+      marked: 0,
+    };
+
+    const students =
+      hallTickets.students > 0 ? hallTickets.students : sheets.students;
+
+    const roomsPct = roomOps.rooms > 0 ? 100 : 0;
+    const invigilatorsPct = percentOf(
+      roomOps.invigilatorsAssigned,
+      roomOps.rooms,
+    );
+    const bundlesPct = percentOf(roomOps.bundlesReady, roomOps.rooms);
+    const hallTicketsPct = percentOf(hallTickets.generated, students);
+    const scannedPct = percentOf(sheets.scanned, students || sheets.students);
+    const markedPct = percentOf(sheets.marked, students || sheets.students);
+    const answerSheetsPct =
+      (students || sheets.students) > 0
+        ? percentOf(scannedPct + markedPct, 200)
+        : 0;
+    const resultsPct = percentOf(hallTickets.resultsPublished, students);
+
+    const percentage = averagePercentages([
+      roomsPct,
+      invigilatorsPct,
+      bundlesPct,
+      hallTicketsPct,
+      answerSheetsPct,
+      resultsPct,
+    ]);
+
+    stepTotals.roomsAssigned.push(roomsPct);
+    stepTotals.invigilators.push(invigilatorsPct);
+    stepTotals.bundles.push(bundlesPct);
+    stepTotals.hallTickets.push(hallTicketsPct);
+    stepTotals.answerSheets.push(answerSheetsPct);
+    stepTotals.results.push(resultsPct);
+    examPercentages.push(percentage);
+  }
+
+  const overallPercentage = averagePercentages(examPercentages);
 
   return {
     examinationSessionId: parsedSessionId,
     sessionName: session.sessionName,
     status: session.status,
     publishedAt: session.publishedAt,
+    percentage: overallPercentage,
+    statusLabel: stageStatus(overallPercentage),
+    totalExams: schedules.length,
     stages: {
-      planning: {
-        percentage: planningPct,
-        status: stageStatus(planningPct),
-        completed: planningDone,
-        total: planningTotal,
-        subtitle:
-          session.publishedAt != null
-            ? `Published ${session.publishedAt}`
-            : session.status,
+      roomsAssigned: {
+        percentage: averagePercentages(stepTotals.roomsAssigned),
+        status: stageStatus(averagePercentages(stepTotals.roomsAssigned)),
       },
-      preExam: {
-        percentage: preExamPct,
-        status: stageStatus(preExamPct),
-        completed: hallTickets.published,
-        total: hallTickets.total,
-        subtitle:
-          preExamPct >= 100
-            ? "Hall Tickets Published"
-            : "Hall Tickets Pending",
+      invigilators: {
+        percentage: averagePercentages(stepTotals.invigilators),
+        status: stageStatus(averagePercentages(stepTotals.invigilators)),
       },
-      operations: {
-        percentage: operationsPct,
-        status: stageStatus(operationsPct),
-        completed: invigilatorStats.assigned,
-        total: invigilatorStats.total,
-        subtitle: `Today ${todayExamCount} Exams`,
-        todayExamCount,
+      bundles: {
+        percentage: averagePercentages(stepTotals.bundles),
+        status: stageStatus(averagePercentages(stepTotals.bundles)),
       },
-      digitization: {
-        percentage: digitizationPct,
-        status: stageStatus(digitizationPct),
-        completed: bundles.received,
-        total: bundles.total,
-        subtitle: `${bundles.received}/${bundles.total} Bundles`,
+      hallTickets: {
+        percentage: averagePercentages(stepTotals.hallTickets),
+        status: stageStatus(averagePercentages(stepTotals.hallTickets)),
       },
-      evaluation: {
-        percentage: evaluationPct,
-        status: stageStatus(evaluationPct),
-        completed: answerSheetScan.submit,
-        total: answerSheetScan.total,
-        subtitle: `${answerSheetScan.submit}/${answerSheetScan.total} Scripts`,
+      answerSheets: {
+        percentage: averagePercentages(stepTotals.answerSheets),
+        status: stageStatus(averagePercentages(stepTotals.answerSheets)),
       },
-    },
-    results: {
-      percentage: percentOf(results.published, results.total),
-      published: results.published,
-      total: results.total,
+      results: {
+        percentage: averagePercentages(stepTotals.results),
+        status: stageStatus(averagePercentages(stepTotals.results)),
+      },
     },
   };
 }
