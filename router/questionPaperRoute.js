@@ -2,20 +2,20 @@ import { Router } from "express";
 import { z } from "zod";
 const router = Router();
 import {
-    addQuestionPaper,
-    getAllQuestionPapers,
-    getSingleQuestionPaper,
-    updateQuestionPaper,
-    deleteQuestionPaper,
-    generateQuestionPaper,
-    approveQuestionPaper,
-    approvefinalpaper,
-    getMyQuestionPapers,
-    addMyQuestionPaper,
-    getMySingleQuestionPaper,
-    updateMyQuestionPaper,
-    deleteMyQuestionPaper,
-    generateMyQuestionPaper,
+  addQuestionPaper,
+  getAllQuestionPapers,
+  getSingleQuestionPaper,
+  updateQuestionPaper,
+  deleteQuestionPaper,
+  generateQuestionPaper,
+  approveQuestionPaper,
+  approvefinalpaper,
+  getMyQuestionPapers,
+  addMyQuestionPaper,
+  getMySingleQuestionPaper,
+  updateMyQuestionPaper,
+  deleteMyQuestionPaper,
+  generateMyQuestionPaper,
 } from "../controllers/questionPaperController.js";
 
 import userAuth from "../middleware/authUser.js";
@@ -25,127 +25,250 @@ import { PERMISSIONS } from "../const/permissions.js";
 import { questionTypes } from "../constant.js";
 
 const mcqSchema = z.object({
-    type: z.literal(questionTypes.MCQ),
-    content: z.object({
-        options: z.array(z.string()).min(2, "MCQ must have at least 2 options"),
-    }),
+  type: z.literal(questionTypes.MCQ),
+  content: z.object({
+    options: z.array(z.string()).min(2, "MCQ must have at least 2 options"),
+  }),
 });
 
 const theorySchema = z.object({
-    type: z.literal(questionTypes.THEORY),
-    content: z.union([z.null(), z.object({}).optional()]),
+  type: z.literal(questionTypes.THEORY),
+  content: z.union([z.null(), z.object({}).optional()]),
 });
 
 const theoryChoiceSchema = z.object({
-    type: z.literal(questionTypes.THEORY_CHOICE),
-    content: z.object({
-        options: z.array(z.object({
-            question: z.string(),
-            Answer: z.string(),
-        })).min(1, "At least one optional question is required"),
-        mandatoryCount: z.number().min(1, "Mandatory count must be at least 1"),
-    }),
+  type: z.literal(questionTypes.THEORY_CHOICE),
+  content: z.object({
+    options: z
+      .array(
+        z.object({
+          question: z.string(),
+          Answer: z.string(),
+        }),
+      )
+      .min(1, "At least one optional question is required"),
+    mandatoryCount: z.number().min(1, "Mandatory count must be at least 1"),
+  }),
 });
 
 const baseQuestionSchema = z.object({
-    id: z.number().optional(), // Include ID optionally as they come from the bank
-    difficulty: z.string({ required_error: "difficulty is required" }),
-    bloom: z.string({ required_error: "bloom is required" }),
-    marks: z.number({ required_error: "marks is required" }),
-    question: z.string({ required_error: "question is required" }),
-    Answer: z.string({ required_error: "Answer is required" }),
-    subjectId: z.number().optional(),
-    status: z.string().optional(),
-    universityId: z.number().optional(),
-    createdBy: z.number().optional(),
-    updatedBy: z.number().optional(),
-    createdAt: z.any().optional(),
-    updatedAt: z.any().optional(),
-    updatedBy: z.number().optional(),
+  id: z.number().optional(), // Include ID optionally as they come from the bank
+  difficulty: z.string({ required_error: "difficulty is required" }),
+  bloom: z.string({ required_error: "bloom is required" }),
+  marks: z.number({ required_error: "marks is required" }),
+  question: z.string({ required_error: "question is required" }),
+  Answer: z.string({ required_error: "Answer is required" }),
+  subjectId: z.number().optional(),
+  status: z.string().optional(),
+  universityId: z.number().optional(),
+  createdBy: z.number().optional(),
+  updatedBy: z.number().optional(),
+  createdAt: z.any().optional(),
+  updatedAt: z.any().optional(),
+  updatedBy: z.number().optional(),
 });
 
 const questionSchema = z.discriminatedUnion("type", [
-    baseQuestionSchema.merge(mcqSchema),
-    baseQuestionSchema.merge(theorySchema),
-    baseQuestionSchema.merge(theoryChoiceSchema),
+  baseQuestionSchema.merge(mcqSchema),
+  baseQuestionSchema.merge(theorySchema),
+  baseQuestionSchema.merge(theoryChoiceSchema),
 ]);
 
 const questionPaperSectionSchema = z.object({
-    sectionName: z.string({ required_error: "sectionName is required" }),
-    typeOfQuestions: z.enum(Object.values(questionTypes), { required_error: "typeOfQuestions is required" }),
-    marksPerQuestion: z.number({ required_error: "marksPerQuestion is required" }),
-    questions: z.array(questionSchema, { required_error: "questions array is required" }).min(1, "At least one question is required"),
+  sectionName: z.string({ required_error: "sectionName is required" }),
+  typeOfQuestions: z.enum(Object.values(questionTypes), {
+    required_error: "typeOfQuestions is required",
+  }),
+  marksPerQuestion: z.number({
+    required_error: "marksPerQuestion is required",
+  }),
+  questions: z
+    .array(questionSchema, { required_error: "questions array is required" })
+    .min(1, "At least one question is required"),
 });
 
 const createQuestionPaperSchema = z.object({
-    name: z.string({ required_error: "name is required" }),
-    questionPaper: z.array(questionPaperSectionSchema).min(1, "Question paper must have at least one section"),
-    examScheduleId: z.number({ required_error: "examScheduleId is required" }),
+  name: z.string({ required_error: "name is required" }),
+  questionPaper: z
+    .array(questionPaperSectionSchema)
+    .min(1, "Question paper must have at least one section"),
+  examScheduleId: z.number({ required_error: "examScheduleId is required" }),
 });
 
 const getAllQuestionPapersQuerySchema = z.object({
-    page: z.string().regex(/^\d+$/).transform(val => parseInt(val)).optional().default("1"),
-    limit: z.string().regex(/^\d+$/).transform(val => parseInt(val)).optional().default("10"),
-    examScheduleId: z.string().regex(/^\d+$/).transform(val => parseInt(val)).optional(),
-    createdBy: z.string().regex(/^\d+$/).transform(val => parseInt(val)).optional(),
+  page: z
+    .string()
+    .regex(/^\d+$/)
+    .transform((val) => parseInt(val))
+    .optional()
+    .default("1"),
+  limit: z
+    .string()
+    .regex(/^\d+$/)
+    .transform((val) => parseInt(val))
+    .optional()
+    .default("10"),
+  examScheduleId: z
+    .string()
+    .regex(/^\d+$/)
+    .transform((val) => parseInt(val))
+    .optional(),
+  createdBy: z
+    .string()
+    .regex(/^\d+$/)
+    .transform((val) => parseInt(val))
+    .optional(),
 });
 
 const getMyQuestionPapersQuerySchema = z.object({
-    page: z.string().regex(/^\d+$/).transform(val => parseInt(val)).optional().default("1"),
-    limit: z.string().regex(/^\d+$/).transform(val => parseInt(val)).optional().default("10"),
-    examScheduleId: z.string().regex(/^\d+$/).transform(val => parseInt(val)).optional(),
+  page: z
+    .string()
+    .regex(/^\d+$/)
+    .transform((val) => parseInt(val))
+    .optional()
+    .default("1"),
+  limit: z
+    .string()
+    .regex(/^\d+$/)
+    .transform((val) => parseInt(val))
+    .optional()
+    .default("10"),
+  examScheduleId: z
+    .string()
+    .regex(/^\d+$/)
+    .transform((val) => parseInt(val))
+    .optional(),
 });
 
 const updateQuestionPaperSchema = z.object({
-    id: z.number({ required_error: "id is required" }),
-    name: z.string().optional(),
-    questionPaper: z.array(questionPaperSectionSchema).min(1, "Question paper must have at least one section").optional(),
+  id: z.number({ required_error: "id is required" }),
+  name: z.string().optional(),
+  questionPaper: z
+    .array(questionPaperSectionSchema)
+    .min(1, "Question paper must have at least one section")
+    .optional(),
 });
 
 const generateQuestionPaperSchema = z.object({
-    name: z.string({ required_error: "name is required" }),
-    blueprintId: z.number({ required_error: "blueprintId is required" }),
-    examScheduleId: z.number({ required_error: "examScheduleId is required" }),
-    numberOfPapers: z.number().int().min(1).max(50).optional().default(1),
+  name: z.string({ required_error: "name is required" }),
+  blueprintId: z.number({ required_error: "blueprintId is required" }),
+  examScheduleId: z.number({ required_error: "examScheduleId is required" }),
+  numberOfPapers: z.number().int().min(1).max(50).optional().default(1),
 });
 
 const approveQuestionPaperSchema = z.object({
-    questionPaperId: z.number({ required_error: "questionPaperId is required" }),
-    status: z.enum(["Approved", "Rejected"], { required_error: "status is required and must be either Approved or Rejected" }),
-    remarks: z.string().optional(),
+  questionPaperId: z.number({ required_error: "questionPaperId is required" }),
+  status: z.enum(["Approved", "Rejected"], {
+    required_error:
+      "status is required and must be either Approved or Rejected",
+  }),
+  remarks: z.string().optional(),
 });
 
 const finalApprovalSchema = z.object({
-    examScheduleId: z.coerce.number({ required_error: "examScheduleId is required" }),
+  examScheduleId: z.coerce.number({
+    required_error: "examScheduleId is required",
+  }),
 });
 
-router.post("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, null), validate({ body: createQuestionPaperSchema }), addQuestionPaper);
+router.post(
+  "/",
+  userAuth,
+  checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, null),
+  validate({ body: createQuestionPaperSchema }),
+  addQuestionPaper,
+);
 
-router.post("/my", userAuth, validate({ body: createQuestionPaperSchema }), addMyQuestionPaper);
+router.post(
+  "/my",
+  userAuth,
+  validate({ body: createQuestionPaperSchema }),
+  addMyQuestionPaper,
+);
 
-router.post("/generate", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, null), validate({ body: generateQuestionPaperSchema }), generateQuestionPaper);
+router.post(
+  "/generate",
+  userAuth,
+  checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, null),
+  validate({ body: generateQuestionPaperSchema }),
+  generateQuestionPaper,
+);
 
-router.post("/my/generate", userAuth, validate({ body: generateQuestionPaperSchema }), generateMyQuestionPaper);
+router.post(
+  "/my/generate",
+  userAuth,
+  validate({ body: generateQuestionPaperSchema }),
+  generateMyQuestionPaper,
+);
 
-router.get("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER.value, null), validate({ query: getAllQuestionPapersQuerySchema }), getAllQuestionPapers);
+router.get(
+  "/",
+  userAuth,
+  checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER.value, null),
+  validate({ query: getAllQuestionPapersQuerySchema }),
+  getAllQuestionPapers,
+);
 
-router.get("/my", userAuth, validate({ query: getMyQuestionPapersQuerySchema }), getMyQuestionPapers);
+router.get(
+  "/my",
+  userAuth,
+  validate({ query: getMyQuestionPapersQuerySchema }),
+  getMyQuestionPapers,
+);
 
 router.get("/my/:id", userAuth, getMySingleQuestionPaper);
 
-router.get("/:id", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER.value, null), getSingleQuestionPaper);
+router.get(
+  "/:id",
+  userAuth,
+  checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER.value, null),
+  getSingleQuestionPaper,
+);
 
-router.put("/", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_EDIT.value, null), validate({ body: updateQuestionPaperSchema }), updateQuestionPaper);
+router.put(
+  "/",
+  userAuth,
+  checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_EDIT.value, null),
+  validate({ body: updateQuestionPaperSchema }),
+  updateQuestionPaper,
+);
 
-router.put("/my", userAuth, validate({ body: updateQuestionPaperSchema }), updateMyQuestionPaper);
+router.put(
+  "/my",
+  userAuth,
+  validate({ body: updateQuestionPaperSchema }),
+  updateMyQuestionPaper,
+);
 
 router.delete("/my/:id", userAuth, deleteMyQuestionPaper);
 
-router.delete("/:id", userAuth, checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_DELETE.value, null), deleteQuestionPaper);
+router.delete(
+  "/:id",
+  userAuth,
+  checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_DELETE.value, null),
+  deleteQuestionPaper,
+);
 
-router.put("/approve", userAuth, checkAccessAny([PERMISSIONS.QUESTION_APPROVAL_EDIT.value, PERMISSIONS.EXAM_TIME_TABLE_CREATE_PAPER_APPROVAL.value], null), validate({ body: approveQuestionPaperSchema }), approveQuestionPaper);
+router.put(
+  "/approve",
+  userAuth,
+  checkAccessAny(
+    [
+      PERMISSIONS.QUESTION_APPROVAL_EDIT.value,
+      PERMISSIONS.EXAM_TIME_TABLE_CREATE_PAPER_APPROVAL.value,
+    ],
+    null,
+  ),
+  validate({ body: approveQuestionPaperSchema }),
+  approveQuestionPaper,
+);
 
-router.patch("/finalApproved", userAuth, validate({ body: finalApprovalSchema }), approvefinalpaper);
-
+router.patch(
+  "/finalApproved",
+  userAuth,
+  checkAccess(PERMISSIONS.EXAM_TIME_TABLE_CREATE_PAPER_APPROVAL.value, null),
+  validate({ body: finalApprovalSchema }),
+  approvefinalpaper,
+);
 
 export default router;

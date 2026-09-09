@@ -70,48 +70,56 @@ router.get(
   "/sku",
   userAuth,
   validate({ query: skuQuery }),
+  checkAccess(PERMISSIONS.EXAM_RESULT.value, null),
   examResultController.getSku,
 );
 router.get(
   "/students",
   userAuth,
   validate({ query }),
+  checkAccess(PERMISSIONS.EXAM_RESULT.value, null),
   examResultController.listStudents,
 );
 router.get(
   "/students/:studentId",
   userAuth,
   validate({ params: z.object({ studentId: id }), query }),
+  checkAccess(PERMISSIONS.EXAM_RESULT.value, null),
   examResultController.getStudentById,
 );
 router.post(
   "/examinationSessionResult",
   userAuth,
   validate({ body: createExaminationSessionResultBody }),
+  checkAccess(PERMISSIONS.EXAM_RESULT.value, null),
   examResultController.createExaminationSessionResult,
 );
 router.post(
   "/publish",
   userAuth,
   validate({ body: createExaminationSessionResultBody }),
+  checkAccess(PERMISSIONS.EXAM_RESULT.value, null),
   examResultController.publishExaminationSessionResults,
 );
 router.get(
   "/publishHistory",
   userAuth,
   validate({ query: z.object({ examinationSessionId: id }) }),
+  checkAccess(PERMISSIONS.EXAM_RESULT.value, null),
   examResultController.getPublishHistory,
 );
 router.get(
   "/publishHistory/:publishBatchId",
   userAuth,
   validate({ params: z.object({ publishBatchId: z.string().uuid() }) }),
+  checkAccess(PERMISSIONS.EXAM_RESULT.value, null),
   examResultController.getPublishHistoryByBatchId,
 );
 router.get(
   "/result",
   userAuth,
   validate({ query: publishedResultQuery }),
+  checkAccess(PERMISSIONS.EXAM_RESULT.value, null),
   examResultController.getStudentResultDetails,
 );
 

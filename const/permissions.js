@@ -152,6 +152,15 @@ export const PERMISSIONS = {
     EXAM_ATTENDANCE: {
         value: "EXAM_ATTENDANCE",
     },
+    EXAM_INVIGILATOR_ASSIGNMENT: {
+        value: "EXAM_INVIGILATOR_ASSIGNMENT",
+    },
+    EXAM_RESULT: {
+        value: "EXAM_RESULT",
+    },
+    EXAM_ROOM_MATERIAL_BUNDLE: {
+        value: "EXAM_ROOM_MATERIAL_BUNDLE",
+    },
     EVALUATION: {
         value: "EVALUATION",
     },
@@ -1921,6 +1930,10 @@ export const PERMISSIONS = {
         value: "QUESTION_PAPER_BUILDER_DELETE",
         parentPermission: 'QUESTION_PAPER_BUILDER',
     },
+    QUESTION_PAPER_BUILDER_APPROVE: {
+        value: "QUESTION_PAPER_BUILDER_APPROVE",
+        parentPermission: 'QUESTION_PAPER_BUILDER',
+    },
     QUESTION_APPROVAL: {
         value: "QUESTION_APPROVAL",
     },
@@ -1930,6 +1943,10 @@ export const PERMISSIONS = {
     },
     QUESTION_APPROVAL_EDIT: {
         value: "QUESTION_APPROVAL_EDIT",
+        parentPermission: 'QUESTION_APPROVAL',
+    },
+    QUESTION_APPROVAL_APPROVE: {
+        value: "QUESTION_APPROVAL_APPROVE",
         parentPermission: 'QUESTION_APPROVAL',
     },
     ASSET_MANAGEMENT: {
