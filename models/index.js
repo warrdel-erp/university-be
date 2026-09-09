@@ -3490,15 +3490,6 @@ studentModel.hasMany(internalAssessmentStudentEvaluationModel, {
   as: "internalAssessmentStudentEvaluations",
 });
 
-internalAssessmentModel.hasMany(assessmentEvaluationModel, {
-  foreignKey: "examAssessmentId",
-  as: "evaluations",
-});
-assessmentEvaluationModel.belongsTo(internalAssessmentModel, {
-  foreignKey: "examAssessmentId",
-  as: "internalAssessment",
-});
-
 studentModel.hasMany(assessmentEvaluationModel, {
   foreignKey: "studentId",
   as: "studentresult",
@@ -3506,6 +3497,33 @@ studentModel.hasMany(assessmentEvaluationModel, {
 assessmentEvaluationModel.belongsTo(studentModel, {
   foreignKey: "studentId",
   as: "studentevaluation",
+});
+
+subjectModel.hasMany(assessmentEvaluationModel, {
+  foreignKey: "subjectId",
+  as: "assessmentEvaluations",
+});
+assessmentEvaluationModel.belongsTo(subjectModel, {
+  foreignKey: "subjectId",
+  as: "subject",
+});
+
+electiveSubjectModel.hasMany(assessmentEvaluationModel, {
+  foreignKey: "electiveSubjectId",
+  as: "assessmentEvaluations",
+});
+assessmentEvaluationModel.belongsTo(electiveSubjectModel, {
+  foreignKey: "electiveSubjectId",
+  as: "electiveSubject",
+});
+
+classSectionTermModel.hasMany(assessmentEvaluationModel, {
+  foreignKey: "classSectionTermId",
+  as: "assessmentEvaluations",
+});
+assessmentEvaluationModel.belongsTo(classSectionTermModel, {
+  foreignKey: "classSectionTermId",
+  as: "classSectionTerm",
 });
 
 assessmentEvaluationModel.belongsTo(employeeModel, {
@@ -3932,6 +3950,15 @@ answerSheetQrModel.belongsTo(s3FileModel, {
 s3FileModel.hasOne(answerSheetQrModel, {
   foreignKey: "file_upload_id",
   as: "answerSheetQr",
+});
+
+answerSheetQrModel.belongsTo(s3FileModel, {
+  foreignKey: "annotated_file_upload_id",
+  as: "annotatedS3File",
+});
+s3FileModel.hasOne(answerSheetQrModel, {
+  foreignKey: "annotated_file_upload_id",
+  as: "annotatedAnswerSheetQr",
 });
 
 studentResultModel.belongsTo(examinationSessionModel, {

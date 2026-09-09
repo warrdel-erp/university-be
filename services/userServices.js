@@ -31,7 +31,11 @@ export async function register(info) {
     uniqueId: uuidv4(),
   };
 
-  return await registerRepository.register(data);
+  const user = await registerRepository.register(data);
+  const userData = user?.toJSON ? user.toJSON() : { ...user };
+  delete userData.password;
+  delete userData.dummyPassword;
+  return userData;
 }
 
 export async function getEmployeeRolePermissionUserId(userId) {

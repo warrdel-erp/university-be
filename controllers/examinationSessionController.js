@@ -211,3 +211,72 @@ export const getExaminationSessionAnswerSheets = async (req, res) => {
   }
 };
 
+export const getExaminationTimeline = async (req, res) => {
+  try {
+    const { examinationSessionId } = req.query;
+    const result = await examinationSessionServices.getExaminationTimeline(
+      Number(examinationSessionId),
+    );
+    return SuccessResponse(
+      res,
+      200,
+      "Examination timeline fetched successfully",
+      result,
+    );
+  } catch (error) {
+    console.error("Error fetching examination timeline:", error);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(
+      res,
+      statusCode,
+      error.message || "Failed to fetch examination timeline",
+    );
+  }
+};
+
+export const getPlanningOverview = async (req, res) => {
+  try {
+    const { examinationSessionId } = req.query;
+    const result = await examinationSessionServices.getPlanningOverview(
+      Number(examinationSessionId),
+    );
+    return SuccessResponse(
+      res,
+      200,
+      "Planning overview fetched successfully",
+      result,
+    );
+  } catch (error) {
+    console.error("Error fetching planning overview:", error);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(
+      res,
+      statusCode,
+      error.message || "Failed to fetch planning overview",
+    );
+  }
+};
+
+export const getProgressMetrics = async (req, res) => {
+  try {
+    const { examinationSessionId } = req.query;
+    const result = await examinationSessionServices.getProgressMetrics(
+      Number(examinationSessionId),
+    );
+    return SuccessResponse(
+      res,
+      200,
+      "Progress metrics fetched successfully",
+      result,
+    );
+  } catch (error) {
+    console.error("Error fetching progress metrics:", error);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(
+      res,
+      statusCode,
+      error.message || "Failed to fetch progress metrics",
+    );
+  }
+};
+

@@ -14,7 +14,7 @@ const sessionInclude = [
   {
     model: model.examSetupTypeModel,
     as: "assessmentType",
-    attributes: ["examSetupTypeId", "examName", "examCode", "examCategory"],
+    attributes: ["examSetupTypeId", "examName", "examCode", "examCategory", "managedBy"],
     required: false,
   },
   {
@@ -532,23 +532,28 @@ export async function findSchedulesForSkuStats(examinationSessionId, options = {
       "term",
       "sessionId",
       "academicYearId",
+      "published",
+    ],
+    include: [
+      {
+        model: model.subjectModel,
+        as: "subjectSchedule",
+        required: false,
+        attributes: ["subjectId", "courseId", "subjectName", "subjectCode"],
+      },
     ],
     transaction: options.transaction,
-    raw: true,
   });
 }
 
-/** Up to `limit` exam schedules for a given date (today's timeline). */
+/** All exam schedules for a session, ordered by date then time. */
 export async function findExamSchedulesForTimeline(
   examinationSessionId,
-  examDate,
-  limit = 5,
   options = {},
 ) {
   return scoped(model.examScheduleModel).findAll({
     where: {
       examinationSessionId: Number(examinationSessionId),
-      examDate,
     },
     attributes: [
       "examScheduleId",
@@ -561,13 +566,21 @@ export async function findExamSchedulesForTimeline(
       "academicYearId",
       "examinationSessionSlotId",
       "published",
+      "type",
+      "maximumMarks",
     ],
     include: [
       {
         model: model.subjectModel,
         as: "subjectSchedule",
-        required: true,
-        attributes: ["subjectId", "subjectName", "subjectCode", "courseId", "term"],
+        required: false,
+        attributes: [
+          "subjectId",
+          "subjectName",
+          "subjectCode",
+          "courseId",
+          "term",
+        ],
       },
       {
         model: model.examinationSessionSlotModel,
@@ -585,7 +598,12 @@ export async function findExamSchedulesForTimeline(
         model: model.examScheduleRoomCapacityModel,
         as: "roomCapacities",
         required: false,
-        attributes: ["examScheduleRoomCapacityId", "capacity", "classRoomSectionId"],
+        attributes: [
+          "examScheduleRoomCapacityId",
+          "capacity",
+          "classRoomSectionId",
+          "status",
+        ],
         include: [
           {
             model: model.classRoomModel,
@@ -597,10 +615,10 @@ export async function findExamSchedulesForTimeline(
       },
     ],
     order: [
+      ["examDate", "ASC"],
       ["examTime", "ASC"],
       ["examScheduleId", "ASC"],
     ],
-    limit: Number(limit),
     transaction: options.transaction,
   });
 }
@@ -850,6 +868,554 @@ export async function countSeatsByExamScheduleIds(examScheduleIds, options = {})
     map.set(Number(row.examScheduleId), Number(row.seatCount) || 0);
   }
   return map;
+}
+
+export async function countAttendanceByExamScheduleIds(
+  examScheduleIds,
+  options = {},
+) {
+  if (!examScheduleIds.length) return new Map();
+
+  const rows = await scoped(model.examAttendanceModel).findAll({
+    where: { examScheduleId: { [Op.in]: examScheduleIds } },
+    attributes: [
+      "examScheduleId",
+      "attendanceStatus",
+      [fn("COUNT", col("exam_attendance_id")), "count"],
+    ],
+    group: ["examScheduleId", "attendanceStatus"],
+    raw: true,
+    transaction: options.transaction,
+  });
+
+  const map = new Map();
+  for (const scheduleId of examScheduleIds) {
+    map.set(Number(scheduleId), { present: 0, absent: 0, pending: 0, total: 0 });
+  }
+
+  for (const row of rows) {
+    const scheduleId = Number(row.examScheduleId);
+    const entry = map.get(scheduleId);
+    const count = Number(row.count) || 0;
+    entry.total += count;
+    if (row.attendanceStatus === "PRESENT") {
+      entry.present += count;
+    } else if (row.attendanceStatus === "ABSENT") {
+      entry.absent += count;
+    } else {
+      entry.pending += count;
+    }
+  }
+
+  return map;
+}
+
+export async function countAnswerSheetStatsByExamScheduleIds(
+  examScheduleIds,
+  options = {},
+) {
+  if (!examScheduleIds.length) return new Map();
+
+  const [studentRows, scannedRows, markedRows] = await Promise.all([
+    scoped(model.answerSheetQrModel).findAll({
+      where: {
+        examScheduleId: { [Op.in]: examScheduleIds },
+        studentId: { [Op.ne]: null },
+      },
+      attributes: ["examScheduleId", [fn("COUNT", col("id")), "count"]],
+      group: ["examScheduleId"],
+      raw: true,
+      transaction: options.transaction,
+    }),
+    scoped(model.answerSheetQrModel).findAll({
+      where: {
+        examScheduleId: { [Op.in]: examScheduleIds },
+        studentId: { [Op.ne]: null },
+        fileUploadId: { [Op.ne]: null },
+      },
+      attributes: ["examScheduleId", [fn("COUNT", col("id")), "count"]],
+      group: ["examScheduleId"],
+      raw: true,
+      transaction: options.transaction,
+    }),
+    scoped(model.answerSheetQrModel).findAll({
+      where: {
+        examScheduleId: { [Op.in]: examScheduleIds },
+        studentId: { [Op.ne]: null },
+        [Op.or]: [
+          { markingStatus: "submit" },
+          { evaluatedAt: { [Op.ne]: null } },
+        ],
+      },
+      attributes: ["examScheduleId", [fn("COUNT", col("id")), "count"]],
+      group: ["examScheduleId"],
+      raw: true,
+      transaction: options.transaction,
+    }),
+  ]);
+
+  const map = new Map();
+  for (const scheduleId of examScheduleIds) {
+    map.set(Number(scheduleId), {
+      students: 0,
+      scanned: 0,
+      marked: 0,
+    });
+  }
+
+  for (const row of studentRows) {
+    map.get(Number(row.examScheduleId)).students = Number(row.count) || 0;
+  }
+  for (const row of scannedRows) {
+    map.get(Number(row.examScheduleId)).scanned = Number(row.count) || 0;
+  }
+  for (const row of markedRows) {
+    map.get(Number(row.examScheduleId)).marked = Number(row.count) || 0;
+  }
+
+  return map;
+}
+
+const BUNDLE_READY_OR_LATER = [
+  "READY",
+  "ISSUED",
+  "RECEIVED",
+  "VERIFIED",
+  "CLOSED",
+];
+
+/**
+ * Per examSchedule: room count vs bundles at READY or later
+ * (matched by examDate + slot + classRoomSectionId).
+ */
+export async function countRoomBundleReadyByExamScheduleIds(
+  examScheduleIds,
+  options = {},
+) {
+  if (!examScheduleIds.length) return new Map();
+
+  const roomRows = await scoped(model.examScheduleRoomCapacityModel).findAll({
+    where: { examScheduleId: { [Op.in]: examScheduleIds } },
+    attributes: ["examScheduleId", "classRoomSectionId"],
+    include: [
+      {
+        model: model.examScheduleModel,
+        as: "examSchedule",
+        required: true,
+        attributes: ["examDate", "examinationSessionSlotId"],
+        where: buildScope(model.examScheduleModel),
+      },
+    ],
+    transaction: options.transaction,
+  });
+
+  const map = new Map();
+  for (const scheduleId of examScheduleIds) {
+    map.set(Number(scheduleId), {
+      rooms: 0,
+      bundlesReady: 0,
+      invigilatorsAssigned: 0,
+      roomKeys: [],
+    });
+  }
+
+  const dates = [];
+  const slotIds = [];
+  const roomIds = [];
+  const dateSeen = new Set();
+  const slotSeen = new Set();
+  const roomSeen = new Set();
+
+  for (const row of roomRows) {
+    const scheduleId = Number(row.examScheduleId);
+    const entry = map.get(scheduleId);
+    if (!entry) {
+      continue;
+    }
+
+    const examDate = row.examSchedule.examDate;
+    const examinationSessionSlotId = row.examSchedule.examinationSessionSlotId;
+    const classRoomSectionId = row.classRoomSectionId;
+    const key = `${examDate}|${examinationSessionSlotId}|${classRoomSectionId}`;
+
+    entry.rooms += 1;
+    entry.roomKeys.push(key);
+
+    if (!dateSeen.has(examDate)) {
+      dateSeen.add(examDate);
+      dates.push(examDate);
+    }
+    if (!slotSeen.has(examinationSessionSlotId)) {
+      slotSeen.add(examinationSessionSlotId);
+      slotIds.push(examinationSessionSlotId);
+    }
+    if (!roomSeen.has(classRoomSectionId)) {
+      roomSeen.add(classRoomSectionId);
+      roomIds.push(classRoomSectionId);
+    }
+  }
+
+  if (!dates.length || !slotIds.length || !roomIds.length) {
+    for (const [, entry] of map) {
+      delete entry.roomKeys;
+    }
+    return map;
+  }
+
+  const [bundles, assignments] = await Promise.all([
+    scoped(model.examRoomMaterialBundleModel).findAll({
+      where: {
+        examDate: { [Op.in]: dates },
+        examinationSessionSlotId: { [Op.in]: slotIds },
+        classRoomSectionId: { [Op.in]: roomIds },
+        status: { [Op.in]: BUNDLE_READY_OR_LATER },
+      },
+      attributes: [
+        "examDate",
+        "examinationSessionSlotId",
+        "classRoomSectionId",
+      ],
+      transaction: options.transaction,
+    }),
+    scoped(model.examInvigilatorAssignmentModel).findAll({
+      where: {
+        examDate: { [Op.in]: dates },
+        examinationSessionSlotId: { [Op.in]: slotIds },
+        classRoomSectionId: { [Op.in]: roomIds },
+      },
+      attributes: [
+        "examDate",
+        "examinationSessionSlotId",
+        "classRoomSectionId",
+      ],
+      transaction: options.transaction,
+    }),
+  ]);
+
+  const readyKeys = new Set();
+  for (const bundle of bundles) {
+    readyKeys.add(
+      `${bundle.examDate}|${bundle.examinationSessionSlotId}|${bundle.classRoomSectionId}`,
+    );
+  }
+
+  const assignedKeys = new Set();
+  for (const assignment of assignments) {
+    assignedKeys.add(
+      `${assignment.examDate}|${assignment.examinationSessionSlotId}|${assignment.classRoomSectionId}`,
+    );
+  }
+
+  for (const [, entry] of map) {
+    let bundlesReady = 0;
+    let invigilatorsAssigned = 0;
+    for (const key of entry.roomKeys) {
+      if (readyKeys.has(key)) {
+        bundlesReady += 1;
+      }
+      if (assignedKeys.has(key)) {
+        invigilatorsAssigned += 1;
+      }
+    }
+    entry.bundlesReady = bundlesReady;
+    entry.invigilatorsAssigned = invigilatorsAssigned;
+    delete entry.roomKeys;
+  }
+
+  return map;
+}
+
+export async function countHallTicketStatsBySession(
+  examinationSessionId,
+  options = {},
+) {
+  const where = { examinationSessionId: Number(examinationSessionId) };
+  const [total, published] = await Promise.all([
+    scoped(model.studentHallTicketModel).count({
+      where,
+      transaction: options.transaction,
+    }),
+    scoped(model.studentHallTicketModel).count({
+      where: { ...where, isPublished: true },
+      transaction: options.transaction,
+    }),
+  ]);
+
+  return {
+    total: Number(total) || 0,
+    published: Number(published) || 0,
+  };
+}
+
+/**
+ * Students for exam schedules (student.sessionId in schedule sessionIds)
+ * and hall tickets generated for this examination session for those students.
+ */
+export async function countStudentsAndHallTicketsForScheduleSessionIds(
+  examinationSessionId,
+  sessionIds,
+  options = {},
+) {
+  const uniqueSessionIds = [];
+  const seen = new Set();
+  for (const sessionId of sessionIds || []) {
+    const id = Number(sessionId);
+    if (!id || seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    uniqueSessionIds.push(id);
+  }
+
+  if (!uniqueSessionIds.length) {
+    return { students: 0, hallTicketsGenerated: 0, hallTicketsPublished: 0 };
+  }
+
+  const studentWhere = { sessionId: { [Op.in]: uniqueSessionIds } };
+
+  const [students, hallTicketsGenerated, hallTicketsPublished] =
+    await Promise.all([
+      scoped(model.studentModel).count({
+        where: studentWhere,
+        distinct: true,
+        col: "student_id",
+        transaction: options.transaction,
+      }),
+      scoped(model.studentHallTicketModel).count({
+        where: { examinationSessionId: Number(examinationSessionId) },
+        include: [
+          {
+            model: model.studentModel,
+            as: "student",
+            required: true,
+            attributes: [],
+            where: {
+              ...studentWhere,
+              ...buildScope(model.studentModel),
+            },
+          },
+        ],
+        distinct: true,
+        col: "id",
+        transaction: options.transaction,
+      }),
+      scoped(model.studentHallTicketModel).count({
+        where: {
+          examinationSessionId: Number(examinationSessionId),
+          isPublished: true,
+        },
+        include: [
+          {
+            model: model.studentModel,
+            as: "student",
+            required: true,
+            attributes: [],
+            where: {
+              ...studentWhere,
+              ...buildScope(model.studentModel),
+            },
+          },
+        ],
+        distinct: true,
+        col: "id",
+        transaction: options.transaction,
+      }),
+    ]);
+
+  return {
+    students: Number(students) || 0,
+    hallTicketsGenerated: Number(hallTicketsGenerated) || 0,
+    hallTicketsPublished: Number(hallTicketsPublished) || 0,
+  };
+}
+
+/**
+ * Per examSchedule: seated students vs hall tickets generated and published results.
+ */
+export async function countHallTicketCoverageByExamScheduleIds(
+  examinationSessionId,
+  examScheduleIds,
+  options = {},
+) {
+  const map = new Map();
+  for (const scheduleId of examScheduleIds) {
+    map.set(Number(scheduleId), {
+      students: 0,
+      generated: 0,
+      resultsPublished: 0,
+    });
+  }
+
+  if (!examScheduleIds.length) {
+    return map;
+  }
+
+  const [tickets, results, seats] = await Promise.all([
+    scoped(model.studentHallTicketModel).findAll({
+      where: { examinationSessionId: Number(examinationSessionId) },
+      attributes: ["studentId"],
+      raw: true,
+      transaction: options.transaction,
+    }),
+    scoped(model.studentResultModel).findAll({
+      where: {
+        examinationSessionId: Number(examinationSessionId),
+        publishedAt: { [Op.ne]: null },
+      },
+      attributes: ["studentId"],
+      raw: true,
+      transaction: options.transaction,
+    }),
+    model.studentExamSeatModel.findAll({
+      attributes: ["studentId"],
+      include: [
+        {
+          model: model.examScheduleRoomCapacityModel,
+          as: "roomCapacity",
+          required: true,
+          attributes: ["examScheduleId"],
+          where: { examScheduleId: { [Op.in]: examScheduleIds } },
+        },
+      ],
+      transaction: options.transaction,
+    }),
+  ]);
+
+  const ticketStudentIds = new Set();
+  for (const ticket of tickets) {
+    ticketStudentIds.add(Number(ticket.studentId));
+  }
+
+  const resultStudentIds = new Set();
+  for (const result of results) {
+    resultStudentIds.add(Number(result.studentId));
+  }
+
+  for (const seat of seats) {
+    const scheduleId = Number(seat.roomCapacity.examScheduleId);
+    const entry = map.get(scheduleId);
+    if (!entry) {
+      continue;
+    }
+    const studentId = Number(seat.studentId);
+    entry.students += 1;
+    if (ticketStudentIds.has(studentId)) {
+      entry.generated += 1;
+    }
+    if (resultStudentIds.has(studentId)) {
+      entry.resultsPublished += 1;
+    }
+  }
+
+  return map;
+}
+
+export async function countStudentResultStatsBySession(
+  examinationSessionId,
+  options = {},
+) {
+  const where = { examinationSessionId: Number(examinationSessionId) };
+  const [total, published] = await Promise.all([
+    scoped(model.studentResultModel).count({
+      where,
+      transaction: options.transaction,
+    }),
+    scoped(model.studentResultModel).count({
+      where: { ...where, publishedAt: { [Op.ne]: null } },
+      transaction: options.transaction,
+    }),
+  ]);
+
+  return {
+    total: Number(total) || 0,
+    published: Number(published) || 0,
+  };
+}
+
+export async function countBundleStatusStatsByDatesAndSlots(
+  uniqueDates,
+  uniqueSlotIds,
+  options = {},
+) {
+  if (!uniqueDates.length || !uniqueSlotIds.length) {
+    return {
+      total: 0,
+      received: 0,
+      verified: 0,
+      issued: 0,
+      preparing: 0,
+    };
+  }
+
+  const baseWhere = {
+    examDate: { [Op.in]: uniqueDates },
+    examinationSessionSlotId: { [Op.in]: uniqueSlotIds },
+  };
+
+  const [total, received, verified, issued, preparing] = await Promise.all([
+    scoped(model.examRoomMaterialBundleModel).count({
+      where: baseWhere,
+      transaction: options.transaction,
+    }),
+    scoped(model.examRoomMaterialBundleModel).count({
+      where: {
+        ...baseWhere,
+        status: { [Op.in]: ["RECEIVED", "VERIFIED", "CLOSED"] },
+      },
+      transaction: options.transaction,
+    }),
+    scoped(model.examRoomMaterialBundleModel).count({
+      where: { ...baseWhere, status: { [Op.in]: ["VERIFIED", "CLOSED"] } },
+      transaction: options.transaction,
+    }),
+    scoped(model.examRoomMaterialBundleModel).count({
+      where: {
+        ...baseWhere,
+        status: { [Op.in]: ["ISSUED", "RECEIVED", "VERIFIED", "CLOSED"] },
+      },
+      transaction: options.transaction,
+    }),
+    scoped(model.examRoomMaterialBundleModel).count({
+      where: { ...baseWhere, status: { [Op.in]: ["PREPARING", "READY"] } },
+      transaction: options.transaction,
+    }),
+  ]);
+
+  return {
+    total: Number(total) || 0,
+    received: Number(received) || 0,
+    verified: Number(verified) || 0,
+    issued: Number(issued) || 0,
+    preparing: Number(preparing) || 0,
+  };
+}
+
+export async function countTodayPublishedSchedules(
+  examinationSessionId,
+  examDate,
+  options = {},
+) {
+  return scoped(model.examScheduleModel).count({
+    where: {
+      examinationSessionId: Number(examinationSessionId),
+      published: true,
+      examDate,
+    },
+    transaction: options.transaction,
+  });
+}
+
+export async function countPublishedSchedulesBySession(
+  examinationSessionId,
+  options = {},
+) {
+  return scoped(model.examScheduleModel).count({
+    where: {
+      examinationSessionId: Number(examinationSessionId),
+      published: true,
+    },
+    transaction: options.transaction,
+  });
 }
 
 export async function findSessionCourseMappingsByCoursesAndSessions(courseIds, sessionIds, options = {}) {

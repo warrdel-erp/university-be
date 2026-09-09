@@ -1368,28 +1368,28 @@ function expandScheduleForExactDate(rawSchedules, currentDate) {
 }
 
 export async function getTodayClassSchedule(userId, currentDate, sessionId, groupPeriods = false, pagination = {}) {
+  // When grouping, fetch extra rows since consecutive periods get merged
+  const adjustedPagination = groupPeriods && pagination.limit
+    ? { ...pagination, limit: pagination.limit * 2 }
+    : pagination;
+
   const { rows: rawSchedules, total } = await employeeScheduleRepository.getTodayClassScheduleForEmployee(
     Number(userId),
     currentDate,
     sessionId,
-    pagination,
+    adjustedPagination,
   );
 
-  const strippedSchedules = [];
-  for (const schedule of rawSchedules) {
-    strippedSchedules.push(stripTeacherFieldsFromSchedule(schedule));
-  }
-
+  const strippedSchedules = rawSchedules.map(stripTeacherFieldsFromSchedule);
   const schedules = await enrichTodayClassSchedules(strippedSchedules);
 
-  let finalSchedules = schedules;
   if (groupPeriods) {
-    finalSchedules = applyGroupAttendanceStatus(
-      await groupConsecutivePeriods(schedules, groupPeriods === 'sessional'),
-    );
+    const grouped = await groupConsecutivePeriods(schedules, groupPeriods === 'sessional');
+    const limitedGroups = pagination.limit ? grouped.slice(0, pagination.limit) : grouped;
+    return { schedules: await applyGroupAttendanceStatus(limitedGroups), total };
   }
 
-  return { schedules: finalSchedules, total };
+  return { schedules, total };
 }
 
 export async function getTeacherCourses(userId) {
@@ -1690,12 +1690,17 @@ export async function getPastClassSchedules(
   sessionId,
   pagination = {},
 ) {
+  // When grouping, fetch extra rows since consecutive periods get merged
+  const adjustedPagination = groupPeriods && pagination.limit
+    ? { ...pagination, limit: pagination.limit * 2 }
+    : pagination;
+
   const { rows: rawSchedules, total } = await employeeScheduleRepository.getPastClassSchedulesForEmployee(
     userId,
     academicYearId,
     currentDateString,
     sessionId,
-    pagination,
+    adjustedPagination,
   );
 
   const teacher = getTeacherDetails(rawSchedules);
@@ -1706,9 +1711,10 @@ export async function getPastClassSchedules(
   if (groupPeriods) {
     const grouped = await groupConsecutivePeriods(schedules, groupPeriods === 'sessional');
     grouped.sort((a, b) => new Date(b.date) - new Date(a.date));
+    const limitedGroups = pagination.limit ? grouped.slice(0, pagination.limit) : grouped;
     return {
       teacher,
-      schedules: await applyGroupAttendanceStatus(grouped),
+      schedules: await applyGroupAttendanceStatus(limitedGroups),
       total,
     };
   }
@@ -1717,28 +1723,29 @@ export async function getPastClassSchedules(
 }
 
 export async function getUpcomingClassSchedules(userId, academicYearId, currentDateString, groupPeriods = false, pagination = {}) {
+  // When grouping, fetch extra rows since consecutive periods get merged
+  const adjustedPagination = groupPeriods && pagination.limit
+    ? { ...pagination, limit: pagination.limit * 2 }
+    : pagination;
+
   const { rows: upcomingClasses, total } = await employeeScheduleRepository.getUpcomingClassSchedulesForEmployee(
     userId,
     academicYearId,
     currentDateString,
-    pagination,
+    adjustedPagination,
   );
 
-  const strippedSchedules = [];
-  for (const schedule of upcomingClasses) {
-    strippedSchedules.push(stripTeacherFieldsFromSchedule(schedule));
-  }
-
+  const strippedSchedules = upcomingClasses.map(stripTeacherFieldsFromSchedule);
   const schedules = await enrichSchedulesWithAttendance(strippedSchedules);
 
-  let finalSchedules = schedules;
   if (groupPeriods) {
     const grouped = await groupConsecutivePeriods(schedules, groupPeriods === 'sessional');
     grouped.sort((a, b) => new Date(a.date) - new Date(b.date));
-    finalSchedules = await applyGroupAttendanceStatus(grouped);
+    const limitedGroups = pagination.limit ? grouped.slice(0, pagination.limit) : grouped;
+    return { schedules: await applyGroupAttendanceStatus(limitedGroups), total };
   }
 
-  return { schedules: finalSchedules, total };
+  return { schedules, total };
 }
 
 async function groupConsecutivePeriods(classes, sessionalBreak = false) {

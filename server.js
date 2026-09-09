@@ -152,6 +152,7 @@ app.use("/academicRegulation", academicRegulation);
 app.use("/assessmentPlan", assessmentPlan);
 
 app.use("/credit", credit);
+
 app.use("/evalution", evalution);
 app.use("/feeTypeCategory", feeTypeCategory);
 app.use("/feeTypeCatalog", feeTypeCatalog);

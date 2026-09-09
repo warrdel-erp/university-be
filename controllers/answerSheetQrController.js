@@ -734,6 +734,54 @@ export async function getMySingleAssignedScript(req, res) {
   }
 }
 
+export async function saveMyAnnotatedAnswerSheetPdf(req, res) {
+  try {
+    const data = await answerSheetQrServices.saveAnnotatedAnswerSheetPdf({
+      answerSheetQrId: Number(req.params.id),
+      fileUploadId: req.body.fileUploadId,
+      assignedToUserId: req.user.userId,
+    });
+
+    return SuccessResponse(
+      res,
+      200,
+      "Annotated answer sheet PDF saved successfully",
+      data,
+    );
+  } catch (error) {
+    console.error("Error in saveMyAnnotatedAnswerSheetPdf:", error);
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to save annotated answer sheet PDF",
+    );
+  }
+}
+
+export async function saveAnnotatedAnswerSheetPdf(req, res) {
+  try {
+    const data = await answerSheetQrServices.saveAnnotatedAnswerSheetPdf({
+      answerSheetQrId: Number(req.params.id),
+      fileUploadId: req.body.fileUploadId,
+      assignedToUserId: null,
+    });
+
+    return SuccessResponse(
+      res,
+      200,
+      "Annotated answer sheet PDF saved successfully",
+      data,
+    );
+  } catch (error) {
+    console.error("Error in saveAnnotatedAnswerSheetPdf:", error);
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to save annotated answer sheet PDF",
+    );
+  }
+}
+
 export async function getApprovedQuestionPaperByAnswerSheetId(req, res) {
   try {
     const { answerSheetQrId } = req.query;

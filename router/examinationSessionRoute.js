@@ -298,4 +298,37 @@ router.get(
   examinationSessionController.getSessionSkuStats,
 );
 
+const dashboardSessionQuerySchema = {
+  query: z.object({
+    examinationSessionId: positiveIntegerQueryId,
+  }),
+};
+
+const timelineQuerySchema = {
+  query: z.object({
+    examinationSessionId: positiveIntegerQueryId,
+  }),
+};
+
+router.get(
+  "/planningOverview",
+  userAuth,
+  validate(dashboardSessionQuerySchema),
+  examinationSessionController.getPlanningOverview,
+);
+
+router.get(
+  "/timeline",
+  userAuth,
+  validate(timelineQuerySchema),
+  examinationSessionController.getExaminationTimeline,
+);
+
+router.get(
+  "/progressMetrics",
+  userAuth,
+  validate(dashboardSessionQuerySchema),
+  examinationSessionController.getProgressMetrics,
+);
+
 export default router;

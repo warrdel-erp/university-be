@@ -24,6 +24,7 @@ import * as examSessionAnswerSheetRepository from "../repository/examSessionAnsw
 import * as s3Helper from "../utility/s3Helper.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 import * as model from "../models/index.js";
+import { decimalAdd, decimalDivide, decimalMultiply } from "../utility/decimalMoney.js";
 
 function createBadRequestError(message) {
   const error = new Error(message);
@@ -1781,5 +1782,363 @@ export async function getExaminationSessionAnswerSheets(examinationSessionId) {
   );
 
   return result;
+}
+
+function percentOf(part, total) {
+  if (!total) {
+    return 0;
+  }
+  return decimalMultiply(decimalDivide(part, total), 100);
+}
+
+function stageStatus(percentage) {
+  if (percentage >= 100) {
+    return "Completed";
+  }
+  if (percentage <= 0) {
+    return "Not Started";
+  }
+  return "In Progress";
+}
+
+function averagePercentages(percentages) {
+  if (!percentages.length) {
+    return 0;
+  }
+  let sum = 0;
+  for (const value of percentages) {
+    sum = decimalAdd(sum, value);
+  }
+  return percentOf(sum, percentages.length * 100);
+}
+
+export async function getExaminationTimeline(examinationSessionId) {
+  const parsedSessionId = Number(examinationSessionId);
+  if (Number.isNaN(parsedSessionId)) {
+    throw createBadRequestError("Invalid examinationSessionId");
+  }
+
+  const session =
+    await examinationSessionRepository.getExaminationSessionById(
+      parsedSessionId,
+    );
+  if (!session) {
+    const error = new Error(
+      `Examination session with ID ${parsedSessionId} not found`,
+    );
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const schedules =
+    await examinationSessionRepository.findExamSchedulesForTimeline(
+      parsedSessionId,
+    );
+
+  const examScheduleIds = [];
+  for (const schedule of schedules) {
+    examScheduleIds.push(schedule.examScheduleId);
+  }
+
+  const seatCountBySchedule =
+    await examinationSessionRepository.countSeatsByExamScheduleIds(
+      examScheduleIds,
+    );
+
+  const data = [];
+  for (const schedule of schedules) {
+    const plain = toPlain(schedule);
+    const rooms = plain.roomCapacities || [];
+    const roomNumbers = [];
+    for (const room of rooms) {
+      if (room.classRoom && room.classRoom.roomNumber) {
+        roomNumbers.push(room.classRoom.roomNumber);
+      }
+    }
+
+    const studentCount =
+      seatCountBySchedule.get(Number(plain.examScheduleId)) || 0;
+
+    data.push({
+      examScheduleId: plain.examScheduleId,
+      examDate: plain.examDate,
+      examTime: plain.examTime,
+      duration: plain.duration,
+      type: plain.type,
+      maximumMarks: plain.maximumMarks,
+      term: plain.term,
+      sessionId: plain.sessionId,
+      subjectId: plain.subjectId,
+      academicYearId: plain.academicYearId,
+      examinationSessionSlotId: plain.examinationSessionSlotId,
+      published: plain.published,
+      subject: plain.subjectSchedule || null,
+      slot: plain.examinationSessionSlot || null,
+      rooms: roomNumbers,
+      capacity: studentCount,
+    });
+  }
+
+  return {
+    examinationSessionId: parsedSessionId,
+    total: data.length,
+    data,
+  };
+}
+
+export async function getPlanningOverview(examinationSessionId) {
+  const parsedSessionId = Number(examinationSessionId);
+  if (Number.isNaN(parsedSessionId)) {
+    throw createBadRequestError("Invalid examinationSessionId");
+  }
+
+  const session =
+    await examinationSessionRepository.getExaminationSessionById(
+      parsedSessionId,
+    );
+  if (!session) {
+    const error = new Error(
+      `Examination session with ID ${parsedSessionId} not found`,
+    );
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const schedules =
+    await examinationSessionRepository.findSchedulesForSkuStats(
+      parsedSessionId,
+    );
+
+  const examScheduleIds = [];
+  for (const schedule of schedules) {
+    examScheduleIds.push(toPlain(schedule).examScheduleId);
+  }
+
+  const [roomOpsMap, hallTicketMap, answerSheetMap] = await Promise.all([
+    examinationSessionRepository.countRoomBundleReadyByExamScheduleIds(
+      examScheduleIds,
+    ),
+    examinationSessionRepository.countHallTicketCoverageByExamScheduleIds(
+      parsedSessionId,
+      examScheduleIds,
+    ),
+    examinationSessionRepository.countAnswerSheetStatsByExamScheduleIds(
+      examScheduleIds,
+    ),
+  ]);
+
+  const examPercentages = [];
+  const stepTotals = {
+    roomsAssigned: [],
+    invigilators: [],
+    bundles: [],
+    hallTickets: [],
+    answerSheets: [],
+    results: [],
+  };
+
+  for (const schedule of schedules) {
+    const plain = toPlain(schedule);
+    const scheduleId = Number(plain.examScheduleId);
+    const roomOps = roomOpsMap.get(scheduleId) || {
+      rooms: 0,
+      bundlesReady: 0,
+      invigilatorsAssigned: 0,
+    };
+    const hallTickets = hallTicketMap.get(scheduleId) || {
+      students: 0,
+      generated: 0,
+      resultsPublished: 0,
+    };
+    const sheets = answerSheetMap.get(scheduleId) || {
+      students: 0,
+      scanned: 0,
+      marked: 0,
+    };
+
+    const students =
+      hallTickets.students > 0 ? hallTickets.students : sheets.students;
+
+    const roomsPct = roomOps.rooms > 0 ? 100 : 0;
+    const invigilatorsPct = percentOf(
+      roomOps.invigilatorsAssigned,
+      roomOps.rooms,
+    );
+    const bundlesPct = percentOf(roomOps.bundlesReady, roomOps.rooms);
+    const hallTicketsPct = percentOf(hallTickets.generated, students);
+    const scannedPct = percentOf(sheets.scanned, students || sheets.students);
+    const markedPct = percentOf(sheets.marked, students || sheets.students);
+    const answerSheetsPct =
+      (students || sheets.students) > 0
+        ? percentOf(scannedPct + markedPct, 200)
+        : 0;
+    const resultsPct = percentOf(hallTickets.resultsPublished, students);
+
+    const percentage = averagePercentages([
+      roomsPct,
+      invigilatorsPct,
+      bundlesPct,
+      hallTicketsPct,
+      answerSheetsPct,
+      resultsPct,
+    ]);
+
+    stepTotals.roomsAssigned.push(roomsPct);
+    stepTotals.invigilators.push(invigilatorsPct);
+    stepTotals.bundles.push(bundlesPct);
+    stepTotals.hallTickets.push(hallTicketsPct);
+    stepTotals.answerSheets.push(answerSheetsPct);
+    stepTotals.results.push(resultsPct);
+    examPercentages.push(percentage);
+  }
+
+  const overallPercentage = averagePercentages(examPercentages);
+
+  return {
+    examinationSessionId: parsedSessionId,
+    sessionName: session.sessionName,
+    status: session.status,
+    publishedAt: session.publishedAt,
+    percentage: overallPercentage,
+    statusLabel: stageStatus(overallPercentage),
+    totalExams: schedules.length,
+    stages: {
+      roomsAssigned: {
+        percentage: averagePercentages(stepTotals.roomsAssigned),
+        status: stageStatus(averagePercentages(stepTotals.roomsAssigned)),
+      },
+      invigilators: {
+        percentage: averagePercentages(stepTotals.invigilators),
+        status: stageStatus(averagePercentages(stepTotals.invigilators)),
+      },
+      bundles: {
+        percentage: averagePercentages(stepTotals.bundles),
+        status: stageStatus(averagePercentages(stepTotals.bundles)),
+      },
+      hallTickets: {
+        percentage: averagePercentages(stepTotals.hallTickets),
+        status: stageStatus(averagePercentages(stepTotals.hallTickets)),
+      },
+      answerSheets: {
+        percentage: averagePercentages(stepTotals.answerSheets),
+        status: stageStatus(averagePercentages(stepTotals.answerSheets)),
+      },
+      results: {
+        percentage: averagePercentages(stepTotals.results),
+        status: stageStatus(averagePercentages(stepTotals.results)),
+      },
+    },
+  };
+}
+
+export async function getProgressMetrics(examinationSessionId) {
+  const parsedSessionId = Number(examinationSessionId);
+  if (Number.isNaN(parsedSessionId)) {
+    throw createBadRequestError("Invalid examinationSessionId");
+  }
+
+  const session =
+    await examinationSessionRepository.getExaminationSessionById(
+      parsedSessionId,
+    );
+  if (!session) {
+    const error = new Error(
+      `Examination session with ID ${parsedSessionId} not found`,
+    );
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const schedules =
+    await examinationSessionRepository.findSchedulesForSkuStats(
+      parsedSessionId,
+    );
+
+  const examScheduleIds = [];
+  for (const schedule of schedules) {
+    examScheduleIds.push(schedule.examScheduleId);
+  }
+
+  const [roomBundleMap, answerSheetBySchedule, hallTicketBySchedule] =
+    await Promise.all([
+      examinationSessionRepository.countRoomBundleReadyByExamScheduleIds(
+        examScheduleIds,
+      ),
+      examinationSessionRepository.countAnswerSheetStatsByExamScheduleIds(
+        examScheduleIds,
+      ),
+      examinationSessionRepository.countHallTicketCoverageByExamScheduleIds(
+        parsedSessionId,
+        examScheduleIds,
+      ),
+    ]);
+
+  let totalRooms = 0;
+  let totalBundlesReady = 0;
+  let totalSeatStudents = 0;
+  let totalHallTicketsGenerated = 0;
+  let totalStudents = 0;
+  let totalScanned = 0;
+  let totalMarked = 0;
+
+  for (const schedule of schedules) {
+    const roomStats = roomBundleMap.get(Number(schedule.examScheduleId)) || {
+      rooms: 0,
+      bundlesReady: 0,
+    };
+    const sheetStats = answerSheetBySchedule.get(
+      Number(schedule.examScheduleId),
+    ) || {
+      students: 0,
+      scanned: 0,
+      marked: 0,
+    };
+    const hallTicketStats = hallTicketBySchedule.get(
+      Number(schedule.examScheduleId),
+    ) || {
+      students: 0,
+      generated: 0,
+    };
+
+    totalRooms += roomStats.rooms;
+    totalBundlesReady += roomStats.bundlesReady;
+    totalSeatStudents += hallTicketStats.students;
+    totalHallTicketsGenerated += hallTicketStats.generated;
+    totalStudents += sheetStats.students;
+    totalScanned += sheetStats.scanned;
+    totalMarked += sheetStats.marked;
+  }
+
+  const sessionBundlePct = percentOf(totalBundlesReady, totalRooms);
+  const sessionHallTicketPct = percentOf(
+    totalHallTicketsGenerated,
+    totalSeatStudents,
+  );
+  const sessionOperationsPercentage =
+    totalRooms > 0 && totalSeatStudents > 0
+      ? percentOf(sessionBundlePct + sessionHallTicketPct, 200)
+      : totalRooms > 0
+        ? sessionBundlePct
+        : sessionHallTicketPct;
+
+  return {
+    examinationSessionId: parsedSessionId,
+    operations: {
+      percentage: sessionOperationsPercentage,
+      rooms: totalRooms,
+      bundlesReady: totalBundlesReady,
+      hallTickets: {
+        percentage: sessionHallTicketPct,
+        generated: totalHallTicketsGenerated,
+        students: totalSeatStudents,
+      },
+    },
+    digitization: {
+      percentage: percentOf(totalScanned, totalStudents),
+      students: totalStudents,
+      scanned: totalScanned,
+      marked: totalMarked,
+    },
+  };
 }
 

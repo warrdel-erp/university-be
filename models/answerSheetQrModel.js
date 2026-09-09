@@ -86,6 +86,16 @@ deadlineDate: {
         key: "id",
       },
     },
+    annotatedFileUploadId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "annotated_file_upload_id",
+      references: {
+        model: "s3_files",
+        key: "id",
+      },
+      comment: "Annotated/marked PDF after evaluation",
+    },
     instituteId: {
       type: DataTypes.INTEGER,
       allowNull: false,

@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "b1a1c3e4-f8d9-4a7c-9b1d-2e3f4a5b6c7d",
     "name": "Internal Assessment APIs",
-    "description": "Faculty Workspace Internal Assessment APIs.\n\nBase path: `/internalAssessment/my`",
+    "description": "Faculty Workspace Internal Assessment APIs.\n\nBase paths:\n- `/internalAssessment/my`\n- `/examStructure/examType` (managedBy: FACULTY | COE; CONTINUOUS_ASSESSMENT auto FACULTY)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -218,7 +218,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"type\": \"Assignment\",\n  \"title\": \"Assignment 1 - Introduction to Fluid Properties\",\n  \"maximumMarks\": 30,\n  \"issueDate\": \"2026-09-01\",\n  \"dueDate\": \"2026-09-08\",\n  \"documentUrl\": \"https://example.com/Assignment_3_Questions.pdf\",\n  \"mode\": \"online\",\n  \"weightagePercentage\": 10,\n  \"normalizedMaxMarks\": 2,\n  \"isIncludeInFinalResult\": true\n}",
+          "raw": "{\n  \"type\": \"Assignment\",\n  \"title\": \"Assignment 1 - Introduction to Fluid Properties\",\n  \"maximumMarks\": 30,\n  \"issueDate\": \"2026-09-01\",\n  \"dueDate\": \"2026-09-08\",\n  \"documentUrl\": \"https://example.com/Assignment_3_Questions.pdf\",\n  \"mode\": \"online\",\n  \"weightagePercentage\": 10,\n  \"isIncludeInFinalResult\": true\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -236,7 +236,7 @@
             }
           ]
         },
-        "description": "Updates assessment fields / weightage. All body fields are optional."
+        "description": "Updates assessment fields / weightage. All body fields are optional. normalizedMaxMarks is auto-calculated as weightage × (weightagePercentage / 100)."
       },
       "response": []
     },
@@ -379,6 +379,349 @@
         "description": "Creates or updates student marks for an assessment. Use null obtainedMarks for absent / not entered."
       },
       "response": []
+    },
+    {
+      "name": "POST Calculate Final Result",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"subjectId\": {{subjectId}},\n  \"classSectionTermId\": {{classSectionTermId}},\n  \"iaMaximumMarks\": {{iaMaximumMarks}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/internalAssessment/my/calculate",
+          "host": ["{{base_url}}"],
+          "path": ["internalAssessment", "my", "calculate"]
+        },
+        "description": "Calculates weighted final IA for all students from assessments with isIncludeInFinalResult=true (weightage sum must be 100). Upserts into assessment_evalution as status=pending. iaMaximumMarks is optional when all included assessments already have normalizedMaxMarks. Blocked if already submitted."
+      },
+      "response": []
+    },
+    {
+      "name": "POST Submit Final Result",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"subjectId\": {{subjectId}},\n  \"classSectionTermId\": {{classSectionTermId}},\n  \"iaMaximumMarks\": {{iaMaximumMarks}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/internalAssessment/my/finalResult/submit",
+          "host": ["{{base_url}}"],
+          "path": ["internalAssessment", "my", "finalResult", "submit"]
+        },
+        "description": "Fully automated CoE submit: validates isIncludeInFinalResult assessments, requires weightage sum=100, recalculates final marks, upserts existing student rows (creates only if missing), sets status=submitted + submittedAt. Blocked if already submitted. iaMaximumMarks optional when normalizedMaxMarks are set on all included assessments."
+      },
+      "response": []
+    },
+    {
+      "name": "GET Final Result",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/internalAssessment/my/results?subjectId={{subjectId}}&classSectionTermId={{classSectionTermId}}&studentId={{studentId}}",
+          "host": ["{{base_url}}"],
+          "path": ["internalAssessment", "my", "results"],
+          "query": [
+            {
+              "key": "subjectId",
+              "value": "{{subjectId}}"
+            },
+            {
+              "key": "classSectionTermId",
+              "value": "{{classSectionTermId}}"
+            },
+            {
+              "key": "studentId",
+              "value": "{{studentId}}",
+              "description": "Optional. When set, returns only that student's final IA row.",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "Fetches stored final IA rows from assessment_evalution for subjectId + classSectionTermId. Optional studentId filters to one student."
+      },
+      "response": []
+    },
+    {
+      "name": "Exam Type (examStructure)",
+      "item": [
+        {
+          "name": "POST Create Exam Type (Continuous Assessment)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examName\": \"Continuous Assessment\",\n  \"examCode\": \"CA\",\n  \"examCategory\": \"CONTINUOUS_ASSESSMENT\",\n  \"examSubcategory\": \"Assignment\",\n  \"examDescription\": \"Ongoing academic evaluation\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/examStructure/examType",
+              "host": ["{{base_url}}"],
+              "path": ["examStructure", "examType"]
+            },
+            "description": "Creates exam setup type. For CONTINUOUS_ASSESSMENT, managedBy is auto-set to FACULTY (do not send managedBy)."
+          },
+          "response": []
+        },
+        {
+          "name": "POST Create Exam Type (with managedBy)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examName\": \"End Term\",\n  \"examCode\": \"ET\",\n  \"examCategory\": \"EXAMINATION\",\n  \"examSubcategory\": \"End Term\",\n  \"examDescription\": \"Scheduled formal assessment\",\n  \"managedBy\": \"COE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/examStructure/examType",
+              "host": ["{{base_url}}"],
+              "path": ["examStructure", "examType"]
+            },
+            "description": "Creates exam setup type for non-continuous categories. managedBy is required: FACULTY | COE."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Exam Type (list / by id)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/examStructure/examType?examSetupTypeId={{examSetupTypeId}}&page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["examStructure", "examType"],
+              "query": [
+                {
+                  "key": "examSetupTypeId",
+                  "value": "{{examSetupTypeId}}",
+                  "description": "Optional. When set, returns single exam type.",
+                  "disabled": true
+                },
+                {
+                  "key": "termNumber",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Without examSetupTypeId: paginated list. With examSetupTypeId: single detail. Includes managedBy."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Exam Type Single",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/examStructure/examType/single?examSetupTypeId={{examSetupTypeId}}",
+              "host": ["{{base_url}}"],
+              "path": ["examStructure", "examType", "single"],
+              "query": [
+                {
+                  "key": "examSetupTypeId",
+                  "value": "{{examSetupTypeId}}"
+                }
+              ]
+            },
+            "description": "Same handler as GET /examType. Prefer passing examSetupTypeId."
+          },
+          "response": []
+        },
+        {
+          "name": "GET All Exam Types",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/examStructure/examType/all?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["examStructure", "examType", "all"],
+              "query": [
+                {
+                  "key": "termNumber",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Lists all exam setup types (includes managedBy)."
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH Update Exam Type",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examSetupTypeId\": {{examSetupTypeId}},\n  \"examName\": \"End Term\",\n  \"examCode\": \"ET\",\n  \"examCategory\": \"EXAMINATION\",\n  \"examSubcategory\": \"End Term\",\n  \"examDescription\": \"Updated description\",\n  \"managedBy\": \"COE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/examStructure/examType",
+              "host": ["{{base_url}}"],
+              "path": ["examStructure", "examType"]
+            },
+            "description": "Updates exam type. If examCategory is CONTINUOUS_ASSESSMENT, managedBy is forced to FACULTY. For other categories, send managedBy when changing category."
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Exam Type",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/examStructure/examType/{{examSetupTypeId}}",
+              "host": ["{{base_url}}"],
+              "path": ["examStructure", "examType", "{{examSetupTypeId}}"]
+            },
+            "description": "Deletes exam setup type if not used in an assessment plan."
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "event": [
@@ -425,6 +768,21 @@
     },
     {
       "key": "internalAssessmentId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "studentId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "iaMaximumMarks",
+      "value": "20",
+      "type": "string"
+    },
+    {
+      "key": "examSetupTypeId",
       "value": "1",
       "type": "string"
     }
