@@ -23,6 +23,8 @@ const sessionInclude = [
     attributes: [
       "examinationSessionTermId",
       "examinationSessionId",
+      "courseId",
+      "sessionId",
       "term",
       "includeElectives",
       "remarks",
@@ -52,9 +54,83 @@ export async function createExaminationSession(sessionData, options = {}) {
   return scoped(model.examinationSessionModel).create(sessionData, options);
 }
 
-export async function findAndCountExaminationSessions({ where, limit, offset }, options = {}) {
+async function findExaminationSessionIdsByLifecycleStatus(
+  lifecycleStatus,
+  options = {},
+) {
+  if (lifecycleStatus === "running") {
+    const rows = await scoped(model.examScheduleModel).findAll({
+      attributes: ["examinationSessionId"],
+      group: ["examinationSessionId"],
+      raw: true,
+      transaction: options.transaction,
+    });
+    const ids = [];
+    for (const row of rows) {
+      ids.push(Number(row.examinationSessionId));
+    }
+    return ids;
+  }
+
+  if (lifecycleStatus === "schedulingEvaluation") {
+    const rows = await scoped(model.examScheduleModel).findAll({
+      attributes: ["examinationSessionId"],
+      include: [
+        {
+          model: model.answerSheetQrModel,
+          as: "answerSheetQrs",
+          attributes: [],
+          required: true,
+          where: buildScope(model.answerSheetQrModel),
+        },
+      ],
+      group: ["examinationSessionId"],
+      raw: true,
+      transaction: options.transaction,
+    });
+    const ids = [];
+    for (const row of rows) {
+      ids.push(Number(row.examinationSessionId));
+    }
+    return ids;
+  }
+
+  if (lifecycleStatus === "result") {
+    const rows = await scoped(model.studentResultModel).findAll({
+      attributes: ["examinationSessionId"],
+      group: ["examinationSessionId"],
+      raw: true,
+      transaction: options.transaction,
+    });
+    const ids = [];
+    for (const row of rows) {
+      ids.push(Number(row.examinationSessionId));
+    }
+    return ids;
+  }
+
+  return null;
+}
+
+export async function findAndCountExaminationSessions(
+  { where, limit, offset, lifecycleStatus },
+  options = {},
+) {
+  const sessionWhere = { ...where };
+
+  if (lifecycleStatus) {
+    const sessionIds = await findExaminationSessionIdsByLifecycleStatus(
+      lifecycleStatus,
+      options,
+    );
+    if (!sessionIds.length) {
+      return { count: 0, rows: [] };
+    }
+    sessionWhere.examinationSessionId = { [Op.in]: sessionIds };
+  }
+
   return scoped(model.examinationSessionModel).findAndCountAll({
-    where,
+    where: sessionWhere,
     include: sessionInclude,
     distinct: true,
     order: [["examinationSessionId", "DESC"]],
@@ -172,6 +248,8 @@ export async function findExaminationSessionTermById(examinationSessionTermId, o
     attributes: [
       "examinationSessionTermId",
       "examinationSessionId",
+      "courseId",
+      "sessionId",
       "term",
       "includeElectives",
       "remarks",
@@ -512,6 +590,8 @@ export async function findExaminationSessionTerms(examinationSessionId, options 
     attributes: [
       "examinationSessionTermId",
       "examinationSessionId",
+      "courseId",
+      "sessionId",
       "term",
       "includeElectives",
       "remarks",
@@ -1450,5 +1530,147 @@ export async function findSessionCourseMappingsByIds(sessionCourseMappingIds, op
     transaction: options.transaction,
     raw: true,
   });
+}
+
+/**
+ * Dashboard overview aggregates across scoped examination sessions.
+ * Optional examinationSessionId narrows to one session.
+ */
+export async function getDashboardOverviewStats({
+  examinationSessionId,
+  today,
+} = {}) {
+  const sessionWhere = {};
+  if (examinationSessionId != null) {
+    sessionWhere.examinationSessionId = Number(examinationSessionId);
+  }
+
+  const sessions = await scoped(model.examinationSessionModel).findAll({
+    where: sessionWhere,
+    attributes: ["examinationSessionId"],
+  });
+
+  const sessionIds = [];
+  for (const session of sessions) {
+    sessionIds.push(Number(session.examinationSessionId));
+  }
+
+  if (!sessionIds.length) {
+    return {
+      todayExamsCount: 0,
+      totalExams: 0,
+      totalStudents: 0,
+      scannedAnswerSheets: 0,
+      totalAnswerSheets: 0,
+      bundlesNotReturned: 0,
+      totalBundles: 0,
+      finalResultsCreated: 0,
+    };
+  }
+
+  const schedules = await scoped(model.examScheduleModel).findAll({
+    where: { examinationSessionId: { [Op.in]: sessionIds } },
+    attributes: ["examScheduleId", "examDate", "examinationSessionSlotId"],
+  });
+
+  const examScheduleIds = [];
+  const slotIds = [];
+  const dates = [];
+  const slotSeen = new Set();
+  const dateSeen = new Set();
+  let todayExamsCount = 0;
+
+  for (const schedule of schedules) {
+    const scheduleId = Number(schedule.examScheduleId);
+    examScheduleIds.push(scheduleId);
+
+    if (schedule.examDate === today) {
+      todayExamsCount += 1;
+    }
+
+    const slotId = Number(schedule.examinationSessionSlotId);
+    if (slotId && !slotSeen.has(slotId)) {
+      slotSeen.add(slotId);
+      slotIds.push(slotId);
+    }
+
+    if (schedule.examDate && !dateSeen.has(schedule.examDate)) {
+      dateSeen.add(schedule.examDate);
+      dates.push(schedule.examDate);
+    }
+  }
+
+  const totalExams = examScheduleIds.length;
+
+  const [
+    totalStudents,
+    totalAnswerSheets,
+    scannedAnswerSheets,
+    finalResultsCreated,
+    totalBundles,
+    returnedBundles,
+  ] = await Promise.all([
+    scoped(model.studentHallTicketModel).count({
+      where: { examinationSessionId: { [Op.in]: sessionIds } },
+      distinct: true,
+      col: "studentId",
+    }),
+    examScheduleIds.length
+      ? scoped(model.answerSheetQrModel).count({
+          where: {
+            examScheduleId: { [Op.in]: examScheduleIds },
+            studentId: { [Op.ne]: null },
+          },
+        })
+      : 0,
+    examScheduleIds.length
+      ? scoped(model.answerSheetQrModel).count({
+          where: {
+            examScheduleId: { [Op.in]: examScheduleIds },
+            studentId: { [Op.ne]: null },
+            fileUploadId: { [Op.ne]: null },
+          },
+        })
+      : 0,
+    scoped(model.studentResultModel).count({
+      where: {
+        examinationSessionId: { [Op.in]: sessionIds },
+        publishedAt: { [Op.ne]: null },
+      },
+      distinct: true,
+      col: "studentId",
+    }),
+    dates.length && slotIds.length
+      ? scoped(model.examRoomMaterialBundleModel).count({
+          where: {
+            examDate: { [Op.in]: dates },
+            examinationSessionSlotId: { [Op.in]: slotIds },
+          },
+        })
+      : 0,
+    dates.length && slotIds.length
+      ? scoped(model.examRoomMaterialBundleModel).count({
+          where: {
+            examDate: { [Op.in]: dates },
+            examinationSessionSlotId: { [Op.in]: slotIds },
+            status: { [Op.in]: ["RECEIVED", "VERIFIED", "CLOSED"] },
+          },
+        })
+      : 0,
+  ]);
+
+  return {
+    todayExamsCount,
+    totalExams,
+    totalStudents: Number(totalStudents) || 0,
+    scannedAnswerSheets: Number(scannedAnswerSheets) || 0,
+    totalAnswerSheets: Number(totalAnswerSheets) || 0,
+    bundlesNotReturned: Math.max(
+      0,
+      (Number(totalBundles) || 0) - (Number(returnedBundles) || 0),
+    ),
+    totalBundles: Number(totalBundles) || 0,
+    finalResultsCreated: Number(finalResultsCreated) || 0,
+  };
 }
 

@@ -94,7 +94,7 @@ export async function countSubmittedFinalResults({
 
 /**
  * Subject + class-section final IA workflow status for faculty UI.
- * @returns {"submit"|"inprogress"}
+ * @returns {"submitted"|"inprogress"}
  */
 export async function getFinalSubmissionStatus({
   subjectId,
@@ -107,7 +107,7 @@ export async function getFinalSubmissionStatus({
     transaction,
   });
 
-  return submittedCount > 0 ? "submit" : "inprogress";
+  return submittedCount > 0 ? "submitted" : "inprogress";
 }
 
 export async function findFinalResultByStudent({

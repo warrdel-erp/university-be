@@ -92,10 +92,17 @@ function buildMissingTermRows(terms, examinationSessionId, existingTermSet = new
   const seen = new Set();
   for (const item of terms || []) {
     const term = Number(item.term);
-    if (seen.has(term) || existingTermSet.has(term)) continue;
-    seen.add(term);
+    const courseId = item.courseId != null ? Number(item.courseId) : null;
+    const sessionId = item.sessionId != null ? Number(item.sessionId) : null;
+    const key = `${courseId}_${sessionId}_${term}`;
+    if (seen.has(key) || existingTermSet.has(key) || existingTermSet.has(term)) {
+      continue;
+    }
+    seen.add(key);
     rows.push({
       term,
+      courseId,
+      sessionId,
       examinationSessionId: Number(examinationSessionId),
       includeElectives: item.includeElectives,
       remarks: item.remarks,
@@ -359,7 +366,7 @@ export async function createExaminationSession(sessionData, options = {}) {
 export async function getExaminationSessions(filters = {}, options = {}) {
   const {
     search,
-    status,
+    status = "all",
     academicYearId,
     assessmentTypeId,
     universityId,
@@ -372,16 +379,17 @@ export async function getExaminationSessions(filters = {}, options = {}) {
   const offset = (pageNum - 1) * limitNum;
   const where = {};
 
-  if (status) where.status = status;
   if (academicYearId) where.academicYearId = Number(academicYearId);
   if (assessmentTypeId) where.assessmentTypeId = Number(assessmentTypeId);
   if (universityId) where.universityId = Number(universityId);
   if (instituteId) where.instituteId = Number(instituteId);
   if (search) where.sessionName = { [Op.like]: `%${search}%` };
 
+  const lifecycleStatus = status === "all" ? undefined : status;
+
   const { count, rows } =
     await examinationSessionRepository.findAndCountExaminationSessions(
-      { where, limit: limitNum, offset },
+      { where, limit: limitNum, offset, lifecycleStatus },
       options,
     );
 
@@ -442,6 +450,12 @@ export async function updateExaminationSession(
         );
       const existingTermSet = new Set();
       for (const row of existingTerms) {
+        const courseId = row.courseId != null ? Number(row.courseId) : null;
+        const sessionIdValue =
+          row.sessionId != null ? Number(row.sessionId) : null;
+        existingTermSet.add(
+          `${courseId}_${sessionIdValue}_${Number(row.term)}`,
+        );
         existingTermSet.add(Number(row.term));
       }
 
@@ -503,6 +517,10 @@ export async function createExaminationSessionTerm(termData, options = {}) {
   return sequelize.transaction(async (transaction) => {
     const examinationSessionId = Number(termData.examinationSessionId);
     const termNumber = Number(termData.term);
+    const courseId =
+      termData.courseId != null ? Number(termData.courseId) : null;
+    const sessionId =
+      termData.sessionId != null ? Number(termData.sessionId) : null;
     const tx = { ...options, transaction };
 
     const existingTerms =
@@ -511,7 +529,17 @@ export async function createExaminationSessionTerm(termData, options = {}) {
         tx,
       );
     for (const existing of existingTerms) {
-      if (Number(existing.term) === termNumber) return existing;
+      const existingCourseId =
+        existing.courseId != null ? Number(existing.courseId) : null;
+      const existingSessionId =
+        existing.sessionId != null ? Number(existing.sessionId) : null;
+      if (
+        Number(existing.term) === termNumber &&
+        existingCourseId === courseId &&
+        existingSessionId === sessionId
+      ) {
+        return existing;
+      }
     }
 
     const session =
@@ -532,7 +560,14 @@ export async function createExaminationSessionTerm(termData, options = {}) {
 
     const record =
       await examinationSessionRepository.createExaminationSessionTerm(
-        termData,
+        {
+          examinationSessionId,
+          term: termNumber,
+          courseId,
+          sessionId,
+          includeElectives: termData.includeElectives,
+          remarks: termData.remarks,
+        },
         tx,
       );
 
@@ -2138,6 +2173,84 @@ export async function getProgressMetrics(examinationSessionId) {
       students: totalStudents,
       scanned: totalScanned,
       marked: totalMarked,
+    },
+  };
+}
+
+function localDateOnlyString(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Examination sessions dashboard overview.
+ * Optional examinationSessionId scopes metrics to one session.
+ */
+export async function getExaminationSessionOverview(examinationSessionId) {
+  const parsedSessionId =
+    examinationSessionId != null && examinationSessionId !== ""
+      ? Number(examinationSessionId)
+      : null;
+
+  if (parsedSessionId != null && Number.isNaN(parsedSessionId)) {
+    throw createBadRequestError("Invalid examinationSessionId");
+  }
+
+  if (parsedSessionId != null) {
+    const session =
+      await examinationSessionRepository.getExaminationSessionById(
+        parsedSessionId,
+      );
+    if (!session) {
+      const error = new Error(
+        `Examination session with ID ${parsedSessionId} not found`,
+      );
+      error.statusCode = 404;
+      throw error;
+    }
+  }
+
+  const today = localDateOnlyString();
+  const stats = await examinationSessionRepository.getDashboardOverviewStats({
+    examinationSessionId: parsedSessionId,
+    today,
+  });
+
+  const totalStudentsForResults =
+    stats.totalStudents > 0 ? stats.totalStudents : stats.totalAnswerSheets;
+
+  return {
+    today: {
+      examsCount: stats.todayExamsCount,
+    },
+    students: {
+      total: stats.totalStudents,
+    },
+    exams: {
+      total: stats.totalExams,
+    },
+    answerSheets: {
+      scanned: stats.scannedAnswerSheets,
+      total: stats.totalAnswerSheets,
+      pending: Math.max(
+        0,
+        stats.totalAnswerSheets - stats.scannedAnswerSheets,
+      ),
+    },
+    bundles: {
+      notReturned: stats.bundlesNotReturned,
+      total: stats.totalBundles,
+      returned: Math.max(0, stats.totalBundles - stats.bundlesNotReturned),
+    },
+    finalResults: {
+      created: stats.finalResultsCreated,
+      total: totalStudentsForResults,
+      pending: Math.max(
+        0,
+        totalStudentsForResults - stats.finalResultsCreated,
+      ),
     },
   };
 }

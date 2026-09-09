@@ -280,3 +280,27 @@ export const getProgressMetrics = async (req, res) => {
   }
 };
 
+export const getExaminationSessionOverview = async (req, res) => {
+  try {
+    const { examinationSessionId } = req.query;
+    const result =
+      await examinationSessionServices.getExaminationSessionOverview(
+        examinationSessionId,
+      );
+    return SuccessResponse(
+      res,
+      200,
+      "Examination session overview fetched successfully",
+      result,
+    );
+  } catch (error) {
+    console.error("Error fetching examination session overview:", error);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(
+      res,
+      statusCode,
+      error.message || "Failed to fetch examination session overview",
+    );
+  }
+};
+

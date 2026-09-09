@@ -4,6 +4,8 @@ import examinationSessionModel from "./examinationSessionModel.js";
 import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
 import acedmicYearModel from "./acedmicYearModel.js";
+import courseModel from "./courseModel.js";
+import sessionModel from "./sessionModel.js";
 
 const examinationSessionTermModel = sequelize.define(
   "examination_session_term",
@@ -21,6 +23,24 @@ const examinationSessionTermModel = sequelize.define(
       references: {
         model: examinationSessionModel,
         key: "examination_session_id",
+      },
+    },
+    courseId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "course_id",
+      references: {
+        model: courseModel,
+        key: "course_id",
+      },
+    },
+    sessionId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "session_id",
+      references: {
+        model: sessionModel,
+        key: "session_id",
       },
     },
     universityId: {
@@ -87,8 +107,8 @@ const examinationSessionTermModel = sequelize.define(
     indexes: [
       {
         unique: true,
-        name: "unique_examination_session_term",
-        fields: ["examination_session_id", "term"],
+        name: "unique_examination_session_course_session_term",
+        fields: ["examination_session_id", "course_id", "session_id", "term"],
       },
     ],
   },
