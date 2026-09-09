@@ -252,7 +252,6 @@ router.delete(
 router.put(
   "/approve",
   userAuth,
-  checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_EDIT.value, null),
   validate({ body: approveQuestionPaperSchema }),
   approveQuestionPaper,
 );
@@ -260,7 +259,6 @@ router.put(
 router.patch(
   "/finalApproved",
   userAuth,
-  checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_EDIT.value, null),
   validate({ body: finalApprovalSchema }),
   approvefinalpaper,
 );

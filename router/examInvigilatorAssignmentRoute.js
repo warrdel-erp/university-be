@@ -2,8 +2,6 @@ import { Router } from "express";
 import { z } from "zod";
 import { validate } from "../utility/validation.js";
 import userAuth from "../middleware/authUser.js";
-import { PERMISSIONS } from "../const/permissions.js";
-import { checkAccess } from "../middleware/checkAccess.js";
 
 import {
   createAssignment,
@@ -163,25 +161,23 @@ const getInvigilatorSummarySchema = {
   }),
 };
 
-router.post("/", userAuth, checkAccess(PERMISSIONS.EXAM_INVIGILATOR_ASSIGNMENT.value, null), validate(createSchema), createAssignment);
+router.post("/", userAuth, validate(createSchema), createAssignment);
 
-router.patch("/", userAuth, checkAccess(PERMISSIONS.EXAM_INVIGILATOR_ASSIGNMENT.value, null), validate(updateSchema), updateAssignment);
+router.patch("/", userAuth, validate(updateSchema), updateAssignment);
 router.get(
   "/summary",
   userAuth,
-  checkAccess(PERMISSIONS.EXAM_INVIGILATOR_ASSIGNMENT.value, null),
   validate(getInvigilatorSummarySchema),
   getInvigilatorSummary,
 );
-router.get("/rooms", userAuth, checkAccess(PERMISSIONS.EXAM_INVIGILATOR_ASSIGNMENT.value, null), validate(getRoomsRoomWiseSchema), getListOfRoomsRoomWise);
+router.get("/rooms", userAuth, validate(getRoomsRoomWiseSchema), getListOfRoomsRoomWise);
 
 
-router.get("/", userAuth, checkAccess(PERMISSIONS.EXAM_INVIGILATOR_ASSIGNMENT.value, null), validate(getListSchema), getAssignments);
-router.delete("/", userAuth, checkAccess(PERMISSIONS.EXAM_INVIGILATOR_ASSIGNMENT.value, null), validate(getByIdSchema), deleteAssignment);
+router.get("/", userAuth, validate(getListSchema), getAssignments);
+router.delete("/", userAuth, validate(getByIdSchema), deleteAssignment);
 router.get(
   "/byUserId",
   userAuth,
-  checkAccess(PERMISSIONS.EXAM_INVIGILATOR_ASSIGNMENT.value, null),
   validate(byUserIdSchema),
   getAssignmentsByUserId,
 );
@@ -191,7 +187,6 @@ router.get("/my", userAuth,validate(myAssignmentsSchema), getMyAssignments);
 router.get(
   "/byroom",
   userAuth,
-  checkAccess(PERMISSIONS.EXAM_INVIGILATOR_ASSIGNMENT.value, null),
   validate(byRoomSchema),
   getAssignmentsByRoom,
 );
@@ -211,7 +206,6 @@ const availabilitySchema = {
 router.get(
   "/availability",
   userAuth,
-  checkAccess(PERMISSIONS.EXAM_INVIGILATOR_ASSIGNMENT.value, null),
   validate(availabilitySchema),
   getFacultyAvailability,
 );
