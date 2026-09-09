@@ -54,9 +54,83 @@ export async function createExaminationSession(sessionData, options = {}) {
   return scoped(model.examinationSessionModel).create(sessionData, options);
 }
 
-export async function findAndCountExaminationSessions({ where, limit, offset }, options = {}) {
+async function findExaminationSessionIdsByLifecycleStatus(
+  lifecycleStatus,
+  options = {},
+) {
+  if (lifecycleStatus === "running") {
+    const rows = await scoped(model.examScheduleModel).findAll({
+      attributes: ["examinationSessionId"],
+      group: ["examinationSessionId"],
+      raw: true,
+      transaction: options.transaction,
+    });
+    const ids = [];
+    for (const row of rows) {
+      ids.push(Number(row.examinationSessionId));
+    }
+    return ids;
+  }
+
+  if (lifecycleStatus === "schedulingEvaluation") {
+    const rows = await scoped(model.examScheduleModel).findAll({
+      attributes: ["examinationSessionId"],
+      include: [
+        {
+          model: model.answerSheetQrModel,
+          as: "answerSheetQrs",
+          attributes: [],
+          required: true,
+          where: buildScope(model.answerSheetQrModel),
+        },
+      ],
+      group: ["examinationSessionId"],
+      raw: true,
+      transaction: options.transaction,
+    });
+    const ids = [];
+    for (const row of rows) {
+      ids.push(Number(row.examinationSessionId));
+    }
+    return ids;
+  }
+
+  if (lifecycleStatus === "result") {
+    const rows = await scoped(model.studentResultModel).findAll({
+      attributes: ["examinationSessionId"],
+      group: ["examinationSessionId"],
+      raw: true,
+      transaction: options.transaction,
+    });
+    const ids = [];
+    for (const row of rows) {
+      ids.push(Number(row.examinationSessionId));
+    }
+    return ids;
+  }
+
+  return null;
+}
+
+export async function findAndCountExaminationSessions(
+  { where, limit, offset, lifecycleStatus },
+  options = {},
+) {
+  const sessionWhere = { ...where };
+
+  if (lifecycleStatus) {
+    const sessionIds = await findExaminationSessionIdsByLifecycleStatus(
+      lifecycleStatus,
+      options,
+    );
+    if (!sessionIds.length) {
+      return { count: 0, rows: [] };
+    }
+    sessionWhere.examinationSessionId = { [Op.in]: sessionIds };
+  }
+
   return scoped(model.examinationSessionModel).findAndCountAll({
-    where,
+    where: sessionWhere,
     include: sessionInclude,
     distinct: true,
     order: [["examinationSessionId", "DESC"]],
