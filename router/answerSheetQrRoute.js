@@ -27,8 +27,9 @@ import {
   getEvaluationAssignmentById,
   getApprovedQuestionPaperByAnswerSheetId,
   getMyApprovedQuestionPaperByAnswerSheetId,
-  saveMyAnnotatedAnswerSheetPdf,
-  saveAnnotatedAnswerSheetPdf,
+  saveMyAnswerSheetAnnotation,
+  submitMyAnswerSheetAnnotation,
+  getMyAnswerSheetAnnotation,
 } from "../controllers/answerSheetQrController.js";
 
 const router = Router();
@@ -130,11 +131,11 @@ const assignObtainedMarksSchema = z.object({
     .max(999.99, "obtained_marks must be less than or equal to 999.99"),
 });
 
-const saveAnnotatedPdfSchema = z.object({
-  fileUploadId: z
-    .number({ required_error: "fileUploadId is required." })
-    .int("fileUploadId must be an integer.")
-    .positive("fileUploadId must be a positive integer."),
+const saveAnnotationSchema = z.object({
+  annotationData: z.union([z.record(z.string(), z.any()), z.array(z.any())], {
+    required_error: "annotationData is required.",
+    invalid_type_error: "annotationData must be a JSON object or array.",
+  }),
 });
 
 const bulkFinalSubmitSchema = z.object({
@@ -383,10 +384,24 @@ router.patch(
 );
 
 router.post(
-  "/my/:id(\\d+)/annotatedPdf",
+  "/my/annotation",
   userAuth,
-  validate({ params: idParamSchema, body: saveAnnotatedPdfSchema }),
-  saveMyAnnotatedAnswerSheetPdf,
+  validate({ query: answerSheetQrIdQuerySchema, body: saveAnnotationSchema }),
+  saveMyAnswerSheetAnnotation,
+);
+
+router.post(
+  "/my/annotation/submit",
+  userAuth,
+  validate({ query: answerSheetQrIdQuerySchema, body: saveAnnotationSchema }),
+  submitMyAnswerSheetAnnotation,
+);
+
+router.get(
+  "/my/:id(\\d+)/annotation",
+  userAuth,
+  validate({ params: idParamSchema }),
+  getMyAnswerSheetAnnotation,
 );
 
 router.patch(
@@ -491,14 +506,6 @@ router.patch(
   checkAccess(PERMISSIONS.EVALUATION_EXECUTE.value, null),
   validate({ params: idParamSchema, body: assignObtainedMarksSchema }),
   assignObtainedMarksToAnswerSheet
-);
-
-router.post(
-  "/:id(\\d+)/annotatedPdf",
-  userAuth,
-  checkAccess(PERMISSIONS.EVALUATION_EXECUTE.value, null),
-  validate({ params: idParamSchema, body: saveAnnotatedPdfSchema }),
-  saveAnnotatedAnswerSheetPdf,
 );
 
 router.get(

@@ -101,7 +101,7 @@ export async function bulkCreateAnswerSheetQr(rows, transaction) {
 export async function getAnswerSheetQrById(id, transaction) {
   return scoped(model.answerSheetQrModel).findOne({
     where: { id },
-    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "deadlineDate", "evaluatedAt", "obtainedMarks", "markingStatus", "fileUploadId", "annotatedFileUploadId", "instituteId", "universityId", "createdAt"],
+    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "deadlineDate", "evaluatedAt", "obtainedMarks", "markingStatus", "fileUploadId", "instituteId", "universityId", "createdAt"],
     include: [
       {
         model: model.studentModel,
@@ -119,12 +119,6 @@ export async function getAnswerSheetQrById(id, transaction) {
       {
         model: model.s3FileModel,
         as: "s3File",
-        required: false,
-        attributes: ["id", "status", "s3Key", "originalName", "mime"],
-      },
-      {
-        model: model.s3FileModel,
-        as: "annotatedS3File",
         required: false,
         attributes: ["id", "status", "s3Key", "originalName", "mime"],
       },
@@ -337,47 +331,6 @@ export async function assignMarksByAnswerSheetId(
   return affectedCount;
 }
 
-export async function findAnswerSheetForAnnotatedPdfSave(
-  answerSheetQrId,
-  assignedToUserId,
-  transaction,
-) {
-  const where = { id: Number(answerSheetQrId) };
-  if (assignedToUserId != null) {
-    where.assignedToUser = Number(assignedToUserId);
-  }
-
-  return scoped(model.answerSheetQrModel).findOne({
-    where,
-    attributes: [
-      "id",
-      "qr",
-      "assignedToUser",
-      "fileUploadId",
-      "annotatedFileUploadId",
-      "markingStatus",
-      "instituteId",
-      "universityId",
-    ],
-    transaction,
-  });
-}
-
-export async function updateAnnotatedFileUploadId(
-  answerSheetQrId,
-  annotatedFileUploadId,
-  transaction,
-) {
-  const [affectedCount] = await scoped(model.answerSheetQrModel).update(
-    { annotatedFileUploadId: Number(annotatedFileUploadId) },
-    {
-      where: { id: Number(answerSheetQrId) },
-      transaction,
-    },
-  );
-  return affectedCount;
-}
-
 /**
  * Bulk final-submit: set markingStatus to submit for the given IDs.
  * Keeps existing obtained_marks. Optionally scopes to assignedToUserId.
@@ -511,7 +464,6 @@ export async function getMySingleAssignedScript(id, assignedToUserId) {
       "obtainedMarks",
       "markingStatus",
       "fileUploadId",
-      "annotatedFileUploadId",
       "createdAt",
     ],
     include: [
@@ -521,12 +473,6 @@ export async function getMySingleAssignedScript(id, assignedToUserId) {
         as: "s3File",
         required: false,
         attributes: ["id", "status", "s3Key"],
-      },
-      {
-        model: model.s3FileModel,
-        as: "annotatedS3File",
-        required: false,
-        attributes: ["id", "status", "s3Key", "originalName", "mime"],
       },
     ],
   });
