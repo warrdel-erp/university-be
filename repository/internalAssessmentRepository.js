@@ -655,19 +655,44 @@ export async function getInternalAssessmentsBySubject(filters) {
   const progressMap = await getMarkingProgressMap(internalAssessmentIds);
 
   const result = [];
+  let allMarksFilled = assessments.length > 0;
+
   for (const assessment of assessments) {
     const plain = assessment.get({ plain: true });
     const progress = progressMap.get(plain.internalAssessmentId);
     plain.studentCount = progress.studentCount;
     plain.checked = progress.checked;
     plain.pendingForMarking = progress.pendingForMarking;
+
+    if (progress.studentCount === 0 || progress.pendingForMarking > 0) {
+      allMarksFilled = false;
+    }
+
     result.push(plain);
   }
 
-  const status = await getFinalSubmissionStatus({
+  const finalStatus = await getFinalSubmissionStatus({
     subjectId,
     classSectionTermId,
   });
+
+  const status =
+    finalStatus === "submitted" && allMarksFilled
+      ? "submitted"
+      : "inprogress";
+
+  for (const assessment of result) {
+    if (status === "submitted") {
+      assessment.status = "submitted";
+    } else if (
+      assessment.studentCount > 0 &&
+      assessment.pendingForMarking === 0
+    ) {
+      assessment.status = "completed";
+    } else {
+      assessment.status = "inprogress";
+    }
+  }
 
   return {
     status,
