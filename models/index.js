@@ -178,6 +178,7 @@ import studentFeePaymentModel from "./studentFeePaymentModel.js";
 import paymentItemModel from "./paymentItemModel.js";
 import studentFeeInvoiceItemsModel from "./studentFeeInvoiceItemsModel.js";
 import answerSheetQrModel from "./answerSheetQrModel.js";
+import answerSheetAnnotationModel from "./answerSheetAnnotationModel.js";
 import answersheetEvalutionUserAssignmentModel from "./answersheetEvalutionUserAssignmentModel.js";
 import s3FileModel from "./s3FileModel.js";
 import pdfSplitJobModel from "./pdfSplitJobModel.js";
@@ -3956,13 +3957,22 @@ s3FileModel.hasOne(answerSheetQrModel, {
   as: "answerSheetQr",
 });
 
-answerSheetQrModel.belongsTo(s3FileModel, {
-  foreignKey: "annotated_file_upload_id",
-  as: "annotatedS3File",
+answerSheetQrModel.hasMany(answerSheetAnnotationModel, {
+  foreignKey: "answerSheetQrId",
+  as: "annotations",
 });
-s3FileModel.hasOne(answerSheetQrModel, {
-  foreignKey: "annotated_file_upload_id",
-  as: "annotatedAnswerSheetQr",
+answerSheetAnnotationModel.belongsTo(answerSheetQrModel, {
+  foreignKey: "answerSheetQrId",
+  as: "answerSheetQr",
+});
+
+answerSheetAnnotationModel.belongsTo(userModel, {
+  foreignKey: "createdBy",
+  as: "createdByUser",
+});
+answerSheetAnnotationModel.belongsTo(userModel, {
+  foreignKey: "updatedBy",
+  as: "updatedByUser",
 });
 
 studentResultModel.belongsTo(examinationSessionModel, {
@@ -4346,6 +4356,7 @@ export {
   libraryCreationModel,
   libraryAuthorityModel,
   answerSheetQrModel,
+  answerSheetAnnotationModel,
   answersheetEvalutionUserAssignmentModel,
   timeTableStructureModel,
   timeTableStructureCourseModel,

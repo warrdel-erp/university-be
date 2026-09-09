@@ -2,11 +2,11 @@ import { v4 as uuidv4 } from "uuid";
 import { Op, UniqueConstraintError } from "sequelize";
 import * as model from "../models/index.js";
 import * as answerSheetQrRepository from "../repository/answerSheetQrRepository.js";
+import * as answerSheetAnnotationRepository from "../repository/answerSheetAnnotationRepository.js";
 import * as examinationSessionRepository from "../repository/examinationSessionRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 import { buildTermName } from "../utility/courseTerms.js";
 import * as s3Helper from "../utility/s3Helper.js";
-import * as s3FileRepository from "../repository/s3FileRepository.js";
 
 const MAX_UNUSED_QR_PER_INSTITUTE = 5000;
 
@@ -475,13 +475,6 @@ export async function getAnswerSheetQrDetailById(id) {
       s3File.url = await s3Helper.getDownloadSignedUrl(s3File.s3Key);
     }
 
-    const annotatedS3File = plainRow.annotatedS3File || null;
-    if (annotatedS3File?.s3Key) {
-      annotatedS3File.url = await s3Helper.getDownloadSignedUrl(
-        annotatedS3File.s3Key,
-      );
-    }
-
     return {
       id: plainRow.id,
       qr: plainRow.qr,
@@ -495,13 +488,11 @@ export async function getAnswerSheetQrDetailById(id) {
       obtainedMarks: plainRow.obtainedMarks ?? null,
       markingStatus: plainRow.markingStatus ?? "pending",
       fileUploadId: plainRow.fileUploadId ?? null,
-      annotatedFileUploadId: plainRow.annotatedFileUploadId ?? null,
       instituteId: plainRow.instituteId,
       universityId: plainRow.universityId,
       isMapped,
       ...examContext,
       s3File,
-      annotatedS3File,
     };
   });
   return result;
@@ -1177,11 +1168,6 @@ export async function getMySingleAssignedScript(id, assignedToUserId) {
   if (plain.s3File && plain.s3File.s3Key) {
     plain.s3File.url = await s3Helper.getDownloadSignedUrl(plain.s3File.s3Key);
   }
-  if (plain.annotatedS3File && plain.annotatedS3File.s3Key) {
-    plain.annotatedS3File.url = await s3Helper.getDownloadSignedUrl(
-      plain.annotatedS3File.s3Key,
-    );
-  }
 
   return {
     id: plain.id,
@@ -1194,28 +1180,29 @@ export async function getMySingleAssignedScript(id, assignedToUserId) {
     obtainedMarks: plain.obtainedMarks ?? null,
     markingStatus: plain.markingStatus ?? "pending",
     fileUploadId: plain.fileUploadId,
-    annotatedFileUploadId: plain.annotatedFileUploadId ?? null,
     createdAt: plain.createdAt,
     ...buildExamContext(plain, { includeStudentIdentity: false }),
     s3File: plain.s3File ?? null,
-    annotatedS3File: plain.annotatedS3File ?? null,
   };
 }
 
 /**
- * Save annotated/marked PDF for one answer sheet.
- * Client uploads via S3 APIs first, then passes fileUploadId here.
+ * Save or submit annotation JSON for one answer sheet (versioned row).
+ * status must be "saved" (repeatable) or "submitted" (final).
+ * When assignedToUserId is set, the sheet must belong to that evaluator.
  */
-export async function saveAnnotatedAnswerSheetPdf({
+export async function saveAnswerSheetAnnotation({
   answerSheetQrId,
-  fileUploadId,
+  annotationData,
+  status,
   assignedToUserId,
+  userId,
 }) {
   const transaction = await sequelize.transaction();
 
   try {
     const answerSheet =
-      await answerSheetQrRepository.findAnswerSheetForAnnotatedPdfSave(
+      await answerSheetAnnotationRepository.findAnswerSheetWithOriginalPdf(
         answerSheetQrId,
         assignedToUserId,
         transaction,
@@ -1233,67 +1220,121 @@ export async function saveAnnotatedAnswerSheetPdf({
 
     if (answerSheet.markingStatus === "submit") {
       const err = new Error(
-        "Cannot update annotated PDF after final submit.",
+        "Cannot update annotation after final submit.",
       );
       err.statusCode = 400;
       throw err;
     }
 
-    const fileRecord = await s3FileRepository.getS3FileById(
-      Number(fileUploadId),
-      transaction,
-    );
+    const latestAnnotation =
+      await answerSheetAnnotationRepository.getLatestAnnotationByAnswerSheetQrId(
+        answerSheet.id,
+        transaction,
+      );
 
-    if (!fileRecord) {
-      const err = new Error("File upload record not found.");
-      err.statusCode = 404;
-      throw err;
-    }
-
-    if (fileRecord.mime !== "application/pdf") {
+    if (latestAnnotation?.status === "submitted") {
       const err = new Error(
-        `Annotated file must be a PDF (detected MIME: ${fileRecord.mime}).`,
+        "Annotation already submitted. Further changes are not allowed.",
       );
       err.statusCode = 400;
       throw err;
     }
 
-    if (fileRecord.status !== "active") {
-      const err = new Error(
-        "File upload is not confirmed/active. Confirm the S3 upload first.",
+    const latestVersion =
+      await answerSheetAnnotationRepository.getLatestVersion(
+        answerSheet.id,
+        transaction,
       );
-      err.statusCode = 400;
-      throw err;
-    }
 
-    await s3Helper.verifyFileInS3(fileRecord.s3Key);
-
-    await answerSheetQrRepository.updateAnnotatedFileUploadId(
-      answerSheet.id,
-      fileRecord.id,
+    const annotation = await answerSheetAnnotationRepository.createAnnotation(
+      {
+        answerSheetQrId: answerSheet.id,
+        annotationData,
+        version: latestVersion + 1,
+        status,
+        createdBy: userId,
+        updatedBy: userId,
+      },
       transaction,
     );
 
     await transaction.commit();
 
-    const annotatedS3File = {
-      id: fileRecord.id,
-      status: fileRecord.status,
-      s3Key: fileRecord.s3Key,
-      originalName: fileRecord.originalName,
-      mime: fileRecord.mime,
-      url: await s3Helper.getDownloadSignedUrl(fileRecord.s3Key),
-    };
-
     return {
-      answerSheetQrId: answerSheet.id,
-      annotatedFileUploadId: fileRecord.id,
-      annotatedS3File,
+      answerSheetAnnotationId: annotation.answerSheetAnnotationId,
+      answerSheetQrId: annotation.answerSheetQrId,
+      annotationData: annotation.annotationData,
+      version: annotation.version,
+      status: annotation.status,
+      createdAt: annotation.createdAt,
+      updatedAt: annotation.updatedAt,
     };
   } catch (error) {
     await transaction.rollback();
     throw error;
   }
+}
+
+/**
+ * Latest annotation JSON + original answer sheet PDF for one QR.
+ * When assignedToUserId is set, the sheet must belong to that evaluator.
+ */
+export async function getAnswerSheetAnnotation(
+  answerSheetQrId,
+  assignedToUserId,
+) {
+  const answerSheet =
+    await answerSheetAnnotationRepository.findAnswerSheetWithOriginalPdf(
+      answerSheetQrId,
+      assignedToUserId,
+    );
+
+  if (!answerSheet) {
+    const err = new Error(
+      assignedToUserId != null
+        ? "Assigned answer sheet not found."
+        : "Answer sheet QR not found.",
+    );
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const annotation =
+    await answerSheetAnnotationRepository.getLatestAnnotationByAnswerSheetQrId(
+      answerSheet.id,
+    );
+
+  let originalS3File = null;
+  if (answerSheet.s3File) {
+    const file = answerSheet.s3File;
+    originalS3File = {
+      id: file.id,
+      status: file.status,
+      s3Key: file.s3Key,
+      originalName: file.originalName,
+      mime: file.mime,
+      url: await s3Helper.getDownloadSignedUrl(file.s3Key),
+    };
+  }
+
+  return {
+    answerSheetQrId: answerSheet.id,
+    qr: answerSheet.qr,
+    markingStatus: answerSheet.markingStatus,
+    originalS3File,
+    annotation: annotation
+      ? {
+          answerSheetAnnotationId: annotation.answerSheetAnnotationId,
+          annotationData: annotation.annotationData,
+          version: annotation.version,
+          status: annotation.status,
+          createdBy: annotation.createdBy,
+          updatedBy: annotation.updatedBy,
+          createdAt: annotation.createdAt,
+          updatedAt: annotation.updatedAt,
+        }
+      : null,
+  };
 }
 
 /**
