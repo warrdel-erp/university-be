@@ -47,7 +47,7 @@ const answerSheetQrModel = sequelize.define(
         key: "user_id",
       },
     },
-deadlineDate: {
+    deadlineDate: {
       type: DataTypes.DATEONLY,
       allowNull: true,
       field: "deadline_date",
