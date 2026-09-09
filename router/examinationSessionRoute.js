@@ -36,6 +36,8 @@ const sessionBodyObject = z.object({
     .array(
       z.object({
         term: z.number().int().positive(),
+        courseId: z.number().int().positive().optional().nullable(),
+        sessionId: z.number().int().positive().optional().nullable(),
         includeElectives: z.boolean().optional(),
         remarks: z.string().optional(),
       }),
@@ -114,6 +116,12 @@ const createTermSchema = {
     term: z.number({
       required_error: "term is required",
     }).int().positive(),
+    courseId: z.number().int().positive({
+      message: "courseId must be a positive number",
+    }),
+    sessionId: z.number().int().positive({
+      message: "sessionId must be a positive number",
+    }),
     includeElectives: z.boolean().optional(),
     remarks: z.string().optional(),
   }),
@@ -329,6 +337,17 @@ router.get(
   userAuth,
   validate(dashboardSessionQuerySchema),
   examinationSessionController.getProgressMetrics,
+);
+
+router.get(
+  "/overview",
+  userAuth,
+  validate({
+    query: z.object({
+      examinationSessionId: positiveIntegerQueryId.optional(),
+    }),
+  }),
+  examinationSessionController.getExaminationSessionOverview,
 );
 
 export default router;

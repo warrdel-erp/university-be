@@ -352,6 +352,24 @@ examinationSessionTermModel.belongsTo(examinationSessionModel, {
   as: "examinationSession",
 });
 
+examinationSessionTermModel.belongsTo(courseModel, {
+  foreignKey: "course_id",
+  as: "course",
+});
+courseModel.hasMany(examinationSessionTermModel, {
+  foreignKey: "course_id",
+  as: "examinationSessionTerms",
+});
+
+examinationSessionTermModel.belongsTo(sessionModel, {
+  foreignKey: "session_id",
+  as: "session",
+});
+sessionModel.hasMany(examinationSessionTermModel, {
+  foreignKey: "session_id",
+  as: "examinationSessionTerms",
+});
+
 // Exam Invigilator Assignment Associations
 examInvigilatorAssignmentModel.belongsTo(universityModel, {
   foreignKey: "university_id",
