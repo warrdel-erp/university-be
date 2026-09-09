@@ -366,7 +366,7 @@ export async function createExaminationSession(sessionData, options = {}) {
 export async function getExaminationSessions(filters = {}, options = {}) {
   const {
     search,
-    status,
+    status = "all",
     academicYearId,
     assessmentTypeId,
     universityId,
@@ -379,16 +379,17 @@ export async function getExaminationSessions(filters = {}, options = {}) {
   const offset = (pageNum - 1) * limitNum;
   const where = {};
 
-  if (status) where.status = status;
   if (academicYearId) where.academicYearId = Number(academicYearId);
   if (assessmentTypeId) where.assessmentTypeId = Number(assessmentTypeId);
   if (universityId) where.universityId = Number(universityId);
   if (instituteId) where.instituteId = Number(instituteId);
   if (search) where.sessionName = { [Op.like]: `%${search}%` };
 
+  const lifecycleStatus = status === "all" ? undefined : status;
+
   const { count, rows } =
     await examinationSessionRepository.findAndCountExaminationSessions(
-      { where, limit: limitNum, offset },
+      { where, limit: limitNum, offset, lifecycleStatus },
       options,
     );
 

@@ -128,6 +128,9 @@ export const PERMISSIONS = {
     EXAM_TYPES: {
         value: "EXAM_TYPES",
     },
+    EXAMINATION_SESSION: {
+        value: "EXAMINATION_SESSION",
+    },
     ASSIGN_WEIGHTAGE: {
         value: "ASSIGN_WEIGHTAGE",
     },
@@ -1026,6 +1029,26 @@ export const PERMISSIONS = {
     EXAM_TYPES_DELETE: {
         value: "EXAM_TYPES_DELETE",
         parentPermission: 'EXAM_TYPES',
+    },
+    EXAMINATION_SESSION_ADD: {
+        value: "EXAMINATION_SESSION_ADD",
+        parentPermission: 'EXAMINATION_SESSION',
+    },
+    EXAMINATION_SESSION_EDIT: {
+        value: "EXAMINATION_SESSION_EDIT",
+        parentPermission: 'EXAMINATION_SESSION',
+    },
+    EXAMINATION_SESSION_GET: {
+        value: "EXAMINATION_SESSION_GET",
+        parentPermission: 'EXAMINATION_SESSION',
+    },
+    EXAMINATION_SESSION_DELETE: {
+        value: "EXAMINATION_SESSION_DELETE",
+        parentPermission: 'EXAMINATION_SESSION',
+    },
+    EXAMINATION_SESSION_PUBLISH: {
+        value: "EXAMINATION_SESSION_PUBLISH",
+        parentPermission: 'EXAMINATION_SESSION',
     },
     ASSIGN_WEIGHTAGE_SIDEBAR: {
         value: "ASSIGN_WEIGHTAGE_SIDEBAR",
