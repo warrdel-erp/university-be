@@ -3,6 +3,8 @@ import { z } from "zod";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
 import * as examResultController from "../controllers/examResultController.js";
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 
 const router = Router();
 

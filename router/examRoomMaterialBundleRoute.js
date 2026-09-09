@@ -3,6 +3,8 @@ import { validate } from "../utility/validation.js";
 import { z } from "zod";
 import * as controller from "../controllers/examRoomMaterialBundleController.js";
 import userAuth from "../middleware/authUser.js";
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 
 const router = Router();
 
