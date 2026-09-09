@@ -252,13 +252,7 @@ router.delete(
 router.put(
   "/approve",
   userAuth,
-  checkAccessAny(
-    [
-      PERMISSIONS.QUESTION_APPROVAL_EDIT.value,
-      PERMISSIONS.EXAM_TIME_TABLE_CREATE_PAPER_APPROVAL.value,
-    ],
-    null,
-  ),
+  checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_EDIT.value, null),
   validate({ body: approveQuestionPaperSchema }),
   approveQuestionPaper,
 );
@@ -266,7 +260,7 @@ router.put(
 router.patch(
   "/finalApproved",
   userAuth,
-  checkAccess(PERMISSIONS.EXAM_TIME_TABLE_CREATE_PAPER_APPROVAL.value, null),
+  checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_EDIT.value, null),
   validate({ body: finalApprovalSchema }),
   approvefinalpaper,
 );
