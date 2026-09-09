@@ -183,32 +183,37 @@ const summarySchema = {
 router.get(
   "/summary",
   userAuth,
+  checkAccess(PERMISSIONS.EXAM_ROOM_MATERIAL_BUNDLE.value, null),
   validate(summarySchema),
   controller.getBundleSummary,
 );
 router.get(
   "/examOperationall",
   userAuth,
+  checkAccess(PERMISSIONS.EXAM_ROOM_MATERIAL_BUNDLE.value, null),
   validate(listSchema),
   controller.getBundleList,
 );
 router.get(
   "/readybundles",
   userAuth,
+  checkAccess(PERMISSIONS.EXAM_ROOM_MATERIAL_BUNDLE.value, null),
   validate(listSchema),
   controller.getReadyBundleList,
 );
-router.get("/", userAuth, validate(listSchema), controller.getBundleList);
+router.get("/", userAuth, checkAccess(PERMISSIONS.EXAM_ROOM_MATERIAL_BUNDLE.value, null), validate(listSchema), controller.getBundleList);
 
 router.get(
   "/room",
   userAuth,
   validate(singleQuerySchema),
+  checkAccess(PERMISSIONS.EXAM_ROOM_MATERIAL_BUNDLE.value, null),
   controller.getBundleByRoomDetails,
 );
 router.get(
   "/receivedRooms",
   userAuth,
+  checkAccess(PERMISSIONS.EXAM_ROOM_MATERIAL_BUNDLE.value, null),
   validate(listSchema),
   controller.getReceivedRooms,
 );
@@ -222,22 +227,25 @@ const updateStatusSchema = {
   }),
 };
 
-router.post("/", userAuth, validate(createSchema), controller.createBundle);
+router.post("/", userAuth, checkAccess(PERMISSIONS.EXAM_ROOM_MATERIAL_BUNDLE.value, null), validate(createSchema), controller.createBundle);
 router.post(
   "/auto",
   userAuth,
+  checkAccess(PERMISSIONS.EXAM_ROOM_MATERIAL_BUNDLE.value, null),
   validate(createAutoSchema),
   controller.createBundleAuto,
 );
 router.patch(
   "/items/:examRoomMaterialBundleId",
   userAuth,
+  checkAccess(PERMISSIONS.EXAM_ROOM_MATERIAL_BUNDLE.value, null),
   validate(updateItemsSchema),
   controller.updateBundleItems,
 );
 router.patch(
   "/status/:examRoomMaterialBundleId",
   userAuth,
+  checkAccess(PERMISSIONS.EXAM_ROOM_MATERIAL_BUNDLE.value, null),
   validate(updateStatusSchema),
   controller.updateBundleStatus,
 );
