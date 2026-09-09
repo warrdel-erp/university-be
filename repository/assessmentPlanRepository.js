@@ -1,6 +1,8 @@
 import { Op } from "sequelize";
 import * as model from "../models/index.js";
 import { scoped } from "../utility/scoped.js";
+import { decimalDivide, decimalMultiply } from "../utility/decimalMoney.js";
+
 
 export async function createAssessmentPlan(planData, options = {}) {
   const { components, ...mainPlanData } = planData;
@@ -547,107 +549,11 @@ export async function getAssessmentPlanStats() {
   };
 }
 
-import sequelize from "../database/sequelizeConfig.js";
-import { ASSESSMENT_CATEGORY_DETAILS } from "../constant.js";
-import { toIntegerNumber, decimalDivide, decimalMultiply } from "../utility/decimalMoney.js";
 
 export async function createAssessmentPlanSubjectMapping(data, options = {}) {
-  const transaction = options.transaction || await sequelize.transaction();
-  let commitTransaction = !options.transaction;
-  
-  try {
-    const mapping = await scoped(model.assessmentPlanSubjectMappingModel).create(data, { transaction });
-    
-    // Create internal assessment placeholder rows for primary teachers of this subject
-    const component = await model.assessmentPlanComponentModel.findOne({
-      where: { assessmentPlanId: mapping.assessmentPlanId },
-      include: [
-        {
-          model: model.examSetupTypeModel,
-          as: 'examSetupType',
-          where: {
-            examCategory: 'CONTINUOUS_ASSESSMENT'
-          },
-          required: true
-        }
-      ],
-      transaction
-    });
-    
-    const examSetupTypeId = component ? component.examSetupTypeId : null;
-    const weightage = component && component.weightagePercentage ? toIntegerNumber(component.weightagePercentage) : 0;
-    const assessmentType =
-      component && component.examSetupType && component.examSetupType.examName
-        ? component.examSetupType.examName
-        : "Continuous Assessment";
-
-    // 3. Query timetable cells to get primary teachers using Sequelize includes
-    let courseMappingWhere = { courseId: mapping.courseId };
-    if (mapping.sessionId) {
-      courseMappingWhere.sessionId = mapping.sessionId;
-    }
-
-    const timeTableCells = await model.timeTableCellModel.findAll({
-      where: { subjectId: mapping.subjectId },
-      include: [
-        {
-          model: model.timeTableCellTeachersModel,
-          as: 'timeTableCellTeachers',
-          where: { teacherType: 'Primary' },
-          attributes: ['userId'],
-          required: true
-        },
-        {
-          model: model.timeTableStructureModel,
-          as: 'timeTableStructure',
-          required: true,
-          include: [
-            {
-              model: model.timeTableStructureCourseModel,
-              as: 'courseMappings',
-              where: courseMappingWhere,
-              required: true
-            }
-          ]
-        }
-      ],
-      transaction
-    });
-
-    const entriesToInsert = [];
-    const uniqueUserIds = new Set();
-    
-    for (const cell of timeTableCells) {
-      for (const teacher of cell.timeTableCellTeachers) {
-        if (!uniqueUserIds.has(teacher.userId)) {
-          uniqueUserIds.add(teacher.userId);
-          entriesToInsert.push({
-            universityId: mapping.universityId,
-            instituteId: mapping.instituteId,
-            academicYearId: mapping.academicYearId,
-            subjectId: mapping.subjectId,
-            sessionId: mapping.sessionId,
-            userId: teacher.userId,
-            examSetupTypeId: examSetupTypeId,
-            weightage: weightage,
-            type: assessmentType,
-            title: assessmentType,
-            isIncludeInFinalResult: false,
-          });
-        }
-      }
-    }
-
-    if (entriesToInsert.length > 0) {
-      await model.internalAssessmentModel.bulkCreate(entriesToInsert, { transaction });
-    }
-
-    if (commitTransaction) await transaction.commit();
-    return mapping;
-  } catch (error) {
-    if (commitTransaction) await transaction.rollback();
-    throw error;
-  }
+  return scoped(model.assessmentPlanSubjectMappingModel).create(data, {
+    transaction: options.transaction,
+  });
 }
 
 export async function getAssessmentPlanSubjectMappings({
