@@ -3,8 +3,6 @@ import * as examinationSessionController from "../controllers/examinationSession
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
 import { z } from "zod";
-import { checkAccess } from "../middleware/checkAccess.js";
-import { PERMISSIONS } from "../const/permissions.js";
 
 const router = Router();
 
@@ -236,7 +234,6 @@ router.post(
   "/",
   userAuth,
   validate(createSessionSchema),
-  checkAccess(PERMISSIONS.EXAMINATION_SESSION_ADD.value, null),
   examinationSessionController.createExaminationSession,
 );
 
@@ -244,7 +241,6 @@ router.patch(
   "/",
   userAuth,
   validate(updateSessionSchema),
-  checkAccess(PERMISSIONS.EXAMINATION_SESSION_EDIT.value, null),
   examinationSessionController.updateExaminationSession,
 );
 
@@ -252,7 +248,6 @@ router.get(
   "/",
   userAuth,
   validate(getSessionsSchema),
-  checkAccess(PERMISSIONS.EXAMINATION_SESSION_GET.value, null),
   examinationSessionController.getExaminationSessions,
 );
 
@@ -260,21 +255,18 @@ router.get(
   "/single",
   userAuth,
   validate(getSessionByIdSchema),
-  checkAccess(PERMISSIONS.EXAMINATION_SESSION_GET.value, null),
   examinationSessionController.getExaminationSessionById,
 );
 router.get(
   "/classSectionTerms",
   userAuth,
   validate(getClassSectionTermsBySetupTypeSchema),
-  checkAccess(PERMISSIONS.EXAMINATION_SESSION_GET.value, null),
   examinationSessionController.getClassSectionTermsBySetupType,
 );
 router.get(
   "/structure",
   userAuth,
   validate(getStructureSchema),
-  checkAccess(PERMISSIONS.EXAMINATION_SESSION_GET.value, null),
   examinationSessionController.getExaminationStructure,
 );
 
@@ -282,7 +274,6 @@ router.get(
   "/subjects",
   userAuth,
   validate(getSubjectsBySessionAndTermSchema),
-  checkAccess(PERMISSIONS.EXAMINATION_SESSION_GET.value, null),
   examinationSessionController.getMappedSubjectsBySessionAndTerm,
 );
 
@@ -290,7 +281,6 @@ router.get(
   "/questionPaper",
   userAuth,
   validate(getSubjectsBySessionAndTermSchema),
-  checkAccess(PERMISSIONS.EXAMINATION_SESSION_GET.value, null),
   examinationSessionController.getMappedSubjectsBySessionAndTermNeed,
 );
 
@@ -298,7 +288,6 @@ router.get(
   "/questionPaperSummary",
   userAuth,
   validate(questionPaperSummarySchema),
-  checkAccess(PERMISSIONS.EXAMINATION_SESSION_GET.value, null),
   examinationSessionController.getQuestionPaperSummary,
 );
 
@@ -306,7 +295,6 @@ router.get(
   "/answerSheets",
   userAuth,
   validate(getAnswerSheetsSchema),
-  checkAccess(PERMISSIONS.EXAMINATION_SESSION_GET.value, null),
   examinationSessionController.getExaminationSessionAnswerSheets,
 );
 
@@ -314,21 +302,18 @@ router.delete(
   "/",
   userAuth,
   validate(getSessionByIdSchema),
-  checkAccess(PERMISSIONS.EXAMINATION_SESSION_DELETE.value, null),
   examinationSessionController.deleteExaminationSession,
 );
 router.post(
   "/term",
   userAuth,
   validate(createTermSchema),
-  checkAccess(PERMISSIONS.EXAMINATION_SESSION_ADD.value, null),
   examinationSessionController.createExaminationSessionTerm,
 );
 router.delete(
   "/term",
   userAuth,
   validate(deleteTermSchema),
-  checkAccess(PERMISSIONS.EXAMINATION_SESSION_DELETE.value, null),
   examinationSessionController.deleteExaminationSessionTerm,
 );
 
@@ -342,7 +327,6 @@ router.post(
       }),
     }),
   }),
-  checkAccess(PERMISSIONS.EXAMINATION_SESSION_PUBLISH.value, null),
   examinationSessionController.publishExaminationSession,
 );
 
@@ -354,7 +338,6 @@ router.get(
       examinationSessionId: positiveIntegerQueryId,
     }),
   }),
-  checkAccess(PERMISSIONS.EXAMINATION_SESSION_GET.value, null),
   examinationSessionController.getSessionSkuStats,
 );
 
@@ -374,7 +357,6 @@ router.get(
   "/planningOverview",
   userAuth,
   validate(dashboardSessionQuerySchema),
-  checkAccess(PERMISSIONS.EXAMINATION_SESSION_GET.value, null),
   examinationSessionController.getPlanningOverview,
 );
 
@@ -382,7 +364,6 @@ router.get(
   "/timeline",
   userAuth,
   validate(timelineQuerySchema),
-  checkAccess(PERMISSIONS.EXAMINATION_SESSION_GET.value, null),
   examinationSessionController.getExaminationTimeline,
 );
 
@@ -390,7 +371,6 @@ router.get(
   "/progressMetrics",
   userAuth,
   validate(dashboardSessionQuerySchema),
-  checkAccess(PERMISSIONS.EXAMINATION_SESSION_GET.value, null),
   examinationSessionController.getProgressMetrics,
 );
 
@@ -402,7 +382,6 @@ router.get(
       examinationSessionId: positiveIntegerQueryId.optional(),
     }),
   }),
-  checkAccess(PERMISSIONS.EXAMINATION_SESSION_GET.value, null),
   examinationSessionController.getExaminationSessionOverview,
 );
 
