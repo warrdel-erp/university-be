@@ -69,3 +69,16 @@ export const mapBatch = async (req, res) => {
         return ErrorResponse(res, error.statusCode || 500, error.message || 'Internal Server Error');
     }
 };
+
+export const updateSubjectTermMapping = async (req, res) => {
+  try {
+    const { curriculumSubjectTermMappingId } = req.params;
+    const result = await curriculumService.updateSubjectTermMapping(
+      Number(curriculumSubjectTermMappingId),
+      req.body,
+    );
+    return SuccessResponse(res, 200, 'Subject mapping updated successfully', result);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || 'Internal Server Error');
+  }
+};

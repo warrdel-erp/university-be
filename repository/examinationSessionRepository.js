@@ -372,6 +372,7 @@ export async function findCurriculumSubjectsByCourseAndTerm(
       "curriculumId",
       "subjectId",
       "term",
+      "credit",
     ],
     where: { term: Number(term) },
     include: [

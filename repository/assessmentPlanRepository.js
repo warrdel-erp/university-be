@@ -452,6 +452,7 @@ export async function findOverviewByCurriculumBatchMappingId({
       "curriculumId",
       "subjectId",
       "term",
+      "credit",
     ],
     include: [
       {
@@ -834,7 +835,7 @@ export async function findCurriculumBatchCoursesWithSessions({
           {
             model: model.curriculumSubjectTermMappingModel,
             as: "subjectTermMappings",
-            attributes: ["curriculumSubjectTermMappingId", "subjectId", "term"],
+            attributes: ["curriculumSubjectTermMappingId", "subjectId", "term", "credit"],
             required: false,
             separate: true,
           },

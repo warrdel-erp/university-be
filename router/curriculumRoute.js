@@ -26,7 +26,13 @@ const mapSubjectsSchema = z.object({
     subjects: z.array(z.object({
         subjectId: z.number().int().positive(),
         term: z.number().int().positive(),
+        credit: z.number().nonnegative().nullable().optional(),
     })).min(1),
+});
+
+const updateSubjectTermMappingSchema = z.object({
+  credit: z.number().nonnegative().nullable(),
+  term: z.number().int().positive().optional(),
 });
 
 router.get('/batches', useAuth, batchController.getBatches);
@@ -36,5 +42,16 @@ router.get('/:id', useAuth, controller.getById);
 router.post('/', useAuth, validate(createSchema), controller.create);
 router.post('/:curriculumId/map-batch', useAuth, validate(mapBatchSchema), controller.mapBatch);
 router.post('/:curriculumId/map-subjects', useAuth, validate(mapSubjectsSchema), controller.mapSubjects);
+router.patch(
+  '/addCredit/:curriculumSubjectTermMappingId',
+  useAuth,
+  validate({
+    params: z.object({
+      curriculumSubjectTermMappingId: z.coerce.number().int().positive(),
+    }),
+    body: updateSubjectTermMappingSchema,
+  }),
+  controller.updateSubjectTermMapping,
+);
 
 export default router;

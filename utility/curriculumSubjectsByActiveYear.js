@@ -185,6 +185,7 @@ export async function findCurriculumSubjectsForActiveYear(
               "curriculumSubjectTermMappingId",
               "subjectId",
               "term",
+              "credit",
             ],
             required: true,
             where:
@@ -263,10 +264,14 @@ export async function findCurriculumSubjectsForActiveYear(
       rows.push({
         subjectId: Number(mapping.subjectId),
         term: activeTerm,
+        credit: mapping.credit,
         year: Number(plainTerm.year),
         yearNumber: Number(plainTerm.yearNumber),
         batch: Number(batchMapping.batch),
         curriculumId: Number(curriculum.curriculumId),
+        curriculumSubjectTermMappingId: Number(
+          mapping.curriculumSubjectTermMappingId,
+        ),
         curriculumBatchMappingId: Number(batchMapping.curriculumBatchMappingId),
         curriculumBatchTermMappingId: Number(
           plainTerm.curriculumBatchTermMappingId,

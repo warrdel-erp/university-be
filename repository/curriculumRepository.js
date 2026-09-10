@@ -130,3 +130,73 @@ export async function findByNameAndCourse(name, courseId) {
     attributes: curriculumAttributes,
   });
 }
+
+const subjectTermMappingAttributes = [
+  'curriculumSubjectTermMappingId',
+  'curriculumId',
+  'subjectId',
+  'term',
+  'credit',
+  'createdAt',
+  'updatedAt',
+  'createdBy',
+];
+
+export async function findSubjectTermMappingsByCurriculumId(curriculumId) {
+  return model.curriculumSubjectTermMappingModel.findAll({
+    where: { curriculumId },
+    attributes: subjectTermMappingAttributes,
+    include: [
+      {
+        model: model.subjectModel,
+        as: 'subject',
+        attributes: [
+          'subjectId',
+          'subjectCode',
+          'subjectName',
+          'subjectType',
+          'subjectCategory',
+        ],
+      },
+    ],
+    order: [
+      ['term', 'ASC'],
+      ['curriculumSubjectTermMappingId', 'ASC'],
+    ],
+  });
+}
+
+export async function findSubjectTermMappingById(curriculumSubjectTermMappingId) {
+  return model.curriculumSubjectTermMappingModel.findByPk(
+    curriculumSubjectTermMappingId,
+    {
+      attributes: subjectTermMappingAttributes,
+      include: [
+        {
+          model: model.subjectModel,
+          as: 'subject',
+          attributes: [
+            'subjectId',
+            'subjectCode',
+            'subjectName',
+            'subjectType',
+            'subjectCategory',
+          ],
+        },
+      ],
+    },
+  );
+}
+
+export async function updateSubjectTermMapping(
+  curriculumSubjectTermMappingId,
+  data,
+  options = {},
+) {
+  await model.curriculumSubjectTermMappingModel.update(data, {
+    where: { curriculumSubjectTermMappingId },
+    ...options,
+  });
+
+  return findSubjectTermMappingById(curriculumSubjectTermMappingId);
+}

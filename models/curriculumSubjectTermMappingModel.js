@@ -36,6 +36,11 @@ const curriculumSubjectTermMappingModel = sequelize.define(
             allowNull: false,
             field: 'term'
         },
+        credit: {
+            type: DataTypes.FLOAT,
+            allowNull: true,
+            field: 'credit'
+        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,

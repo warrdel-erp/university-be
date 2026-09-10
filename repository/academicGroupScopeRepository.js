@@ -338,6 +338,12 @@ export async function getSubjectOptionsRepository({ classSectionTermId, academic
     if (batchMapping?.curriculumId) {
       const mappings = await model.curriculumSubjectTermMappingModel.findAll({
         where: { curriculumId: batchMapping.curriculumId, term },
+        attributes: [
+          'curriculumSubjectTermMappingId',
+          'subjectId',
+          'term',
+          'credit',
+        ],
         include: [{
           model: model.subjectModel,
           as: 'subject',
@@ -356,7 +362,9 @@ export async function getSubjectOptionsRepository({ classSectionTermId, academic
           subjectName: m.subject.subjectName,
           subjectCode: m.subject.subjectCode,
           subjectType: m.subject.subjectType,
-          subjectCategory: m.subject.subjectCategory
+          subjectCategory: m.subject.subjectCategory,
+          credit: m.credit,
+          curriculumSubjectTermMappingId: m.curriculumSubjectTermMappingId,
         }));
       }
     }
