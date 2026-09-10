@@ -1,9 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { Op } from "sequelize";
 import * as assessmentPlanRepo from "../repository/assessmentPlanRepository.js";
-import * as acedmicYearRepository from "../repository/acedmicYearRepository.js";
 import * as model from "../models/index.js";
-import { getAcademicYearId, getTenantStore } from "../utility/requestContext.js";
 import {
   decimalAdd,
   decimalCompare,
@@ -16,56 +14,8 @@ import {
   toMoneyNumber,
 } from "../utility/decimalMoney.js";
 import { resolveTotalTerms, termsPerYear } from "../utility/courseTerms.js";
-
-/**
- * Active academic year from tenant store (academicYearId).
- * Returns academicYearId + calendar year from startingDate (e.g. 2026-07-01 → 2026).
- */
-async function resolveActiveAcademicYearContext() {
-  let academicYearId = getAcademicYearId();
-  let academicYear = null;
-
-  if (academicYearId) {
-    academicYear = await acedmicYearRepository.getSingleacedmicYearDetails(
-      academicYearId,
-    );
-  }
-
-  if (!academicYear) {
-    const store = getTenantStore();
-    const activeYears =
-      await acedmicYearRepository.getActiveAcedmicYearByInstitute(
-        store.instituteId,
-        store.universityId,
-      );
-    academicYear = activeYears?.[0] || null;
-  }
-
-  if (!academicYear?.academicYearId || !academicYear?.startingDate) {
-    const err = new Error(
-      "Active academic year is required to resolve sessions and batch year",
-    );
-    err.statusCode = 400;
-    throw err;
-  }
-
-  const activeBatchYear = toIntegerNumber(
-    String(academicYear.startingDate).slice(0, 4),
-  );
-  if (!decimalGreaterThan(activeBatchYear, 0)) {
-    const err = new Error(
-      "Unable to resolve active batch year from academic year starting date",
-    );
-    err.statusCode = 400;
-    throw err;
-  }
-
-  return {
-    academicYearId: toIntegerNumber(academicYear.academicYearId),
-    activeBatchYear,
-    academicYear,
-  };
-}
+import { resolveActiveAcademicYearContext } from "../utility/curriculumSubjectsByActiveYear.js";
+import { getAcademicYearId } from "../utility/requestContext.js";
 
 function parsePositiveId(val) {
   if (
@@ -153,7 +103,6 @@ function mapAssessmentPlanMapping(mapping) {
           courseId: plan.courseId,
           academicYearId: plan.academicYearId,
           regulationId: plan.regulationId,
-          term: plan.term,
           gradingId: plan.gradingId,
           status: plan.status,
           isActive: plan.isActive,
@@ -177,7 +126,8 @@ function resolveSubjectYearStatus(termYear, activeBatchYear) {
   return "current";
 }
 
-function nestOverviewByTerm(batchMapping, rows, activeBatchYear) {
+/** Flat subject list; term + course live on each subject. */
+function buildOverviewSubjects(batchMapping, rows, activeBatchYear) {
   const curriculum = batchMapping.curriculum;
   const course = curriculum.course;
   const durationYears = resolveDurationYears(course);
@@ -185,19 +135,27 @@ function nestOverviewByTerm(batchMapping, rows, activeBatchYear) {
     ? toIntegerNumber(decimalAdd(batchMapping.batch, durationYears))
     : null;
 
-  // Seed every term from curriculum_batch_term_mapping (e.g. 1..10)
-  const termsByNumber = new Map();
+  const termMeta = new Map();
   for (const termMapping of batchMapping.termMappings || []) {
-    const term = Number(termMapping.term);
-    termsByNumber.set(term, {
-      term,
+    termMeta.set(Number(termMapping.term), {
       year: termMapping.year,
       yearNumber: termMapping.yearNumber,
       curriculumBatchTermMappingId: termMapping.curriculumBatchTermMappingId,
       status: resolveSubjectYearStatus(termMapping.year, activeBatchYear),
-      subjects: [],
     });
   }
+
+  const courseDetails = {
+    courseId: course.courseId,
+    courseName: course.courseName,
+    courseCode: course.courseCode,
+    termType: course.termType,
+    totalTerms: course.totalTerms,
+    courseDuration: course.courseDuration,
+    durationYears,
+  };
+
+  const subjects = [];
 
   for (const row of rows) {
     const plain = row.get ? row.get({ plain: true }) : row;
@@ -205,25 +163,19 @@ function nestOverviewByTerm(batchMapping, rows, activeBatchYear) {
     if (!subject) continue;
 
     const term = Number(plain.term);
-    let termBucket = termsByNumber.get(term);
-    if (!termBucket) {
-      termBucket = {
-        term,
-        year: null,
-        yearNumber: null,
-        curriculumBatchTermMappingId: null,
-        status: null,
-        subjects: [],
-      };
-      termsByNumber.set(term, termBucket);
-    }
+    const meta = termMeta.get(term) || {
+      year: null,
+      yearNumber: null,
+      curriculumBatchTermMappingId: null,
+      status: null,
+    };
 
     const assessmentPlanMappings = [];
     for (const mapping of subject.assessmentPlanMappings || []) {
       assessmentPlanMappings.push(mapAssessmentPlanMapping(mapping));
     }
 
-    termBucket.subjects.push({
+    subjects.push({
       curriculumSubjectTermMappingId: plain.curriculumSubjectTermMappingId,
       subjectId: subject.subjectId,
       subjectName: subject.subjectName,
@@ -235,27 +187,15 @@ function nestOverviewByTerm(batchMapping, rows, activeBatchYear) {
       subjectCategory: subject.subjectCategory,
       electiveOrCore: resolveSubjectKind(subject.subjectType),
       term,
-      year: termBucket.year,
-      yearNumber: termBucket.yearNumber,
-      status: termBucket.status,
+      year: meta.year,
+      yearNumber: meta.yearNumber,
+      curriculumBatchTermMappingId: meta.curriculumBatchTermMappingId,
+      status: meta.status,
+      course: courseDetails,
       assignmentStatus:
         assessmentPlanMappings.length > 0 ? "assigned" : "unassigned",
       assessmentPlanMappings,
     });
-  }
-
-  const terms = [...termsByNumber.values()];
-  terms.sort((a, b) => decimalCompare(a.term, b.term));
-
-  let totalSubjects = 0;
-  let assignedSubjects = 0;
-  for (const termBucket of terms) {
-    for (const subject of termBucket.subjects) {
-      totalSubjects = decimalAdd(totalSubjects, 1);
-      if (subject.assessmentPlanMappings.length > 0) {
-        assignedSubjects = decimalAdd(assignedSubjects, 1);
-      }
-    }
   }
 
   return {
@@ -269,21 +209,7 @@ function nestOverviewByTerm(batchMapping, rows, activeBatchYear) {
       curriculumId: curriculum.curriculumId,
       name: curriculum.name,
     },
-    course: {
-      courseId: course.courseId,
-      courseName: course.courseName,
-      courseCode: course.courseCode,
-      termType: course.termType,
-      totalTerms: course.totalTerms,
-      courseDuration: course.courseDuration,
-      durationYears,
-    },
-    totalSubjects,
-    assignedSubjects,
-    unassignedSubjects: toIntegerNumber(
-      decimalSubtract(totalSubjects, assignedSubjects),
-    ),
-    terms,
+    subjects,
   };
 }
 
@@ -651,7 +577,7 @@ export async function getCourseAssessmentPlanOverview(queryParams = {}) {
   }
 
   const { activeBatchYear } = await resolveActiveAcademicYearContext();
-  const nested = nestOverviewByTerm(
+  const overview = buildOverviewSubjects(
     result.batchMapping,
     result.rows,
     activeBatchYear,
@@ -662,7 +588,7 @@ export async function getCourseAssessmentPlanOverview(queryParams = {}) {
     totalPages: result.totalPages,
     currentPage: result.currentPage,
     pageSize: result.pageSize,
-    ...nested,
+    ...overview,
   };
 }
 

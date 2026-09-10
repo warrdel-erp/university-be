@@ -340,6 +340,22 @@ export async function findAssessmentPlanSubjectMappings(where, options = {}) {
   });
 }
 
+export async function findAssessmentPlansByIds(planIds, options = {}) {
+  if (!planIds.length) return [];
+  return scoped(model.assessmentPlanModel).findAll({
+    where: { assessmentPlanId: { [Op.in]: planIds } },
+    attributes: [
+      "assessmentPlanId",
+      "courseId",
+      "academicYearId",
+      "planName",
+      "planCode",
+    ],
+    raw: true,
+    transaction: options.transaction,
+  });
+}
+
 /**
  * Curriculum subjects for courseId + term across every admission batch.
  * Path: curriculum → curriculum_batch_mapping → curriculum_subject_term_mapping
@@ -468,7 +484,7 @@ export async function findAssessmentPlanSubjectMappingsWithSession(where, option
 export async function findSubjects(where, options = {}) {
   return scoped(model.subjectModel).findAll({
     where,
-    attributes: ["subjectId", "subjectName", "subjectCode", "subjectType", "subjectCategory", "courseId", "term", "academicYearId"],
+    attributes: ["subjectId", "subjectName", "subjectCode", "subjectType", "subjectCategory", "courseId", "term"],
     include: [
       {
         model: model.courseModel,

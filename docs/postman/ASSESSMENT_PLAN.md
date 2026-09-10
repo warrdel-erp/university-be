@@ -102,8 +102,9 @@ Mount: `/assessmentPlan`
 | academicRegulationId | No | — | |
 
 **Rules**
-- Without `term`: returns **all terms** (1…N) with **all subjects**
-- With `term`: paginates subjects in that term
+- Returns a flat paginated `subjects[]` list for the batch
+- Optional `term` filters to one term
+- Each subject includes `term`, `year`, `status`, and `course`
 - Subject `status` vs tenant active calendar year (`curriculum_batch_term_mapping.year`):
   - `year < activeBatchYear` → `previous`
   - `year === activeBatchYear` → `current`
@@ -111,7 +112,7 @@ Mount: `/assessmentPlan`
 
 **Examples**
 ```
-{{base_url}}/assessmentPlan/overview?curriculumBatchMappingId=2
+{{base_url}}/assessmentPlan/overview?curriculumBatchMappingId=2&page=1&limit=10
 {{base_url}}/assessmentPlan/overview?curriculumBatchMappingId=2&term=3&page=1&limit=10
 ```
 
@@ -121,25 +122,21 @@ Mount: `/assessmentPlan`
   "curriculumBatchMappingId": 2,
   "batch": 2025,
   "activeBatchYear": 2026,
-  "totalSubjects": 72,
-  "terms": [
+  "subjects": [
     {
+      "subjectId": 64,
+      "subjectCode": "3AR1",
       "term": 3,
       "year": 2026,
       "yearNumber": 2,
       "status": "current",
-      "subjects": [
-        {
-          "subjectId": 64,
-          "subjectCode": "3AR1",
-          "term": 3,
-          "year": 2026,
-          "yearNumber": 2,
-          "status": "current",
-          "assignmentStatus": "unassigned",
-          "assessmentPlanMappings": []
-        }
-      ]
+      "course": {
+        "courseId": 1,
+        "courseName": "B.Arch",
+        "courseCode": "BARCH"
+      },
+      "assignmentStatus": "unassigned",
+      "assessmentPlanMappings": []
     }
   ]
 }

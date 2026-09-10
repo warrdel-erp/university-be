@@ -383,12 +383,7 @@ export async function findOverviewByCurriculumBatchMappingId({
 } = {}) {
   const pageNum = resolvePositiveInt(page, 1);
   const limitNum = resolvePositiveInt(limit, 10);
-  // Paginate subjects only when a specific term is requested.
-  // Full batch overview returns every term (1..N) with all subjects.
-  const paginateSubjects = subjectTermWhere.term !== undefined;
-  const offset = paginateSubjects
-    ? decimalMultiply(decimalSubtract(pageNum, 1), limitNum)
-    : 0;
+  const offset = decimalMultiply(decimalSubtract(pageNum, 1), limitNum);
 
   const batchMapping = await model.curriculumBatchMappingModel.findOne({
     where: { curriculumBatchMappingId },
@@ -511,7 +506,6 @@ export async function findOverviewByCurriculumBatchMappingId({
                   "courseId",
                   "academicYearId",
                   "regulationId",
-                  "term",
                   "gradingId",
                   "status",
                   "isActive",
@@ -577,12 +571,9 @@ export async function findOverviewByCurriculumBatchMappingId({
       ["term", "ASC"],
       ["curriculumSubjectTermMappingId", "ASC"],
     ],
+    limit: limitNum,
+    offset,
   };
-
-  if (paginateSubjects) {
-    queryOptions.limit = limitNum;
-    queryOptions.offset = offset;
-  }
 
   const { count, rows } =
     await model.curriculumSubjectTermMappingModel.findAndCountAll(queryOptions);
@@ -590,11 +581,7 @@ export async function findOverviewByCurriculumBatchMappingId({
   return {
     batchMapping: plainBatch,
     rows,
-    ...paginationMeta(
-      count,
-      paginateSubjects ? pageNum : 1,
-      paginateSubjects ? limitNum : count || 1,
-    ),
+    ...paginationMeta(count, pageNum, limitNum),
   };
 }
 
