@@ -251,6 +251,18 @@ async function buildUnscheduledSchedules(
       type: null,
       duration: null,
       examinationSessionSlotId: null,
+      subjectSchedule: {
+        subjectId: sub.subjectId,
+        subjectName: sub.subjectName || null,
+        subjectCode: sub.subjectCode || null,
+        courseId: sub.courseId || null,
+        term: sub.term,
+        academicYearId: sub.academicYearId || null,
+        courseInfo: {
+          courseName: sub.courseName || null,
+          termType: sub.termType || null,
+        },
+      },
       studentCount: sub.studentCount || 0,
       courseName: sub.courseName || null,
       termType: sub.termType || null,

@@ -15,7 +15,7 @@ export const createInstitute = async (data) => {
     }
 
     const row = await instituteRepository.createInstitute(
-      { ...instituteData, campusId },
+      { ...instituteData, campusId, universityId },
       affiliatedUniversity,
       academicYear,
     );

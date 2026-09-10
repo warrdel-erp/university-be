@@ -53,9 +53,9 @@ export async function getSingleFeeInvoiceDetailRecord(req, res) {
 
 export async function updateFeeInvoiceDetailRecord(req, res) {
   try {
-    const { feeInvoiceId, feeGroupId, classStudentMapperId } = req.body;
-    if (!(feeInvoiceId && feeGroupId && classStudentMapperId)) {
-      return res.status(400).send("FeeInvoiceId , feeGroupId abd classStudentMapperId is required");
+    const { feeInvoiceId, feeGroupId, studentId } = req.body;
+    if (!(feeInvoiceId && feeGroupId && studentId)) {
+      return res.status(400).send("FeeInvoiceId, feeGroupId and studentId is required");
     }
     const updatedBy = req.user.userId;
     const updatedFeeInvoice = await feeInvoiceCreation.updateFeeInvoice(feeInvoiceId, req.body, updatedBy);

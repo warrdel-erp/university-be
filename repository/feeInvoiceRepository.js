@@ -40,35 +40,30 @@ function feePlanInclude() {
   };
 }
 
-function classStudentMapperInclude(businessWhere = {}) {
+function feeInvoiceStudentInclude(businessWhere = {}) {
   return {
-    model: model.classStudentMapperModel,
-    as: "feeStudentMapper",
-    attributes: {
-      exclude: [
-        "createdAt",
-        "updatedAt",
-        "deletedAt",
-        "createdBy",
-        "updatedBy",
-        "student_id",
-        "class_sections_id",
-      ],
-    },
-    where: { ...businessWhere, ...buildScope(model.classStudentMapperModel) },
+    model: model.studentModel,
+    as: "feeInvoiceStudent",
+    attributes: [
+      "studentId",
+      "firstName",
+      "middleName",
+      "lastName",
+      "scholarNumber",
+      "enrollNumber",
+      "classSectionTermId",
+      "sessionId",
+    ],
+    where: { ...businessWhere, ...buildScope(model.studentModel) },
+    required: true,
     include: [
-      {
-        model: model.studentModel,
-        as: "studentMapped",
-        attributes: ["firstName", "middleName", "lastName", "scholarNumber", "enrollNumber"],
-        where: buildScope(model.studentModel),
-        required: true,
-      },
-      {
-        model: model.classSectionModel,
-        as: "studentSectionDetail",
-        attributes: ["section", "classSectionsId", "year"],
-      },
+      studentClassSectionTermWithSectionInclude({
+        termRequired: false,
+        sectionRequired: false,
+        termAttributes: ["classSectionTermId", "term", "classSectionsId"],
+        sectionAttributes: ["section", "classSectionsId", "year", "academicYearId", "sessionId"],
+        includeSectionTerms: false,
+      }),
     ],
   };
 }
@@ -94,29 +89,37 @@ function feeInvoiceDetailsInclude() {
 }
 
 function feeInvoiceListIncludes(filters = {}) {
-  const mapperWhere = filters.academicYearId ? { academicYearId: filters.academicYearId } : {};
+  const studentWhere = {};
+  if (filters.academicYearId) {
+    // academic year lives on class section / session for the student placement
+  }
+
+  const studentInclude = feeInvoiceStudentInclude(studentWhere);
+  if (filters.academicYearId) {
+    studentInclude.include = [
+      studentClassSectionTermWithSectionInclude({
+        termRequired: true,
+        sectionRequired: true,
+        sectionWhere: { academicYearId: Number(filters.academicYearId) },
+        termAttributes: ["classSectionTermId", "term", "classSectionsId"],
+        sectionAttributes: ["section", "classSectionsId", "year", "academicYearId", "sessionId"],
+        includeSectionTerms: false,
+      }),
+    ];
+  }
 
   return [
     userFeeInvoiceInclude(),
     feePlanInclude(),
-    classStudentMapperInclude(mapperWhere),
+    studentInclude,
     feeInvoiceDetailsInclude(),
   ];
 }
 
-async function assertScopedClassStudentMapper(classStudentMapperId, transaction) {
-  return scoped(model.classStudentMapperModel).findOne({
-    attributes: ["classStudentMapperId", "studentId"],
-    where: { classStudentMapperId },
-    include: [
-      {
-        model: model.studentModel,
-        as: "studentMapped",
-        attributes: [],
-        where: buildScope(model.studentModel),
-        required: true,
-      },
-    ],
+async function assertScopedStudent(studentId, transaction) {
+  return scoped(model.studentModel).findOne({
+    attributes: ["studentId"],
+    where: { studentId },
     transaction,
   });
 }
@@ -141,12 +144,12 @@ export async function addFeeInvoice(feeInvoiceData, transaction) {
       throw new Error("Fee plan not found");
     }
 
-    const mapper = await assertScopedClassStudentMapper(
-      feeInvoiceData.classStudentMapperId,
-      transaction
+    const student = await assertScopedStudent(
+      feeInvoiceData.studentId,
+      transaction,
     );
-    if (!mapper) {
-      throw new Error("Class student mapper not found");
+    if (!student) {
+      throw new Error("Student not found");
     }
 
     return scoped(model.feeInvoiceModel).create(feeInvoiceData, { transaction });
@@ -180,36 +183,7 @@ export async function getSingleFeeInvoiceDetails(feeInvoiceId) {
           as: "feeInvoicePlan",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
         },
-        {
-          model: model.classStudentMapperModel,
-          as: "feeStudentMapper",
-          attributes: {
-            exclude: [
-              "createdAt",
-              "updatedAt",
-              "deletedAt",
-              "createdBy",
-              "updatedBy",
-              "student_id",
-              "class_sections_id",
-            ],
-          },
-          where: buildScope(model.classStudentMapperModel),
-          include: [
-            {
-              model: model.studentModel,
-              as: "studentMapped",
-              attributes: ["firstName", "middleName", "lastName", "scholarNumber", "enrollNumber"],
-              where: buildScope(model.studentModel),
-              required: true,
-            },
-            {
-              model: model.classSectionModel,
-              as: "studentSectionDetail",
-              attributes: ["section", "classSectionsId", "year"],
-            },
-          ],
-        },
+        feeInvoiceStudentInclude(),
         feeInvoiceDetailsInclude(),
       ],
     });
@@ -219,13 +193,17 @@ export async function getSingleFeeInvoiceDetails(feeInvoiceId) {
   }
 }
 
-export async function getStudentIdByClassStudentMapper(classStudentMapperId, options = {}) {
+export async function getStudentIdByClassStudentMapper(studentId, options = {}) {
   try {
-    return assertScopedClassStudentMapper(classStudentMapperId, options.transaction);
+    return assertScopedStudent(studentId, options.transaction);
   } catch (error) {
-    console.error("Error fetching Student Id By ClassStudentMapper details:", error);
+    console.error("Error fetching Student by id:", error);
     throw error;
   }
+}
+
+export async function getStudentByStudentId(studentId, options = {}) {
+  return assertScopedStudent(studentId, options.transaction);
 }
 
 export async function updateFeeInvoice(feeInvoiceId, feeInvoiceData, transaction) {

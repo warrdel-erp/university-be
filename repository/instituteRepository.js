@@ -1,11 +1,15 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as model from "../models/index.js";
-import { scoped } from "../utility/scoped.js";
+import { getTenantStore } from "../utility/requestContext.js";
+
+function universityWhere(extra = {}) {
+  return { universityId: getTenantStore().universityId, ...extra };
+}
 
 export async function createInstitute(data, affiliatedUniversities = [], academicYear) {
   const transaction = await sequelize.transaction();
   try {
-    const institute = await scoped(model.instituteModel).create(data, { transaction });
+    const institute = await model.instituteModel.create(data, { transaction });
 
     const affiliateRows = [];
     for (const item of affiliatedUniversities) {
@@ -48,10 +52,8 @@ export async function createInstitute(data, affiliatedUniversities = [], academi
 
 export async function getInstitutes(campusId) {
   try {
-    return await scoped(model.instituteModel).findAll({
-      where: {
-        ...(campusId && { campusId }),
-      },
+    return await model.instituteModel.findAll({
+      where: universityWhere(campusId ? { campusId } : {}),
       include: [
         {
           model: model.campusModel,
@@ -77,8 +79,8 @@ export async function getInstitutes(campusId) {
 
 export async function getInstituteByCampusAndId(campusId, instituteId) {
   try {
-    return await scoped(model.instituteModel).findOne({
-      where: { campusId, instituteId },
+    return await model.instituteModel.findOne({
+      where: universityWhere({ campusId, instituteId }),
     });
   } catch (error) {
     console.error("Error in Institute Repository (getInstituteByCampusAndId):", error);
@@ -88,8 +90,8 @@ export async function getInstituteByCampusAndId(campusId, instituteId) {
 
 export async function getInstituteById(instituteId) {
   try {
-    return scoped(model.instituteModel).findOne({
-      where: { instituteId },
+    return model.instituteModel.findOne({
+      where: universityWhere({ instituteId }),
       include: [
         {
           model: model.affiliatedIniversityModel,
@@ -109,15 +111,15 @@ export async function getInstituteById(instituteId) {
 
 export async function updateInstitute(instituteId, data) {
   try {
-    const existing = await scoped(model.instituteModel).findOne({
-      where: { instituteId },
+    const existing = await model.instituteModel.findOne({
+      where: universityWhere({ instituteId }),
     });
     if (!existing) {
       return null;
     }
 
-    await scoped(model.instituteModel).update(data, {
-      where: { instituteId },
+    await model.instituteModel.update(data, {
+      where: universityWhere({ instituteId }),
     });
 
     return getInstituteById(instituteId);
@@ -129,8 +131,8 @@ export async function updateInstitute(instituteId, data) {
 
 export async function getAffiliatedUniversityById(affiliatedUniversityId) {
   try {
-    return scoped(model.affiliatedIniversityModel).findOne({
-      where: { affiliatedUniversityId },
+    return model.affiliatedIniversityModel.findOne({
+      where: universityWhere({ affiliatedUniversityId }),
     });
   } catch (error) {
     console.error("Error in Institute Repository (getAffiliatedUniversityById):", error);
@@ -140,13 +142,14 @@ export async function getAffiliatedUniversityById(affiliatedUniversityId) {
 
 export async function findDefaultAffiliatedUniversityId() {
   try {
-    const row = await scoped(model.affiliatedIniversityModel).findOne({
-      attributes: ['affiliatedUniversityId'],
-      order: [['affiliatedUniversityId', 'ASC']],
+    const row = await model.affiliatedIniversityModel.findOne({
+      attributes: ["affiliatedUniversityId"],
+      where: universityWhere(),
+      order: [["affiliatedUniversityId", "ASC"]],
     });
-    return row?.get('affiliatedUniversityId') ?? null;
+    return row?.get("affiliatedUniversityId") ?? null;
   } catch (error) {
-    console.error('Error in Institute Repository (findDefaultAffiliatedUniversityId):', error);
+    console.error("Error in Institute Repository (findDefaultAffiliatedUniversityId):", error);
     throw error;
   }
 }
@@ -158,8 +161,8 @@ export async function updateAffiliatedUniversity(affiliatedUniversityId, data) {
       return null;
     }
 
-    await scoped(model.affiliatedIniversityModel).update(data, {
-      where: { affiliatedUniversityId },
+    await model.affiliatedIniversityModel.update(data, {
+      where: universityWhere({ affiliatedUniversityId }),
     });
 
     return getAffiliatedUniversityById(affiliatedUniversityId);
