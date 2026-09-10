@@ -749,23 +749,14 @@ export async function deleteAssessmentPlanSubjectMapping(
 }
 
 /**
- * Active admission batch for tenant academic year, with sessions only from that academicYearId.
+ * Curriculum admission batches for courses (current + previous: batch <= activeYear).
+ * Path: curriculum_batch_mapping → curriculum_batch_term_mapping
+ *       + curriculum → curriculum_subject_term_mapping
  */
-export async function findCurriculumBatchCoursesWithActiveSessions({
+export async function findCurriculumBatchesByCourse({
   batchWhere = {},
   curriculumWhere = {},
-  activeYear,
-  academicYearId,
 } = {}) {
-  const sessionWhere = {
-    ...buildScope(model.sessionModel, {
-      scopeConfig: { academicYear: false },
-    }),
-  };
-  if (academicYearId) {
-    sessionWhere.academicYearId = academicYearId;
-  }
-
   return scoped(model.curriculumBatchMappingModel).findAll({
     where: batchWhere,
     attributes: ["curriculumBatchMappingId", "curriculumId", "batch"],
@@ -779,8 +770,8 @@ export async function findCurriculumBatchCoursesWithActiveSessions({
           "yearNumber",
           "year",
         ],
-        required: true,
-        where: activeYear ? { year: activeYear } : undefined,
+        required: false,
+        separate: true,
       },
       {
         model: model.curriculumModel,
@@ -804,52 +795,13 @@ export async function findCurriculumBatchCoursesWithActiveSessions({
               "courseDuration",
             ],
             required: true,
-            include: [
-              {
-                model: model.sessionCouseMappingModel,
-                as: "sessionCourseMappings",
-                required: true,
-                attributes: ["sessionCourseMappingId", "sessionId", "courseId"],
-                include: [
-                  {
-                    model: model.sessionModel,
-                    as: "session",
-                    attributes: [
-                      "sessionId",
-                      "sessionName",
-                      "startingDate",
-                      "endingDate",
-                      "academicYearId",
-                    ],
-                    required: true,
-                    where: sessionWhere,
-                    include: [
-                      {
-                        model: model.acedmicYearModel,
-                        as: "sessionAcedmic",
-                        attributes: [
-                          "academicYearId",
-                          "yearTitle",
-                          "startingDate",
-                          "endingDate",
-                          "isActive",
-                        ],
-                        required: true,
-                        where: academicYearId
-                          ? { academicYearId }
-                          : buildScope(model.acedmicYearModel),
-                      },
-                    ],
-                  },
-                ],
-              },
-            ],
           },
           {
             model: model.curriculumSubjectTermMappingModel,
             as: "subjectTermMappings",
             attributes: ["curriculumSubjectTermMappingId", "subjectId", "term"],
             required: false,
+            separate: true,
           },
         ],
       },
@@ -866,16 +818,20 @@ export async function findAssignedSubjectMappings({
   sessionIds = [],
   subjectIds = [],
 } = {}) {
-  if (!courseIds.length || !sessionIds.length || !subjectIds.length) {
+  if (!courseIds.length || !subjectIds.length) {
     return [];
   }
 
+  const where = {
+    courseId: { [Op.in]: courseIds },
+    subjectId: { [Op.in]: subjectIds },
+  };
+  if (sessionIds.length) {
+    where.sessionId = { [Op.in]: sessionIds };
+  }
+
   return scoped(model.assessmentPlanSubjectMappingModel).findAll({
-    where: {
-      courseId: { [Op.in]: courseIds },
-      sessionId: { [Op.in]: sessionIds },
-      subjectId: { [Op.in]: subjectIds },
-    },
+    where,
     attributes: ["courseId", "sessionId", "subjectId"],
   });
 }
