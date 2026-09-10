@@ -69,7 +69,6 @@ export async function getAssessmentPlans({
   search,
   status,
   courseId,
-  sessionId,
   regulationId,
   gradingId,
   term,
@@ -86,9 +85,6 @@ export async function getAssessmentPlans({
   }
   if (courseId) {
     where.courseId = Number(courseId);
-  }
-  if (sessionId) {
-    where.sessionId = Number(sessionId);
   }
   if (regulationId) {
     where.regulationId = Number(regulationId);
@@ -115,12 +111,6 @@ export async function getAssessmentPlans({
         model: model.courseModel,
         as: "course",
         attributes: ["courseId", "courseName", "courseCode"],
-        required: false,
-      },
-      {
-        model: model.sessionModel,
-        as: "session",
-        attributes: ["sessionId", "sessionName"],
         required: false,
       },
       {
@@ -189,12 +179,6 @@ export async function getAssessmentPlanById(assessmentPlanId, options = {}) {
         model: model.courseModel,
         as: "course",
         attributes: ["courseId", "courseName", "courseCode"],
-        required: false,
-      },
-      {
-        model: model.sessionModel,
-        as: "session",
-        attributes: ["sessionId", "sessionName"],
         required: false,
       },
       {
@@ -529,7 +513,6 @@ export async function findOverviewByCurriculumBatchMappingId({
                   "planCode",
                   "description",
                   "courseId",
-                  "sessionId",
                   "academicYearId",
                   "regulationId",
                   "term",
@@ -552,12 +535,6 @@ export async function findOverviewByCurriculumBatchMappingId({
                       "internalWeightage",
                       "externalWeightage",
                     ],
-                    required: false,
-                  },
-                  {
-                    model: model.sessionModel,
-                    as: "session",
-                    attributes: ["sessionId", "sessionName"],
                     required: false,
                   },
                   {
@@ -655,6 +632,11 @@ export async function createAssessmentPlanSubjectMapping(data, options = {}) {
 }
 
 export async function getAssessmentPlanSubjectMappings({
+  assessmentPlanId,
+  subjectId,
+  courseId,
+  sessionId,
+  academicYearId,
   page = 1,
   limit = 10,
 } = {}) {
@@ -662,50 +644,83 @@ export async function getAssessmentPlanSubjectMappings({
   const limitNum = resolvePositiveInt(limit, 10);
   const offset = decimalMultiply(decimalSubtract(pageNum, 1), limitNum);
 
-  const { count, rows } =
-    await model.assessmentPlanSubjectMappingModel.findAndCountAll({
-      include: [
-        {
-          model: model.assessmentPlanModel,
-          as: "assessmentPlan",
-          attributes: [
-            "assessmentPlanId",
-            "planName",
-            "planCode",
-            "status",
-            "isActive",
-          ],
-          required: false,
-        },
-        {
-          model: model.subjectModel,
-          as: "subject",
-          attributes: ["subjectId", "subjectName", "subjectCode", "term"],
-          required: false,
-        },
-        {
-          model: model.courseModel,
-          as: "course",
-          attributes: ["courseId", "courseName"],
-          required: false,
-        },
-        {
-          model: model.sessionModel,
-          as: "session",
-          attributes: ["sessionId", "sessionName"],
-          required: false,
-        },
-        {
-          model: model.acedmicYearModel,
-          as: "academicYear",
-          attributes: ["academicYearId", "yearTitle"],
-          required: false,
-        },
-      ],
-      limit: limitNum,
-      offset,
-      order: [["assessmentPlanSubjectMappingId", "DESC"]],
-    });
+  const where = {};
+  if (assessmentPlanId) {
+    where.assessmentPlanId = Number(assessmentPlanId);
+  }
+  if (subjectId) {
+    where.subjectId = Number(subjectId);
+  }
+  if (courseId) {
+    where.courseId = Number(courseId);
+  }
+  if (sessionId) {
+    where.sessionId = Number(sessionId);
+  }
+  if (academicYearId) {
+    where.academicYearId = Number(academicYearId);
+  }
+
+  const { count, rows } = await scoped(
+    model.assessmentPlanSubjectMappingModel,
+  ).findAndCountAll({
+    where,
+    attributes: [
+      "assessmentPlanSubjectMappingId",
+      "assessmentPlanId",
+      "subjectId",
+      "courseId",
+      "sessionId",
+      "academicYearId",
+      "examSetupTypeId",
+      "createdAt",
+      "updatedAt",
+    ],
+    include: [
+      {
+        model: model.assessmentPlanModel,
+        as: "assessmentPlan",
+        attributes: [
+          "assessmentPlanId",
+          "planName",
+          "planCode",
+          "courseId",
+          "academicYearId",
+          "status",
+          "isActive",
+        ],
+        required: false,
+      },
+      {
+        model: model.subjectModel,
+        as: "subject",
+        attributes: ["subjectId", "subjectName", "subjectCode", "term"],
+        required: false,
+      },
+      {
+        model: model.courseModel,
+        as: "course",
+        attributes: ["courseId", "courseName"],
+        required: false,
+      },
+      {
+        model: model.sessionModel,
+        as: "session",
+        attributes: ["sessionId", "sessionName"],
+        required: false,
+      },
+      {
+        model: model.acedmicYearModel,
+        as: "academicYear",
+        attributes: ["academicYearId", "yearTitle"],
+        required: false,
+      },
+    ],
+    distinct: true,
+    limit: limitNum,
+    offset,
+    order: [["assessmentPlanSubjectMappingId", "DESC"]],
+  });
 
   return {
     ...paginationMeta(count, pageNum, limitNum),

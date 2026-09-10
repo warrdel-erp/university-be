@@ -84,7 +84,6 @@ export const createAssessmentPlanBody = z.object({
   planCode: z.string().min(1).max(50),
   description: z.string().max(500).optional().nullable(),
   courseId: z.coerce.number().int().positive().optional().nullable(),
-  sessionId: z.coerce.number().int().positive().optional().nullable(),
   regulationId: z.coerce.number().int().positive().optional().nullable(),
   term: z.coerce.number().int().positive().optional().nullable(),
   gradingId: z.coerce.number().int().positive().optional().nullable(),
@@ -105,7 +104,6 @@ export const listAssessmentPlanQuery = z.object({
     z.enum(["Draft", "Published"]).optional(),
   ),
   courseId: z.union([z.string(), z.number()]).optional(),
-  sessionId: z.union([z.string(), z.number()]).optional(),
   regulationId: z.union([z.string(), z.number()]).optional(),
   academicYearId: z.union([z.string(), z.number()]).optional(),
   gradingId: z.union([z.string(), z.number()]).optional(),
@@ -209,6 +207,7 @@ router.get(
   "/subjectMapping",
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
+  validate({ query: listSubjectMappingQuery }),
   getAssessmentPlanSubjectMappings,
 );
 

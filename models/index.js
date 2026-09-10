@@ -4220,15 +4220,6 @@ courseModel.hasMany(assessmentPlanModel, {
   as: "assessmentPlans",
 });
 
-assessmentPlanModel.belongsTo(sessionModel, {
-  foreignKey: "sessionId",
-  as: "session",
-});
-sessionModel.hasMany(assessmentPlanModel, {
-  foreignKey: "sessionId",
-  as: "assessmentPlans",
-});
-
 assessmentPlanModel.belongsTo(academicRegulationModel, {
   foreignKey: "regulationId",
   as: "academicRegulation",

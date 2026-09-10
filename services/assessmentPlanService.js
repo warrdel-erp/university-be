@@ -151,7 +151,6 @@ function mapAssessmentPlanMapping(mapping) {
           planCode: plan.planCode,
           description: plan.description,
           courseId: plan.courseId,
-          sessionId: plan.sessionId,
           academicYearId: plan.academicYearId,
           regulationId: plan.regulationId,
           term: plan.term,
@@ -159,14 +158,26 @@ function mapAssessmentPlanMapping(mapping) {
           status: plan.status,
           isActive: plan.isActive,
           academicRegulation: plan.academicRegulation || null,
-          session: plan.session || null,
           components: plan.components || [],
         }
       : null,
   };
 }
 
-function nestOverviewByTerm(batchMapping, rows) {
+function resolveSubjectYearStatus(termYear, activeBatchYear) {
+  const year = toIntegerNumber(termYear);
+  const active = toIntegerNumber(activeBatchYear);
+  if (!decimalGreaterThan(year, 0) || !decimalGreaterThan(active, 0)) {
+    return null;
+  }
+
+  const cmp = decimalCompare(year, active);
+  if (cmp < 0) return "previous";
+  if (cmp > 0) return "upcoming";
+  return "current";
+}
+
+function nestOverviewByTerm(batchMapping, rows, activeBatchYear) {
   const curriculum = batchMapping.curriculum;
   const course = curriculum.course;
   const durationYears = resolveDurationYears(course);
@@ -183,6 +194,7 @@ function nestOverviewByTerm(batchMapping, rows) {
       year: termMapping.year,
       yearNumber: termMapping.yearNumber,
       curriculumBatchTermMappingId: termMapping.curriculumBatchTermMappingId,
+      status: resolveSubjectYearStatus(termMapping.year, activeBatchYear),
       subjects: [],
     });
   }
@@ -200,6 +212,7 @@ function nestOverviewByTerm(batchMapping, rows) {
         year: null,
         yearNumber: null,
         curriculumBatchTermMappingId: null,
+        status: null,
         subjects: [],
       };
       termsByNumber.set(term, termBucket);
@@ -222,6 +235,9 @@ function nestOverviewByTerm(batchMapping, rows) {
       subjectCategory: subject.subjectCategory,
       electiveOrCore: resolveSubjectKind(subject.subjectType),
       term,
+      year: termBucket.year,
+      yearNumber: termBucket.yearNumber,
+      status: termBucket.status,
       assignmentStatus:
         assessmentPlanMappings.length > 0 ? "assigned" : "unassigned",
       assessmentPlanMappings,
@@ -248,6 +264,7 @@ function nestOverviewByTerm(batchMapping, rows) {
     batch: batchMapping.batch,
     batchEndYear,
     batchName: buildBatchName(batchMapping.batch, batchEndYear),
+    activeBatchYear,
     curriculum: {
       curriculumId: curriculum.curriculumId,
       name: curriculum.name,
@@ -432,13 +449,16 @@ function nestBatchCoursesWithSessions(batchMappings, assignedRows, activeBatchYe
 
 export async function createAssessmentPlan({ payload, user }) {
   return await sequelize.transaction(async (t) => {
+    const academicYearId =
+      getAcademicYearId() ||
+      (user?.academicYearId ? Number(user.academicYearId) : null);
+
     const planData = {
       ...payload,
       courseId: payload.courseId ? Number(payload.courseId) : null,
-      sessionId: payload.sessionId ? Number(payload.sessionId) : null,
       regulationId: payload.regulationId ? Number(payload.regulationId) : null,
       term: payload.term !== undefined && payload.term !== null ? Number(payload.term) : null,
-      academicYearId: payload.academicYearId ? Number(payload.academicYearId) : (user?.academicYearId || null),
+      academicYearId,
       universityId: user?.universityId ? Number(user.universityId) : null,
       instituteId: user?.instituteId ? Number(user.instituteId) : null,
       createdBy: user?.userId || null,
@@ -446,6 +466,8 @@ export async function createAssessmentPlan({ payload, user }) {
       status: payload.status || "Draft",
       isActive: payload.isActive !== undefined ? payload.isActive : true,
     };
+
+    delete planData.sessionId;
 
     return await assessmentPlanRepo.createAssessmentPlan(planData, { transaction: t });
   });
@@ -480,10 +502,11 @@ export async function updateAssessmentPlan({ assessmentPlanId, payload, user }) 
     };
 
     if (payload.courseId !== undefined) updateData.courseId = payload.courseId ? Number(payload.courseId) : null;
-    if (payload.sessionId !== undefined) updateData.sessionId = payload.sessionId ? Number(payload.sessionId) : null;
     if (payload.regulationId !== undefined) updateData.regulationId = payload.regulationId ? Number(payload.regulationId) : null;
     if (payload.term !== undefined) updateData.term = payload.term !== null ? Number(payload.term) : null;
-    if (payload.academicYearId !== undefined) updateData.academicYearId = payload.academicYearId ? Number(payload.academicYearId) : null;
+
+    delete updateData.sessionId;
+    delete updateData.academicYearId;
 
     return await assessmentPlanRepo.updateAssessmentPlan(assessmentPlanId, updateData, { transaction: t });
   });
@@ -627,7 +650,12 @@ export async function getCourseAssessmentPlanOverview(queryParams = {}) {
     throw err;
   }
 
-  const nested = nestOverviewByTerm(result.batchMapping, result.rows);
+  const { activeBatchYear } = await resolveActiveAcademicYearContext();
+  const nested = nestOverviewByTerm(
+    result.batchMapping,
+    result.rows,
+    activeBatchYear,
+  );
 
   return {
     totalRecords: result.totalRecords,
@@ -698,12 +726,6 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
       throw error;
     }
 
-    if (plan.sessionId && Number(plan.sessionId) !== Number(payload.sessionId)) {
-      const error = new Error(`Assessment Plan (ID: ${payload.assessmentPlanId}) is created for Session (ID: ${plan.sessionId}), which does not match payload Session (ID: ${payload.sessionId})`);
-      error.statusCode = 400;
-      throw error;
-    }
-
     const subjectRecord = await model.subjectModel.findOne({
       where: {
         subjectId: Number(payload.subjectId),
@@ -753,17 +775,6 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
     const academicYearId = Number(plan.academicYearId);
 
     if (
-      !subjectRecord.academicYearId ||
-      Number(subjectRecord.academicYearId) !== academicYearId
-    ) {
-      const error = new Error(
-        `Assessment Plan (ID: ${payload.assessmentPlanId}) belongs to Academic Year ID ${academicYearId}, which does not match Subject (ID: ${payload.subjectId}) Academic Year ID ${subjectRecord.academicYearId}`,
-      );
-      error.statusCode = 400;
-      throw error;
-    }
-
-    if (
       !sessionRecord.academicYearId ||
       Number(sessionRecord.academicYearId) !== academicYearId
     ) {
@@ -793,7 +804,7 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
       assessmentPlanId: Number(payload.assessmentPlanId),
       subjectId: Number(payload.subjectId),
       courseId: Number(payload.courseId),
-      sessionId: sessionId || null,
+      sessionId: sessionId,
       academicYearId: academicYearId,
       examSetupTypeId: examSetupTypeId || null,
       universityId: user?.universityId ? Number(user.universityId) : null,

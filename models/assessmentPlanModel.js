@@ -10,15 +10,6 @@ const assessmentPlanModel = sequelize.define(
             autoIncrement: true,
             field: 'assessment_plan_id'
         },
-        sessionId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'session_id',
-            references: {
-                model: 'session',
-                key: 'session_id'
-            }
-        },
         academicYearId: {
             type: DataTypes.INTEGER,
             allowNull: true,
