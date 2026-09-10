@@ -24,7 +24,7 @@ import * as examSessionAnswerSheetRepository from "../repository/examSessionAnsw
 import * as s3Helper from "../utility/s3Helper.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 import * as model from "../models/index.js";
-import { decimalAdd, decimalDivide, decimalMultiply, toIntegerNumber, decimalCompare } from "../utility/decimalMoney.js";
+import { decimalAdd, decimalDivide, decimalMultiply, toIntegerNumber, decimalCompare, decimalGreaterThan } from "../utility/decimalMoney.js";
 import {
   findCurriculumSubjectsForActiveYear,
   resolveActiveAcademicYearContext,
@@ -714,7 +714,8 @@ export async function deleteExaminationSessionTerm(
 
 /**
  * Courses / terms for an exam setup type.
- * Terms = curriculum (active year); mappedSubjectCount from assessment_plan_subject_mapping.
+ * Terms = curriculum (batch from curriculum_batch_mapping); counts from assessment plan mapping.
+ * Response terms omit the subjects array.
  */
 export async function getClassSectionTermsBySetupType(
   examSetupTypeId,
@@ -745,7 +746,6 @@ export async function getClassSectionTermsBySetupType(
     options,
   );
 
-  // ---------- mappedKeys for assignment status ----------
   const mappedKeys = new Set();
   const groupKeys = new Map();
   const coursesWithGroup = new Set();
@@ -773,43 +773,33 @@ export async function getClassSectionTermsBySetupType(
     });
   }
 
-  // ---------- Build termsByCourse ----------
+  // courseId → termKey → { term, batch, subjectIds }
   const termsByCourse = new Map();
 
-  if (rows.length > 0) {
-    // Happy path: curriculum_batch_term_mapping found rows for active year
-    for (const row of rows) {
-      const courseId = Number(row.courseId);
-      const term = toIntegerNumber(row.term);
-      const batch = toIntegerNumber(row.batch);
-      const termKey = `${batch}_${term}`;
+  function addTermSubject(courseId, term, batch, subjectId) {
+    const cid = Number(courseId);
+    const t = toIntegerNumber(term);
+    const b = toIntegerNumber(batch);
+    if (!decimalGreaterThan(b, 0) || !decimalGreaterThan(t, 0)) return;
 
-      if (!termsByCourse.has(courseId)) termsByCourse.set(courseId, new Map());
-      const termMap = termsByCourse.get(courseId);
-      if (!termMap.has(termKey)) {
-        termMap.set(termKey, { term, batch, subjects: [], subjectIds: new Set() });
-      }
-      const bucket = termMap.get(termKey);
-      if (bucket.subjectIds.has(row.subjectId)) continue;
-      bucket.subjectIds.add(row.subjectId);
-      bucket.subjects.push({
-        subjectId: Number(row.subjectId),
-        subjectName: row.subject.subjectName,
-        subjectCode: row.subject.subjectCode,
-        subjectType: row.subject.subjectType,
-        subjectCategory: row.subject.subjectCategory,
-        courseId,
-        term,
-        batch,
-        academicYearId,
-      });
+    if (!termsByCourse.has(cid)) termsByCourse.set(cid, new Map());
+    const termMap = termsByCourse.get(cid);
+    const termKey = `${b}_${t}`;
+    if (!termMap.has(termKey)) {
+      termMap.set(termKey, { term: t, batch: b, subjectIds: new Set() });
+    }
+    termMap.get(termKey).subjectIds.add(Number(subjectId));
+  }
+
+  if (rows.length > 0) {
+    for (const row of rows) {
+      addTermSubject(row.courseId, row.term, row.batch, row.subjectId);
     }
   } else {
-    // Fallback: no curriculum_batch_term_mapping rows for this year.
-    // Build term buckets from curriculum_subject_term_mapping directly.
-    for (const courseId of courseIds) {
-      const curriculumRows = await model.curriculumSubjectTermMappingModel.findAll({
-        attributes: ["curriculumSubjectTermMappingId", "subjectId", "term"],
+    // Active-year batch-term rows missing: still resolve batch via curriculum_batch_mapping.
+    const curriculumRows =
+      await model.curriculumSubjectTermMappingModel.findAll({
+        attributes: ["subjectId", "term", "curriculumId"],
         include: [
           {
             model: model.curriculumModel,
@@ -818,56 +808,32 @@ export async function getClassSectionTermsBySetupType(
             required: true,
             where: {
               ...buildScope(model.curriculumModel),
-              courseId: Number(courseId),
+              courseId: { [Op.in]: courseIds },
             },
-          },
-          {
-            model: model.subjectModel,
-            as: "subject",
-            attributes: [
-              "subjectId",
-              "subjectName",
-              "subjectCode",
-              "subjectType",
-              "subjectCategory",
+            include: [
+              {
+                model: model.curriculumBatchMappingModel,
+                as: "batchMappings",
+                attributes: ["curriculumBatchMappingId", "batch"],
+                required: true,
+              },
             ],
-            required: true,
-            where: {
-              ...buildScope(model.subjectModel),
-              isActive: true,
-            },
           },
         ],
         transaction: options.transaction,
       });
 
-      if (!termsByCourse.has(Number(courseId))) {
-        termsByCourse.set(Number(courseId), new Map());
-      }
-      const termMap = termsByCourse.get(Number(courseId));
-
-      for (const row of curriculumRows) {
-        const plain = row.get ? row.get({ plain: true }) : row;
-        const term = toIntegerNumber(plain.term);
-        const termKey = `0_${term}`; // batch=0 as placeholder (no batch context)
-
-        if (!termMap.has(termKey)) {
-          termMap.set(termKey, { term, batch: null, subjects: [], subjectIds: new Set() });
-        }
-        const bucket = termMap.get(termKey);
-        if (bucket.subjectIds.has(plain.subjectId)) continue;
-        bucket.subjectIds.add(plain.subjectId);
-        bucket.subjects.push({
-          subjectId: Number(plain.subjectId),
-          subjectName: plain.subject.subjectName,
-          subjectCode: plain.subject.subjectCode,
-          subjectType: plain.subject.subjectType,
-          subjectCategory: plain.subject.subjectCategory,
-          courseId: Number(courseId),
-          term,
-          batch: null,
-          academicYearId,
-        });
+    for (const row of curriculumRows) {
+      const plain = row.get ? row.get({ plain: true }) : row;
+      const curriculum = plain.curriculum;
+      if (!curriculum) continue;
+      for (const batchMapping of curriculum.batchMappings || []) {
+        addTermSubject(
+          curriculum.courseId,
+          plain.term,
+          batchMapping.batch,
+          plain.subjectId,
+        );
       }
     }
   }
@@ -929,58 +895,37 @@ export async function getClassSectionTermsBySetupType(
   const result = [];
   for (const group of groups) {
     const course = courseMap.get(group.courseId);
-    if (!course) continue;
-
-    // If no curriculum data at all, still emit term stubs from 1..totalTerms
     const termMap = termsByCourse.get(group.courseId);
-    let termDetails = [];
+    if (!course || !termMap || termMap.size === 0) continue;
 
-    if (termMap && termMap.size > 0) {
-      const terms = [...termMap.values()];
-      terms.sort((a, b) => {
-        if (a.batch !== null && b.batch !== null) {
-          const byBatch = decimalCompare(a.batch, b.batch);
-          if (byBatch !== 0) return byBatch;
-        }
-        return decimalCompare(a.term, b.term);
-      });
+    const terms = [...termMap.values()];
+    terms.sort((a, b) => {
+      const byBatch = decimalCompare(a.batch, b.batch);
+      return byBatch !== 0 ? byBatch : decimalCompare(a.term, b.term);
+    });
 
-      for (const bucket of terms) {
-        let mappedSubjectCount = 0;
-        for (const subject of bucket.subjects) {
-          if (!mappedKeys.has(`${group.courseId}_${subject.subjectId}`)) continue;
-          mappedSubjectCount = toIntegerNumber(
-            decimalAdd(mappedSubjectCount, 1),
-          );
-        }
+    const termDetails = [];
+    for (const bucket of terms) {
+      let mappedSubjectCount = 0;
+      for (const subjectId of bucket.subjectIds) {
+        if (!mappedKeys.has(`${group.courseId}_${subjectId}`)) continue;
+        mappedSubjectCount = toIntegerNumber(
+          decimalAdd(mappedSubjectCount, 1),
+        );
+      }
 
-        termDetails.push({
+      termDetails.push({
+        term: bucket.term,
+        batch: bucket.batch,
+        mappedSubjectCount,
+        totalSubjects: toIntegerNumber(bucket.subjectIds.size),
+        studentCount: lookupStudentCount(studentCountMap, {
+          courseId: group.courseId,
+          sessionId: group.sessionId,
           term: bucket.term,
-          batch: bucket.batch,
-          mappedSubjectCount,
-          totalSubjects: toIntegerNumber(bucket.subjects.length),
-          studentCount: lookupStudentCount(studentCountMap, {
-            courseId: group.courseId,
-            sessionId: group.sessionId,
-            term: bucket.term,
-            academicYearId: group.academicYearId,
-          }),
-          subjects: bucket.subjects,
-        });
-      }
-    } else {
-      // No curriculum mapping at all — emit stubs for every term (1..totalTerms)
-      const totalTerms = toIntegerNumber(course.totalTerms) || 0;
-      for (let t = 1; t <= totalTerms; t++) {
-        termDetails.push({
-          term: t,
-          batch: null,
-          mappedSubjectCount: 0,
-          totalSubjects: 0,
-          studentCount: 0,
-          subjects: [],
-        });
-      }
+          academicYearId: group.academicYearId,
+        }),
+      });
     }
 
     result.push({

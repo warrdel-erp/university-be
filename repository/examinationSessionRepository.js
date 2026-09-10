@@ -7,6 +7,7 @@ import {
   lookupStudentCount,
 } from "../utility/studentCount.js";
 import { QUESTION_STATUS } from "../constant.js";
+import { decimalAdd, toIntegerNumber } from "../utility/decimalMoney.js";
 
 const sessionInclude = [
   {
@@ -1712,4 +1713,199 @@ export async function findSessionCourseMappingsByIds(sessionCourseMappingIds, op
     raw: true,
   });
 }
+
+/**
+ * Dashboard overview aggregates across scoped examination sessions.
+ * Optional examinationSessionId narrows to one session.
+ * Exam schedules are limited to examination_session_term (course + session + term).
+ */
+export async function getDashboardOverviewStats({
+  examinationSessionId,
+  today,
+} = {}) {
+  const sessionWhere = {};
+  if (examinationSessionId != null) {
+    sessionWhere.examinationSessionId = Number(examinationSessionId);
+  }
+
+  const sessions = await scoped(model.examinationSessionModel).findAll({
+    where: sessionWhere,
+    attributes: ["examinationSessionId"],
+  });
+
+  const sessionIds = [];
+  for (const session of sessions) {
+    sessionIds.push(Number(session.examinationSessionId));
+  }
+
+  const emptyStats = {
+    todayExamsCount: 0,
+    totalExams: 0,
+    totalStudents: 0,
+    scannedAnswerSheets: 0,
+    totalAnswerSheets: 0,
+    bundlesNotReturned: 0,
+    totalBundles: 0,
+    finalResultsCreated: 0,
+  };
+
+  if (!sessionIds.length) return emptyStats;
+
+  const terms = await findExaminationSessionTermsBySessionIds(sessionIds);
+  if (!terms.length) return emptyStats;
+
+  const schedules = await scoped(model.examScheduleModel).findAll({
+    where: {
+      examinationSessionId: { [Op.in]: sessionIds },
+      [Op.or]: buildExamScheduleTermScopeOr(terms, {
+        includeExaminationSessionId: true,
+      }),
+    },
+    attributes: ["examScheduleId", "examDate", "examinationSessionSlotId"],
+    include: [
+      {
+        model: model.subjectModel,
+        as: "subjectSchedule",
+        required: true,
+        attributes: ["subjectId", "courseId"],
+      },
+    ],
+    subQuery: false,
+  });
+
+  const examScheduleIds = [];
+  const slotIds = [];
+  const dates = [];
+  const slotSeen = new Set();
+  const dateSeen = new Set();
+  let todayExamsCount = 0;
+
+  for (const schedule of schedules) {
+    examScheduleIds.push(Number(schedule.examScheduleId));
+
+    if (schedule.examDate === today) {
+      todayExamsCount = toIntegerNumber(decimalAdd(todayExamsCount, 1));
+    }
+
+    const slotId = Number(schedule.examinationSessionSlotId);
+    if (slotId && !slotSeen.has(slotId)) {
+      slotSeen.add(slotId);
+      slotIds.push(slotId);
+    }
+
+    if (schedule.examDate && !dateSeen.has(schedule.examDate)) {
+      dateSeen.add(schedule.examDate);
+      dates.push(schedule.examDate);
+    }
+  }
+
+  const resultOr = [];
+  const studentGroups = [];
+  const groupSeen = new Set();
+  for (const termRow of terms) {
+    const courseId = termRow.courseId != null ? Number(termRow.courseId) : null;
+    const sessionId = termRow.sessionId != null ? Number(termRow.sessionId) : null;
+    const term = Number(termRow.term);
+    const academicYearId =
+      termRow.academicYearId != null ? Number(termRow.academicYearId) : null;
+
+    const resultClause = { term };
+    if (courseId != null) resultClause.courseId = courseId;
+    if (sessionId != null) resultClause.sessionId = sessionId;
+    resultOr.push(resultClause);
+
+    if (courseId != null && sessionId != null && academicYearId != null) {
+      const key = `${sessionId}_${courseId}_${term}_${academicYearId}`;
+      if (!groupSeen.has(key)) {
+        groupSeen.add(key);
+        studentGroups.push({
+          sessionId,
+          courseId,
+          term,
+          academicYearId,
+        });
+      }
+    }
+  }
+
+  const [
+    studentCountMap,
+    totalAnswerSheets,
+    scannedAnswerSheets,
+    finalResultsCreated,
+    totalBundles,
+    returnedBundles,
+  ] = await Promise.all([
+    studentGroups.length
+      ? getStudentCountMapByGroups(studentGroups)
+      : Promise.resolve(new Map()),
+    examScheduleIds.length
+      ? scoped(model.answerSheetQrModel).count({
+          where: {
+            examScheduleId: { [Op.in]: examScheduleIds },
+            studentId: { [Op.ne]: null },
+          },
+        })
+      : 0,
+    examScheduleIds.length
+      ? scoped(model.answerSheetQrModel).count({
+          where: {
+            examScheduleId: { [Op.in]: examScheduleIds },
+            studentId: { [Op.ne]: null },
+            fileUploadId: { [Op.ne]: null },
+          },
+        })
+      : 0,
+    scoped(model.studentResultModel).count({
+      where: {
+        examinationSessionId: { [Op.in]: sessionIds },
+        publishedAt: { [Op.ne]: null },
+        [Op.or]: resultOr,
+      },
+      distinct: true,
+      col: "studentId",
+    }),
+    dates.length && slotIds.length
+      ? scoped(model.examRoomMaterialBundleModel).count({
+          where: {
+            examDate: { [Op.in]: dates },
+            examinationSessionSlotId: { [Op.in]: slotIds },
+          },
+        })
+      : 0,
+    dates.length && slotIds.length
+      ? scoped(model.examRoomMaterialBundleModel).count({
+          where: {
+            examDate: { [Op.in]: dates },
+            examinationSessionSlotId: { [Op.in]: slotIds },
+            status: { [Op.in]: ["RECEIVED", "VERIFIED", "CLOSED"] },
+          },
+        })
+      : 0,
+  ]);
+
+  let totalStudents = 0;
+  for (const group of studentGroups) {
+    totalStudents = toIntegerNumber(
+      decimalAdd(totalStudents, lookupStudentCount(studentCountMap, group)),
+    );
+  }
+
+  const totalBundlesNum = toIntegerNumber(totalBundles);
+  const returnedBundlesNum = toIntegerNumber(returnedBundles);
+
+  return {
+    todayExamsCount,
+    totalExams: toIntegerNumber(examScheduleIds.length),
+    totalStudents,
+    scannedAnswerSheets: toIntegerNumber(scannedAnswerSheets),
+    totalAnswerSheets: toIntegerNumber(totalAnswerSheets),
+    bundlesNotReturned: toIntegerNumber(
+      Math.max(0, totalBundlesNum - returnedBundlesNum),
+    ),
+    totalBundles: totalBundlesNum,
+    finalResultsCreated: toIntegerNumber(finalResultsCreated),
+  };
+}
+
 
