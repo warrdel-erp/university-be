@@ -387,253 +387,241 @@ export async function deleteAssessmentPlanComponent(
  * curriculum_batch_term_mapping.year matches the active academic calendar year
  * (from tenant academicYear.startingDate, e.g. 2025-07-01 → 2025).
  */
-export async function findCurriculumSubjectOverview({
+/**
+ * Overview for one curriculum batch:
+ * curriculum_batch_mapping → term mappings + curriculum subjects + plan mappings.
+ */
+export async function findOverviewByCurriculumBatchMappingId({
+  curriculumBatchMappingId,
   subjectTermWhere = {},
-  curriculumWhere = {},
-  batchWhere = {},
   subjectWhere = {},
   mappingWhere = {},
   planWhere = {},
   mappingRequired = false,
-  activeYear,
   page = 1,
   limit = 10,
 } = {}) {
   const pageNum = resolvePositiveInt(page, 1);
   const limitNum = resolvePositiveInt(limit, 10);
-  const offset = decimalMultiply(decimalSubtract(pageNum, 1), limitNum);
+  // Paginate subjects only when a specific term is requested.
+  // Full batch overview returns every term (1..N) with all subjects.
+  const paginateSubjects = subjectTermWhere.term !== undefined;
+  const offset = paginateSubjects
+    ? decimalMultiply(decimalSubtract(pageNum, 1), limitNum)
+    : 0;
 
-  if (!activeYear) {
-    return {
-      ...paginationMeta(0, pageNum, limitNum),
-      rows: [],
-    };
-  }
-
-  const activeTermRows = await model.curriculumBatchTermMappingModel.findAll({
-    attributes: [
-      "curriculumBatchTermMappingId",
-      "curriculumBatchMappingId",
-      "term",
-      "yearNumber",
-      "year",
-    ],
-    where: { year: activeYear },
+  const batchMapping = await model.curriculumBatchMappingModel.findOne({
+    where: { curriculumBatchMappingId },
+    attributes: ["curriculumBatchMappingId", "curriculumId", "batch"],
     include: [
       {
-        model: model.curriculumBatchMappingModel,
-        as: "batchMapping",
-        attributes: ["curriculumBatchMappingId", "curriculumId", "batch"],
+        model: model.curriculumBatchTermMappingModel,
+        as: "termMappings",
+        attributes: [
+          "curriculumBatchTermMappingId",
+          "term",
+          "yearNumber",
+          "year",
+        ],
+        required: false,
+        separate: true,
+        order: [["term", "ASC"]],
+      },
+      {
+        model: model.curriculumModel,
+        as: "curriculum",
+        attributes: ["curriculumId", "name", "courseId"],
         required: true,
-        where: Object.keys(batchWhere).length > 0 ? batchWhere : undefined,
+        where: buildScope(model.curriculumModel),
         include: [
           {
-            model: model.curriculumModel,
-            as: "curriculum",
-            attributes: ["curriculumId"],
+            model: model.courseModel,
+            as: "course",
+            attributes: [
+              "courseId",
+              "courseName",
+              "courseCode",
+              "termType",
+              "totalTerms",
+              "courseDuration",
+            ],
             required: true,
-            where: {
-              ...buildScope(model.curriculumModel),
-              ...curriculumWhere,
-            },
           },
         ],
       },
     ],
   });
 
-  if (activeTermRows.length === 0) {
-    return {
-      ...paginationMeta(0, pageNum, limitNum),
-      rows: [],
-    };
+  if (!batchMapping) {
+    return null;
   }
 
-  const subjectTermOr = [];
-  const batchMappingIds = [];
-  const seenBatchMappingIds = new Set();
-  const seenSubjectTermKeys = new Set();
-
-  for (const termRow of activeTermRows) {
-    const batchMapping = termRow.batchMapping;
-    if (!batchMapping) continue;
-
-    const curriculumId = batchMapping.curriculumId;
-    const term = termRow.term;
-    const key = `${curriculumId}:${term}`;
-    if (!seenSubjectTermKeys.has(key)) {
-      seenSubjectTermKeys.add(key);
-      subjectTermOr.push({ curriculumId, term });
-    }
-
-    if (!seenBatchMappingIds.has(batchMapping.curriculumBatchMappingId)) {
-      seenBatchMappingIds.add(batchMapping.curriculumBatchMappingId);
-      batchMappingIds.push(batchMapping.curriculumBatchMappingId);
-    }
+  const plainBatch = batchMapping.get({ plain: true });
+  const batchTerms = [];
+  for (const termMapping of plainBatch.termMappings || []) {
+    batchTerms.push(Number(termMapping.term));
   }
 
-  if (subjectTermOr.length === 0) {
-    return {
-      ...paginationMeta(0, pageNum, limitNum),
-      rows: [],
-    };
+  const where = {
+    curriculumId: plainBatch.curriculumId,
+    ...subjectTermWhere,
+  };
+  if (subjectTermWhere.term === undefined && batchTerms.length > 0) {
+    where.term = { [Op.in]: batchTerms };
+  }
+
+  const queryOptions = {
+    where,
+    attributes: [
+      "curriculumSubjectTermMappingId",
+      "curriculumId",
+      "subjectId",
+      "term",
+    ],
+    include: [
+      {
+        model: model.subjectModel,
+        as: "subject",
+        attributes: [
+          "subjectId",
+          "subjectName",
+          "subjectCode",
+          "subjectType",
+          "subjectCategory",
+          "shortName",
+          "description",
+          "isActive",
+          "term",
+          "courseId",
+        ],
+        required: true,
+        where: {
+          ...buildScope(model.subjectModel),
+          ...subjectWhere,
+        },
+        include: [
+          {
+            model: model.assessmentPlanSubjectMappingModel,
+            as: "assessmentPlanMappings",
+            attributes: [
+              "assessmentPlanSubjectMappingId",
+              "assessmentPlanId",
+              "subjectId",
+              "courseId",
+              "sessionId",
+              "academicYearId",
+              "examSetupTypeId",
+              "universityId",
+              "instituteId",
+              "createdAt",
+              "updatedAt",
+            ],
+            where:
+              Object.keys(mappingWhere).length > 0 ? mappingWhere : undefined,
+            required: mappingRequired,
+            include: [
+              {
+                model: model.assessmentPlanModel,
+                as: "assessmentPlan",
+                attributes: [
+                  "assessmentPlanId",
+                  "planName",
+                  "planCode",
+                  "description",
+                  "courseId",
+                  "sessionId",
+                  "academicYearId",
+                  "regulationId",
+                  "term",
+                  "gradingId",
+                  "status",
+                  "isActive",
+                ],
+                where:
+                  Object.keys(planWhere).length > 0 ? planWhere : undefined,
+                required: Object.keys(planWhere).length > 0,
+                include: [
+                  {
+                    model: model.academicRegulationModel,
+                    as: "academicRegulation",
+                    attributes: [
+                      "academicRegulationId",
+                      "regulationCode",
+                      "regulationName",
+                      "evaluationPattern",
+                      "internalWeightage",
+                      "externalWeightage",
+                    ],
+                    required: false,
+                  },
+                  {
+                    model: model.sessionModel,
+                    as: "session",
+                    attributes: ["sessionId", "sessionName"],
+                    required: false,
+                  },
+                  {
+                    model: model.assessmentPlanComponentModel,
+                    as: "components",
+                    attributes: [
+                      "assessmentPlanComponentId",
+                      "examSetupTypeId",
+                      "weightagePercentage",
+                      "maxAssessments",
+                      "duration",
+                    ],
+                    required: false,
+                    include: [
+                      {
+                        model: model.examSetupTypeModel,
+                        as: "examSetupType",
+                        attributes: ["examSetupTypeId", "examName"],
+                        required: false,
+                      },
+                    ],
+                  },
+                ],
+              },
+              {
+                model: model.sessionModel,
+                as: "session",
+                attributes: ["sessionId", "sessionName"],
+                required: false,
+              },
+              {
+                model: model.examSetupTypeModel,
+                as: "examSetupType",
+                attributes: ["examSetupTypeId", "examName"],
+                required: false,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    distinct: true,
+    order: [
+      ["term", "ASC"],
+      ["curriculumSubjectTermMappingId", "ASC"],
+    ],
+  };
+
+  if (paginateSubjects) {
+    queryOptions.limit = limitNum;
+    queryOptions.offset = offset;
   }
 
   const { count, rows } =
-    await model.curriculumSubjectTermMappingModel.findAndCountAll({
-      where: {
-        ...subjectTermWhere,
-        [Op.or]: subjectTermOr,
-      },
-      attributes: [
-        "curriculumSubjectTermMappingId",
-        "curriculumId",
-        "subjectId",
-        "term",
-      ],
-      include: [
-        {
-          model: model.curriculumModel,
-          as: "curriculum",
-          attributes: ["curriculumId", "name", "courseId"],
-          required: true,
-          where: {
-            ...buildScope(model.curriculumModel),
-            ...curriculumWhere,
-          },
-          include: [
-            {
-              model: model.courseModel,
-              as: "course",
-              attributes: [
-                "courseId",
-                "courseName",
-                "courseCode",
-                "termType",
-                "totalTerms",
-                "courseDuration",
-              ],
-              required: true,
-              include: [
-                {
-                  model: model.academicRegulationModel,
-                  as: "academicRegulations",
-                  attributes: [
-                    "academicRegulationId",
-                    "regulationCode",
-                    "regulationName",
-                    "evaluationPattern",
-                    "internalWeightage",
-                    "externalWeightage",
-                  ],
-                  required: false,
-                },
-              ],
-            },
-            {
-              model: model.curriculumBatchMappingModel,
-              as: "batchMappings",
-              attributes: ["curriculumBatchMappingId", "curriculumId", "batch"],
-              required: true,
-              where: {
-                curriculumBatchMappingId: { [Op.in]: batchMappingIds },
-              },
-              include: [
-                {
-                  model: model.curriculumBatchTermMappingModel,
-                  as: "termMappings",
-                  attributes: [
-                    "curriculumBatchTermMappingId",
-                    "term",
-                    "yearNumber",
-                    "year",
-                  ],
-                  required: true,
-                  where: { year: activeYear },
-                },
-              ],
-            },
-          ],
-        },
-        {
-          model: model.subjectModel,
-          as: "subject",
-          attributes: [
-            "subjectId",
-            "subjectName",
-            "subjectCode",
-            "subjectType",
-            "subjectCategory",
-            "shortName",
-            "description",
-            "isActive",
-            "term",
-            "courseId",
-          ],
-          required: true,
-          where: {
-            ...buildScope(model.subjectModel),
-            ...subjectWhere,
-          },
-          include: [
-            {
-              model: model.assessmentPlanSubjectMappingModel,
-              as: "assessmentPlanMappings",
-              where:
-                Object.keys(mappingWhere).length > 0 ? mappingWhere : undefined,
-              required: mappingRequired,
-              include: [
-                {
-                  model: model.assessmentPlanModel,
-                  as: "assessmentPlan",
-                  where:
-                    Object.keys(planWhere).length > 0 ? planWhere : undefined,
-                  required: Object.keys(planWhere).length > 0,
-                  include: [
-                    {
-                      model: model.academicRegulationModel,
-                      as: "academicRegulation",
-                      attributes: [
-                        "academicRegulationId",
-                        "regulationCode",
-                        "regulationName",
-                        "evaluationPattern",
-                        "internalWeightage",
-                        "externalWeightage",
-                      ],
-                      required: false,
-                    },
-                    {
-                      model: model.sessionModel,
-                      as: "session",
-                      attributes: ["sessionId", "sessionName"],
-                      required: false,
-                    },
-                  ],
-                },
-              ],
-            },
-          ],
-        },
-      ],
-      distinct: true,
-      order: [
-        [
-          { model: model.curriculumModel, as: "curriculum" },
-          { model: model.curriculumBatchMappingModel, as: "batchMappings" },
-          "batch",
-          "DESC",
-        ],
-        ["term", "ASC"],
-        ["curriculumSubjectTermMappingId", "ASC"],
-      ],
-      limit: limitNum,
-      offset,
-    });
+    await model.curriculumSubjectTermMappingModel.findAndCountAll(queryOptions);
 
   return {
-    ...paginationMeta(count, pageNum, limitNum),
+    batchMapping: plainBatch,
     rows,
+    ...paginationMeta(
+      count,
+      paginateSubjects ? pageNum : 1,
+      paginateSubjects ? limitNum : count || 1,
+    ),
   };
 }
 
@@ -749,14 +737,23 @@ export async function deleteAssessmentPlanSubjectMapping(
 }
 
 /**
- * Curriculum admission batches for courses (current + previous: batch <= activeYear).
- * Path: curriculum_batch_mapping → curriculum_batch_term_mapping
- *       + curriculum → curriculum_subject_term_mapping
+ * Curriculum batches (current + previous) with course sessions for one academicYearId.
+ * Path: curriculum_batch_mapping → curriculum → course → sessionCourseMappings → session
  */
-export async function findCurriculumBatchesByCourse({
+export async function findCurriculumBatchCoursesWithSessions({
   batchWhere = {},
   curriculumWhere = {},
+  academicYearId,
 } = {}) {
+  const sessionWhere = {
+    ...buildScope(model.sessionModel, {
+      scopeConfig: { academicYear: false },
+    }),
+  };
+  if (academicYearId) {
+    sessionWhere.academicYearId = academicYearId;
+  }
+
   return scoped(model.curriculumBatchMappingModel).findAll({
     where: batchWhere,
     attributes: ["curriculumBatchMappingId", "curriculumId", "batch"],
@@ -795,6 +792,46 @@ export async function findCurriculumBatchesByCourse({
               "courseDuration",
             ],
             required: true,
+            include: [
+              {
+                model: model.sessionCouseMappingModel,
+                as: "sessionCourseMappings",
+                required: true,
+                attributes: ["sessionCourseMappingId", "sessionId", "courseId"],
+                include: [
+                  {
+                    model: model.sessionModel,
+                    as: "session",
+                    attributes: [
+                      "sessionId",
+                      "sessionName",
+                      "startingDate",
+                      "endingDate",
+                      "academicYearId",
+                    ],
+                    required: true,
+                    where: sessionWhere,
+                    include: [
+                      {
+                        model: model.acedmicYearModel,
+                        as: "sessionAcedmic",
+                        attributes: [
+                          "academicYearId",
+                          "yearTitle",
+                          "startingDate",
+                          "endingDate",
+                          "isActive",
+                        ],
+                        required: true,
+                        where: academicYearId
+                          ? { academicYearId }
+                          : buildScope(model.acedmicYearModel),
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
           },
           {
             model: model.curriculumSubjectTermMappingModel,

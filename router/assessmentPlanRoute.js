@@ -54,20 +54,22 @@ export const batchCoursesSessionsQuerySchema = z.object({
 });
 
 export const overviewQuerySchema = z.object({
-  courseId: z.union([z.string(), z.number()]).optional(),
+  curriculumBatchMappingId: z.coerce
+    .number()
+    .int()
+    .positive("curriculumBatchMappingId is required"),
+  term: z.coerce.number().int().positive().optional(),
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().positive().optional().default(10),
   sessionId: z.union([z.string(), z.number()]).optional(),
   subjectId: z.union([z.string(), z.number()]).optional(),
   assessmentPlanId: z.union([z.string(), z.number()]).optional(),
   academicRegulationId: z.union([z.string(), z.number()]).optional(),
-  batch: z.union([z.string(), z.number(), z.array(z.union([z.string(), z.number()]))]).optional(),
   assignmentStatus: z
     .enum(["assigned", "unassigned", "all"])
     .optional()
     .default("all"),
-  term: z.union([z.string(), z.number()]).optional(),
   search: z.string().optional(),
-  page: z.union([z.string(), z.number()]).optional(),
-  limit: z.union([z.string(), z.number()]).optional(),
 });
 
 export const componentSchema = z.object({
