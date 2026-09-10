@@ -52,11 +52,6 @@ const assessmentPlanModel = sequelize.define(
                 key: 'academic_regulation_id'
             }
         },
-        term: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'term'
-        },
         gradingId: {
             type: DataTypes.BIGINT,
             allowNull: true,

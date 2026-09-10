@@ -71,7 +71,6 @@ export async function getAssessmentPlans({
   courseId,
   regulationId,
   gradingId,
-  term,
   page = 1,
   limit = 10,
 }) {
@@ -91,9 +90,6 @@ export async function getAssessmentPlans({
   }
   if (gradingId) {
     where.gradingId = Number(gradingId);
-  }
-  if (term !== undefined && term !== null && term !== "") {
-    where.term = Number(term);
   }
   if (search) {
     where[Op.or] = [

@@ -457,7 +457,6 @@ export async function createAssessmentPlan({ payload, user }) {
       ...payload,
       courseId: payload.courseId ? Number(payload.courseId) : null,
       regulationId: payload.regulationId ? Number(payload.regulationId) : null,
-      term: payload.term !== undefined && payload.term !== null ? Number(payload.term) : null,
       academicYearId,
       universityId: user?.universityId ? Number(user.universityId) : null,
       instituteId: user?.instituteId ? Number(user.instituteId) : null,
@@ -467,6 +466,7 @@ export async function createAssessmentPlan({ payload, user }) {
       isActive: payload.isActive !== undefined ? payload.isActive : true,
     };
 
+    delete planData.term;
     delete planData.sessionId;
 
     return await assessmentPlanRepo.createAssessmentPlan(planData, { transaction: t });
@@ -503,8 +503,8 @@ export async function updateAssessmentPlan({ assessmentPlanId, payload, user }) 
 
     if (payload.courseId !== undefined) updateData.courseId = payload.courseId ? Number(payload.courseId) : null;
     if (payload.regulationId !== undefined) updateData.regulationId = payload.regulationId ? Number(payload.regulationId) : null;
-    if (payload.term !== undefined) updateData.term = payload.term !== null ? Number(payload.term) : null;
 
+    delete updateData.term;
     delete updateData.sessionId;
     delete updateData.academicYearId;
 

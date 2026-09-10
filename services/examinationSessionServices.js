@@ -139,6 +139,93 @@ async function assertNoTermOverlap(
   }
 }
 
+/**
+ * Before creating examination_session_term for (courseId + sessionId + term):
+ * every curriculum subject for that course+term (any batch) must have
+ * assessment_plan_subject_mapping for the same courseId + sessionId,
+ * and that subject must belong to the same term in curriculum.
+ */
+async function assertCurriculumSubjectsHaveAssessmentPlanMapping(
+  { courseId, sessionId, term },
+  options = {},
+) {
+  if (!courseId || !sessionId || !term) {
+    throw createBadRequestError(
+      "courseId, sessionId and term are required to validate assessment plan subject mappings.",
+    );
+  }
+
+  const curriculumSubjects =
+    await examinationSessionRepository.findCurriculumSubjectsByCourseAndTerm(
+      courseId,
+      term,
+      options,
+    );
+
+  const subjectById = new Map();
+  for (const row of curriculumSubjects) {
+    const plain = toPlain(row);
+    const subjectId = Number(plain.subjectId);
+    if (subjectById.has(subjectId)) continue;
+
+    const subject = plain.subject;
+    subjectById.set(subjectId, {
+      subjectId,
+      subjectName: subject?.subjectName ?? null,
+      subjectCode: subject?.subjectCode ?? null,
+      term: Number(plain.term),
+    });
+  }
+
+  if (subjectById.size === 0) {
+    throw createBadRequestError(
+      `No curriculum subjects found for courseId ${courseId}, term ${term} across any batch.`,
+    );
+  }
+
+  const subjectIds = [...subjectById.keys()];
+  const mappedIds =
+    await examinationSessionRepository.findMappedSubjectIdsForCourseSessionTerm(
+      { courseId, sessionId, term, subjectIds },
+      options,
+    );
+  const mappedSet = new Set(mappedIds);
+
+  const unmappedSubjects = [];
+  for (const subjectId of subjectIds) {
+    if (mappedSet.has(subjectId)) continue;
+    unmappedSubjects.push(subjectById.get(subjectId));
+  }
+
+  if (unmappedSubjects.length === 0) {
+    return;
+  }
+
+  const labels = [];
+  for (const subject of unmappedSubjects) {
+    labels.push(subject.subjectCode || String(subject.subjectId));
+  }
+
+  const error = createBadRequestError(
+    `Cannot create examination session term: ${unmappedSubjects.length} subject(s) for courseId ${courseId}, sessionId ${sessionId}, term ${term} are missing assessment plan mapping (${labels.join(", ")}).`,
+  );
+  error.unmappedSubjects = unmappedSubjects;
+  throw error;
+}
+
+async function assertTermRowsHaveAssessmentPlanMappings(termRows, options = {}) {
+  for (const row of termRows) {
+    await assertCurriculumSubjectsHaveAssessmentPlanMapping(
+      {
+        courseId: row.courseId,
+        sessionId: row.sessionId,
+        term: row.term,
+      },
+      options,
+    );
+  }
+}
+
 async function buildSessionSummary(sessionRecord, options = {}) {
   if (!sessionRecord) {
     return null;
@@ -348,6 +435,7 @@ export async function createExaminationSession(sessionData, options = {}) {
       for (const row of termsToCreate) {
         row.examinationSessionId = record.examinationSessionId;
       }
+      await assertTermRowsHaveAssessmentPlanMappings(termsToCreate, tx);
       await examinationSessionRepository.createExaminationSessionTerms(
         termsToCreate,
         tx,
@@ -477,6 +565,7 @@ export async function updateExaminationSession(
           tx,
           sessionId,
         );
+        await assertTermRowsHaveAssessmentPlanMappings(termsToCreate, tx);
         await examinationSessionRepository.createExaminationSessionTerms(
           termsToCreate,
           tx,
@@ -556,6 +645,15 @@ export async function createExaminationSessionTerm(termData, options = {}) {
       [termNumber],
       tx,
       examinationSessionId,
+    );
+
+    await assertCurriculumSubjectsHaveAssessmentPlanMapping(
+      {
+        courseId,
+        sessionId,
+        term: termNumber,
+      },
+      tx,
     );
 
     const record =

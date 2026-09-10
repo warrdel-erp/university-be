@@ -340,6 +340,114 @@ export async function findAssessmentPlanSubjectMappings(where, options = {}) {
   });
 }
 
+/**
+ * Curriculum subjects for courseId + term across every admission batch.
+ * Path: curriculum → curriculum_batch_mapping → curriculum_subject_term_mapping
+ */
+export async function findCurriculumSubjectsByCourseAndTerm(
+  courseId,
+  term,
+  options = {},
+) {
+  return model.curriculumSubjectTermMappingModel.findAll({
+    attributes: [
+      "curriculumSubjectTermMappingId",
+      "curriculumId",
+      "subjectId",
+      "term",
+    ],
+    where: { term: Number(term) },
+    include: [
+      {
+        model: model.curriculumModel,
+        as: "curriculum",
+        attributes: ["curriculumId", "name", "courseId"],
+        required: true,
+        where: {
+          ...buildScope(model.curriculumModel),
+          courseId: Number(courseId),
+        },
+        include: [
+          {
+            model: model.curriculumBatchMappingModel,
+            as: "batchMappings",
+            attributes: ["curriculumBatchMappingId", "batch"],
+            required: true,
+          },
+        ],
+      },
+      {
+        model: model.subjectModel,
+        as: "subject",
+        attributes: ["subjectId", "subjectName", "subjectCode"],
+        required: true,
+      },
+    ],
+    transaction: options.transaction,
+  });
+}
+
+/**
+ * Mapped subjectIds for courseId + sessionId that belong to curriculum term.
+ */
+export async function findMappedSubjectIdsForCourseSessionTerm(
+  { courseId, sessionId, term, subjectIds },
+  options = {},
+) {
+  if (!subjectIds.length) {
+    return [];
+  }
+
+  const rows = await scoped(model.assessmentPlanSubjectMappingModel).findAll({
+    where: {
+      courseId: Number(courseId),
+      sessionId: Number(sessionId),
+      subjectId: { [Op.in]: subjectIds },
+    },
+    attributes: ["subjectId", "courseId", "sessionId"],
+    include: [
+      {
+        model: model.subjectModel,
+        as: "subject",
+        attributes: ["subjectId"],
+        required: true,
+        include: [
+          {
+            model: model.curriculumSubjectTermMappingModel,
+            as: "curriculumTermMappings",
+            attributes: ["curriculumSubjectTermMappingId", "term"],
+            required: true,
+            where: { term: Number(term) },
+            include: [
+              {
+                model: model.curriculumModel,
+                as: "curriculum",
+                attributes: ["curriculumId", "courseId"],
+                required: true,
+                where: {
+                  ...buildScope(model.curriculumModel),
+                  courseId: Number(courseId),
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    transaction: options.transaction,
+  });
+
+  const mappedIds = [];
+  const seen = new Set();
+  for (const row of rows) {
+    const subjectId = Number(row.subjectId);
+    if (seen.has(subjectId)) continue;
+    seen.add(subjectId);
+    mappedIds.push(subjectId);
+  }
+  return mappedIds;
+}
+
 export async function findAssessmentPlanSubjectMappingsWithSession(where, options = {}) {
   return scoped(model.assessmentPlanSubjectMappingModel).findAll({
     where,

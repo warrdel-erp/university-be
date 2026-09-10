@@ -2,56 +2,32 @@
   "info": {
     "_postman_id": "assessment-plan-api-collection-v2",
     "name": "Assessment Plan Module",
-    "description": "Assessment Plan APIs for Batch Configuration and Plan Library.\n\nMount: /assessmentPlan\n\nAuth: Bearer {{token}}\n\nTenant: uses academicYearId / instituteId / universityId from user defaults.\n\nChangelog 2026-09-10:\n- batchCoursesSessions: no batch/batchYear filter; scopes by tenant academicYearId; returns courseId+sessionId+active batch only; sessions only for that academic year.\n- overview: subjects from curriculum mappings; optional batch filter; terms limited to active academic calendar year; use limit (not pageSize).\n\nDocs: docs/postman/ASSESSMENT_PLAN.md",
+    "description": "Assessment Plan + Examination Session Term gate APIs (updated 2026-09-10).\n\nMounts:\n- /assessmentPlan\n- /examinationSession\n\nAuth: Bearer {{token}}\n\nTenant: academicYearId / instituteId / universityId from user defaults.\n\nKey changes:\n- batchCoursesSessions: courseId+sessionId rows; batches[] = current+previous\n- overview: curriculumBatchMappingId required; term-wise nest; subject status previous|current|upcoming\n- assessment plan: no sessionId; academicYearId from tenant\n- subject mapping: keeps sessionId\n- examinationSession create/update/term: all curriculum subjects for courseId+sessionId+term must be mapped\n\nDocs: docs/postman/ASSESSMENT_PLAN.md",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    {
-      "key": "baseurl",
-      "value": "http://localhost:8080"
-    },
-    {
-      "key": "token",
-      "value": ""
-    },
-    {
-      "key": "courseId",
-      "value": "34"
-    },
-    {
-      "key": "sessionId",
-      "value": "20"
-    },
-    {
-      "key": "batch",
-      "value": "2026"
-    },
-    {
-      "key": "assessmentPlanId",
-      "value": "1"
-    },
-    {
-      "key": "subjectId",
-      "value": "55"
-    }
+    { "key": "baseurl", "value": "http://localhost:8080" },
+    { "key": "token", "value": "" },
+    { "key": "courseId", "value": "34" },
+    { "key": "sessionId", "value": "20" },
+    { "key": "curriculumBatchMappingId", "value": "2" },
+    { "key": "term", "value": "3" },
+    { "key": "assessmentPlanId", "value": "1" },
+    { "key": "subjectId", "value": "64" },
+    { "key": "examinationSessionId", "value": "1" },
+    { "key": "assessmentTypeId", "value": "2" }
   ],
   "item": [
     {
       "name": "1. Batch Configuration",
       "item": [
         {
-          "name": "1.1 Get Batch Courses Sessions (active AY)",
+          "name": "1.1 Get Batch Courses Sessions",
           "request": {
             "method": "GET",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
             ],
             "url": {
               "raw": "{{baseurl}}/assessmentPlan/batchCoursesSessions?courseId={{courseId}}",
@@ -65,41 +41,16 @@
                 }
               ]
             },
-            "description": "Returns one object per courseId + sessionId for the tenant active academic year.\n\nRules:\n- academicYearId from tenant store (e.g. 60)\n- activeBatchYear from AY startingDate (e.g. 2026-07-01 → 2026)\n- Sessions only for that academicYearId\n- Single active admission batch only\n\nRemoved: batch, batchYear query params.\n\nassignmentStatus: Pending | Partially Assigned | Fully Assigned"
+            "description": "One object per courseId + sessionId for tenant active academic year.\n\nbatches[] = admission years where batch <= activeBatchYear (newest first).\nUse curriculumBatchMappingId from batches[] for overview."
           },
           "response": [
             {
               "name": "Success",
-              "originalRequest": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{token}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseurl}}/assessmentPlan/batchCoursesSessions?courseId=34",
-                  "host": ["{{baseurl}}"],
-                  "path": ["assessmentPlan", "batchCoursesSessions"],
-                  "query": [
-                    {
-                      "key": "courseId",
-                      "value": "34"
-                    }
-                  ]
-                }
-              },
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Batch courses with sessions fetched successfully\",\n  \"data\": [\n    {\n      \"courseId\": 34,\n      \"sessionId\": 20,\n      \"activeBatchYear\": 2026,\n      \"course\": {\n        \"courseId\": 34,\n        \"courseName\": \"Bachelors in Architecture\",\n        \"courseCode\": \"BARCH\",\n        \"termType\": \"Sem\",\n        \"totalTerms\": 10,\n        \"courseDuration\": 5,\n        \"durationYears\": 5\n      },\n      \"session\": {\n        \"sessionId\": 20,\n        \"sessionName\": \"Morning Session July 26\",\n        \"startingDate\": \"2026-06-01\",\n        \"endingDate\": \"2027-07-31\",\n        \"academicYearId\": 60,\n        \"academicYear\": {\n          \"academicYearId\": 60,\n          \"yearTitle\": \"2026-2027\",\n          \"startingDate\": \"2026-07-01\",\n          \"endingDate\": \"2027-06-30\",\n          \"isActive\": true\n        }\n      },\n      \"batch\": {\n        \"curriculumBatchMappingId\": 1,\n        \"curriculumId\": 1,\n        \"batch\": 2026,\n        \"batchEndYear\": 2031,\n        \"batchName\": \"2026 – 31\",\n        \"curriculum\": {\n          \"curriculumId\": 1,\n          \"name\": \"Curriculum BARCH - Batch 2026\"\n        },\n        \"totalSubjects\": 11,\n        \"assignedSubjects\": 3,\n        \"assignmentStatus\": \"Partially Assigned\"\n      }\n    }\n  ]\n}"
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Batch courses with sessions fetched successfully\",\n  \"data\": [\n    {\n      \"courseId\": 34,\n      \"sessionId\": 20,\n      \"activeBatchYear\": 2026,\n      \"course\": {\n        \"courseId\": 34,\n        \"courseName\": \"Bachelors in Architecture\",\n        \"courseCode\": \"BARCH\",\n        \"durationYears\": 5\n      },\n      \"session\": {\n        \"sessionId\": 20,\n        \"sessionName\": \"Morning Session July 26\",\n        \"academicYearId\": 60\n      },\n      \"batches\": [\n        {\n          \"curriculumBatchMappingId\": 1,\n          \"batch\": 2026,\n          \"batchName\": \"2026 – 31\",\n          \"totalSubjects\": 88,\n          \"assignedSubjects\": 3,\n          \"assignmentStatus\": \"Partially Assigned\"\n        },\n        {\n          \"curriculumBatchMappingId\": 2,\n          \"batch\": 2025,\n          \"totalSubjects\": 72,\n          \"assignedSubjects\": 0,\n          \"assignmentStatus\": \"Pending\"\n        }\n      ]\n    }\n  ]\n}"
             }
           ]
         },
@@ -107,18 +58,12 @@
           "name": "1.2 Get Batch Courses Sessions (all courses)",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "url": {
               "raw": "{{baseurl}}/assessmentPlan/batchCoursesSessions",
               "host": ["{{baseurl}}"],
               "path": ["assessmentPlan", "batchCoursesSessions"]
-            },
-            "description": "Same as 1.1 without courseId filter."
+            }
           }
         }
       ]
@@ -127,128 +72,83 @@
       "name": "2. Subject Overview",
       "item": [
         {
-          "name": "2.1 Overview by course + session + batch",
+          "name": "2.1 Overview by curriculumBatchMappingId (all terms)",
           "request": {
             "method": "GET",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
             ],
             "url": {
-              "raw": "{{baseurl}}/assessmentPlan/overview?courseId={{courseId}}&sessionId={{sessionId}}&batch={{batch}}&page=1&limit=10",
+              "raw": "{{baseurl}}/assessmentPlan/overview?curriculumBatchMappingId={{curriculumBatchMappingId}}",
               "host": ["{{baseurl}}"],
               "path": ["assessmentPlan", "overview"],
               "query": [
                 {
-                  "key": "courseId",
-                  "value": "{{courseId}}"
+                  "key": "curriculumBatchMappingId",
+                  "value": "{{curriculumBatchMappingId}}",
+                  "description": "Required. From batches[].curriculumBatchMappingId"
                 },
                 {
                   "key": "sessionId",
                   "value": "{{sessionId}}",
-                  "description": "Filters assessmentPlanMappings by session"
-                },
-                {
-                  "key": "batch",
-                  "value": "{{batch}}",
-                  "description": "Admission batch year (e.g. 2026). Comma list supported: 2024,2025"
+                  "description": "Optional — filter assessmentPlanMappings",
+                  "disabled": true
                 },
                 {
                   "key": "assignmentStatus",
                   "value": "all",
-                  "description": "all | assigned | unassigned"
+                  "disabled": true
                 },
                 {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10",
-                  "description": "Page size (do not use pageSize)"
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
                 }
               ]
             },
-            "description": "Subjects from curriculum mappings for the selected admission batch.\n\nTerms are limited to curriculum_batch_term_mapping.year = active academic calendar year (from tenant AY startingDate).\n\nEach row includes batch, batchName, subjectType, subjectCategory, electiveOrCore.\n\nUse limit (not pageSize)."
+            "description": "Returns all terms (1…N) with all subjects nested.\n\nEach subject/term has status vs activeBatchYear:\n- previous | current | upcoming\n\nWithout term filter, page/limit do not truncate subjects."
           },
           "response": [
             {
               "name": "Success",
-              "originalRequest": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{token}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseurl}}/assessmentPlan/overview?courseId=34&sessionId=20&batch=2026&page=1&limit=10",
-                  "host": ["{{baseurl}}"],
-                  "path": ["assessmentPlan", "overview"],
-                  "query": [
-                    { "key": "courseId", "value": "34" },
-                    { "key": "sessionId", "value": "20" },
-                    { "key": "batch", "value": "2026" },
-                    { "key": "page", "value": "1" },
-                    { "key": "limit", "value": "10" }
-                  ]
-                }
-              },
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
-              "body": "{\n  \"success\": true,\n  \"message\": \"Course assessment plan overview fetched successfully\",\n  \"data\": {\n    \"totalRecords\": 11,\n    \"totalPages\": 2,\n    \"currentPage\": 1,\n    \"pageSize\": 10,\n    \"data\": [\n      {\n        \"curriculumSubjectTermMappingId\": 101,\n        \"curriculumId\": 1,\n        \"curriculumBatchMappingId\": 1,\n        \"curriculumName\": \"Curriculum BARCH - Batch 2026\",\n        \"courseId\": 34,\n        \"subjectId\": 55,\n        \"subjectName\": \"Design Studio I\",\n        \"subjectCode\": \"AR101\",\n        \"term\": 1,\n        \"batch\": 2026,\n        \"batchEndYear\": 2031,\n        \"batchName\": \"2026 – 31\",\n        \"subjectType\": \"Core\",\n        \"subjectCategory\": \"Theory\",\n        \"electiveOrCore\": \"core\",\n        \"yearNumber\": 1,\n        \"year\": 2026,\n        \"assessmentPlanMappings\": []\n      }\n    ]\n  }\n}"
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"curriculumBatchMappingId\": 2,\n    \"batch\": 2025,\n    \"activeBatchYear\": 2026,\n    \"totalSubjects\": 72,\n    \"assignedSubjects\": 1,\n    \"unassignedSubjects\": 71,\n    \"terms\": [\n      {\n        \"term\": 3,\n        \"year\": 2026,\n        \"yearNumber\": 2,\n        \"status\": \"current\",\n        \"subjects\": [\n          {\n            \"subjectId\": 64,\n            \"subjectCode\": \"3AR1\",\n            \"term\": 3,\n            \"year\": 2026,\n            \"yearNumber\": 2,\n            \"status\": \"current\",\n            \"assignmentStatus\": \"unassigned\",\n            \"assessmentPlanMappings\": []\n          }\n        ]\n      }\n    ]\n  }\n}"
             }
           ]
         },
         {
-          "name": "2.2 Overview unassigned only",
+          "name": "2.2 Overview by term (paginated)",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "url": {
-              "raw": "{{baseurl}}/assessmentPlan/overview?courseId={{courseId}}&sessionId={{sessionId}}&batch={{batch}}&assignmentStatus=unassigned&page=1&limit=10",
+              "raw": "{{baseurl}}/assessmentPlan/overview?curriculumBatchMappingId={{curriculumBatchMappingId}}&term={{term}}&page=1&limit=10",
               "host": ["{{baseurl}}"],
               "path": ["assessmentPlan", "overview"],
               "query": [
-                { "key": "courseId", "value": "{{courseId}}" },
-                { "key": "sessionId", "value": "{{sessionId}}" },
-                { "key": "batch", "value": "{{batch}}" },
-                { "key": "assignmentStatus", "value": "unassigned" },
+                { "key": "curriculumBatchMappingId", "value": "{{curriculumBatchMappingId}}" },
+                { "key": "term", "value": "{{term}}" },
                 { "key": "page", "value": "1" },
                 { "key": "limit", "value": "10" }
               ]
-            }
+            },
+            "description": "Paginate subjects inside one term."
           }
         },
         {
           "name": "2.3 Get Stats",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "url": {
               "raw": "{{baseurl}}/assessmentPlan/stats",
               "host": ["{{baseurl}}"],
               "path": ["assessmentPlan", "stats"]
-            },
-            "description": "Coverage summary cards: totalSubjects, assignedSubjects, unassignedSubjects, overriddenSubjects, coveragePercentage."
+            }
           }
         }
       ]
@@ -261,62 +161,48 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"planName\": \"BARCH Continuous Assessment 2026\",\n  \"planCode\": \"BARCH-CA-2026\",\n  \"description\": \"Internal + external components\",\n  \"courseId\": 34,\n  \"sessionId\": 20,\n  \"regulationId\": 1,\n  \"term\": 1,\n  \"gradingId\": 1,\n  \"status\": \"Draft\",\n  \"isActive\": true,\n  \"components\": [\n    {\n      \"examSetupTypeId\": 2,\n      \"weightagePercentage\": 40,\n      \"maxAssessments\": 2,\n      \"duration\": 90\n    }\n  ]\n}"
+              "raw": "{\n  \"planName\": \"BARCH Continuous Assessment 2026\",\n  \"planCode\": \"BARCH-CA-2026\",\n  \"description\": \"Internal + external components\",\n  \"courseId\": {{courseId}},\n  \"regulationId\": 1,\n  \"term\": {{term}},\n  \"gradingId\": 1,\n  \"status\": \"Draft\",\n  \"isActive\": true,\n  \"components\": [\n    {\n      \"examSetupTypeId\": {{assessmentTypeId}},\n      \"weightagePercentage\": 40,\n      \"maxAssessments\": 2,\n      \"duration\": 90\n    }\n  ]\n}"
             },
             "url": {
               "raw": "{{baseurl}}/assessmentPlan",
               "host": ["{{baseurl}}"],
               "path": ["assessmentPlan"]
             },
-            "description": "status: Draft | Published"
+            "description": "No sessionId on assessment plan.\nacademicYearId is loaded from tenant context.\nScoped by courseId + academicYearId."
           }
         },
         {
           "name": "3.2 List Assessment Plans",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "url": {
-              "raw": "{{baseurl}}/assessmentPlan?courseId={{courseId}}&sessionId={{sessionId}}&page=1&limit=10",
+              "raw": "{{baseurl}}/assessmentPlan?courseId={{courseId}}&page=1&limit=10",
               "host": ["{{baseurl}}"],
               "path": ["assessmentPlan"],
               "query": [
                 { "key": "courseId", "value": "{{courseId}}" },
-                { "key": "sessionId", "value": "{{sessionId}}" },
                 { "key": "status", "value": "Published", "disabled": true },
+                { "key": "academicYearId", "value": "", "disabled": true },
+                { "key": "term", "value": "{{term}}", "disabled": true },
                 { "key": "search", "value": "", "disabled": true },
                 { "key": "page", "value": "1" },
                 { "key": "limit", "value": "10" }
               ]
-            }
+            },
+            "description": "sessionId query removed from list."
           }
         },
         {
           "name": "3.3 Get Assessment Plan By Id",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "url": {
               "raw": "{{baseurl}}/assessmentPlan/{{assessmentPlanId}}",
               "host": ["{{baseurl}}"],
@@ -329,18 +215,12 @@
           "request": {
             "method": "PATCH",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"planName\": \"BARCH Continuous Assessment 2026 Updated\",\n  \"status\": \"Published\"\n}"
+              "raw": "{\n  \"status\": \"Published\",\n  \"planName\": \"BARCH Continuous Assessment 2026\"\n}"
             },
             "url": {
               "raw": "{{baseurl}}/assessmentPlan/{{assessmentPlanId}}",
@@ -350,15 +230,10 @@
           }
         },
         {
-          "name": "3.5 Delete / Toggle Assessment Plan",
+          "name": "3.5 Delete Assessment Plan",
           "request": {
             "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "url": {
               "raw": "{{baseurl}}/assessmentPlan/{{assessmentPlanId}}",
               "host": ["{{baseurl}}"],
@@ -376,18 +251,12 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"assessmentPlanId\": 1,\n  \"examSetupTypeId\": 2,\n  \"weightagePercentage\": 30,\n  \"maxAssessments\": 1,\n  \"duration\": 60\n}"
+              "raw": "{\n  \"assessmentPlanId\": {{assessmentPlanId}},\n  \"examSetupTypeId\": {{assessmentTypeId}},\n  \"weightagePercentage\": 30,\n  \"maxAssessments\": 1,\n  \"duration\": 60\n}"
             },
             "url": {
               "raw": "{{baseurl}}/assessmentPlan/component",
@@ -401,18 +270,12 @@
           "request": {
             "method": "PATCH",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"weightagePercentage\": 35,\n  \"maxAssessments\": 2\n}"
+              "raw": "{\n  \"weightagePercentage\": 35\n}"
             },
             "url": {
               "raw": "{{baseurl}}/assessmentPlan/component/1",
@@ -425,12 +288,7 @@
           "name": "4.3 Delete Component",
           "request": {
             "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "url": {
               "raw": "{{baseurl}}/assessmentPlan/component/1",
               "host": ["{{baseurl}}"],
@@ -448,14 +306,8 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
@@ -466,24 +318,24 @@
               "host": ["{{baseurl}}"],
               "path": ["assessmentPlan", "subjectMapping"]
             },
-            "description": "Plan must be Published + isActive.\nSubject must belong to courseId.\nSession must be mapped to course.\nAcademic years of plan/subject/session must align."
+            "description": "Mapping table keeps sessionId.\nPlan must be Published.\nRequired for examination session term create gate."
           }
         },
         {
           "name": "5.2 List Subject Mappings",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "url": {
-              "raw": "{{baseurl}}/assessmentPlan/subjectMapping?page=1&limit=10",
+              "raw": "{{baseurl}}/assessmentPlan/subjectMapping?courseId={{courseId}}&sessionId={{sessionId}}&page=1&limit=10",
               "host": ["{{baseurl}}"],
               "path": ["assessmentPlan", "subjectMapping"],
               "query": [
+                { "key": "assessmentPlanId", "value": "{{assessmentPlanId}}", "disabled": true },
+                { "key": "courseId", "value": "{{courseId}}" },
+                { "key": "sessionId", "value": "{{sessionId}}" },
+                { "key": "subjectId", "value": "{{subjectId}}", "disabled": true },
+                { "key": "academicYearId", "value": "", "disabled": true },
                 { "key": "page", "value": "1" },
                 { "key": "limit", "value": "10" }
               ]
@@ -494,17 +346,111 @@
           "name": "5.3 Delete Subject Mapping",
           "request": {
             "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "url": {
               "raw": "{{baseurl}}/assessmentPlan/subjectMapping/1",
               "host": ["{{baseurl}}"],
               "path": ["assessmentPlan", "subjectMapping", "1"]
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Examination Session Term Gate",
+      "item": [
+        {
+          "name": "6.1 Create Examination Session (with terms)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assessmentTypeId\": {{assessmentTypeId}},\n  \"sessionName\": \"Odd Sem Exams 2026\",\n  \"status\": \"Draft\",\n  \"terms\": [\n    {\n      \"term\": {{term}},\n      \"courseId\": {{courseId}},\n      \"sessionId\": {{sessionId}},\n      \"includeElectives\": true\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/examinationSession",
+              "host": ["{{baseurl}}"],
+              "path": ["examinationSession"]
+            },
+            "description": "Before creating each examination_session_term:\nall curriculum subjects for courseId+term (any batch) must have assessment_plan_subject_mapping for courseId+sessionId+that term.\n\nEach terms[] item requires courseId, sessionId, term."
+          }
+        },
+        {
+          "name": "6.2 Update Examination Session (add terms)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"terms\": [\n    {\n      \"term\": {{term}},\n      \"courseId\": {{courseId}},\n      \"sessionId\": {{sessionId}},\n      \"includeElectives\": true\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/examinationSession?examinationSessionId={{examinationSessionId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["examinationSession"],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "{{examinationSessionId}}"
+                }
+              ]
+            },
+            "description": "Same assessment-plan mapping gate for newly added terms."
+          }
+        },
+        {
+          "name": "6.3 Create Examination Session Term",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examinationSessionId\": {{examinationSessionId}},\n  \"term\": {{term}},\n  \"courseId\": {{courseId}},\n  \"sessionId\": {{sessionId}},\n  \"includeElectives\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/examinationSession/term",
+              "host": ["{{baseurl}}"],
+              "path": ["examinationSession", "term"]
+            },
+            "description": "POST /examinationSession/term\n\nValidates courseId + sessionId + term curriculum subjects are all assessment-plan mapped.\n\n400 example:\nCannot create examination session term: N subject(s) for courseId 34, sessionId 20, term 3 are missing assessment plan mapping (3AR1, ...)."
+          },
+          "response": [
+            {
+              "name": "Missing mappings",
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Cannot create examination session term: 3 subject(s) for courseId 34, sessionId 20, term 3 are missing assessment plan mapping (3AR1, 3AR2, 3AR5).\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. Related Course",
+      "item": [
+        {
+          "name": "7.1 Get Courses With Subjects",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseurl}}/course/withSubjects",
+              "host": ["{{baseurl}}"],
+              "path": ["course", "withSubjects"]
+            },
+            "description": "No instituteId / academicYear query required. Uses tenant scoped()."
           }
         }
       ]

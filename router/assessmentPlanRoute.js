@@ -46,7 +46,6 @@ export const listSubjectMappingQuery = z.object({
 export const statsQuerySchema = z.object({
   courseId: z.union([z.string(), z.number()]).optional(),
   sessionId: z.union([z.string(), z.number()]).optional(),
-  term: z.union([z.string(), z.number()]).optional(),
 });
 
 export const batchCoursesSessionsQuerySchema = z.object({
@@ -85,7 +84,6 @@ export const createAssessmentPlanBody = z.object({
   description: z.string().max(500).optional().nullable(),
   courseId: z.coerce.number().int().positive().optional().nullable(),
   regulationId: z.coerce.number().int().positive().optional().nullable(),
-  term: z.coerce.number().int().positive().optional().nullable(),
   gradingId: z.coerce.number().int().positive().optional().nullable(),
   status: z.preprocess(
     (val) => (val === "" || val === null ? undefined : val),
@@ -107,7 +105,6 @@ export const listAssessmentPlanQuery = z.object({
   regulationId: z.union([z.string(), z.number()]).optional(),
   academicYearId: z.union([z.string(), z.number()]).optional(),
   gradingId: z.union([z.string(), z.number()]).optional(),
-  term: z.union([z.string(), z.number()]).optional(),
   page: z.union([z.string(), z.number()]).optional(),
   limit: z.union([z.string(), z.number()]).optional(),
 });
