@@ -298,119 +298,113 @@ export async function getGroupRoutinesWrappedInStructureRepository({ academicGro
 }
 
 export async function getSubjectOptionsRepository({ classSectionTermId, academicGroupId }, options = {}) {
-  const subjectIds = new Set();
-  const directSubjectWheres = [];
-
-  if (classSectionTermId != null) {
-    const mapperRows = await scoped(model.subjectMapperModel).findAll({
-      where: { classSectionTermId: Number(classSectionTermId) },
-      attributes: ['subjectId'],
-      raw: true,
-      transaction: options.transaction,
+  if (classSectionTermId) {
+    const cst = await model.classSectionTermModel.findByPk(classSectionTermId, {
+      include: [{
+        model: model.classSectionModel,
+        as: 'classSection',
+        include: [{
+          model: model.sessionModel,
+          as: 'classSession',
+          include: [{ model: model.acedmicYearModel, as: 'sessionAcedmic' }]
+        }]
+      }],
+      transaction: options.transaction
     });
 
-    for (const row of mapperRows) {
-      if (row.subjectId) {
-        subjectIds.add(Number(row.subjectId));
+    if (!cst) return [];
+
+    const term = cst.term;
+    const courseId = cst.classSection?.courseId;
+    const year = cst.classSection?.year || 1;
+
+    // Academic year title (e.g. '2026-2027') -> 2026
+    const ayTitle = cst.classSection?.classSession?.sessionAcedmic?.year_title;
+    const startYear = ayTitle ? parseInt(ayTitle.match(/\d{4}/)?.[0], 10) : new Date().getFullYear();
+    const batch = startYear - (year - 1);
+
+    // Get curriculum mapped for this batch and program
+    const batchMapping = await model.curriculumBatchMappingModel.findOne({
+      where: { batch },
+      include: [{
+        model: model.curriculumModel,
+        as: 'curriculum',
+        where: { courseId },
+        required: true
+      }],
+      transaction: options.transaction
+    });
+
+    if (batchMapping?.curriculumId) {
+      const mappings = await model.curriculumSubjectTermMappingModel.findAll({
+        where: { curriculumId: batchMapping.curriculumId, term },
+        include: [{
+          model: model.subjectModel,
+          as: 'subject',
+          attributes: ['subjectId', 'subjectName', 'subjectCode', 'subjectType', 'subjectCategory'],
+          where: { isActive: true },
+          required: true
+        }],
+        order: [[{ model: model.subjectModel, as: 'subject' }, 'subjectName', 'ASC']],
+        transaction: options.transaction
+      });
+
+      if (mappings.length > 0) {
+        return mappings.map(m => ({
+          subjectId: m.subject.subjectId,
+          name: m.subject.subjectName,
+          subjectName: m.subject.subjectName,
+          subjectCode: m.subject.subjectCode,
+          subjectType: m.subject.subjectType,
+          subjectCategory: m.subject.subjectCategory
+        }));
       }
     }
 
-    const termRow = await scoped(model.classSectionTermModel).findOne({
-      where: { classSectionTermId: Number(classSectionTermId) },
-      attributes: ['classSectionTermId', 'term', 'classSectionsId'],
-      include: [
-        {
-          model: model.classSectionModel,
-          as: 'classSection',
-          attributes: ['courseId'],
-          required: false,
-        },
-      ],
-      transaction: options.transaction,
+    // Fallback if curriculum mapping not yet set
+    const subjects = await model.subjectModel.findAll({
+      where: { courseId, term, isActive: true },
+      attributes: ['subjectId', 'subjectName', 'subjectCode', 'subjectType', 'subjectCategory'],
+      order: [['subjectName', 'ASC']],
+      transaction: options.transaction
     });
 
-    if (termRow) {
-      const plainTerm = termRow.get ? termRow.get({ plain: true }) : termRow;
-      const termVal = plainTerm.term;
-      const courseIdVal = plainTerm.classSection?.courseId;
+    return subjects.map(s => ({
+      subjectId: s.subjectId,
+      name: s.subjectName,
+      subjectName: s.subjectName,
+      subjectCode: s.subjectCode,
+      subjectType: s.subjectType,
+      subjectCategory: s.subjectCategory
+    }));
+  }
 
-      if (courseIdVal != null && termVal != null) {
-        directSubjectWheres.push({
-          courseId: Number(courseIdVal),
-          term: Number(termVal),
-        });
-      } else if (courseIdVal != null) {
-        directSubjectWheres.push({
-          courseId: Number(courseIdVal),
-        });
-      }
+  // Academic Group support
+  if (academicGroupId) {
+    const group = await model.academicGroupModel.findByPk(academicGroupId, {
+      include: [{ model: model.academicGroupScopeModel, as: 'scope' }],
+      transaction: options.transaction
+    });
+    const scope = group?.scope;
+    if (scope?.courseId && scope?.term) {
+      const subjects = await model.subjectModel.findAll({
+        where: { courseId: scope.courseId, term: scope.term, isActive: true },
+        attributes: ['subjectId', 'subjectName', 'subjectCode', 'subjectType', 'subjectCategory'],
+        order: [['subjectName', 'ASC']],
+        transaction: options.transaction
+      });
+      return subjects.map(s => ({
+        subjectId: s.subjectId,
+        name: s.subjectName,
+        subjectName: s.subjectName,
+        subjectCode: s.subjectCode,
+        subjectType: s.subjectType,
+        subjectCategory: s.subjectCategory
+      }));
     }
   }
 
-  if (academicGroupId != null) {
-    const groupRow = await scoped(model.academicGroupModel).findOne({
-      where: { academicGroupId: Number(academicGroupId) },
-      attributes: ['academicGroupId', 'academicGroupScopeId'],
-      include: [
-        {
-          model: model.academicGroupScopeModel,
-          as: 'scope',
-          attributes: ['academicGroupScopeId', 'courseId', 'term', 'contextSubjectId'],
-          required: false,
-        },
-      ],
-      transaction: options.transaction,
-    });
-
-    if (groupRow) {
-      const plainGroup = groupRow.get ? groupRow.get({ plain: true }) : groupRow;
-      const scope = plainGroup.scope || plainGroup.academicGroupScope;
-
-      if (scope && scope.courseId != null) {
-        const scopeWhere = {
-          courseId: Number(scope.courseId),
-        };
-        if (scope.term != null) {
-          scopeWhere.term = Number(scope.term);
-        }
-        directSubjectWheres.push(scopeWhere);
-
-        if (scope.contextSubjectId != null) {
-          subjectIds.add(Number(scope.contextSubjectId));
-        }
-      }
-    }
-  }
-
-  const finalSubjectWheres = [];
-
-  if (subjectIds.size > 0) {
-    finalSubjectWheres.push({
-      subjectId: { [Op.in]: Array.from(subjectIds) },
-    });
-  }
-
-  for (const w of directSubjectWheres) {
-    finalSubjectWheres.push(w);
-  }
-
-  if (finalSubjectWheres.length === 0) {
-    return [];
-  }
-
-  const subjects = await scoped(model.subjectModel).findAll({
-    where: {
-      [Op.or]: finalSubjectWheres,
-    },
-    attributes: ['subjectId', 'subjectName'],
-    order: [['subjectName', 'ASC']],
-    transaction: options.transaction,
-  });
-
-  return subjects.map((s) => ({
-    subjectId: s.subjectId,
-    name: s.subjectName,
-  }));
+  return [];
 }
 
 

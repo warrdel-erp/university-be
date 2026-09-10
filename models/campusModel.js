@@ -26,7 +26,7 @@ const campusModel = sequelize.define(
             allowNull: false,
             field: 'campus_name'
         },
-        campusCode:{
+        campusCode: {
             type: DataTypes.STRING,
             allowNull: false,
             field: 'campus_code',
@@ -45,7 +45,7 @@ const campusModel = sequelize.define(
             type: DataTypes.FLOAT,
             allowNull: true,
         },
-        longitude:{
+        longitude: {
             type: DataTypes.FLOAT,
             allowNull: true,
         },
@@ -81,7 +81,7 @@ const campusModel = sequelize.define(
             allowNull: false,
             field: 'created_by',
             references: {
-                model: users,
+                model: 'users',
                 key: 'user_id'
             }
         },

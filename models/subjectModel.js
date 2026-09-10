@@ -53,15 +53,7 @@ const subjectModel = sequelize.define(
                 key: 'specialization_id'
             }
         },
-        academicYearId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'acedmic_year_id',
-            references: {
-                model: acedmicYear,
-                key: 'acedmic_year_id'
-            }
-        },
+// academicYearId migrated to curriculum
         instituteId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -166,6 +158,6 @@ const subjectModel = sequelize.define(
     }
 );
 
-subjectModel.scopeConfig = { university: true, institute: true, academicYear: true };
+subjectModel.scopeConfig = { university: true, institute: true };
 
 export default subjectModel;

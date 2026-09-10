@@ -1,3 +1,8 @@
+
+import curriculumModel from "./curriculumModel.js";
+import curriculumSubjectTermMappingModel from "./curriculumSubjectTermMappingModel.js";
+import curriculumBatchMappingModel from "./curriculumBatchMappingModel.js";
+import curriculumBatchTermMappingModel from "./curriculumBatchTermMappingModel.js";
 import settingModel from "./settingModel.js";
 import assessmentPlanModel from "./assessmentPlanModel.js";
 import assessmentPlanComponentModel from "./assessmentPlanComponentModel.js";
@@ -4314,6 +4319,22 @@ assessmentPlanSubjectMappingModel.belongsTo(examSetupTypeModel, {
   as: "examSetupType",
 });
 
+
+curriculumModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
+courseModel.hasMany(curriculumModel, { foreignKey: 'courseId', as: 'curriculums' });
+
+curriculumModel.hasMany(curriculumSubjectTermMappingModel, { foreignKey: 'curriculumId', as: 'subjectTermMappings' });
+curriculumSubjectTermMappingModel.belongsTo(curriculumModel, { foreignKey: 'curriculumId', as: 'curriculum' });
+
+curriculumSubjectTermMappingModel.belongsTo(subjectModel, { foreignKey: 'subjectId', as: 'subject' });
+subjectModel.hasMany(curriculumSubjectTermMappingModel, { foreignKey: 'subjectId', as: 'curriculumTermMappings' });
+
+curriculumModel.hasMany(curriculumBatchMappingModel, { foreignKey: 'curriculumId', as: 'batchMappings' });
+curriculumBatchMappingModel.belongsTo(curriculumModel, { foreignKey: 'curriculumId', as: 'curriculum' });
+
+curriculumBatchMappingModel.hasMany(curriculumBatchTermMappingModel, { foreignKey: 'curriculumBatchMappingId', as: 'termMappings' });
+curriculumBatchTermMappingModel.belongsTo(curriculumBatchMappingModel, { foreignKey: 'curriculumBatchMappingId', as: 'batchMapping' });
+
 export {
   assessmentPlanModel,
   assessmentPlanComponentModel,
@@ -4504,6 +4525,11 @@ export {
   examRoomMaterialItemModel,
   studentResultModel,
   userModel as users,
+
+  curriculumModel,
+  curriculumSubjectTermMappingModel,
+  curriculumBatchMappingModel,
+  curriculumBatchTermMappingModel,
 };
 
 import sequelize from "../database/sequelizeConfig.js";
