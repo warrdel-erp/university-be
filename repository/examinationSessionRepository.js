@@ -405,10 +405,11 @@ export async function findCurriculumSubjectsByCourseAndTerm(
 }
 
 /**
- * Mapped subjectIds for courseId + sessionId that belong to curriculum term.
+ * SubjectIds that have assessment_plan_subject_mapping for courseId + sessionId.
+ * Term is already enforced by the curriculum subject list passed in.
  */
 export async function findMappedSubjectIdsForCourseSessionTerm(
-  { courseId, sessionId, term, subjectIds },
+  { courseId, sessionId, subjectIds },
   options = {},
 ) {
   if (!subjectIds.length) {
@@ -421,36 +422,7 @@ export async function findMappedSubjectIdsForCourseSessionTerm(
       sessionId: Number(sessionId),
       subjectId: { [Op.in]: subjectIds },
     },
-    attributes: ["subjectId", "courseId", "sessionId"],
-    include: [
-      {
-        model: model.subjectModel,
-        as: "subject",
-        attributes: ["subjectId"],
-        required: true,
-        include: [
-          {
-            model: model.curriculumSubjectTermMappingModel,
-            as: "curriculumTermMappings",
-            attributes: ["curriculumSubjectTermMappingId", "term"],
-            required: true,
-            where: { term: Number(term) },
-            include: [
-              {
-                model: model.curriculumModel,
-                as: "curriculum",
-                attributes: ["curriculumId", "courseId"],
-                required: true,
-                where: {
-                  ...buildScope(model.curriculumModel),
-                  courseId: Number(courseId),
-                },
-              },
-            ],
-          },
-        ],
-      },
-    ],
+    attributes: ["subjectId"],
     transaction: options.transaction,
   });
 
@@ -779,13 +751,9 @@ function buildExamScheduleTermScopeOr(
 }
 
 export async function findSchedulesForSkuStats(examinationSessionId, options = {}) {
-  const terms = await findExaminationSessionTerms(examinationSessionId, options);
-  if (!terms.length) return [];
-
   return scoped(model.examScheduleModel).findAll({
     where: {
       examinationSessionId: Number(examinationSessionId),
-      [Op.or]: buildExamScheduleTermScopeOr(terms),
     },
     attributes: [
       "examScheduleId",
@@ -794,16 +762,17 @@ export async function findSchedulesForSkuStats(examinationSessionId, options = {
       "term",
       "sessionId",
       "academicYearId",
+      "published",
+      "subjectId",
     ],
     include: [
       {
         model: model.subjectModel,
         as: "subjectSchedule",
-        required: true,
+        required: false,
         attributes: ["subjectId", "courseId"],
       },
     ],
-    subQuery: false,
     transaction: options.transaction,
   });
 }

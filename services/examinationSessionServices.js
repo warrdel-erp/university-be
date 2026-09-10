@@ -100,7 +100,7 @@ function buildMissingTermRows(terms, examinationSessionId, existingTermSet = new
     const courseId = item.courseId != null ? Number(item.courseId) : null;
     const sessionId = item.sessionId != null ? Number(item.sessionId) : null;
     const key = `${courseId}_${sessionId}_${term}`;
-    if (seen.has(key) || existingTermSet.has(key) || existingTermSet.has(term)) {
+    if (seen.has(key) || existingTermSet.has(key)) {
       continue;
     }
     seen.add(key);
@@ -146,9 +146,8 @@ async function assertNoTermOverlap(
 
 /**
  * Before creating examination_session_term for (courseId + sessionId + term):
- * every curriculum subject for that course+term (any batch) must have
- * assessment_plan_subject_mapping for the same courseId + sessionId,
- * and that subject must belong to the same term in curriculum.
+ * every active-year curriculum subject for that course+term must have
+ * assessment_plan_subject_mapping for the same courseId + sessionId.
  */
 async function assertCurriculumSubjectsHaveAssessmentPlanMapping(
   { courseId, sessionId, term },
@@ -160,38 +159,56 @@ async function assertCurriculumSubjectsHaveAssessmentPlanMapping(
     );
   }
 
-  const curriculumSubjects =
-    await examinationSessionRepository.findCurriculumSubjectsByCourseAndTerm(
-      courseId,
-      term,
-      options,
-    );
+  const { rows: activeYearRows } = await findCurriculumSubjectsForActiveYear(
+    { courseId: Number(courseId), terms: [Number(term)] },
+    options,
+  );
 
   const subjectById = new Map();
-  for (const row of curriculumSubjects) {
-    const plain = toPlain(row);
-    const subjectId = Number(plain.subjectId);
-    if (subjectById.has(subjectId)) continue;
 
-    const subject = plain.subject;
-    subjectById.set(subjectId, {
-      subjectId,
-      subjectName: subject?.subjectName ?? null,
-      subjectCode: subject?.subjectCode ?? null,
-      term: Number(plain.term),
-    });
+  if (activeYearRows.length > 0) {
+    for (const row of activeYearRows) {
+      const subjectId = Number(row.subjectId);
+      if (subjectById.has(subjectId)) continue;
+      const subject = row.subject;
+      subjectById.set(subjectId, {
+        subjectId,
+        subjectName: subject.subjectName,
+        subjectCode: subject.subjectCode,
+        term: Number(row.term),
+      });
+    }
+  } else {
+    const curriculumSubjects =
+      await examinationSessionRepository.findCurriculumSubjectsByCourseAndTerm(
+        courseId,
+        term,
+        options,
+      );
+    for (const row of curriculumSubjects) {
+      const plain = toPlain(row);
+      const subjectId = Number(plain.subjectId);
+      if (subjectById.has(subjectId)) continue;
+      const subject = plain.subject;
+      subjectById.set(subjectId, {
+        subjectId,
+        subjectName: subject.subjectName,
+        subjectCode: subject.subjectCode,
+        term: Number(plain.term),
+      });
+    }
   }
 
   if (subjectById.size === 0) {
     throw createBadRequestError(
-      `No curriculum subjects found for courseId ${courseId}, term ${term} across any batch.`,
+      `No curriculum subjects found for courseId ${courseId}, term ${term}.`,
     );
   }
 
   const subjectIds = [...subjectById.keys()];
   const mappedIds =
     await examinationSessionRepository.findMappedSubjectIdsForCourseSessionTerm(
-      { courseId, sessionId, term, subjectIds },
+      { courseId, sessionId, subjectIds },
       options,
     );
   const mappedSet = new Set(mappedIds);
@@ -206,16 +223,7 @@ async function assertCurriculumSubjectsHaveAssessmentPlanMapping(
     return;
   }
 
-  const labels = [];
-  for (const subject of unmappedSubjects) {
-    labels.push(subject.subjectCode || String(subject.subjectId));
-  }
-
-  const error = createBadRequestError(
-    `Cannot create examination session term: ${unmappedSubjects.length} subject(s) for courseId ${courseId}, sessionId ${sessionId}, term ${term} are missing assessment plan mapping (${labels.join(", ")}).`,
-  );
-  error.unmappedSubjects = unmappedSubjects;
-  throw error;
+  throw createBadRequestError('All subjects are not mapped');
 }
 
 async function assertTermRowsHaveAssessmentPlanMappings(termRows, options = {}) {
@@ -410,6 +418,10 @@ export async function createExaminationSession(sessionData, options = {}) {
     const tx = { ...options, transaction };
     const termsToCreate = buildMissingTermRows(terms, 0);
 
+    if (termsToCreate.length) {
+      await assertTermRowsHaveAssessmentPlanMappings(termsToCreate, tx);
+    }
+
     if (mainData.assessmentTypeId) {
       if (termsToCreate.length) {
         await assertNoTermOverlap(
@@ -440,7 +452,6 @@ export async function createExaminationSession(sessionData, options = {}) {
       for (const row of termsToCreate) {
         row.examinationSessionId = record.examinationSessionId;
       }
-      await assertTermRowsHaveAssessmentPlanMappings(termsToCreate, tx);
       await examinationSessionRepository.createExaminationSessionTerms(
         termsToCreate,
         tx,
@@ -549,7 +560,6 @@ export async function updateExaminationSession(
         existingTermSet.add(
           `${courseId}_${sessionIdValue}_${Number(row.term)}`,
         );
-        existingTermSet.add(Number(row.term));
       }
 
       const termsToCreate = buildMissingTermRows(
@@ -1305,7 +1315,7 @@ export async function getMappedSubjectsBySessionAndTerm(
     );
   }
 
-  if (!examinationSession.assessmentTypeId) return [];
+  if (!examinationSession.assessmentTypeId && isExamScheduled !== true) return [];
 
   const sessionTermRows =
     await examinationSessionRepository.findExaminationSessionTerms(
@@ -1316,107 +1326,210 @@ export async function getMappedSubjectsBySessionAndTerm(
   for (const row of sessionTermRows) {
     sessionTermSet.add(Number(row.term));
   }
-  if (!sessionTermSet.size) return [];
 
-  const assessmentPlanIds = await getAssessmentPlanIds(
-    Number(examinationSession.assessmentTypeId),
-    options,
-  );
-  if (!assessmentPlanIds.length) return [];
-
-  const mappingWhere = { assessmentPlanId: { [Op.in]: assessmentPlanIds } };
-  if (filterCourseIds.length > 0) {
-    mappingWhere.courseId = { [Op.in]: filterCourseIds };
-  }
-  if (filterSessionIds.length > 0) {
-    mappingWhere.sessionId = { [Op.in]: filterSessionIds };
-  }
-
-  const subjectMappings =
-    await examinationSessionRepository.findAssessmentPlanSubjectMappings(
-      mappingWhere,
-      options,
-    );
-  if (!subjectMappings.length) return [];
-
-  const uniqueSubjectIds = [];
+  let mappedSubjects = [];
   const subjectSessionMap = new Map();
-  for (const mapping of subjectMappings) {
-    if (subjectSessionMap.has(mapping.subjectId)) continue;
-    uniqueSubjectIds.push(mapping.subjectId);
-    subjectSessionMap.set(mapping.subjectId, mapping.sessionId);
-  }
+  let activeAcademicYearId = null;
 
-  const mappingKeySet = new Set();
-  for (const mapping of subjectMappings) {
-    mappingKeySet.add(`${mapping.courseId}_${mapping.subjectId}`);
-  }
+  // Question-paper / scheduled path: subjects come from exam_schedule (not curriculum ∩ plan).
+  if (isExamScheduled === true) {
+    const scheduleRows =
+      await examinationSessionRepository.findSchedulesForSkuStats(
+        parsedExaminationSessionId,
+        options,
+      );
+    if (!scheduleRows.length) return [];
 
-  // Mapped subjects ∩ session terms via curriculum (active academic year).
-  const curriculumFilters = {
-    subjectIds: uniqueSubjectIds,
-    terms: [...sessionTermSet],
-  };
-  if (filterCourseIds.length > 0) {
-    curriculumFilters.courseIds = uniqueValues(filterCourseIds);
-  }
+    const seenSubject = new Set();
+    for (const schedule of scheduleRows) {
+      const plain = toPlain(schedule);
+      if (date && plain.examDate !== date) continue;
 
-  const { academicYearId: activeAcademicYearId, rows: curriculumRows } =
-    await findCurriculumSubjectsForActiveYear(curriculumFilters, options);
-  if (!curriculumRows.length) return [];
-
-  const mappedSubjects = [];
-  const seenMapped = new Set();
-  for (const row of curriculumRows) {
-    if (!mappingKeySet.has(`${row.courseId}_${row.subjectId}`)) continue;
-
-    if (filterCombinations.length > 0) {
-      let allowed = false;
-      for (const comb of filterCombinations) {
-        if (Number(comb.courseId) !== row.courseId) continue;
-        for (const term of comb.terms) {
-          if (Number(term) !== row.term) continue;
-          if (!sessionTermSet.has(row.term)) continue;
-          allowed = true;
-          break;
+      const subject = plain.subjectSchedule;
+      const courseId = subject ? Number(subject.courseId) : null;
+      if (filterCourseIds.length > 0 && courseId != null) {
+        let courseOk = false;
+        for (const id of filterCourseIds) {
+          if (Number(id) === courseId) {
+            courseOk = true;
+            break;
+          }
         }
-        if (allowed) break;
+        if (!courseOk) continue;
       }
-      if (!allowed) continue;
+      if (filterSessionIds.length > 0) {
+        let sessionOk = false;
+        for (const id of filterSessionIds) {
+          if (Number(id) === Number(plain.sessionId)) {
+            sessionOk = true;
+            break;
+          }
+        }
+        if (!sessionOk) continue;
+      }
+      if (filterCombinations.length > 0) {
+        let allowed = false;
+        for (const comb of filterCombinations) {
+          if (courseId != null && Number(comb.courseId) !== courseId) continue;
+          if (Number(comb.sessionId) !== Number(plain.sessionId)) continue;
+          for (const term of comb.terms) {
+            if (Number(term) === Number(plain.term)) {
+              allowed = true;
+              break;
+            }
+          }
+          if (allowed) break;
+        }
+        if (!allowed) continue;
+      }
+
+      if (seenSubject.has(plain.subjectId)) continue;
+      seenSubject.add(plain.subjectId);
+
+      subjectSessionMap.set(plain.subjectId, plain.sessionId);
+      activeAcademicYearId = plain.academicYearId;
+      mappedSubjects.push({
+        subjectId: plain.subjectId,
+        subjectName: subject ? subject.subjectName : null,
+        subjectCode: subject ? subject.subjectCode : null,
+        subjectType: null,
+        subjectCategory: null,
+        courseId,
+        term: plain.term,
+        academicYearId: plain.academicYearId,
+        course: null,
+      });
     }
 
-    const dedupeKey = `${row.courseId}_${row.subjectId}_${row.term}`;
-    if (seenMapped.has(dedupeKey)) continue;
-    seenMapped.add(dedupeKey);
+    if (!mappedSubjects.length) return [];
 
-    mappedSubjects.push({
-      subjectId: row.subjectId,
-      subjectName: row.subject.subjectName,
-      subjectCode: row.subject.subjectCode,
-      subjectType: row.subject.subjectType,
-      subjectCategory: row.subject.subjectCategory,
-      courseId: row.courseId,
-      term: row.term,
-      academicYearId: activeAcademicYearId,
-      course: null,
-    });
-  }
-  if (!mappedSubjects.length) return [];
-
-  const courseIdsForTermType = uniqueValues(
-    mappedSubjects.map((sub) => sub.courseId),
-  );
-  const coursesForTermType =
-    await examinationSessionRepository.findCoursesByIds(
-      courseIdsForTermType,
+    // Enrich subject details + course termType
+    const subjectIds = [];
+    for (const sub of mappedSubjects) subjectIds.push(sub.subjectId);
+    const subjectRows = await examinationSessionRepository.findSubjects(
+      { subjectId: { [Op.in]: subjectIds }, isActive: true },
       options,
     );
-  const courseTermTypeMap = new Map();
-  for (const course of coursesForTermType) {
-    courseTermTypeMap.set(course.courseId, course.termType);
-  }
-  for (const sub of mappedSubjects) {
-    sub.course = { termType: courseTermTypeMap.get(sub.courseId) || null };
+    const subjectDetailMap = new Map();
+    for (const row of subjectRows) {
+      subjectDetailMap.set(row.subjectId, row);
+    }
+    for (const sub of mappedSubjects) {
+      const detail = subjectDetailMap.get(sub.subjectId);
+      if (!detail) continue;
+      sub.subjectName = detail.subjectName;
+      sub.subjectCode = detail.subjectCode;
+      sub.subjectType = detail.subjectType;
+      sub.subjectCategory = detail.subjectCategory;
+      sub.courseId = detail.courseId;
+      sub.course = detail.course
+        ? { termType: detail.course.termType }
+        : null;
+    }
+  } else {
+    if (!sessionTermSet.size) return [];
+
+    const assessmentPlanIds = await getAssessmentPlanIds(
+      Number(examinationSession.assessmentTypeId),
+      options,
+    );
+    if (!assessmentPlanIds.length) return [];
+
+    const mappingWhere = { assessmentPlanId: { [Op.in]: assessmentPlanIds } };
+    if (filterCourseIds.length > 0) {
+      mappingWhere.courseId = { [Op.in]: filterCourseIds };
+    }
+    if (filterSessionIds.length > 0) {
+      mappingWhere.sessionId = { [Op.in]: filterSessionIds };
+    }
+
+    const subjectMappings =
+      await examinationSessionRepository.findAssessmentPlanSubjectMappings(
+        mappingWhere,
+        options,
+      );
+    if (!subjectMappings.length) return [];
+
+    const uniqueSubjectIds = [];
+    for (const mapping of subjectMappings) {
+      if (subjectSessionMap.has(mapping.subjectId)) continue;
+      uniqueSubjectIds.push(mapping.subjectId);
+      subjectSessionMap.set(mapping.subjectId, mapping.sessionId);
+    }
+
+    const mappingKeySet = new Set();
+    for (const mapping of subjectMappings) {
+      mappingKeySet.add(`${mapping.courseId}_${mapping.subjectId}`);
+    }
+
+    const curriculumFilters = {
+      subjectIds: uniqueSubjectIds,
+      terms: [...sessionTermSet],
+    };
+    if (filterCourseIds.length > 0) {
+      curriculumFilters.courseIds = uniqueValues(filterCourseIds);
+    }
+
+    const curriculumResult = await findCurriculumSubjectsForActiveYear(
+      curriculumFilters,
+      options,
+    );
+    activeAcademicYearId = curriculumResult.academicYearId;
+    const curriculumRows = curriculumResult.rows;
+    if (!curriculumRows.length) return [];
+
+    const seenMapped = new Set();
+    for (const row of curriculumRows) {
+      if (!mappingKeySet.has(`${row.courseId}_${row.subjectId}`)) continue;
+
+      if (filterCombinations.length > 0) {
+        let allowed = false;
+        for (const comb of filterCombinations) {
+          if (Number(comb.courseId) !== row.courseId) continue;
+          for (const term of comb.terms) {
+            if (Number(term) !== row.term) continue;
+            if (!sessionTermSet.has(row.term)) continue;
+            allowed = true;
+            break;
+          }
+          if (allowed) break;
+        }
+        if (!allowed) continue;
+      }
+
+      const dedupeKey = `${row.courseId}_${row.subjectId}_${row.term}`;
+      if (seenMapped.has(dedupeKey)) continue;
+      seenMapped.add(dedupeKey);
+
+      mappedSubjects.push({
+        subjectId: row.subjectId,
+        subjectName: row.subject.subjectName,
+        subjectCode: row.subject.subjectCode,
+        subjectType: row.subject.subjectType,
+        subjectCategory: row.subject.subjectCategory,
+        courseId: row.courseId,
+        term: row.term,
+        academicYearId: activeAcademicYearId,
+        course: null,
+      });
+    }
+    if (!mappedSubjects.length) return [];
+
+    const courseIdsForTermType = uniqueValues(
+      mappedSubjects.map((sub) => sub.courseId),
+    );
+    const coursesForTermType =
+      await examinationSessionRepository.findCoursesByIds(
+        courseIdsForTermType,
+        options,
+      );
+    const courseTermTypeMap = new Map();
+    for (const course of coursesForTermType) {
+      courseTermTypeMap.set(course.courseId, course.termType);
+    }
+    for (const sub of mappedSubjects) {
+      sub.course = { termType: courseTermTypeMap.get(sub.courseId) || null };
+    }
   }
 
   const subjectIds = [];
@@ -2004,28 +2117,23 @@ export async function getSessionSkuStats(examinationSessionId, options = {}) {
     throw createBadRequestError("Invalid examinationSessionId");
   }
 
-  const mappedSubjects = await getMappedSubjectsBySessionAndTerm(
-    { examinationSessionId: parsedSessionId },
-    { ...options, skipTeacherAndPaperEnrichment: true },
-  );
-
-  let scheduledSubjectsCount = 0;
-  for (const sub of mappedSubjects) {
-    if (sub.isExamScheduled === true) {
-      scheduledSubjectsCount++;
-    }
-  }
-  const totalSubjectsCount = mappedSubjects.length;
-
   const schedules = await examinationSessionRepository.findSchedulesForSkuStats(
     parsedSessionId,
     options,
   );
-  const totalExamSchedule = schedules.length;
+
+  let scheduledSubjectsCount = 0;
   const examScheduleIds = [];
   for (const schedule of schedules) {
     examScheduleIds.push(schedule.examScheduleId);
+    if (schedule.published === true || schedule.published === 1) {
+      scheduledSubjectsCount = toIntegerNumber(
+        decimalAdd(scheduledSubjectsCount, 1),
+      );
+    }
   }
+  const totalSubjectsCount = toIntegerNumber(schedules.length);
+  const totalExamSchedule = totalSubjectsCount;
 
   let totalQuestionPapers = 0;
   let approvedQuestionPapers = 0;
