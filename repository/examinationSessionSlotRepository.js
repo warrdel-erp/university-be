@@ -63,7 +63,6 @@ const scheduleInclude = (date, filterCombinations) => {
           "subjectCode",
           "courseId",
           "term",
-          "academicYearId",
         ],
         include: [
           {

@@ -121,10 +121,13 @@ export async function getExamStructureSchedule(examSetupTypeId) {
 }
 
 export async function findSubjectacademicYearId(subjectId) {
-  const subject = await scoped(model.subjectModel).findByPk(subjectId, {
+  const mapping = await scoped(model.assessmentPlanSubjectMappingModel).findOne({
+    where: { subjectId: Number(subjectId) },
     attributes: ["academicYearId"],
+    order: [["assessmentPlanSubjectMappingId", "DESC"]],
+    raw: true,
   });
-  return subject?.academicYearId ?? null;
+  return mapping?.academicYearId ?? null;
 }
 
 export async function updateExamSchedule(examScheduleId, data) {
@@ -375,11 +378,14 @@ export async function getExamSetupTypeTermById(examSetupTypeTermId) {
 }
 
 export async function findSubjectsWithSchedules(courseId, academicYearId, term, examSetupTypeTermId, sessionId) {
+  const scheduleWhere = {};
+  if (sessionId) scheduleWhere.sessionId = sessionId;
+  if (academicYearId) scheduleWhere.academicYearId = academicYearId;
+
   return scoped(model.subjectModel).findAll({
     where: {
       ...buildScope(model.subjectModel),
       ...(courseId && { courseId }),
-      ...(academicYearId && { academicYearId }),
       ...(term && { term }),
     },
     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
@@ -388,9 +394,8 @@ export async function findSubjectsWithSchedules(courseId, academicYearId, term, 
         model: model.examScheduleModel,
         as: "scheduleSubject",
         required: false,
-        where: {
-          ...(sessionId && { sessionId }),
-        },
+        where:
+          Object.keys(scheduleWhere).length > 0 ? scheduleWhere : undefined,
         attributes: [
           "examScheduleId",
           "subjectId",

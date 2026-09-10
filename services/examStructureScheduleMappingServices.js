@@ -98,19 +98,16 @@ async function resolveSessionId(examDetail) {
   let mappedAcademicYearId = null;
   let mappedCourseId = examDetail.courseId ? Number(examDetail.courseId) : null;
 
-  // 1. Resolve courseId, academicYearId, term from subjectModel if subjectId is passed
+  // 1. Resolve courseId + term from subject if subjectId is passed
   if (!mappedCourseId && examDetail.subjectId) {
     const subject = await scoped(model.subjectModel).findOne({
       where: { subjectId: Number(examDetail.subjectId) },
-      attributes: ["courseId", "academicYearId", "term"],
+      attributes: ["courseId", "term"],
       raw: true,
     });
     if (subject) {
       mappedCourseId = subject.courseId;
       examDetail.courseId = subject.courseId;
-      if (!examDetail.academicYearId && subject.academicYearId) {
-        examDetail.academicYearId = subject.academicYearId;
-      }
       if (!examDetail.term && subject.term != null) {
         examDetail.term = subject.term;
       }
@@ -165,21 +162,16 @@ async function resolveSessionId(examDetail) {
     }
   }
 
-  // 3. Fallback to assessmentPlanModel matching (courseId + sessionId) if needed
-  if (!mappedSessionId && mappedCourseId) {
+  // 3. Fallback academic year from assessment plan (courseId) if needed
+  if (!mappedAcademicYearId && mappedCourseId) {
     const planWhere = { courseId: mappedCourseId, isActive: true };
-    if (examDetail.sessionId) {
-      planWhere.sessionId = Number(examDetail.sessionId);
-    }
     const plan = await scoped(model.assessmentPlanModel).findOne({
       where: planWhere,
-      attributes: ["sessionId", "academicYearId"],
+      attributes: ["academicYearId"],
       raw: true,
     });
-    if (plan) {
-      if (plan.sessionId) mappedSessionId = Number(plan.sessionId);
-      if (plan.academicYearId && !mappedAcademicYearId)
-        mappedAcademicYearId = Number(plan.academicYearId);
+    if (plan?.academicYearId) {
+      mappedAcademicYearId = Number(plan.academicYearId);
     }
   }
 

@@ -657,7 +657,7 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
         subjectId: Number(payload.subjectId),
         courseId: Number(payload.courseId),
       },
-      attributes: ["subjectId", "courseId", "academicYearId"],
+      attributes: ["subjectId", "courseId"],
       transaction: t,
     });
     if (!subjectRecord) {
