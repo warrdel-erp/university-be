@@ -155,3 +155,13 @@ export async function deleteAssessmentPlanSubjectMapping(req, res) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to delete subject assessment plan mapping");
   }
 }
+
+export async function getBatchCoursesWithSessions(req, res) {
+  try {
+    const result = await assessmentPlanService.getBatchCoursesWithSessions(req.query);
+    return SuccessResponse(res, 200, "Batch courses with sessions fetched successfully", result);
+  } catch (error) {
+    console.error("Error in getBatchCoursesWithSessions:", error.message);
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to fetch batch courses with sessions");
+  }
+}

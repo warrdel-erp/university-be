@@ -18,12 +18,16 @@ import {
   createAssessmentPlanSubjectMapping,
   getAssessmentPlanSubjectMappings,
   deleteAssessmentPlanSubjectMapping,
+  getBatchCoursesWithSessions,
 } from "../controllers/assessmentPlanController.js";
 
 const router = express.Router();
 
 export const createSubjectMappingBody = z.object({
-  assessmentPlanId: z.coerce.number().int().positive("assessmentPlanId is required"),
+  assessmentPlanId: z.coerce
+    .number()
+    .int()
+    .positive("assessmentPlanId is required"),
   subjectId: z.coerce.number().int().positive("subjectId is required"),
   courseId: z.coerce.number().int().positive("courseId is required"),
   sessionId: z.coerce.number().int().positive("sessionId is required"),
@@ -45,13 +49,21 @@ export const statsQuerySchema = z.object({
   term: z.union([z.string(), z.number()]).optional(),
 });
 
+export const batchCoursesSessionsQuerySchema = z.object({
+  courseId: z.union([z.string(), z.number()]).optional(),
+});
+
 export const overviewQuerySchema = z.object({
   courseId: z.union([z.string(), z.number()]).optional(),
   sessionId: z.union([z.string(), z.number()]).optional(),
   subjectId: z.union([z.string(), z.number()]).optional(),
   assessmentPlanId: z.union([z.string(), z.number()]).optional(),
   academicRegulationId: z.union([z.string(), z.number()]).optional(),
-  assignmentStatus: z.enum(["assigned", "unassigned", "all"]).optional().default("all"),
+  batch: z.union([z.string(), z.number(), z.array(z.union([z.string(), z.number()]))]).optional(),
+  assignmentStatus: z
+    .enum(["assigned", "unassigned", "all"])
+    .optional()
+    .default("all"),
   term: z.union([z.string(), z.number()]).optional(),
   search: z.string().optional(),
   page: z.union([z.string(), z.number()]).optional(),
@@ -74,7 +86,10 @@ export const createAssessmentPlanBody = z.object({
   regulationId: z.coerce.number().int().positive().optional().nullable(),
   term: z.coerce.number().int().positive().optional().nullable(),
   gradingId: z.coerce.number().int().positive().optional().nullable(),
-  status: z.preprocess((val) => (val === "" || val === null ? undefined : val), z.enum(["Draft", "Published"]).optional().default("Draft")),
+  status: z.preprocess(
+    (val) => (val === "" || val === null ? undefined : val),
+    z.enum(["Draft", "Published"]).optional().default("Draft"),
+  ),
   isActive: z.boolean().optional().default(true),
   components: z.array(componentSchema).optional(),
 });
@@ -83,7 +98,10 @@ export const updateAssessmentPlanBody = createAssessmentPlanBody.partial();
 
 export const listAssessmentPlanQuery = z.object({
   search: z.string().optional(),
-  status: z.preprocess((val) => (val === "Draft" || val === "Published" ? val : undefined), z.enum(["Draft", "Published"]).optional()),
+  status: z.preprocess(
+    (val) => (val === "Draft" || val === "Published" ? val : undefined),
+    z.enum(["Draft", "Published"]).optional(),
+  ),
   courseId: z.union([z.string(), z.number()]).optional(),
   sessionId: z.union([z.string(), z.number()]).optional(),
   regulationId: z.union([z.string(), z.number()]).optional(),
@@ -101,6 +119,17 @@ export const createAssessmentPlanComponentBody = componentSchema.extend({
 export const updateAssessmentPlanComponentBody = componentSchema.partial();
 
 // ==========================================
+// BATCH COURSES + SESSIONS ENDPOINT
+// ==========================================
+
+router.get(
+  "/batchCoursesSessions",
+  useAuth,
+  validate({ query: batchCoursesSessionsQuerySchema }),
+  getBatchCoursesWithSessions,
+);
+
+// ==========================================
 // ASSESSMENT PLAN ENDPOINTS
 // ==========================================
 
@@ -109,7 +138,7 @@ router.post(
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP_ADD.value, null),
   validate({ body: createAssessmentPlanBody }),
-  createAssessmentPlan
+  createAssessmentPlan,
 );
 
 router.get(
@@ -117,7 +146,7 @@ router.get(
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
   validate({ query: listAssessmentPlanQuery }),
-  getAssessmentPlans
+  getAssessmentPlans,
 );
 
 router.get(
@@ -125,14 +154,14 @@ router.get(
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
   validate({ query: overviewQuerySchema }),
-  getCourseAssessmentPlanOverview
+  getCourseAssessmentPlanOverview,
 );
 
 router.get(
   "/stats",
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
-  getAssessmentPlanStats
+  getAssessmentPlanStats,
 );
 
 // ==========================================
@@ -144,7 +173,7 @@ router.post(
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP_ADD.value, null),
   validate({ body: createAssessmentPlanComponentBody }),
-  createAssessmentPlanComponent
+  createAssessmentPlanComponent,
 );
 
 router.patch(
@@ -152,14 +181,14 @@ router.patch(
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP_EDIT.value, null),
   validate({ body: updateAssessmentPlanComponentBody }),
-  updateAssessmentPlanComponent
+  updateAssessmentPlanComponent,
 );
 
 router.delete(
   "/component/:assessmentPlanComponentId",
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
-  deleteAssessmentPlanComponent
+  deleteAssessmentPlanComponent,
 );
 
 // ==========================================
@@ -171,21 +200,21 @@ router.post(
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP_ADD.value, null),
   validate({ body: createSubjectMappingBody }),
-  createAssessmentPlanSubjectMapping
+  createAssessmentPlanSubjectMapping,
 );
 
 router.get(
   "/subjectMapping",
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
-  getAssessmentPlanSubjectMappings
+  getAssessmentPlanSubjectMappings,
 );
 
 router.delete(
   "/subjectMapping/:mappingId",
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
-  deleteAssessmentPlanSubjectMapping
+  deleteAssessmentPlanSubjectMapping,
 );
 
 // ==========================================
@@ -196,7 +225,7 @@ router.get(
   "/:assessmentPlanId",
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
-  getAssessmentPlanById
+  getAssessmentPlanById,
 );
 
 router.patch(
@@ -204,14 +233,14 @@ router.patch(
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP_EDIT.value, null),
   validate({ body: updateAssessmentPlanBody }),
-  updateAssessmentPlan
+  updateAssessmentPlan,
 );
 
 router.delete(
   "/:assessmentPlanId",
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
-  deleteAssessmentPlan
+  deleteAssessmentPlan,
 );
 
 export default router;
