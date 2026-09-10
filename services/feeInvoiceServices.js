@@ -6,17 +6,20 @@ import moment from "moment";
 export async function addFeeInvoice(feeInvoiceData, createdBy, updatedBy) {
   const transaction = await sequelize.transaction();
   let feeInvoiceDetails = [];
-  const classStudentMapperId = feeInvoiceData.classStudentMapperId;
+  const studentId = Number(feeInvoiceData.studentId);
 
   try {
-    const getStudent = await feeInvoiceCreationService.getStudentIdByClassStudentMapper(
-      classStudentMapperId,
-      { transaction }
+    if (!studentId) {
+      throw new Error("studentId is required");
+    }
+
+    const getStudent = await feeInvoiceCreationService.getStudentByStudentId(
+      studentId,
+      { transaction },
     );
     if (!getStudent) {
-      throw new Error("Class student mapper not found");
+      throw new Error("Student not found");
     }
-    const studentId = getStudent.studentId;
 
     const feeInvoicePayload = {
       ...feeInvoiceData,

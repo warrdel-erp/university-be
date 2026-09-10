@@ -9,7 +9,7 @@ import sessionModel from "./sessionModel.js";
 import classSectionTermModel from "./classSectionTermModel.js";
 
 const classSectionStudentMapperModel = sequelize.define(
-    'class_student_mapper',
+    'class_student_mapper_depricated',
     {
                         universityId: {
             type: DataTypes.INTEGER,
@@ -105,7 +105,7 @@ const classSectionStudentMapperModel = sequelize.define(
         },
     },
     {
-        tableName: 'class_student_mapper',
+        tableName: 'class_student_mapper_depricated',
         timestamps: true,
         paranoid: true
     }
