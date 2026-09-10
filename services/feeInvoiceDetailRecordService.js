@@ -20,9 +20,9 @@ export async function getAllFeeInvoiceDetailRecord(filters = {}) {
     invoiceNumber: feeInvoice.invoiceNumber,
     student: {
       studentId: feeInvoice.studentId,
-      name: `${feeInvoice?.feeStudentMapper?.studentMapped?.firstName || ""} ${feeInvoice?.feeStudentMapper?.studentMapped?.lastName || ""}`.trim(),
-      scholarNumber: feeInvoice?.feeStudentMapper?.studentMapped?.scholarNumber,
-      section: feeInvoice?.feeStudentMapper?.studentSectionDetail?.section,
+      name: `${feeInvoice?.feeInvoiceStudent?.firstName || ""} ${feeInvoice?.feeInvoiceStudent?.lastName || ""}`.trim(),
+      scholarNumber: feeInvoice?.feeInvoiceStudent?.scholarNumber,
+      section: feeInvoice?.feeInvoiceStudent?.studentClassSectionTerm?.classSection?.section,
     },
     invoiceDetails: (feeInvoice.feeInvoiceDetails || []).map((detail) => ({
       feeInvoiceDetailsId: detail.feeInvoiceDetailsId,

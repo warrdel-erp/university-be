@@ -1155,6 +1155,7 @@ export async function getMappedSubjectsBySessionAndTerm(
         term: subject.term,
         termType: subject.course ? subject.course.termType : null,
         courseId: subject.courseId,
+        academicYearId: subject.academicYearId || null,
         courseName: mappingInfo ? mappingInfo.courseName : null,
         sessionId: subjectSessionId,
         sessionName: mappingInfo ? mappingInfo.sessionName : null,

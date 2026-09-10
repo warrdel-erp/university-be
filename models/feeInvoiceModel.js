@@ -31,7 +31,7 @@ const feeInvoiceModel = sequelize.define(
         },
         classStudentMapperId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'class_student_mapper_id',
             references: {
                 model: classStudentMapper,

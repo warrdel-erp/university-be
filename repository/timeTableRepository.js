@@ -739,7 +739,7 @@ export async function getTimetableListPrintRows(filters = {}) {
             [
                 sequelize.literal(`(
                     SELECT COUNT(DISTINCT csm.student_id)
-                    FROM class_student_mapper AS csm
+                    FROM class_student_mapper_depricated AS csm
                     WHERE csm.class_section_term_id = time_table_routine.class_section_term_id
                     
                 )`),

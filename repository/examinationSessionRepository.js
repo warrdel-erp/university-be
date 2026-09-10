@@ -2,6 +2,10 @@ import { Op, fn, col } from "sequelize";
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { getAllocatedCapacityByExamScheduleIds } from "../utility/roomCapacity.js";
+import {
+  getStudentCountMapByGroups,
+  lookupStudentCount,
+} from "../utility/studentCount.js";
 import { QUESTION_STATUS } from "../constant.js";
 
 const sessionInclude = [
@@ -593,6 +597,7 @@ export async function findExaminationSessionTerms(examinationSessionId, options 
       "courseId",
       "sessionId",
       "term",
+      "academicYearId",
       "includeElectives",
       "remarks",
     ],
@@ -600,28 +605,80 @@ export async function findExaminationSessionTerms(examinationSessionId, options 
   });
 }
 
+export async function findExaminationSessionTermsBySessionIds(
+  examinationSessionIds,
+  options = {},
+) {
+  if (!examinationSessionIds.length) return [];
+  return scoped(model.examinationSessionTermModel).findAll({
+    where: { examinationSessionId: { [Op.in]: examinationSessionIds } },
+    attributes: [
+      "examinationSessionTermId",
+      "examinationSessionId",
+      "courseId",
+      "sessionId",
+      "term",
+      "academicYearId",
+      "includeElectives",
+      "remarks",
+    ],
+    transaction: options.transaction,
+  });
+}
+
+/**
+ * Assumption: dashboard metrics only include exam_schedule rows that match
+ * examination_session_term (courseId + sessionId + term). Used by SKU count APIs only.
+ */
+function buildExamScheduleTermScopeOr(
+  terms,
+  { includeExaminationSessionId = false } = {},
+) {
+  const orConditions = [];
+  for (const termRow of terms) {
+    const clause = {
+      term: Number(termRow.term),
+    };
+    if (includeExaminationSessionId && termRow.examinationSessionId != null) {
+      clause.examinationSessionId = Number(termRow.examinationSessionId);
+    }
+    if (termRow.sessionId != null) {
+      clause.sessionId = Number(termRow.sessionId);
+    }
+    if (termRow.courseId != null) {
+      clause["$subjectSchedule.course_id$"] = Number(termRow.courseId);
+    }
+    orConditions.push(clause);
+  }
+  return orConditions;
+}
+
 export async function findSchedulesForSkuStats(examinationSessionId, options = {}) {
+  const terms = await findExaminationSessionTerms(examinationSessionId, options);
+  if (!terms.length) return [];
+
   return scoped(model.examScheduleModel).findAll({
-    where: { examinationSessionId: Number(examinationSessionId) },
+    where: {
+      examinationSessionId: Number(examinationSessionId),
+      [Op.or]: buildExamScheduleTermScopeOr(terms),
+    },
     attributes: [
       "examScheduleId",
       "examDate",
-      "examTime",
       "examinationSessionSlotId",
-      "subjectId",
       "term",
       "sessionId",
-      "academicYearId",
       "published",
     ],
     include: [
       {
         model: model.subjectModel,
         as: "subjectSchedule",
-        required: false,
-        attributes: ["subjectId", "courseId", "subjectName", "subjectCode"],
+        required: true,
+        attributes: ["subjectId", "courseId"],
       },
     ],
+    subQuery: false,
     transaction: options.transaction,
   });
 }
@@ -1535,6 +1592,7 @@ export async function findSessionCourseMappingsByIds(sessionCourseMappingIds, op
 /**
  * Dashboard overview aggregates across scoped examination sessions.
  * Optional examinationSessionId narrows to one session.
+ * Assumption: only examination_session_term (courseId + sessionId + term) scope.
  */
 export async function getDashboardOverviewStats({
   examinationSessionId,
@@ -1568,9 +1626,37 @@ export async function getDashboardOverviewStats({
     };
   }
 
+  const terms = await findExaminationSessionTermsBySessionIds(sessionIds);
+  if (!terms.length) {
+    return {
+      todayExamsCount: 0,
+      totalExams: 0,
+      totalStudents: 0,
+      scannedAnswerSheets: 0,
+      totalAnswerSheets: 0,
+      bundlesNotReturned: 0,
+      totalBundles: 0,
+      finalResultsCreated: 0,
+    };
+  }
+
   const schedules = await scoped(model.examScheduleModel).findAll({
-    where: { examinationSessionId: { [Op.in]: sessionIds } },
+    where: {
+      examinationSessionId: { [Op.in]: sessionIds },
+      [Op.or]: buildExamScheduleTermScopeOr(terms, {
+        includeExaminationSessionId: true,
+      }),
+    },
     attributes: ["examScheduleId", "examDate", "examinationSessionSlotId"],
+    include: [
+      {
+        model: model.subjectModel,
+        as: "subjectSchedule",
+        required: true,
+        attributes: ["subjectId", "courseId"],
+      },
+    ],
+    subQuery: false,
   });
 
   const examScheduleIds = [];
@@ -1602,19 +1688,50 @@ export async function getDashboardOverviewStats({
 
   const totalExams = examScheduleIds.length;
 
+  const resultOr = [];
+  const studentGroups = [];
+  const groupSeen = new Set();
+  for (const termRow of terms) {
+    const courseId = termRow.courseId != null ? Number(termRow.courseId) : null;
+    const sessionId = termRow.sessionId != null ? Number(termRow.sessionId) : null;
+    const term = Number(termRow.term);
+    const academicYearId =
+      termRow.academicYearId != null ? Number(termRow.academicYearId) : null;
+
+    const resultClause = { term };
+    if (courseId != null) resultClause.courseId = courseId;
+    if (sessionId != null) resultClause.sessionId = sessionId;
+    resultOr.push(resultClause);
+
+    if (courseId != null && sessionId != null && academicYearId != null) {
+      const key = `${sessionId}_${courseId}_${term}_${academicYearId}`;
+      if (!groupSeen.has(key)) {
+        groupSeen.add(key);
+        studentGroups.push({
+          sessionId,
+          courseId,
+          term,
+          academicYearId,
+        });
+      }
+    }
+  }
+
+  let totalStudents = 0;
+  if (studentGroups.length) {
+    const countMap = await getStudentCountMapByGroups(studentGroups);
+    for (const group of studentGroups) {
+      totalStudents += lookupStudentCount(countMap, group);
+    }
+  }
+
   const [
-    totalStudents,
     totalAnswerSheets,
     scannedAnswerSheets,
     finalResultsCreated,
     totalBundles,
     returnedBundles,
   ] = await Promise.all([
-    scoped(model.studentHallTicketModel).count({
-      where: { examinationSessionId: { [Op.in]: sessionIds } },
-      distinct: true,
-      col: "studentId",
-    }),
     examScheduleIds.length
       ? scoped(model.answerSheetQrModel).count({
           where: {
@@ -1636,6 +1753,7 @@ export async function getDashboardOverviewStats({
       where: {
         examinationSessionId: { [Op.in]: sessionIds },
         publishedAt: { [Op.ne]: null },
+        [Op.or]: resultOr,
       },
       distinct: true,
       col: "studentId",
@@ -1662,7 +1780,7 @@ export async function getDashboardOverviewStats({
   return {
     todayExamsCount,
     totalExams,
-    totalStudents: Number(totalStudents) || 0,
+    totalStudents,
     scannedAnswerSheets: Number(scannedAnswerSheets) || 0,
     totalAnswerSheets: Number(totalAnswerSheets) || 0,
     bundlesNotReturned: Math.max(

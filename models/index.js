@@ -1998,6 +1998,15 @@ classStudentMapperModel.hasMany(feeInvoiceModel, {
   as: "feeStudentMapper",
 });
 
+feeInvoiceModel.belongsTo(studentModel, {
+  foreignKey: "student_id",
+  as: "feeInvoiceStudent",
+});
+studentModel.hasMany(feeInvoiceModel, {
+  foreignKey: "student_id",
+  as: "feeInvoiceStudent",
+});
+
 //fee (fee Invoice Details)
 feeInvoiceDetailModel.belongsTo(feePlanTypeModel, {
   foreignKey: "fee_plan_type_id",
