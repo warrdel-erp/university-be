@@ -458,7 +458,7 @@ export async function findAssessmentPlanSubjectMappingsWithSession(where, option
 export async function findSubjects(where, options = {}) {
   return scoped(model.subjectModel).findAll({
     where,
-    attributes: ["subjectId", "subjectName", "subjectCode", "subjectType", "subjectCategory", "courseId", "term"],
+    attributes: ["subjectId", "subjectName", "subjectCode", "subjectType", "subjectCategory", "courseId"],
     include: [
       {
         model: model.courseModel,
@@ -811,7 +811,6 @@ export async function findExamSchedulesForTimeline(
           "subjectName",
           "subjectCode",
           "courseId",
-          "term",
         ],
       },
       {

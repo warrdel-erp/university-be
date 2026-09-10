@@ -60,7 +60,7 @@ async function resolveSelectionFilters(selections, options = {}) {
 
 function studentGroupFromSchedule(item) {
   const courseId = item.subjectSchedule?.courseId;
-  const term = item.term ?? item.subjectSchedule?.term;
+  const term = item.term;
   const academicYearId = item.academicYearId;
   const sessionId = item.sessionId;
 

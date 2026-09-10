@@ -382,14 +382,38 @@ export async function findSubjectsWithSchedules(courseId, academicYearId, term, 
   if (sessionId) scheduleWhere.sessionId = sessionId;
   if (academicYearId) scheduleWhere.academicYearId = academicYearId;
 
+  const curriculumInclude = {
+    model: model.curriculumSubjectTermMappingModel,
+    as: "curriculumTermMappings",
+    attributes: ["curriculumSubjectTermMappingId", "term", "credit"],
+    required: !!term,
+    where: term ? { term: Number(term) } : undefined,
+    include: [],
+  };
+
+  if (courseId) {
+    curriculumInclude.include.push({
+      model: model.curriculumModel,
+      as: "curriculum",
+      attributes: [],
+      required: true,
+      where: {
+        ...buildScope(model.curriculumModel),
+        courseId: Number(courseId),
+      },
+    });
+  }
+
   return scoped(model.subjectModel).findAll({
     where: {
       ...buildScope(model.subjectModel),
       ...(courseId && { courseId }),
-      ...(term && { term }),
     },
-    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+    attributes: {
+      exclude: ["createdAt", "updatedAt", "deletedAt", "term"],
+    },
     include: [
+      curriculumInclude,
       {
         model: model.examScheduleModel,
         as: "scheduleSubject",

@@ -2641,7 +2641,7 @@ export async function getClassSectionRecord(courseId, classSectionId) {
 };
 
 /**
- * classSectionsId → class.term → subject.term (same value) + courseId → subjectIds
+ * classSectionsId → class term + courseId → subjectIds via curriculum_subject_term_mapping
  */
 export async function getSubjectIdsByClassSection(classSectionsId) {
     try {
@@ -2656,15 +2656,33 @@ export async function getSubjectIdsByClassSection(classSectionsId) {
         const term = resolveProgramTerm(plain);
         if (term == null || !plain.courseId) return [];
 
-        const rows = await scoped(model.subjectModel).findAll({
-            where: {
-                courseId: Number(plain.courseId),
-                term: Number(term),
-            },
+        const rows = await model.curriculumSubjectTermMappingModel.findAll({
+            where: { term: Number(term) },
             attributes: ['subjectId'],
+            include: [
+                {
+                    model: model.curriculumModel,
+                    as: 'curriculum',
+                    attributes: [],
+                    required: true,
+                    where: {
+                        ...buildScope(model.curriculumModel),
+                        courseId: Number(plain.courseId),
+                    },
+                },
+            ],
             raw: true,
         });
-        return rows.map((row) => row.subjectId);
+
+        const subjectIds = [];
+        const seen = new Set();
+        for (const row of rows) {
+            const subjectId = Number(row.subjectId);
+            if (seen.has(subjectId)) continue;
+            seen.add(subjectId);
+            subjectIds.push(subjectId);
+        }
+        return subjectIds;
     } catch (error) {
         console.error('Error in getSubjectIdsByClassSection:', error);
         throw error;

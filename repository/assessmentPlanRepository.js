@@ -678,7 +678,7 @@ export async function getAssessmentPlanSubjectMappings({
       {
         model: model.subjectModel,
         as: "subject",
-        attributes: ["subjectId", "subjectName", "subjectCode", "term"],
+        attributes: ["subjectId", "subjectName", "subjectCode"],
         required: false,
       },
       {

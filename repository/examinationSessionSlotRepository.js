@@ -13,10 +13,8 @@ const scheduleInclude = (date, filterCombinations) => {
       orSchedules.push({
         [Op.and]: [
           { sessionId: comb.sessionId },
+          { term: { [Op.in]: comb.terms } },
           where(col("examSchedules->subjectSchedule.course_id"), comb.courseId),
-          where(col("examSchedules->subjectSchedule.term"), {
-            [Op.in]: comb.terms,
-          }),
         ],
       });
     }
@@ -62,7 +60,6 @@ const scheduleInclude = (date, filterCombinations) => {
           "subjectName",
           "subjectCode",
           "courseId",
-          "term",
         ],
         include: [
           {

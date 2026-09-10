@@ -206,7 +206,6 @@ export async function findCurriculumSubjectsForActiveYear(
                   "description",
                   "isActive",
                   "courseId",
-                  "term",
                 ],
                 required: true,
                 where: {

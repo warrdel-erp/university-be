@@ -1,6 +1,6 @@
 import * as model from "../models/index.js";
 import { Op } from "sequelize";
-import { scoped } from "../utility/scoped.js";
+import { buildScope, scoped } from "../utility/scoped.js";
 import * as examStructureScheduleRepository from "../repository/examStructureScheduleMappingRepository.js";
 import * as examinationSessionRepository from "../repository/examinationSessionRepository.js";
 import { getTimeSlotRange } from "../utility/timeSlot.js";
@@ -17,6 +17,33 @@ const studentListFields = [
   "courseName",
   "termName",
 ];
+
+async function resolveTermFromCurriculum(subjectId, courseId) {
+  const curriculumWhere = {
+    ...buildScope(model.curriculumModel),
+  };
+  if (courseId) {
+    curriculumWhere.courseId = Number(courseId);
+  }
+
+  const mapping = await model.curriculumSubjectTermMappingModel.findOne({
+    where: { subjectId: Number(subjectId) },
+    attributes: ["term"],
+    include: [
+      {
+        model: model.curriculumModel,
+        as: "curriculum",
+        attributes: [],
+        required: true,
+        where: curriculumWhere,
+      },
+    ],
+    order: [["term", "ASC"]],
+    raw: true,
+  });
+
+  return mapping?.term != null ? Number(mapping.term) : null;
+}
 
 async function resolveSlotDetails(examDetail) {
   if (examDetail.examinationSessionSlotId) {
@@ -98,19 +125,26 @@ async function resolveSessionId(examDetail) {
   let mappedAcademicYearId = null;
   let mappedCourseId = examDetail.courseId ? Number(examDetail.courseId) : null;
 
-  // 1. Resolve courseId + term from subject if subjectId is passed
+  // 1. Resolve courseId from subject if subjectId is passed
   if (!mappedCourseId && examDetail.subjectId) {
     const subject = await scoped(model.subjectModel).findOne({
       where: { subjectId: Number(examDetail.subjectId) },
-      attributes: ["courseId", "term"],
+      attributes: ["courseId"],
       raw: true,
     });
     if (subject) {
       mappedCourseId = subject.courseId;
       examDetail.courseId = subject.courseId;
-      if (!examDetail.term && subject.term != null) {
-        examDetail.term = subject.term;
-      }
+    }
+  }
+
+  if (!examDetail.term && examDetail.subjectId) {
+    const curriculumTerm = await resolveTermFromCurriculum(
+      examDetail.subjectId,
+      mappedCourseId,
+    );
+    if (curriculumTerm != null) {
+      examDetail.term = curriculumTerm;
     }
   }
 
@@ -241,14 +275,10 @@ async function resolveTermForExamDetail(examDetail) {
     }
   }
   if (examDetail.subjectId) {
-    const subject = await scoped(model.subjectModel).findOne({
-      where: { subjectId: Number(examDetail.subjectId) },
-      attributes: ["term"],
-      raw: true,
-    });
-    if (subject?.term != null) {
-      return Number(subject.term);
-    }
+    return resolveTermFromCurriculum(
+      examDetail.subjectId,
+      examDetail.courseId,
+    );
   }
   return null;
 }
@@ -302,7 +332,18 @@ function attachRoomsToSubjects(subjects, roomsByScheduleId) {
         rooms,
       });
     }
-    result.push({ ...subject, scheduleSubject: schedules });
+
+    const mappings = subject.curriculumTermMappings || [];
+    const curriculumTerm =
+      mappings.length > 0 && mappings[0].term != null
+        ? Number(mappings[0].term)
+        : null;
+
+    result.push({
+      ...subject,
+      term: curriculumTerm,
+      scheduleSubject: schedules,
+    });
   }
 
   return result;
@@ -452,13 +493,19 @@ async function assertNoStudentExamTimeConflict(
   if (!courseId && examDetail.subjectId) {
     const subject = await scoped(model.subjectModel).findOne({
       where: { subjectId: Number(examDetail.subjectId) },
-      attributes: ["courseId", "term"],
+      attributes: ["courseId"],
       raw: true,
     });
     if (subject) {
       courseId = subject.courseId;
-      if (term == null) term = subject.term;
     }
+  }
+
+  if (term == null && examDetail.subjectId) {
+    term = await resolveTermFromCurriculum(
+      examDetail.subjectId,
+      courseId || examDetail.courseId,
+    );
   }
 
   if (!courseId || term == null) {

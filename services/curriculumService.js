@@ -79,7 +79,7 @@ export async function getAvailableSubjects(curriculumId) {
   return scoped(models.subjectModel).findAll({
     where,
     order: [['subjectCode', 'ASC']],
-    attributes: ['subjectId', 'subjectCode', 'subjectName', 'subjectType', 'subjectCategory', 'term'],
+    attributes: ['subjectId', 'subjectCode', 'subjectName', 'subjectType', 'subjectCategory'],
   });
 }
 
