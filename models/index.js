@@ -2,6 +2,7 @@
 import curriculumModel from "./curriculumModel.js";
 import curriculumSubjectTermMappingModel from "./curriculumSubjectTermMappingModel.js";
 import curriculumBatchMappingModel from "./curriculumBatchMappingModel.js";
+import curriculumBatchTermMappingModel from "./curriculumBatchTermMappingModel.js";
 import settingModel from "./settingModel.js";
 import assessmentPlanModel from "./assessmentPlanModel.js";
 import assessmentPlanComponentModel from "./assessmentPlanComponentModel.js";
@@ -4322,6 +4323,9 @@ subjectModel.hasMany(curriculumSubjectTermMappingModel, { foreignKey: 'subjectId
 curriculumModel.hasMany(curriculumBatchMappingModel, { foreignKey: 'curriculumId', as: 'batchMappings' });
 curriculumBatchMappingModel.belongsTo(curriculumModel, { foreignKey: 'curriculumId', as: 'curriculum' });
 
+curriculumBatchMappingModel.hasMany(curriculumBatchTermMappingModel, { foreignKey: 'curriculumBatchMappingId', as: 'termMappings' });
+curriculumBatchTermMappingModel.belongsTo(curriculumBatchMappingModel, { foreignKey: 'curriculumBatchMappingId', as: 'batchMapping' });
+
 export {
   assessmentPlanModel,
   assessmentPlanComponentModel,
@@ -4516,6 +4520,7 @@ export {
   curriculumModel,
   curriculumSubjectTermMappingModel,
   curriculumBatchMappingModel,
+  curriculumBatchTermMappingModel,
 };
 
 import sequelize from "../database/sequelizeConfig.js";

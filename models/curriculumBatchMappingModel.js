@@ -118,14 +118,59 @@ curriculumBatchMappingModel.beforeCreate(async (instance, options) => {
 });
 
 curriculumBatchMappingModel.beforeUpdate(async (instance, options) => {
-    if (instance.changed('curriculumId') || instance.changed('batch')) {
-        await validateSingleCurriculumPerBatchAndProgramme(instance, options);
-    }
+    throw new Error('Batch-Curriculum mapping cannot be edited. It can only be created or deleted.');
 });
 
 curriculumBatchMappingModel.beforeBulkCreate(async (instances, options) => {
     for (const instance of instances) {
         await validateSingleCurriculumPerBatchAndProgramme(instance, options);
+    }
+});
+
+async function createTermMappings(instance, options) {
+    const { resolveTotalTerms, yearFromTerm } = await import('../utility/courseTerms.js');
+    
+    const curriculum = await curriculumModel.findByPk(instance.curriculumId, {
+        include: [{ model: sequelize.models.course, as: 'course' }],
+        transaction: options?.transaction
+    });
+
+    if (!curriculum || !curriculum.course) {
+        console.warn(`Could not generate term mappings: Curriculum or Course not found for mapping ${instance.curriculumBatchMappingId}`);
+        return;
+    }
+
+    const totalTerms = resolveTotalTerms(curriculum.course);
+    const batch = instance.batch;
+    
+    const termsData = [];
+    for (let term = 1; term <= totalTerms; term++) {
+        const yearNum = yearFromTerm(term, curriculum.course);
+        const calcYear = batch + yearNum - 1;
+
+        termsData.push({
+            curriculumBatchMappingId: instance.curriculumBatchMappingId,
+            term: term,
+            yearNumber: yearNum,
+            year: calcYear,
+            createdBy: instance.createdBy
+        });
+    }
+
+    if (termsData.length > 0) {
+        await sequelize.models.curriculum_batch_term_mapping.bulkCreate(termsData, {
+            transaction: options?.transaction
+        });
+    }
+}
+
+curriculumBatchMappingModel.afterCreate(async (instance, options) => {
+    await createTermMappings(instance, options);
+});
+
+curriculumBatchMappingModel.afterBulkCreate(async (instances, options) => {
+    for (const instance of instances) {
+        await createTermMappings(instance, options);
     }
 });
 
