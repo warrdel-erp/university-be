@@ -186,7 +186,11 @@ export async function addInstitute(data) {
 
 export async function addAffiliatedUniversity(data) {
     try {
-        return scoped(model.affiliatedIniversityModel).create(data);
+        const { universityId } = getTenantStore();
+        return model.affiliatedIniversityModel.create({
+            ...data,
+            universityId,
+        });
     } catch (error) {
         console.error("Error in add Affiliated Universit:", error);
         throw error;
