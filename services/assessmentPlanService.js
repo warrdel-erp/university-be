@@ -1,16 +1,389 @@
 import sequelize from "../database/sequelizeConfig.js";
+import { Op } from "sequelize";
 import * as assessmentPlanRepo from "../repository/assessmentPlanRepository.js";
 import * as model from "../models/index.js";
+import {
+  decimalAdd,
+  decimalCompare,
+  decimalDivide,
+  decimalGreaterThan,
+  decimalGreaterThanOrEqual,
+  decimalMultiply,
+  decimalSubtract,
+  toIntegerNumber,
+  toMoneyNumber,
+} from "../utility/decimalMoney.js";
+import { resolveTotalTerms, termsPerYear } from "../utility/courseTerms.js";
+import { resolveActiveAcademicYearContext } from "../utility/curriculumSubjectsByActiveYear.js";
+import { getAcademicYearId } from "../utility/requestContext.js";
+
+function parsePositiveId(val) {
+  if (
+    val === undefined ||
+    val === null ||
+    val === "" ||
+    val === "undefined" ||
+    val === "null" ||
+    val === "NaN"
+  ) {
+    return undefined;
+  }
+  const num = toIntegerNumber(val);
+  return decimalGreaterThan(num, 0) ? num : undefined;
+}
+
+function resolveDurationYears(course) {
+  const courseDuration = toMoneyNumber(course.courseDuration);
+  if (decimalGreaterThan(courseDuration, 0)) {
+    return toIntegerNumber(courseDuration);
+  }
+
+  const totalTerms = resolveTotalTerms(course);
+  const perYear = termsPerYear(course);
+  if (!decimalGreaterThan(totalTerms, 0) || !decimalGreaterThan(perYear, 0)) {
+    return 0;
+  }
+
+  const quotient = decimalDivide(totalTerms, perYear);
+  const floored = toIntegerNumber(quotient);
+  if (decimalGreaterThan(quotient, floored)) {
+    return decimalAdd(floored, 1);
+  }
+  return floored;
+}
+
+function buildBatchName(batch, batchEndYear) {
+  if (!decimalGreaterThan(batch, 0)) return null;
+  if (!decimalGreaterThan(batchEndYear, 0)) return String(batch);
+  const endSuffix = String(toIntegerNumber(batchEndYear)).slice(-2);
+  return `${toIntegerNumber(batch)} – ${endSuffix}`;
+}
+
+function resolveSubjectKind(subjectType) {
+  const normalized = String(subjectType || "").trim().toLowerCase();
+  if (!normalized) return null;
+  if (normalized.includes("elective")) return "elective";
+  if (normalized === "core" || normalized.includes("foundation")) return "core";
+  return normalized;
+}
+
+function buildAssignmentStatus(totalSubjects, assignedSubjects) {
+  if (
+    !decimalGreaterThan(totalSubjects, 0) ||
+    !decimalGreaterThan(assignedSubjects, 0)
+  ) {
+    return "Pending";
+  }
+  if (decimalGreaterThanOrEqual(assignedSubjects, totalSubjects)) {
+    return "Fully Assigned";
+  }
+  return "Partially Assigned";
+}
+
+function mapAssessmentPlanMapping(mapping) {
+  const plain = mapping.get ? mapping.get({ plain: true }) : mapping;
+  const plan = plain.assessmentPlan;
+
+  return {
+    assessmentPlanSubjectMappingId: plain.assessmentPlanSubjectMappingId,
+    assessmentPlanId: plain.assessmentPlanId,
+    subjectId: plain.subjectId,
+    courseId: plain.courseId,
+    sessionId: plain.sessionId,
+    academicYearId: plain.academicYearId,
+    examSetupTypeId: plain.examSetupTypeId,
+    session: plain.session || null,
+    examSetupType: plain.examSetupType || null,
+    assessmentPlan: plan
+      ? {
+          assessmentPlanId: plan.assessmentPlanId,
+          planName: plan.planName,
+          planCode: plan.planCode,
+          description: plan.description,
+          courseId: plan.courseId,
+          academicYearId: plan.academicYearId,
+          regulationId: plan.regulationId,
+          gradingId: plan.gradingId,
+          status: plan.status,
+          isActive: plan.isActive,
+          academicRegulation: plan.academicRegulation || null,
+          components: plan.components || [],
+        }
+      : null,
+  };
+}
+
+function resolveSubjectYearStatus(termYear, activeBatchYear) {
+  const year = toIntegerNumber(termYear);
+  const active = toIntegerNumber(activeBatchYear);
+  if (!decimalGreaterThan(year, 0) || !decimalGreaterThan(active, 0)) {
+    return null;
+  }
+
+  const cmp = decimalCompare(year, active);
+  if (cmp < 0) return "previous";
+  if (cmp > 0) return "upcoming";
+  return "current";
+}
+
+/** Flat subject list; term + course live on each subject. */
+function buildOverviewSubjects(batchMapping, rows, activeBatchYear) {
+  const curriculum = batchMapping.curriculum;
+  const course = curriculum.course;
+  const durationYears = resolveDurationYears(course);
+  const batchEndYear = decimalGreaterThan(durationYears, 0)
+    ? toIntegerNumber(decimalAdd(batchMapping.batch, durationYears))
+    : null;
+
+  const termMeta = new Map();
+  for (const termMapping of batchMapping.termMappings || []) {
+    termMeta.set(Number(termMapping.term), {
+      year: termMapping.year,
+      yearNumber: termMapping.yearNumber,
+      curriculumBatchTermMappingId: termMapping.curriculumBatchTermMappingId,
+      status: resolveSubjectYearStatus(termMapping.year, activeBatchYear),
+    });
+  }
+
+  const courseDetails = {
+    courseId: course.courseId,
+    courseName: course.courseName,
+    courseCode: course.courseCode,
+    termType: course.termType,
+    totalTerms: course.totalTerms,
+    courseDuration: course.courseDuration,
+    durationYears,
+  };
+
+  const subjects = [];
+
+  for (const row of rows) {
+    const plain = row.get ? row.get({ plain: true }) : row;
+    const subject = plain.subject;
+    if (!subject) continue;
+
+    const term = Number(plain.term);
+    const meta = termMeta.get(term) || {
+      year: null,
+      yearNumber: null,
+      curriculumBatchTermMappingId: null,
+      status: null,
+    };
+
+    const assessmentPlanMappings = [];
+    for (const mapping of subject.assessmentPlanMappings || []) {
+      assessmentPlanMappings.push(mapAssessmentPlanMapping(mapping));
+    }
+
+    subjects.push({
+      curriculumSubjectTermMappingId: plain.curriculumSubjectTermMappingId,
+      subjectId: subject.subjectId,
+      subjectName: subject.subjectName,
+      subjectCode: subject.subjectCode,
+      shortName: subject.shortName,
+      description: subject.description,
+      isActive: subject.isActive,
+      subjectType: subject.subjectType,
+      subjectCategory: subject.subjectCategory,
+      electiveOrCore: resolveSubjectKind(subject.subjectType),
+      term,
+      year: meta.year,
+      yearNumber: meta.yearNumber,
+      curriculumBatchTermMappingId: meta.curriculumBatchTermMappingId,
+      status: meta.status,
+      course: courseDetails,
+      assignmentStatus:
+        assessmentPlanMappings.length > 0 ? "assigned" : "unassigned",
+      assessmentPlanMappings,
+    });
+  }
+
+  return {
+    curriculumBatchMappingId: batchMapping.curriculumBatchMappingId,
+    curriculumId: curriculum.curriculumId,
+    batch: batchMapping.batch,
+    batchEndYear,
+    batchName: buildBatchName(batchMapping.batch, batchEndYear),
+    activeBatchYear,
+    curriculum: {
+      curriculumId: curriculum.curriculumId,
+      name: curriculum.name,
+    },
+    subjects,
+  };
+}
+
+/** Whole-batch subjects: subject terms whose term exists on the batch term map. */
+function collectBatchSubjectIds(plain) {
+  const batchTerms = new Set();
+  for (const termMapping of plain.termMappings || []) {
+    batchTerms.add(Number(termMapping.term));
+  }
+
+  const subjectIds = [];
+  const curriculum = plain.curriculum;
+  for (const mapping of curriculum.subjectTermMappings || []) {
+    if (batchTerms.size > 0 && !batchTerms.has(Number(mapping.term))) {
+      continue;
+    }
+    subjectIds.push(mapping.subjectId);
+  }
+  return subjectIds;
+}
+
+function collectBatchCourseSessionIds(batchMappings) {
+  const courseIds = new Set();
+  const sessionIds = new Set();
+  const subjectIds = new Set();
+
+  for (const bm of batchMappings) {
+    const plain = bm.get ? bm.get({ plain: true }) : bm;
+    const course = plain.curriculum?.course;
+    if (!course) continue;
+
+    for (const subjectId of collectBatchSubjectIds(plain)) {
+      subjectIds.add(subjectId);
+    }
+
+    for (const scm of course.sessionCourseMappings || []) {
+      if (!scm.session) continue;
+      courseIds.add(course.courseId);
+      sessionIds.add(scm.session.sessionId);
+    }
+  }
+
+  return {
+    courseIds: [...courseIds],
+    sessionIds: [...sessionIds],
+    subjectIds: [...subjectIds],
+  };
+}
+
+function nestBatchCoursesWithSessions(batchMappings, assignedRows, activeBatchYear) {
+  const assignedByCourseSession = new Map();
+  for (const row of assignedRows) {
+    const key = `${row.courseId}:${row.sessionId}`;
+    let subjectSet = assignedByCourseSession.get(key);
+    if (!subjectSet) {
+      subjectSet = new Set();
+      assignedByCourseSession.set(key, subjectSet);
+    }
+    subjectSet.add(row.subjectId);
+  }
+
+  const nestedByCourseSession = new Map();
+
+  for (const bm of batchMappings) {
+    const plain = bm.get ? bm.get({ plain: true }) : bm;
+    const curriculum = plain.curriculum;
+    const course = curriculum?.course;
+    if (!course) continue;
+
+    const subjectIds = collectBatchSubjectIds(plain);
+    const durationYears = resolveDurationYears(course);
+    const batchEndYear = decimalGreaterThan(durationYears, 0)
+      ? toIntegerNumber(decimalAdd(plain.batch, durationYears))
+      : null;
+
+    for (const scm of course.sessionCourseMappings || []) {
+      const session = scm.session;
+      if (!session) continue;
+
+      const nestKey = `${course.courseId}:${session.sessionId}`;
+      let nest = nestedByCourseSession.get(nestKey);
+      if (!nest) {
+        const academicYear = session.sessionAcedmic;
+        nest = {
+          courseId: course.courseId,
+          sessionId: session.sessionId,
+          activeBatchYear,
+          course: {
+            courseId: course.courseId,
+            courseName: course.courseName,
+            courseCode: course.courseCode,
+            termType: course.termType,
+            totalTerms: course.totalTerms,
+            courseDuration: course.courseDuration,
+            durationYears,
+          },
+          session: {
+            sessionId: session.sessionId,
+            sessionName: session.sessionName,
+            startingDate: session.startingDate,
+            endingDate: session.endingDate,
+            academicYearId: session.academicYearId,
+            academicYear: academicYear
+              ? {
+                  academicYearId: academicYear.academicYearId,
+                  yearTitle: academicYear.yearTitle,
+                  startingDate: academicYear.startingDate,
+                  endingDate: academicYear.endingDate,
+                  isActive: academicYear.isActive,
+                }
+              : null,
+          },
+          batches: [],
+        };
+        nestedByCourseSession.set(nestKey, nest);
+      }
+
+      const assignedSet = assignedByCourseSession.get(
+        `${course.courseId}:${session.sessionId}`,
+      );
+      let assignedSubjects = 0;
+      if (assignedSet) {
+        for (const subjectId of subjectIds) {
+          if (assignedSet.has(subjectId)) {
+            assignedSubjects = decimalAdd(assignedSubjects, 1);
+          }
+        }
+      }
+
+      nest.batches.push({
+        curriculumBatchMappingId: plain.curriculumBatchMappingId,
+        curriculumId: plain.curriculumId,
+        batch: plain.batch,
+        batchEndYear,
+        batchName: buildBatchName(plain.batch, batchEndYear),
+        curriculum: {
+          curriculumId: curriculum.curriculumId,
+          name: curriculum.name,
+        },
+        totalSubjects: subjectIds.length,
+        assignedSubjects,
+        assignmentStatus: buildAssignmentStatus(
+          subjectIds.length,
+          assignedSubjects,
+        ),
+      });
+    }
+  }
+
+  const result = [...nestedByCourseSession.values()];
+  for (const nest of result) {
+    nest.batches.sort((a, b) => decimalCompare(b.batch, a.batch));
+  }
+
+  result.sort((a, b) => {
+    if (a.course.courseName < b.course.courseName) return -1;
+    if (a.course.courseName > b.course.courseName) return 1;
+    return decimalCompare(a.sessionId, b.sessionId);
+  });
+
+  return result;
+}
 
 export async function createAssessmentPlan({ payload, user }) {
   return await sequelize.transaction(async (t) => {
+    const academicYearId =
+      getAcademicYearId() ||
+      (user?.academicYearId ? Number(user.academicYearId) : null);
+
     const planData = {
       ...payload,
       courseId: payload.courseId ? Number(payload.courseId) : null,
-      sessionId: payload.sessionId ? Number(payload.sessionId) : null,
       regulationId: payload.regulationId ? Number(payload.regulationId) : null,
-      term: payload.term !== undefined && payload.term !== null ? Number(payload.term) : null,
-      academicYearId: payload.academicYearId ? Number(payload.academicYearId) : (user?.academicYearId || null),
+      academicYearId,
       universityId: user?.universityId ? Number(user.universityId) : null,
       instituteId: user?.instituteId ? Number(user.instituteId) : null,
       createdBy: user?.userId || null,
@@ -18,6 +391,9 @@ export async function createAssessmentPlan({ payload, user }) {
       status: payload.status || "Draft",
       isActive: payload.isActive !== undefined ? payload.isActive : true,
     };
+
+    delete planData.term;
+    delete planData.sessionId;
 
     return await assessmentPlanRepo.createAssessmentPlan(planData, { transaction: t });
   });
@@ -52,10 +428,11 @@ export async function updateAssessmentPlan({ assessmentPlanId, payload, user }) 
     };
 
     if (payload.courseId !== undefined) updateData.courseId = payload.courseId ? Number(payload.courseId) : null;
-    if (payload.sessionId !== undefined) updateData.sessionId = payload.sessionId ? Number(payload.sessionId) : null;
     if (payload.regulationId !== undefined) updateData.regulationId = payload.regulationId ? Number(payload.regulationId) : null;
-    if (payload.term !== undefined) updateData.term = payload.term !== null ? Number(payload.term) : null;
-    if (payload.academicYearId !== undefined) updateData.academicYearId = payload.academicYearId ? Number(payload.academicYearId) : null;
+
+    delete updateData.term;
+    delete updateData.sessionId;
+    delete updateData.academicYearId;
 
     return await assessmentPlanRepo.updateAssessmentPlan(assessmentPlanId, updateData, { transaction: t });
   });
@@ -118,12 +495,140 @@ export async function deleteAssessmentPlanComponent(assessmentPlanComponentId) {
   });
 }
 
-export async function getCourseAssessmentPlanOverview(queryParams) {
-  return await assessmentPlanRepo.getCourseAssessmentPlanOverview(queryParams);
+export async function getCourseAssessmentPlanOverview(queryParams = {}) {
+  const {
+    curriculumBatchMappingId,
+    sessionId,
+    subjectId,
+    assessmentPlanId,
+    academicRegulationId,
+    assignmentStatus = "all",
+    term,
+    search,
+    page = 1,
+    limit = 10,
+  } = queryParams;
+
+  const parsedCurriculumBatchMappingId = parsePositiveId(
+    curriculumBatchMappingId,
+  );
+  if (parsedCurriculumBatchMappingId === undefined) {
+    const err = new Error("curriculumBatchMappingId is required");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const subjectTermWhere = {};
+  const parsedSubjectId = parsePositiveId(subjectId);
+  const parsedTerm = parsePositiveId(term);
+  if (parsedSubjectId !== undefined) subjectTermWhere.subjectId = parsedSubjectId;
+  if (parsedTerm !== undefined) subjectTermWhere.term = parsedTerm;
+
+  const subjectWhere = {};
+  if (search) {
+    subjectWhere[Op.or] = [
+      { subjectName: { [Op.like]: `%${search}%` } },
+      { subjectCode: { [Op.like]: `%${search}%` } },
+    ];
+  }
+
+  const mappingWhere = {};
+  const parsedAssessmentPlanId = parsePositiveId(assessmentPlanId);
+  const parsedSessionId = parsePositiveId(sessionId);
+  if (parsedAssessmentPlanId !== undefined) {
+    mappingWhere.assessmentPlanId = parsedAssessmentPlanId;
+  }
+  if (parsedSessionId !== undefined) {
+    mappingWhere.sessionId = parsedSessionId;
+  }
+
+  const planWhere = {};
+  const parsedAcademicRegulationId = parsePositiveId(academicRegulationId);
+  if (parsedAcademicRegulationId !== undefined) {
+    planWhere.regulationId = parsedAcademicRegulationId;
+  }
+
+  let mappingRequired = false;
+  if (assignmentStatus === "assigned") {
+    mappingRequired = true;
+  }
+  if (assignmentStatus === "unassigned") {
+    subjectWhere[
+      "$assessmentPlanMappings.assessment_plan_subject_mapping_id$"
+    ] = null;
+  }
+
+  const result =
+    await assessmentPlanRepo.findOverviewByCurriculumBatchMappingId({
+      curriculumBatchMappingId: parsedCurriculumBatchMappingId,
+      subjectTermWhere,
+      subjectWhere,
+      mappingWhere,
+      planWhere,
+      mappingRequired,
+      page,
+      limit,
+    });
+
+  if (!result) {
+    const err = new Error("Curriculum batch mapping not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const { activeBatchYear } = await resolveActiveAcademicYearContext();
+  const overview = buildOverviewSubjects(
+    result.batchMapping,
+    result.rows,
+    activeBatchYear,
+  );
+
+  return {
+    totalRecords: result.totalRecords,
+    totalPages: result.totalPages,
+    currentPage: result.currentPage,
+    pageSize: result.pageSize,
+    ...overview,
+  };
 }
 
-export async function getAssessmentPlanStats(queryParams) {
-  return await assessmentPlanRepo.getAssessmentPlanStats(queryParams);
+export async function getAssessmentPlanStats() {
+  const { subjects, mappings, plans } =
+    await assessmentPlanRepo.getAssessmentPlanStatsData();
+
+  const assignedSubjectIds = new Set();
+  for (const mapping of mappings) {
+    assignedSubjectIds.add(mapping.subjectId);
+  }
+
+  let assignedSubjects = 0;
+  let unassignedSubjects = 0;
+  for (const subject of subjects) {
+    if (assignedSubjectIds.has(subject.subjectId)) {
+      assignedSubjects = decimalAdd(assignedSubjects, 1);
+    } else {
+      unassignedSubjects = decimalAdd(unassignedSubjects, 1);
+    }
+  }
+
+  let overriddenSubjects = 0;
+  for (const plan of plans) {
+    if (plan.status === "Draft" || plan.isActive === false) {
+      overriddenSubjects = decimalAdd(overriddenSubjects, 1);
+    }
+  }
+
+  const totalSubjects = subjects.length;
+
+  return {
+    totalSubjects,
+    assignedSubjects,
+    unassignedSubjects,
+    overriddenSubjects,
+    coveragePercentage: decimalGreaterThan(totalSubjects, 0)
+      ? decimalMultiply(decimalDivide(assignedSubjects, totalSubjects), 100)
+      : 0,
+  };
 }
 
 export async function createAssessmentPlanSubjectMapping({ payload, user }) {
@@ -141,26 +646,18 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
       throw error;
     }
 
-    // Verify assessmentPlanId courseId and sessionId match assessmentPlanModel
     if (plan.courseId && Number(plan.courseId) !== Number(payload.courseId)) {
       const error = new Error(`Assessment Plan (ID: ${payload.assessmentPlanId}) is created for Course (ID: ${plan.courseId}), which does not match payload Course (ID: ${payload.courseId})`);
       error.statusCode = 400;
       throw error;
     }
 
-    if (plan.sessionId && Number(plan.sessionId) !== Number(payload.sessionId)) {
-      const error = new Error(`Assessment Plan (ID: ${payload.assessmentPlanId}) is created for Session (ID: ${plan.sessionId}), which does not match payload Session (ID: ${payload.sessionId})`);
-      error.statusCode = 400;
-      throw error;
-    }
-
-    // 1. Verify subjectId belongs to courseId
     const subjectRecord = await model.subjectModel.findOne({
       where: {
         subjectId: Number(payload.subjectId),
         courseId: Number(payload.courseId),
       },
-      attributes: ["subjectId", "courseId", "academicYearId"],
+      attributes: ["subjectId", "courseId"],
       transaction: t,
     });
     if (!subjectRecord) {
@@ -169,7 +666,6 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
       throw error;
     }
 
-    // 2. Verify sessionId and courseId are mapped in sessionCouseMappingModel
     const sessionCourseRecord = await model.sessionCouseMappingModel.findOne({
       where: {
         sessionId: Number(payload.sessionId),
@@ -204,18 +700,6 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
 
     const academicYearId = Number(plan.academicYearId);
 
-    // No cross-year mapping: plan, subject, and session must share the same academic year
-    if (
-      !subjectRecord.academicYearId ||
-      Number(subjectRecord.academicYearId) !== academicYearId
-    ) {
-      const error = new Error(
-        `Assessment Plan (ID: ${payload.assessmentPlanId}) belongs to Academic Year ID ${academicYearId}, which does not match Subject (ID: ${payload.subjectId}) Academic Year ID ${subjectRecord.academicYearId}`,
-      );
-      error.statusCode = 400;
-      throw error;
-    }
-
     if (
       !sessionRecord.academicYearId ||
       Number(sessionRecord.academicYearId) !== academicYearId
@@ -227,7 +711,6 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
       throw error;
     }
 
-    // Auto fetch examSetupTypeId strictly from internal assessmentPlanComponentModel connection
     let examSetupTypeId = null;
     const component = await model.assessmentPlanComponentModel.findOne({
       where: { assessmentPlanId: Number(payload.assessmentPlanId) },
@@ -247,7 +730,7 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
       assessmentPlanId: Number(payload.assessmentPlanId),
       subjectId: Number(payload.subjectId),
       courseId: Number(payload.courseId),
-      sessionId: sessionId || null,
+      sessionId: sessionId,
       academicYearId: academicYearId,
       examSetupTypeId: examSetupTypeId || null,
       universityId: user?.universityId ? Number(user.universityId) : null,
@@ -273,4 +756,33 @@ export async function deleteAssessmentPlanSubjectMapping(mappingId) {
     }
     return result;
   });
+}
+
+export async function getBatchCoursesWithSessions(query = {}) {
+  const { courseId } = query;
+
+  const curriculumWhere = {};
+  const parsedCourseId = parsePositiveId(courseId);
+  if (parsedCourseId !== undefined) {
+    curriculumWhere.courseId = parsedCourseId;
+  }
+
+  const { academicYearId, activeBatchYear } =
+    await resolveActiveAcademicYearContext();
+
+  const batchMappings =
+    await assessmentPlanRepo.findCurriculumBatchCoursesWithSessions({
+      batchWhere: { batch: { [Op.lte]: activeBatchYear } },
+      curriculumWhere,
+      academicYearId,
+    });
+
+  const ids = collectBatchCourseSessionIds(batchMappings);
+  const assignedRows = await assessmentPlanRepo.findAssignedSubjectMappings(ids);
+
+  return nestBatchCoursesWithSessions(
+    batchMappings,
+    assignedRows,
+    activeBatchYear,
+  );
 }

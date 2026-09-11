@@ -121,10 +121,13 @@ export async function getExamStructureSchedule(examSetupTypeId) {
 }
 
 export async function findSubjectacademicYearId(subjectId) {
-  const subject = await scoped(model.subjectModel).findByPk(subjectId, {
+  const mapping = await scoped(model.assessmentPlanSubjectMappingModel).findOne({
+    where: { subjectId: Number(subjectId) },
     attributes: ["academicYearId"],
+    order: [["assessmentPlanSubjectMappingId", "DESC"]],
+    raw: true,
   });
-  return subject?.academicYearId ?? null;
+  return mapping?.academicYearId ?? null;
 }
 
 export async function updateExamSchedule(examScheduleId, data) {
@@ -375,22 +378,48 @@ export async function getExamSetupTypeTermById(examSetupTypeTermId) {
 }
 
 export async function findSubjectsWithSchedules(courseId, academicYearId, term, examSetupTypeTermId, sessionId) {
+  const scheduleWhere = {};
+  if (sessionId) scheduleWhere.sessionId = sessionId;
+  if (academicYearId) scheduleWhere.academicYearId = academicYearId;
+
+  const curriculumInclude = {
+    model: model.curriculumSubjectTermMappingModel,
+    as: "curriculumTermMappings",
+    attributes: ["curriculumSubjectTermMappingId", "term", "credit"],
+    required: !!term,
+    where: term ? { term: Number(term) } : undefined,
+    include: [],
+  };
+
+  if (courseId) {
+    curriculumInclude.include.push({
+      model: model.curriculumModel,
+      as: "curriculum",
+      attributes: [],
+      required: true,
+      where: {
+        ...buildScope(model.curriculumModel),
+        courseId: Number(courseId),
+      },
+    });
+  }
+
   return scoped(model.subjectModel).findAll({
     where: {
       ...buildScope(model.subjectModel),
       ...(courseId && { courseId }),
-      ...(academicYearId && { academicYearId }),
-      ...(term && { term }),
     },
-    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+    attributes: {
+      exclude: ["createdAt", "updatedAt", "deletedAt", "term"],
+    },
     include: [
+      curriculumInclude,
       {
         model: model.examScheduleModel,
         as: "scheduleSubject",
         required: false,
-        where: {
-          ...(sessionId && { sessionId }),
-        },
+        where:
+          Object.keys(scheduleWhere).length > 0 ? scheduleWhere : undefined,
         attributes: [
           "examScheduleId",
           "subjectId",

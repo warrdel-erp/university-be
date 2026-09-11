@@ -356,7 +356,6 @@ export async function getSchedulesWithSubjectsForExaminationSession(examinationS
           "subjectName",
           "subjectCode",
           "courseId",
-          "term",
           "academicYearId",
         ],
         where: { ...buildScope(model.subjectModel), ...(courseId != null && { courseId }) },

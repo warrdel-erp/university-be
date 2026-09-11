@@ -429,20 +429,15 @@ export async function getSessionSummaryById(sessionId) {
   }
 }
 
-export async function getCourseListWithSubjects(academicYearId) {
+export async function getCourseListWithSubjects() {
   try {
-    const subjectScope = buildScope(model.subjectModel);
-
     return await scoped(model.courseModel).findAll({
       include: [
         {
           model: model.subjectModel,
           as: 'subjectInfo',
           attributes: ['subjectId', 'subjectCode'],
-          where: {
-            ...subjectScope,
-            ...(academicYearId && { academicYearId }),
-          },
+          where: buildScope(model.subjectModel),
           required: false,
         },
         {

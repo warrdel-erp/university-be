@@ -11,38 +11,39 @@ export async function getById(id) {
   const curriculum = await curriculumRepository.findById(id);
   if (!curriculum) return null;
 
-  // We need to fetch mapped subjects for this curriculum
-  const mappings = await models.curriculumSubjectTermMappingModel.findAll({
-      where: { curriculumId: id },
-      include: [{ model: models.subjectModel, as: 'subject' }]
-  });
+  const mappings =
+    await curriculumRepository.findSubjectTermMappingsByCurriculumId(id);
 
   const course = curriculum.course;
-  const totalTerms = course?.totalTerms || 8; // fallback to 8 if not defined
-  
+  const totalTerms = course?.totalTerms || 8;
+
   const terms = [];
   for (let i = 1; i <= totalTerms; i++) {
-      const termMappings = mappings.filter(m => m.term === i);
-      const courses = termMappings.map(m => ({
-          id: m.subject?.subjectId || m.curriculumSubjectTermMappingId,
-          code: m.subject?.subjectCode || 'N/A',
-          name: m.subject?.subjectName || 'Unknown Subject',
-          type: m.subject?.subjectType || 'Theory',
-          category: 'Core', // Can be customized later
-          syllabus: 'Configured'
-      }));
-
-      terms.push({
-          id: i,
-          term_number: i,
-          courses
+    const courses = [];
+    for (const mapping of mappings) {
+      if (mapping.term !== i) continue;
+      courses.push({
+        id: mapping.subject?.subjectId || mapping.curriculumSubjectTermMappingId,
+        curriculumSubjectTermMappingId: mapping.curriculumSubjectTermMappingId,
+        code: mapping.subject?.subjectCode || 'N/A',
+        name: mapping.subject?.subjectName || 'Unknown Subject',
+        type: mapping.subject?.subjectType || 'Theory',
+        category: mapping.subject?.subjectCategory || 'Core',
+        credit: mapping.credit,
+        syllabus: 'Configured',
       });
+    }
+
+    terms.push({
+      id: i,
+      term_number: i,
+      courses,
+    });
   }
 
-  // Return exactly the structure the UI expects
   return {
-      ...curriculum.toJSON(),
-      terms
+    ...curriculum.toJSON(),
+    terms,
   };
 }
 
@@ -78,7 +79,7 @@ export async function getAvailableSubjects(curriculumId) {
   return scoped(models.subjectModel).findAll({
     where,
     order: [['subjectCode', 'ASC']],
-    attributes: ['subjectId', 'subjectCode', 'subjectName', 'subjectType', 'subjectCategory', 'term'],
+    attributes: ['subjectId', 'subjectCode', 'subjectName', 'subjectType', 'subjectCategory'],
   });
 }
 
@@ -143,9 +144,29 @@ export async function mapSubjects(curriculumId, subjects) {
     curriculumId,
     subjectId: s.subjectId,
     term: s.term ?? s.termNumber,
+    credit: s.credit,
   }));
 
   return models.curriculumSubjectTermMappingModel.bulkCreate(mappings);
+}
+
+export async function updateSubjectTermMapping(
+  curriculumSubjectTermMappingId,
+  data,
+) {
+  const mapping = await curriculumRepository.findSubjectTermMappingById(
+    curriculumSubjectTermMappingId,
+  );
+  if (!mapping) {
+    const e = new Error('Curriculum subject mapping not found');
+    e.statusCode = 404;
+    throw e;
+  }
+
+  return curriculumRepository.updateSubjectTermMapping(
+    curriculumSubjectTermMappingId,
+    data,
+  );
 }
 
 export async function mapBatch(curriculumId, batch, userId) {

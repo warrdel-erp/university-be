@@ -36,8 +36,12 @@ const sessionBodyObject = z.object({
     .array(
       z.object({
         term: z.number().int().positive(),
-        courseId: z.number().int().positive().optional().nullable(),
-        sessionId: z.number().int().positive().optional().nullable(),
+        courseId: z.number().int().positive({
+          message: "courseId is required for each term",
+        }),
+        sessionId: z.number().int().positive({
+          message: "sessionId is required for each term",
+        }),
         includeElectives: z.boolean().optional(),
         remarks: z.string().optional(),
       }),

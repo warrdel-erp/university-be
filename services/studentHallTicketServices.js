@@ -670,9 +670,6 @@ export async function blockHallTicket(id) {
 
 function resolveScheduleTerm(plain) {
   if (plain.term != null) return Number(plain.term);
-  if (plain.subjectSchedule && plain.subjectSchedule.term != null) {
-    return Number(plain.subjectSchedule.term);
-  }
   return null;
 }
 
