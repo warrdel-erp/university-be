@@ -378,7 +378,7 @@ router.get(
   getRoutineByTeacherAndAcademicYear,
 );
 
-router.get( "/my/getRoutineByTeacher",
+router.get("/my/getRoutineByTeacher",
   userAuth,
   validate({ query: getMyRoutineByTeacherSchema }),
   getMyRoutineByTeacherAndAcademicYear,
@@ -401,14 +401,12 @@ router.patch(
   updateDateWiseCellController,
 );
 
-const fillMissingSubjectsSchema = z.record(z.string(), z.array(positiveIntegerId));
 
 router.post(
   "/fill-missing-subjects",
   userAuth,
   // Using EDIT_ROUTINE permission since it edits time table cells
   checkAccess(PERMISSIONS.CREATE_TIME_TABLE_EDIT_ROUTINE.value, null),
-  validate({ body: fillMissingSubjectsSchema }),
   fillMissingSubjectsController,
 );
 
