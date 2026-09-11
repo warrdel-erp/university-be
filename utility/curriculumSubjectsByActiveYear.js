@@ -95,6 +95,18 @@ export async function findCurriculumSubjectsForActiveYear(
     ? toIntegerNumber(academicYearId)
     : null;
 
+  if (!activeBatchYear && resolvedAcademicYearId) {
+    const academicYear = await acedmicYearRepository.getSingleacedmicYearDetails(
+      resolvedAcademicYearId,
+      options,
+    );
+    if (academicYear?.startingDate) {
+      activeBatchYear = toIntegerNumber(
+        String(academicYear.startingDate).slice(0, 4),
+      );
+    }
+  }
+
   if (!activeBatchYear) {
     const ctx = await resolveActiveAcademicYearContext(options);
     activeBatchYear = ctx.activeBatchYear;
@@ -223,6 +235,15 @@ export async function findCurriculumSubjectsForActiveYear(
     batchInclude.where = batchWhere;
   }
 
+  // year = calendar year of the academic year; term narrows to the batch
+  // currently in that term (not every batch's same term number).
+  const batchTermWhere = { year: activeBatchYear };
+  if (termList.length === 1) {
+    batchTermWhere.term = termList[0];
+  } else if (termList.length > 1) {
+    batchTermWhere.term = { [Op.in]: termList };
+  }
+
   const termRows = await model.curriculumBatchTermMappingModel.findAll({
     attributes: [
       "curriculumBatchTermMappingId",
@@ -231,7 +252,7 @@ export async function findCurriculumSubjectsForActiveYear(
       "yearNumber",
       "year",
     ],
-    where: { year: activeBatchYear },
+    where: batchTermWhere,
     include: [batchInclude],
     transaction: options.transaction,
   });
@@ -282,6 +303,119 @@ export async function findCurriculumSubjectsForActiveYear(
         subject,
       });
     }
+  }
+
+  return {
+    academicYearId: resolvedAcademicYearId,
+    activeBatchYear,
+    rows,
+  };
+}
+
+/**
+ * Active-year curriculum batch-term rows for courses (no subject required).
+ * Use this when selectable terms must appear even if curriculum subjects
+ * are not mapped for that term yet.
+ */
+export async function findActiveYearBatchTermsByCourseIds(
+  courseIds,
+  options = {},
+) {
+  const courseIdList = [];
+  for (const id of courseIds || []) {
+    if (id == null || id === "") continue;
+    courseIdList.push(Number(id));
+  }
+  if (!courseIdList.length) {
+    return { academicYearId: null, activeBatchYear: null, rows: [] };
+  }
+
+  let resolvedAcademicYearId = options.academicYearId
+    ? toIntegerNumber(options.academicYearId)
+    : null;
+  let activeBatchYear = options.activeBatchYear
+    ? toIntegerNumber(options.activeBatchYear)
+    : null;
+
+  if (!activeBatchYear && resolvedAcademicYearId) {
+    const academicYear = await acedmicYearRepository.getSingleacedmicYearDetails(
+      resolvedAcademicYearId,
+      options,
+    );
+    if (academicYear?.startingDate) {
+      activeBatchYear = toIntegerNumber(
+        String(academicYear.startingDate).slice(0, 4),
+      );
+    }
+  }
+
+  if (!activeBatchYear) {
+    const ctx = await resolveActiveAcademicYearContext(options);
+    activeBatchYear = ctx.activeBatchYear;
+    if (!resolvedAcademicYearId) {
+      resolvedAcademicYearId = ctx.academicYearId;
+    }
+  }
+
+  const termRows = await model.curriculumBatchTermMappingModel.findAll({
+    attributes: [
+      "curriculumBatchTermMappingId",
+      "curriculumBatchMappingId",
+      "term",
+      "yearNumber",
+      "year",
+    ],
+    where: { year: activeBatchYear },
+    include: [
+      {
+        model: model.curriculumBatchMappingModel,
+        as: "batchMapping",
+        attributes: ["curriculumBatchMappingId", "curriculumId", "batch"],
+        required: true,
+        include: [
+          {
+            model: model.curriculumModel,
+            as: "curriculum",
+            attributes: ["curriculumId", "name", "courseId"],
+            required: true,
+            where: {
+              ...buildScope(model.curriculumModel),
+              courseId: { [Op.in]: courseIdList },
+            },
+          },
+        ],
+      },
+    ],
+    transaction: options.transaction,
+  });
+
+  const rows = [];
+  const seen = new Set();
+  for (const termRow of termRows) {
+    const plain = termRow.get ? termRow.get({ plain: true }) : termRow;
+    const batchMapping = plain.batchMapping;
+    if (!batchMapping || !batchMapping.curriculum) continue;
+
+    const courseId = Number(batchMapping.curriculum.courseId);
+    const term = Number(plain.term);
+    const batch = Number(batchMapping.batch);
+    const key = `${courseId}_${batch}_${term}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    rows.push({
+      courseId,
+      term,
+      batch,
+      year: Number(plain.year),
+      yearNumber: Number(plain.yearNumber),
+      curriculumId: Number(batchMapping.curriculum.curriculumId),
+      curriculumName: batchMapping.curriculum.name,
+      curriculumBatchMappingId: Number(batchMapping.curriculumBatchMappingId),
+      curriculumBatchTermMappingId: Number(plain.curriculumBatchTermMappingId),
+      academicYearId: resolvedAcademicYearId,
+      activeBatchYear,
+    });
   }
 
   return {
