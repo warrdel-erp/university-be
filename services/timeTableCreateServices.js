@@ -3248,17 +3248,6 @@ function collectPeriodCells(cells, period, daysName) {
 }
 
 function resolveCellSubject(cell) {
-  if (
-    cell.isSameTeacher === true &&
-    cell.timeTableTeacherSubject?.employeeSubject
-  ) {
-    const mappedSubject = cell.timeTableTeacherSubject.employeeSubject;
-    return {
-      subjectId: mappedSubject.subjectId ?? null,
-      name: mappedSubject.subjectName ?? "N/A",
-    };
-  }
-
   const subject = cell.timeTableSubject;
   return {
     subjectId: subject?.subjectId ?? null,
