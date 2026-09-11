@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { validate } from "../utility/validation.js";
 import userAuth from "../middleware/authUser.js";
+
 import {
   createAssignment,
   updateAssignment,
@@ -181,7 +182,7 @@ router.get(
   getAssignmentsByUserId,
 );
 
-router.get("/my", userAuth, validate(myAssignmentsSchema), getMyAssignments);
+router.get("/my", userAuth,validate(myAssignmentsSchema), getMyAssignments);
 
 router.get(
   "/byroom",

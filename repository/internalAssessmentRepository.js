@@ -1,6 +1,7 @@
 import { Op, fn, col } from "sequelize";
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
+import { getFinalSubmissionStatus } from "./assessmentEvaluationRepository.js";
 
 const internalAssessmentAttributes = [
   "internalAssessmentId",
@@ -50,6 +51,7 @@ const examSetupTypeAttributes = [
   "examSetupTypeId",
   "examName",
   "examCategory",
+  "managedBy",
 ];
 
 async function getMarkingProgressMap(internalAssessmentIds) {
@@ -635,7 +637,7 @@ export async function getInternalAssessmentsBySubject(filters) {
       {
         model: model.examSetupTypeModel,
         as: "assessmentExamType",
-        attributes: ["examSetupTypeId", "examName", "examCategory"],
+        attributes: ["examSetupTypeId", "examName", "examCategory", "managedBy"],
         required: false,
       },
     ],
@@ -653,16 +655,49 @@ export async function getInternalAssessmentsBySubject(filters) {
   const progressMap = await getMarkingProgressMap(internalAssessmentIds);
 
   const result = [];
+  let allMarksFilled = assessments.length > 0;
+
   for (const assessment of assessments) {
     const plain = assessment.get({ plain: true });
     const progress = progressMap.get(plain.internalAssessmentId);
     plain.studentCount = progress.studentCount;
     plain.checked = progress.checked;
     plain.pendingForMarking = progress.pendingForMarking;
+
+    if (progress.studentCount === 0 || progress.pendingForMarking > 0) {
+      allMarksFilled = false;
+    }
+
     result.push(plain);
   }
 
-  return result;
+  const finalStatus = await getFinalSubmissionStatus({
+    subjectId,
+    classSectionTermId,
+  });
+
+  const status =
+    finalStatus === "submitted" && allMarksFilled
+      ? "submitted"
+      : "inprogress";
+
+  for (const assessment of result) {
+    if (status === "submitted") {
+      assessment.status = "submitted";
+    } else if (
+      assessment.studentCount > 0 &&
+      assessment.pendingForMarking === 0
+    ) {
+      assessment.status = "completed";
+    } else {
+      assessment.status = "inprogress";
+    }
+  }
+
+  return {
+    status,
+    assessments: result,
+  };
 }
 
 export async function getInternalAssessmentById(internalAssessmentId) {
@@ -718,7 +753,7 @@ export async function getInternalAssessmentById(internalAssessmentId) {
       {
         model: model.examSetupTypeModel,
         as: "assessmentExamType",
-        attributes: ["examSetupTypeId", "examName", "examCategory"],
+        attributes: ["examSetupTypeId", "examName", "examCategory", "managedBy"],
         required: false,
       },
     ],
@@ -816,6 +851,10 @@ export async function getAssessmentStatusCounts(filters) {
   }
 
   return {
+    status: await getFinalSubmissionStatus({
+      subjectId,
+      classSectionTermId,
+    }),
     total: assessments.length,
     completed,
     open,
@@ -907,6 +946,34 @@ export async function updateInternalAssessment(
     where: { internalAssessmentId },
     transaction,
   });
+}
+
+export async function getIncludedWeightageSum({
+  subjectId,
+  classSectionTermId,
+  excludeInternalAssessmentId,
+  transaction,
+}) {
+  const where = {
+    subjectId: Number(subjectId),
+    classSectionTermId: Number(classSectionTermId),
+    isIncludeInFinalResult: true,
+  };
+
+  if (excludeInternalAssessmentId) {
+    where.internalAssessmentId = {
+      [Op.ne]: Number(excludeInternalAssessmentId),
+    };
+  }
+
+  const result = await scoped(model.internalAssessmentModel).findOne({
+    where,
+    attributes: [[fn("SUM", col("weightage_percentage")), "totalWeightage"]],
+    raw: true,
+    transaction,
+  });
+
+  return Number(result?.totalWeightage || 0);
 }
 
 export async function getMarksTableBySubject(filters) {
@@ -1030,7 +1097,13 @@ export async function getMarksTableBySubject(filters) {
     assessmentList.push(assessment.get({ plain: true }));
   }
 
+  const status = await getFinalSubmissionStatus({
+    subjectId,
+    classSectionTermId,
+  });
+
   return {
+    status,
     subjectId,
     classSectionTermId,
     term,
@@ -1155,6 +1228,10 @@ export async function getMarksCellBySubject(filters) {
   }
 
   const response = {
+    status: await getFinalSubmissionStatus({
+      subjectId,
+      classSectionTermId,
+    }),
     subjectId,
     classSectionTermId,
     studentCount: total,
@@ -1366,11 +1443,71 @@ export async function createStudentEvaluationPlaceholders(
 }
 
 export async function upsertStudentEvaluations(rows, transaction) {
-  return scoped(model.internalAssessmentStudentEvaluationModel).bulkCreate(
-    rows,
-    {
+  for (const row of rows) {
+    const where = {
+      internalAssessmentId: Number(row.internalAssessmentId),
+      studentId: Number(row.studentId),
+    };
+
+    const existingRows = await scoped(
+      model.internalAssessmentStudentEvaluationModel,
+    ).findAll({
+      where,
+      attributes: [
+        "internalAssessmentStudentEvaluationId",
+        "obtainedMarks",
+      ],
+      order: [["internalAssessmentStudentEvaluationId", "ASC"]],
       transaction,
-      updateOnDuplicate: ["obtainedMarks", "updatedAt"],
-    },
-  );
+    });
+
+    if (!existingRows.length) {
+      await scoped(model.internalAssessmentStudentEvaluationModel).create(
+        row,
+        { transaction },
+      );
+      continue;
+    }
+
+    let keep = existingRows[existingRows.length - 1];
+    for (let i = existingRows.length - 1; i >= 0; i -= 1) {
+      if (
+        existingRows[i].obtainedMarks !== null &&
+        existingRows[i].obtainedMarks !== undefined
+      ) {
+        keep = existingRows[i];
+        break;
+      }
+    }
+
+    await scoped(model.internalAssessmentStudentEvaluationModel).update(
+      { obtainedMarks: row.obtainedMarks },
+      {
+        where: {
+          internalAssessmentStudentEvaluationId:
+            keep.internalAssessmentStudentEvaluationId,
+        },
+        transaction,
+      },
+    );
+
+    const duplicateIds = [];
+    for (const existing of existingRows) {
+      if (
+        existing.internalAssessmentStudentEvaluationId !==
+        keep.internalAssessmentStudentEvaluationId
+      ) {
+        duplicateIds.push(existing.internalAssessmentStudentEvaluationId);
+      }
+    }
+
+    if (duplicateIds.length) {
+      await scoped(model.internalAssessmentStudentEvaluationModel).destroy({
+        where: {
+          internalAssessmentStudentEvaluationId: { [Op.in]: duplicateIds },
+        },
+        transaction,
+      });
+    }
+  }
 }

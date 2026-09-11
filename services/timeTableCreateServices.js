@@ -378,11 +378,13 @@ function shapeTimeTableCreateList(rows, course) {
   const byYear = {};
   let draftRoutineCount = 0;
   let publishedRoutineCount = 0;
+  let sessionAcademicYear = null;
   const meta = {
     courseId: coursePlain?.courseId ?? null,
     sessionId: null,
     courseName: coursePlain?.courseName ?? null,
     termType: coursePlain?.termType ?? null,
+    academicYear: null,
   };
 
   for (const row of rows) {
@@ -398,6 +400,10 @@ function shapeTimeTableCreateList(rows, course) {
       meta.courseId = section.courseId;
     if (meta.sessionId == null && section.sessionId != null)
       meta.sessionId = section.sessionId;
+    if (meta.academicYear == null && section.classSession?.sessionAcedmic) {
+      meta.academicYear = section.classSession.sessionAcedmic;
+      sessionAcademicYear = section.classSession.sessionAcedmic;
+    }
 
     const year = Number(section.year);
     const term = Number(plain.term);
@@ -439,6 +445,15 @@ function shapeTimeTableCreateList(rows, course) {
   } else {
     for (const y of Object.keys(byYear)) yearNumbers.push(Number(y));
     yearNumbers.sort((a, b) => a - b);
+  }
+
+  let baseYear = null;
+  if (sessionAcademicYear?.year_title) {
+    const m = String(sessionAcademicYear.year_title).match(/\b(\d{4})\b/);
+    if (m) baseYear = parseInt(m[1], 10);
+  } else if (sessionAcademicYear?.starting_date) {
+    const m = String(sessionAcademicYear.starting_date).match(/^(\d{4})/);
+    if (m) baseYear = parseInt(m[1], 10);
   }
 
   const years = [];
@@ -497,7 +512,8 @@ function shapeTimeTableCreateList(rows, course) {
     classSections.sort((a, b) =>
       String(a.section).localeCompare(String(b.section)),
     );
-    years.push({ year: yearNum, classSections });
+    const batch = baseYear != null ? (baseYear - (yearNum - 1)) : null;
+    years.push({ year: yearNum, batch, classSections });
   }
 
   return {

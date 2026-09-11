@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Op, UniqueConstraintError } from "sequelize";
 import * as model from "../models/index.js";
 import * as answerSheetQrRepository from "../repository/answerSheetQrRepository.js";
+import * as answerSheetAnnotationRepository from "../repository/answerSheetAnnotationRepository.js";
 import * as examinationSessionRepository from "../repository/examinationSessionRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 import { buildTermName } from "../utility/courseTerms.js";
@@ -467,21 +468,31 @@ export async function getAnswerSheetQrDetailById(id) {
         sessionId: null,
       };
 
+    const plainRow = row.get ? row.get({ plain: true }) : row;
+
+    const s3File = plainRow.s3File || null;
+    if (s3File?.s3Key) {
+      s3File.url = await s3Helper.getDownloadSignedUrl(s3File.s3Key);
+    }
+
     return {
-      id: row.id,
-      qr: row.qr,
-      requestId: row.requestId ?? null,
-      studentId: row.studentId,
-      examScheduleId: row.examScheduleId,
-      assignedToUser: row.assignedToUser ?? null,
-      deadlineDate: row.deadlineDate ?? null,
-      assignedTeacherName: row.assignedTeacher?.userName || null,
-      evaluatedAt: row.evaluatedAt ?? null,
-      obtainedMarks: row.obtainedMarks ?? null,
-      instituteId: row.instituteId,
-      universityId: row.universityId,
+      id: plainRow.id,
+      qr: plainRow.qr,
+      requestId: plainRow.requestId ?? null,
+      studentId: plainRow.studentId,
+      examScheduleId: plainRow.examScheduleId,
+      assignedToUser: plainRow.assignedToUser ?? null,
+      deadlineDate: plainRow.deadlineDate ?? null,
+      assignedTeacherName: plainRow.assignedTeacher?.userName || null,
+      evaluatedAt: plainRow.evaluatedAt ?? null,
+      obtainedMarks: plainRow.obtainedMarks ?? null,
+      markingStatus: plainRow.markingStatus ?? "pending",
+      fileUploadId: plainRow.fileUploadId ?? null,
+      instituteId: plainRow.instituteId,
+      universityId: plainRow.universityId,
       isMapped,
       ...examContext,
+      s3File,
     };
   });
   return result;
@@ -1172,6 +1183,157 @@ export async function getMySingleAssignedScript(id, assignedToUserId) {
     createdAt: plain.createdAt,
     ...buildExamContext(plain, { includeStudentIdentity: false }),
     s3File: plain.s3File ?? null,
+  };
+}
+
+/**
+ * Save or submit annotation JSON for one answer sheet (versioned row).
+ * status must be "saved" (repeatable) or "submitted" (final).
+ * When assignedToUserId is set, the sheet must belong to that evaluator.
+ */
+export async function saveAnswerSheetAnnotation({
+  answerSheetQrId,
+  annotationData,
+  status,
+  assignedToUserId,
+  userId,
+}) {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const answerSheet =
+      await answerSheetAnnotationRepository.findAnswerSheetWithOriginalPdf(
+        answerSheetQrId,
+        assignedToUserId,
+        transaction,
+      );
+
+    if (!answerSheet) {
+      const err = new Error(
+        assignedToUserId != null
+          ? "Assigned answer sheet not found."
+          : "Answer sheet QR not found.",
+      );
+      err.statusCode = 404;
+      throw err;
+    }
+
+    if (answerSheet.markingStatus === "submit") {
+      const err = new Error(
+        "Cannot update annotation after final submit.",
+      );
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const latestAnnotation =
+      await answerSheetAnnotationRepository.getLatestAnnotationByAnswerSheetQrId(
+        answerSheet.id,
+        transaction,
+      );
+
+    if (latestAnnotation?.status === "submitted") {
+      const err = new Error(
+        "Annotation already submitted. Further changes are not allowed.",
+      );
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const latestVersion =
+      await answerSheetAnnotationRepository.getLatestVersion(
+        answerSheet.id,
+        transaction,
+      );
+
+    const annotation = await answerSheetAnnotationRepository.createAnnotation(
+      {
+        answerSheetQrId: answerSheet.id,
+        annotationData,
+        version: latestVersion + 1,
+        status,
+        createdBy: userId,
+        updatedBy: userId,
+      },
+      transaction,
+    );
+
+    await transaction.commit();
+
+    return {
+      answerSheetAnnotationId: annotation.answerSheetAnnotationId,
+      answerSheetQrId: annotation.answerSheetQrId,
+      annotationData: annotation.annotationData,
+      version: annotation.version,
+      status: annotation.status,
+      createdAt: annotation.createdAt,
+      updatedAt: annotation.updatedAt,
+    };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+/**
+ * Latest annotation JSON + original answer sheet PDF for one QR.
+ * When assignedToUserId is set, the sheet must belong to that evaluator.
+ */
+export async function getAnswerSheetAnnotation(
+  answerSheetQrId,
+  assignedToUserId,
+) {
+  const answerSheet =
+    await answerSheetAnnotationRepository.findAnswerSheetWithOriginalPdf(
+      answerSheetQrId,
+      assignedToUserId,
+    );
+
+  if (!answerSheet) {
+    const err = new Error(
+      assignedToUserId != null
+        ? "Assigned answer sheet not found."
+        : "Answer sheet QR not found.",
+    );
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const annotation =
+    await answerSheetAnnotationRepository.getLatestAnnotationByAnswerSheetQrId(
+      answerSheet.id,
+    );
+
+  let originalS3File = null;
+  if (answerSheet.s3File) {
+    const file = answerSheet.s3File;
+    originalS3File = {
+      id: file.id,
+      status: file.status,
+      s3Key: file.s3Key,
+      originalName: file.originalName,
+      mime: file.mime,
+      url: await s3Helper.getDownloadSignedUrl(file.s3Key),
+    };
+  }
+
+  return {
+    answerSheetQrId: answerSheet.id,
+    qr: answerSheet.qr,
+    markingStatus: answerSheet.markingStatus,
+    originalS3File,
+    annotation: annotation
+      ? {
+          answerSheetAnnotationId: annotation.answerSheetAnnotationId,
+          annotationData: annotation.annotationData,
+          version: annotation.version,
+          status: annotation.status,
+          createdBy: annotation.createdBy,
+          updatedBy: annotation.updatedBy,
+          createdAt: annotation.createdAt,
+          updatedAt: annotation.updatedAt,
+        }
+      : null,
   };
 }
 

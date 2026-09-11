@@ -179,18 +179,17 @@ export async function getClassByName(className, Section) {
 
 export async function getStudentBySectionId(classSectionId) {
   try {
-    return await scoped(model.classStudentMapperModel).findAll({
-      attributes: ['studentId'],
+    return await scoped(model.studentModel).findAll({
+      attributes: ['studentId', 'scholarNumber', 'email', 'phoneNumber'],
       include: [
         {
-          model: model.studentModel,
-          as: 'studentMapped',
-          attributes: ['scholarNumber', 'email', 'phoneNumber'],
+          model: model.classSectionTermModel,
+          as: 'studentClassSectionTerm',
+          attributes: ['classSectionTermId', 'term', 'classSectionsId'],
+          required: true,
+          where: { classSectionsId: Number(classSectionId) },
         },
       ],
-      where: {
-        class_sections_id: classSectionId,
-      },
     });
   } catch (error) {
     console.error('Error in getting student by SectionId:', error);
@@ -390,94 +389,25 @@ export async function countStudentsByClassSectionIds(classSectionsIds) {
 
   const termWhere = { classSectionsId: { [Op.in]: ids } };
 
-  const [studentRows, mapperRows, overlapRows] = await Promise.all([
-    scoped(model.studentModel).findAll({
-      attributes: [
-        [col('studentClassSectionTerm.class_sections_id'), 'classSectionsId'],
-        [fn('COUNT', fn('DISTINCT', col('students.student_id'))), 'studentCount'],
-      ],
-      include: [{
-        model: model.classSectionTermModel,
-        as: 'studentClassSectionTerm',
-        attributes: [],
-        required: true,
-        where: termWhere,
-      }],
-      group: [col('studentClassSectionTerm.class_sections_id')],
-      raw: true,
-      subQuery: false,
-    }),
-    scoped(model.classStudentMapperModel).findAll({
-      attributes: [
-        [col('studentTermPlacement.class_sections_id'), 'classSectionsId'],
-        [fn('COUNT', fn('DISTINCT', col('class_student_mapper.student_id'))), 'studentCount'],
-      ],
-      include: [{
-        model: model.classSectionTermModel,
-        as: 'studentTermPlacement',
-        attributes: [],
-        required: true,
-        where: termWhere,
-      }],
-      group: [col('studentTermPlacement.class_sections_id')],
-      raw: true,
-      subQuery: false,
-    }),
-    scoped(model.classStudentMapperModel).findAll({
-      attributes: [
-        [col('studentTermPlacement.class_sections_id'), 'classSectionsId'],
-        [fn('COUNT', fn('DISTINCT', col('class_student_mapper.student_id'))), 'overlapCount'],
-      ],
-      include: [
-        {
-          model: model.classSectionTermModel,
-          as: 'studentTermPlacement',
-          attributes: [],
-          required: true,
-          where: termWhere,
-        },
-        {
-          model: model.studentModel,
-          as: 'studentMapped',
-          attributes: [],
-          required: true,
-          include: [{
-            model: model.classSectionTermModel,
-            as: 'studentClassSectionTerm',
-            attributes: [],
-            required: true,
-            where: {
-              classSectionsId: { [Op.eq]: col('studentTermPlacement.class_sections_id') },
-            },
-          }],
-        },
-      ],
-      group: [col('studentTermPlacement.class_sections_id')],
-      raw: true,
-      subQuery: false,
-    }),
-  ]);
+  const studentRows = await scoped(model.studentModel).findAll({
+    attributes: [
+      [col('studentClassSectionTerm.class_sections_id'), 'classSectionsId'],
+      [fn('COUNT', fn('DISTINCT', col('students.student_id'))), 'studentCount'],
+    ],
+    include: [{
+      model: model.classSectionTermModel,
+      as: 'studentClassSectionTerm',
+      attributes: [],
+      required: true,
+      where: termWhere,
+    }],
+    group: [col('studentClassSectionTerm.class_sections_id')],
+    raw: true,
+    subQuery: false,
+  });
 
-  const studentCountBySection = new Map();
   for (const row of studentRows) {
-    studentCountBySection.set(Number(row.classSectionsId), Number(row.studentCount));
-  }
-
-  const mapperCountBySection = new Map();
-  for (const row of mapperRows) {
-    mapperCountBySection.set(Number(row.classSectionsId), Number(row.studentCount));
-  }
-
-  const overlapCountBySection = new Map();
-  for (const row of overlapRows) {
-    overlapCountBySection.set(Number(row.classSectionsId), Number(row.overlapCount));
-  }
-
-  for (const id of ids) {
-    const studentCount = studentCountBySection.get(id) ?? 0;
-    const mapperCount = mapperCountBySection.get(id) ?? 0;
-    const overlapCount = overlapCountBySection.get(id) ?? 0;
-    countMap.set(id, studentCount + mapperCount - overlapCount);
+    countMap.set(Number(row.classSectionsId), Number(row.studentCount) || 0);
   }
 
   return countMap;
@@ -499,20 +429,15 @@ export async function getSessionSummaryById(sessionId) {
   }
 }
 
-export async function getCourseListWithSubjects(academicYearId) {
+export async function getCourseListWithSubjects() {
   try {
-    const subjectScope = buildScope(model.subjectModel);
-
     return await scoped(model.courseModel).findAll({
       include: [
         {
           model: model.subjectModel,
           as: 'subjectInfo',
           attributes: ['subjectId', 'subjectCode'],
-          where: {
-            ...subjectScope,
-            ...(academicYearId && { academicYearId }),
-          },
+          where: buildScope(model.subjectModel),
           required: false,
         },
         {

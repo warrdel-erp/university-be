@@ -136,6 +136,19 @@ export async function findClassSectionTermsWithRoutines({
                 "updatedBy",
               ],
             },
+            include: [
+              {
+                model: model.acedmicYearModel,
+                as: "sessionAcedmic",
+                attributes: [
+                  "acedmic_year_id",
+                  "year_title",
+                  "starting_date",
+                  "ending_date",
+                ],
+                required: false,
+              },
+            ],
           },
           {
             model: model.courseModel,

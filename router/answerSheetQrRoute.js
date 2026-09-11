@@ -27,6 +27,9 @@ import {
   getEvaluationAssignmentById,
   getApprovedQuestionPaperByAnswerSheetId,
   getMyApprovedQuestionPaperByAnswerSheetId,
+  saveMyAnswerSheetAnnotation,
+  submitMyAnswerSheetAnnotation,
+  getMyAnswerSheetAnnotation,
 } from "../controllers/answerSheetQrController.js";
 
 const router = Router();
@@ -126,6 +129,13 @@ const assignObtainedMarksSchema = z.object({
     .number()
     .min(0, "obtained_marks must be greater than or equal to 0")
     .max(999.99, "obtained_marks must be less than or equal to 999.99"),
+});
+
+const saveAnnotationSchema = z.object({
+  annotationData: z.union([z.record(z.string(), z.any()), z.array(z.any())], {
+    required_error: "annotationData is required.",
+    invalid_type_error: "annotationData must be a JSON object or array.",
+  }),
 });
 
 const bulkFinalSubmitSchema = z.object({
@@ -371,6 +381,27 @@ router.patch(
   userAuth,
   validate({ params: idParamSchema, body: assignObtainedMarksSchema }),
   assignMyObtainedMarksToAnswerSheet,
+);
+
+router.post(
+  "/my/annotation",
+  userAuth,
+  validate({ query: answerSheetQrIdQuerySchema, body: saveAnnotationSchema }),
+  saveMyAnswerSheetAnnotation,
+);
+
+router.post(
+  "/my/annotation/submit",
+  userAuth,
+  validate({ query: answerSheetQrIdQuerySchema, body: saveAnnotationSchema }),
+  submitMyAnswerSheetAnnotation,
+);
+
+router.get(
+  "/my/:id(\\d+)/annotation",
+  userAuth,
+  validate({ params: idParamSchema }),
+  getMyAnswerSheetAnnotation,
 );
 
 router.patch(

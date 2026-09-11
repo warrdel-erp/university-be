@@ -36,6 +36,12 @@ const sessionBodyObject = z.object({
     .array(
       z.object({
         term: z.number().int().positive(),
+        courseId: z.number().int().positive({
+          message: "courseId is required for each term",
+        }),
+        sessionId: z.number().int().positive({
+          message: "sessionId is required for each term",
+        }),
         includeElectives: z.boolean().optional(),
         remarks: z.string().optional(),
       }),
@@ -106,6 +112,40 @@ const getSessionByIdSchema = {
   }),
 };
 
+const examinationSessionLifecycleStatusSchema = z.preprocess(
+  (val) => {
+    if (val == null || val === "") return "all";
+    const normalized = String(val)
+      .trim()
+      .toLowerCase()
+      .replace(/[_\s-]+/g, "");
+    if (normalized === "all") return "all";
+    if (normalized === "running") return "running";
+    if (
+      normalized === "schedulingevaluation" ||
+      normalized === "schedulingevalution"
+    ) {
+      return "schedulingEvaluation";
+    }
+    if (normalized === "result") return "result";
+    return val;
+  },
+  z.enum(["all", "running", "schedulingEvaluation", "result"]).default("all"),
+);
+
+const getSessionsSchema = {
+  query: z.object({
+    status: examinationSessionLifecycleStatusSchema,
+    search: z.string().optional(),
+    academicYearId: positiveIntegerQueryId.optional(),
+    assessmentTypeId: positiveIntegerQueryId.optional(),
+    universityId: positiveIntegerQueryId.optional(),
+    instituteId: positiveIntegerQueryId.optional(),
+    page: z.coerce.number().int().positive().optional(),
+    limit: z.coerce.number().int().positive().optional(),
+  }),
+};
+
 const createTermSchema = {
   body: z.object({
     examinationSessionId: z.number({
@@ -114,6 +154,12 @@ const createTermSchema = {
     term: z.number({
       required_error: "term is required",
     }).int().positive(),
+    courseId: z.number().int().positive({
+      message: "courseId must be a positive number",
+    }),
+    sessionId: z.number().int().positive({
+      message: "sessionId must be a positive number",
+    }),
     includeElectives: z.boolean().optional(),
     remarks: z.string().optional(),
   }),
@@ -201,7 +247,14 @@ router.patch(
   validate(updateSessionSchema),
   examinationSessionController.updateExaminationSession,
 );
-router.get("/", userAuth, examinationSessionController.getExaminationSessions);
+
+router.get(
+  "/",
+  userAuth,
+  validate(getSessionsSchema),
+  examinationSessionController.getExaminationSessions,
+);
+
 router.get(
   "/single",
   userAuth,
@@ -249,12 +302,6 @@ router.get(
   examinationSessionController.getExaminationSessionAnswerSheets,
 );
 
-router.patch(
-  "/",
-  userAuth,
-  validate(updateSessionSchema),
-  examinationSessionController.updateExaminationSession,
-);
 router.delete(
   "/",
   userAuth,
@@ -296,6 +343,50 @@ router.get(
     }),
   }),
   examinationSessionController.getSessionSkuStats,
+);
+
+const dashboardSessionQuerySchema = {
+  query: z.object({
+    examinationSessionId: positiveIntegerQueryId,
+  }),
+};
+
+const timelineQuerySchema = {
+  query: z.object({
+    examinationSessionId: positiveIntegerQueryId,
+  }),
+};
+
+router.get(
+  "/planningOverview",
+  userAuth,
+  validate(dashboardSessionQuerySchema),
+  examinationSessionController.getPlanningOverview,
+);
+
+router.get(
+  "/timeline",
+  userAuth,
+  validate(timelineQuerySchema),
+  examinationSessionController.getExaminationTimeline,
+);
+
+router.get(
+  "/progressMetrics",
+  userAuth,
+  validate(dashboardSessionQuerySchema),
+  examinationSessionController.getProgressMetrics,
+);
+
+router.get(
+  "/overview",
+  userAuth,
+  validate({
+    query: z.object({
+      examinationSessionId: positiveIntegerQueryId.optional(),
+    }),
+  }),
+  examinationSessionController.getExaminationSessionOverview,
 );
 
 export default router;

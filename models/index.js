@@ -1,3 +1,8 @@
+
+import curriculumModel from "./curriculumModel.js";
+import curriculumSubjectTermMappingModel from "./curriculumSubjectTermMappingModel.js";
+import curriculumBatchMappingModel from "./curriculumBatchMappingModel.js";
+import curriculumBatchTermMappingModel from "./curriculumBatchTermMappingModel.js";
 import settingModel from "./settingModel.js";
 import assessmentPlanModel from "./assessmentPlanModel.js";
 import assessmentPlanComponentModel from "./assessmentPlanComponentModel.js";
@@ -174,6 +179,7 @@ import studentFeePaymentModel from "./studentFeePaymentModel.js";
 import paymentItemModel from "./paymentItemModel.js";
 import studentFeeInvoiceItemsModel from "./studentFeeInvoiceItemsModel.js";
 import answerSheetQrModel from "./answerSheetQrModel.js";
+import answerSheetAnnotationModel from "./answerSheetAnnotationModel.js";
 import answersheetEvalutionUserAssignmentModel from "./answersheetEvalutionUserAssignmentModel.js";
 import s3FileModel from "./s3FileModel.js";
 import pdfSplitJobModel from "./pdfSplitJobModel.js";
@@ -345,6 +351,24 @@ examinationSessionModel.hasMany(examinationSessionTermModel, {
 examinationSessionTermModel.belongsTo(examinationSessionModel, {
   foreignKey: "examination_session_id",
   as: "examinationSession",
+});
+
+examinationSessionTermModel.belongsTo(courseModel, {
+  foreignKey: "course_id",
+  as: "course",
+});
+courseModel.hasMany(examinationSessionTermModel, {
+  foreignKey: "course_id",
+  as: "examinationSessionTerms",
+});
+
+examinationSessionTermModel.belongsTo(sessionModel, {
+  foreignKey: "session_id",
+  as: "session",
+});
+sessionModel.hasMany(examinationSessionTermModel, {
+  foreignKey: "session_id",
+  as: "examinationSessionTerms",
 });
 
 // Exam Invigilator Assignment Associations
@@ -1979,6 +2003,15 @@ classStudentMapperModel.hasMany(feeInvoiceModel, {
   as: "feeStudentMapper",
 });
 
+feeInvoiceModel.belongsTo(studentModel, {
+  foreignKey: "student_id",
+  as: "feeInvoiceStudent",
+});
+studentModel.hasMany(feeInvoiceModel, {
+  foreignKey: "student_id",
+  as: "feeInvoiceStudent",
+});
+
 //fee (fee Invoice Details)
 feeInvoiceDetailModel.belongsTo(feePlanTypeModel, {
   foreignKey: "fee_plan_type_id",
@@ -3490,15 +3523,6 @@ studentModel.hasMany(internalAssessmentStudentEvaluationModel, {
   as: "internalAssessmentStudentEvaluations",
 });
 
-internalAssessmentModel.hasMany(assessmentEvaluationModel, {
-  foreignKey: "examAssessmentId",
-  as: "evaluations",
-});
-assessmentEvaluationModel.belongsTo(internalAssessmentModel, {
-  foreignKey: "examAssessmentId",
-  as: "internalAssessment",
-});
-
 studentModel.hasMany(assessmentEvaluationModel, {
   foreignKey: "studentId",
   as: "studentresult",
@@ -3506,6 +3530,33 @@ studentModel.hasMany(assessmentEvaluationModel, {
 assessmentEvaluationModel.belongsTo(studentModel, {
   foreignKey: "studentId",
   as: "studentevaluation",
+});
+
+subjectModel.hasMany(assessmentEvaluationModel, {
+  foreignKey: "subjectId",
+  as: "assessmentEvaluations",
+});
+assessmentEvaluationModel.belongsTo(subjectModel, {
+  foreignKey: "subjectId",
+  as: "subject",
+});
+
+electiveSubjectModel.hasMany(assessmentEvaluationModel, {
+  foreignKey: "electiveSubjectId",
+  as: "assessmentEvaluations",
+});
+assessmentEvaluationModel.belongsTo(electiveSubjectModel, {
+  foreignKey: "electiveSubjectId",
+  as: "electiveSubject",
+});
+
+classSectionTermModel.hasMany(assessmentEvaluationModel, {
+  foreignKey: "classSectionTermId",
+  as: "assessmentEvaluations",
+});
+assessmentEvaluationModel.belongsTo(classSectionTermModel, {
+  foreignKey: "classSectionTermId",
+  as: "classSectionTerm",
 });
 
 assessmentEvaluationModel.belongsTo(employeeModel, {
@@ -3934,6 +3985,24 @@ s3FileModel.hasOne(answerSheetQrModel, {
   as: "answerSheetQr",
 });
 
+answerSheetQrModel.hasMany(answerSheetAnnotationModel, {
+  foreignKey: "answerSheetQrId",
+  as: "annotations",
+});
+answerSheetAnnotationModel.belongsTo(answerSheetQrModel, {
+  foreignKey: "answerSheetQrId",
+  as: "answerSheetQr",
+});
+
+answerSheetAnnotationModel.belongsTo(userModel, {
+  foreignKey: "createdBy",
+  as: "createdByUser",
+});
+answerSheetAnnotationModel.belongsTo(userModel, {
+  foreignKey: "updatedBy",
+  as: "updatedByUser",
+});
+
 studentResultModel.belongsTo(examinationSessionModel, {
   foreignKey: "examinationSessionId",
   as: "examinationSession",
@@ -4151,15 +4220,6 @@ courseModel.hasMany(assessmentPlanModel, {
   as: "assessmentPlans",
 });
 
-assessmentPlanModel.belongsTo(sessionModel, {
-  foreignKey: "sessionId",
-  as: "session",
-});
-sessionModel.hasMany(assessmentPlanModel, {
-  foreignKey: "sessionId",
-  as: "assessmentPlans",
-});
-
 assessmentPlanModel.belongsTo(academicRegulationModel, {
   foreignKey: "regulationId",
   as: "academicRegulation",
@@ -4250,6 +4310,22 @@ assessmentPlanSubjectMappingModel.belongsTo(examSetupTypeModel, {
   as: "examSetupType",
 });
 
+
+curriculumModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
+courseModel.hasMany(curriculumModel, { foreignKey: 'courseId', as: 'curriculums' });
+
+curriculumModel.hasMany(curriculumSubjectTermMappingModel, { foreignKey: 'curriculumId', as: 'subjectTermMappings' });
+curriculumSubjectTermMappingModel.belongsTo(curriculumModel, { foreignKey: 'curriculumId', as: 'curriculum' });
+
+curriculumSubjectTermMappingModel.belongsTo(subjectModel, { foreignKey: 'subjectId', as: 'subject' });
+subjectModel.hasMany(curriculumSubjectTermMappingModel, { foreignKey: 'subjectId', as: 'curriculumTermMappings' });
+
+curriculumModel.hasMany(curriculumBatchMappingModel, { foreignKey: 'curriculumId', as: 'batchMappings' });
+curriculumBatchMappingModel.belongsTo(curriculumModel, { foreignKey: 'curriculumId', as: 'curriculum' });
+
+curriculumBatchMappingModel.hasMany(curriculumBatchTermMappingModel, { foreignKey: 'curriculumBatchMappingId', as: 'termMappings' });
+curriculumBatchTermMappingModel.belongsTo(curriculumBatchMappingModel, { foreignKey: 'curriculumBatchMappingId', as: 'batchMapping' });
+
 export {
   assessmentPlanModel,
   assessmentPlanComponentModel,
@@ -4302,6 +4378,7 @@ export {
   libraryCreationModel,
   libraryAuthorityModel,
   answerSheetQrModel,
+  answerSheetAnnotationModel,
   answersheetEvalutionUserAssignmentModel,
   timeTableStructureModel,
   timeTableStructureCourseModel,
@@ -4439,6 +4516,11 @@ export {
   examRoomMaterialItemModel,
   studentResultModel,
   userModel as users,
+
+  curriculumModel,
+  curriculumSubjectTermMappingModel,
+  curriculumBatchMappingModel,
+  curriculumBatchTermMappingModel,
 };
 
 import sequelize from "../database/sequelizeConfig.js";

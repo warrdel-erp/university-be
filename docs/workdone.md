@@ -147,3 +147,8 @@
 6. error in create staff.
 
 ---
+
+1. curriculum new structure. Create, map,
+2. One batch can not have more then 1 curriculum belonging to same program.
+3. show batch in create time table. (doubt)
+4. show subject as per their batch curriculum mapping in create time table cell.

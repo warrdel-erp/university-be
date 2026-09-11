@@ -40,7 +40,7 @@ export async function updateJob(id, data) {
          SET status_log = JSON_ARRAY_APPEND(
            COALESCE(status_log, JSON_ARRAY()),
            '$',
-           CAST(:entry AS JSON)
+           JSON_EXTRACT(:entry, '$')
          )
          WHERE id = :id`,
         { replacements: { id, entry }, type: QueryTypes.UPDATE }
@@ -102,7 +102,7 @@ export async function appendLog(id, entry) {
        SET status_log = JSON_ARRAY_APPEND(
          COALESCE(status_log, JSON_ARRAY()),
          '$',
-         CAST(:entry AS JSON)
+         JSON_EXTRACT(:entry, '$')
        )
        WHERE id = :id`,
       { replacements: { id, entry: fullEntry }, type: QueryTypes.UPDATE }
@@ -173,7 +173,7 @@ export async function appendFailedBatchDetail(id, batchDetail) {
        SET error_details = JSON_ARRAY_APPEND(
          COALESCE(error_details, JSON_ARRAY()),
          '$',
-         CAST(:detail AS JSON)
+         JSON_EXTRACT(:detail, '$')
        )
        WHERE id = :id`,
       {

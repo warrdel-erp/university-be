@@ -1,0 +1,118 @@
+{
+  "info": {
+    "_postman_id": "exam-session-dashboard-apis-v1",
+    "name": "Examination Session Dashboard APIs",
+    "description": "Dashboard APIs for examination progress UI.\n\nBase path: `/examinationSession`\n\n1. Planning Overview — stepper stages (Planning → Evaluation)\n2. Timeline — published exam schedules (Today's Timeline)\n3. Progress Metrics — operational health, digitization, evaluation, examScheduleId-wise details",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "GET Planning Overview",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/examinationSession/planningOverview?examinationSessionId={{examinationSessionId}}",
+          "host": ["{{base_url}}"],
+          "path": ["examinationSession", "planningOverview"],
+          "query": [
+            {
+              "key": "examinationSessionId",
+              "value": "{{examinationSessionId}}",
+              "description": "Required. Examination session id."
+            }
+          ]
+        },
+        "description": "GET /examinationSession/planningOverview?examinationSessionId=\n\nSession-level progress only (no exams array). Calculates per exam then averages:\n1. roomsAssigned 2. invigilators 3. bundles READY+ 4. hallTickets 5. answerSheets scanned+marked 6. results published\n\nResponse: percentage, totalExams, stages{}."
+      },
+      "response": []
+    },
+    {
+      "name": "GET Timeline",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/examinationSession/timeline?examinationSessionId={{examinationSessionId}}",
+          "host": ["{{base_url}}"],
+          "path": ["examinationSession", "timeline"],
+          "query": [
+            {
+              "key": "examinationSessionId",
+              "value": "{{examinationSessionId}}",
+              "description": "Required. Examination session id."
+            }
+          ]
+        },
+        "description": "GET /examinationSession/timeline?examinationSessionId=\n\nFetches all exam_schedule rows for the session (with exam_schedule_room_capacity rooms), ordered by examDate ASC, examTime ASC.\n\ncapacity / studentCount = booked student_exam_seat count for that examSchedule (not room capacity)."
+      },
+      "response": []
+    },
+    {
+      "name": "GET Progress Metrics",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/examinationSession/progressMetrics?examinationSessionId={{examinationSessionId}}",
+          "host": ["{{base_url}}"],
+          "path": ["examinationSession", "progressMetrics"],
+          "query": [
+            {
+              "key": "examinationSessionId",
+              "value": "{{examinationSessionId}}",
+              "description": "Required. Examination session id."
+            }
+          ]
+        },
+        "description": "GET /examinationSession/progressMetrics?examinationSessionId=\n\nSession-level only (no examSchedules array):\n- operations — rooms vs bundles READY+; hallTickets generated for seated students\n- digitization — students (mapped answer sheets), scanned (fileUploadId), marked (markingStatus=submit or evaluatedAt); percentage = scanned/students"
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "examinationSessionId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "examDate",
+      "value": "2026-09-08",
+      "type": "string"
+    },
+    {
+      "key": "limit",
+      "value": "20",
+      "type": "string"
+    }
+  ]
+}

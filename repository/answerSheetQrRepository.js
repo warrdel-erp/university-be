@@ -116,6 +116,12 @@ export async function getAnswerSheetQrById(id, transaction) {
         attributes: ["userId", "userName", "email"],
         required: false,
       },
+      {
+        model: model.s3FileModel,
+        as: "s3File",
+        required: false,
+        attributes: ["id", "status", "s3Key", "originalName", "mime"],
+      },
     ],
     transaction,
   });

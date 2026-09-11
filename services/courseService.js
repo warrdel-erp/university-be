@@ -8,8 +8,8 @@ export const getCourseByCourseId = async (courseId) => {
   return courseRepository.getCourseByCourseId(courseId);
 };
 
-export const getCourseWithSubjects = async (academicYearId) => {
-  return courseRepository.getCourseListWithSubjects(academicYearId);
+export const getCourseWithSubjects = async () => {
+  return courseRepository.getCourseListWithSubjects();
 };
 
 export const getCourseWithSessions = async (courseId) => {

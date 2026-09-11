@@ -72,7 +72,7 @@ function getHallTicketIncludes() {
         {
           model: model.examSetupTypeModel,
           as: "assessmentType",
-          attributes: ["examSetupTypeId", "examName", "examCode", "examCategory"],
+          attributes: ["examSetupTypeId", "examName", "examCode", "examCategory", "managedBy"],
         },
         {
           model: model.acedmicYearModel,
@@ -187,13 +187,6 @@ function buildStudentListIncludes(examinationSessionId, termIds, eligibilityWher
           attributes: ["classSectionTermId", "term"],
         },
       ],
-    },
-    {
-      model: model.classStudentMapperModel,
-      as: "studentMapped",
-      required: false,
-      where: { classSectionTermId: { [Op.in]: termIds } },
-      attributes: ["classStudentMapperId", "studentId", "classSectionTermId", "sessionId", "academicYearId"],
     },
     {
       model: model.examinationSessionEligibilityModel,
@@ -314,7 +307,7 @@ export async function findExaminationSessionById(examinationSessionId, transacti
       {
         model: model.examSetupTypeModel,
         as: "assessmentType",
-        attributes: ["examSetupTypeId", "examName", "examCode", "examCategory"],
+        attributes: ["examSetupTypeId", "examName", "examCode", "examCategory", "managedBy"],
         where: buildScope(model.examSetupTypeModel),
         required: false,
       },
@@ -363,7 +356,6 @@ export async function getSchedulesWithSubjectsForExaminationSession(examinationS
           "subjectName",
           "subjectCode",
           "courseId",
-          "term",
           "academicYearId",
         ],
         where: { ...buildScope(model.subjectModel), ...(courseId != null && { courseId }) },

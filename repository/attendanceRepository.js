@@ -695,6 +695,59 @@ export async function getStudentsBatchAttendance(classSectionTermId, filters = [
         }
 
         const termId = Number(classSectionTermId);
+
+        const termRow = await model.classSectionTermModel.findOne({
+            where: { classSectionTermId: termId },
+            include: [{
+                model: model.classSectionModel,
+                as: 'classSection',
+                attributes: ['classSectionsId', 'sessionId', 'academicYearId', 'courseId'],
+            }],
+        });
+
+        const expectedSessionId = termRow?.classSection?.sessionId;
+
+        const [historyRows, allCurrentHistory, directStudentRows] = await Promise.all([
+            model.studentClassSectionsHistoryModel.findAll({
+                attributes: ['studentId'],
+                where: {
+                    classSectionTermId: termId,
+                    status: 'current',
+                },
+                raw: true,
+            }),
+            model.studentClassSectionsHistoryModel.findAll({
+                attributes: ['studentId'],
+                where: { status: 'current' },
+                raw: true,
+            }),
+            model.studentModel.findAll({
+                attributes: ['studentId'],
+                where: {
+                    classSectionTermId: termId,
+                    ...(expectedSessionId != null && { sessionId: expectedSessionId }),
+                    deletedAt: null,
+                },
+                raw: true,
+            }),
+        ]);
+
+        const historyStudentIds = historyRows.map(r => Number(r.studentId));
+        const studentsWithAnyCurrentHistory = new Set(allCurrentHistory.map(r => Number(r.studentId)));
+
+        const candidateIds = new Set(historyStudentIds);
+        for (const r of directStudentRows) {
+            const sid = Number(r.studentId);
+            if (!studentsWithAnyCurrentHistory.has(sid) || historyStudentIds.includes(sid)) {
+                candidateIds.add(sid);
+            }
+        }
+
+        const placementStudentIds = Array.from(candidateIds);
+        if (placementStudentIds.length === 0) {
+            return [];
+        }
+
         const includes = [
             studentClassSectionTermWithSectionInclude({
                 classSectionTermId: termId,
@@ -724,7 +777,7 @@ export async function getStudentsBatchAttendance(classSectionTermId, filters = [
 
         return await scoped(model.studentModel).findAll({
             where: {
-                classSectionTermId: termId,
+                studentId: { [Op.in]: placementStudentIds },
                 deletedAt: null,
             },
             attributes: [

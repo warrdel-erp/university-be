@@ -81,6 +81,7 @@ import libraryStructure from "./router/libraryStructureRoute.js";
 import internalAssessment from "./router/internalAssessmentRoute.js";
 import jobSetting from "./router/jobSettingsRoutes.js";
 import jobs from "./router/jobRoutes.js";
+import curriculumRoute from './router/curriculumRoute.js';
 import gradingSchemas from "./router/gradingSchemasRouter.js";
 import academicRegulation from "./router/academicRegulationRoute.js";
 import assessmentPlan from "./router/assessmentPlanRoute.js";
@@ -152,6 +153,7 @@ app.use("/academicRegulation", academicRegulation);
 app.use("/assessmentPlan", assessmentPlan);
 
 app.use("/credit", credit);
+
 app.use("/evalution", evalution);
 app.use("/feeTypeCategory", feeTypeCategory);
 app.use("/feeTypeCatalog", feeTypeCatalog);
@@ -266,6 +268,7 @@ app.use("/leave-requests", leaveRequest);
 app.use("/leave-balance", leaveBalance);
 app.use("/jobSetting", jobSetting);
 app.use("/jobs", jobs);
+app.use("/api/curriculums", curriculumRoute);
 
 app.listen(PORT, () => {
   console.log(`server is running on port ${PORT}`);

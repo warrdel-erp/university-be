@@ -16,7 +16,7 @@ export async function createAssessmentPlan(req, res) {
 
 export async function getAssessmentPlans(req, res) {
   try {
-    const result = await assessmentPlanService.getAssessmentPlans(req.query, req.user);
+    const result = await assessmentPlanService.getAssessmentPlans(req.query);
     return SuccessResponse(res, 200, "Assessment plans fetched successfully", result);
   } catch (error) {
     console.error("Error in getAssessmentPlans:", error.message);
@@ -27,7 +27,9 @@ export async function getAssessmentPlans(req, res) {
 export async function getAssessmentPlanById(req, res) {
   try {
     const { assessmentPlanId } = req.params;
-    const result = await assessmentPlanService.getAssessmentPlanById(assessmentPlanId);
+    const result = await assessmentPlanService.getAssessmentPlanById(
+      assessmentPlanId,
+    );
     return SuccessResponse(res, 200, "Assessment plan fetched successfully", result);
   } catch (error) {
     console.error("Error in getAssessmentPlanById:", error.message);
@@ -151,5 +153,15 @@ export async function deleteAssessmentPlanSubjectMapping(req, res) {
   } catch (error) {
     console.error("Error in deleteAssessmentPlanSubjectMapping:", error.message);
     return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to delete subject assessment plan mapping");
+  }
+}
+
+export async function getBatchCoursesWithSessions(req, res) {
+  try {
+    const result = await assessmentPlanService.getBatchCoursesWithSessions(req.query);
+    return SuccessResponse(res, 200, "Batch courses with sessions fetched successfully", result);
+  } catch (error) {
+    console.error("Error in getBatchCoursesWithSessions:", error.message);
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to fetch batch courses with sessions");
   }
 }

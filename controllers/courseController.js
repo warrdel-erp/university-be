@@ -1,7 +1,6 @@
 import * as courseService from '../services/courseService.js';
 import * as optionsServices from '../services/optionsServices.js';
 import { ErrorResponse, SuccessResponse } from '../utility/response.js';
-import { getAcademicYearId } from '../utility/requestContext.js';
 
 export const listCourses = async (req, res) => {
   try {
@@ -25,7 +24,7 @@ export const listCourses = async (req, res) => {
 
 export const getCourseWithSubjects = async (req, res) => {
   try {
-    const result = await courseService.getCourseWithSubjects(getAcademicYearId());
+    const result = await courseService.getCourseWithSubjects();
 
     return res.status(200).json({
       status: 'success',

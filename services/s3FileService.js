@@ -20,6 +20,10 @@ export const UPLOAD_CONFIGS = {
     maxSizeBytes: 10 * 1024 * 1024 * 1024, // 10 GB (large bulk scanned exam sheets)
     allowedMimes: ["application/pdf"],
   },
+  answer_sheet: {
+    maxSizeBytes: 100 * 1024 * 1024, // 100MB per sheet / annotated PDF
+    allowedMimes: ["application/pdf"],
+  },
   general: {
     maxSizeBytes: 50 * 1024 * 1024, // 50MB
     allowedMimes: [

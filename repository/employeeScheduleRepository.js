@@ -125,6 +125,53 @@ function isRowForTeacher(row, userId) {
   return false;
 }
 
+/**
+ * Pre-query the cell IDs that belong to a specific teacher.
+ * Checks two association paths:
+ *   1. time_table_cell_teachers_date_wise.user_id
+ *   2. time_table_cell → teacher_subject_mapping.user_id
+ */
+async function getTeacherCellFilters(userId) {
+  const numericUserId = Number(userId);
+
+  const [dateWiseTeacherRows, teacherMappingCells] = await Promise.all([
+    model.timeTableCellTeachersDateWiseModel.findAll({
+      where: { userId: numericUserId },
+      attributes: ['timeTableCellDateWiseId'],
+      raw: true,
+    }),
+    model.timeTableCellModel.findAll({
+      where: { teacherSubjectMappingId: { [Op.ne]: null } },
+      include: [{
+        model: model.teacherSubjectMappingModel,
+        as: 'timeTableTeacherSubject',
+        where: { userId: numericUserId },
+        required: true,
+        attributes: [],
+      }],
+      attributes: ['timeTableCellId'],
+      raw: true,
+    }),
+  ]);
+
+  return {
+    dateWiseIds: dateWiseTeacherRows.map(r => r.timeTableCellDateWiseId),
+    cellIds: teacherMappingCells.map(r => r.timeTableCellId),
+  };
+}
+
+function buildTeacherWhereClause(dateWiseIds, cellIds) {
+  const orConditions = [];
+  if (dateWiseIds.length > 0) {
+    orConditions.push({ timeTableCellDateWiseId: { [Op.in]: dateWiseIds } });
+  }
+  if (cellIds.length > 0) {
+    orConditions.push({ timeTableCellId: { [Op.in]: cellIds } });
+  }
+  if (orConditions.length === 0) return null;
+  return orConditions.length === 1 ? orConditions[0] : { [Op.or]: orConditions };
+}
+
 function dateWiseScheduleIncludes({ sessionId, academicYearId } = {}) {
   const routineWhere = {
     is_publish: true,
@@ -318,6 +365,10 @@ export async function getTodayClassScheduleForEmployee(
   sessionId,
   pagination = {},
 ) {
+  const { dateWiseIds, cellIds } = await getTeacherCellFilters(userId);
+  const teacherWhere = buildTeacherWhereClause(dateWiseIds, cellIds);
+  if (!teacherWhere) return { rows: [], total: 0 };
+
   const includes = dateWiseScheduleIncludes({ sessionId });
   const cellInclude = includes.find((item) => item.as === "timeTableCell");
   cellInclude.include = cellInclude.include.map((nested) => {
@@ -333,8 +384,11 @@ export async function getTodayClassScheduleForEmployee(
     };
   });
 
-  const rows = await model.timeTableCellDateWiseModel.findAll({
-    where: { date: currentDate },
+  const baseWhere = { date: currentDate, ...teacherWhere };
+  const { page, limit } = pagination;
+
+  const findOptions = {
+    where: baseWhere,
     attributes: [
       "timeTableCellDateWiseId",
       "timeTableCellId",
@@ -345,24 +399,20 @@ export async function getTodayClassScheduleForEmployee(
     ],
     include: includes,
     order: [["date", "ASC"]],
+    subQuery: false,
+  };
+  if (page && limit) {
+    findOptions.limit = limit;
+    findOptions.offset = (page - 1) * limit;
+  }
+
+  const { count: total, rows } = await model.timeTableCellDateWiseModel.findAndCountAll({
+    ...findOptions,
+    distinct: true,
   });
 
-  const result = [];
-  for (const row of rows) {
-    if (isRowForTeacher(row, userId)) {
-      result.push(flattenDateWiseScheduleRow(row, userId));
-    }
-  }
-
-  const total = result.length;
-  const { page, limit } = pagination;
-  let sliced = result;
-  if (page && limit) {
-    const start = (page - 1) * limit;
-    sliced = result.slice(start, start + limit);
-  }
-
-  return { rows: sliced, total };
+  const result = rows.map(row => flattenDateWiseScheduleRow(row, Number(userId)));
+  return { rows: result, total };
 }
 
 export async function getPastClassSchedulesForEmployee(
@@ -372,8 +422,15 @@ export async function getPastClassSchedulesForEmployee(
   sessionId,
   pagination = {},
 ) {
-  const rows = await model.timeTableCellDateWiseModel.findAll({
-    where: { date: { [Op.lt]: currentDate } },
+  const { dateWiseIds, cellIds } = await getTeacherCellFilters(userId);
+  const teacherWhere = buildTeacherWhereClause(dateWiseIds, cellIds);
+  if (!teacherWhere) return { rows: [], total: 0 };
+
+  const baseWhere = { date: { [Op.lt]: currentDate }, ...teacherWhere };
+  const { page, limit } = pagination;
+
+  const findOptions = {
+    where: baseWhere,
     attributes: [
       "timeTableCellDateWiseId",
       "timeTableCellId",
@@ -384,24 +441,20 @@ export async function getPastClassSchedulesForEmployee(
     ],
     include: dateWiseScheduleIncludes({ sessionId, academicYearId }),
     order: [["date", "DESC"]],
+    subQuery: false,
+  };
+  if (page && limit) {
+    findOptions.limit = limit;
+    findOptions.offset = (page - 1) * limit;
+  }
+
+  const { count: total, rows } = await model.timeTableCellDateWiseModel.findAndCountAll({
+    ...findOptions,
+    distinct: true,
   });
 
-  const result = [];
-  for (const row of rows) {
-    if (isRowForTeacher(row, userId)) {
-      result.push(flattenDateWiseScheduleRow(row, userId));
-    }
-  }
-
-  const total = result.length;
-  const { page, limit } = pagination;
-  let sliced = result;
-  if (page && limit) {
-    const start = (page - 1) * limit;
-    sliced = result.slice(start, start + limit);
-  }
-
-  return { rows: sliced, total };
+  const result = rows.map(row => flattenDateWiseScheduleRow(row, Number(userId)));
+  return { rows: result, total };
 }
 
 export async function getUpcomingClassSchedulesForEmployee(
@@ -410,8 +463,15 @@ export async function getUpcomingClassSchedulesForEmployee(
   currentDate,
   pagination = {},
 ) {
-  const rows = await model.timeTableCellDateWiseModel.findAll({
-    where: { date: { [Op.gte]: currentDate } },
+  const { dateWiseIds, cellIds } = await getTeacherCellFilters(userId);
+  const teacherWhere = buildTeacherWhereClause(dateWiseIds, cellIds);
+  if (!teacherWhere) return { rows: [], total: 0 };
+
+  const baseWhere = { date: { [Op.gte]: currentDate }, ...teacherWhere };
+  const { page, limit } = pagination;
+
+  const findOptions = {
+    where: baseWhere,
     attributes: [
       "timeTableCellDateWiseId",
       "timeTableCellId",
@@ -422,24 +482,20 @@ export async function getUpcomingClassSchedulesForEmployee(
     ],
     include: dateWiseScheduleIncludes({ academicYearId }),
     order: [["date", "ASC"]],
+    subQuery: false,
+  };
+  if (page && limit) {
+    findOptions.limit = limit;
+    findOptions.offset = (page - 1) * limit;
+  }
+
+  const { count: total, rows } = await model.timeTableCellDateWiseModel.findAndCountAll({
+    ...findOptions,
+    distinct: true,
   });
 
-  const result = [];
-  for (const row of rows) {
-    if (isRowForTeacher(row, userId)) {
-      result.push(flattenDateWiseScheduleRow(row, userId));
-    }
-  }
-
-  const total = result.length;
-  const { page, limit } = pagination;
-  let sliced = result;
-  if (page && limit) {
-    const start = (page - 1) * limit;
-    sliced = result.slice(start, start + limit);
-  }
-
-  return { rows: sliced, total };
+  const result = rows.map(row => flattenDateWiseScheduleRow(row, Number(userId)));
+  return { rows: result, total };
 }
 
 export async function getUniqueClassSectionSubjectsForEmployee(

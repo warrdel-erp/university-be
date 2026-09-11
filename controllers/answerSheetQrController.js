@@ -734,6 +734,81 @@ export async function getMySingleAssignedScript(req, res) {
   }
 }
 
+export async function saveMyAnswerSheetAnnotation(req, res) {
+  try {
+    const data = await answerSheetQrServices.saveAnswerSheetAnnotation({
+      answerSheetQrId: Number(req.query.answerSheetQrId),
+      annotationData: req.body.annotationData,
+      status: "saved",
+      assignedToUserId: req.user.userId,
+      userId: req.user.userId,
+    });
+
+    return SuccessResponse(
+      res,
+      200,
+      "Answer sheet annotation saved successfully",
+      data,
+    );
+  } catch (error) {
+    console.error("Error in saveMyAnswerSheetAnnotation:", error);
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to save answer sheet annotation",
+    );
+  }
+}
+
+export async function submitMyAnswerSheetAnnotation(req, res) {
+  try {
+    const data = await answerSheetQrServices.saveAnswerSheetAnnotation({
+      answerSheetQrId: Number(req.query.answerSheetQrId),
+      annotationData: req.body.annotationData,
+      status: "submitted",
+      assignedToUserId: req.user.userId,
+      userId: req.user.userId,
+    });
+
+    return SuccessResponse(
+      res,
+      200,
+      "Answer sheet annotation submitted successfully",
+      data,
+    );
+  } catch (error) {
+    console.error("Error in submitMyAnswerSheetAnnotation:", error);
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to submit answer sheet annotation",
+    );
+  }
+}
+
+export async function getMyAnswerSheetAnnotation(req, res) {
+  try {
+    const data = await answerSheetQrServices.getAnswerSheetAnnotation(
+      Number(req.params.id),
+      req.user.userId,
+    );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Answer sheet annotation fetched successfully",
+      data,
+    );
+  } catch (error) {
+    console.error("Error in getMyAnswerSheetAnnotation:", error);
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch answer sheet annotation",
+    );
+  }
+}
+
 export async function getApprovedQuestionPaperByAnswerSheetId(req, res) {
   try {
     const { answerSheetQrId } = req.query;
