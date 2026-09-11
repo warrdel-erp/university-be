@@ -182,8 +182,13 @@ module.exports = {
               if (tableName.startsWith('curriculum')) continue;
 
               await queryInterface.sequelize.query(
-                `UPDATE ${tableName} SET ${columnName} = ? WHERE ${columnName} = ?`,
+                `UPDATE IGNORE ${tableName} SET ${columnName} = ? WHERE ${columnName} = ?`,
                 { replacements: [master.subject_id, dup.subject_id], transaction }
+              );
+
+              await queryInterface.sequelize.query(
+                `DELETE FROM ${tableName} WHERE ${columnName} = ?`,
+                { replacements: [dup.subject_id], transaction }
               );
             }
             // Delete duplicate subject
@@ -269,9 +274,6 @@ module.exports = {
       }
 
       // 2.5 Remove academic_year from subject model
-      // But wait, user said "at last remove academic year from remaining subjects".
-      // Let's drop the column if it exists or set it to null if we don't want to drop it yet.
-      // Dropping column:
       await queryInterface.removeColumn('subject', 'acedmic_year_id', { transaction });
 
       await transaction.commit();
@@ -286,8 +288,6 @@ module.exports = {
     await queryInterface.dropTable('curriculum_batch_mapping');
     await queryInterface.dropTable('curriculum_subject_term_mapping');
     await queryInterface.dropTable('curriculum');
-    // Note: Reversing data migration and adding acedmic_year_id back is complex, 
-    // down migration is typically destructive for the new tables.
     await queryInterface.addColumn('subject', 'acedmic_year_id', {
       type: Sequelize.INTEGER,
       allowNull: true
