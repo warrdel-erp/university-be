@@ -5725,3 +5725,94 @@ export async function deleteTimeTableTeacher(timeTableCellTeacherId) {
 
 import { getCascadingGroupRoutinesService } from "./academicGroupScopeService.js";
 export { getCascadingGroupRoutinesService };
+
+export const fillMissingSubjectsService = async (data, updatedBy) => {
+  // data is a record mapping subjectCode to an array of cellIds.
+  const subjectCodes = Object.keys(data);
+  if (subjectCodes.length === 0) {
+    return { success: true, message: "No data provided" };
+  }
+
+  // Use transaction to ensure data integrity
+  return await sequelize.transaction(async (t) => {
+    // 1. Validate subject codes and fetch their subjectIds
+    const subjects = await model.subjectModel.findAll({
+      where: { subjectCode: subjectCodes },
+      attributes: ['subjectId', 'subjectCode'],
+      transaction: t,
+    });
+
+    const subjectMap = {};
+    for (const subject of subjects) {
+      subjectMap[subject.subjectCode] = subject.subjectId;
+    }
+
+    const missingSubjects = subjectCodes.filter(code => !subjectMap[code]);
+    if (missingSubjects.length > 0) {
+      const error = new Error(`Invalid subject codes: ${missingSubjects.join(", ")}`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const allCellIds = Object.values(data).flat();
+    if (allCellIds.length === 0) {
+      return { success: true, message: "No cell IDs provided" };
+    }
+
+    // 2. Validate cell IDs and check if they are missing subjectId
+    const cells = await model.timeTableCellModel.findAll({
+      where: { timeTableCellId: allCellIds },
+      attributes: ['timeTableCellId', 'subjectId'],
+      transaction: t,
+    });
+
+    const cellMap = {};
+    for (const cell of cells) {
+      cellMap[cell.timeTableCellId] = cell;
+    }
+
+    const missingCells = allCellIds.filter(id => !cellMap[id]);
+    if (missingCells.length > 0) {
+      const error = new Error(`Invalid cell IDs: ${missingCells.join(", ")}`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const cellsWithExistingData = allCellIds.filter(id => cellMap[id].subjectId != null);
+    if (cellsWithExistingData.length > 0) {
+      const error = new Error(`Some cells already have a subjectId: ${cellsWithExistingData.join(", ")}`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // 3. Update the data
+    let updatedCellsCount = 0;
+    let updatedDateWiseCount = 0;
+    
+    for (const [subjectCode, cellIds] of Object.entries(data)) {
+      const subjectId = subjectMap[subjectCode];
+      
+      // Update time_table_cell
+      await model.timeTableCellModel.update(
+        { subjectId: subjectId, updatedBy: updatedBy },
+        { where: { timeTableCellId: cellIds }, transaction: t }
+      );
+      updatedCellsCount += cellIds.length;
+
+      // Update time_table_cell_date_wise
+      const [affectedRows] = await model.timeTableCellDateWiseModel.update(
+        { subjectId: subjectId, updatedBy: updatedBy },
+        { where: { timeTableCellId: cellIds }, transaction: t }
+      );
+      updatedDateWiseCount += affectedRows;
+      
+      
+    }
+
+    return { 
+      success: true, 
+      updatedCellsCount, 
+      updatedDateWiseCount,
+    };
+  });
+};

@@ -29,6 +29,7 @@ import {
   deleteTimeTableRoutine,
   getDateWiseCellsBySection,
   updateDateWiseCellController,
+  fillMissingSubjectsController,
 } from "../controllers/timeTableCreateController.js";
 
 const router = Router();
@@ -398,6 +399,17 @@ router.patch(
   checkAccess(PERMISSIONS.CREATE_TIME_TABLE_EDIT_ROUTINE.value, null),
   validate({ body: updateDateWiseCellSchema }),
   updateDateWiseCellController,
+);
+
+const fillMissingSubjectsSchema = z.record(z.string(), z.array(positiveIntegerId));
+
+router.post(
+  "/fill-missing-subjects",
+  userAuth,
+  // Using EDIT_ROUTINE permission since it edits time table cells
+  checkAccess(PERMISSIONS.CREATE_TIME_TABLE_EDIT_ROUTINE.value, null),
+  validate({ body: fillMissingSubjectsSchema }),
+  fillMissingSubjectsController,
 );
 
 // ---------------------------------------------------------------------------
