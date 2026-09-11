@@ -1886,7 +1886,7 @@ export async function promoteStudent(data) {
   const currentClassSectionTermId = Number(studentPlain.classSectionTermId);
   const currentAcademicYearId =
     currentSection?.academicYearId ??
-    studentPlain.studentMapped?.[0]?.academicYearId ??
+    studentPlain.studentClassSectionTerm?.classSection?.academicYearId ??
     studentPlain.studentSession?.academicYearId;
 
   const nextSessionId = targetSection.sessionId;
@@ -1901,9 +1901,7 @@ export async function promoteStudent(data) {
       data.studentId,
       {
         classSectionTermId: targetClassSectionTermId,
-        academicYearId: targetSection.academicYearId,
         sessionId: nextSessionId,
-        classStudentMapperId: studentPlain.studentMapped?.[0]?.classStudentMapperId,
       },
       transaction,
     );

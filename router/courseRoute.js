@@ -23,12 +23,7 @@ const listCoursesSchema = z.object({
     .transform((val) => (val ? parseInt(val) : undefined)),
 });
 
-const courseListWithSubjectsSchema = z.object({
-  instituteId: z
-    .string()
-    .regex(/^\d+$/, "Institute Id must be a number")
-    .transform((val) => parseInt(val)),
-});
+const courseListWithSubjectsSchema = z.object({});
 
 const classSectionsGroupedSchema = z.object({
   courseId: z

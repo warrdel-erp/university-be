@@ -364,6 +364,11 @@ const studentModel = sequelize.define(
             allowNull: true,
             field: 'c_city',
         },
+        batchYear: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'batch_year'
+        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,
@@ -406,6 +411,24 @@ const studentModel = sequelize.define(
         paranoid: true
     }
 );
+
+studentModel.beforeValidate(async (student, options) => {
+    if (!student.batchYear && student.classSectionTermId) {
+        const cst = await sequelize.models.class_section_term.findByPk(student.classSectionTermId, {
+            include: [{ model: sequelize.models.class_sections, as: 'classSection' }],
+            transaction: options?.transaction
+        });
+        
+        if (cst && cst.classSection) {
+            const year = cst.classSection.year || 1;
+            student.batchYear = 2026 - (year - 1);
+        } else {
+            student.batchYear = 2026;
+        }
+    } else if (!student.batchYear) {
+        student.batchYear = 2026;
+    }
+});
 
 studentModel.scopeConfig = { university: true, institute: true, academicYear: true };
 

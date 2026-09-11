@@ -60,9 +60,8 @@ async function resolveSelectionFilters(selections, options = {}) {
 
 function studentGroupFromSchedule(item) {
   const courseId = item.subjectSchedule?.courseId;
-  const term = item.term ?? item.subjectSchedule?.term;
-  const academicYearId =
-    item.academicYearId ?? item.subjectSchedule?.academicYearId;
+  const term = item.term;
+  const academicYearId = item.academicYearId;
   const sessionId = item.sessionId;
 
   if (
@@ -251,6 +250,17 @@ async function buildUnscheduledSchedules(
       type: null,
       duration: null,
       examinationSessionSlotId: null,
+      subjectSchedule: {
+        subjectId: sub.subjectId,
+        subjectName: sub.subjectName || null,
+        subjectCode: sub.subjectCode || null,
+        courseId: sub.courseId || null,
+        term: sub.term,
+        courseInfo: {
+          courseName: sub.courseName || null,
+          termType: sub.termType || null,
+        },
+      },
       studentCount: sub.studentCount || 0,
       courseName: sub.courseName || null,
       termType: sub.termType || null,

@@ -29,6 +29,7 @@ import {
   deleteTimeTableRoutine,
   getDateWiseCellsBySection,
   updateDateWiseCellController,
+  fillMissingSubjectsController,
 } from "../controllers/timeTableCreateController.js";
 
 const router = Router();

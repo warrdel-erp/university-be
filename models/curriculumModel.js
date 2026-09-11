@@ -1,45 +1,56 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import campus from "./campusModel.js";
+import course from "./courseModel.js";
 import university from "./universityModel.js";
+import instituteModel from "./instituteModel.js";
 import users from "./userModel.js";
 
-const instituteModel = sequelize.define(
-    'institute',
+const curriculumModel = sequelize.define(
+    'curriculum',
     {
-        instituteId: {
+        curriculumId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'institute_id'
+            field: 'curriculum_id'
         },
-        campusId: {
+        name: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            field: 'name'
+        },
+        courseId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'campus_id',
+            field: 'course_id',
             references: {
-                model: 'campus',
-                key: 'campus_id'
+                model: course,
+                key: 'course_id'
             }
         },
         universityId: {
             type: DataTypes.INTEGER,
-            allowNull: true,
+            allowNull: false,
             field: 'university_id',
             references: {
                 model: university,
                 key: 'university_id'
             }
         },
-        instituteName: {
-            type: DataTypes.STRING,
+        instituteId: {
+            type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'institute_name'
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
         },
-        instituteCode: {
-            type: DataTypes.STRING,
+        isActive: {
+            type: DataTypes.BOOLEAN,
             allowNull: false,
-            field: 'institute_code'
+            defaultValue: true,
+            field: 'is_active'
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -55,36 +66,20 @@ const instituteModel = sequelize.define(
         },
         createdBy: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'created_by',
             references: {
-                model: 'users',
+                model: users,
                 key: 'user_id'
             }
-        },
-        // updatedBy: {
-        //     type: DataTypes.INTEGER,
-        //     allowNull: false,
-        //     field: 'updated_by',
-        //     references: {
-        //         model: users,
-        //         key: 'user_id'
-        //     }
-        // },
-        deletedAt: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'deleted_at'
-        },
+        }
     },
     {
-        tableName: 'institute',
-        timestamps: true,
-        paranoid: true
+        tableName: 'curriculum',
+        timestamps: true
     }
 );
 
+curriculumModel.scopeConfig = { university: true, institute: true };
 
-instituteModel.scopeConfig = { university: true, institute: false, academicYear: false, campus: false };
-
-export default instituteModel;
+export default curriculumModel;

@@ -28,6 +28,7 @@ function scopedFeeInvoiceParentInclude() {
         "updatedBy",
         "fee_type_id",
         "class_student_mapper_id",
+        "student_id",
       ],
     },
     required: true,

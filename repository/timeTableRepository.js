@@ -738,10 +738,10 @@ export async function getTimetableListPrintRows(filters = {}) {
             [sequelize.fn('MAX', sequelize.col('time_table_routine.ending_date')), 'endingDate'],
             [
                 sequelize.literal(`(
-                    SELECT COUNT(DISTINCT csm.student_id)
-                    FROM class_student_mapper AS csm
-                    WHERE csm.class_section_term_id = time_table_routine.class_section_term_id
-                    
+                    SELECT COUNT(DISTINCT s.student_id)
+                    FROM students AS s
+                    WHERE s.class_section_term_id = time_table_routine.class_section_term_id
+                    AND s.deleted_at IS NULL
                 )`),
                 'totalStudent'
             ],

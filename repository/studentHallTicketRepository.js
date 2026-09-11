@@ -189,13 +189,6 @@ function buildStudentListIncludes(examinationSessionId, termIds, eligibilityWher
       ],
     },
     {
-      model: model.classStudentMapperModel,
-      as: "studentMapped",
-      required: false,
-      where: { classSectionTermId: { [Op.in]: termIds } },
-      attributes: ["classStudentMapperId", "studentId", "classSectionTermId", "sessionId", "academicYearId"],
-    },
-    {
       model: model.examinationSessionEligibilityModel,
       as: "examinationSessionEligibilities",
       required: requireEligibility,
@@ -363,7 +356,6 @@ export async function getSchedulesWithSubjectsForExaminationSession(examinationS
           "subjectName",
           "subjectCode",
           "courseId",
-          "term",
           "academicYearId",
         ],
         where: { ...buildScope(model.subjectModel), ...(courseId != null && { courseId }) },
