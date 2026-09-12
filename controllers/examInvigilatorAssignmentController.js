@@ -126,13 +126,19 @@ export async function getAssignmentsByUserId(req, res) {
 
 export async function getAssignmentsByRoom(req, res) {
     try {
-        const { classRoomSectionId, examinationSessionId, examDate, examinationSessionSlotId } = req.query;
-        if (!classRoomSectionId) {
-            return ErrorResponse(res, 400, "Missing required parameter: classRoomSectionId");
-        }
+        const {
+            classRoomSectionId,
+            examinationSessionId,
+            examDate,
+            examinationSessionSlotId,
+        } = req.query;
         const result = await examInvigilatorAssignmentServices.getAssignmentsByRoom(
             Number(classRoomSectionId),
-            { examinationSessionId, examDate, examinationSessionSlotId }
+            {
+                examinationSessionId: Number(examinationSessionId),
+                examDate,
+                examinationSessionSlotId: Number(examinationSessionSlotId),
+            },
         );
         return SuccessResponse(res, 200, "Room assignment details fetched successfully", result);
     } catch (error) {

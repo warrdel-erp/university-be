@@ -3,7 +3,11 @@ import * as userRoleRepository from "../repository/userRoleRepository.js";
 import { Op } from "sequelize";
 import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
-import { getStudentBySectionId, getCourseByCourseId, getEmployeeByuserId } from "../repository/courseRepository.js";
+import {
+  getStudentBySectionId,
+  getCourseByCourseId,
+  getEmployeeByuserId,
+} from "../repository/courseRepository.js";
 var salt = bcrypt.genSaltSync(10);
 import sequelize from "../database/sequelizeConfig.js";
 import { getSingleRoleDetails } from "../repository/roleRepository.js";
@@ -80,7 +84,10 @@ const formatEmployeeDetailsDeep = (employee) => {
     new Map(
       subjects
         .filter((s) => s.courseId && s.courseName)
-        .map((s) => [s.courseId, { courseId: s.courseId, courseName: s.courseName }]),
+        .map((s) => [
+          s.courseId,
+          { courseId: s.courseId, courseName: s.courseName },
+        ]),
     ).values(),
   );
   // Sections
@@ -171,11 +178,16 @@ export async function adminRegisterStudentAndEmployee(info) {
       userName: item.employeeName,
       universityId: 1,
       password,
-      phone: item.address.phoneNumber || item.address.mobileNumber || null,
-      email: item.address.personal_email || item.address.officalEmailId || null,
-      uniqueId: dummyPassword,
+      phone:
+        item.personalMobileNumber ||
+        item.mobileNumber ||
+        item.office?.officialMobileNumber ||
+        null,
+      email: item.personalEmail || item.email || null,
+      uniqueId: uuidv4(),
       role,
       dummyPassword,
+      employeeId: item.employeeId,
     };
   };
 
@@ -186,20 +198,38 @@ export async function adminRegisterStudentAndEmployee(info) {
     let results;
 
     if (role === "Student") {
-      results = await registerRepository.adminRegisterStudentAndEmployee(studentData, transaction);
+      results = await registerRepository.adminRegisterStudentAndEmployee(
+        studentData,
+        transaction,
+      );
       const userIds = results.map((user) => user.dataValues.userId);
 
       for (let i = 0; i < userIds.length; i++) {
-        await registerRepository.adminUser({ userId: userIds[i], studentId: studentData[i].studentId }, transaction);
-        await registerRepository.updateStudent(studentData[i].studentId, { userId: userIds[i] }, transaction);
+        await registerRepository.adminUser(
+          { userId: userIds[i], studentId: studentData[i].studentId },
+          transaction,
+        );
+        await registerRepository.updateStudent(
+          studentData[i].studentId,
+          { userId: userIds[i] },
+          transaction,
+        );
       }
 
       const roleName = await getSingleRoleDetails(roleId);
       for (let i = 0; i < userIds.length; i++) {
-        await userRoleService.assignRoleToUser(userIds[i], roleName?.dataValues?.role || role, [], transaction);
+        await userRoleService.assignRoleToUser(
+          userIds[i],
+          roleName?.dataValues?.role || role,
+          [],
+          transaction,
+        );
       }
     } else if (role != "Student") {
-      results = await registerRepository.adminRegisterStudentAndEmployee(employeeData, transaction);
+      results = await registerRepository.adminRegisterStudentAndEmployee(
+        employeeData,
+        transaction,
+      );
       const userIds = results.map((user) => user.dataValues.userId);
 
       const userEmployeeMapping = userIds.map((userId, index) => ({
@@ -209,12 +239,21 @@ export async function adminRegisterStudentAndEmployee(info) {
 
       for (const { userId, employeeId } of userEmployeeMapping) {
         await registerRepository.adminUser({ userId, employeeId }, transaction);
-        await registerRepository.updateEmployee(employeeId, { userId }, transaction);
+        await registerRepository.updateEmployee(
+          employeeId,
+          { userId },
+          transaction,
+        );
       }
 
       const roleName = await getSingleRoleDetails(roleId);
       for (let i = 0; i < userIds.length; i++) {
-        await userRoleService.assignRoleToUser(userIds[i], roleName?.dataValues?.role || role, [], transaction);
+        await userRoleService.assignRoleToUser(
+          userIds[i],
+          roleName?.dataValues?.role || role,
+          [],
+          transaction,
+        );
       }
     } else {
       throw new Error("Invalid role");
@@ -229,13 +268,21 @@ export async function adminRegisterStudentAndEmployee(info) {
   }
 }
 
-export async function dataSaveUerRolePermission(userIds, roleId, permissions, transaction) {
+export async function dataSaveUerRolePermission(
+  userIds,
+  roleId,
+  permissions,
+  transaction,
+) {
   const dataToSave = [];
   const uIds = Array.isArray(userIds) ? userIds : [userIds];
 
   uIds.forEach((userId) => {
     permissions.forEach((perm) => {
-      const resourceIds = perm.resourceIds && perm.resourceIds.length > 0 ? perm.resourceIds : [null];
+      const resourceIds =
+        perm.resourceIds && perm.resourceIds.length > 0
+          ? perm.resourceIds
+          : [null];
       resourceIds.forEach((resId) => {
         dataToSave.push({
           userId,
@@ -272,7 +319,11 @@ export async function getAdminRegisterStudentAndEmployee() {
 }
 
 export async function emptyPassword(email, transaction) {
-  return await registerRepository.changePassword(email, { dummyPassword: "" }, transaction);
+  return await registerRepository.changePassword(
+    email,
+    { dummyPassword: "" },
+    transaction,
+  );
 }
 
 export async function changePassword(info, transaction) {
@@ -294,7 +345,15 @@ export async function getUserRoleAndPermissionsByUserId(userId) {
 
 export const studentRegister = async (registerStudentData, transaction) => {
   try {
-    const { studentId, email, phoneNumber, scholarNumber, role, universityId, roleId } = registerStudentData;
+    const {
+      studentId,
+      email,
+      phoneNumber,
+      scholarNumber,
+      role,
+      universityId,
+      roleId,
+    } = registerStudentData;
 
     const dummyPassword = uuidv4();
     const password = bcrypt.hashSync(dummyPassword, salt);
@@ -312,17 +371,28 @@ export const studentRegister = async (registerStudentData, transaction) => {
     };
 
     // Register the student and employee
-    const results = await registerRepository.adminRegisterStudentAndEmployee(data, transaction);
+    const results = await registerRepository.adminRegisterStudentAndEmployee(
+      data,
+      transaction,
+    );
 
     const userId = results.dataValues.userId;
 
     // Associate user and student
-    await registerRepository.adminUser({ userId: userId, studentId: studentId }, transaction);
+    await registerRepository.adminUser(
+      { userId: userId, studentId: studentId },
+      transaction,
+    );
 
     // Roles are dynamic — only assign a role if a valid roleId was resolved.
     if (roleId != null) {
       const roleName = await getSingleRoleDetails(roleId);
-      await userRoleService.assignRoleToUser(userId, roleName?.dataValues?.role || role, [], transaction);
+      await userRoleService.assignRoleToUser(
+        userId,
+        roleName?.dataValues?.role || role,
+        [],
+        transaction,
+      );
     }
 
     return userId;
@@ -332,10 +402,21 @@ export const studentRegister = async (registerStudentData, transaction) => {
   }
 };
 
-export const employeeRegister = async (employeePersonalDetail, employeeRegisterData, transaction) => {
+export const employeeRegister = async (
+  employeePersonalDetail,
+  employeeRegisterData,
+  transaction,
+) => {
   try {
     const { personalEmail, mobileNumber } = employeePersonalDetail;
-    const { universityId, roleId, employeeName, employeeId, instituteId, isTeacher } = employeeRegisterData;
+    const {
+      universityId,
+      roleId,
+      employeeName,
+      employeeId,
+      instituteId,
+      isTeacher,
+    } = employeeRegisterData;
     const dummyPassword = uuidv4();
     const password = bcrypt.hashSync(dummyPassword, salt);
     const data = {
@@ -352,13 +433,19 @@ export const employeeRegister = async (employeePersonalDetail, employeeRegisterD
     };
 
     // Register the student and employee
-    const results = await registerRepository.adminRegisterStudentAndEmployee(data, transaction);
+    const results = await registerRepository.adminRegisterStudentAndEmployee(
+      data,
+      transaction,
+    );
 
     const userId = results.dataValues.userId;
 
     // Associate user and student
     if (employeeId) {
-      await registerRepository.adminUser({ userId: userId, employeeId: employeeId }, transaction);
+      await registerRepository.adminUser(
+        { userId: userId, employeeId: employeeId },
+        transaction,
+      );
     }
 
     return userId;
@@ -367,7 +454,6 @@ export const employeeRegister = async (employeePersonalDetail, employeeRegisterD
     throw new Error("Failed to register employee");
   }
 };
-
 
 export async function changeStatus(userId) {
   try {
@@ -388,21 +474,32 @@ export const sendLink = async (email) => {
     const user = await registerRepository.findEmailByEmail(email);
     if (!user) throw new Error("User not found");
 
-    const jwtSecret = process.env.JWT_SECRET || "warrdelUniversityERPWarrdelUniversityERP";
+    const jwtSecret =
+      process.env.JWT_SECRET || "warrdelUniversityERPWarrdelUniversityERP";
     const baseUrl = process.env.FRONTEND_URL;
 
     if (!baseUrl) {
-      throw new Error("FRONTEND_URL is not configured in environment variables");
+      throw new Error(
+        "FRONTEND_URL is not configured in environment variables",
+      );
     }
 
-    const token = jwt.sign({ email: user.email }, jwtSecret, { expiresIn: "5m" });
+    const token = jwt.sign({ email: user.email }, jwtSecret, {
+      expiresIn: "5m",
+    });
 
     const resetLink = `${baseUrl}/password-change?token=${token}&email=${encodeURIComponent(user.email)}`;
 
-    const emailResponse = await sendEmail(user.email, "Password Reset", resetLink);
+    const emailResponse = await sendEmail(
+      user.email,
+      "Password Reset",
+      resetLink,
+    );
 
     if (!emailResponse?.messageId) {
-      throw new Error("Failed to send email. Please check email address or SMTP credentials.");
+      throw new Error(
+        "Failed to send email. Please check email address or SMTP credentials.",
+      );
     }
 
     const userId = user.dataValues.userId;
@@ -424,17 +521,26 @@ export const forgotSendLink = async (email) => {
     const user = await registerRepository.findEmailByEmail(email);
     if (!user) throw new Error("User not found");
 
-    const jwtSecret = process.env.JWT_SECRET || "warrdelUniversityERPWarrdelUniversityERP";
+    const jwtSecret =
+      process.env.JWT_SECRET || "warrdelUniversityERPWarrdelUniversityERP";
     const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
-    const token = jwt.sign({ email: user.email }, jwtSecret, { expiresIn: "5m" });
+    const token = jwt.sign({ email: user.email }, jwtSecret, {
+      expiresIn: "5m",
+    });
 
     const resetLink = `${baseUrl}/forget-password-change?token=${token}&email=${encodeURIComponent(user.email)}`;
 
-    const emailResponse = await sendEmail(user.email, "Forgot Password Reset", resetLink);
+    const emailResponse = await sendEmail(
+      user.email,
+      "Forgot Password Reset",
+      resetLink,
+    );
 
     if (!emailResponse?.messageId) {
-      throw new Error("Failed to send email. Please check email address or SMTP credentials.");
+      throw new Error(
+        "Failed to send email. Please check email address or SMTP credentials.",
+      );
     }
 
     return {
@@ -449,13 +555,18 @@ export const forgotSendLink = async (email) => {
 
 export const getAllUsers = async (page = 1, limit = 10, search = "") => {
   try {
-    const { totalCount, users } = await registerRepository.getAllUsers(page, limit, search);
+    const { totalCount, users } = await registerRepository.getAllUsers(
+      page,
+      limit,
+      search,
+    );
     const userIds = [];
     for (const user of users) {
       userIds.push(user.userId);
     }
 
-    const rolesByUserId = await userRoleRepository.findDistinctRolesByUserIds(userIds);
+    const rolesByUserId =
+      await userRoleRepository.findDistinctRolesByUserIds(userIds);
     const usersWithRoles = [];
 
     for (const user of users) {
@@ -492,25 +603,25 @@ export async function getMyDetails(userId) {
   // Fetch distinct roles from user_role_permission_scope
   const roleEntries = await model.userRolePermissionModel.findAll({
     attributes: [
-      [sequelize.fn('DISTINCT', sequelize.col('userRole.role')), 'roleName'],
-      [sequelize.col('userRole.role_id'), 'roleId']
+      [sequelize.fn("DISTINCT", sequelize.col("userRole.role")), "roleName"],
+      [sequelize.col("userRole.role_id"), "roleId"],
     ],
     where: { user_id: userId },
     include: [
       {
         model: model.roleModel,
-        as: 'userRole',
-        attributes: []
-      }
+        as: "userRole",
+        attributes: [],
+      },
     ],
-    raw: true
+    raw: true,
   });
 
   userData.roles = roleEntries
-    .filter(entry => entry.roleName != null && entry.roleName !== '')
-    .map(entry => ({
+    .filter((entry) => entry.roleName != null && entry.roleName !== "")
+    .map((entry) => ({
       roleId: entry.roleId,
-      roleName: entry.roleName
+      roleName: entry.roleName,
     }));
 
   return userData;
@@ -529,46 +640,68 @@ async function assignNewRolesAndPermissions(userId, transaction) {
   // handled within seedLegacyRoleAndPermissions now
 }
 
-async function seedLegacyRoleAndPermissions(userId, universityId, instituteId, transaction) {
+async function seedLegacyRoleAndPermissions(
+  userId,
+  universityId,
+  instituteId,
+  transaction,
+) {
   // 1. Find or create the CLIENT_ADMIN role
   let clientAdminRole = await model.roleModel.findOne({
     where: { role: "CLIENT_ADMIN", instituteId },
-    transaction
+    transaction,
   });
 
   if (!clientAdminRole) {
-    clientAdminRole = await model.roleModel.create({ role: "CLIENT_ADMIN", instituteId: instituteId }, { transaction });
+    clientAdminRole = await model.roleModel.create(
+      { role: "CLIENT_ADMIN", instituteId: instituteId },
+      { transaction },
+    );
   }
 
   // 2. Build full permission template for CLIENT_ADMIN
   //    MASTER_SECTION gets UNIVERSITY scope; all other permissions get INSTITUTE scope
   const rolePermissionRows = [];
   for (const [key, valueObj] of Object.entries(PERMISSIONS)) {
-    const isMasterSection = valueObj.value === PERMISSIONS.MASTER_SECTION.value
-      || valueObj.parentPermission === 'MASTER_SECTION';
+    const isMasterSection =
+      valueObj.value === PERMISSIONS.MASTER_SECTION.value ||
+      valueObj.parentPermission === "MASTER_SECTION";
     rolePermissionRows.push({
       roleId: clientAdminRole.roleId,
       permission: valueObj.value,
       scope: isMasterSection ? SCOPES.UNIVERSITY : SCOPES.INSTITUTE,
-      resourceId: isMasterSection ? universityId : instituteId
+      resourceId: isMasterSection ? universityId : instituteId,
     });
   }
 
   // 4. Sync role_permissions template
-  await model.rolePermissionMappingModel.destroy({ where: { roleId: clientAdminRole.roleId }, transaction });
-  await model.rolePermissionMappingModel.bulkCreate(rolePermissionRows, { transaction });
+  await model.rolePermissionMappingModel.destroy({
+    where: { roleId: clientAdminRole.roleId },
+    transaction,
+  });
+  await model.rolePermissionMappingModel.bulkCreate(rolePermissionRows, {
+    transaction,
+  });
 
   // 5. Assign the CLIENT_ADMIN role to the user (copies all non-perm_access_inst rows)
-  await userRoleService.assignRoleToUser(userId, clientAdminRole.roleId, [], transaction);
+  await userRoleService.assignRoleToUser(
+    userId,
+    clientAdminRole.roleId,
+    [],
+    transaction,
+  );
 
   // 6. Explicitly insert UNIVERSITY-scoped perm_access_inst with the real roleId
-  await model.userRolePermissionModel.create({
-    userId,
-    roleId: clientAdminRole.roleId,
-    permission: PERMISSIONS.ACCESS_INSTITUTE.value,
-    scope: SCOPES.UNIVERSITY,
-    resourceId: universityId
-  }, { transaction });
+  await model.userRolePermissionModel.create(
+    {
+      userId,
+      roleId: clientAdminRole.roleId,
+      permission: PERMISSIONS.ACCESS_INSTITUTE.value,
+      scope: SCOPES.UNIVERSITY,
+      resourceId: universityId,
+    },
+    { transaction },
+  );
 
   return clientAdminRole.roleId;
 }
@@ -671,7 +804,12 @@ export async function initialSetup(info) {
     await assignNewRolesAndPermissions(user.userId, transaction);
 
     // 9. Assign legacy role, permissions, and role-permissions mapping
-    const clientAdminRoleId = await seedLegacyRoleAndPermissions(user.userId, university.universityId, institute.instituteId, transaction);
+    const clientAdminRoleId = await seedLegacyRoleAndPermissions(
+      user.userId,
+      university.universityId,
+      institute.instituteId,
+      transaction,
+    );
 
     await user.update({ defaultRoleId: clientAdminRoleId }, { transaction });
 
@@ -786,7 +924,11 @@ async function buildGrantedAccessFromPermissions(user, userId, accessEntries) {
     }
   }
 
-  if (!hasUniversityAccess && allowedCampusIds.size === 0 && allowedInstituteIds.size === 0) {
+  if (
+    !hasUniversityAccess &&
+    allowedCampusIds.size === 0 &&
+    allowedInstituteIds.size === 0
+  ) {
     return buildGrantedAccessFromUserContext(user, userId);
   }
 
@@ -849,7 +991,9 @@ async function buildGrantedAccessFromPermissions(user, userId, accessEntries) {
   }
 
   if (universityIds.size > 0) {
-    university = await model.universityModel.findByPk(Array.from(universityIds)[0]);
+    university = await model.universityModel.findByPk(
+      Array.from(universityIds)[0],
+    );
   } else {
     university = await model.universityModel.findByPk(user.universityId);
   }
@@ -912,7 +1056,7 @@ export async function giveFullAccess(info) {
 
   if (!instituteId) {
     const institute = await model.instituteModel.findOne({
-      where: { universityId }
+      where: { universityId },
     });
     if (institute) {
       instituteId = institute.instituteId;
@@ -927,13 +1071,13 @@ export async function giveFullAccess(info) {
     // 1. Find or create the CLIENT_ADMIN role
     let clientAdminRole = await model.roleModel.findOne({
       where: { role: "CLIENT_ADMIN", instituteId },
-      transaction
+      transaction,
     });
 
     if (!clientAdminRole) {
       clientAdminRole = await model.roleModel.create(
         { role: "CLIENT_ADMIN", instituteId },
-        { transaction }
+        { transaction },
       );
     }
 
@@ -949,18 +1093,23 @@ export async function giveFullAccess(info) {
         roleId,
         permission: valueObj.value,
         scope: isMasterSection ? SCOPES.UNIVERSITY : SCOPES.INSTITUTE,
-        resourceId: isMasterSection ? universityId : instituteId
+        resourceId: isMasterSection ? universityId : instituteId,
       });
     }
 
     // 3. Sync role_permissions template
-    await model.rolePermissionMappingModel.destroy({ where: { roleId }, transaction });
-    await model.rolePermissionMappingModel.bulkCreate(rolePermissionRows, { transaction });
+    await model.rolePermissionMappingModel.destroy({
+      where: { roleId },
+      transaction,
+    });
+    await model.rolePermissionMappingModel.bulkCreate(rolePermissionRows, {
+      transaction,
+    });
 
     // 4. Clear existing user permissions in user_role_permission_scope for this user
     await model.userRolePermissionModel.destroy({
       where: { userId },
-      transaction
+      transaction,
     });
 
     // 5. Assign CLIENT_ADMIN role to user
@@ -973,18 +1122,18 @@ export async function giveFullAccess(info) {
         roleId,
         permission: PERMISSIONS.ACCESS_INSTITUTE.value,
         scope: SCOPES.UNIVERSITY,
-        resourceId: universityId
+        resourceId: universityId,
       },
-      { transaction }
+      { transaction },
     );
 
     // 7. Update user defaultRoleId and defaultInstituteId
     await user.update(
       {
         defaultRoleId: roleId,
-        defaultInstituteId: instituteId
+        defaultInstituteId: instituteId,
       },
-      { transaction }
+      { transaction },
     );
 
     await transaction.commit();
@@ -996,8 +1145,8 @@ export async function giveFullAccess(info) {
         userId,
         roleId,
         universityId,
-        instituteId
-      }
+        instituteId,
+      },
     };
   } catch (error) {
     await transaction.rollback();

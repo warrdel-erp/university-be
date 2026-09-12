@@ -125,6 +125,24 @@ export async function getAllEmployee(campusId, instituteId, options = {}) {
                     attributes: { exclude: ["createdAt", "updatedAt"] },
                 },
                 {
+                    model: model.employeeAddressModel.unscoped(),
+                    as: 'address',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    required: false,
+                },
+                {
+                    model: model.s3FileModel.unscoped(),
+                    as: 'photoFile',
+                    attributes: ['id', 'entityType', 's3Key', 'size', 'mime', 'originalName', 'status'],
+                    required: false,
+                },
+                {
+                    model: model.s3FileModel.unscoped(),
+                    as: 'signatureFile',
+                    attributes: ['id', 'entityType', 's3Key', 'size', 'mime', 'originalName', 'status'],
+                    required: false,
+                },
+                {
                     model: model.employeeMetaDataModel.unscoped(),
                     as: "employeeMetaData",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
@@ -272,7 +290,27 @@ function employeeDetailIncludes() {
             as: 'documents',
             separate: true,
             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-            include: [employeeCodeMasterInclude('codeMasterQualificationDocuments')],
+            include: [
+                employeeCodeMasterInclude('codeMasterQualificationDocuments'),
+                {
+                    model: model.s3FileModel.unscoped(),
+                    as: 'attachmentFile',
+                    attributes: ['id', 'entityType', 's3Key', 'size', 'mime', 'originalName', 'status'],
+                    required: false,
+                },
+            ],
+        },
+        {
+            model: model.s3FileModel.unscoped(),
+            as: 'photoFile',
+            attributes: ['id', 'entityType', 's3Key', 'size', 'mime', 'originalName', 'status'],
+            required: false,
+        },
+        {
+            model: model.s3FileModel.unscoped(),
+            as: 'signatureFile',
+            attributes: ['id', 'entityType', 's3Key', 'size', 'mime', 'originalName', 'status'],
+            required: false,
         },
         {
             model: model.employeeExperianceModel.unscoped(),

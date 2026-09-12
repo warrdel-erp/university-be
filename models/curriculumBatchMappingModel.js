@@ -174,4 +174,31 @@ curriculumBatchMappingModel.afterBulkCreate(async (instances, options) => {
     }
 });
 
+/** Auto-delete term rows that were auto-created with this batch mapping. */
+async function destroyTermMappings(instance, options) {
+    await sequelize.models.curriculum_batch_term_mapping.destroy({
+        where: { curriculumBatchMappingId: instance.curriculumBatchMappingId },
+        transaction: options?.transaction,
+    });
+}
+
+curriculumBatchMappingModel.beforeDestroy(async (instance, options) => {
+    await destroyTermMappings(instance, options);
+});
+
+curriculumBatchMappingModel.beforeBulkDestroy(async (options) => {
+    const rows = await curriculumBatchMappingModel.findAll({
+        where: options.where,
+        attributes: ['curriculumBatchMappingId'],
+        transaction: options?.transaction,
+    });
+    if (rows.length === 0) return;
+
+    const ids = rows.map((row) => row.curriculumBatchMappingId);
+    await sequelize.models.curriculum_batch_term_mapping.destroy({
+        where: { curriculumBatchMappingId: { [Op.in]: ids } },
+        transaction: options?.transaction,
+    });
+});
+
 export default curriculumBatchMappingModel;

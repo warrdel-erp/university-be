@@ -310,6 +310,7 @@ export async function getExaminationSessionSlots(
   );
 
   // filterStatus=all also includes subjects that still need scheduling.
+  // Count them once (same as /count) — do not duplicate under every slot.
   const includeUnscheduled =
     !filterStatus || filterStatus === EXAM_SCHEDULE_FILTER_STATUS.ALL;
   const unscheduled = includeUnscheduled
@@ -320,14 +321,15 @@ export async function getExaminationSessionSlots(
     : [];
 
   const result = [];
-  for (const slot of slots) {
+  for (let i = 0; i < slots.length; i++) {
+    const slot = slots[i];
     const schedules = [];
     for (const schedule of slot.schedules) {
       if (matchesFilterStatus(schedule, filterStatus)) {
         schedules.push(schedule);
       }
     }
-    if (includeUnscheduled) {
+    if (includeUnscheduled && i === 0) {
       for (const subject of unscheduled) {
         schedules.push(subject);
       }
@@ -335,6 +337,14 @@ export async function getExaminationSessionSlots(
     result.push({
       ...slot,
       schedules,
+    });
+  }
+
+  if (includeUnscheduled && slots.length === 0 && unscheduled.length > 0) {
+    result.push({
+      examinationSessionSlotId: null,
+      examinationSessionId: Number(examinationSessionId),
+      schedules: unscheduled,
     });
   }
 

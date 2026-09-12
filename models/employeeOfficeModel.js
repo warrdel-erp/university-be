@@ -61,10 +61,15 @@ const employeeOfficeModel = sequelize.define(
             allowNull: true,
             field: 'employee_file_number'
         },
-        officeMailId: {
+        officialEmailId: {
             type: DataTypes.STRING,
             allowNull: true,
-            field: 'office_mail_id'
+            field: 'official_email_id'
+        },
+        officialMobileNumber: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'official_mobile_number'
         },
         istActive:{
             type: DataTypes.BOOLEAN,
