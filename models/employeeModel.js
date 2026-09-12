@@ -6,6 +6,7 @@ import users from "./userModel.js";
 import role from "./roleModel.js";
 import department from "./departmentModel.js";
 import universityModel from "./universityModel.js";
+import s3FileModel from "./s3FileModel.js";
 
 const employeeModel = sequelize.define(
     'employee',
@@ -62,14 +63,22 @@ const employeeModel = sequelize.define(
             }
         },
         employeePhoto: {
-            type: DataTypes.JSON,
+            type: DataTypes.INTEGER,
             allowNull: true,
             field: 'employee_photo',
+            references: {
+                model: s3FileModel,
+                key: 'id',
+            },
         },
         employeeSignature: {
-            type: DataTypes.JSON,
+            type: DataTypes.INTEGER,
             allowNull: true,
             field: 'employee_signature',
+            references: {
+                model: s3FileModel,
+                key: 'id',
+            },
         },
         employeeCode: {
             type: DataTypes.STRING,

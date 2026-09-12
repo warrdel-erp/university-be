@@ -35,6 +35,7 @@ import { ROLES } from '../const/roles.js';
 import moment from 'moment';
 import { getTenantStore } from '../utility/requestContext.js';
 import { decimalAdd } from '../utility/decimalMoney.js';
+import { getDownloadSignedUrl } from '../utility/s3Helper.js';
 
 async function generateEmployeeNumber(campusId, instituteId) {
   const getCampusCodeDetail = await getCampusCode(campusId);
@@ -88,7 +89,8 @@ function normalizeAchievements(rows = []) {
   return (Array.isArray(rows) ? rows : [])
     .map((row) => ({
       ...row,
-      achievementCategory: row?.achievementCategory ?? row?.achievement_category ?? null
+      achievementCategory: row?.achievementCategory ?? row?.achievement_category ?? null,
+      title: row?.title ?? row?.achievementName ?? null
     }))
     .filter((row) => Number.isInteger(Number(row?.achievementCategory)))
     .map((row) => ({
@@ -97,11 +99,60 @@ function normalizeAchievements(rows = []) {
     }));
 }
 
+function extractS3FileId(val) {
+  if (val == null || val === "" || val === "null" || val === 0 || val === "0") return null;
+  if (typeof val === "object") {
+    if (val.id != null) return extractS3FileId(val.id);
+    if (val.fileUploadId != null) return extractS3FileId(val.fileUploadId);
+    return null;
+  }
+  const num = Number(val);
+  return Number.isInteger(num) && num > 0 ? num : null;
+}
+
+async function linkEmployeeS3Files(fileIds = [], employeeId, companyId, transaction) {
+  const validIds = [
+    ...new Set(
+      fileIds
+        .map((id) => Number(id))
+        .filter((id) => Number.isInteger(id) && id > 0)
+    ),
+  ];
+  if (validIds.length === 0) return;
+
+  await model.s3FileModel.update(
+    {
+      status: "active",
+      entityType: "employee_document",
+      entityId: String(employeeId),
+      ...(companyId ? { companyId: Number(companyId) } : {}),
+    },
+    {
+      where: { id: validIds },
+      transaction,
+    }
+  );
+}
+
+async function enrichS3FileRecord(fileRecord) {
+  if (!fileRecord || typeof fileRecord !== "object") return fileRecord || null;
+  const plain = toPlain(fileRecord);
+  if (plain?.s3Key && !plain?.url) {
+    try {
+      plain.url = await getDownloadSignedUrl(plain.s3Key);
+    } catch (err) {
+      console.warn("Failed to generate download url for s3Key:", plain.s3Key, err.message);
+    }
+  }
+  return plain;
+}
+
 function normalizeDocumentAttachments(rows = []) {
   return (Array.isArray(rows) ? rows : [])
     .map((row) => ({
       ...row,
-      document: row?.document ?? row?.documentType ?? null
+      document: row?.document ?? row?.documentType ?? null,
+      attachment: extractS3FileId(row?.attachment)
     }))
     .filter((row) => Number.isInteger(Number(row?.document)));
 }
@@ -131,6 +182,8 @@ async function resolveOfficeEntry(item = {}) {
 }
 
 function mapEmployment(item = {}, officeEntry = {}, addressEntry = {}) {
+  const officialMail = officeEntry?.officialEmailId || officeEntry?.officalEmailId || officeEntry?.officeMailId || "";
+  const officialMob = officeEntry?.officialMobileNumber || officeEntry?.officalMobileNumber || "";
   return {
     departmentId: item?.departmentId ?? null,
     departmentName: item?.employeeDepartment?.departmentName || "",
@@ -138,7 +191,8 @@ function mapEmployment(item = {}, officeEntry = {}, addressEntry = {}) {
     joiningDate: officeEntry?.joiningDate || "",
     noticePeriod: officeEntry?.noticePeriod ?? "",
     employeeFileNumber: officeEntry?.employeeFileNumber || "",
-    officeMailId: officeEntry?.officeMailId || addressEntry?.officalEmailId || "",
+    officialEmailId: officialMail,
+    officialMobileNumber: officialMob,
     officeExtensionNumber: officeEntry?.officeExtensionNumber || "",
     employeeRank: officeEntry?.employeeRank || ""
   };
@@ -170,162 +224,183 @@ function mapLongLeaveForEmployeeDetails(rows = []) {
   }));
 }
 
+function safeParseJsonField(val, fallback = null) {
+  if (val == null) return fallback;
+  if (typeof val === 'object') return val;
+  if (typeof val === 'string') {
+    try {
+      return JSON.parse(val);
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+}
+
 export async function addEmployee(data, files, createdBy, roleId) {
-  const { universityId, instituteId: contextInstituteId } = getTenantStore();
-  const instituteId = data.instituteId ?? contextInstituteId;
+  const { universityId, instituteId, campusId: contextCampusId } = getTenantStore();
+  let campusId = contextCampusId;
+
+  if (!campusId && instituteId) {
+    const instRecord = await model.instituteModel.findByPk(instituteId, { attributes: ["campusId"] });
+    if (instRecord) {
+      campusId = instRecord.campusId ?? instRecord.get?.("campusId");
+    }
+  }
+
+  data.instituteId = instituteId;
+  data.campusId = campusId;
 
   const transaction = await sequelize.transaction();
   try {
-    const address = data.address ? JSON.parse(data.address) : null;
-    const corsAddress = data.corsAddress ? JSON.parse(data.corsAddress) : null;
-    const office = data.office ? JSON.parse(data.office) : null;
-    const normalizedOffice = office ? {
+    const address = safeParseJsonField(data.address, null);
+    const corsAddress = safeParseJsonField(data.corsAddress, null);
+    const office = safeParseJsonField(data.office, null) || {};
+    const officialEmail = data.officialEmailId ?? office.officialEmailId ?? null;
+    const officialMobile = data.officialMobileNumber ?? office.officialMobileNumber ?? null;
+    const normalizedOffice = {
       ...office,
-      employeeRank: office.employeeRank ?? data.salutation ?? data.designation ?? null
-    } : null;
+      employeeRank: office.employeeRank ?? data.salutation ?? data.designation ?? null,
+      officialEmailId: officialEmail,
+      officialMobileNumber: officialMobile,
+    };
 
-    const roleData = data.roleData ? JSON.parse(data.roleData) : null;
-    const skills = data.skill ? JSON.parse(data.skill) : [];
-    const documents = data.documents ? JSON.parse(data.documents) : [];
-    const qualifications = data.qualification ? JSON.parse(data.qualification) : [];
-    const experiences = data.experience ? JSON.parse(data.experience) : [];
-    const achievementsRaw = data.achievements ? JSON.parse(data.achievements) : [];
+    const skills = safeParseJsonField(data.skill, []);
+    const documents = safeParseJsonField(data.documents, []);
+    const qualifications = safeParseJsonField(data.qualification, []);
+    const experiences = safeParseJsonField(data.experience, []);
+    const achievementsRaw = safeParseJsonField(data.achievements, []);
     const achievements = normalizeAchievements(achievementsRaw);
-    const wards = data.ward ? JSON.parse(data.ward) : [];
-    const activitiesRaw = data.activity ? JSON.parse(data.activity) : [];
+    const wards = safeParseJsonField(data.ward, []);
+    const activitiesRaw = safeParseJsonField(data.activity, []);
     const activities = normalizeActivities(activitiesRaw);
-    const references = data.reference ? JSON.parse(data.reference) : [];
-    const research = data.research ? JSON.parse(data.research) : [];
-    const longLeavesRaw = data.longLeave ? JSON.parse(data.longLeave) : [];
+    const references = safeParseJsonField(data.reference, []);
+    const research = safeParseJsonField(data.research, []);
+    const longLeavesRaw = safeParseJsonField(data.longLeave, []);
     const longLeaves = normalizeLongLeaves(longLeavesRaw);
 
 
-    // const roleDetails = await getSingleRoleDetails(roleId)
-    // const roleName = roleDetails.dataValues.role
-    // let finalRegisterRoleId = roleId;
-
-    // if (roleName?.trim().toLowerCase() === 'admin') {
-    //   finalRegisterRoleId = 13;
-    // }
-
     const employeePersonalDetail = {
-      personalEmail: data.officalEmailId,
-      mobileNumber: address?.mobileNumber
-    }
-
-    // Detect if this is the legacy TEACHER role (string name, not a numeric roleId)
-    const isTeacherRole = String(roleData?.role ?? '').trim().toUpperCase() === 'TEACHER';
+      personalEmail: officialEmail || address?.personalEmail || null,
+      mobileNumber: address?.mobileNumber || officialMobile || null,
+    };
 
     const employeeRegisterData = {
       universityId,
       employeeName: data.employeeName,
       userId: null,
       instituteId,
-      isTeacher: isTeacherRole,
-    }
+      roleId: null,
+      isTeacher: false,
+    };
 
     const userId = await employeeRegister(employeePersonalDetail, employeeRegisterData, transaction);
 
-    // Add user role entry
-    // Teachers are a special backward-compatibility case: no entry in user_role,
-    // they are identified by isTeacher = true on the users record.
-    if (!isTeacherRole) {
-      if (roleData) {
-        const isNumericRoleId = roleData.role != null && !isNaN(Number(roleData.role));
-        if (isNumericRoleId) {
-          await userRoleService.assignRoleToUser(userId, Number(roleData.role), roleData.permissions, transaction);
-        }
-      } else {
-        throw new Error("Role data is required");
-      }
-    }
-
-    // Add employee 
-    data.createdBy = createdBy
+    // Add employee
+    data.createdBy = createdBy;
     data.userId = userId;
     data.roleId = null;
-    data.employeeCode = await generateEmployeeNumber(data.campusId, data.instituteId)
+    data.employeePhoto = extractS3FileId(data.employeePhoto);
+    data.employeeSignature = extractS3FileId(data.employeeSignature);
+    data.employeeCode = await generateEmployeeNumber(data.campusId, data.instituteId);
     delete data.department;
-    if (data.departmentId != null && data.departmentId !== "" && data.departmentId !== 0 && data.departmentId !== "null" && data.departmentId !== "undefined") {
-      const parsedDeptId = Number(data.departmentId);
-      if (!isNaN(parsedDeptId) && parsedDeptId > 0) {
-        const deptExists = await model.departmentModel.findByPk(parsedDeptId, { transaction });
-        data.departmentId = deptExists ? parsedDeptId : null;
-      } else {
-        data.departmentId = null;
-      }
-    } else {
-      data.departmentId = null;
-    }
+    data.departmentId = data.departmentId ? Number(data.departmentId) : null;
+
     const employee = await employeeRepository.addEmployee(data, transaction);
     const employeeId = employee.dataValues.employeeId;
 
     // Associate user and employee
-    await registerRepository.adminUser({ userId: userId, employeeId: employeeId }, transaction);
+    await registerRepository.adminUser({ userId, employeeId }, transaction);
 
-    const { campusId, employeeName, employmentType } = employee.dataValues
+    const { campusId, employeeName } = employee.dataValues;
 
-
-    // image upload
-    if (files) {
+    // image / files upload and AWS S3 JSON URLs handling
+    if (files && typeof files === 'object' && Object.keys(files).length > 0) {
       const uploadPromises = Object.keys(files).map(async key => {
         const file = files[key];
         const s3Response = await uploadFile(file);
         const url = s3Response.Location;
-        const data = { key, url, userId, createdBy };
-        await employeeFilesRepository.addEmployeeFiles(data, transaction);
+        const fileData = { key, url, userId, createdBy };
+        await employeeFilesRepository.addEmployeeFiles(fileData, transaction);
       });
 
       await Promise.all(uploadPromises);
     }
 
+    const jsonFiles = safeParseJsonField(data.files ?? data.employeeFiles, null);
+    if (jsonFiles) {
+      if (Array.isArray(jsonFiles)) {
+        for (const fileItem of jsonFiles) {
+          if (fileItem?.url) {
+            await employeeFilesRepository.addEmployeeFiles({
+              key: fileItem.key || fileItem.fieldName || "document",
+              url: fileItem.url,
+              userId,
+              createdBy,
+            }, transaction);
+          }
+        }
+      } else if (typeof jsonFiles === 'object') {
+        for (const [key, url] of Object.entries(jsonFiles)) {
+          if (url) {
+            await employeeFilesRepository.addEmployeeFiles({
+              key,
+              url: typeof url === 'string' ? url : url?.url,
+              userId,
+              createdBy,
+            }, transaction);
+          }
+        }
+      }
+    }
+
     // Add employee address
-    const addressDetail = await employeeAddressRepository.addAddress({
-      userId,
-      employeeId,
-      createdBy,
-      ...address
-    }, transaction);
-    const { personalEmail, mobileNumber, officalMobileNumber, officalEmailId } = addressDetail.dataValues
+    if (address) {
+      await employeeAddressRepository.addAddress({
+        userId,
+        employeeId,
+        createdBy,
+        pAddress: address.pAddress || null,
+        pPincode: address.pPincode || null,
+        pCountry: address.pCountry || null,
+        pState: address.pState || null,
+        pCity: address.pCity || null,
+        mobileNumber: address.mobileNumber || null,
+        personalEmail: address.personalEmail || null,
+      }, transaction);
+    }
 
-    // Normalize correspondence address keys for FE compatibility
-    const normalizedCorsAddress = corsAddress ? {
-      ...corsAddress,
-      address: corsAddress.address ?? corsAddress.cAddress ?? null,
-      pincode: corsAddress.pincode ?? corsAddress.cPincode ?? null
-    } : null;
-
-    // Add employee cor-address
-    await employeeAddressRepository.addCorsAddress({
-      userId,
-      employeeId,
-      createdBy,
-      ...normalizedCorsAddress
-    }, transaction);
+    // Add employee cor-address (employee_cor_address: address, pincode, cCity, cState, cCountry)
+    if (corsAddress) {
+      await employeeAddressRepository.addCorsAddress({
+        userId,
+        employeeId,
+        createdBy,
+        address: corsAddress.address ?? corsAddress.cAddress ?? null,
+        pincode: corsAddress.pincode ?? corsAddress.cPincode ?? null,
+        cCity: corsAddress.cCity || null,
+        cState: corsAddress.cState || null,
+        cCountry: corsAddress.cCountry || null,
+      }, transaction);
+    }
 
     // Add employee office details
     await employeeOfficeRepository.addOfficeDetails({
       userId,
       employeeId,
       createdBy,
-      ...normalizedOffice
+      ...normalizedOffice,
     }, transaction);
-
-    // Add employee roles
-    // for (const roles of role) {
-    //     await employeeRoleRepository.addEmployeeRole({
-    //         userId,
-    //         createdBy,
-    //         roles
-    //     }, transaction);
-    // }
 
     // Add employee skills
     for (const skill of skills) {
       await employeeSkillRepository.addEmployeeSkill({
+        employeeId,
         userId,
         createdBy,
-        ...skill
+        ...skill,
+        name: skill.name ?? skill.skill,
+        proficiencyLevel: skill.proficiencyLevel ?? skill.proficiency,
       }, transaction);
     }
 
@@ -333,11 +408,20 @@ export async function addEmployee(data, files, createdBy, roleId) {
     const validDocsForQualification = normalizeDocumentAttachments(documents || []).filter((doc) => doc?.receivedDate);
     for (const document of validDocsForQualification) {
       await employeeQualificationRepository.addEmployeeQualification({
+        employeeId,
         userId,
         createdBy,
         ...document
       }, transaction);
     }
+
+    // Link and activate S3 files for employeePhoto, employeeSignature, and document attachments
+    const employeeS3FileIds = [
+      data.employeePhoto,
+      data.employeeSignature,
+      ...validDocsForQualification.map((d) => d?.attachment)
+    ].filter(Boolean);
+    await linkEmployeeS3Files(employeeS3FileIds, employeeId, data.campusId || data.instituteId, transaction);
 
     // Add employee qualifications (frontend "qualification" tab) -> employee_documents table
     const validQualificationsForDocuments = (qualifications || [])
@@ -349,6 +433,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
       }));
     for (const qualification of validQualificationsForDocuments) {
       await employeeDocumentRepository.addEmployeeDocuments({
+        employeeId,
         userId,
         createdBy,
         ...qualification
@@ -358,6 +443,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
     // Add employee experiences
     for (const experience of experiences) {
       await employeeExperianceRepository.addEmployeeExperiance({
+        employeeId,
         userId,
         createdBy,
         ...experience
@@ -367,6 +453,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
     // Add employee achievements
     for (const achievement of achievements) {
       await employeeAchivementRepository.addEmployeeAchievement({
+        employeeId,
         userId,
         createdBy,
         ...achievement
@@ -376,6 +463,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
     // Add employee wards
     for (const ward of wards) {
       await employeeWardRepository.addEmployeeWard({
+        employeeId,
         userId,
         createdBy,
         ...ward
@@ -385,6 +473,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
     // Add employee activities
     for (const activity of activities) {
       await employeeActivityRepository.addEmployeeActivity({
+        employeeId,
         userId,
         createdBy,
         ...activity
@@ -394,6 +483,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
     // Add employee references
     for (const reference of references) {
       await employeeReferenceRepository.addEmployeeReference({
+        employeeId,
         userId,
         createdBy,
         ...reference
@@ -403,6 +493,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
     // Add employee research
     for (const researchItem of research) {
       await employeeResearchRepository.addEmployeeResearch({
+        employeeId,
         userId,
         createdBy,
         ...researchItem
@@ -412,6 +503,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
     // Add employee long leaves
     for (const longLeave of longLeaves) {
       await employeeLongLeaveRepository.addEmployeeLongLeave({
+        employeeId,
         userId,
         createdBy,
         ...longLeave
@@ -420,11 +512,9 @@ export async function addEmployee(data, files, createdBy, roleId) {
 
     //  allDropDownData
     if (data.allDropDownData) {
-      const allDropDownDataObject = typeof data.allDropDownData === 'string'
-        ? JSON.parse(data.allDropDownData)
-        : data.allDropDownData;
+      const allDropDownDataObject = safeParseJsonField(data.allDropDownData, null);
 
-      if (typeof allDropDownDataObject === 'object' && Array.isArray(allDropDownDataObject.type) && Array.isArray(allDropDownDataObject.code)) {
+      if (typeof allDropDownDataObject === 'object' && allDropDownDataObject !== null && Array.isArray(allDropDownDataObject.type) && Array.isArray(allDropDownDataObject.code)) {
         const type = allDropDownDataObject.type;
         const code = allDropDownDataObject.code;
 
@@ -446,9 +536,9 @@ export async function addEmployee(data, files, createdBy, roleId) {
     }
 
 
-    if (roleData?.role?.trim().toLowerCase() === 'admin') {
-      const data = { campusId, instituteId, universityId, createdBy, updatedBy: createdBy, headName: employeeName, mobileNumber, alternateNumber: officalMobileNumber, registerEmail: officalEmailId, alternateEmail: personalEmail, isAdmin: true, designation: 'Admin' }
-      await addHead(data, transaction)
+    if (data.isAdmin === true) {
+      const headData = { campusId, instituteId, universityId, createdBy, updatedBy: createdBy, headName: employeeName, mobileNumber: mobileNumber || officialMobile, alternateNumber: officialMobile || mobileNumber, registerEmail: officialEmail || personalEmail, alternateEmail: personalEmail, isAdmin: true, designation: 'Admin' };
+      await addHead(headData, transaction);
     }
     // Commit transaction
     await transaction.commit();
@@ -458,6 +548,361 @@ export async function addEmployee(data, files, createdBy, roleId) {
     await transaction.rollback();
     console.error('Error adding employee data:', error);
     throw new Error('Failed to add employee data');
+  }
+};
+
+export async function updateEmployee(identifier, data, files, updatedBy, createdBy) {
+
+  const transaction = await sequelize.transaction();
+  try {
+    const existingEmployee = await employeeRepository.assertScopedEmployee(identifier, { transaction });
+    if (!existingEmployee) {
+      throw new Error(`Employee not found for id: ${identifier}`);
+    }
+    const employeeId = existingEmployee.employeeId;
+    const userId = existingEmployee.userId;
+
+    const address = safeParseJsonField(data.address, null);
+    const corsAddress = safeParseJsonField(data.corsAddress, null);
+    const office = safeParseJsonField(data.office, null);
+    const officialEmail = data.officialEmailId ?? office?.officialEmailId;
+    const officialMobile = data.officialMobileNumber ?? office?.officialMobileNumber;
+    const normalizedOffice = (office || officialEmail !== undefined || officialMobile !== undefined) ? {
+      ...(office || {}),
+      employeeRank: office?.employeeRank ?? data.salutation ?? data.designation ?? null,
+      ...(officialEmail !== undefined ? { officialEmailId: officialEmail } : {}),
+      ...(officialMobile !== undefined ? { officialMobileNumber: officialMobile } : {}),
+    } : null;
+
+
+    // array
+    const skills = safeParseJsonField(data.skill, []);
+    const documents = safeParseJsonField(data.documents, []);
+    const qualifications = safeParseJsonField(data.qualification, []);
+    const experiences = safeParseJsonField(data.experience, []);
+    const achievementsRaw = safeParseJsonField(data.achievements, []);
+    const achievements = normalizeAchievements(achievementsRaw);
+    const wards = safeParseJsonField(data.ward, []);
+    const activitiesRaw = safeParseJsonField(data.activity, []);
+    const activities = normalizeActivities(activitiesRaw);
+    const references = safeParseJsonField(data.reference, []);
+    const research = safeParseJsonField(data.research, []);
+    const longLeavesRaw = safeParseJsonField(data.longLeave, []);
+    const longLeaves = normalizeLongLeaves(longLeavesRaw);
+    const allDropDownData = safeParseJsonField(data.allDropDownData, { type: [], code: [] });
+
+    //  Update main employee table
+    const {
+      roleId: _excludedRoleId,
+      campusId: _excludedCampusId,
+      instituteId: _excludedInstituteId,
+      department: _legacyDepartment,
+      ...employeeUpdateData
+    } = data;
+    if (employeeUpdateData.employeePhoto !== undefined) {
+      employeeUpdateData.employeePhoto = extractS3FileId(employeeUpdateData.employeePhoto);
+    }
+    if (employeeUpdateData.employeeSignature !== undefined) {
+      employeeUpdateData.employeeSignature = extractS3FileId(employeeUpdateData.employeeSignature);
+    }
+    if (employeeUpdateData.departmentId !== undefined) {
+      employeeUpdateData.departmentId = employeeUpdateData.departmentId ? Number(employeeUpdateData.departmentId) : null;
+    }
+    await employeeRepository.updateEmployee(employeeId, {
+      ...employeeUpdateData,
+      roleId: null,  // role_id in employee table is always null; role is managed via user_roles table
+      updatedBy
+    }, transaction);
+
+    // Sync officialEmailId with user table email
+    const updatedEmail = data.officialEmailId ?? office?.officialEmailId;
+    if (updatedEmail && userId) {
+      await registerRepository.updateUser(userId, { email: updatedEmail }, transaction);
+    }
+
+    //  Upload/update files (supports both binary uploads and AWS S3 JSON URLs)
+    if (files && typeof files === 'object' && Object.keys(files).length > 0) {
+      const uploadPromises = Object.keys(files).map(async key => {
+        const file = files[key];
+        const s3Response = await uploadFile(file);
+        const url = s3Response.Location;
+        const fileData = { key, url, employeeId, userId, updatedBy };
+        await employeeFilesRepository.updateEmployee(employeeId, fileData, transaction);
+      });
+      await Promise.all(uploadPromises);
+    }
+
+    const jsonFiles = safeParseJsonField(data.files ?? data.employeeFiles, null);
+    if (jsonFiles) {
+      if (Array.isArray(jsonFiles)) {
+        for (const fileItem of jsonFiles) {
+          if (fileItem?.url) {
+            await employeeFilesRepository.updateEmployee(employeeId, {
+              key: fileItem.key || fileItem.fieldName || "document",
+              url: fileItem.url,
+              employeeId,
+              userId,
+              updatedBy,
+            }, transaction);
+          }
+        }
+      } else if (typeof jsonFiles === 'object') {
+        for (const [key, url] of Object.entries(jsonFiles)) {
+          if (url) {
+            await employeeFilesRepository.updateEmployee(employeeId, {
+              key,
+              url: typeof url === 'string' ? url : url?.url,
+              employeeId,
+              userId,
+              updatedBy,
+            }, transaction);
+          }
+        }
+      }
+    }
+
+    //  Update Address
+    if (address) {
+      const addressPayload = {
+        updatedBy,
+        pAddress: address.pAddress || null,
+        pPincode: address.pPincode || null,
+        pCountry: address.pCountry || null,
+        pState: address.pState || null,
+        pCity: address.pCity || null,
+        mobileNumber: address.mobileNumber || null,
+        personalEmail: address.personalEmail || null,
+      };
+
+      const addressUpdateResult = await employeeAddressRepository.updateAddress(
+        employeeId,
+        addressPayload,
+        transaction
+      );
+      const updatedAddressCount = Array.isArray(addressUpdateResult) ? (addressUpdateResult[0] || 0) : 0;
+      if (updatedAddressCount === 0) {
+        await employeeAddressRepository.addAddress({
+          employeeId,
+          userId,
+          createdBy,
+          ...addressPayload,
+        }, transaction);
+      }
+    }
+
+    if (corsAddress) {
+      const corsAddressPayload = {
+        updatedBy,
+        address: corsAddress.address ?? corsAddress.cAddress ?? null,
+        pincode: corsAddress.pincode ?? corsAddress.cPincode ?? null,
+        cCity: corsAddress.cCity || null,
+        cState: corsAddress.cState || null,
+        cCountry: corsAddress.cCountry || null,
+      };
+      const corsUpdateResult = await employeeAddressRepository.updateCorsAddress(
+        employeeId,
+        corsAddressPayload,
+        transaction
+      );
+      const updatedCorsCount = Array.isArray(corsUpdateResult) ? (corsUpdateResult[0] || 0) : 0;
+      if (updatedCorsCount === 0) {
+        await employeeAddressRepository.addCorsAddress({
+          employeeId,
+          userId,
+          createdBy,
+          ...corsAddressPayload,
+        }, transaction);
+      }
+    }
+
+    //  Update Office details
+    if (normalizedOffice) {
+      const officePayload = {
+        updatedBy,
+        ...normalizedOffice
+      };
+
+      const existingOffice = await employeeOfficeRepository.getEmployeeOfficeByEmployeeId(employeeId);
+
+      if (existingOffice?.employeeOfficeId) {
+        await employeeOfficeRepository.updateOfficeDetailsById(
+          existingOffice.employeeOfficeId,
+          officePayload,
+          transaction
+        );
+      } else {
+        await employeeOfficeRepository.addOfficeDetails({
+          employeeId,
+          userId,
+          createdBy,
+          ...normalizedOffice
+        }, transaction);
+      }
+    }
+
+    // Update Skills:
+    // If FE sends skill key (including []), treat it as source of truth and refresh.
+    const hasSkillField = Object.prototype.hasOwnProperty.call(data, 'skill');
+    const hasDocumentsField = Object.prototype.hasOwnProperty.call(data, 'documents');
+    const hasQualificationField = Object.prototype.hasOwnProperty.call(data, 'qualification');
+    const hasExperienceField = Object.prototype.hasOwnProperty.call(data, 'experience');
+    const hasAchievementsField = Object.prototype.hasOwnProperty.call(data, 'achievements');
+    const hasWardField = Object.prototype.hasOwnProperty.call(data, 'ward');
+    const hasActivityField = Object.prototype.hasOwnProperty.call(data, 'activity');
+    const hasReferenceField = Object.prototype.hasOwnProperty.call(data, 'reference');
+    const hasResearchField = Object.prototype.hasOwnProperty.call(data, 'research');
+    const hasLongLeaveField = Object.prototype.hasOwnProperty.call(data, 'longLeave');
+    if (hasSkillField) {
+      await employeeSkillRepository.refreshEmployeeSkills(
+        employeeId,
+        skills,
+        createdBy,
+        updatedBy,
+        transaction
+      );
+    }
+
+    // Update Documents (frontend "documents" tab) -> employee_qualification table
+    const validDocsForQualification = normalizeDocumentAttachments(documents || []).filter((doc) => doc?.receivedDate);
+    if (hasDocumentsField) {
+      await employeeQualificationRepository.refreshEmployeeQualifications(
+        employeeId,
+        validDocsForQualification,
+        createdBy,
+        updatedBy,
+        transaction
+      );
+    }
+
+    // Link and activate S3 files for employeePhoto, employeeSignature, and document attachments
+    const employeeUpdateS3FileIds = [
+      employeeUpdateData.employeePhoto,
+      employeeUpdateData.employeeSignature,
+      ...(hasDocumentsField ? validDocsForQualification.map((d) => d?.attachment) : []),
+    ].filter(Boolean);
+    await linkEmployeeS3Files(employeeUpdateS3FileIds, employeeId, data.campusId || data.instituteId, transaction);
+
+    // Update Qualifications (frontend "qualification" tab) -> employee_documents table
+    const validQualificationsForDocuments = (qualifications || [])
+      .filter((q) => q?.qualifications && q?.degreeLevel)
+      .map((q) => ({
+        ...q,
+        stream: q?.stream ?? q?.degreeLevel
+      }));
+    if (hasQualificationField) {
+      await employeeDocumentRepository.refreshEmployeeDocuments(
+        employeeId,
+        validQualificationsForDocuments,
+        createdBy,
+        updatedBy,
+        transaction
+      );
+    }
+
+    // Update Experiences
+    if (hasExperienceField) {
+      await employeeExperianceRepository.refreshEmployeeExperiences(
+        employeeId,
+        experiences,
+        createdBy,
+        updatedBy,
+        transaction
+      );
+    }
+
+    // Update Achievements
+    if (hasAchievementsField) {
+      await employeeAchivementRepository.refreshEmployeeAchievements(
+        employeeId,
+        achievements,
+        createdBy,
+        updatedBy,
+        transaction
+      );
+    }
+
+    // Update Wards
+    if (hasWardField) {
+      await employeeWardRepository.refreshEmployeeWards(
+        employeeId,
+        wards,
+        createdBy,
+        updatedBy,
+        transaction
+      );
+    }
+
+    // Update Activities
+    if (hasActivityField) {
+      await employeeActivityRepository.refreshEmployeeActivities(
+        employeeId,
+        activities,
+        createdBy,
+        updatedBy,
+        transaction
+      );
+    }
+
+    // Update References
+    if (hasReferenceField) {
+      await employeeReferenceRepository.refreshEmployeeReferences(
+        employeeId,
+        references,
+        createdBy,
+        updatedBy,
+        transaction
+      );
+    }
+
+    // Update Research
+    if (hasResearchField) {
+      await employeeResearchRepository.refreshEmployeeResearch(
+        employeeId,
+        research,
+        createdBy,
+        updatedBy,
+        transaction
+      );
+    }
+
+    //  Update Long Leaves
+    if (hasLongLeaveField) {
+      await employeeLongLeaveRepository.refreshEmployeeLongLeaves(
+        employeeId,
+        longLeaves,
+        createdBy,
+        updatedBy,
+        transaction
+      );
+    }
+
+    //  Dropdown data
+    if (data.allDropDownData) {
+      const allDropDownDataObject = safeParseJsonField(data.allDropDownData, null);
+
+      if (allDropDownDataObject && Array.isArray(allDropDownDataObject.type) && Array.isArray(allDropDownDataObject.code)) {
+        const type = allDropDownDataObject.type;
+        const code = allDropDownDataObject.code;
+
+        const entries = type.map((types, index) => ({
+          employeeId,
+          userId,
+          createdBy,
+          updatedBy,
+          types,
+          codes: code[index]
+        }));
+
+        await employeeMetaDataRepository.updateEmployeeMetaData(entries, transaction);
+      }
+    }
+
+    await transaction.commit();
+    return { message: "Employee data successfully updated" };
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error updating employee data:", error);
+    throw new Error("Failed to update employee data");
   }
 };
 // addEmployee(data,1)
@@ -489,22 +934,20 @@ async function formatEmployeeListItem(row) {
   const item = toPlain(row) || {};
   const authUser = item?.user || item?.userEmployee || {};
   const mappedRoleData = mapRoleData(authUser);
-  const officeEntry = await resolveOfficeEntry(item);
+  const officeEntry = Array.isArray(item?.office) ? (item.office[0] || {}) : (item?.office || {});
   const addressEntry = Array.isArray(item?.address) ? (item.address[0] || {}) : (item?.address || {});
   const employment = mapEmployment(item, officeEntry, addressEntry);
 
+  const photoFile = await enrichS3FileRecord(item?.photoFile);
+  const signatureFile = await enrichS3FileRecord(item?.signatureFile);
+
   return {
-    employeeId: item?.employeeId,
-    userId: item?.userId,
-    employeeCode: item?.employeeCode,
-    employeeName: item?.employeeName || "",
-    dateOfBirth: item?.dateOfBirth || "",
-    departmentId: item?.departmentId ?? null,
+    ...item,
+    photoFile,
+    signatureFile,
+    employeePhotoUrl: photoFile?.url || null,
+    employeeSignatureUrl: signatureFile?.url || null,
     departmentName: item?.employeeDepartment?.departmentName || "",
-    employmentType: item?.employmentType || "",
-    pickColor: item?.pickColor || "",
-    campusId: item?.campusId,
-    instituteId: item?.instituteId,
     roleId: item?.roleId || mappedRoleData?.role || "",
     roleData: mappedRoleData,
     role: mappedRoleData?.role ? [mappedRoleData.role] : (item?.role || []),
@@ -553,61 +996,44 @@ export async function getSingleEmployeeDetails(userId) {
   return Promise.all((result || []).map(async (row) => {
     const item = toPlain(row) || {};
     const authUser = item?.user || item?.userEmployee || {};
-
     const mappedRoleData = mapRoleData(authUser);
 
-    const mappedQualification = Array.isArray(item?.qualification) ? item.qualification : [];
-    const mappedDocuments = Array.isArray(item?.documents) ? item.documents : [];
-    const officeEntry = await resolveOfficeEntry(item);
-    const referenceList = (Array.isArray(item?.reference) && item.reference.length > 0)
-      ? item.reference
-      : (await getEmployeeReferenceDetails(item?.userId))?.map(toPlain) || [];
-    const skillList = (Array.isArray(item?.skill) && item.skill.length > 0)
-      ? item.skill
-      : (await getEmployeeSkillDetails(item?.userId))?.map(toPlain) || [];
-    const qualificationList = (Array.isArray(mappedQualification) && mappedQualification.length > 0)
-      ? mappedQualification
-      : (await getEmployeeDocumentDetails(item?.userId))?.map(toPlain) || [];
-    const documentList = (Array.isArray(mappedDocuments) && mappedDocuments.length > 0)
-      ? mappedDocuments
-      : (await getEmployeeQualificationDetails(item?.userId))?.map(toPlain) || [];
-    const experienceList = (Array.isArray(item?.experiance) && item.experiance.length > 0)
-      ? item.experiance
-      : (await getEmployeeExperienceDetails(item?.userId))?.map(toPlain) || [];
-    const achievementList = (Array.isArray(item?.achievements) && item.achievements.length > 0)
-      ? item.achievements
-      : (await getEmployeeAchievementDetails(item?.userId))?.map(toPlain) || [];
-    const researchList = (Array.isArray(item?.research) && item.research.length > 0)
-      ? item.research
-      : (await getEmployeeResearchList(item?.userId))?.map(toPlain) || [];
-    const activityList = (Array.isArray(item?.activty) && item.activty.length > 0)
-      ? item.activty
-      : (await getEmployeeActivityDetails(item?.userId))?.map(toPlain) || [];
-    const longLeaveList = (Array.isArray(item?.longLeave) && item.longLeave.length > 0)
-      ? item.longLeave
-      : (await getEmployeeLongLeaveDetails(item?.userId))?.map(toPlain) || [];
+    const officeEntry = Array.isArray(item?.office) ? (item.office[0] || {}) : (item?.office || {});
     const addressEntry = Array.isArray(item?.address) ? (item.address[0] || {}) : (item?.address || {});
     const employment = mapEmployment(item, officeEntry, addressEntry);
-    const { office: _officeIgnored, ...itemWithoutOffice } = item;
+
+    const photoFile = await enrichS3FileRecord(item?.photoFile);
+    const signatureFile = await enrichS3FileRecord(item?.signatureFile);
+
+    const rawDocuments = Array.isArray(item?.documents) ? item.documents : [];
+    const documents = await Promise.all(
+      rawDocuments.map(async (doc) => {
+        const docPlain = toPlain(doc) || {};
+        if (docPlain.attachmentFile) {
+          docPlain.attachmentFile = await enrichS3FileRecord(docPlain.attachmentFile);
+          docPlain.attachmentUrl = docPlain.attachmentFile?.url || null;
+        }
+        return docPlain;
+      })
+    );
 
     return {
-      ...itemWithoutOffice,
+      ...item,
+      photoFile,
+      signatureFile,
+      employeePhotoUrl: photoFile?.url || null,
+      employeeSignatureUrl: signatureFile?.url || null,
+      documents,
       userEmployee: authUser,
       roleData: mappedRoleData,
       roleId: item?.roleId || mappedRoleData?.role || "",
       role: mappedRoleData?.role ? [mappedRoleData.role] : (item?.role || []),
       employment,
-      salutation: officeEntry?.employeeRank || "",
-      designation: officeEntry?.employeeRank || "",
-      qualification: qualificationList,
-      documents: documentList,
-      skill: skillList,
-      reference: referenceList,
-      experience: experienceList,
-      achievements: achievementList,
-      research: researchList,
-      longLeave: mapLongLeaveForEmployeeDetails(longLeaveList),
-      activity: mapActivityForEmployeeDetails(activityList)
+      salutation: officeEntry?.employeeRank || item?.salutation || "",
+      designation: officeEntry?.employeeRank || item?.designation || "",
+      experience: item?.experiance || item?.experience || [],
+      activity: mapActivityForEmployeeDetails(item?.activty || item?.activity || []),
+      longLeave: mapLongLeaveForEmployeeDetails(item?.longLeave || []),
     };
   }));
 };
@@ -741,20 +1167,16 @@ export async function importEmployeeData(excelData, commonData) {
         retirementDate: convertedData.retirementDate,
         employeeFileNumber: convertedData.employeeFileNumber,
         noticePeriod: convertedData.noticePeriod,
+        officialEmailId: convertedData.officialEmailId || null,
+        officialMobileNumber: convertedData.officialMobileNumber || null,
         createdBy: convertedData.createdBy,
       };
 
       const addressData = {
         pAddress: convertedData.pAddress,
         pPincode: convertedData.pPincode,
-        // pCountry: convertedData.pCountry,
-        // pState: convertedData.pState,
-        // pCity: convertedData.pCity,
-        phoneNumber: convertedData.phoneNumber,
-        mobileNumber: convertedData.mobileNumber,
-        officalMobileNumber: convertedData.officalMobileNumber,
-        officalEmailId: convertedData.officalEmailId,
-        personalEmail: convertedData.personalEmail,
+        mobileNumber: convertedData.mobileNumber || convertedData.phoneNumber || null,
+        personalEmail: convertedData.personalEmail || null,
         createdBy: convertedData.createdBy,
       };
 
@@ -764,13 +1186,14 @@ export async function importEmployeeData(excelData, commonData) {
 
       const employeeRegisterData = {
         instituteId: convertedData.instituteId,
-        roleId: convertedData.roleId,
+        roleId: null,
+        isTeacher: false,
         employeeName: convertedData.employeeName,
         universityId,
         employeeId
       }
       const employeePersonalDetail = {
-        personalEmail: convertedData.officalEmailId,
+        personalEmail: convertedData.officialEmailId || convertedData.officalEmailId,
         mobileNumber: convertedData.mobileNumber
       }
 
@@ -788,315 +1211,7 @@ export async function importEmployeeData(excelData, commonData) {
     return { success: false, error: error.message };
   }
 };
-export async function updateEmployee(identifier, data, files, updatedBy, createdBy) {
 
-  const transaction = await sequelize.transaction();
-  try {
-    const existingEmployee = await employeeRepository.assertScopedEmployee(identifier, { transaction });
-    if (!existingEmployee) {
-      throw new Error(`Employee not found for id: ${identifier}`);
-    }
-    const employeeId = existingEmployee.employeeId;
-    const userId = existingEmployee.userId;
-
-    const address = typeof data.address === 'string' && data.address ? JSON.parse(data.address) : data.address || null;
-    const corsAddress = typeof data.corsAddress === 'string' && data.corsAddress ? JSON.parse(data.corsAddress) : data.corsAddress || null;
-    const office = typeof data.office === 'string' && data.office ? JSON.parse(data.office) : data.office || null;
-    const normalizedOffice = office ? {
-      ...office,
-      employeeRank: office.employeeRank ?? data.salutation ?? data.designation ?? null
-    } : null;
-
-
-    // array
-    const skills = typeof data.skill === 'string' && data.skill ? JSON.parse(data.skill) : data.skill || [];
-    const documents = typeof data.documents === 'string' && data.documents ? JSON.parse(data.documents) : data.documents || [];
-    const qualifications = typeof data.qualification === 'string' && data.qualification ? JSON.parse(data.qualification) : data.qualification || [];
-    const experiences = typeof data.experience === 'string' && data.experience ? JSON.parse(data.experience) : data.experience || [];
-    const achievementsRaw = typeof data.achievements === 'string' && data.achievements ? JSON.parse(data.achievements) : data.achievements || [];
-    const achievements = normalizeAchievements(achievementsRaw);
-    const wards = typeof data.ward === 'string' && data.ward ? JSON.parse(data.ward) : data.ward || [];
-    const activitiesRaw = typeof data.activity === 'string' && data.activity ? JSON.parse(data.activity) : data.activity || [];
-    const activities = normalizeActivities(activitiesRaw);
-    const references = typeof data.reference === 'string' && data.reference ? JSON.parse(data.reference) : data.reference || [];
-    const research = typeof data.research === 'string' && data.research ? JSON.parse(data.research) : data.research || [];
-    const longLeavesRaw = typeof data.longLeave === 'string' && data.longLeave ? JSON.parse(data.longLeave) : data.longLeave || [];
-    const longLeaves = normalizeLongLeaves(longLeavesRaw);
-    const allDropDownData = typeof data.allDropDownData === 'string' && data.allDropDownData ? JSON.parse(data.allDropDownData) : data.allDropDownData || { type: [], code: [] };
-
-    //  Update main employee table
-    const {
-      roleId: _excludedRoleId,
-      department: _legacyDepartment,
-      ...employeeUpdateData
-    } = data; // roleId is a string ("ADMIN"), not an int FK — exclude it
-    if (employeeUpdateData.departmentId != null && employeeUpdateData.departmentId !== "" && employeeUpdateData.departmentId !== 0 && employeeUpdateData.departmentId !== "null" && employeeUpdateData.departmentId !== "undefined") {
-      const parsedDeptId = Number(employeeUpdateData.departmentId);
-      if (!isNaN(parsedDeptId) && parsedDeptId > 0) {
-        const deptExists = await model.departmentModel.findByPk(parsedDeptId, { transaction });
-        employeeUpdateData.departmentId = deptExists ? parsedDeptId : null;
-      } else {
-        employeeUpdateData.departmentId = null;
-      }
-    } else {
-      employeeUpdateData.departmentId = null;
-    }
-    await employeeRepository.updateEmployee(employeeId, {
-      ...employeeUpdateData,
-      roleId: null,  // role_id in employee table is always null; role is managed via user_roles table
-      updatedBy
-    }, transaction);
-
-    // Sync officialEmailId with user table email
-    if (data.officalEmailId && userId) {
-      await registerRepository.updateUser(userId, { email: data.officalEmailId }, transaction);
-    }
-
-    //  Upload/update files
-    if (files) {
-      const uploadPromises = Object.keys(files).map(async key => {
-        const file = files[key];
-        const s3Response = await uploadFile(file);
-        const url = s3Response.Location;
-        const fileData = { key, url, employeeId, userId, updatedBy };
-        await employeeFilesRepository.updateEmployee(employeeId, fileData, transaction);
-      });
-      await Promise.all(uploadPromises);
-    }
-
-    //  Update Address
-    if (address) {
-      const addressPayload = {
-        updatedBy,
-        ...address
-      };
-      const addressUpdateResult = await employeeAddressRepository.updateAddress(
-        employeeId,
-        addressPayload,
-        transaction
-      );
-      const updatedAddressCount = Array.isArray(addressUpdateResult) ? (addressUpdateResult[0] || 0) : 0;
-      if (updatedAddressCount === 0) {
-        await employeeAddressRepository.addAddress({
-          employeeId,
-          userId,
-          createdBy,
-          ...address
-        }, transaction);
-      }
-    }
-
-    const normalizedCorsAddress = corsAddress ? {
-      ...corsAddress,
-      address: corsAddress.address ?? corsAddress.cAddress ?? null,
-      pincode: corsAddress.pincode ?? corsAddress.cPincode ?? null
-    } : null;
-
-    if (normalizedCorsAddress) {
-      const corsAddressPayload = {
-        updatedBy,
-        ...normalizedCorsAddress
-      };
-      const corsUpdateResult = await employeeAddressRepository.updateCorsAddress(
-        employeeId,
-        corsAddressPayload,
-        transaction
-      );
-      const updatedCorsCount = Array.isArray(corsUpdateResult) ? (corsUpdateResult[0] || 0) : 0;
-      if (updatedCorsCount === 0) {
-        await employeeAddressRepository.addCorsAddress({
-          employeeId,
-          userId,
-          createdBy,
-          ...normalizedCorsAddress
-        }, transaction);
-      }
-    }
-
-    //  Update Office details
-    if (normalizedOffice) {
-      const officePayload = {
-        updatedBy,
-        ...normalizedOffice
-      };
-
-      const existingOffice = await employeeOfficeRepository.getEmployeeOfficeByEmployeeId(employeeId);
-
-      if (existingOffice?.employeeOfficeId) {
-        await employeeOfficeRepository.updateOfficeDetailsById(
-          existingOffice.employeeOfficeId,
-          officePayload,
-          transaction
-        );
-      } else {
-        await employeeOfficeRepository.addOfficeDetails({
-          employeeId,
-          userId,
-          createdBy,
-          ...normalizedOffice
-        }, transaction);
-      }
-    }
-
-    // Update Skills:
-    // If FE sends skill key (including []), treat it as source of truth and refresh.
-    const hasSkillField = Object.prototype.hasOwnProperty.call(data, 'skill');
-    const hasDocumentsField = Object.prototype.hasOwnProperty.call(data, 'documents');
-    const hasQualificationField = Object.prototype.hasOwnProperty.call(data, 'qualification');
-    const hasExperienceField = Object.prototype.hasOwnProperty.call(data, 'experience');
-    const hasAchievementsField = Object.prototype.hasOwnProperty.call(data, 'achievements');
-    const hasWardField = Object.prototype.hasOwnProperty.call(data, 'ward');
-    const hasActivityField = Object.prototype.hasOwnProperty.call(data, 'activity');
-    const hasReferenceField = Object.prototype.hasOwnProperty.call(data, 'reference');
-    const hasResearchField = Object.prototype.hasOwnProperty.call(data, 'research');
-    const hasLongLeaveField = Object.prototype.hasOwnProperty.call(data, 'longLeave');
-    if (hasSkillField) {
-      await employeeSkillRepository.refreshEmployeeSkills(
-        employeeId,
-        skills,
-        createdBy,
-        updatedBy,
-        transaction
-      );
-    }
-
-    // Update Documents (frontend "documents" tab) -> employee_qualification table
-    const validDocsForQualification = normalizeDocumentAttachments(documents || []).filter((doc) => doc?.receivedDate);
-    if (hasDocumentsField) {
-      await employeeQualificationRepository.refreshEmployeeQualifications(
-        employeeId,
-        validDocsForQualification,
-        createdBy,
-        updatedBy,
-        transaction
-      );
-    }
-
-    // Update Qualifications (frontend "qualification" tab) -> employee_documents table
-    const validQualificationsForDocuments = (qualifications || [])
-      .filter((q) => q?.qualifications && q?.degreeLevel)
-      .map((q) => ({
-        ...q,
-        stream: q?.stream ?? q?.degreeLevel
-      }));
-    if (hasQualificationField) {
-      await employeeDocumentRepository.refreshEmployeeDocuments(
-        employeeId,
-        validQualificationsForDocuments,
-        createdBy,
-        updatedBy,
-        transaction
-      );
-    }
-
-    // Update Experiences
-    if (hasExperienceField) {
-      await employeeExperianceRepository.refreshEmployeeExperiences(
-        employeeId,
-        experiences,
-        createdBy,
-        updatedBy,
-        transaction
-      );
-    }
-
-    // Update Achievements
-    if (hasAchievementsField) {
-      await employeeAchivementRepository.refreshEmployeeAchievements(
-        employeeId,
-        achievements,
-        createdBy,
-        updatedBy,
-        transaction
-      );
-    }
-
-    // Update Wards
-    if (hasWardField) {
-      await employeeWardRepository.refreshEmployeeWards(
-        employeeId,
-        wards,
-        createdBy,
-        updatedBy,
-        transaction
-      );
-    }
-
-    // Update Activities
-    if (hasActivityField) {
-      await employeeActivityRepository.refreshEmployeeActivities(
-        employeeId,
-        activities,
-        createdBy,
-        updatedBy,
-        transaction
-      );
-    }
-
-    // Update References
-    if (hasReferenceField) {
-      await employeeReferenceRepository.refreshEmployeeReferences(
-        employeeId,
-        references,
-        createdBy,
-        updatedBy,
-        transaction
-      );
-    }
-
-    // Update Research
-    if (hasResearchField) {
-      await employeeResearchRepository.refreshEmployeeResearch(
-        employeeId,
-        research,
-        createdBy,
-        updatedBy,
-        transaction
-      );
-    }
-
-    //  Update Long Leaves
-    if (hasLongLeaveField) {
-      await employeeLongLeaveRepository.refreshEmployeeLongLeaves(
-        employeeId,
-        longLeaves,
-        createdBy,
-        updatedBy,
-        transaction
-      );
-    }
-
-    //  Dropdown data
-    if (data.allDropDownData) {
-      const allDropDownDataObject = typeof data.allDropDownData === "string"
-        ? JSON.parse(data.allDropDownData)
-        : data.allDropDownData;
-
-      if (Array.isArray(allDropDownDataObject.type) && Array.isArray(allDropDownDataObject.code)) {
-        const type = allDropDownDataObject.type;
-        const code = allDropDownDataObject.code;
-
-        const entries = type.map((types, index) => ({
-          employeeId,
-          userId,
-          createdBy,
-          updatedBy,
-          types,
-          codes: code[index]
-        }));
-
-        await employeeMetaDataRepository.updateEmployeeMetaData(entries, transaction);
-      }
-    }
-
-    await transaction.commit();
-    return { message: "Employee data successfully updated" };
-  } catch (error) {
-    await transaction.rollback();
-    console.error("Error updating employee data:", error);
-    throw new Error("Failed to update employee data");
-  }
-};
 
 export async function getEmployeeOfficeDetails(userId) {
   return await employeeOfficeRepository.getEmployeeOfficeByEmployeeId(userId);

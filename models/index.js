@@ -886,6 +886,33 @@ employeeModel.hasMany(employeeQualificationModel, {
   as: "documents",
 });
 
+employeeModel.belongsTo(s3FileModel, {
+  foreignKey: "employeePhoto",
+  as: "photoFile",
+});
+s3FileModel.hasMany(employeeModel, {
+  foreignKey: "employeePhoto",
+  as: "photoEmployees",
+});
+
+employeeModel.belongsTo(s3FileModel, {
+  foreignKey: "employeeSignature",
+  as: "signatureFile",
+});
+s3FileModel.hasMany(employeeModel, {
+  foreignKey: "employeeSignature",
+  as: "signatureEmployees",
+});
+
+employeeQualificationModel.belongsTo(s3FileModel, {
+  foreignKey: "attachment",
+  as: "attachmentFile",
+});
+s3FileModel.hasMany(employeeQualificationModel, {
+  foreignKey: "attachment",
+  as: "employeeQualifications",
+});
+
 employeeExperianceModel.belongsTo(employeeModel, {
   foreignKey: "employeeId",
   as: "experiance",

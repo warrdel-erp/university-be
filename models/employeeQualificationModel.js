@@ -3,6 +3,7 @@ import { DataTypes } from 'sequelize';
 import employee from "./employeeModel.js";
 import users from "./userModel.js";
 import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
+import s3FileModel from "./s3FileModel.js";
 
 const employeeQualificationModel = sequelize.define(
     'employee_qualification',
@@ -41,8 +42,13 @@ const employeeQualificationModel = sequelize.define(
             field:'returned_date'
 		},
         attachment:{
-			type:DataTypes.JSON,
+			type:DataTypes.INTEGER,
 			allowNull:true,
+            field:'attachment',
+            references: {
+                model: s3FileModel,
+                key: 'id',
+            },
 		},
         createdAt: {
             type: DataTypes.DATE,
