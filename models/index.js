@@ -4350,8 +4350,17 @@ subjectModel.hasMany(curriculumSubjectTermMappingModel, { foreignKey: 'subjectId
 curriculumModel.hasMany(curriculumBatchMappingModel, { foreignKey: 'curriculumId', as: 'batchMappings' });
 curriculumBatchMappingModel.belongsTo(curriculumModel, { foreignKey: 'curriculumId', as: 'curriculum' });
 
-curriculumBatchMappingModel.hasMany(curriculumBatchTermMappingModel, { foreignKey: 'curriculumBatchMappingId', as: 'termMappings' });
-curriculumBatchTermMappingModel.belongsTo(curriculumBatchMappingModel, { foreignKey: 'curriculumBatchMappingId', as: 'batchMapping' });
+curriculumBatchMappingModel.hasMany(curriculumBatchTermMappingModel, {
+  foreignKey: 'curriculumBatchMappingId',
+  as: 'termMappings',
+  onDelete: 'CASCADE',
+  hooks: true,
+});
+curriculumBatchTermMappingModel.belongsTo(curriculumBatchMappingModel, {
+  foreignKey: 'curriculumBatchMappingId',
+  as: 'batchMapping',
+  onDelete: 'CASCADE',
+});
 
 export {
   assessmentPlanModel,

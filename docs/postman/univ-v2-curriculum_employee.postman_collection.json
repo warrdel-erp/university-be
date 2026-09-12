@@ -1,0 +1,657 @@
+{
+  "info": {
+    "_postman_id": "e1e2e3e4-f5f6-7890-abcd-employee01",
+    "name": "univ-v2-curriculum_employee",
+    "description": "Employee create/update + Curriculum CRUD APIs.\n\n**Docs:** `docs/postman/EMPLOYEE.md`\n\n## Employee flow\n1. `POST /employee/addEmp` → save `employeeId`\n2. `PATCH /employee/{{employeeId}}`\n\n## Curriculum flow\n1. `POST /api/curriculums` (draft) → `curriculumId`\n2. `POST /api/curriculums/:id/map-subjects`\n3. `PATCH /api/curriculums/:id/publish` `{ \"publishStatus\": \"published\" }`\n4. `POST /api/curriculums/:id/map-batch`\n\nSet `baseurl` + `token`. Tenant from `saveUserDefaults`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseurl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlSWQiOjE1LCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInN0YXR1cyI6ImFjdGl2ZSIsInBob25lIjoiOTkyOTU1NTY0NCIsImVtYWlsIjoiYWFkaTI4eDZAZ21haWwuY29tIiwiaXNUZWFjaGVyIjpmYWxzZSwiY3JlYXRlZEF0IjoiMjAyNS0wOC0xM1QxNjo0ODo0Mi4wMDBaIiwidXBkYXRlZEF0IjoiMjAyNi0wOS0xMVQxMDo1MDowMi4wMDBaIiwiZGVsZXRlZEF0IjpudWxsLCJkZWZhdWx0X3JvbGVfaWQiOjE1LCJpbnN0aXR1dGVOYW1lIjoiQWF5b2phbiBTY2hvb2wgb2YgQXJjaGl0ZWN0dXJlIiwiaWF0IjoxNzg5MjExMTI0LCJleHAiOjE3ODkyOTc1MjR9.L31KFUz6KRDvJX9KxnAD_vZkWAjVX5mwp1WAW_QujdY"
+    },
+    {
+      "key": "employeeId",
+      "value": ""
+    },
+    {
+      "key": "curriculumId",
+      "value": ""
+    },
+    {
+      "key": "courseId",
+      "value": "1"
+    },
+    {
+      "key": "subjectId",
+      "value": "1"
+    },
+    {
+      "key": "batch",
+      "value": "2024"
+    },
+    {
+      "key": "curriculumSubjectTermMappingId",
+      "value": ""
+    },
+    {
+      "key": "curriculumBatchMappingId",
+      "value": ""
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "1. Employee",
+      "item": [
+        {
+          "name": "Add Employee",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const json = pm.response.json();",
+                  "  const data = json.data || json;",
+                  "  const id = data.employeeId || data.employee?.employeeId || data.dataValues?.employeeId;",
+                  "  if (id) pm.collectionVariables.set('employeeId', String(id));",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeName\": \"John Doe\",\n  // \"roleId\": 2,                    // role_id → assigned via user_roles (optional)\n  // \"departmentId\": 1,              // department.department_id (optional)\n  \"employmentType\": \"Permanent\",\n  \"dateOfBirth\": \"1990-05-15\",\n  \"fatherName\": \"Robert Doe\",\n  \"motherName\": \"Jane Doe\",\n  \"pickColor\": \"#4A90E2\",\n  // \"employeePhoto\": 101,           // s3_files.id (optional)\n  // \"employeeSignature\": 102,       // s3_files.id (optional)\n  \"salutation\": \"Mr\",                // maps to office.employeeRank fallback\n  \"designation\": \"Assistant Professor\", // maps to office.employeeRank fallback\n  \"officialEmailId\": \"john.doe@university.edu\",     // → employee_office + users.email\n  \"officialMobileNumber\": \"9876543210\",             // → employee_office\n\n  \"address\": {                       // → employee_address\n    \"pAddress\": \"12 MG Road\",\n    \"pPincode\": 110001,\n    \"pCountry\": \"India\",\n    \"pState\": \"Delhi\",\n    \"pCity\": \"New Delhi\",\n    \"mobileNumber\": \"9876543210\",\n    \"personalEmail\": \"john.personal@gmail.com\"\n  },\n\n  \"corsAddress\": {                   // → employee_cor_address\n    \"address\": \"Flat 4B, Hostel Road\",\n    \"pincode\": 110002,\n    \"cCountry\": 1,                   // integer geo id (not code-master FK)\n    \"cState\": 10,\n    \"cCity\": 100\n  },\n\n  \"office\": {                        // → employee_office\n    \"joiningDate\": \"2020-01-15\",\n    \"confirmationDate\": \"2021-01-15\",\n    \"relievingDate\": null,\n    \"retirementDate\": null,\n    \"transferDate\": null,\n    \"resignationDate\": null,\n    \"noticePeriod\": 30,\n    \"employeeFileNumber\": \"EMP-FILE-001\",\n    \"officialEmailId\": \"john.doe@university.edu\",\n    \"officialMobileNumber\": \"9876543210\",\n    \"istActive\": true,\n    \"bankName\": \"SBI\",\n    \"accountNumber\": \"1234567890\",\n    \"ifscCode\": \"SBIN0001234\",\n    \"iindActive\": false,\n    \"bankNameIInd\": null,\n    \"accountNumberIInd\": null,\n    \"ifscCodeIInd\": null,\n    \"contractBased\": false,\n    \"gpf\": \"GPF001\",\n    \"esiNumber\": \"ESI001\",\n    \"uanNumber\": \"UAN001\",\n    \"lectureBased\": false,\n    \"pfNumber\": \"PF001\",\n    \"panNumber\": \"ABCDE1234F\",\n    \"voterId\": \"VOTER123\",\n    \"aadharNumber\": \"123456789012\",\n    \"spouseName\": \"Mary Doe\",\n    \"nomineeName\": \"Robert Doe\",\n    \"officeExtensionNumber\": \"2345\",\n    \"employeeRank\": \"Assistant Professor\"\n  },\n\n  \"skill\": [                         // → employee_skill\n    {\n      \"name\": \"Java\",\n      \"experienceInYear\": 5,\n      \"experienceInMonth\": \"6\",\n      \"proficiencyLevel\": 235         // ProficiencyLevel: 234 Beginner | 235 Intermediate | 236 Advanced | 237 Expert\n    }\n  ],\n\n  \"documents\": [                     // → employee_qualification (Documents tab)\n    {\n      \"document\": 238,               // Document: 238 Aadhaar | 239 PAN | 240 Passport | 241 Voter ID | 242 DL | 243 Marksheet | 244 Degree Certificate\n      \"receivedDate\": \"2024-01-10\",\n      \"returnedDate\": null\n      // \"attachment\": 201            // s3_files.id (optional)\n    }\n  ],\n\n  \"qualification\": [                 // → employee_documents (Qualification tab)\n    {\n      \"qualifications\": 213,         // Qualification: 213 UG | 214 PG | 215 Ph.D. | 216 Diploma | 228 B.Arch. | 229 M.Arch. | 230 B.Des. | 231 M.Des.\n      \"degreeLevel\": 219,            // DegreeLevel: 219 UG | 220 PG | 221 Ph.D. | 222 Diploma\n      // \"stream\": 219,              // Stream master empty in DB — omit; service falls back to degreeLevel\n      \"fromYear\": \"2010-01-01\",\n      \"toYear\": \"2014-01-01\",\n      \"university\": \"Delhi University\",\n      \"percentage\": \"78\",\n      \"remarks\": null,\n      \"pursuing\": false,\n      \"medicalCouncilName\": null,\n      \"medicalRegistrationNumber\": null,\n      \"medicalCouncilRegistrationDate\": null,\n      \"medicalRegistrationExpiryDate\": null\n    }\n  ],\n\n  \"experience\": [                    // → employee_experiance\n    {\n      \"experienceType\": 210,         // ExperienceType: 210 Teaching | 211 Professional\n      \"organization\": \"ABC College\",\n      \"desigation\": \"Lecturer\",\n      \"fromDate\": \"2015-06-01\",\n      \"toDate\": \"2019-12-31\",\n      \"totalExperianceYears\": 4,\n      \"totalExperianceMonths\": 6,\n      \"totalExperiancedays\": 0,\n      \"lastSalary\": 45000,\n      \"remarks\": null\n    }\n  ],\n\n  \"achievements\": [                  // → employee_achievements\n    {\n      \"achievementCategory\": 245,    // AchievementCategory: 245 Academic | 246 Research | 247 Sports | 248 Cultural | 249 Administrative | 250 Other\n      \"title\": \"Best Teacher Award\",\n      \"description\": \"Department award\",\n      \"noOfTimes\": 1,\n      \"discipline\": \"CS\",\n      \"nameOf\": \"University Awards\",\n      \"date\": \"2023-03-15\"\n    }\n  ],\n\n  \"ward\": [                          // → employee_ward\n    {\n      \"wardName\": \"Sam Doe\",\n      \"studyIn\": \"Class 10\",\n      \"annualFees\": 50000,\n      \"dateOfBirth\": \"2012-08-20\"\n    }\n  ],\n\n  \"activity\": [                      // → employee_activity\n    {\n      \"activity\": \"NCC Coordinator\",\n      \"monthYear\": \"2024-01-01\",\n      \"remarks\": \"Campus activity\"\n    }\n  ],\n\n  \"reference\": [                     // → employee_reference\n    {\n      \"name\": \"Dr. Sharma\",\n      \"designation\": \"HOD\",\n      \"mobileNumber\": \"9988776655\",\n      \"address\": \"Campus Block A\"\n    }\n  ],\n\n  \"research\": [                      // → employee_research\n    {\n      \"thesisName\": \"ML in Education\",\n      \"associate\": \"Dr. Kumar\",\n      \"periodFrom\": \"2018-01-01\",\n      \"to\": \"2020-12-31\",\n      \"institution\": \"IIT Delhi\"\n    }\n  ],\n\n  \"longLeave\": [                     // → employee_long_leave\n    {\n      \"leaveType\": 254,              // LeaveType: 251 Medical | 252 Maternity | 253 Paternity | 254 Sabbatical | 255 Personal | 263 Sick | 264 Casual\n      \"DateOfLeaving\": \"2022-06-01\",\n      \"DateOfRejoining\": \"2022-12-01\",\n      \"remark\": \"Sabbatical\"\n    }\n  ]\n\n  // \"files\": [                      // → employee_files\n  //   { \"key\": \"resume\", \"url\": \"https://your-bucket.s3.amazonaws.com/resume.pdf\" }\n  // ],\n\n  // \"allDropDownData\": {            // → employee_meta_data\n  //   \"type\": [1],                  // employee_code_master_id values\n  //   \"code\": [10]                  // employee_code_master_type_id values (same length as type)\n  // }\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/employee/addEmp",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "employee",
+                "addEmp"
+              ]
+            },
+            "description": "Creates employee + satellite tables. Required: `employeeName` only. See `docs/postman/EMPLOYEE.md`."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Employee",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeName\": \"John Doe\",\n  // \"roleId\": 2,                    // role_id → assigned via user_roles (optional)\n  // \"departmentId\": 1,              // department.department_id (optional)\n  \"employmentType\": \"Permanent\",\n  \"dateOfBirth\": \"1990-05-15\",\n  \"fatherName\": \"Robert Doe\",\n  \"motherName\": \"Jane Doe\",\n  \"pickColor\": \"#4A90E2\",\n  // \"employeePhoto\": 101,           // s3_files.id (optional)\n  // \"employeeSignature\": 102,       // s3_files.id (optional)\n  \"salutation\": \"Mr\",                // maps to office.employeeRank fallback\n  \"designation\": \"Assistant Professor\", // maps to office.employeeRank fallback\n  \"officialEmailId\": \"john.doe@university.edu\",     // → employee_office + users.email\n  \"officialMobileNumber\": \"9876543210\",             // → employee_office\n\n  \"address\": {                       // → employee_address\n    \"pAddress\": \"12 MG Road\",\n    \"pPincode\": 110001,\n    \"pCountry\": \"India\",\n    \"pState\": \"Delhi\",\n    \"pCity\": \"New Delhi\",\n    \"mobileNumber\": \"9876543210\",\n    \"personalEmail\": \"john.personal@gmail.com\"\n  },\n\n  \"corsAddress\": {                   // → employee_cor_address\n    \"address\": \"Flat 4B, Hostel Road\",\n    \"pincode\": 110002,\n    \"cCountry\": 1,                   // integer geo id (not code-master FK)\n    \"cState\": 10,\n    \"cCity\": 100\n  },\n\n  \"office\": {                        // → employee_office\n    \"joiningDate\": \"2020-01-15\",\n    \"confirmationDate\": \"2021-01-15\",\n    \"relievingDate\": null,\n    \"retirementDate\": null,\n    \"transferDate\": null,\n    \"resignationDate\": null,\n    \"noticePeriod\": 30,\n    \"employeeFileNumber\": \"EMP-FILE-001\",\n    \"officialEmailId\": \"john.doe@university.edu\",\n    \"officialMobileNumber\": \"9876543210\",\n    \"istActive\": true,\n    \"bankName\": \"SBI\",\n    \"accountNumber\": \"1234567890\",\n    \"ifscCode\": \"SBIN0001234\",\n    \"iindActive\": false,\n    \"bankNameIInd\": null,\n    \"accountNumberIInd\": null,\n    \"ifscCodeIInd\": null,\n    \"contractBased\": false,\n    \"gpf\": \"GPF001\",\n    \"esiNumber\": \"ESI001\",\n    \"uanNumber\": \"UAN001\",\n    \"lectureBased\": false,\n    \"pfNumber\": \"PF001\",\n    \"panNumber\": \"ABCDE1234F\",\n    \"voterId\": \"VOTER123\",\n    \"aadharNumber\": \"123456789012\",\n    \"spouseName\": \"Mary Doe\",\n    \"nomineeName\": \"Robert Doe\",\n    \"officeExtensionNumber\": \"2345\",\n    \"employeeRank\": \"Assistant Professor\"\n  },\n\n  \"skill\": [                         // → employee_skill\n    {\n      \"name\": \"Java\",\n      \"experienceInYear\": 5,\n      \"experienceInMonth\": \"6\",\n      \"proficiencyLevel\": 235         // ProficiencyLevel: 234 Beginner | 235 Intermediate | 236 Advanced | 237 Expert\n    }\n  ],\n\n  \"documents\": [                     // → employee_qualification (Documents tab)\n    {\n      \"document\": 238,               // Document: 238 Aadhaar | 239 PAN | 240 Passport | 241 Voter ID | 242 DL | 243 Marksheet | 244 Degree Certificate\n      \"receivedDate\": \"2024-01-10\",\n      \"returnedDate\": null\n      // \"attachment\": 201            // s3_files.id (optional)\n    }\n  ],\n\n  \"qualification\": [                 // → employee_documents (Qualification tab)\n    {\n      \"qualifications\": 213,         // Qualification: 213 UG | 214 PG | 215 Ph.D. | 216 Diploma | 228 B.Arch. | 229 M.Arch. | 230 B.Des. | 231 M.Des.\n      \"degreeLevel\": 219,            // DegreeLevel: 219 UG | 220 PG | 221 Ph.D. | 222 Diploma\n      // \"stream\": 219,              // Stream master empty in DB — omit; service falls back to degreeLevel\n      \"fromYear\": \"2010-01-01\",\n      \"toYear\": \"2014-01-01\",\n      \"university\": \"Delhi University\",\n      \"percentage\": \"78\",\n      \"remarks\": null,\n      \"pursuing\": false,\n      \"medicalCouncilName\": null,\n      \"medicalRegistrationNumber\": null,\n      \"medicalCouncilRegistrationDate\": null,\n      \"medicalRegistrationExpiryDate\": null\n    }\n  ],\n\n  \"experience\": [                    // → employee_experiance\n    {\n      \"experienceType\": 210,         // ExperienceType: 210 Teaching | 211 Professional\n      \"organization\": \"ABC College\",\n      \"desigation\": \"Lecturer\",\n      \"fromDate\": \"2015-06-01\",\n      \"toDate\": \"2019-12-31\",\n      \"totalExperianceYears\": 4,\n      \"totalExperianceMonths\": 6,\n      \"totalExperiancedays\": 0,\n      \"lastSalary\": 45000,\n      \"remarks\": null\n    }\n  ],\n\n  \"achievements\": [                  // → employee_achievements\n    {\n      \"achievementCategory\": 245,    // AchievementCategory: 245 Academic | 246 Research | 247 Sports | 248 Cultural | 249 Administrative | 250 Other\n      \"title\": \"Best Teacher Award\",\n      \"description\": \"Department award\",\n      \"noOfTimes\": 1,\n      \"discipline\": \"CS\",\n      \"nameOf\": \"University Awards\",\n      \"date\": \"2023-03-15\"\n    }\n  ],\n\n  \"ward\": [                          // → employee_ward\n    {\n      \"wardName\": \"Sam Doe\",\n      \"studyIn\": \"Class 10\",\n      \"annualFees\": 50000,\n      \"dateOfBirth\": \"2012-08-20\"\n    }\n  ],\n\n  \"activity\": [                      // → employee_activity\n    {\n      \"activity\": \"NCC Coordinator\",\n      \"monthYear\": \"2024-01-01\",\n      \"remarks\": \"Campus activity\"\n    }\n  ],\n\n  \"reference\": [                     // → employee_reference\n    {\n      \"name\": \"Dr. Sharma\",\n      \"designation\": \"HOD\",\n      \"mobileNumber\": \"9988776655\",\n      \"address\": \"Campus Block A\"\n    }\n  ],\n\n  \"research\": [                      // → employee_research\n    {\n      \"thesisName\": \"ML in Education\",\n      \"associate\": \"Dr. Kumar\",\n      \"periodFrom\": \"2018-01-01\",\n      \"to\": \"2020-12-31\",\n      \"institution\": \"IIT Delhi\"\n    }\n  ],\n\n  \"longLeave\": [                     // → employee_long_leave\n    {\n      \"leaveType\": 254,              // LeaveType: 251 Medical | 252 Maternity | 253 Paternity | 254 Sabbatical | 255 Personal | 263 Sick | 264 Casual\n      \"DateOfLeaving\": \"2022-06-01\",\n      \"DateOfRejoining\": \"2022-12-01\",\n      \"remark\": \"Sabbatical\"\n    }\n  ]\n\n  // \"files\": [                      // → employee_files\n  //   { \"key\": \"resume\", \"url\": \"https://your-bucket.s3.amazonaws.com/resume.pdf\" }\n  // ],\n\n  // \"allDropDownData\": {            // → employee_meta_data\n  //   \"type\": [1],                  // employee_code_master_id values\n  //   \"code\": [10]                  // employee_code_master_type_id values (same length as type)\n  // }\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/employee/{{employeeId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "employee",
+                "{{employeeId}}"
+              ]
+            },
+            "description": "Updates employee. `:id` = employeeId or userId."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Curriculum",
+      "description": "Mount: `/api/curriculums`\n\npublishStatus: `draft` | `published`\n\nEdge cases:\n- Map subjects / unmap subject / update credit → draft only\n- Publish needs ≥1 subject\n- Map batch → published + active only\n- Unpublish blocked if batches mapped\n- Delete curriculum blocked if published or batches mapped\n- Unmap batch blocked if students exist for course+batch\n- Term rows auto-create/delete with batch mapping",
+      "item": [
+        {
+          "name": "1. Read",
+          "item": [
+            {
+              "name": "GET all curriculums",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseurl}}/api/curriculums",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "curriculums"
+                  ]
+                },
+                "description": "List curriculums with course + batchMappings + studentCount."
+              },
+              "response": []
+            },
+            {
+              "name": "GET curriculum by id",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseurl}}/api/curriculums/{{curriculumId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "curriculums",
+                    "{{curriculumId}}"
+                  ]
+                },
+                "description": "Curriculum detail with terms[] and mapped subjects."
+              },
+              "response": []
+            },
+            {
+              "name": "GET available subjects",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseurl}}/api/curriculums/{{curriculumId}}/available-subjects",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "curriculums",
+                    "{{curriculumId}}",
+                    "available-subjects"
+                  ]
+                },
+                "description": "Subjects for the programme not yet mapped to this curriculum."
+              },
+              "response": []
+            },
+            {
+              "name": "GET curriculum batches",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseurl}}/api/curriculums/{{curriculumId}}/batches",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "curriculums",
+                    "{{curriculumId}}",
+                    "batches"
+                  ]
+                },
+                "description": "Batch mappings + auto termMappings + studentCount."
+              },
+              "response": []
+            },
+            {
+              "name": "GET batch year options",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseurl}}/api/curriculums/batches",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "curriculums",
+                    "batches"
+                  ]
+                },
+                "description": "Batch year picker list (batchController.getBatches)."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "2. Curriculum CRUD",
+          "item": [
+            {
+              "name": "Create curriculum",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "try {",
+                      "  const json = pm.response.json();",
+                      "  const data = json.data || json;",
+                      "  const id = data.curriculumId || data.dataValues?.curriculumId;",
+                      "  if (id) pm.collectionVariables.set('curriculumId', String(id));",
+                      "} catch (e) {}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Curriculum 2026\",\n  \"courseId\": {{courseId}},\n  \"publishStatus\": \"draft\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseurl}}/api/curriculums",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "curriculums"
+                  ]
+                },
+                "description": "Creates curriculum. Default publishStatus = draft. campus/institute from tenant."
+              },
+              "response": []
+            },
+            {
+              "name": "Update curriculum",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Curriculum 2026 Updated\",\n  \"isActive\": true\n}"
+                },
+                "url": {
+                  "raw": "{{baseurl}}/api/curriculums/{{curriculumId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "curriculums",
+                    "{{curriculumId}}"
+                  ]
+                },
+                "description": "Update name and/or isActive.\n\nEdge case: cannot rename when published (unpublish first)."
+              },
+              "response": []
+            },
+            {
+              "name": "Publish curriculum",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"publishStatus\": \"published\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseurl}}/api/curriculums/{{curriculumId}}/publish",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "curriculums",
+                    "{{curriculumId}}",
+                    "publish"
+                  ]
+                },
+                "description": "publishStatus: `draft` | `published`.\n\nEdge cases:\n- Already same status → 400\n- Publish requires ≥1 subject mapped\n- Unpublish blocked if batches mapped"
+              },
+              "response": []
+            },
+            {
+              "name": "Unpublish curriculum",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"publishStatus\": \"draft\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseurl}}/api/curriculums/{{curriculumId}}/publish",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "curriculums",
+                    "{{curriculumId}}",
+                    "publish"
+                  ]
+                },
+                "description": "Set publishStatus back to draft. Blocked if batch mappings exist."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete curriculum",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseurl}}/api/curriculums/{{curriculumId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "curriculums",
+                    "{{curriculumId}}"
+                  ]
+                },
+                "description": "Delete curriculum.\n\nEdge cases:\n- Blocked if published\n- Blocked if batches mapped\n- Subject mappings deleted in transaction"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "3. Subject mappings",
+          "item": [
+            {
+              "name": "Map subjects",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "try {",
+                      "  const json = pm.response.json();",
+                      "  const data = json.data || json;",
+                      "  const rows = Array.isArray(data) ? data : [];",
+                      "  if (rows[0]?.curriculumSubjectTermMappingId) {",
+                      "    pm.collectionVariables.set('curriculumSubjectTermMappingId', String(rows[0].curriculumSubjectTermMappingId));",
+                      "  }",
+                      "} catch (e) {}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"subjects\": [\n    {\n      \"subjectId\": {{subjectId}},\n      \"term\": 1,\n      \"credit\": 4\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{baseurl}}/api/curriculums/{{curriculumId}}/map-subjects",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "curriculums",
+                    "{{curriculumId}}",
+                    "map-subjects"
+                  ]
+                },
+                "description": "Map subjects to terms. Draft only. Subjects must belong to curriculum programme. Term ≤ totalTerms."
+              },
+              "response": []
+            },
+            {
+              "name": "Update subject credit/term",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"credit\": 3,\n  \"term\": 1\n}"
+                },
+                "url": {
+                  "raw": "{{baseurl}}/api/curriculums/addCredit/{{curriculumSubjectTermMappingId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "curriculums",
+                    "addCredit",
+                    "{{curriculumSubjectTermMappingId}}"
+                  ]
+                },
+                "description": "Update credit/term. Draft only."
+              },
+              "response": []
+            },
+            {
+              "name": "Unmap subject",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseurl}}/api/curriculums/subject-mappings/{{curriculumSubjectTermMappingId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "curriculums",
+                    "subject-mappings",
+                    "{{curriculumSubjectTermMappingId}}"
+                  ]
+                },
+                "description": "Remove subject mapping. Draft only."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "4. Batch mappings",
+          "item": [
+            {
+              "name": "Map batch",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "try {",
+                      "  const json = pm.response.json();",
+                      "  const data = json.data || json;",
+                      "  const id = data.curriculumBatchMappingId || data.dataValues?.curriculumBatchMappingId;",
+                      "  if (id) pm.collectionVariables.set('curriculumBatchMappingId', String(id));",
+                      "} catch (e) {}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"batch\": {{batch}}\n}"
+                },
+                "url": {
+                  "raw": "{{baseurl}}/api/curriculums/{{curriculumId}}/map-batch",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "curriculums",
+                    "{{curriculumId}}",
+                    "map-batch"
+                  ]
+                },
+                "description": "Map batch year to curriculum. Auto-creates term/year rows.\n\nEdge cases:\n- Curriculum must be published + active\n- One curriculum per programme+batch → 409"
+              },
+              "response": []
+            },
+            {
+              "name": "Unmap batch",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseurl}}/api/curriculums/batch-mappings/{{curriculumBatchMappingId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "curriculums",
+                    "batch-mappings",
+                    "{{curriculumBatchMappingId}}"
+                  ]
+                },
+                "description": "Delete batch mapping. Term rows auto-deleted.\n\nEdge case: blocked if students enrolled for that course+batch."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
