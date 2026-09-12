@@ -192,6 +192,12 @@ import examInvigilatorAssignmentModel from "./examInvigilatorAssignmentModel.js"
 import examRoomMaterialBundleModel from "./examRoomMaterialBundleModel.js";
 import examRoomMaterialItemModel from "./examRoomMaterialItemModel.js";
 import studentResultModel from "./studentResultModel.js";
+import eventModel from "./eventModel.js";
+import eventLogModel from "./eventLogModel.js";
+
+// Event / EventLog associations
+eventModel.hasMany(eventLogModel, { foreignKey: "eventId", as: "eventLogs" });
+eventLogModel.belongsTo(eventModel, { foreignKey: "eventId", as: "event" });
 
 // Examination Session associations
 examinationSessionSlotModel.belongsTo(examinationSessionModel, {
@@ -4551,6 +4557,8 @@ export {
   examRoomMaterialBundleModel,
   examRoomMaterialItemModel,
   studentResultModel,
+  eventModel,
+  eventLogModel,
   userModel as users,
 
   curriculumModel,
@@ -4560,3 +4568,6 @@ export {
 };
 
 import sequelize from "../database/sequelizeConfig.js";
+import { registerAuditedModels } from "../utility/audit/registerAuditHooks.js";
+
+registerAuditedModels(sequelize.models);

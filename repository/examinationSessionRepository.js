@@ -166,6 +166,7 @@ export async function updateExaminationSession(id, updateData, options = {}) {
   return scoped(model.examinationSessionModel).update(updateData, {
     where: { examinationSessionId: Number(id) },
     transaction: options.transaction,
+    individualHooks: options.individualHooks === true,
   });
 }
 
@@ -861,6 +862,7 @@ export async function publishExamSchedulesByIds(examScheduleIds, userId, options
     {
       where: { examScheduleId: { [Op.in]: examScheduleIds } },
       transaction: options.transaction,
+      individualHooks: true,
     },
   );
   return affected;

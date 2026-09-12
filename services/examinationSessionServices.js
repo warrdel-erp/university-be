@@ -20,6 +20,8 @@ import {
   ELIGIBILITY_STATUS_LABEL,
   HALL_TICKET_STUDENT_QUERY_PURPOSE,
 } from "../constant.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 import * as examSessionAnswerSheetRepository from "../repository/examSessionAnswerSheetRepository.js";
 import * as s3Helper from "../utility/s3Helper.js";
 import { buildScope, scoped } from "../utility/scoped.js";
@@ -2104,7 +2106,7 @@ export async function getQuestionPaperSummary(
 }
 
 export async function publishExaminationSession(examinationSessionId, userId, options = {}) {
-  return sequelize.transaction(async (transaction) => {
+  return withAuditEvent(AUDIT_EVENTS.EXAMINATION_SESSION_PUBLISH, async ({ transaction }) => {
     const session = await examinationSessionRepository.getExaminationSessionById(examinationSessionId, { ...options, transaction });
     if (!session) {
       throw new Error("Examination session not found");
@@ -2134,7 +2136,7 @@ export async function publishExaminationSession(examinationSessionId, userId, op
     await examinationSessionRepository.updateExaminationSession(
       examinationSessionId,
       { status: "Published", updatedBy: userId },
-      { ...options, transaction },
+      { ...options, transaction, individualHooks: true },
     );
 
     await examinationSessionRepository.publishExamSchedulesByIds(
