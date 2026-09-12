@@ -47,6 +47,27 @@ Staff directory create / update APIs (+ Curriculum folder in the same collection
 
 ---
 
+## Exam Operations (same collection, folder `3. Exam Operations`)
+
+**Mount:** `/examOperations`
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/examOperations/rooms` | Room-wise ops for examination session |
+
+### Query params
+| Name | Required | Description |
+|------|----------|-------------|
+| `examinationSessionId` | Yes | Session id |
+| `examDate` | No | `YYYY-MM-DD` |
+| `selections` | No | JSON string: `[{ "courseSessionMappingId": 1, "terms": [1,2] }]` |
+| `status` | No | `READY_FOR_EXAM` \| `NOT_READY` |
+| `page` / `limit` | No | Defaults 1 / 10 |
+
+Term filter uses `exam_schedule.term` (not `subject.term`). Course is paired per selection via `subject.course_id`.
+
+---
+
 ## Authentication
 
 Bearer token required.

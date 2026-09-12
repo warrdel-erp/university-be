@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "e1e2e3e4-f5f6-7890-abcd-employee01",
     "name": "univ-v2-curriculum_employee",
-    "description": "Employee create/update + Curriculum CRUD APIs.\n\n**Docs:** `docs/postman/EMPLOYEE.md`\n\n## Employee flow\n1. `POST /employee/addEmp` → save `employeeId`\n2. `PATCH /employee/{{employeeId}}`\n\n## Curriculum flow\n1. `POST /api/curriculums` (draft) → `curriculumId`\n2. `POST /api/curriculums/:id/map-subjects`\n3. `PATCH /api/curriculums/:id/publish` `{ \"publishStatus\": \"published\" }`\n4. `POST /api/curriculums/:id/map-batch`\n\nSet `baseurl` + `token`. Tenant from `saveUserDefaults`.",
+    "description": "Employee create/update + Curriculum CRUD + Exam Operations APIs.\n\n**Docs:** `docs/postman/EMPLOYEE.md`\n\n## Employee flow\n1. `POST /employee/addEmp` → save `employeeId`\n2. `PATCH /employee/{{employeeId}}`\n\n## Curriculum flow\n1. `POST /api/curriculums` (draft) → `curriculumId`\n2. `POST /api/curriculums/:id/map-subjects`\n3. `PATCH /api/curriculums/:id/publish` `{ \"publishStatus\": \"published\" }`\n4. `POST /api/curriculums/:id/map-batch`\n\n## Exam Operations\n1. `GET /examOperations/rooms` — room-wise ops for an examination session\n\nSet `baseurl` + `token`. Tenant from `saveUserDefaults`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -41,6 +41,22 @@
     {
       "key": "curriculumBatchMappingId",
       "value": ""
+    },
+    {
+      "key": "examinationSessionId",
+      "value": "1"
+    },
+    {
+      "key": "examDate",
+      "value": "2026-09-12"
+    },
+    {
+      "key": "courseSessionMappingId",
+      "value": "1"
+    },
+    {
+      "key": "term",
+      "value": "1"
     }
   ],
   "auth": {
@@ -650,6 +666,108 @@
               "response": []
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "3. Exam Operations",
+      "description": "Mount: `/examOperations`\n\nRoom-wise exam operations. Term filter uses `exam_schedule.term` (not `subject.term`). Course is paired via `subject.course_id`.\n\nstatus: `READY_FOR_EXAM` | `NOT_READY`",
+      "item": [
+        {
+          "name": "GET rooms",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examOperations/rooms?examinationSessionId={{examinationSessionId}}&examDate={{examDate}}&selections=[{\"courseSessionMappingId\":{{courseSessionMappingId}},\"terms\":[{{term}}]}]&status=READY_FOR_EXAM&page=1&limit=10",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examOperations",
+                "rooms"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "{{examinationSessionId}}",
+                  "description": "Required. examination_session.examination_session_id"
+                },
+                {
+                  "key": "examDate",
+                  "value": "{{examDate}}",
+                  "description": "Optional. YYYY-MM-DD",
+                  "disabled": false
+                },
+                {
+                  "key": "selections",
+                  "value": "[{\"courseSessionMappingId\":{{courseSessionMappingId}},\"terms\":[{{term}}]}]",
+                  "description": "Optional JSON array string. Each item: { courseSessionMappingId, terms[] }. Term filters exam_schedule.term; course from session mapping → subject.course_id."
+                },
+                {
+                  "key": "status",
+                  "value": "READY_FOR_EXAM",
+                  "description": "Optional. READY_FOR_EXAM | NOT_READY",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Optional. Default 1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Optional. Default 10"
+                }
+              ]
+            },
+            "description": "## GET /examOperations/rooms\n\nRoom-wise exam operations for an examination session.\n\n### Auth\nBearer `{{token}}`\n\n### Query\n\n| Name | Required | Description |\n|------|----------|-------------|\n| examinationSessionId | Yes | Session id |\n| examDate | No | YYYY-MM-DD |\n| selections | No | JSON string: `[{ \"courseSessionMappingId\": 1, \"terms\": [1,2] }]` |\n| status | No | `READY_FOR_EXAM` \\| `NOT_READY` |\n| page | No | Default 1 |\n| limit | No | Default 10 |\n\n### Filter notes (curriculum-aligned)\n- `term` filtered on **exam_schedule.term** (not subject.term)\n- `courseId` from session course mapping paired with term per selection\n- Subject name/code still from `subject` table\n\n### Response shape\n- `rows[]`: one per room (`classRoomSectionId`)\n- `operations[]`: per examDate + slot\n- each operation: `status`, `exams[]`, `invigilators[]`, `materialBundle`\n- `READY_FOR_EXAM` when invigilators + materialBundle both exist"
+          },
+          "response": []
+        },
+        {
+          "name": "GET rooms (session only)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/examOperations/rooms?examinationSessionId={{examinationSessionId}}&page=1&limit=10",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examOperations",
+                "rooms"
+              ],
+              "query": [
+                {
+                  "key": "examinationSessionId",
+                  "value": "{{examinationSessionId}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Minimal call — only examinationSessionId required. No date/selections/status filters."
+          },
+          "response": []
         }
       ]
     }

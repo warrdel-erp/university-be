@@ -31,11 +31,17 @@ export const getBundleList = async (req, res) => {
 
 export const getBundleByRoomDetails = async (req, res) => {
   try {
-    const { classRoomSectionId, examDate, examinationSessionSlotId } = req.query;
+    const {
+      examinationSessionId,
+      classRoomSectionId,
+      examDate,
+      examinationSessionSlotId,
+    } = req.query;
     const result = await service.getBundleByRoomDetails(
       Number(classRoomSectionId),
       examDate,
       Number(examinationSessionSlotId),
+      Number(examinationSessionId),
     );
     return SuccessResponse(res, 200, "Bundle room details fetched successfully", result);
   } catch (error) {

@@ -69,7 +69,10 @@ function operationStatus(invigilators, materialBundle) {
   return "NOT_READY";
 }
 
-/** Resolve query filters → scheduleWhere / subjectWhere for repository queries. */
+/** Resolve query filters → scheduleWhere / subjectWhere for repository queries.
+ * Term lives on exam_schedule (and curriculum_subject_term_mapping), not subject.term.
+ * Keep courseId + term paired per selection to avoid cross-course matches.
+ */
 async function resolveScheduleFilters(query) {
   const scheduleWhere = {
     examinationSessionId: Number(query.examinationSessionId),
@@ -113,22 +116,15 @@ async function resolveScheduleFilters(query) {
     return { scheduleWhere, subjectWhere };
   }
 
-  const sessionIds = [];
-  const orSubjects = [];
+  const scheduleOr = [];
   for (const comb of filterCombinations) {
-    sessionIds.push(comb.sessionId);
-    orSubjects.push({
-      courseId: comb.courseId,
+    scheduleOr.push({
+      sessionId: comb.sessionId,
       term: { [Op.in]: comb.terms },
+      "$subjectSchedule.course_id$": comb.courseId,
     });
   }
-
-  const uniqueSessionIds = [...new Set(sessionIds)];
-  scheduleWhere.sessionId =
-    uniqueSessionIds.length === 1
-      ? uniqueSessionIds[0]
-      : { [Op.in]: uniqueSessionIds };
-  subjectWhere[Op.or] = orSubjects;
+  scheduleWhere[Op.or] = scheduleOr;
 
   return { scheduleWhere, subjectWhere };
 }

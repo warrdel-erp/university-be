@@ -205,11 +205,13 @@ export async function getBundleByRoomDetails(
   classRoomSectionId,
   examDate,
   examinationSessionSlotId,
+  examinationSessionId,
 ) {
   const sharingCapacities = await repo.findRoomCapacitiesForBundleRoom(
     classRoomSectionId,
     examDate,
     examinationSessionSlotId,
+    { examinationSessionId },
   );
 
   if (sharingCapacities.length === 0) {

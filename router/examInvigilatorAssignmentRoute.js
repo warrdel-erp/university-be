@@ -144,9 +144,11 @@ const myAssignmentsSchema = {
 const byRoomSchema = {
   query: z.object({
     classRoomSectionId: positiveIntegerId,
-    examinationSessionId: positiveIntegerQueryId,
-    examDate: z.preprocess(emptyToUndefined, z.string().optional()),
-    examinationSessionSlotId: positiveIntegerQueryId,
+    examinationSessionId: positiveIntegerId,
+    examDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD"),
+    examinationSessionSlotId: positiveIntegerId,
   }),
 };
 
