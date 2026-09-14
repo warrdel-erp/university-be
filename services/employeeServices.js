@@ -526,11 +526,14 @@ export async function addEmployee(data, files, createdBy, roleId) {
           throw new Error('Types and codes arrays must be of the same length.');
         }
 
-        const entries = type.map((types, index) => ({
+        // DB: types → employee_code_master_type_id, codes → employee_code_master_id
+        // Payload: type[] = master ids, code[] = type option ids
+        const entries = type.map((masterId, index) => ({
           userId,
+          employeeId,
           createdBy,
-          types,
-          codes: code[index]
+          types: code[index],
+          codes: masterId,
         }));
 
         await employeeMetaDataRepository.employeeMetaData(entries, transaction);
@@ -903,13 +906,19 @@ export async function updateEmployee(identifier, data, files, updatedBy, created
         const type = allDropDownDataObject.type;
         const code = allDropDownDataObject.code;
 
-        const entries = type.map((types, index) => ({
+        if (type.length !== code.length) {
+          throw new Error('Types and codes arrays must be of the same length.');
+        }
+
+        // DB: types → employee_code_master_type_id, codes → employee_code_master_id
+        // Payload: type[] = master ids, code[] = type option ids
+        const entries = type.map((masterId, index) => ({
           employeeId,
           userId,
           createdBy,
           updatedBy,
-          types,
-          codes: code[index]
+          types: code[index],
+          codes: masterId,
         }));
 
         await employeeMetaDataRepository.updateEmployeeMetaData(entries, transaction);
