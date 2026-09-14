@@ -1367,17 +1367,11 @@ function expandScheduleForExactDate(rawSchedules, currentDate) {
   return results;
 }
 
-export async function getTodayClassSchedule(userId, currentDate, sessionId, groupPeriods = false, pagination = {}) {
-  // When grouping, fetch extra rows since consecutive periods get merged
-  const adjustedPagination = groupPeriods && pagination.limit
-    ? { ...pagination, limit: pagination.limit * 2 }
-    : pagination;
-
-  const { rows: rawSchedules, total } = await employeeScheduleRepository.getTodayClassScheduleForEmployee(
+export async function getTodayClassSchedule(userId, currentDate, sessionId, groupPeriods = false) {
+  const { rows: rawSchedules } = await employeeScheduleRepository.getTodayClassScheduleForEmployee(
     Number(userId),
     currentDate,
     sessionId,
-    adjustedPagination,
   );
 
   const strippedSchedules = rawSchedules.map(stripTeacherFieldsFromSchedule);
@@ -1385,11 +1379,11 @@ export async function getTodayClassSchedule(userId, currentDate, sessionId, grou
 
   if (groupPeriods) {
     const grouped = await groupConsecutivePeriods(schedules, groupPeriods === 'sessional');
-    const limitedGroups = pagination.limit ? grouped.slice(0, pagination.limit) : grouped;
-    return { schedules: await applyGroupAttendanceStatus(limitedGroups), total };
+    const result = await applyGroupAttendanceStatus(grouped);
+    return { schedules: result, total: result.length };
   }
 
-  return { schedules, total };
+  return { schedules, total: schedules.length };
 }
 
 export async function getTeacherCourses(userId) {

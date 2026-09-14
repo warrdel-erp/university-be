@@ -215,10 +215,6 @@ export async function getSubjectEvalution(req, res) {
 export const getTodayClassSchedule = async (req, res) => {
   try {
     const { userId, date, sessionId, groupPeriods } = req.query;
-    const hasPagination =
-      req.query.page !== undefined || req.query.limit !== undefined;
-    const page = hasPagination ? Number(req.query.page) || 1 : undefined;
-    const limit = hasPagination ? Number(req.query.limit) || 10 : undefined;
     const academicYearId = getAcademicYearId();
 
     if (!userId) {
@@ -243,7 +239,6 @@ export const getTodayClassSchedule = async (req, res) => {
       formattedDate,
       sessionId != null && sessionId !== "" ? Number(sessionId) : undefined,
       groupingType,
-      hasPagination ? { page, limit } : {},
     );
 
     return SuccessResponse(
@@ -253,8 +248,8 @@ export const getTodayClassSchedule = async (req, res) => {
       schedules,
       {
         total,
-        limit: hasPagination ? limit : total,
-        page: hasPagination ? page : 1,
+        limit: total,
+        page: 1,
       },
     );
   } catch (error) {
@@ -580,10 +575,6 @@ export const getMyTodayClassSchedule = async (req, res) => {
     }
     const { userId } = validation;
     const { date, sessionId, groupPeriods } = req.query;
-    const hasPagination =
-      req.query.page !== undefined || req.query.limit !== undefined;
-    const page = hasPagination ? Number(req.query.page) || 1 : undefined;
-    const limit = hasPagination ? Number(req.query.limit) || 10 : undefined;
     const academicYearId = getAcademicYearId();
 
     if (!academicYearId) {
@@ -604,7 +595,6 @@ export const getMyTodayClassSchedule = async (req, res) => {
       formattedDate,
       sessionId != null && sessionId !== "" ? Number(sessionId) : undefined,
       groupingType,
-      hasPagination ? { page, limit } : {},
     );
 
     return SuccessResponse(
@@ -614,8 +604,8 @@ export const getMyTodayClassSchedule = async (req, res) => {
       schedules,
       {
         total,
-        limit: hasPagination ? limit : total,
-        page: hasPagination ? page : 1,
+        limit: total,
+        page: 1,
       },
     );
   } catch (error) {
