@@ -163,14 +163,12 @@ function toPlain(value) {
 
 function mapRoleData(authUser = {}) {
   const userRolePermissions = authUser?.userRolePermissions || [];
-
-  const firstRole = userRolePermissions.find(urp => urp?.userRole?.role)?.userRole?.role || "";
-
-  const permissions = userRolePermissions.map(urp => urp?.permission).filter(Boolean);
-
+  const withRole = userRolePermissions.find((urp) => urp?.userRole?.role || urp?.roleId);
+  const roleId = authUser?.defaultRoleId ?? withRole?.roleId ?? null;
+  const role = withRole?.userRole?.role || "";
   return {
-    role: firstRole,
-    permissions: [...new Set(permissions)]
+    roleId: roleId != null ? Number(roleId) : null,
+    role,
   };
 }
 
@@ -976,9 +974,8 @@ async function formatEmployeeListItem(row) {
     employeePhotoUrl: photoFile?.url || null,
     employeeSignatureUrl: signatureFile?.url || null,
     departmentName: item?.employeeDepartment?.departmentName || "",
-    roleId: item?.roleId || mappedRoleData?.role || "",
-    roleData: mappedRoleData,
-    role: mappedRoleData?.role ? [mappedRoleData.role] : (item?.role || []),
+    roleId: mappedRoleData.roleId,
+    role: mappedRoleData.role ? [mappedRoleData.role] : [],
     joiningDate: employment.joiningDate,
     gender: getMetaCode(item, "gender"),
     religion: getMetaCode(item, "religion"),
@@ -1023,8 +1020,15 @@ export async function getSingleEmployeeDetails(userId) {
   const result = await employeeRepository.getSingleEmployeeDetails(userId);
   return Promise.all((result || []).map(async (row) => {
     const item = toPlain(row) || {};
-    const authUser = item?.user || item?.userEmployee || {};
-    const mappedRoleData = mapRoleData(authUser);
+    const authUserRaw = toPlain(item?.user || item?.userEmployee) || {};
+    const mappedRoleData = mapRoleData(authUserRaw);
+
+    const {
+      user: _user,
+      userEmployee: _userEmployee,
+      roleId: _employeeTableRoleId,
+      ...restItem
+    } = item;
 
     const officeEntry = Array.isArray(item?.office) ? (item.office[0] || {}) : (item?.office || {});
     const addressEntry = Array.isArray(item?.address) ? (item.address[0] || {}) : (item?.address || {});
@@ -1046,16 +1050,14 @@ export async function getSingleEmployeeDetails(userId) {
     );
 
     return {
-      ...item,
+      ...restItem,
       photoFile,
       signatureFile,
       employeePhotoUrl: photoFile?.url || null,
       employeeSignatureUrl: signatureFile?.url || null,
       documents,
-      userEmployee: authUser,
-      roleData: mappedRoleData,
-      roleId: item?.roleId || mappedRoleData?.role || "",
-      role: mappedRoleData?.role ? [mappedRoleData.role] : (item?.role || []),
+      roleId: mappedRoleData.roleId,
+      role: mappedRoleData.role ? [mappedRoleData.role] : [],
       employment,
       salutation: officeEntry?.employeeRank || item?.salutation || "",
       designation: officeEntry?.employeeRank || item?.designation || "",

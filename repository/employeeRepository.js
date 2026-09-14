@@ -205,13 +205,13 @@ function employeeDetailIncludes() {
         {
             model: model.userModel.unscoped(),
             as: 'userEmployee',
-            attributes: ['universityId', 'userId'],
+            attributes: ['universityId', 'userId', 'defaultRoleId'],
             include: [
                 {
                     model: model.userRolePermissionModel.unscoped(),
                     as: 'userRolePermissions',
                     separate: true,
-                    attributes: ['roleId', 'permission', 'scope'],
+                    attributes: ['roleId'],
                     include: [
                         {
                             model: model.roleModel.unscoped(),
@@ -225,14 +225,14 @@ function employeeDetailIncludes() {
         {
             model: model.userModel.unscoped(),
             as: 'user',
-            attributes: ['universityId', 'userId', 'email'],
+            attributes: ['universityId', 'userId', 'email', 'defaultRoleId'],
             required: false,
             include: [
                 {
                     model: model.userRolePermissionModel.unscoped(),
                     as: 'userRolePermissions',
                     separate: true,
-                    attributes: ['roleId', 'permission', 'scope'],
+                    attributes: ['roleId'],
                     include: [
                         {
                             model: model.roleModel.unscoped(),
