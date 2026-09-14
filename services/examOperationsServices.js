@@ -62,11 +62,22 @@ function mapMaterialBundle(row) {
   };
 }
 
+const REQUIRED_INVIGILATORS_PER_ROOM = 2;
+
 function operationStatus(invigilators, materialBundle) {
   if (invigilators.length > 0 && materialBundle != null) {
     return "READY_FOR_EXAM";
   }
   return "NOT_READY";
+}
+
+function buildInvigilatorCount(added) {
+  const required = REQUIRED_INVIGILATORS_PER_ROOM;
+  return {
+    required,
+    added,
+    status: added >= required ? "Added" : "pending",
+  };
 }
 
 /** Resolve query filters → scheduleWhere / subjectWhere for repository queries.
@@ -333,6 +344,7 @@ export async function listRooms(query) {
       const opInvigilators = invigilatorsByOp.get(opKey) || [];
       const materialBundle = bundleByOp.get(opKey) || null;
       const status = operationStatus(opInvigilators, materialBundle);
+      const invigilatorCount = buildInvigilatorCount(opInvigilators.length);
 
       if (statusFilter && status !== statusFilter) continue;
 
@@ -341,6 +353,7 @@ export async function listRooms(query) {
         slot: operation.slot,
         status,
         exams: operation.exams,
+        invigilatorCount,
         invigilators: opInvigilators,
         materialBundle,
       });
