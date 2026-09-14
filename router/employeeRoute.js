@@ -156,7 +156,7 @@ const employeeDocumentsListSchema = z.preprocess(
 
 const addEmployeeBodySchema = z
   .object({
-    roleId: z.union([positiveIntegerId, z.string().min(1)]).optional().nullable(),
+    roleId: positiveIntegerId,
     employeeName: z
       .string({ required_error: "employeeName is required" })
       .trim()
@@ -182,7 +182,7 @@ const addEmployeeBodySchema = z
 
 const updateEmployeeBodySchema = z
   .object({
-    roleId: z.union([positiveIntegerId, z.string().min(1)]).optional().nullable(),
+    roleId: positiveIntegerId,
     employeeName: z.string().trim().min(1).optional(),
     departmentId: z.preprocess(
       (val) => (val === "" || val === "null" || val === 0 ? null : val),

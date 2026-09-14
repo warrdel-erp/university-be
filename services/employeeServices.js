@@ -291,10 +291,14 @@ export async function addEmployee(data, files, createdBy, roleId) {
       userId: null,
       instituteId,
       roleId: null,
-      isTeacher: false,
     };
 
     const userId = await employeeRegister(employeePersonalDetail, employeeRegisterData, transaction);
+
+    // Assign role → copies role_permissions into user_role_permission_scope
+    const assignedRoleId = Number(roleId);
+    await userRoleService.assignRoleToUser(userId, assignedRoleId, [], transaction);
+    await registerRepository.updateUser(userId, { defaultRoleId: assignedRoleId }, transaction);
 
     // Add employee
     data.createdBy = createdBy;
@@ -593,7 +597,7 @@ export async function updateEmployee(identifier, data, files, updatedBy, created
 
     //  Update main employee table
     const {
-      roleId: _excludedRoleId,
+      roleId: incomingRoleId,
       campusId: _excludedCampusId,
       instituteId: _excludedInstituteId,
       department: _legacyDepartment,
@@ -610,9 +614,24 @@ export async function updateEmployee(identifier, data, files, updatedBy, created
     }
     await employeeRepository.updateEmployee(employeeId, {
       ...employeeUpdateData,
-      roleId: null,  // role_id in employee table is always null; role is managed via user_roles table
+      roleId: null,  // role_id in employee table is always null; role is managed via user_role_permission_scope
       updatedBy
     }, transaction);
+
+    // Sync role → user_role_permission_scope + users.defaultRoleId
+    const assignedRoleId = Number(incomingRoleId);
+    const roleExists = await userRoleService.getUserRoles(userId);
+    let hasRole = false;
+    for (const role of roleExists) {
+      if (Number(role.roleId) === assignedRoleId) {
+        hasRole = true;
+        break;
+      }
+    }
+    if (!hasRole) {
+      await userRoleService.assignRoleToUser(userId, assignedRoleId, [], transaction);
+    }
+    await registerRepository.updateUser(userId, { defaultRoleId: assignedRoleId }, transaction);
 
     // Sync officialEmailId with user table email
     const updatedEmail = data.officialEmailId ?? office?.officialEmailId;
@@ -1187,7 +1206,6 @@ export async function importEmployeeData(excelData, commonData) {
       const employeeRegisterData = {
         instituteId: convertedData.instituteId,
         roleId: null,
-        isTeacher: false,
         employeeName: convertedData.employeeName,
         universityId,
         employeeId

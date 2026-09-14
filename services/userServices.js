@@ -411,11 +411,9 @@ export const employeeRegister = async (
     const { personalEmail, mobileNumber } = employeePersonalDetail;
     const {
       universityId,
-      roleId,
       employeeName,
       employeeId,
       instituteId,
-      isTeacher,
     } = employeeRegisterData;
     const dummyPassword = uuidv4();
     const password = bcrypt.hashSync(dummyPassword, salt);
@@ -429,7 +427,6 @@ export const employeeRegister = async (
       employeeId: employeeId,
       dummyPassword: dummyPassword,
       defaultInstituteId: instituteId,
-      isTeacher: isTeacher === true,
     };
 
     // Register the student and employee
