@@ -2,15 +2,12 @@ import { Op } from "sequelize";
 import * as model from "../models/index.js";
 import { scoped } from "../utility/scoped.js";
 
-function examEnrollmentInclude(sessionId, courseId, term, academicYearId, yearNumber) {
+function examEnrollmentInclude(sessionId, courseId, term, academicYearId) {
   const sectionWhere = {
     sessionId: Number(sessionId),
     courseId: Number(courseId),
     academicYearId: Number(academicYearId),
   };
-  if (yearNumber != null) {
-    sectionWhere.year = Number(yearNumber);
-  }
 
   return {
     model: model.classSectionTermModel,
@@ -35,9 +32,6 @@ export async function countTermCohortStudents(group, options = {}) {
     sessionId: Number(group.sessionId),
     courseId: Number(group.courseId),
   };
-  if (group.batchYear != null) {
-    where.batchYear = Number(group.batchYear);
-  }
 
   return scoped(model.studentModel).count({
     where,
@@ -47,7 +41,6 @@ export async function countTermCohortStudents(group, options = {}) {
         group.courseId,
         group.term,
         group.academicYearId,
-        group.yearNumber,
       ),
     ],
     distinct: true,
@@ -61,9 +54,6 @@ export async function findTermCohortStudents(group, options = {}) {
     sessionId: Number(group.sessionId),
     courseId: Number(group.courseId),
   };
-  if (group.batchYear != null) {
-    where.batchYear = Number(group.batchYear);
-  }
   if (options.search) {
     const like = `%${options.search}%`;
     where[Op.or] = [
@@ -95,7 +85,6 @@ export async function findTermCohortStudents(group, options = {}) {
         group.courseId,
         group.term,
         group.academicYearId,
-        group.yearNumber,
       ),
       {
         model: model.courseModel,

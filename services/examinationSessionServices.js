@@ -2178,6 +2178,7 @@ export async function getMappedSubjectsBySessionAndTerm(
       courseSessionMappingId: mappingInfo
         ? mappingInfo.sessionCourseMappingId
         : null,
+      studentCount,
       isExamScheduled: hasSchedule,
       examScheduleId: schedInfo ? schedInfo.examScheduleId : null,
       needsScheduling,
@@ -2758,6 +2759,10 @@ export async function getPlanningOverview(examinationSessionId) {
     examPercentages.push(percentage);
   }
 
+  const publishedExams = schedules.filter(
+    (s) => Boolean(toPlain(s).published) || toPlain(s).published === 1,
+  ).length;
+  const publishedPercentage = percentOf(publishedExams, schedules.length);
   const overallPercentage = averagePercentages(examPercentages);
 
   return {
@@ -2765,9 +2770,12 @@ export async function getPlanningOverview(examinationSessionId) {
     sessionName: session.sessionName,
     status: session.status,
     publishedAt: session.publishedAt,
-    percentage: overallPercentage,
-    statusLabel: stageStatus(overallPercentage),
+    percentage: publishedPercentage,
+    statusLabel: stageStatus(publishedPercentage),
+    overallProgressPercentage: overallPercentage,
     totalExams: schedules.length,
+    publishedExams,
+    publishedPercentage,
     stages: {
       roomsAssigned: {
         percentage: averagePercentages(stepTotals.roomsAssigned),
