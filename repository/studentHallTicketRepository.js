@@ -3,7 +3,7 @@ import { Op, fn, col } from "sequelize";
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
-import { expandClassSectionTermIdsByTerms } from "../utility/studentCount.js";
+import { expandClassSectionTermIdsByTerms } from "./studentCountRepository.js";
 import * as examinationSessionRepository from "./examinationSessionRepository.js";
 import {
   ELIGIBILITY_STATUS,

@@ -2,7 +2,6 @@ import * as model from "../models/index.js";
 import { Op, fn, col } from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { doTimeSlotsOverlap, getTimeSlotRange } from "../utility/timeSlot.js";
-import { countStudentsForExamGroup } from "../utility/studentCount.js";
 
 export async function assertScopedExamSchedule(examScheduleId, options = {}) {
   const { transaction, attributes = ['examScheduleId'] } = options;
@@ -210,6 +209,7 @@ export async function getExamScheduleSlot(examScheduleId) {
       "sessionId",
       "term",
       "academicYearId",
+      "curriculumBatchTermMappingId",
       "published",
     ],
     include: [
@@ -383,10 +383,6 @@ export async function getSeatAllocationCountsByRoomCapacityIds(examScheduleRoomC
     transaction,
   });
   return rows;
-}
-
-export async function getEnrolledStudentsCount(sessionId, courseId, term, academicYearId, transaction = null) {
-  return countStudentsForExamGroup(sessionId, courseId, term, academicYearId, { transaction });
 }
 
 export async function getAlreadyAssignedCapacity(examScheduleId, transaction = null) {

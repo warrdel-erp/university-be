@@ -3,37 +3,20 @@ import { validate } from "../utility/validation.js";
 import { z } from "zod";
 import * as controller from "../controllers/examRoomMaterialBundleController.js";
 import userAuth from "../middleware/authUser.js";
+import {
+  emptyToUndefined,
+  positiveIntegerId,
+  optionalQueryId,
+  dateStringSchema,
+  selectionsSchema,
+} from "../utility/examZodSchemas.js";
 
 const router = Router();
-
-const emptyToUndefined = (val) =>
-  val === "" || val === null || val === undefined ? undefined : val;
-
-const positiveIntegerId = z.union([
-  z.string().regex(/^\d+$/).transform(Number),
-  z.number().int().positive(),
-]);
-
-const positiveIntegerQueryId = z.preprocess(
-  emptyToUndefined,
-  z
-    .union([
-      z.string().regex(/^\d+$/).transform(Number),
-      z.number().int().positive(),
-    ])
-    .optional(),
-);
 
 const optionalIdWithNullDefault = z
   .preprocess(
     emptyToUndefined,
-    z
-      .union([
-        z.string().regex(/^\d+$/).transform(Number),
-        z.number().int().positive(),
-      ])
-      .nullable()
-      .optional(),
+    positiveIntegerId.nullable().optional(),
   )
   .transform((val) => (val === undefined || val === null ? null : val));
 
@@ -42,12 +25,9 @@ const listSchema = {
     examinationSessionId: positiveIntegerId,
     examDate: z.preprocess(
       emptyToUndefined,
-      z
-        .string()
-        .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD")
-        .optional(),
+      dateStringSchema.optional(),
     ),
-    examinationSessionSlotId: positiveIntegerQueryId,
+    examinationSessionSlotId: optionalQueryId,
     status: z.preprocess(
       emptyToUndefined,
       z
@@ -61,25 +41,10 @@ const listSchema = {
         ])
         .optional(),
     ),
-    selections: z.preprocess(
-      (val) => {
-        if (!val || val === "") return undefined;
-        try {
-          return typeof val === "string" ? JSON.parse(val) : val;
-        } catch {
-          return undefined;
-        }
-      },
-      z.array(
-        z.object({
-          courseSessionMappingId: z.number().int().positive(),
-          terms: z.array(z.number().int().positive()),
-        })
-      ).optional()
-    ),
+    selections: selectionsSchema,
     search: z.preprocess(emptyToUndefined, z.string().optional()),
-    page: positiveIntegerQueryId,
-    limit: positiveIntegerQueryId,
+    page: optionalQueryId,
+    limit: optionalQueryId,
   }),
 };
 
@@ -91,9 +56,7 @@ const idParamSchema = {
 
 const createSchema = {
   body: z.object({
-    examDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD"),
+    examDate: dateStringSchema,
     examinationSessionSlotId: positiveIntegerId,
     classRoomSectionId: positiveIntegerId,
     issuedTo: optionalIdWithNullDefault,
@@ -120,9 +83,7 @@ const createSchema = {
 
 const createAutoSchema = {
   body: z.object({
-    examDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD"),
+    examDate: dateStringSchema,
     examinationSessionSlotId: positiveIntegerId,
     classRoomSectionId: positiveIntegerId,
     issuedTo: optionalIdWithNullDefault,
@@ -168,9 +129,7 @@ const singleQuerySchema = {
   query: z.object({
     examinationSessionId: positiveIntegerId,
     classRoomSectionId: positiveIntegerId,
-    examDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD"),
+    examDate: dateStringSchema,
     examinationSessionSlotId: positiveIntegerId,
   }),
 };

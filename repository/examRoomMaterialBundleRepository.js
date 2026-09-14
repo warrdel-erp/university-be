@@ -96,6 +96,8 @@ export async function getBundleList(filters, pagination) {
           "examinationSessionSlotId",
           "sessionId",
           "term",
+          "academicYearId",
+          "curriculumBatchTermMappingId",
         ],
         where: scheduleWhere,
         required: true,
@@ -107,6 +109,29 @@ export async function getBundleList(filters, pagination) {
             where:
               Object.keys(subjectWhere).length > 0 ? subjectWhere : undefined,
             required: true,
+          },
+          {
+            model: model.curriculumBatchTermMappingModel,
+            as: "curriculumBatchTermMapping",
+            attributes: [
+              "curriculumBatchTermMappingId",
+              "term",
+              "yearNumber",
+              "year",
+            ],
+            required: false,
+            include: [
+              {
+                model: model.curriculumBatchMappingModel,
+                as: "batchMapping",
+                attributes: [
+                  "curriculumBatchMappingId",
+                  "curriculumId",
+                  "batch",
+                ],
+                required: true,
+              },
+            ],
           },
           {
             model: model.examinationSessionSlotModel,

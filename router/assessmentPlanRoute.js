@@ -29,6 +29,10 @@ export const createSubjectMappingBody = z.object({
     .int()
     .positive("assessmentPlanId is required"),
   subjectId: z.coerce.number().int().positive("subjectId is required"),
+  curriculumBatchTermMappingId: z.coerce
+    .number()
+    .int()
+    .positive("curriculumBatchTermMappingId is required"),
   courseId: z.coerce.number().int().positive("courseId is required"),
   sessionId: z.coerce.number().int().positive("sessionId is required"),
 });
@@ -36,6 +40,7 @@ export const createSubjectMappingBody = z.object({
 export const listSubjectMappingQuery = z.object({
   assessmentPlanId: z.union([z.string(), z.number()]).optional(),
   subjectId: z.union([z.string(), z.number()]).optional(),
+  curriculumBatchTermMappingId: z.union([z.string(), z.number()]).optional(),
   courseId: z.union([z.string(), z.number()]).optional(),
   sessionId: z.union([z.string(), z.number()]).optional(),
   academicYearId: z.union([z.string(), z.number()]).optional(),
@@ -62,6 +67,7 @@ export const overviewQuerySchema = z.object({
   limit: z.coerce.number().int().positive().optional().default(10),
   sessionId: z.union([z.string(), z.number()]).optional(),
   subjectId: z.union([z.string(), z.number()]).optional(),
+  curriculumBatchTermMappingId: z.union([z.string(), z.number()]).optional(),
   assessmentPlanId: z.union([z.string(), z.number()]).optional(),
   academicRegulationId: z.union([z.string(), z.number()]).optional(),
   assignmentStatus: z

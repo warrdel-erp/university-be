@@ -2,7 +2,11 @@ import { UniqueConstraintError } from "sequelize";
 import crypto from "crypto";
 import sequelize from "../database/sequelizeConfig.js";
 import * as examResultRepository from "../repository/examResultRepository.js";
-import { countWholeTermStudentsByTerms } from "../utility/studentCount.js";
+import {
+  buildStudentGroupFromSchedule,
+  lookupStudentCount,
+} from "../utility/studentCount.js";
+import { getStudentCountMapByGroups } from "./studentCountServices.js";
 import {
   decimalAdd,
   decimalDivide,
@@ -10,6 +14,7 @@ import {
   decimalMultiply,
   decimalSubtract,
   toMoneyNumber,
+  toIntegerNumber,
 } from "../utility/decimalMoney.js";
 
 /**
@@ -418,22 +423,45 @@ export async function getSku(query) {
     return emptySku(examinationSessionId);
   }
 
-  const [totalExams, sheetSku, totalStudents, scheduleRows] = await Promise.all(
-    [
-      examResultRepository.countExamSchedulesByExaminationSessionId(
-        examinationSessionId,
-      ),
-      examResultRepository.countAnswerSheetSkuByExaminationSessionId(
-        examinationSessionId,
-      ),
-      countWholeTermStudentsByTerms(terms, academicYearId),
-      examResultRepository.findExamScheduleContextsByExaminationSessionId(
-        examinationSessionId,
-      ),
-    ],
-  );
+  const [totalExams, sheetSku, scheduleRows] = await Promise.all([
+    examResultRepository.countExamSchedulesByExaminationSessionId(
+      examinationSessionId,
+    ),
+    examResultRepository.countAnswerSheetSkuByExaminationSessionId(
+      examinationSessionId,
+    ),
+    examResultRepository.findExamScheduleContextsByExaminationSessionId(
+      examinationSessionId,
+    ),
+  ]);
 
-  const studentTotal = Number(totalStudents) || 0;
+  const studentGroups = [];
+  for (const row of scheduleRows) {
+    const group = buildStudentGroupFromSchedule(row);
+    if (group) studentGroups.push(group);
+  }
+  const studentCountMap = studentGroups.length
+    ? await getStudentCountMapByGroups(studentGroups)
+    : new Map();
+
+  let studentTotal = 0;
+  const seenGroupKeys = new Set();
+  for (const group of studentGroups) {
+    const key = [
+      group.sessionId,
+      group.courseId,
+      group.term,
+      group.academicYearId,
+      group.batchYear,
+      group.yearNumber,
+      group.curriculumBatchTermMappingId,
+    ].join("_");
+    if (seenGroupKeys.has(key)) continue;
+    seenGroupKeys.add(key);
+    studentTotal = toIntegerNumber(
+      decimalAdd(studentTotal, lookupStudentCount(studentCountMap, group)),
+    );
+  }
 
   if (!totalExams || !scheduleRows.length) {
     return {
@@ -450,11 +478,12 @@ export async function getSku(query) {
 
   const schedules = [];
   for (const row of scheduleRows) {
+    const plain = row.get ? row.get({ plain: true }) : row;
     schedules.push({
-      examScheduleId: Number(row.examScheduleId),
-      courseId: Number(row.subjectSchedule.courseId),
-      sessionId: Number(row.sessionId),
-      term: row.term == null ? null : Number(row.term),
+      examScheduleId: Number(plain.examScheduleId),
+      courseId: Number(plain.subjectSchedule.courseId),
+      sessionId: Number(plain.sessionId),
+      term: plain.term == null ? null : Number(plain.term),
     });
   }
 

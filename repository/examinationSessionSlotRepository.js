@@ -37,6 +37,7 @@ const scheduleInclude = (date, filterCombinations) => {
       "sessionId",  
       "academicYearId",
       "term",
+      "curriculumBatchTermMappingId",
       "examDate",
       "examTime",
       "type",
@@ -66,6 +67,25 @@ const scheduleInclude = (date, filterCombinations) => {
             model: model.courseModel,
             as: "courseInfo",
             attributes: ["courseName", "termType"],
+          },
+        ],
+      },
+      {
+        model: model.curriculumBatchTermMappingModel,
+        as: "curriculumBatchTermMapping",
+        attributes: [
+          "curriculumBatchTermMappingId",
+          "term",
+          "yearNumber",
+          "year",
+        ],
+        required: false,
+        include: [
+          {
+            model: model.curriculumBatchMappingModel,
+            as: "batchMapping",
+            attributes: ["curriculumBatchMappingId", "curriculumId", "batch"],
+            required: true,
           },
         ],
       },

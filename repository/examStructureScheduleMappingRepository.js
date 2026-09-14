@@ -4,7 +4,6 @@ import { Op } from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { classSectionTermsInclude } from "../utility/classSectionIncludes.js";
 
-
 async function assertScopedExamSchedule(examScheduleId, options = {}) {
   const { transaction, attributes = ['examScheduleId'] } = options;
   return scoped(model.examScheduleModel).findOne({
@@ -45,6 +44,7 @@ export async function addExamStructureSchedule(examDetailSchedule, options = {})
    await scoped(model.examScheduleModel).create(
   {
     subjectId: examDetailSchedule.subjectId,
+    curriculumBatchTermMappingId: examDetailSchedule.curriculumBatchTermMappingId || null,
     term: examDetailSchedule.term,
     examinationSessionId: examDetailSchedule.examinationSessionId,
     academicYearId: examDetailSchedule.academicYearId,
@@ -114,7 +114,6 @@ export async function getExamStructureSchedule(examSetupTypeId) {
         model: model.examSetupTypeTermModel,
         as: "examSetupTypeTerms",
         attributes: { exclude: ["createdAt", "updatedAt"] },
-
       },
     ],
   });
