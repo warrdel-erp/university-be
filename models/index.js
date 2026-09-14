@@ -840,11 +840,11 @@ employeeModel.hasMany(employeeAddressModel, {
 
 employeeCorAddressModel.belongsTo(employeeModel, {
   foreignKey: "employeeId",
-  as: "CorsAddress",
+  as: "corsAddress",
 });
 employeeModel.hasMany(employeeCorAddressModel, {
   foreignKey: "employeeId",
-  as: "CorsAddress",
+  as: "corsAddress",
 });
 
 employeeOfficeModel.belongsTo(employeeModel, {
@@ -921,11 +921,11 @@ s3FileModel.hasMany(employeeQualificationModel, {
 
 employeeExperianceModel.belongsTo(employeeModel, {
   foreignKey: "employeeId",
-  as: "experiance",
+  as: "experience",
 });
 employeeModel.hasMany(employeeExperianceModel, {
   foreignKey: "employeeId",
-  as: "experiance",
+  as: "experience",
 });
 
 employeeAchievementModel.belongsTo(employeeModel, {
@@ -948,11 +948,11 @@ employeeModel.hasMany(employeeWardModel, {
 
 employeeActivityModel.belongsTo(employeeModel, {
   foreignKey: "employeeId",
-  as: "activty",
+  as: "employee",
 });
 employeeModel.hasMany(employeeActivityModel, {
   foreignKey: "employeeId",
-  as: "activty",
+  as: "activity",
 });
 
 employeeReferenceModel.belongsTo(employeeModel, {

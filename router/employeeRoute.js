@@ -348,6 +348,7 @@ router.get(
   "/:id",
   userAuth,
   checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
+  validate({ params: employeeIdParamSchema }),
   getSingleEmployeeDetails,
 );
 router.patch(

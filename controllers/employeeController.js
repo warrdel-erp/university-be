@@ -47,12 +47,9 @@ export const getAllEmployee = async (req, res) => {
 };
 
 export const getSingleEmployeeDetails = async (req, res) => {
-  const userId = req.params.id;
+  const id = req.params.id;
   try {
-    if (!userId) {
-      return res.status(400).send("userId is required");
-    }
-    const result = await employee.getSingleEmployeeDetails(userId);
+    const result = await employee.getSingleEmployeeDetails(id);
     res.status(200).send(result);
   } catch (error) {
     console.error("Error in getting single employee details:", error);

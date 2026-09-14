@@ -162,24 +162,26 @@ function toPlain(value) {
 }
 
 function mapRoleData(authUser = {}) {
+  const defaultRole = authUser?.defaultRoleRef;
+  if (defaultRole?.roleId != null || defaultRole?.role) {
+    return {
+      roleId: defaultRole.roleId != null
+        ? Number(defaultRole.roleId)
+        : (authUser.defaultRoleId != null ? Number(authUser.defaultRoleId) : null),
+      role: defaultRole.role || "",
+    };
+  }
+
   const userRolePermissions = authUser?.userRolePermissions || [];
   const withRole = userRolePermissions.find((urp) => urp?.userRole?.role || urp?.roleId);
   const roleId = authUser?.defaultRoleId ?? withRole?.roleId ?? null;
-  const role = withRole?.userRole?.role || "";
   return {
     roleId: roleId != null ? Number(roleId) : null,
-    role,
+    role: withRole?.userRole?.role || "",
   };
 }
 
-async function resolveOfficeEntry(item = {}) {
-  const directOffice = await getEmployeeOfficeDetails(item?.userId);
-  const directOfficeEntry = toPlain(directOffice) || {};
-  const includedOffice = Array.isArray(item?.office) ? (item.office[0] || {}) : (item?.office || {});
-  return Object.keys(directOfficeEntry).length > 0 ? directOfficeEntry : includedOffice;
-}
-
-function mapEmployment(item = {}, officeEntry = {}, addressEntry = {}) {
+function mapEmployment(item = {}, officeEntry = {}) {
   const officialMail = officeEntry?.officialEmailId || officeEntry?.officalEmailId || officeEntry?.officeMailId || "";
   const officialMob = officeEntry?.officialMobileNumber || officeEntry?.officalMobileNumber || "";
   return {
@@ -200,26 +202,6 @@ function getMetaCode(item = {}, type) {
   return item?.employeeMetaData?.find((metaItem) =>
     String(metaItem?.typess?.codes?.codeMasterType || "").trim().toLowerCase() === type
   )?.typess?.code || "";
-}
-
-function mapActivityForEmployeeDetails(rows = []) {
-  return (Array.isArray(rows) ? rows : []).map((activity) => ({
-    ...activity,
-    activityName: activity?.activityName ?? activity?.activity ?? "",
-    date: activity?.date ?? activity?.monthYear ?? "",
-    description: activity?.description ?? activity?.remarks ?? "",
-    category: activity?.category ?? ""
-  }));
-}
-
-function mapLongLeaveForEmployeeDetails(rows = []) {
-  return (Array.isArray(rows) ? rows : []).map((leave) => ({
-    ...leave,
-    leaveType: leave?.leaveType ?? leave?.leave_type ?? "",
-    fromDate: leave?.fromDate ?? leave?.dateOfLeaving ?? leave?.DateOfLeaving ?? "",
-    toDate: leave?.toDate ?? leave?.dateOfRejoining ?? leave?.DateOfRejoining ?? "",
-    reason: leave?.reason ?? leave?.remark ?? ""
-  }));
 }
 
 function safeParseJsonField(val, fallback = null) {
@@ -1020,53 +1002,31 @@ export async function getSingleEmployeeDetails(userId) {
   const result = await employeeRepository.getSingleEmployeeDetails(userId);
   return Promise.all((result || []).map(async (row) => {
     const item = toPlain(row) || {};
-    const authUserRaw = toPlain(item?.user || item?.userEmployee) || {};
-    const mappedRoleData = mapRoleData(authUserRaw);
+    const user = item.userEmployee || {};
+    const defaultRole = user.defaultRoleRef || {};
 
-    const {
-      user: _user,
-      userEmployee: _userEmployee,
-      roleId: _employeeTableRoleId,
-      ...restItem
-    } = item;
+    item.photoFile = await enrichS3FileRecord(item.photoFile);
+    item.signatureFile = await enrichS3FileRecord(item.signatureFile);
+    item.employeePhotoUrl = item.photoFile?.url || null;
+    item.employeeSignatureUrl = item.signatureFile?.url || null;
 
-    const officeEntry = Array.isArray(item?.office) ? (item.office[0] || {}) : (item?.office || {});
-    const addressEntry = Array.isArray(item?.address) ? (item.address[0] || {}) : (item?.address || {});
-    const employment = mapEmployment(item, officeEntry, addressEntry);
-
-    const photoFile = await enrichS3FileRecord(item?.photoFile);
-    const signatureFile = await enrichS3FileRecord(item?.signatureFile);
-
-    const rawDocuments = Array.isArray(item?.documents) ? item.documents : [];
-    const documents = await Promise.all(
-      rawDocuments.map(async (doc) => {
-        const docPlain = toPlain(doc) || {};
-        if (docPlain.attachmentFile) {
-          docPlain.attachmentFile = await enrichS3FileRecord(docPlain.attachmentFile);
-          docPlain.attachmentUrl = docPlain.attachmentFile?.url || null;
+    if (Array.isArray(item.documents)) {
+      for (const doc of item.documents) {
+        if (doc.attachmentFile) {
+          doc.attachmentFile = await enrichS3FileRecord(doc.attachmentFile);
         }
-        return docPlain;
-      })
-    );
+      }
+    }
 
-    return {
-      ...restItem,
-      photoFile,
-      signatureFile,
-      employeePhotoUrl: photoFile?.url || null,
-      employeeSignatureUrl: signatureFile?.url || null,
-      documents,
-      roleId: mappedRoleData.roleId,
-      role: mappedRoleData.role ? [mappedRoleData.role] : [],
-      employment,
-      salutation: officeEntry?.employeeRank || item?.salutation || "",
-      designation: officeEntry?.employeeRank || item?.designation || "",
-      experience: item?.experiance || item?.experience || [],
-      activity: mapActivityForEmployeeDetails(item?.activty || item?.activity || []),
-      longLeave: mapLongLeaveForEmployeeDetails(item?.longLeave || []),
-    };
+    item.roleId = defaultRole.roleId != null
+      ? Number(defaultRole.roleId)
+      : (user.defaultRoleId != null ? Number(user.defaultRoleId) : null);
+    item.role = defaultRole.role || null;
+    delete item.userEmployee;
+
+    return item;
   }));
-};
+}
 
 export async function deleteEmployeeDetail(userId) {
   try {
