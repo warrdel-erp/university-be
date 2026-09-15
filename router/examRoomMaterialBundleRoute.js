@@ -166,6 +166,7 @@ const updateItemsSchema = {
 
 const singleQuerySchema = {
   query: z.object({
+    examinationSessionId: positiveIntegerId,
     classRoomSectionId: positiveIntegerId,
     examDate: z
       .string()
