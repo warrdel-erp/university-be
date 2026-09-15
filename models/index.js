@@ -1054,6 +1054,15 @@ employeeCodeMasterType.hasMany(employeeQualificationModel, {
   as: "codeMasterQualificationDocuments",
 });
 
+employeeOfficeModel.belongsTo(employeeCodeMasterType, {
+  foreignKey: "designation",
+  as: "codeMasterDesignation",
+});
+employeeCodeMasterType.hasMany(employeeOfficeModel, {
+  foreignKey: "designation",
+  as: "employeeOffices",
+});
+
 employeeExperianceModel.belongsTo(employeeCodeMasterType, {
   foreignKey: "experience_type",
   as: "codeMasterExperienceType",

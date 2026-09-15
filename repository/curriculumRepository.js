@@ -245,14 +245,6 @@ export async function findBatchMappingsByCurriculumId(curriculumId) {
   return model.curriculumBatchMappingModel.findAll({
     where: { curriculumId },
     attributes: batchMappingAttributes,
-    include: [
-      {
-        model: model.curriculumBatchTermMappingModel,
-        as: 'termMappings',
-        attributes: termMappingAttributes,
-        required: false,
-      },
-    ],
     order: [['batch', 'ASC']],
   });
 }

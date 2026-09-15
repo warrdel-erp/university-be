@@ -6,178 +6,102 @@ import {
     teacherSubjectWhere,
 } from './teacherSubjectMappingRepository.js';
 
-export async function assertScopedEmployee(id, options = {}) {
-    if (!id) return null;
-    const numId = Number(id);
-    if (isNaN(numId)) return null;
-    let employee = await scoped(model.employeeModel).findOne({
-        where: { employeeId: numId },
-        attributes: options.attributes || ['userId', 'employeeId'],
-        transaction: options.transaction,
-    });
-    if (!employee) {
-        employee = await scoped(model.employeeModel).findOne({
-            where: { userId: numId },
-            attributes: options.attributes || ['userId', 'employeeId'],
-            transaction: options.transaction,
-        });
-    }
-    return employee;
-}
+// ============================================================================
+// 1. Constants & Reusable Attributes
+// ============================================================================
 
-export const getEmployeeById = assertScopedEmployee;
-export const getEmployeeByUserId = assertScopedEmployee;
+const S3_FILE_ATTRIBUTES = [
+    'id',
+    'entityType',
+    's3Key',
+    'size',
+    'mime',
+    'originalName',
+    'status',
+];
 
-export async function resolveEmployeeIdForAuth({ userId, employeeId } = {}) {
-    if (employeeId != null && employeeId !== '') {
-        const row = await scoped(model.employeeModel).findOne({
-            where: { userId: Number(employeeId) },
-            attributes: ['userId'],
-        });
-        if (!row) {
-            return null;
-        }
-        if (userId != null && Number(row.userId) !== Number(userId)) {
-            return null;
-        }
-        return row.userId;
-    }
+const OFFICE_ATTRIBUTES = [
+    'employeeOfficeId',
+    'employeeId',
+    'joiningDate',
+    'confirmationDate',
+    'relievingDate',
+    'retirementDate',
+    'transferDate',
+    'resignationDate',
+    'noticePeriod',
+    'employeeFileNumber',
+    'officialEmailId',
+    'officialMobileNumber',
+    'istActive',
+    'bankName',
+    'accountNumber',
+    'ifscCode',
+    'iindActive',
+    'bankNameIInd',
+    'accountNumberIInd',
+    'ifscCodeIInd',
+    'contractBased',
+    'gpf',
+    'esiNumber',
+    'uanNumber',
+    'lectureBased',
+    'pfNumber',
+    'panNumber',
+    'voterId',
+    'aadharNumber',
+    'spouseName',
+    'nomineeName',
+    'officeExtensionNumber',
+    'designation',
+    'salutation',
+];
 
-    if (userId != null && userId !== '') {
-        const row = await scoped(model.employeeModel).findOne({
-            where: { userId: Number(userId) },
-            attributes: ['employeeId'],
-        });
-        return row?.employeeId ?? null;
-    }
+const ADDRESS_ATTRIBUTES = [
+    'employeeAddressId',
+    'employeeId',
+    'pAddress',
+    'pPincode',
+    'pCountry',
+    'pState',
+    'pCity',
+    'mobileNumber',
+    'personalEmail',
+];
 
-    return null;
-}
+const CORS_ADDRESS_ATTRIBUTES = [
+    'employeeCorAddressId',
+    'employeeId',
+    'address',
+    'pincode',
+    'cCountry',
+    'cState',
+    'cCity',
+];
 
-export async function addEmployee(data, transaction) {
-    try {
-        const result = await scoped(model.employeeModel).create(data, { transaction });
-        return result;
-    } catch (error) {
-        console.error("Error in add employee :", error);
-        throw error;
-    }
-};
+const EMPLOYEE_SCALAR_ATTRIBUTES = [
+    'employeeId',
+    'userId',
+    'universityId',
+    'campusId',
+    'instituteId',
+    'employeePhoto',
+    'employeeSignature',
+    'employeeCode',
+    'departmentId',
+    'employmentType',
+    'employeeName',
+    'dateOfBirth',
+    'fatherName',
+    'motherName',
+    'pickColor',
+];
 
-export async function updateEmployee(employeeId, data, transaction) {
-    try {
-        const existing = await assertScopedEmployee(employeeId, { transaction });
-        if (!existing) {
-            return [0];
-        }
+// ============================================================================
+// 2. Include Builders
+// ============================================================================
 
-        const result = await scoped(model.employeeModel).update(
-            data,
-            { where: { employeeId: existing.employeeId }, transaction },
-        );
-        return result;
-    } catch (error) {
-        console.error("Error in update employee:", error);
-        throw error;
-    }
-};
-
-export async function getAllEmployee(campusId, instituteId, options = {}) {
-    try {
-        const { employeeId } = options;
-        const whereClause = {
-            ...(employeeId && { userId: employeeId }),
-            ...(campusId && { campusId }),
-            ...(instituteId && { instituteId }),
-        };
-        return await scoped(model.employeeModel).findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            where: whereClause,
-            include: [
-                {
-                    model: model.userModel.unscoped(),
-                    as: 'userEmployee',
-                    attributes: ["universityId", "userId"],
-                },
-                {
-                    model: model.userModel.unscoped(),
-                    as: 'user',
-                    attributes: ["universityId", "userId"],
-                    required: false,
-                    include: [
-                        {
-                            model: model.userRolePermissionModel.unscoped(),
-                            as: 'userRolePermissions',
-                            attributes: ["roleId", "permission", "scope"],
-                            include: [
-                                {
-                                    model: model.roleModel.unscoped(),
-                                    as: 'userRole',
-                                    attributes: ["role"],
-                                }
-                            ]
-                        },
-                    ],
-                },
-                {
-                    model: model.employeeOfficeModel.unscoped(),
-                    as: 'office',
-                    attributes: { exclude: ["createdAt", "updatedAt"] },
-                },
-                {
-                    model: model.employeeAddressModel.unscoped(),
-                    as: 'address',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    required: false,
-                },
-                {
-                    model: model.s3FileModel.unscoped(),
-                    as: 'photoFile',
-                    attributes: ['id', 'entityType', 's3Key', 'size', 'mime', 'originalName', 'status'],
-                    required: false,
-                },
-                {
-                    model: model.s3FileModel.unscoped(),
-                    as: 'signatureFile',
-                    attributes: ['id', 'entityType', 's3Key', 'size', 'mime', 'originalName', 'status'],
-                    required: false,
-                },
-                {
-                    model: model.employeeMetaDataModel.unscoped(),
-                    as: "employeeMetaData",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    include: [
-                        {
-                            model: model.employeeCodeMasterType.unscoped(),
-                            as: "typess",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                            include: [
-                                {
-                                    model: model.employeeCodeMaster.unscoped(),
-                                    as: "codes",
-                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                                },
-                            ],
-                        },
-                    ],
-                },
-                {
-                    model: model.departmentModel.unscoped(),
-                    as: 'employeeDepartment',
-                    attributes: ['departmentId', 'departmentName'],
-                    required: false,
-                },
-            ],
-        });
-    } catch (error) {
-        console.error(`Error in getting all employee :`, error);
-        throw error;
-    };
-};
-
-const S3_FILE_ATTRIBUTES = ['id', 'entityType', 's3Key', 'size', 'mime', 'originalName', 'status'];
-
-function employeeCodeMasterInclude(as) {
+export function employeeCodeMasterInclude(as) {
     return {
         model: model.employeeCodeMasterType.unscoped(),
         as,
@@ -192,7 +116,102 @@ function employeeCodeMasterInclude(as) {
     };
 }
 
-function employeeDetailIncludes() {
+function buildEmployeeOfficeInclude(options = {}) {
+    return {
+        model: model.employeeOfficeModel.unscoped(),
+        as: 'office',
+        ...(options.separate ? { separate: true } : {}),
+        attributes: OFFICE_ATTRIBUTES,
+        include: [employeeCodeMasterInclude('codeMasterDesignation')],
+    };
+}
+
+function buildEmployeeMetaDataInclude(options = {}) {
+    return {
+        model: model.employeeMetaDataModel.unscoped(),
+        as: 'employeeMetaData',
+        ...(options.separate ? { separate: true } : {}),
+        attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+        include: [
+            {
+                model: model.employeeCodeMasterType.unscoped(),
+                as: 'typess',
+                attributes: ['employeeCodeMasterTypeId', 'code', 'description'],
+                include: [
+                    {
+                        model: model.employeeCodeMaster.unscoped(),
+                        as: 'codes',
+                        attributes: ['employeeCodeMasterId', 'codeMasterType'],
+                    },
+                ],
+            },
+        ],
+    };
+}
+
+function buildEmployeeListIncludes() {
+    return [
+        {
+            model: model.userModel.unscoped(),
+            as: 'userEmployee',
+            attributes: ['universityId', 'userId'],
+        },
+        {
+            model: model.userModel.unscoped(),
+            as: 'user',
+            attributes: ['universityId', 'userId', 'defaultRoleId'],
+            required: false,
+            include: [
+                {
+                    model: model.roleModel.unscoped(),
+                    as: 'defaultRoleRef',
+                    attributes: ['roleId', 'role'],
+                    required: false,
+                },
+                {
+                    model: model.userRolePermissionModel.unscoped(),
+                    as: 'userRolePermissions',
+                    attributes: ['roleId', 'permission', 'scope'],
+                    include: [
+                        {
+                            model: model.roleModel.unscoped(),
+                            as: 'userRole',
+                            attributes: ['role'],
+                        },
+                    ],
+                },
+            ],
+        },
+        buildEmployeeOfficeInclude(),
+        {
+            model: model.employeeAddressModel.unscoped(),
+            as: 'address',
+            attributes: ADDRESS_ATTRIBUTES,
+            required: false,
+        },
+        {
+            model: model.s3FileModel.unscoped(),
+            as: 'photoFile',
+            attributes: S3_FILE_ATTRIBUTES,
+            required: false,
+        },
+        {
+            model: model.s3FileModel.unscoped(),
+            as: 'signatureFile',
+            attributes: S3_FILE_ATTRIBUTES,
+            required: false,
+        },
+        buildEmployeeMetaDataInclude(),
+        {
+            model: model.departmentModel.unscoped(),
+            as: 'employeeDepartment',
+            attributes: ['departmentId', 'departmentName'],
+            required: false,
+        },
+    ];
+}
+
+function buildEmployeeDetailIncludes() {
     return [
         {
             model: model.userModel.unscoped(),
@@ -211,72 +230,15 @@ function employeeDetailIncludes() {
             model: model.employeeAddressModel.unscoped(),
             as: 'address',
             separate: true,
-            attributes: [
-                'employeeAddressId',
-                'employeeId',
-                'pAddress',
-                'pPincode',
-                'pCountry',
-                'pState',
-                'pCity',
-                'mobileNumber',
-                'personalEmail',
-            ],
+            attributes: ADDRESS_ATTRIBUTES,
         },
         {
             model: model.employeeCorAddressModel.unscoped(),
             as: 'corsAddress',
             separate: true,
-            attributes: [
-                'employeeCorAddressId',
-                'employeeId',
-                'address',
-                'pincode',
-                'cCountry',
-                'cState',
-                'cCity',
-            ],
+            attributes: CORS_ADDRESS_ATTRIBUTES,
         },
-        {
-            model: model.employeeOfficeModel.unscoped(),
-            as: 'office',
-            separate: true,
-            attributes: [
-                'employeeOfficeId',
-                'employeeId',
-                'joiningDate',
-                'confirmationDate',
-                'relievingDate',
-                'retirementDate',
-                'transferDate',
-                'resignationDate',
-                'noticePeriod',
-                'employeeFileNumber',
-                'officialEmailId',
-                'officialMobileNumber',
-                'istActive',
-                'bankName',
-                'accountNumber',
-                'ifscCode',
-                'iindActive',
-                'bankNameIInd',
-                'accountNumberIInd',
-                'ifscCodeIInd',
-                'contractBased',
-                'gpf',
-                'esiNumber',
-                'uanNumber',
-                'lectureBased',
-                'pfNumber',
-                'panNumber',
-                'voterId',
-                'aadharNumber',
-                'spouseName',
-                'nomineeName',
-                'officeExtensionNumber',
-                'employeeRank',
-            ],
-        },
+        buildEmployeeOfficeInclude({ separate: true }),
         {
             model: model.employeeSkillModel.unscoped(),
             as: 'skill',
@@ -461,26 +423,7 @@ function employeeDetailIncludes() {
             ],
             include: [employeeCodeMasterInclude('codeMasterLeaveType')],
         },
-        {
-            model: model.employeeMetaDataModel.unscoped(),
-            as: 'employeeMetaData',
-            separate: true,
-            attributes: ['employeeMetaDataId', 'employeeId', 'types', 'codes'],
-            include: [
-                {
-                    model: model.employeeCodeMasterType.unscoped(),
-                    as: 'typess',
-                    attributes: ['employeeCodeMasterTypeId', 'code', 'description'],
-                    include: [
-                        {
-                            model: model.employeeCodeMaster.unscoped(),
-                            as: 'codes',
-                            attributes: ['employeeCodeMasterId', 'codeMasterType'],
-                        },
-                    ],
-                },
-            ],
-        },
+        buildEmployeeMetaDataInclude({ separate: true }),
         {
             model: model.departmentModel.unscoped(),
             as: 'employeeDepartment',
@@ -490,42 +433,59 @@ function employeeDetailIncludes() {
     ];
 }
 
-export async function getSingleEmployeeDetails(id) {
-    if (!id) return [];
-    try {
-        const scopedEmployee = await assertScopedEmployee(id, {
+// ============================================================================
+// 3. Employee Identity & Scope Assertion
+// ============================================================================
+
+export async function assertScopedEmployee(id, options = {}) {
+    if (!id) return null;
+    const numId = Number(id);
+    if (isNaN(numId)) return null;
+
+    let employee = await scoped(model.employeeModel).findOne({
+        where: { employeeId: numId },
+        attributes: options.attributes || ['userId', 'employeeId'],
+        transaction: options.transaction,
+    });
+
+    if (!employee) {
+        employee = await scoped(model.employeeModel).findOne({
+            where: { userId: numId },
+            attributes: options.attributes || ['userId', 'employeeId'],
+            transaction: options.transaction,
+        });
+    }
+
+    return employee;
+}
+
+export const getEmployeeById = assertScopedEmployee;
+export const getEmployeeByUserId = assertScopedEmployee;
+
+export async function resolveEmployeeIdForAuth({ userId, employeeId } = {}) {
+    if (employeeId != null && employeeId !== '') {
+        const row = await scoped(model.employeeModel).findOne({
+            where: { userId: Number(employeeId) },
+            attributes: ['userId'],
+        });
+        if (!row) {
+            return null;
+        }
+        if (userId != null && Number(row.userId) !== Number(userId)) {
+            return null;
+        }
+        return row.userId;
+    }
+
+    if (userId != null && userId !== '') {
+        const row = await scoped(model.employeeModel).findOne({
+            where: { userId: Number(userId) },
             attributes: ['employeeId'],
         });
-        if (!scopedEmployee) return [];
-
-        const result = await scoped(model.employeeModel).findAll({
-            attributes: [
-                'employeeId',
-                'userId',
-                'universityId',
-                'campusId',
-                'instituteId',
-                'employeePhoto',
-                'employeeSignature',
-                'employeeCode',
-                'departmentId',
-                'employmentType',
-                'employeeName',
-                'dateOfBirth',
-                'fatherName',
-                'motherName',
-                'pickColor',
-            ],
-            include: employeeDetailIncludes(),
-            where: {
-                employeeId: scopedEmployee.employeeId,
-            },
-        });
-        return result;
-    } catch (error) {
-        console.error(`Error in getting employee for ${id} :`, error);
-        throw error;
+        return row?.employeeId ?? null;
     }
+
+    return null;
 }
 
 async function assertEmployeeNotLinked(userId) {
@@ -536,6 +496,77 @@ async function assertEmployeeNotLinked(userId) {
     if (subjectLinks > 0) {
         const error = new Error('Cannot delete employee: employee is connected to subjects.');
         error.statusCode = 409;
+        throw error;
+    }
+}
+
+// ============================================================================
+// 4. Employee CRUD Operations
+// ============================================================================
+
+export async function addEmployee(data, transaction) {
+    try {
+        return await scoped(model.employeeModel).create(data, { transaction });
+    } catch (error) {
+        console.error('Error in add employee:', error);
+        throw error;
+    }
+}
+
+export async function updateEmployee(employeeId, data, transaction) {
+    try {
+        const existing = await assertScopedEmployee(employeeId, { transaction });
+        if (!existing) {
+            return [0];
+        }
+
+        return await scoped(model.employeeModel).update(
+            data,
+            { where: { employeeId: existing.employeeId }, transaction },
+        );
+    } catch (error) {
+        console.error('Error in update employee:', error);
+        throw error;
+    }
+}
+
+export async function getAllEmployee(campusId, instituteId, options = {}) {
+    try {
+        const { employeeId } = options;
+        const whereClause = {
+            ...(employeeId && { userId: employeeId }),
+            ...(campusId && { campusId }),
+            ...(instituteId && { instituteId }),
+        };
+
+        return await scoped(model.employeeModel).findAll({
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+            where: whereClause,
+            include: buildEmployeeListIncludes(),
+        });
+    } catch (error) {
+        console.error('Error in getting all employee:', error);
+        throw error;
+    }
+}
+
+export async function getSingleEmployeeDetails(id) {
+    if (!id) return [];
+    try {
+        const scopedEmployee = await assertScopedEmployee(id, {
+            attributes: ['employeeId'],
+        });
+        if (!scopedEmployee) return [];
+
+        return await scoped(model.employeeModel).findAll({
+            attributes: EMPLOYEE_SCALAR_ATTRIBUTES,
+            include: buildEmployeeDetailIncludes(),
+            where: {
+                employeeId: scopedEmployee.employeeId,
+            },
+        });
+    } catch (error) {
+        console.error(`Error in getting employee for ${id}:`, error);
         throw error;
     }
 }
@@ -561,8 +592,7 @@ export async function deleteEmployeeDetail(employeeId) {
         }
         throw new Error('Unable to soft delete account');
     }
-};
-
+}
 
 export async function createEmployeeWithDetails(employeeData, officeData, addressData, transaction) {
     const employee = await scoped(model.employeeModel).create(employeeData, { transaction });
@@ -578,26 +608,28 @@ export async function createEmployeeWithDetails(employeeData, officeData, addres
     }
 
     return employee;
-};
+}
+
+// ============================================================================
+// 5. Academic & Schedule Operations
+// ============================================================================
 
 export async function getPreviousEnrollNumber(campusCode, instituteCode) {
     try {
-        const attribute = ["employee_Code"];
-        const result = await scoped(model.employeeModel).findOne({
-            attributes: attribute,
+        return await scoped(model.employeeModel).findOne({
+            attributes: ['employee_Code'],
             where: {
                 employee_Code: {
-                    [Op.regexp]: `^${campusCode}/${instituteCode}/`
-                }
+                    [Op.regexp]: `^${campusCode}/${instituteCode}/`,
+                },
             },
-            order: [['employee_Code', 'DESC']]
+            order: [['employee_Code', 'DESC']],
         });
-        return result;
     } catch (error) {
         console.error(`Error in get Previous Enroll Number for campus ${campusCode} and institue Code ${instituteCode}:`, error);
         throw error;
     }
-};
+}
 
 export async function getTeacherSubject(employeeId, filters = {}) {
     try {
@@ -615,7 +647,7 @@ export async function getTeacherSubject(employeeId, filters = {}) {
             ...buildScope(model.subjectModel),
         };
 
-        return scoped(model.teacherSubjectMappingModel).findAll({
+        return await scoped(model.teacherSubjectMappingModel).findAll({
             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
             where: {
                 userId: employee.userId,
@@ -657,12 +689,11 @@ export async function getTeacherSubject(employeeId, filters = {}) {
                 },
             ],
         });
-
     } catch (error) {
         console.error('Error in getting employee subjects:', error);
         throw error;
     }
-};
+}
 
 export async function getTeacherCourses(employeeId) {
     try {
@@ -704,10 +735,10 @@ export async function getTeacherCourses(employeeId) {
 
         return courses;
     } catch (error) {
-        console.error("Error in getTeacherCourses repository:", error);
+        console.error('Error in getTeacherCourses repository:', error);
         throw error;
     }
-};
+}
 
 export async function getTeacherSubjectsFromSchedule(userId) {
     try {

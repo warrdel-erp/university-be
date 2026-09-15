@@ -33,7 +33,7 @@ Staff directory create / update APIs (+ Curriculum folder in the same collection
 | `GET` | `/api/curriculums` | List |
 | `GET` | `/api/curriculums/:id` | Detail + terms |
 | `GET` | `/api/curriculums/:id/available-subjects` | Unmapped subjects |
-| `GET` | `/api/curriculums/:id/batches` | Batch mappings + term rows |
+| `GET` | `/api/curriculums/:id/batches` | Batch mappings list with student counts |
 | `GET` | `/api/curriculums/batches` | Batch year options |
 | `POST` | `/api/curriculums` | Create (default draft) |
 | `PATCH` | `/api/curriculums/:id` | Update name / isActive |
@@ -108,7 +108,7 @@ Creates auth user + employee master row and optional satellite records (address,
   "motherName": "Jane Doe",
   "pickColor": "#4A90E2",
   "salutation": "Mr",
-  "designation": "Assistant Professor",
+  "designation": 32,
   "officialEmailId": "john.doe@university.edu",
   "officialMobileNumber": "9876543210",
   "address": {
@@ -158,7 +158,8 @@ Creates auth user + employee master row and optional satellite records (address,
     "spouseName": "Mary Doe",
     "nomineeName": "Robert Doe",
     "officeExtensionNumber": "2345",
-    "employeeRank": "Assistant Professor"
+    "designation": 32,
+    "salutation": "Mr"
   },
   "skill": [
     {
@@ -359,8 +360,9 @@ Same shape as Add Employee. Minimal example:
   "employeeName": "John Doe Updated",
   "officialEmailId": "john.updated@university.edu",
   "officialMobileNumber": "9876543210",
+  "designation": 32,
+  "salutation": "Mr",
   "office": {
-    "employeeRank": "Associate Professor",
     "noticePeriod": 60
   },
   "address": {
