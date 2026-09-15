@@ -68,7 +68,29 @@ const optionalPositiveId = z.preprocess(
   z.coerce.number().int().positive().optional(),
 );
 
-// Shared query schema for GET /employee/schedule, GET /employee/pastSchedule, GET /employee/upcomingSchedule and GET /employee/uniqueClassSectionSubjects.
+// Today schedule returns all entries for the day (no page/limit).
+const todayScheduleQuerySchema = z
+  .object({
+    userId: z.coerce.number().int().positive(),
+    date: z.string().optional(),
+    sessionId: optionalPositiveId,
+    groupPeriods: z.enum(["false", "sessional", "consecutive"]).optional(),
+    instituteId: optionalPositiveId,
+    universityId: optionalPositiveId,
+  })
+  .passthrough();
+
+const todayScheduleQuerySchemaWithoutUserId = z
+  .object({
+    date: z.string().optional(),
+    sessionId: optionalPositiveId,
+    groupPeriods: z.enum(["false", "sessional", "consecutive"]).optional(),
+    instituteId: optionalPositiveId,
+    universityId: optionalPositiveId,
+  })
+  .passthrough();
+
+// Shared query schema for GET /employee/pastSchedule, GET /employee/upcomingSchedule and GET /employee/uniqueClassSectionSubjects.
 const scheduleQuerySchema = z
   .object({
     userId: z.coerce.number().int().positive(),
@@ -119,7 +141,7 @@ router.get(
   "/schedule",
   userAuth,
   checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
-  validate({ query: scheduleQuerySchema }),
+  validate({ query: todayScheduleQuerySchema }),
   getTodayClassSchedule,
 );
 router.get(
@@ -161,7 +183,7 @@ router.get(
 router.get(
   "/my/schedule",
   userAuth,
-  validate({ query: scheduleQuerySchemaWithoutUserId }),
+  validate({ query: todayScheduleQuerySchemaWithoutUserId }),
   getMyTodayClassSchedule,
 );
 
