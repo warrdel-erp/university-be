@@ -37,6 +37,23 @@ const getSlotByIdSchema = {
   }),
 };
 
+const getSingleSlotSchema = {
+  query: z
+    .object({
+      examinationSessionId: positiveIntegerQueryId.optional(),
+      examinationSessionSlotId: positiveIntegerQueryId.optional(),
+    })
+    .refine(
+      (data) =>
+        data.examinationSessionId != null ||
+        data.examinationSessionSlotId != null,
+      {
+        message:
+          "examinationSessionId or examinationSessionSlotId is required",
+      },
+    ),
+};
+
 const updateSlotSchema = {
   body: z.array(
     z.object({
@@ -52,7 +69,7 @@ const updateSlotSchema = {
 router.post('/', userAuth, validate(createSlotSchema), examinationSessionSlotController.createExaminationSessionSlot);
 router.get('/count', userAuth, validate(getSlotsSchema), examinationSessionSlotController.getExaminationSessionSlotsCount);
 router.get('/', userAuth, validate(getSlotsSchema), examinationSessionSlotController.getExaminationSessionSlots);
-router.get('/single', userAuth, validate(getSlotByIdSchema), examinationSessionSlotController.getExaminationSessionSlotById);
+router.get('/single', userAuth, validate(getSingleSlotSchema), examinationSessionSlotController.getExaminationSessionSlotById);
 router.patch('/', userAuth, validate(updateSlotSchema), examinationSessionSlotController.updateExaminationSessionSlot);
 router.delete('/', userAuth, validate(getSlotByIdSchema), examinationSessionSlotController.deleteExaminationSessionSlot);
 

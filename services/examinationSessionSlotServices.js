@@ -380,11 +380,14 @@ export async function getExaminationSessionSlotsCount(
 }
 
 export async function getExaminationSessionSlotById(
-  examinationSessionSlotId,
+  { examinationSessionId, examinationSessionSlotId },
   options,
 ) {
   return examinationSessionSlotRepository.getExaminationSessionSlotById(
-    examinationSessionSlotId,
+    {
+      examinationSessionId,
+      examinationSessionSlotId,
+    },
     options,
   );
 }

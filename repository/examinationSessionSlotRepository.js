@@ -178,12 +178,60 @@ export async function findSlotsWithoutSchedules(
   });
 }
 
+const slotAttributes = [
+  "examinationSessionSlotId",
+  "examinationSessionId",
+  "universityId",
+  "instituteId",
+  "academicYearId",
+  "slotNumber",
+  "startTime",
+  "endTime",
+  "durationMinutes",
+  "createdBy",
+  "updatedBy",
+  "createdAt",
+  "updatedAt",
+];
+
 export async function getExaminationSessionSlotById(
-  examinationSessionSlotId,
+  params,
   options = {},
 ) {
-  return scoped(model.examinationSessionSlotModel).findOne({
-    where: { examinationSessionSlotId: Number(examinationSessionSlotId) },
+  let examinationSessionId;
+  let examinationSessionSlotId;
+
+  if (typeof params === "number" || typeof params === "string") {
+    examinationSessionSlotId = Number(params);
+  } else {
+    examinationSessionId = params.examinationSessionId;
+    examinationSessionSlotId = params.examinationSessionSlotId;
+  }
+
+  const where = {};
+  if (examinationSessionId != null) {
+    where.examinationSessionId = Number(examinationSessionId);
+  }
+  if (examinationSessionSlotId != null) {
+    where.examinationSessionSlotId = Number(examinationSessionSlotId);
+  }
+
+  if (examinationSessionSlotId != null) {
+    return scoped(model.examinationSessionSlotModel).findOne({
+      where,
+      attributes: slotAttributes,
+      transaction: options.transaction,
+    });
+  }
+
+  if (examinationSessionId == null) {
+    return null;
+  }
+
+  return scoped(model.examinationSessionSlotModel).findAll({
+    where,
+    attributes: slotAttributes,
+    order: [["slotNumber", "ASC"]],
     transaction: options.transaction,
   });
 }
