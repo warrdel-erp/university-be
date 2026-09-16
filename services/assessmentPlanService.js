@@ -91,9 +91,7 @@ function mapAssessmentPlanMapping(mapping) {
     courseId: plain.courseId,
     sessionId: plain.sessionId,
     academicYearId: plain.academicYearId,
-    examSetupTypeId: plain.examSetupTypeId,
     session: plain.session || null,
-    examSetupType: plain.examSetupType || null,
     assessmentPlan: plan
       ? {
           assessmentPlanId: plan.assessmentPlanId,
@@ -711,28 +709,12 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
       throw error;
     }
 
-    let examSetupTypeId = null;
-    const component = await model.assessmentPlanComponentModel.findOne({
-      where: { assessmentPlanId: Number(payload.assessmentPlanId) },
-      attributes: ["examSetupTypeId"],
-      raw: true,
-      transaction: t,
-    });
-    if (component && component.examSetupTypeId) {
-      examSetupTypeId = Number(component.examSetupTypeId);
-      const setupTypeRecord = await model.examSetupTypeModel.findByPk(examSetupTypeId, { transaction: t });
-      if (!setupTypeRecord) {
-        examSetupTypeId = null;
-      }
-    }
-
     const data = {
       assessmentPlanId: Number(payload.assessmentPlanId),
       subjectId: Number(payload.subjectId),
       courseId: Number(payload.courseId),
       sessionId: sessionId,
       academicYearId: academicYearId,
-      examSetupTypeId: examSetupTypeId || null,
       universityId: user?.universityId ? Number(user.universityId) : null,
       instituteId: user?.instituteId ? Number(user.instituteId) : null,
       createdBy: user?.userId || null,
