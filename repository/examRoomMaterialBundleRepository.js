@@ -96,6 +96,8 @@ export async function getBundleList(filters, pagination) {
           "examinationSessionSlotId",
           "sessionId",
           "term",
+          "academicYearId",
+          "curriculumBatchTermMappingId",
         ],
         where: scheduleWhere,
         required: true,
@@ -107,6 +109,29 @@ export async function getBundleList(filters, pagination) {
             where:
               Object.keys(subjectWhere).length > 0 ? subjectWhere : undefined,
             required: true,
+          },
+          {
+            model: model.curriculumBatchTermMappingModel,
+            as: "curriculumBatchTermMapping",
+            attributes: [
+              "curriculumBatchTermMappingId",
+              "term",
+              "yearNumber",
+              "year",
+            ],
+            required: false,
+            include: [
+              {
+                model: model.curriculumBatchMappingModel,
+                as: "batchMapping",
+                attributes: [
+                  "curriculumBatchMappingId",
+                  "curriculumId",
+                  "batch",
+                ],
+                required: true,
+              },
+            ],
           },
           {
             model: model.examinationSessionSlotModel,
@@ -828,6 +853,15 @@ export async function findRoomCapacitiesForBundleRoom(
   examinationSessionSlotId,
   options = {},
 ) {
+  const scheduleWhere = {
+    ...buildScope(model.examScheduleModel),
+    examDate,
+    examinationSessionSlotId: Number(examinationSessionSlotId),
+  };
+  if (options.examinationSessionId != null) {
+    scheduleWhere.examinationSessionId = Number(options.examinationSessionId);
+  }
+
   return scoped(model.examScheduleRoomCapacityModel).findAll({
     where: { classRoomSectionId: Number(classRoomSectionId) },
     attributes: [
@@ -840,15 +874,13 @@ export async function findRoomCapacitiesForBundleRoom(
       {
         model: model.examScheduleModel,
         as: "examSchedule",
-        where: {
-          examDate,
-          examinationSessionSlotId: Number(examinationSessionSlotId),
-        },
+        where: scheduleWhere,
         required: true,
         attributes: [
           "examScheduleId",
           "examDate",
           "examinationSessionSlotId",
+          "examinationSessionId",
           "sessionId",
           "term",
         ],

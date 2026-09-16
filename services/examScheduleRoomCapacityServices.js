@@ -1,6 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as examRoomCapacityRepository from "../repository/examScheduleRoomCapacityRepository.js";
 import * as examScheduleServices from "./examScheduleServices.js";
+import { countStudentsForExamGroup } from "./studentCountServices.js";
 import * as model from "../models/index.js";
 import { z } from "zod";
 import { getTimeSlotRange, minutesToTime } from "../utility/timeSlot.js";
@@ -187,12 +188,15 @@ export async function addExamRoomCapacity(data, userId) {
     const transaction = await sequelize.transaction();
 
     try {
-        const totalStudents = await examRoomCapacityRepository.getEnrolledStudentsCount(
+        const totalStudents = await countStudentsForExamGroup(
             examSchedule.sessionId,
             examSchedule.subjectSchedule?.courseId,
             examSchedule.term,
             examSchedule.academicYearId,
-            transaction
+            {
+                transaction,
+                curriculumBatchTermMappingId: examSchedule.curriculumBatchTermMappingId,
+            },
         );
 
         const alreadyAssignedCapacity = await examRoomCapacityRepository.getAlreadyAssignedCapacity(

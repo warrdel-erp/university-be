@@ -15,17 +15,18 @@ import userAuth from "../middleware/authUser.js";
 import { checkAccess } from "../middleware/checkAccess.js";
 import { PERMISSIONS } from "../const/permissions.js";
 import { validate } from "../utility/validation.js";
+import { positiveIntegerQueryId } from "../utility/examZodSchemas.js";
 
 const router = Router();
 
-const positiveIntegerQueryId = z.preprocess(
-  (val) => (val === "" || val === undefined ? undefined : val),
-  z.coerce.number().int().positive()
-);
-
 const addScheduleSchema = {
   body: z.object({
-    subjectId: z.coerce.number().int().positive().optional().nullable(),
+    subjectId: z.coerce.number().int().positive("subjectId is required"),
+    curriculumBatchTermMappingId: z.coerce
+      .number()
+      .int()
+      .positive("curriculumBatchTermMappingId is required"),
+    // term is always resolved from curriculumBatchTermMappingId — ignored if sent
     term: z.coerce.number().int().positive().optional().nullable(),
     examSetupTypeId: z.coerce.number().int().positive().optional().nullable(),
     academicYearId: z.coerce.number().int().positive().optional().nullable(),
@@ -41,7 +42,12 @@ const addScheduleSchema = {
 const updateScheduleSchema = {
   body: z.object({
     examScheduleId: z.coerce.number().int().positive({ message: "examScheduleId is required" }),
-    subjectId: z.coerce.number().int().positive().optional().nullable(),
+    subjectId: z.coerce.number().int().positive("subjectId is required"),
+    curriculumBatchTermMappingId: z.coerce
+      .number()
+      .int()
+      .positive("curriculumBatchTermMappingId is required"),
+    // term is always resolved from curriculumBatchTermMappingId — ignored if sent
     term: z.coerce.number().int().positive().optional().nullable(),
     examSetupTypeId: z.coerce.number().int().positive().optional().nullable(),
     examSetupTypeTermId: z.coerce.number().int().positive().optional().nullable(),

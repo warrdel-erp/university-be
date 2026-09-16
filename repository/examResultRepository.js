@@ -291,7 +291,13 @@ export async function findExamScheduleContextsByExaminationSessionId(
 ) {
   return scoped(model.examScheduleModel).findAll({
     where: { examinationSessionId: Number(examinationSessionId) },
-    attributes: ["examScheduleId", "sessionId", "term"],
+    attributes: [
+      "examScheduleId",
+      "sessionId",
+      "term",
+      "academicYearId",
+      "curriculumBatchTermMappingId",
+    ],
     include: [
       {
         model: model.subjectModel,
@@ -300,9 +306,26 @@ export async function findExamScheduleContextsByExaminationSessionId(
         attributes: ["courseId"],
         where: buildScope(model.subjectModel),
       },
+      {
+        model: model.curriculumBatchTermMappingModel,
+        as: "curriculumBatchTermMapping",
+        attributes: [
+          "curriculumBatchTermMappingId",
+          "term",
+          "yearNumber",
+          "year",
+        ],
+        required: false,
+        include: [
+          {
+            model: model.curriculumBatchMappingModel,
+            as: "batchMapping",
+            attributes: ["curriculumBatchMappingId", "curriculumId", "batch"],
+            required: true,
+          },
+        ],
+      },
     ],
-    raw: true,
-    nest: true,
   });
 }
 

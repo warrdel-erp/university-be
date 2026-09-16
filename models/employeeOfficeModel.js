@@ -2,6 +2,8 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import employee from "./employeeModel.js";
 import users from "./userModel.js";
+import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
+import employeeCodeMaster from "./employeeCodeMasterModel.js";
 
 const employeeOfficeModel = sequelize.define(
     'employee_office',
@@ -61,10 +63,15 @@ const employeeOfficeModel = sequelize.define(
             allowNull: true,
             field: 'employee_file_number'
         },
-        officeMailId: {
+        officialEmailId: {
             type: DataTypes.STRING,
             allowNull: true,
-            field: 'office_mail_id'
+            field: 'official_email_id'
+        },
+        officialMobileNumber: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'official_mobile_number'
         },
         istActive:{
             type: DataTypes.BOOLEAN,
@@ -165,10 +172,19 @@ const employeeOfficeModel = sequelize.define(
             allowNull: true,
             field: 'office_extension_number'
         },
-        employeeRank:{
+        salutation: {
             type: DataTypes.STRING,
             allowNull: true,
-            field: 'employee_rank'
+            field: 'salutation',
+        },
+        designation: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'designation',
+            references: {
+                model: employeeCodeMasterType,
+                key: 'employee_code_master_type_id',
+            },
         },
         createdAt: {
             type: DataTypes.DATE,

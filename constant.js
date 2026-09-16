@@ -328,6 +328,7 @@ export const ACADEMIC_GROUP_TYPES = ["teaching", "activity"];
 export const ACADEMIC_GROUP_SELECTION_SCOPES = ["program_specific", "cross_program"];
 export const ACADEMIC_GROUP_CONTEXT_TYPES = ["course", "activity", "none"];
 export const ACADEMIC_GROUP_PUBLISH_STATUSES = ["draft", "published"];
+export const CURRICULUM_PUBLISH_STATUSES = ["draft", "published"];
 export const ACADEMIC_GROUP_USER_ROLES = [
   "primary_faculty",
   "co_faculty",

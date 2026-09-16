@@ -4,6 +4,7 @@ import course from "./courseModel.js";
 import university from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
 import users from "./userModel.js";
+import { CURRICULUM_PUBLISH_STATUSES } from "../constant.js";
 
 const curriculumModel = sequelize.define(
     'curriculum',
@@ -45,6 +46,12 @@ const curriculumModel = sequelize.define(
                 model: instituteModel,
                 key: 'institute_id'
             }
+        },
+        publishStatus: {
+            type: DataTypes.ENUM(...CURRICULUM_PUBLISH_STATUSES),
+            allowNull: false,
+            defaultValue: 'draft',
+            field: 'publish_status',
         },
         isActive: {
             type: DataTypes.BOOLEAN,
