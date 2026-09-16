@@ -3,6 +3,7 @@ import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 import {
   decimalAdd,
+  decimalCompare,
   decimalDivide,
   decimalGreaterThan,
   decimalMultiply,
@@ -22,6 +23,43 @@ function decimalCeilDivide(numerator, denominator) {
     return decimalAdd(floored, 1);
   }
   return floored;
+}
+
+function resolveTermsForYearStatus(termMappings, activeBatchYear, yearStatus) {
+  const active = toIntegerNumber(activeBatchYear);
+  if (!yearStatus || !decimalGreaterThan(active, 0)) {
+    return null;
+  }
+
+  const terms = [];
+  for (const termMapping of termMappings || []) {
+    const year = toIntegerNumber(termMapping.year);
+    if (!decimalGreaterThan(year, 0)) continue;
+
+    const cmp = decimalCompare(year, active);
+    let mappedStatus = "current";
+    if (cmp < 0) mappedStatus = "previous";
+    if (cmp > 0) mappedStatus = "upcoming";
+    if (mappedStatus !== yearStatus) continue;
+
+    terms.push(Number(termMapping.term));
+  }
+
+  return terms;
+}
+
+function intersectTermFilters(existingTerms, nextTerms) {
+  if (!existingTerms.length) return nextTerms;
+  if (!nextTerms.length) return existingTerms;
+
+  const allowed = new Set(nextTerms);
+  const intersected = [];
+  for (const term of existingTerms) {
+    if (allowed.has(Number(term))) {
+      intersected.push(Number(term));
+    }
+  }
+  return intersected;
 }
 
 function paginationMeta(count, pageNum, limitNum) {
@@ -378,6 +416,8 @@ export async function findOverviewByCurriculumBatchMappingId({
   mappingWhere = {},
   planWhere = {},
   mappingRequired = false,
+  yearStatus,
+  activeBatchYear,
   page = 1,
   limit = 10,
 } = {}) {
@@ -441,8 +481,33 @@ export async function findOverviewByCurriculumBatchMappingId({
     curriculumId: plainBatch.curriculumId,
     ...subjectTermWhere,
   };
-  if (subjectTermWhere.term === undefined && batchTerms.length > 0) {
-    where.term = { [Op.in]: batchTerms };
+
+  let termFilter = [];
+  if (subjectTermWhere.term !== undefined) {
+    termFilter.push(Number(subjectTermWhere.term));
+  } else if (batchTerms.length > 0) {
+    termFilter = batchTerms;
+  }
+
+  const statusTerms = resolveTermsForYearStatus(
+    plainBatch.termMappings,
+    activeBatchYear,
+    yearStatus,
+  );
+  if (statusTerms) {
+    termFilter = intersectTermFilters(termFilter, statusTerms);
+    if (!termFilter.length) {
+      return {
+        batchMapping: plainBatch,
+        rows: [],
+        ...paginationMeta(0, pageNum, limitNum),
+      };
+    }
+  }
+
+  if (termFilter.length > 0) {
+    where.term =
+      termFilter.length === 1 ? termFilter[0] : { [Op.in]: termFilter };
   }
 
   const queryOptions = {

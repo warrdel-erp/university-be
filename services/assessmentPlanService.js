@@ -510,6 +510,7 @@ export async function getCourseAssessmentPlanOverview(queryParams = {}) {
     assessmentPlanId,
     academicRegulationId,
     assignmentStatus = "all",
+    status,
     term,
     search,
     page = 1,
@@ -569,6 +570,8 @@ export async function getCourseAssessmentPlanOverview(queryParams = {}) {
     ] = null;
   }
 
+  const { activeBatchYear } = await resolveActiveAcademicYearContext();
+
   const result =
     await assessmentPlanRepo.findOverviewByCurriculumBatchMappingId({
       curriculumBatchMappingId: parsedCurriculumBatchMappingId,
@@ -577,6 +580,8 @@ export async function getCourseAssessmentPlanOverview(queryParams = {}) {
       mappingWhere,
       planWhere,
       mappingRequired,
+      yearStatus: status,
+      activeBatchYear,
       page,
       limit,
     });
@@ -586,8 +591,6 @@ export async function getCourseAssessmentPlanOverview(queryParams = {}) {
     err.statusCode = 404;
     throw err;
   }
-
-  const { activeBatchYear } = await resolveActiveAcademicYearContext();
   const overview = buildOverviewSubjects(
     result.batchMapping,
     result.rows,

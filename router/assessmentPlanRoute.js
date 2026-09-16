@@ -70,10 +70,12 @@ export const overviewQuerySchema = z.object({
   curriculumBatchTermMappingId: z.union([z.string(), z.number()]).optional(),
   assessmentPlanId: z.union([z.string(), z.number()]).optional(),
   academicRegulationId: z.union([z.string(), z.number()]).optional(),
+  
   assignmentStatus: z
     .enum(["assigned", "unassigned", "all"])
     .optional()
     .default("all"),
+  status: z.enum(["current", "previous", "upcoming"]).optional(),
   search: z.string().optional(),
 });
 
