@@ -1,77 +1,89 @@
-import sequelize from '../database/sequelizeConfig.js';
-import * as model from '../models/index.js';
-import * as employeeRepository from '../repository/employeeRepository.js';
-import * as employeeAddressRepository from '../repository/employeeAddressRepository.js';
-import * as employeeOfficeRepository from '../repository/employeeOfficeRepository.js';
-import * as employeeRoleRepository from '../repository/employeeRoleRepository.js';
-import * as employeeSkillRepository from '../repository/employeeSkillRepository.js';
-import * as employeeDocumentRepository from '../repository/employeeDocumentRepository.js';
-import * as employeeQualificationRepository from '../repository/employeeQualificationRepository.js';
-import * as employeeExperianceRepository from '../repository/employeeExperianceRepository.js';
-import * as employeeAchivementRepository from '../repository/employeeAchivementRepository.js';
-import * as employeeWardRepository from '../repository/employeeWardRepository.js';
-import * as employeeActivityRepository from '../repository/employeeActivityRepository.js';
-import * as employeeReferenceRepository from '../repository/employeeReferenceRepository.js';
-import * as employeeResearchRepository from '../repository/employeeResearchRepository.js';
-import * as employeeLongLeaveRepository from '../repository/employeeLongLeaveRepository.js';
-import * as employeeMetaDataRepository from '../repository/employeeMetaDataRepository.js';
-import * as employeeFilesRepository from '../repository/employeeFilesRepository.js';
-import { uploadFile } from '../utility/awsServices.js';
-import { employeeRegister } from '../services/userServices.js'
+import sequelize from "../database/sequelizeConfig.js";
+import * as model from "../models/index.js";
+import * as employeeRepository from "../repository/employeeRepository.js";
+import * as employeeAddressRepository from "../repository/employeeAddressRepository.js";
+import * as employeeOfficeRepository from "../repository/employeeOfficeRepository.js";
+import * as employeeRoleRepository from "../repository/employeeRoleRepository.js";
+import * as employeeSkillRepository from "../repository/employeeSkillRepository.js";
+import * as employeeDocumentRepository from "../repository/employeeDocumentRepository.js";
+import * as employeeQualificationRepository from "../repository/employeeQualificationRepository.js";
+import * as employeeExperianceRepository from "../repository/employeeExperianceRepository.js";
+import * as employeeAchivementRepository from "../repository/employeeAchivementRepository.js";
+import * as employeeWardRepository from "../repository/employeeWardRepository.js";
+import * as employeeActivityRepository from "../repository/employeeActivityRepository.js";
+import * as employeeReferenceRepository from "../repository/employeeReferenceRepository.js";
+import * as employeeResearchRepository from "../repository/employeeResearchRepository.js";
+import * as employeeLongLeaveRepository from "../repository/employeeLongLeaveRepository.js";
+import * as employeeMetaDataRepository from "../repository/employeeMetaDataRepository.js";
+import * as employeeFilesRepository from "../repository/employeeFilesRepository.js";
+import { uploadFile } from "../utility/awsServices.js";
+import { employeeRegister } from "../services/userServices.js";
 import * as registerRepository from "../repository/userRepository.js";
-import * as userRoleService from '../services/userRoleService.js';
-import { getCampusCode, getInstituteCode } from '../repository/collegeRepository.js';
-import * as libraryRepository from '../repository/libraryCreationRepository.js';
-import * as timeTableCreateRepository from '../repository/timeTablecreateRepository.js';
-import * as employeeScheduleRepository from '../repository/employeeScheduleRepository.js';
-import * as attendanceRepository from '../repository/attendanceRepository.js';
-import * as classSectionTermRepository from '../repository/classSectionTermRepository.js';
+import * as userRoleService from "../services/userRoleService.js";
+import {
+  getCampusCode,
+  getInstituteCode,
+} from "../repository/collegeRepository.js";
+import * as libraryRepository from "../repository/libraryCreationRepository.js";
+import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
+import * as employeeScheduleRepository from "../repository/employeeScheduleRepository.js";
+import * as attendanceRepository from "../repository/attendanceRepository.js";
+import * as classSectionTermRepository from "../repository/classSectionTermRepository.js";
 import * as evaluationRepository from "../repository/evalutionRepository.js";
-import { getSingleRoleDetails } from '../repository/roleRepository.js';
-import { addHead } from '../repository/headRepository.js';
-import { countWeekdayInRange, formatQueryDate, parseLocalDateOnly } from '../utility/helper.js';
-import { resolveTimeTableRoutineSection } from '../utility/classSectionIncludes.js';
-import { ROLES } from '../const/roles.js';
-import moment from 'moment';
-import { getTenantStore } from '../utility/requestContext.js';
-import { decimalAdd } from '../utility/decimalMoney.js';
-import { getDownloadSignedUrl } from '../utility/s3Helper.js';
+import { getSingleRoleDetails } from "../repository/roleRepository.js";
+import { addHead } from "../repository/headRepository.js";
+import {
+  countWeekdayInRange,
+  formatQueryDate,
+  parseLocalDateOnly,
+} from "../utility/helper.js";
+import { resolveTimeTableRoutineSection } from "../utility/classSectionIncludes.js";
+import { ROLES } from "../const/roles.js";
+import moment from "moment";
+import { getTenantStore } from "../utility/requestContext.js";
+import { decimalAdd } from "../utility/decimalMoney.js";
+import { getDownloadSignedUrl } from "../utility/s3Helper.js";
 
 async function generateEmployeeNumber(campusId, instituteId) {
   const getCampusCodeDetail = await getCampusCode(campusId);
   const getInstitueCodeDetail = await getInstituteCode(instituteId);
-  const campusCode = getCampusCodeDetail.get('campusCode');
-  const institueCode = getInstitueCodeDetail.get('instituteCode');
-  const getPreviousEnrollNumber = await employeeRepository.getPreviousEnrollNumber(campusCode, institueCode);
-  const previousEnrollNumber = getPreviousEnrollNumber ? getPreviousEnrollNumber.get('employee_Code') : null;
+  const campusCode = getCampusCodeDetail.get("campusCode");
+  const institueCode = getInstitueCodeDetail.get("instituteCode");
+  const getPreviousEnrollNumber =
+    await employeeRepository.getPreviousEnrollNumber(campusCode, institueCode);
+  const previousEnrollNumber = getPreviousEnrollNumber
+    ? getPreviousEnrollNumber.get("employee_Code")
+    : null;
   let enrollNumber;
   if (previousEnrollNumber) {
-    const enrollNumberParts = previousEnrollNumber.split('/');
-    const enrollNumberPrefix = enrollNumberParts.slice(0, 3).join('/');
+    const enrollNumberParts = previousEnrollNumber.split("/");
+    const enrollNumberPrefix = enrollNumberParts.slice(0, 3).join("/");
     const enrollNumberSuffix = parseInt(enrollNumberParts[3]) + 1;
-    enrollNumber = `${enrollNumberPrefix}/${enrollNumberSuffix.toString().padStart(6, '0')}`;
+    enrollNumber = `${enrollNumberPrefix}/${enrollNumberSuffix.toString().padStart(6, "0")}`;
   } else {
-    const yearLastTwoDigits = moment().format('YY');
+    const yearLastTwoDigits = moment().format("YY");
     enrollNumber = `${campusCode}/${institueCode}/${yearLastTwoDigits}/100001`;
   }
   return enrollNumber;
-};
+}
 
 function normalizeLongLeaves(rows = []) {
   return (Array.isArray(rows) ? rows : [])
     .map((row) => ({
       ...row,
       leaveType: row?.leaveType ?? row?.leave_type ?? null,
-      DateOfLeaving: row?.DateOfLeaving ?? row?.dateOfLeaving ?? row?.fromDate ?? null,
-      DateOfRejoining: row?.DateOfRejoining ?? row?.dateOfRejoining ?? row?.toDate ?? null,
-      remark: row?.remark ?? row?.reason ?? null
+      DateOfLeaving:
+        row?.DateOfLeaving ?? row?.dateOfLeaving ?? row?.fromDate ?? null,
+      DateOfRejoining:
+        row?.DateOfRejoining ?? row?.dateOfRejoining ?? row?.toDate ?? null,
+      remark: row?.remark ?? row?.reason ?? null,
     }))
     .filter((row) => Number.isInteger(Number(row?.leaveType)))
     .map((row) => ({
       leaveType: Number(row.leaveType),
       DateOfLeaving: row.DateOfLeaving,
       DateOfRejoining: row.DateOfRejoining,
-      remark: row.remark
+      remark: row.remark,
     }));
 }
 
@@ -80,7 +92,7 @@ function normalizeActivities(rows = []) {
     .map((row) => ({
       activity: row?.activity ?? row?.activityName ?? null,
       monthYear: row?.monthYear ?? row?.date ?? null,
-      remarks: row?.remarks ?? row?.description ?? row?.category ?? null
+      remarks: row?.remarks ?? row?.description ?? row?.category ?? null,
     }))
     .filter((row) => row.activity);
 }
@@ -89,18 +101,20 @@ function normalizeAchievements(rows = []) {
   return (Array.isArray(rows) ? rows : [])
     .map((row) => ({
       ...row,
-      achievementCategory: row?.achievementCategory ?? row?.achievement_category ?? null,
-      title: row?.title ?? row?.achievementName ?? null
+      achievementCategory:
+        row?.achievementCategory ?? row?.achievement_category ?? null,
+      title: row?.title ?? row?.achievementName ?? null,
     }))
     .filter((row) => Number.isInteger(Number(row?.achievementCategory)))
     .map((row) => ({
       ...row,
-      achievementCategory: Number(row.achievementCategory)
+      achievementCategory: Number(row.achievementCategory),
     }));
 }
 
 function extractS3FileId(val) {
-  if (val == null || val === "" || val === "null" || val === 0 || val === "0") return null;
+  if (val == null || val === "" || val === "null" || val === 0 || val === "0")
+    return null;
   if (typeof val === "object") {
     if (val.id != null) return extractS3FileId(val.id);
     if (val.fileUploadId != null) return extractS3FileId(val.fileUploadId);
@@ -110,12 +124,17 @@ function extractS3FileId(val) {
   return Number.isInteger(num) && num > 0 ? num : null;
 }
 
-async function linkEmployeeS3Files(fileIds = [], employeeId, companyId, transaction) {
+async function linkEmployeeS3Files(
+  fileIds = [],
+  employeeId,
+  companyId,
+  transaction,
+) {
   const validIds = [
     ...new Set(
       fileIds
         .map((id) => Number(id))
-        .filter((id) => Number.isInteger(id) && id > 0)
+        .filter((id) => Number.isInteger(id) && id > 0),
     ),
   ];
   if (validIds.length === 0) return;
@@ -130,7 +149,7 @@ async function linkEmployeeS3Files(fileIds = [], employeeId, companyId, transact
     {
       where: { id: validIds },
       transaction,
-    }
+    },
   );
 }
 
@@ -141,7 +160,11 @@ async function enrichS3FileRecord(fileRecord) {
     try {
       plain.url = await getDownloadSignedUrl(plain.s3Key);
     } catch (err) {
-      console.warn("Failed to generate download url for s3Key:", plain.s3Key, err.message);
+      console.warn(
+        "Failed to generate download url for s3Key:",
+        plain.s3Key,
+        err.message,
+      );
     }
   }
   return plain;
@@ -152,7 +175,7 @@ function normalizeDocumentAttachments(rows = []) {
     .map((row) => ({
       ...row,
       document: row?.document ?? row?.documentType ?? null,
-      attachment: extractS3FileId(row?.attachment)
+      attachment: extractS3FileId(row?.attachment),
     }))
     .filter((row) => Number.isInteger(Number(row?.document)));
 }
@@ -165,15 +188,20 @@ function mapRoleData(authUser = {}) {
   const defaultRole = authUser?.defaultRoleRef;
   if (defaultRole?.roleId != null || defaultRole?.role) {
     return {
-      roleId: defaultRole.roleId != null
-        ? Number(defaultRole.roleId)
-        : (authUser.defaultRoleId != null ? Number(authUser.defaultRoleId) : null),
+      roleId:
+        defaultRole.roleId != null
+          ? Number(defaultRole.roleId)
+          : authUser.defaultRoleId != null
+            ? Number(authUser.defaultRoleId)
+            : null,
       role: defaultRole.role || "",
     };
   }
 
   const userRolePermissions = authUser?.userRolePermissions || [];
-  const withRole = userRolePermissions.find((urp) => urp?.userRole?.role || urp?.roleId);
+  const withRole = userRolePermissions.find(
+    (urp) => urp?.userRole?.role || urp?.roleId,
+  );
   const roleId = authUser?.defaultRoleId ?? withRole?.roleId ?? null;
   return {
     roleId: roleId != null ? Number(roleId) : null,
@@ -182,8 +210,20 @@ function mapRoleData(authUser = {}) {
 }
 
 function mapEmployment(item = {}, officeEntry = {}) {
-  const officialMail = officeEntry?.officialEmailId || officeEntry?.officalEmailId || officeEntry?.officeMailId || "";
-  const officialMob = officeEntry?.officialMobileNumber || officeEntry?.officalMobileNumber || "";
+  const officialMail =
+    officeEntry?.officialEmailId ||
+    officeEntry?.officalEmailId ||
+    officeEntry?.officeMailId ||
+    "";
+  const officialMob =
+    officeEntry?.officialMobileNumber || officeEntry?.officalMobileNumber || "";
+  const codeMasterDesig = officeEntry?.codeMasterDesignation;
+  const designationText =
+    codeMasterDesig?.code ||
+    codeMasterDesig?.description ||
+    (typeof officeEntry?.designation === "string"
+      ? officeEntry.designation
+      : "");
   return {
     departmentId: item?.departmentId ?? null,
     departmentName: item?.employeeDepartment?.departmentName || "",
@@ -194,20 +234,28 @@ function mapEmployment(item = {}, officeEntry = {}) {
     officialEmailId: officialMail,
     officialMobileNumber: officialMob,
     officeExtensionNumber: officeEntry?.officeExtensionNumber || "",
-    employeeRank: officeEntry?.employeeRank || ""
+    designationId: officeEntry?.designation ?? null,
+    designation: designationText,
+    salutation: officeEntry?.salutation || "",
   };
 }
 
+5;
 function getMetaCode(item = {}, type) {
-  return item?.employeeMetaData?.find((metaItem) =>
-    String(metaItem?.typess?.codes?.codeMasterType || "").trim().toLowerCase() === type
-  )?.typess?.code || "";
+  return (
+    item?.employeeMetaData?.find(
+      (metaItem) =>
+        String(metaItem?.typess?.codes?.codeMasterType || "")
+          .trim()
+          .toLowerCase() === type,
+    )?.typess?.code || ""
+  );
 }
 
 function safeParseJsonField(val, fallback = null) {
   if (val == null) return fallback;
-  if (typeof val === 'object') return val;
-  if (typeof val === 'string') {
+  if (typeof val === "object") return val;
+  if (typeof val === "string") {
     try {
       return JSON.parse(val);
     } catch {
@@ -218,11 +266,17 @@ function safeParseJsonField(val, fallback = null) {
 }
 
 export async function addEmployee(data, files, createdBy, roleId) {
-  const { universityId, instituteId, campusId: contextCampusId } = getTenantStore();
+  const {
+    universityId,
+    instituteId,
+    campusId: contextCampusId,
+  } = getTenantStore();
   let campusId = contextCampusId;
 
   if (!campusId && instituteId) {
-    const instRecord = await model.instituteModel.findByPk(instituteId, { attributes: ["campusId"] });
+    const instRecord = await model.instituteModel.findByPk(instituteId, {
+      attributes: ["campusId"],
+    });
     if (instRecord) {
       campusId = instRecord.campusId ?? instRecord.get?.("campusId");
     }
@@ -236,11 +290,22 @@ export async function addEmployee(data, files, createdBy, roleId) {
     const address = safeParseJsonField(data.address, null);
     const corsAddress = safeParseJsonField(data.corsAddress, null);
     const office = safeParseJsonField(data.office, null) || {};
-    const officialEmail = data.officialEmailId ?? office.officialEmailId ?? null;
-    const officialMobile = data.officialMobileNumber ?? office.officialMobileNumber ?? null;
+    const officialEmail =
+      data.officialEmailId ?? office.officialEmailId ?? null;
+    const officialMobile =
+      data.officialMobileNumber ?? office.officialMobileNumber ?? null;
+    const rawDesignation = office.designation ?? data.designation ?? null;
+    const designation =
+      rawDesignation != null && rawDesignation !== ""
+        ? !Number.isNaN(Number(rawDesignation))
+          ? Number(rawDesignation)
+          : rawDesignation
+        : null;
+    const salutation = office.salutation ?? data.salutation ?? null;
     const normalizedOffice = {
       ...office,
-      employeeRank: office.employeeRank ?? data.salutation ?? data.designation ?? null,
+      designation,
+      salutation,
       officialEmailId: officialEmail,
       officialMobileNumber: officialMobile,
     };
@@ -259,7 +324,6 @@ export async function addEmployee(data, files, createdBy, roleId) {
     const longLeavesRaw = safeParseJsonField(data.longLeave, []);
     const longLeaves = normalizeLongLeaves(longLeavesRaw);
 
-
     const employeePersonalDetail = {
       personalEmail: officialEmail || address?.personalEmail || null,
       mobileNumber: address?.mobileNumber || officialMobile || null,
@@ -273,12 +337,25 @@ export async function addEmployee(data, files, createdBy, roleId) {
       roleId: null,
     };
 
-    const userId = await employeeRegister(employeePersonalDetail, employeeRegisterData, transaction);
+    const userId = await employeeRegister(
+      employeePersonalDetail,
+      employeeRegisterData,
+      transaction,
+    );
 
     // Assign role → copies role_permissions into user_role_permission_scope
     const assignedRoleId = Number(roleId);
-    await userRoleService.assignRoleToUser(userId, assignedRoleId, [], transaction);
-    await registerRepository.updateUser(userId, { defaultRoleId: assignedRoleId }, transaction);
+    await userRoleService.assignRoleToUser(
+      userId,
+      assignedRoleId,
+      [],
+      transaction,
+    );
+    await registerRepository.updateUser(
+      userId,
+      { defaultRoleId: assignedRoleId },
+      transaction,
+    );
 
     // Add employee
     data.createdBy = createdBy;
@@ -286,7 +363,10 @@ export async function addEmployee(data, files, createdBy, roleId) {
     data.roleId = null;
     data.employeePhoto = extractS3FileId(data.employeePhoto);
     data.employeeSignature = extractS3FileId(data.employeeSignature);
-    data.employeeCode = await generateEmployeeNumber(data.campusId, data.instituteId);
+    data.employeeCode = await generateEmployeeNumber(
+      data.campusId,
+      data.instituteId,
+    );
     delete data.department;
     data.departmentId = data.departmentId ? Number(data.departmentId) : null;
 
@@ -299,8 +379,8 @@ export async function addEmployee(data, files, createdBy, roleId) {
     const { campusId, employeeName } = employee.dataValues;
 
     // image / files upload and AWS S3 JSON URLs handling
-    if (files && typeof files === 'object' && Object.keys(files).length > 0) {
-      const uploadPromises = Object.keys(files).map(async key => {
+    if (files && typeof files === "object" && Object.keys(files).length > 0) {
+      const uploadPromises = Object.keys(files).map(async (key) => {
         const file = files[key];
         const s3Response = await uploadFile(file);
         const url = s3Response.Location;
@@ -311,28 +391,37 @@ export async function addEmployee(data, files, createdBy, roleId) {
       await Promise.all(uploadPromises);
     }
 
-    const jsonFiles = safeParseJsonField(data.files ?? data.employeeFiles, null);
+    const jsonFiles = safeParseJsonField(
+      data.files ?? data.employeeFiles,
+      null,
+    );
     if (jsonFiles) {
       if (Array.isArray(jsonFiles)) {
         for (const fileItem of jsonFiles) {
           if (fileItem?.url) {
-            await employeeFilesRepository.addEmployeeFiles({
-              key: fileItem.key || fileItem.fieldName || "document",
-              url: fileItem.url,
-              userId,
-              createdBy,
-            }, transaction);
+            await employeeFilesRepository.addEmployeeFiles(
+              {
+                key: fileItem.key || fileItem.fieldName || "document",
+                url: fileItem.url,
+                userId,
+                createdBy,
+              },
+              transaction,
+            );
           }
         }
-      } else if (typeof jsonFiles === 'object') {
+      } else if (typeof jsonFiles === "object") {
         for (const [key, url] of Object.entries(jsonFiles)) {
           if (url) {
-            await employeeFilesRepository.addEmployeeFiles({
-              key,
-              url: typeof url === 'string' ? url : url?.url,
-              userId,
-              createdBy,
-            }, transaction);
+            await employeeFilesRepository.addEmployeeFiles(
+              {
+                key,
+                url: typeof url === "string" ? url : url?.url,
+                userId,
+                createdBy,
+              },
+              transaction,
+            );
           }
         }
       }
@@ -340,72 +429,94 @@ export async function addEmployee(data, files, createdBy, roleId) {
 
     // Add employee address
     if (address) {
-      await employeeAddressRepository.addAddress({
-        userId,
-        employeeId,
-        createdBy,
-        pAddress: address.pAddress || null,
-        pPincode: address.pPincode || null,
-        pCountry: address.pCountry || null,
-        pState: address.pState || null,
-        pCity: address.pCity || null,
-        mobileNumber: address.mobileNumber || null,
-        personalEmail: address.personalEmail || null,
-      }, transaction);
+      await employeeAddressRepository.addAddress(
+        {
+          userId,
+          employeeId,
+          createdBy,
+          pAddress: address.pAddress || null,
+          pPincode: address.pPincode || null,
+          pCountry: address.pCountry || null,
+          pState: address.pState || null,
+          pCity: address.pCity || null,
+          mobileNumber: address.mobileNumber || null,
+          personalEmail: address.personalEmail || null,
+        },
+        transaction,
+      );
     }
 
     // Add employee cor-address (employee_cor_address: address, pincode, cCity, cState, cCountry)
     if (corsAddress) {
-      await employeeAddressRepository.addCorsAddress({
-        userId,
-        employeeId,
-        createdBy,
-        address: corsAddress.address ?? corsAddress.cAddress ?? null,
-        pincode: corsAddress.pincode ?? corsAddress.cPincode ?? null,
-        cCity: corsAddress.cCity || null,
-        cState: corsAddress.cState || null,
-        cCountry: corsAddress.cCountry || null,
-      }, transaction);
+      await employeeAddressRepository.addCorsAddress(
+        {
+          userId,
+          employeeId,
+          createdBy,
+          address: corsAddress.address ?? corsAddress.cAddress ?? null,
+          pincode: corsAddress.pincode ?? corsAddress.cPincode ?? null,
+          cCity: corsAddress.cCity || null,
+          cState: corsAddress.cState || null,
+          cCountry: corsAddress.cCountry || null,
+        },
+        transaction,
+      );
     }
 
     // Add employee office details
-    await employeeOfficeRepository.addOfficeDetails({
-      userId,
-      employeeId,
-      createdBy,
-      ...normalizedOffice,
-    }, transaction);
+    await employeeOfficeRepository.addOfficeDetails(
+      {
+        userId,
+        employeeId,
+        createdBy,
+        ...normalizedOffice,
+      },
+      transaction,
+    );
 
     // Add employee skills
     for (const skill of skills) {
-      await employeeSkillRepository.addEmployeeSkill({
-        employeeId,
-        userId,
-        createdBy,
-        ...skill,
-        name: skill.name ?? skill.skill,
-        proficiencyLevel: skill.proficiencyLevel ?? skill.proficiency,
-      }, transaction);
+      await employeeSkillRepository.addEmployeeSkill(
+        {
+          employeeId,
+          userId,
+          createdBy,
+          ...skill,
+          name: skill.name ?? skill.skill,
+          proficiencyLevel: skill.proficiencyLevel ?? skill.proficiency,
+        },
+        transaction,
+      );
     }
 
     // Add employee documents (frontend "documents" tab) -> employee_qualification table
-    const validDocsForQualification = normalizeDocumentAttachments(documents || []).filter((doc) => doc?.receivedDate);
+    const validDocsForQualification = normalizeDocumentAttachments(
+      documents || [],
+    ).filter((doc) => doc?.receivedDate);
     for (const document of validDocsForQualification) {
-      await employeeQualificationRepository.addEmployeeQualification({
-        employeeId,
-        userId,
-        createdBy,
-        ...document
-      }, transaction);
+      await employeeQualificationRepository.addEmployeeQualification(
+        {
+          employeeId,
+          userId,
+          createdBy,
+          ...document,
+        },
+        transaction,
+      );
     }
 
     // Link and activate S3 files for employeePhoto, employeeSignature, and document attachments
     const employeeS3FileIds = [
       data.employeePhoto,
       data.employeeSignature,
-      ...validDocsForQualification.map((d) => d?.attachment)
+      ...validDocsForQualification.map((d) => d?.attachment),
     ].filter(Boolean);
-    await linkEmployeeS3Files(employeeS3FileIds, employeeId, data.campusId || data.instituteId, transaction);
+    await linkEmployeeS3Files(
+      employeeS3FileIds,
+      employeeId,
+      data.campusId || data.instituteId,
+      transaction,
+    );
 
     // Add employee qualifications (frontend "qualification" tab) -> employee_documents table
     const validQualificationsForDocuments = (qualifications || [])
@@ -413,97 +524,129 @@ export async function addEmployee(data, files, createdBy, roleId) {
       .map((q) => ({
         ...q,
         // Backward-compatible fallback for non-null stream column in some DBs
-        stream: q?.stream ?? q?.degreeLevel
+        stream: q?.stream ?? q?.degreeLevel,
       }));
     for (const qualification of validQualificationsForDocuments) {
-      await employeeDocumentRepository.addEmployeeDocuments({
-        employeeId,
-        userId,
-        createdBy,
-        ...qualification
-      }, transaction);
+      await employeeDocumentRepository.addEmployeeDocuments(
+        {
+          employeeId,
+          userId,
+          createdBy,
+          ...qualification,
+        },
+        transaction,
+      );
     }
 
     // Add employee experiences
     for (const experience of experiences) {
-      await employeeExperianceRepository.addEmployeeExperiance({
-        employeeId,
-        userId,
-        createdBy,
-        ...experience
-      }, transaction);
+      await employeeExperianceRepository.addEmployeeExperiance(
+        {
+          employeeId,
+          userId,
+          createdBy,
+          ...experience,
+        },
+        transaction,
+      );
     }
 
     // Add employee achievements
     for (const achievement of achievements) {
-      await employeeAchivementRepository.addEmployeeAchievement({
-        employeeId,
-        userId,
-        createdBy,
-        ...achievement
-      }, transaction);
+      await employeeAchivementRepository.addEmployeeAchievement(
+        {
+          employeeId,
+          userId,
+          createdBy,
+          ...achievement,
+        },
+        transaction,
+      );
     }
 
     // Add employee wards
     for (const ward of wards) {
-      await employeeWardRepository.addEmployeeWard({
-        employeeId,
-        userId,
-        createdBy,
-        ...ward
-      }, transaction);
+      await employeeWardRepository.addEmployeeWard(
+        {
+          employeeId,
+          userId,
+          createdBy,
+          ...ward,
+        },
+        transaction,
+      );
     }
 
     // Add employee activities
     for (const activity of activities) {
-      await employeeActivityRepository.addEmployeeActivity({
-        employeeId,
-        userId,
-        createdBy,
-        ...activity
-      }, transaction);
+      await employeeActivityRepository.addEmployeeActivity(
+        {
+          employeeId,
+          userId,
+          createdBy,
+          ...activity,
+        },
+        transaction,
+      );
     }
 
     // Add employee references
     for (const reference of references) {
-      await employeeReferenceRepository.addEmployeeReference({
-        employeeId,
-        userId,
-        createdBy,
-        ...reference
-      }, transaction);
+      await employeeReferenceRepository.addEmployeeReference(
+        {
+          employeeId,
+          userId,
+          createdBy,
+          ...reference,
+        },
+        transaction,
+      );
     }
 
     // Add employee research
     for (const researchItem of research) {
-      await employeeResearchRepository.addEmployeeResearch({
-        employeeId,
-        userId,
-        createdBy,
-        ...researchItem
-      }, transaction);
+      await employeeResearchRepository.addEmployeeResearch(
+        {
+          employeeId,
+          userId,
+          createdBy,
+          ...researchItem,
+        },
+        transaction,
+      );
     }
 
     // Add employee long leaves
     for (const longLeave of longLeaves) {
-      await employeeLongLeaveRepository.addEmployeeLongLeave({
-        employeeId,
-        userId,
-        createdBy,
-        ...longLeave
-      }, transaction);
+      await employeeLongLeaveRepository.addEmployeeLongLeave(
+        {
+          employeeId,
+          userId,
+          createdBy,
+          ...longLeave,
+        },
+        transaction,
+      );
     }
 
     //  allDropDownData
     if (data.allDropDownData) {
-      const allDropDownDataObject = safeParseJsonField(data.allDropDownData, null);
+      const allDropDownDataObject = safeParseJsonField(
+        data.allDropDownData,
+        null,
+      );
 
-      if (typeof allDropDownDataObject === 'object' && allDropDownDataObject !== null && Array.isArray(allDropDownDataObject.type) && Array.isArray(allDropDownDataObject.code)) {
+      if (
+        typeof allDropDownDataObject === "object" &&
+        allDropDownDataObject !== null &&
+        Array.isArray(allDropDownDataObject.type) &&
+        Array.isArray(allDropDownDataObject.code)
+      ) {
         const type = allDropDownDataObject.type;
         const code = allDropDownDataObject.code;
 
         if (type.length !== code.length) {
-          throw new Error('Types and codes arrays must be of the same length.');
+          throw new Error("Types and codes arrays must be of the same length.");
         }
 
         // DB: types → employee_code_master_type_id, codes → employee_code_master_id
@@ -518,13 +661,25 @@ export async function addEmployee(data, files, createdBy, roleId) {
 
         await employeeMetaDataRepository.employeeMetaData(entries, transaction);
       } else {
-        throw new Error('Invalid format for allDropDownData.');
+        throw new Error("Invalid format for allDropDownData.");
       }
     }
 
-
     if (data.isAdmin === true) {
-      const headData = { campusId, instituteId, universityId, createdBy, updatedBy: createdBy, headName: employeeName, mobileNumber: mobileNumber || officialMobile, alternateNumber: officialMobile || mobileNumber, registerEmail: officialEmail || personalEmail, alternateEmail: personalEmail, isAdmin: true, designation: 'Admin' };
+      const headData = {
+        campusId,
+        instituteId,
+        universityId,
+        createdBy,
+        updatedBy: createdBy,
+        headName: employeeName,
+        mobileNumber: mobileNumber || officialMobile,
+        alternateNumber: officialMobile || mobileNumber,
+        registerEmail: officialEmail || personalEmail,
+        alternateEmail: personalEmail,
+        isAdmin: true,
+        designation: "Admin",
+      };
       await addHead(headData, transaction);
     }
     // Commit transaction
@@ -533,16 +688,24 @@ export async function addEmployee(data, files, createdBy, roleId) {
   } catch (error) {
     // Rollback transaction in case of error
     await transaction.rollback();
-    console.error('Error adding employee data:', error);
-    throw new Error('Failed to add employee data');
+    console.error("Error adding employee data:", error);
+    throw new Error("Failed to add employee data");
   }
-};
+}
 
-export async function updateEmployee(identifier, data, files, updatedBy, createdBy) {
-
+export async function updateEmployee(
+  identifier,
+  data,
+  files,
+  updatedBy,
+  createdBy,
+) {
   const transaction = await sequelize.transaction();
   try {
-    const existingEmployee = await employeeRepository.assertScopedEmployee(identifier, { transaction });
+    const existingEmployee = await employeeRepository.assertScopedEmployee(
+      identifier,
+      { transaction },
+    );
     if (!existingEmployee) {
       throw new Error(`Employee not found for id: ${identifier}`);
     }
@@ -553,14 +716,36 @@ export async function updateEmployee(identifier, data, files, updatedBy, created
     const corsAddress = safeParseJsonField(data.corsAddress, null);
     const office = safeParseJsonField(data.office, null);
     const officialEmail = data.officialEmailId ?? office?.officialEmailId;
-    const officialMobile = data.officialMobileNumber ?? office?.officialMobileNumber;
-    const normalizedOffice = (office || officialEmail !== undefined || officialMobile !== undefined) ? {
-      ...(office || {}),
-      employeeRank: office?.employeeRank ?? data.salutation ?? data.designation ?? null,
-      ...(officialEmail !== undefined ? { officialEmailId: officialEmail } : {}),
-      ...(officialMobile !== undefined ? { officialMobileNumber: officialMobile } : {}),
-    } : null;
-
+    const officialMobile =
+      data.officialMobileNumber ?? office?.officialMobileNumber;
+    const rawDesignation = office?.designation ?? data.designation;
+    const designation =
+      rawDesignation !== undefined
+        ? rawDesignation != null && rawDesignation !== ""
+          ? !Number.isNaN(Number(rawDesignation))
+            ? Number(rawDesignation)
+            : rawDesignation
+          : null
+        : undefined;
+    const salutation = office?.salutation ?? data.salutation;
+    const normalizedOffice =
+      office ||
+      officialEmail !== undefined ||
+      officialMobile !== undefined ||
+      designation !== undefined ||
+      salutation !== undefined
+        ? {
+            ...(office || {}),
+            ...(designation !== undefined ? { designation } : {}),
+            ...(salutation !== undefined ? { salutation } : {}),
+            ...(officialEmail !== undefined
+              ? { officialEmailId: officialEmail }
+              : {}),
+            ...(officialMobile !== undefined
+              ? { officialMobileNumber: officialMobile }
+              : {}),
+          }
+        : null;
 
     // array
     const skills = safeParseJsonField(data.skill, []);
@@ -576,7 +761,10 @@ export async function updateEmployee(identifier, data, files, updatedBy, created
     const research = safeParseJsonField(data.research, []);
     const longLeavesRaw = safeParseJsonField(data.longLeave, []);
     const longLeaves = normalizeLongLeaves(longLeavesRaw);
-    const allDropDownData = safeParseJsonField(data.allDropDownData, { type: [], code: [] });
+    const allDropDownData = safeParseJsonField(data.allDropDownData, {
+      type: [],
+      code: [],
+    });
 
     //  Update main employee table
     const {
@@ -587,19 +775,29 @@ export async function updateEmployee(identifier, data, files, updatedBy, created
       ...employeeUpdateData
     } = data;
     if (employeeUpdateData.employeePhoto !== undefined) {
-      employeeUpdateData.employeePhoto = extractS3FileId(employeeUpdateData.employeePhoto);
+      employeeUpdateData.employeePhoto = extractS3FileId(
+        employeeUpdateData.employeePhoto,
+      );
     }
     if (employeeUpdateData.employeeSignature !== undefined) {
-      employeeUpdateData.employeeSignature = extractS3FileId(employeeUpdateData.employeeSignature);
+      employeeUpdateData.employeeSignature = extractS3FileId(
+        employeeUpdateData.employeeSignature,
+      );
     }
     if (employeeUpdateData.departmentId !== undefined) {
-      employeeUpdateData.departmentId = employeeUpdateData.departmentId ? Number(employeeUpdateData.departmentId) : null;
+      employeeUpdateData.departmentId = employeeUpdateData.departmentId
+        ? Number(employeeUpdateData.departmentId)
+        : null;
     }
-    await employeeRepository.updateEmployee(employeeId, {
-      ...employeeUpdateData,
-      roleId: null,  // role_id in employee table is always null; role is managed via user_role_permission_scope
-      updatedBy
-    }, transaction);
+    await employeeRepository.updateEmployee(
+      employeeId,
+      {
+        ...employeeUpdateData,
+        roleId: null, // role_id in employee table is always null; role is managed via user_role_permission_scope
+        updatedBy,
+      },
+      transaction,
+    );
 
     // Sync role → user_role_permission_scope + users.defaultRoleId
     const assignedRoleId = Number(incomingRoleId);
@@ -612,52 +810,80 @@ export async function updateEmployee(identifier, data, files, updatedBy, created
       }
     }
     if (!hasRole) {
-      await userRoleService.assignRoleToUser(userId, assignedRoleId, [], transaction);
+      await userRoleService.assignRoleToUser(
+        userId,
+        assignedRoleId,
+        [],
+        transaction,
+      );
     }
-    await registerRepository.updateUser(userId, { defaultRoleId: assignedRoleId }, transaction);
+    await registerRepository.updateUser(
+      userId,
+      { defaultRoleId: assignedRoleId },
+      transaction,
+    );
 
     // Sync officialEmailId with user table email
     const updatedEmail = data.officialEmailId ?? office?.officialEmailId;
     if (updatedEmail && userId) {
-      await registerRepository.updateUser(userId, { email: updatedEmail }, transaction);
+      await registerRepository.updateUser(
+        userId,
+        { email: updatedEmail },
+        transaction,
+      );
     }
 
     //  Upload/update files (supports both binary uploads and AWS S3 JSON URLs)
-    if (files && typeof files === 'object' && Object.keys(files).length > 0) {
-      const uploadPromises = Object.keys(files).map(async key => {
+    if (files && typeof files === "object" && Object.keys(files).length > 0) {
+      const uploadPromises = Object.keys(files).map(async (key) => {
         const file = files[key];
         const s3Response = await uploadFile(file);
         const url = s3Response.Location;
         const fileData = { key, url, employeeId, userId, updatedBy };
-        await employeeFilesRepository.updateEmployee(employeeId, fileData, transaction);
+        await employeeFilesRepository.updateEmployee(
+          employeeId,
+          fileData,
+          transaction,
+        );
       });
       await Promise.all(uploadPromises);
     }
 
-    const jsonFiles = safeParseJsonField(data.files ?? data.employeeFiles, null);
+    const jsonFiles = safeParseJsonField(
+      data.files ?? data.employeeFiles,
+      null,
+    );
     if (jsonFiles) {
       if (Array.isArray(jsonFiles)) {
         for (const fileItem of jsonFiles) {
           if (fileItem?.url) {
-            await employeeFilesRepository.updateEmployee(employeeId, {
-              key: fileItem.key || fileItem.fieldName || "document",
-              url: fileItem.url,
+            await employeeFilesRepository.updateEmployee(
               employeeId,
-              userId,
-              updatedBy,
-            }, transaction);
+              {
+                key: fileItem.key || fileItem.fieldName || "document",
+                url: fileItem.url,
+                employeeId,
+                userId,
+                updatedBy,
+              },
+              transaction,
+            );
           }
         }
-      } else if (typeof jsonFiles === 'object') {
+      } else if (typeof jsonFiles === "object") {
         for (const [key, url] of Object.entries(jsonFiles)) {
           if (url) {
-            await employeeFilesRepository.updateEmployee(employeeId, {
-              key,
-              url: typeof url === 'string' ? url : url?.url,
+            await employeeFilesRepository.updateEmployee(
               employeeId,
-              userId,
-              updatedBy,
-            }, transaction);
+              {
+                key,
+                url: typeof url === "string" ? url : url?.url,
+                employeeId,
+                userId,
+                updatedBy,
+              },
+              transaction,
+            );
           }
         }
       }
@@ -679,16 +905,21 @@ export async function updateEmployee(identifier, data, files, updatedBy, created
       const addressUpdateResult = await employeeAddressRepository.updateAddress(
         employeeId,
         addressPayload,
-        transaction
+        transaction,
       );
-      const updatedAddressCount = Array.isArray(addressUpdateResult) ? (addressUpdateResult[0] || 0) : 0;
+      const updatedAddressCount = Array.isArray(addressUpdateResult)
+        ? addressUpdateResult[0] || 0
+        : 0;
       if (updatedAddressCount === 0) {
-        await employeeAddressRepository.addAddress({
-          employeeId,
-          userId,
-          createdBy,
-          ...addressPayload,
-        }, transaction);
+        await employeeAddressRepository.addAddress(
+          {
+            employeeId,
+            userId,
+            createdBy,
+            ...addressPayload,
+          },
+          transaction,
+        );
       }
     }
 
@@ -701,19 +932,25 @@ export async function updateEmployee(identifier, data, files, updatedBy, created
         cState: corsAddress.cState || null,
         cCountry: corsAddress.cCountry || null,
       };
-      const corsUpdateResult = await employeeAddressRepository.updateCorsAddress(
-        employeeId,
-        corsAddressPayload,
-        transaction
-      );
-      const updatedCorsCount = Array.isArray(corsUpdateResult) ? (corsUpdateResult[0] || 0) : 0;
-      if (updatedCorsCount === 0) {
-        await employeeAddressRepository.addCorsAddress({
+      const corsUpdateResult =
+        await employeeAddressRepository.updateCorsAddress(
           employeeId,
-          userId,
-          createdBy,
-          ...corsAddressPayload,
-        }, transaction);
+          corsAddressPayload,
+          transaction,
+        );
+      const updatedCorsCount = Array.isArray(corsUpdateResult)
+        ? corsUpdateResult[0] || 0
+        : 0;
+      if (updatedCorsCount === 0) {
+        await employeeAddressRepository.addCorsAddress(
+          {
+            employeeId,
+            userId,
+            createdBy,
+            ...corsAddressPayload,
+          },
+          transaction,
+        );
       }
     }
 
@@ -721,58 +958,90 @@ export async function updateEmployee(identifier, data, files, updatedBy, created
     if (normalizedOffice) {
       const officePayload = {
         updatedBy,
-        ...normalizedOffice
+        ...normalizedOffice,
       };
 
-      const existingOffice = await employeeOfficeRepository.getEmployeeOfficeByEmployeeId(employeeId);
+      const existingOffice =
+        await employeeOfficeRepository.getEmployeeOfficeByEmployeeId(
+          employeeId,
+        );
 
       if (existingOffice?.employeeOfficeId) {
         await employeeOfficeRepository.updateOfficeDetailsById(
           existingOffice.employeeOfficeId,
           officePayload,
-          transaction
+          transaction,
         );
       } else {
-        await employeeOfficeRepository.addOfficeDetails({
-          employeeId,
-          userId,
-          createdBy,
-          ...normalizedOffice
-        }, transaction);
+        await employeeOfficeRepository.addOfficeDetails(
+          {
+            employeeId,
+            userId,
+            createdBy,
+            ...normalizedOffice,
+          },
+          transaction,
+        );
       }
     }
 
     // Update Skills:
     // If FE sends skill key (including []), treat it as source of truth and refresh.
-    const hasSkillField = Object.prototype.hasOwnProperty.call(data, 'skill');
-    const hasDocumentsField = Object.prototype.hasOwnProperty.call(data, 'documents');
-    const hasQualificationField = Object.prototype.hasOwnProperty.call(data, 'qualification');
-    const hasExperienceField = Object.prototype.hasOwnProperty.call(data, 'experience');
-    const hasAchievementsField = Object.prototype.hasOwnProperty.call(data, 'achievements');
-    const hasWardField = Object.prototype.hasOwnProperty.call(data, 'ward');
-    const hasActivityField = Object.prototype.hasOwnProperty.call(data, 'activity');
-    const hasReferenceField = Object.prototype.hasOwnProperty.call(data, 'reference');
-    const hasResearchField = Object.prototype.hasOwnProperty.call(data, 'research');
-    const hasLongLeaveField = Object.prototype.hasOwnProperty.call(data, 'longLeave');
+    const hasSkillField = Object.prototype.hasOwnProperty.call(data, "skill");
+    const hasDocumentsField = Object.prototype.hasOwnProperty.call(
+      data,
+      "documents",
+    );
+    const hasQualificationField = Object.prototype.hasOwnProperty.call(
+      data,
+      "qualification",
+    );
+    const hasExperienceField = Object.prototype.hasOwnProperty.call(
+      data,
+      "experience",
+    );
+    const hasAchievementsField = Object.prototype.hasOwnProperty.call(
+      data,
+      "achievements",
+    );
+    const hasWardField = Object.prototype.hasOwnProperty.call(data, "ward");
+    const hasActivityField = Object.prototype.hasOwnProperty.call(
+      data,
+      "activity",
+    );
+    const hasReferenceField = Object.prototype.hasOwnProperty.call(
+      data,
+      "reference",
+    );
+    const hasResearchField = Object.prototype.hasOwnProperty.call(
+      data,
+      "research",
+    );
+    const hasLongLeaveField = Object.prototype.hasOwnProperty.call(
+      data,
+      "longLeave",
+    );
     if (hasSkillField) {
       await employeeSkillRepository.refreshEmployeeSkills(
         employeeId,
         skills,
         createdBy,
         updatedBy,
-        transaction
+        transaction,
       );
     }
 
     // Update Documents (frontend "documents" tab) -> employee_qualification table
-    const validDocsForQualification = normalizeDocumentAttachments(documents || []).filter((doc) => doc?.receivedDate);
+    const validDocsForQualification = normalizeDocumentAttachments(
+      documents || [],
+    ).filter((doc) => doc?.receivedDate);
     if (hasDocumentsField) {
       await employeeQualificationRepository.refreshEmployeeQualifications(
         employeeId,
         validDocsForQualification,
         createdBy,
         updatedBy,
-        transaction
+        transaction,
       );
     }
 
@@ -780,16 +1049,23 @@ export async function updateEmployee(identifier, data, files, updatedBy, created
     const employeeUpdateS3FileIds = [
       employeeUpdateData.employeePhoto,
       employeeUpdateData.employeeSignature,
-      ...(hasDocumentsField ? validDocsForQualification.map((d) => d?.attachment) : []),
+      ...(hasDocumentsField
+        ? validDocsForQualification.map((d) => d?.attachment)
+        : []),
     ].filter(Boolean);
-    await linkEmployeeS3Files(employeeUpdateS3FileIds, employeeId, data.campusId || data.instituteId, transaction);
+    await linkEmployeeS3Files(
+      employeeUpdateS3FileIds,
+      employeeId,
+      data.campusId || data.instituteId,
+      transaction,
+    );
 
     // Update Qualifications (frontend "qualification" tab) -> employee_documents table
     const validQualificationsForDocuments = (qualifications || [])
       .filter((q) => q?.qualifications && q?.degreeLevel)
       .map((q) => ({
         ...q,
-        stream: q?.stream ?? q?.degreeLevel
+        stream: q?.stream ?? q?.degreeLevel,
       }));
     if (hasQualificationField) {
       await employeeDocumentRepository.refreshEmployeeDocuments(
@@ -797,7 +1073,7 @@ export async function updateEmployee(identifier, data, files, updatedBy, created
         validQualificationsForDocuments,
         createdBy,
         updatedBy,
-        transaction
+        transaction,
       );
     }
 
@@ -808,7 +1084,7 @@ export async function updateEmployee(identifier, data, files, updatedBy, created
         experiences,
         createdBy,
         updatedBy,
-        transaction
+        transaction,
       );
     }
 
@@ -819,7 +1095,7 @@ export async function updateEmployee(identifier, data, files, updatedBy, created
         achievements,
         createdBy,
         updatedBy,
-        transaction
+        transaction,
       );
     }
 
@@ -830,7 +1106,7 @@ export async function updateEmployee(identifier, data, files, updatedBy, created
         wards,
         createdBy,
         updatedBy,
-        transaction
+        transaction,
       );
     }
 
@@ -841,7 +1117,7 @@ export async function updateEmployee(identifier, data, files, updatedBy, created
         activities,
         createdBy,
         updatedBy,
-        transaction
+        transaction,
       );
     }
 
@@ -852,7 +1128,7 @@ export async function updateEmployee(identifier, data, files, updatedBy, created
         references,
         createdBy,
         updatedBy,
-        transaction
+        transaction,
       );
     }
 
@@ -863,7 +1139,7 @@ export async function updateEmployee(identifier, data, files, updatedBy, created
         research,
         createdBy,
         updatedBy,
-        transaction
+        transaction,
       );
     }
 
@@ -874,20 +1150,27 @@ export async function updateEmployee(identifier, data, files, updatedBy, created
         longLeaves,
         createdBy,
         updatedBy,
-        transaction
+        transaction,
       );
     }
 
     //  Dropdown data
     if (data.allDropDownData) {
-      const allDropDownDataObject = safeParseJsonField(data.allDropDownData, null);
+      const allDropDownDataObject = safeParseJsonField(
+        data.allDropDownData,
+        null,
+      );
 
-      if (allDropDownDataObject && Array.isArray(allDropDownDataObject.type) && Array.isArray(allDropDownDataObject.code)) {
+      if (
+        allDropDownDataObject &&
+        Array.isArray(allDropDownDataObject.type) &&
+        Array.isArray(allDropDownDataObject.code)
+      ) {
         const type = allDropDownDataObject.type;
         const code = allDropDownDataObject.code;
 
         if (type.length !== code.length) {
-          throw new Error('Types and codes arrays must be of the same length.');
+          throw new Error("Types and codes arrays must be of the same length.");
         }
 
         // DB: types → employee_code_master_type_id, codes → employee_code_master_id
@@ -901,7 +1184,10 @@ export async function updateEmployee(identifier, data, files, updatedBy, created
           codes: masterId,
         }));
 
-        await employeeMetaDataRepository.updateEmployeeMetaData(entries, transaction);
+        await employeeMetaDataRepository.updateEmployeeMetaData(
+          entries,
+          transaction,
+        );
       }
     }
 
@@ -912,11 +1198,11 @@ export async function updateEmployee(identifier, data, files, updatedBy, created
     console.error("Error updating employee data:", error);
     throw new Error("Failed to update employee data");
   }
-};
+}
 // addEmployee(data,1)
 
 function isTeacherRole(role) {
-  return String(role ?? '').toUpperCase() === ROLES.TEACHER;
+  return String(role ?? "").toUpperCase() === ROLES.TEACHER;
 }
 
 function formatTeacherSubjectMappings(rows) {
@@ -942,8 +1228,12 @@ async function formatEmployeeListItem(row) {
   const item = toPlain(row) || {};
   const authUser = item?.user || item?.userEmployee || {};
   const mappedRoleData = mapRoleData(authUser);
-  const officeEntry = Array.isArray(item?.office) ? (item.office[0] || {}) : (item?.office || {});
-  const addressEntry = Array.isArray(item?.address) ? (item.address[0] || {}) : (item?.address || {});
+  const officeEntry = Array.isArray(item?.office)
+    ? item.office[0] || {}
+    : item?.office || {};
+  const addressEntry = Array.isArray(item?.address)
+    ? item.address[0] || {}
+    : item?.address || {};
   const employment = mapEmployment(item, officeEntry, addressEntry);
 
   const photoFile = await enrichS3FileRecord(item?.photoFile);
@@ -959,6 +1249,9 @@ async function formatEmployeeListItem(row) {
     roleId: mappedRoleData.roleId,
     role: mappedRoleData.role ? [mappedRoleData.role] : [],
     joiningDate: employment.joiningDate,
+    designationId: employment.designationId,
+    designation: employment.designation,
+    salutation: employment.salutation,
     gender: getMetaCode(item, "gender"),
     religion: getMetaCode(item, "religion"),
     nationality: getMetaCode(item, "nationality"),
@@ -970,67 +1263,94 @@ export async function getAllEmployee(campusId, instituteId, auth = {}) {
   const { userId, role, employeeId: authEmployeeId } = auth;
 
   if (isTeacherRole(role)) {
-    const resolvedEmployeeId = await employeeRepository.resolveEmployeeIdForAuth({
-      userId,
-      employeeId: authEmployeeId,
-    });
+    const resolvedEmployeeId =
+      await employeeRepository.resolveEmployeeIdForAuth({
+        userId,
+        employeeId: authEmployeeId,
+      });
     if (!resolvedEmployeeId) {
-      throw new Error('Employee not found for user');
+      throw new Error("Employee not found for user");
     }
 
     const [employees, subjectMappings] = await Promise.all([
-      employeeRepository.getAllEmployee(undefined, undefined, { employeeId: resolvedEmployeeId }),
+      employeeRepository.getAllEmployee(undefined, undefined, {
+        employeeId: resolvedEmployeeId,
+      }),
       employeeRepository.getTeacherSubject(resolvedEmployeeId, {}),
     ]);
 
-    const formatted = await Promise.all((employees || []).map(formatEmployeeListItem));
+    const formatted = await Promise.all(
+      (employees || []).map(formatEmployeeListItem),
+    );
     if (!formatted.length) {
       return [];
     }
 
-    return [{
-      ...formatted[0],
-      subjects: formatTeacherSubjectMappings(subjectMappings),
-    }];
+    return [
+      {
+        ...formatted[0],
+        subjects: formatTeacherSubjectMappings(subjectMappings),
+      },
+    ];
   }
 
   const result = await employeeRepository.getAllEmployee(campusId, instituteId);
   return Promise.all((result || []).map(formatEmployeeListItem));
-};
+}
 
 export async function getSingleEmployeeDetails(userId) {
   const result = await employeeRepository.getSingleEmployeeDetails(userId);
-  return Promise.all((result || []).map(async (row) => {
-    const item = toPlain(row) || {};
-    const user = item.userEmployee || {};
-    const defaultRole = user.defaultRoleRef || {};
+  return Promise.all(
+    (result || []).map(async (row) => {
+      const item = toPlain(row) || {};
+      const user = item.userEmployee || {};
+      const defaultRole = user.defaultRoleRef || {};
 
-    item.photoFile = await enrichS3FileRecord(item.photoFile);
-    item.signatureFile = await enrichS3FileRecord(item.signatureFile);
-    item.employeePhotoUrl = item.photoFile?.url || null;
-    item.employeeSignatureUrl = item.signatureFile?.url || null;
+      item.photoFile = await enrichS3FileRecord(item.photoFile);
+      item.signatureFile = await enrichS3FileRecord(item.signatureFile);
+      item.employeePhotoUrl = item.photoFile?.url || null;
+      item.employeeSignatureUrl = item.signatureFile?.url || null;
 
-    if (Array.isArray(item.documents)) {
-      for (const doc of item.documents) {
-        if (doc.attachmentFile) {
-          doc.attachmentFile = await enrichS3FileRecord(doc.attachmentFile);
+      if (Array.isArray(item.documents)) {
+        for (const doc of item.documents) {
+          if (doc.attachmentFile) {
+            doc.attachmentFile = await enrichS3FileRecord(doc.attachmentFile);
+          }
         }
       }
-    }
 
-    item.roleId = defaultRole.roleId != null
-      ? Number(defaultRole.roleId)
-      : (user.defaultRoleId != null ? Number(user.defaultRoleId) : null);
-    item.role = defaultRole.role || null;
-    delete item.userEmployee;
+      item.roleId =
+        defaultRole.roleId != null
+          ? Number(defaultRole.roleId)
+          : user.defaultRoleId != null
+            ? Number(user.defaultRoleId)
+            : null;
+      item.role = defaultRole.role || null;
+      delete item.userEmployee;
 
-    return item;
-  }));
+      const officeEntry = Array.isArray(item.office)
+        ? item.office[0]
+        : item.office;
+      if (officeEntry) {
+        const codeMasterDesig = officeEntry?.codeMasterDesignation;
+        const designationText =
+          codeMasterDesig?.code ||
+          codeMasterDesig?.description ||
+          (typeof officeEntry?.designation === "string"
+            ? officeEntry.designation
+            : "");
+        item.designationId = officeEntry.designation ?? null;
+        item.designation = designationText;
+        item.salutation = officeEntry.salutation || "";
+      }
+
+      return item;
+    }),
+  );
 }
 
 export async function deleteEmployeeDetail(userId) {
   try {
-
     const [
       deleteEmployeeDetails,
       deleteEmployeeAddresses,
@@ -1045,7 +1365,7 @@ export async function deleteEmployeeDetail(userId) {
       deleteEmployeeActivities,
       deleteEmployeeReferences,
       deleteEmployeeLongLeaves,
-      deleteEmployeeMetaData
+      deleteEmployeeMetaData,
     ] = await Promise.all([
       employeeRepository.deleteEmployeeDetail(userId),
       employeeAddressRepository.deleteEmployeeAddress(userId),
@@ -1060,7 +1380,7 @@ export async function deleteEmployeeDetail(userId) {
       employeeActivityRepository.deleteEmployeeActivity(userId),
       employeeReferenceRepository.deleteEmployeeReference(userId),
       employeeLongLeaveRepository.deleteEmployeeLongLeave(userId),
-      employeeMetaDataRepository.deleteEmployeeMetaData(userId)
+      employeeMetaDataRepository.deleteEmployeeMetaData(userId),
     ]);
 
     const results = [
@@ -1077,24 +1397,27 @@ export async function deleteEmployeeDetail(userId) {
       deleteEmployeeActivities,
       deleteEmployeeReferences,
       deleteEmployeeLongLeaves,
-      deleteEmployeeMetaData
+      deleteEmployeeMetaData,
     ];
 
-    const allDeleted = results.every(result => result !== null);
+    const allDeleted = results.every((result) => result !== null);
 
     if (allDeleted) {
-      return { message: 'Employee and related records deleted successfully' };
+      return { message: "Employee and related records deleted successfully" };
     } else {
-      return { message: 'Some records were not found or not deleted' };
+      return { message: "Some records were not found or not deleted" };
     }
   } catch (error) {
-    console.error('Error deleting employee:', error);
+    console.error("Error deleting employee:", error);
     if (error.statusCode) {
       throw error;
     }
-    return { message: 'An error occurred while trying to delete the employee', error: error.message };
+    return {
+      message: "An error occurred while trying to delete the employee",
+      error: error.message,
+    };
   }
-};
+}
 
 function validateEmployeeRow(employee) {
   const requiredFields = [
@@ -1114,8 +1437,7 @@ function validateEmployeeRow(employee) {
   }
 
   return null;
-};
-
+}
 
 export async function importEmployeeData(excelData, commonData) {
   const transaction = await sequelize.transaction();
@@ -1127,21 +1449,33 @@ export async function importEmployeeData(excelData, commonData) {
 
       const error = validateEmployeeRow(convertedData);
       if (error) {
-        throw new Error(`Row ${index + 1} (${employee.employeeName || "Unknown"}): ${error}`);
+        throw new Error(
+          `Row ${index + 1} (${employee.employeeName || "Unknown"}): ${error}`,
+        );
       }
     }
 
     for (const employee of excelData) {
       const convertedData = { ...employee, ...commonData };
-      const employeeCode = generateEmployeeNumber(convertedData.campusId, commonData.instituteId)
+      const employeeCode = generateEmployeeNumber(
+        convertedData.campusId,
+        commonData.instituteId,
+      );
 
       const employeeData = {
         employeeName: convertedData.employeeName,
-        employeeCode: convertedData.employeeCode ? convertedData.employeeCode : employeeCode,
+        employeeCode: convertedData.employeeCode
+          ? convertedData.employeeCode
+          : employeeCode,
         employmentType: convertedData.employmentType,
         dateOfBirth: convertedData.dateOfBirth,
         fatherName: convertedData.fatherName,
-        departmentId: (convertedData.departmentId != null && convertedData.departmentId !== "" && convertedData.departmentId !== 0) ? Number(convertedData.departmentId) : null,
+        departmentId:
+          convertedData.departmentId != null &&
+          convertedData.departmentId !== "" &&
+          convertedData.departmentId !== 0
+            ? Number(convertedData.departmentId)
+            : null,
         motherName: convertedData.motherName,
         pickColor: convertedData.pickColor,
         campusId: convertedData.campusId,
@@ -1165,49 +1499,62 @@ export async function importEmployeeData(excelData, commonData) {
       const addressData = {
         pAddress: convertedData.pAddress,
         pPincode: convertedData.pPincode,
-        mobileNumber: convertedData.mobileNumber || convertedData.phoneNumber || null,
+        mobileNumber:
+          convertedData.mobileNumber || convertedData.phoneNumber || null,
         personalEmail: convertedData.personalEmail || null,
         createdBy: convertedData.createdBy,
       };
 
-
-      const result = await employeeRepository.createEmployeeWithDetails(employeeData, officeData, addressData, transaction);
-      const employeeId = result.dataValues.employeeId
+      const result = await employeeRepository.createEmployeeWithDetails(
+        employeeData,
+        officeData,
+        addressData,
+        transaction,
+      );
+      const employeeId = result.dataValues.employeeId;
 
       const employeeRegisterData = {
         instituteId: convertedData.instituteId,
         roleId: null,
         employeeName: convertedData.employeeName,
         universityId,
-        employeeId
-      }
+        employeeId,
+      };
       const employeePersonalDetail = {
-        personalEmail: convertedData.officialEmailId || convertedData.officalEmailId,
-        mobileNumber: convertedData.mobileNumber
-      }
+        personalEmail:
+          convertedData.officialEmailId || convertedData.officalEmailId,
+        mobileNumber: convertedData.mobileNumber,
+      };
 
-      const userId = await employeeRegister(employeePersonalDetail, employeeRegisterData, transaction);
-      await employeeRepository.updateEmployee(employeeId, { userId }, transaction);
-
+      const userId = await employeeRegister(
+        employeePersonalDetail,
+        employeeRegisterData,
+        transaction,
+      );
+      await employeeRepository.updateEmployee(
+        employeeId,
+        { userId },
+        transaction,
+      );
     }
 
     await transaction.commit();
     return { success: true, message: "All employees imported successfully" };
-
   } catch (error) {
     await transaction.rollback();
     console.error("Error in importing employee data:", error.message);
     return { success: false, error: error.message };
   }
-};
-
+}
 
 export async function getEmployeeOfficeDetails(userId) {
   return await employeeOfficeRepository.getEmployeeOfficeByEmployeeId(userId);
 }
 
 export async function getEmployeeReferenceDetails(userId) {
-  return await employeeReferenceRepository.getEmployeeReferencesByEmployeeId(userId);
+  return await employeeReferenceRepository.getEmployeeReferencesByEmployeeId(
+    userId,
+  );
 }
 
 export async function getEmployeeSkillDetails(userId) {
@@ -1215,31 +1562,45 @@ export async function getEmployeeSkillDetails(userId) {
 }
 
 export async function getEmployeeDocumentDetails(userId) {
-  return await employeeDocumentRepository.getEmployeeDocumentsByEmployeeId(userId);
+  return await employeeDocumentRepository.getEmployeeDocumentsByEmployeeId(
+    userId,
+  );
 }
 
 export async function getEmployeeQualificationDetails(userId) {
-  return await employeeQualificationRepository.getEmployeeQualificationsByEmployeeId(userId);
+  return await employeeQualificationRepository.getEmployeeQualificationsByEmployeeId(
+    userId,
+  );
 }
 
 export async function getEmployeeExperienceDetails(userId) {
-  return await employeeExperianceRepository.getEmployeeExperiencesByEmployeeId(userId);
+  return await employeeExperianceRepository.getEmployeeExperiencesByEmployeeId(
+    userId,
+  );
 }
 
 export async function getEmployeeAchievementDetails(userId) {
-  return await employeeAchivementRepository.getEmployeeAchievementsByEmployeeId(userId);
+  return await employeeAchivementRepository.getEmployeeAchievementsByEmployeeId(
+    userId,
+  );
 }
 
 export async function getEmployeeResearchList(userId) {
-  return await employeeResearchRepository.getEmployeeResearchByEmployeeId(userId);
+  return await employeeResearchRepository.getEmployeeResearchByEmployeeId(
+    userId,
+  );
 }
 
 export async function getEmployeeActivityDetails(userId) {
-  return await employeeActivityRepository.getEmployeeActivitiesByEmployeeId(userId);
+  return await employeeActivityRepository.getEmployeeActivitiesByEmployeeId(
+    userId,
+  );
 }
 
 export async function getEmployeeLongLeaveDetails(userId) {
-  return await employeeLongLeaveRepository.getEmployeeLongLeavesByEmployeeId(userId);
+  return await employeeLongLeaveRepository.getEmployeeLongLeavesByEmployeeId(
+    userId,
+  );
 }
 
 export async function getBooksIssuedToEmployee(userId) {
@@ -1248,19 +1609,18 @@ export async function getBooksIssuedToEmployee(userId) {
     return { message: "No issued books found", books: [] };
   }
 
-  const employeeDetails = rawData[0].employeeDetails
-    || rawData[0].employeeDetailsBook
-    || null;
+  const employeeDetails =
+    rawData[0].employeeDetails || rawData[0].employeeDetailsBook || null;
 
   const groupedBooks = {};
 
-  rawData.forEach(item => {
+  rawData.forEach((item) => {
     const bookId = item.bookDetails.libraryBookId;
 
     if (!groupedBooks[bookId]) {
       groupedBooks[bookId] = {
         bookDetails: item.bookDetails,
-        inventory: []
+        inventory: [],
       };
     }
 
@@ -1270,15 +1630,15 @@ export async function getBooksIssuedToEmployee(userId) {
       issueDate: item.issueDate,
       dueDate: item.dueDate,
       status: item.status,
-      createdAt: item.createdAt
+      createdAt: item.createdAt,
     });
   });
 
   return {
     employeeDetails,
-    books: Object.values(groupedBooks)
+    books: Object.values(groupedBooks),
   };
-};
+}
 
 export async function getTeacherTimeTable(userId) {
   const allData = await employeeScheduleRepository.getTeacherWeekCells(userId);
@@ -1288,9 +1648,10 @@ export async function getTeacherTimeTable(userId) {
   for (const item of allData) {
     const plain = item.get({ plain: true });
     const course = plain.timeTableCourse || {};
-    const classSection = plain.timeTableClassSectionTerm?.classSection
-      || plain.timeTableClassSection
-      || {};
+    const classSection =
+      plain.timeTableClassSectionTerm?.classSection ||
+      plain.timeTableClassSection ||
+      {};
 
     for (const period of plain.timeTableCells) {
       const {
@@ -1327,15 +1688,15 @@ export async function getTeacherTimeTable(userId) {
         timeTableType,
         subject: timeTableElective
           ? {
-            subjectId: timeTableElective.electiveSubjectId,
-            Name: timeTableElective.electiveSubjectName,
-            Code: timeTableElective.electiveSubjectCode,
-          }
+              subjectId: timeTableElective.electiveSubjectId,
+              Name: timeTableElective.electiveSubjectName,
+              Code: timeTableElective.electiveSubjectCode,
+            }
           : {
-            subjectId: subjectData?.subjectId,
-            Name: subjectData?.subjectName,
-            Code: subjectData?.subjectCode,
-          },
+              subjectId: subjectData?.subjectId,
+              Name: subjectData?.subjectName,
+              Code: subjectData?.subjectCode,
+            },
       };
 
       allMappings.push({
@@ -1347,9 +1708,10 @@ export async function getTeacherTimeTable(userId) {
           courseName: course.courseName,
           courseCode: course.courseCode,
           courseId: plain.courseId || course.courseId,
-          class: classSection.year != null ? String(classSection.year) : '',
+          class: classSection.year != null ? String(classSection.year) : "",
           section: classSection.section,
-          classSectionsId: plain.classSectionsId || classSection.classSectionsId,
+          classSectionsId:
+            plain.classSectionsId || classSection.classSectionsId,
           startingDate: plain.startingDate,
           endingDate: plain.endingDate,
           timeTableType,
@@ -1428,12 +1790,11 @@ export async function getTeacherTimeTable(userId) {
 
 export async function getTeacherSubject(userId, filters = {}) {
   return await employeeRepository.getTeacherSubject(userId, filters);
-};
+}
 
 export async function getSubjectEvalution(userId) {
   return await evaluationRepository.getTeacherSubjectEvalution(userId);
 }
-
 
 const SCHEDULE_DAY_INDEX = {
   Sunday: 0,
@@ -1447,7 +1808,10 @@ const SCHEDULE_DAY_INDEX = {
 
 function expandScheduleForExactDate(rawSchedules, currentDate) {
   const targetDate = parseLocalDateOnly(currentDate);
-  const dateString = typeof currentDate === 'string' ? currentDate.split('T')[0] : formatQueryDate(currentDate);
+  const dateString =
+    typeof currentDate === "string"
+      ? currentDate.split("T")[0]
+      : formatQueryDate(currentDate);
   const results = [];
 
   for (const schedule of rawSchedules) {
@@ -1471,18 +1835,27 @@ function expandScheduleForExactDate(rawSchedules, currentDate) {
   return results;
 }
 
-export async function getTodayClassSchedule(userId, currentDate, sessionId, groupPeriods = false) {
-  const { rows: rawSchedules } = await employeeScheduleRepository.getTodayClassScheduleForEmployee(
-    Number(userId),
-    currentDate,
-    sessionId,
-  );
+export async function getTodayClassSchedule(
+  userId,
+  currentDate,
+  sessionId,
+  groupPeriods = false,
+) {
+  const { rows: rawSchedules } =
+    await employeeScheduleRepository.getTodayClassScheduleForEmployee(
+      Number(userId),
+      currentDate,
+      sessionId,
+    );
 
   const strippedSchedules = rawSchedules.map(stripTeacherFieldsFromSchedule);
   const schedules = await enrichTodayClassSchedules(strippedSchedules);
 
   if (groupPeriods) {
-    const grouped = await groupConsecutivePeriods(schedules, groupPeriods === 'sessional');
+    const grouped = await groupConsecutivePeriods(
+      schedules,
+      groupPeriods === "sessional",
+    );
     const result = await applyGroupAttendanceStatus(grouped);
     return { schedules: result, total: result.length };
   }
@@ -1495,11 +1868,16 @@ export async function getTeacherCourses(userId) {
 }
 
 export async function getTeacherSubjectsFromSchedule(userId, filters = {}) {
-  return await employeeScheduleRepository.getTeacherSubjectsFromWeekCells(userId, filters);
+  return await employeeScheduleRepository.getTeacherSubjectsFromWeekCells(
+    userId,
+    filters,
+  );
 }
 
 function getTeacherDetails(rawSchedules) {
-  const employee = rawSchedules.find((schedule) => schedule.employeeDetails)?.employeeDetails;
+  const employee = rawSchedules.find(
+    (schedule) => schedule.employeeDetails,
+  )?.employeeDetails;
 
   if (!employee) {
     return null;
@@ -1593,8 +1971,8 @@ function collectScheduleQueryParams(schedules) {
     dateWiseIds.push(id);
   }
 
-  let from = '';
-  let to = '';
+  let from = "";
+  let to = "";
   if (dates.length) {
     from = dates[0];
     to = dates[0];
@@ -1622,7 +2000,7 @@ function resolveScheduleAttendanceFields(schedule, presentMap, markedMap) {
 
   return {
     attendanceCount: presentCount != null ? presentCount : 0,
-    attendanceStatus: markedCount > 0 ? 'MARKED' : 'PENDING',
+    attendanceStatus: markedCount > 0 ? "MARKED" : "PENDING",
   };
 }
 
@@ -1630,17 +2008,22 @@ async function fetchElectiveStudentCountMap(schedules) {
   const electiveSubjectIds = [
     ...new Set(
       schedules
-        .map((s) => s.electiveSubjectId || s.timeTableElective?.electiveSubjectId)
+        .map(
+          (s) => s.electiveSubjectId || s.timeTableElective?.electiveSubjectId,
+        )
         .filter(Boolean)
-        .map(Number)
+        .map(Number),
     ),
   ];
   const electiveCountMap = new Map();
   if (electiveSubjectIds.length > 0) {
     const counts = await model.studentElectiveSubjectModel.findAll({
       where: { electiveSubjectId: electiveSubjectIds },
-      attributes: ['electiveSubjectId', [sequelize.fn('COUNT', sequelize.col('student_id')), 'count']],
-      group: ['electiveSubjectId'],
+      attributes: [
+        "electiveSubjectId",
+        [sequelize.fn("COUNT", sequelize.col("student_id")), "count"],
+      ],
+      group: ["electiveSubjectId"],
       raw: true,
     });
     for (const c of counts) {
@@ -1658,22 +2041,34 @@ async function enrichTodayClassSchedules(schedules) {
   const { dateWiseIds, resolvedTermIds, uniqueTermIds } =
     collectScheduleQueryParams(schedules);
 
-  const [studentCountMap, electiveCountMap, markedMap, presentMap] = await Promise.all([
-    classSectionTermRepository.countStudentsByClassSectionTermIds(uniqueTermIds),
-    fetchElectiveStudentCountMap(schedules),
-    attendanceRepository.getAttendanceMarkedMap({ dateWiseIds }),
-    attendanceRepository.getAttendanceMap({ dateWiseIds }),
-  ]);
+  const [studentCountMap, electiveCountMap, markedMap, presentMap] =
+    await Promise.all([
+      classSectionTermRepository.countStudentsByClassSectionTermIds(
+        uniqueTermIds,
+      ),
+      fetchElectiveStudentCountMap(schedules),
+      attendanceRepository.getAttendanceMarkedMap({ dateWiseIds }),
+      attendanceRepository.getAttendanceMap({ dateWiseIds }),
+    ]);
 
   const enriched = [];
   for (let i = 0; i < schedules.length; i++) {
     const schedule = schedules[i];
     const classSectionTermId = resolvedTermIds[i];
-    const attendanceFields = resolveScheduleAttendanceFields(schedule, presentMap, markedMap);
-    const electiveId = schedule.electiveSubjectId || schedule.timeTableElective?.electiveSubjectId;
+    const attendanceFields = resolveScheduleAttendanceFields(
+      schedule,
+      presentMap,
+      markedMap,
+    );
+    const electiveId =
+      schedule.electiveSubjectId ||
+      schedule.timeTableElective?.electiveSubjectId;
 
     let studentCount = 0;
-    if (schedule.academicGroupId && schedule.academicGroupStudentCount != null) {
+    if (
+      schedule.academicGroupId &&
+      schedule.academicGroupStudentCount != null
+    ) {
       studentCount = schedule.academicGroupStudentCount;
     } else if (electiveId) {
       studentCount = electiveCountMap.get(Number(electiveId)) || 0;
@@ -1699,27 +2094,40 @@ async function enrichSchedulesWithAttendance(schedules) {
     return schedules;
   }
 
-  const { dateWiseIds, resolvedTermIds, uniqueTermIds } = collectScheduleQueryParams(schedules);
+  const { dateWiseIds, resolvedTermIds, uniqueTermIds } =
+    collectScheduleQueryParams(schedules);
   if (!dateWiseIds.length) {
     return schedules;
   }
 
-  const [studentCountMap, electiveCountMap, markedMap, presentMap] = await Promise.all([
-    classSectionTermRepository.countStudentsByClassSectionTermIds(uniqueTermIds),
-    fetchElectiveStudentCountMap(schedules),
-    attendanceRepository.getAttendanceMarkedMap({ dateWiseIds }),
-    attendanceRepository.getAttendanceMap({ dateWiseIds }),
-  ]);
+  const [studentCountMap, electiveCountMap, markedMap, presentMap] =
+    await Promise.all([
+      classSectionTermRepository.countStudentsByClassSectionTermIds(
+        uniqueTermIds,
+      ),
+      fetchElectiveStudentCountMap(schedules),
+      attendanceRepository.getAttendanceMarkedMap({ dateWiseIds }),
+      attendanceRepository.getAttendanceMap({ dateWiseIds }),
+    ]);
 
   const enriched = [];
   for (let i = 0; i < schedules.length; i++) {
     const schedule = schedules[i];
     const classSectionTermId = resolvedTermIds[i];
-    const attendanceFields = resolveScheduleAttendanceFields(schedule, presentMap, markedMap);
-    const electiveId = schedule.electiveSubjectId || schedule.timeTableElective?.electiveSubjectId;
+    const attendanceFields = resolveScheduleAttendanceFields(
+      schedule,
+      presentMap,
+      markedMap,
+    );
+    const electiveId =
+      schedule.electiveSubjectId ||
+      schedule.timeTableElective?.electiveSubjectId;
 
     let studentCount = 0;
-    if (schedule.academicGroupId && schedule.academicGroupStudentCount != null) {
+    if (
+      schedule.academicGroupId &&
+      schedule.academicGroupStudentCount != null
+    ) {
       studentCount = schedule.academicGroupStudentCount;
     } else if (electiveId) {
       studentCount = electiveCountMap.get(Number(electiveId)) || 0;
@@ -1747,20 +2155,20 @@ async function applyGroupAttendanceStatus(groups) {
     let anyMarked = false;
 
     for (const item of items) {
-      if (item.attendanceStatus !== 'MARKED') {
+      if (item.attendanceStatus !== "MARKED") {
         allMarked = false;
       }
-      if (item.attendanceStatus === 'MARKED') {
+      if (item.attendanceStatus === "MARKED") {
         anyMarked = true;
       }
     }
 
     if (allMarked) {
-      group.attendanceStatus = 'MARKED';
+      group.attendanceStatus = "MARKED";
     } else if (anyMarked) {
-      group.attendanceStatus = 'PARTIAL';
+      group.attendanceStatus = "PARTIAL";
     } else {
-      group.attendanceStatus = 'PENDING';
+      group.attendanceStatus = "PENDING";
     }
 
     delete group.attendanceCount;
@@ -1773,12 +2181,13 @@ async function applyGroupAttendanceStatus(groups) {
  * Past teacher schedule: expands recurring weekly mappings into dated occurrences
  * strictly before currentDateString, enriches attendance, optionally groups periods.
  *
- * @param {number|string} userOd
+ * @param {number|string} userId
  * @param {number} academicYearId
  * @param {string} currentDateString - YYYY-MM-DD cutoff (dates before this only)
  * @param {false|'consecutive'|'sessional'} groupPeriods
  * @param {number} [sessionId] - when set, only routines for that session
- * @returns {Promise<{ teacher: object|null, schedules: object[] }>}
+ * @param {{ page?: number, limit?: number }} [pagination]
+ * @returns {Promise<{ teacher: object|null, schedules: object[], total: number }>}
  */
 export async function getPastClassSchedules(
   userId,
@@ -1793,13 +2202,14 @@ export async function getPastClassSchedules(
 
   // No grouping: DB page/limit matches response entries directly
   if (!groupPeriods && hasPagination) {
-    const { rows: rawSchedules, total } = await employeeScheduleRepository.getPastClassSchedulesForEmployee(
-      userId,
-      academicYearId,
-      currentDateString,
-      sessionId,
-      { page, limit },
-    );
+    const { rows: rawSchedules, total } =
+      await employeeScheduleRepository.getPastClassSchedulesForEmployee(
+        userId,
+        academicYearId,
+        currentDateString,
+        sessionId,
+        { page, limit },
+      );
     const teacher = getTeacherDetails(rawSchedules);
     const schedules = await enrichSchedulesWithAttendance(
       rawSchedules.map(stripTeacherFieldsFromSchedule),
@@ -1817,14 +2227,17 @@ export async function getPastClassSchedules(
   let exhausted = false;
 
   while (true) {
-    const batchPagination = batchSize ? { page: fetchPage, limit: batchSize } : {};
-    const { rows } = await employeeScheduleRepository.getPastClassSchedulesForEmployee(
-      userId,
-      academicYearId,
-      currentDateString,
-      sessionId,
-      batchPagination,
-    );
+    const batchPagination = batchSize
+      ? { page: fetchPage, limit: batchSize }
+      : {};
+    const { rows } =
+      await employeeScheduleRepository.getPastClassSchedulesForEmployee(
+        userId,
+        academicYearId,
+        currentDateString,
+        sessionId,
+        batchPagination,
+      );
 
     if (!teacher) {
       teacher = getTeacherDetails(rows);
@@ -1841,7 +2254,10 @@ export async function getPastClassSchedules(
 
     schedules = allRaw.map(stripTeacherFieldsFromSchedule);
     if (groupPeriods) {
-      schedules = await groupConsecutivePeriods(schedules, groupPeriods === 'sessional');
+      schedules = await groupConsecutivePeriods(
+        schedules,
+        groupPeriods === "sessional",
+      );
       schedules.sort((a, b) => new Date(b.date) - new Date(a.date));
     }
 
@@ -1876,30 +2292,54 @@ export async function getPastClassSchedules(
   return { teacher, schedules: pageSchedules, total };
 }
 
-export async function getUpcomingClassSchedules(userId, academicYearId, currentDateString, groupPeriods = false, pagination = {}) {
-  // When grouping, fetch extra rows since consecutive periods get merged
-  const adjustedPagination = groupPeriods && pagination.limit
-    ? { ...pagination, limit: pagination.limit * 2 }
-    : pagination;
+export async function getUpcomingClassSchedules(
+  userId,
+  academicYearId,
+  currentDateString,
+  groupPeriods = false,
+  pagination = {},
+) {
+  const page = Number(pagination.page) || 1;
+  const limit = Number(pagination.limit) || undefined;
+  const hasPagination = limit != null && limit > 0;
 
-  const { rows: upcomingClasses, total } = await employeeScheduleRepository.getUpcomingClassSchedulesForEmployee(
-    userId,
-    academicYearId,
-    currentDateString,
-    adjustedPagination,
-  );
+  // Fetch all rows — do not pass page/limit to the query
+  const { rows: upcomingClasses } =
+    await employeeScheduleRepository.getUpcomingClassSchedulesForEmployee(
+      userId,
+      academicYearId,
+      currentDateString,
+      {},
+    );
 
-  const strippedSchedules = upcomingClasses.map(stripTeacherFieldsFromSchedule);
-  const schedules = await enrichSchedulesWithAttendance(strippedSchedules);
+  let schedules = upcomingClasses.map(stripTeacherFieldsFromSchedule);
 
   if (groupPeriods) {
-    const grouped = await groupConsecutivePeriods(schedules, groupPeriods === 'sessional');
-    grouped.sort((a, b) => new Date(a.date) - new Date(b.date));
-    const limitedGroups = pagination.limit ? grouped.slice(0, pagination.limit) : grouped;
-    return { schedules: await applyGroupAttendanceStatus(limitedGroups), total };
+    schedules = await groupConsecutivePeriods(
+      schedules,
+      groupPeriods === "sessional",
+    );
+    schedules.sort((a, b) => new Date(a.date) - new Date(b.date));
   }
 
-  return { schedules, total };
+  const total = schedules.length;
+
+  let pageSchedules = schedules;
+  if (hasPagination) {
+    const offset = (page - 1) * limit;
+    pageSchedules = schedules.slice(offset, offset + limit);
+  }
+
+  pageSchedules = await enrichSchedulesWithAttendance(pageSchedules);
+
+  if (groupPeriods) {
+    return {
+      schedules: await applyGroupAttendanceStatus(pageSchedules),
+      total,
+    };
+  }
+
+  return { schedules: pageSchedules, total };
 }
 
 async function groupConsecutivePeriods(classes, sessionalBreak = false) {
@@ -1911,9 +2351,12 @@ async function groupConsecutivePeriods(classes, sessionalBreak = false) {
   const groupedResult = [];
 
   let breakPeriodsMap = new Map();
-  const structureIds = [...new Set(classes.map(c => c.timeTableNameId).filter(Boolean))];
+  const structureIds = [
+    ...new Set(classes.map((c) => c.timeTableNameId).filter(Boolean)),
+  ];
   if (structureIds.length > 0) {
-    const allPeriods = await timeTableCreateRepository.getPeriodsForStructures(structureIds);
+    const allPeriods =
+      await timeTableCreateRepository.getPeriodsForStructures(structureIds);
     // Create a map to quickly look up periods for each structure
     for (const p of allPeriods) {
       if (!breakPeriodsMap.has(p.timeTableNameId)) {
@@ -1924,17 +2367,35 @@ async function groupConsecutivePeriods(classes, sessionalBreak = false) {
   }
 
   const getSubjectInfo = (item) => {
-    if (item.timeTableSubject) return { id: item.timeTableSubject.subjectId, name: item.timeTableSubject.subjectName };
-    if (item.timeTableElective) return { id: item.timeTableElective.electiveSubjectId, name: item.timeTableElective.electiveSubjectName };
-    if (item.timeTableTeacherSubject?.employeeSubject?.subjects) return { id: item.timeTableTeacherSubject.employeeSubject.subjects.subjectId, name: item.timeTableTeacherSubject.employeeSubject.subjects.subjectName };
-    return { id: null, name: 'Unknown' };
+    if (item.timeTableSubject)
+      return {
+        id: item.timeTableSubject.subjectId,
+        name: item.timeTableSubject.subjectName,
+      };
+    if (item.timeTableElective)
+      return {
+        id: item.timeTableElective.electiveSubjectId,
+        name: item.timeTableElective.electiveSubjectName,
+      };
+    if (item.timeTableTeacherSubject?.employeeSubject?.subjects)
+      return {
+        id: item.timeTableTeacherSubject.employeeSubject.subjects.subjectId,
+        name: item.timeTableTeacherSubject.employeeSubject.subjects.subjectName,
+      };
+    return { id: null, name: "Unknown" };
   };
 
   // Sort for grouping
   classes.sort((a, b) => {
     if (a.date !== b.date) return new Date(a.date) - new Date(b.date);
-    if (a.timeTablecreate.timeTableRoutineId !== b.timeTablecreate.timeTableRoutineId)
-      return a.timeTablecreate.timeTableRoutineId - b.timeTablecreate.timeTableRoutineId;
+    if (
+      a.timeTablecreate.timeTableRoutineId !==
+      b.timeTablecreate.timeTableRoutineId
+    )
+      return (
+        a.timeTablecreate.timeTableRoutineId -
+        b.timeTablecreate.timeTableRoutineId
+      );
 
     const subjA = getSubjectInfo(a);
     const subjB = getSubjectInfo(b);
@@ -1949,8 +2410,12 @@ async function groupConsecutivePeriods(classes, sessionalBreak = false) {
     if (!structurePeriods) return false;
 
     // Find the indices of item1 and item2 in the structure periods
-    const idx1 = structurePeriods.findIndex(p => p.timeTableCreationId === item1.timeTableCreationId);
-    const idx2 = structurePeriods.findIndex(p => p.timeTableCreationId === item2.timeTableCreationId);
+    const idx1 = structurePeriods.findIndex(
+      (p) => p.timeTableCreationId === item1.timeTableCreationId,
+    );
+    const idx2 = structurePeriods.findIndex(
+      (p) => p.timeTableCreationId === item2.timeTableCreationId,
+    );
 
     // They must be distinct valid periods
     if (idx1 === -1 || idx2 === -1 || idx1 === idx2) return false;
@@ -1979,12 +2444,17 @@ async function groupConsecutivePeriods(classes, sessionalBreak = false) {
     const periodNum = parseInt(item.period);
 
     let isConsecutive = false;
-    if (currentGroup &&
+    if (
+      currentGroup &&
       currentGroup.date === item.date &&
-      currentGroup.timeTablecreate.timeTableRoutineId === item.timeTablecreate.timeTableRoutineId &&
+      currentGroup.timeTablecreate.timeTableRoutineId ===
+        item.timeTablecreate.timeTableRoutineId &&
       currentGroup.subjectId === subj.id
     ) {
-      const lastItem = currentGroup.classScheduleItems[currentGroup.classScheduleItems.length - 1];
+      const lastItem =
+        currentGroup.classScheduleItems[
+          currentGroup.classScheduleItems.length - 1
+        ];
       if (areConsecutivePeriods(lastItem, item)) {
         isConsecutive = true;
       }
@@ -2005,8 +2475,14 @@ async function groupConsecutivePeriods(classes, sessionalBreak = false) {
       }
 
       const creation = item.timeTablecreation || {};
-      const itemStart = creation.startTime || (structurePeriod && structurePeriod.startTime) || null;
-      const itemEnd = creation.endTime || (structurePeriod && structurePeriod.endTime) || null;
+      const itemStart =
+        creation.startTime ||
+        (structurePeriod && structurePeriod.startTime) ||
+        null;
+      const itemEnd =
+        creation.endTime ||
+        (structurePeriod && structurePeriod.endTime) ||
+        null;
       if (itemEnd) {
         currentGroup.endTime = itemEnd;
         currentGroup.timeTablecreation = {
@@ -2016,7 +2492,10 @@ async function groupConsecutivePeriods(classes, sessionalBreak = false) {
       }
       if (itemStart && !currentGroup.startTime) {
         currentGroup.startTime = itemStart;
-        if (!currentGroup.timeTablecreation || !currentGroup.timeTablecreation.startTime) {
+        if (
+          !currentGroup.timeTablecreation ||
+          !currentGroup.timeTablecreation.startTime
+        ) {
           currentGroup.timeTablecreation = {
             ...(currentGroup.timeTablecreation || {}),
             startTime: itemStart,
@@ -2035,9 +2514,18 @@ async function groupConsecutivePeriods(classes, sessionalBreak = false) {
       }
 
       const creation = item.timeTablecreation || {};
-      const startTime = creation.startTime || (structurePeriod && structurePeriod.startTime) || null;
-      const endTime = creation.endTime || (structurePeriod && structurePeriod.endTime) || null;
-      const periodName = creation.periodName || (structurePeriod && structurePeriod.periodName) || null;
+      const startTime =
+        creation.startTime ||
+        (structurePeriod && structurePeriod.startTime) ||
+        null;
+      const endTime =
+        creation.endTime ||
+        (structurePeriod && structurePeriod.endTime) ||
+        null;
+      const periodName =
+        creation.periodName ||
+        (structurePeriod && structurePeriod.periodName) ||
+        null;
       currentGroup = {
         ...item,
         subjectId: subj.id,
@@ -2062,9 +2550,15 @@ async function groupConsecutivePeriods(classes, sessionalBreak = false) {
 
 function extractSubjectDetails(schedule) {
   if (schedule.timeTableSubject) {
-    return { subjectId: schedule.timeTableSubject.subjectId, subjectName: schedule.timeTableSubject.subjectName };
+    return {
+      subjectId: schedule.timeTableSubject.subjectId,
+      subjectName: schedule.timeTableSubject.subjectName,
+    };
   } else if (schedule.timeTableElective) {
-    return { subjectId: schedule.timeTableElective.electiveSubjectId, subjectName: schedule.timeTableElective.electiveSubjectName };
+    return {
+      subjectId: schedule.timeTableElective.electiveSubjectId,
+      subjectName: schedule.timeTableElective.electiveSubjectName,
+    };
   }
   return null;
 }
@@ -2081,9 +2575,9 @@ function processScheduleCombinations(schedules) {
 
     const routinePlain = routine.get ? routine.get({ plain: true }) : routine;
     const classSectionTermId =
-      routinePlain.classSectionTermId
-      ?? routinePlain.timeTableClassSectionTerm?.classSectionTermId
-      ?? null;
+      routinePlain.classSectionTermId ??
+      routinePlain.timeTableClassSectionTerm?.classSectionTermId ??
+      null;
     if (!classSectionTermId) continue;
 
     const term = routinePlain.timeTableClassSectionTerm?.term ?? null;
@@ -2104,7 +2598,7 @@ function processScheduleCombinations(schedules) {
         section: classSection.section,
         subjectId: subject.subjectId,
         subjectName: subject.subjectName,
-        totalClasses: 0
+        totalClasses: 0,
       });
     }
 
@@ -2114,7 +2608,10 @@ function processScheduleCombinations(schedules) {
     const dayStr = schedule.day;
 
     if (startDateStr && endDateStr && dayStr) {
-      entry.totalClasses = decimalAdd(entry.totalClasses, countWeekdayInRange(startDateStr, endDateStr, dayStr));
+      entry.totalClasses = decimalAdd(
+        entry.totalClasses,
+        countWeekdayInRange(startDateStr, endDateStr, dayStr),
+      );
     }
   }
 
@@ -2135,17 +2632,24 @@ function getEmployeeDetails(schedules) {
     employeeName: employee.employeeName,
     employmentType: employee.employmentType,
     departmentId: employee.departmentId ?? null,
-    departmentName: employee.employeeDepartment?.departmentName || employee.departmentName || "",
-    totalClasses: schedules.reduce((acc, schedule) => decimalAdd(acc, schedule.totalClasses || 0), 0),
-    totalUniqueSubjects: schedules.length
+    departmentName:
+      employee.employeeDepartment?.departmentName ||
+      employee.departmentName ||
+      "",
+    totalClasses: schedules.reduce(
+      (acc, schedule) => decimalAdd(acc, schedule.totalClasses || 0),
+      0,
+    ),
+    totalUniqueSubjects: schedules.length,
   };
 }
 
 export async function getUniqueClassSectionSubjects(userId, academicYearId) {
-  const schedules = await employeeScheduleRepository.getUniqueClassSectionSubjectsForEmployee(
-    userId,
-    academicYearId,
-  );
+  const schedules =
+    await employeeScheduleRepository.getUniqueClassSectionSubjectsForEmployee(
+      userId,
+      academicYearId,
+    );
 
   const employeeDetails = getEmployeeDetails(schedules);
   const combinations = processScheduleCombinations(schedules);
@@ -2156,16 +2660,22 @@ export async function getUniqueClassSectionSubjects(userId, academicYearId) {
   };
 }
 
-export async function getSectionCounts(userId, academicYearId, currentDateString) {
-  const { pastCount, upcomingCount } = await employeeScheduleRepository.countEmployeeDateWiseSchedules(
-    userId,
-    academicYearId,
-    currentDateString,
-  );
-  const allSchedules = await employeeScheduleRepository.getUniqueClassSectionSubjectsForEmployee(
-    userId,
-    academicYearId,
-  );
+export async function getSectionCounts(
+  userId,
+  academicYearId,
+  currentDateString,
+) {
+  const { pastCount, upcomingCount } =
+    await employeeScheduleRepository.countEmployeeDateWiseSchedules(
+      userId,
+      academicYearId,
+      currentDateString,
+    );
+  const allSchedules =
+    await employeeScheduleRepository.getUniqueClassSectionSubjectsForEmployee(
+      userId,
+      academicYearId,
+    );
 
   const combinations = processScheduleCombinations(allSchedules);
   const uniqueSubjects = new Set(combinations.map((c) => c.subjectId));

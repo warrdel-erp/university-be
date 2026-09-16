@@ -52,9 +52,12 @@ export const getExaminationSessionSlots = async (req, res) => {
 
 export const getExaminationSessionSlotById = async (req, res) => {
   try {
-    const { examinationSessionSlotId } = req.query;
-    const result = await examinationSessionSlotServices.getExaminationSessionSlotById(examinationSessionSlotId);
-    if (!result) {
+    const { examinationSessionId, examinationSessionSlotId } = req.query;
+    const result = await examinationSessionSlotServices.getExaminationSessionSlotById({
+      examinationSessionId,
+      examinationSessionSlotId,
+    });
+    if (!result || (Array.isArray(result) && result.length === 0)) {
       return ErrorResponse(res, 404, "Examination session slot not found");
     }
     return SuccessResponse(res, 200, "Examination session slot fetched successfully", result);

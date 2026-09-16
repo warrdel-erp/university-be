@@ -1,7 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { Op } from "sequelize";
 import * as assessmentPlanRepo from "../repository/assessmentPlanRepository.js";
-import * as model from "../models/index.js";
 import {
   decimalAdd,
   decimalCompare,
@@ -15,6 +14,10 @@ import {
 } from "../utility/decimalMoney.js";
 import { resolveTotalTerms, termsPerYear } from "../utility/courseTerms.js";
 import { resolveActiveAcademicYearContext } from "../utility/curriculumSubjectsByActiveYear.js";
+import {
+  assertSubjectOnCurriculumBatchTerm,
+  resolveCurriculumBatchTermContext,
+} from "./curriculumBatchTermServices.js";
 import { getAcademicYearId } from "../utility/requestContext.js";
 
 function parsePositiveId(val) {
@@ -88,6 +91,9 @@ function mapAssessmentPlanMapping(mapping) {
     assessmentPlanSubjectMappingId: plain.assessmentPlanSubjectMappingId,
     assessmentPlanId: plain.assessmentPlanId,
     subjectId: plain.subjectId,
+    curriculumBatchTermMappingId: plain.curriculumBatchTermMappingId
+      ? Number(plain.curriculumBatchTermMappingId)
+      : null,
     courseId: plain.courseId,
     sessionId: plain.sessionId,
     academicYearId: plain.academicYearId,
@@ -500,9 +506,11 @@ export async function getCourseAssessmentPlanOverview(queryParams = {}) {
     curriculumBatchMappingId,
     sessionId,
     subjectId,
+    curriculumBatchTermMappingId,
     assessmentPlanId,
     academicRegulationId,
     assignmentStatus = "all",
+    status,
     term,
     search,
     page = 1,
@@ -535,11 +543,15 @@ export async function getCourseAssessmentPlanOverview(queryParams = {}) {
   const mappingWhere = {};
   const parsedAssessmentPlanId = parsePositiveId(assessmentPlanId);
   const parsedSessionId = parsePositiveId(sessionId);
+  const parsedCurriculumBatchTermMappingId = parsePositiveId(curriculumBatchTermMappingId);
   if (parsedAssessmentPlanId !== undefined) {
     mappingWhere.assessmentPlanId = parsedAssessmentPlanId;
   }
   if (parsedSessionId !== undefined) {
     mappingWhere.sessionId = parsedSessionId;
+  }
+  if (parsedCurriculumBatchTermMappingId !== undefined) {
+    mappingWhere.curriculumBatchTermMappingId = parsedCurriculumBatchTermMappingId;
   }
 
   const planWhere = {};
@@ -558,6 +570,8 @@ export async function getCourseAssessmentPlanOverview(queryParams = {}) {
     ] = null;
   }
 
+  const { activeBatchYear } = await resolveActiveAcademicYearContext();
+
   const result =
     await assessmentPlanRepo.findOverviewByCurriculumBatchMappingId({
       curriculumBatchMappingId: parsedCurriculumBatchMappingId,
@@ -566,6 +580,8 @@ export async function getCourseAssessmentPlanOverview(queryParams = {}) {
       mappingWhere,
       planWhere,
       mappingRequired,
+      yearStatus: status,
+      activeBatchYear,
       page,
       limit,
     });
@@ -575,8 +591,6 @@ export async function getCourseAssessmentPlanOverview(queryParams = {}) {
     err.statusCode = 404;
     throw err;
   }
-
-  const { activeBatchYear } = await resolveActiveAcademicYearContext();
   const overview = buildOverviewSubjects(
     result.batchMapping,
     result.rows,
@@ -633,7 +647,7 @@ export async function getAssessmentPlanStats() {
 
 export async function createAssessmentPlanSubjectMapping({ payload, user }) {
   return await sequelize.transaction(async (t) => {
-    const plan = await model.assessmentPlanModel.findByPk(Number(payload.assessmentPlanId), { transaction: t });
+    const plan = await assessmentPlanRepo.findPlanForMapping(payload.assessmentPlanId, { transaction: t });
     if (!plan) {
       const error = new Error("Assessment plan not found");
       error.statusCode = 404;
@@ -652,27 +666,14 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
       throw error;
     }
 
-    const subjectRecord = await model.subjectModel.findOne({
-      where: {
-        subjectId: Number(payload.subjectId),
-        courseId: Number(payload.courseId),
-      },
-      attributes: ["subjectId", "courseId"],
-      transaction: t,
-    });
+    const subjectRecord = await assessmentPlanRepo.findSubjectForMapping(payload.subjectId, payload.courseId, { transaction: t });
     if (!subjectRecord) {
       const error = new Error(`Subject (ID: ${payload.subjectId}) does not belong to Course (ID: ${payload.courseId})`);
       error.statusCode = 400;
       throw error;
     }
 
-    const sessionCourseRecord = await model.sessionCouseMappingModel.findOne({
-      where: {
-        sessionId: Number(payload.sessionId),
-        courseId: Number(payload.courseId),
-      },
-      transaction: t,
-    });
+    const sessionCourseRecord = await assessmentPlanRepo.findSessionCourseMapping(payload.sessionId, payload.courseId, { transaction: t });
     if (!sessionCourseRecord) {
       const error = new Error(`Session (ID: ${payload.sessionId}) is not mapped to Course (ID: ${payload.courseId})`);
       error.statusCode = 400;
@@ -680,8 +681,7 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
     }
 
     let sessionId = Number(payload.sessionId);
-    const sessionRecord = await model.sessionModel.findByPk(sessionId, {
-      attributes: ["sessionId", "academicYearId"],
+    const sessionRecord = await assessmentPlanRepo.findSessionForMapping(sessionId, {
       transaction: t,
     });
     if (!sessionRecord) {
@@ -711,24 +711,32 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
       throw error;
     }
 
-    let examSetupTypeId = null;
-    const component = await model.assessmentPlanComponentModel.findOne({
-      where: { assessmentPlanId: Number(payload.assessmentPlanId) },
-      attributes: ["examSetupTypeId"],
-      raw: true,
-      transaction: t,
-    });
-    if (component && component.examSetupTypeId) {
-      examSetupTypeId = Number(component.examSetupTypeId);
-      const setupTypeRecord = await model.examSetupTypeModel.findByPk(examSetupTypeId, { transaction: t });
-      if (!setupTypeRecord) {
-        examSetupTypeId = null;
-      }
+    let curriculumBatchTermMappingId = Number(payload.curriculumBatchTermMappingId);
+    const cbtmContext = await resolveCurriculumBatchTermContext(
+      curriculumBatchTermMappingId,
+      { transaction: t },
+    );
+
+    if (Number(payload.courseId) !== cbtmContext.courseId) {
+      const error = new Error(
+        `Course (ID: ${payload.courseId}) does not match curriculum course (ID: ${cbtmContext.courseId}) for this batch term`,
+      );
+      error.statusCode = 400;
+      throw error;
     }
+
+    await assertSubjectOnCurriculumBatchTerm(
+      payload.subjectId,
+      cbtmContext,
+      { transaction: t },
+    );
+
+    const examSetupTypeId = await assessmentPlanRepo.findPlanComponentSetupType(payload.assessmentPlanId, { transaction: t });
 
     const data = {
       assessmentPlanId: Number(payload.assessmentPlanId),
       subjectId: Number(payload.subjectId),
+      curriculumBatchTermMappingId: cbtmContext.curriculumBatchTermMappingId,
       courseId: Number(payload.courseId),
       sessionId: sessionId,
       academicYearId: academicYearId,

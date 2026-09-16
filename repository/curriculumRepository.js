@@ -83,12 +83,11 @@ export async function findAll(filters = {}) {
   }
 
   for (const curriculum of curriculums) {
-    let studentCount = 0;
     for (const mapping of curriculum.batchMappings) {
       const key = `${Number(curriculum.courseId)}_${Number(mapping.batch)}`;
-      studentCount += countMap.get(key) || 0;
+      const batchStudentCount = countMap.get(key) || 0;
+      mapping.setDataValue('studentCount', batchStudentCount);
     }
-    curriculum.setDataValue('studentCount', studentCount);
   }
 
   return curriculums;
@@ -245,14 +244,6 @@ export async function findBatchMappingsByCurriculumId(curriculumId) {
   return model.curriculumBatchMappingModel.findAll({
     where: { curriculumId },
     attributes: batchMappingAttributes,
-    include: [
-      {
-        model: model.curriculumBatchTermMappingModel,
-        as: 'termMappings',
-        attributes: termMappingAttributes,
-        required: false,
-      },
-    ],
     order: [['batch', 'ASC']],
   });
 }

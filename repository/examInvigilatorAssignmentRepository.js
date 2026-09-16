@@ -1,12 +1,12 @@
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { Op } from "sequelize";
-import { getStudentCountsByGroups } from "./examScheduleRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 import { getSeatCountsByCapacityIds } from "../utility/roomCapacity.js";
 import { INVIGILATOR_ASSIGNMENT_INACTIVE_STATUSES } from "../constant.js";
 import { findExamScheduleIdsBySelections } from "../utility/examScheduleSelection.js";
 import { formatDateKey } from "../utility/dateFormat.js";
+import { curriculumBatchTermScheduleInclude } from "./curriculumBatchTermRepository.js";
 
 export async function createAssignment(data, options = {}) {
   return scoped(model.examInvigilatorAssignmentModel).create(data, {
@@ -901,8 +901,10 @@ async function fetchRoomCapacityRows(scheduleWhere, options = {}) {
           "examDate",
           "term",
           "sessionId",
+          "academicYearId",
           "examinationSessionSlotId",
           "subjectId",
+          "curriculumBatchTermMappingId",
         ],
         where: scheduleWhere,
         include: [
@@ -917,6 +919,7 @@ async function fetchRoomCapacityRows(scheduleWhere, options = {}) {
             ],
             required: true,
           },
+          curriculumBatchTermScheduleInclude(),
           {
             model: model.examinationSessionSlotModel,
             as: "examinationSessionSlot",

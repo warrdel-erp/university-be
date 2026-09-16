@@ -1,11 +1,16 @@
 import * as examInvigilatorAssignmentRepository from "../repository/examInvigilatorAssignmentRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
-import { decimalAdd } from "../utility/decimalMoney.js";
+import { decimalAdd, toIntegerNumber } from "../utility/decimalMoney.js";
 import { formatDateKey } from "../utility/dateFormat.js";
 import { getRoomCentricMetrics } from "../utility/roomCentricHelper.js";
 import * as model from "../models/index.js";
 import { Op } from "sequelize";
 import { INVIGILATOR_ROOM_STATUS } from "../constant.js";
+import {
+  buildStudentGroupFromSchedule,
+  lookupStudentCount,
+} from "../utility/studentCount.js";
+import { getStudentCountMapByGroups } from "./studentCountServices.js";
 
 function createBadRequestError(message) {
   const error = new Error(message);
@@ -587,6 +592,16 @@ export async function getListOfRoomsRoomWise(
     assignmentsMap.get(key).push(ass);
   }
 
+  const studentGroups = [];
+  for (const rc of allRows) {
+    if (!rc.examSchedule) continue;
+    const group = buildStudentGroupFromSchedule(rc.examSchedule);
+    if (group) studentGroups.push(group);
+  }
+  const studentCountMap = studentGroups.length
+    ? await getStudentCountMapByGroups(studentGroups, options)
+    : new Map();
+
   // Group by classRoomSectionId + examDate + examinationSessionSlotId
   const roomMap = new Map();
 
@@ -629,13 +644,26 @@ export async function getListOfRoomsRoomWise(
           : null,
         invigilatorCount: assignedCount,
         invigilatorStatus,
+        studentCount: 0,
         exams: [],
       });
     }
 
+    const studentCount = schedule
+      ? lookupStudentCount(
+          studentCountMap,
+          buildStudentGroupFromSchedule(schedule),
+        )
+      : 0;
+
+    roomMap.get(key).studentCount = toIntegerNumber(
+      decimalAdd(roomMap.get(key).studentCount, studentCount),
+    );
+
     roomMap.get(key).exams.push({
       examScheduleRoomCapacityId: rc.examScheduleRoomCapacityId,
       examScheduleId: schedule?.examScheduleId,
+      curriculumBatchTermMappingId: schedule?.curriculumBatchTermMappingId || null,
       term: schedule?.term,
       sessionId: schedule?.sessionId,
       subjectId: subject?.subjectId,
@@ -643,6 +671,7 @@ export async function getListOfRoomsRoomWise(
       subjectCode: subject?.subjectCode,
       courseId: subject?.courseId,
       capacity: rc.capacity,
+      studentCount,
     });
   }
 

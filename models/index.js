@@ -1054,6 +1054,15 @@ employeeCodeMasterType.hasMany(employeeQualificationModel, {
   as: "codeMasterQualificationDocuments",
 });
 
+employeeOfficeModel.belongsTo(employeeCodeMasterType, {
+  foreignKey: "designation",
+  as: "codeMasterDesignation",
+});
+employeeCodeMasterType.hasMany(employeeOfficeModel, {
+  foreignKey: "designation",
+  as: "employeeOffices",
+});
+
 employeeExperianceModel.belongsTo(employeeCodeMasterType, {
   foreignKey: "experience_type",
   as: "codeMasterExperienceType",
@@ -3262,6 +3271,15 @@ sessionModel.hasMany(examScheduleModel, {
   as: "examScheduleSession",
 });
 
+examScheduleModel.belongsTo(curriculumBatchTermMappingModel, {
+  foreignKey: "curriculumBatchTermMappingId",
+  as: "curriculumBatchTermMapping",
+});
+curriculumBatchTermMappingModel.hasMany(examScheduleModel, {
+  foreignKey: "curriculumBatchTermMappingId",
+  as: "examSchedules",
+});
+
 examSetupTypeModel.hasMany(syllabusDetailsModel, {
   foreignKey: "exam_setup_type_id",
   as: "syllabusDetailsExam",
@@ -4341,6 +4359,14 @@ assessmentPlanSubjectMappingModel.belongsTo(acedmicYearModel, {
 assessmentPlanSubjectMappingModel.belongsTo(examSetupTypeModel, {
   foreignKey: "examSetupTypeId",
   as: "examSetupType",
+});
+assessmentPlanSubjectMappingModel.belongsTo(curriculumBatchTermMappingModel, {
+  foreignKey: "curriculumBatchTermMappingId",
+  as: "curriculumBatchTermMapping",
+});
+curriculumBatchTermMappingModel.hasMany(assessmentPlanSubjectMappingModel, {
+  foreignKey: "curriculumBatchTermMappingId",
+  as: "assessmentPlanSubjectMappings",
 });
 
 

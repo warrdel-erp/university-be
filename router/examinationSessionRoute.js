@@ -3,12 +3,13 @@ import * as examinationSessionController from "../controllers/examinationSession
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
 import { z } from "zod";
+import {
+  dateStringSchema,
+  positiveIntegerQueryId,
+  selectionsSchema,
+} from "../utility/examZodSchemas.js";
 
 const router = Router();
-
-const dateStringSchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format");
 
 const sessionBodyObject = z.object({
   assessmentTypeId: z.number({
@@ -88,16 +89,7 @@ const createSessionSchema = {
   ),
 };
 
-const emptyToUndefined = (val) =>
-  val === "" || val === null || val === undefined ? undefined : val;
 
-const positiveIntegerQueryId = z.preprocess(
-  emptyToUndefined,
-  z.union([
-    z.string().regex(/^\d+$/).transform(Number),
-    z.number().int().positive(),
-  ]),
-);
 
 const updateSessionSchema = {
   query: z.object({
@@ -198,24 +190,7 @@ const getAnswerSheetsSchema = {
 const getSubjectsBySessionAndTermSchema = {
   query: z.object({
     examinationSessionId: positiveIntegerQueryId,
-    selections: z.preprocess(
-      (val) => {
-        if (!val || val === "") return undefined;
-        try {
-          return typeof val === "string" ? JSON.parse(val) : val;
-        } catch {
-          return undefined;
-        }
-      },
-      z
-        .array(
-          z.object({
-            courseSessionMappingId: z.number().int().positive(),
-            terms: z.array(z.number().int().positive()),
-          }),
-        )
-        .optional(),
-    ),
+    selections: selectionsSchema,
 
     filterStatus: z
       .enum([

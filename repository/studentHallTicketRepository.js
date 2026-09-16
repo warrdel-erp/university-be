@@ -3,7 +3,7 @@ import { Op, fn, col } from "sequelize";
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
-import { expandClassSectionTermIdsByTerms } from "../utility/studentCount.js";
+import { expandClassSectionTermIdsByTerms } from "./studentCountRepository.js";
 import * as examinationSessionRepository from "./examinationSessionRepository.js";
 import {
   ELIGIBILITY_STATUS,
@@ -420,7 +420,7 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
   // Fetch terms for this session.
   const termQueryOptions = {
     where: { examinationSessionId },
-    attributes: ["term", "examinationSessionTermId"],
+    attributes: ["term", "examinationSessionTermId", "courseId", "sessionId"],
     transaction,
   };
 
@@ -449,6 +449,26 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
     const termNumber = Number(row.term);
     sessionTermNumbers.push(termNumber);
     termToEstMap[termNumber] = row.examinationSessionTermId;
+  }
+
+  if (filterCombinations.length === 0) {
+    const sessionCombMap = new Map();
+    for (const row of termRows) {
+      if (row.courseId != null && row.sessionId != null) {
+        const key = `${row.courseId}_${row.sessionId}`;
+        if (!sessionCombMap.has(key)) {
+          sessionCombMap.set(key, {
+            courseId: Number(row.courseId),
+            sessionId: Number(row.sessionId),
+            terms: [],
+          });
+        }
+        sessionCombMap.get(key).terms.push(Number(row.term));
+      }
+    }
+    if (sessionCombMap.size > 0) {
+      filterCombinations = Array.from(sessionCombMap.values());
+    }
   }
 
   if (!sessionTermNumbers.length) {

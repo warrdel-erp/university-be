@@ -1,6 +1,12 @@
 import * as repo from "../repository/examRoomMaterialBundleRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 import { getTenantStore } from "../utility/requestContext.js";
+import {
+  buildStudentGroupFromSchedule,
+  lookupStudentCount,
+} from "../utility/studentCount.js";
+import { getStudentCountMapByGroups } from "./studentCountServices.js";
+import { toIntegerNumber, decimalAdd } from "../utility/decimalMoney.js";
 
 function generateBundleCode(roomNumber, seqId) {
   const cleanRoom = String(roomNumber || "000")
@@ -119,6 +125,7 @@ export async function getBundleList(filters, pagination) {
       capacity: 0,
       studentCount: 0,
       isRoomAllocationDone: false,
+      _schedule: schedule,
     });
   }
 
@@ -130,15 +137,25 @@ export async function getBundleList(filters, pagination) {
   const pageRooms = allRooms.slice(offset, offset + limitNum);
 
   const capacityIds = [];
+  const studentGroups = [];
   for (const roomObj of pageRooms) {
     for (const id of roomObj._capacityIds) {
       capacityIds.push(id);
     }
+    for (const exam of roomObj.exams) {
+      if (exam._schedule) {
+        const group = buildStudentGroupFromSchedule(exam._schedule);
+        if (group) studentGroups.push(group);
+      }
+    }
   }
 
-  const seatCounts = capacityIds.length
-    ? await repo.getSeatCounts(capacityIds)
-    : [];
+  const [seatCounts, studentCountMap] = await Promise.all([
+    capacityIds.length ? repo.getSeatCounts(capacityIds) : Promise.resolve([]),
+    studentGroups.length
+      ? getStudentCountMapByGroups(studentGroups)
+      : Promise.resolve(new Map()),
+  ]);
   const seatCountsMap = new Map();
   for (const sc of seatCounts) {
     seatCountsMap.set(
@@ -150,11 +167,19 @@ export async function getBundleList(filters, pagination) {
   const rows = [];
   for (const roomObj of pageRooms) {
     for (const exam of roomObj.exams) {
-      const studentCount =
+      const allocatedSeatCount =
         seatCountsMap.get(exam.examScheduleRoomCapacityId) || 0;
+      const studentCount = exam._schedule
+        ? lookupStudentCount(
+            studentCountMap,
+            buildStudentGroupFromSchedule(exam._schedule),
+          )
+        : 0;
       exam.capacity = studentCount;
       exam.studentCount = studentCount;
-      exam.isRoomAllocationDone = studentCount > 0;
+      exam.allocatedSeatCount = allocatedSeatCount;
+      exam.isRoomAllocationDone = allocatedSeatCount > 0;
+      delete exam._schedule;
     }
 
     const classMaxCounts = {};
@@ -175,9 +200,10 @@ export async function getBundleList(filters, pagination) {
       if (exam.studentCount === 0 && maxCount > 0) {
         exam.studentCount = maxCount;
         exam.capacity = maxCount;
-        exam.isRoomAllocationDone = true;
       }
-      totalStudentCount += exam.studentCount;
+      totalStudentCount = toIntegerNumber(
+        decimalAdd(totalStudentCount, exam.studentCount),
+      );
     }
 
     roomObj.studentCount = totalStudentCount;

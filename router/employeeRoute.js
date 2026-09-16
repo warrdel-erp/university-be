@@ -197,7 +197,10 @@ const addEmployeeBodySchema = z
     pickColor: z.string().optional().nullable(),
     officialEmailId: z.string().optional().nullable(),
     officialMobileNumber: z.string().optional().nullable(),
-    designation: z.string().optional().nullable(),
+    designation: z.preprocess(
+      (val) => (val === "" || val === "null" || val === 0 ? null : val),
+      z.coerce.number().int().positive().nullable().optional(),
+    ),
     salutation: z.string().optional().nullable(),
   })
   .passthrough();
@@ -220,7 +223,10 @@ const updateEmployeeBodySchema = z
     pickColor: z.string().optional().nullable(),
     officialEmailId: z.string().optional().nullable(),
     officialMobileNumber: z.string().optional().nullable(),
-    designation: z.string().optional().nullable(),
+    designation: z.preprocess(
+      (val) => (val === "" || val === "null" || val === 0 ? null : val),
+      z.coerce.number().int().positive().nullable().optional(),
+    ),
     salutation: z.string().optional().nullable(),
   })
   .passthrough();

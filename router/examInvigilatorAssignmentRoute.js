@@ -2,6 +2,13 @@ import { Router } from "express";
 import { z } from "zod";
 import { validate } from "../utility/validation.js";
 import userAuth from "../middleware/authUser.js";
+import {
+  emptyToUndefined,
+  positiveIntegerId,
+  optionalQueryId as positiveIntegerQueryId,
+  dateStringSchema,
+  selectionsSchema,
+} from "../utility/examZodSchemas.js";
 
 import {
   createAssignment,
@@ -19,30 +26,10 @@ import {
 
 const router = Router();
 
-const emptyToUndefined = (val) =>
-  val === "" || val === null || val === undefined ? undefined : val;
-
-const positiveIntegerId = z.union([
-  z.string().regex(/^\d+$/).transform(Number),
-  z.number().int().positive(),
-]);
-
-const positiveIntegerQueryId = z.preprocess(
-  emptyToUndefined,
-  z
-    .union([
-      z.string().regex(/^\d+$/).transform(Number),
-      z.number().int().positive(),
-    ])
-    .optional(),
-);
-
 const createSchema = {
   body: z.object({
     examinationSessionSlotId: positiveIntegerId,
-    examDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD"),
+    examDate: dateStringSchema,
     classRoomSectionId: positiveIntegerId,
     userId: positiveIntegerId,
     role: z.string().min(1, "role is required"),
@@ -56,10 +43,7 @@ const updateSchema = {
   body: z.object({
     userId: positiveIntegerId.optional(),
     examinationSessionSlotId: positiveIntegerId.optional(),
-    examDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD")
-      .optional(),
+    examDate: dateStringSchema.optional(),
     classRoomSectionId: positiveIntegerId.optional(),
     role: z.string().optional(),
   }),
@@ -89,42 +73,9 @@ const getRoomsRoomWiseSchema = {
   query: z.object({
     examinationSessionId: positiveIntegerId,
     examDate: z.preprocess(emptyToUndefined, z.string().optional()),
-    page: z.preprocess(
-      emptyToUndefined,
-      z
-        .union([
-          z.string().regex(/^\d+$/).transform(Number),
-          z.number().int().positive(),
-        ])
-        .optional()
-        .default(1),
-    ),
-    limit: z.preprocess(
-      emptyToUndefined,
-      z
-        .union([
-          z.string().regex(/^\d+$/).transform(Number),
-          z.number().int().positive(),
-        ])
-        .optional()
-        .default(10),
-    ),
-    selections: z.preprocess(
-      (val) => {
-        if (!val || val === "") return undefined;
-        try {
-          return typeof val === "string" ? JSON.parse(val) : val;
-        } catch {
-          return undefined;
-        }
-      },
-      z.array(
-        z.object({
-          courseSessionMappingId: z.number().int().positive(),
-          terms: z.array(z.number().int().positive()),
-        })
-      ).optional()
-    ),
+    page: positiveIntegerQueryId.default(1),
+    limit: positiveIntegerQueryId.default(10),
+    selections: selectionsSchema,
   }),
 };
 
@@ -145,9 +96,7 @@ const byRoomSchema = {
   query: z.object({
     classRoomSectionId: positiveIntegerId,
     examinationSessionId: positiveIntegerId,
-    examDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD"),
+    examDate: dateStringSchema,
     examinationSessionSlotId: positiveIntegerId,
   }),
 };
@@ -198,10 +147,7 @@ const availabilitySchema = {
     examScheduleId: positiveIntegerQueryId,
     classRoomSectionId: positiveIntegerQueryId,
     examinationSessionSlotId: positiveIntegerQueryId,
-    examDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD")
-      .optional(),
+    examDate: dateStringSchema.optional(),
   }),
 };
 

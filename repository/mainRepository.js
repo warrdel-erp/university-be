@@ -551,10 +551,147 @@ export async function addSectionSubjectMapper(data) {
     }
 }
 
+async function resolveAcademicYearStartYear(academicYearId) {
+    const academicYear = await scoped(model.acedmicYearModel).findOne({
+        where: { academicYearId: Number(academicYearId) },
+        attributes: ['academicYearId', 'yearTitle'],
+    });
+    if (!academicYear) {
+        const error = new Error('Academic year not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    const match = String(academicYear.yearTitle).match(/^(\d{4})/);
+    if (!match) {
+        const error = new Error(
+            `Cannot parse year from academic year title '${academicYear.yearTitle}'`,
+        );
+        error.statusCode = 400;
+        throw error;
+    }
+    return Number(match[1]);
+}
+
+/**
+ * Active curriculum term slots for an academic year:
+ * curriculum_batch_term_mapping.year === academic-year start year,
+ * joined to curriculum + batch.
+ */
+async function findActiveCurriculumTermSlots(academicYearId) {
+    const startYear = await resolveAcademicYearStartYear(academicYearId);
+
+    const rows = await model.curriculumBatchTermMappingModel.findAll({
+        attributes: ['term', 'year', 'yearNumber'],
+        where: { year: startYear },
+        include: [
+            {
+                model: model.curriculumBatchMappingModel,
+                as: 'batchMapping',
+                attributes: ['curriculumBatchMappingId', 'curriculumId', 'batch'],
+                required: true,
+                include: [
+                    {
+                        model: model.curriculumModel,
+                        as: 'curriculum',
+                        attributes: ['curriculumId', 'courseId', 'name', 'publishStatus'],
+                        required: true,
+                        where: buildScope(model.curriculumModel),
+                    },
+                ],
+            },
+        ],
+    });
+
+    const slots = [];
+    for (const row of rows) {
+        const plain = row.get ? row.get({ plain: true }) : row;
+        const batchMapping = plain.batchMapping;
+        if (!batchMapping?.curriculumId) continue;
+        slots.push({
+            curriculumId: Number(batchMapping.curriculumId),
+            curriculumBatchMappingId: Number(batchMapping.curriculumBatchMappingId),
+            batch: Number(batchMapping.batch),
+            term: Number(plain.term),
+            year: Number(plain.year),
+            curriculum: batchMapping.curriculum || null,
+        });
+    }
+    return slots;
+}
+
+function buildSubjectMapperRow(subjectPlain, mappingRows) {
+    const terms = [];
+    const batches = [];
+    const termSeen = new Set();
+    const batchSeen = new Set();
+    const mappings = [];
+
+    for (const mapping of mappingRows) {
+        const term = mapping.term == null ? null : Number(mapping.term);
+        const batch = mapping.batch == null ? null : Number(mapping.batch);
+
+        if (term != null && !termSeen.has(term)) {
+            termSeen.add(term);
+            terms.push(term);
+        }
+        if (batch != null && !batchSeen.has(batch)) {
+            batchSeen.add(batch);
+            batches.push(batch);
+        }
+
+        mappings.push({
+            curriculumSubjectTermMappingId: mapping.curriculumSubjectTermMappingId,
+            curriculumId: mapping.curriculumId,
+            curriculumName: mapping.curriculumName ?? null,
+            term,
+            credit: mapping.credit ?? null,
+            batch,
+            curriculumBatchMappingId: mapping.curriculumBatchMappingId ?? null,
+        });
+    }
+
+    terms.sort((a, b) => a - b);
+    batches.sort((a, b) => a - b);
+
+    const subjectType = subjectPlain.subjectType ?? null;
+    const normalizedType = String(subjectType || '').trim().toLowerCase();
+
+    return {
+        subjectId: subjectPlain.subjectId,
+        universityId: subjectPlain.universityId,
+        campusId: subjectPlain.campusId,
+        instituteId: subjectPlain.instituteId,
+        courseId: subjectPlain.courseId,
+        specializationId: subjectPlain.specializationId ?? null,
+        subjectName: subjectPlain.subjectName,
+        subjectCode: subjectPlain.subjectCode,
+        subjectType,
+        subjectCategory: subjectPlain.subjectCategory ?? null,
+        shortName: subjectPlain.shortName ?? null,
+        description: subjectPlain.description ?? null,
+        isActive: subjectPlain.isActive,
+        departmentId: subjectPlain.departmentId ?? null,
+        isElective: normalizedType.includes('elective'),
+        isCore: normalizedType === 'core',
+        terms,
+        batches,
+        mappings,
+        course: subjectPlain.courseInfo
+            ? {
+                courseId: subjectPlain.courseInfo.courseId,
+                courseName: subjectPlain.courseInfo.courseName,
+                termType: subjectPlain.courseInfo.termType,
+                totalTerms: subjectPlain.courseInfo.totalTerms,
+            }
+            : null,
+    };
+}
+
 export async function getSectionSubjectMapper(arg1, arg2) {
     try {
         let opts = {};
-        if (typeof arg1 === "object" && arg1 !== null) {
+        if (typeof arg1 === 'object' && arg1 !== null) {
             opts = arg1;
         } else {
             opts = {
@@ -564,92 +701,277 @@ export async function getSectionSubjectMapper(arg1, arg2) {
         }
 
         const { term, courseId, search, page, limit, academicYearId } = opts;
+        const termFilter = term != null && term !== '' ? Number(term) : null;
+        const courseFilter = courseId != null && courseId !== '' ? Number(courseId) : null;
 
-        const where = {
-            ...(academicYearId && { academicYearId: Number(academicYearId) }),
-            ...(term && { term: Number(term) }),
-            ...(courseId && { courseId: Number(courseId) }),
+        const subjectWhere = {
+            ...(courseFilter && { courseId: courseFilter }),
         };
-
         if (search) {
-            where[Op.or] = [
+            subjectWhere[Op.or] = [
                 { subjectName: { [Op.like]: `%${search}%` } },
                 { subjectCode: { [Op.like]: `%${search}%` } },
             ];
         }
 
-        const include = [
-            {
-                model: model.courseModel,
-                as: "courseInfo",
-                attributes: ["courseId", "courseName", "termType", "totalTerms"],
-                where: buildScope(model.courseModel),
-                required: false,
-            },
-        ];
+        const subjectInclude = {
+            model: model.courseModel,
+            as: 'courseInfo',
+            attributes: ['courseId', 'courseName', 'termType', 'totalTerms'],
+            where: buildScope(model.courseModel),
+            required: false,
+        };
 
-        const order = [
-            ["courseId", "ASC"],
-            ["term", "ASC"],
-            ["subjectName", "ASC"],
-        ];
+        let mappingBySubjectId = new Map();
 
-        const isPaginated = page != null && limit != null;
-        if (isPaginated) {
-            const parsedPage = Number(page);
-            const parsedLimit = Number(limit);
-            const pageNum = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
-            const limitNum = Number.isInteger(parsedLimit) && parsedLimit > 0 ? parsedLimit : 10;
-            const offset = (pageNum - 1) * limitNum;
-
-            const { count, rows } = await scoped(model.subjectModel).findAndCountAll({
-                where,
-                include,
-                order,
-                limit: limitNum,
-                offset,
-                distinct: true,
-            });
-
-            const formattedRows = rows.map((sub) => {
-                const plain = sub.toJSON ? sub.toJSON() : sub;
+        if (academicYearId != null && academicYearId !== '') {
+            const slots = await findActiveCurriculumTermSlots(academicYearId);
+            if (!slots.length) {
+                const isPaginated = page != null && limit != null;
+                if (!isPaginated) return [];
                 return {
-                    ...plain,
-                    course: plain.courseInfo || null,
-                    subjects: {
-                        ...plain,
+                    data: [],
+                    pagination: {
+                        page: Number(page) || 1,
+                        limit: Number(limit) || 10,
+                        total: 0,
                     },
                 };
+            }
+
+            const mappingOr = [];
+            const slotMetaByKey = new Map();
+            for (const slot of slots) {
+                if (termFilter != null && slot.term !== termFilter) continue;
+                const key = `${slot.curriculumId}_${slot.term}`;
+                mappingOr.push({
+                    curriculumId: slot.curriculumId,
+                    term: slot.term,
+                });
+                if (!slotMetaByKey.has(key)) {
+                    slotMetaByKey.set(key, slot);
+                }
+            }
+
+            if (!mappingOr.length) {
+                const isPaginated = page != null && limit != null;
+                if (!isPaginated) return [];
+                return {
+                    data: [],
+                    pagination: {
+                        page: Number(page) || 1,
+                        limit: Number(limit) || 10,
+                        total: 0,
+                    },
+                };
+            }
+
+            const mappingRows = await model.curriculumSubjectTermMappingModel.findAll({
+                attributes: [
+                    'curriculumSubjectTermMappingId',
+                    'curriculumId',
+                    'subjectId',
+                    'term',
+                    'credit',
+                ],
+                where: { [Op.or]: mappingOr },
+                include: [
+                    {
+                        model: model.subjectModel,
+                        as: 'subject',
+                        attributes: [
+                            'subjectId',
+                            'universityId',
+                            'campusId',
+                            'instituteId',
+                            'courseId',
+                            'specializationId',
+                            'subjectName',
+                            'subjectCode',
+                            'subjectType',
+                            'subjectCategory',
+                            'shortName',
+                            'description',
+                            'isActive',
+                            'departmentId',
+                        ],
+                        required: true,
+                        where: {
+                            ...buildScope(model.subjectModel),
+                            ...subjectWhere,
+                        },
+                        include: [subjectInclude],
+                    },
+                    {
+                        model: model.curriculumModel,
+                        as: 'curriculum',
+                        attributes: ['curriculumId', 'name'],
+                        required: true,
+                        where: buildScope(model.curriculumModel),
+                    },
+                ],
             });
 
-            return {
-                data: formattedRows,
-                pagination: {
-                    page: pageNum,
-                    limit: limitNum,
-                    total: count,
-                },
+            for (const row of mappingRows) {
+                const plain = row.get ? row.get({ plain: true }) : row;
+                const subjectId = Number(plain.subjectId);
+                const slotKey = `${Number(plain.curriculumId)}_${Number(plain.term)}`;
+                const slot = slotMetaByKey.get(slotKey);
+
+                if (!mappingBySubjectId.has(subjectId)) {
+                    mappingBySubjectId.set(subjectId, {
+                        subject: plain.subject,
+                        mappings: [],
+                    });
+                }
+
+                mappingBySubjectId.get(subjectId).mappings.push({
+                    curriculumSubjectTermMappingId: plain.curriculumSubjectTermMappingId,
+                    curriculumId: Number(plain.curriculumId),
+                    curriculumName: plain.curriculum?.name ?? null,
+                    term: Number(plain.term),
+                    credit: plain.credit,
+                    batch: slot?.batch ?? null,
+                    curriculumBatchMappingId: slot?.curriculumBatchMappingId ?? null,
+                });
+            }
+        } else {
+            const mappingWhere = {
+                ...(termFilter != null && { term: termFilter }),
             };
+
+            const subjects = await scoped(model.subjectModel).findAll({
+                attributes: [
+                    'subjectId',
+                    'universityId',
+                    'campusId',
+                    'instituteId',
+                    'courseId',
+                    'specializationId',
+                    'subjectName',
+                    'subjectCode',
+                    'subjectType',
+                    'subjectCategory',
+                    'shortName',
+                    'description',
+                    'isActive',
+                    'departmentId',
+                ],
+                where: subjectWhere,
+                include: [
+                    subjectInclude,
+                    {
+                        model: model.curriculumSubjectTermMappingModel,
+                        as: 'curriculumTermMappings',
+                        attributes: [
+                            'curriculumSubjectTermMappingId',
+                            'curriculumId',
+                            'subjectId',
+                            'term',
+                            'credit',
+                        ],
+                        required: termFilter != null,
+                        where: Object.keys(mappingWhere).length ? mappingWhere : undefined,
+                        include: [
+                            {
+                                model: model.curriculumModel,
+                                as: 'curriculum',
+                                attributes: ['curriculumId', 'name'],
+                                required: true,
+                                where: buildScope(model.curriculumModel),
+                                include: [
+                                    {
+                                        model: model.curriculumBatchMappingModel,
+                                        as: 'batchMappings',
+                                        attributes: ['curriculumBatchMappingId', 'batch'],
+                                        required: false,
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                ],
+                order: [
+                    ['courseId', 'ASC'],
+                    ['subjectName', 'ASC'],
+                ],
+            });
+
+            for (const subject of subjects) {
+                const plain = subject.get ? subject.get({ plain: true }) : subject;
+                const mappings = [];
+                for (const mapping of plain.curriculumTermMappings || []) {
+                    const batchMappings = mapping.curriculum?.batchMappings || [];
+                    if (!batchMappings.length) {
+                        mappings.push({
+                            curriculumSubjectTermMappingId: mapping.curriculumSubjectTermMappingId,
+                            curriculumId: Number(mapping.curriculumId),
+                            curriculumName: mapping.curriculum?.name ?? null,
+                            term: Number(mapping.term),
+                            credit: mapping.credit,
+                            batch: null,
+                            curriculumBatchMappingId: null,
+                        });
+                        continue;
+                    }
+                    for (const batchMapping of batchMappings) {
+                        mappings.push({
+                            curriculumSubjectTermMappingId: mapping.curriculumSubjectTermMappingId,
+                            curriculumId: Number(mapping.curriculumId),
+                            curriculumName: mapping.curriculum?.name ?? null,
+                            term: Number(mapping.term),
+                            credit: mapping.credit,
+                            batch: Number(batchMapping.batch),
+                            curriculumBatchMappingId: Number(batchMapping.curriculumBatchMappingId),
+                        });
+                    }
+                }
+
+                mappingBySubjectId.set(Number(plain.subjectId), {
+                    subject: plain,
+                    mappings,
+                });
+            }
         }
 
-        const rows = await scoped(model.subjectModel).findAll({
-            where,
-            include,
-            order,
+        const subjectIds = [];
+        for (const subjectId of mappingBySubjectId.keys()) {
+            subjectIds.push(subjectId);
+        }
+
+        const formatted = [];
+        for (const subjectId of subjectIds) {
+            const entry = mappingBySubjectId.get(subjectId);
+            formatted.push(buildSubjectMapperRow(entry.subject, entry.mappings));
+        }
+
+        formatted.sort((a, b) => {
+            if (a.courseId !== b.courseId) return a.courseId - b.courseId;
+            return String(a.subjectName).localeCompare(String(b.subjectName));
         });
 
-        return rows.map((sub) => {
-            const plain = sub.toJSON ? sub.toJSON() : sub;
-            return {
-                ...plain,
-                course: plain.courseInfo || null,
-                subjects: {
-                    ...plain,
-                },
-            };
-        });
+        const isPaginated = page != null && limit != null;
+        if (!isPaginated) {
+            return formatted;
+        }
+
+        const parsedPage = Number(page);
+        const parsedLimit = Number(limit);
+        const pageNum = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+        const limitNum = Number.isInteger(parsedLimit) && parsedLimit > 0 ? parsedLimit : 10;
+        const offset = (pageNum - 1) * limitNum;
+        const total = formatted.length;
+
+        return {
+            data: formatted.slice(offset, offset + limitNum),
+            pagination: {
+                page: pageNum,
+                limit: limitNum,
+                total,
+            },
+        };
     } catch (error) {
-        console.error("Error fetching class subject mapper details:", error.message);
+        console.error('Error fetching class subject mapper details:', error.message);
         throw error;
     }
 }

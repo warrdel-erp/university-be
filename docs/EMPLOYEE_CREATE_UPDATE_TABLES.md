@@ -162,9 +162,8 @@ The endpoints **`POST /employee`** (Create) and **`PATCH /employee/:id`** (Updat
   "motherName": "Jane Doe",
   "pickColor": "#4A90E2",
   // "employeePhoto": 101,           // s3_files.id (optional)
-  // "employeeSignature": 102,       // s3_files.id (optional)
-  "salutation": "Mr",                // maps to office.employeeRank fallback
-  "designation": "Assistant Professor", // maps to office.employeeRank fallback
+  "salutation": "Mr",                // → employee_office.salutation
+  "designation": 32,                 // employee_code_master_type_id → employee_office.designation
   "officialEmailId": "john.doe@university.edu",     // → employee_office + users.email
   "officialMobileNumber": "9876543210",             // → employee_office
 
@@ -217,7 +216,8 @@ The endpoints **`POST /employee`** (Create) and **`PATCH /employee/:id`** (Updat
     "spouseName": "Mary Doe",
     "nomineeName": "Robert Doe",
     "officeExtensionNumber": "2345",
-    "employeeRank": "Assistant Professor"
+    "designation": 32,
+    "salutation": "Mr"
   },
 
   "skill": [                         // → employee_skill
@@ -400,7 +400,8 @@ The endpoints **`POST /employee`** (Create) and **`PATCH /employee/:id`** (Updat
     "spouseName": "Mary Doe",
     "nomineeName": "Robert Doe",
     "officeExtensionNumber": "2345",
-    "employeeRank": "Assistant Professor"
+    "designation": 32,
+    "salutation": "Mr"
   },
   "skill": [
     {
@@ -564,7 +565,8 @@ The endpoints **`POST /employee`** (Create) and **`PATCH /employee/:id`** (Updat
 | **`office.retirementDate`** | `String (YYYY-MM-DD)` | **Optional** | `employee_office.retirement_date` | Date of retirement. |
 | **`office.noticePeriod`** | `Integer` | **Optional** | `employee_office.notice_period` | Notice period in days. |
 | **`office.employeeFileNumber`**| `String` | **Optional** | `employee_office.employee_file_number` | Physical dossier / file number. |
-| **`office.employeeRank`** | `String` | **Optional** | `employee_office.employee_rank` | Grade or rank designation. |
+| **`office.designation`** | `Integer` | **Optional** | `employee_office.designation` | Designation FK (`employee_code_master_type_id`). |
+| **`office.salutation`** | `String` | **Optional** | `employee_office.salutation` | Salutation / Title (e.g. "Mr", "Dr"). |
 | **`office.officeExtensionNumber`**| `String` | **Optional** | `employee_office.office_extension_number` | Intercom or desk extension. |
 | **`office.bankName`** | `String` | **Optional** | `employee_office.bank_name` | Bank for payroll. |
 | **`office.accountNumber`** | `String` | **Optional** | `employee_office.account_number` | Salary account number. |
