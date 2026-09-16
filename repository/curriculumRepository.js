@@ -83,12 +83,11 @@ export async function findAll(filters = {}) {
   }
 
   for (const curriculum of curriculums) {
-    let studentCount = 0;
     for (const mapping of curriculum.batchMappings) {
       const key = `${Number(curriculum.courseId)}_${Number(mapping.batch)}`;
-      studentCount += countMap.get(key) || 0;
+      const batchStudentCount = countMap.get(key) || 0;
+      mapping.setDataValue('studentCount', batchStudentCount);
     }
-    curriculum.setDataValue('studentCount', studentCount);
   }
 
   return curriculums;
