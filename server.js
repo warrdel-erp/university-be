@@ -112,8 +112,10 @@ import subjectWeightage from "./router/subjectWeightageRoute.js";
 import libraryIssueBookTransaction from "./router/libraryIssueBookTransactionRoute.js";
 import answerSheetQr from "./router/answerSheetQrRoute.js";
 import examResult from "./router/examResultRoute.js";
+import examOperations from "./router/examOperationsRoute.js";
 import s3FileRoute from "./router/s3FileRoute.js";
 // middleware
+
 app.use((req, res, next) => {
   if (req.originalUrl.startsWith("/answerSheetQr/splitPdf")) {
     return next();
@@ -122,10 +124,10 @@ app.use((req, res, next) => {
 });
 app.use(json());
 app.use((err, req, res, next) => {
-  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+  if (err instanceof SyntaxError && err.status === 400 && "body" in err) {
     return res.status(400).json({
-      message: 'Invalid JSON in request body',
-      hint: 'Empty Postman variables produce invalid JSON — run create steps in order or set collection variables.',
+      message: "Invalid JSON in request body",
+      hint: "Empty Postman variables produce invalid JSON — run create steps in order or set collection variables.",
       error: err.message,
     });
   }
@@ -140,7 +142,7 @@ app.use(urlencoded({ extended: true }));
 app.use("/campus", campus);
 app.use("/institute", institute);
 app.use("/specialization", specialization);
-app.use("/acedmicYear", acedmicYear); 
+app.use("/acedmicYear", acedmicYear);
 // Institute + University scoped (X-Institute-Id via authUser; no academic year on core models)
 
 app.use("/course", course);
@@ -195,7 +197,6 @@ app.use("/examinationSession", examinationSession);
 app.use("/examinationSessionSlot", examinationSessionSlot);
 app.use("/examInvigilatorAssignment", examInvigilatorAssignment);
 
-
 app.use("/examSchedule", examSchedule);
 
 app.use("/examStructure", examStructure);
@@ -218,12 +219,12 @@ app.use("/teacher", teacher);
 // ---------------------------------------------------------------------------
 // Schedule date-wise stack (structure → week cells → date instances → consumers)
 // ---------------------------------------------------------------------------
-app.use("/timeTable", timeTable);                 // structure + courseMapping + periods
-app.use("/timeTableCreate", timeTableCreate);     // week cells + teachers; publish → date-wise
+app.use("/timeTable", timeTable); // structure + courseMapping + periods
+app.use("/timeTableCreate", timeTableCreate); // week cells + teachers; publish → date-wise
 app.use("/timetableAcademicGroup", timetableAcademicGroup);
 app.use("/faculityLoad", faculityLoad);
-app.use("/attendance", attendance);               // keys: timeTableCellDateWiseId
-app.use("/lesson", lesson);                       // mapping keys: timeTableCellDateWiseId
+app.use("/attendance", attendance); // keys: timeTableCellDateWiseId
+app.use("/lesson", lesson); // mapping keys: timeTableCellDateWiseId
 app.use("/lecture", lecture);
 
 app.use("/feePlan", feePlan);
@@ -248,6 +249,7 @@ app.use("/transportRoute", transportRoute);
 app.use("/answerSheetQr", answerSheetQr);
 
 app.use("/examResult", examResult);
+app.use("/examOperations", examOperations);
 
 app.use("/fileUpload", s3FileRoute);
 

@@ -1,119 +1,108 @@
 import sequelize from "../database/sequelizeConfig.js";
-import { DataTypes } from 'sequelize';
+import { DataTypes } from "sequelize";
 import employee from "./employeeModel.js";
-import users from "./userModel.js"
+import users from "./userModel.js";
 
 const employeeAddressModel = sequelize.define(
-    'employee_address',
-    {
-        employeeAddressId: {
-            type: DataTypes.INTEGER,
-            primaryKey: true,
-            autoIncrement: true,
-            field: 'employee_address_id'
-        },
-        employeeId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'employee_id',
-            references: {
-                model: users,
-                key: 'user_id'
-            }
-        },
-        pAddress:{
-            type: DataTypes.STRING,
-            allowNull: true,
-            field:'p_address'
-        },
-        pPincode:{
-			type:DataTypes.INTEGER,
-			allowNull:true,
-            field:'p_pincode'
-		},
-        pCountry:{
-            type: DataTypes.STRING,
-            allowNull: true,
-            field:'p_country'
-        },
-        pState:{
-			type:DataTypes.STRING,
-			allowNull:true,
-            field:'p_state'
-		},
-        pCity:{
-            type: DataTypes.STRING,
-            allowNull: true,
-            field:'p_City'
-        },
-        phoneNumber:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'phone_number'
-        },
-        mobileNumber:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'mobile_number'
-        },
-        officalMobileNumber:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'offical_mobile_number'
-        },
-        officalEmailId:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'offical_email_id'
-        },
-        personalEmail:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'personal_email'
-        },
-        createdAt: {
-            type: DataTypes.DATE,
-            allowNull: false,
-            defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
-            field: 'created_at'
-        },
-        updatedAt: {
-            type: DataTypes.DATE,
-            allowNull: false,
-            defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
-            field: 'updated_at'
-        },
-        createdBy: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'created_by',
-            references: {
-                model: users,
-                key: 'user_id'
-            }
-        },
-        // updatedBy: {
-        //     type: DataTypes.INTEGER,
-        //     allowNull: false,
-        //     field: 'updated_by',
-        //     references: {
-        //         model: users,
-        //         key: 'user_id'
-        //     }
-        // },
-        deletedAt: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'deleted_at'
-        },
+  "employee_address",
+  {
+    employeeAddressId: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+      field: "employee_address_id",
     },
-    {
-        tableName: 'employee_address',
-        timestamps: true,
-        paranoid: true
-    }
+    employeeId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: "employee_id",
+      references: {
+        model: users,
+        key: "user_id",
+      },
+    },
+    pAddress: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "p_address",
+    },
+    pPincode: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "p_pincode",
+    },
+    pCountry: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "p_country",
+    },
+    pState: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "p_state",
+    },
+    pCity: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "p_City",
+    },
+    mobileNumber: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "mobile_number",
+    },
+    personalEmail: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "personal_email",
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
+      field: "created_at",
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
+      field: "updated_at",
+    },
+    createdBy: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: "created_by",
+      references: {
+        model: users,
+        key: "user_id",
+      },
+    },
+    // updatedBy: {
+    //     type: DataTypes.INTEGER,
+    //     allowNull: false,
+    //     field: 'updated_by',
+    //     references: {
+    //         model: users,
+    //         key: 'user_id'
+    //     }
+    // },
+    deletedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: "deleted_at",
+    },
+  },
+  {
+    tableName: "employee_address",
+    timestamps: true,
+    paranoid: true,
+  },
 );
 
-employeeAddressModel.scopeConfig = { university: false, institute: false, academicYear: false };
+employeeAddressModel.scopeConfig = {
+  university: false,
+  institute: false,
+  academicYear: false,
+};
 
 export default employeeAddressModel;

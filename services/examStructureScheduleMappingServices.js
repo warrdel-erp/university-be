@@ -4,6 +4,8 @@ import { buildScope, scoped } from "../utility/scoped.js";
 import * as examStructureScheduleRepository from "../repository/examStructureScheduleMappingRepository.js";
 import * as examinationSessionRepository from "../repository/examinationSessionRepository.js";
 import { getTimeSlotRange } from "../utility/timeSlot.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 const studentListFields = [
   "studentId",
@@ -635,32 +637,36 @@ async function assertUniqueExamScheduleMapping(
 }
 
 export async function addExamSchedule(examDetail, createdBy, updatedBy) {
-  examDetail.createdBy = createdBy;
-  examDetail.updatedBy = updatedBy;
+  return withAuditEvent(AUDIT_EVENTS.EXAM_SCHEDULE_CREATE, async ({ transaction }) => {
+    examDetail.createdBy = createdBy;
+    examDetail.updatedBy = updatedBy;
 
-  // Do NOT accept duration from frontend — always resolve from assessment plan
-  delete examDetail.duration;
+    // Do NOT accept duration from frontend — always resolve from assessment plan
+    delete examDetail.duration;
 
-  // Set examSetupTypeTermId to null explicitly
-  examDetail.examSetupTypeTermId = null;
+    // Set examSetupTypeTermId to null explicitly
+    examDetail.examSetupTypeTermId = null;
 
-  await resolveSlotDetails(examDetail);
-  await resolveSessionId(examDetail);
-  await resolveAcademicYearId(examDetail);
+    await resolveSlotDetails(examDetail);
+    await resolveSessionId(examDetail);
+    await resolveAcademicYearId(examDetail);
 
-  // Resolve duration and assessmentPlanComponentId from assessmentPlanComponent
-  await resolveDurationFromAssessmentPlan(examDetail);
+    // Resolve duration and assessmentPlanComponentId from assessmentPlanComponent
+    await resolveDurationFromAssessmentPlan(examDetail);
 
-  const resolvedTerm = await resolveTermForExamDetail(examDetail);
-  if (resolvedTerm != null) {
-    examDetail.term = resolvedTerm;
-  }
-  delete examDetail.semesterId;
+    const resolvedTerm = await resolveTermForExamDetail(examDetail);
+    if (resolvedTerm != null) {
+      examDetail.term = resolvedTerm;
+    }
+    delete examDetail.semesterId;
 
-  await assertNoStudentExamTimeConflict(examDetail);
-  await assertUniqueExamScheduleMapping(examDetail);
+    await assertNoStudentExamTimeConflict(examDetail);
+    await assertUniqueExamScheduleMapping(examDetail);
 
-  return await examStructureScheduleRepository.addExamSchedule(examDetail);
+    return await examStructureScheduleRepository.addExamSchedule(examDetail, {
+      transaction,
+    });
+  });
 }
 
 export async function updateExamSchedule(
@@ -668,31 +674,37 @@ export async function updateExamSchedule(
   examDetail,
   updatedBy,
 ) {
-  examDetail.updatedBy = updatedBy;
+  return withAuditEvent(AUDIT_EVENTS.EXAM_SCHEDULE_UPDATE, async ({ transaction }) => {
+    examDetail.updatedBy = updatedBy;
 
-  await resolveSlotDetails(examDetail);
-  await resolveSessionId(examDetail);
-  await resolveAcademicYearId(examDetail);
+    await resolveSlotDetails(examDetail);
+    await resolveSessionId(examDetail);
+    await resolveAcademicYearId(examDetail);
 
-  const resolvedTerm = await resolveTermForExamDetail(examDetail);
-  if (resolvedTerm != null) {
-    examDetail.term = resolvedTerm;
-  }
-  delete examDetail.semesterId;
+    const resolvedTerm = await resolveTermForExamDetail(examDetail);
+    if (resolvedTerm != null) {
+      examDetail.term = resolvedTerm;
+    }
+    delete examDetail.semesterId;
 
-  await assertNoStudentExamTimeConflict(examDetail, examScheduleId);
-  await assertUniqueExamScheduleMapping(examDetail, examScheduleId);
+    await assertNoStudentExamTimeConflict(examDetail, examScheduleId);
+    await assertUniqueExamScheduleMapping(examDetail, examScheduleId);
 
-  await examStructureScheduleRepository.updateExamSchedule(
-    examScheduleId,
-    examDetail,
-  );
+    await examStructureScheduleRepository.updateExamSchedule(
+      examScheduleId,
+      examDetail,
+      { transaction },
+    );
+  });
 }
 
 export async function deleteExamSchedule(examScheduleId) {
-  return await examStructureScheduleRepository.deleteExamSchedule(
-    examScheduleId,
-  );
+  return withAuditEvent(AUDIT_EVENTS.EXAM_SCHEDULE_DELETE, async ({ transaction }) => {
+    return await examStructureScheduleRepository.deleteExamSchedule(
+      examScheduleId,
+      { transaction },
+    );
+  });
 }
 
 export async function getDetailByExamType(examSetupTypeId) {

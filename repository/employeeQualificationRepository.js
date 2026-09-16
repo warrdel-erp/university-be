@@ -77,6 +77,14 @@ export async function getEmployeeQualificationsByEmployeeId(employeeId) {
         return await model.employeeQualificationModel.findAll({
             where: { employeeId },
             attributes: { exclude: ["createdAt", "updatedAt"] },
+            include: [
+                {
+                    model: model.s3FileModel.unscoped(),
+                    as: "attachmentFile",
+                    attributes: ["id", "entityType", "s3Key", "size", "mime", "originalName", "status"],
+                    required: false,
+                },
+            ],
         });
     } catch (error) {
         console.error("Error fetching employee qualifications:", error);

@@ -205,7 +205,13 @@ export async function getEmployeeByuserId(userId) {
         {
           model: model.employeeAddressModel,
           as: 'address',
-          attributes: ['phoneNumber', 'mobileNumber', 'personal_email', 'officalEmailId'],
+          attributes: ['mobileNumber', 'personal_email'],
+        },
+        {
+          model: model.employeeOfficeModel,
+          as: 'office',
+          attributes: ['officialEmailId', 'officialMobileNumber'],
+          required: false,
         },
       ],
       where: { userId },

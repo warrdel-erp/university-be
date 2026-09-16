@@ -55,10 +55,10 @@ export async function refreshEmployeeSkills(employeeId, skills, createdBy, updat
             employeeId,
             createdBy,
             updatedBy,
-            name: skill.name,
+            name: skill.name ?? skill.skill,
             experienceInYear: skill.experienceInYear ?? null,
             experienceInMonth: skill.experienceInMonth ?? null,
-            proficiencyLevel: skill.proficiencyLevel,
+            proficiencyLevel: skill.proficiencyLevel ?? skill.proficiency,
         }));
 
         return await model.employeeSkillModel.bulkCreate(insertData, { transaction });
