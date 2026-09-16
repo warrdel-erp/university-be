@@ -1957,10 +1957,30 @@ async function groupConsecutivePeriods(classes, sessionalBreak = false) {
 }
 
 function extractSubjectDetails(schedule) {
+  // Elective cells use electiveSubjectId; prefer elective over regular subject.
+  if (schedule.timeTableElective) {
+    return {
+      subjectId: schedule.timeTableElective.electiveSubjectId,
+      subjectName: schedule.timeTableElective.electiveSubjectName,
+      electiveSubjectId: schedule.timeTableElective.electiveSubjectId,
+      isElective: true,
+    };
+  }
+  if (schedule.electiveSubjectId != null) {
+    return {
+      subjectId: Number(schedule.electiveSubjectId),
+      subjectName: null,
+      electiveSubjectId: Number(schedule.electiveSubjectId),
+      isElective: true,
+    };
+  }
   if (schedule.timeTableSubject) {
-    return { subjectId: schedule.timeTableSubject.subjectId, subjectName: schedule.timeTableSubject.subjectName };
-  } else if (schedule.timeTableElective) {
-    return { subjectId: schedule.timeTableElective.electiveSubjectId, subjectName: schedule.timeTableElective.electiveSubjectName };
+    return {
+      subjectId: schedule.timeTableSubject.subjectId,
+      subjectName: schedule.timeTableSubject.subjectName,
+      electiveSubjectId: null,
+      isElective: false,
+    };
   }
   return null;
 }
@@ -1972,35 +1992,48 @@ function processScheduleCombinations(schedules) {
     const routine = schedule.timeTablecreate;
     if (!routine) continue;
 
-    const classSection = resolveTimeTableRoutineSection(routine);
-    if (!classSection) continue;
+    const subject = extractSubjectDetails(schedule);
+    if (!subject) continue;
 
     const routinePlain = routine.get ? routine.get({ plain: true }) : routine;
+    const classSection = resolveTimeTableRoutineSection(routine);
     const classSectionTermId =
       routinePlain.classSectionTermId
       ?? routinePlain.timeTableClassSectionTerm?.classSectionTermId
       ?? null;
-    if (!classSectionTermId) continue;
+
+    const cellType = schedule.timeTableType || null;
+    const routineType = routinePlain.timeTableType || null;
+    const isElective =
+      subject.isElective
+      || cellType === "elective"
+      || routineType === "elective";
+
+    // Normal subjects require a class-section term. Elective routines often omit it.
+    if (!isElective && (!classSection || !classSectionTermId)) continue;
 
     const term = routinePlain.timeTableClassSectionTerm?.term ?? null;
     const course = routine.timeTableCourse;
+    const timeTableType = isElective ? "elective" : (cellType || routineType || "normal");
 
-    const subject = extractSubjectDetails(schedule);
-    if (!subject) continue;
+    const key = isElective
+      ? `elective_${subject.electiveSubjectId}_${classSectionTermId ?? "none"}`
+      : `${classSectionTermId}_${subject.subjectId}`;
 
-    const key = `${classSectionTermId}_${subject.subjectId}`;
     if (!uniqueCombinationsMap.has(key)) {
       uniqueCombinationsMap.set(key, {
-        courseId: course?.courseId,
-        courseName: course?.courseName,
-        classSectionTermId,
-        classSectionsId: classSection.classSectionsId,
-        year: classSection.year != null ? Number(classSection.year) : null,
+        courseId: course?.courseId ?? routinePlain.courseId ?? null,
+        courseName: course?.courseName ?? null,
+        classSectionTermId: classSectionTermId != null ? Number(classSectionTermId) : null,
+        classSectionsId: classSection?.classSectionsId ?? null,
+        year: classSection?.year != null ? Number(classSection.year) : null,
         term: term != null ? Number(term) : null,
-        section: classSection.section,
+        section: classSection?.section ?? null,
         subjectId: subject.subjectId,
         subjectName: subject.subjectName,
-        totalClasses: 0
+        electiveSubjectId: subject.electiveSubjectId,
+        timeTableType,
+        totalClasses: 0,
       });
     }
 
