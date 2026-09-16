@@ -4356,10 +4356,6 @@ assessmentPlanSubjectMappingModel.belongsTo(acedmicYearModel, {
   foreignKey: "academicYearId",
   as: "academicYear",
 });
-assessmentPlanSubjectMappingModel.belongsTo(examSetupTypeModel, {
-  foreignKey: "examSetupTypeId",
-  as: "examSetupType",
-});
 assessmentPlanSubjectMappingModel.belongsTo(curriculumBatchTermMappingModel, {
   foreignKey: "curriculumBatchTermMappingId",
   as: "curriculumBatchTermMapping",

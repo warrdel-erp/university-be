@@ -97,9 +97,7 @@ function mapAssessmentPlanMapping(mapping) {
     courseId: plain.courseId,
     sessionId: plain.sessionId,
     academicYearId: plain.academicYearId,
-    examSetupTypeId: plain.examSetupTypeId,
     session: plain.session || null,
-    examSetupType: plain.examSetupType || null,
     assessmentPlan: plan
       ? {
           assessmentPlanId: plan.assessmentPlanId,
@@ -731,8 +729,6 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
       { transaction: t },
     );
 
-    const examSetupTypeId = await assessmentPlanRepo.findPlanComponentSetupType(payload.assessmentPlanId, { transaction: t });
-
     const data = {
       assessmentPlanId: Number(payload.assessmentPlanId),
       subjectId: Number(payload.subjectId),
@@ -740,7 +736,6 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
       courseId: Number(payload.courseId),
       sessionId: sessionId,
       academicYearId: academicYearId,
-      examSetupTypeId: examSetupTypeId || null,
       universityId: user?.universityId ? Number(user.universityId) : null,
       instituteId: user?.instituteId ? Number(user.instituteId) : null,
       createdBy: user?.userId || null,

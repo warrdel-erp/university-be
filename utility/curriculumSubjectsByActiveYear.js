@@ -268,6 +268,15 @@ export async function findCurriculumSubjectsForActiveYear(
     const curriculum = batchMapping.curriculum;
     if (!curriculum) continue;
 
+    const batch = Number(batchMapping.batch);
+    const expectedYearNumber = Number(activeBatchYear) - batch + 1;
+    if (
+      expectedYearNumber < 1 ||
+      Number(plainTerm.yearNumber) !== expectedYearNumber
+    ) {
+      continue;
+    }
+
     const activeTerm = Number(plainTerm.term);
 
     for (const mapping of curriculum.subjectTermMappings || []) {
@@ -396,9 +405,17 @@ export async function findActiveYearBatchTermsByCourseIds(
     const batchMapping = plain.batchMapping;
     if (!batchMapping || !batchMapping.curriculum) continue;
 
+    const batch = Number(batchMapping.batch);
+    const expectedYearNumber = Number(activeBatchYear) - batch + 1;
+    if (
+      expectedYearNumber < 1 ||
+      Number(plain.yearNumber) !== expectedYearNumber
+    ) {
+      continue;
+    }
+
     const courseId = Number(batchMapping.curriculum.courseId);
     const term = Number(plain.term);
-    const batch = Number(batchMapping.batch);
     const key = `${courseId}_${batch}_${term}`;
     if (seen.has(key)) continue;
     seen.add(key);

@@ -538,6 +538,7 @@ export async function getUniqueClassSectionSubjectsForEmployee(
       "subjectId",
       "electiveSubjectId",
       "teacherSubjectMappingId",
+      "timeTableType",
     ],
     include: [
       {
@@ -561,6 +562,8 @@ export async function getUniqueClassSectionSubjectsForEmployee(
           "startingDate",
           "endingDate",
           "classSectionTermId",
+          "courseId",
+          "timeTableType",
         ],
         include: [
           {
@@ -570,6 +573,8 @@ export async function getUniqueClassSectionSubjectsForEmployee(
             required: false,
           },
           timeTableRoutineClassSectionInclude({
+            termRequired: false,
+            sectionRequired: false,
             termAttributes: ["classSectionTermId", "term", "classSectionsId"],
             sectionAttributes: ["year", "section", "classSectionsId"],
           }),
@@ -584,7 +589,11 @@ export async function getUniqueClassSectionSubjectsForEmployee(
       {
         model: model.electiveSubjectModel,
         as: "timeTableElective",
-        attributes: ["electiveSubjectId", "electiveSubjectName"],
+        attributes: [
+          "electiveSubjectId",
+          "electiveSubjectName",
+          "electiveSubjectCode",
+        ],
         required: false,
       },
     ],
