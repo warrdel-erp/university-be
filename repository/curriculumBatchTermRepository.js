@@ -88,6 +88,14 @@ export async function findSubjectTermMapping(subjectId, curriculumId, term, opti
 }
 
 export async function findClassSectionTermIdsByBatchTerm(context, filters = {}, options = {}) {
+  if (
+    context.courseId == null ||
+    context.term == null ||
+    context.yearNumber == null
+  ) {
+    return [];
+  }
+
   const sectionWhere = {
     courseId: Number(context.courseId),
     year: Number(context.yearNumber),
@@ -127,7 +135,7 @@ export async function findEnrichmentByIds(curriculumBatchTermMappingIds, options
   if (!ids.length) return [];
 
   const rows = await model.curriculumBatchTermMappingModel.findAll({
-    attributes: ["curriculumBatchTermMappingId", "term", "yearNumber"],
+    attributes: ["curriculumBatchTermMappingId", "term", "yearNumber", "year"],
     where: {
       curriculumBatchTermMappingId: { [Op.in]: ids },
     },
@@ -149,6 +157,7 @@ export async function findEnrichmentByIds(curriculumBatchTermMappingIds, options
       curriculumBatchTermMappingId: Number(plain.curriculumBatchTermMappingId),
       term: Number(plain.term),
       yearNumber: Number(plain.yearNumber),
+      year: Number(plain.year),
       batchYear: Number(plain.batchMapping.batch),
     });
   }

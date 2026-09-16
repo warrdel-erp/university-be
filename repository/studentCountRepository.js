@@ -28,10 +28,22 @@ function examEnrollmentInclude(sessionId, courseId, term, academicYearId) {
 }
 
 export async function countTermCohortStudents(group, options = {}) {
+  if (
+    group.sessionId == null ||
+    group.courseId == null ||
+    group.term == null ||
+    group.academicYearId == null
+  ) {
+    return 0;
+  }
+
   const where = {
     sessionId: Number(group.sessionId),
     courseId: Number(group.courseId),
   };
+  if (group.batchYear != null) {
+    where.batchYear = Number(group.batchYear);
+  }
 
   return scoped(model.studentModel).count({
     where,
@@ -50,10 +62,25 @@ export async function countTermCohortStudents(group, options = {}) {
 }
 
 export async function findTermCohortStudents(group, options = {}) {
+  if (
+    group.sessionId == null ||
+    group.courseId == null ||
+    group.term == null ||
+    group.academicYearId == null
+  ) {
+    if (options.page != null && options.limit != null) {
+      return { rows: [], totalCount: 0 };
+    }
+    return [];
+  }
+
   const where = {
     sessionId: Number(group.sessionId),
     courseId: Number(group.courseId),
   };
+  if (group.batchYear != null) {
+    where.batchYear = Number(group.batchYear);
+  }
   if (options.search) {
     const like = `%${options.search}%`;
     where[Op.or] = [

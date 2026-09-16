@@ -849,7 +849,7 @@ export async function getClassSectionTermsBySetupType(
 
   // examSetupTypeId → plans/mappings → all course terms, grouped by courseId + sessionId.
   const [
-    { academicYearId, rows: batchTermRows },
+    { academicYearId, activeBatchYear, rows: batchTermRows },
     { rows: subjectRows },
   ] = await Promise.all([
     findActiveYearBatchTermsByCourseIds(courseIds, options),
@@ -867,16 +867,14 @@ export async function getClassSectionTermsBySetupType(
     return `${Number(courseId)}_${sessionId != null ? Number(sessionId) : 0}`;
   }
 
-  function ensureGroup(courseId, sessionId, academicYearIdValue) {
+  function ensureGroup(courseId, sessionId) {
     const key = groupKeyOf(courseId, sessionId);
     if (!groupKeys.has(key)) {
       groupKeys.set(key, {
         courseId: Number(courseId),
         sessionId: sessionId != null ? Number(sessionId) : null,
-        academicYearId:
-          academicYearIdValue != null
-            ? Number(academicYearIdValue)
-            : academicYearId,
+        // Always use logged-in academic year — never APSM's stale academicYearId.
+        academicYearId: academicYearId != null ? Number(academicYearId) : null,
       });
     }
     return key;
@@ -890,11 +888,7 @@ export async function getClassSectionTermsBySetupType(
   }
 
   for (const mapping of mappings) {
-    const key = ensureGroup(
-      mapping.courseId,
-      mapping.sessionId,
-      mapping.academicYearId,
-    );
+    const key = ensureGroup(mapping.courseId, mapping.sessionId);
     if (mapping.curriculumBatchTermMappingId == null) continue;
     const cbtmId = Number(mapping.curriculumBatchTermMappingId);
     mappedCbtmIds.push(cbtmId);
@@ -910,7 +904,21 @@ export async function getClassSectionTermsBySetupType(
       }
     }
     if (!hasGroup) {
-      ensureGroup(courseId, null, academicYearId);
+      ensureGroup(courseId, null);
+    }
+  }
+
+  // Prefer session-scoped groups: drop null-session rows when the course already
+  // has at least one real session group (avoids duplicate term lists).
+  const coursesWithSession = new Set();
+  for (const group of groupKeys.values()) {
+    if (group.sessionId != null) {
+      coursesWithSession.add(group.courseId);
+    }
+  }
+  for (const [key, group] of [...groupKeys.entries()]) {
+    if (group.sessionId == null && coursesWithSession.has(group.courseId)) {
+      groupKeys.delete(key);
     }
   }
 
@@ -929,6 +937,14 @@ export async function getClassSectionTermsBySetupType(
     if (mapping.curriculumBatchTermMappingId == null) continue;
     const ctx = enrichmentById.get(Number(mapping.curriculumBatchTermMappingId));
     if (!ctx) continue;
+    // Only attribute batch+term mapped counts for the logged-in calendar year.
+    if (
+      activeBatchYear != null &&
+      ctx.year != null &&
+      Number(ctx.year) !== Number(activeBatchYear)
+    ) {
+      continue;
+    }
     const key = groupKeyOf(mapping.courseId, mapping.sessionId);
     addToNestedSet(
       mappedByGroupBatchTerm,
@@ -986,26 +1002,41 @@ export async function getClassSectionTermsBySetupType(
     bucket.subjectIds.add(Number(row.subjectId));
   }
 
-  // Keep mapped CBTMs visible even when outside the active-year seed set.
+  // Attach APSM subjects onto active-year buckets only (by CBTM id, or by
+  // batch+term when the mapping points at a different CBTM row for the same
+  // cohort in the logged-in year).
   for (const mapping of mappings) {
     if (mapping.curriculumBatchTermMappingId == null) continue;
     const cbtmId = Number(mapping.curriculumBatchTermMappingId);
     const courseId = Number(mapping.courseId);
-    const existing = termsByCourse.get(courseId)?.get(cbtmId);
-    if (existing) {
-      existing.subjectIds.add(Number(mapping.subjectId));
+    const subjectId = Number(mapping.subjectId);
+    const termMap = termsByCourse.get(courseId);
+    if (!termMap) continue;
+
+    const byId = termMap.get(cbtmId);
+    if (byId) {
+      byId.subjectIds.add(subjectId);
       continue;
     }
+
     const ctx = enrichmentById.get(cbtmId);
     if (!ctx) continue;
-    const bucket = ensureTermBucket(
-      courseId,
-      ctx.term,
-      ctx.batchYear,
-      ctx.yearNumber,
-      cbtmId,
-    );
-    if (bucket) bucket.subjectIds.add(Number(mapping.subjectId));
+    if (
+      activeBatchYear != null &&
+      ctx.year != null &&
+      Number(ctx.year) !== Number(activeBatchYear)
+    ) {
+      continue;
+    }
+    for (const bucket of termMap.values()) {
+      if (
+        Number(bucket.batch) === Number(ctx.batchYear) &&
+        Number(bucket.term) === Number(ctx.term)
+      ) {
+        bucket.subjectIds.add(subjectId);
+        break;
+      }
+    }
   }
 
   const groups = [...groupKeys.values()];
@@ -1057,76 +1088,86 @@ export async function getClassSectionTermsBySetupType(
       return byBatch !== 0 ? byBatch : decimalCompare(a.term, b.term);
     });
 
-    const groupKey = groupKeyOf(group.courseId, group.sessionId);
-    const mappedForGroup = mappedByGroupCbtm.get(groupKey);
-    const mappedBatchTermForGroup = mappedByGroupBatchTerm.get(groupKey);
-
-    const termDetails = [];
-    for (const bucket of terms) {
-      const mappedSubjects = new Set();
-      const byCbtm = mappedForGroup
-        ? mappedForGroup.get(bucket.curriculumBatchTermMappingId)
-        : null;
-      if (byCbtm) {
-        for (const subjectId of byCbtm) mappedSubjects.add(subjectId);
-      }
-      const byBatchTerm = mappedBatchTermForGroup
-        ? mappedBatchTermForGroup.get(`${bucket.batch}_${bucket.term}`)
-        : null;
-      if (byBatchTerm) {
-        for (const subjectId of byBatchTerm) mappedSubjects.add(subjectId);
-      }
-
-      let mappedSubjectCount = 0;
-      for (const subjectId of mappedSubjects) {
-        if (!bucket.subjectIds.has(subjectId)) continue;
-        mappedSubjectCount = toIntegerNumber(
-          decimalAdd(mappedSubjectCount, 1),
-        );
-      }
-
-      const cohortContext = {
-        courseId: group.courseId,
-        term: bucket.term,
-        yearNumber: bucket.yearNumber,
-        batch: bucket.batch,
-      };
-      const classSectionTermIds = await resolveClassSectionTermIdsFromBatchTerm(
-        cohortContext,
-        {
-          sessionId: group.sessionId,
-          academicYearId: group.academicYearId,
-        },
-        options,
-      );
-
-      let studentCount = 0;
-      if (group.sessionId != null && group.academicYearId != null) {
-        studentCount = await countStudentsForExamGroup(
-          group.sessionId,
-          group.courseId,
-          bucket.term,
-          group.academicYearId,
-          {
-            batchYear: bucket.batch,
-            yearNumber: bucket.yearNumber,
-            curriculumBatchTermMappingId: bucket.curriculumBatchTermMappingId,
-            transaction: options.transaction,
-          },
-        );
-      }
-
-      termDetails.push({
-        term: bucket.term,
-        batch: bucket.batch,
-        yearNumber: bucket.yearNumber,
-        curriculumBatchTermMappingId: bucket.curriculumBatchTermMappingId,
-        classSectionTermIds,
-        mappedSubjectCount,
-        totalSubjects: toIntegerNumber(bucket.subjectIds.size),
-        studentCount,
-      });
+    // Include session-null APSM rows so mappings still count for this course group.
+    const mappedLookupKeys = [groupKeyOf(group.courseId, group.sessionId)];
+    if (group.sessionId != null) {
+      mappedLookupKeys.push(groupKeyOf(group.courseId, null));
     }
+
+    const termDetails = await Promise.all(
+      terms.map(async (bucket) => {
+        const mappedSubjects = new Set();
+        for (const lookupKey of mappedLookupKeys) {
+          const mappedForGroup = mappedByGroupCbtm.get(lookupKey);
+          const byCbtm = mappedForGroup
+            ? mappedForGroup.get(bucket.curriculumBatchTermMappingId)
+            : null;
+          if (byCbtm) {
+            for (const subjectId of byCbtm) mappedSubjects.add(subjectId);
+          }
+          const mappedBatchTermForGroup = mappedByGroupBatchTerm.get(lookupKey);
+          const byBatchTerm = mappedBatchTermForGroup
+            ? mappedBatchTermForGroup.get(`${bucket.batch}_${bucket.term}`)
+            : null;
+          if (byBatchTerm) {
+            for (const subjectId of byBatchTerm) mappedSubjects.add(subjectId);
+          }
+        }
+
+        let mappedSubjectCount = 0;
+        for (const subjectId of mappedSubjects) {
+          if (!bucket.subjectIds.has(subjectId)) continue;
+          mappedSubjectCount = toIntegerNumber(
+            decimalAdd(mappedSubjectCount, 1),
+          );
+        }
+
+        const canResolveEnrollment =
+          group.sessionId != null && group.academicYearId != null;
+
+        const classSectionTermIds = canResolveEnrollment
+          ? await resolveClassSectionTermIdsFromBatchTerm(
+              {
+                courseId: group.courseId,
+                term: bucket.term,
+                yearNumber: bucket.yearNumber,
+                batch: bucket.batch,
+              },
+              {
+                sessionId: group.sessionId,
+                academicYearId: group.academicYearId,
+              },
+              options,
+            )
+          : [];
+
+        const studentCount = canResolveEnrollment
+          ? await countStudentsForExamGroup(
+              group.sessionId,
+              group.courseId,
+              bucket.term,
+              group.academicYearId,
+              {
+                batchYear: bucket.batch,
+                yearNumber: bucket.yearNumber,
+                curriculumBatchTermMappingId: bucket.curriculumBatchTermMappingId,
+                transaction: options.transaction,
+              },
+            )
+          : 0;
+
+        return {
+          term: bucket.term,
+          batch: bucket.batch,
+          yearNumber: bucket.yearNumber,
+          curriculumBatchTermMappingId: bucket.curriculumBatchTermMappingId,
+          classSectionTermIds,
+          mappedSubjectCount,
+          totalSubjects: toIntegerNumber(bucket.subjectIds.size),
+          studentCount,
+        };
+      }),
+    );
 
     result.push({
       course,

@@ -572,6 +572,7 @@ export async function findQuestionPapersByExamSchedules(examScheduleIds, options
 }
 
 export async function findCoursesByIds(courseIds, options = {}) {
+  if (!courseIds?.length) return [];
   return scoped(model.courseModel).findAll({
     where: { courseId: { [Op.in]: courseIds } },
     attributes: ["courseId", "courseName", "courseCode", "courseDuration", "termType", "totalTerms"],
@@ -581,6 +582,7 @@ export async function findCoursesByIds(courseIds, options = {}) {
 }
 
 export async function findSessionsByIds(sessionIds, options = {}) {
+  if (!sessionIds?.length) return [];
   return scoped(model.sessionModel).findAll({
     where: { sessionId: { [Op.in]: sessionIds } },
     attributes: ["sessionId", "sessionName", "startingDate", "endingDate", "classTillDate"],
@@ -1662,6 +1664,8 @@ export async function countPublishedSchedulesBySession(
 }
 
 export async function findSessionCourseMappingsByCoursesAndSessions(courseIds, sessionIds, options = {}) {
+  if (!courseIds?.length || !sessionIds?.length) return [];
+
   return scoped(model.sessionCouseMappingModel).findAll({
     where: {
       courseId: { [Op.in]: courseIds },
