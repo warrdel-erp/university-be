@@ -1,12 +1,12 @@
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { Op } from "sequelize";
-import { getStudentCountsByGroups } from "./examScheduleRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 import { getSeatCountsByCapacityIds } from "../utility/roomCapacity.js";
 import { INVIGILATOR_ASSIGNMENT_INACTIVE_STATUSES } from "../constant.js";
 import { findExamScheduleIdsBySelections } from "../utility/examScheduleSelection.js";
 import { formatDateKey } from "../utility/dateFormat.js";
+import { curriculumBatchTermScheduleInclude } from "./curriculumBatchTermRepository.js";
 
 export async function createAssignment(data, options = {}) {
   return scoped(model.examInvigilatorAssignmentModel).create(data, {
@@ -901,8 +901,10 @@ async function fetchRoomCapacityRows(scheduleWhere, options = {}) {
           "examDate",
           "term",
           "sessionId",
+          "academicYearId",
           "examinationSessionSlotId",
           "subjectId",
+          "curriculumBatchTermMappingId",
         ],
         where: scheduleWhere,
         include: [
@@ -917,6 +919,7 @@ async function fetchRoomCapacityRows(scheduleWhere, options = {}) {
             ],
             required: true,
           },
+          curriculumBatchTermScheduleInclude(),
           {
             model: model.examinationSessionSlotModel,
             as: "examinationSessionSlot",
@@ -965,49 +968,74 @@ export async function getRoomCapacitiesByRoom(classRoomSectionId, filters = {}, 
   const scheduleWhere = {
     ...buildScope(model.examScheduleModel),
   };
-  if (examinationSessionId) {
+  if (examinationSessionId != null) {
     scheduleWhere.examinationSessionId = Number(examinationSessionId);
   }
   if (examDate) {
     scheduleWhere.examDate = examDate;
   }
-  if (examinationSessionSlotId) {
+  if (examinationSessionSlotId != null) {
     scheduleWhere.examinationSessionSlotId = Number(examinationSessionSlotId);
   }
 
   return scoped(model.examScheduleRoomCapacityModel).findAll({
     where: { classRoomSectionId: Number(classRoomSectionId) },
+    attributes: [
+      "examScheduleRoomCapacityId",
+      "examScheduleId",
+      "classRoomSectionId",
+      "capacity",
+    ],
     include: [
       {
         model: model.examScheduleModel,
         as: "examSchedule",
         where: scheduleWhere,
         required: true,
+        attributes: [
+          "examScheduleId",
+          "examDate",
+          "examinationSessionId",
+          "examinationSessionSlotId",
+          "sessionId",
+          "term",
+          "subjectId",
+        ],
         include: [
           {
             model: model.subjectModel,
             as: "subjectSchedule",
             attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
-            required: false,
+            required: true,
           },
           {
             model: model.examinationSessionSlotModel,
             as: "examinationSessionSlot",
-            attributes: ["examinationSessionSlotId", "slotNumber", "startTime", "endTime"],
+            attributes: [
+              "examinationSessionSlotId",
+              "slotNumber",
+              "startTime",
+              "endTime",
+            ],
             where: buildScope(model.examinationSessionSlotModel),
-            required: false,
+            required: true,
           },
-        ]
+        ],
       },
       {
         model: model.classRoomModel,
         as: "classRoom",
         required: true,
-        attributes: ["classRoomSectionId", "roomNumber", "capacity", "examCapacity"],
+        attributes: [
+          "classRoomSectionId",
+          "roomNumber",
+          "capacity",
+          "examCapacity",
+        ],
         where: buildScope(model.classRoomModel),
-      }
+      },
     ],
-    transaction: options.transaction
+    transaction: options.transaction,
   });
 }
 

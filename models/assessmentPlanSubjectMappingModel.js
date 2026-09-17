@@ -28,6 +28,15 @@ const assessmentPlanSubjectMappingModel = sequelize.define(
                 key: 'subject_id'
             }
         },
+        curriculumBatchTermMappingId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'curriculum_batch_term_mapping_id',
+            references: {
+                model: 'curriculum_batch_term_mapping',
+                key: 'curriculum_batch_term_mapping_id'
+            }
+        },
         courseId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -53,15 +62,6 @@ const assessmentPlanSubjectMappingModel = sequelize.define(
             references: {
                 model: 'acedmic_year',
                 key: 'acedmic_year_id'
-            }
-        },
-        examSetupTypeId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'exam_setup_type_id',
-            references: {
-                model: 'exam_setup_type',
-                key: 'exam_setup_type_id'
             }
         },
         universityId: {
@@ -125,8 +125,8 @@ const assessmentPlanSubjectMappingModel = sequelize.define(
         indexes: [
             {
                 unique: true,
-                name: 'unique_subject_course_session_assessment_plan',
-                fields: ['subject_id', 'course_id', 'session_id', 'assessment_plan_id']
+                name: 'unique_subject_batch_term_plan',
+                fields: ['subject_id', 'curriculum_batch_term_mapping_id', 'course_id', 'session_id', 'assessment_plan_id']
             }
         ]
     }

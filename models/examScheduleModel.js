@@ -42,6 +42,15 @@ const examScheduleModel = sequelize.define(
                 key: 'subject_id'
             }
         },
+        curriculumBatchTermMappingId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'curriculum_batch_term_mapping_id',
+            references: {
+                model: 'curriculum_batch_term_mapping',
+                key: 'curriculum_batch_term_mapping_id'
+            }
+        },
         term: {
             type: DataTypes.INTEGER,
             allowNull: true,

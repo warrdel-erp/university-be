@@ -68,7 +68,29 @@ const optionalPositiveId = z.preprocess(
   z.coerce.number().int().positive().optional(),
 );
 
-// Shared query schema for GET /employee/schedule, GET /employee/pastSchedule, GET /employee/upcomingSchedule and GET /employee/uniqueClassSectionSubjects.
+// Today schedule returns all entries for the day (no page/limit).
+const todayScheduleQuerySchema = z
+  .object({
+    userId: z.coerce.number().int().positive(),
+    date: z.string().optional(),
+    sessionId: optionalPositiveId,
+    groupPeriods: z.enum(["false", "sessional", "consecutive"]).optional(),
+    instituteId: optionalPositiveId,
+    universityId: optionalPositiveId,
+  })
+  .passthrough();
+
+const todayScheduleQuerySchemaWithoutUserId = z
+  .object({
+    date: z.string().optional(),
+    sessionId: optionalPositiveId,
+    groupPeriods: z.enum(["false", "sessional", "consecutive"]).optional(),
+    instituteId: optionalPositiveId,
+    universityId: optionalPositiveId,
+  })
+  .passthrough();
+
+// Shared query schema for GET /employee/pastSchedule, GET /employee/upcomingSchedule and GET /employee/uniqueClassSectionSubjects.
 const scheduleQuerySchema = z
   .object({
     userId: z.coerce.number().int().positive(),
@@ -112,6 +134,103 @@ const teacherSubjectQuerySchema = z
   })
   .strict();
 
+const employeeIdParamSchema = z.object({
+  id: positiveIntegerId,
+});
+
+const s3FileIdSchema = z.preprocess(
+  (val) => {
+    if (val === "" || val == null || val === "null" || val === 0 || val === "0") return null;
+    if (typeof val === "object" && val !== null) {
+      if ("id" in val) return val.id;
+      if ("fileUploadId" in val) return val.fileUploadId;
+    }
+    return val;
+  },
+  z.coerce.number().int().positive().nullable().optional(),
+);
+
+const employeeDocumentItemSchema = z
+  .object({
+    document: z.preprocess(
+      (val) => (val === "" || val == null ? null : val),
+      z.coerce.number().int().positive().nullable().optional(),
+    ),
+    receivedDate: z.any().optional().nullable(),
+    returnedDate: z.any().optional().nullable(),
+    attachment: s3FileIdSchema,
+  })
+  .passthrough();
+
+const employeeDocumentsListSchema = z.preprocess(
+  (val) => {
+    if (typeof val === "string") {
+      try {
+        return JSON.parse(val);
+      } catch {
+        return val;
+      }
+    }
+    return val;
+  },
+  z.array(employeeDocumentItemSchema).optional().nullable(),
+);
+
+const addEmployeeBodySchema = z
+  .object({
+    roleId: positiveIntegerId,
+    employeeName: z
+      .string({ required_error: "employeeName is required" })
+      .trim()
+      .min(1, "employeeName cannot be empty"),
+    departmentId: z.preprocess(
+      (val) => (val === "" || val === "null" || val === 0 ? null : val),
+      z.coerce.number().int().positive().nullable().optional(),
+    ),
+    employeePhoto: s3FileIdSchema,
+    employeeSignature: s3FileIdSchema,
+    documents: employeeDocumentsListSchema,
+    employmentType: z.string().optional().nullable(),
+    dateOfBirth: z.string().optional().nullable(),
+    fatherName: z.string().optional().nullable(),
+    motherName: z.string().optional().nullable(),
+    pickColor: z.string().optional().nullable(),
+    officialEmailId: z.string().optional().nullable(),
+    officialMobileNumber: z.string().optional().nullable(),
+    designation: z.preprocess(
+      (val) => (val === "" || val === "null" || val === 0 ? null : val),
+      z.coerce.number().int().positive().nullable().optional(),
+    ),
+    salutation: z.string().optional().nullable(),
+  })
+  .passthrough();
+
+const updateEmployeeBodySchema = z
+  .object({
+    roleId: positiveIntegerId,
+    employeeName: z.string().trim().min(1).optional(),
+    departmentId: z.preprocess(
+      (val) => (val === "" || val === "null" || val === 0 ? null : val),
+      z.coerce.number().int().positive().nullable().optional(),
+    ),
+    employeePhoto: s3FileIdSchema,
+    employeeSignature: s3FileIdSchema,
+    documents: employeeDocumentsListSchema,
+    employmentType: z.string().optional().nullable(),
+    dateOfBirth: z.string().optional().nullable(),
+    fatherName: z.string().optional().nullable(),
+    motherName: z.string().optional().nullable(),
+    pickColor: z.string().optional().nullable(),
+    officialEmailId: z.string().optional().nullable(),
+    officialMobileNumber: z.string().optional().nullable(),
+    designation: z.preprocess(
+      (val) => (val === "" || val === "null" || val === 0 ? null : val),
+      z.coerce.number().int().positive().nullable().optional(),
+    ),
+    salutation: z.string().optional().nullable(),
+  })
+  .passthrough();
+
 // ---------------------------------------------------------------------------
 // 1. Date-wise schedule — time_table_cell_date_wise + teachers
 // ---------------------------------------------------------------------------
@@ -119,7 +238,7 @@ router.get(
   "/schedule",
   userAuth,
   checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
-  validate({ query: scheduleQuerySchema }),
+  validate({ query: todayScheduleQuerySchema }),
   getTodayClassSchedule,
 );
 router.get(
@@ -161,7 +280,7 @@ router.get(
 router.get(
   "/my/schedule",
   userAuth,
-  validate({ query: scheduleQuerySchemaWithoutUserId }),
+  validate({ query: todayScheduleQuerySchemaWithoutUserId }),
   getMyTodayClassSchedule,
 );
 
@@ -244,6 +363,7 @@ router.post(
   "/addEmp",
   userAuth,
   checkAccess(PERMISSIONS.STAFF_DIRECTORY_ADD.value, null),
+  validate({ body: addEmployeeBodySchema }),
   addEmployee,
 );
 router.get(
@@ -256,12 +376,14 @@ router.get(
   "/:id",
   userAuth,
   checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
+  validate({ params: employeeIdParamSchema }),
   getSingleEmployeeDetails,
 );
 router.patch(
   "/:id",
   userAuth,
   checkAccess(PERMISSIONS.STAFF_DIRECTORY_EDIT.value, null),
+  validate({ params: employeeIdParamSchema, body: updateEmployeeBodySchema }),
   updateEmployee,
 );
 router.delete(

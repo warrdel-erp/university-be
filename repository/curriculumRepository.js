@@ -8,6 +8,7 @@ const curriculumAttributes = [
   'courseId',
   'universityId',
   'instituteId',
+  'publishStatus',
   'isActive',
   'createdAt',
   'updatedAt',
@@ -82,12 +83,11 @@ export async function findAll(filters = {}) {
   }
 
   for (const curriculum of curriculums) {
-    let studentCount = 0;
     for (const mapping of curriculum.batchMappings) {
       const key = `${Number(curriculum.courseId)}_${Number(mapping.batch)}`;
-      studentCount += countMap.get(key) || 0;
+      const batchStudentCount = countMap.get(key) || 0;
+      mapping.setDataValue('studentCount', batchStudentCount);
     }
-    curriculum.setDataValue('studentCount', studentCount);
   }
 
   return curriculums;
@@ -124,9 +124,13 @@ export async function remove(id, options = {}) {
   });
 }
 
-export async function findByNameAndCourse(name, courseId) {
+export async function findByNameAndCourse(name, courseId, excludeCurriculumId = null) {
+  const where = { name, courseId };
+  if (excludeCurriculumId) {
+    where.curriculumId = { [Op.ne]: excludeCurriculumId };
+  }
   return scoped(model.curriculumModel).findOne({
-    where: { name, courseId },
+    where,
     attributes: curriculumAttributes,
   });
 }
@@ -166,6 +170,13 @@ export async function findSubjectTermMappingsByCurriculumId(curriculumId) {
   });
 }
 
+export async function countSubjectTermMappings(curriculumId, options = {}) {
+  return model.curriculumSubjectTermMappingModel.count({
+    where: { curriculumId },
+    ...options,
+  });
+}
+
 export async function findSubjectTermMappingById(curriculumSubjectTermMappingId) {
   return model.curriculumSubjectTermMappingModel.findByPk(
     curriculumSubjectTermMappingId,
@@ -199,4 +210,89 @@ export async function updateSubjectTermMapping(
   });
 
   return findSubjectTermMappingById(curriculumSubjectTermMappingId);
+}
+
+export async function deleteSubjectTermMapping(
+  curriculumSubjectTermMappingId,
+  options = {},
+) {
+  return model.curriculumSubjectTermMappingModel.destroy({
+    where: { curriculumSubjectTermMappingId },
+    ...options,
+  });
+}
+
+export async function deleteSubjectTermMappingsByCurriculumId(
+  curriculumId,
+  options = {},
+) {
+  return model.curriculumSubjectTermMappingModel.destroy({
+    where: { curriculumId },
+    ...options,
+  });
+}
+
+const termMappingAttributes = [
+  'curriculumBatchTermMappingId',
+  'curriculumBatchMappingId',
+  'term',
+  'yearNumber',
+  'year',
+];
+
+export async function findBatchMappingsByCurriculumId(curriculumId) {
+  return model.curriculumBatchMappingModel.findAll({
+    where: { curriculumId },
+    attributes: batchMappingAttributes,
+    order: [['batch', 'ASC']],
+  });
+}
+
+export async function countBatchMappings(curriculumId, options = {}) {
+  return model.curriculumBatchMappingModel.count({
+    where: { curriculumId },
+    ...options,
+  });
+}
+
+export async function findBatchMappingById(curriculumBatchMappingId) {
+  return model.curriculumBatchMappingModel.findByPk(curriculumBatchMappingId, {
+    attributes: [...batchMappingAttributes, 'createdAt', 'createdBy'],
+    include: [
+      {
+        model: model.curriculumModel,
+        as: 'curriculum',
+        attributes: curriculumAttributes,
+      },
+      {
+        model: model.curriculumBatchTermMappingModel,
+        as: 'termMappings',
+        attributes: termMappingAttributes,
+        required: false,
+      },
+    ],
+  });
+}
+
+export async function deleteBatchMapping(curriculumBatchMappingId, options = {}) {
+  const mapping = await model.curriculumBatchMappingModel.findByPk(
+    curriculumBatchMappingId,
+    {
+      attributes: ['curriculumBatchMappingId'],
+      transaction: options.transaction,
+    },
+  );
+  if (!mapping) return 0;
+  await mapping.destroy({ transaction: options.transaction });
+  return 1;
+}
+
+export async function countStudentsForCourseBatch(courseId, batch, options = {}) {
+  return scoped(model.studentModel).count({
+    where: {
+      courseId,
+      batchYear: batch,
+    },
+    ...options,
+  });
 }

@@ -6,15 +6,448 @@ import {
     teacherSubjectWhere,
 } from './teacherSubjectMappingRepository.js';
 
+// ============================================================================
+// 1. Constants & Reusable Attributes
+// ============================================================================
+
+const S3_FILE_ATTRIBUTES = [
+    'id',
+    'entityType',
+    's3Key',
+    'size',
+    'mime',
+    'originalName',
+    'status',
+];
+
+const OFFICE_ATTRIBUTES = [
+    'employeeOfficeId',
+    'employeeId',
+    'joiningDate',
+    'confirmationDate',
+    'relievingDate',
+    'retirementDate',
+    'transferDate',
+    'resignationDate',
+    'noticePeriod',
+    'employeeFileNumber',
+    'officialEmailId',
+    'officialMobileNumber',
+    'istActive',
+    'bankName',
+    'accountNumber',
+    'ifscCode',
+    'iindActive',
+    'bankNameIInd',
+    'accountNumberIInd',
+    'ifscCodeIInd',
+    'contractBased',
+    'gpf',
+    'esiNumber',
+    'uanNumber',
+    'lectureBased',
+    'pfNumber',
+    'panNumber',
+    'voterId',
+    'aadharNumber',
+    'spouseName',
+    'nomineeName',
+    'officeExtensionNumber',
+    'designation',
+    'salutation',
+];
+
+const ADDRESS_ATTRIBUTES = [
+    'employeeAddressId',
+    'employeeId',
+    'pAddress',
+    'pPincode',
+    'pCountry',
+    'pState',
+    'pCity',
+    'mobileNumber',
+    'personalEmail',
+];
+
+const CORS_ADDRESS_ATTRIBUTES = [
+    'employeeCorAddressId',
+    'employeeId',
+    'address',
+    'pincode',
+    'cCountry',
+    'cState',
+    'cCity',
+];
+
+const EMPLOYEE_SCALAR_ATTRIBUTES = [
+    'employeeId',
+    'userId',
+    'universityId',
+    'campusId',
+    'instituteId',
+    'employeePhoto',
+    'employeeSignature',
+    'employeeCode',
+    'departmentId',
+    'employmentType',
+    'employeeName',
+    'dateOfBirth',
+    'fatherName',
+    'motherName',
+    'pickColor',
+];
+
+// ============================================================================
+// 2. Include Builders
+// ============================================================================
+
+export function employeeCodeMasterInclude(as) {
+    return {
+        model: model.employeeCodeMasterType.unscoped(),
+        as,
+        attributes: ['employeeCodeMasterTypeId', 'code', 'description'],
+        include: [
+            {
+                model: model.employeeCodeMaster.unscoped(),
+                as: 'codes',
+                attributes: ['employeeCodeMasterId', 'codeMasterType'],
+            },
+        ],
+    };
+}
+
+function buildEmployeeOfficeInclude(options = {}) {
+    return {
+        model: model.employeeOfficeModel.unscoped(),
+        as: 'office',
+        ...(options.separate ? { separate: true } : {}),
+        attributes: OFFICE_ATTRIBUTES,
+        include: [employeeCodeMasterInclude('codeMasterDesignation')],
+    };
+}
+
+function buildEmployeeMetaDataInclude(options = {}) {
+    return {
+        model: model.employeeMetaDataModel.unscoped(),
+        as: 'employeeMetaData',
+        ...(options.separate ? { separate: true } : {}),
+        attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+        include: [
+            {
+                model: model.employeeCodeMasterType.unscoped(),
+                as: 'typess',
+                attributes: ['employeeCodeMasterTypeId', 'code', 'description'],
+                include: [
+                    {
+                        model: model.employeeCodeMaster.unscoped(),
+                        as: 'codes',
+                        attributes: ['employeeCodeMasterId', 'codeMasterType'],
+                    },
+                ],
+            },
+        ],
+    };
+}
+
+function buildEmployeeListIncludes() {
+    return [
+        {
+            model: model.userModel.unscoped(),
+            as: 'userEmployee',
+            attributes: ['universityId', 'userId'],
+        },
+        {
+            model: model.userModel.unscoped(),
+            as: 'user',
+            attributes: ['universityId', 'userId', 'defaultRoleId'],
+            required: false,
+            include: [
+                {
+                    model: model.roleModel.unscoped(),
+                    as: 'defaultRoleRef',
+                    attributes: ['roleId', 'role'],
+                    required: false,
+                },
+                {
+                    model: model.userRolePermissionModel.unscoped(),
+                    as: 'userRolePermissions',
+                    attributes: ['roleId', 'permission', 'scope'],
+                    include: [
+                        {
+                            model: model.roleModel.unscoped(),
+                            as: 'userRole',
+                            attributes: ['role'],
+                        },
+                    ],
+                },
+            ],
+        },
+        buildEmployeeOfficeInclude(),
+        {
+            model: model.employeeAddressModel.unscoped(),
+            as: 'address',
+            attributes: ADDRESS_ATTRIBUTES,
+            required: false,
+        },
+        {
+            model: model.s3FileModel.unscoped(),
+            as: 'photoFile',
+            attributes: S3_FILE_ATTRIBUTES,
+            required: false,
+        },
+        {
+            model: model.s3FileModel.unscoped(),
+            as: 'signatureFile',
+            attributes: S3_FILE_ATTRIBUTES,
+            required: false,
+        },
+        buildEmployeeMetaDataInclude(),
+        {
+            model: model.departmentModel.unscoped(),
+            as: 'employeeDepartment',
+            attributes: ['departmentId', 'departmentName'],
+            required: false,
+        },
+    ];
+}
+
+function buildEmployeeDetailIncludes() {
+    return [
+        {
+            model: model.userModel.unscoped(),
+            as: 'userEmployee',
+            attributes: ['userId', 'defaultRoleId'],
+            include: [
+                {
+                    model: model.roleModel.unscoped(),
+                    as: 'defaultRoleRef',
+                    attributes: ['roleId', 'role'],
+                    required: false,
+                },
+            ],
+        },
+        {
+            model: model.employeeAddressModel.unscoped(),
+            as: 'address',
+            separate: true,
+            attributes: ADDRESS_ATTRIBUTES,
+        },
+        {
+            model: model.employeeCorAddressModel.unscoped(),
+            as: 'corsAddress',
+            separate: true,
+            attributes: CORS_ADDRESS_ATTRIBUTES,
+        },
+        buildEmployeeOfficeInclude({ separate: true }),
+        {
+            model: model.employeeSkillModel.unscoped(),
+            as: 'skill',
+            separate: true,
+            attributes: [
+                'employeeSkillId',
+                'employeeId',
+                'name',
+                'experienceInYear',
+                'experienceInMonth',
+                'proficiencyLevel',
+            ],
+            include: [employeeCodeMasterInclude('codeMasterEmployeeSkill')],
+        },
+        {
+            model: model.employeeDocumentsModel.unscoped(),
+            as: 'qualification',
+            separate: true,
+            attributes: [
+                'employeeDocumentsId',
+                'employeeId',
+                'qualifications',
+                'degreeLevel',
+                'stream',
+                'fromYear',
+                'toYear',
+                'university',
+                'percentage',
+                'remarks',
+                'pursuing',
+                'medicalCouncilName',
+                'medicalRegistrationNumber',
+                'medicalCouncilRegistrationDate',
+                'medicalRegistrationExpiryDate',
+            ],
+            include: [
+                employeeCodeMasterInclude('codeMasterDocumentQualification'),
+                employeeCodeMasterInclude('codeMasterDocumentDegreeLevel'),
+                employeeCodeMasterInclude('codeMasterDocumentStream'),
+            ],
+        },
+        {
+            model: model.employeeQualificationModel.unscoped(),
+            as: 'documents',
+            separate: true,
+            attributes: [
+                'employeeQualificationId',
+                'employeeId',
+                'document',
+                'receivedDate',
+                'returnedDate',
+                'attachment',
+            ],
+            include: [
+                employeeCodeMasterInclude('codeMasterQualificationDocuments'),
+                {
+                    model: model.s3FileModel.unscoped(),
+                    as: 'attachmentFile',
+                    attributes: S3_FILE_ATTRIBUTES,
+                    required: false,
+                },
+            ],
+        },
+        {
+            model: model.s3FileModel.unscoped(),
+            as: 'photoFile',
+            attributes: S3_FILE_ATTRIBUTES,
+            required: false,
+        },
+        {
+            model: model.s3FileModel.unscoped(),
+            as: 'signatureFile',
+            attributes: S3_FILE_ATTRIBUTES,
+            required: false,
+        },
+        {
+            model: model.employeeExperianceModel.unscoped(),
+            as: 'experience',
+            separate: true,
+            attributes: [
+                'employeeExperianceId',
+                'employeeId',
+                'experienceType',
+                'organization',
+                'desigation',
+                'fromDate',
+                'toDate',
+                'totalExperianceYears',
+                'totalExperianceMonths',
+                'totalExperiancedays',
+                'lastSalary',
+                'remarks',
+            ],
+            include: [employeeCodeMasterInclude('codeMasterExperienceType')],
+        },
+        {
+            model: model.employeeAchievementModel.unscoped(),
+            as: 'achievements',
+            separate: true,
+            attributes: [
+                'employeeAchievementsId',
+                'employeeId',
+                'achievementCategory',
+                'title',
+                'description',
+                'noOfTimes',
+                'discipline',
+                'nameOf',
+                'date',
+            ],
+            include: [employeeCodeMasterInclude('codeMasterAchievementCategory')],
+        },
+        {
+            model: model.employeeWardModel.unscoped(),
+            as: 'ward',
+            separate: true,
+            attributes: [
+                'employeeWardId',
+                'employeeId',
+                'wardName',
+                'studyIn',
+                'annualFees',
+                'dateOfBirth',
+            ],
+        },
+        {
+            model: model.employeeActivityModel.unscoped(),
+            as: 'activity',
+            separate: true,
+            attributes: [
+                'employeeActivityId',
+                'employeeId',
+                'activity',
+                'monthYear',
+                'remarks',
+            ],
+        },
+        {
+            model: model.employeeReferenceModel.unscoped(),
+            as: 'reference',
+            separate: true,
+            attributes: [
+                'employeeReferenceId',
+                'employeeId',
+                'name',
+                'designation',
+                'mobileNumber',
+                'address',
+            ],
+        },
+        {
+            model: model.employeeResearchModel.unscoped(),
+            as: 'research',
+            separate: true,
+            attributes: [
+                'employeeResearchId',
+                'employeeId',
+                'thesisName',
+                'associate',
+                'periodFrom',
+                'to',
+                'institution',
+            ],
+        },
+        {
+            model: model.employeeFilesModel.unscoped(),
+            as: 'files',
+            separate: true,
+            attributes: ['employeeFilesId', 'key', 'url'],
+        },
+        {
+            model: model.employeeLongLeaveModel.unscoped(),
+            as: 'longLeave',
+            separate: true,
+            attributes: [
+                'employeeLongLeaveId',
+                'employeeId',
+                'leaveType',
+                'DateOfLeaving',
+                'DateOfRejoining',
+                'remark',
+            ],
+            include: [employeeCodeMasterInclude('codeMasterLeaveType')],
+        },
+        buildEmployeeMetaDataInclude({ separate: true }),
+        {
+            model: model.departmentModel.unscoped(),
+            as: 'employeeDepartment',
+            attributes: ['departmentId', 'departmentName'],
+            required: false,
+        },
+    ];
+}
+
+// ============================================================================
+// 3. Employee Identity & Scope Assertion
+// ============================================================================
+
 export async function assertScopedEmployee(id, options = {}) {
     if (!id) return null;
     const numId = Number(id);
     if (isNaN(numId)) return null;
+
     let employee = await scoped(model.employeeModel).findOne({
         where: { employeeId: numId },
         attributes: options.attributes || ['userId', 'employeeId'],
         transaction: options.transaction,
     });
+
     if (!employee) {
         employee = await scoped(model.employeeModel).findOne({
             where: { userId: numId },
@@ -22,6 +455,7 @@ export async function assertScopedEmployee(id, options = {}) {
             transaction: options.transaction,
         });
     }
+
     return employee;
 }
 
@@ -54,15 +488,30 @@ export async function resolveEmployeeIdForAuth({ userId, employeeId } = {}) {
     return null;
 }
 
-export async function addEmployee(data, transaction) {
-    try {
-        const result = await scoped(model.employeeModel).create(data, { transaction });
-        return result;
-    } catch (error) {
-        console.error("Error in add employee :", error);
+async function assertEmployeeNotLinked(userId) {
+    const subjectLinks = await scoped(model.teacherSubjectMappingModel).count({
+        where: { userId: Number(userId) },
+    });
+
+    if (subjectLinks > 0) {
+        const error = new Error('Cannot delete employee: employee is connected to subjects.');
+        error.statusCode = 409;
         throw error;
     }
-};
+}
+
+// ============================================================================
+// 4. Employee CRUD Operations
+// ============================================================================
+
+export async function addEmployee(data, transaction) {
+    try {
+        return await scoped(model.employeeModel).create(data, { transaction });
+    } catch (error) {
+        console.error('Error in add employee:', error);
+        throw error;
+    }
+}
 
 export async function updateEmployee(employeeId, data, transaction) {
     try {
@@ -71,16 +520,15 @@ export async function updateEmployee(employeeId, data, transaction) {
             return [0];
         }
 
-        const result = await scoped(model.employeeModel).update(
+        return await scoped(model.employeeModel).update(
             data,
             { where: { employeeId: existing.employeeId }, transaction },
         );
-        return result;
     } catch (error) {
-        console.error("Error in update employee:", error);
+        console.error('Error in update employee:', error);
         throw error;
     }
-};
+}
 
 export async function getAllEmployee(campusId, instituteId, options = {}) {
     try {
@@ -90,297 +538,35 @@ export async function getAllEmployee(campusId, instituteId, options = {}) {
             ...(campusId && { campusId }),
             ...(instituteId && { instituteId }),
         };
+
         return await scoped(model.employeeModel).findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
             where: whereClause,
-            include: [
-                {
-                    model: model.userModel.unscoped(),
-                    as: 'userEmployee',
-                    attributes: ["universityId", "userId"],
-                },
-                {
-                    model: model.userModel.unscoped(),
-                    as: 'user',
-                    attributes: ["universityId", "userId"],
-                    required: false,
-                    include: [
-                        {
-                            model: model.userRolePermissionModel.unscoped(),
-                            as: 'userRolePermissions',
-                            attributes: ["roleId", "permission", "scope"],
-                            include: [
-                                {
-                                    model: model.roleModel.unscoped(),
-                                    as: 'userRole',
-                                    attributes: ["role"],
-                                }
-                            ]
-                        },
-                    ],
-                },
-                {
-                    model: model.employeeOfficeModel.unscoped(),
-                    as: 'office',
-                    attributes: { exclude: ["createdAt", "updatedAt"] },
-                },
-                {
-                    model: model.employeeMetaDataModel.unscoped(),
-                    as: "employeeMetaData",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    include: [
-                        {
-                            model: model.employeeCodeMasterType.unscoped(),
-                            as: "typess",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                            include: [
-                                {
-                                    model: model.employeeCodeMaster.unscoped(),
-                                    as: "codes",
-                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                                },
-                            ],
-                        },
-                    ],
-                },
-                {
-                    model: model.departmentModel.unscoped(),
-                    as: 'employeeDepartment',
-                    attributes: ['departmentId', 'departmentName'],
-                    required: false,
-                },
-            ],
+            include: buildEmployeeListIncludes(),
         });
     } catch (error) {
-        console.error(`Error in getting all employee :`, error);
+        console.error('Error in getting all employee:', error);
         throw error;
-    };
-};
-
-function employeeCodeMasterInclude(as) {
-    return {
-        model: model.employeeCodeMasterType.unscoped(),
-        as,
-        attributes: {
-            exclude: [
-                'createdAt',
-                'updatedAt',
-                'deletedAt',
-                'employeeCodeMasterTypeId',
-                'employeeCodeMasterId',
-                'employee_code_master_id',
-                'createdBy',
-            ],
-        },
-        include: [
-            {
-                model: model.employeeCodeMaster.unscoped(),
-                as: 'codes',
-                attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-            },
-        ],
-    };
+    }
 }
 
-function employeeDetailIncludes() {
-    return [
-        {
-            model: model.userModel.unscoped(),
-            as: 'userEmployee',
-            attributes: ['universityId', 'userId'],
-            include: [
-                {
-                    model: model.userRolePermissionModel.unscoped(),
-                    as: 'userRolePermissions',
-                    separate: true,
-                    attributes: ['roleId', 'permission', 'scope'],
-                    include: [
-                        {
-                            model: model.roleModel.unscoped(),
-                            as: 'userRole',
-                            attributes: ['role'],
-                        },
-                    ],
-                },
-            ],
-        },
-        {
-            model: model.userModel.unscoped(),
-            as: 'user',
-            attributes: ['universityId', 'userId', 'email'],
-            required: false,
-            include: [
-                {
-                    model: model.userRolePermissionModel.unscoped(),
-                    as: 'userRolePermissions',
-                    separate: true,
-                    attributes: ['roleId', 'permission', 'scope'],
-                    include: [
-                        {
-                            model: model.roleModel.unscoped(),
-                            as: 'userRole',
-                            attributes: ['role'],
-                        },
-                    ],
-                },
-            ],
-        },
-        {
-            model: model.employeeAddressModel.unscoped(),
-            as: 'address',
-            separate: true,
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-        },
-        {
-            model: model.employeeCorAddressModel.unscoped(),
-            as: 'CorsAddress',
-            separate: true,
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-        },
-        {
-            model: model.employeeOfficeModel.unscoped(),
-            as: 'office',
-            separate: true,
-            attributes: { exclude: ['createdAt', 'updatedAt'] },
-        },
-        {
-            model: model.emplopeeRoleModel.unscoped(),
-            as: 'role',
-            separate: true,
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-        },
-        {
-            model: model.employeeSkillModel.unscoped(),
-            as: 'skill',
-            separate: true,
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-            include: [employeeCodeMasterInclude('codeMasterEmployeeSkill')],
-        },
-        {
-            model: model.employeeDocumentsModel.unscoped(),
-            as: 'qualification',
-            separate: true,
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-            include: [
-                employeeCodeMasterInclude('codeMasterDocumentQualification'),
-                employeeCodeMasterInclude('codeMasterDocumentDegreeLevel'),
-                employeeCodeMasterInclude('codeMasterDocumentStream'),
-            ],
-        },
-        {
-            model: model.employeeQualificationModel.unscoped(),
-            as: 'documents',
-            separate: true,
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-            include: [employeeCodeMasterInclude('codeMasterQualificationDocuments')],
-        },
-        {
-            model: model.employeeExperianceModel.unscoped(),
-            as: 'experiance',
-            separate: true,
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-            include: [employeeCodeMasterInclude('codeMasterExperienceType')],
-        },
-        {
-            model: model.employeeAchievementModel.unscoped(),
-            as: 'achievements',
-            separate: true,
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-            include: [employeeCodeMasterInclude('codeMasterAchievementCategory')],
-        },
-        {
-            model: model.employeeWardModel.unscoped(),
-            as: 'ward',
-            separate: true,
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-        },
-        {
-            model: model.employeeActivityModel.unscoped(),
-            as: 'activty',
-            separate: true,
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-        },
-        {
-            model: model.employeeReferenceModel.unscoped(),
-            as: 'reference',
-            separate: true,
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-        },
-        {
-            model: model.employeeResearchModel.unscoped(),
-            as: 'research',
-            separate: true,
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-        },
-        {
-            model: model.employeeFilesModel.unscoped(),
-            as: 'files',
-            separate: true,
-            attributes: {
-                exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'employeeId'],
-            },
-        },
-        {
-            model: model.employeeLongLeaveModel.unscoped(),
-            as: 'longLeave',
-            separate: true,
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-            include: [employeeCodeMasterInclude('codeMasterLeaveType')],
-        },
-        {
-            model: model.employeeMetaDataModel.unscoped(),
-            as: 'employeeMetaData',
-            separate: true,
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-            include: [
-                {
-                    model: model.employeeCodeMasterType.unscoped(),
-                    as: 'typess',
-                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-                    include: [
-                        {
-                            model: model.employeeCodeMaster.unscoped(),
-                            as: 'codes',
-                            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-                        },
-                    ],
-                },
-            ],
-        },
-        {
-            model: model.departmentModel.unscoped(),
-            as: 'employeeDepartment',
-            attributes: ['departmentId', 'departmentName'],
-            required: false,
-        },
-    ];
-}
-
-export async function getSingleEmployeeDetails(employeeId) {
-    if (!employeeId) return [];
+export async function getSingleEmployeeDetails(id) {
+    if (!id) return [];
     try {
-        const result = await scoped(model.employeeModel).findAll({
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-            include: employeeDetailIncludes(),
+        const scopedEmployee = await assertScopedEmployee(id, {
+            attributes: ['employeeId'],
+        });
+        if (!scopedEmployee) return [];
+
+        return await scoped(model.employeeModel).findAll({
+            attributes: EMPLOYEE_SCALAR_ATTRIBUTES,
+            include: buildEmployeeDetailIncludes(),
             where: {
-                employeeId: employeeId,
+                employeeId: scopedEmployee.employeeId,
             },
         });
-        return result;
     } catch (error) {
-        console.error(`Error in getting employee for ${employeeId} :`, error);
-        throw error;
-    };
-};
-
-async function assertEmployeeNotLinked(userId) {
-    const subjectLinks = await scoped(model.teacherSubjectMappingModel).count({
-        where: { userId: Number(userId) },
-    });
-
-    if (subjectLinks > 0) {
-        const error = new Error('Cannot delete employee: employee is connected to subjects.');
-        error.statusCode = 409;
+        console.error(`Error in getting employee for ${id}:`, error);
         throw error;
     }
 }
@@ -406,8 +592,7 @@ export async function deleteEmployeeDetail(employeeId) {
         }
         throw new Error('Unable to soft delete account');
     }
-};
-
+}
 
 export async function createEmployeeWithDetails(employeeData, officeData, addressData, transaction) {
     const employee = await scoped(model.employeeModel).create(employeeData, { transaction });
@@ -423,26 +608,28 @@ export async function createEmployeeWithDetails(employeeData, officeData, addres
     }
 
     return employee;
-};
+}
+
+// ============================================================================
+// 5. Academic & Schedule Operations
+// ============================================================================
 
 export async function getPreviousEnrollNumber(campusCode, instituteCode) {
     try {
-        const attribute = ["employee_Code"];
-        const result = await scoped(model.employeeModel).findOne({
-            attributes: attribute,
+        return await scoped(model.employeeModel).findOne({
+            attributes: ['employee_Code'],
             where: {
                 employee_Code: {
-                    [Op.regexp]: `^${campusCode}/${instituteCode}/`
-                }
+                    [Op.regexp]: `^${campusCode}/${instituteCode}/`,
+                },
             },
-            order: [['employee_Code', 'DESC']]
+            order: [['employee_Code', 'DESC']],
         });
-        return result;
     } catch (error) {
         console.error(`Error in get Previous Enroll Number for campus ${campusCode} and institue Code ${instituteCode}:`, error);
         throw error;
     }
-};
+}
 
 export async function getTeacherSubject(employeeId, filters = {}) {
     try {
@@ -460,7 +647,7 @@ export async function getTeacherSubject(employeeId, filters = {}) {
             ...buildScope(model.subjectModel),
         };
 
-        return scoped(model.teacherSubjectMappingModel).findAll({
+        return await scoped(model.teacherSubjectMappingModel).findAll({
             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
             where: {
                 userId: employee.userId,
@@ -502,12 +689,11 @@ export async function getTeacherSubject(employeeId, filters = {}) {
                 },
             ],
         });
-
     } catch (error) {
         console.error('Error in getting employee subjects:', error);
         throw error;
     }
-};
+}
 
 export async function getTeacherCourses(employeeId) {
     try {
@@ -549,10 +735,10 @@ export async function getTeacherCourses(employeeId) {
 
         return courses;
     } catch (error) {
-        console.error("Error in getTeacherCourses repository:", error);
+        console.error('Error in getTeacherCourses repository:', error);
         throw error;
     }
-};
+}
 
 export async function getTeacherSubjectsFromSchedule(userId) {
     try {

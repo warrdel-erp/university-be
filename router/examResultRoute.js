@@ -3,29 +3,11 @@ import { z } from "zod";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
 import * as examResultController from "../controllers/examResultController.js";
+import { selectionsSchema } from "../utility/examZodSchemas.js";
 
 const router = Router();
 
 const id = z.coerce.number().int().positive();
-
-const selections = z.preprocess(
-  (val) => {
-    if (!val || val === "") return undefined;
-    try {
-      return typeof val === "string" ? JSON.parse(val) : val;
-    } catch {
-      return undefined;
-    }
-  },
-  z
-    .array(
-      z.object({
-        courseSessionMappingId: z.number().int().positive(),
-        terms: z.array(z.number().int().positive()),
-      }),
-    )
-    .optional(),
-);
 
 const filterStatusQuery = z.preprocess(
   (val) => {
@@ -45,7 +27,7 @@ const filterStatusQuery = z.preprocess(
 
 const query = z.object({
   examinationSessionId: id.optional(),
-  selections,
+  selections: selectionsSchema,
   search: z.string().trim().optional(),
   filterStatus: filterStatusQuery,
   page: id.optional().default(1),

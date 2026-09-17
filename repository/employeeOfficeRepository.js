@@ -71,6 +71,13 @@ export async function getEmployeeOfficeByEmployeeId(employeeId) {
         return await model.employeeOfficeModel.findOne({
             where: { employeeId },
             attributes: { exclude: ["createdAt", "updatedAt"] },
+            include: [
+                {
+                    model: model.employeeCodeMasterType.unscoped(),
+                    as: 'codeMasterDesignation',
+                    attributes: ['employeeCodeMasterTypeId', 'code', 'description'],
+                },
+            ],
         });
     } catch (error) {
         console.error("Error fetching employee office details:", error);
