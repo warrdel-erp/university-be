@@ -186,6 +186,10 @@ const myAssignedScriptsQuerySchema = paginationSchema.extend({
   ),
 });
 
+const myAnswerSheetSkuStatsQuerySchema = z.object({
+  examinationSessionId: positiveIntegerQueryId,
+});
+
 const positiveIntegerId = z.preprocess(
   (val) => (typeof val === "string" ? parseInt(val, 10) : val),
   z
@@ -334,12 +338,14 @@ router.get(
 router.get(
   "/my/skuStats",
   userAuth,
+  validate({ query: myAnswerSheetSkuStatsQuerySchema }),
   getMyAnswerSheetSkuStats,
 );
 
 router.get(
   "/my/summary",
   userAuth,
+  validate({ query: myAnswerSheetSkuStatsQuerySchema }),
   getMyEvaluationSummary,
 );
 

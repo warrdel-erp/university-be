@@ -621,6 +621,9 @@ export async function findAndCountMappedAnswerSheets(
 /**
  * One row per assignment. An assignment may cover multiple examScheduleIds
  * and answerSheetIds; those are nested under the assignment.
+ *
+ * Page distinct assignmentIds from answer_sheet_qr (belongsTo exam schedule)
+ * so hasMany sheet joins cannot collapse LIMIT/OFFSET to fewer assignments.
  */
 export async function findAndCountMappedAssignments(
   qrWhere,
@@ -629,25 +632,25 @@ export async function findAndCountMappedAssignments(
   offset,
   options = {},
 ) {
-  const matchingQrInclude = {
-    model: model.answerSheetQrModel,
-    as: "answerSheetQrs",
+  const examScheduleInclude = mappedListExamScheduleInclude(
+    examScheduleWhere,
+    options.search,
+    { selectAttributes: false },
+  );
+
+  const assignmentScopeInclude = {
+    model: model.answersheetEvalutionUserAssignmentModel,
+    as: "evaluationAssignment",
     required: true,
     attributes: [],
-    where: qrWhere,
-    include: [
-      mappedListExamScheduleInclude(examScheduleWhere, options.search, {
-        selectAttributes: false,
-      }),
-    ],
+    where: buildScope(model.answersheetEvalutionUserAssignmentModel),
   };
 
-  const count = await scoped(
-    model.answersheetEvalutionUserAssignmentModel,
-  ).count({
+  const count = await scoped(model.answerSheetQrModel).count({
+    where: qrWhere,
+    include: [examScheduleInclude, assignmentScopeInclude],
     distinct: true,
     col: "assignment_id",
-    include: [matchingQrInclude],
     transaction: options.transaction,
   });
 
@@ -655,13 +658,12 @@ export async function findAndCountMappedAssignments(
     return { count: 0, rows: [] };
   }
 
-  const idRows = await scoped(
-    model.answersheetEvalutionUserAssignmentModel,
-  ).findAll({
+  const idRows = await scoped(model.answerSheetQrModel).findAll({
     attributes: ["assignmentId"],
-    include: [matchingQrInclude],
-    group: ["answersheet_evalution_user_assignment.assignment_id"],
-    order: [[col("answersheet_evalution_user_assignment.assignment_id"), "DESC"]],
+    where: qrWhere,
+    include: [examScheduleInclude, assignmentScopeInclude],
+    group: ["answer_sheet_qr.assignment_id"],
+    order: [[col("answer_sheet_qr.assignment_id"), "DESC"]],
     limit,
     offset,
     subQuery: false,
@@ -671,7 +673,10 @@ export async function findAndCountMappedAssignments(
 
   const assignmentIds = [];
   for (const row of idRows) {
-    assignmentIds.push(row.assignmentId ?? row.assignment_id);
+    const assignmentId = Number(row.assignmentId ?? row.assignment_id);
+    if (assignmentId) {
+      assignmentIds.push(assignmentId);
+    }
   }
 
   if (!assignmentIds.length) {
@@ -722,7 +727,7 @@ export async function findAndCountMappedAssignments(
 
   const rowsById = new Map();
   for (const row of rows) {
-    rowsById.set(row.assignmentId, row);
+    rowsById.set(Number(row.assignmentId), row);
   }
 
   const orderedRows = [];
@@ -949,23 +954,48 @@ export async function findAnswerSheetSkuStatsByExaminationSession(
   };
 }
 
-export async function findMyAnswerSheetSkuStats(assignedToUserId) {
+export async function findMyAnswerSheetSkuStats(
+  assignedToUserId,
+  examinationSessionId = null,
+) {
   const today = new Date().toISOString().slice(0, 10);
+
+  const where = {
+    assignedToUser: assignedToUserId,
+  };
+
+  const include = [];
+  if (examinationSessionId != null) {
+    include.push({
+      model: model.examScheduleModel,
+      as: "examSchedule",
+      required: true,
+      attributes: [],
+      where: {
+        examinationSessionId: Number(examinationSessionId),
+        ...buildScope(model.examScheduleModel),
+      },
+    });
+  }
 
   const row = await scoped(model.answerSheetQrModel).findOne({
     attributes: [
-      [fn("COUNT", col("id")), "totalAssigned"],
+      [fn("COUNT", col("answer_sheet_qr.id")), "totalAssigned"],
       [
         fn(
           "SUM",
-          literal("CASE WHEN marking_status = 'submit' THEN 1 ELSE 0 END"),
+          literal(
+            "CASE WHEN answer_sheet_qr.marking_status = 'submit' THEN 1 ELSE 0 END",
+          ),
         ),
         "graded",
       ],
       [
         fn(
           "SUM",
-          literal("CASE WHEN marking_status <> 'submit' THEN 1 ELSE 0 END"),
+          literal(
+            "CASE WHEN answer_sheet_qr.marking_status <> 'submit' THEN 1 ELSE 0 END",
+          ),
         ),
         "notChecked",
       ],
@@ -973,7 +1003,7 @@ export async function findMyAnswerSheetSkuStats(assignedToUserId) {
         fn(
           "SUM",
           literal(
-            `CASE WHEN marking_status <> 'submit' AND deadline_date IS NOT NULL AND deadline_date < '${today}' THEN 1 ELSE 0 END`,
+            `CASE WHEN answer_sheet_qr.marking_status <> 'submit' AND answer_sheet_qr.deadline_date IS NOT NULL AND answer_sheet_qr.deadline_date < '${today}' THEN 1 ELSE 0 END`,
           ),
         ),
         "overdue",
@@ -982,16 +1012,16 @@ export async function findMyAnswerSheetSkuStats(assignedToUserId) {
         fn(
           "SUM",
           literal(
-            `CASE WHEN marking_status <> 'submit' AND deadline_date = '${today}' THEN 1 ELSE 0 END`,
+            `CASE WHEN answer_sheet_qr.marking_status <> 'submit' AND answer_sheet_qr.deadline_date = '${today}' THEN 1 ELSE 0 END`,
           ),
         ),
         "dueToday",
       ],
     ],
-    where: {
-      assignedToUser: assignedToUserId,
-    },
+    where,
+    include: include.length > 0 ? include : undefined,
     raw: true,
+    subQuery: false,
   });
 
   return {
