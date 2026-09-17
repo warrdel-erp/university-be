@@ -2529,9 +2529,21 @@ export async function getSessionSkuStats(examinationSessionId, options = {}) {
     approvedQuestionPapers = qpCounts.approved;
   }
 
-  const [hallTicketsCount, answerSheetScan] = await Promise.all([
-    examinationSessionRepository.countHallTicketsBySession(
+  const scheduleSessionIds = [];
+  const seenSessionIds = new Set();
+  for (const schedule of schedules) {
+    const sessionId = Number(schedule.sessionId);
+    if (!sessionId || seenSessionIds.has(sessionId)) {
+      continue;
+    }
+    seenSessionIds.add(sessionId);
+    scheduleSessionIds.push(sessionId);
+  }
+
+  const [hallTicketStats, answerSheetScan] = await Promise.all([
+    examinationSessionRepository.countStudentsAndHallTicketsForScheduleSessionIds(
       parsedSessionId,
+      scheduleSessionIds,
       options,
     ),
     examinationSessionRepository.countAnswerSheetScanStatsBySession(
@@ -2585,8 +2597,9 @@ export async function getSessionSkuStats(examinationSessionId, options = {}) {
       approved: approvedQuestionPapers,
     },
     hallTickets: {
-      total: hallTicketsCount,
+      total: hallTicketStats.students,
       totalExamSchedules: totalExamSchedule,
+      totalHallTicketGenerated: hallTicketStats.hallTicketsGenerated,
     },
     bundles: {
       total: totalBundles,
