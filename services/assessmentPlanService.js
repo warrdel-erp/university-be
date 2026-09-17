@@ -141,11 +141,22 @@ function buildOverviewSubjects(batchMapping, rows, activeBatchYear) {
 
   const termMeta = new Map();
   for (const termMapping of batchMapping.termMappings || []) {
+    const effectiveYear =
+      termMapping.year ||
+      (batchMapping.batch && termMapping.yearNumber
+        ? toIntegerNumber(
+            decimalSubtract(
+              decimalAdd(batchMapping.batch, termMapping.yearNumber),
+              1,
+            ),
+          )
+        : null);
+
     termMeta.set(Number(termMapping.term), {
-      year: termMapping.year,
+      year: effectiveYear,
       yearNumber: termMapping.yearNumber,
       curriculumBatchTermMappingId: termMapping.curriculumBatchTermMappingId,
-      status: resolveSubjectYearStatus(termMapping.year, activeBatchYear),
+      status: resolveSubjectYearStatus(effectiveYear, activeBatchYear),
     });
   }
 
@@ -569,6 +580,7 @@ export async function getCourseAssessmentPlanOverview(queryParams = {}) {
   }
 
   const { activeBatchYear } = await resolveActiveAcademicYearContext();
+  const effectiveLimit = queryParams.pageSize || limit || 10;
 
   const result =
     await assessmentPlanRepo.findOverviewByCurriculumBatchMappingId({
@@ -581,7 +593,7 @@ export async function getCourseAssessmentPlanOverview(queryParams = {}) {
       yearStatus: status,
       activeBatchYear,
       page,
-      limit,
+      limit: effectiveLimit,
     });
 
   if (!result) {

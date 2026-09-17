@@ -25,7 +25,12 @@ function decimalCeilDivide(numerator, denominator) {
   return floored;
 }
 
-function resolveTermsForYearStatus(termMappings, activeBatchYear, yearStatus) {
+function resolveTermsForYearStatus(
+  termMappings,
+  activeBatchYear,
+  yearStatus,
+  batch,
+) {
   const active = toIntegerNumber(activeBatchYear);
   if (!yearStatus || !decimalGreaterThan(active, 0)) {
     return null;
@@ -33,7 +38,15 @@ function resolveTermsForYearStatus(termMappings, activeBatchYear, yearStatus) {
 
   const terms = [];
   for (const termMapping of termMappings || []) {
-    const year = toIntegerNumber(termMapping.year);
+    const rawYear =
+      termMapping.year ||
+      (batch && termMapping.yearNumber
+        ? toIntegerNumber(
+            decimalSubtract(decimalAdd(batch, termMapping.yearNumber), 1),
+          )
+        : null);
+
+    const year = toIntegerNumber(rawYear);
     if (!decimalGreaterThan(year, 0)) continue;
 
     const cmp = decimalCompare(year, active);
@@ -49,10 +62,9 @@ function resolveTermsForYearStatus(termMappings, activeBatchYear, yearStatus) {
 }
 
 function intersectTermFilters(existingTerms, nextTerms) {
-  if (!existingTerms.length) return nextTerms;
-  if (!nextTerms.length) return existingTerms;
+  if (!existingTerms.length || !nextTerms.length) return [];
 
-  const allowed = new Set(nextTerms);
+  const allowed = new Set(nextTerms.map(Number));
   const intersected = [];
   for (const term of existingTerms) {
     if (allowed.has(Number(term))) {
@@ -493,6 +505,7 @@ export async function findOverviewByCurriculumBatchMappingId({
     plainBatch.termMappings,
     activeBatchYear,
     yearStatus,
+    plainBatch.batch,
   );
   if (statusTerms) {
     termFilter = intersectTermFilters(termFilter, statusTerms);
@@ -619,12 +632,6 @@ export async function findOverviewByCurriculumBatchMappingId({
                 model: model.sessionModel,
                 as: "session",
                 attributes: ["sessionId", "sessionName"],
-                required: false,
-              },
-              {
-                model: model.examSetupTypeModel,
-                as: "examSetupType",
-                attributes: ["examSetupTypeId", "examName"],
                 required: false,
               },
             ],

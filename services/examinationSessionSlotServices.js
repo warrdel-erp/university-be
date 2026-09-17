@@ -98,6 +98,15 @@ function matchesFilterStatus(schedule, filterStatus) {
   return schedule[filterStatus] === true;
 }
 
+function resolveSlotPublished(schedules) {
+  if (!schedules.length) return false;
+
+  for (const schedule of schedules) {
+    if (!schedule.published) return false;
+  }
+  return true;
+}
+
 async function loadEnrichedSlotSchedules(
   { examinationSessionId, date, selections },
   options = {},
@@ -284,6 +293,7 @@ export async function getExaminationSessionSlots(
       const slot = slotRow.get ? slotRow.get({ plain: true }) : slotRow;
       result.push({
         ...slot,
+        published: false,
         schedules: [...unscheduled],
       });
     }
@@ -309,6 +319,7 @@ export async function getExaminationSessionSlots(
   const result = [];
   for (let i = 0; i < slots.length; i++) {
     const slot = slots[i];
+    const published = resolveSlotPublished(slot.schedules);
     const schedules = [];
     for (const schedule of slot.schedules) {
       if (matchesFilterStatus(schedule, filterStatus)) {
@@ -322,6 +333,7 @@ export async function getExaminationSessionSlots(
     }
     result.push({
       ...slot,
+      published,
       schedules,
     });
   }
@@ -330,6 +342,7 @@ export async function getExaminationSessionSlots(
     result.push({
       examinationSessionSlotId: null,
       examinationSessionId: Number(examinationSessionId),
+      published: false,
       schedules: unscheduled,
     });
   }

@@ -608,6 +608,58 @@ export async function updateExamSchedule(
   updatedBy,
 ) {
   return withAuditEvent(AUDIT_EVENTS.EXAM_SCHEDULE_UPDATE, async ({ transaction }) => {
+    const id = Number(examScheduleId);
+    const requestedDate = examDetail.examDate;
+    const requestedSlotId = examDetail.examinationSessionSlotId;
+
+    const existing =
+      await examStructureScheduleRepository.findScopedExamScheduleById(id, {
+        transaction,
+      });
+    if (!existing) {
+      const error = new Error("Exam schedule not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (existing.published) {
+      const error = new Error(
+        "Cannot edit exam schedule because it is already published.",
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const isDateChanging =
+      requestedDate !== undefined &&
+      requestedDate !== null &&
+      String(requestedDate) !== String(existing.examDate);
+    const isSlotChanging =
+      requestedSlotId !== undefined &&
+      requestedSlotId !== null &&
+      Number(requestedSlotId) !== Number(existing.examinationSessionSlotId);
+
+    if (isDateChanging || isSlotChanging) {
+      const roomAssignmentCount =
+        await examStructureScheduleRepository.countRoomAssignmentsByExamScheduleId(
+          id,
+          { transaction },
+        );
+      const allocatedSeatCount =
+        await examStructureScheduleRepository.countAllocatedSeatsByExamScheduleId(
+          id,
+          { transaction },
+        );
+
+      if (roomAssignmentCount > 0 || allocatedSeatCount > 0) {
+        const error = new Error(
+          "Cannot change exam date or slot until room allocation is removed and all allocated seats are deleted.",
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+
     examDetail.updatedBy = updatedBy;
 
     await applyCurriculumBatchTermToExamDetail(examDetail, { transaction });
@@ -618,23 +670,57 @@ export async function updateExamSchedule(
 
     delete examDetail.semesterId;
 
-    await assertNoStudentExamTimeConflict(examDetail, examScheduleId);
-    await assertUniqueExamScheduleMapping(examDetail, examScheduleId);
+    await assertNoStudentExamTimeConflict(examDetail, id);
+    await assertUniqueExamScheduleMapping(examDetail, id);
 
-    await examStructureScheduleRepository.updateExamSchedule(
-      examScheduleId,
-      examDetail,
-      { transaction },
-    );
+    await examStructureScheduleRepository.updateExamSchedule(id, examDetail, {
+      transaction,
+    });
   });
 }
 
 export async function deleteExamSchedule(examScheduleId) {
   return withAuditEvent(AUDIT_EVENTS.EXAM_SCHEDULE_DELETE, async ({ transaction }) => {
-    return await examStructureScheduleRepository.deleteExamSchedule(
-      examScheduleId,
+    const id = Number(examScheduleId);
+
+    const existing = await examStructureScheduleRepository.findScopedExamScheduleById(
+      id,
       { transaction },
     );
+    if (!existing) {
+      const error = new Error("Exam schedule not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const allocatedSeatCount =
+      await examStructureScheduleRepository.countAllocatedSeatsByExamScheduleId(
+        id,
+        { transaction },
+      );
+    if (allocatedSeatCount > 0) {
+      const error = new Error(
+        "Cannot delete exam schedule because seats have already been allocated.",
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const roomAssignmentCount =
+      await examStructureScheduleRepository.countRoomAssignmentsByExamScheduleId(
+        id,
+        { transaction },
+      );
+    if (roomAssignmentCount > 0) {
+      const error = new Error(
+        "Cannot delete exam schedule because room assignment has already been done.",
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
+    await examStructureScheduleRepository.deleteExamSchedule(id, { transaction });
+    return true;
   });
 }
 

@@ -65,6 +65,8 @@ export const overviewQuerySchema = z.object({
   term: z.coerce.number().int().positive().optional(),
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().optional().default(10),
+  pageSize: z.union([z.string(), z.number()]).optional(),
+  courseId: z.union([z.string(), z.number()]).optional(),
   sessionId: z.union([z.string(), z.number()]).optional(),
   subjectId: z.union([z.string(), z.number()]).optional(),
   curriculumBatchTermMappingId: z.union([z.string(), z.number()]).optional(),

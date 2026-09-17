@@ -48,34 +48,32 @@ export async function publishExamSchedule(req, res) {
 export async function updateExamSchedule(req, res) {
   try {
     const { examScheduleId } = req.body;
-    if (!examScheduleId) {
-      return res.status(400).send("examScheduleId is required");
-    }
-    const examDetails = await examStructureScheduleServices.updateExamSchedule(
+    await examStructureScheduleServices.updateExamSchedule(
       examScheduleId,
       req.body,
       req.user.userId,
     );
-    res.status(200).json({ message: "Exam Schedule updated successfully", examDetails });
+    return SuccessResponse(res, 200, "Exam schedule updated successfully");
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to update exam schedule",
+    );
   }
 }
 
 export async function deleteExamSchedule(req, res) {
   try {
     const { examScheduleId } = req.query;
-    if (!examScheduleId) {
-      return res.status(400).json({ message: "examScheduleId is required" });
-    }
-    const deleted = await examStructureScheduleServices.deleteExamSchedule(examScheduleId);
-    if (deleted) {
-      res.status(200).json({ message: `Delete successful for exam StructureSchedule ID ${examScheduleId}` });
-    } else {
-      res.status(404).json({ message: "Exam StructureSchedule not found" });
-    }
+    await examStructureScheduleServices.deleteExamSchedule(examScheduleId);
+    return SuccessResponse(res, 200, "Exam schedule deleted successfully");
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to delete exam schedule",
+    );
   }
 }
 
