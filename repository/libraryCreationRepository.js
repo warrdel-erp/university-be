@@ -464,9 +464,6 @@ export async function getAllBooks(libraryCreationId, libraryFloorId, filters = {
     for (const row of idRows) {
       bookIds.push(Number(row.libraryBookId));
     }
-    if (!bookIds.length) {
-      return { total, books: [] };
-    }
   }
 
   const inventoryInclude = {
