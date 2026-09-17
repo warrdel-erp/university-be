@@ -3,6 +3,7 @@ import sequelize from '../database/sequelizeConfig.js';
 import * as curriculumRepository from '../repository/curriculumRepository.js';
 import * as models from '../models/index.js';
 import { scoped } from '../utility/scoped.js';
+import { resolveTotalTerms } from '../utility/courseTerms.js';
 
 function httpError(message, statusCode) {
   const error = new Error(message);
@@ -16,8 +17,91 @@ function assertDraft(curriculum, action) {
   }
 }
 
+function resolveStructureStatus(configuredTerms, totalTerms) {
+  if (configuredTerms <= 0) return 'Not Started';
+  if (configuredTerms >= totalTerms) return 'Completed';
+  return 'In Progress';
+}
+
 export async function getAll(filters) {
-  return curriculumRepository.findAll(filters);
+  const curriculums = await curriculumRepository.findAll(filters);
+
+  for (const curriculum of curriculums) {
+    const totalTerms = resolveTotalTerms(curriculum.course);
+    const configuredTerms = Number(curriculum.getDataValue('configuredTerms')) || 0;
+    curriculum.setDataValue('totalTerms', totalTerms);
+    curriculum.setDataValue(
+      'structure',
+      `${configuredTerms} / ${totalTerms} terms`,
+    );
+    curriculum.setDataValue(
+      'status',
+      resolveStructureStatus(configuredTerms, totalTerms),
+    );
+  }
+
+  return curriculums;
+}
+
+export async function getProgrammeOverview() {
+  const { curriculums, studentCountMap, configuredTermsMap } =
+    await curriculumRepository.findProgrammeBatchOverview();
+
+  const programmeMap = new Map();
+
+  for (const curriculum of curriculums) {
+    const plain = curriculum.get ? curriculum.get({ plain: true }) : curriculum;
+    const course = plain.course;
+    const courseId = Number(plain.courseId);
+    const totalTerms = resolveTotalTerms(course);
+    const configuredTerms = configuredTermsMap.get(Number(plain.curriculumId)) || 0;
+    const status = resolveStructureStatus(configuredTerms, totalTerms);
+
+    let programme = programmeMap.get(courseId);
+    if (!programme) {
+      programme = {
+        courseId,
+        courseName: course?.courseName || null,
+        courseCode: course?.courseCode || null,
+        termType: course?.termType || null,
+        totalTerms,
+        admissionBatchCount: 0,
+        totalStudents: 0,
+        batches: [],
+      };
+      programmeMap.set(courseId, programme);
+    }
+
+    for (const mapping of plain.batchMappings || []) {
+      const batch = Number(mapping.batch);
+      const students =
+        studentCountMap.get(`${courseId}_${batch}`) || 0;
+
+      programme.batches.push({
+        curriculumBatchMappingId: Number(mapping.curriculumBatchMappingId),
+        batch,
+        students,
+        curriculumId: Number(plain.curriculumId),
+        curriculumName: plain.name,
+        publishStatus: plain.publishStatus,
+        isActive: plain.isActive,
+        totalTerms,
+        configuredTerms,
+        structure: `${configuredTerms} / ${totalTerms} terms`,
+        status,
+      });
+      programme.admissionBatchCount += 1;
+      programme.totalStudents += students;
+    }
+  }
+
+  const programmes = [];
+  for (const programme of programmeMap.values()) {
+    programme.batches.sort((a, b) => b.batch - a.batch);
+    programmes.push(programme);
+  }
+
+  return programmes;
 }
 
 export async function getById(id) {

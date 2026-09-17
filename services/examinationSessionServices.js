@@ -986,7 +986,7 @@ export async function getClassSectionTermsBySetupType(
     bucket.subjectIds.add(Number(row.subjectId));
   }
 
-  // Keep mapped CBTMs visible even when outside the active-year seed set.
+  // Only link mapped subject IDs to active-year term buckets.
   for (const mapping of mappings) {
     if (mapping.curriculumBatchTermMappingId == null) continue;
     const cbtmId = Number(mapping.curriculumBatchTermMappingId);
@@ -994,18 +994,7 @@ export async function getClassSectionTermsBySetupType(
     const existing = termsByCourse.get(courseId)?.get(cbtmId);
     if (existing) {
       existing.subjectIds.add(Number(mapping.subjectId));
-      continue;
     }
-    const ctx = enrichmentById.get(cbtmId);
-    if (!ctx) continue;
-    const bucket = ensureTermBucket(
-      courseId,
-      ctx.term,
-      ctx.batchYear,
-      ctx.yearNumber,
-      cbtmId,
-    );
-    if (bucket) bucket.subjectIds.add(Number(mapping.subjectId));
   }
 
   const groups = [...groupKeys.values()];
@@ -2496,23 +2485,37 @@ export async function getSessionSkuStats(examinationSessionId, options = {}) {
     throw createBadRequestError("Invalid examinationSessionId");
   }
 
-  const schedules = await examinationSessionRepository.findSchedulesForSkuStats(
-    parsedSessionId,
-    options,
-  );
+  const [schedules, mappedSubjects] = await Promise.all([
+    examinationSessionRepository.findSchedulesForSkuStats(
+      parsedSessionId,
+      options,
+    ),
+    getMappedSubjectsBySessionAndTerm(
+      { examinationSessionId: parsedSessionId },
+      { ...options, skipTeacherAndPaperEnrichment: true },
+    ),
+  ]);
 
   let scheduledSubjectsCount = 0;
-  const examScheduleIds = [];
-  for (const schedule of schedules) {
-    examScheduleIds.push(schedule.examScheduleId);
-    if (schedule.published === true || schedule.published === 1) {
+  let needsSchedulingSubjectsCount = 0;
+  for (const subject of mappedSubjects) {
+    if (subject.needsScheduling || subject.examScheduleId == null) {
+      needsSchedulingSubjectsCount = toIntegerNumber(
+        decimalAdd(needsSchedulingSubjectsCount, 1),
+      );
+    } else {
       scheduledSubjectsCount = toIntegerNumber(
         decimalAdd(scheduledSubjectsCount, 1),
       );
     }
   }
-  const totalSubjectsCount = toIntegerNumber(schedules.length);
-  const totalExamSchedule = totalSubjectsCount;
+  const totalSubjectsCount = toIntegerNumber(mappedSubjects.length);
+  const totalExamSchedule = toIntegerNumber(schedules.length);
+
+  const examScheduleIds = [];
+  for (const schedule of schedules) {
+    examScheduleIds.push(schedule.examScheduleId);
+  }
 
   let totalQuestionPapers = 0;
   let approvedQuestionPapers = 0;
@@ -2575,6 +2578,7 @@ export async function getSessionSkuStats(examinationSessionId, options = {}) {
     subjects: {
       total: totalSubjectsCount,
       scheduled: scheduledSubjectsCount,
+      needsScheduling: needsSchedulingSubjectsCount,
     },
     questionPapers: {
       total: totalQuestionPapers,
@@ -2758,11 +2762,15 @@ export async function getPlanningOverview(examinationSessionId) {
     throw error;
   }
 
-  const schedules =
-    await examinationSessionRepository.findSchedulesForSkuStats(
-      parsedSessionId,
-    );
+  const [schedules, mappedSubjects] = await Promise.all([
+    examinationSessionRepository.findSchedulesForSkuStats(parsedSessionId),
+    getMappedSubjectsBySessionAndTerm(
+      { examinationSessionId: parsedSessionId },
+      { skipTeacherAndPaperEnrichment: true },
+    ),
+  ]);
 
+  const totalSubjects = toIntegerNumber(mappedSubjects.length);
   const examScheduleIds = [];
   for (const schedule of schedules) {
     examScheduleIds.push(toPlain(schedule).examScheduleId);
@@ -2846,10 +2854,29 @@ export async function getPlanningOverview(examinationSessionId) {
     examPercentages.push(percentage);
   }
 
-  const publishedExams = schedules.filter(
-    (s) => Boolean(toPlain(s).published) || toPlain(s).published === 1,
-  ).length;
-  const publishedPercentage = percentOf(publishedExams, schedules.length);
+  // Unscheduled subjects contribute 0% so progress is against total mapped subjects.
+  const unscheduledCount = Math.max(
+    0,
+    totalSubjects - toIntegerNumber(schedules.length),
+  );
+  for (let i = 0; i < unscheduledCount; i++) {
+    stepTotals.roomsAssigned.push(0);
+    stepTotals.invigilators.push(0);
+    stepTotals.bundles.push(0);
+    stepTotals.hallTickets.push(0);
+    stepTotals.answerSheets.push(0);
+    stepTotals.results.push(0);
+    examPercentages.push(0);
+  }
+
+  let publishedExams = 0;
+  for (const schedule of schedules) {
+    const plain = toPlain(schedule);
+    if (Boolean(plain.published) || plain.published === 1) {
+      publishedExams = toIntegerNumber(decimalAdd(publishedExams, 1));
+    }
+  }
+  const publishedPercentage = percentOf(publishedExams, totalSubjects);
   const overallPercentage = averagePercentages(examPercentages);
 
   return {
@@ -2860,7 +2887,8 @@ export async function getPlanningOverview(examinationSessionId) {
     percentage: publishedPercentage,
     statusLabel: stageStatus(publishedPercentage),
     overallProgressPercentage: overallPercentage,
-    totalExams: schedules.length,
+    totalExams: totalSubjects,
+    scheduledExams: toIntegerNumber(schedules.length),
     publishedExams,
     publishedPercentage,
     stages: {
@@ -2910,10 +2938,16 @@ export async function getProgressMetrics(examinationSessionId) {
     throw error;
   }
 
-  const schedules =
-    await examinationSessionRepository.findSchedulesForSkuStats(
-      parsedSessionId,
-    );
+  const [schedules, mappedSubjects] = await Promise.all([
+    examinationSessionRepository.findSchedulesForSkuStats(parsedSessionId),
+    getMappedSubjectsBySessionAndTerm(
+      { examinationSessionId: parsedSessionId },
+      { skipTeacherAndPaperEnrichment: true },
+    ),
+  ]);
+
+  const totalSubjects = toIntegerNumber(mappedSubjects.length);
+  const scheduledExams = toIntegerNumber(schedules.length);
 
   const examScheduleIds = [];
   for (const schedule of schedules) {
@@ -2970,20 +3004,36 @@ export async function getProgressMetrics(examinationSessionId) {
     totalMarked += sheetStats.marked;
   }
 
-  const sessionBundlePct = percentOf(totalBundlesReady, totalRooms);
-  const sessionHallTicketPct = percentOf(
+  const scheduledBundlePct = percentOf(totalBundlesReady, totalRooms);
+  const scheduledHallTicketPct = percentOf(
     totalHallTicketsGenerated,
     totalSeatStudents,
   );
-  const sessionOperationsPercentage =
+  const scheduledOperationsPercentage =
     totalRooms > 0 && totalSeatStudents > 0
-      ? percentOf(sessionBundlePct + sessionHallTicketPct, 200)
+      ? percentOf(scheduledBundlePct + scheduledHallTicketPct, 200)
       : totalRooms > 0
-        ? sessionBundlePct
-        : sessionHallTicketPct;
+        ? scheduledBundlePct
+        : scheduledHallTicketPct;
+
+  // Scale scheduled-subject progress against total mapped subjects.
+  const sessionOperationsPercentage = percentOf(
+    decimalMultiply(scheduledOperationsPercentage, scheduledExams),
+    decimalMultiply(100, totalSubjects),
+  );
+  const sessionHallTicketPct = percentOf(
+    decimalMultiply(scheduledHallTicketPct, scheduledExams),
+    decimalMultiply(100, totalSubjects),
+  );
+  const digitizationPct = percentOf(
+    decimalMultiply(percentOf(totalScanned, totalStudents), scheduledExams),
+    decimalMultiply(100, totalSubjects),
+  );
 
   return {
     examinationSessionId: parsedSessionId,
+    totalSubjects,
+    scheduledExams,
     operations: {
       percentage: sessionOperationsPercentage,
       rooms: totalRooms,
@@ -2995,7 +3045,7 @@ export async function getProgressMetrics(examinationSessionId) {
       },
     },
     digitization: {
-      percentage: percentOf(totalScanned, totalStudents),
+      percentage: digitizationPct,
       students: totalStudents,
       scanned: totalScanned,
       marked: totalMarked,

@@ -88,8 +88,8 @@ const optionalLibraryFloorId = z
 const listBooksQuerySchema = z.object({
   libraryCreationId: z.coerce.number(),
   libraryFloorId: optionalLibraryFloorId,
-  page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  page: z.coerce.number().int().min(1).optional(),
+  limit: z.coerce.number().int().min(1).optional(),
   search: optionalTrimmedString,
 });
 

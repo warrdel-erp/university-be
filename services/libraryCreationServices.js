@@ -736,14 +736,21 @@ export async function getAllBooks(query) {
   const {
     libraryCreationId,
     libraryFloorId,
-    page = 1,
-    limit = 20,
+    page,
+    limit,
     search,
   } = query;
 
-  const safeLimit = Math.min(100, Math.max(1, limit));
-  const safePage = Math.max(1, page);
-  const offset = (safePage - 1) * safeLimit;
+  let pagination = undefined;
+  let paginationOptions = {};
+
+  if (page !== undefined || limit !== undefined) {
+    const safeLimit = limit !== undefined ? Math.max(1, Number(limit)) : 20;
+    const safePage = page !== undefined ? Math.max(1, Number(page)) : 1;
+    const offset = (safePage - 1) * safeLimit;
+    paginationOptions = { limit: safeLimit, offset };
+    pagination = { total: 0, page: safePage, limit: safeLimit };
+  }
 
   const filters = { search };
 
@@ -751,13 +758,17 @@ export async function getAllBooks(query) {
     libraryCreationId,
     libraryFloorId,
     filters,
-    { limit: safeLimit, offset },
+    paginationOptions,
   );
+
+  if (pagination) {
+    pagination.total = total ?? 0;
+  }
 
   if (!books?.length) {
     return {
       books: [],
-      pagination: { total: total ?? 0, page: safePage, limit: safeLimit },
+      pagination,
     };
   }
 
@@ -766,7 +777,7 @@ export async function getAllBooks(query) {
 
   return {
     books: mapBooksToAllBookList(floorFiltered),
-    pagination: { total, page: safePage, limit: safeLimit },
+    pagination,
   };
 }
 
