@@ -604,19 +604,23 @@ export async function getAllStudents({
         }
         filterInclude.push(classSectionTermIncludeForFilter);
 
-        const offset = (page - 1) * limit;
+        const paginate = page != null && limit != null;
 
         // Step 1: page over distinct student IDs matching the filter.
-        const idRows = await scoped(model.studentModel).findAll({
+        const idQuery = {
             attributes: ["studentId"],
             where: whereCondition,
             include: filterInclude,
-            offset,
-            limit,
             order: [["studentId", "DESC"]],
             subQuery: false,
             raw: true,
-        });
+        };
+        if (paginate) {
+            idQuery.offset = (page - 1) * limit;
+            idQuery.limit = limit;
+        }
+
+        const idRows = await scoped(model.studentModel).findAll(idQuery);
         const studentIds = [];
         for (const row of idRows) {
             studentIds.push(row.studentId);
@@ -647,9 +651,9 @@ export async function getAllStudents({
         return {
             result,
             totalCount,
-            page,
-            limit,
-            totalPages: Math.ceil(totalCount / limit),
+            page: paginate ? page : 1,
+            limit: paginate ? limit : totalCount,
+            totalPages: paginate ? Math.ceil(totalCount / limit) : 1,
         };
 
     } catch (error) {
