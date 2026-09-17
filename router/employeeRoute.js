@@ -231,6 +231,12 @@ const updateEmployeeBodySchema = z
   })
   .passthrough();
 
+const getAllEmployeeQuerySchema = z.object({
+  search: z.string().optional(),
+  page: z.union([z.string(), z.number()]).optional(),
+  limit: z.union([z.string(), z.number()]).optional(),
+});
+
 // ---------------------------------------------------------------------------
 // 1. Date-wise schedule — time_table_cell_date_wise + teachers
 // ---------------------------------------------------------------------------
@@ -370,6 +376,7 @@ router.get(
   "/",
   userAuth,
   checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
+  validate({ query: getAllEmployeeQuerySchema }),
   getAllEmployee,
 );
 router.get(
