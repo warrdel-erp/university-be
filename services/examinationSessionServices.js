@@ -986,7 +986,7 @@ export async function getClassSectionTermsBySetupType(
     bucket.subjectIds.add(Number(row.subjectId));
   }
 
-  // Keep mapped CBTMs visible even when outside the active-year seed set.
+  // Only link mapped subject IDs to active-year term buckets.
   for (const mapping of mappings) {
     if (mapping.curriculumBatchTermMappingId == null) continue;
     const cbtmId = Number(mapping.curriculumBatchTermMappingId);
@@ -994,18 +994,7 @@ export async function getClassSectionTermsBySetupType(
     const existing = termsByCourse.get(courseId)?.get(cbtmId);
     if (existing) {
       existing.subjectIds.add(Number(mapping.subjectId));
-      continue;
     }
-    const ctx = enrichmentById.get(cbtmId);
-    if (!ctx) continue;
-    const bucket = ensureTermBucket(
-      courseId,
-      ctx.term,
-      ctx.batchYear,
-      ctx.yearNumber,
-      cbtmId,
-    );
-    if (bucket) bucket.subjectIds.add(Number(mapping.subjectId));
   }
 
   const groups = [...groupKeys.values()];
