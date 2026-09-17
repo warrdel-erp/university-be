@@ -350,6 +350,152 @@ export async function deleteAssessmentPlan(assessmentPlanId, options = {}) {
   };
 }
 
+export async function findBlockingExamScheduleForAssessmentPlan(
+  assessmentPlanId,
+  options = {},
+) {
+  const planId = Number(assessmentPlanId);
+
+  const components = await model.assessmentPlanComponentModel.findAll({
+    where: {
+      assessmentPlanId: planId,
+      examSetupTypeId: { [Op.ne]: null },
+    },
+    attributes: ["examSetupTypeId"],
+    raw: true,
+    transaction: options.transaction,
+  });
+
+  const setupTypeIds = [];
+  const seenSetupTypeIds = new Set();
+  for (const component of components) {
+    const setupTypeId = Number(component.examSetupTypeId);
+    if (!setupTypeId || seenSetupTypeIds.has(setupTypeId)) continue;
+    seenSetupTypeIds.add(setupTypeId);
+    setupTypeIds.push(setupTypeId);
+  }
+  if (!setupTypeIds.length) {
+    return null;
+  }
+
+  const mappings = await scoped(model.assessmentPlanSubjectMappingModel).findAll({
+    where: { assessmentPlanId: planId },
+    attributes: ["subjectId"],
+    raw: true,
+    transaction: options.transaction,
+  });
+
+  const subjectIds = [];
+  const seenSubjectIds = new Set();
+  for (const mapping of mappings) {
+    const subjectId = Number(mapping.subjectId);
+    if (!subjectId || seenSubjectIds.has(subjectId)) continue;
+    seenSubjectIds.add(subjectId);
+    subjectIds.push(subjectId);
+  }
+  if (!subjectIds.length) {
+    return null;
+  }
+
+  return scoped(model.examScheduleModel).findOne({
+    where: {
+      subjectId: { [Op.in]: subjectIds },
+    },
+    attributes: ["examScheduleId", "subjectId", "examinationSessionId"],
+    include: [
+      {
+        model: model.examinationSessionModel,
+        as: "examinationSession",
+        required: true,
+        where: {
+          assessmentTypeId: { [Op.in]: setupTypeIds },
+          ...buildScope(model.examinationSessionModel),
+        },
+        attributes: ["examinationSessionId", "assessmentTypeId", "sessionName"],
+      },
+    ],
+    transaction: options.transaction,
+  });
+}
+
+export async function findAssessmentPlanSubjectMappingById(
+  mappingId,
+  options = {},
+) {
+  return scoped(model.assessmentPlanSubjectMappingModel).findOne({
+    where: { assessmentPlanSubjectMappingId: Number(mappingId) },
+    attributes: [
+      "assessmentPlanSubjectMappingId",
+      "assessmentPlanId",
+      "subjectId",
+      "curriculumBatchTermMappingId",
+      "courseId",
+      "sessionId",
+    ],
+    transaction: options.transaction,
+  });
+}
+
+export async function findBlockingExamScheduleForSubjectMapping(
+  mapping,
+  options = {},
+) {
+  const planId = Number(mapping.assessmentPlanId);
+  const subjectId = Number(mapping.subjectId);
+
+  const components = await model.assessmentPlanComponentModel.findAll({
+    where: {
+      assessmentPlanId: planId,
+      examSetupTypeId: { [Op.ne]: null },
+    },
+    attributes: ["examSetupTypeId"],
+    raw: true,
+    transaction: options.transaction,
+  });
+
+  const setupTypeIds = [];
+  const seenSetupTypeIds = new Set();
+  for (const component of components) {
+    const setupTypeId = Number(component.examSetupTypeId);
+    if (!setupTypeId || seenSetupTypeIds.has(setupTypeId)) continue;
+    seenSetupTypeIds.add(setupTypeId);
+    setupTypeIds.push(setupTypeId);
+  }
+  if (!setupTypeIds.length) {
+    return null;
+  }
+
+  const scheduleWhere = { subjectId };
+  if (mapping.curriculumBatchTermMappingId != null) {
+    scheduleWhere.curriculumBatchTermMappingId = Number(
+      mapping.curriculumBatchTermMappingId,
+    );
+  }
+
+  return scoped(model.examScheduleModel).findOne({
+    where: scheduleWhere,
+    attributes: [
+      "examScheduleId",
+      "subjectId",
+      "curriculumBatchTermMappingId",
+      "examinationSessionId",
+    ],
+    include: [
+      {
+        model: model.examinationSessionModel,
+        as: "examinationSession",
+        required: true,
+        where: {
+          assessmentTypeId: { [Op.in]: setupTypeIds },
+          ...buildScope(model.examinationSessionModel),
+        },
+        attributes: ["examinationSessionId", "assessmentTypeId", "sessionName"],
+      },
+    ],
+    transaction: options.transaction,
+  });
+}
+
 export async function createAssessmentPlanComponent(
   componentData,
   options = {},

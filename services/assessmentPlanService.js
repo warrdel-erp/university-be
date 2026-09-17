@@ -455,6 +455,19 @@ export async function updateAssessmentPlan({ assessmentPlanId, payload, user }) 
 
 export async function deleteAssessmentPlan(assessmentPlanId) {
   return await sequelize.transaction(async (t) => {
+    const blockingSchedule =
+      await assessmentPlanRepo.findBlockingExamScheduleForAssessmentPlan(
+        assessmentPlanId,
+        { transaction: t },
+      );
+    if (blockingSchedule) {
+      const error = new Error(
+        "Cannot delete assessment plan because an examination session exists for its exam setup type and exam schedules already exist for mapped subjects.",
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
     const result = await assessmentPlanRepo.deleteAssessmentPlan(assessmentPlanId, { transaction: t });
     if (!result) {
       const error = new Error("Assessment plan not found");
@@ -763,13 +776,33 @@ export async function getAssessmentPlanSubjectMappings(queryParams) {
 
 export async function deleteAssessmentPlanSubjectMapping(mappingId) {
   return await sequelize.transaction(async (t) => {
-    const result = await assessmentPlanRepo.deleteAssessmentPlanSubjectMapping(mappingId, { transaction: t });
-    if (!result) {
+    const mapping = await assessmentPlanRepo.findAssessmentPlanSubjectMappingById(
+      mappingId,
+      { transaction: t },
+    );
+    if (!mapping) {
       const error = new Error("Subject assessment plan mapping not found");
       error.statusCode = 404;
       throw error;
     }
-    return result;
+
+    const blockingSchedule =
+      await assessmentPlanRepo.findBlockingExamScheduleForSubjectMapping(
+        mapping,
+        { transaction: t },
+      );
+    if (blockingSchedule) {
+      const error = new Error(
+        "Cannot unmap subject because an examination session exists for this assessment plan's exam setup type and an exam schedule already exists for this subject.",
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
+    return await assessmentPlanRepo.deleteAssessmentPlanSubjectMapping(
+      mappingId,
+      { transaction: t },
+    );
   });
 }
 
