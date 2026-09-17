@@ -530,20 +530,44 @@ export async function updateEmployee(employeeId, data, transaction) {
     }
 }
 
-export async function getAllEmployee(campusId, instituteId, options = {}) {
+export async function getAllEmployee(params = {}) {
+    const { campusId, instituteId, employeeId, page , limit , search = '',} = params;
+
+    const currentPage = Math.max(Number(page) || 1, 1);
+    const pageLimit = Math.max(Number(limit) || 10, 1);
+    const offset = (currentPage - 1) * pageLimit;
+
     try {
-        const { employeeId } = options;
         const whereClause = {
             ...(employeeId && { userId: employeeId }),
             ...(campusId && { campusId }),
             ...(instituteId && { instituteId }),
         };
 
-        return await scoped(model.employeeModel).findAll({
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+        if (search && search.trim()) {
+            whereClause[Op.or] = [
+                { employeeName: { [Op.like]: `%${search.trim()}%`}},
+                { employeeCode: { [Op.like]: `%${search.trim()}%`}}];
+        }
+
+       
+
+        const { rows, count } = await scoped(model.employeeModel).findAndCountAll({
+            attributes: {exclude: ['createdAt', 'updatedAt', 'deletedAt'],},
             where: whereClause,
+            ...(limit && page && { limit: pageLimit, offset }),
             include: buildEmployeeListIncludes(),
+            distinct: true
         });
+        return {
+            data: rows,
+            pagination: {
+                page: currentPage,
+                limit: pageLimit,
+                total: count,
+                totalPages: Math.ceil(count / pageLimit),
+            },
+        };
     } catch (error) {
         console.error('Error in getting all employee:', error);
         throw error;
