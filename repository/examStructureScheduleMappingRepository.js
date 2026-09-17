@@ -148,24 +148,61 @@ export async function updateExamSchedule(examScheduleId, data, options = {}) {
   }
 }
 
+export async function findScopedExamScheduleById(examScheduleId, options = {}) {
+  return assertScopedExamSchedule(Number(examScheduleId), {
+    transaction: options.transaction,
+    attributes: options.attributes || [
+      "examScheduleId",
+      "published",
+      "examDate",
+      "examinationSessionSlotId",
+    ],
+  });
+}
+
+export async function countRoomAssignmentsByExamScheduleId(
+  examScheduleId,
+  options = {},
+) {
+  return model.examScheduleRoomCapacityModel.count({
+    where: { examScheduleId: Number(examScheduleId) },
+    transaction: options.transaction,
+  });
+}
+
+export async function countAllocatedSeatsByExamScheduleId(
+  examScheduleId,
+  options = {},
+) {
+  return model.studentExamSeatModel.count({
+    include: [
+      {
+        model: model.examScheduleRoomCapacityModel,
+        as: "roomCapacity",
+        required: true,
+        where: { examScheduleId: Number(examScheduleId) },
+        attributes: [],
+      },
+    ],
+    transaction: options.transaction,
+  });
+}
+
 export async function deleteExamSchedule(examScheduleId, options = {}) {
-  try {
-    const existing = await assertScopedExamSchedule(examScheduleId, {
-      transaction: options.transaction,
-    });
-    if (!existing) {
-      return false;
-    }
-    const deleted = await scoped(model.examScheduleModel).destroy({
-      where: { examScheduleId },
-      transaction: options.transaction,
-      individualHooks: true,
-    });
-    return deleted > 0;
-  } catch (error) {
-    console.error("Error deleting exam Schedule:", error);
-    throw error;
+  const id = Number(examScheduleId);
+  const existing = await assertScopedExamSchedule(id, {
+    transaction: options.transaction,
+  });
+  if (!existing) {
+    return false;
   }
+
+  const deleted = await scoped(model.examScheduleModel).destroy({
+    where: { examScheduleId: id },
+    transaction: options.transaction,
+    individualHooks: true,
+  });
+  return deleted > 0;
 }
 
 export async function publishExamSchedule(examSetupTypeId, data) {

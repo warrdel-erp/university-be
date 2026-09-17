@@ -29,6 +29,32 @@ const batchMappingAttributes = [
   'batch',
 ];
 
+export async function findConfiguredTermsByCurriculumIds(curriculumIds) {
+  const configuredTermsMap = new Map();
+  if (!curriculumIds.length) {
+    return configuredTermsMap;
+  }
+
+  const termRows = await model.curriculumSubjectTermMappingModel.findAll({
+    attributes: [
+      'curriculumId',
+      [fn('COUNT', fn('DISTINCT', col('term'))), 'configuredTerms'],
+    ],
+    where: { curriculumId: { [Op.in]: curriculumIds } },
+    group: ['curriculumId'],
+    raw: true,
+  });
+
+  for (const row of termRows) {
+    configuredTermsMap.set(
+      Number(row.curriculumId),
+      Number(row.configuredTerms) || 0,
+    );
+  }
+
+  return configuredTermsMap;
+}
+
 export async function findAll(filters = {}) {
   const curriculums = await scoped(model.curriculumModel).findAll({
     where: filters,
@@ -37,7 +63,7 @@ export async function findAll(filters = {}) {
       {
         model: model.courseModel,
         as: 'course',
-        attributes: courseAttributes,
+        attributes: [...courseAttributes, 'termType'],
       },
       {
         model: model.curriculumBatchMappingModel,
@@ -51,7 +77,9 @@ export async function findAll(filters = {}) {
 
   const courseIds = [];
   const batchYears = [];
+  const curriculumIds = [];
   for (const curriculum of curriculums) {
+    curriculumIds.push(Number(curriculum.curriculumId));
     for (const mapping of curriculum.batchMappings) {
       courseIds.push(Number(curriculum.courseId));
       batchYears.push(Number(mapping.batch));
@@ -82,12 +110,19 @@ export async function findAll(filters = {}) {
     }
   }
 
+  const configuredTermsMap =
+    await findConfiguredTermsByCurriculumIds(curriculumIds);
+
   for (const curriculum of curriculums) {
     for (const mapping of curriculum.batchMappings) {
       const key = `${Number(curriculum.courseId)}_${Number(mapping.batch)}`;
       const batchStudentCount = countMap.get(key) || 0;
       mapping.setDataValue('studentCount', batchStudentCount);
     }
+
+    const configuredTerms =
+      configuredTermsMap.get(Number(curriculum.curriculumId)) || 0;
+    curriculum.setDataValue('configuredTerms', configuredTerms);
   }
 
   return curriculums;
@@ -295,4 +330,72 @@ export async function countStudentsForCourseBatch(courseId, batch, options = {})
     },
     ...options,
   });
+}
+
+export async function findProgrammeBatchOverview() {
+  const curriculums = await scoped(model.curriculumModel).findAll({
+    attributes: curriculumAttributes,
+    include: [
+      {
+        model: model.courseModel,
+        as: 'course',
+        attributes: [...courseAttributes, 'termType'],
+        required: true,
+      },
+      {
+        model: model.curriculumBatchMappingModel,
+        as: 'batchMappings',
+        attributes: batchMappingAttributes,
+        required: true,
+      },
+    ],
+    order: [
+      [{ model: model.courseModel, as: 'course' }, 'courseName', 'ASC'],
+      [
+        { model: model.curriculumBatchMappingModel, as: 'batchMappings' },
+        'batch',
+        'DESC',
+      ],
+    ],
+  });
+
+  const courseIds = [];
+  const batchYears = [];
+  const curriculumIds = [];
+  for (const curriculum of curriculums) {
+    curriculumIds.push(Number(curriculum.curriculumId));
+    for (const mapping of curriculum.batchMappings) {
+      courseIds.push(Number(curriculum.courseId));
+      batchYears.push(Number(mapping.batch));
+    }
+  }
+
+  const studentCountMap = new Map();
+  if (courseIds.length > 0) {
+    const countRows = await scoped(model.studentModel).findAll({
+      attributes: [
+        'courseId',
+        'batchYear',
+        [fn('COUNT', fn('DISTINCT', col('student_id'))), 'studentCount'],
+      ],
+      where: {
+        courseId: { [Op.in]: courseIds },
+        batchYear: { [Op.in]: batchYears },
+      },
+      group: ['courseId', 'batchYear'],
+      raw: true,
+    });
+
+    for (const row of countRows) {
+      studentCountMap.set(
+        `${Number(row.courseId)}_${Number(row.batchYear)}`,
+        Number(row.studentCount) || 0,
+      );
+    }
+  }
+
+  const configuredTermsMap =
+    await findConfiguredTermsByCurriculumIds(curriculumIds);
+
+  return { curriculums, studentCountMap, configuredTermsMap };
 }
