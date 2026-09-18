@@ -30,7 +30,7 @@ async function findSubjectInInstitute(subjectId) {
 export async function findSubjectIdsForYear(academicYearId) {
     const rows = await scoped(model.subjectModel).findAll({
         attributes: ['subjectId'],
-        where: { academicYearId },
+        // where: { academicYearId },
         raw: true,
     });
     const ids = [];
@@ -178,7 +178,7 @@ export async function findMappedTeacherUserIds({ userId, subjectId, subjectIds, 
                 attributes: [],
                 where: {
                     ...(subjectId && { subjectId }),
-                    ...(academicYearId != null && { academicYearId }),
+                    // ...(academicYearId != null && { academicYearId }),
                     ...buildScope(model.subjectModel),
                 },
                 required: true,
@@ -257,7 +257,7 @@ export async function findDateWiseTeacherSubjectRows({
 
     const subjectWhere = {
         ...(subjectId != null ? { subjectId: Number(subjectId) } : {}),
-        ...(academicYearId != null ? { academicYearId: Number(academicYearId) } : {}),
+        // ...(academicYearId != null ? { academicYearId: Number(academicYearId) } : {}),
         ...buildScope(model.subjectModel),
     };
     if (subjectIds != null) {
@@ -426,7 +426,7 @@ export async function findTeacherSubjectMappingRows({
                 },
                 where: {
                     ...(subjectId && { subjectId }),
-                    ...(academicYearId != null && { academicYearId }),
+                    // ...(academicYearId != null && { academicYearId }),
                     ...buildScope(model.subjectModel),
                 },
                 required: true,

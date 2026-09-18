@@ -25,19 +25,11 @@ export const addEmployee = async (req, res) => {
 };
 
 export const getAllEmployee = async (req, res) => {
-  const campusId = req.query.campusId ? Number(req.query.campusId) : undefined;
-  const instituteId = req.query.instituteId
-    ? Number(req.query.instituteId)
-    : undefined;
-  const userId = req.query.userId ? Number(req.query.userId) : undefined;
-  const tenant = getTenantStore();
+     const { search, page, limit,userId } = req.query;
+   const {defaultRole:role, instituteId, campusId,} = getTenantStore();
   try {
-    const result = await employee.getAllEmployee(campusId, instituteId, {
-      userId: req.user.userId,
-      role: tenant.defaultRole,
-      userId,
-    });
-    res.status(200).send(result);
+    const result = await employee.getAllEmployee({campusId, instituteId,role,userId,search, page, limit});
+    return SuccessResponse(res,200,"Employee fetched successfully",result.data,result.pagination);
   } catch (error) {
     console.error("Error in getting all employee:", error);
     const message = error?.message || "Internal Server Error";

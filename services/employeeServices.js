@@ -1259,8 +1259,8 @@ async function formatEmployeeListItem(row) {
   };
 }
 
-export async function getAllEmployee(campusId, instituteId, auth = {}) {
-  const { userId, role, employeeId: authEmployeeId } = auth;
+export async function getAllEmployee(params = {}) {
+  const { userId, role, employeeId: authEmployeeId} = params;
 
   if (isTeacherRole(role)) {
     const resolvedEmployeeId =
@@ -1294,8 +1294,10 @@ export async function getAllEmployee(campusId, instituteId, auth = {}) {
     ];
   }
 
-  const result = await employeeRepository.getAllEmployee(campusId, instituteId);
-  return Promise.all((result || []).map(formatEmployeeListItem));
+  const result = await employeeRepository.getAllEmployee(params);
+  const formatted = await Promise.all((result.data || []).map(formatEmployeeListItem));
+
+  return { pagination: result?.pagination, data: formatted };
 }
 
 export async function getSingleEmployeeDetails(userId) {
