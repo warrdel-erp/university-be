@@ -1,6 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import examinationSessionModel from "./examinationSessionModel.js";
+import assessmentPlanComponentModel from "./assessmentPlanComponentModel.js";
 import studentModel from "./studentModel.js";
 import courseModel from "./courseModel.js";
 import sessionModel from "./sessionModel.js";
@@ -19,11 +20,20 @@ const studentResultModel = sequelize.define(
     },
     examinationSessionId: {
       type: DataTypes.BIGINT,
-      allowNull: false,
+      allowNull: true,
       field: "examination_session_id",
       references: {
         model: examinationSessionModel,
         key: "examination_session_id",
+      },
+    },
+    assessmentPlanComponentId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "assessment_plan_component_id",
+      references: {
+        model: assessmentPlanComponentModel,
+        key: "assessment_plan_component_id",
       },
     },
     studentId: {
@@ -152,7 +162,7 @@ const studentResultModel = sequelize.define(
     tableName: "student_result",
     timestamps: true,
     paranoid: false,
-  },
+  }
 );
 
 studentResultModel.scopeConfig = {

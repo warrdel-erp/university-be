@@ -21,11 +21,48 @@ const getSingleBatchQuerySchema = z.object({
   sessionId: z.coerce.number().int().positive().optional(),
 });
 
+const getTermStudentsParamsSchema = z.object({
+  curriculumBatchTermMappingId: z.coerce
+    .number()
+    .int()
+    .positive('curriculumBatchTermMappingId must be a positive integer'),
+});
+
 router.get(
   '/batches',
   useAuth,
   validate({ query: getBatchesQuerySchema }),
   controller.getPreviousAcademicBatches,
+);
+
+router.get(
+  '/terms/:curriculumBatchTermMappingId/students/template',
+  useAuth,
+  validate({
+    params: getTermStudentsParamsSchema,
+    query: getSingleBatchQuerySchema,
+  }),
+  controller.downloadTermMarksTemplate,
+);
+
+router.post(
+  '/terms/:curriculumBatchTermMappingId/students/upload',
+  useAuth,
+  validate({
+    params: getTermStudentsParamsSchema,
+    query: getSingleBatchQuerySchema,
+  }),
+  controller.uploadTermMarks,
+);
+
+router.get(
+  '/terms/:curriculumBatchTermMappingId/students',
+  useAuth,
+  validate({
+    params: getTermStudentsParamsSchema,
+    query: getSingleBatchQuerySchema,
+  }),
+  controller.getTermStudents,
 );
 
 router.get(

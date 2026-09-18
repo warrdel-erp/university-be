@@ -192,23 +192,22 @@ import examInvigilatorAssignmentModel from "./examInvigilatorAssignmentModel.js"
 import examRoomMaterialBundleModel from "./examRoomMaterialBundleModel.js";
 import examRoomMaterialItemModel from "./examRoomMaterialItemModel.js";
 import studentResultModel from "./studentResultModel.js";
-import studentHistoricalResultModel from "./studentHistoricalResultModel.js";
-import studentHistoricalSubjectMarkModel from "./studentHistoricalSubjectMarkModel.js";
+import studentResultItemModel from "./studentResultItemModel.js";
 import eventModel from "./eventModel.js";
 import eventLogModel from "./eventLogModel.js";
 
-// Student Historical Result associations
-studentHistoricalResultModel.belongsTo(studentModel, { foreignKey: "studentId", as: "student" });
-studentModel.hasMany(studentHistoricalResultModel, { foreignKey: "studentId", as: "historicalResults" });
+// Student Result Item associations
+studentResultItemModel.belongsTo(studentModel, { foreignKey: "studentId", as: "student" });
+studentModel.hasMany(studentResultItemModel, { foreignKey: "studentId", as: "resultItems" });
 
-studentHistoricalResultModel.belongsTo(curriculumBatchTermMappingModel, { foreignKey: "curriculumBatchTermMappingId", as: "curriculumBatchTermMapping" });
-curriculumBatchTermMappingModel.hasMany(studentHistoricalResultModel, { foreignKey: "curriculumBatchTermMappingId", as: "historicalResults" });
+studentResultItemModel.belongsTo(curriculumSubjectTermMappingModel, { foreignKey: "curriculumSubjectTermMappingId", as: "curriculumSubjectTermMapping" });
+curriculumSubjectTermMappingModel.hasMany(studentResultItemModel, { foreignKey: "curriculumSubjectTermMappingId", as: "resultItems" });
 
-studentHistoricalResultModel.hasMany(studentHistoricalSubjectMarkModel, { foreignKey: "studentHistoricalResultId", as: "subjectMarks", onDelete: "CASCADE" });
-studentHistoricalSubjectMarkModel.belongsTo(studentHistoricalResultModel, { foreignKey: "studentHistoricalResultId", as: "historicalResult" });
+studentResultItemModel.belongsTo(assessmentPlanComponentModel, { foreignKey: "assessmentPlanComponentId", as: "assessmentPlanComponent" });
+assessmentPlanComponentModel.hasMany(studentResultItemModel, { foreignKey: "assessmentPlanComponentId", as: "resultItems" });
 
-studentHistoricalSubjectMarkModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "subject" });
-studentHistoricalSubjectMarkModel.belongsTo(examSetupTypeModel, { foreignKey: "examSetupTypeId", as: "examSetupType" });
+studentResultItemModel.belongsTo(universityModel, { foreignKey: "universityId", as: "university" });
+studentResultItemModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "institute" });
 
 // Event / EventLog associations
 eventModel.hasMany(eventLogModel, { foreignKey: "eventId", as: "eventLogs" });
@@ -4113,6 +4112,14 @@ studentResultModel.belongsTo(acedmicYearModel, {
   foreignKey: "academicYearId",
   as: "academicYear",
 });
+studentResultModel.belongsTo(assessmentPlanComponentModel, {
+  foreignKey: "assessmentPlanComponentId",
+  as: "assessmentPlanComponent",
+});
+assessmentPlanComponentModel.hasMany(studentResultModel, {
+  foreignKey: "assessmentPlanComponentId",
+  as: "studentResults",
+});
 
 examSessionAnswerSheetModel.belongsTo(examinationSessionModel, {
   foreignKey: "examinationSessionId",
@@ -4594,8 +4601,7 @@ export {
   examRoomMaterialBundleModel,
   examRoomMaterialItemModel,
   studentResultModel,
-  studentHistoricalResultModel,
-  studentHistoricalSubjectMarkModel,
+  studentResultItemModel,
   eventModel,
   eventLogModel,
   userModel as users,

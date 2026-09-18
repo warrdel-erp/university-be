@@ -1,6 +1,13 @@
 import * as previousAcademicRepository from '../repository/previousAcademicRepository.js';
 import { resolveTotalTerms } from '../utility/courseTerms.js';
 import { resolveActiveAcademicYearContext } from '../utility/curriculumSubjectsByActiveYear.js';
+import sequelize from '../database/sequelizeConfig.js';
+import xlsx from 'xlsx';
+import {
+  decimalGreaterThan,
+  parseMoneyInput,
+  toMoneyNumber,
+} from '../utility/decimalMoney.js';
 
 async function getActiveYear() {
   const ctx = await resolveActiveAcademicYearContext();
@@ -30,36 +37,48 @@ function emptyBatchesResponse(activeYear, yearTitle, activeYearRecord) {
   };
 }
 
-function aggregateHistoricalByTerm(historicalResults) {
-  const historicalResultMap = new Map();
-  for (const hr of historicalResults) {
-    const termId = Number(hr.curriculumBatchTermMappingId);
-    let agg = historicalResultMap.get(termId);
+function aggregateMarksByCstm(marks) {
+  const marksByCstm = new Map();
+  for (const item of marks) {
+    const cstmId = Number(item.curriculumSubjectTermMappingId);
+    let agg = marksByCstm.get(cstmId);
     if (!agg) {
-      agg = {
-        total: 0,
-        frozenCount: 0,
-        validatedCount: 0,
-        draftCount: 0,
-        blockedCount: 0,
-      };
-      historicalResultMap.set(termId, agg);
+      agg = { total: 0, students: new Set() };
+      marksByCstm.set(cstmId, agg);
     }
     agg.total += 1;
-    if (hr.freezeStatus === 'FROZEN' || hr.isFrozen) {
-      agg.frozenCount += 1;
+    agg.students.add(Number(item.studentId));
+  }
+  return marksByCstm;
+}
+
+function termAggFromSubjectMappings(subjectMappings, termNum, marksByCstm) {
+  let total = 0;
+  const students = new Set();
+  for (const sm of subjectMappings || []) {
+    if (Number(sm.term) !== Number(termNum)) {
+      continue;
     }
-    if (hr.freezeStatus === 'VALIDATED') {
-      agg.validatedCount += 1;
+    const agg = marksByCstm.get(Number(sm.curriculumSubjectTermMappingId));
+    if (!agg) {
+      continue;
     }
-    if (hr.freezeStatus === 'DRAFT') {
-      agg.draftCount += 1;
-    }
-    if (hr.resultStatus === 'FAIL' || hr.resultStatus === 'WITHHELD') {
-      agg.blockedCount += 1;
+    total += agg.total;
+    for (const studentId of agg.students) {
+      students.add(studentId);
     }
   }
-  return historicalResultMap;
+  if (total === 0) {
+    return null;
+  }
+  return {
+    total,
+    frozenCount: 0,
+    validatedCount: 0,
+    draftCount: total,
+    blockedCount: 0,
+    studentCount: students.size,
+  };
 }
 
 export async function getPreviousAcademicBatches(filters = {}) {
@@ -137,8 +156,15 @@ export async function getPreviousAcademicBatches(filters = {}) {
       batchTermMappingIds,
       courseIds,
     );
-  const historicalResults =
-    await previousAcademicRepository.getHistoricalResultsByTermIds(batchTermMappingIds);
+  const cstmIds = [];
+  for (const curr of curriculums) {
+    for (const sm of curr.subjectTermMappings || []) {
+      cstmIds.push(sm.curriculumSubjectTermMappingId);
+    }
+  }
+  const historicalMarks =
+    await previousAcademicRepository.getHistoricalMarksByCstmIds(cstmIds);
+  const marksByCstm = aggregateMarksByCstm(historicalMarks);
 
   const apSubjectMap = new Set();
   for (const apm of assessmentPlanMappings) {
@@ -149,8 +175,6 @@ export async function getPreviousAcademicBatches(filters = {}) {
       `${apm.courseId}_${apm.curriculumBatchTermMappingId}_${apm.subjectId}`,
     );
   }
-
-  const historicalResultMap = aggregateHistoricalByTerm(historicalResults);
 
   let totalBatchesCount = 0;
   let totalStudentsCount = 0;
@@ -276,8 +300,10 @@ export async function getPreviousAcademicBatches(filters = {}) {
               if (t.term > requiredHistoricalTerms) {
                 continue;
               }
-              const hrData = historicalResultMap.get(
-                Number(t.curriculumBatchTermMappingId),
+              const hrData = termAggFromSubjectMappings(
+                currData.subjectMappings,
+                t.term,
+                marksByCstm,
               );
               if (!hrData) {
                 continue;
@@ -403,281 +429,548 @@ export async function getSingleBatchDetails(curriculumBatchMappingId, sessionId 
     throw error;
   }
 
-  const batch = Number(batchMapping.batch);
   const curriculum = batchMapping.curriculum;
-  const course = curriculum?.course;
-  const courseId = Number(curriculum?.courseId);
+  const course = curriculum.course;
+  const batch = Number(batchMapping.batch);
+  const courseId = Number(curriculum.courseId);
+  const { activeYear } = await getActiveYear();
+  const totalTerms = resolveTotalTerms(course) || 8;
+  const requiredHistoricalTerms =
+    batch === activeYear ? 0 : Math.min((activeYear - batch) * 2, totalTerms);
 
-  const { activeYear, yearTitle } = await getActiveYear();
-
-  const sessionMappings = course?.sessionCourseMappings || [];
-  let sessionNum = sessionId ? Number(sessionId) : null;
-  let sessionName = null;
-  for (const mapping of sessionMappings) {
-    if (!mapping.session) {
-      continue;
-    }
-    if (sessionNum == null) {
-      sessionNum = Number(mapping.session.sessionId);
-      sessionName = mapping.session.sessionName;
-      break;
-    }
-    if (Number(mapping.session.sessionId) === sessionNum) {
-      sessionName = mapping.session.sessionName;
-      break;
-    }
+  const termMappings = batchMapping.termMappings || [];
+  const subjectMappings = curriculum.subjectTermMappings || [];
+  const batchTermMappingIds = [];
+  const cstmIds = [];
+  for (const t of termMappings) {
+    batchTermMappingIds.push(t.curriculumBatchTermMappingId);
   }
-  if (sessionNum == null) {
-    const error = new Error('No session is mapped to this course');
-    error.statusCode = 400;
-    throw error;
+  for (const sm of subjectMappings) {
+    cstmIds.push(sm.curriculumSubjectTermMappingId);
   }
 
   const studentCount = await previousAcademicRepository.countBatchStudents(
     courseId,
-    sessionNum,
+    sessionId,
     batch,
   );
-  const regMappings =
-    await previousAcademicRepository.getAcademicRegulationCourseMappings([courseId]);
-  const regulation = regMappings[0]?.academicRegulation || null;
-
-  const totalTerms = resolveTotalTerms(course) || 8;
-  const isCurrentBatch = batch === activeYear;
-  const requiredHistoricalTerms = isCurrentBatch
-    ? 0
-    : Math.min((activeYear - batch) * 2, totalTerms);
-
-  const termMappings = [...(batchMapping.termMappings || [])];
-  termMappings.sort((a, b) => Number(a.term) - Number(b.term));
-
-  const batchTermMappingIds = [];
-  for (const t of termMappings) {
-    batchTermMappingIds.push(t.curriculumBatchTermMappingId);
-  }
-
   const apSubjectMappings =
     await previousAcademicRepository.getAssessmentPlanSubjectMappings(
       batchTermMappingIds,
       [courseId],
     );
-  const apSubjectSet = new Set();
+  const historicalMarks =
+    await previousAcademicRepository.getHistoricalMarksByCstmIds(cstmIds);
+
+  const apKeys = new Set();
   for (const apm of apSubjectMappings) {
-    apSubjectSet.add(
-      `${apm.courseId}_${apm.sessionId}_${apm.curriculumBatchTermMappingId}_${apm.subjectId}`,
-    );
-    apSubjectSet.add(
-      `${apm.courseId}_${apm.curriculumBatchTermMappingId}_${apm.subjectId}`,
-    );
+    apKeys.add(`${apm.curriculumBatchTermMappingId}_${apm.subjectId}`);
+  }
+  const markedCstmIds = new Set();
+  for (const item of historicalMarks) {
+    markedCstmIds.add(Number(item.curriculumSubjectTermMappingId));
   }
 
-  const historicalResults =
-    await previousAcademicRepository.getHistoricalResultsByTermIds(batchTermMappingIds);
-  const termResultsMap = aggregateHistoricalByTerm(historicalResults);
-
-  const subjectMappings = curriculum?.subjectTermMappings || [];
-  let totalHistoricalCoursesRequired = 0;
-  let totalHistoricalCoursesConfigured = 0;
-  let currentYearCoursesRequired = 0;
-  let currentYearCoursesConfigured = 0;
-  let frozenTermsCount = 0;
-  const previousTerms = [];
-
-  let currentYearTermFound = false;
-  for (const termObj of termMappings) {
-    if (Number(termObj.year) === activeYear || Number(termObj.yearNumber) === 1) {
-      currentYearTermFound = true;
-      break;
-    }
-  }
+  const terms = [];
+  let subjectsRequired = 0;
+  let subjectsWithPlan = 0;
 
   for (const termObj of termMappings) {
     const termNum = Number(termObj.term);
-    const isHistorical = termNum <= requiredHistoricalTerms;
-    const isCurrentYearTerm =
-      Number(termObj.year) === activeYear || Number(termObj.yearNumber) === 1;
-    const countCurrentYearPlans =
-      isCurrentBatch && (!currentYearTermFound || isCurrentYearTerm);
-    const cbtmId = Number(termObj.curriculumBatchTermMappingId);
-    const calcYear = termObj.year || batch + (termObj.yearNumber || 1) - 1;
-    let subjectCount = 0;
+    if (termNum > requiredHistoricalTerms) {
+      continue;
+    }
 
+    const cbtmId = Number(termObj.curriculumBatchTermMappingId);
+    const subjects = [];
+    let hasMarks = false;
     for (const sm of subjectMappings) {
       if (Number(sm.term) !== termNum) {
         continue;
       }
-      subjectCount += 1;
-      const specificKey = `${courseId}_${sessionNum}_${cbtmId}_${sm.subjectId}`;
-      const genericKey = `${courseId}_${cbtmId}_${sm.subjectId}`;
-      const isConfigured =
-        apSubjectSet.has(specificKey) || apSubjectSet.has(genericKey);
-      if (isHistorical) {
-        totalHistoricalCoursesRequired += 1;
-        if (isConfigured) {
-          totalHistoricalCoursesConfigured += 1;
-        }
+      subjectsRequired += 1;
+      if (apKeys.has(`${cbtmId}_${sm.subjectId}`)) {
+        subjectsWithPlan += 1;
       }
-      if (countCurrentYearPlans) {
-        currentYearCoursesRequired += 1;
-        if (isConfigured) {
-          currentYearCoursesConfigured += 1;
-        }
+      if (markedCstmIds.has(Number(sm.curriculumSubjectTermMappingId))) {
+        hasMarks = true;
       }
+      subjects.push({
+        subjectId: sm.subjectId,
+        subjectCode: sm.subject.subjectCode,
+        subjectName: sm.subject.subjectName,
+      });
     }
 
-    if (!isHistorical) {
-      continue;
-    }
-
-    const termResultAgg = termResultsMap.get(cbtmId);
-    let validation = null;
-    let termStatus = 'Not Started';
-    let termStatusMessage = 'Template ready';
-    let isFrozen = false;
-
-    if (termResultAgg && termResultAgg.total > 0) {
-      const readyCount = Math.max(0, studentCount - termResultAgg.blockedCount);
-      validation = {
-        readyStudents: readyCount,
-        totalStudents: studentCount,
-        summary: `${readyCount}/${studentCount} ready`,
-        blockingCount: termResultAgg.blockedCount,
-        warningCount: 0,
-      };
-      if (termResultAgg.frozenCount >= studentCount && studentCount > 0) {
-        termStatus = 'Frozen';
-        termStatusMessage = 'Historical data frozen';
-        isFrozen = true;
-        frozenTermsCount += 1;
-      } else if (termResultAgg.blockedCount > 0) {
-        termStatus = 'Review Required';
-        termStatusMessage = `${termResultAgg.blockedCount} students blocked`;
-      } else if (termResultAgg.validatedCount > 0) {
-        termStatus = 'Ready to Submit';
-        termStatusMessage = `${readyCount}/${studentCount} ready`;
-      } else {
-        termStatus = 'In Progress';
-        termStatusMessage = 'Draft uploaded';
-      }
-    }
-
-    previousTerms.push({
+    terms.push({
       curriculumBatchTermMappingId: cbtmId,
       term: termNum,
       termName: `Semester ${termNum}`,
-      academicPeriod: `${calcYear}-${String(calcYear + 1).slice(-2)}`,
       yearNumber: termObj.yearNumber,
-      year: calcYear,
-      subjectCount,
-      validation,
-      status: termStatus,
-      statusMessage: termStatusMessage,
-      isFrozen,
+      year: termObj.year,
+      subjectCount: subjects.length,
+      status: hasMarks ? 'In Progress' : 'Not Started',
+      subjects,
     });
   }
 
-  const hasCurriculum = Boolean(curriculum);
-  const hasAllTermsConfigured = termMappings.length >= totalTerms;
-  const hasRegulation = Boolean(regulation);
-  const planRequired = isCurrentBatch
-    ? currentYearCoursesRequired
-    : totalHistoricalCoursesRequired;
-  const planConfigured = isCurrentBatch
-    ? currentYearCoursesConfigured
-    : totalHistoricalCoursesConfigured;
-  const hasAssessmentPlans = planRequired > 0 && planConfigured >= planRequired;
-
-  let setupReadinessStatus = 'Setup Complete';
-  let setupReadinessMessage = 'All prerequisites configured.';
-  if (!hasCurriculum || !hasAllTermsConfigured) {
-    setupReadinessStatus = 'Needs Setup';
-    setupReadinessMessage = 'Curriculum structure incomplete.';
+  const hasAssessmentPlans = subjectsRequired > 0 && subjectsWithPlan >= subjectsRequired;
+  let setupReadiness = 'Setup Complete';
+  if (termMappings.length < totalTerms) {
+    setupReadiness = 'Needs Setup';
   } else if (!hasAssessmentPlans) {
-    setupReadinessStatus = 'Needs Attention';
-    setupReadinessMessage = 'Assessment plans incomplete';
-  } else if (!hasRegulation) {
-    setupReadinessStatus = 'Needs Setup';
-    setupReadinessMessage = 'Regulation not linked.';
+    setupReadiness = 'Needs Attention';
   }
-
-  const assessmentPlanLabel = isCurrentBatch
-    ? `${planConfigured}/${planRequired} current courses configured`
-    : `${planConfigured}/${planRequired} historical courses configured (Sem 1–${requiredHistoricalTerms})`;
 
   let openingPosition = 'Awaiting Setup';
-  if (isCurrentBatch) {
-    openingPosition = hasAssessmentPlans
-      ? 'Awaiting Setup'
-      : setupReadinessStatus;
-  } else if (setupReadinessStatus !== 'Setup Complete') {
-    openingPosition = 'Awaiting Setup';
-  } else if (frozenTermsCount >= requiredHistoricalTerms && studentCount > 0) {
-    openingPosition = 'Established';
-  } else {
+  if (setupReadiness === 'Setup Complete') {
     openingPosition = 'Awaiting Historical Data';
+  } else if (batch === activeYear && hasAssessmentPlans) {
+    openingPosition = 'Awaiting Setup';
+  } else {
+    openingPosition = setupReadiness;
   }
 
-  const result = {
-    batchHeader: {
-      admissionBatch: batch,
-      courseId,
-      courseName: course?.courseName || 'Programme',
-      courseCode: course?.courseCode || null,
-      sessionId: sessionNum,
-      sessionName: sessionName || `Session ${sessionNum}`,
-      studentsCount: studentCount,
-      academicYear: yearTitle,
-      curriculumId: curriculum?.curriculumId,
-      curriculumName: curriculum?.name,
-      curriculumBatchMappingId,
-      openingPosition,
-    },
-    setupReadiness: {
-      status: setupReadinessStatus,
-      message: setupReadinessMessage,
-      items: {
-        batchStudents: {
-          label: 'Batch Students',
-          value: `${studentCount} students`,
-          isComplete: studentCount > 0,
-          count: studentCount,
-        },
-        curriculumStructure: {
-          label: 'Curriculum Structure',
-          value: `${termMappings.length}/${totalTerms} semesters configured`,
-          isComplete: hasAllTermsConfigured,
-          configured: termMappings.length,
-          total: totalTerms,
-        },
-        assessmentPlans: {
-          label: 'Assessment Plans',
-          value: assessmentPlanLabel,
-          isComplete: hasAssessmentPlans,
-          configured: planConfigured,
-          total: planRequired,
-        },
-        regulation: {
-          label: 'Regulation & Academic Rules',
-          value: regulation ? regulation.regulationName : 'Not linked',
-          isComplete: hasRegulation,
-          regulationId: regulation?.academicRegulationId || null,
-          regulationName: regulation?.regulationName || null,
-        },
-      },
-    },
+  return {
+    admissionBatch: batch,
+    courseId,
+    courseName: course.courseName,
+    courseCode: course.courseCode,
+    sessionId: sessionId ? Number(sessionId) : null,
+    studentsCount: studentCount,
+    curriculumId: curriculum.curriculumId,
+    curriculumName: curriculum.name,
+    curriculumBatchMappingId,
+    openingPosition,
+    setupReadiness,
     setupDetails: {
-      curriculum: hasCurriculum
-        ? `${termMappings.length}/${totalTerms} semesters configured`
-        : 'Not configured',
-      curriculumId: curriculum?.curriculumId || null,
-      curriculumName: curriculum?.name || null,
+      curriculum: `${termMappings.length}/${totalTerms} semesters configured`,
+      curriculumId: curriculum.curriculumId,
+      curriculumName: curriculum.name,
       curriculumBatchMappingId,
-      assessmentPlans: assessmentPlanLabel,
-      regulation: regulation ? regulation.regulationName : 'Not linked',
+      assessmentPlans: `${subjectsWithPlan}/${subjectsRequired} courses configured`,
       students: studentCount,
     },
-    terms: previousTerms,
+    terms,
   };
+}
 
-  return result;
+function studentFullName(student) {
+  const parts = [student.firstName, student.middleName, student.lastName];
+  const nameParts = [];
+  for (const part of parts) {
+    if (part) {
+      nameParts.push(part);
+    }
+  }
+  return nameParts.join(' ').trim();
+}
+
+function componentMaximumMarks(component) {
+  const weightage = toMoneyNumber(component.weightagePercentage);
+  if (weightage > 0) {
+    return weightage;
+  }
+  return 100;
+}
+
+async function loadTermMarksContext(curriculumBatchTermMappingId, sessionId = null) {
+  const termMapping = await previousAcademicRepository.findTermMappingWithBatch(
+    curriculumBatchTermMappingId,
+  );
+  if (!termMapping) {
+    const error = new Error(
+      `Curriculum batch term mapping with ID ${curriculumBatchTermMappingId} not found`,
+    );
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const batchMapping = termMapping.batchMapping;
+  const curriculum = batchMapping.curriculum;
+  const course = curriculum.course;
+  const batch = Number(batchMapping.batch);
+  const courseId = Number(curriculum.courseId);
+  const curriculumId = Number(curriculum.curriculumId);
+  const term = Number(termMapping.term);
+
+  const studentRows = await previousAcademicRepository.findStudentsByCourseBatch(
+    courseId,
+    batch,
+    sessionId,
+  );
+  const apMappings =
+    await previousAcademicRepository.findAssessmentPlanSubjectsForTerm(
+      curriculumBatchTermMappingId,
+      sessionId,
+    );
+  const cstmRows =
+    await previousAcademicRepository.findSubjectTermMappingsByCurriculumTerm(
+      curriculumId,
+      term,
+    );
+
+  const cstmBySubjectId = new Map();
+  for (const row of cstmRows) {
+    cstmBySubjectId.set(Number(row.subjectId), row);
+  }
+
+  const subjects = [];
+  const seenSubjects = new Set();
+  const cstmIds = [];
+  for (const mapping of apMappings) {
+    const subjectId = Number(mapping.subjectId);
+    if (seenSubjects.has(subjectId)) {
+      continue;
+    }
+    seenSubjects.add(subjectId);
+
+    const cstm = cstmBySubjectId.get(subjectId);
+    if (!cstm) {
+      continue;
+    }
+
+    const curriculumSubjectTermMappingId = Number(cstm.curriculumSubjectTermMappingId);
+    cstmIds.push(curriculumSubjectTermMappingId);
+
+    const examSetupTypes = [];
+    const seenExamTypes = new Set();
+    for (const component of mapping.assessmentPlan.components) {
+      const examSetupTypeId = Number(component.examSetupTypeId);
+      if (seenExamTypes.has(examSetupTypeId)) {
+        continue;
+      }
+      seenExamTypes.add(examSetupTypeId);
+      examSetupTypes.push({
+        examSetupTypeId,
+        examName: component.examSetupType.examName,
+        examCode: component.examSetupType.examCode,
+        assessmentPlanComponentId: Number(component.assessmentPlanComponentId),
+        maximumMarks: componentMaximumMarks(component),
+      });
+    }
+    if (examSetupTypes.length === 0) {
+      continue;
+    }
+
+    subjects.push({
+      subjectId,
+      subjectCode: mapping.subject.subjectCode,
+      subjectName: mapping.subject.subjectName,
+      assessmentPlanId: mapping.assessmentPlanId,
+      curriculumSubjectTermMappingId,
+      credit: Number(cstm.credit) || 0,
+      examSetupTypes,
+    });
+  }
+
+  const existingItems =
+    await previousAcademicRepository.getHistoricalMarksByCstmIds(cstmIds);
+  const marksByKey = new Map();
+  for (const item of existingItems) {
+    marksByKey.set(
+      `${item.studentId}_${item.curriculumSubjectTermMappingId}_${item.assessmentPlanComponentId}`,
+      item,
+    );
+  }
+
+  const students = [];
+  for (const student of studentRows) {
+    const marks = [];
+    for (const subject of subjects) {
+      for (const examType of subject.examSetupTypes) {
+        const existing = marksByKey.get(
+          `${student.studentId}_${subject.curriculumSubjectTermMappingId}_${examType.assessmentPlanComponentId}`,
+        );
+        marks.push({
+          curriculumSubjectTermMappingId: subject.curriculumSubjectTermMappingId,
+          assessmentPlanComponentId: examType.assessmentPlanComponentId,
+          obtainedMarks: existing ? toMoneyNumber(existing.obtainedMarks) : null,
+          maximumMarks: examType.maximumMarks,
+        });
+      }
+    }
+    students.push({
+      studentId: student.studentId,
+      firstName: student.firstName,
+      fullName: studentFullName(student),
+      enrollment: student.enrollNumber,
+      scholarNo: student.scholarNumber,
+      batch: student.batchYear,
+      marks,
+    });
+  }
+
+  return {
+    curriculumBatchTermMappingId: Number(termMapping.curriculumBatchTermMappingId),
+    term,
+    year: termMapping.year,
+    yearNumber: termMapping.yearNumber,
+    batch,
+    courseId,
+    curriculumId,
+    sessionId,
+    courseName: course.courseName,
+    courseCode: course.courseCode,
+    students,
+    subjects,
+    marksByKey,
+  };
+}
+
+export async function getTermStudents(curriculumBatchTermMappingId, sessionId = null) {
+  const context = await loadTermMarksContext(curriculumBatchTermMappingId, sessionId);
+  return {
+    curriculumBatchTermMappingId: context.curriculumBatchTermMappingId,
+    term: context.term,
+    year: context.year,
+    yearNumber: context.yearNumber,
+    batch: context.batch,
+    courseId: context.courseId,
+    sessionId: context.sessionId,
+    students: context.students,
+    subjects: context.subjects,
+  };
+}
+
+export async function downloadTermMarksTemplate(curriculumBatchTermMappingId, sessionId = null) {
+  const context = await loadTermMarksContext(curriculumBatchTermMappingId, sessionId);
+
+  const subjectHeader = ['', '', ''];
+  const columnHeader = ['studentId', 'Scholar No', 'Student Name'];
+  const mapRows = [];
+  const merges = [];
+
+  for (const subject of context.subjects) {
+    const startCol = columnHeader.length;
+    for (const examType of subject.examSetupTypes) {
+      if (columnHeader.length === startCol) {
+        subjectHeader.push(`${subject.subjectCode} - ${subject.subjectName}`);
+      } else {
+        subjectHeader.push('');
+      }
+      columnHeader.push(examType.examName);
+      mapRows.push({
+        col: columnHeader.length - 1,
+        subjectId: subject.subjectId,
+        subjectCode: subject.subjectCode,
+        curriculumSubjectTermMappingId: subject.curriculumSubjectTermMappingId,
+        assessmentPlanComponentId: examType.assessmentPlanComponentId,
+        examSetupTypeId: examType.examSetupTypeId,
+        examName: examType.examName,
+        maximumMarks: examType.maximumMarks,
+      });
+    }
+    const endCol = columnHeader.length - 1;
+    if (endCol > startCol) {
+      merges.push({ s: { r: 2, c: startCol }, e: { r: 2, c: endCol } });
+    }
+  }
+
+  const aoa = [
+    [`Term ${context.term} · ${context.courseName} · Batch ${context.batch}`],
+    [],
+    subjectHeader,
+    columnHeader,
+  ];
+  for (const student of context.students) {
+    const row = [student.studentId, student.scholarNo || student.enrollment, student.fullName];
+    for (const mark of student.marks) {
+      row.push(mark.obtainedMarks == null ? '' : mark.obtainedMarks);
+    }
+    aoa.push(row);
+  }
+
+  const workbook = xlsx.utils.book_new();
+  const marksSheet = xlsx.utils.aoa_to_sheet(aoa);
+  if (merges.length > 0) {
+    marksSheet['!merges'] = merges;
+  }
+  xlsx.utils.book_append_sheet(workbook, marksSheet, 'Marks');
+  xlsx.utils.book_append_sheet(workbook, xlsx.utils.json_to_sheet(mapRows), '_map');
+  workbook.Workbook = { Sheets: [{ Hidden: 0 }, { Hidden: 1 }] };
+
+  return {
+    buffer: xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' }),
+    fileName: `term-${context.term}-batch-${context.batch}-marks.xlsx`,
+  };
+}
+
+export async function uploadTermMarks(curriculumBatchTermMappingId, file, sessionId = null) {
+  if (!file?.data && !file?.buffer) {
+    const error = new Error('Excel file is required (form-data field: marks)');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const context = await loadTermMarksContext(curriculumBatchTermMappingId, sessionId);
+  const fileBuffer = file.data || file.buffer;
+  const workbook = xlsx.read(fileBuffer, { type: 'buffer' });
+  const mapSheet = workbook.Sheets._map;
+  const marksSheet = workbook.Sheets.Marks || workbook.Sheets[workbook.SheetNames[0]];
+  if (!mapSheet || !marksSheet) {
+    const error = new Error('Upload the downloaded marks template. Mapping sheet is missing.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const mapRows = xlsx.utils.sheet_to_json(mapSheet, { defval: '' });
+  const sheetRows = xlsx.utils.sheet_to_json(marksSheet, {
+    header: 1,
+    defval: '',
+    blankrows: false,
+  });
+
+  const studentsById = new Map();
+  const studentsByEnrollment = new Map();
+  const studentsByScholar = new Map();
+  for (const student of context.students) {
+    studentsById.set(Number(student.studentId), student);
+    if (student.enrollment) {
+      studentsByEnrollment.set(String(student.enrollment).trim(), student);
+    }
+    if (student.scholarNo) {
+      studentsByScholar.set(String(student.scholarNo).trim(), student);
+    }
+  }
+
+  const validComponentKeys = new Set();
+  const componentMeta = new Map();
+  for (const subject of context.subjects) {
+    for (const examType of subject.examSetupTypes) {
+      const key = `${subject.curriculumSubjectTermMappingId}_${examType.assessmentPlanComponentId}`;
+      validComponentKeys.add(key);
+      componentMeta.set(key, {
+        curriculumSubjectTermMappingId: subject.curriculumSubjectTermMappingId,
+        assessmentPlanComponentId: examType.assessmentPlanComponentId,
+        maximumMarks: examType.maximumMarks,
+        subjectCode: subject.subjectCode,
+        examName: examType.examName,
+      });
+    }
+  }
+
+  const columns = [];
+  for (const mapRow of mapRows) {
+    const cstmId = Number(mapRow.curriculumSubjectTermMappingId);
+    const componentId = Number(mapRow.assessmentPlanComponentId);
+    const key = `${cstmId}_${componentId}`;
+    if (!validComponentKeys.has(key)) {
+      continue;
+    }
+    columns.push({
+      col: Number(mapRow.col),
+      ...componentMeta.get(key),
+    });
+  }
+
+  if (columns.length === 0) {
+    const error = new Error('No valid assessment components found in the uploaded sheet.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const toCreate = [];
+  const toUpdate = [];
+  const errors = [];
+
+  for (let rowIndex = 4; rowIndex < sheetRows.length; rowIndex++) {
+    const row = sheetRows[rowIndex];
+    if (!row) {
+      continue;
+    }
+    const studentIdCell = row[0];
+    const scholarOrEnrollment = row[1] != null ? String(row[1]).trim() : '';
+    if (!studentIdCell && !scholarOrEnrollment) {
+      continue;
+    }
+
+    let student = null;
+    if (studentIdCell) {
+      student = studentsById.get(Number(studentIdCell));
+    }
+    if (!student && scholarOrEnrollment) {
+      student =
+        studentsByScholar.get(scholarOrEnrollment) ||
+        studentsByEnrollment.get(scholarOrEnrollment);
+    }
+    if (!student) {
+      errors.push(`Row ${rowIndex + 1}: student not found (${scholarOrEnrollment || studentIdCell})`);
+      continue;
+    }
+
+    for (const column of columns) {
+      const rawValue = row[column.col];
+      const obtainedMarks = parseMoneyInput(rawValue);
+      if (obtainedMarks == null) {
+        continue;
+      }
+      if (Number.isNaN(obtainedMarks) || decimalGreaterThan(0, obtainedMarks)) {
+        errors.push(
+          `Row ${rowIndex + 1}: invalid marks for ${column.subjectCode} ${column.examName}`,
+        );
+        continue;
+      }
+      if (decimalGreaterThan(obtainedMarks, column.maximumMarks)) {
+        errors.push(
+          `Row ${rowIndex + 1}: ${column.subjectCode} ${column.examName} exceeds maximum ${column.maximumMarks}`,
+        );
+        continue;
+      }
+
+      const existingKey = `${student.studentId}_${column.curriculumSubjectTermMappingId}_${column.assessmentPlanComponentId}`;
+      const existing = context.marksByKey.get(existingKey);
+      const payload = {
+        studentId: student.studentId,
+        curriculumSubjectTermMappingId: column.curriculumSubjectTermMappingId,
+        assessmentPlanComponentId: column.assessmentPlanComponentId,
+        maximumMarks: column.maximumMarks,
+        obtainedMarks,
+      };
+      if (existing) {
+        toUpdate.push({
+          studentResultItemId: existing.studentResultItemId,
+          payload,
+        });
+      } else {
+        toCreate.push(payload);
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    const error = new Error(errors[0]);
+    error.statusCode = 400;
+    error.details = errors;
+    throw error;
+  }
+
+  if (toCreate.length === 0 && toUpdate.length === 0) {
+    const error = new Error('No obtained marks found in the uploaded sheet.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const transaction = await sequelize.transaction();
+  try {
+    if (toCreate.length > 0) {
+      await previousAcademicRepository.createStudentResultItems(toCreate, transaction);
+    }
+    for (const item of toUpdate) {
+      await previousAcademicRepository.updateStudentResultItem(
+        item.studentResultItemId,
+        item.payload,
+        transaction,
+      );
+    }
+    await transaction.commit();
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+
+  return {
+    created: toCreate.length,
+    updated: toUpdate.length,
+  };
 }

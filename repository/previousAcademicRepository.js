@@ -159,23 +159,24 @@ export async function getAssessmentPlanSubjectMappings(batchTermMappingIds, cour
   });
 }
 
-export async function getHistoricalResultsByTermIds(batchTermMappingIds) {
-  if (batchTermMappingIds.length === 0) {
+export async function getHistoricalMarksByCstmIds(cstmIds) {
+  if (!cstmIds || cstmIds.length === 0) {
     return [];
   }
 
-  return scoped(models.studentHistoricalResultModel, {
+  return scoped(models.studentResultItemModel, {
     scopeConfig: { academicYear: false },
   }).findAll({
     where: {
-      curriculumBatchTermMappingId: { [Op.in]: batchTermMappingIds },
+      curriculumSubjectTermMappingId: { [Op.in]: cstmIds },
     },
     attributes: [
-      'studentHistoricalResultId',
-      'curriculumBatchTermMappingId',
-      'freezeStatus',
-      'isFrozen',
-      'resultStatus',
+      'studentResultItemId',
+      'studentId',
+      'curriculumSubjectTermMappingId',
+      'assessmentPlanComponentId',
+      'maximumMarks',
+      'obtainedMarks',
     ],
   });
 }
@@ -189,6 +190,7 @@ export async function findBatchMappingDetails(curriculumBatchMappingId) {
         {
           model: models.curriculumModel,
           as: 'curriculum',
+          required: true,
           attributes: ['curriculumId', 'name', 'courseId'],
           include: [
             {
@@ -202,28 +204,6 @@ export async function findBatchMappingDetails(curriculumBatchMappingId) {
                 'totalTerms',
                 'courseDuration',
               ],
-              include: [
-                {
-                  model: models.sessionCouseMappingModel,
-                  as: 'sessionCourseMappings',
-                  required: false,
-                  attributes: ['sessionCourseMappingId', 'sessionId', 'courseId'],
-                  where: buildScope(models.sessionCouseMappingModel, {
-                    scopeConfig: { academicYear: false },
-                  }),
-                  include: [
-                    {
-                      model: models.sessionModel,
-                      as: 'session',
-                      attributes: ['sessionId', 'sessionName'],
-                      required: false,
-                      where: buildScope(models.sessionModel, {
-                        scopeConfig: { academicYear: false },
-                      }),
-                    },
-                  ],
-                },
-              ],
             },
             {
               model: models.curriculumSubjectTermMappingModel,
@@ -233,6 +213,13 @@ export async function findBatchMappingDetails(curriculumBatchMappingId) {
                 'curriculumSubjectTermMappingId',
                 'subjectId',
                 'term',
+              ],
+              include: [
+                {
+                  model: models.subjectModel,
+                  as: 'subject',
+                  attributes: ['subjectId', 'subjectCode', 'subjectName'],
+                },
               ],
             },
           ],
@@ -248,6 +235,7 @@ export async function findBatchMappingDetails(curriculumBatchMappingId) {
           ],
         },
       ],
+      order: [[{ model: models.curriculumBatchTermMappingModel, as: 'termMappings' }, 'term', 'ASC']],
     },
   );
 }
@@ -260,4 +248,156 @@ export async function countBatchStudents(courseId, sessionId, batchYear) {
   return scoped(models.studentModel, {
     scopeConfig: { academicYear: false },
   }).count({ where });
+}
+
+export async function findTermMappingWithBatch(curriculumBatchTermMappingId) {
+  return scoped(models.curriculumBatchTermMappingModel).findByPk(
+    curriculumBatchTermMappingId,
+    {
+      attributes: [
+        'curriculumBatchTermMappingId',
+        'curriculumBatchMappingId',
+        'term',
+        'yearNumber',
+        'year',
+      ],
+      include: [
+        {
+          model: models.curriculumBatchMappingModel,
+          as: 'batchMapping',
+          required: true,
+          attributes: ['curriculumBatchMappingId', 'curriculumId', 'batch'],
+          include: [
+            {
+              model: models.curriculumModel,
+              as: 'curriculum',
+              attributes: ['curriculumId', 'name', 'courseId'],
+              required: true,
+              where: buildScope(models.curriculumModel),
+              include: [
+                {
+                  model: models.courseModel,
+                  as: 'course',
+                  attributes: ['courseId', 'courseName', 'courseCode'],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  );
+}
+
+export async function findStudentsByCourseBatch(courseId, batchYear, sessionId) {
+  const where = { courseId, batchYear };
+  if (sessionId) {
+    where.sessionId = sessionId;
+  }
+
+  return scoped(models.studentModel, {
+    scopeConfig: { academicYear: false },
+  }).findAll({
+    where,
+    attributes: [
+      'studentId',
+      'firstName',
+      'middleName',
+      'lastName',
+      'enrollNumber',
+      'scholarNumber',
+      'batchYear',
+      'sessionId',
+    ],
+    order: [
+      ['enrollNumber', 'ASC'],
+      ['firstName', 'ASC'],
+    ],
+  });
+}
+
+export async function findAssessmentPlanSubjectsForTerm(
+  curriculumBatchTermMappingId,
+  sessionId,
+) {
+  const where = { curriculumBatchTermMappingId };
+  if (sessionId) {
+    where.sessionId = { [Op.or]: [sessionId, null] };
+  }
+
+  return scoped(models.assessmentPlanSubjectMappingModel).findAll({
+    where,
+    attributes: [
+      'assessmentPlanSubjectMappingId',
+      'assessmentPlanId',
+      'subjectId',
+      'curriculumBatchTermMappingId',
+      'courseId',
+      'sessionId',
+    ],
+    include: [
+      {
+        model: models.subjectModel,
+        as: 'subject',
+        required: true,
+        attributes: ['subjectId', 'subjectCode', 'subjectName'],
+      },
+      {
+        model: models.assessmentPlanModel,
+        as: 'assessmentPlan',
+        required: true,
+        attributes: ['assessmentPlanId', 'planName', 'planCode'],
+        where: buildScope(models.assessmentPlanModel, {
+          scopeConfig: { academicYear: false },
+        }),
+        include: [
+          {
+            model: models.assessmentPlanComponentModel,
+            as: 'components',
+            required: true,
+            attributes: [
+              'assessmentPlanComponentId',
+              'examSetupTypeId',
+              'weightagePercentage',
+            ],
+            include: [
+              {
+                model: models.examSetupTypeModel,
+                as: 'examSetupType',
+                required: true,
+                attributes: ['examSetupTypeId', 'examName', 'examCode'],
+                where: buildScope(models.examSetupTypeModel, {
+                  scopeConfig: { academicYear: false },
+                }),
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+}
+
+export async function findSubjectTermMappingsByCurriculumTerm(curriculumId, term) {
+  return scoped(models.curriculumSubjectTermMappingModel).findAll({
+    where: { curriculumId, term },
+    attributes: [
+      'curriculumSubjectTermMappingId',
+      'curriculumId',
+      'subjectId',
+      'term',
+      'credit',
+    ],
+  });
+}
+
+export async function createStudentResultItems(rows, transaction) {
+  return scoped(models.studentResultItemModel).bulkCreate(rows, { transaction });
+}
+
+export async function updateStudentResultItem(studentResultItemId, payload, transaction) {
+  return scoped(models.studentResultItemModel).update(payload, {
+    where: { studentResultItemId },
+    transaction,
+  });
 }
