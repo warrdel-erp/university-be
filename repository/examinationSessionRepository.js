@@ -340,7 +340,6 @@ export async function findAssessmentPlanSubjectMappings(where, options = {}) {
       "curriculumBatchTermMappingId",
       "courseId",
       "sessionId",
-      "academicYearId",
       "assessmentPlanId",
     ],
     raw: true,
@@ -355,7 +354,6 @@ export async function findAssessmentPlansByIds(planIds, options = {}) {
     attributes: [
       "assessmentPlanId",
       "courseId",
-      "academicYearId",
       "planName",
       "planCode",
     ],

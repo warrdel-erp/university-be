@@ -117,25 +117,12 @@ async function resolveSessionId(examDetail) {
 
   const mapping = await scoped(model.assessmentPlanSubjectMappingModel).findOne({
     where: mappingWhere,
-    attributes: ["sessionId", "academicYearId", "courseId"],
+    attributes: ["sessionId", "courseId"],
     raw: true,
   });
 
   let mappedSessionId = mapping?.sessionId ? Number(mapping.sessionId) : null;
-  let mappedAcademicYearId = mapping?.academicYearId
-    ? Number(mapping.academicYearId)
-    : null;
-
-  if (!mappedAcademicYearId && mappedCourseId) {
-    const plan = await scoped(model.assessmentPlanModel).findOne({
-      where: { courseId: mappedCourseId, isActive: true },
-      attributes: ["academicYearId"],
-      raw: true,
-    });
-    if (plan?.academicYearId) {
-      mappedAcademicYearId = Number(plan.academicYearId);
-    }
-  }
+  let mappedAcademicYearId = null;
 
   const candidateSessionId = examDetail.sessionId
     ? Number(examDetail.sessionId)

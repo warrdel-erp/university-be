@@ -4302,15 +4302,6 @@ academicRegulationModel.hasMany(assessmentPlanModel, {
   as: "assessmentPlans",
 });
 
-assessmentPlanModel.belongsTo(acedmicYearModel, {
-  foreignKey: "academicYearId",
-  as: "academicYear",
-});
-acedmicYearModel.hasMany(assessmentPlanModel, {
-  foreignKey: "academicYearId",
-  as: "assessmentPlans",
-});
-
 assessmentPlanModel.belongsTo(gradingModel, {
   foreignKey: "gradingId",
   as: "gradingScheme",
@@ -4318,15 +4309,6 @@ assessmentPlanModel.belongsTo(gradingModel, {
 gradingModel.hasMany(assessmentPlanModel, {
   foreignKey: "gradingId",
   as: "assessmentPlans",
-});
-
-assessmentPlanComponentModel.belongsTo(acedmicYearModel, {
-  foreignKey: "academicYearId",
-  as: "academicYear",
-});
-acedmicYearModel.hasMany(assessmentPlanComponentModel, {
-  foreignKey: "academicYearId",
-  as: "assessmentPlanComponents",
 });
 
 assessmentPlanComponentModel.belongsTo(examSetupTypeModel, {
@@ -4373,10 +4355,6 @@ assessmentPlanSubjectMappingModel.belongsTo(courseModel, {
 assessmentPlanSubjectMappingModel.belongsTo(sessionModel, {
   foreignKey: "sessionId",
   as: "session",
-});
-assessmentPlanSubjectMappingModel.belongsTo(acedmicYearModel, {
-  foreignKey: "academicYearId",
-  as: "academicYear",
 });
 assessmentPlanSubjectMappingModel.belongsTo(curriculumBatchTermMappingModel, {
   foreignKey: "curriculumBatchTermMappingId",

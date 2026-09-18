@@ -95,8 +95,6 @@ export async function createAssessmentPlan(planData, options = {}) {
     const componentsToCreate = components.map((comp) => ({
       ...comp,
       assessmentPlanId: record.assessmentPlanId,
-      academicYearId:
-        comp.academicYearId || mainPlanData.academicYearId || null,
       universityId: mainPlanData.universityId,
       instituteId: mainPlanData.instituteId,
       createdBy: mainPlanData.createdBy,
@@ -170,17 +168,6 @@ export async function getAssessmentPlans({
         required: false,
       },
       {
-        model: model.acedmicYearModel,
-        as: "academicYear",
-        attributes: [
-          "academicYearId",
-          "yearTitle",
-          "startingDate",
-          "endingDate",
-        ],
-        required: false,
-      },
-      {
         model: model.gradingModel,
         as: "gradingScheme",
         attributes: ["gradingId", "gradingName", "gradingCode"],
@@ -234,17 +221,6 @@ export async function getAssessmentPlanById(assessmentPlanId, options = {}) {
           "academicRegulationId",
           "regulationCode",
           "regulationName",
-        ],
-        required: false,
-      },
-      {
-        model: model.acedmicYearModel,
-        as: "academicYear",
-        attributes: [
-          "academicYearId",
-          "yearTitle",
-          "startingDate",
-          "endingDate",
         ],
         required: false,
       },
@@ -303,8 +279,6 @@ export async function updateAssessmentPlan(
       const componentsToCreate = components.map((comp) => ({
         ...comp,
         assessmentPlanId: planId,
-        academicYearId:
-          comp.academicYearId || existingPlan?.academicYearId || null,
         universityId: existingPlan?.universityId,
         instituteId: existingPlan?.instituteId,
         createdBy: mainUpdateData.updatedBy || null,
@@ -710,7 +684,6 @@ export async function findOverviewByCurriculumBatchMappingId({
               "subjectId",
               "courseId",
               "sessionId",
-              "academicYearId",
               "universityId",
               "instituteId",
               "createdAt",
@@ -729,7 +702,6 @@ export async function findOverviewByCurriculumBatchMappingId({
                   "planCode",
                   "description",
                   "courseId",
-                  "academicYearId",
                   "regulationId",
                   "gradingId",
                   "status",
@@ -960,10 +932,6 @@ export async function getAssessmentPlanSubjectMappings({
   if (sessionId) {
     where.sessionId = Number(sessionId);
   }
-  if (academicYearId) {
-    where.academicYearId = Number(academicYearId);
-  }
-
   const { count, rows } = await scoped(
     model.assessmentPlanSubjectMappingModel,
   ).findAndCountAll({
@@ -975,7 +943,6 @@ export async function getAssessmentPlanSubjectMappings({
       "curriculumBatchTermMappingId",
       "courseId",
       "sessionId",
-      "academicYearId",
       "createdAt",
       "updatedAt",
     ],
@@ -988,7 +955,6 @@ export async function getAssessmentPlanSubjectMappings({
           "planName",
           "planCode",
           "courseId",
-          "academicYearId",
           "status",
           "isActive",
         ],
@@ -1038,12 +1004,6 @@ export async function getAssessmentPlanSubjectMappings({
         model: model.sessionModel,
         as: "session",
         attributes: ["sessionId", "sessionName"],
-        required: false,
-      },
-      {
-        model: model.acedmicYearModel,
-        as: "academicYear",
-        attributes: ["academicYearId", "yearTitle"],
         required: false,
       },
     ],

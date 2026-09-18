@@ -733,69 +733,6 @@ export async function getTermStudents(curriculumBatchTermMappingId, sessionId = 
   };
 }
 
-export async function downloadTermMarksTemplate(curriculumBatchTermMappingId, sessionId = null) {
-  const context = await loadTermMarksContext(curriculumBatchTermMappingId, sessionId);
-
-  const subjectHeader = ['', '', ''];
-  const columnHeader = ['studentId', 'Scholar No', 'Student Name'];
-  const mapRows = [];
-  const merges = [];
-
-  for (const subject of context.subjects) {
-    const startCol = columnHeader.length;
-    for (const examType of subject.examSetupTypes) {
-      if (columnHeader.length === startCol) {
-        subjectHeader.push(`${subject.subjectCode} - ${subject.subjectName}`);
-      } else {
-        subjectHeader.push('');
-      }
-      columnHeader.push(examType.examName);
-      mapRows.push({
-        col: columnHeader.length - 1,
-        subjectId: subject.subjectId,
-        subjectCode: subject.subjectCode,
-        curriculumSubjectTermMappingId: subject.curriculumSubjectTermMappingId,
-        assessmentPlanComponentId: examType.assessmentPlanComponentId,
-        examSetupTypeId: examType.examSetupTypeId,
-        examName: examType.examName,
-        maximumMarks: examType.maximumMarks,
-      });
-    }
-    const endCol = columnHeader.length - 1;
-    if (endCol > startCol) {
-      merges.push({ s: { r: 2, c: startCol }, e: { r: 2, c: endCol } });
-    }
-  }
-
-  const aoa = [
-    [`Term ${context.term} · ${context.courseName} · Batch ${context.batch}`],
-    [],
-    subjectHeader,
-    columnHeader,
-  ];
-  for (const student of context.students) {
-    const row = [student.studentId, student.scholarNo || student.enrollment, student.fullName];
-    for (const mark of student.marks) {
-      row.push(mark.obtainedMarks == null ? '' : mark.obtainedMarks);
-    }
-    aoa.push(row);
-  }
-
-  const workbook = xlsx.utils.book_new();
-  const marksSheet = xlsx.utils.aoa_to_sheet(aoa);
-  if (merges.length > 0) {
-    marksSheet['!merges'] = merges;
-  }
-  xlsx.utils.book_append_sheet(workbook, marksSheet, 'Marks');
-  xlsx.utils.book_append_sheet(workbook, xlsx.utils.json_to_sheet(mapRows), '_map');
-  workbook.Workbook = { Sheets: [{ Hidden: 0 }, { Hidden: 1 }] };
-
-  return {
-    buffer: xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' }),
-    fileName: `term-${context.term}-batch-${context.batch}-marks.xlsx`,
-  };
-}
-
 export async function uploadTermMarks(curriculumBatchTermMappingId, file, sessionId = null) {
   if (!file?.data && !file?.buffer) {
     const error = new Error('Excel file is required (form-data field: marks)');

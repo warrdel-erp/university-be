@@ -48,17 +48,11 @@ export const getTermStudents = async (req, res) => {
 
 export const downloadTermMarksTemplate = async (req, res) => {
   try {
-    const { buffer, fileName } = await previousAcademicService.downloadTermMarksTemplate(
+    const data = await previousAcademicService.getTermStudents(
       req.params.curriculumBatchTermMappingId,
       req.query.sessionId,
     );
-    res.setHeader(
-      'Content-Type',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    );
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
- 
-    return SuccessResponse(res, 200, 'Term marks template downloaded successfully', buffer);
+    return SuccessResponse(res, 200, 'Term marks template retrieved successfully', data);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || 'Internal Server Error');
   }
