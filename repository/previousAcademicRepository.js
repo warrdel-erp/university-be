@@ -310,6 +310,17 @@ export async function findStudentsByCourseBatch(courseId, batchYear, sessionId) 
       'batchYear',
       'sessionId',
     ],
+    include: [
+      {
+        model: models.sessionModel,
+        as: 'studentSession',
+        required: false,
+        attributes: ['sessionId', 'sessionName'],
+        where: buildScope(models.sessionModel, {
+          scopeConfig: { academicYear: false },
+        }),
+      },
+    ],
     order: [
       ['enrollNumber', 'ASC'],
       ['firstName', 'ASC'],
@@ -389,6 +400,14 @@ export async function findSubjectTermMappingsByCurriculumTerm(curriculumId, term
       'term',
       'credit',
     ],
+    include: [
+      {
+        model: models.subjectModel,
+        as: 'subject',
+        required: true,
+        attributes: ['subjectId', 'subjectCode', 'subjectName'],
+      },
+    ],
   });
 }
 
@@ -400,6 +419,67 @@ export async function upsertStudentResultItems(rows, transaction) {
   return scoped(models.studentResultItemModel).bulkCreate(rows, {
     transaction,
     updateOnDuplicate: ['maximumMarks', 'obtainedMarks', 'creditEarned', 'updatedAt'],
+  });
+}
+
+export async function createUploadLog(payload, transaction) {
+  return scoped(models.previousAcademicUploadLogModel).create(payload, { transaction });
+}
+
+export async function findUploadLogsByTermMappingId(curriculumBatchTermMappingId, sessionId) {
+  const where = { curriculumBatchTermMappingId };
+  if (sessionId) {
+    where.sessionId = sessionId;
+  }
+
+  return scoped(models.previousAcademicUploadLogModel).findAll({
+    where,
+    attributes: [
+      'previousAcademicUploadLogId',
+      'curriculumBatchTermMappingId',
+      'sessionId',
+      'fileName',
+      'mimeType',
+      'fileSize',
+      'status',
+      'errorMessage',
+      'entriesCreated',
+      'entriesUpdated',
+      'createdBy',
+      'createdAt',
+    ],
+    include: [
+      {
+        model: models.users,
+        as: 'uploadedBy',
+        required: false,
+        attributes: ['userId', 'userName'],
+      },
+      {
+        model: models.sessionModel,
+        as: 'session',
+        required: false,
+        attributes: ['sessionId', 'sessionName'],
+        where: buildScope(models.sessionModel, {
+          scopeConfig: { academicYear: false },
+        }),
+      },
+    ],
+    order: [['createdAt', 'DESC']],
+  });
+}
+
+export async function findSessionsByIds(sessionIds) {
+  if (!sessionIds || sessionIds.length === 0) {
+    return [];
+  }
+
+  return scoped(models.sessionModel, {
+    scopeConfig: { academicYear: false },
+  }).findAll({
+    where: { sessionId: { [Op.in]: sessionIds } },
+    attributes: ['sessionId', 'sessionName'],
+    order: [['sessionId', 'ASC']],
   });
 }
 

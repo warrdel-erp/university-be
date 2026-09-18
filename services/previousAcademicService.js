@@ -4,10 +4,12 @@ import { resolveActiveAcademicYearContext } from '../utility/curriculumSubjectsB
 import sequelize from '../database/sequelizeConfig.js';
 import xlsx from 'xlsx';
 import {
+  decimalAdd,
   decimalGreaterThan,
   parseMoneyInput,
   toMoneyNumber,
 } from '../utility/decimalMoney.js';
+import { getTenantStore } from '../utility/requestContext.js';
 
 async function getActiveYear() {
     const ctx = await resolveActiveAcademicYearContext();
@@ -770,6 +772,10 @@ async function loadTermMarksContext(curriculumBatchTermMappingId, sessionId = nu
         });
       }
     }
+    let sessionName = null;
+    if (student.studentSession) {
+      sessionName = student.studentSession.sessionName;
+    }
     students.push({
       studentId: student.studentId,
       firstName: student.firstName,
@@ -777,6 +783,8 @@ async function loadTermMarksContext(curriculumBatchTermMappingId, sessionId = nu
       enrollment: student.enrollNumber,
       scholarNo: student.scholarNumber,
       batch: student.batchYear,
+      sessionId: student.sessionId ? Number(student.sessionId) : null,
+      sessionName,
       marks,
     });
   }
@@ -798,7 +806,7 @@ async function loadTermMarksContext(curriculumBatchTermMappingId, sessionId = nu
   };
 }
 
-export async function getTermStudents(curriculumBatchTermMappingId, sessionId = null) {
+export async function getTermMarksTemplate(curriculumBatchTermMappingId, sessionId = null) {
   const context = await loadTermMarksContext(curriculumBatchTermMappingId, sessionId);
   return {
     curriculumBatchTermMappingId: context.curriculumBatchTermMappingId,
@@ -810,6 +818,368 @@ export async function getTermStudents(curriculumBatchTermMappingId, sessionId = 
     sessionId: context.sessionId,
     students: context.students,
     subjects: context.subjects,
+  };
+}
+
+function buildStudentTermReview(student, context) {
+  const termLabel = `Semester ${context.term}`;
+  const issues = [];
+  const subjects = [];
+  let missingCount = 0;
+
+  for (const subject of context.subjects) {
+    const assessments = [];
+    let totalObtainedMarks = 0;
+    let totalMaximumMarks = 0;
+
+    for (const examType of subject.examSetupTypes) {
+      const existing = context.marksByKey.get(
+        `${student.studentId}_${subject.curriculumSubjectTermMappingId}_${examType.assessmentPlanComponentId}`,
+      );
+      const obtainedMarks = existing ? toMoneyNumber(existing.obtainedMarks) : null;
+      const maximumMarks = examType.maximumMarks;
+      totalMaximumMarks = decimalAdd(totalMaximumMarks, maximumMarks);
+
+      if (obtainedMarks == null) {
+        missingCount += 1;
+        issues.push({
+          type: 'warning',
+          code: 'MARKS_MISSING',
+          message: `${examType.examName} result missing`,
+          subjectId: subject.subjectId,
+          subjectCode: subject.subjectCode,
+          subjectName: subject.subjectName,
+          examName: examType.examName,
+          assessmentPlanComponentId: examType.assessmentPlanComponentId,
+        });
+      } else {
+        totalObtainedMarks = decimalAdd(totalObtainedMarks, obtainedMarks);
+        if (decimalGreaterThan(obtainedMarks, maximumMarks)) {
+          issues.push({
+            type: 'warning',
+            code: 'MARKS_EXCEED_MAXIMUM',
+            message: `${examType.examName} obtained marks exceed maximum ${maximumMarks}`,
+            subjectId: subject.subjectId,
+            subjectCode: subject.subjectCode,
+            subjectName: subject.subjectName,
+            examName: examType.examName,
+            assessmentPlanComponentId: examType.assessmentPlanComponentId,
+            obtainedMarks,
+            maximumMarks,
+          });
+        }
+      }
+
+      assessments.push({
+        examSetupTypeId: examType.examSetupTypeId,
+        examName: examType.examName,
+        examCode: examType.examCode,
+        assessmentPlanComponentId: examType.assessmentPlanComponentId,
+        obtainedMarks,
+        maximumMarks,
+      });
+    }
+
+    subjects.push({
+      subjectId: subject.subjectId,
+      subjectCode: subject.subjectCode,
+      subjectName: subject.subjectName,
+      curriculumSubjectTermMappingId: subject.curriculumSubjectTermMappingId,
+      assessments,
+      totalObtainedMarks,
+      totalMaximumMarks,
+    });
+  }
+
+  const isComplete = missingCount === 0;
+  const academicHistory = isComplete ? `${termLabel} complete` : `${termLabel} incomplete`;
+  const status = issues.length > 0 ? 'Ready with warning' : 'Ready';
+
+  return {
+    studentId: student.studentId,
+    scholarNo: student.scholarNo || student.enrollment,
+    studentName: student.fullName,
+    enrollment: student.enrollment,
+    batch: student.batch,
+    sessionId: student.sessionId,
+    sessionName: student.sessionName,
+    academicHistory,
+    backlogs: 0,
+    issueCount: issues.length,
+    status,
+    issues,
+    subjects,
+  };
+}
+
+function collectSessions(students) {
+  const seen = new Set();
+  const sessions = [];
+  for (const student of students) {
+    if (student.sessionId == null) {
+      continue;
+    }
+    if (seen.has(student.sessionId)) {
+      continue;
+    }
+    seen.add(student.sessionId);
+    sessions.push({
+      sessionId: student.sessionId,
+      sessionName: student.sessionName,
+    });
+  }
+  return sessions;
+}
+
+export async function getTermStudents(curriculumBatchTermMappingId, sessionId = null) {
+  const context = await loadTermMarksContext(curriculumBatchTermMappingId, sessionId);
+  const students = [];
+  let readyCount = 0;
+  let readyWithWarningCount = 0;
+  let warningIssueCount = 0;
+
+  for (const student of context.students) {
+    const review = buildStudentTermReview(student, context);
+    if (review.issueCount > 0) {
+      readyWithWarningCount += 1;
+    } else {
+      readyCount += 1;
+    }
+    warningIssueCount += review.issueCount;
+
+    students.push({
+      studentId: review.studentId,
+      scholarNo: review.scholarNo,
+      studentName: review.studentName,
+      enrollment: review.enrollment,
+      batch: review.batch,
+      sessionId: review.sessionId,
+      sessionName: review.sessionName,
+      academicHistory: review.academicHistory,
+      backlogs: review.backlogs,
+      issueCount: review.issueCount,
+      status: review.status,
+    });
+  }
+
+  const sessions = collectSessions(students);
+
+  return {
+    curriculumBatchTermMappingId: context.curriculumBatchTermMappingId,
+    term: context.term,
+    year: context.year,
+    yearNumber: context.yearNumber,
+    batch: context.batch,
+    courseId: context.courseId,
+    courseName: context.courseName,
+    courseCode: context.courseCode,
+    sessionId: sessionId ? Number(sessionId) : null,
+    sessions,
+    summary: {
+      totalStudents: students.length,
+      ready: readyCount + readyWithWarningCount,
+      readyWithWarning: readyWithWarningCount,
+      blocked: 0,
+      issues: warningIssueCount,
+      blocking: 0,
+      warnings: warningIssueCount,
+    },
+    students,
+  };
+}
+
+export async function getTermStudentDetails(
+  curriculumBatchTermMappingId,
+  studentId,
+  sessionId = null,
+) {
+  const context = await loadTermMarksContext(curriculumBatchTermMappingId, sessionId);
+  let matched = null;
+  for (const student of context.students) {
+    if (Number(student.studentId) === Number(studentId)) {
+      matched = student;
+      break;
+    }
+  }
+  if (!matched) {
+    const error = new Error(`Student with ID ${studentId} not found for this term`);
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const review = buildStudentTermReview(matched, context);
+  return {
+    curriculumBatchTermMappingId: context.curriculumBatchTermMappingId,
+    term: context.term,
+    year: context.year,
+    yearNumber: context.yearNumber,
+    batch: context.batch,
+    courseId: context.courseId,
+    courseName: context.courseName,
+    courseCode: context.courseCode,
+    session: {
+      sessionId: review.sessionId,
+      sessionName: review.sessionName,
+    },
+    ...review,
+  };
+}
+
+function assessmentPlanComponentCount(mapping) {
+  if (!mapping) {
+    return 0;
+  }
+  const seen = new Set();
+  for (const component of mapping.assessmentPlan.components) {
+    seen.add(Number(component.assessmentPlanComponentId));
+  }
+  return seen.size;
+}
+
+export async function getTermSubjects(curriculumBatchTermMappingId, sessionId = null) {
+  const termMapping = await previousAcademicRepository.findTermMappingWithBatch(
+    curriculumBatchTermMappingId,
+  );
+  if (!termMapping) {
+    const error = new Error(
+      `Curriculum batch term mapping with ID ${curriculumBatchTermMappingId} not found`,
+    );
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const batchMapping = termMapping.batchMapping;
+  const curriculum = batchMapping.curriculum;
+  const course = curriculum.course;
+  const batch = Number(batchMapping.batch);
+  const courseId = Number(curriculum.courseId);
+  const curriculumId = Number(curriculum.curriculumId);
+  const term = Number(termMapping.term);
+
+  const studentRows = await previousAcademicRepository.findStudentsByCourseBatch(
+    courseId,
+    batch,
+    sessionId,
+  );
+  const cstmRows =
+    await previousAcademicRepository.findSubjectTermMappingsByCurriculumTerm(
+      curriculumId,
+      term,
+    );
+  const apMappings =
+    await previousAcademicRepository.findAssessmentPlanSubjectsForTerm(
+      curriculumBatchTermMappingId,
+      sessionId,
+    );
+
+  const cstmIds = [];
+  for (const row of cstmRows) {
+    cstmIds.push(row.curriculumSubjectTermMappingId);
+  }
+  const markRows = await previousAcademicRepository.getHistoricalMarksByCstmIds(cstmIds);
+
+  const studentsBySession = new Map();
+  for (const student of studentRows) {
+    const sid = Number(student.sessionId);
+    let list = studentsBySession.get(sid);
+    if (!list) {
+      list = [];
+      studentsBySession.set(sid, list);
+    }
+    list.push(Number(student.studentId));
+  }
+
+  const markedByCstm = new Map();
+  for (const item of markRows) {
+    const cstmId = Number(item.curriculumSubjectTermMappingId);
+    let marked = markedByCstm.get(cstmId);
+    if (!marked) {
+      marked = new Set();
+      markedByCstm.set(cstmId, marked);
+    }
+    marked.add(Number(item.studentId));
+  }
+
+  const apBySubjectSession = new Map();
+  const apBySubject = new Map();
+  for (const mapping of apMappings) {
+    const subjectId = Number(mapping.subjectId);
+    apBySubjectSession.set(`${subjectId}_${mapping.sessionId}`, mapping);
+    if (!apBySubject.has(subjectId)) {
+      apBySubject.set(subjectId, mapping);
+    }
+  }
+
+  const sessionIds = [];
+  if (sessionId) {
+    sessionIds.push(Number(sessionId));
+  } else {
+    for (const sid of studentsBySession.keys()) {
+      sessionIds.push(sid);
+    }
+  }
+  if (sessionIds.length === 0) {
+    sessionIds.push(null);
+  }
+
+  const sessions = [];
+  for (const sid of sessionIds) {
+    const sessionStudentIds = studentsBySession.get(sid) || [];
+    const totalStudents = sessionStudentIds.length;
+    const subjects = [];
+
+    for (const cstm of cstmRows) {
+      const subjectId = Number(cstm.subjectId);
+      const cstmId = Number(cstm.curriculumSubjectTermMappingId);
+      const apMapping =
+        apBySubjectSession.get(`${subjectId}_${sid}`) || apBySubject.get(subjectId);
+      const componentCount = assessmentPlanComponentCount(apMapping);
+      const markedSet = markedByCstm.get(cstmId);
+      let markedCount = 0;
+      if (markedSet) {
+        for (const studentId of sessionStudentIds) {
+          if (markedSet.has(studentId)) {
+            markedCount += 1;
+          }
+        }
+      }
+
+      let status = 'Incomplete';
+      if (totalStudents > 0 && componentCount > 0 && markedCount === totalStudents) {
+        status = 'Complete';
+      }
+
+      subjects.push({
+        subjectId,
+        subjectCode: cstm.subject.subjectCode,
+        subjectName: cstm.subject.subjectName,
+        curriculumSubjectTermMappingId: cstmId,
+        credit: Number(cstm.credit) || 0,
+        sessionId: sid,
+        studentCount: totalStudents,
+        assessmentPlanComponentCount: componentCount,
+        markedStudents: `${markedCount}/${totalStudents}`,
+        status,
+      });
+    }
+
+    sessions.push({
+      sessionId: sid,
+      studentCount: totalStudents,
+      subjects,
+    });
+  }
+
+  return {
+    curriculumBatchTermMappingId: Number(termMapping.curriculumBatchTermMappingId),
+    term,
+    year: termMapping.year,
+    yearNumber: termMapping.yearNumber,
+    batch,
+    courseId,
+    courseName: course.courseName,
+    courseCode: course.courseCode,
+    sessions,
   };
 }
 
@@ -1062,7 +1432,189 @@ function buildMarkColumns(sheetRows, examHeaderIndex, subjects) {
 }
 
 export async function uploadTermMarks(curriculumBatchTermMappingId, file, sessionId = null) {
-  if (!file?.data && !file?.buffer) {
+  const fileMeta = buildUploadFileMeta(file);
+  let status = 'SUCCESS';
+  let errorMessage = null;
+  let created = 0;
+  let updated = 0;
+  let failure = null;
+
+  try {
+    const result = await processTermMarksUpload(
+      curriculumBatchTermMappingId,
+      file,
+      sessionId,
+    );
+    created = result.created;
+    updated = result.updated;
+  } catch (error) {
+    status = 'FAILED';
+    errorMessage = formatUploadError(error);
+    failure = error;
+  }
+
+  const store = getTenantStore();
+  let log;
+  try {
+    log = await previousAcademicRepository.createUploadLog({
+      curriculumBatchTermMappingId: Number(curriculumBatchTermMappingId),
+      sessionId: sessionId ? Number(sessionId) : null,
+      fileName: fileMeta.fileName,
+      mimeType: fileMeta.mimeType,
+      fileSize: fileMeta.fileSize,
+      fileData: fileMeta.fileData,
+      status,
+      errorMessage,
+      entriesCreated: created,
+      entriesUpdated: updated,
+      createdBy: store.userId,
+    });
+  } catch (logError) {
+    if (failure) {
+      throw failure;
+    }
+    throw logError;
+  }
+
+  if (failure) {
+    throw failure;
+  }
+
+  return {
+    created,
+    updated,
+    uploadLogId: Number(log.previousAcademicUploadLogId),
+    status,
+    fileName: fileMeta.fileName,
+  };
+}
+
+export async function getTermUploadHistory(curriculumBatchTermMappingId, sessionId = null) {
+  const termMapping = await previousAcademicRepository.findTermMappingWithBatch(
+    curriculumBatchTermMappingId,
+  );
+  if (!termMapping) {
+    const error = new Error(
+      `Curriculum batch term mapping with ID ${curriculumBatchTermMappingId} not found`,
+    );
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const batchMapping = termMapping.batchMapping;
+  const curriculum = batchMapping.curriculum;
+  const course = curriculum.course;
+
+  const rows = await previousAcademicRepository.findUploadLogsByTermMappingId(
+    Number(curriculumBatchTermMappingId),
+    sessionId,
+  );
+
+  const sessions = [];
+  const seenSessionIds = new Set();
+  const uploads = [];
+  for (const row of rows) {
+    let uploadedBy = null;
+    if (row.uploadedBy) {
+      uploadedBy = {
+        userId: row.uploadedBy.userId,
+        userName: row.uploadedBy.userName,
+      };
+    }
+
+    let sessionName = null;
+    if (row.session) {
+      sessionName = row.session.sessionName;
+    }
+    if (row.sessionId != null && !seenSessionIds.has(Number(row.sessionId))) {
+      seenSessionIds.add(Number(row.sessionId));
+      sessions.push({
+        sessionId: Number(row.sessionId),
+        sessionName,
+      });
+    }
+
+    uploads.push({
+      uploadLogId: Number(row.previousAcademicUploadLogId),
+      fileName: row.fileName,
+      mimeType: row.mimeType,
+      fileSize: row.fileSize != null ? Number(row.fileSize) : null,
+      status: row.status,
+      errorMessage: row.errorMessage,
+      entriesCreated: Number(row.entriesCreated),
+      entriesUpdated: Number(row.entriesUpdated),
+      sessionId: row.sessionId,
+      sessionName,
+      createdAt: row.createdAt,
+      uploadedBy,
+    });
+  }
+
+  if (sessionId && !seenSessionIds.has(Number(sessionId))) {
+    const sessionRows = await previousAcademicRepository.findSessionsByIds([
+      Number(sessionId),
+    ]);
+    for (const session of sessionRows) {
+      sessions.push({
+        sessionId: Number(session.sessionId),
+        sessionName: session.sessionName,
+      });
+    }
+  }
+
+  return {
+    curriculumBatchTermMappingId: Number(termMapping.curriculumBatchTermMappingId),
+    course: {
+      courseId: Number(course.courseId),
+      courseName: course.courseName,
+      courseCode: course.courseCode,
+    },
+    term: {
+      curriculumBatchTermMappingId: Number(termMapping.curriculumBatchTermMappingId),
+      term: Number(termMapping.term),
+      year: termMapping.year,
+      yearNumber: termMapping.yearNumber,
+    },
+    sessions,
+    uploads,
+  };
+}
+
+function buildUploadFileMeta(file) {
+  if (!file) {
+    return {
+      fileName: null,
+      mimeType: null,
+      fileSize: null,
+      fileData: null,
+    };
+  }
+
+  const fileData = file.data || file.buffer || null;
+  let fileSize = null;
+  if (file.size != null) {
+    fileSize = Number(file.size);
+  } else if (fileData) {
+    fileSize = fileData.length;
+  }
+
+  return {
+    fileName: file.name || file.originalname || null,
+    mimeType: file.mimetype || file.mimeType || null,
+    fileSize,
+    fileData,
+  };
+}
+
+function formatUploadError(error) {
+  if (error.details && error.details.length > 0) {
+    return error.details.join('\n');
+  }
+  return error.message || 'Upload failed';
+}
+
+async function processTermMarksUpload(curriculumBatchTermMappingId, file, sessionId = null) {
+  if (!file || (!file.data && !file.buffer)) {
     const error = new Error('Excel file is required (form-data field: marks)');
     error.statusCode = 400;
     throw error;

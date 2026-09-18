@@ -2,6 +2,7 @@
 export const AUDIT_EXCLUDED_MODELS = new Set([
   "event",
   "event_log",
+  "previous_academic_upload_log",
 ]);
 
 /**

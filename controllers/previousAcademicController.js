@@ -30,6 +30,22 @@ export const getSingleBatchDetails = async (req, res) => {
   }
 };
 
+export const getTermSubjects = async (req, res) => {
+  try {
+    const data = await previousAcademicService.getTermSubjects(
+      req.params.curriculumBatchTermMappingId,
+      req.query.sessionId,
+    );
+    return SuccessResponse(res, 200, 'Term subjects retrieved successfully', data);
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || 'Internal Server Error',
+    );
+  }
+};
+
 export const getTermStudents = async (req, res) => {
   try {
     const data = await previousAcademicService.getTermStudents(
@@ -46,9 +62,26 @@ export const getTermStudents = async (req, res) => {
   }
 };
 
+export const getTermStudentDetails = async (req, res) => {
+  try {
+    const data = await previousAcademicService.getTermStudentDetails(
+      req.params.curriculumBatchTermMappingId,
+      req.params.studentId,
+      req.query.sessionId,
+    );
+    return SuccessResponse(res, 200, 'Term student details retrieved successfully', data);
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || 'Internal Server Error',
+    );
+  }
+};
+
 export const downloadTermMarksTemplate = async (req, res) => {
   try {
-    const data = await previousAcademicService.getTermStudents(
+    const data = await previousAcademicService.getTermMarksTemplate(
       req.params.curriculumBatchTermMappingId,
       req.query.sessionId,
     );
@@ -74,6 +107,22 @@ export const uploadTermMarks = async (req, res) => {
       error.statusCode || 500,
       error.message || 'Internal Server Error',
       error.details || null,
+    );
+  }
+};
+
+export const getTermUploadHistory = async (req, res) => {
+  try {
+    const data = await previousAcademicService.getTermUploadHistory(
+      req.params.curriculumBatchTermMappingId,
+      req.query.sessionId,
+    );
+    return SuccessResponse(res, 200, 'Term upload history retrieved successfully', data);
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || 'Internal Server Error',
     );
   }
 };

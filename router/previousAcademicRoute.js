@@ -28,11 +28,29 @@ const getTermStudentsParamsSchema = z.object({
     .positive('curriculumBatchTermMappingId must be a positive integer'),
 });
 
+const getTermStudentDetailsParamsSchema = z.object({
+  curriculumBatchTermMappingId: z.coerce
+    .number()
+    .int()
+    .positive('curriculumBatchTermMappingId must be a positive integer'),
+  studentId: z.coerce.number().int().positive('studentId must be a positive integer'),
+});
+
 router.get(
   '/batches',
   useAuth,
   validate({ query: getBatchesQuerySchema }),
   controller.getPreviousAcademicBatches,
+);
+
+router.get(
+  '/terms/:curriculumBatchTermMappingId/subjects',
+  useAuth,
+  validate({
+    params: getTermStudentsParamsSchema,
+    query: getSingleBatchQuerySchema,
+  }),
+  controller.getTermSubjects,
 );
 
 router.get(
@@ -56,6 +74,16 @@ router.post(
 );
 
 router.get(
+  '/terms/:curriculumBatchTermMappingId/uploads',
+  useAuth,
+  validate({
+    params: getTermStudentsParamsSchema,
+    query: getSingleBatchQuerySchema,
+  }),
+  controller.getTermUploadHistory,
+);
+
+router.get(
   '/terms/:curriculumBatchTermMappingId/students',
   useAuth,
   validate({
@@ -63,6 +91,16 @@ router.get(
     query: getSingleBatchQuerySchema,
   }),
   controller.getTermStudents,
+);
+
+router.get(
+  '/terms/:curriculumBatchTermMappingId/students/:studentId',
+  useAuth,
+  validate({
+    params: getTermStudentDetailsParamsSchema,
+    query: getSingleBatchQuerySchema,
+  }),
+  controller.getTermStudentDetails,
 );
 
 router.get(

@@ -193,6 +193,7 @@ import examRoomMaterialBundleModel from "./examRoomMaterialBundleModel.js";
 import examRoomMaterialItemModel from "./examRoomMaterialItemModel.js";
 import studentResultModel from "./studentResultModel.js";
 import studentResultItemModel from "./studentResultItemModel.js";
+import previousAcademicUploadLogModel from "./previousAcademicUploadLogModel.js";
 import eventModel from "./eventModel.js";
 import eventLogModel from "./eventLogModel.js";
 
@@ -208,6 +209,22 @@ assessmentPlanComponentModel.hasMany(studentResultItemModel, { foreignKey: "asse
 
 studentResultItemModel.belongsTo(universityModel, { foreignKey: "universityId", as: "university" });
 studentResultItemModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "institute" });
+
+previousAcademicUploadLogModel.belongsTo(curriculumBatchTermMappingModel, {
+  foreignKey: "curriculumBatchTermMappingId",
+  as: "termMapping",
+});
+curriculumBatchTermMappingModel.hasMany(previousAcademicUploadLogModel, {
+  foreignKey: "curriculumBatchTermMappingId",
+  as: "uploadLogs",
+});
+previousAcademicUploadLogModel.belongsTo(universityModel, { foreignKey: "universityId", as: "university" });
+previousAcademicUploadLogModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "institute" });
+previousAcademicUploadLogModel.belongsTo(userModel, { foreignKey: "createdBy", as: "uploadedBy" });
+previousAcademicUploadLogModel.belongsTo(sessionModel, {
+  foreignKey: "sessionId",
+  as: "session",
+});
 
 // Event / EventLog associations
 eventModel.hasMany(eventLogModel, { foreignKey: "eventId", as: "eventLogs" });
@@ -4580,6 +4597,7 @@ export {
   examRoomMaterialItemModel,
   studentResultModel,
   studentResultItemModel,
+  previousAcademicUploadLogModel,
   eventModel,
   eventLogModel,
   userModel as users,
