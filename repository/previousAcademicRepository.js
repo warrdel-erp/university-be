@@ -177,6 +177,7 @@ export async function getHistoricalMarksByCstmIds(cstmIds) {
       'assessmentPlanComponentId',
       'maximumMarks',
       'obtainedMarks',
+      'creditEarned',
     ],
   });
 }
@@ -393,6 +394,13 @@ export async function findSubjectTermMappingsByCurriculumTerm(curriculumId, term
 
 export async function createStudentResultItems(rows, transaction) {
   return scoped(models.studentResultItemModel).bulkCreate(rows, { transaction });
+}
+
+export async function upsertStudentResultItems(rows, transaction) {
+  return scoped(models.studentResultItemModel).bulkCreate(rows, {
+    transaction,
+    updateOnDuplicate: ['maximumMarks', 'obtainedMarks', 'creditEarned', 'updatedAt'],
+  });
 }
 
 export async function updateStudentResultItem(studentResultItemId, payload, transaction) {

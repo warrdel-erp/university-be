@@ -53,6 +53,10 @@ module.exports = {
             type: Sequelize.DECIMAL(6, 2),
             allowNull: false,
           },
+          credit_earned: {
+            type: Sequelize.DECIMAL(6, 2),
+            allowNull: true,
+          },
           university_id: {
             type: Sequelize.INTEGER,
             allowNull: false,

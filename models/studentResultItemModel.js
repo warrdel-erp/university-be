@@ -52,6 +52,11 @@ const studentResultItemModel = sequelize.define(
       allowNull: false,
       field: 'obtained_marks',
     },
+    creditEarned: {
+      type: DataTypes.DECIMAL(6, 2),
+      allowNull: true,
+      field: 'credit_earned',
+    },
     universityId: {
       type: DataTypes.INTEGER,
       allowNull: false,

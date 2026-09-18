@@ -60,7 +60,8 @@ export const downloadTermMarksTemplate = async (req, res) => {
 
 export const uploadTermMarks = async (req, res) => {
   try {
-    const file = req.files?.marks || req.files?.file || req.files?.students;
+    const uploaded = req.files || {};
+    const file = uploaded.marks || uploaded.file || uploaded.students || Object.values(uploaded)[0];
     const data = await previousAcademicService.uploadTermMarks(
       req.params.curriculumBatchTermMappingId,
       file,
