@@ -426,13 +426,8 @@ export async function createUploadLog(payload, transaction) {
   return scoped(models.previousAcademicUploadLogModel).create(payload, { transaction });
 }
 
-export async function findUploadLogsByTermMappingId(curriculumBatchTermMappingId, sessionId) {
-  const where = { curriculumBatchTermMappingId };
-  if (sessionId) {
-    where.sessionId = sessionId;
-  }
-
-  return scoped(models.previousAcademicUploadLogModel).findAll({
+function uploadLogListOptions(where) {
+  return {
     where,
     attributes: [
       'previousAcademicUploadLogId',
@@ -466,7 +461,29 @@ export async function findUploadLogsByTermMappingId(curriculumBatchTermMappingId
       },
     ],
     order: [['createdAt', 'DESC']],
-  });
+  };
+}
+
+export async function findUploadLogsByTermMappingId(curriculumBatchTermMappingId, sessionId) {
+  const where = { curriculumBatchTermMappingId };
+  if (sessionId) {
+    where.sessionId = sessionId;
+  }
+
+  return scoped(models.previousAcademicUploadLogModel).findAll(
+    uploadLogListOptions(where),
+  );
+}
+
+export async function findLatestUploadLogByTermMappingId(curriculumBatchTermMappingId, sessionId) {
+  const where = { curriculumBatchTermMappingId };
+  if (sessionId) {
+    where.sessionId = sessionId;
+  }
+
+  return scoped(models.previousAcademicUploadLogModel).findOne(
+    uploadLogListOptions(where),
+  );
 }
 
 export async function findSessionsByIds(sessionIds) {

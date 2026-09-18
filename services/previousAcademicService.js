@@ -931,6 +931,45 @@ function collectSessions(students) {
   return sessions;
 }
 
+function mapUploadLog(row) {
+  let uploadedBy = null;
+  if (row.uploadedBy) {
+    uploadedBy = {
+      userId: row.uploadedBy.userId,
+      userName: row.uploadedBy.userName,
+    };
+  }
+  let sessionName = null;
+  if (row.session) {
+    sessionName = row.session.sessionName;
+  }
+  return {
+    uploadLogId: Number(row.previousAcademicUploadLogId),
+    fileName: row.fileName,
+    mimeType: row.mimeType,
+    fileSize: row.fileSize != null ? Number(row.fileSize) : null,
+    status: row.status,
+    errorMessage: row.errorMessage,
+    entriesCreated: Number(row.entriesCreated),
+    entriesUpdated: Number(row.entriesUpdated),
+    sessionId: row.sessionId,
+    sessionName,
+    createdAt: row.createdAt,
+    uploadedBy,
+  };
+}
+
+async function getRecentUpload(curriculumBatchTermMappingId, sessionId) {
+  const row = await previousAcademicRepository.findLatestUploadLogByTermMappingId(
+    Number(curriculumBatchTermMappingId),
+    sessionId,
+  );
+  if (!row) {
+    return null;
+  }
+  return mapUploadLog(row);
+}
+
 export async function getTermStudents(curriculumBatchTermMappingId, sessionId = null) {
   const context = await loadTermMarksContext(curriculumBatchTermMappingId, sessionId);
   const students = [];
@@ -963,6 +1002,10 @@ export async function getTermStudents(curriculumBatchTermMappingId, sessionId = 
   }
 
   const sessions = collectSessions(students);
+  const recentUpload = await getRecentUpload(
+    context.curriculumBatchTermMappingId,
+    sessionId,
+  );
 
   return {
     curriculumBatchTermMappingId: context.curriculumBatchTermMappingId,
@@ -970,11 +1013,14 @@ export async function getTermStudents(curriculumBatchTermMappingId, sessionId = 
     year: context.year,
     yearNumber: context.yearNumber,
     batch: context.batch,
-    courseId: context.courseId,
-    courseName: context.courseName,
-    courseCode: context.courseCode,
+    course: {
+      courseId: context.courseId,
+      courseName: context.courseName,
+      courseCode: context.courseCode,
+    },
     sessionId: sessionId ? Number(sessionId) : null,
     sessions,
+    recentUpload,
     summary: {
       totalStudents: students.length,
       ready: readyCount + readyWithWarningCount,
@@ -1078,6 +1124,7 @@ export async function getTermSubjects(curriculumBatchTermMappingId, sessionId = 
   }
   const markRows = await previousAcademicRepository.getHistoricalMarksByCstmIds(cstmIds);
 
+  const sessionNameById = new Map();
   const studentsBySession = new Map();
   for (const student of studentRows) {
     const sid = Number(student.sessionId);
@@ -1087,6 +1134,9 @@ export async function getTermSubjects(curriculumBatchTermMappingId, sessionId = 
       studentsBySession.set(sid, list);
     }
     list.push(Number(student.studentId));
+    if (!sessionNameById.has(sid) && student.studentSession) {
+      sessionNameById.set(sid, student.studentSession.sessionName);
+    }
   }
 
   const markedByCstm = new Map();
@@ -1165,10 +1215,29 @@ export async function getTermSubjects(curriculumBatchTermMappingId, sessionId = 
 
     sessions.push({
       sessionId: sid,
+      sessionName: sessionNameById.get(sid) || null,
       studentCount: totalStudents,
       subjects,
     });
   }
+
+  if (sessionId && !sessionNameById.has(Number(sessionId))) {
+    const sessionRows = await previousAcademicRepository.findSessionsByIds([
+      Number(sessionId),
+    ]);
+    for (const session of sessionRows) {
+      for (const item of sessions) {
+        if (Number(item.sessionId) === Number(session.sessionId)) {
+          item.sessionName = session.sessionName;
+        }
+      }
+    }
+  }
+
+  const recentUpload = await getRecentUpload(
+    termMapping.curriculumBatchTermMappingId,
+    sessionId,
+  );
 
   return {
     curriculumBatchTermMappingId: Number(termMapping.curriculumBatchTermMappingId),
@@ -1176,10 +1245,13 @@ export async function getTermSubjects(curriculumBatchTermMappingId, sessionId = 
     year: termMapping.year,
     yearNumber: termMapping.yearNumber,
     batch,
-    courseId,
-    courseName: course.courseName,
-    courseCode: course.courseCode,
+    course: {
+      courseId,
+      courseName: course.courseName,
+      courseCode: course.courseCode,
+    },
     sessions,
+    recentUpload,
   };
 }
 
@@ -1514,40 +1586,15 @@ export async function getTermUploadHistory(curriculumBatchTermMappingId, session
   const seenSessionIds = new Set();
   const uploads = [];
   for (const row of rows) {
-    let uploadedBy = null;
-    if (row.uploadedBy) {
-      uploadedBy = {
-        userId: row.uploadedBy.userId,
-        userName: row.uploadedBy.userName,
-      };
-    }
-
-    let sessionName = null;
-    if (row.session) {
-      sessionName = row.session.sessionName;
-    }
-    if (row.sessionId != null && !seenSessionIds.has(Number(row.sessionId))) {
-      seenSessionIds.add(Number(row.sessionId));
+    const mapped = mapUploadLog(row);
+    if (mapped.sessionId != null && !seenSessionIds.has(Number(mapped.sessionId))) {
+      seenSessionIds.add(Number(mapped.sessionId));
       sessions.push({
-        sessionId: Number(row.sessionId),
-        sessionName,
+        sessionId: Number(mapped.sessionId),
+        sessionName: mapped.sessionName,
       });
     }
-
-    uploads.push({
-      uploadLogId: Number(row.previousAcademicUploadLogId),
-      fileName: row.fileName,
-      mimeType: row.mimeType,
-      fileSize: row.fileSize != null ? Number(row.fileSize) : null,
-      status: row.status,
-      errorMessage: row.errorMessage,
-      entriesCreated: Number(row.entriesCreated),
-      entriesUpdated: Number(row.entriesUpdated),
-      sessionId: row.sessionId,
-      sessionName,
-      createdAt: row.createdAt,
-      uploadedBy,
-    });
+    uploads.push(mapped);
   }
 
   if (sessionId && !seenSessionIds.has(Number(sessionId))) {
