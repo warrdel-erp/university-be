@@ -211,11 +211,10 @@ async function findSubjectIdsFromTimeTableCells(userId, courseId, term, sessionI
     return subjectIds;
 }
 
-export async function getSubjectOptions(courseId, term, academicYearId, userId, sessionId = null, unmapped = false) {
+export async function getSubjectOptions(courseId, term, userId, sessionId = null, unmapped = false) {
     const subjectWhere = {
         ...(courseId != null && { courseId: Number(courseId) }),
         ...(term != null && { term: Number(term) }),
-        ...(academicYearId != null && { academicYearId: Number(academicYearId) }),
     };
 
     if (unmapped) {

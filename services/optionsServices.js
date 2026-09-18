@@ -86,7 +86,6 @@ export async function getSubjectOptions(courseId, term, academicYearId, sessionI
     return await optionsRepository.getSubjectOptions(
         courseId,
         term,
-        resolvedAcademicYearId,
         userId,
         sessionId,
         unmapped,
