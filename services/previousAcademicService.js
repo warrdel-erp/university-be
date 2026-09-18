@@ -228,8 +228,24 @@ export async function getPreviousAcademicBatches(filters = {}) {
           : Math.min((activeYear - batchYear) * 2, totalTerms);
 
         const hasCurriculum = Boolean(currData?.curriculum);
-        const hasTermsConfigured = Boolean(currData?.terms?.length >= totalTerms);
         const hasRegulation = Boolean(regulation);
+
+        let termsConfigured = 0;
+        if (currData?.terms && currData?.subjectMappings) {
+          for (const t of currData.terms) {
+            let hasSubject = false;
+            for (const subj of currData.subjectMappings) {
+              if (Number(subj.term) === Number(t.term)) {
+                hasSubject = true;
+                break;
+              }
+            }
+            if (hasSubject) {
+              termsConfigured += 1;
+            }
+          }
+        }
+        const hasTermsConfigured = termsConfigured >= totalTerms;
 
         let currentYearTermFound = false;
         if (isCurrentBatch && currData?.terms) {
@@ -357,22 +373,6 @@ export async function getPreviousAcademicBatches(filters = {}) {
           requireSetupTotal += 1;
         }
 
-        let termsConfigured = 0;
-        if (currData?.terms && currData?.subjectMappings) {
-          for (const t of currData.terms) {
-            let hasSubject = false;
-            for (const subj of currData.subjectMappings) {
-              if (Number(subj.term) === Number(t.term)) {
-                hasSubject = true;
-                break;
-              }
-            }
-            if (hasSubject) {
-              termsConfigured += 1;
-            }
-          }
-        }
-
         batchRows.push({
           admissionBatch: batchYear,
           isCurrentBatch,
@@ -474,6 +474,20 @@ export async function getSingleBatchDetails(curriculumBatchMappingId, sessionId 
   const terms = [];
   let subjectsRequired = 0;
   let subjectsWithPlan = 0;
+  let termsConfigured = 0;
+  for (const termObj of termMappings) {
+    const termNum = Number(termObj.term);
+    let hasSubject = false;
+    for (const sm of subjectMappings) {
+      if (Number(sm.term) === termNum) {
+        hasSubject = true;
+        break;
+      }
+    }
+    if (hasSubject) {
+      termsConfigured += 1;
+    }
+  }
 
   for (const termObj of termMappings) {
     const termNum = Number(termObj.term);
@@ -516,7 +530,7 @@ export async function getSingleBatchDetails(curriculumBatchMappingId, sessionId 
 
   const hasAssessmentPlans = subjectsRequired > 0 && subjectsWithPlan >= subjectsRequired;
   let setupReadiness = 'Setup Complete';
-  if (termMappings.length < totalTerms) {
+  if (termsConfigured < totalTerms) {
     setupReadiness = 'Needs Setup';
   } else if (!hasAssessmentPlans) {
     setupReadiness = 'Needs Attention';
@@ -544,7 +558,7 @@ export async function getSingleBatchDetails(curriculumBatchMappingId, sessionId 
     openingPosition,
     setupReadiness,
     setupDetails: {
-      curriculum: `${termMappings.length}/${totalTerms} semesters configured`,
+      curriculum: `${termsConfigured}/${totalTerms} semesters configured`,
       curriculumId: curriculum.curriculumId,
       curriculumName: curriculum.name,
       curriculumBatchMappingId,
