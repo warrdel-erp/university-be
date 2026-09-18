@@ -114,6 +114,7 @@ import answerSheetQr from "./router/answerSheetQrRoute.js";
 import examResult from "./router/examResultRoute.js";
 import examOperations from "./router/examOperationsRoute.js";
 import s3FileRoute from "./router/s3FileRoute.js";
+import previousAcademic from "./router/previousAcademicRoute.js";
 // middleware
 
 app.use((req, res, next) => {
@@ -271,6 +272,8 @@ app.use("/leave-balance", leaveBalance);
 app.use("/jobSetting", jobSetting);
 app.use("/jobs", jobs);
 app.use("/api/curriculums", curriculumRoute);
+app.use("/previousAcademic", previousAcademic);
+app.use("/academic", previousAcademic);
 
 app.listen(PORT, () => {
   console.log(`server is running on port ${PORT}`);
