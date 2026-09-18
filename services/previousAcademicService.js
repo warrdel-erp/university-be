@@ -912,25 +912,6 @@ function buildStudentTermReview(student, context) {
   };
 }
 
-function collectSessions(students) {
-  const seen = new Set();
-  const sessions = [];
-  for (const student of students) {
-    if (student.sessionId == null) {
-      continue;
-    }
-    if (seen.has(student.sessionId)) {
-      continue;
-    }
-    seen.add(student.sessionId);
-    sessions.push({
-      sessionId: student.sessionId,
-      sessionName: student.sessionName,
-    });
-  }
-  return sessions;
-}
-
 function mapUploadLog(row) {
   let uploadedBy = null;
   if (row.uploadedBy) {
@@ -970,9 +951,17 @@ async function getRecentUpload(curriculumBatchTermMappingId, sessionId) {
   return mapUploadLog(row);
 }
 
-export async function getTermStudents(curriculumBatchTermMappingId, sessionId = null) {
+export async function getTermStudents(
+  curriculumBatchTermMappingId,
+  sessionId = null,
+  pagination = {},
+) {
+  const page = pagination.page != null ? Number(pagination.page) : 1;
+  const limit = pagination.limit != null ? Number(pagination.limit) : 25;
+  const statusFilter = pagination.status || null;
   const context = await loadTermMarksContext(curriculumBatchTermMappingId, sessionId);
   const students = [];
+  const filteredStudents = [];
   let readyCount = 0;
   let readyWithWarningCount = 0;
   let warningIssueCount = 0;
@@ -986,7 +975,7 @@ export async function getTermStudents(curriculumBatchTermMappingId, sessionId = 
     }
     warningIssueCount += review.issueCount;
 
-    students.push({
+    const row = {
       studentId: review.studentId,
       scholarNo: review.scholarNo,
       studentName: review.studentName,
@@ -998,39 +987,58 @@ export async function getTermStudents(curriculumBatchTermMappingId, sessionId = 
       backlogs: review.backlogs,
       issueCount: review.issueCount,
       status: review.status,
-    });
+    };
+    students.push(row);
+    let matchesStatus = true;
+    if (statusFilter === 'Ready') {
+      matchesStatus = row.status === 'Ready';
+    } else if (statusFilter === 'warning') {
+      matchesStatus = row.status === 'Ready with warning';
+    }
+    if (matchesStatus) {
+      filteredStudents.push(row);
+    }
   }
 
-  const sessions = collectSessions(students);
+  const total = filteredStudents.length;
+  const offset = (page - 1) * limit;
+  const pagedStudents = filteredStudents.slice(offset, offset + limit);
+
   const recentUpload = await getRecentUpload(
     context.curriculumBatchTermMappingId,
     sessionId,
   );
 
   return {
-    curriculumBatchTermMappingId: context.curriculumBatchTermMappingId,
-    term: context.term,
-    year: context.year,
-    yearNumber: context.yearNumber,
-    batch: context.batch,
-    course: {
-      courseId: context.courseId,
-      courseName: context.courseName,
-      courseCode: context.courseCode,
+    data: {
+      curriculumBatchTermMappingId: context.curriculumBatchTermMappingId,
+      term: context.term,
+      year: context.year,
+      yearNumber: context.yearNumber,
+      batch: context.batch,
+      course: {
+        courseId: context.courseId,
+        courseName: context.courseName,
+        courseCode: context.courseCode,
+      },
+      sessionId: sessionId ? Number(sessionId) : null,
+      recentUpload,
+      summary: {
+        totalStudents: total,
+        ready: readyCount + readyWithWarningCount,
+        readyWithWarning: readyWithWarningCount,
+        blocked: 0,
+        issues: warningIssueCount,
+        blocking: 0,
+        warnings: warningIssueCount,
+      },
+      students: pagedStudents,
     },
-    sessionId: sessionId ? Number(sessionId) : null,
-    sessions,
-    recentUpload,
-    summary: {
-      totalStudents: students.length,
-      ready: readyCount + readyWithWarningCount,
-      readyWithWarning: readyWithWarningCount,
-      blocked: 0,
-      issues: warningIssueCount,
-      blocking: 0,
-      warnings: warningIssueCount,
+    pagination: {
+      total,
+      page,
+      limit,
     },
-    students,
   };
 }
 

@@ -21,6 +21,21 @@ const getSingleBatchQuerySchema = z.object({
   sessionId: z.coerce.number().int().positive().optional(),
 });
 
+const getTermStudentsQuerySchema = z.object({
+  sessionId: z.coerce.number().int().positive().optional(),
+  status: z.preprocess((value) => {
+    if (value === '' || value == null) {
+      return undefined;
+    }
+    if (value === 'Ready with warning') {
+      return 'warning';
+    }
+    return value;
+  }, z.enum(['Ready', 'warning']).optional()),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(25),
+});
+
 const getTermStudentsParamsSchema = z.object({
   curriculumBatchTermMappingId: z.coerce
     .number()
@@ -88,7 +103,7 @@ router.get(
   useAuth,
   validate({
     params: getTermStudentsParamsSchema,
-    query: getSingleBatchQuerySchema,
+    query: getTermStudentsQuerySchema,
   }),
   controller.getTermStudents,
 );

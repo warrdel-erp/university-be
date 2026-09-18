@@ -48,11 +48,22 @@ export const getTermSubjects = async (req, res) => {
 
 export const getTermStudents = async (req, res) => {
   try {
-    const data = await previousAcademicService.getTermStudents(
+    const result = await previousAcademicService.getTermStudents(
       req.params.curriculumBatchTermMappingId,
       req.query.sessionId,
+      {
+        page: req.query.page,
+        limit: req.query.limit,
+        status: req.query.status,
+      },
     );
-    return SuccessResponse(res, 200, 'Term students retrieved successfully', data);
+    return SuccessResponse(
+      res,
+      200,
+      'Term students retrieved successfully',
+      result.data,
+      result.pagination,
+    );
   } catch (error) {
     return ErrorResponse(
       res,
