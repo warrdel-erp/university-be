@@ -160,7 +160,7 @@ export async function getAssessmentPlanSubjectMappings(batchTermMappingIds, cour
 }
 
 export async function getHistoricalMarksByCstmIds(curriculumSubjectTermMappingIds) {
-  if (!curriculumSubjectTermMappingIds || curriculumSubjectTermMappingIds.length === 0) {
+  if (curriculumSubjectTermMappingIds.length === 0) {
     return [];
   }
 
@@ -178,6 +178,7 @@ export async function getHistoricalMarksByCstmIds(curriculumSubjectTermMappingId
       'maximumMarks',
       'obtainedMarks',
       'creditEarned',
+      'attempt',
     ],
   });
 }
@@ -367,6 +368,8 @@ export async function findStudentsWithTermResultItems(
         'assessmentPlanComponentId',
         'obtainedMarks',
         'maximumMarks',
+        'creditEarned',
+        'attempt',
       ],
       where: resultItemWhere,
     });
@@ -497,7 +500,7 @@ export async function createStudentResultItems(rows, transaction) {
 export async function upsertStudentResultItems(rows, transaction) {
   return scoped(models.studentResultItemModel).bulkCreate(rows, {
     transaction,
-    updateOnDuplicate: ['maximumMarks', 'obtainedMarks', 'creditEarned', 'updatedAt'],
+    updateOnDuplicate: ['maximumMarks', 'obtainedMarks', 'creditEarned', 'attempt', 'updatedAt'],
   });
 }
 

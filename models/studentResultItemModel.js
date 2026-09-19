@@ -57,6 +57,12 @@ const studentResultItemModel = sequelize.define(
       allowNull: true,
       field: 'credit_earned',
     },
+    attempt: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 1,
+      field: 'attempt',
+    },
     universityId: {
       type: DataTypes.INTEGER,
       allowNull: false,
