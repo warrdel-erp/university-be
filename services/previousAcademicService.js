@@ -1046,6 +1046,35 @@ function mapGradingScheme(gradingScheme) {
   };
 }
 
+function mapGradingBasic(gradingScheme) {
+  if (!gradingScheme) {
+    return null;
+  }
+  return {
+    gradingId: Number(gradingScheme.gradingId),
+    gradingName: gradingScheme.gradingName,
+    gradingCode: gradingScheme.gradingCode,
+    gradingMethod: gradingScheme.gradingMethod,
+  };
+}
+
+function mapRegulationBasic(regulation) {
+  if (!regulation) {
+    return null;
+  }
+  return {
+    academicRegulationId: Number(regulation.academicRegulationId),
+    regulationCode: regulation.regulationCode,
+    regulationName: regulation.regulationName,
+    applicableBatch: regulation.applicableBatch,
+    academicYearRange: regulation.academicYearRange,
+    status: regulation.status,
+    version: regulation.version != null ? Number(regulation.version) : null,
+    gradingSchemeId:
+      regulation.gradingSchemeId != null ? Number(regulation.gradingSchemeId) : null,
+  };
+}
+
 function mapRegulationRules(regulation) {
   if (!regulation) {
     return null;
@@ -1295,8 +1324,8 @@ function buildStudentMarksRow(student, subjects, courseRegulation) {
         hasExternal = true;
       }
       if (existing) {
-        if (subjectAttempt == null && existing.attempt != null) {
-          subjectAttempt = Number(existing.attempt);
+        if (subjectAttempt == null) {
+          subjectAttempt = existing.attempt != null ? Number(existing.attempt) : 1;
         }
         if (subjectCreditEarned == null && existing.creditEarned != null) {
           subjectCreditEarned = toMoneyNumber(existing.creditEarned);
@@ -1383,7 +1412,7 @@ function buildStudentMarksRow(student, subjects, courseRegulation) {
       totalCredit: outcome.totalCredit,
       resultStatus: outcome.resultStatus,
       creditEarned: subjectCreditEarned,
-      attempt: subjectAttempt,
+      attempt: subjectAttempt != null ? subjectAttempt : 1,
     });
   }
 
@@ -1466,16 +1495,29 @@ export async function getTermStudentMarks(
       curriculumSubjectTermMappingIds,
       {},
     ),
-    previousAcademicRepository.findAcademicRegulationForCourse(courseId, sessionId),
+    previousAcademicRepository.findAcademicRegulationForCourse(courseId, sessionId, batch),
   ]);
 
   const regulationBySessionId = new Map();
+  const regulationRecordBySessionId = new Map();
   let defaultRegulation = null;
+  let defaultRegulationRecord = null;
   for (const mapping of regulationMappings) {
-    const rules = mapRegulationRules(mapping.academicRegulation);
+    const regulationRecord = mapping.academicRegulation;
+    const rules = mapRegulationRules(regulationRecord);
     regulationBySessionId.set(Number(mapping.sessionId), rules);
+    regulationRecordBySessionId.set(Number(mapping.sessionId), regulationRecord);
     if (defaultRegulation == null) {
       defaultRegulation = rules;
+      defaultRegulationRecord = regulationRecord;
+    }
+  }
+
+  let selectedRegulationRecord = defaultRegulationRecord;
+  if (sessionId != null) {
+    const sessionRegulationRecord = regulationRecordBySessionId.get(Number(sessionId));
+    if (sessionRegulationRecord) {
+      selectedRegulationRecord = sessionRegulationRecord;
     }
   }
 
@@ -1527,12 +1569,17 @@ export async function getTermStudentMarks(
     year: termMapping.year,
     yearNumber: termMapping.yearNumber,
     batch,
+    batchYear: batch,
     sessionId: sessionId ? Number(sessionId) : null,
     course: {
       courseId,
       courseName: course.courseName,
       courseCode: course.courseCode,
     },
+    regulation: mapRegulationBasic(selectedRegulationRecord),
+    grading: mapGradingBasic(
+      selectedRegulationRecord ? selectedRegulationRecord.gradingScheme : null,
+    ),
     subjects,
     students: pagedStudents,
     uploadHistory,

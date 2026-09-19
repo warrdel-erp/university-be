@@ -517,7 +517,14 @@ function gradingSchemeInclude() {
     model: models.gradingModel,
     as: 'gradingScheme',
     required: false,
-    attributes: ['gradingId', 'minimumPassingMarks', 'maximumMarks'],
+    attributes: [
+      'gradingId',
+      'gradingName',
+      'gradingCode',
+      'gradingMethod',
+      'minimumPassingMarks',
+      'maximumMarks',
+    ],
     where: buildScope(models.gradingModel, {
       scopeConfig: { academicYear: false },
     }),
@@ -539,13 +546,29 @@ function gradingSchemeInclude() {
   };
 }
 
-function academicRegulationInclude(required) {
+function academicRegulationInclude(required, batchYear = null) {
+  const regulationWhere = { ...buildScope(models.academicRegulationModel) };
+  if (batchYear != null) {
+    const batchYearText = String(batchYear);
+    regulationWhere[Op.or] = [
+      { applicableBatch: batchYearText },
+      { applicableBatch: { [Op.like]: `${batchYearText} %` } },
+      { applicableBatch: { [Op.like]: `${batchYearText}-%` } },
+    ];
+  }
+
   return {
     model: models.academicRegulationModel,
     as: 'academicRegulation',
     required,
     attributes: [
       'academicRegulationId',
+      'regulationCode',
+      'regulationName',
+      'applicableBatch',
+      'academicYearRange',
+      'status',
+      'version',
       'gradingSchemeId',
       'evaluationPattern',
       'minimumOverallMarks',
@@ -553,12 +576,12 @@ function academicRegulationInclude(required) {
       'minimumInternalMarks',
       'minimumExternalMarks',
     ],
-    where: buildScope(models.academicRegulationModel),
+    where: regulationWhere,
     include: [gradingSchemeInclude()],
   };
 }
 
-export async function findAcademicRegulationForCourse(courseId, sessionId) {
+export async function findAcademicRegulationForCourse(courseId, sessionId, batchYear = null) {
   const where = { courseId };
   if (sessionId) {
     where.sessionId = sessionId;
@@ -572,7 +595,7 @@ export async function findAcademicRegulationForCourse(courseId, sessionId) {
       'sessionId',
       'academicRegulationId',
     ],
-    include: [academicRegulationInclude(true)],
+    include: [academicRegulationInclude(true, batchYear)],
   });
 }
 
