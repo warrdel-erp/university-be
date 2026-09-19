@@ -103,17 +103,21 @@ export async function getBatchStudentCounts(courseIds, batchYears) {
       'courseId',
       'sessionId',
       'batchYear',
-      [sequelize.fn('COUNT', sequelize.col('student_id')), 'studentCount'],
+      [
+        sequelize.fn('COUNT', sequelize.fn('DISTINCT', sequelize.col('students.student_id'))),
+        'studentCount',
+      ],
     ],
     where,
     group: ['courseId', 'sessionId', 'batchYear'],
     raw: true,
+    subQuery: false,
   });
 
   const countMap = new Map();
   for (const row of rows) {
     countMap.set(
-      `${row.courseId}_${row.sessionId}_${row.batchYear}`,
+      `${Number(row.courseId)}_${Number(row.sessionId)}_${Number(row.batchYear)}`,
       Number(row.studentCount) || 0,
     );
   }

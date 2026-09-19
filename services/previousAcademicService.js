@@ -227,7 +227,9 @@ export async function getPreviousAcademicBatches(filters = {}) {
 
       for (const batchYear of courseBatches) {
         const studentCount =
-          studentCountMap.get(`${course.courseId}_${sessionId}_${batchYear}`) || 0;
+          studentCountMap.get(
+            `${Number(course.courseId)}_${Number(sessionId)}_${Number(batchYear)}`,
+          ) || 0;
         programmeSessionStudents += studentCount;
 
         const curriculumData = curriculumMap.get(`${course.courseId}_${batchYear}`);
