@@ -5,7 +5,12 @@ import sequelize from '../database/sequelizeConfig.js';
 import xlsx from 'xlsx';
 import {
   decimalAdd,
+  decimalDivide,
   decimalGreaterThan,
+  decimalGreaterThanOrEqual,
+  decimalLessThan,
+  decimalLessThanOrEqual,
+  decimalMultiply,
   parseMoneyInput,
   toMoneyNumber,
 } from '../utility/decimalMoney.js';
@@ -964,6 +969,229 @@ export async function getTermStudents(
   };
 }
 
+function mapGradingScheme(gradingScheme) {
+  const grades = [];
+  if (!gradingScheme) {
+    return { grades, minimumPassingMarks: null, maximumMarks: null };
+  }
+  for (const band of gradingScheme.grades || []) {
+    grades.push({
+      grade: band.grade,
+      minPercentage: toMoneyNumber(band.minPercentage),
+      maxPercentage: toMoneyNumber(band.maxPercentage),
+      isPass: band.isPass !== false,
+    });
+  }
+  return {
+    grades,
+    minimumPassingMarks:
+      gradingScheme.minimumPassingMarks != null
+        ? toMoneyNumber(gradingScheme.minimumPassingMarks)
+        : null,
+    maximumMarks:
+      gradingScheme.maximumMarks != null ? toMoneyNumber(gradingScheme.maximumMarks) : null,
+  };
+}
+
+function mapRegulationRules(regulation) {
+  if (!regulation) {
+    return null;
+  }
+  return {
+    evaluationPattern: regulation.evaluationPattern || null,
+    minimumOverallMarks:
+      regulation.minimumOverallMarks != null ? Number(regulation.minimumOverallMarks) : null,
+    minimumOverallPercentage:
+      regulation.minimumOverallPercentage != null
+        ? toMoneyNumber(regulation.minimumOverallPercentage)
+        : null,
+    minimumInternalMarks:
+      regulation.minimumInternalMarks != null ? Number(regulation.minimumInternalMarks) : null,
+    minimumExternalMarks:
+      regulation.minimumExternalMarks != null ? Number(regulation.minimumExternalMarks) : null,
+    gradingScheme: mapGradingScheme(regulation.gradingScheme),
+  };
+}
+
+function examGroup(examCategory) {
+  const value = String(examCategory || '').toUpperCase();
+  if (value.includes('INTERNAL')) {
+    return 'INTERNAL';
+  }
+  if (value.includes('EXTERNAL')) {
+    return 'EXTERNAL';
+  }
+  return 'OTHER';
+}
+
+function marksPercentage(obtained, maximum) {
+  if (!maximum) {
+    return 0;
+  }
+  return decimalMultiply(decimalDivide(obtained, maximum), 100);
+}
+
+function findMatchingGrade(grades, percentage) {
+  for (const band of grades) {
+    if (
+      decimalGreaterThanOrEqual(percentage, band.minPercentage) &&
+      decimalLessThanOrEqual(percentage, band.maxPercentage)
+    ) {
+      return band;
+    }
+  }
+  return null;
+}
+
+function meetsMinimumPassingMarks(obtained, maximum, minimumPassingMarks, gradingMaximumMarks) {
+  if (minimumPassingMarks == null) {
+    return true;
+  }
+  if (gradingMaximumMarks) {
+    const requiredPercentage = decimalMultiply(
+      decimalDivide(minimumPassingMarks, gradingMaximumMarks),
+      100,
+    );
+    return decimalGreaterThanOrEqual(marksPercentage(obtained, maximum), requiredPercentage);
+  }
+  return decimalGreaterThanOrEqual(obtained, minimumPassingMarks);
+}
+
+function resolveSubjectResultRules(subject, courseRegulation) {
+  let grades = subject.grading.grades;
+  let minimumPassingMarks = subject.grading.minimumPassingMarks;
+  let gradingMaximumMarks = subject.grading.maximumMarks;
+  const regulation = subject.regulation || courseRegulation;
+
+  if (grades.length === 0 && regulation) {
+    grades = regulation.gradingScheme.grades;
+    minimumPassingMarks = regulation.gradingScheme.minimumPassingMarks;
+    gradingMaximumMarks = regulation.gradingScheme.maximumMarks;
+  }
+
+  return { grades, minimumPassingMarks, gradingMaximumMarks, regulation };
+}
+
+function computeSubjectOutcome({
+  isComplete,
+  obtained,
+  maximum,
+  internalObtained,
+  externalObtained,
+  hasInternal,
+  hasExternal,
+  totalCredit,
+  grades,
+  minimumPassingMarks,
+  gradingMaximumMarks,
+  regulation,
+}) {
+  if (!isComplete) {
+    return {
+      grade: null,
+      obtainedCredit: 0,
+      totalCredit,
+      resultStatus: null,
+    };
+  }
+
+  const hasRule =
+    grades.length > 0 || minimumPassingMarks != null || regulation != null;
+  if (!hasRule) {
+    return {
+      grade: null,
+      obtainedCredit: 0,
+      totalCredit,
+      resultStatus: null,
+    };
+  }
+
+  const percentage = marksPercentage(obtained, maximum);
+  const band = findMatchingGrade(grades, percentage);
+  let passed = true;
+
+  if (grades.length > 0 && !band) {
+    passed = false;
+  }
+  if (band && !band.isPass) {
+    passed = false;
+  }
+  if (!meetsMinimumPassingMarks(obtained, maximum, minimumPassingMarks, gradingMaximumMarks)) {
+    passed = false;
+  }
+
+  if (regulation) {
+    if (
+      regulation.minimumOverallPercentage != null &&
+      decimalLessThan(percentage, regulation.minimumOverallPercentage)
+    ) {
+      passed = false;
+    }
+    if (
+      regulation.minimumOverallMarks != null &&
+      decimalLessThan(obtained, regulation.minimumOverallMarks)
+    ) {
+      passed = false;
+    }
+    if (
+      regulation.evaluationPattern !== 'EXTERNAL_ONLY' &&
+      regulation.minimumInternalMarks != null &&
+      hasInternal &&
+      decimalLessThan(internalObtained, regulation.minimumInternalMarks)
+    ) {
+      passed = false;
+    }
+    if (
+      regulation.evaluationPattern !== 'INTERNAL_ONLY' &&
+      regulation.minimumExternalMarks != null &&
+      hasExternal &&
+      decimalLessThan(externalObtained, regulation.minimumExternalMarks)
+    ) {
+      passed = false;
+    }
+  }
+
+  return {
+    grade: band ? band.grade : null,
+    obtainedCredit: passed ? totalCredit : 0,
+    totalCredit,
+    resultStatus: passed ? 'Pass' : 'Fail',
+  };
+}
+
+function toPublicTermSubjects(subjects) {
+  const publicSubjects = [];
+  for (const subject of subjects) {
+    const examSetupTypes = [];
+    for (const examType of subject.examSetupTypes) {
+      examSetupTypes.push({
+        examSetupTypeId: examType.examSetupTypeId,
+        examName: examType.examName,
+        examCode: examType.examCode,
+        assessmentPlanComponentId: examType.assessmentPlanComponentId,
+        maximumMarks: examType.maximumMarks,
+      });
+    }
+    publicSubjects.push({
+      subjectId: subject.subjectId,
+      subjectCode: subject.subjectCode,
+      subjectName: subject.subjectName,
+      assessmentPlanId: subject.assessmentPlanId,
+      curriculumSubjectTermMappingId: subject.curriculumSubjectTermMappingId,
+      credit: subject.credit,
+      examSetupTypes,
+    });
+  }
+  return publicSubjects;
+}
+
+function regulationForSession(regulationBySessionId, defaultRegulation, sessionId) {
+  if (sessionId != null && regulationBySessionId.has(Number(sessionId))) {
+    return regulationBySessionId.get(Number(sessionId));
+  }
+  return defaultRegulation;
+}
+
 function buildTermSubjects(assessmentPlanSubjectMappings, curriculumSubjectTermMappings) {
   const subjectTermMappingBySubjectId = new Map();
   for (const row of curriculumSubjectTermMappings) {
@@ -996,12 +1224,22 @@ function buildTermSubjects(assessmentPlanSubjectMappings, curriculumSubjectTermM
         examSetupTypeId,
         examName: component.examSetupType.examName,
         examCode: component.examSetupType.examCode,
+        examCategory: component.examSetupType.examCategory,
         assessmentPlanComponentId: Number(component.assessmentPlanComponentId),
         maximumMarks: componentMaximumMarks(component),
       });
     }
     if (examSetupTypes.length === 0) {
       continue;
+    }
+
+    const assessmentPlan = mapping.assessmentPlan;
+    const grading = mapGradingScheme(assessmentPlan.gradingScheme);
+    const regulation = mapRegulationRules(assessmentPlan.academicRegulation);
+    if (grading.grades.length === 0 && regulation) {
+      grading.grades = regulation.gradingScheme.grades;
+      grading.minimumPassingMarks = regulation.gradingScheme.minimumPassingMarks;
+      grading.maximumMarks = regulation.gradingScheme.maximumMarks;
     }
 
     const curriculumSubjectTermMappingId = Number(subjectTermMapping.curriculumSubjectTermMappingId);
@@ -1014,12 +1252,14 @@ function buildTermSubjects(assessmentPlanSubjectMappings, curriculumSubjectTermM
       curriculumSubjectTermMappingId,
       credit: Number(subjectTermMapping.credit) || 0,
       examSetupTypes,
+      grading,
+      regulation,
     });
   }
   return { subjects, curriculumSubjectTermMappingIds };
 }
 
-function buildStudentMarksRow(student, subjects) {
+function buildStudentMarksRow(student, subjects, courseRegulation) {
   const marksByComponent = new Map();
   const resultItems = student.resultItems || [];
   for (const item of resultItems) {
@@ -1031,10 +1271,22 @@ function buildStudentMarksRow(student, subjects) {
 
   const studentSubjects = [];
   const issueMessages = [];
+  let studentTotalCredit = 0;
+  let studentObtainedCredit = 0;
+  let studentObtainedMarks = 0;
+  let studentMaximumMarks = 0;
+  let allSubjectsDecided = true;
+  let anyFail = false;
+  let overallGrades = null;
+
   for (const subject of subjects) {
     const examSetupTypes = [];
     let totalObtainedMarks = 0;
     let totalMaximumMarks = 0;
+    let internalObtained = 0;
+    let externalObtained = 0;
+    let hasInternal = false;
+    let hasExternal = false;
     let subjectHasMissingMarks = false;
 
     for (const examType of subject.examSetupTypes) {
@@ -1044,11 +1296,22 @@ function buildStudentMarksRow(student, subjects) {
       const obtainedMarks = existing ? toMoneyNumber(existing.obtainedMarks) : null;
       const maximumMarks = examType.maximumMarks;
       totalMaximumMarks = decimalAdd(totalMaximumMarks, maximumMarks);
+      const group = examGroup(examType.examCategory);
+      if (group === 'INTERNAL') {
+        hasInternal = true;
+      } else if (group === 'EXTERNAL') {
+        hasExternal = true;
+      }
 
       if (obtainedMarks == null) {
         subjectHasMissingMarks = true;
       } else {
         totalObtainedMarks = decimalAdd(totalObtainedMarks, obtainedMarks);
+        if (group === 'INTERNAL') {
+          internalObtained = decimalAdd(internalObtained, obtainedMarks);
+        } else if (group === 'EXTERNAL') {
+          externalObtained = decimalAdd(externalObtained, obtainedMarks);
+        }
         if (decimalGreaterThan(obtainedMarks, maximumMarks)) {
           issueMessages.push(
             `${subject.subjectCode} ${examType.examName} obtained marks exceed maximum ${maximumMarks}`,
@@ -1069,6 +1332,36 @@ function buildStudentMarksRow(student, subjects) {
     if (subjectHasMissingMarks) {
       issueMessages.push(`${subject.subjectCode} result missing`);
     }
+
+    const resultRules = resolveSubjectResultRules(subject, courseRegulation);
+    if (overallGrades == null && resultRules.grades.length > 0) {
+      overallGrades = resultRules.grades;
+    }
+    const outcome = computeSubjectOutcome({
+      isComplete: !subjectHasMissingMarks,
+      obtained: totalObtainedMarks,
+      maximum: totalMaximumMarks,
+      internalObtained,
+      externalObtained,
+      hasInternal,
+      hasExternal,
+      totalCredit: subject.credit,
+      grades: resultRules.grades,
+      minimumPassingMarks: resultRules.minimumPassingMarks,
+      gradingMaximumMarks: resultRules.gradingMaximumMarks,
+      regulation: resultRules.regulation,
+    });
+
+    studentTotalCredit = decimalAdd(studentTotalCredit, outcome.totalCredit);
+    studentObtainedCredit = decimalAdd(studentObtainedCredit, outcome.obtainedCredit);
+    studentObtainedMarks = decimalAdd(studentObtainedMarks, totalObtainedMarks);
+    studentMaximumMarks = decimalAdd(studentMaximumMarks, totalMaximumMarks);
+    if (outcome.resultStatus == null) {
+      allSubjectsDecided = false;
+    } else if (outcome.resultStatus === 'Fail') {
+      anyFail = true;
+    }
+
     studentSubjects.push({
       subjectId: subject.subjectId,
       subjectCode: subject.subjectCode,
@@ -1077,6 +1370,10 @@ function buildStudentMarksRow(student, subjects) {
       examSetupTypes,
       totalObtainedMarks,
       totalMaximumMarks,
+      grade: outcome.grade,
+      obtainedCredit: outcome.obtainedCredit,
+      totalCredit: outcome.totalCredit,
+      resultStatus: outcome.resultStatus,
     });
   }
 
@@ -1085,6 +1382,19 @@ function buildStudentMarksRow(student, subjects) {
     sessionName = student.studentSession.sessionName;
   }
   const isComplete = issueMessages.length === 0;
+  let resultStatus = null;
+  let grade = null;
+  if (allSubjectsDecided && studentSubjects.length > 0) {
+    resultStatus = anyFail ? 'Fail' : 'Pass';
+    if (overallGrades) {
+      const band = findMatchingGrade(
+        overallGrades,
+        marksPercentage(studentObtainedMarks, studentMaximumMarks),
+      );
+      grade = band ? band.grade : null;
+    }
+  }
+
   return {
     studentId: student.studentId,
     enrollmentNumber: student.enrollNumber,
@@ -1093,6 +1403,10 @@ function buildStudentMarksRow(student, subjects) {
     sessionId: student.sessionId ? Number(student.sessionId) : null,
     sessionName,
     subjects: studentSubjects,
+    grade,
+    obtainedCredit: studentObtainedCredit,
+    totalCredit: studentTotalCredit,
+    resultStatus,
     status: isComplete ? 'Complete' : 'Blocking',
     issueCount: issueMessages.length,
     issueMessage: isComplete ? null : issueMessages.join('; '),
@@ -1134,19 +1448,37 @@ export async function getTermStudentMarks(
   );
   const { subjects, curriculumSubjectTermMappingIds } = buildTermSubjects(assessmentPlanSubjectMappings, curriculumSubjectTermMappings);
 
-  const studentPage = await previousAcademicRepository.findStudentsWithTermResultItems(
-    courseId,
-    batch,
-    sessionId,
-    curriculumSubjectTermMappingIds,
-    {},
-  );
+  const [studentPage, regulationMappings] = await Promise.all([
+    previousAcademicRepository.findStudentsWithTermResultItems(
+      courseId,
+      batch,
+      sessionId,
+      curriculumSubjectTermMappingIds,
+      {},
+    ),
+    previousAcademicRepository.findAcademicRegulationForCourse(courseId, sessionId),
+  ]);
+
+  const regulationBySessionId = new Map();
+  let defaultRegulation = null;
+  for (const mapping of regulationMappings) {
+    const rules = mapRegulationRules(mapping.academicRegulation);
+    regulationBySessionId.set(Number(mapping.sessionId), rules);
+    if (defaultRegulation == null) {
+      defaultRegulation = rules;
+    }
+  }
 
   const students = [];
   let completedCount = 0;
   let issuesCount = 0;
   for (const student of studentPage.rows) {
-    const row = buildStudentMarksRow(student, subjects);
+    const courseRegulation = regulationForSession(
+      regulationBySessionId,
+      defaultRegulation,
+      student.sessionId,
+    );
+    const row = buildStudentMarksRow(student, subjects, courseRegulation);
     if (row.status === 'Complete') {
       completedCount += 1;
     } else {
@@ -1184,7 +1516,7 @@ export async function getTermStudentMarks(
       courseName: course.courseName,
       courseCode: course.courseCode,
     },
-    subjects,
+    subjects: toPublicTermSubjects(subjects),
     students: rows,
     uploadHistory,
     sku: {

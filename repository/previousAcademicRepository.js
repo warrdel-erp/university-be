@@ -435,11 +435,13 @@ export async function findAssessmentPlanSubjectsForTerm(
         model: models.assessmentPlanModel,
         as: 'assessmentPlan',
         required: true,
-        attributes: ['assessmentPlanId', 'planName', 'planCode'],
+        attributes: ['assessmentPlanId', 'planName', 'planCode', 'gradingId', 'regulationId'],
         where: buildScope(models.assessmentPlanModel, {
           scopeConfig: { academicYear: false },
         }),
         include: [
+          gradingSchemeInclude(),
+          academicRegulationInclude(false),
           {
             model: models.assessmentPlanComponentModel,
             as: 'components',
@@ -454,7 +456,7 @@ export async function findAssessmentPlanSubjectsForTerm(
                 model: models.examSetupTypeModel,
                 as: 'examSetupType',
                 required: true,
-                attributes: ['examSetupTypeId', 'examName', 'examCode'],
+                attributes: ['examSetupTypeId', 'examName', 'examCode', 'examCategory'],
                 where: buildScope(models.examSetupTypeModel, {
                   scopeConfig: { academicYear: false },
                 }),
@@ -501,6 +503,70 @@ export async function upsertStudentResultItems(rows, transaction) {
 
 export async function createUploadLog(payload, transaction) {
   return scoped(models.previousAcademicUploadLogModel).create(payload, { transaction });
+}
+
+function gradingSchemeInclude() {
+  return {
+    model: models.gradingModel,
+    as: 'gradingScheme',
+    required: false,
+    attributes: ['gradingId', 'minimumPassingMarks', 'maximumMarks'],
+    where: buildScope(models.gradingModel, {
+      scopeConfig: { academicYear: false },
+    }),
+    include: [
+      {
+        model: models.gradingGradeModel,
+        as: 'grades',
+        required: false,
+        attributes: [
+          'gradingGradeId',
+          'grade',
+          'minPercentage',
+          'maxPercentage',
+          'isPass',
+          'sortOrder',
+        ],
+      },
+    ],
+  };
+}
+
+function academicRegulationInclude(required) {
+  return {
+    model: models.academicRegulationModel,
+    as: 'academicRegulation',
+    required,
+    attributes: [
+      'academicRegulationId',
+      'gradingSchemeId',
+      'evaluationPattern',
+      'minimumOverallMarks',
+      'minimumOverallPercentage',
+      'minimumInternalMarks',
+      'minimumExternalMarks',
+    ],
+    where: buildScope(models.academicRegulationModel),
+    include: [gradingSchemeInclude()],
+  };
+}
+
+export async function findAcademicRegulationForCourse(courseId, sessionId) {
+  const where = { courseId };
+  if (sessionId) {
+    where.sessionId = sessionId;
+  }
+
+  return scoped(models.academicRegulationCourseMappingModel).findAll({
+    where,
+    attributes: [
+      'academicRegulationCourseMappingId',
+      'courseId',
+      'sessionId',
+      'academicRegulationId',
+    ],
+    include: [academicRegulationInclude(true)],
+  });
 }
 
 function uploadLogListOptions(where) {
