@@ -83,7 +83,7 @@ function termAggFromSubjectMappings(subjectMappings, termNum, marksByCstm) {
   };
 }
 
-export async function getPreviousAcademicBatches(filters = {}) {
+export async function   getPreviousAcademicBatches(filters = {}) {
   const { activeYear, yearTitle, activeYearRecord } = await getActiveYear();
   const courses = await previousAcademicRepository.findProgrammesWithSessions(filters);
 
@@ -831,6 +831,7 @@ function buildStudentTermReview(student, context) {
     const assessments = [];
     let totalObtainedMarks = 0;
     let totalMaximumMarks = 0;
+    let subjectHasMissingMarks = false;
 
     for (const examType of subject.examSetupTypes) {
       const existing = context.marksByKey.get(
@@ -842,16 +843,7 @@ function buildStudentTermReview(student, context) {
 
       if (obtainedMarks == null) {
         missingCount += 1;
-        issues.push({
-          type: 'warning',
-          code: 'MARKS_MISSING',
-          message: `${examType.examName} result missing`,
-          subjectId: subject.subjectId,
-          subjectCode: subject.subjectCode,
-          subjectName: subject.subjectName,
-          examName: examType.examName,
-          assessmentPlanComponentId: examType.assessmentPlanComponentId,
-        });
+        subjectHasMissingMarks = true;
       } else {
         totalObtainedMarks = decimalAdd(totalObtainedMarks, obtainedMarks);
         if (decimalGreaterThan(obtainedMarks, maximumMarks)) {
@@ -877,6 +869,17 @@ function buildStudentTermReview(student, context) {
         assessmentPlanComponentId: examType.assessmentPlanComponentId,
         obtainedMarks,
         maximumMarks,
+      });
+    }
+
+    if (subjectHasMissingMarks) {
+      issues.push({
+        type: 'warning',
+        code: 'MARKS_MISSING',
+        message: `${subject.subjectCode} result missing`,
+        subjectId: subject.subjectId,
+        subjectCode: subject.subjectCode,
+        subjectName: subject.subjectName,
       });
     }
 
