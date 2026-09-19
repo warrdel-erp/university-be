@@ -1134,31 +1134,42 @@ export async function getTermStudentMarks(
   );
   const { subjects, curriculumSubjectTermMappingIds } = buildTermSubjects(assessmentPlanSubjectMappings, curriculumSubjectTermMappings);
 
-  const paging =
-    limit != null && !statusFilter ? { limit, offset: (page - 1) * limit } : {};
   const studentPage = await previousAcademicRepository.findStudentsWithTermResultItems(
     courseId,
     batch,
     sessionId,
     curriculumSubjectTermMappingIds,
-    paging,
+    {},
   );
 
   const students = [];
+  let completedCount = 0;
+  let issuesCount = 0;
   for (const student of studentPage.rows) {
     const row = buildStudentMarksRow(student, subjects);
+    if (row.status === 'Complete') {
+      completedCount += 1;
+    } else {
+      issuesCount += 1;
+    }
     if (!statusFilter || row.status === statusFilter) {
       students.push(row);
     }
   }
 
   let rows = students;
-  let total = studentPage.count;
-  if (statusFilter) {
-    total = students.length;
-    if (limit != null) {
-      rows = students.slice((page - 1) * limit, (page - 1) * limit + limit);
-    }
+  const total = students.length;
+  if (limit != null) {
+    rows = students.slice((page - 1) * limit, (page - 1) * limit + limit);
+  }
+
+  const uploadRows = await previousAcademicRepository.findUploadLogsByTermMappingId(
+    Number(termMapping.curriculumBatchTermMappingId),
+    sessionId,
+  );
+  const uploadHistory = [];
+  for (const row of uploadRows) {
+    uploadHistory.push(mapUploadLog(row));
   }
 
   const data = {
@@ -1175,6 +1186,14 @@ export async function getTermStudentMarks(
     },
     subjects,
     students: rows,
+    uploadHistory,
+    sku: {
+      recentUpload: uploadHistory[0] || null,
+      studentCount: studentPage.count,
+      subjectCount: subjects.length,
+      issuesCount,
+      completedCount,
+    },
   };
   if (limit == null) {
     return { data };
