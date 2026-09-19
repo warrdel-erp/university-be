@@ -159,8 +159,8 @@ export async function getAssessmentPlanSubjectMappings(batchTermMappingIds, cour
   });
 }
 
-export async function getHistoricalMarksByCstmIds(cstmIds) {
-  if (!cstmIds || cstmIds.length === 0) {
+export async function getHistoricalMarksByCstmIds(curriculumSubjectTermMappingIds) {
+  if (!curriculumSubjectTermMappingIds || curriculumSubjectTermMappingIds.length === 0) {
     return [];
   }
 
@@ -168,7 +168,7 @@ export async function getHistoricalMarksByCstmIds(cstmIds) {
     scopeConfig: { academicYear: false },
   }).findAll({
     where: {
-      curriculumSubjectTermMappingId: { [Op.in]: cstmIds },
+      curriculumSubjectTermMappingId: { [Op.in]: curriculumSubjectTermMappingIds },
     },
     attributes: [
       'studentResultItemId',
@@ -326,6 +326,83 @@ export async function findStudentsByCourseBatch(courseId, batchYear, sessionId) 
       ['firstName', 'ASC'],
     ],
   });
+}
+
+export async function findStudentsWithTermResultItems(
+  courseId,
+  batchYear,
+  sessionId,
+  curriculumSubjectTermMappingIds,
+  pagination = {},
+) {
+  const where = { courseId, batchYear };
+  if (sessionId) {
+    where.sessionId = sessionId;
+  }
+
+  const include = [
+    {
+      model: models.sessionModel,
+      as: 'studentSession',
+      required: false,
+      attributes: ['sessionId', 'sessionName'],
+      where: buildScope(models.sessionModel, {
+        scopeConfig: { academicYear: false },
+      }),
+    },
+  ];
+
+  if (curriculumSubjectTermMappingIds.length > 0) {
+    const resultItemWhere = { ...buildScope(models.studentResultItemModel) };
+    resultItemWhere.curriculumSubjectTermMappingId = { [Op.in]: curriculumSubjectTermMappingIds };
+    include.push({
+      model: models.studentResultItemModel,
+      as: 'resultItems',
+      required: false,
+      separate: true,
+      attributes: [
+        'studentResultItemId',
+        'studentId',
+        'curriculumSubjectTermMappingId',
+        'assessmentPlanComponentId',
+        'obtainedMarks',
+        'maximumMarks',
+      ],
+      where: resultItemWhere,
+    });
+  }
+
+  const options = {
+    where,
+    attributes: [
+      'studentId',
+      'firstName',
+      'middleName',
+      'lastName',
+      'enrollNumber',
+      'scholarNumber',
+      'sessionId',
+    ],
+    include,
+    order: [
+      ['enrollNumber', 'ASC'],
+      ['firstName', 'ASC'],
+    ],
+    distinct: true,
+  };
+
+  if (pagination.limit != null) {
+    options.limit = pagination.limit;
+    options.offset = pagination.offset;
+    return scoped(models.studentModel, {
+      scopeConfig: { academicYear: false },
+    }).findAndCountAll(options);
+  }
+
+  const rows = await scoped(models.studentModel, {
+    scopeConfig: { academicYear: false },
+  }).findAll(options);
+  return { count: rows.length, rows };
 }
 
 export async function findAssessmentPlanSubjectsForTerm(

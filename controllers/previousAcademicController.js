@@ -73,6 +73,33 @@ export const getTermStudents = async (req, res) => {
   }
 };
 
+export const getTermStudentMarks = async (req, res) => {
+  try {
+    const result = await previousAcademicService.getTermStudentMarks(
+      req.params.curriculumBatchTermMappingId,
+      req.query.sessionId,
+      {
+        page: req.query.page,
+        limit: req.query.limit,
+        status: req.query.status,
+      },
+    );
+    return SuccessResponse(
+      res,
+      200,
+      'Term student marks retrieved successfully',
+      result.data,
+      result.pagination,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || 'Internal Server Error',
+    );
+  }
+};
+
 export const getTermStudentDetails = async (req, res) => {
   try {
     const data = await previousAcademicService.getTermStudentDetails(

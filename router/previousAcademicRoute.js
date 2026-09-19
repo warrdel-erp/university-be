@@ -36,6 +36,13 @@ const getTermStudentsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(25),
 });
 
+const getTermStudentMarksQuerySchema = z.object({
+  sessionId: z.coerce.number().int().positive().optional(),
+  status: z.enum(['Complete', 'Blocking']).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+});
+
 const getTermStudentsParamsSchema = z.object({
   curriculumBatchTermMappingId: z.coerce
     .number()
@@ -106,6 +113,16 @@ router.get(
     query: getTermStudentsQuerySchema,
   }),
   controller.getTermStudents,
+);
+
+router.get(
+  '/terms/:curriculumBatchTermMappingId/students/marks',
+  useAuth,
+  validate({
+    params: getTermStudentsParamsSchema,
+    query: getTermStudentMarksQuerySchema,
+  }),
+  controller.getTermStudentMarks,
 );
 
 router.get(
