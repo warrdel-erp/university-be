@@ -824,13 +824,9 @@ export async function getTermMarksTemplate(curriculumBatchTermMappingId, session
 function buildStudentTermReview(student, context) {
   const termLabel = `Semester ${context.term}`;
   const issues = [];
-  const subjects = [];
   let missingCount = 0;
 
   for (const subject of context.subjects) {
-    const assessments = [];
-    let totalObtainedMarks = 0;
-    let totalMaximumMarks = 0;
     let subjectHasMissingMarks = false;
 
     for (const examType of subject.examSetupTypes) {
@@ -839,37 +835,24 @@ function buildStudentTermReview(student, context) {
       );
       const obtainedMarks = existing ? toMoneyNumber(existing.obtainedMarks) : null;
       const maximumMarks = examType.maximumMarks;
-      totalMaximumMarks = decimalAdd(totalMaximumMarks, maximumMarks);
 
       if (obtainedMarks == null) {
         missingCount += 1;
         subjectHasMissingMarks = true;
-      } else {
-        totalObtainedMarks = decimalAdd(totalObtainedMarks, obtainedMarks);
-        if (decimalGreaterThan(obtainedMarks, maximumMarks)) {
-          issues.push({
-            type: 'warning',
-            code: 'MARKS_EXCEED_MAXIMUM',
-            message: `${examType.examName} obtained marks exceed maximum ${maximumMarks}`,
-            subjectId: subject.subjectId,
-            subjectCode: subject.subjectCode,
-            subjectName: subject.subjectName,
-            examName: examType.examName,
-            assessmentPlanComponentId: examType.assessmentPlanComponentId,
-            obtainedMarks,
-            maximumMarks,
-          });
-        }
+      } else if (decimalGreaterThan(obtainedMarks, maximumMarks)) {
+        issues.push({
+          type: 'warning',
+          code: 'MARKS_EXCEED_MAXIMUM',
+          message: `${examType.examName} obtained marks exceed maximum ${maximumMarks}`,
+          subjectId: subject.subjectId,
+          subjectCode: subject.subjectCode,
+          subjectName: subject.subjectName,
+          examName: examType.examName,
+          assessmentPlanComponentId: examType.assessmentPlanComponentId,
+          obtainedMarks,
+          maximumMarks,
+        });
       }
-
-      assessments.push({
-        examSetupTypeId: examType.examSetupTypeId,
-        examName: examType.examName,
-        examCode: examType.examCode,
-        assessmentPlanComponentId: examType.assessmentPlanComponentId,
-        obtainedMarks,
-        maximumMarks,
-      });
     }
 
     if (subjectHasMissingMarks) {
@@ -882,16 +865,6 @@ function buildStudentTermReview(student, context) {
         subjectName: subject.subjectName,
       });
     }
-
-    subjects.push({
-      subjectId: subject.subjectId,
-      subjectCode: subject.subjectCode,
-      subjectName: subject.subjectName,
-      curriculumSubjectTermMappingId: subject.curriculumSubjectTermMappingId,
-      assessments,
-      totalObtainedMarks,
-      totalMaximumMarks,
-    });
   }
 
   const isComplete = missingCount === 0;
@@ -911,7 +884,6 @@ function buildStudentTermReview(student, context) {
     issueCount: issues.length,
     status,
     issues,
-    subjects,
   };
 }
 
