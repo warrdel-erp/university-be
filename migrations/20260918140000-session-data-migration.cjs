@@ -117,9 +117,10 @@ module.exports = {
         
         if (idsToReplace.length > 0) {
           for (const fk of allSessionFks) {
-            // e.g. UPDATE class_sections SET session_id = primary WHERE session_id IN (idsToReplace)
+            // Use UPDATE IGNORE to prevent Unique Constraint Violations (Validation error)
+            // if merging child rows creates a duplicate in tables with unique indexes (e.g. batch, student_result)
             await queryInterface.sequelize.query(`
-              UPDATE ${fk.TABLE_NAME}
+              UPDATE IGNORE ${fk.TABLE_NAME}
               SET ${fk.COLUMN_NAME} = ?
               WHERE ${fk.COLUMN_NAME} IN (?)
             `, { replacements: [primarySessionId, idsToReplace], transaction });
