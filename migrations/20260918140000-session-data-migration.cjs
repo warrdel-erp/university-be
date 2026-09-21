@@ -137,12 +137,20 @@ module.exports = {
 
       // 3. Backfill active_year on class_sections
       // active_year = acedmic_year_title start year
-      await queryInterface.sequelize.query(`
-        UPDATE class_sections cs
-        JOIN acedmic_year ay ON cs.acedmic_year_id = ay.acedmic_year_id
-        SET cs.active_year = CAST(SUBSTRING_INDEX(ay.year_title, '-', 1) AS UNSIGNED)
-        WHERE cs.active_year IS NULL AND cs.year IS NOT NULL
+      const [ayRows] = await queryInterface.sequelize.query(`
+        SELECT acedmic_year_id, year_title FROM acedmic_year
       `, { transaction });
+
+      for (const ay of ayRows) {
+        const match = ay.year_title && ay.year_title.match(/\d{4}/);
+        const yearInt = match ? parseInt(match[0], 10) : 2026;
+
+        await queryInterface.sequelize.query(`
+          UPDATE class_sections
+          SET active_year = ?
+          WHERE acedmic_year_id = ? AND active_year IS NULL AND year IS NOT NULL
+        `, { replacements: [yearInt, ay.acedmic_year_id], transaction });
+      }
 
       // Fallback for null years or non-parseable years
       await queryInterface.sequelize.query(`
