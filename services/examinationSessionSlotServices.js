@@ -3,9 +3,10 @@ import * as examinationSessionSlotRepository from "../repository/examinationSess
 import * as examinationSessionRepository from "../repository/examinationSessionRepository.js";
 import * as examinationSessionServices from "./examinationSessionServices.js";
 import {
-  getStudentCountMapByGroups,
   lookupStudentCount,
+  buildStudentGroupFromSchedule,
 } from "../utility/studentCount.js";
+import { getStudentCountMapByGroups } from "./studentCountServices.js";
 import { deriveScheduleRoomFlags } from "../utility/roomCapacity.js";
 import { EXAM_SCHEDULE_FILTER_STATUS } from "../constant.js";
 
@@ -58,23 +59,6 @@ async function resolveSelectionFilters(selections, options = {}) {
   return filterCombinations;
 }
 
-function studentGroupFromSchedule(item) {
-  const courseId = item.subjectSchedule?.courseId;
-  const term = item.term;
-  const academicYearId = item.academicYearId;
-  const sessionId = item.sessionId;
-
-  if (
-    sessionId == null ||
-    courseId == null ||
-    term == null ||
-    academicYearId == null
-  ) {
-    return null;
-  }
-  return { sessionId, courseId, term, academicYearId };
-}
-
 function buildScheduleRow(item, studentCount) {
   const roomNumbers = [];
   let roomCapacity = 0;
@@ -114,6 +98,15 @@ function matchesFilterStatus(schedule, filterStatus) {
   return schedule[filterStatus] === true;
 }
 
+function resolveSlotPublished(schedules) {
+  if (!schedules.length) return false;
+
+  for (const schedule of schedules) {
+    if (!schedule.published) return false;
+  }
+  return true;
+}
+
 async function loadEnrichedSlotSchedules(
   { examinationSessionId, date, selections },
   options = {},
@@ -137,7 +130,7 @@ async function loadEnrichedSlotSchedules(
     slots.push(slot);
 
     for (const schedule of schedules) {
-      const group = studentGroupFromSchedule(schedule);
+      const group = buildStudentGroupFromSchedule(schedule);
       if (group) studentGroups.push(group);
     }
   }
@@ -152,7 +145,7 @@ async function loadEnrichedSlotSchedules(
     for (const schedule of slot.schedules) {
       const studentCount = lookupStudentCount(
         studentCountMap,
-        studentGroupFromSchedule(schedule),
+        buildStudentGroupFromSchedule(schedule),
       );
       enriched.push(buildScheduleRow(schedule, studentCount));
     }
@@ -242,6 +235,8 @@ async function buildUnscheduledSchedules(
     unscheduled.push({
       examScheduleId: null,
       subjectId: sub.subjectId,
+      curriculumBatchTermMappingId:
+        sub.curriculumBatchTermMappingId || null,
       term: sub.term,
       academicYearId: sub.academicYearId || null,
       sessionId: sub.sessionId,
@@ -298,6 +293,7 @@ export async function getExaminationSessionSlots(
       const slot = slotRow.get ? slotRow.get({ plain: true }) : slotRow;
       result.push({
         ...slot,
+        published: false,
         schedules: [...unscheduled],
       });
     }
@@ -310,6 +306,7 @@ export async function getExaminationSessionSlots(
   );
 
   // filterStatus=all also includes subjects that still need scheduling.
+  // Count them once (same as /count) — do not duplicate under every slot.
   const includeUnscheduled =
     !filterStatus || filterStatus === EXAM_SCHEDULE_FILTER_STATUS.ALL;
   const unscheduled = includeUnscheduled
@@ -320,21 +317,33 @@ export async function getExaminationSessionSlots(
     : [];
 
   const result = [];
-  for (const slot of slots) {
+  for (let i = 0; i < slots.length; i++) {
+    const slot = slots[i];
+    const published = resolveSlotPublished(slot.schedules);
     const schedules = [];
     for (const schedule of slot.schedules) {
       if (matchesFilterStatus(schedule, filterStatus)) {
         schedules.push(schedule);
       }
     }
-    if (includeUnscheduled) {
+    if (includeUnscheduled && i === 0) {
       for (const subject of unscheduled) {
         schedules.push(subject);
       }
     }
     result.push({
       ...slot,
+      published,
       schedules,
+    });
+  }
+
+  if (includeUnscheduled && slots.length === 0 && unscheduled.length > 0) {
+    result.push({
+      examinationSessionSlotId: null,
+      examinationSessionId: Number(examinationSessionId),
+      published: false,
+      schedules: unscheduled,
     });
   }
 
@@ -384,11 +393,14 @@ export async function getExaminationSessionSlotsCount(
 }
 
 export async function getExaminationSessionSlotById(
-  examinationSessionSlotId,
+  { examinationSessionId, examinationSessionSlotId },
   options,
 ) {
   return examinationSessionSlotRepository.getExaminationSessionSlotById(
-    examinationSessionSlotId,
+    {
+      examinationSessionId,
+      examinationSessionSlotId,
+    },
     options,
   );
 }

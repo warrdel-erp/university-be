@@ -52,10 +52,10 @@ export async function refreshEmployeeWards(employeeId, wards, createdBy, updated
             employeeId,
             createdBy,
             updatedBy,
-            name: w?.name ?? null,
-            relationship: w?.relationship ?? null,
-            dateOfBirth: w?.dateOfBirth ?? null,
-            profession: w?.profession ?? null,
+            wardName: w.wardName ?? w.name,
+            studyIn: w.studyIn ?? null,
+            annualFees: w.annualFees ?? null,
+            dateOfBirth: w.dateOfBirth ?? null,
         }));
 
         return await model.employeeWardModel.bulkCreate(insertData, { transaction });

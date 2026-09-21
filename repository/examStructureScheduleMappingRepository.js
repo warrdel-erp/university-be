@@ -4,7 +4,6 @@ import { Op } from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { classSectionTermsInclude } from "../utility/classSectionIncludes.js";
 
-
 async function assertScopedExamSchedule(examScheduleId, options = {}) {
   const { transaction, attributes = ['examScheduleId'] } = options;
   return scoped(model.examScheduleModel).findOne({
@@ -45,6 +44,7 @@ export async function addExamStructureSchedule(examDetailSchedule, options = {})
    await scoped(model.examScheduleModel).create(
   {
     subjectId: examDetailSchedule.subjectId,
+    curriculumBatchTermMappingId: examDetailSchedule.curriculumBatchTermMappingId || null,
     term: examDetailSchedule.term,
     examinationSessionId: examDetailSchedule.examinationSessionId,
     academicYearId: examDetailSchedule.academicYearId,
@@ -114,7 +114,6 @@ export async function getExamStructureSchedule(examSetupTypeId) {
         model: model.examSetupTypeTermModel,
         as: "examSetupTypeTerms",
         attributes: { exclude: ["createdAt", "updatedAt"] },
-
       },
     ],
   });
@@ -130,14 +129,18 @@ export async function findSubjectacademicYearId(subjectId) {
   return mapping?.academicYearId ?? null;
 }
 
-export async function updateExamSchedule(examScheduleId, data) {
+export async function updateExamSchedule(examScheduleId, data, options = {}) {
   try {
-    const existing = await assertScopedExamSchedule(examScheduleId);
+    const existing = await assertScopedExamSchedule(examScheduleId, {
+      transaction: options.transaction,
+    });
     if (!existing) {
       return [0];
     }
     return await scoped(model.examScheduleModel).update(data, {
       where: { examScheduleId },
+      transaction: options.transaction,
+      individualHooks: true,
     });
   } catch (error) {
     console.error("Error updating exam Schedule:", error.message);
@@ -145,18 +148,61 @@ export async function updateExamSchedule(examScheduleId, data) {
   }
 }
 
-export async function deleteExamSchedule(examScheduleId) {
-  try {
-    const existing = await assertScopedExamSchedule(examScheduleId);
-    if (!existing) {
-      return false;
-    }
-    const deleted = await scoped(model.examScheduleModel).destroy({ where: { examScheduleId } });
-    return deleted > 0;
-  } catch (error) {
-    console.error("Error deleting exam Schedule:", error);
-    throw error;
+export async function findScopedExamScheduleById(examScheduleId, options = {}) {
+  return assertScopedExamSchedule(Number(examScheduleId), {
+    transaction: options.transaction,
+    attributes: options.attributes || [
+      "examScheduleId",
+      "published",
+      "examDate",
+      "examinationSessionSlotId",
+    ],
+  });
+}
+
+export async function countRoomAssignmentsByExamScheduleId(
+  examScheduleId,
+  options = {},
+) {
+  return model.examScheduleRoomCapacityModel.count({
+    where: { examScheduleId: Number(examScheduleId) },
+    transaction: options.transaction,
+  });
+}
+
+export async function countAllocatedSeatsByExamScheduleId(
+  examScheduleId,
+  options = {},
+) {
+  return model.studentExamSeatModel.count({
+    include: [
+      {
+        model: model.examScheduleRoomCapacityModel,
+        as: "roomCapacity",
+        required: true,
+        where: { examScheduleId: Number(examScheduleId) },
+        attributes: [],
+      },
+    ],
+    transaction: options.transaction,
+  });
+}
+
+export async function deleteExamSchedule(examScheduleId, options = {}) {
+  const id = Number(examScheduleId);
+  const existing = await assertScopedExamSchedule(id, {
+    transaction: options.transaction,
+  });
+  if (!existing) {
+    return false;
   }
+
+  const deleted = await scoped(model.examScheduleModel).destroy({
+    where: { examScheduleId: id },
+    transaction: options.transaction,
+    individualHooks: true,
+  });
+  return deleted > 0;
 }
 
 export async function publishExamSchedule(examSetupTypeId, data) {
@@ -220,7 +266,7 @@ export async function findConflictingExamForStudentCohort({
 }
 
 
-export async function addExamSchedule(examDetail) {
+export async function addExamSchedule(examDetail, options = {}) {
   try {
     if (!examDetail.examinationSessionId && !examDetail.examSetupTypeId) {
       throw new Error("examSetupTypeId or examinationSessionSlotId is required.");
@@ -245,16 +291,20 @@ export async function addExamSchedule(examDetail) {
         "examStartDate",
         "examEndDate",
       ],
+      transaction: options.transaction,
     });
 
     if (!examinationSession) {
       throw new Error("No examination session found for the selected exam date.");
     }
 
-    return await scoped(model.examScheduleModel).create({
-      ...examDetail,
-      examinationSessionId: examinationSession.examinationSessionId,
-    });
+    return await scoped(model.examScheduleModel).create(
+      {
+        ...examDetail,
+        examinationSessionId: examinationSession.examinationSessionId,
+      },
+      { transaction: options.transaction },
+    );
   } catch (error) {
     console.error("Error adding exam schedule:", error.message);
     throw error;

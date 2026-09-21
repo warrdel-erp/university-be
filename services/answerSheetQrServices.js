@@ -808,9 +808,13 @@ function buildSkuResponse(stats) {
   return { sku };
 }
 
-export async function getMyAnswerSheetSkuStats(assignedToUserId) {
+export async function getMyAnswerSheetSkuStats(
+  assignedToUserId,
+  examinationSessionId = null,
+) {
   const stats = await answerSheetQrRepository.findMyAnswerSheetSkuStats(
     assignedToUserId,
+    examinationSessionId,
   );
   return buildSkuResponse(stats);
 }

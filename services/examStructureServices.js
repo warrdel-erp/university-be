@@ -1,6 +1,6 @@
 import * as examStructureRepository from "../repository/examStructureRepository.js";
-import * as examScheduleRepository from "../repository/examScheduleRepository.js";
 import * as studentHallTicketRepository from "../repository/studentHallTicketRepository.js";
+import { countStudentsForExamGroup } from "./studentCountServices.js";
 
 export async function addExamStructure(examDetail, createdBy, updatedBy) {
     examDetail.createdBy = createdBy;
@@ -86,8 +86,7 @@ async function buildStudentCountMap(rows, sessionId, courseId, academicYearId, t
         const key = `${term}:${yearId}`;
         if (!countMap.has(key)) {
             pending.push(
-                examScheduleRepository
-                    .getStudentCountByGroup(sessionId, courseId, term, yearId)
+                countStudentsForExamGroup(sessionId, courseId, term, yearId)
                     .then((count) => countMap.set(key, count)),
             );
         }

@@ -15,10 +15,7 @@ export const addEmployee = async (req, res) => {
     const data = req.body;
     const file = req.files;
     const createdBy = req.user.userId;
-    const { campusId, instituteId, roleId } = req.body;
-    if (!(campusId && instituteId && roleId)) {
-      return res.status(400).send("campusId,instituteId is required");
-    }
+    const { roleId } = req.body;
     const result = await employee.addEmployee(data, file, createdBy, roleId);
     res.status(200).send(result);
   } catch (error) {
@@ -28,19 +25,11 @@ export const addEmployee = async (req, res) => {
 };
 
 export const getAllEmployee = async (req, res) => {
-  const campusId = req.query.campusId ? Number(req.query.campusId) : undefined;
-  const instituteId = req.query.instituteId
-    ? Number(req.query.instituteId)
-    : undefined;
-  const userId = req.query.userId ? Number(req.query.userId) : undefined;
-  const tenant = getTenantStore();
+     const { search, page, limit,userId } = req.query;
+   const {defaultRole:role, instituteId, campusId,} = getTenantStore();
   try {
-    const result = await employee.getAllEmployee(campusId, instituteId, {
-      userId: req.user.userId,
-      role: tenant.defaultRole,
-      userId,
-    });
-    res.status(200).send(result);
+    const result = await employee.getAllEmployee({campusId, instituteId,role,userId,search, page, limit});
+    return SuccessResponse(res,200,"Employee fetched successfully",result.data,result.pagination);
   } catch (error) {
     console.error("Error in getting all employee:", error);
     const message = error?.message || "Internal Server Error";
@@ -50,12 +39,9 @@ export const getAllEmployee = async (req, res) => {
 };
 
 export const getSingleEmployeeDetails = async (req, res) => {
-  const userId = req.params.id;
+  const id = req.params.id;
   try {
-    if (!userId) {
-      return res.status(400).send("userId is required");
-    }
-    const result = await employee.getSingleEmployeeDetails(userId);
+    const result = await employee.getSingleEmployeeDetails(id);
     res.status(200).send(result);
   } catch (error) {
     console.error("Error in getting single employee details:", error);
@@ -122,13 +108,6 @@ export const updateEmployee = async (req, res) => {
     const file = req.files;
     const updatedBy = req.user.userId;
     const createdBy = req.user.userId;
-    const { campusId, instituteId, roleId } = req.body;
-
-    if (!(campusId && instituteId && roleId)) {
-      return res
-        .status(400)
-        .send("campusId, instituteId and roleId are required");
-    }
 
     const result = await employee.updateEmployee(
       userId,

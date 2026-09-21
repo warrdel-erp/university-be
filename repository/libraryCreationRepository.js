@@ -421,13 +421,58 @@ export async function getAllBooks(libraryCreationId, libraryFloorId, filters = {
     inventoryWhere.libraryAisleId = { [Op.in]: aisleIds };
   }
 
+  const bookWhere = buildBookListWhere(libraryCreationId, filters);
+  const inventoryFilterWhere = Object.keys(inventoryWhere).length
+    ? inventoryWhere
+    : undefined;
+
+  // Filter-only include so hasMany joins do not inflate LIMIT/OFFSET rows.
+  const inventoryFilterInclude = {
+    model: model.libraryBookInventoryModel,
+    as: "inventoryCopies",
+    attributes: [],
+    where: inventoryFilterWhere,
+    required: true,
+  };
+
+  const total = await scoped(model.libraryBookModel).count({
+    where: bookWhere,
+    include: [inventoryFilterInclude],
+    distinct: true,
+    col: "library_book_id",
+  });
+
+  const limit = pagination.limit;
+  const offset = pagination.offset;
+  const usePagination = Number.isInteger(limit);
+
+  let bookIds = null;
+  if (usePagination) {
+    const idRows = await scoped(model.libraryBookModel).findAll({
+      attributes: ["libraryBookId"],
+      where: bookWhere,
+      include: [inventoryFilterInclude],
+      group: ["libraryBookId"],
+      order: [["libraryBookId", "DESC"]],
+      limit,
+      offset: Number.isInteger(offset) ? offset : 0,
+      subQuery: false,
+      raw: true,
+    });
+
+    bookIds = [];
+    for (const row of idRows) {
+      bookIds.push(Number(row.libraryBookId));
+    }
+  }
+
   const inventoryInclude = {
     model: model.libraryBookInventoryModel,
     as: "inventoryCopies",
     attributes: {
       exclude: ["createdAt", "updatedAt", "deletedAt"],
     },
-    where: Object.keys(inventoryWhere).length ? inventoryWhere : undefined,
+    where: inventoryFilterWhere,
     required: true,
     include: [
       {
@@ -451,26 +496,38 @@ export async function getAllBooks(libraryCreationId, libraryFloorId, filters = {
     ],
   };
 
-  const { limit, offset } = pagination;
-
-  const { count, rows } = await scoped(model.libraryBookModel).findAndCountAll({
-    where: buildBookListWhere(libraryCreationId, filters),
-    subQuery: false,
-    distinct: true,
-    col: "library_book_id",
+  const rows = await scoped(model.libraryBookModel).findAll({
+    where: usePagination
+      ? { libraryBookId: { [Op.in]: bookIds } }
+      : bookWhere,
     attributes: {
       exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
     },
     include: [...bookMappingIncludes(), scopedLibraryInclude(), inventoryInclude],
-    limit,
-    offset,
     order: [
       ["libraryBookId", "DESC"],
       [{ model: model.libraryBookInventoryModel, as: "inventoryCopies" }, "inventoryId", "DESC"],
     ],
   });
 
-  return { total: count, books: rows };
+  if (!usePagination) {
+    return { total, books: rows };
+  }
+
+  const booksById = new Map();
+  for (const row of rows) {
+    booksById.set(Number(row.libraryBookId), row);
+  }
+
+  const books = [];
+  for (const bookId of bookIds) {
+    const book = booksById.get(bookId);
+    if (book) {
+      books.push(book);
+    }
+  }
+
+  return { total, books };
 }
 
 const EMPTY_BOOK_SUMMARY = {

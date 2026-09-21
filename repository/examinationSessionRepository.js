@@ -2,10 +2,9 @@ import { Op, fn, col } from "sequelize";
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { getAllocatedCapacityByExamScheduleIds } from "../utility/roomCapacity.js";
-import {
-  getStudentCountMapByGroups,
-  lookupStudentCount,
-} from "../utility/studentCount.js";
+import { lookupStudentCount, buildTermCohortGroupKey } from "../utility/studentCount.js";
+import * as studentCountRepository from "./studentCountRepository.js";
+import { curriculumBatchTermScheduleInclude } from "./curriculumBatchTermRepository.js";
 import { QUESTION_STATUS } from "../constant.js";
 import { decimalAdd, toIntegerNumber } from "../utility/decimalMoney.js";
 
@@ -166,6 +165,7 @@ export async function updateExaminationSession(id, updateData, options = {}) {
   return scoped(model.examinationSessionModel).update(updateData, {
     where: { examinationSessionId: Number(id) },
     transaction: options.transaction,
+    individualHooks: options.individualHooks === true,
   });
 }
 
@@ -335,7 +335,14 @@ export async function findAssessmentPlanComponentDurationBySetupTypeId(examSetup
 export async function findAssessmentPlanSubjectMappings(where, options = {}) {
   return scoped(model.assessmentPlanSubjectMappingModel).findAll({
     where,
-    attributes: ["subjectId", "courseId", "sessionId", "academicYearId", "assessmentPlanId"],
+    attributes: [
+      "subjectId",
+      "curriculumBatchTermMappingId",
+      "courseId",
+      "sessionId",
+      "academicYearId",
+      "assessmentPlanId",
+    ],
     raw: true,
     transaction: options.transaction,
   });
@@ -495,6 +502,7 @@ export async function findExamSchedulesBySubjects(examinationSessionId, subjectI
       "maximumMarks",
       "examinationSessionSlotId",
       "term",
+      "curriculumBatchTermMappingId",
       "published",
     ],
     include: [
@@ -503,6 +511,7 @@ export async function findExamSchedulesBySubjects(examinationSessionId, subjectI
         as: "subjectSchedule",
         attributes: ["courseId"],
       },
+      curriculumBatchTermScheduleInclude(),
       {
         model: model.examinationSessionSlotModel,
         as: "examinationSessionSlot",
@@ -763,6 +772,7 @@ export async function findSchedulesForSkuStats(examinationSessionId, options = {
       "term",
       "sessionId",
       "academicYearId",
+      "curriculumBatchTermMappingId",
       "published",
       "subjectId",
     ],
@@ -796,6 +806,7 @@ export async function findExamSchedulesForTimeline(
       "sessionId",
       "subjectId",
       "academicYearId",
+      "curriculumBatchTermMappingId",
       "examinationSessionSlotId",
       "published",
       "type",
@@ -861,6 +872,7 @@ export async function publishExamSchedulesByIds(examScheduleIds, userId, options
     {
       where: { examScheduleId: { [Op.in]: examScheduleIds } },
       transaction: options.transaction,
+      individualHooks: true,
     },
   );
   return affected;
@@ -1806,7 +1818,26 @@ export async function getDashboardOverviewStats({
     returnedBundles,
   ] = await Promise.all([
     studentGroups.length
-      ? getStudentCountMapByGroups(studentGroups)
+      ? (async () => {
+          const countMap = new Map();
+          const unique = [];
+          const seen = new Set();
+          for (const group of studentGroups) {
+            const key = buildTermCohortGroupKey(group);
+            if (seen.has(key)) continue;
+            seen.add(key);
+            unique.push(group);
+          }
+          await Promise.all(
+            unique.map(async (group) => {
+              countMap.set(
+                buildTermCohortGroupKey(group),
+                await studentCountRepository.countTermCohortStudents(group),
+              );
+            }),
+          );
+          return countMap;
+        })()
       : Promise.resolve(new Map()),
     examScheduleIds.length
       ? scoped(model.answerSheetQrModel).count({
