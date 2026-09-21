@@ -30,6 +30,7 @@ export async function renameClassSection(classSectionId, section) {
     sessionId: plain.sessionId,
     year: plain.year,
     section: sectionName,
+    sessionBatchMappingId: plain.sessionBatchMappingId,
     excludeClassSectionsId: classSectionId,
   });
   if (duplicate) {

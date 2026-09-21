@@ -1,17 +1,24 @@
 import { Router } from 'express'
 const router = Router();
-import { addSession, getAllSession, getSingleSessionDetails, updateSession, deleteSession, couseSessionMapping, updateCouseSessionMapping, deleteCouseSessionMapping } from "../controllers/sessionController.js";
+import { getSessionBatches, addSessionBatch, deleteSessionBatch, addSession, getAllSession, getSingleSessionDetails, updateSession, deleteSession, couseSessionMapping, updateCouseSessionMapping, deleteCouseSessionMapping } from "../controllers/sessionController.js";
 import userAuth from "../middleware/authUser.js"
 import { z } from 'zod';
 import { validate } from '../utility/validation.js';
 import { checkAccess } from '../middleware/checkAccess.js';
 import { PERMISSIONS } from '../const/permissions.js';
 
+
+const addSessionBatchSchema = z.object({
+    sessionId: z.coerce.number().int().positive(),
+    batch: z.coerce.number().int().min(1900).max(2100),
+});
+
 const sessionSchema = z.object({
     sessionName: z.string({ required_error: "Session name is required" }).min(1, "Session name cannot be empty"),
     startingDate: z.string({ required_error: "Starting date is required" }),
     endingDate: z.string({ required_error: "Ending date is required" }),
     classTillDate: z.string({ required_error: "Class till date is required" }),
+    courseId: z.coerce.number({ required_error: "Course ID is required" }).int().positive(),
 });
 
 const updateSessionSchema = sessionSchema.partial().extend({
@@ -66,5 +73,10 @@ router.patch(
 );
 
 router.delete('/courseSessionMapping', userAuth, checkAccess(PERMISSIONS.SESSION_SETUP_DELETE.value, 'sessionCourseMapping'), validate({ query: deleteCourseSessionMappingSchema }), deleteCouseSessionMapping);
+
+
+router.get('/batches', userAuth, getSessionBatches);
+router.post('/batches', userAuth, validate({ body: addSessionBatchSchema }), addSessionBatch);
+router.delete('/batches/:id', userAuth, deleteSessionBatch);
 
 export default router; 

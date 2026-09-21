@@ -97,6 +97,7 @@ export async function findCourseById(courseId) {
 export async function findClassSectionTermsWithRoutines({
   courseId,
   sessionId,
+  activeYear,
 } = {}) {
   const sectionScope = buildScope(model.classSectionModel);
   const sectionWhere = { ...sectionScope };
@@ -105,6 +106,9 @@ export async function findClassSectionTermsWithRoutines({
   }
   if (sessionId != null) {
     sectionWhere.sessionId = Number(sessionId);
+  }
+  if (activeYear != null) {
+    sectionWhere.activeYear = Number(activeYear);
   }
 
   return model.classSectionTermModel.findAll({
@@ -122,6 +126,7 @@ export async function findClassSectionTermsWithRoutines({
           "courseId",
           "sessionId",
           "academicYearId",
+          "activeYear",
         ],
         include: [
           {

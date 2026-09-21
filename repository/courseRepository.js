@@ -242,19 +242,11 @@ export async function getAllCourses({ campusId } = {}) {
           required: false,
         },
         {
-          model: model.sessionCouseMappingModel,
-          as: 'sessionCourseMappings',
-          attributes: ['sessionCourseMappingId'],
+          model: model.sessionModel,
+          as: 'sessions',
+          attributes: ['sessionId', 'sessionName', 'academicYearId'],
+          where: buildScope(model.sessionModel),
           required: false,
-          include: [
-            {
-              model: model.sessionModel,
-              as: 'session',
-              attributes: ['sessionId', 'sessionName', 'academicYearId'],
-              where: buildScope(model.sessionModel),
-              required: true,
-            },
-          ],
         },
       ],
     });
@@ -363,7 +355,7 @@ export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
   try {
     return await scoped(model.classSectionModel).findAll({
       where: { courseId, sessionId },
-      attributes: ['classSectionsId', 'section', 'year'],
+      attributes: ['classSectionsId', 'section', 'year', 'activeYear', 'sessionBatchMappingId'],
       order: [['year', 'ASC'], ['section', 'ASC']],
       raw: true,
     });
@@ -389,7 +381,11 @@ export async function countStudentsByClassSectionIds(classSectionsIds) {
 
   const termWhere = { classSectionsId: { [Op.in]: ids } };
 
-  const studentRows = await scoped(model.studentModel).findAll({
+  const scopeWhere = buildScope(model.studentModel);
+  const where = omitAcademicYearScope(scopeWhere);
+
+  const studentRows = await model.studentModel.findAll({
+    where,
     attributes: [
       [col('studentClassSectionTerm.class_sections_id'), 'classSectionsId'],
       [fn('COUNT', fn('DISTINCT', col('students.student_id'))), 'studentCount'],
@@ -671,5 +667,18 @@ export async function getSubjectByTeacherUserIdAndSubjectId(userId, subjectId) {
   } catch (error) {
     console.error("Error fetching subject by teacher userId and subjectId:", error);
     throw error;
+  }
+}
+
+export async function getSessionBatchesMapping(sessionId) {
+  try {
+    const [rows] = await sequelize.query(
+      "SELECT session_batch_mapping_id, batch FROM session_batch_mapping WHERE session_id = ? ORDER BY batch DESC",
+      { replacements: [Number(sessionId)] }
+    );
+    return rows;
+  } catch (error) {
+    console.error('Error in getSessionBatchesMapping:', error);
+    return [];
   }
 }

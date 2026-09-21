@@ -114,6 +114,7 @@ import syllabusDetailsModel from "./syllabusDetailsModel.js";
 import syllabusModel from "./syllabusModel.js";
 import sessionModel from "./sessionModel.js";
 import sessionCouseMappingModel from "./sessionCouseMappingModel.js";
+import sessionBatchMappingModel from "./sessionBatchMappingModel.js";
 import poModel from "./poModel.js";
 import coModel from "./coModel.js";
 import coWeightageModel from "./coWeightageModel.js";
@@ -4441,6 +4442,7 @@ export {
   syllabusModel,
   sessionModel,
   sessionCouseMappingModel,
+  sessionBatchMappingModel,
   poModel,
   coModel,
   coWeightageModel,
@@ -4524,3 +4526,15 @@ export {
 };
 
 import sequelize from "../database/sequelizeConfig.js";
+
+// Session Batch Mapping Associations
+sessionModel.hasMany(sessionBatchMappingModel, { foreignKey: 'session_id', as: 'sessionBatchMappings' });
+sessionBatchMappingModel.belongsTo(sessionModel, { foreignKey: 'session_id', as: 'session' });
+
+// Session Course Direct Association
+sessionModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'course' });
+courseModel.hasMany(sessionModel, { foreignKey: 'course_id', as: 'sessions' });
+
+// Class Section to Session Batch Mapping
+classSectionModel.belongsTo(sessionBatchMappingModel, { foreignKey: 'session_batch_mapping_id', as: 'sessionBatch' });
+sessionBatchMappingModel.hasMany(classSectionModel, { foreignKey: 'session_batch_mapping_id', as: 'classSections' });

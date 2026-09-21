@@ -649,11 +649,12 @@ export async function getProgramsOverviewData(query, reqContext) {
             });
         }
 
-        if (sessionIds.size === 0) {
-            sessionIds.add(null);
+        const validSessionIds = Array.from(sessionIds).filter(id => id === null || sessionMap[id]);
+        if (validSessionIds.length === 0) {
+            validSessionIds.push(null);
         }
 
-        sessionIds.forEach(sessionId => {
+        validSessionIds.forEach(sessionId => {
             let sectionsCount = 0;
             if (plain.courseSection) {
                 sectionsCount = plain.courseSection.filter(sec => sec.sessionId === sessionId || (!sec.sessionId && !sessionId)).length;

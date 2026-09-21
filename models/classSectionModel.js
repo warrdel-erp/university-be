@@ -43,9 +43,14 @@ const classSectionModel = sequelize.define(
                 key: 'session_id'
             }
         },
+        sessionBatchMappingId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'session_batch_mapping_id'
+        },
         academicYearId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'acedmic_year_id',
             references: {
                 model: acedmicYearModel,
@@ -69,6 +74,11 @@ const classSectionModel = sequelize.define(
             type: DataTypes.INTEGER,
             allowNull: true,
             comment: 'Program year level (1, 2, 3...)',
+        },
+        activeYear: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'active_year'
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -131,6 +141,6 @@ const classSectionModel = sequelize.define(
     }
 );
 
-classSectionModel.scopeConfig = { university: false, institute: true, academicYear: true };
+classSectionModel.scopeConfig = { university: false, institute: true, academicYear: false };
 
 export default classSectionModel;

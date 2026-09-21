@@ -297,7 +297,7 @@ export async function addClassSections(data) {
 }
 
 export async function findClassSectionForYear(
-    { courseId, sessionId, section, year },
+    { courseId, sessionId, section, year, sessionBatchMappingId },
     options = {},
 ) {
     try {
@@ -306,14 +306,20 @@ export async function findClassSectionForYear(
             return null;
         }
 
+        const whereClause = {
+            courseId: Number(courseId),
+            sessionId: Number(sessionId),
+            section: sectionName,
+            year: Number(year),
+        };
+
+        if (sessionBatchMappingId !== undefined) {
+            whereClause.sessionBatchMappingId = Number(sessionBatchMappingId);
+        }
+
         return scoped(model.classSectionModel).findOne({
-            where: {
-                courseId: Number(courseId),
-                sessionId: Number(sessionId),
-                section: sectionName,
-                year: Number(year),
-            },
-            transaction: options.transaction,
+            where: whereClause,
+            ...options,
         });
     } catch (error) {
         console.error('Error finding class section for year:', error);

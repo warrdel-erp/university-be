@@ -22,3 +22,8 @@
 5. Answer sheet Pdf Splitting
 6. Annotation
 7. Grading
+
+---
+
+1. Batch creation flow.
+2. fee plan batch wise.
