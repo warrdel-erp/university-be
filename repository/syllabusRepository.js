@@ -25,7 +25,7 @@ const unitIncludes = [
   {
     model: model.acedmicYearModel,
     as: 'acedmicYearUnit',
-    attributes: ['yearTitle', 'startingDate', 'endingDate'],
+    attributes: ['yearTitle'],
   },
   {
     model: model.sessionModel,
@@ -94,7 +94,7 @@ export async function getSyllabusDetails(academicYearId) {
         {
           model: model.acedmicYearModel,
           as: 'syllabusAcedmicYear',
-          attributes: ['yearTitle', 'startingDate', 'endingDate'],
+          attributes: ['yearTitle'],
         },
         {
           model: model.courseModel,

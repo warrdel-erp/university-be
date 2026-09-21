@@ -25,5 +25,9 @@
 
 ---
 
-1. Batch creation flow.
-2. fee plan batch wise.
+1. Batch setup list is not showing for new sessions
+2. Batch mapping is not working.
+3. Show current term an d year for each batch. Also show competed status in batches.
+4. Session batch view in create class-section, students.
+5. Student -> fee plan optional.
+6. Fee plan under batches. Fee plan -> select batch -> show list of year and year will contain invoices without start date and end date.

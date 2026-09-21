@@ -145,7 +145,7 @@ export async function getTeacherSectionMapping({
                     {
                         model: model.sessionModel,
                         as: 'classSession',
-                        attributes: ['sessionId', 'sessionName', 'startingDate', 'endingDate', 'classTillDate'],
+                        attributes: ['sessionId', 'sessionName'],
                         required: false,
                     },
                     classSectionTermsInclude(),

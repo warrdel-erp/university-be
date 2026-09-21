@@ -57,7 +57,7 @@ export async function findClassSectionInTenantScope(classSectionId, options = {}
 }
 
 export async function findClassSectionByCourseSessionYearSection(
-  { courseId, sessionId, year, section, sessionBatchMappingId, excludeClassSectionsId },
+  { courseId, sessionId, year, section, batchId, excludeClassSectionsId },
   options = {},
 ) {
   const sectionName = String(section).trim();
@@ -72,8 +72,8 @@ export async function findClassSectionByCourseSessionYearSection(
     section: sectionName,
   };
   
-  if (sessionBatchMappingId !== undefined) {
-    where.sessionBatchMappingId = Number(sessionBatchMappingId);
+  if (batchId !== undefined) {
+    where.batchId = Number(batchId);
   }
 
   if (excludeClassSectionsId != null) {

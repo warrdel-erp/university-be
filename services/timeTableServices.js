@@ -618,7 +618,7 @@ export async function getProgramsOverviewData(query, reqContext) {
     if (allSessionIds.size > 0) {
         const sessions = await model.sessionModel.findAll({
             where: { sessionId: Array.from(allSessionIds) },
-            attributes: ['sessionId', 'sessionName', 'startingDate', 'endingDate'],
+            attributes: ['sessionId', 'sessionName'],
             raw: true
         });
         sessions.forEach(s => sessionMap[s.sessionId] = s);

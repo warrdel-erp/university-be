@@ -1043,7 +1043,7 @@ export async function getAssessmentPlanSubjectMappings({
       {
         model: model.acedmicYearModel,
         as: "academicYear",
-        attributes: ["academicYearId", "yearTitle"],
+        attributes: ["academicYearId", "yearTitle", "startingDate", "endingDate"],
         required: false,
       },
     ],

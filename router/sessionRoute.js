@@ -1,6 +1,7 @@
 import { Router } from 'express'
 const router = Router();
-import { getSessionBatches, addSessionBatch, deleteSessionBatch, addSession, getAllSession, getSingleSessionDetails, updateSession, deleteSession, couseSessionMapping, updateCouseSessionMapping, deleteCouseSessionMapping } from "../controllers/sessionController.js";
+import { addSession, getAllSession, getSingleSessionDetails, updateSession, deleteSession, couseSessionMapping, updateCouseSessionMapping, deleteCouseSessionMapping } from "../controllers/sessionController.js";
+import * as batchController from "../controllers/batchController.js";
 import userAuth from "../middleware/authUser.js"
 import { z } from 'zod';
 import { validate } from '../utility/validation.js';
@@ -8,21 +9,31 @@ import { checkAccess } from '../middleware/checkAccess.js';
 import { PERMISSIONS } from '../const/permissions.js';
 
 
-const addSessionBatchSchema = z.object({
+const createBatchSchema = z.object({
     sessionId: z.coerce.number().int().positive(),
     batch: z.coerce.number().int().min(1900).max(2100),
+    intakeCapacity: z.coerce.number().int().positive().optional().nullable(),
+});
+
+const updateBatchSchema = z.object({
+    intakeCapacity: z.coerce.number().int().positive().optional().nullable(),
+}).refine((d) => d.intakeCapacity !== undefined, {
+    message: 'intakeCapacity is required',
+});
+
+const batchIdParamSchema = z.object({
+    id: z.coerce.number().int().positive(),
 });
 
 const sessionSchema = z.object({
     sessionName: z.string({ required_error: "Session name is required" }).min(1, "Session name cannot be empty"),
-    startingDate: z.string({ required_error: "Starting date is required" }),
-    endingDate: z.string({ required_error: "Ending date is required" }),
-    classTillDate: z.string({ required_error: "Class till date is required" }),
+
     courseId: z.coerce.number({ required_error: "Course ID is required" }).int().positive(),
 });
 
-const updateSessionSchema = sessionSchema.partial().extend({
+const updateSessionSchema = sessionSchema.omit({ courseId: true }).partial().extend({
     sessionId: z.coerce.number().int().positive(),
+    courseId: z.any().optional().refine(val => val === undefined, { message: "Program of a session cannot be edited" }),
 });
 
 const deleteCourseSessionMappingSchema = z.object({
@@ -74,9 +85,19 @@ router.patch(
 
 router.delete('/courseSessionMapping', userAuth, checkAccess(PERMISSIONS.SESSION_SETUP_DELETE.value, 'sessionCourseMapping'), validate({ query: deleteCourseSessionMappingSchema }), deleteCouseSessionMapping);
 
+// ── Batch CRUD ────────────────────────────────────────────────────────────────
+// GET  /session/batches             — list all sessions with their batches
+// POST /session/batches             — create a new batch (starts as draft)
+// GET  /session/batches/:id         — single batch detail
+// PATCH /session/batches/:id        — update (draft only: intakeCapacity)
+// PATCH /session/batches/:id/publish — publish a batch (draft → published)
+// DELETE /session/batches/:id       — delete a batch (draft only)
 
-router.get('/batches', userAuth, getSessionBatches);
-router.post('/batches', userAuth, validate({ body: addSessionBatchSchema }), addSessionBatch);
-router.delete('/batches/:id', userAuth, deleteSessionBatch);
+router.get('/batches', userAuth, batchController.getAllBatches);
+router.post('/batches', userAuth, validate({ body: createBatchSchema }), batchController.createBatch);
+router.get('/batches/:id', userAuth, validate({ params: batchIdParamSchema }), batchController.getBatch);
+router.patch('/batches/:id/publish', userAuth, validate({ params: batchIdParamSchema }), batchController.publishBatch);
+router.patch('/batches/:id', userAuth, validate({ params: batchIdParamSchema, body: updateBatchSchema }), batchController.updateBatch);
+router.delete('/batches/:id', userAuth, validate({ params: batchIdParamSchema }), batchController.deleteBatch);
 
-export default router; 
+export default router;

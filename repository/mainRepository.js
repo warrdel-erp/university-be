@@ -95,7 +95,7 @@ export async function getAllCourse() {
                         {
                             model: model.sessionModel,
                             as: 'session',
-                            attributes: ["sessionName", "startingDate", "endingDate", "classTillDate"],
+                            attributes: ["sessionName"],
                             where: buildScope(model.sessionModel),
                             required: false,
                         }
@@ -297,7 +297,7 @@ export async function addClassSections(data) {
 }
 
 export async function findClassSectionForYear(
-    { courseId, sessionId, section, year, sessionBatchMappingId },
+    { courseId, sessionId, section, year, batchId },
     options = {},
 ) {
     try {
@@ -313,8 +313,8 @@ export async function findClassSectionForYear(
             year: Number(year),
         };
 
-        if (sessionBatchMappingId !== undefined) {
-            whereClause.sessionBatchMappingId = Number(sessionBatchMappingId);
+        if (batchId !== undefined) {
+            whereClause.batchId = Number(batchId);
         }
 
         return scoped(model.classSectionModel).findOne({
@@ -516,7 +516,7 @@ export async function getClassSectionSpecific(campusId, instituteId, academicYea
                                                     model: model.sessionModel,
                                                     as: "session",
                                                     required: false,
-                                                    attributes: ["sessionName", "startingDate", "endingDate", "classTillDate",],
+                                                    attributes: ["sessionName",],
                                                     where: buildScope(model.sessionModel),
                                                 },
                                             ],

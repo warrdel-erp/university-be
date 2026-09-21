@@ -283,7 +283,7 @@ export async function getCourseWithSessionsData(courseId) {
                 'sessionName',
                 'startingDate',
                 'endingDate',
-                'classTillDate',
+                ,
                 'academicYearId',
               ],
               where: buildScope(model.sessionModel),
@@ -361,7 +361,7 @@ export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
   try {
     return await scoped(model.classSectionModel).findAll({
       where: { courseId, sessionId },
-      attributes: ['classSectionsId', 'section', 'year', 'activeYear', 'sessionBatchMappingId'],
+      attributes: ['classSectionsId', 'section', 'year', 'activeYear', 'batchId'],
       order: [['year', 'ASC'], ['section', 'ASC']],
       raw: true,
     });
@@ -679,7 +679,7 @@ export async function getSubjectByTeacherUserIdAndSubjectId(userId, subjectId) {
 export async function getSessionBatchesMapping(sessionId) {
   try {
     const [rows] = await sequelize.query(
-      "SELECT session_batch_mapping_id, batch FROM session_batch_mapping WHERE session_id = ? ORDER BY batch DESC",
+      "SELECT batch_id, batch FROM batch WHERE session_id = ? ORDER BY batch DESC",
       { replacements: [Number(sessionId)] }
     );
     return rows;

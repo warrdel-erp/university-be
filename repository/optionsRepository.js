@@ -437,7 +437,7 @@ export async function getLectureWindowOptionDetail(lectureWindowId, academicYear
             {
                 model: model.sessionModel,
                 as: 'lectureWindowSession',
-                attributes: ['sessionId', 'sessionName', 'startingDate', 'endingDate'],
+                attributes: ['sessionId', 'sessionName'],
             },
         ],
     });

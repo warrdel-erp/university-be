@@ -43,10 +43,10 @@ const classSectionModel = sequelize.define(
                 key: 'session_id'
             }
         },
-        sessionBatchMappingId: {
+        batchId: {
             type: DataTypes.INTEGER,
             allowNull: true,
-            field: 'session_batch_mapping_id'
+            field: 'batch_id'
         },
         academicYearId: {
             type: DataTypes.INTEGER,

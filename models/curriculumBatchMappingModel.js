@@ -1,6 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes, Op } from 'sequelize';
 import curriculumModel from "./curriculumModel.js";
+import batchModel from "./batchModel.js";
 import users from "./userModel.js";
 
 const curriculumBatchMappingModel = sequelize.define(
@@ -21,10 +22,18 @@ const curriculumBatchMappingModel = sequelize.define(
                 key: 'curriculum_id'
             }
         },
-        batch: {
+        /**
+         * FK to batch — the canonical batch entity.
+         * This is the new source of truth replacing the raw `batch` year integer.
+         */
+        batchId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'batch'
+            field: 'batch_id',
+            references: {
+                model: batchModel,
+                key: 'batch_id'
+            }
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -55,14 +64,15 @@ const curriculumBatchMappingModel = sequelize.define(
 );
 
 /**
- * Validates that a batch cannot have more than one curriculum belonging to the same programme.
- * Basically one batch for one program will have only one mapping.
+ * Validates that a batch (batch) cannot have more than one curriculum
+ * belonging to the same programme mapped to it.
+ * One programme batch → one curriculum only.
  */
 export async function validateSingleCurriculumPerBatchAndProgramme(mapping, options = {}) {
     const curriculumId = mapping.curriculumId;
-    const batch = mapping.batch;
+    const batchId = mapping.batchId;
 
-    if (!curriculumId || !batch) {
+    if (!curriculumId || !batchId) {
         return;
     }
 
@@ -87,9 +97,9 @@ export async function validateSingleCurriculumPerBatchAndProgramme(mapping, opti
 
     const siblingCurriculumIds = siblingCurriculums.map(c => c.curriculumId);
 
-    // 3. Check if any curriculum belonging to this programme is already mapped to this batch
+    // 3. Check if any curriculum belonging to this programme is already mapped to this batch entity
     const whereClause = {
-        batch,
+        batchId,
         curriculumId: { [Op.in]: siblingCurriculumIds }
     };
 
@@ -106,7 +116,7 @@ export async function validateSingleCurriculumPerBatchAndProgramme(mapping, opti
         const mappedCurriculum = siblingCurriculums.find(c => c.curriculumId === existingMapping.curriculumId);
         const mappedName = mappedCurriculum?.name || `ID ${existingMapping.curriculumId}`;
         const err = new Error(
-            `A curriculum ('${mappedName}') belonging to this programme is already mapped to batch ${batch}. Only one curriculum per programme can be mapped to a batch.`
+            `A curriculum ('${mappedName}') belonging to this programme is already mapped to this batch. Only one curriculum per programme can be mapped to a batch.`
         );
         err.statusCode = 409;
         throw err;
@@ -140,13 +150,29 @@ async function createTermMappings(instance, options) {
         return;
     }
 
+    // Resolve the batch year from the batch FK
+    let batchYear;
+    if (instance.batchId) {
+        const sbm = await sequelize.models.batch.findByPk(
+            instance.batchId,
+            { attributes: ['batch'], transaction: options?.transaction }
+        );
+        if (sbm) {
+            batchYear = sbm.batch;
+        }
+    }
+
+    if (!batchYear) {
+        console.warn(`Could not determine batch year for curriculum_batch_mapping ${instance.curriculumBatchMappingId}`);
+        return;
+    }
+
     const totalTerms = resolveTotalTerms(curriculum.course);
-    const batch = instance.batch;
     
     const termsData = [];
     for (let term = 1; term <= totalTerms; term++) {
         const yearNum = yearFromTerm(term, curriculum.course);
-        const calcYear = batch + yearNum - 1;
+        const calcYear = batchYear + yearNum - 1;
 
         termsData.push({
             curriculumBatchMappingId: instance.curriculumBatchMappingId,
@@ -163,6 +189,7 @@ async function createTermMappings(instance, options) {
         });
     }
 }
+
 
 curriculumBatchMappingModel.afterCreate(async (instance, options) => {
     await createTermMappings(instance, options);

@@ -157,3 +157,10 @@
 
 1. Timetable year showing incorrect data.
 2. Not showing all session for a program in create timetable.
+
+---
+
+1. Batch creation flow.
+2. remove dated from session.
+3. program of a session can not be changed.
+4. there should not be view option in "Batch Configuration" tab. ????

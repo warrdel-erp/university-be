@@ -336,27 +336,27 @@ export async function updateCouseSessionMapping(data, updatedBy) {
 import sequelize from "../database/sequelizeConfig.js";
 
 export async function getSessionBatches(sessionId) {
-    const [rows] = await sequelize.query("SELECT * FROM session_batch_mapping WHERE session_id = ? ORDER BY batch DESC", { replacements: [Number(sessionId)] });
+    const [rows] = await sequelize.query("SELECT * FROM batch WHERE session_id = ? ORDER BY batch DESC", { replacements: [Number(sessionId)] });
     return rows;
 }
 
 export async function addSessionBatch(data, userId) {
     const { sessionId, batch } = data;
     
-    const [existing] = await sequelize.query("SELECT * FROM session_batch_mapping WHERE session_id = ? AND batch = ?", { replacements: [Number(sessionId), Number(batch)] });
+    const [existing] = await sequelize.query("SELECT * FROM batch WHERE session_id = ? AND batch = ?", { replacements: [Number(sessionId), Number(batch)] });
     if (existing.length > 0) throw new Error("Batch already mapped to this session");
 
     const [result] = await sequelize.query(
-        "INSERT INTO session_batch_mapping (session_id, batch, created_by, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())",
+        "INSERT INTO batch (session_id, batch, created_by, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())",
         { replacements: [Number(sessionId), Number(batch), userId] }
     );
-    return { session_batch_mapping_id: result, session_id: sessionId, batch };
+    return { batch_id: result, session_id: sessionId, batch };
 }
 
 export async function deleteSessionBatch(mappingId) {
     // Check if it has class sections first
-    const [sections] = await sequelize.query("SELECT class_sections_id FROM class_sections WHERE session_batch_mapping_id = ? AND deleted_at IS NULL LIMIT 1", { replacements: [Number(mappingId)] });
+    const [sections] = await sequelize.query("SELECT class_sections_id FROM class_sections WHERE batch_id = ? AND deleted_at IS NULL LIMIT 1", { replacements: [Number(mappingId)] });
     if (sections.length > 0) throw new Error("Cannot delete batch because it has active class sections. Delete the sections first.");
     
-    await sequelize.query("DELETE FROM session_batch_mapping WHERE session_batch_mapping_id = ?", { replacements: [Number(mappingId)] });
+    await sequelize.query("DELETE FROM batch WHERE batch_id = ?", { replacements: [Number(mappingId)] });
 }

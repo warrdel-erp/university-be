@@ -43,7 +43,7 @@ export const getTermsWithClassSections = async (courseId, sessionId) => {
   // Create a quick lookup for batch numbers from mapping IDs
   const batchMap = {};
   for (const mb of mappedBatches) {
-    batchMap[mb.session_batch_mapping_id] = mb.batch;
+    batchMap[mb.batch_id] = mb.batch;
     if (!classSectionsByBatchAndYear[mb.batch]) {
       classSectionsByBatchAndYear[mb.batch] = {};
     }
@@ -53,7 +53,7 @@ export const getTermsWithClassSections = async (courseId, sessionId) => {
     classSectionsIds.push(section.classSectionsId);
     
     // Look up batch by mapping ID, fallback to old activeYear math if missing
-    let batch = batchMap[section.sessionBatchMappingId];
+    let batch = batchMap[section.batchId];
     if (!batch) {
        batch = section.activeYear ? (section.activeYear - ((section.year || 1) - 1)) : 2026;
     }

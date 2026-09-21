@@ -383,22 +383,22 @@ export async function addClassSections(data, createdBy) {
         try {
             // Ensure session batch mapping exists
             await sequelize.query(`
-                INSERT IGNORE INTO session_batch_mapping (session_id, batch, created_by, created_at, updated_at)
+                INSERT IGNORE INTO batch (session_id, batch, created_by, created_at, updated_at)
                 VALUES (?, ?, ?, NOW(), NOW())
             `, { replacements: [Number(sessionId), batchNum, createdBy], transaction });
 
             const [batchMappingRows] = await sequelize.query(`
-                SELECT session_batch_mapping_id FROM session_batch_mapping
+                SELECT batch_id FROM batch
                 WHERE session_id = ? AND batch = ?
             `, { replacements: [Number(sessionId), batchNum], transaction });
             
-            const sessionBatchMappingId = batchMappingRows[0]?.session_batch_mapping_id;
+            const batchId = batchMappingRows[0]?.batch_id;
 
             let classSectionRow = await mainRepository.findClassSectionForYear(
                 {
                     courseId: Number(courseId),
                     sessionId: Number(sessionId),
-                    sessionBatchMappingId,
+                    batchId,
                     section: sectionName,
                     year: yearNum,
                 },
@@ -414,7 +414,7 @@ export async function addClassSections(data, createdBy) {
             classSectionRow = await mainRepository.createClassSectionRow({
                 courseId: Number(courseId),
                 sessionId: Number(sessionId),
-                sessionBatchMappingId,
+                batchId,
                 year: yearNum,
                 activeYear: activeYear,
                 section: sectionName,

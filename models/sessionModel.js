@@ -56,21 +56,6 @@ const sessionModel = sequelize.define(
             allowNull: false,
             field: 'session_name'
         },
-        startingDate: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            field: 'starting_date'
-        },
-        endingDate: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            field: 'ending_date'
-        },
-        classTillDate: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            field: 'class_til_date'
-        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,

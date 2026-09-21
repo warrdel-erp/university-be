@@ -30,14 +30,9 @@ const publishSchema = z.object({
   publishStatus: z.enum(CURRICULUM_PUBLISH_STATUSES),
 });
 
-const mapBatchSchema = z
-  .object({
-    batch: z.number().int().positive().optional(),
-    batchId: z.number().int().positive().optional(),
-  })
-  .refine((data) => data.batch !== undefined || data.batchId !== undefined, {
-    message: 'Either batch or batchId is required',
-  });
+const mapBatchSchema = z.object({
+  batchId: z.number().int().positive({ message: "batchId is required" }),
+});
 
 const mapSubjectsSchema = z.object({
   subjects: z
