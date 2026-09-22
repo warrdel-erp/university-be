@@ -26,28 +26,23 @@ async function getActiveYear() {
   return { activeYear, yearTitle, activeYearRecord };
 }
 
-function emptyBatchesResponse(activeYear, yearTitle, activeYearRecord) {
-    return {
-      academicYear: {
-      academicYearId: activeYearRecord.academicYearId || null,
-        yearTitle,
-        activeYear,
-      },
-      summary: {
-        totalBatches: 0,
-        totalStudents: 0,
-        establishedCount: 0,
-        requireReviewCount: 0,
-        requireSetupCount: 0,
-      },
-      programmes: [],
-    };
-  }
+function emptyBatchesResponse() {
+  return {
+    summary: {
+      totalBatches: 0,
+      totalStudents: 0,
+      establishedCount: 0,
+      requireReviewCount: 0,
+      requireSetupCount: 0,
+    },
+    programmes: [],
+  };
+}
 
-function buildCurrentTerms({ course, terms, batchYear, activeYear, duration }) {
+function buildCurrentTerms({ course, terms, batchYear, referenceYear, duration }) {
   const currentTerms = [];
   for (const termMapping of terms) {
-    if (Number(termMapping.year) !== activeYear) {
+    if (Number(termMapping.year) !== referenceYear) {
       continue;
     }
     const termNumber = Number(termMapping.term);
@@ -65,7 +60,7 @@ function buildCurrentTerms({ course, terms, batchYear, activeYear, duration }) {
     return currentTerms;
   }
 
-  const currentYearNumber = activeYear - batchYear + 1;
+  const currentYearNumber = referenceYear - batchYear + 1;
   if (currentYearNumber < 1 || currentYearNumber > duration) {
     return [];
   }
@@ -84,7 +79,7 @@ function buildCurrentTerms({ course, terms, batchYear, activeYear, duration }) {
       term: termNumber,
       termName: buildTermName(course.termType, termNumber),
       yearNumber: currentYearNumber,
-      year: activeYear,
+      year: referenceYear,
     });
   }
   return currentTerms;
@@ -157,96 +152,65 @@ function termAggregationFromSubjectMappings(subjectMappings, termNumber, marksBy
 }
 
 export async function getPreviousAcademicBatches(filters = {}) {
-  const { activeYear, yearTitle, activeYearRecord } = await getActiveYear();
-  const courses = await previousAcademicRepository.findProgrammesWithSessions(filters);
+  const batchRows = await previousAcademicRepository.findPublishedBatchesForPreviousAcademic(
+    filters,
+  );
 
-  if (!courses.length) {
-    return emptyBatchesResponse(activeYear, yearTitle, activeYearRecord);
+  if (!batchRows.length) {
+    return emptyBatchesResponse();
   }
 
+  const referenceYear = new Date().getFullYear();
   const courseIds = [];
-  for (const course of courses) {
-    courseIds.push(course.courseId);
-  }
-
-  const curriculums = await previousAcademicRepository.getCurriculumBatchMappings(courseIds);
-  const regulationMappings =
-    await previousAcademicRepository.getAcademicRegulationCourseMappings(courseIds);
-
-  const curriculumMap = new Map();
+  const batchIds = [];
   const batchTermMappingIds = [];
-  const courseMappedBatchesMap = new Map();
+  const curriculumSubjectTermMappingIds = [];
+  const regulationCourseIds = new Set();
 
-  for (const curriculum of curriculums) {
-    const courseId = Number(curriculum.courseId);
-    if (!courseMappedBatchesMap.has(courseId)) {
-      courseMappedBatchesMap.set(courseId, new Set());
+  for (const row of batchRows) {
+    batchIds.push(Number(row.batchId));
+    const session = row.session;
+    const course = session ? session.course : null;
+    if (course && course.courseId) {
+      courseIds.push(Number(course.courseId));
+      regulationCourseIds.add(Number(course.courseId));
     }
-
-    for (const curriculumBatchMapping of curriculum.batchMappings || []) {
-      const batch = resolveBatchYear(curriculumBatchMapping);
-      if (batch == null) {
-        continue;
-      }
-      const batchSessionId = resolveBatchSessionId(curriculumBatchMapping);
-      courseMappedBatchesMap.get(courseId).add(batch);
-      const mapKey =
-        batchSessionId != null
-          ? `${courseId}_${batchSessionId}_${batch}`
-          : `${courseId}_${batch}`;
-      curriculumMap.set(mapKey, {
-        curriculum,
-        batchMapping: curriculumBatchMapping,
-        terms: curriculumBatchMapping.termMappings || [],
-        subjectMappings: curriculum.subjectTermMappings || [],
-      });
-      for (const termMapping of curriculumBatchMapping.termMappings || []) {
+    for (const curriculumMapping of row.curriculumMappings || []) {
+      for (const termMapping of curriculumMapping.termMappings || []) {
         batchTermMappingIds.push(termMapping.curriculumBatchTermMappingId);
       }
-    }
-  }
-
-  const regulationMap = new Map();
-  for (const regulationMapping of regulationMappings) {
-    regulationMap.set(regulationMapping.courseId, regulationMapping.academicRegulation);
-  }
-
-  const courseDurationMap = new Map();
-  const allBatchYearsSet = new Set();
-
-  for (const course of courses) {
-    const totalTerms = resolveTotalTerms(course) || 8;
-    const duration = Math.ceil(totalTerms / 2) || 4;
-    courseDurationMap.set(course.courseId, { totalTerms, duration });
-
-    for (let i = 0; i < duration; i++) {
-      allBatchYearsSet.add(activeYear - i);
-    }
-    const mappedBatches = courseMappedBatchesMap.get(course.courseId);
-    if (mappedBatches) {
-      for (const batchYear of mappedBatches) {
-        allBatchYearsSet.add(batchYear);
+      const curriculum = curriculumMapping.curriculum;
+      if (!curriculum) {
+        continue;
+      }
+      for (const subjectTermMapping of curriculum.subjectTermMappings || []) {
+        curriculumSubjectTermMappingIds.push(
+          subjectTermMapping.curriculumSubjectTermMappingId,
+        );
       }
     }
   }
 
-  const studentCountMap = await previousAcademicRepository.getBatchStudentCounts(
-    courseIds,
-    Array.from(allBatchYearsSet),
-  );
+  const regulationMappings =
+    await previousAcademicRepository.getAcademicRegulationCourseMappings(
+      Array.from(regulationCourseIds),
+    );
+  const regulationMap = new Map();
+  for (const regulationMapping of regulationMappings) {
+    regulationMap.set(Number(regulationMapping.courseId), regulationMapping.academicRegulation);
+  }
+
+  const studentCountMap =
+    await previousAcademicRepository.getStudentCountsByBatchIds(batchIds);
   const assessmentPlanMappings =
     await previousAcademicRepository.getAssessmentPlanSubjectMappings(
-    batchTermMappingIds,
-    courseIds,
+      batchTermMappingIds,
+      courseIds,
     );
-  const curriculumSubjectTermMappingIds = [];
-  for (const curriculum of curriculums) {
-    for (const subjectTermMapping of curriculum.subjectTermMappings || []) {
-      curriculumSubjectTermMappingIds.push(subjectTermMapping.curriculumSubjectTermMappingId);
-    }
-  }
   const historicalMarks =
-    await previousAcademicRepository.getHistoricalMarksByCstmIds(curriculumSubjectTermMappingIds);
+    await previousAcademicRepository.getHistoricalMarksByCstmIds(
+      curriculumSubjectTermMappingIds,
+    );
   const marksBySubjectTermMapping = aggregateMarksBySubjectTermMapping(historicalMarks);
 
   const assessmentPlanSubjectKeys = new Set();
@@ -272,246 +236,228 @@ export async function getPreviousAcademicBatches(filters = {}) {
   let establishedTotal = 0;
   let requireReviewTotal = 0;
   let requireSetupTotal = 0;
-  const programmeResults = [];
+  const programmeMap = new Map();
 
-  for (const course of courses) {
-    const { totalTerms, duration } = courseDurationMap.get(course.courseId);
-    const regulation = regulationMap.get(course.courseId);
+  for (const row of batchRows) {
+    const plain = row.get({ plain: true });
+    const session = plain.session;
+    const course = session.course;
+    const courseId = Number(course.courseId);
+    const sessionId = Number(session.sessionId);
+    const batchId = Number(plain.batchId);
+    const batchYear = Number(plain.batch);
+    const totalTerms = resolveTotalTerms(course) || 8;
+    const perYear = termsPerYear(course) || 2;
+    const duration = Math.ceil(totalTerms / perYear) || 4;
+    const studentCount = studentCountMap.get(batchId) || 0;
+    const regulation = regulationMap.get(courseId);
 
-    const sessionList = [];
-    for (const mapping of course.sessionCourseMappings || []) {
-      if (mapping.session) {
-        sessionList.push(mapping.session);
+    const curriculumMapping = (plain.curriculumMappings || [])[0] || null;
+    let curriculum = null;
+    let terms = [];
+    let subjectMappings = [];
+    if (curriculumMapping) {
+      curriculum = curriculumMapping.curriculum || null;
+      terms = curriculumMapping.termMappings || [];
+      if (curriculum) {
+        subjectMappings = curriculum.subjectTermMappings || [];
       }
     }
-    if (sessionList.length === 0) {
-      continue;
-    }
+    const hasCurriculum = Boolean(curriculumMapping);
 
-    const courseBatchesSet = new Set();
-    for (let i = 0; i < duration; i++) {
-      courseBatchesSet.add(activeYear - i);
-    }
-    const mappedBatches = courseMappedBatchesMap.get(course.courseId);
-    if (mappedBatches) {
-      for (const batchYear of mappedBatches) {
-        courseBatchesSet.add(batchYear);
+    const isCurrentBatch = batchYear === referenceYear;
+    const requiredHistoricalTerms = isCurrentBatch
+      ? 0
+      : Math.min((referenceYear - batchYear) * perYear, totalTerms);
+
+    let termsConfigured = 0;
+    for (const termMapping of terms) {
+      let hasSubject = false;
+      for (const subjectTermMapping of subjectMappings) {
+        if (Number(subjectTermMapping.term) === Number(termMapping.term)) {
+          hasSubject = true;
+          break;
+        }
+      }
+      if (hasSubject) {
+        termsConfigured += 1;
       }
     }
+    const hasTermsConfigured = termsConfigured >= totalTerms;
 
-    const courseBatches = Array.from(courseBatchesSet).sort((a, b) => b - a);
-
-    for (const session of sessionList) {
-      const sessionId = session.sessionId;
-      const sessionName = session.sessionName || `Session ${sessionId}`;
-      const batchRows = [];
-      let programmeSessionStudents = 0;
-
-      for (const batchYear of courseBatches) {
-        const studentCount =
-          studentCountMap.get(
-            `${Number(course.courseId)}_${Number(sessionId)}_${Number(batchYear)}`,
-          ) || 0;
-        programmeSessionStudents += studentCount;
-
-        const curriculumData =
-          curriculumMap.get(`${course.courseId}_${sessionId}_${batchYear}`) ||
-          curriculumMap.get(`${course.courseId}_${batchYear}`);
-        const isCurrentBatch = batchYear === activeYear;
-        const requiredHistoricalTerms = isCurrentBatch
-          ? 0
-          : Math.min((activeYear - batchYear) * 2, totalTerms);
-
-        const hasCurriculum = Boolean(curriculumData);
-        const hasRegulation = Boolean(regulation);
-        const terms = curriculumData ? curriculumData.terms : [];
-        const subjectMappings = curriculumData ? curriculumData.subjectMappings : [];
-
-        let termsConfigured = 0;
-        for (const termMapping of terms) {
-          let hasSubject = false;
-          for (const subjectTermMapping of subjectMappings) {
-            if (Number(subjectTermMapping.term) === Number(termMapping.term)) {
-              hasSubject = true;
-              break;
-            }
-          }
-          if (hasSubject) {
-            termsConfigured += 1;
-          }
-        }
-        const hasTermsConfigured = termsConfigured >= totalTerms;
-
-        let currentYearTermFound = false;
-        if (isCurrentBatch) {
-          for (const termMapping of terms) {
-            if (Number(termMapping.year) === activeYear || Number(termMapping.yearNumber) === 1) {
-              currentYearTermFound = true;
-              break;
-            }
-          }
-        }
-
-        let subjectsRequired = 0;
-        let subjectsConfigured = 0;
-        for (const termMapping of terms) {
-          const isCurrentYearTerm =
-            Number(termMapping.year) === activeYear || Number(termMapping.yearNumber) === 1;
-          const includeTerm = isCurrentBatch
-            ? !currentYearTermFound || isCurrentYearTerm
-            : Number(termMapping.term) <= requiredHistoricalTerms;
-          if (!includeTerm) {
-            continue;
-          }
-          for (const subjectTermMapping of subjectMappings) {
-            if (Number(subjectTermMapping.term) !== Number(termMapping.term)) {
-              continue;
-            }
-            subjectsRequired += 1;
-            const specificKey = `${course.courseId}_${sessionId}_${termMapping.curriculumBatchTermMappingId}_${subjectTermMapping.subjectId}`;
-            const genericKey = `${course.courseId}_${termMapping.curriculumBatchTermMappingId}_${subjectTermMapping.subjectId}`;
-            const sessionSubjectKey = `${course.courseId}_${sessionId}_${subjectTermMapping.subjectId}`;
-            const courseSubjectKey = `${course.courseId}_${subjectTermMapping.subjectId}`;
-            if (
-              assessmentPlanSubjectKeys.has(specificKey) ||
-              assessmentPlanSubjectKeys.has(genericKey) ||
-              assessmentPlanSubjectKeys.has(sessionSubjectKey) ||
-              assessmentPlanSubjectKeys.has(courseSubjectKey)
-            ) {
-              subjectsConfigured += 1;
-            }
-          }
-        }
-
-        const hasAssessmentPlans =
-          subjectsRequired > 0 && subjectsConfigured >= subjectsRequired;
-
-        let setupReadiness = 'Setup Complete';
-        let setupMessage = 'All prerequisites configured.';
-        if (!hasCurriculum || !hasTermsConfigured) {
-          setupReadiness = 'Needs Setup';
-          setupMessage = 'Curriculum structure incomplete.';
-        } else if (!hasAssessmentPlans) {
-          setupReadiness = 'Needs Attention';
-          setupMessage = 'Assessment plans incomplete';
-        } else if (!hasRegulation) {
-          setupReadiness = 'Needs Setup';
-          setupMessage = 'Regulation not linked.';
-        }
-
-        let openingPosition = 'Awaiting Setup';
-        let statusFilterValues = [openingPosition, setupReadiness];
-
-        if (isCurrentBatch) {
-          openingPosition = hasAssessmentPlans
-            ? 'Awaiting Setup'
-            : setupReadiness;
-          statusFilterValues = [openingPosition, setupReadiness];
-        } else {
-          let frozenTermsCount = 0;
-          let blockedStudentsCount = 0;
-          let validatedCount = 0;
-          for (const termMapping of terms) {
-            if (termMapping.term > requiredHistoricalTerms) {
-              continue;
-            }
-            const historicalTermData = termAggregationFromSubjectMappings(
-              subjectMappings,
-              termMapping.term,
-              marksBySubjectTermMapping,
-            );
-            if (!historicalTermData) {
-              continue;
-            }
-            if (historicalTermData.frozenCount > 0) {
-              frozenTermsCount += 1;
-            }
-            blockedStudentsCount += historicalTermData.blockedCount;
-            validatedCount += historicalTermData.validatedCount;
-          }
-
-          if (setupReadiness !== 'Setup Complete') {
-            openingPosition = 'Awaiting Setup';
-          } else if (frozenTermsCount >= requiredHistoricalTerms && studentCount > 0) {
-            openingPosition = 'Established';
-          } else if (blockedStudentsCount > 0) {
-            openingPosition = 'Awaiting Historical Data';
-          } else if (validatedCount > 0) {
-            openingPosition = 'Awaiting Historical Data';
-          } else {
-            openingPosition = 'Awaiting Historical Data';
-          }
-          statusFilterValues = [openingPosition, setupReadiness];
-        }
-
-        if (filters.status && filters.status !== 'All States') {
-          let statusMatched = false;
-          for (const value of statusFilterValues) {
-            if (value === filters.status) {
-              statusMatched = true;
-              break;
-            }
-          }
-          if (!statusMatched) {
-            continue;
-          }
-        }
-
-        totalBatchesCount += 1;
-        totalStudentsCount += studentCount;
-        if (openingPosition === 'Established') {
-          establishedTotal += 1;
-        } else if (setupReadiness === 'Needs Attention') {
-          requireReviewTotal += 1;
-        } else if (
-          setupReadiness === 'Needs Setup' ||
-          openingPosition === 'Awaiting Setup' ||
-          openingPosition === 'Awaiting Historical Data'
+    let currentYearTermFound = false;
+    if (isCurrentBatch) {
+      for (const termMapping of terms) {
+        if (
+          Number(termMapping.year) === referenceYear ||
+          Number(termMapping.yearNumber) === 1
         ) {
-          requireSetupTotal += 1;
+          currentYearTermFound = true;
+          break;
         }
+      }
+    }
 
-        batchRows.push({
-          admissionBatch: batchYear,
-          isCurrentBatch,
-          studentCount: studentCount,
-          curriculumBatchMappingId: curriculumData
-            ? curriculumData.batchMapping.curriculumBatchMappingId
-            : null,
-          termsConfigured,
-          totalTerms,
-          currentTerms: buildCurrentTerms({
-            course,
-            terms,
-            batchYear,
-            activeYear,
-            duration,
-          }),
-          setupReadiness,
-          setupMessage,
-          openingPosition,
-        });
+    let subjectsRequired = 0;
+    let subjectsConfigured = 0;
+    for (const termMapping of terms) {
+      const isCurrentYearTerm =
+        Number(termMapping.year) === referenceYear || Number(termMapping.yearNumber) === 1;
+      const includeTerm = isCurrentBatch
+        ? !currentYearTermFound || isCurrentYearTerm
+        : Number(termMapping.term) <= requiredHistoricalTerms;
+      if (!includeTerm) {
+        continue;
+      }
+      for (const subjectTermMapping of subjectMappings) {
+        if (Number(subjectTermMapping.term) !== Number(termMapping.term)) {
+          continue;
+        }
+        subjectsRequired += 1;
+        const specificKey = `${courseId}_${sessionId}_${termMapping.curriculumBatchTermMappingId}_${subjectTermMapping.subjectId}`;
+        const genericKey = `${courseId}_${termMapping.curriculumBatchTermMappingId}_${subjectTermMapping.subjectId}`;
+        const sessionSubjectKey = `${courseId}_${sessionId}_${subjectTermMapping.subjectId}`;
+        const courseSubjectKey = `${courseId}_${subjectTermMapping.subjectId}`;
+        if (
+          assessmentPlanSubjectKeys.has(specificKey) ||
+          assessmentPlanSubjectKeys.has(genericKey) ||
+          assessmentPlanSubjectKeys.has(sessionSubjectKey) ||
+          assessmentPlanSubjectKeys.has(courseSubjectKey)
+        ) {
+          subjectsConfigured += 1;
+        }
+      }
+    }
+
+    const hasAssessmentPlans =
+      subjectsRequired > 0 && subjectsConfigured >= subjectsRequired;
+    const hasRegulation = Boolean(regulation);
+
+    let setupReadiness = 'Setup Complete';
+    let setupMessage = 'All prerequisites configured.';
+    if (!hasCurriculum || !hasTermsConfigured) {
+      setupReadiness = 'Needs Setup';
+      setupMessage = 'Curriculum structure incomplete.';
+    } else if (!hasAssessmentPlans) {
+      setupReadiness = 'Needs Attention';
+      setupMessage = 'Assessment plans incomplete';
+    } else if (!hasRegulation) {
+      setupReadiness = 'Needs Setup';
+      setupMessage = 'Regulation not linked.';
+    }
+
+    let openingPosition = 'Awaiting Setup';
+    let statusFilterValues = [openingPosition, setupReadiness];
+
+    if (isCurrentBatch) {
+      openingPosition = hasAssessmentPlans ? 'Awaiting Setup' : setupReadiness;
+      statusFilterValues = [openingPosition, setupReadiness];
+    } else {
+      let frozenTermsCount = 0;
+      let blockedStudentsCount = 0;
+      let validatedCount = 0;
+      for (const termMapping of terms) {
+        if (termMapping.term > requiredHistoricalTerms) {
+          continue;
+        }
+        const historicalTermData = termAggregationFromSubjectMappings(
+          subjectMappings,
+          termMapping.term,
+          marksBySubjectTermMapping,
+        );
+        if (!historicalTermData) {
+          continue;
+        }
+        if (historicalTermData.frozenCount > 0) {
+          frozenTermsCount += 1;
+        }
+        blockedStudentsCount += historicalTermData.blockedCount;
+        validatedCount += historicalTermData.validatedCount;
       }
 
-      programmeResults.push({
-        courseId: course.courseId,
+      if (setupReadiness !== 'Setup Complete') {
+        openingPosition = 'Awaiting Setup';
+      } else if (frozenTermsCount >= requiredHistoricalTerms && studentCount > 0) {
+        openingPosition = 'Established';
+      } else {
+        openingPosition = 'Awaiting Historical Data';
+      }
+      statusFilterValues = [openingPosition, setupReadiness];
+    }
+
+    if (filters.status && filters.status !== 'All States') {
+      let statusMatched = false;
+      for (const value of statusFilterValues) {
+        if (value === filters.status) {
+          statusMatched = true;
+          break;
+        }
+      }
+      if (!statusMatched) {
+        continue;
+      }
+    }
+
+    totalBatchesCount += 1;
+    totalStudentsCount += studentCount;
+    if (openingPosition === 'Established') {
+      establishedTotal += 1;
+    } else if (setupReadiness === 'Needs Attention') {
+      requireReviewTotal += 1;
+    } else if (
+      setupReadiness === 'Needs Setup' ||
+      openingPosition === 'Awaiting Setup' ||
+      openingPosition === 'Awaiting Historical Data'
+    ) {
+      requireSetupTotal += 1;
+    }
+
+    const programmeKey = `${courseId}_${sessionId}`;
+    if (!programmeMap.has(programmeKey)) {
+      programmeMap.set(programmeKey, {
+        courseId,
         courseName: course.courseName,
         courseCode: course.courseCode,
         sessionId,
-        sessionName,
-        totalBatches: batchRows.length,
-        totalStudents: programmeSessionStudents,
-        batches: batchRows,
+        sessionName: session.sessionName || `Session ${sessionId}`,
+        totalBatches: 0,
+        totalStudents: 0,
+        batches: [],
       });
     }
+
+    const programme = programmeMap.get(programmeKey);
+    programme.totalBatches += 1;
+    programme.totalStudents += studentCount;
+    programme.batches.push({
+      batchId,
+      admissionBatch: batchYear,
+      isCurrentBatch,
+      studentCount,
+      curriculumBatchMappingId: curriculumMapping
+        ? Number(curriculumMapping.curriculumBatchMappingId)
+        : null,
+      termsConfigured,
+      totalTerms,
+      currentTerms: buildCurrentTerms({
+        course,
+        terms,
+        batchYear,
+        referenceYear,
+        duration,
+      }),
+      setupReadiness,
+      setupMessage,
+      openingPosition,
+    });
+  }
+
+  const programmeResults = [];
+  for (const programme of programmeMap.values()) {
+    programmeResults.push(programme);
   }
 
   return {
-    academicYear: {
-      academicYearId: activeYearRecord.academicYearId || null,
-      yearTitle,
-      activeYear,
-    },
     summary: {
       totalBatches: totalBatchesCount,
       totalStudents: totalStudentsCount,

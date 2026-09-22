@@ -54,6 +54,92 @@ export async function findProgrammesWithSessions(filters = {}) {
   });
 }
 
+export async function findPublishedBatchesForPreviousAcademic(filters = {}) {
+  const sessionWhere = { ...buildScope(models.sessionModel, { scopeConfig: { academicYear: false } }) };
+  if (filters.sessionId) {
+    sessionWhere.sessionId = Number(filters.sessionId);
+  }
+
+  const courseWhere = { isActive: true };
+  if (filters.courseId) {
+    courseWhere.courseId = Number(filters.courseId);
+  }
+  if (filters.search) {
+    courseWhere[Op.or] = [
+      { courseName: { [Op.like]: `%${filters.search}%` } },
+      { courseCode: { [Op.like]: `%${filters.search}%` } },
+    ];
+  }
+
+  return models.batchModel.findAll({
+    where: { status: 'published' },
+    attributes: ['batchId', 'sessionId', 'batch', 'intakeCapacity', 'status'],
+    include: [
+      {
+        model: models.sessionModel,
+        as: 'session',
+        required: true,
+        attributes: ['sessionId', 'sessionName', 'courseId'],
+        where: sessionWhere,
+        include: [
+          {
+            model: models.courseModel,
+            as: 'course',
+            required: true,
+            attributes: [
+              'courseId',
+              'courseName',
+              'courseCode',
+              'termType',
+              'totalTerms',
+              'courseDuration',
+            ],
+            where: courseWhere,
+          },
+        ],
+      },
+      {
+        model: models.curriculumBatchMappingModel,
+        as: 'curriculumMappings',
+        required: false,
+        attributes: ['curriculumBatchMappingId', 'curriculumId', 'batchId'],
+        include: [
+          {
+            model: models.curriculumModel,
+            as: 'curriculum',
+            required: false,
+            attributes: ['curriculumId', 'name', 'courseId', 'isActive'],
+            where: { isActive: true },
+            include: [
+              {
+                model: models.curriculumSubjectTermMappingModel,
+                as: 'subjectTermMappings',
+                required: false,
+                attributes: ['curriculumSubjectTermMappingId', 'subjectId', 'term', 'credit'],
+              },
+            ],
+          },
+          {
+            model: models.curriculumBatchTermMappingModel,
+            as: 'termMappings',
+            required: false,
+            attributes: [
+              'curriculumBatchTermMappingId',
+              'term',
+              'yearNumber',
+              'year',
+            ],
+          },
+        ],
+      },
+    ],
+    order: [
+      [{ model: models.sessionModel, as: 'session' }, 'sessionId', 'ASC'],
+      ['batch', 'DESC'],
+    ],
+  });
+}
+
 export async function getCurriculumBatchMappings(courseIds) {
   return scoped(models.curriculumModel).findAll({
     where: { courseId: { [Op.in]: courseIds } },
@@ -126,6 +212,34 @@ export async function getBatchStudentCounts(courseIds, batchYears) {
       `${Number(row.courseId)}_${Number(row.sessionId)}_${Number(row.batchYear)}`,
       Number(row.studentCount) || 0,
     );
+  }
+  return countMap;
+}
+
+export async function getStudentCountsByBatchIds(batchIds) {
+  const countMap = new Map();
+  if (!batchIds.length) {
+    return countMap;
+  }
+
+  const rows = await scoped(models.studentModel, {
+    scopeConfig: { academicYear: false },
+  }).findAll({
+    attributes: [
+      'batchId',
+      [
+        sequelize.fn('COUNT', sequelize.fn('DISTINCT', sequelize.col('students.student_id'))),
+        'studentCount',
+      ],
+    ],
+    where: { batchId: { [Op.in]: batchIds } },
+    group: ['batchId'],
+    raw: true,
+    subQuery: false,
+  });
+
+  for (const row of rows) {
+    countMap.set(Number(row.batchId), Number(row.studentCount) || 0);
   }
   return countMap;
 }
