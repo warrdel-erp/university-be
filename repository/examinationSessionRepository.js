@@ -581,7 +581,7 @@ export async function findCoursesByIds(courseIds, options = {}) {
 export async function findSessionsByIds(sessionIds, options = {}) {
   return scoped(model.sessionModel).findAll({
     where: { sessionId: { [Op.in]: sessionIds } },
-    attributes: ["sessionId", "sessionName", "startingDate", "endingDate", "classTillDate"],
+    attributes: ["sessionId", "sessionName"],
     raw: true,
     transaction: options.transaction,
   });

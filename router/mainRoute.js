@@ -96,6 +96,7 @@ const addClassSectionsSchema = z.object({
     sessionId: positiveIntegerId,
     section: z.string().trim().min(1, 'section is required'),
     year: z.coerce.number().int().positive('year must be a positive integer'),
+    batchYear: z.coerce.number().int().positive('batchYear must be a positive integer'),
 }).strict();
 
 const router = Router();

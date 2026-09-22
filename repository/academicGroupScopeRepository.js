@@ -44,7 +44,7 @@ export async function getCascadingGroupRoutinesRepository({
       {
         model: model.timeTableStructureCourseModel,
         as: 'timeTableStructureCourses',
-        attributes: ['timetableStructureCourseMapperId', 'timeTableNameId', 'academicGroupScopeId', 'startingDate', 'endingDate'],
+        attributes: ['timetableStructureCourseMapperId', 'timeTableNameId', 'academicGroupScopeId'],
         required: false,
         include: [
           {
@@ -66,7 +66,7 @@ export async function getCascadingGroupRoutinesRepository({
             as: 'timeTableRoutines',
             where: buildScope(model.timeTableRoutineModel),
             required: false,
-            attributes: ['timeTableRoutineId', 'timetableStructureCourseMapperId', 'academicGroupId', 'courseId', 'academicYearId', 'isPublish', 'campusId', 'timeTableType', 'startingDate', 'endingDate'],
+            attributes: ['timeTableRoutineId', 'timetableStructureCourseMapperId', 'academicGroupId', 'courseId', 'academicYearId', 'isPublish', 'campusId', 'timeTableType'],
             include: [
               {
                 model: model.timeTableCellModel,

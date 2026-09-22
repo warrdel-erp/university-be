@@ -98,7 +98,7 @@ export async function getNextDateWisePeriodsOnSameDay(timeTableRoutineId, date, 
                         {
                             model: model.timeTableRoutineModel,
                             as: 'timeTableRoutine',
-                            attributes: ['timeTableRoutineId', 'classSectionTermId', 'startingDate', 'endingDate'],
+                            attributes: ['timeTableRoutineId', 'classSectionTermId'],
                             required: true,
                             where: buildScope(model.timeTableRoutineModel),
                             include: [

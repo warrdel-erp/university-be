@@ -364,10 +364,24 @@ const studentModel = sequelize.define(
             allowNull: true,
             field: 'c_city',
         },
+        /**
+         * Legacy batch year integer (e.g. 2024).
+         * @deprecated — use batchId (FK to batch) instead.
+         * Kept nullable during transition.
+         */
         batchYear: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'batch_year'
+        },
+        /**
+         * FK to batch — the canonical batch entity.
+         * Replaces the raw batchYear integer as the source of truth.
+         */
+        batchId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'batch_id'
         },
         createdAt: {
             type: DataTypes.DATE,

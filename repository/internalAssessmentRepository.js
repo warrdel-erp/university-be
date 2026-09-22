@@ -719,7 +719,7 @@ export async function getInternalAssessmentById(internalAssessmentId) {
           "sessionName",
           "startingDate",
           "endingDate",
-          "classTillDate",
+          ,
         ],
         required: false,
       },

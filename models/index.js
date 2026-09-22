@@ -114,6 +114,7 @@ import syllabusDetailsModel from "./syllabusDetailsModel.js";
 import syllabusModel from "./syllabusModel.js";
 import sessionModel from "./sessionModel.js";
 import sessionCouseMappingModel from "./sessionCouseMappingModel.js";
+import batchModel from "./batchModel.js";
 import poModel from "./poModel.js";
 import coModel from "./coModel.js";
 import coWeightageModel from "./coWeightageModel.js";
@@ -4522,6 +4523,7 @@ export {
   syllabusModel,
   sessionModel,
   sessionCouseMappingModel,
+  batchModel,
   poModel,
   coModel,
   coWeightageModel,
@@ -4609,6 +4611,28 @@ export {
 };
 
 import sequelize from "../database/sequelizeConfig.js";
+
+// Session Batch Mapping Associations
+sessionModel.hasMany(batchModel, { foreignKey: 'session_id', as: 'batches' });
+batchModel.belongsTo(sessionModel, { foreignKey: 'session_id', as: 'session' });
+
+// Session Course Direct Association
+sessionModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'course' });
+courseModel.hasMany(sessionModel, { foreignKey: 'course_id', as: 'sessions' });
+
+// Class Section to Session Batch Mapping
+classSectionModel.belongsTo(batchModel, { foreignKey: 'batch_id', as: 'batch' });
+batchModel.hasMany(classSectionModel, { foreignKey: 'batch_id', as: 'classSections' });
+
+// Curriculum Batch Mapping to Session Batch Mapping
+curriculumBatchMappingModel.belongsTo(batchModel, { foreignKey: 'batch_id', as: 'batch' });
+batchModel.hasMany(curriculumBatchMappingModel, { foreignKey: 'batch_id', as: 'curriculumMappings' });
+
+// Student to Session Batch Mapping (batch_id FK)
+studentModel.belongsTo(batchModel, { foreignKey: 'batch_id', as: 'batch' });
+batchModel.hasMany(studentModel, { foreignKey: 'batch_id', as: 'students' });
+
 import { registerAuditedModels } from "../utility/audit/registerAuditHooks.js";
 
 registerAuditedModels(sequelize.models);
+

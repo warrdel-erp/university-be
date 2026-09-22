@@ -3,12 +3,22 @@ export function timeToMinutes(time) {
     return null;
   }
 
-  const [hours = 0, minutes = 0] = String(time).split(":").map(Number);
+  const text = String(time).replace(/\u202f/g, " ").trim().toLowerCase();
+  const [clock, meridiem] = text.split(/\s+/);
+  const [hours = 0, minutes = 0] = clock.split(":").map(Number);
   if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
     return null;
   }
 
-  return hours * 60 + minutes;
+  let hour = hours;
+  if (meridiem === "pm" && hour < 12) {
+    hour += 12;
+  }
+  if (meridiem === "am" && hour === 12) {
+    hour = 0;
+  }
+
+  return hour * 60 + minutes;
 }
 
 export function minutesToTime(minutes) {

@@ -67,7 +67,7 @@ export async function getExamSchedules(filters = {}) {
                 {
                     model: model.acedmicYearModel,
                     as: "acedmicYearSchedule",
-                    attributes: ["academicYearId", "yearTitle"],
+                    attributes: ["academicYearId", "yearTitle", "startingDate", "endingDate"],
                 },
                 {
                     model: model.examinationSessionModel,
@@ -166,7 +166,7 @@ export async function getExamScheduleById(examScheduleId, options = {}) {
                 {
                     model: model.acedmicYearModel,
                     as: "acedmicYearSchedule",
-                    attributes: ["academicYearId", "yearTitle"],
+                    attributes: ["academicYearId", "yearTitle", "startingDate", "endingDate"],
                 },
                 {
                     model: model.sessionModel,

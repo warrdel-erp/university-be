@@ -63,11 +63,17 @@ export async function updateCouseSessionMapping(sessionCourseMappingId, data) {
     }
 }
 
-export async function getSessionDetails() {
+export async function getSessionDetails(courseId) {
     try {
-        const mappingScope = buildScope(model.sessionCouseMappingModel);
+        
+        
+        const whereClause = {};
+        if (courseId) {
+            whereClause.courseId = Number(courseId);
+        }
 
         return await scoped(model.sessionModel).findAll({
+            where: whereClause,
             attributes: { exclude: excludeMeta },
             include: [
                 {
@@ -76,18 +82,9 @@ export async function getSessionDetails() {
                     attributes: { exclude: excludeMeta },
                 },
                 {
-                    model: model.sessionCouseMappingModel,
-                    as: "courseMappings",
-                    where: mappingScope,
-                    required: false,
-                    attributes: { exclude: excludeMeta },
-                    include: [
-                        {
-                            model: model.courseModel,
-                            as: 'courses',
-                            attributes: ["courseName", "courseCode"],
-                        }
-                    ]
+                    model: model.courseModel,
+                    as: 'course',
+                    attributes: ["courseName", "courseCode"],
                 }
             ]
         });
@@ -107,6 +104,11 @@ export async function getSingleSessionDetails(sessionId) {
                     model: model.acedmicYearModel,
                     as: 'sessionAcedmic',
                     attributes: { exclude: excludeMeta },
+                },
+                {
+                    model: model.courseModel,
+                    as: 'course',
+                    attributes: ["courseName", "courseCode"],
                 }
             ]
         });
@@ -412,22 +414,17 @@ export async function createSessionWithCourseMappings(sessionData, createdBy, up
     const transaction = await sequelize.transaction();
 
     try {
-        const courseIds = normalizeCourseIds(sessionData.courseId);
         const payload = {
             ...sessionData,
             createdBy,
             updatedBy,
         };
-        delete payload.courseId;
+        // Normalize courseId in case it comes as an array with one element (legacy compatibility)
+        if (Array.isArray(payload.courseId)) {
+             payload.courseId = payload.courseId[0];
+        }
 
         const session = await addSession(payload, transaction);
-
-        await syncCourseSessionMappings({
-            sessionId: session.sessionId,
-            courseIds,
-            userId: createdBy,
-            transaction,
-        });
 
         await transaction.commit();
         return session;
@@ -452,18 +449,17 @@ export async function updateSessionWithCourseMappings(sessionId, sessionData, up
             throw new Error(`Session ID ${numericSessionId} not found`);
         }
 
+        // Add courseId if present
+        const updateFields = pickSessionUpdateFields(sessionData, updatedBy);
+        if (sessionData.courseId) {
+            updateFields.courseId = Array.isArray(sessionData.courseId) ? sessionData.courseId[0] : sessionData.courseId;
+        }
+
         await updateSession(
             numericSessionId,
-            pickSessionUpdateFields(sessionData, updatedBy),
+            updateFields,
             transaction,
         );
-
-        await syncCourseSessionMappings({
-            sessionId: numericSessionId,
-            courseIds: sessionData.courseId,
-            userId: updatedBy,
-            transaction,
-        });
 
         await transaction.commit();
         return getSingleSessionDetails(numericSessionId);

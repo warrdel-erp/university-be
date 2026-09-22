@@ -147,7 +147,7 @@ export const addClassSections = async (req, res) => {
     } catch (error) {
         console.error("Error in add class sections:", error);
         const message = error.message || 'Internal Server Error';
-        return res.status(/required|found|Active institute/.test(message) ? 400 : 500).send(message);
+        return res.status(/required|found|Active institute|already exists/.test(message) ? 400 : 500).send(message);
     }
 };
 

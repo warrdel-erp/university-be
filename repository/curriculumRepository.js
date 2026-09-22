@@ -26,7 +26,7 @@ const courseAttributes = [
 const batchMappingAttributes = [
   'curriculumBatchMappingId',
   'curriculumId',
-  'batch',
+  'batchId',
 ];
 
 export async function findConfiguredTermsByCurriculumIds(curriculumIds) {
@@ -70,6 +70,13 @@ export async function findAll(filters = {}) {
         as: 'batchMappings',
         attributes: batchMappingAttributes,
         required: false,
+        include: [
+          {
+            model: model.batchModel,
+            as: 'batch',
+            attributes: ['batch']
+          }
+        ]
       },
     ],
     order: [['createdAt', 'DESC']],
@@ -82,7 +89,7 @@ export async function findAll(filters = {}) {
     curriculumIds.push(Number(curriculum.curriculumId));
     for (const mapping of curriculum.batchMappings) {
       courseIds.push(Number(curriculum.courseId));
-      batchYears.push(Number(mapping.batch));
+      batchYears.push(Number(mapping.batch?.batch || 0));
     }
   }
 
@@ -115,7 +122,7 @@ export async function findAll(filters = {}) {
 
   for (const curriculum of curriculums) {
     for (const mapping of curriculum.batchMappings) {
-      const key = `${Number(curriculum.courseId)}_${Number(mapping.batch)}`;
+      const key = `${Number(curriculum.courseId)}_${Number(mapping.batch?.batch || 0)}`;
       const batchStudentCount = countMap.get(key) || 0;
       mapping.setDataValue('studentCount', batchStudentCount);
     }
@@ -279,7 +286,22 @@ export async function findBatchMappingsByCurriculumId(curriculumId) {
   return model.curriculumBatchMappingModel.findAll({
     where: { curriculumId },
     attributes: batchMappingAttributes,
-    order: [['batch', 'ASC']],
+    include: [
+      {
+        model: model.batchModel,
+        as: 'batch',
+        attributes: ['batchId', 'batch', 'status', 'sessionId'],
+        include: [
+          {
+            model: model.sessionModel,
+            as: 'session',
+            attributes: ['sessionId', 'sessionName'],
+            paranoid: false,
+          }
+        ]
+      }
+    ],
+    order: [[{ model: model.batchModel, as: 'batch' }, 'batch', 'ASC']],
   });
 }
 
@@ -347,15 +369,18 @@ export async function findProgrammeBatchOverview() {
         as: 'batchMappings',
         attributes: batchMappingAttributes,
         required: true,
+        include: [
+          {
+            model: model.batchModel,
+            as: 'batch',
+            attributes: ['batch']
+          }
+        ]
       },
     ],
     order: [
       [{ model: model.courseModel, as: 'course' }, 'courseName', 'ASC'],
-      [
-        { model: model.curriculumBatchMappingModel, as: 'batchMappings' },
-        'batch',
-        'DESC',
-      ],
+      [{ model: model.curriculumBatchMappingModel, as: 'batchMappings' }, { model: model.batchModel, as: 'batch' }, 'batch', 'DESC'],
     ],
   });
 
@@ -366,7 +391,7 @@ export async function findProgrammeBatchOverview() {
     curriculumIds.push(Number(curriculum.curriculumId));
     for (const mapping of curriculum.batchMappings) {
       courseIds.push(Number(curriculum.courseId));
-      batchYears.push(Number(mapping.batch));
+      batchYears.push(Number(mapping.batch?.batch || 0));
     }
   }
 

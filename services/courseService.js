@@ -17,10 +17,11 @@ export const getCourseWithSessions = async (courseId) => {
 };
 
 export const getTermsWithClassSections = async (courseId, sessionId) => {
-  const [course, session, classSections] = await Promise.all([
+  const [course, session, classSections, mappedBatches] = await Promise.all([
     courseRepository.getCourseByCourseId(courseId),
     courseRepository.getSessionSummaryById(sessionId),
     courseRepository.getClassSectionsByCourseAndSession(courseId, sessionId),
+    courseRepository.getSessionBatchesMapping(sessionId),
   ]);
 
   if (!course) {
@@ -36,51 +37,70 @@ export const getTermsWithClassSections = async (courseId, sessionId) => {
 
   const coursePlain = course.get({ plain: true });
   const classSectionsIds = [];
-  const classSectionsByYear = {};
+  const classSectionsByBatchAndYear = {};
+  const duration = Number(coursePlain.courseDuration) || 0;
+
+  // Create a quick lookup for batch numbers from mapping IDs
+  const batchMap = {};
+  for (const mb of mappedBatches) {
+    batchMap[mb.batch_id] = mb.batch;
+    if (!classSectionsByBatchAndYear[mb.batch]) {
+      classSectionsByBatchAndYear[mb.batch] = {};
+    }
+  }
 
   for (const section of classSections) {
     classSectionsIds.push(section.classSectionsId);
-
-    if (!classSectionsByYear[section.year]) {
-      classSectionsByYear[section.year] = [];
+    
+    // Look up batch by mapping ID, fallback to old activeYear math if missing
+    let batch = batchMap[section.batchId];
+    if (!batch) {
+       batch = section.activeYear ? (section.activeYear - ((section.year || 1) - 1)) : 2026;
+    }
+    
+    const yearLevel = section.year || 1;
+    
+    if (!classSectionsByBatchAndYear[batch]) {
+      classSectionsByBatchAndYear[batch] = {};
+    }
+    if (!classSectionsByBatchAndYear[batch][yearLevel]) {
+      classSectionsByBatchAndYear[batch][yearLevel] = [];
     }
 
-    classSectionsByYear[section.year].push({
+    classSectionsByBatchAndYear[batch][yearLevel].push({
       classSectionsId: section.classSectionsId,
       section: section.section,
+      activeYear: section.activeYear
     });
   }
 
   const studentCountBySection = await courseRepository.countStudentsByClassSectionIds(classSectionsIds);
 
-  for (const yearKey of Object.keys(classSectionsByYear)) {
-    const sections = classSectionsByYear[yearKey];
-    for (let i = 0; i < sections.length; i++) {
-      const sectionId = sections[i].classSectionsId;
-      sections[i].studentCount = studentCountBySection.get(sectionId) ?? 0;
-    }
-  }
+  const batches = [];
+  const batchKeys = Object.keys(classSectionsByBatchAndYear).map(Number).sort((a, b) => b - a); // Descending batches (newest first)
 
-  const duration = Number(coursePlain.courseDuration) || 0;
-  const years = [];
-
-  if (duration > 0) {
-    for (let year = 1; year <= duration; year++) {
+  for (const batch of batchKeys) {
+    const years = [];
+    const maxYear = duration > 0 ? duration : Math.max(1, ...Object.keys(classSectionsByBatchAndYear[batch]).map(Number));
+    
+    for (let year = 1; year <= maxYear; year++) {
+      const sections = classSectionsByBatchAndYear[batch][year] || [];
+      
+      for (const section of sections) {
+        section.studentCount = studentCountBySection.get(Number(section.classSectionsId)) ?? 0;
+      }
+      
       years.push({
         year,
-        classSections: classSectionsByYear[year] || [],
+        activeYear: batch + (year - 1), // Compute active year for this slot even if empty
+        classSections: sections,
       });
     }
-  } else {
-    const yearKeys = Object.keys(classSectionsByYear);
-    yearKeys.sort((a, b) => Number(a) - Number(b));
-
-    for (const yearKey of yearKeys) {
-      years.push({
-        year: Number(yearKey),
-        classSections: classSectionsByYear[yearKey],
-      });
-    }
+    
+    batches.push({
+      batch,
+      years
+    });
   }
 
   return {
@@ -96,7 +116,7 @@ export const getTermsWithClassSections = async (courseId, sessionId) => {
       sessionId: session.sessionId,
       sessionName: session.sessionName,
     },
-    years,
+    batches,
   };
 };
 

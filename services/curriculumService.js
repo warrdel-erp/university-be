@@ -43,66 +43,154 @@ export async function getAll(filters) {
   return curriculums;
 }
 
+/**
+ * Overview used by the Curriculum > Batch Configuration tab.
+ * Groups by: session (with programme info) → published batches → curriculum mapping.
+ *
+ * Returns an array of session objects, each with:
+ *   { sessionId, sessionName, course, batches: [{ batchId, batch, intakeCapacity,
+ *     curriculumId?, curriculumName?, curriculumBatchMappingId?, isConfigured, students, ... }] }
+ */
 export async function getProgrammeOverview() {
-  const { curriculums, studentCountMap, configuredTermsMap } =
-    await curriculumRepository.findProgrammeBatchOverview();
+  // Load all published batches with their sessions and any curriculum mappings
+  const batchRows = await models.batchModel.findAll({
+    where: { status: 'published' },
+    attributes: [
+      'batchId',
+      'sessionId',
+      'batch',
+      'intakeCapacity',
+    ],
+    include: [
+      {
+        model: models.sessionModel,
+        as: 'session',
+        required: true,
+        attributes: ['sessionId', 'sessionName'],
+        include: [
+          {
+            model: models.courseModel,
+            as: 'course',
+            required: true,
+            attributes: [
+              'courseId',
+              'courseName',
+              'courseCode',
+              'courseDuration',
+              'totalTerms',
+              'termType',
+            ],
+          },
+        ],
+      },
+      {
+        model: models.curriculumBatchMappingModel,
+        as: 'curriculumMappings',
+        required: false,
+        attributes: ['curriculumBatchMappingId', 'curriculumId'],
+        include: [
+          {
+            model: models.curriculumModel,
+            as: 'curriculum',
+            required: false,
+            attributes: ['curriculumId', 'name', 'publishStatus', 'isActive'],
+            where: { isActive: true },
+          },
+        ],
+      },
+    ],
+    order: [
+      [{ model: models.sessionModel, as: 'session' }, 'sessionId', 'ASC'],
+      ['batch', 'ASC'],
+    ],
+  });
 
-  const programmeMap = new Map();
+  // Collect all curriculum IDs to bulk-fetch configuredTerms
+  const curriculumIds = [];
+  for (const row of batchRows) {
+    for (const cm of row.curriculumMappings || []) {
+      if (cm.curriculumId) curriculumIds.push(Number(cm.curriculumId));
+    }
+  }
 
-  for (const curriculum of curriculums) {
-    const plain = curriculum.get ? curriculum.get({ plain: true }) : curriculum;
-    const course = plain.course;
-    const courseId = Number(plain.courseId);
+  const configuredTermsMap = curriculumIds.length
+    ? await curriculumRepository.findConfiguredTermsByCurriculumIds(curriculumIds)
+    : new Map();
+
+  // Collect batch IDs to bulk count students via batchId FK
+  const batchIds = batchRows.map((r) => Number(r.batchId));
+  const studentCountMap = new Map();
+  if (batchIds.length) {
+    const countRows = await scoped(models.studentModel).findAll({
+      attributes: [
+        'batchId',
+        [sequelize.fn('COUNT', sequelize.fn('DISTINCT', sequelize.col('student_id'))), 'studentCount'],
+      ],
+      where: { batchId: { [Op.in]: batchIds } },
+      group: ['batchId'],
+      raw: true,
+    });
+    for (const row of countRows) {
+      studentCountMap.set(Number(row.batchId), Number(row.studentCount) || 0);
+    }
+  }
+
+  // Group by session
+  const sessionMap = new Map();
+  for (const row of batchRows) {
+    const plain = row.get({ plain: true });
+    const session = plain.session;
+    const course = session.course;
+    const sid = Number(session.sessionId);
     const totalTerms = resolveTotalTerms(course);
-    const configuredTerms = configuredTermsMap.get(Number(plain.curriculumId)) || 0;
-    const status = resolveStructureStatus(configuredTerms, totalTerms);
 
-    let programme = programmeMap.get(courseId);
-    if (!programme) {
-      programme = {
-        courseId,
-        courseName: course?.courseName || null,
-        courseCode: course?.courseCode || null,
-        termType: course?.termType || null,
+    if (!sessionMap.has(sid)) {
+      sessionMap.set(sid, {
+        sessionId: sid,
+        sessionName: session.sessionName,
+        course,
         totalTerms,
-        admissionBatchCount: 0,
-        totalStudents: 0,
         batches: [],
-      };
-      programmeMap.set(courseId, programme);
-    }
-
-    for (const mapping of plain.batchMappings || []) {
-      const batch = Number(mapping.batch);
-      const students =
-        studentCountMap.get(`${courseId}_${batch}`) || 0;
-
-      programme.batches.push({
-        curriculumBatchMappingId: Number(mapping.curriculumBatchMappingId),
-        batch,
-        students,
-        curriculumId: Number(plain.curriculumId),
-        curriculumName: plain.name,
-        publishStatus: plain.publishStatus,
-        isActive: plain.isActive,
-        totalTerms,
-        configuredTerms,
-        structure: `${configuredTerms} / ${totalTerms} terms`,
-        status,
       });
-      programme.admissionBatchCount += 1;
-      programme.totalStudents += students;
     }
+
+    const sbmId = Number(plain.batchId);
+    const students = studentCountMap.get(sbmId) || 0;
+
+    // A batch may have 0 or 1 curriculum mappings (one per programme enforced)
+    const curriculumMapping = (plain.curriculumMappings || [])[0] || null;
+    const curriculum = curriculumMapping?.curriculum || null;
+    const configuredTerms = curriculum
+      ? configuredTermsMap.get(Number(curriculum.curriculumId)) || 0
+      : 0;
+    const structureStatus = resolveStructureStatus(configuredTerms, totalTerms);
+
+    sessionMap.get(sid).batches.push({
+      batchId: sbmId,
+      batch: Number(plain.batch),
+      intakeCapacity: plain.intakeCapacity,
+      students,
+      isConfigured: Boolean(curriculum),
+      curriculumBatchMappingId: curriculumMapping
+        ? Number(curriculumMapping.curriculumBatchMappingId)
+        : null,
+      curriculumId: curriculum ? Number(curriculum.curriculumId) : null,
+      curriculumName: curriculum?.name || null,
+      curriculumPublishStatus: curriculum?.publishStatus || null,
+      configuredTerms,
+      totalTerms,
+      structure: `${configuredTerms} / ${totalTerms} terms`,
+      status: structureStatus,
+    });
   }
 
-  const programmes = [];
-  for (const programme of programmeMap.values()) {
-    programme.batches.sort((a, b) => b.batch - a.batch);
-    programmes.push(programme);
+  const sessions = [];
+  for (const session of sessionMap.values()) {
+    sessions.push(session);
   }
-
-  return programmes;
+  return sessions;
 }
+
 
 export async function getById(id) {
   const curriculum = await curriculumRepository.findById(id);
@@ -150,18 +238,32 @@ export async function getBatches(curriculumId) {
     httpError('Curriculum not found', 404);
   }
 
-  const batchMappings =
-    await curriculumRepository.findBatchMappingsByCurriculumId(curriculumId);
+  const batchMappings = await curriculumRepository.findBatchMappingsByCurriculumId(curriculumId);
 
   const result = [];
   for (const mapping of batchMappings) {
-    const studentCount = await curriculumRepository.countStudentsForCourseBatch(
-      curriculum.courseId,
-      mapping.batch,
-    );
+    const m = mapping.toJSON();
+
+    // Count students via batchId FK if available, fall back to legacy batchYear
+    let studentCount = 0;
+    if (m.batchId) {
+      studentCount = await models.studentModel.count({
+        where: { batchId: m.batchId },
+      });
+    } else if (m.batch) {
+      studentCount = await curriculumRepository.countStudentsForCourseBatch(
+        curriculum.courseId,
+        m.batch,
+      );
+    }
+
+    // Include session info if batch association is loaded
+    const batch = m.batch || null;
+
     result.push({
-      ...mapping.toJSON(),
+      ...m,
       studentCount,
+      batch,
     });
   }
 
@@ -172,6 +274,7 @@ export async function getBatches(curriculumId) {
     batches: result,
   };
 }
+
 
 export async function create(data) {
   const existing = await curriculumRepository.findByNameAndCourse(
@@ -452,7 +555,14 @@ export async function unmapSubject(curriculumSubjectTermMappingId) {
   };
 }
 
-export async function mapBatch(curriculumId, batch, userId) {
+/**
+ * Map a curriculum to a published batch (batch).
+ *
+ * @param {number} curriculumId
+ * @param {number} batchId - FK to batch
+ * @param {number} userId
+ */
+export async function mapBatch(curriculumId, batchId, userId) {
   const curriculum = await curriculumRepository.findById(curriculumId);
   if (!curriculum) {
     httpError('Curriculum not found', 404);
@@ -466,10 +576,24 @@ export async function mapBatch(curriculumId, batch, userId) {
     httpError('Cannot map batch to an inactive curriculum', 400);
   }
 
-  if (!batch) {
-    httpError('Batch is required', 400);
+  if (!batchId) {
+    httpError('batchId is required', 400);
   }
 
+  // Validate the target batch exists and is published
+  const batch = await models.batchModel.findByPk(
+    Number(batchId),
+    { attributes: ['batchId', 'batch', 'status'] },
+  );
+  if (!batch) {
+    httpError(`Batch (ID ${batchId}) not found`, 404);
+  }
+  if (batch.status !== 'published') {
+    httpError('Only published batches can be mapped to a curriculum', 400);
+  }
+
+  // Uniqueness check handled by model beforeCreate hook (validateSingleCurriculumPerBatchAndProgramme)
+  // but we also do a quick service-level check for a clearer error message
   const siblingCurriculums = await scoped(models.curriculumModel).findAll({
     where: { courseId: curriculum.courseId },
     attributes: ['curriculumId', 'name'],
@@ -478,7 +602,7 @@ export async function mapBatch(curriculumId, batch, userId) {
 
   const existingMapping = await models.curriculumBatchMappingModel.findOne({
     where: {
-      batch,
+      batchId: Number(batchId),
       curriculumId: { [Op.in]: siblingCurriculumIds },
     },
     include: [
@@ -494,14 +618,14 @@ export async function mapBatch(curriculumId, batch, userId) {
     const mappedName =
       existingMapping.curriculum?.name || `ID ${existingMapping.curriculumId}`;
     httpError(
-      `Curriculum '${mappedName}' is already mapped to batch ${batch} for this programme. Only one curriculum per programme can be mapped to a batch.`,
+      `Curriculum '${mappedName}' is already mapped to this batch for this programme. Only one curriculum per programme can be mapped to a batch.`,
       409,
     );
   }
 
   return models.curriculumBatchMappingModel.create({
     curriculumId,
-    batch,
+    batchId: Number(batchId),
     createdBy: userId,
   });
 }
@@ -519,13 +643,22 @@ export async function unmapBatch(curriculumBatchMappingId) {
     httpError('Curriculum not found', 404);
   }
 
-  const studentCount = await curriculumRepository.countStudentsForCourseBatch(
-    curriculum.courseId,
-    mapping.batch,
-  );
+  // Count students — use batchId FK if available, fall back to legacy batchYear
+  let studentCount = 0;
+  if (mapping.batchId) {
+    studentCount = await models.studentModel.count({
+      where: { batchId: mapping.batchId },
+    });
+  } else if (mapping.batch) {
+    studentCount = await curriculumRepository.countStudentsForCourseBatch(
+      curriculum.courseId,
+      mapping.batch,
+    );
+  }
+
   if (studentCount > 0) {
     httpError(
-      `Cannot unmap batch ${mapping.batch}: ${studentCount} student(s) are enrolled for this programme batch`,
+      `Cannot unmap this batch: ${studentCount} student(s) are enrolled. Remove student enrollments first.`,
       400,
     );
   }
@@ -539,7 +672,7 @@ export async function unmapBatch(curriculumBatchMappingId) {
     return {
       curriculumBatchMappingId: Number(curriculumBatchMappingId),
       curriculumId: mapping.curriculumId,
-      batch: mapping.batch,
+      batchId: mapping.batchId,
       deleted: true,
     };
   } catch (error) {
@@ -547,3 +680,4 @@ export async function unmapBatch(curriculumBatchMappingId) {
     throw error;
   }
 }
+

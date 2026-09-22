@@ -193,7 +193,7 @@ async function resolvePlacementStudentIds({ classSectionsId, year, term }) {
 }
 
 const studentSessionAttrs = ['sessionId', 'sessionName', 'academicYearId'];
-const sessionYearAttrs = ['academicYearId', 'yearTitle', 'startingDate', 'endingDate', 'isActive'];
+const sessionYearAttrs = ['academicYearId', 'yearTitle', 'isActive'];
 
 function getRequestAcademicYearId() {
     return getAcademicYearId();
@@ -1765,7 +1765,7 @@ export async function getStudentForPromate(studentId) {
                         {
                             model: model.acedmicYearModel,
                             as: "sessionAcedmic",
-                            attributes: ["academicYearId", "yearTitle"],
+                            attributes: ["academicYearId", "yearTitle", "startingDate", "endingDate"],
                         },
                     ],
                 },
@@ -1838,7 +1838,7 @@ export async function getNextAcedmicYearAfter(currentacademicYearId) {
             universityId: current.universityId,
             academicYearId: { [Op.gt]: current.academicYearId },
         },
-        attributes: ['academicYearId', 'yearTitle', 'startingDate', 'endingDate'],
+        attributes: ['academicYearId', 'yearTitle'],
         order: [['academicYearId', 'ASC']],
     });
 
@@ -1852,7 +1852,7 @@ export async function getNextAcedmicYearAfter(currentacademicYearId) {
             universityId: current.universityId,
             startingDate: { [Op.gt]: current.startingDate },
         },
-        attributes: ['academicYearId', 'yearTitle', 'startingDate', 'endingDate'],
+        attributes: ['academicYearId', 'yearTitle'],
         order: [['startingDate', 'ASC']],
     });
 }

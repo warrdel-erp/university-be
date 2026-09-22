@@ -1,4 +1,5 @@
 import * as sessionCreation from "../services/sesssionServices.js";
+// dummy from "../services/sesssionServices.js";
 import { getAcademicYearId } from "../utility/requestContext.js";
 
 export async function addSession(req, res) {
@@ -7,7 +8,7 @@ export async function addSession(req, res) {
 
     try {
         const session = await sessionCreation.addSession(
-            { ...req.body, academicYearId: getAcademicYearId() },
+            req.body,
             createdBy,
             updatedBy,
         );
@@ -19,7 +20,8 @@ export async function addSession(req, res) {
 
 export async function getAllSession(req, res) {
     try {
-        const session = await sessionCreation.getSessionDetails();
+        const { courseId } = req.query;
+        const session = await sessionCreation.getSessionDetails(courseId);
         res.status(200).json(session);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -105,6 +107,37 @@ export async function deleteCouseSessionMapping(req, res) {
     try {
         await sessionCreation.deleteCouseSessionMapping(sessionCourseMappingId);
         res.status(200).json({ message: "Mapping deleted successfully" });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+
+export async function getSessionBatches(req, res) {
+    try {
+        const { sessionId } = req.query;
+        if (!sessionId) return res.status(400).json({ error: "sessionId required" });
+        const result = await sessionCreation.getSessionBatches(sessionId);
+        res.status(200).json({ status: "success", data: result });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+export async function addSessionBatch(req, res) {
+    try {
+        const result = await sessionCreation.addSessionBatch(req.body, req.user.userId);
+        res.status(201).json({ status: "success", data: result });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+export async function deleteSessionBatch(req, res) {
+    try {
+        const { id } = req.params;
+        await sessionCreation.deleteSessionBatch(id);
+        res.status(200).json({ status: "success" });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

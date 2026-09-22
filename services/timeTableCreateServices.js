@@ -373,7 +373,7 @@ function buildTermRoutineSummary(routines) {
   };
 }
 
-function shapeTimeTableCreateList(rows, course) {
+function shapeTimeTableCreateList(rows, course, activeYear) {
   const coursePlain = course?.get ? course.get({ plain: true }) : course;
   const byYear = {};
   let draftRoutineCount = 0;
@@ -416,6 +416,7 @@ function shapeTimeTableCreateList(rows, course) {
         section: section.section,
         year,
         classSession: section.classSession,
+        activeYear: section.activeYear,
         termsByNum: {},
       };
     }
@@ -505,6 +506,7 @@ function shapeTimeTableCreateList(rows, course) {
         section: sectionEntry.section,
         year: sectionEntry.year,
         classSession: sectionEntry.classSession,
+        activeYear: sectionEntry.activeYear,
         semesters,
       });
     }
@@ -512,8 +514,17 @@ function shapeTimeTableCreateList(rows, course) {
     classSections.sort((a, b) =>
       String(a.section).localeCompare(String(b.section)),
     );
-    const batch = baseYear != null ? (baseYear - (yearNum - 1)) : null;
-    years.push({ year: yearNum, batch, classSections });
+    
+    let batch = baseYear != null ? (baseYear - (yearNum - 1)) : null;
+    if (activeYear != null) {
+      batch = activeYear - (yearNum - 1);
+    } else if (classSections.length > 0 && classSections[0].activeYear) {
+      batch = classSections[0].activeYear - (yearNum - 1);
+    }
+  
+    if (classSections.length > 0) {
+      years.push({ year: yearNum, batch, classSections });
+    }
   }
 
   return {
@@ -1165,6 +1176,13 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
 }
 
 export async function gettimeTableCreateDetails(query = {}) {
+  const { resolveActiveAcademicYearContext } = await import("../utility/curriculumSubjectsByActiveYear.js");
+  let activeYear = null;
+  try {
+    const ctx = await resolveActiveAcademicYearContext();
+    if (ctx && ctx.activeBatchYear) activeYear = ctx.activeBatchYear;
+  } catch (err) {}
+
   const courseId = query.courseId != null ? Number(query.courseId) : null;
   const sessionId = query.sessionId != null ? Number(query.sessionId) : null;
 
@@ -1172,6 +1190,7 @@ export async function gettimeTableCreateDetails(query = {}) {
     await timeTableCreateRepository.findClassSectionTermsWithRoutines({
       courseId,
       sessionId,
+      activeYear,
     });
 
   let course = null;
@@ -1182,7 +1201,7 @@ export async function gettimeTableCreateDetails(query = {}) {
     course = first.classSection.courseSection;
   }
 
-  return shapeTimeTableCreateList(rows, course);
+  return shapeTimeTableCreateList(rows, course, activeYear);
 }
 
 export async function getSingletimeTableCreateDetails(courseId) {

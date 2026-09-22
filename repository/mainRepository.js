@@ -95,7 +95,7 @@ export async function getAllCourse() {
                         {
                             model: model.sessionModel,
                             as: 'session',
-                            attributes: ["sessionName", "startingDate", "endingDate", "classTillDate"],
+                            attributes: ["sessionName"],
                             where: buildScope(model.sessionModel),
                             required: false,
                         }
@@ -297,7 +297,7 @@ export async function addClassSections(data) {
 }
 
 export async function findClassSectionForYear(
-    { courseId, sessionId, section, year },
+    { courseId, sessionId, section, year, batchId },
     options = {},
 ) {
     try {
@@ -306,14 +306,20 @@ export async function findClassSectionForYear(
             return null;
         }
 
+        const whereClause = {
+            courseId: Number(courseId),
+            sessionId: Number(sessionId),
+            section: sectionName,
+            year: Number(year),
+        };
+
+        if (batchId !== undefined) {
+            whereClause.batchId = Number(batchId);
+        }
+
         return scoped(model.classSectionModel).findOne({
-            where: {
-                courseId: Number(courseId),
-                sessionId: Number(sessionId),
-                section: sectionName,
-                year: Number(year),
-            },
-            transaction: options.transaction,
+            where: whereClause,
+            ...options,
         });
     } catch (error) {
         console.error('Error finding class section for year:', error);
@@ -510,7 +516,7 @@ export async function getClassSectionSpecific(campusId, instituteId, academicYea
                                                     model: model.sessionModel,
                                                     as: "session",
                                                     required: false,
-                                                    attributes: ["sessionName", "startingDate", "endingDate", "classTillDate",],
+                                                    attributes: ["sessionName",],
                                                     where: buildScope(model.sessionModel),
                                                 },
                                             ],

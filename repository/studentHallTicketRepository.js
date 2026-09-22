@@ -47,7 +47,7 @@ function getHallTicketIncludes() {
     {
       model: model.acedmicYearModel,
       as: "academicYear",
-      attributes: ["academicYearId", "yearTitle"],
+      attributes: ["academicYearId", "yearTitle", "startingDate", "endingDate"],
     },
     {
       model: model.studentModel,
@@ -77,7 +77,7 @@ function getHallTicketIncludes() {
         {
           model: model.acedmicYearModel,
           as: "academicYear",
-          attributes: ["academicYearId", "yearTitle"],
+          attributes: ["academicYearId", "yearTitle", "startingDate", "endingDate"],
         },
       ],
     },
@@ -314,7 +314,7 @@ export async function findExaminationSessionById(examinationSessionId, transacti
       {
         model: model.acedmicYearModel,
         as: "academicYear",
-        attributes: ["academicYearId", "yearTitle"],
+        attributes: ["academicYearId", "yearTitle", "startingDate", "endingDate"],
       },
       {
         model: model.examinationSessionTermModel,
