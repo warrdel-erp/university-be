@@ -1,5 +1,5 @@
 import * as previousAcademicRepository from '../repository/previousAcademicRepository.js';
-import { resolveTotalTerms } from '../utility/courseTerms.js';
+import { buildTermName, resolveTotalTerms, termsForYear } from '../utility/courseTerms.js';
 import { resolveActiveAcademicYearContext } from '../utility/curriculumSubjectsByActiveYear.js';
 import sequelize from '../database/sequelizeConfig.js';
 import xlsx from 'xlsx';
@@ -43,6 +43,52 @@ function emptyBatchesResponse(activeYear, yearTitle, activeYearRecord) {
       programmes: [],
     };
   }
+
+function buildCurrentTerms({ course, terms, batchYear, activeYear, duration }) {
+  const currentTerms = [];
+  for (const termMapping of terms) {
+    if (Number(termMapping.year) !== activeYear) {
+      continue;
+    }
+    const termNumber = Number(termMapping.term);
+    currentTerms.push({
+      curriculumBatchTermMappingId: Number(termMapping.curriculumBatchTermMappingId),
+      term: termNumber,
+      termName: buildTermName(course.termType, termNumber),
+      yearNumber: Number(termMapping.yearNumber),
+      year: Number(termMapping.year),
+    });
+  }
+
+  if (currentTerms.length > 0) {
+    currentTerms.sort((a, b) => a.term - b.term);
+    return currentTerms;
+  }
+
+  const currentYearNumber = activeYear - batchYear + 1;
+  if (currentYearNumber < 1 || currentYearNumber > duration) {
+    return [];
+  }
+
+  const expectedTerms = termsForYear(currentYearNumber, course);
+  for (const termNumber of expectedTerms) {
+    let curriculumBatchTermMappingId = null;
+    for (const termMapping of terms) {
+      if (Number(termMapping.term) === termNumber) {
+        curriculumBatchTermMappingId = Number(termMapping.curriculumBatchTermMappingId);
+        break;
+      }
+    }
+    currentTerms.push({
+      curriculumBatchTermMappingId,
+      term: termNumber,
+      termName: buildTermName(course.termType, termNumber),
+      yearNumber: currentYearNumber,
+      year: activeYear,
+    });
+  }
+  return currentTerms;
+}
 
 function aggregateMarksBySubjectTermMapping(marks) {
   const marksBySubjectTermMapping = new Map();
@@ -389,6 +435,13 @@ export async function getPreviousAcademicBatches(filters = {}) {
             : null,
           termsConfigured,
           totalTerms,
+          currentTerms: buildCurrentTerms({
+            course,
+            terms,
+            batchYear,
+            activeYear,
+            duration,
+          }),
           setupReadiness,
           setupMessage,
           openingPosition,
@@ -607,6 +660,10 @@ function normalizeLabel(value) {
     .replace(/\s+/g, ' ');
 }
 
+function normalizeSubjectCode(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
 function isSkipExamHeader(label) {
   return label === 'total';
 }
@@ -666,12 +723,18 @@ function parseSubjectHeader(raw) {
   if (!text) {
     return null;
   }
-  const withoutCredit = text.replace(/\s*[·•]\s*\d+(\.\d+)?\s*cr\s*$/i, '').trim();
-  const separatorIndex = withoutCredit.indexOf(' - ');
-  if (separatorIndex > 0) {
+  let withoutCredit = text.replace(/\s*[·•]\s*\d+(\.\d+)?\s*cr\s*$/i, '').trim();
+  withoutCredit = withoutCredit.replace(/\s+\d+(\.\d+)?\s*cr\s*$/i, '').trim();
+  const bulletParts = [];
+  for (const part of withoutCredit.split(/\s*[·•]\s*/)) {
+    if (part) {
+      bulletParts.push(part.trim());
+    }
+  }
+  if (bulletParts.length >= 2) {
     return {
-      subjectCode: withoutCredit.slice(0, separatorIndex).trim(),
-      subjectName: withoutCredit.slice(separatorIndex + 3).trim(),
+      subjectCode: bulletParts[0],
+      subjectName: bulletParts.slice(1).join(' '),
     };
   }
   return {
@@ -1880,18 +1943,32 @@ function findSubjectForHeader(header, subjects) {
   if (!header) {
     return null;
   }
-  const codeKey = header.subjectCode ? normalizeLabel(header.subjectCode) : '';
+  const headerCode = normalizeSubjectCode(header.subjectCode);
+  const headerNameAsCode = normalizeSubjectCode(header.subjectName);
   const nameKey = header.subjectName ? normalizeLabel(header.subjectName) : '';
+  let fullKey = header.subjectCode ? normalizeLabel(header.subjectCode) : '';
+  if (fullKey && nameKey) {
+    fullKey = `${fullKey} ${nameKey}`;
+  } else if (nameKey) {
+    fullKey = nameKey;
+  }
+
   for (const subject of subjects) {
-    if (codeKey && normalizeLabel(subject.subjectCode) === codeKey) {
+    const subjectCode = normalizeSubjectCode(subject.subjectCode);
+    if (!subjectCode) {
+      continue;
+    }
+    if (subjectCode === headerCode || subjectCode === headerNameAsCode) {
       return subject;
     }
   }
   for (const subject of subjects) {
-    if (nameKey && normalizeLabel(subject.subjectName) === nameKey) {
+    const subjectNameKey = normalizeLabel(subject.subjectName);
+    const combinedKey = normalizeLabel(`${subject.subjectCode} ${subject.subjectName}`);
+    if (nameKey && (nameKey === subjectNameKey || nameKey === combinedKey)) {
       return subject;
     }
-    if (nameKey && normalizeLabel(`${subject.subjectCode} ${subject.subjectName}`) === nameKey) {
+    if (fullKey && fullKey === combinedKey) {
       return subject;
     }
   }
