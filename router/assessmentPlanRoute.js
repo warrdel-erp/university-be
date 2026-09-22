@@ -43,7 +43,6 @@ export const listSubjectMappingQuery = z.object({
   curriculumBatchTermMappingId: z.union([z.string(), z.number()]).optional(),
   courseId: z.union([z.string(), z.number()]).optional(),
   sessionId: z.union([z.string(), z.number()]).optional(),
-  academicYearId: z.union([z.string(), z.number()]).optional(),
   page: z.union([z.string(), z.number()]).optional(),
   limit: z.union([z.string(), z.number()]).optional(),
 });
@@ -113,7 +112,6 @@ export const listAssessmentPlanQuery = z.object({
   ),
   courseId: z.union([z.string(), z.number()]).optional(),
   regulationId: z.union([z.string(), z.number()]).optional(),
-  academicYearId: z.union([z.string(), z.number()]).optional(),
   gradingId: z.union([z.string(), z.number()]).optional(),
   page: z.union([z.string(), z.number()]).optional(),
   limit: z.union([z.string(), z.number()]).optional(),

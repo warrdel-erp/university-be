@@ -55,15 +55,6 @@ const assessmentPlanSubjectMappingModel = sequelize.define(
                 key: 'session_id'
             }
         },
-        academicYearId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'acedmic_year_id',
-            references: {
-                model: 'acedmic_year',
-                key: 'acedmic_year_id'
-            }
-        },
         universityId: {
             type: DataTypes.INTEGER,
             allowNull: false,

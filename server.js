@@ -81,7 +81,7 @@ import libraryStructure from "./router/libraryStructureRoute.js";
 import internalAssessment from "./router/internalAssessmentRoute.js";
 import jobSetting from "./router/jobSettingsRoutes.js";
 import jobs from "./router/jobRoutes.js";
-import curriculumRoute from './router/curriculumRoute.js';
+import curriculumRoute from "./router/curriculumRoute.js";
 import gradingSchemas from "./router/gradingSchemasRouter.js";
 import academicRegulation from "./router/academicRegulationRoute.js";
 import assessmentPlan from "./router/assessmentPlanRoute.js";
@@ -114,6 +114,7 @@ import answerSheetQr from "./router/answerSheetQrRoute.js";
 import examResult from "./router/examResultRoute.js";
 import examOperations from "./router/examOperationsRoute.js";
 import s3FileRoute from "./router/s3FileRoute.js";
+import previousAcademic from "./router/previousAcademicRoute.js";
 // middleware
 
 app.use((req, res, next) => {
@@ -271,6 +272,7 @@ app.use("/leave-balance", leaveBalance);
 app.use("/jobSetting", jobSetting);
 app.use("/jobs", jobs);
 app.use("/api/curriculums", curriculumRoute);
+app.use("/previousAcademic", previousAcademic);
 
 app.listen(PORT, () => {
   console.log(`server is running on port ${PORT}`);

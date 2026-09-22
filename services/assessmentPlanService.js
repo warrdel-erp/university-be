@@ -96,7 +96,6 @@ function mapAssessmentPlanMapping(mapping) {
       : null,
     courseId: plain.courseId,
     sessionId: plain.sessionId,
-    academicYearId: plain.academicYearId,
     session: plain.session || null,
     assessmentPlan: plan
       ? {
@@ -105,7 +104,6 @@ function mapAssessmentPlanMapping(mapping) {
           planCode: plan.planCode,
           description: plan.description,
           courseId: plan.courseId,
-          academicYearId: plan.academicYearId,
           regulationId: plan.regulationId,
           gradingId: plan.gradingId,
           status: plan.status,
@@ -713,27 +711,6 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
       throw error;
     }
 
-    if (!plan.academicYearId) {
-      const error = new Error(
-        `Assessment Plan (ID: ${payload.assessmentPlanId}) has no Academic Year. Cannot create subject mapping.`,
-      );
-      error.statusCode = 400;
-      throw error;
-    }
-
-    const academicYearId = Number(plan.academicYearId);
-
-    if (
-      !sessionRecord.academicYearId ||
-      Number(sessionRecord.academicYearId) !== academicYearId
-    ) {
-      const error = new Error(
-        `Assessment Plan (ID: ${payload.assessmentPlanId}) belongs to Academic Year ID ${academicYearId}, which does not match Session (ID: ${sessionId}) Academic Year ID ${sessionRecord.academicYearId}`,
-      );
-      error.statusCode = 400;
-      throw error;
-    }
-
     let curriculumBatchTermMappingId = Number(payload.curriculumBatchTermMappingId);
     const cbtmContext = await resolveCurriculumBatchTermContext(
       curriculumBatchTermMappingId,
@@ -760,7 +737,6 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
       curriculumBatchTermMappingId: cbtmContext.curriculumBatchTermMappingId,
       courseId: Number(payload.courseId),
       sessionId: sessionId,
-      academicYearId: academicYearId,
       universityId: user?.universityId ? Number(user.universityId) : null,
       instituteId: user?.instituteId ? Number(user.instituteId) : null,
       createdBy: user?.userId || null,

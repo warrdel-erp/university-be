@@ -4,48 +4,6 @@ alwaysApply: true
 
 Always use Sequelize ORM features to build queries. Prefer include, association joins, fn, col, where, Op, subQuery, and query builders. Do not write raw SQL or SQL inside Sequelize.literal() unless explicitly approved or there is no Sequelize alternative.
 
+never seed with optional string data for formatting , do not send misleading data of entry, 
 
-QUERY REQUIREMENTS
-The query must:
-- Filter Class Sections at DB level.
-- Filter by batch.
-- Filter by course through the appropriate association.
-- Use Sequelize `include`.
-- Use exact association `as`.
-- Select only required `attributes`.
-- Respect tenant scope.
-- Avoid N+1 queries.
-- Return nested Sequelize association data where appropriate.
-- Do not fetch all records and filter them in JavaScript.
-
-
-
-==================================================
-8. IMPORTANT IMPLEMENTATION RULES
-==================================================
-
-1. Do not use raw SQL.
-2. Do not use `sequelize.query()`.
-3. Use `scoped(model)` everywhere according to the existing project architecture.
-4. Do not use `unscoped()`.
-5. Do not monkey-patch tenancy.
-6. Use requestContext tenant information.
-7. Use Sequelize associations with:
-   - include
-   - exact `as`
-   - attributes
-   - required where appropriate
-8. Keep DB filtering in the repository.
-9. Avoid N+1 queries.
-10. Do not perform DB joins manually in the service using:
-    - `.map()`
-    - `.filter()`
-    - `.find()`
-11. Keep business logic in services.
-12. Keep database operations in repositories.
-13. Do not refactor unrelated modules.
-14. Preserve existing API behavior unless it is directly affected by removing Academic Year dependency.
-15. Check all existing usages of `classSectionModel` before removing `academicYearId`.
-16. Check associations, scopes, repositories, services, controllers, validations, migrations, and API consumers.
-17. Ensure existing Class Section APIs continue working wherever their behavior is still valid.
-18. Add/update migrations only where an actual DB schema change is required.
+Id is always is unique , do not use or condition to use other Id in response .

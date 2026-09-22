@@ -1,0 +1,166 @@
+import { SuccessResponse, ErrorResponse } from '../utility/response.js';
+import * as previousAcademicService from '../services/previousAcademicService.js';
+
+export const getPreviousAcademicBatches = async (req, res) => {
+  try {
+    const data = await previousAcademicService.getPreviousAcademicBatches(req.query);
+    return SuccessResponse(res, 200, 'Previous academic batches retrieved successfully', data);
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || 'Internal Server Error',
+    );
+  }
+};
+
+export const getSingleBatchDetails = async (req, res) => {
+  try {
+    const data = await previousAcademicService.getSingleBatchDetails(
+      req.params.curriculumBatchMappingId,
+      req.query.sessionId,
+    );
+    return SuccessResponse(res, 200, 'Single batch details retrieved successfully', data);
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || 'Internal Server Error',
+    );
+  }
+};
+
+export const getTermSubjects = async (req, res) => {
+  try {
+    const data = await previousAcademicService.getTermSubjects(
+      req.params.curriculumBatchTermMappingId,
+      req.query.sessionId,
+    );
+    return SuccessResponse(res, 200, 'Term subjects retrieved successfully', data);
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || 'Internal Server Error',
+    );
+  }
+};
+
+export const getTermStudents = async (req, res) => {
+  try {
+    const result = await previousAcademicService.getTermStudents(
+      req.params.curriculumBatchTermMappingId,
+      req.query.sessionId,
+      {
+        page: req.query.page,
+        limit: req.query.limit,
+        status: req.query.status,
+      },
+    );
+    return SuccessResponse(
+      res,
+      200,
+      'Term students retrieved successfully',
+      result.data,
+      result.pagination,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || 'Internal Server Error',
+    );
+  }
+};
+
+export const getTermStudentMarks = async (req, res) => {
+  try {
+    const result = await previousAcademicService.getTermStudentMarks(
+      req.params.curriculumBatchTermMappingId,
+      req.query.sessionId,
+      {
+        page: req.query.page,
+        limit: req.query.limit,
+        status: req.query.status,
+      },
+    );
+    return SuccessResponse(
+      res,
+      200,
+      'Term student marks retrieved successfully',
+      result.data,
+      result.pagination,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || 'Internal Server Error',
+    );
+  }
+};
+
+export const getTermStudentDetails = async (req, res) => {
+  try {
+    const data = await previousAcademicService.getTermStudentDetails(
+      req.params.curriculumBatchTermMappingId,
+      req.params.studentId,
+      req.query.sessionId,
+    );
+    return SuccessResponse(res, 200, 'Term student details retrieved successfully', data);
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || 'Internal Server Error',
+    );
+  }
+};
+
+export const downloadTermMarksTemplate = async (req, res) => {
+  try {
+    const data = await previousAcademicService.getTermMarksTemplate(
+      req.params.curriculumBatchTermMappingId,
+      req.query.sessionId,
+    );
+    return SuccessResponse(res, 200, 'Term marks template retrieved successfully', data);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || 'Internal Server Error');
+  }
+};
+
+export const uploadTermMarks = async (req, res) => {
+  try {
+    const uploaded = req.files || {};
+    const file = uploaded.marks || uploaded.file || uploaded.students || Object.values(uploaded)[0];
+    const data = await previousAcademicService.uploadTermMarks(
+      req.params.curriculumBatchTermMappingId,
+      file,
+      req.query.sessionId,
+    );
+    return SuccessResponse(res, 200, 'Term marks uploaded successfully', data);
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || 'Internal Server Error',
+      error.details || null,
+    );
+  }
+};
+
+export const getTermUploadHistory = async (req, res) => {
+  try {
+    const data = await previousAcademicService.getTermUploadHistory(
+      req.params.curriculumBatchTermMappingId,
+      req.query.sessionId,
+    );
+    return SuccessResponse(res, 200, 'Term upload history retrieved successfully', data);
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || 'Internal Server Error',
+    );
+  }
+};
