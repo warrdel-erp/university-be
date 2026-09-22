@@ -63,8 +63,14 @@ export async function getCurriculumBatchMappings(courseIds) {
         model: models.curriculumBatchMappingModel,
         as: 'batchMappings',
         required: false,
-        attributes: ['curriculumBatchMappingId', 'curriculumId', 'batch'],
+        attributes: ['curriculumBatchMappingId', 'curriculumId', 'batchId'],
         include: [
+          {
+            model: models.batchModel,
+            as: 'batch',
+            required: true,
+            attributes: ['batchId', 'batch', 'sessionId', 'status'],
+          },
           {
             model: models.curriculumBatchTermMappingModel,
             as: 'termMappings',
@@ -138,16 +144,35 @@ export async function getAcademicRegulationCourseMappings(courseIds) {
   });
 }
 
-export async function getAssessmentPlanSubjectMappings(batchTermMappingIds, courseIds) {
-  if (batchTermMappingIds.length === 0) {
+export async function getAssessmentPlanSubjectMappings(batchTermMappingIds, courseIds, sessionId = null) {
+  const where = {};
+  const orConditions = [];
+
+  if (batchTermMappingIds.length > 0) {
+    orConditions.push({
+      curriculumBatchTermMappingId: { [Op.in]: batchTermMappingIds },
+    });
+  }
+
+  if (courseIds.length > 0) {
+    const nullTermWhere = {
+      curriculumBatchTermMappingId: null,
+      courseId: { [Op.in]: courseIds },
+    };
+    if (sessionId) {
+      nullTermWhere.sessionId = { [Op.or]: [Number(sessionId), null] };
+    }
+    orConditions.push(nullTermWhere);
+  }
+
+  if (orConditions.length === 0) {
     return [];
   }
 
-  const where = {
-    curriculumBatchTermMappingId: { [Op.in]: batchTermMappingIds },
-  };
-  if (courseIds.length > 0) {
-    where.courseId = { [Op.in]: courseIds };
+  if (orConditions.length === 1) {
+    Object.assign(where, orConditions[0]);
+  } else {
+    where[Op.or] = orConditions;
   }
 
   return scoped(models.assessmentPlanSubjectMappingModel).findAll({
@@ -191,8 +216,14 @@ export async function findBatchMappingDetails(curriculumBatchMappingId) {
   return scoped(models.curriculumBatchMappingModel).findByPk(
     curriculumBatchMappingId,
     {
-      attributes: ['curriculumBatchMappingId', 'curriculumId', 'batch'],
+      attributes: ['curriculumBatchMappingId', 'curriculumId', 'batchId'],
       include: [
+        {
+          model: models.batchModel,
+          as: 'batch',
+          required: true,
+          attributes: ['batchId', 'batch', 'sessionId', 'status'],
+        },
         {
           model: models.curriculumModel,
           as: 'curriculum',
@@ -256,6 +287,59 @@ export async function countBatchStudents(courseId, sessionId, batchYear) {
   }).count({ where });
 }
 
+export async function ensureCurriculumBatchTermMappings(
+  curriculumBatchMappingId,
+  course,
+  batchYear,
+  transaction,
+) {
+  const existing = await scoped(models.curriculumBatchTermMappingModel).findAll({
+    where: { curriculumBatchMappingId: Number(curriculumBatchMappingId) },
+    attributes: [
+      'curriculumBatchTermMappingId',
+      'term',
+      'yearNumber',
+      'year',
+    ],
+    order: [['term', 'ASC']],
+    transaction,
+  });
+  if (existing.length > 0) {
+    return existing;
+  }
+
+  const { resolveTotalTerms, yearFromTerm } = await import('../utility/courseTerms.js');
+  const totalTerms = resolveTotalTerms(course) || 0;
+  if (!totalTerms || batchYear == null) {
+    return [];
+  }
+
+  const rows = [];
+  for (let term = 1; term <= totalTerms; term++) {
+    const yearNumber = yearFromTerm(term, course);
+    rows.push({
+      curriculumBatchMappingId: Number(curriculumBatchMappingId),
+      term,
+      yearNumber,
+      year: Number(batchYear) + yearNumber - 1,
+    });
+  }
+
+  await scoped(models.curriculumBatchTermMappingModel).bulkCreate(rows, { transaction });
+
+  return scoped(models.curriculumBatchTermMappingModel).findAll({
+    where: { curriculumBatchMappingId: Number(curriculumBatchMappingId) },
+    attributes: [
+      'curriculumBatchTermMappingId',
+      'term',
+      'yearNumber',
+      'year',
+    ],
+    order: [['term', 'ASC']],
+    transaction,
+  });
+}
+
 export async function findTermMappingWithBatch(curriculumBatchTermMappingId) {
   return scoped(models.curriculumBatchTermMappingModel).findByPk(
     curriculumBatchTermMappingId,
@@ -272,8 +356,14 @@ export async function findTermMappingWithBatch(curriculumBatchTermMappingId) {
           model: models.curriculumBatchMappingModel,
           as: 'batchMapping',
           required: true,
-          attributes: ['curriculumBatchMappingId', 'curriculumId', 'batch'],
+          attributes: ['curriculumBatchMappingId', 'curriculumId', 'batchId'],
           include: [
+            {
+              model: models.batchModel,
+              as: 'batch',
+              required: true,
+              attributes: ['batchId', 'batch', 'sessionId', 'status'],
+            },
             {
               model: models.curriculumModel,
               as: 'curriculum',
@@ -415,11 +505,22 @@ export async function findStudentsWithTermResultItems(
 export async function findAssessmentPlanSubjectsForTerm(
   curriculumBatchTermMappingId,
   sessionId,
+  courseId = null,
 ) {
-  const where = { curriculumBatchTermMappingId };
-  if (sessionId) {
-    where.sessionId = { [Op.or]: [sessionId, null] };
+  const orConditions = [{ curriculumBatchTermMappingId }];
+
+  if (courseId) {
+    const nullTermWhere = {
+      curriculumBatchTermMappingId: null,
+      courseId: Number(courseId),
+    };
+    if (sessionId) {
+      nullTermWhere.sessionId = { [Op.or]: [Number(sessionId), null] };
+    }
+    orConditions.push(nullTermWhere);
   }
+
+  const where = orConditions.length === 1 ? orConditions[0] : { [Op.or]: orConditions };
 
   return scoped(models.assessmentPlanSubjectMappingModel).findAll({
     where,
