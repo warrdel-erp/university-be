@@ -444,6 +444,6 @@ studentModel.beforeValidate(async (student, options) => {
     }
 });
 
-studentModel.scopeConfig = { university: true, institute: true, academicYear: true };
+studentModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
 export default studentModel;

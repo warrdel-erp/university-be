@@ -95,7 +95,9 @@ export async function findAll(filters = {}) {
 
   const countMap = new Map();
   if (courseIds.length > 0) {
-    const countRows = await scoped(model.studentModel).findAll({
+    const countRows = await scoped(model.studentModel, {
+      scopeConfig: { academicYear: false },
+    }).findAll({
       attributes: [
         'courseId',
         'batchYear',
@@ -345,7 +347,9 @@ export async function deleteBatchMapping(curriculumBatchMappingId, options = {})
 }
 
 export async function countStudentsForCourseBatch(courseId, batch, options = {}) {
-  return scoped(model.studentModel).count({
+  return scoped(model.studentModel, {
+    scopeConfig: { academicYear: false },
+  }).count({
     where: {
       courseId,
       batchYear: batch,
@@ -397,7 +401,9 @@ export async function findProgrammeBatchOverview() {
 
   const studentCountMap = new Map();
   if (courseIds.length > 0) {
-    const countRows = await scoped(model.studentModel).findAll({
+    const countRows = await scoped(model.studentModel, {
+      scopeConfig: { academicYear: false },
+    }).findAll({
       attributes: [
         'courseId',
         'batchYear',
