@@ -2,6 +2,7 @@ import { Op } from 'sequelize';
 import sequelize from '../database/sequelizeConfig.js';
 import * as models from '../models/index.js';
 import { buildScope, scoped } from '../utility/scoped.js';
+import { decimalAdd, decimalSubtract, toIntegerNumber } from '../utility/decimalMoney.js';
 
 export async function findProgrammesWithSessions(filters = {}) {
   const courseWhere = { isActive: true };
@@ -401,6 +402,17 @@ export async function countBatchStudents(courseId, sessionId, batchYear) {
   }).count({ where });
 }
 
+export async function countStudentsByBatchId(batchId) {
+  if (batchId == null) {
+    return 0;
+  }
+  return scoped(models.studentModel, {
+    scopeConfig: { academicYear: false },
+  }).count({
+    where: { batchId: Number(batchId) },
+  });
+}
+
 export async function ensureCurriculumBatchTermMappings(
   curriculumBatchMappingId,
   course,
@@ -435,7 +447,7 @@ export async function ensureCurriculumBatchTermMappings(
       curriculumBatchMappingId: Number(curriculumBatchMappingId),
       term,
       yearNumber,
-      year: Number(batchYear) + yearNumber - 1,
+      year: toIntegerNumber(decimalSubtract(decimalAdd(batchYear, yearNumber), 1)),
     });
   }
 

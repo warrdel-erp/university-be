@@ -1,30 +1,24 @@
 import * as previousAcademicRepository from '../repository/previousAcademicRepository.js';
 import { buildTermName, resolveTotalTerms, termsForYear, termsPerYear } from '../utility/courseTerms.js';
-import { resolveActiveAcademicYearContext } from '../utility/curriculumSubjectsByActiveYear.js';
 import sequelize from '../database/sequelizeConfig.js';
 import xlsx from 'xlsx';
 import {
   decimalAdd,
+  decimalCompare,
   decimalDivide,
   decimalGreaterThan,
   decimalGreaterThanOrEqual,
   decimalLessThan,
   decimalLessThanOrEqual,
+  decimalMax,
+  decimalMin,
   decimalMultiply,
+  decimalSubtract,
   parseMoneyInput,
+  toIntegerNumber,
   toMoneyNumber,
 } from '../utility/decimalMoney.js';
 import { getTenantStore } from '../utility/requestContext.js';
-
-async function getActiveYear() {
-  const academicYearContext = await resolveActiveAcademicYearContext();
-  const activeYearRecord = academicYearContext.academicYear;
-  const activeYear = academicYearContext.activeBatchYear;
-  const yearTitle =
-    activeYearRecord.yearTitle ||
-    `${activeYear}-${String(activeYear + 1).slice(-2)}`;
-  return { activeYear, yearTitle, activeYearRecord };
-}
 
 function emptyBatchesResponse() {
   return {
@@ -42,26 +36,26 @@ function emptyBatchesResponse() {
 function buildCurrentTerms({ course, terms, batchYear, referenceYear, duration }) {
   const currentTerms = [];
   for (const termMapping of terms) {
-    if (Number(termMapping.year) !== referenceYear) {
+    if (decimalCompare(toIntegerNumber(termMapping.year), referenceYear) !== 0) {
       continue;
     }
-    const termNumber = Number(termMapping.term);
+    const termNumber = toIntegerNumber(termMapping.term);
     currentTerms.push({
       curriculumBatchTermMappingId: Number(termMapping.curriculumBatchTermMappingId),
       term: termNumber,
       termName: buildTermName(course.termType, termNumber),
-      yearNumber: Number(termMapping.yearNumber),
-      year: Number(termMapping.year),
+      yearNumber: toIntegerNumber(termMapping.yearNumber),
+      year: toIntegerNumber(termMapping.year),
     });
   }
 
   if (currentTerms.length > 0) {
-    currentTerms.sort((a, b) => a.term - b.term);
+    currentTerms.sort((a, b) => decimalSubtract(a.term, b.term));
     return currentTerms;
   }
 
-  const currentYearNumber = referenceYear - batchYear + 1;
-  if (currentYearNumber < 1 || currentYearNumber > duration) {
+  const currentYearNumber = decimalAdd(decimalSubtract(referenceYear, batchYear), 1);
+  if (decimalLessThan(currentYearNumber, 1) || decimalGreaterThan(currentYearNumber, duration)) {
     return [];
   }
 
@@ -69,17 +63,17 @@ function buildCurrentTerms({ course, terms, batchYear, referenceYear, duration }
   for (const termNumber of expectedTerms) {
     let curriculumBatchTermMappingId = null;
     for (const termMapping of terms) {
-      if (Number(termMapping.term) === termNumber) {
+      if (toIntegerNumber(termMapping.term) === toIntegerNumber(termNumber)) {
         curriculumBatchTermMappingId = Number(termMapping.curriculumBatchTermMappingId);
         break;
       }
     }
     currentTerms.push({
       curriculumBatchTermMappingId,
-      term: termNumber,
+      term: toIntegerNumber(termNumber),
       termName: buildTermName(course.termType, termNumber),
-      yearNumber: currentYearNumber,
-      year: referenceYear,
+      yearNumber: toIntegerNumber(currentYearNumber),
+      year: toIntegerNumber(referenceYear),
     });
   }
   return currentTerms;
@@ -114,7 +108,7 @@ function aggregateMarksBySubjectTermMapping(marks) {
       aggregation = { total: 0, students: new Set() };
       marksBySubjectTermMapping.set(curriculumSubjectTermMappingId, aggregation);
     }
-    aggregation.total += 1;
+    aggregation.total = decimalAdd(aggregation.total, 1);
     aggregation.students.add(Number(resultItem.studentId));
   }
   return marksBySubjectTermMapping;
@@ -133,7 +127,7 @@ function termAggregationFromSubjectMappings(subjectMappings, termNumber, marksBy
     if (!aggregation) {
       continue;
     }
-    total += aggregation.total;
+    total = decimalAdd(total, aggregation.total);
     for (const studentId of aggregation.students) {
       students.add(studentId);
     }
@@ -248,7 +242,8 @@ export async function getPreviousAcademicBatches(filters = {}) {
     const batchYear = Number(plain.batch);
     const totalTerms = resolveTotalTerms(course) || 8;
     const perYear = termsPerYear(course) || 2;
-    const duration = Math.ceil(totalTerms / perYear) || 4;
+    const rawDuration = Math.ceil(decimalDivide(totalTerms, perYear));
+    const duration = decimalGreaterThan(rawDuration, 0) ? rawDuration : 4;
     const studentCount = studentCountMap.get(batchId) || 0;
     const regulation = regulationMap.get(courseId);
 
@@ -265,32 +260,40 @@ export async function getPreviousAcademicBatches(filters = {}) {
     }
     const hasCurriculum = Boolean(curriculumMapping);
 
-    const isCurrentBatch = batchYear === referenceYear;
+    const isCurrentBatch = decimalCompare(batchYear, referenceYear) === 0;
     const requiredHistoricalTerms = isCurrentBatch
       ? 0
-      : Math.min((referenceYear - batchYear) * perYear, totalTerms);
+      : decimalMin(
+          decimalMultiply(decimalSubtract(referenceYear, batchYear), perYear),
+          totalTerms,
+        );
 
     let termsConfigured = 0;
     for (const termMapping of terms) {
       let hasSubject = false;
       for (const subjectTermMapping of subjectMappings) {
-        if (Number(subjectTermMapping.term) === Number(termMapping.term)) {
+        if (
+          decimalCompare(
+            toIntegerNumber(subjectTermMapping.term),
+            toIntegerNumber(termMapping.term),
+          ) === 0
+        ) {
           hasSubject = true;
           break;
         }
       }
       if (hasSubject) {
-        termsConfigured += 1;
+        termsConfigured = decimalAdd(termsConfigured, 1);
       }
     }
-    const hasTermsConfigured = termsConfigured >= totalTerms;
+    const hasTermsConfigured = decimalGreaterThanOrEqual(termsConfigured, totalTerms);
 
     let currentYearTermFound = false;
     if (isCurrentBatch) {
       for (const termMapping of terms) {
         if (
-          Number(termMapping.year) === referenceYear ||
-          Number(termMapping.yearNumber) === 1
+          decimalCompare(toIntegerNumber(termMapping.year), referenceYear) === 0 ||
+          decimalCompare(toIntegerNumber(termMapping.yearNumber), 1) === 0
         ) {
           currentYearTermFound = true;
           break;
@@ -302,18 +305,24 @@ export async function getPreviousAcademicBatches(filters = {}) {
     let subjectsConfigured = 0;
     for (const termMapping of terms) {
       const isCurrentYearTerm =
-        Number(termMapping.year) === referenceYear || Number(termMapping.yearNumber) === 1;
+        decimalCompare(toIntegerNumber(termMapping.year), referenceYear) === 0 ||
+        decimalCompare(toIntegerNumber(termMapping.yearNumber), 1) === 0;
       const includeTerm = isCurrentBatch
         ? !currentYearTermFound || isCurrentYearTerm
-        : Number(termMapping.term) <= requiredHistoricalTerms;
+        : decimalLessThanOrEqual(toIntegerNumber(termMapping.term), requiredHistoricalTerms);
       if (!includeTerm) {
         continue;
       }
       for (const subjectTermMapping of subjectMappings) {
-        if (Number(subjectTermMapping.term) !== Number(termMapping.term)) {
+        if (
+          decimalCompare(
+            toIntegerNumber(subjectTermMapping.term),
+            toIntegerNumber(termMapping.term),
+          ) !== 0
+        ) {
           continue;
         }
-        subjectsRequired += 1;
+        subjectsRequired = decimalAdd(subjectsRequired, 1);
         const specificKey = `${courseId}_${sessionId}_${termMapping.curriculumBatchTermMappingId}_${subjectTermMapping.subjectId}`;
         const genericKey = `${courseId}_${termMapping.curriculumBatchTermMappingId}_${subjectTermMapping.subjectId}`;
         const sessionSubjectKey = `${courseId}_${sessionId}_${subjectTermMapping.subjectId}`;
@@ -324,13 +333,14 @@ export async function getPreviousAcademicBatches(filters = {}) {
           assessmentPlanSubjectKeys.has(sessionSubjectKey) ||
           assessmentPlanSubjectKeys.has(courseSubjectKey)
         ) {
-          subjectsConfigured += 1;
+          subjectsConfigured = decimalAdd(subjectsConfigured, 1);
         }
       }
     }
 
     const hasAssessmentPlans =
-      subjectsRequired > 0 && subjectsConfigured >= subjectsRequired;
+      decimalGreaterThan(subjectsRequired, 0) &&
+      decimalGreaterThanOrEqual(subjectsConfigured, subjectsRequired);
     const hasRegulation = Boolean(regulation);
 
     let setupReadiness = 'Setup Complete';
@@ -357,7 +367,7 @@ export async function getPreviousAcademicBatches(filters = {}) {
       let blockedStudentsCount = 0;
       let validatedCount = 0;
       for (const termMapping of terms) {
-        if (termMapping.term > requiredHistoricalTerms) {
+        if (decimalGreaterThan(toIntegerNumber(termMapping.term), requiredHistoricalTerms)) {
           continue;
         }
         const historicalTermData = termAggregationFromSubjectMappings(
@@ -368,16 +378,22 @@ export async function getPreviousAcademicBatches(filters = {}) {
         if (!historicalTermData) {
           continue;
         }
-        if (historicalTermData.frozenCount > 0) {
-          frozenTermsCount += 1;
+        if (decimalGreaterThan(historicalTermData.frozenCount, 0)) {
+          frozenTermsCount = decimalAdd(frozenTermsCount, 1);
         }
-        blockedStudentsCount += historicalTermData.blockedCount;
-        validatedCount += historicalTermData.validatedCount;
+        blockedStudentsCount = decimalAdd(
+          blockedStudentsCount,
+          historicalTermData.blockedCount,
+        );
+        validatedCount = decimalAdd(validatedCount, historicalTermData.validatedCount);
       }
 
       if (setupReadiness !== 'Setup Complete') {
         openingPosition = 'Awaiting Setup';
-      } else if (frozenTermsCount >= requiredHistoricalTerms && studentCount > 0) {
+      } else if (
+        decimalGreaterThanOrEqual(frozenTermsCount, requiredHistoricalTerms) &&
+        decimalGreaterThan(studentCount, 0)
+      ) {
         openingPosition = 'Established';
       } else {
         openingPosition = 'Awaiting Historical Data';
@@ -398,18 +414,18 @@ export async function getPreviousAcademicBatches(filters = {}) {
       }
     }
 
-    totalBatchesCount += 1;
-    totalStudentsCount += studentCount;
+    totalBatchesCount = decimalAdd(totalBatchesCount, 1);
+    totalStudentsCount = decimalAdd(totalStudentsCount, studentCount);
     if (openingPosition === 'Established') {
-      establishedTotal += 1;
+      establishedTotal = decimalAdd(establishedTotal, 1);
     } else if (setupReadiness === 'Needs Attention') {
-      requireReviewTotal += 1;
+      requireReviewTotal = decimalAdd(requireReviewTotal, 1);
     } else if (
       setupReadiness === 'Needs Setup' ||
       openingPosition === 'Awaiting Setup' ||
       openingPosition === 'Awaiting Historical Data'
     ) {
-      requireSetupTotal += 1;
+      requireSetupTotal = decimalAdd(requireSetupTotal, 1);
     }
 
     const programmeKey = `${courseId}_${sessionId}`;
@@ -427,8 +443,8 @@ export async function getPreviousAcademicBatches(filters = {}) {
     }
 
     const programme = programmeMap.get(programmeKey);
-    programme.totalBatches += 1;
-    programme.totalStudents += studentCount;
+    programme.totalBatches = decimalAdd(programme.totalBatches, 1);
+    programme.totalStudents = decimalAdd(programme.totalStudents, studentCount);
     programme.batches.push({
       batchId,
       admissionBatch: batchYear,
@@ -483,13 +499,27 @@ export async function getSingleBatchDetails(curriculumBatchMappingId, sessionId 
 
   const curriculum = batchMapping.curriculum;
   const course = curriculum.course;
+  const batchEntity = batchMapping.batch;
+  const batchId = batchEntity ? Number(batchEntity.batchId) : Number(batchMapping.batchId);
   const batch = resolveBatchYear(batchMapping);
   const courseId = Number(curriculum.courseId);
-  const { activeYear } = await getActiveYear();
+  let resolvedSessionId = null;
+  if (sessionId) {
+    resolvedSessionId = Number(sessionId);
+  } else if (batchEntity && batchEntity.sessionId != null) {
+    resolvedSessionId = Number(batchEntity.sessionId);
+  }
+
+  const referenceYear = new Date().getFullYear();
   const totalTerms = resolveTotalTerms(course) || 8;
   const perYear = termsPerYear(course) || 2;
-  const requiredHistoricalTerms =
-    batch === activeYear ? 0 : Math.min((activeYear - batch) * perYear, totalTerms);
+  const isCurrentBatch = decimalCompare(batch, referenceYear) === 0;
+  const requiredHistoricalTerms = isCurrentBatch
+    ? 0
+    : decimalMin(
+        decimalMultiply(decimalSubtract(referenceYear, batch), perYear),
+        totalTerms,
+      );
 
   let termMappings = batchMapping.termMappings || [];
   if (termMappings.length === 0 && batch != null) {
@@ -510,16 +540,18 @@ export async function getSingleBatchDetails(curriculumBatchMappingId, sessionId 
     curriculumSubjectTermMappingIds.push(subjectTermMapping.curriculumSubjectTermMappingId);
   }
 
-  const studentCount = await previousAcademicRepository.countBatchStudents(
-    courseId,
-    sessionId,
-    batch,
-  );
+  const studentCount = batchId
+    ? await previousAcademicRepository.countStudentsByBatchId(batchId)
+    : await previousAcademicRepository.countBatchStudents(
+        courseId,
+        resolvedSessionId,
+        batch,
+      );
   const assessmentPlanSubjectMappings =
     await previousAcademicRepository.getAssessmentPlanSubjectMappings(
       batchTermMappingIds,
       [courseId],
-      sessionId,
+      resolvedSessionId,
     );
   const historicalMarks =
     await previousAcademicRepository.getHistoricalMarksByCstmIds(curriculumSubjectTermMappingIds);
@@ -543,70 +575,71 @@ export async function getSingleBatchDetails(curriculumBatchMappingId, sessionId 
   let subjectsWithPlan = 0;
   let termsConfigured = 0;
   for (const termMapping of termMappings) {
-    const termNumber = Number(termMapping.term);
+    const termNumber = toIntegerNumber(termMapping.term);
     let hasSubject = false;
     for (const subjectTermMapping of subjectMappings) {
-      if (Number(subjectTermMapping.term) === termNumber) {
+      if (decimalCompare(toIntegerNumber(subjectTermMapping.term), termNumber) === 0) {
         hasSubject = true;
         break;
       }
     }
     if (hasSubject) {
-      termsConfigured += 1;
+      termsConfigured = decimalAdd(termsConfigured, 1);
     }
   }
 
   for (const termMapping of termMappings) {
-    const termNumber = Number(termMapping.term);
-    if (termNumber > requiredHistoricalTerms) {
+    const termNumber = toIntegerNumber(termMapping.term);
+    if (decimalGreaterThan(termNumber, requiredHistoricalTerms)) {
       continue;
     }
 
-    const curriculumBatchTermMappingId = Number(termMapping.curriculumBatchTermMappingId);
+    const termMappingId = Number(termMapping.curriculumBatchTermMappingId);
     const subjects = [];
     let hasMarks = false;
     for (const subjectTermMapping of subjectMappings) {
-      if (Number(subjectTermMapping.term) !== termNumber) {
+      if (decimalCompare(toIntegerNumber(subjectTermMapping.term), termNumber) !== 0) {
         continue;
       }
-      subjectsRequired += 1;
-      if (
-        assessmentPlanSubjectKeys.has(
-          `${curriculumBatchTermMappingId}_${subjectTermMapping.subjectId}`,
-        ) ||
-        assessmentPlanSubjectKeys.has(`subject_${subjectTermMapping.subjectId}`)
-      ) {
-        subjectsWithPlan += 1;
+      subjectsRequired = decimalAdd(subjectsRequired, 1);
+      const hasAssessmentPlan =
+        assessmentPlanSubjectKeys.has(`${termMappingId}_${subjectTermMapping.subjectId}`) ||
+        assessmentPlanSubjectKeys.has(`subject_${subjectTermMapping.subjectId}`);
+      if (hasAssessmentPlan) {
+        subjectsWithPlan = decimalAdd(subjectsWithPlan, 1);
       }
-      if (markedCurriculumSubjectTermMappingIds.has(Number(subjectTermMapping.curriculumSubjectTermMappingId))) {
+      if (
+        markedCurriculumSubjectTermMappingIds.has(
+          Number(subjectTermMapping.curriculumSubjectTermMappingId),
+        )
+      ) {
         hasMarks = true;
       }
       subjects.push({
         subjectId: subjectTermMapping.subjectId,
         subjectCode: subjectTermMapping.subject.subjectCode,
         subjectName: subjectTermMapping.subject.subjectName,
-        hasAssessmentPlan:
-          assessmentPlanSubjectKeys.has(
-            `${curriculumBatchTermMappingId}_${subjectTermMapping.subjectId}`,
-          ) || assessmentPlanSubjectKeys.has(`subject_${subjectTermMapping.subjectId}`),
+        hasAssessmentPlan,
       });
     }
 
     terms.push({
-      curriculumBatchTermMappingId,
+      curriculumBatchTermMappingId: termMappingId,
       term: termNumber,
       termName: buildTermName(course.termType, termNumber),
-      yearNumber: termMapping.yearNumber,
-      year: termMapping.year,
+      yearNumber: toIntegerNumber(termMapping.yearNumber),
+      year: toIntegerNumber(termMapping.year),
       subjectCount: subjects.length,
       status: hasMarks ? 'In Progress' : 'Not Started',
       subjects,
     });
   }
 
-  const hasAssessmentPlans = subjectsRequired > 0 && subjectsWithPlan >= subjectsRequired;
+  const hasAssessmentPlans =
+    decimalGreaterThan(subjectsRequired, 0) &&
+    decimalGreaterThanOrEqual(subjectsWithPlan, subjectsRequired);
   let setupReadiness = 'Setup Complete';
-  if (termsConfigured < totalTerms) {
+  if (decimalLessThan(termsConfigured, totalTerms)) {
     setupReadiness = 'Needs Setup';
   } else if (!hasAssessmentPlans) {
     setupReadiness = 'Needs Attention';
@@ -615,29 +648,31 @@ export async function getSingleBatchDetails(curriculumBatchMappingId, sessionId 
   let openingPosition = 'Awaiting Setup';
   if (setupReadiness === 'Setup Complete') {
     openingPosition = 'Awaiting Historical Data';
-  } else if (batch === activeYear && hasAssessmentPlans) {
+  } else if (isCurrentBatch && hasAssessmentPlans) {
     openingPosition = 'Awaiting Setup';
   } else {
     openingPosition = setupReadiness;
   }
 
   return {
+    batchId,
     admissionBatch: batch,
+    isCurrentBatch,
     courseId,
     courseName: course.courseName,
     courseCode: course.courseCode,
-    sessionId: sessionId ? Number(sessionId) : null,
-    studentCount: studentCount,
+    sessionId: resolvedSessionId,
+    studentCount,
     curriculumId: curriculum.curriculumId,
     curriculumName: curriculum.name,
-    curriculumBatchMappingId,
+    curriculumBatchMappingId: Number(curriculumBatchMappingId),
     openingPosition,
     setupReadiness,
     setupDetails: {
       curriculum: `${termsConfigured}/${totalTerms} semesters configured`,
       curriculumId: curriculum.curriculumId,
       curriculumName: curriculum.name,
-      curriculumBatchMappingId,
+      curriculumBatchMappingId: Number(curriculumBatchMappingId),
       assessmentPlans: `${subjectsWithPlan}/${subjectsRequired} courses configured`,
       students: studentCount,
     },
@@ -919,7 +954,7 @@ function buildStudentTermReview(student, context) {
       const maximumMarks = examType.maximumMarks;
 
       if (obtainedMarks == null) {
-        missingCount += 1;
+        missingCount = decimalAdd(missingCount, 1);
         subjectHasMissingMarks = true;
       } else if (decimalGreaterThan(obtainedMarks, maximumMarks)) {
         issues.push({
@@ -1026,11 +1061,11 @@ export async function getTermStudents(
   for (const student of context.students) {
     const review = buildStudentTermReview(student, context);
     if (review.issueCount > 0) {
-      readyWithWarningCount += 1;
+      readyWithWarningCount = decimalAdd(readyWithWarningCount, 1);
     } else {
-      readyCount += 1;
+      readyCount = decimalAdd(readyCount, 1);
     }
-    warningIssueCount += review.issueCount;
+    warningIssueCount = decimalAdd(warningIssueCount, review.issueCount);
 
     const studentRow = {
       studentId: review.studentId,
@@ -1058,8 +1093,11 @@ export async function getTermStudents(
   }
 
   const total = filteredStudents.length;
-  const offset = (page - 1) * limit;
-  const pagedStudents = filteredStudents.slice(offset, offset + limit);
+  const offset = toIntegerNumber(decimalMultiply(decimalSubtract(page, 1), limit));
+  const pagedStudents = filteredStudents.slice(
+    offset,
+    toIntegerNumber(decimalAdd(offset, limit)),
+  );
 
   const recentUpload = await getRecentUpload(
     context.curriculumBatchTermMappingId,
@@ -1082,7 +1120,7 @@ export async function getTermStudents(
       recentUpload,
       summary: {
         totalStudents: total,
-        ready: readyCount + readyWithWarningCount,
+        ready: decimalAdd(readyCount, readyWithWarningCount),
         readyWithWarning: readyWithWarningCount,
         blocked: 0,
         issues: warningIssueCount,
@@ -1612,9 +1650,9 @@ export async function getTermStudentMarks(
     }
     const studentMarks = buildStudentMarksRow(student, subjects, courseRegulation);
     if (studentMarks.status === 'Complete') {
-      completedCount += 1;
+      completedCount = decimalAdd(completedCount, 1);
     } else {
-      issuesCount += 1;
+      issuesCount = decimalAdd(issuesCount, 1);
     }
     if (!statusFilter || studentMarks.status === statusFilter) {
       students.push(studentMarks);
@@ -1624,7 +1662,11 @@ export async function getTermStudentMarks(
   let pagedStudents = students;
   const total = students.length;
   if (limit != null) {
-    pagedStudents = students.slice((page - 1) * limit, (page - 1) * limit + limit);
+    const pageStart = toIntegerNumber(decimalMultiply(decimalSubtract(page, 1), limit));
+    pagedStudents = students.slice(
+      pageStart,
+      toIntegerNumber(decimalAdd(pageStart, limit)),
+    );
   }
 
   const uploadLogs = await previousAcademicRepository.findUploadLogsByTermMappingId(
@@ -1831,7 +1873,7 @@ export async function getTermSubjects(curriculumBatchTermMappingId, sessionId = 
       if (markedStudentIds) {
         for (const studentId of sessionStudentIds) {
           if (markedStudentIds.has(studentId)) {
-            markedCount += 1;
+            markedCount = decimalAdd(markedCount, 1);
           }
         }
       }
@@ -1915,7 +1957,7 @@ function buildStudentLookup(students) {
     if (!nameKey) {
       continue;
     }
-    nameCount.set(nameKey, (nameCount.get(nameKey) || 0) + 1);
+    nameCount.set(nameKey, decimalAdd(nameCount.get(nameKey) || 0, 1));
     byName.set(nameKey, student);
   }
 
@@ -2033,16 +2075,16 @@ function detectExamHeaderRow(sheetRows, subjects) {
         continue;
       }
       if (knownExams.has(label) || isSkipExamHeader(label) || isCreditHeader(label) || isAttemptHeader(label)) {
-        score += 1;
+        score = decimalAdd(score, 1);
       }
       if (isStudentHeader(label)) {
-        studentHeaderHits += 1;
+        studentHeaderHits = decimalAdd(studentHeaderHits, 1);
       }
     }
-    if (studentHeaderHits > 0) {
-      score += studentHeaderHits;
+    if (decimalGreaterThan(studentHeaderHits, 0)) {
+      score = decimalAdd(score, studentHeaderHits);
     }
-    if (score > bestScore) {
+    if (decimalGreaterThan(score, bestScore)) {
       bestScore = score;
       bestIndex = i;
     }
@@ -2056,7 +2098,10 @@ function resolveStudentColumns(examHeaderRow, maxMarksRow) {
     fullName: null,
     studentId: null,
   };
-  const width = Math.max(examHeaderRow.length, maxMarksRow ? maxMarksRow.length : 0);
+  const width = decimalMax(
+    examHeaderRow.length,
+    maxMarksRow ? maxMarksRow.length : 0,
+  );
   for (let columnIndex = 0; columnIndex < width; columnIndex++) {
     const headerLabel = normalizeLabel(examHeaderRow[columnIndex]);
     const subLabel = maxMarksRow ? normalizeLabel(maxMarksRow[columnIndex]) : '';
@@ -2097,8 +2142,8 @@ function resolveStudentColumns(examHeaderRow, maxMarksRow) {
 
 function buildMarkColumns(sheetRows, examHeaderIndex, subjects) {
   const examHeaderRow = sheetRows[examHeaderIndex] || [];
-  const subjectRow = sheetRows[examHeaderIndex - 1] || [];
-  const maxMarksRow = sheetRows[examHeaderIndex + 1] || [];
+  const subjectRow = sheetRows[toIntegerNumber(decimalSubtract(examHeaderIndex, 1))] || [];
+  const maxMarksRow = sheetRows[toIntegerNumber(decimalAdd(examHeaderIndex, 1))] || [];
   const studentColumns = resolveStudentColumns(examHeaderRow, maxMarksRow);
   const studentColumnIndexes = new Set();
   if (studentColumns.enrollmentNumber != null) {
@@ -2111,7 +2156,10 @@ function buildMarkColumns(sheetRows, examHeaderIndex, subjects) {
     studentColumnIndexes.add(studentColumns.studentId);
   }
 
-  const width = Math.max(examHeaderRow.length, subjectRow.length, maxMarksRow.length);
+  const width = decimalMax(
+    examHeaderRow.length,
+    decimalMax(subjectRow.length, maxMarksRow.length),
+  );
   const filledSubjects = [];
   let currentSubject = null;
   for (let columnIndex = 0; columnIndex < width; columnIndex++) {
@@ -2166,7 +2214,7 @@ function buildMarkColumns(sheetRows, examHeaderIndex, subjects) {
     columns,
     creditColumnBySubjectTermMappingId,
     attemptColumnBySubjectTermMappingId,
-    dataStartIndex: examHeaderIndex + 2,
+    dataStartIndex: toIntegerNumber(decimalAdd(examHeaderIndex, 2)),
   };
 }
 
@@ -2394,7 +2442,7 @@ async function processTermMarksUpload(curriculumBatchTermMappingId, file, sessio
     const student = findUploadedStudent(row, studentColumns, lookup);
     if (!student) {
       errors.push(
-        `Row ${rowIndex + 1}: student not found (${enrollmentNumber || fullName || studentIdText})`,
+        `Row ${toIntegerNumber(decimalAdd(rowIndex, 1))}: student not found (${enrollmentNumber || fullName || studentIdText})`,
       );
       continue;
     }
@@ -2417,7 +2465,7 @@ async function processTermMarksUpload(curriculumBatchTermMappingId, file, sessio
       }
       if (Number.isNaN(attemptValue)) {
         errors.push(
-          `Row ${rowIndex + 1}: invalid attempt for subject`,
+          `Row ${toIntegerNumber(decimalAdd(rowIndex, 1))}: invalid attempt for subject`,
         );
         continue;
       }
@@ -2431,13 +2479,13 @@ async function processTermMarksUpload(curriculumBatchTermMappingId, file, sessio
       }
       if (Number.isNaN(obtainedMarks) || decimalGreaterThan(0, obtainedMarks)) {
         errors.push(
-          `Row ${rowIndex + 1}: invalid marks for ${column.subjectName} ${column.examName}`,
+          `Row ${toIntegerNumber(decimalAdd(rowIndex, 1))}: invalid marks for ${column.subjectName} ${column.examName}`,
         );
         continue;
       }
       if (decimalGreaterThan(obtainedMarks, column.maximumMarks)) {
         errors.push(
-          `Row ${rowIndex + 1}: ${column.subjectName} ${column.examName} exceeds maximum ${column.maximumMarks}`,
+          `Row ${toIntegerNumber(decimalAdd(rowIndex, 1))}: ${column.subjectName} ${column.examName} exceeds maximum ${column.maximumMarks}`,
         );
         continue;
       }
@@ -2445,9 +2493,9 @@ async function processTermMarksUpload(curriculumBatchTermMappingId, file, sessio
       const existingKey = `${student.studentId}_${column.curriculumSubjectTermMappingId}_${column.assessmentPlanComponentId}`;
       const existing = context.marksByKey.get(existingKey);
       if (existing) {
-        updated += 1;
+        updated = decimalAdd(updated, 1);
       } else {
-        created += 1;
+        created = decimalAdd(created, 1);
       }
       const subjectKey = `${student.studentId}_${column.curriculumSubjectTermMappingId}`;
       let attempt = attemptBySubjectTermMappingId.get(column.curriculumSubjectTermMappingId);
