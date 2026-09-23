@@ -185,47 +185,45 @@ export const getTermsWithClassSections = async (query) => {
       term: termFilter || null,
     },
     academicRegulations,
-    batches: [
-      {
-        batchId: Number(batch.batchId),
-        batch: batchYear,
-        status: batch.status,
-        intakeCapacity: batch.intakeCapacity,
-        currentYear: currentYearNumber > 0 ? currentYearNumber : null,
-        curriculum: curriculum
-          ? {
-              curriculumId: Number(curriculum.curriculumId),
-              sku: curriculum.name,
-              name: curriculum.name,
-              publishStatus: curriculum.publishStatus,
-              isActive: curriculum.isActive,
-              curriculumBatchMappingId: Number(
-                curriculumMapping.curriculumBatchMappingId,
-              ),
-              configuredTerms,
-              totalTerms,
-              structure: `${configuredTerms} / ${totalTerms} terms`,
-              status: structureStatus,
-              configured: configuredTerms > 0,
-              isConfigured: true,
-            }
-          : {
-              curriculumId: null,
-              sku: null,
-              name: null,
-              publishStatus: null,
-              isActive: null,
-              curriculumBatchMappingId: null,
-              configuredTerms: 0,
-              totalTerms,
-              structure: `0 / ${totalTerms} terms`,
-              status: "Not Started",
-              configured: false,
-              isConfigured: false,
-            },
-        years,
-      },
-    ],
+    batch: {
+      batchId: Number(batch.batchId),
+      batch: batchYear,
+      status: batch.status,
+      intakeCapacity: batch.intakeCapacity,
+      currentYear: currentYearNumber > 0 ? currentYearNumber : null,
+      curriculum: curriculum
+        ? {
+            curriculumId: Number(curriculum.curriculumId),
+            sku: curriculum.name,
+            name: curriculum.name,
+            publishStatus: curriculum.publishStatus,
+            isActive: curriculum.isActive,
+            curriculumBatchMappingId: Number(
+              curriculumMapping.curriculumBatchMappingId,
+            ),
+            configuredTerms,
+            totalTerms,
+            structure: `${configuredTerms} / ${totalTerms} terms`,
+            status: structureStatus,
+            configured: configuredTerms > 0,
+            isConfigured: true,
+          }
+        : {
+            curriculumId: null,
+            sku: null,
+            name: null,
+            publishStatus: null,
+            isActive: null,
+            curriculumBatchMappingId: null,
+            configuredTerms: 0,
+            totalTerms,
+            structure: `0 / ${totalTerms} terms`,
+            status: "Not Started",
+            configured: false,
+            isConfigured: false,
+          },
+      years,
+    },
   };
 };
 
