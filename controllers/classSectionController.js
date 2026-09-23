@@ -13,6 +13,16 @@ export const getBatchAcademicProgression = async (req, res) => {
   }
 };
 
+export const getClassSectionBatches = async (req, res) => {
+  try {
+    const result = await classSectionServices.getClassSectionBatches(req.query);
+    return SuccessResponse(res, 200, 'Class section batches retrieved successfully', result);
+  } catch (error) {
+    const statusCode = error.statusCode || 400;
+    return ErrorResponse(res, statusCode, error.message || 'Something went wrong');
+  }
+};
+
 export const renameClassSection = async (req, res) => {
   try {
     const { classSectionId, section } = req.body;

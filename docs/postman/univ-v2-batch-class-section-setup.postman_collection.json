@@ -105,6 +105,27 @@
       "name": "3. Class sections — rename / delete / overview",
       "item": [
         {
+          "name": "3.0 List class section batches",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/classSections/batches?courseId=&sessionId=&search=",
+              "host": ["{{baseurl}}"],
+              "path": ["classSections", "batches"],
+              "query": [
+                { "key": "courseId", "value": "", "description": "Optional programme filter", "disabled": true },
+                { "key": "sessionId", "value": "", "description": "Optional session filter", "disabled": true },
+                { "key": "search", "value": "", "description": "Optional search on course/session/batch" }
+              ]
+            },
+            "description": "GET /classSections/batches\n\nClass Sections list UI: groups by programme+session with batches, current year/terms, active sections (SKU), studentCount, classSectionCount, sectionStatus."
+          }
+        },
+        {
           "name": "3.1 Get batch details (query batchId)",
           "request": {
             "method": "GET",

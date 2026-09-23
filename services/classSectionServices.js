@@ -1,6 +1,7 @@
 import sequelize from '../database/sequelizeConfig.js';
 import * as classSectionTermRepository from '../repository/classSectionTermRepository.js';
 import * as batchRepository from '../repository/batchRepository.js';
+import * as courseRepository from '../repository/courseRepository.js';
 import { resolveActiveAcademicYearContext } from '../utility/curriculumSubjectsByActiveYear.js';
 import {
   buildTermName,
@@ -27,6 +28,174 @@ function resolveCurrentTermSlotInYear({ startingDate, termType, perYear, referen
   if (slot < 0) return 0;
   if (slot >= perYear) return perYear - 1;
   return slot;
+}
+
+/**
+ * Class Sections list: programmes/sessions with batches, current year/terms,
+ * class section SKUs for current year, studentCount + classSectionCount.
+ */
+export async function getClassSectionBatches(filters = {}) {
+  const [batchRows, academicCtx] = await Promise.all([
+    batchRepository.findClassSectionBatchesOverview(filters),
+    resolveActiveAcademicYearContext(),
+  ]);
+
+  const activeCalendarYear = Number(academicCtx.activeBatchYear);
+  const academicYear = academicCtx.academicYear.get
+    ? academicCtx.academicYear.get({ plain: true })
+    : academicCtx.academicYear;
+
+  const allClassSectionIds = [];
+  for (const row of batchRows) {
+    const plain = row.get({ plain: true });
+    for (const section of plain.classSections || []) {
+      allClassSectionIds.push(Number(section.classSectionsId));
+    }
+  }
+
+  const studentCountBySection =
+    await courseRepository.countStudentsByClassSectionIds(allClassSectionIds);
+
+  const search = filters.search != null ? String(filters.search).trim().toLowerCase() : '';
+  const groupMap = new Map();
+
+  for (const row of batchRows) {
+    const plain = row.get({ plain: true });
+    const session = plain.session;
+    const course = session.course;
+    const batchYear = Number(plain.batch);
+    const duration = Number(course.courseDuration) || 0;
+    const currentYearNumber = activeCalendarYear - batchYear + 1;
+    const endBatchYear = duration > 0 ? batchYear + duration : batchYear;
+
+    if (search) {
+      const haystack = `${course.courseName} ${course.courseCode} ${session.sessionName} ${batchYear}`.toLowerCase();
+      if (!haystack.includes(search)) {
+        continue;
+      }
+    }
+
+    const expectedTermsInCurrentYear =
+      currentYearNumber >= 1 && currentYearNumber <= duration
+        ? termsForYear(currentYearNumber, course)
+        : [];
+
+    const currentTerms = [];
+    for (const termNumber of expectedTermsInCurrentYear) {
+      currentTerms.push({
+        term: termNumber,
+        termName: buildTermName(course.termType, termNumber),
+      });
+    }
+
+    let currentTermsLabel = null;
+    if (currentTerms.length === 1) {
+      currentTermsLabel = currentTerms[0].termName;
+    } else if (currentTerms.length > 1) {
+      currentTermsLabel = `${currentTerms[0].termName} - ${currentTerms[currentTerms.length - 1].termName}`;
+    }
+
+    const currentYearSections = [];
+    const yearsWithSections = new Set();
+    for (const section of plain.classSections || []) {
+      const yearNum = Number(section.year);
+      yearsWithSections.add(yearNum);
+      if (yearNum !== currentYearNumber) {
+        continue;
+      }
+      const classSectionsId = Number(section.classSectionsId);
+      currentYearSections.push({
+        classSectionsId,
+        section: section.section,
+        year: yearNum,
+        activeYear: section.activeYear,
+        batchId: section.batchId,
+        studentCount: studentCountBySection.get(classSectionsId) || 0,
+      });
+    }
+
+    let pastYearsMissing = false;
+    if (currentYearNumber >= 1) {
+      const maxPastYear = currentYearNumber > duration ? duration : currentYearNumber;
+      for (let y = 1; y <= maxPastYear; y++) {
+        if (!yearsWithSections.has(y)) {
+          pastYearsMissing = true;
+          break;
+        }
+      }
+    }
+
+    let studentCount = 0;
+    for (const section of currentYearSections) {
+      studentCount += section.studentCount;
+    }
+
+    const classSectionCount = currentYearSections.length;
+
+    let status = 'Setup required';
+    if (currentYearNumber >= 1 && currentYearNumber <= duration) {
+      if (classSectionCount > 0 && !pastYearsMissing) {
+        status = 'Configured';
+      } else if (classSectionCount > 0 && pastYearsMissing) {
+        status = 'Needs attention';
+      } else {
+        status = 'Setup required';
+      }
+    }
+
+    const groupKey = `${course.courseId}_${session.sessionId}`;
+    if (!groupMap.has(groupKey)) {
+      groupMap.set(groupKey, {
+        courseId: course.courseId,
+        courseName: course.courseName,
+        courseCode: course.courseCode,
+        sessionId: session.sessionId,
+        sessionName: session.sessionName,
+        termType: course.termType,
+        duration,
+        activeBatchCount: 0,
+        activeSectionCount: 0,
+        batches: [],
+      });
+    }
+
+    const group = groupMap.get(groupKey);
+    group.activeBatchCount += 1;
+    group.activeSectionCount += classSectionCount;
+    group.batches.push({
+      batchId: Number(plain.batchId),
+      batch: batchYear,
+      status: plain.status,
+      intakeCapacity: plain.intakeCapacity,
+      academicYears: `${batchYear} - ${endBatchYear}`,
+      academicYearFrom: batchYear,
+      academicYearTo: endBatchYear,
+      currentYear: currentYearNumber > 0 && currentYearNumber <= duration ? currentYearNumber : null,
+      currentYearLabel:
+        currentYearNumber > 0 && currentYearNumber <= duration
+          ? `Year ${currentYearNumber}`
+          : null,
+      currentTerms,
+      currentTermsLabel,
+      classSectionCount,
+      studentCount,
+      sections: currentYearSections,
+      sectionStatus: status,
+    });
+  }
+
+  const groups = [];
+  for (const group of groupMap.values()) {
+    groups.push(group);
+  }
+
+  return {
+    activeCalendarYear,
+    academicYear: formatAcademicYearLabel(activeCalendarYear),
+    academicYearId: academicCtx.academicYearId,
+    yearTitle: academicYear.yearTitle || null,
+    groups,
+  };
 }
 
 export async function getBatchAcademicProgression(batchId) {

@@ -4,6 +4,7 @@ import { getClassSectionsByFilter } from '../controllers/mainController.js';
 import {
   deleteClassSectionTerm,
   getBatchAcademicProgression,
+  getClassSectionBatches,
   renameClassSection,
 } from '../controllers/classSectionController.js';
 import { getBatchFullDetails } from '../controllers/batchController.js';
@@ -35,7 +36,20 @@ const academicProgressionQuerySchema = z.object({
   batchId: positiveIntegerId,
 });
 
+const classSectionBatchesQuerySchema = z.object({
+  courseId: positiveIntegerId.optional(),
+  sessionId: positiveIntegerId.optional(),
+  search: z.string().trim().optional(),
+});
+
 router.get('/', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP.value, null), getClassSectionsByFilter);
+router.get(
+  '/batches',
+  userAuth,
+  checkAccess(PERMISSIONS.CLASS_SETUP.value, null),
+  validate({ query: classSectionBatchesQuerySchema }),
+  getClassSectionBatches,
+);
 router.get(
   '/batchDetails',
   userAuth,
@@ -49,7 +63,6 @@ router.get(
   validate({ query: academicProgressionQuerySchema }),
   getBatchAcademicProgression,
 );
-
 
 router.patch('/section', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP.value, null), validate({ body: renameClassSectionSchema }), renameClassSection);
 router.delete('/term', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP.value, null), validate({ query: deleteClassSectionTermQuerySchema }), deleteClassSectionTerm);

@@ -239,6 +239,72 @@ export async function countAssessmentPlanSubjectMappingsByBatchContext({
 }
 
 /**
+ * Published batches with session/course and class sections for class-section list UI.
+ * @param {{ courseId?: number, sessionId?: number, search?: string }} filters
+ */
+export async function findClassSectionBatchesOverview(filters = {}) {
+  const batchWhere = { status: 'published' };
+  const sessionWhere = { ...buildScope(model.sessionModel) };
+  if (filters.sessionId != null) {
+    sessionWhere.sessionId = Number(filters.sessionId);
+  }
+
+  const courseWhere = { ...buildScope(model.courseModel) };
+  if (filters.courseId != null) {
+    courseWhere.courseId = Number(filters.courseId);
+  }
+
+  return model.batchModel.findAll({
+    where: batchWhere,
+    attributes: ['batchId', 'sessionId', 'batch', 'status', 'intakeCapacity'],
+    include: [
+      {
+        model: model.sessionModel,
+        as: 'session',
+        attributes: ['sessionId', 'sessionName', 'courseId'],
+        required: true,
+        where: sessionWhere,
+        include: [
+          {
+            model: model.courseModel,
+            as: 'course',
+            attributes: [
+              'courseId',
+              'courseName',
+              'courseCode',
+              'courseDuration',
+              'totalTerms',
+              'termType',
+            ],
+            required: true,
+            where: courseWhere,
+          },
+        ],
+      },
+      {
+        model: model.classSectionModel,
+        as: 'classSections',
+        attributes: [
+          'classSectionsId',
+          'section',
+          'year',
+          'activeYear',
+          'batchId',
+          'courseId',
+          'sessionId',
+        ],
+        required: false,
+        where: buildScope(model.classSectionModel),
+      },
+    ],
+    order: [
+      [{ model: model.sessionModel, as: 'session' }, 'sessionName', 'ASC'],
+      ['batch', 'ASC'],
+    ],
+  });
+}
+
+/**
  * Paginated students for a batch, with class section + term placement.
  */
 export async function findStudentsByBatchId(batchId, { page = 1, limit = 10, search } = {}) {

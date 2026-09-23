@@ -164,6 +164,37 @@ GET /session/batches/:batchId/students
 
 ## 3. Class sections — rename / delete / overview
 
+### 3.0 List class section batches
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Endpoint** | `/classSections/batches` |
+
+**Query params**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| courseId | Integer | No | Programme filter |
+| sessionId | Integer | No | Session filter |
+| search | String | No | Search course / session / batch year |
+
+**Response (data)**
+
+- `activeCalendarYear`, `academicYear`
+- `groups[]` — each programme+session group:
+  - `courseId`, `courseName`, `sessionId`, `sessionName`
+  - `activeBatchCount`, `activeSectionCount`
+  - `batches[]`:
+    - `batchId`, `batch`, `academicYears` (`2024 - 2029`)
+    - `currentYear`, `currentYearLabel` (`Year 3`)
+    - `currentTerms[]`, `currentTermsLabel` (`Semester 5 - Semester 6`)
+    - `classSectionCount`, `studentCount`
+    - `sections[]` — `classSectionsId`, `section`, `year`, `studentCount`
+    - `sectionStatus` — `Configured` \| `Setup required` \| `Needs attention`
+
+---
+
 ### 3.1 Rename class section
 
 | | |
