@@ -1,7 +1,13 @@
 import * as repo from '../repository/batchRepository.js';
 import * as model from '../models/index.js';
 import { resolveActiveAcademicYearContext } from '../utility/curriculumSubjectsByActiveYear.js';
-import { resolveTotalTerms } from '../utility/courseTerms.js';
+import {
+  buildTermName,
+  monthsPerTermFromTermType,
+  resolveTotalTerms,
+  termsForYear,
+  termsPerYear,
+} from '../utility/courseTerms.js';
 
 function httpError(message, statusCode) {
   const err = new Error(message);
@@ -12,6 +18,19 @@ function httpError(message, statusCode) {
 function formatAcademicYearLabel(calendarYear) {
   const start = Number(calendarYear);
   return `${start}-${String(start + 1).slice(-2)}`;
+}
+
+function resolveCurrentTermSlotInYear({ startingDate, termType, perYear, referenceDate }) {
+  const start = new Date(startingDate);
+  const monthsElapsed =
+    (referenceDate.getFullYear() - start.getFullYear()) * 12 +
+    (referenceDate.getMonth() - start.getMonth());
+  const safeMonths = monthsElapsed < 0 ? 0 : monthsElapsed;
+  const monthsPerTerm = monthsPerTermFromTermType(termType);
+  const slot = Math.floor(safeMonths / monthsPerTerm);
+  if (slot < 0) return 0;
+  if (slot >= perYear) return perYear - 1;
+  return slot;
 }
 
 /**
@@ -79,6 +98,34 @@ export async function getBatchFullDetails(batchId) {
   const duration = Number(course.courseDuration) || 0;
   const totalTerms = resolveTotalTerms(course);
   const totalYears = duration > 0 ? duration : 0;
+  const perYear = termsPerYear(course);
+
+  const expectedTermsInCurrentYear =
+    currentYearNumber >= 1 && currentYearNumber <= duration
+      ? termsForYear(currentYearNumber, course)
+      : [];
+
+  const currentTerms = [];
+  for (const termNumber of expectedTermsInCurrentYear) {
+    currentTerms.push({
+      term: termNumber,
+      termName: buildTermName(course.termType, termNumber),
+      year: currentYearNumber,
+      academicYear: formatAcademicYearLabel(activeCalendarYear),
+    });
+  }
+
+  let currentTerm = null;
+  if (currentTerms.length > 0) {
+    const slot = resolveCurrentTermSlotInYear({
+      startingDate: academicYear.startingDate,
+      termType: course.termType,
+      perYear,
+      referenceDate: new Date(),
+    });
+    const clampedSlot = slot < currentTerms.length ? slot : currentTerms.length - 1;
+    currentTerm = currentTerms[clampedSlot];
+  }
 
   const curriculumMapping = (batch.curriculumMappings || [])[0] || null;
   const curriculumRow = curriculumMapping ? curriculumMapping.curriculum : null;
@@ -156,6 +203,8 @@ export async function getBatchFullDetails(batchId) {
       yearTitle: academicYear.yearTitle || null,
       yearNumber: currentYearNumber > 0 ? currentYearNumber : null,
       isWithinProgramme: currentYearNumber >= 1 && currentYearNumber <= duration,
+      currentTerm,
+      currentTerms,
     },
     batch: {
       batchId: Number(batch.batchId),
