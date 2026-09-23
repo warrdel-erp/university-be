@@ -1,0 +1,214 @@
+{
+  "info": {
+    "_postman_id": "batch-class-section-setup-v1",
+    "name": "Batch & Class Section Setup",
+    "description": "Batch setup, academic progression, class section CRUD, terms-with-sections, and batch students.\n\nMounts:\n- /session\n- /main\n- /classSections\n- /course\n\nAuth: Bearer {{token}}\n\nDocs: docs/postman/BATCH_CLASS_SECTION_SETUP.md",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseurl", "value": "http://localhost:8080" },
+    { "key": "token", "value": "" },
+    { "key": "batchId", "value": "1" },
+    { "key": "classSectionId", "value": "289" },
+    { "key": "year", "value": "1" },
+    { "key": "term", "value": "1" },
+    { "key": "page", "value": "1" },
+    { "key": "limit", "value": "10" },
+    { "key": "search", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Session — Batch setup",
+      "item": [
+        {
+          "name": "1.1 Get batch full details",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/session/batches/{{batchId}}/details",
+              "host": ["{{baseurl}}"],
+              "path": ["session", "batches", "{{batchId}}", "details"]
+            },
+            "description": "GET /session/batches/:id/details\n\nReturns current year/terms plus config summaries for curriculum, assessment plan, regulation, and class sections (counts only — no mapping arrays).\n\nAlso available as GET /classSections/batchDetails?batchId="
+          }
+        },
+        {
+          "name": "1.2 Get batch academic progression",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/session/batches/{{batchId}}/academicProgression",
+              "host": ["{{baseurl}}"],
+              "path": ["session", "batches", "{{batchId}}", "academicProgression"]
+            },
+            "description": "GET /session/batches/:id/academicProgression\n\nReturns programme terms with status Historical | Current | Future and configurationStatus Verified | Unverified (from class_section_term rows).\n\nAlso available as GET /classSections/academicProgression?batchId="
+          }
+        },
+        {
+          "name": "1.3 List batch students (paginated)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/session/batches/{{batchId}}/students?page={{page}}&limit={{limit}}&search={{search}}",
+              "host": ["{{baseurl}}"],
+              "path": ["session", "batches", "{{batchId}}", "students"],
+              "query": [
+                { "key": "page", "value": "{{page}}", "description": "Page number (default 1)" },
+                { "key": "limit", "value": "{{limit}}", "description": "Page size (default 10, max 100)" },
+                { "key": "search", "value": "{{search}}", "description": "Optional search on name / scholarNumber / enrollNumber" }
+              ]
+            },
+            "description": "GET /session/batches/:batchId/students\n\nReturns batch/session/course basics, curriculum subject counts, current terms/year, studentCount, and paginated students (name, enrollNumber, scholarNumber, batch, term, classSection)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Main — Create class section",
+      "item": [
+        {
+          "name": "2.1 Create class section",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"batchId\": 1,\n  \"section\": \"1B\",\n  \"year\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/main/classSections",
+              "host": ["{{baseurl}}"],
+              "path": ["main", "classSections"]
+            },
+            "description": "POST /main/classSections\n\nCreates a class section for a batch year and auto-creates class_section_term rows for that programme year.\n\nBody (strict):\n- batchId (integer, required)\n- section (string, required)\n- year (positive integer programme year, required)\n\ncourseId / sessionId are resolved from the batch."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Class sections — rename / delete / overview",
+      "item": [
+        {
+          "name": "3.1 Get batch details (query batchId)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/classSections/batchDetails?batchId={{batchId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["classSections", "batchDetails"],
+              "query": [
+                { "key": "batchId", "value": "{{batchId}}", "description": "Required batch ID" }
+              ]
+            },
+            "description": "GET /classSections/batchDetails?batchId=\n\nSame payload as GET /session/batches/:id/details."
+          }
+        },
+        {
+          "name": "3.2 Get academic progression (query batchId)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/classSections/academicProgression?batchId={{batchId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["classSections", "academicProgression"],
+              "query": [
+                { "key": "batchId", "value": "{{batchId}}", "description": "Required batch ID" }
+              ]
+            },
+            "description": "GET /classSections/academicProgression?batchId=\n\nSame payload as GET /session/batches/:id/academicProgression."
+          }
+        },
+        {
+          "name": "3.3 Rename class section",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"classSectionId\": 289,\n  \"section\": \"1BB\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/classSections/section",
+              "host": ["{{baseurl}}"],
+              "path": ["classSections", "section"]
+            },
+            "description": "PATCH /classSections/section\n\nRenames a class section.\n\nBody:\n- classSectionId (integer, required)\n- section (string, required)"
+          }
+        },
+        {
+          "name": "3.4 Delete class section",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/classSections/term?classSectionId={{classSectionId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["classSections", "term"],
+              "query": [
+                { "key": "classSectionId", "value": "{{classSectionId}}", "description": "Required class section ID" }
+              ]
+            },
+            "description": "DELETE /classSections/term?classSectionId=\n\nDeletes the class section and its class_section_term rows (blocked if students are still assigned)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Course — Terms with class sections",
+      "item": [
+        {
+          "name": "4.1 Get terms with class sections by batch",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/course/termsWithClassSections?batchId={{batchId}}&year={{year}}&term={{term}}",
+              "host": ["{{baseurl}}"],
+              "path": ["course", "termsWithClassSections"],
+              "query": [
+                { "key": "batchId", "value": "{{batchId}}", "description": "Required batch ID" },
+                { "key": "year", "value": "{{year}}", "description": "Optional programme year filter" },
+                { "key": "term", "value": "{{term}}", "description": "Optional programme term filter", "disabled": true }
+              ]
+            },
+            "description": "GET /course/termsWithClassSections?batchId=\n\nBatch-centric overview: course/session, academic regulations, curriculum structure status, and years with class sections + terms."
+          }
+        }
+      ]
+    }
+  ]
+}
