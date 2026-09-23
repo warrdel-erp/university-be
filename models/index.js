@@ -119,8 +119,8 @@ import poModel from "./poModel.js";
 import coModel from "./coModel.js";
 import coWeightageModel from "./coWeightageModel.js";
 import feePlanModel from "./feePlanModel.js";
-import feePlanProfileModel from "./feePlanProfileModel.js";
 import feePlanItemModel from "./feePlanItemModel.js";
+import feePlanPublishHistoryModel from "./feePlanPublishHistoryModel.js";
 import feePlanTypeModel from "./feePlanTypeModel.js";
 import feePlanSemesterModel from "./feePlanSemesterModel.js";
 import feeInvoiceDetailRecordModel from "./feeInvoiceDetailRecordModel.js";
@@ -537,14 +537,6 @@ employeeCodeMasterType.hasMany(studentModel, {
   as: "courseLevel",
 });
 
-studentModel.belongsTo(feePlanProfileModel, {
-  foreignKey: "fee_plan_profile_id",
-  as: "studentFeePlanProfile",
-});
-feePlanProfileModel.hasMany(studentModel, {
-  foreignKey: "fee_plan_profile_id",
-  as: "studentsWithFeePlanProfile",
-});
 
 userStudentEmployeeModel.belongsTo(studentModel, {
   foreignKey: "student_id",
@@ -2919,33 +2911,6 @@ sessionModel.hasMany(feePlanModel, {
   as: "feePlanSession",
 });
 
-feePlanProfileModel.belongsTo(sessionCouseMappingModel, {
-  foreignKey: "courseSessionId",
-  as: "courseSessionMapping",
-});
-sessionCouseMappingModel.hasMany(feePlanProfileModel, {
-  foreignKey: "courseSessionId",
-  as: "feePlanProfiles",
-});
-
-feePlanProfileModel.belongsTo(instituteModel, {
-  foreignKey: "instituteId",
-  as: "instituteFeePlanProfile",
-});
-instituteModel.hasMany(feePlanProfileModel, {
-  foreignKey: "instituteId",
-  as: "feePlanProfiles",
-});
-
-feePlanItemModel.belongsTo(feePlanProfileModel, {
-  foreignKey: "feePlanProfileId",
-  as: "feePlanProfile",
-});
-feePlanProfileModel.hasMany(feePlanItemModel, {
-  foreignKey: "feePlanProfileId",
-  as: "feePlanItems",
-});
-
 feePlanItemModel.belongsTo(batchModel, {
   foreignKey: "batchId",
   as: "batch",
@@ -2953,6 +2918,24 @@ feePlanItemModel.belongsTo(batchModel, {
 batchModel.hasMany(feePlanItemModel, {
   foreignKey: "batchId",
   as: "feePlanItems",
+});
+
+feePlanPublishHistoryModel.belongsTo(batchModel, {
+  foreignKey: "batchId",
+  as: "batch",
+});
+batchModel.hasMany(feePlanPublishHistoryModel, {
+  foreignKey: "batchId",
+  as: "feePlanPublishHistory",
+});
+
+feePlanPublishHistoryModel.belongsTo(instituteModel, {
+  foreignKey: "instituteId",
+  as: "instituteFeePlanPublishHistory",
+});
+instituteModel.hasMany(feePlanPublishHistoryModel, {
+  foreignKey: "instituteId",
+  as: "feePlanPublishHistoryList",
 });
 
 feePlanItemModel.belongsTo(instituteModel, {
@@ -4537,8 +4520,8 @@ export {
   coModel,
   coWeightageModel,
   feePlanModel,
-  feePlanProfileModel,
   feePlanItemModel,
+  feePlanPublishHistoryModel,
   feePlanTypeModel,
   feePlanSemesterModel,
   feeInvoiceDetailRecordModel,

@@ -1,7 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import universityModel from "./universityModel.js";
-import feePlanProfileModel from "./feePlanProfileModel.js";
 import instituteModel from "./instituteModel.js";
 import batchModel from "./batchModel.js";
 
@@ -33,15 +32,6 @@ const feePlanItemModel = sequelize.define(
       allowNull: true,
       field: "due_date",
     },
-    feePlanProfileId: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      field: "fee_plan_profile_id",
-      references: {
-        model: feePlanProfileModel,
-        key: "fee_plan_profile_id",
-      },
-    },
     batchId: {
       type: DataTypes.INTEGER,
       allowNull: true,
@@ -50,6 +40,40 @@ const feePlanItemModel = sequelize.define(
         model: batchModel,
         key: "batch_id",
       },
+    },
+    year: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "year",
+      comment: "Programme year level (1, 2, 3...)",
+    },
+    name: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      field: "name",
+      comment: "Planned fee receipt label (e.g. Admission / Semester I Fee)",
+    },
+    academicPeriod: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      field: "academic_period",
+      comment: "Academic period tag (e.g. Semester I)",
+    },
+    publishStatus: {
+      type: DataTypes.ENUM("draft", "published"),
+      allowNull: false,
+      defaultValue: "draft",
+      field: "publish_status",
+    },
+    publishedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: "published_at",
+    },
+    publishedBy: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "published_by",
     },
     instituteId: {
       type: DataTypes.INTEGER,
@@ -65,9 +89,7 @@ const feePlanItemModel = sequelize.define(
     tableName: "fee_plan_item",
     charset: "latin1",
     collate: "latin1_swedish_ci",
-    timestamps: true,
-    createdAt: "created_at",
-    updatedAt: "updated_at",
+    timestamps: false,
     paranoid: false,
   }
 );

@@ -20,16 +20,12 @@ import { buildTermName } from "../utility/courseTerms.js";
 import { studentRegister } from "../services/userServices.js";
 import * as acedmicYearCreationService from "../repository/acedmicYearRepository.js";
 import * as sessionRepository from "../repository/sessionRepository.js";
-import * as feePlanProfileRepository from "../repository/feePlanProfileRepository.js";
 import * as roleRepository from "../repository/roleRepository.js";
 import { parseCustomDate } from "../utility/dateFormat.js";
 import * as feeInvoiceRepository from "../repository/feeInvoiceRepository.js";
 import * as libraryRepository from "../repository/libraryCreationRepository.js";
 import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
 import * as model from "../models/index.js";
-import { decimalAdd, decimalSum, toMoneyNumber } from "../utility/decimalMoney.js";
-import { FEE_PLAN_PUBLISH_STATUS } from "../constant.js";
-import { getTenantStore } from "../utility/requestContext.js";
 import { Op } from "sequelize";
 import {
   classSectionTermsInclude,
@@ -133,41 +129,6 @@ async function resolveClassSectionTermIdForStudent(info, options = {}) {
     throw new Error('classSectionTermId not found');
   }
   return placement.classSectionTermId;
-}
-
-function isMainFeePlanSubItem(line) {
-  return line?.isMainSubItem === true || line?.isMainSubItem === 1;
-}
-
-function splitFeePlanSubItemAmounts(subItems) {
-  let amount = 0;
-  let supplementalFees = 0;
-
-  for (const line of subItems ?? []) {
-    const lineAmount = toMoneyNumber(line.amount);
-    if (isMainFeePlanSubItem(line)) {
-      amount = decimalAdd(amount, lineAmount);
-    } else {
-      supplementalFees = decimalAdd(supplementalFees, lineAmount);
-    }
-  }
-
-  return {
-    amount,
-    supplementalFees,
-    total: decimalAdd(amount, supplementalFees),
-  };
-}
-
-function mapFeePlanSubItemsForResponse(subItems) {
-  return (subItems ?? []).map((line) => ({
-    feePlanSubitemId: line.feePlanSubitemId,
-    feeTypeId: line.feeTypeId,
-    name: line.feeTypeCatalog?.name ?? null,
-    ledgerType: line.feeTypeCatalog?.ledgerType ?? null,
-    amount: toMoneyNumber(line.amount),
-    isMainItem: isMainFeePlanSubItem(line),
-  }));
 }
 
 export async function addStudent(
@@ -359,7 +320,6 @@ export async function addStudent(
 
     return {
       studentId: plainStudent.studentId,
-      feePlanProfileId: plainStudent.feePlanProfileId,
       scholarNumber: plainStudent.scholarNumber,
       enrollNumber: plainStudent.enrollNumber,
       email: plainStudent.email,
@@ -368,6 +328,7 @@ export async function addStudent(
       classSectionTermId: plainStudent.classSectionTermId,
       courseId: plainStudent.courseId,
       sessionId: plainStudent.sessionId,
+      batchId: plainStudent.batchId,
       academicYearId: mapperAcademicYearId,
       userId,
       student: plainStudent,
@@ -386,20 +347,6 @@ export async function addStudent(
 }
 
 
-
-async function assertFeePlanProfileForInstitute(feePlanProfileId) {
-  const profile = await feePlanProfileRepository.findFeePlanProfileByIdForInstitute(
-    feePlanProfileId
-  );
-  if (!profile) {
-    throw new Error("Fee plan profile not found for this institute");
-  }
-  const plain =
-    typeof profile.get === "function" ? profile.get({ plain: true }) : profile;
-  if (plain.publishStatus !== FEE_PLAN_PUBLISH_STATUS.PUBLISHED) {
-    throw new Error("Only published fee plans can be assigned to students");
-  }
-}
 
 async function assertStudentEnrollNumberAvailable(enrollNumber) {
   if (!enrollNumber) return;
@@ -432,7 +379,6 @@ async function resolveStudentRoleId() {
 }
 
 export async function addStudentWithFeePlanProfile({ info, files, createdBy }) {
-  await assertFeePlanProfileForInstitute(info.feePlanProfileId);
   await assertStudentEmailAvailable(info.email);
   await assertStudentEnrollNumberAvailable(info.enrollNumber);
 
@@ -700,10 +646,6 @@ export async function importStudentData(excelData, data) {
       convertedData.birthDate = formatDob;
       convertedData.enrollDate = formatEnrollDate;
       convertedData.admisssionDate = formatAdmissionDate;
-
-      if (convertedData.feePlanProfileId) {
-        await assertFeePlanProfileForInstitute(convertedData.feePlanProfileId);
-      }
 
       const mapperAcademicYearId = await resolveAcademicYearIdForClassMapping({
         academicYearId: convertedData.academicYearId,
@@ -996,7 +938,7 @@ const STUDENT_SCALAR_UPDATE_FIELDS = new Set([
   "specializationId",
   "sessionId",
   "classSectionTermId",
-  "feePlanProfileId",
+  "batchId",
   "scholarNumber",
   "enrollNumber",
   "firstName",
@@ -1046,7 +988,7 @@ const STUDENT_SCALAR_UPDATE_FIELDS = new Set([
 
 const STUDENT_UPDATE_OPTIONAL_FK_KEYS = new Set([
   "specializationId",
-  "feePlanProfileId",
+  "batchId",
 ]);
 
 const STUDENT_UPDATE_NUMERIC_FIELDS = new Set([
@@ -1126,7 +1068,6 @@ export async function updateStudentDetails(
   files,
   createdBy,
 ) {
-  const instituteId = getTenantStore().instituteId;
   const transaction = await sequelize.transaction();
 
   try {
@@ -1154,14 +1095,6 @@ export async function updateStudentDetails(
     }
 
     const studentPayload = pickStudentUpdatePayload(info);
-
-    if (studentPayload.feePlanProfileId) {
-      const resolvedInstituteId = instituteId ?? studentPayload.instituteId ?? info.instituteId;
-      if (!resolvedInstituteId) {
-        throw new Error("instituteId is required to assign a fee plan");
-      }
-      await assertFeePlanProfileForInstitute(studentPayload.feePlanProfileId);
-    }
 
     let rowsUpdated = 0;
     if (Object.keys(studentPayload).length > 0) {
@@ -1984,171 +1917,13 @@ function toPlainRows(rows) {
   return result;
 }
 
-function todayDateOnly() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function formatStudentDisplayName(student) {
-  return [student.firstName, student.middleName, student.lastName]
-    .filter(Boolean)
-    .join(" ")
-    .trim();
-}
-
-function resolveTermDisplayStatus(feePlanItem, invoice, today = todayDateOnly()) {
-  if (invoice) {
-    if (invoice.paymentStatus === "paid") return "paid";
-    if (invoice.paymentStatus === "partial") return "partial";
-    return "unpaid";
-  }
-
-  const startDate = String(feePlanItem.createDate).slice(0, 10);
-  return startDate > today ? "upcoming" : "pending";
-}
-
-function formatStudentTermRow(feePlanItem, invoice, index) {
-  const item = toPlainRow(feePlanItem);
-  const inv = invoice ? toPlainRow(invoice) : null;
-  const subItems = item.feePlanSubItems ?? [];
-  const { amount, supplementalFees, total } = splitFeePlanSubItemAmounts(subItems);
-  const hasFeeLines = subItems.length > 0;
-
-  return {
-    sno: index + 1,
-    feePlanItemId: item.feePlanItemId,
-    startDate: item.createDate ?? null,
-    endDate: item.dueDate ?? null,
-    amount,
-    supplementalFees,
-    total,
-    feeTypeCatalogs: mapFeePlanSubItemsForResponse(subItems),
-    status: resolveTermDisplayStatus(item, inv),
-    studentFeeInvoiceId: inv?.studentFeeInvoiceId ?? null,
-    paymentStatus: inv?.paymentStatus ?? null,
-    canGenerateInvoice: !inv && hasFeeLines,
-  };
-}
-
-function formatFeePlanInitiateStudentRow(student, feePlanItems, invoiceMap) {
-  const s = toPlainRow(student);
-  const profile = s.studentFeePlanProfile ?? {};
-  const course = s.course ?? {};
-  const session = s.studentSession ?? {};
-  const section = resolveStudentSection(s) ?? {};
-
-  const studentInvoices = invoiceMap.get(s.studentId) ?? new Map();
-
-  return {
-    studentId: s.studentId,
-    date: s.enrollDate ?? s.admisssionDate ?? null,
-    studentName: formatStudentDisplayName(s),
-    scholarNumber: s.scholarNumber,
-    className:
-      [section.year, section.section].filter(Boolean).join("") ||
-      section.section ||
-      (section.year != null ? String(section.year) : null) ||
-      null,
-    program: course.courseName ?? null,
-    session: session.sessionName ?? null,
-    feePlanName: profile.name ?? null,
-    feePlanProfileId: s.feePlanProfileId,
-    terms: feePlanItems.map((item, index) =>
-      formatStudentTermRow(item, studentInvoices.get(toPlainRow(item).feePlanItemId), index)
-    ),
-  };
-}
-
-function buildInvoiceMap(invoices) {
-  const invoiceMap = new Map();
-  for (const inv of invoices) {
-    const p = toPlainRow(inv);
-    if (!invoiceMap.has(p.studentId)) {
-      invoiceMap.set(p.studentId, new Map());
-    }
-    invoiceMap.get(p.studentId).set(p.feePlanItemId, inv);
-  }
-  return invoiceMap;
-}
-
-function groupFeePlanItemsByProfileId(feePlanItems) {
-  const byProfile = new Map();
-  for (const item of feePlanItems) {
-    const p = toPlainRow(item);
-    const profileId = p.feePlanProfileId;
-    if (!byProfile.has(profileId)) byProfile.set(profileId, []);
-    byProfile.get(profileId).push(item);
-  }
-  return byProfile;
-}
-
-/** GET /student/feePlanProfiles/all — students with fee plan + nested terms (paginated). */
-export async function getFeePlanInitiateAll(pagination = {}) {
-  const page = Number(pagination.page) || 1;
-  const limit = Number(pagination.limit) || 20;
-
-  const total = await studentRepository.countStudentsWithFeePlanForInitiate();
-  const students = await studentRepository.findStudentsWithFeePlanForInitiate({
-    page,
-    limit,
-  });
-
-  if (!students.length) {
-    return {
-      students: [],
-      pagination: { page, limit, total },
-    };
-  }
-
-  const studentIds = students.map((s) => toPlainRow(s).studentId);
-  const profileIds = [
-    ...new Set(
-      students
-        .map((s) => toPlainRow(s).feePlanProfileId)
-        .filter((id) => id != null)
-    ),
-  ];
-
-  const [feePlanItems, invoices] = await Promise.all([
-    studentRepository.findFeePlanItemsByProfileIds(profileIds),
-    studentRepository.findInvoicesByStudentIds(studentIds),
-  ]);
-
-  const itemsByProfile = groupFeePlanItemsByProfileId(feePlanItems);
-  const invoiceMap = buildInvoiceMap(invoices);
-
-  return {
-    students: students.map((student) => {
-      const profileId = toPlainRow(student).feePlanProfileId;
-      const items = itemsByProfile.get(profileId) ?? [];
-      return formatFeePlanInitiateStudentRow(student, items, invoiceMap);
-    }),
-    pagination: { page, limit, total },
-  };
-}
-
 /** GET /student/feePlanStudents — students list with fee plan data; all filters are optional. */
 export async function getStudentsByFeePlanList(filters = {}) {
-  const feePlanProfileId = filters.feePlanProfileId != null
-    ? Number(filters.feePlanProfileId)
-    : null;
-
-  // Validate the fee plan only when the caller filters by it.
-  if (feePlanProfileId != null) {
-    const profile = await feePlanProfileRepository.findFeePlanProfileByIdForInstitute(
-      feePlanProfileId,
-    );
-    if (!profile) {
-      const error = new Error("Fee plan profile not found for this institute");
-      error.statusCode = 404;
-      throw error;
-    }
-  }
-
   const result = await studentRepository.getStudentsByFeePlanList({
     courseId: filters.courseId,
     year: filters.year,
     term: filters.term,
-    feePlanProfileId,
+    batchId: filters.batchId,
     academicYearId: filters.academicYearId,
     page: Number(filters.page) || 1,
     limit: Number(filters.limit) || 10,

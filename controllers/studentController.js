@@ -340,30 +340,14 @@ export const getStudentPromotionHistory = async (req, res) => {
     }
 };
 
-export const getFeePlanInitiate = async (req, res) => {
-    try {
-        const { page, limit } = req.query;
-        const result = await studentService.getFeePlanInitiateAll({ page, limit });
-        return SuccessResponse(
-            res,
-            200,
-            "Fee plan initiate data fetched successfully",
-            { students: result.students },
-            result.pagination
-        );
-    } catch (error) {
-        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
-    }
-};
-
 export const getStudentsByFeePlanList = async (req, res) => {
     try {
-        const { courseId, year, term, feePlanProfileId, page, limit } = req.query;
+        const { courseId, year, term, batchId, page, limit } = req.query;
         const result = await studentService.getStudentsByFeePlanList({
             courseId,
             year,
             term,
-            feePlanProfileId,
+            batchId,
             academicYearId: getAcademicYearId(),
             page,
             limit,

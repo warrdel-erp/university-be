@@ -226,12 +226,6 @@ const courseSessionMappingBlockers = (courseId, sessionId, sessionCourseMappingI
         count: () => model.feePlanModel.count({ where: { courseId, sessionId } }),
     },
     {
-        label: "fee plan profiles",
-        count: () => model.feePlanProfileModel.count({
-            where: { courseSessionId: sessionCourseMappingId },
-        }),
-    },
-    {
         label: "credits",
         count: () => model.creditModel.count({ where: { courseId, sessionId } }),
     },

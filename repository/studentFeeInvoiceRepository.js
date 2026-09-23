@@ -6,37 +6,6 @@ function excludeTimestamps() {
   return ["createdAt", "updatedAt"];
 }
 
-function feePlanProfileInclude() {
-  return {
-    model: model.feePlanProfileModel,
-    as: "feePlanProfile",
-    required: false,
-    attributes: ["feePlanProfileId", "name", "planType", "category", "courseSessionId"],
-    include: [
-      {
-        model: model.sessionCouseMappingModel,
-        as: "courseSessionMapping",
-        required: false,
-        attributes: ["sessionCourseMappingId", "courseId", "sessionId", "instituteId"],
-        include: [
-          {
-            model: model.courseModel,
-            as: "courses",
-            required: false,
-            attributes: ["courseId", "courseName"],
-          },
-          {
-            model: model.sessionModel,
-            as: "session",
-            required: false,
-            attributes: ["sessionId", "sessionName"],
-          },
-        ],
-      },
-    ],
-  };
-}
-
 function feeInvoiceItemsInclude() {
   return {
     model: model.studentFeeInvoiceItemsModel,
@@ -76,7 +45,6 @@ function feePlanItemDetailInclude() {
     required: false,
     attributes: { exclude: excludeTimestamps() },
     include: [
-      feePlanProfileInclude(),
       {
         model: model.feePlanSubItemsModel,
         as: "feePlanSubItems",
@@ -100,7 +68,7 @@ function studentInclude() {
       "email",
       "mobileNumber",
       "enrollNumber",
-      "feePlanProfileId",
+      "batchId",
       "courseId",
       "sessionId",
     ],
@@ -120,7 +88,7 @@ function studentDetailInclude() {
       "email",
       "mobileNumber",
       "enrollNumber",
-      "feePlanProfileId",
+      "batchId",
       "courseId",
       "sessionId",
     ],
@@ -136,10 +104,6 @@ function studentDetailInclude() {
         as: "studentSession",
         required: false,
         attributes: ["sessionId", "sessionName"],
-      },
-      {
-        ...feePlanProfileInclude(),
-        as: "studentFeePlanProfile",
       },
     ],
   };
@@ -164,7 +128,7 @@ export async function findFeePlanItemById(feePlanItemId, options = {}) {
 export async function findStudentById(studentId, options = {}) {
   return scoped(model.studentModel).findOne({
     where: { studentId },
-    attributes: options.attributes ?? ["studentId", "instituteId", "feePlanProfileId"],
+    attributes: options.attributes ?? ["studentId", "instituteId", "batchId"],
     transaction: options.transaction,
   });
 }

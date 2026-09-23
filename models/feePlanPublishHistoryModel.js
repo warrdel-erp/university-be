@@ -1,12 +1,11 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import universityModel from "./universityModel.js";
-import feeTypeCatalogModel from "./feeTypeCatalogModel.js";
-import feePlanItemModel from "./feePlanItemModel.js";
 import instituteModel from "./instituteModel.js";
+import batchModel from "./batchModel.js";
 
-const feePlanSubItemsModel = sequelize.define(
-  "fee_plan_sub_items",
+const feePlanPublishHistoryModel = sequelize.define(
+  "fee_plan_publish_history",
   {
     universityId: {
       type: DataTypes.INTEGER,
@@ -17,39 +16,38 @@ const feePlanSubItemsModel = sequelize.define(
         key: "university_id",
       },
     },
-    feePlanSubitemId: {
+    feePlanPublishHistoryId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
-      field: "fee_plan_sub_item_id",
+      field: "fee_plan_publish_history_id",
     },
-    amount: {
-      type: DataTypes.DECIMAL(12, 2),
-      allowNull: false,
-    },
-    isMainSubItem: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-      field: "is_main_sub_item",
-    },
-    feeTypeId: {
+    batchId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      field: "fee_type_catalog_id",
+      field: "batch_id",
       references: {
-        model: feeTypeCatalogModel,
-        key: "fee_type_catalog_id",
+        model: batchModel,
+        key: "batch_id",
       },
     },
-    feePlanItemId: {
+    year: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    action: {
+      type: DataTypes.ENUM("publish", "unpublish"),
+      allowNull: false,
+    },
+    publishedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: "published_at",
+    },
+    publishedBy: {
       type: DataTypes.INTEGER,
       allowNull: true,
-      field: "fee_plan_item_id",
-      references: {
-        model: feePlanItemModel,
-        key: "fee_plan_item_id",
-      },
+      field: "published_by",
     },
     instituteId: {
       type: DataTypes.INTEGER,
@@ -62,21 +60,20 @@ const feePlanSubItemsModel = sequelize.define(
     },
   },
   {
-    tableName: "fee_plan_sub_items",
+    tableName: "fee_plan_publish_history",
     charset: "latin1",
     collate: "latin1_swedish_ci",
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",
     paranoid: false,
-    
   },
 );
 
-feePlanSubItemsModel.scopeConfig = {
+feePlanPublishHistoryModel.scopeConfig = {
   university: true,
   institute: true,
   academicYear: false,
 };
 
-export default feePlanSubItemsModel;
+export default feePlanPublishHistoryModel;
