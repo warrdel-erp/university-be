@@ -407,3 +407,146 @@ export async function deleteBatch(id) {
   await repo.remove(id);
   return { batchId: Number(id), deleted: true };
 }
+
+/**
+ * Batch students list with basic batch/course/session/curriculum summary + pagination.
+ */
+export async function getBatchStudents(batchId, query = {}) {
+  const resolvedBatchId = Number(batchId);
+
+  const [batchRow, academicCtx, studentPage] = await Promise.all([
+    repo.findFullDetailsById(resolvedBatchId),
+    resolveActiveAcademicYearContext(),
+    repo.findStudentsByBatchId(resolvedBatchId, {
+      page: query.page,
+      limit: query.limit,
+      search: query.search,
+    }),
+  ]);
+
+  if (!batchRow) {
+    httpError(`Batch (ID: ${resolvedBatchId}) not found`, 404);
+  }
+
+  const batch = batchRow.get({ plain: true });
+  const session = batch.session;
+  if (!session || !session.course) {
+    httpError(`Batch (ID: ${resolvedBatchId}) is missing session or course`, 400);
+  }
+  const course = session.course;
+
+  const batchYear = Number(batch.batch);
+  const activeCalendarYear = Number(academicCtx.activeBatchYear);
+  const academicYear = academicCtx.academicYear.get
+    ? academicCtx.academicYear.get({ plain: true })
+    : academicCtx.academicYear;
+  const currentYearNumber = activeCalendarYear - batchYear + 1;
+  const duration = Number(course.courseDuration) || 0;
+  const perYear = termsPerYear(course);
+
+  const expectedTermsInCurrentYear =
+    currentYearNumber >= 1 && currentYearNumber <= duration
+      ? termsForYear(currentYearNumber, course)
+      : [];
+
+  const currentTerms = [];
+  for (const termNumber of expectedTermsInCurrentYear) {
+    currentTerms.push({
+      term: termNumber,
+      termName: buildTermName(course.termType, termNumber),
+      year: currentYearNumber,
+      academicYear: formatAcademicYearLabel(activeCalendarYear),
+    });
+  }
+
+  let currentTerm = null;
+  if (currentTerms.length > 0) {
+    const slot = resolveCurrentTermSlotInYear({
+      startingDate: academicYear.startingDate,
+      termType: course.termType,
+      perYear,
+      referenceDate: new Date(),
+    });
+    const clampedSlot = slot < currentTerms.length ? slot : currentTerms.length - 1;
+    currentTerm = currentTerms[clampedSlot];
+  }
+
+  const curriculumMapping = (batch.curriculumMappings || [])[0] || null;
+  const curriculumRow = curriculumMapping ? curriculumMapping.curriculum : null;
+
+  const curriculumSubjectSet = new Set();
+  if (curriculumRow) {
+    for (const subjectTerm of curriculumRow.subjectTermMappings || []) {
+      curriculumSubjectSet.add(Number(subjectTerm.subjectId));
+    }
+  }
+  const configuredSubjects = curriculumSubjectSet.size;
+
+  const students = [];
+  for (const row of studentPage.rows) {
+    const plain = row.get({ plain: true });
+    const termRow = plain.studentClassSectionTerm || null;
+    const section = termRow ? termRow.classSection : null;
+
+    students.push({
+      studentId: plain.studentId,
+      firstName: plain.firstName,
+      middleName: plain.middleName,
+      lastName: plain.lastName,
+      enrollNumber: plain.enrollNumber,
+      scholarNumber: plain.scholarNumber,
+      batch: batchYear,
+      batchId: Number(plain.batchId),
+      term: termRow ? Number(termRow.term) : null,
+      classSectionTermId: termRow ? termRow.classSectionTermId : plain.classSectionTermId,
+      classSection: section ? section.section : null,
+      classSectionsId: section ? section.classSectionsId : null,
+      year: section ? section.year : null,
+    });
+  }
+
+  return {
+    data: {
+      batch: {
+        batchId: Number(batch.batchId),
+        batch: batchYear,
+        status: batch.status,
+        intakeCapacity: batch.intakeCapacity,
+        admissionYear: formatAcademicYearLabel(batchYear),
+      },
+      session: {
+        sessionId: session.sessionId,
+        sessionName: session.sessionName,
+        courseId: session.courseId,
+      },
+      course: {
+        courseId: course.courseId,
+        courseName: course.courseName,
+        courseCode: course.courseCode,
+        termType: course.termType,
+        courseDuration: course.courseDuration,
+      },
+      curriculum: {
+        curriculumId: curriculumRow ? curriculumRow.curriculumId : null,
+        name: curriculumRow ? curriculumRow.name : null,
+        publishStatus: curriculumRow ? curriculumRow.publishStatus : null,
+        configuredSubjects,
+        totalSubjects: configuredSubjects,
+      },
+      currentYear: {
+        academicCalendarYear: activeCalendarYear,
+        academicYear: formatAcademicYearLabel(activeCalendarYear),
+        yearNumber: currentYearNumber > 0 ? currentYearNumber : null,
+        currentTerm,
+        currentTerms,
+      },
+      studentCount: studentPage.count,
+      students,
+    },
+    paginationData: {
+      page: studentPage.page,
+      limit: studentPage.limit,
+      total: studentPage.count,
+    },
+  };
+}

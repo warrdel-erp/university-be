@@ -1,6 +1,7 @@
 import { Op } from 'sequelize';
 import * as model from '../models/index.js';
 import { buildScope, scoped } from '../utility/scoped.js';
+import { studentClassSectionTermWithSectionInclude } from '../utility/classSectionIncludes.js';
 
 const SESSION_BATCH_ATTRS = [
   'batchId',
@@ -234,6 +235,70 @@ export async function countAssessmentPlanSubjectMappingsByBatchContext({
   return {
     mappedSubjectCount: subjectIds.size,
     mappedPlanCount: planIds.size,
+  };
+}
+
+/**
+ * Paginated students for a batch, with class section + term placement.
+ */
+export async function findStudentsByBatchId(batchId, { page = 1, limit = 10, search } = {}) {
+  const pageNum = Number(page) > 0 ? Number(page) : 1;
+  const limitNum = Number(limit) > 0 ? Number(limit) : 10;
+  const offset = (pageNum - 1) * limitNum;
+
+  const where = {
+    batchId: Number(batchId),
+  };
+
+  if (search != null && String(search).trim() !== '') {
+    const like = `%${String(search).trim()}%`;
+    where[Op.or] = [
+      { firstName: { [Op.like]: like } },
+      { middleName: { [Op.like]: like } },
+      { lastName: { [Op.like]: like } },
+      { scholarNumber: { [Op.like]: like } },
+      { enrollNumber: { [Op.like]: like } },
+    ];
+  }
+
+  const { rows, count } = await scoped(model.studentModel, {
+    scopeConfig: { academicYear: false },
+  }).findAndCountAll({
+    where,
+    attributes: [
+      'studentId',
+      'firstName',
+      'middleName',
+      'lastName',
+      'enrollNumber',
+      'scholarNumber',
+      'batchId',
+      'batchYear',
+      'classSectionTermId',
+    ],
+    include: [
+      studentClassSectionTermWithSectionInclude({
+        includeSectionTerms: false,
+        termRequired: false,
+        sectionRequired: false,
+        termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
+        sectionAttributes: ['classSectionsId', 'section', 'year', 'batchId', 'activeYear'],
+      }),
+    ],
+    order: [
+      ['scholarNumber', 'ASC'],
+      ['studentId', 'ASC'],
+    ],
+    limit: limitNum,
+    offset,
+    distinct: true,
+  });
+
+  return {
+    rows,
+    count,
+    page: pageNum,
+    limit: limitNum,
   };
 }
 

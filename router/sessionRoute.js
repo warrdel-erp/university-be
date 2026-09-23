@@ -2,6 +2,7 @@ import { Router } from 'express'
 const router = Router();
 import { addSession, getAllSession, getSingleSessionDetails, updateSession, deleteSession, couseSessionMapping, updateCouseSessionMapping, deleteCouseSessionMapping } from "../controllers/sessionController.js";
 import * as batchController from "../controllers/batchController.js";
+import { getBatchAcademicProgression } from "../controllers/classSectionController.js";
 import userAuth from "../middleware/authUser.js"
 import { z } from 'zod';
 import { validate } from '../utility/validation.js';
@@ -25,6 +26,15 @@ const batchIdParamSchema = z.object({
     id: z.coerce.number().int().positive(),
 });
 
+const batchIdOnlyParamSchema = z.object({
+    batchId: z.coerce.number().int().positive(),
+});
+
+const batchStudentsQuerySchema = z.object({
+    page: z.coerce.number().int().positive().optional().default(1),
+    limit: z.coerce.number().int().positive().max(100).optional().default(10),
+    search: z.string().trim().optional(),
+});
 const sessionSchema = z.object({
     sessionName: z.string({ required_error: "Session name is required" }).min(1, "Session name cannot be empty"),
 
@@ -90,6 +100,8 @@ router.delete('/courseSessionMapping', userAuth, checkAccess(PERMISSIONS.SESSION
 // POST /session/batches             — create a new batch (starts as draft)
 // GET  /session/batches/:id         — single batch detail
 // GET  /session/batches/:id/details — full batch setup (course/session/curriculum/regulations/APSMs)
+// GET  /session/batches/:id/academicProgression — term progression (Historical/Current/Future)
+// GET  /session/batches/:batchId/students — students in batch (paginated)
 // PATCH /session/batches/:id        — update (draft only: intakeCapacity)
 // PATCH /session/batches/:id/publish — publish a batch (draft → published)
 // DELETE /session/batches/:id       — delete a batch (draft only)
@@ -97,6 +109,13 @@ router.delete('/courseSessionMapping', userAuth, checkAccess(PERMISSIONS.SESSION
 router.get('/batches', userAuth, batchController.getAllBatches);
 router.post('/batches', userAuth, validate({ body: createBatchSchema }), batchController.createBatch);
 router.get('/batches/:id/details', userAuth, validate({ params: batchIdParamSchema }), batchController.getBatchFullDetails);
+router.get('/batches/:id/academicProgression', userAuth, validate({ params: batchIdParamSchema }), getBatchAcademicProgression);
+router.get(
+  '/batches/:batchId/students',
+  userAuth,
+  validate({ params: batchIdOnlyParamSchema, query: batchStudentsQuerySchema }),
+  batchController.getBatchStudents,
+);
 router.get('/batches/:id', userAuth, validate({ params: batchIdParamSchema }), batchController.getBatch);
 router.patch('/batches/:id/publish', userAuth, validate({ params: batchIdParamSchema }), batchController.publishBatch);
 router.patch('/batches/:id', userAuth, validate({ params: batchIdParamSchema, body: updateBatchSchema }), batchController.updateBatch);

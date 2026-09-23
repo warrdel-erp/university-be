@@ -2,7 +2,7 @@ import * as classSectionServices from '../services/classSectionServices.js';
 import { SuccessResponse, ErrorResponse } from '../utility/response.js';
 export const getBatchAcademicProgression = async (req, res) => {
   try {
-    const { batchId } = req.query;
+    const batchId = req.params.id ?? req.query.batchId;
     const result = await classSectionServices.getBatchAcademicProgression(batchId);
     return SuccessResponse(res, 200, 'Batch academic progression fetched successfully', result);
   } catch (error) {
