@@ -1,6 +1,5 @@
 import * as model from '../models/index.js';
 import { Op, fn, col } from 'sequelize';
-import sequelize from '../database/sequelizeConfig.js';
 import { getTenantStore } from '../utility/requestContext.js';
 import { buildScope, scoped } from '../utility/scoped.js';
 import { classSectionTermsInclude } from '../utility/classSectionIncludes.js';
@@ -357,17 +356,206 @@ export async function getCourseWithSessionsData(courseId) {
   }
 }
 
-export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
+export async function findTermsWithClassSectionsByBatchId(batchId, filters = {}) {
+  const classSectionWhere = {
+    ...buildScope(model.classSectionModel),
+  };
+  if (filters.year != null) {
+    classSectionWhere.year = Number(filters.year);
+  }
+
+  const termInclude = classSectionTermsInclude({
+    term: filters.term,
+    required: filters.term != null,
+  });
+
+  return model.batchModel.findByPk(Number(batchId), {
+    attributes: ['batchId', 'sessionId', 'batch', 'status', 'intakeCapacity'],
+    include: [
+      {
+        model: model.sessionModel,
+        as: 'session',
+        attributes: ['sessionId', 'sessionName', 'academicYearId', 'courseId'],
+        required: true,
+        where: buildScope(model.sessionModel),
+        include: [
+          {
+            model: model.courseModel,
+            as: 'course',
+            attributes: [
+              'courseId',
+              'courseName',
+              'courseCode',
+              'courseDuration',
+              'totalTerms',
+              'termType',
+              'universityId',
+              'instituteId',
+              'isActive',
+            ],
+            required: true,
+            where: buildScope(model.courseModel),
+          },
+          {
+            model: model.academicRegulationCourseMappingModel,
+            as: 'regulationCourseMappings',
+            attributes: [
+              'academicRegulationCourseMappingId',
+              'academicRegulationId',
+              'courseId',
+              'sessionId',
+            ],
+            required: false,
+            where: buildScope(model.academicRegulationCourseMappingModel),
+            include: [
+              {
+                model: model.academicRegulationModel,
+                as: 'academicRegulation',
+                attributes: [
+                  'academicRegulationId',
+                  'regulationCode',
+                  'regulationName',
+                  'description',
+                  'academicYearRange',
+                  'applicableBatch',
+                  'effectiveFrom',
+                  'effectiveUntil',
+                  'gradingSchemeId',
+                  'academicYearId',
+                  'status',
+                  'isActive',
+                ],
+                required: true,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        model: model.classSectionModel,
+        as: 'classSections',
+        attributes: [
+          'classSectionsId',
+          'section',
+          'year',
+          'activeYear',
+          'batchId',
+          'courseId',
+          'sessionId',
+        ],
+        required: false,
+        where: classSectionWhere,
+        include: [termInclude],
+      },
+      {
+        model: model.curriculumBatchMappingModel,
+        as: 'curriculumMappings',
+        attributes: ['curriculumBatchMappingId', 'curriculumId', 'batchId'],
+        required: false,
+        include: [
+          {
+            model: model.curriculumModel,
+            as: 'curriculum',
+            attributes: [
+              'curriculumId',
+              'name',
+              'courseId',
+              'publishStatus',
+              'isActive',
+            ],
+            required: true,
+            where: {
+              ...buildScope(model.curriculumModel),
+              isActive: true,
+            },
+            include: [
+              {
+                model: model.curriculumSubjectTermMappingModel,
+                as: 'subjectTermMappings',
+                attributes: ['curriculumSubjectTermMappingId', 'term'],
+                required: false,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+}
+
+export async function getClassSectionsByCourseAndSession(courseId, sessionId, filters = {}) {
   try {
+    const where = {
+      courseId: Number(courseId),
+      sessionId: Number(sessionId),
+    };
+    if (filters.batchId != null) {
+      where.batchId = Number(filters.batchId);
+    }
+    if (filters.year != null) {
+      where.year = Number(filters.year);
+    }
+
     return await scoped(model.classSectionModel).findAll({
-      where: { courseId, sessionId },
-      attributes: ['classSectionsId', 'section', 'year', 'activeYear', 'batchId'],
+      where,
+      attributes: [
+        'classSectionsId',
+        'section',
+        'year',
+        'activeYear',
+        'batchId',
+        'courseId',
+        'sessionId',
+      ],
+      include: [
+        classSectionTermsInclude({
+          term: filters.term,
+          required: filters.term != null,
+        }),
+      ],
       order: [['year', 'ASC'], ['section', 'ASC']],
-      raw: true,
     });
   } catch (error) {
     console.error('Error in Course Repository (getClassSectionsByCourseAndSession):', error);
     throw error;
+  }
+}
+
+export async function getSessionSummaryById(sessionId) {
+  try {
+    const scopeWhere = buildScope(model.sessionModel);
+    const where = omitAcademicYearScope(scopeWhere);
+    where.sessionId = sessionId;
+    return await model.sessionModel.findOne({
+      where,
+      attributes: ['sessionId', 'sessionName', 'academicYearId', 'courseId'],
+      raw: true,
+    });
+  } catch (error) {
+    console.error('Error in Course Repository (getSessionSummaryById):', error);
+    throw error;
+  }
+}
+
+export async function getSessionBatchesMapping(sessionId) {
+  try {
+    const rows = await model.batchModel.findAll({
+      where: { sessionId: Number(sessionId) },
+      attributes: ['batchId', 'batch'],
+      order: [['batch', 'DESC']],
+      raw: true,
+    });
+    const mapped = [];
+    for (const row of rows) {
+      mapped.push({
+        batch_id: row.batchId,
+        batch: row.batch,
+      });
+    }
+    return mapped;
+  } catch (error) {
+    console.error('Error in getSessionBatchesMapping:', error);
+    return [];
   }
 }
 
@@ -413,22 +601,6 @@ export async function countStudentsByClassSectionIds(classSectionsIds) {
   }
 
   return countMap;
-}
-
-export async function getSessionSummaryById(sessionId) {
-  try {
-    const scopeWhere = buildScope(model.sessionModel);
-    const where = omitAcademicYearScope(scopeWhere);
-    where.sessionId = sessionId;
-    return await model.sessionModel.findOne({
-      where,
-      attributes: ['sessionId', 'sessionName'],
-      raw: true,
-    });
-  } catch (error) {
-    console.error('Error in Course Repository (getSessionSummaryById):', error);
-    throw error;
-  }
 }
 
 export async function getCourseListWithSubjects() {
@@ -673,18 +845,5 @@ export async function getSubjectByTeacherUserIdAndSubjectId(userId, subjectId) {
   } catch (error) {
     console.error("Error fetching subject by teacher userId and subjectId:", error);
     throw error;
-  }
-}
-
-export async function getSessionBatchesMapping(sessionId) {
-  try {
-    const [rows] = await sequelize.query(
-      "SELECT batch_id, batch FROM batch WHERE session_id = ? ORDER BY batch DESC",
-      { replacements: [Number(sessionId)] }
-    );
-    return rows;
-  } catch (error) {
-    console.error('Error in getSessionBatchesMapping:', error);
-    return [];
   }
 }

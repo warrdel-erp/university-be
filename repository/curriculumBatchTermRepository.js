@@ -17,8 +17,16 @@ export function curriculumBatchTermScheduleInclude() {
       {
         model: model.curriculumBatchMappingModel,
         as: "batchMapping",
-        attributes: ["curriculumBatchMappingId", "curriculumId", "batch"],
+        attributes: ["curriculumBatchMappingId", "curriculumId", "batchId"],
         required: true,
+        include: [
+          {
+            model: model.batchModel,
+            as: "batch",
+            attributes: ["batchId", "batch", "sessionId", "status"],
+            required: true,
+          },
+        ],
       },
     ],
   };
@@ -39,9 +47,15 @@ export async function findContextById(curriculumBatchTermMappingId, options = {}
         {
           model: model.curriculumBatchMappingModel,
           as: "batchMapping",
-          attributes: ["curriculumBatchMappingId", "curriculumId", "batch"],
+          attributes: ["curriculumBatchMappingId", "curriculumId", "batchId"],
           required: true,
           include: [
+            {
+              model: model.batchModel,
+              as: "batch",
+              attributes: ["batchId", "batch", "sessionId", "status"],
+              required: true,
+            },
             {
               model: model.curriculumModel,
               as: "curriculum",
@@ -68,7 +82,9 @@ export async function findContextById(curriculumBatchTermMappingId, options = {}
     term: Number(plain.term),
     yearNumber: Number(plain.yearNumber),
     year: Number(plain.year),
-    batch: Number(batchMapping.batch),
+    batch: Number(batchMapping.batch.batch),
+    batchId: Number(batchMapping.batchId),
+    sessionId: Number(batchMapping.batch.sessionId),
     curriculumId: Number(curriculum.curriculumId),
     courseId: Number(curriculum.courseId),
     curriculumName: curriculum.name,
@@ -135,8 +151,16 @@ export async function findEnrichmentByIds(curriculumBatchTermMappingIds, options
       {
         model: model.curriculumBatchMappingModel,
         as: "batchMapping",
-        attributes: ["batch"],
+        attributes: ["curriculumBatchMappingId", "batchId"],
         required: true,
+        include: [
+          {
+            model: model.batchModel,
+            as: "batch",
+            attributes: ["batchId", "batch"],
+            required: true,
+          },
+        ],
       },
     ],
     transaction: options.transaction,
@@ -149,7 +173,7 @@ export async function findEnrichmentByIds(curriculumBatchTermMappingIds, options
       curriculumBatchTermMappingId: Number(plain.curriculumBatchTermMappingId),
       term: Number(plain.term),
       yearNumber: Number(plain.yearNumber),
-      batchYear: Number(plain.batchMapping.batch),
+      batchYear: Number(plain.batchMapping.batch.batch),
     });
   }
   return result;

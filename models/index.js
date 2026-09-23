@@ -2946,6 +2946,15 @@ feePlanProfileModel.hasMany(feePlanItemModel, {
   as: "feePlanItems",
 });
 
+feePlanItemModel.belongsTo(batchModel, {
+  foreignKey: "batchId",
+  as: "batch",
+});
+batchModel.hasMany(feePlanItemModel, {
+  foreignKey: "batchId",
+  as: "feePlanItems",
+});
+
 feePlanItemModel.belongsTo(instituteModel, {
   foreignKey: "instituteId",
   as: "instituteFeePlanItem",

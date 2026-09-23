@@ -26,14 +26,9 @@ const listCoursesSchema = z.object({
 const courseListWithSubjectsSchema = z.object({});
 
 const classSectionsGroupedSchema = z.object({
-  courseId: z
-    .string()
-    .regex(/^\d+$/, "Course Id must be a number")
-    .transform((val) => parseInt(val)),
-  sessionId: z
-    .string()
-    .regex(/^\d+$/, "Session Id must be a number")
-    .transform((val) => parseInt(val)),
+  batchId: z.coerce.number().int().positive("batchId is required"),
+  year: z.coerce.number().int().positive().optional(),
+  term: z.coerce.number().int().positive().optional(),
 });
 
 const courseIdParamSchema = z.object({

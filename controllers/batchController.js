@@ -33,6 +33,32 @@ export const getBatch = async (req, res) => {
   }
 };
 
+export const getBatchFullDetails = async (req, res) => {
+  try {
+    const batchId = req.params.id ?? req.query.batchId;
+    const data = await batchService.getBatchFullDetails(batchId);
+    return SuccessResponse(res, 200, 'Batch details retrieved successfully', data);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || 'Internal Server Error');
+  }
+};
+
+export const getBatchStudents = async (req, res) => {
+  try {
+    const batchId = req.params.batchId ?? req.query.batchId;
+    const result = await batchService.getBatchStudents(batchId, req.query);
+    return SuccessResponse(
+      res,
+      200,
+      'Batch students retrieved successfully',
+      result.data,
+      result.paginationData,
+    );
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || 'Internal Server Error');
+  }
+};
+
 export const createBatch = async (req, res) => {
   try {
     const userId = req.user?.userId || req.user?.dataValues?.userId;

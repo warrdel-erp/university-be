@@ -8,16 +8,16 @@ import sessionCouseMappingModel from "./sessionCouseMappingModel.js";
 const feePlanProfileModel = sequelize.define(
   "fee_plan_profile",
   {
-            universityId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'university_id',
-            references: {
-                model: universityModel,
-                key: 'university_id'
-            }
-        },
-        feePlanProfileId: {
+    universityId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'university_id',
+      references: {
+        model: universityModel,
+        key: 'university_id',
+      },
+    },
+    feePlanProfileId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,

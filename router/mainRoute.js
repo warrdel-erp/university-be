@@ -91,13 +91,16 @@ const classSectionRecordQuerySchema = z.object({
     classSectionId: z.coerce.number({ required_error: 'classSectionId is required' }).int().positive(),
 });
 
-const addClassSectionsSchema = z.object({
-    courseId: positiveIntegerId,
-    sessionId: positiveIntegerId,
+const addClassSectionItemSchema = z.object({
+    batchId: positiveIntegerId,
     section: z.string().trim().min(1, 'section is required'),
     year: z.coerce.number().int().positive('year must be a positive integer'),
-    batchYear: z.coerce.number().int().positive('batchYear must be a positive integer'),
 }).strict();
+
+const addClassSectionsSchema = z.union([
+    addClassSectionItemSchema,
+    z.array(addClassSectionItemSchema).min(1, 'At least one class section is required'),
+]);
 
 const router = Router();
 

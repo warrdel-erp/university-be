@@ -404,15 +404,6 @@ const studentModel = sequelize.define(
                 key: 'user_id'
             }
         },
-        // updatedBy: {
-        //     type: DataTypes.INTEGER,
-        //     allowNull: false,
-        //     field: 'updated_by',
-        //     references: {
-        //         model: users,
-        //         key: 'user_id'
-        //     }
-        // },
         deletedAt: {
             type: DataTypes.DATE,
             allowNull: true,
@@ -444,6 +435,6 @@ studentModel.beforeValidate(async (student, options) => {
     }
 });
 
-studentModel.scopeConfig = { university: true, institute: true, academicYear: true };
+studentModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
 export default studentModel;
