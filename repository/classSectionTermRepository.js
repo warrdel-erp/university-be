@@ -51,7 +51,15 @@ export async function findClassSectionTermById(classSectionTermId, options = {})
 export async function findClassSectionInTenantScope(classSectionId, options = {}) {
   return scoped(model.classSectionModel).findOne({
     where: { classSectionsId: Number(classSectionId) },
-    attributes: ['classSectionsId', 'section', 'year', 'courseId', 'sessionId'],
+    attributes: [
+      'classSectionsId',
+      'section',
+      'expectedCapacity',
+      'year',
+      'batchId',
+      'courseId',
+      'sessionId',
+    ],
     transaction: options.transaction,
   });
 }
@@ -88,21 +96,27 @@ export async function findClassSectionByCourseSessionYearSection(
 }
 
 export async function updateClassSectionName(classSectionId, section, options = {}) {
+  return updateClassSectionFields(classSectionId, { section }, options);
+}
+
+export async function updateClassSectionFields(classSectionId, fields, options = {}) {
   const sectionRow = await findClassSectionInTenantScope(classSectionId, options);
   if (!sectionRow) {
     return null;
   }
 
-  const sectionName = String(section).trim();
-  const updated = await scoped(model.classSectionModel).update(
-    { section: sectionName },
-    {
-      where: { classSectionsId: Number(classSectionId) },
-      transaction: options.transaction,
-    },
-  );
+  const payload = {};
+  if (fields.section !== undefined) {
+    payload.section = String(fields.section).trim();
+  }
+  if (fields.expectedCapacity !== undefined) {
+    payload.expectedCapacity = Number(fields.expectedCapacity);
+  }
 
-  return updated;
+  return scoped(model.classSectionModel).update(payload, {
+    where: { classSectionsId: Number(classSectionId) },
+    transaction: options.transaction,
+  });
 }
 
 export async function findClassSectionTermsByClassSectionId(classSectionId, options = {}) {

@@ -83,10 +83,11 @@ export async function findAll(filters = {}) {
 /**
  * Find a single batch by PK, including session + course info.
  */
-export async function findById(id) {
+export async function findById(id, options = {}) {
   return model.batchModel.findByPk(Number(id), {
     attributes: SESSION_BATCH_ATTRS,
     include: [sessionInclude()],
+    transaction: options.transaction,
   });
 }
 
@@ -189,7 +190,7 @@ export async function findFullDetailsById(batchId) {
       {
         model: model.classSectionModel,
         as: 'classSections',
-        attributes: ['classSectionsId', 'year', 'section', 'activeYear'],
+        attributes: ['classSectionsId', 'year', 'section', 'activeYear', 'expectedCapacity'],
         required: false,
         where: buildScope(model.classSectionModel),
       },
@@ -292,6 +293,7 @@ export async function findClassSectionBatchesOverview(filters = {}) {
           'batchId',
           'courseId',
           'sessionId',
+          'expectedCapacity',
         ],
         required: false,
         where: buildScope(model.classSectionModel),

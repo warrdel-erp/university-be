@@ -27,10 +27,20 @@ const deleteClassSectionTermQuerySchema = z.object({
     .positive('Class section id must be greater than 0.'),
 });
 
-const renameClassSectionSchema = z.object({
-  classSectionId: positiveIntegerId,
-  section: z.string().trim().min(1, 'section is required'),
-});
+const renameClassSectionSchema = z
+  .object({
+    classSectionId: positiveIntegerId,
+    section: z.string().trim().min(1, 'section cannot be empty').optional(),
+    expectedCapacity: z.coerce
+      .number()
+      .int('expectedCapacity must be an integer')
+      .positive('expectedCapacity must be greater than 0')
+      .optional(),
+  })
+  .refine(
+    (body) => body.section !== undefined || body.expectedCapacity !== undefined,
+    { message: 'At least one of section or expectedCapacity is required' },
+  );
 
 const academicProgressionQuerySchema = z.object({
   batchId: positiveIntegerId,

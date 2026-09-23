@@ -136,14 +136,23 @@ GET /session/batches/:batchId/students
 | Authorization | Bearer `{{token}}` |
 | Content-Type | application/json |
 
-**Body**
+**Body** (single object **or** array)
 
 ```json
 {
   "batchId": 1,
   "section": "1B",
-  "year": 1
+  "year": 1,
+  "expectedCapacity": 60
 }
+```
+
+```json
+[
+  { "batchId": 12, "section": "A", "year": 3, "expectedCapacity": 40 },
+  { "batchId": 12, "section": "B", "year": 3, "expectedCapacity": 40 },
+  { "batchId": 12, "section": "C", "year": 3, "expectedCapacity": 40 }
+]
 ```
 
 | Field | Type | Required | Nullable | Description |
@@ -151,12 +160,46 @@ GET /session/batches/:batchId/students
 | batchId | Integer | Yes | No | Batch entity ID |
 | section | String | Yes | No | Section name (trimmed, min 1) |
 | year | Integer | Yes | No | Programme year (1…courseDuration) |
+| expectedCapacity | Integer | Yes | No | Expected seats; must be **> 0** |
 
 **Business rules**
 
+- Body may be one object or a non-empty array of the same shape.
+- Bulk create runs in one transaction.
 - `courseId` / `sessionId` come from the batch (do not send them).
 - Creates `class_sections` + `class_section_term` rows for that year.
-- Duplicate section name for same batch/year → `400`.
+- Duplicate section name for same batch/year (DB or within request) → `400`.
+
+**Errors:** `400`, `401`, `403`, `404`, `500`
+
+---
+
+### 2.1 Update class section
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Endpoint** | `/main/classSections` |
+| **Auth** | Bearer token required |
+| **Permission** | `CLASS_SETUP_EDIT` |
+
+```json
+{
+  "classSectionId": 289,
+  "section": "1A",
+  "expectedCapacity": 55
+}
+```
+
+Also available as `PATCH /classSections/section` (same body shape).
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| classSectionId | Integer | Yes | `class_sections.class_sections_id` |
+| section | String | No* | New section name |
+| expectedCapacity | Integer | No* | Must be **> 0** when sent |
+
+\* At least one of `section` or `expectedCapacity` is required.
 
 **Errors:** `400`, `401`, `403`, `404`, `500`
 
@@ -190,31 +233,19 @@ GET /session/batches/:batchId/students
     - `currentYear`, `currentYearLabel` (`Year 3`)
     - `currentTerms[]`, `currentTermsLabel` (`Semester 5 - Semester 6`)
     - `classSectionCount`, `studentCount`
-    - `sections[]` — `classSectionsId`, `section`, `year`, `studentCount`
+    - `sections[]` — `classSectionsId`, `section`, `year`, `expectedCapacity`, `studentCount`
     - `sectionStatus` — `Configured` \| `Setup required` \| `Needs attention`
 
 ---
 
-### 3.1 Rename class section
+### 3.1 Update class section (alias)
 
 | | |
 |---|---|
 | **Method** | `PATCH` |
 | **Endpoint** | `/classSections/section` |
 
-**Body**
-
-```json
-{
-  "classSectionId": 289,
-  "section": "1BB"
-}
-```
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| classSectionId | Integer | Yes | Class section PK |
-| section | String | Yes | New section name |
+Same body as `PATCH /main/classSections` (`classSectionId` + optional `section` / `expectedCapacity`).
 
 **Errors:** `400`, `401`, `404`, `500`
 

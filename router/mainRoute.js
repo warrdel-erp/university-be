@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { validate } from '../utility/validation.js';
 import { SUBJECT_TYPES, SUBJECT_CATEGORIES } from '../constant.js';
-import { getAllCollegesAndCourses, addCampus, addInstitute, addAffiliatedUniversity, addCourse, addSpecialization, addSubject, addClassSections, getClassSections, addSectionSubjectMapper, getSectionSubjectMapper, subjectExcel, updateCourse, changeCourseStatus, getClassSectionSpecific, getClassSectionRecord, updateSubject, getMonthlyIncome } from '../controllers/mainController.js';
+import { getAllCollegesAndCourses, addCampus, addInstitute, addAffiliatedUniversity, addCourse, addSpecialization, addSubject, addClassSections, updateClassSection, getClassSections, addSectionSubjectMapper, getSectionSubjectMapper, subjectExcel, updateCourse, changeCourseStatus, getClassSectionSpecific, getClassSectionRecord, updateSubject, getMonthlyIncome } from '../controllers/mainController.js';
 import userAuth from '../middleware/authUser.js';
 import { checkAccess } from '../middleware/checkAccess.js';
 import { PERMISSIONS } from '../const/permissions.js';
@@ -91,11 +91,34 @@ const classSectionRecordQuerySchema = z.object({
     classSectionId: z.coerce.number({ required_error: 'classSectionId is required' }).int().positive(),
 });
 
-const addClassSectionsSchema = z.object({
+const positiveNonZeroInteger = z.coerce
+    .number()
+    .int('expectedCapacity must be an integer')
+    .positive('expectedCapacity must be greater than 0');
+
+const addClassSectionItemSchema = z.object({
     batchId: positiveIntegerId,
     section: z.string().trim().min(1, 'section is required'),
     year: z.coerce.number().int().positive('year must be a positive integer'),
+    expectedCapacity: positiveNonZeroInteger,
 }).strict();
+
+const addClassSectionsSchema = z.union([
+    addClassSectionItemSchema,
+    z.array(addClassSectionItemSchema).min(1, 'At least one class section is required'),
+]);
+
+const updateClassSectionSchema = z
+    .object({
+        classSectionId: positiveIntegerId,
+        section: z.string().trim().min(1, 'section cannot be empty').optional(),
+        expectedCapacity: positiveNonZeroInteger.optional(),
+    })
+    .strict()
+    .refine(
+        (body) => body.section !== undefined || body.expectedCapacity !== undefined,
+        { message: 'At least one of section or expectedCapacity is required' },
+    );
 
 const router = Router();
 
@@ -120,6 +143,7 @@ router.patch('/subject/update', userAuth, checkAccess(PERMISSIONS.SUBJECTS_EDIT.
 
 // Section master (class table removed)
 router.post('/classSections', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP_ADD.value, null), validate({ body: addClassSectionsSchema }), addClassSections);
+router.patch('/classSections', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP_EDIT.value, null), validate({ body: updateClassSectionSchema }), updateClassSection);
 router.get('/classSections', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP.value, null), getClassSections);
 router.get('/classSectionSpecific', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP.value, null), getClassSectionSpecific);
 router.post('/sectionSubjectMapper', userAuth, checkAccess(PERMISSIONS.SEMESTER_SUBJECT_MAPPING_ASSIGN.value, null), addSectionSubjectMapper);

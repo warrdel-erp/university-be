@@ -70,6 +70,15 @@ const classSectionModel = sequelize.define(
             type: DataTypes.STRING,
             allowNull: false,
         },
+        expectedCapacity: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'expected_capacity',
+            validate: {
+                min: 1,
+            },
+            comment: 'Expected student capacity for this section (must be > 0)',
+        },
         year: {
             type: DataTypes.INTEGER,
             allowNull: true,

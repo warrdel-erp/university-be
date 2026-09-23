@@ -348,122 +348,191 @@ export async function updateSubject(data) {
 }
 
 export async function addClassSections(data, createdBy) {
-    try {
-        const { batchId, section, year } = data;
-        const yearNum = Number(year);
-        const sectionName = String(section).trim();
-        const resolvedBatchId = Number(batchId);
+    const items = Array.isArray(data) ? data : [data];
+    const isBulk = Array.isArray(data);
 
-        const batchRow = await batchRepository.findById(resolvedBatchId);
-        if (!batchRow) {
-            throw new Error(`Batch (ID: ${resolvedBatchId}) not found`);
-        }
-
-        const batchPlain = batchRow.get({ plain: true });
-        if (!batchPlain.session || !batchPlain.session.course) {
-            throw new Error(`Batch (ID: ${resolvedBatchId}) is missing session or course`);
-        }
-
-        const sessionId = Number(batchPlain.sessionId);
-        const courseId = Number(batchPlain.session.course.courseId);
-        const batchYear = Number(batchPlain.batch);
-
-        const course = await getCourseByCourseId(courseId);
-        if (!course) {
-            throw new Error(`Course (ID: ${courseId}) not found for batch ${resolvedBatchId}`);
-        }
-
-        const totalTerms = resolveTotalTerms(course);
-        if (totalTerms <= 0) {
-            throw new Error('Course courseDuration and termType must be configured before creating class sections');
-        }
-
-        const courseDuration = Number(course.courseDuration) || 1;
-        if (yearNum < 1 || yearNum > courseDuration) {
+    const seenKeys = new Set();
+    for (const item of items) {
+        const key = `${Number(item.batchId)}|${Number(item.year)}|${String(item.section).trim().toLowerCase()}`;
+        if (seenKeys.has(key)) {
             throw new Error(
-                `year must be between 1 and ${courseDuration} for course ${courseId}`,
+                `Duplicate section "${String(item.section).trim()}" for batch ${item.batchId} year ${item.year} in request`,
             );
         }
+        seenKeys.add(key);
+    }
 
-        const activeYear = batchYear + (yearNum - 1);
-
-        const termNumbers = termsForYear(yearNum, course);
-        if (!termNumbers.length) {
-            throw new Error(`No program terms found for year ${yearNum}`);
+    const transaction = await sequelize.transaction();
+    try {
+        const results = [];
+        for (const item of items) {
+            results.push(await createOneClassSection(item, createdBy, transaction));
         }
-
-        const transaction = await sequelize.transaction();
-        try {
-            let classSectionRow = await mainRepository.findClassSectionForYear(
-                {
-                    courseId,
-                    sessionId,
-                    batchId: resolvedBatchId,
-                    section: sectionName,
-                    year: yearNum,
-                },
-                { transaction },
-            );
-
-            if (classSectionRow) {
-                throw new Error(`Section ${sectionName} already exists for Year ${yearNum} of Batch ${batchYear}.`);
-            }
-
-            const classSectionCreated = true;
-
-            classSectionRow = await mainRepository.createClassSectionRow({
-                courseId,
-                sessionId,
-                batchId: resolvedBatchId,
-                year: yearNum,
-                activeYear,
-                section: sectionName,
-                instituteId: course.instituteId,
-                createdBy,
-            }, { transaction });
-
-            const classSectionPlain = classSectionRow.get({ plain: true });
-            const classSectionsId = classSectionPlain.classSectionsId;
-
-            const terms = [];
-            for (const termNum of termNumbers) {
-                const classSectionTermRow = await mainRepository.findOrCreateClassSectionTerm(
-                    {
-                        classSectionsId,
-                        term: termNum,
-                        createdBy,
-                        universityId: course.universityId,
-                        instituteId: course.instituteId,
-                    },
-                    { transaction },
-                );
-
-                const termPlain = classSectionTermRow.get({ plain: true });
-                terms.push({
-                    classSectionTermId: termPlain.classSectionTermId,
-                    term: termPlain.term,
-                });
-            }
-
-            await transaction.commit();
-            return {
-                ...classSectionPlain,
-                batchId: resolvedBatchId,
-                batch: batchYear,
-                sessionId,
-                courseId,
-                year: yearNum,
-                terms,
-                classSectionCreated,
-            };
-        } catch (error) {
-            await transaction.rollback();
-            throw error;
-        }
+        await transaction.commit();
+        return isBulk ? results : results[0];
     } catch (error) {
+        await transaction.rollback();
         console.error('Error adding class:', error);
         throw error;
     }
+}
+
+async function createOneClassSection(data, createdBy, transaction) {
+    const { batchId, section, year, expectedCapacity } = data;
+    const yearNum = Number(year);
+    const sectionName = String(section).trim();
+    const resolvedBatchId = Number(batchId);
+    const capacity = Number(expectedCapacity);
+
+    const batchRow = await batchRepository.findById(resolvedBatchId, { transaction });
+    if (!batchRow) {
+        throw new Error(`Batch (ID: ${resolvedBatchId}) not found`);
+    }
+
+    const batchPlain = batchRow.get({ plain: true });
+    if (!batchPlain.session || !batchPlain.session.course) {
+        throw new Error(`Batch (ID: ${resolvedBatchId}) is missing session or course`);
+    }
+
+    const sessionId = Number(batchPlain.sessionId);
+    const courseId = Number(batchPlain.session.course.courseId);
+    const batchYear = Number(batchPlain.batch);
+
+    const course = await getCourseByCourseId(courseId);
+    if (!course) {
+        throw new Error(`Course (ID: ${courseId}) not found for batch ${resolvedBatchId}`);
+    }
+
+    const totalTerms = resolveTotalTerms(course);
+    if (totalTerms <= 0) {
+        throw new Error('Course courseDuration and termType must be configured before creating class sections');
+    }
+
+    const courseDuration = Number(course.courseDuration) || 1;
+    if (yearNum < 1 || yearNum > courseDuration) {
+        throw new Error(
+            `year must be between 1 and ${courseDuration} for course ${courseId}`,
+        );
+    }
+
+    const activeYear = batchYear + (yearNum - 1);
+
+    const termNumbers = termsForYear(yearNum, course);
+    if (!termNumbers.length) {
+        throw new Error(`No program terms found for year ${yearNum}`);
+    }
+
+    let classSectionRow = await mainRepository.findClassSectionForYear(
+        {
+            courseId,
+            sessionId,
+            batchId: resolvedBatchId,
+            section: sectionName,
+            year: yearNum,
+        },
+        { transaction },
+    );
+
+    if (classSectionRow) {
+        throw new Error(`Section ${sectionName} already exists for Year ${yearNum} of Batch ${batchYear}.`);
+    }
+
+    classSectionRow = await mainRepository.createClassSectionRow({
+        courseId,
+        sessionId,
+        batchId: resolvedBatchId,
+        year: yearNum,
+        activeYear,
+        section: sectionName,
+        expectedCapacity: capacity,
+        instituteId: course.instituteId,
+        createdBy,
+    }, { transaction });
+
+    const classSectionPlain = classSectionRow.get({ plain: true });
+    const classSectionsId = classSectionPlain.classSectionsId;
+
+    const terms = [];
+    for (const termNum of termNumbers) {
+        const classSectionTermRow = await mainRepository.findOrCreateClassSectionTerm(
+            {
+                classSectionsId,
+                term: termNum,
+                createdBy,
+                universityId: course.universityId,
+                instituteId: course.instituteId,
+            },
+            { transaction },
+        );
+
+        const termPlain = classSectionTermRow.get({ plain: true });
+        terms.push({
+            classSectionTermId: termPlain.classSectionTermId,
+            term: termPlain.term,
+        });
+    }
+
+    return {
+        ...classSectionPlain,
+        batchId: resolvedBatchId,
+        batch: batchYear,
+        sessionId,
+        courseId,
+        year: yearNum,
+        expectedCapacity: capacity,
+        terms,
+        classSectionCreated: true,
+    };
+}
+
+export async function updateClassSection(body) {
+    const classSectionId = Number(body.classSectionId);
+    const updates = {};
+
+    if (body.section !== undefined) {
+        updates.section = String(body.section).trim();
+    }
+    if (body.expectedCapacity !== undefined) {
+        updates.expectedCapacity = Number(body.expectedCapacity);
+    }
+
+    const classSectionRow = await mainRepository.findClassSectionById(classSectionId);
+    if (!classSectionRow) {
+        throw new Error(`Class section (ID: ${classSectionId}) not found`);
+    }
+
+    const plain = classSectionRow.get({ plain: true });
+
+    if (updates.section !== undefined && updates.section !== plain.section) {
+        const duplicate = await mainRepository.findClassSectionForYear({
+            courseId: plain.courseId,
+            sessionId: plain.sessionId,
+            batchId: plain.batchId,
+            section: updates.section,
+            year: plain.year,
+        });
+        if (duplicate && Number(duplicate.classSectionsId) !== classSectionId) {
+            throw new Error(
+                `Section ${updates.section} already exists for Year ${plain.year}`,
+            );
+        }
+    }
+
+    await mainRepository.updateClassSectionById(classSectionId, updates);
+
+    const refreshed = await mainRepository.findClassSectionById(classSectionId);
+    const updatedPlain = refreshed.get({ plain: true });
+
+    return {
+        classSectionId: Number(updatedPlain.classSectionsId),
+        classSectionsId: updatedPlain.classSectionsId,
+        section: updatedPlain.section,
+        expectedCapacity: updatedPlain.expectedCapacity,
+        year: updatedPlain.year,
+        batchId: updatedPlain.batchId,
+        courseId: updatedPlain.courseId,
+        sessionId: updatedPlain.sessionId,
+    };
 }
 
 export async function getClassSectionDetails(classSectionId, academicYearId) {

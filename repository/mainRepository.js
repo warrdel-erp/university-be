@@ -327,6 +327,29 @@ export async function findClassSectionForYear(
     }
 }
 
+export async function findClassSectionById(classSectionId, options = {}) {
+    return scoped(model.classSectionModel).findOne({
+        where: { classSectionsId: Number(classSectionId) },
+        attributes: [
+            'classSectionsId',
+            'section',
+            'expectedCapacity',
+            'year',
+            'batchId',
+            'courseId',
+            'sessionId',
+        ],
+        transaction: options.transaction,
+    });
+}
+
+export async function updateClassSectionById(classSectionId, fields, options = {}) {
+    return scoped(model.classSectionModel).update(fields, {
+        where: { classSectionsId: Number(classSectionId) },
+        transaction: options.transaction,
+    });
+}
+
 export async function createClassSectionRow(data, options = {}) {
     try {
         if (data.year == null) {
@@ -338,13 +361,22 @@ export async function createClassSectionRow(data, options = {}) {
             throw new Error('section is required to create class sections');
         }
 
+        if (data.expectedCapacity == null || Number(data.expectedCapacity) < 1) {
+            throw new Error('expectedCapacity must be a non-zero positive integer');
+        }
+
         if (!data.departmentId && data.courseId) {
             const course = await model.courseModel.findByPk(data.courseId, { attributes: ['departmentId'] });
             if (course?.departmentId) data.departmentId = course.departmentId;
         }
 
         return scoped(model.classSectionModel).create(
-            { ...data, section: sectionName, year: Number(data.year) },
+            {
+                ...data,
+                section: sectionName,
+                year: Number(data.year),
+                expectedCapacity: Number(data.expectedCapacity),
+            },
             { transaction: options.transaction },
         );
     } catch (error) {
