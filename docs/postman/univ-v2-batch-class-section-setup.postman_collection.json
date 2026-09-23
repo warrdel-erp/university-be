@@ -96,7 +96,7 @@
               "host": ["{{baseurl}}"],
               "path": ["main", "classSections"]
             },
-            "description": "POST /main/classSections\n\nCreates a class section for a batch year and auto-creates class_section_term rows for that programme year.\n\nBody (strict):\n- batchId (integer, required)\n- section (string, required)\n- year (positive integer programme year, required)\n\ncourseId / sessionId are resolved from the batch."
+            "description": "POST /main/classSections\n\nCreates class section(s) for a batch year and auto-creates class_section_term rows for that programme year.\n\nBody: single object OR non-empty array of:\n- batchId (integer, required)\n- section (string, required)\n- year (positive integer programme year, required)\n\nExamples:\n{ \"batchId\": 1, \"section\": \"1B\", \"year\": 1 }\n[{ \"batchId\": 12, \"section\": \"A\", \"year\": 3 }, { \"batchId\": 12, \"section\": \"B\", \"year\": 3 }]\n\ncourseId / sessionId are resolved from the batch.\nBulk runs in one transaction. Duplicate section for same batch/year → 400."
           }
         }
       ]

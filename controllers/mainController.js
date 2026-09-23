@@ -143,11 +143,17 @@ export const updateSubject = async (req, res) => {
 export const addClassSections = async (req, res) => {
     try {
         const result = await mainServices.addClassSections(req.body, req.user.userId);
-        return SuccessResponse(res, 200, 'Class section created successfully', result);
+        const isBulk = Array.isArray(req.body);
+        return SuccessResponse(
+            res,
+            200,
+            isBulk ? 'Class sections created successfully' : 'Class section created successfully',
+            result,
+        );
     } catch (error) {
         console.error("Error in add class sections:", error);
         const message = error.message || 'Internal Server Error';
-        const statusCode = /required|found|Active institute|already exists/.test(message) ? 400 : 500;
+        const statusCode = /required|found|Active institute|already exists|must be between|No program terms/.test(message) ? 400 : 500;
         return ErrorResponse(res, statusCode, message);
     }
 };

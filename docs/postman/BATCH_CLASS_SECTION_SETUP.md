@@ -136,7 +136,7 @@ GET /session/batches/:batchId/students
 | Authorization | Bearer `{{token}}` |
 | Content-Type | application/json |
 
-**Body**
+**Body** (single object **or** array)
 
 ```json
 {
@@ -144,6 +144,14 @@ GET /session/batches/:batchId/students
   "section": "1B",
   "year": 1
 }
+```
+
+```json
+[
+  { "batchId": 12, "section": "A", "year": 3 },
+  { "batchId": 12, "section": "B", "year": 3 },
+  { "batchId": 12, "section": "C", "year": 3 }
+]
 ```
 
 | Field | Type | Required | Nullable | Description |
@@ -154,9 +162,12 @@ GET /session/batches/:batchId/students
 
 **Business rules**
 
+- Body may be one object or a non-empty array of the same shape.
+- Bulk create runs in one transaction (all succeed or all roll back).
 - `courseId` / `sessionId` come from the batch (do not send them).
 - Creates `class_sections` + `class_section_term` rows for that year.
-- Duplicate section name for same batch/year → `400`.
+- Duplicate section name for same batch/year (DB or within request) → `400`.
+- Single body → single object in `data`; array body → array in `data`.
 
 **Errors:** `400`, `401`, `403`, `404`, `500`
 

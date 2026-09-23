@@ -83,10 +83,11 @@ export async function findAll(filters = {}) {
 /**
  * Find a single batch by PK, including session + course info.
  */
-export async function findById(id) {
+export async function findById(id, options = {}) {
   return model.batchModel.findByPk(Number(id), {
     attributes: SESSION_BATCH_ATTRS,
     include: [sessionInclude()],
+    transaction: options.transaction,
   });
 }
 
