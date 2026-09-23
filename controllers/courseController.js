@@ -141,9 +141,13 @@ export const getMyCourseSessions = async (req, res) => {
 
 export const getTermsWithClassSections = async (req, res) => {
   try {
-    const { courseId, sessionId } = req.query;
+    const { batchId, year, term } = req.query;
 
-    const result = await courseService.getTermsWithClassSections(courseId, sessionId);
+    const result = await courseService.getTermsWithClassSections({
+      batchId,
+      year,
+      term,
+    });
 
     return res.status(200).json({
       status: 'success',

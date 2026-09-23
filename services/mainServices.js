@@ -2,6 +2,7 @@ import { getCourseByCourseId, updateCourseById, changeCourseStatuss, assertCours
 import * as mainRepository from '../repository/mainRepository.js';
 import * as instituteRepository from '../repository/instituteRepository.js';
 import { getSingleDepartmentDetails } from '../repository/departmentRepository.js';
+import * as batchRepository from '../repository/batchRepository.js';
 import sequelize from "../database/sequelizeConfig.js";
 import * as studentRepository from '../repository/studentRepository.js';
 import { resolveProgramTerm, resolveStudentSection } from '../utility/classSectionIncludes.js';
@@ -348,13 +349,29 @@ export async function updateSubject(data) {
 
 export async function addClassSections(data, createdBy) {
     try {
-        const { courseId, sessionId, section, year, batchYear } = data;
+        const { batchId, section, year } = data;
         const yearNum = Number(year);
-        const batchNum = Number(batchYear);
         const sectionName = String(section).trim();
+        const resolvedBatchId = Number(batchId);
 
-        const course = await getCourseByCourseId(Number(courseId));
-        if (!course) throw new Error('Course not found');
+        const batchRow = await batchRepository.findById(resolvedBatchId);
+        if (!batchRow) {
+            throw new Error(`Batch (ID: ${resolvedBatchId}) not found`);
+        }
+
+        const batchPlain = batchRow.get({ plain: true });
+        if (!batchPlain.session || !batchPlain.session.course) {
+            throw new Error(`Batch (ID: ${resolvedBatchId}) is missing session or course`);
+        }
+
+        const sessionId = Number(batchPlain.sessionId);
+        const courseId = Number(batchPlain.session.course.courseId);
+        const batchYear = Number(batchPlain.batch);
+
+        const course = await getCourseByCourseId(courseId);
+        if (!course) {
+            throw new Error(`Course (ID: ${courseId}) not found for batch ${resolvedBatchId}`);
+        }
 
         const totalTerms = resolveTotalTerms(course);
         if (totalTerms <= 0) {
@@ -368,11 +385,7 @@ export async function addClassSections(data, createdBy) {
             );
         }
 
-        if (!batchNum) {
-            throw new Error('batchYear is required to create a class section');
-        }
-
-        const activeYear = batchNum + (yearNum - 1);
+        const activeYear = batchYear + (yearNum - 1);
 
         const termNumbers = termsForYear(yearNum, course);
         if (!termNumbers.length) {
@@ -381,24 +394,11 @@ export async function addClassSections(data, createdBy) {
 
         const transaction = await sequelize.transaction();
         try {
-            // Ensure session batch mapping exists
-            await sequelize.query(`
-                INSERT IGNORE INTO batch (session_id, batch, created_by, created_at, updated_at)
-                VALUES (?, ?, ?, NOW(), NOW())
-            `, { replacements: [Number(sessionId), batchNum, createdBy], transaction });
-
-            const [batchMappingRows] = await sequelize.query(`
-                SELECT batch_id FROM batch
-                WHERE session_id = ? AND batch = ?
-            `, { replacements: [Number(sessionId), batchNum], transaction });
-            
-            const batchId = batchMappingRows[0]?.batch_id;
-
             let classSectionRow = await mainRepository.findClassSectionForYear(
                 {
-                    courseId: Number(courseId),
-                    sessionId: Number(sessionId),
-                    batchId,
+                    courseId,
+                    sessionId,
+                    batchId: resolvedBatchId,
                     section: sectionName,
                     year: yearNum,
                 },
@@ -406,17 +406,17 @@ export async function addClassSections(data, createdBy) {
             );
 
             if (classSectionRow) {
-                throw new Error(`Section ${sectionName} already exists for Year ${yearNum} of Batch ${batchNum}.`);
+                throw new Error(`Section ${sectionName} already exists for Year ${yearNum} of Batch ${batchYear}.`);
             }
 
             const classSectionCreated = true;
 
             classSectionRow = await mainRepository.createClassSectionRow({
-                courseId: Number(courseId),
-                sessionId: Number(sessionId),
-                batchId,
+                courseId,
+                sessionId,
+                batchId: resolvedBatchId,
                 year: yearNum,
-                activeYear: activeYear,
+                activeYear,
                 section: sectionName,
                 instituteId: course.instituteId,
                 createdBy,
@@ -448,6 +448,10 @@ export async function addClassSections(data, createdBy) {
             await transaction.commit();
             return {
                 ...classSectionPlain,
+                batchId: resolvedBatchId,
+                batch: batchYear,
+                sessionId,
+                courseId,
                 year: yearNum,
                 terms,
                 classSectionCreated,

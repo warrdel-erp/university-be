@@ -12,7 +12,7 @@ const SESSION_BATCH_ATTRS = [
   'createdBy',
 ];
 
-const SESSION_ATTRS = ['sessionId', 'sessionName'];
+const SESSION_ATTRS = ['sessionId', 'sessionName', 'academicYearId', 'courseId'];
 const COURSE_ATTRS = [
   'courseId',
   'courseName',
@@ -20,6 +20,9 @@ const COURSE_ATTRS = [
   'courseDuration',
   'totalTerms',
   'termType',
+  'universityId',
+  'instituteId',
+  'isActive',
 ];
 
 function sessionInclude() {
