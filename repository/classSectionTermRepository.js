@@ -342,3 +342,31 @@ export async function deleteClassSectionById(classSectionId, options = {}) {
     transaction: options.transaction,
   });
 }
+
+/**
+ * Distinct program term numbers that already have class_section_term rows for a batch.
+ */
+export async function findConfiguredTermNumbersByBatchId(batchId, options = {}) {
+  const rows = await scoped(model.classSectionModel).findAll({
+    where: { batchId: Number(batchId) },
+    attributes: ['classSectionsId', 'year'],
+    include: [
+      {
+        model: model.classSectionTermModel,
+        as: 'classSectionTerms',
+        attributes: ['classSectionTermId', 'term', 'classSectionsId'],
+        required: false,
+      },
+    ],
+    transaction: options.transaction,
+  });
+
+  const configuredTerms = new Set();
+  for (const row of rows) {
+    const plain = row.get({ plain: true });
+    for (const termRow of plain.classSectionTerms || []) {
+      configuredTerms.add(Number(termRow.term));
+    }
+  }
+  return configuredTerms;
+}
