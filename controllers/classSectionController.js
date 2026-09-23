@@ -1,6 +1,5 @@
 import * as classSectionServices from '../services/classSectionServices.js';
-import { SuccessResponse, ErrorResponse } from "../utility/response.js";
-
+import { SuccessResponse, ErrorResponse } from '../utility/response.js';
 export const getBatchAcademicProgression = async (req, res) => {
   try {
     const { batchId } = req.query;
