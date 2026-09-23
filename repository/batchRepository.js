@@ -1,6 +1,6 @@
 import { Op } from 'sequelize';
 import * as model from '../models/index.js';
-import { scoped } from '../utility/scoped.js';
+import { buildScope, scoped } from '../utility/scoped.js';
 
 const SESSION_BATCH_ATTRS = [
   'batchId',
@@ -69,7 +69,7 @@ export async function findAll(filters = {}) {
         as: 'batches',
         attributes: SESSION_BATCH_ATTRS,
         where: Object.keys(batchWhere).length ? batchWhere : undefined,
-        required: false, // Return sessions even if they have 0 batches
+        required: false,
       },
     ],
     order: [
@@ -87,6 +87,154 @@ export async function findById(id) {
     attributes: SESSION_BATCH_ATTRS,
     include: [sessionInclude()],
   });
+}
+
+/**
+ * Batch with session, course, curriculum mapping (+ term/subject ids for counts),
+ * regulation mappings, and class section year rows.
+ */
+export async function findFullDetailsById(batchId) {
+  return model.batchModel.findByPk(Number(batchId), {
+    attributes: SESSION_BATCH_ATTRS,
+    include: [
+      {
+        model: model.sessionModel,
+        as: 'session',
+        attributes: SESSION_ATTRS,
+        required: true,
+        where: buildScope(model.sessionModel),
+        include: [
+          {
+            model: model.courseModel,
+            as: 'course',
+            attributes: COURSE_ATTRS,
+            required: true,
+            where: buildScope(model.courseModel),
+          },
+          {
+            model: model.academicRegulationCourseMappingModel,
+            as: 'regulationCourseMappings',
+            attributes: [
+              'academicRegulationCourseMappingId',
+              'academicRegulationId',
+              'courseId',
+              'sessionId',
+            ],
+            required: false,
+            where: buildScope(model.academicRegulationCourseMappingModel),
+            include: [
+              {
+                model: model.academicRegulationModel,
+                as: 'academicRegulation',
+                attributes: [
+                  'academicRegulationId',
+                  'regulationCode',
+                  'regulationName',
+                  'status',
+                  'isActive',
+                ],
+                required: true,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        model: model.curriculumBatchMappingModel,
+        as: 'curriculumMappings',
+        attributes: [
+          'curriculumBatchMappingId',
+          'curriculumId',
+          'batchId',
+          'createdAt',
+          'createdBy',
+        ],
+        required: false,
+        include: [
+          {
+            model: model.curriculumModel,
+            as: 'curriculum',
+            attributes: [
+              'curriculumId',
+              'name',
+              'courseId',
+              'publishStatus',
+              'isActive',
+            ],
+            required: true,
+            where: buildScope(model.curriculumModel),
+            include: [
+              {
+                model: model.curriculumSubjectTermMappingModel,
+                as: 'subjectTermMappings',
+                attributes: ['curriculumSubjectTermMappingId', 'subjectId', 'term'],
+                required: false,
+              },
+            ],
+          },
+          {
+            model: model.curriculumBatchTermMappingModel,
+            as: 'termMappings',
+            attributes: [
+              'curriculumBatchTermMappingId',
+              'term',
+              'yearNumber',
+              'year',
+            ],
+            required: false,
+          },
+        ],
+      },
+      {
+        model: model.classSectionModel,
+        as: 'classSections',
+        attributes: ['classSectionsId', 'year', 'section', 'activeYear'],
+        required: false,
+        where: buildScope(model.classSectionModel),
+      },
+    ],
+  });
+}
+
+/**
+ * Distinct subject + plan counts for assessment plan subject mappings
+ * linked to this batch's term mappings, or same course + session.
+ */
+export async function countAssessmentPlanSubjectMappingsByBatchContext({
+  courseId,
+  sessionId,
+  curriculumBatchTermMappingIds,
+}) {
+  const orConditions = [];
+
+  if (curriculumBatchTermMappingIds.length > 0) {
+    orConditions.push({
+      curriculumBatchTermMappingId: { [Op.in]: curriculumBatchTermMappingIds },
+    });
+  }
+
+  orConditions.push({
+    courseId: Number(courseId),
+    sessionId: Number(sessionId),
+  });
+
+  const rows = await scoped(model.assessmentPlanSubjectMappingModel).findAll({
+    where: { [Op.or]: orConditions },
+    attributes: ['subjectId', 'assessmentPlanId'],
+  });
+
+  const subjectIds = new Set();
+  const planIds = new Set();
+  for (const row of rows) {
+    const plain = row.get({ plain: true });
+    subjectIds.add(Number(plain.subjectId));
+    planIds.add(Number(plain.assessmentPlanId));
+  }
+
+  return {
+    mappedSubjectCount: subjectIds.size,
+    mappedPlanCount: planIds.size,
+  };
 }
 
 /**

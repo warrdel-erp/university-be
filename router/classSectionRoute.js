@@ -6,6 +6,7 @@ import {
   getBatchAcademicProgression,
   renameClassSection,
 } from '../controllers/classSectionController.js';
+import { getBatchFullDetails } from '../controllers/batchController.js';
 import userAuth from '../middleware/authUser.js';
 import { checkAccess } from '../middleware/checkAccess.js';
 import { PERMISSIONS } from '../const/permissions.js';
@@ -36,12 +37,20 @@ const academicProgressionQuerySchema = z.object({
 
 router.get('/', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP.value, null), getClassSectionsByFilter);
 router.get(
-  '/academicProgression',
+  '/batchDetails',
   userAuth,
   checkAccess(PERMISSIONS.CLASS_SETUP.value, null),
   validate({ query: academicProgressionQuerySchema }),
+  getBatchFullDetails,
+);
+router.get(
+  '/academicProgression',
+  userAuth,
+  validate({ query: academicProgressionQuerySchema }),
   getBatchAcademicProgression,
 );
+
+
 router.patch('/section', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP.value, null), validate({ body: renameClassSectionSchema }), renameClassSection);
 router.delete('/term', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP.value, null), validate({ query: deleteClassSectionTermQuerySchema }), deleteClassSectionTerm);
 

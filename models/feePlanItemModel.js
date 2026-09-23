@@ -3,20 +3,21 @@ import { DataTypes } from 'sequelize';
 import universityModel from "./universityModel.js";
 import feePlanProfileModel from "./feePlanProfileModel.js";
 import instituteModel from "./instituteModel.js";
+import batchModel from "./batchModel.js";
 
 const feePlanItemModel = sequelize.define(
   "fee_plan_item",
   {
-            universityId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'university_id',
-            references: {
-                model: universityModel,
-                key: 'university_id'
-            }
-        },
-        feePlanItemId: {
+    universityId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'university_id',
+      references: {
+        model: universityModel,
+        key: 'university_id',
+      },
+    },
+    feePlanItemId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
@@ -39,6 +40,15 @@ const feePlanItemModel = sequelize.define(
       references: {
         model: feePlanProfileModel,
         key: "fee_plan_profile_id",
+      },
+    },
+    batchId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "batch_id",
+      references: {
+        model: batchModel,
+        key: "batch_id",
       },
     },
     instituteId: {

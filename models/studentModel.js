@@ -404,15 +404,6 @@ const studentModel = sequelize.define(
                 key: 'user_id'
             }
         },
-        // updatedBy: {
-        //     type: DataTypes.INTEGER,
-        //     allowNull: false,
-        //     field: 'updated_by',
-        //     references: {
-        //         model: users,
-        //         key: 'user_id'
-        //     }
-        // },
         deletedAt: {
             type: DataTypes.DATE,
             allowNull: true,

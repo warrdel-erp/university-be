@@ -89,12 +89,14 @@ router.delete('/courseSessionMapping', userAuth, checkAccess(PERMISSIONS.SESSION
 // GET  /session/batches             — list all sessions with their batches
 // POST /session/batches             — create a new batch (starts as draft)
 // GET  /session/batches/:id         — single batch detail
+// GET  /session/batches/:id/details — full batch setup (course/session/curriculum/regulations/APSMs)
 // PATCH /session/batches/:id        — update (draft only: intakeCapacity)
 // PATCH /session/batches/:id/publish — publish a batch (draft → published)
 // DELETE /session/batches/:id       — delete a batch (draft only)
 
 router.get('/batches', userAuth, batchController.getAllBatches);
 router.post('/batches', userAuth, validate({ body: createBatchSchema }), batchController.createBatch);
+router.get('/batches/:id/details', userAuth, validate({ params: batchIdParamSchema }), batchController.getBatchFullDetails);
 router.get('/batches/:id', userAuth, validate({ params: batchIdParamSchema }), batchController.getBatch);
 router.patch('/batches/:id/publish', userAuth, validate({ params: batchIdParamSchema }), batchController.publishBatch);
 router.patch('/batches/:id', userAuth, validate({ params: batchIdParamSchema, body: updateBatchSchema }), batchController.updateBatch);
