@@ -559,8 +559,15 @@ export async function findOverviewByCurriculumBatchMappingId({
 
   const batchMapping = await model.curriculumBatchMappingModel.findOne({
     where: { curriculumBatchMappingId },
-    attributes: ["curriculumBatchMappingId", "curriculumId", "batch"],
+    attributes: ["curriculumBatchMappingId", "curriculumId", "batchId"],
     include: [
+      {
+        model: model.batchModel,
+        as: "batch",
+        attributes: ["batchId", "batch", "status", "sessionId"],
+        required: true,
+        where: buildScope(model.batchModel),
+      },
       {
         model: model.curriculumBatchTermMappingModel,
         as: "termMappings",
@@ -625,7 +632,7 @@ export async function findOverviewByCurriculumBatchMappingId({
     plainBatch.termMappings,
     activeBatchYear,
     yearStatus,
-    plainBatch.batch,
+    plainBatch.batch.batch,
   );
   if (statusTerms) {
     termFilter = intersectTermFilters(termFilter, statusTerms);
@@ -881,9 +888,15 @@ export async function createAssessmentPlanSubjectMapping(data, options = {}) {
             {
               model: model.curriculumBatchMappingModel,
               as: "batchMapping",
-              attributes: ["curriculumBatchMappingId", "curriculumId", "batch"],
+              attributes: ["curriculumBatchMappingId", "curriculumId", "batchId"],
               required: false,
               include: [
+                {
+                  model: model.batchModel,
+                  as: "batch",
+                  attributes: ["batchId", "batch", "status", "sessionId"],
+                  required: false,
+                },
                 {
                   model: model.curriculumModel,
                   as: "curriculum",
@@ -981,9 +994,15 @@ export async function getAssessmentPlanSubjectMappings({
           {
             model: model.curriculumBatchMappingModel,
             as: "batchMapping",
-            attributes: ["curriculumBatchMappingId", "curriculumId", "batch"],
+            attributes: ["curriculumBatchMappingId", "curriculumId", "batchId"],
             required: false,
             include: [
+              {
+                model: model.batchModel,
+                as: "batch",
+                attributes: ["batchId", "batch", "status", "sessionId"],
+                required: false,
+              },
               {
                 model: model.curriculumModel,
                 as: "curriculum",
@@ -1044,7 +1063,7 @@ export async function deleteAssessmentPlanSubjectMapping(
 
 /**
  * Curriculum batches (current + previous) with course sessions for one academicYearId.
- * Path: curriculum_batch_mapping → curriculum → course → sessionCourseMappings → session
+ * Path: curriculum_batch_mapping → batch + curriculum → course → sessionCourseMappings → session
  */
 export async function findCurriculumBatchCoursesWithSessions({
   batchWhere = {},
@@ -1061,9 +1080,18 @@ export async function findCurriculumBatchCoursesWithSessions({
   }
 
   return scoped(model.curriculumBatchMappingModel).findAll({
-    where: batchWhere,
-    attributes: ["curriculumBatchMappingId", "curriculumId", "batch"],
+    attributes: ["curriculumBatchMappingId", "curriculumId", "batchId"],
     include: [
+      {
+        model: model.batchModel,
+        as: "batch",
+        attributes: ["batchId", "batch", "status", "sessionId"],
+        required: true,
+        where: {
+          ...buildScope(model.batchModel),
+          ...batchWhere,
+        },
+      },
       {
         model: model.curriculumBatchTermMappingModel,
         as: "termMappings",
@@ -1111,8 +1139,6 @@ export async function findCurriculumBatchCoursesWithSessions({
                     attributes: [
                       "sessionId",
                       "sessionName",
-                      "startingDate",
-                      "endingDate",
                       "academicYearId",
                     ],
                     required: true,
@@ -1150,7 +1176,7 @@ export async function findCurriculumBatchCoursesWithSessions({
       },
     ],
     order: [
-      ["batch", "DESC"],
+      [{ model: model.batchModel, as: "batch" }, "batch", "DESC"],
       ["curriculumBatchMappingId", "ASC"],
     ],
   });

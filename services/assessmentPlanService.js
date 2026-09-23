@@ -70,6 +70,16 @@ function resolveSubjectKind(subjectType) {
   return normalized;
 }
 
+function resolveBatchYear(batchMapping) {
+  if (!batchMapping) {
+    return null;
+  }
+  if (batchMapping.batch && batchMapping.batch.batch != null) {
+    return Number(batchMapping.batch.batch);
+  }
+  return null;
+}
+
 function buildAssignmentStatus(totalSubjects, assignedSubjects) {
   if (
     !decimalGreaterThan(totalSubjects, 0) ||
@@ -132,19 +142,20 @@ function resolveSubjectYearStatus(termYear, activeBatchYear) {
 function buildOverviewSubjects(batchMapping, rows, activeBatchYear) {
   const curriculum = batchMapping.curriculum;
   const course = curriculum.course;
+  const batchYear = resolveBatchYear(batchMapping);
   const durationYears = resolveDurationYears(course);
   const batchEndYear = decimalGreaterThan(durationYears, 0)
-    ? toIntegerNumber(decimalAdd(batchMapping.batch, durationYears))
+    ? toIntegerNumber(decimalAdd(batchYear, durationYears))
     : null;
 
   const termMeta = new Map();
   for (const termMapping of batchMapping.termMappings || []) {
     const effectiveYear =
       termMapping.year ||
-      (batchMapping.batch && termMapping.yearNumber
+      (batchYear && termMapping.yearNumber
         ? toIntegerNumber(
             decimalSubtract(
-              decimalAdd(batchMapping.batch, termMapping.yearNumber),
+              decimalAdd(batchYear, termMapping.yearNumber),
               1,
             ),
           )
@@ -214,9 +225,9 @@ function buildOverviewSubjects(batchMapping, rows, activeBatchYear) {
   return {
     curriculumBatchMappingId: batchMapping.curriculumBatchMappingId,
     curriculumId: curriculum.curriculumId,
-    batch: batchMapping.batch,
+    batch: batchYear,
     batchEndYear,
-    batchName: buildBatchName(batchMapping.batch, batchEndYear),
+    batchName: buildBatchName(batchYear, batchEndYear),
     activeBatchYear,
     curriculum: {
       curriculumId: curriculum.curriculumId,
@@ -293,9 +304,10 @@ function nestBatchCoursesWithSessions(batchMappings, assignedRows, activeBatchYe
     if (!course) continue;
 
     const subjectIds = collectBatchSubjectIds(plain);
+    const batchYear = resolveBatchYear(plain);
     const durationYears = resolveDurationYears(course);
     const batchEndYear = decimalGreaterThan(durationYears, 0)
-      ? toIntegerNumber(decimalAdd(plain.batch, durationYears))
+      ? toIntegerNumber(decimalAdd(batchYear, durationYears))
       : null;
 
     for (const scm of course.sessionCourseMappings || []) {
@@ -322,8 +334,6 @@ function nestBatchCoursesWithSessions(batchMappings, assignedRows, activeBatchYe
           session: {
             sessionId: session.sessionId,
             sessionName: session.sessionName,
-            startingDate: session.startingDate,
-            endingDate: session.endingDate,
             academicYearId: session.academicYearId,
             academicYear: academicYear
               ? {
@@ -355,9 +365,9 @@ function nestBatchCoursesWithSessions(batchMappings, assignedRows, activeBatchYe
       nest.batches.push({
         curriculumBatchMappingId: plain.curriculumBatchMappingId,
         curriculumId: plain.curriculumId,
-        batch: plain.batch,
+        batch: batchYear,
         batchEndYear,
-        batchName: buildBatchName(plain.batch, batchEndYear),
+        batchName: buildBatchName(batchYear, batchEndYear),
         curriculum: {
           curriculumId: curriculum.curriculumId,
           name: curriculum.name,
