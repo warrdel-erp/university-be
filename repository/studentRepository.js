@@ -63,7 +63,7 @@ function whereEqualOrIn(value) {
     return { [Op.in]: ids };
 }
 
-function buildStudentListWhere(search, courseId, sessionId) {
+function buildStudentListWhere(search, courseId, sessionId, batchId) {
     const where = {};
 
     const courseFilter = whereEqualOrIn(courseId);
@@ -74,6 +74,11 @@ function buildStudentListWhere(search, courseId, sessionId) {
     const sessionFilter = whereEqualOrIn(sessionId);
     if (sessionFilter !== undefined) {
         where.sessionId = sessionFilter;
+    }
+
+    const batchFilter = whereEqualOrIn(batchId);
+    if (batchFilter !== undefined) {
+        where.batchId = batchFilter;
     }
 
     if (search) {
@@ -98,14 +103,15 @@ function buildStudentListWhere(search, courseId, sessionId) {
  * Returns null when no placement filters are set.
  * Filters accept a single id or id list.
  */
-async function resolvePlacementStudentIds({ classSectionsId, year, term }) {
-    if (classSectionsId == null && year == null && term == null) {
+async function resolvePlacementStudentIds({ classSectionsId, year, term, batchId }) {
+    if (classSectionsId == null && year == null && term == null && batchId == null) {
         return null;
     }
 
     const classSectionsIdFilter = whereEqualOrIn(classSectionsId);
     const yearFilter = whereEqualOrIn(year);
     const termFilter = whereEqualOrIn(term);
+    const batchIdFilter = whereEqualOrIn(batchId);
 
     const historyWhere = { status: 'current' };
     if (classSectionsIdFilter !== undefined) {
@@ -113,13 +119,16 @@ async function resolvePlacementStudentIds({ classSectionsId, year, term }) {
     }
 
     const historyInclude = [];
-    if (yearFilter !== undefined) {
+    const classSectionWhere = {};
+    if (yearFilter !== undefined) classSectionWhere.year = yearFilter;
+    if (batchIdFilter !== undefined) classSectionWhere.batchId = batchIdFilter;
+    if (Object.keys(classSectionWhere).length > 0) {
         historyInclude.push({
             model: model.classSectionModel,
             as: 'classSection',
             attributes: [],
             required: true,
-            where: { year: yearFilter },
+            where: classSectionWhere,
         });
     }
     if (termFilter !== undefined) {
@@ -331,6 +340,7 @@ export async function getAllStudents({
     year,
     term,
     academicYearId,
+    batchId,
     excludeStudentIds,
     includeStudentIds,
 }) {
@@ -415,7 +425,7 @@ export async function getAllStudents({
             },
         ];
 
-        const whereCondition = buildStudentListWhere(search, courseId, sessionId);
+        const whereCondition = buildStudentListWhere(search, courseId, sessionId, batchId);
 
         const classSectionTermWhere = {};
         if (term?.length) classSectionTermWhere.term = { [Op.in]: term.map(Number) };
@@ -424,6 +434,7 @@ export async function getAllStudents({
         if (classSectionsId?.length) classSectionWhere.classSectionsId = { [Op.in]: classSectionsId.map(Number) };
         if (year?.length) classSectionWhere.year = { [Op.in]: year.map(Number) };
         if (academicYearId?.length) classSectionWhere.academicYearId = { [Op.in]: academicYearId.map(Number) };
+        if (batchId?.length) classSectionWhere.batchId = { [Op.in]: batchId.map(Number) };
 
         const hasTermFilter = Object.keys(classSectionTermWhere).length > 0;
         const hasSectionFilter = Object.keys(classSectionWhere).length > 0;
@@ -693,9 +704,10 @@ export async function getPromotionStudentList({
     search,
     courseId,
     term,
+    batchId,
 }) {
     try {
-        const whereCondition = buildStudentListWhere(search, courseId);
+        const whereCondition = buildStudentListWhere(search, courseId, null, batchId);
 
         const baseInclude = buildPromotionStudentIncludes({ term });
 
@@ -1108,7 +1120,7 @@ export async function checkEnroll(enrollNumber) {
     return findStudentByEnrollNumber(enrollNumber);
 }
 
-export async function getEmptyEnrollNumber(academicYearId, { page = 1, limit = 10, search } = {}) {
+export async function getEmptyEnrollNumber(academicYearId, { page = 1, limit = 10, search, batchId, courseId, sessionId } = {}) {
     try {
         if (getRequestAcademicYearId() == null && academicYearId == null) {
             return { result: [], totalCount: 0, page, limit, totalPages: 0 };
@@ -1118,7 +1130,7 @@ export async function getEmptyEnrollNumber(academicYearId, { page = 1, limit = 1
             enrollNumber: {
                 [Op.or]: [null, ''],
             },
-            ...buildStudentListWhere(search),
+            ...buildStudentListWhere(search, courseId, sessionId, batchId),
         };
 
         const baseInclude = [
@@ -1468,7 +1480,7 @@ export async function sectionStudentMappingExcel(data, transaction) {
     }
 };
 
-export async function getSectionStudentMapping(classSectionTermId, academicYearId, term, { page = 1, limit = 10, search } = {}) {
+export async function getSectionStudentMapping(classSectionTermId, academicYearId, term, { page = 1, limit = 10, search, batchId } = {}) {
     try {
         if (getRequestAcademicYearId() == null && academicYearId == null) {
             return { result: [], totalCount: 0, page, limit, totalPages: 0 };
@@ -1479,6 +1491,10 @@ export async function getSectionStudentMapping(classSectionTermId, academicYearI
         };
         if (classSectionTermId !== 0 && classSectionTermId != null) {
             whereConditions.classSectionTermId = Number(classSectionTermId);
+        }
+        const batchFilter = whereEqualOrIn(batchId);
+        if (batchFilter !== undefined) {
+            whereConditions.batchId = batchFilter;
         }
 
         const searchWhere = {};
@@ -2056,13 +2072,14 @@ export async function getStudentsByFeePlanList(filters = {}) {
 
 export async function getEmptyFeeDetails(filters = {}) {
     try {
-        const { courseId, sessionId, academicYearId, year, search, page = 1, limit = 10 } = filters;
+        const { courseId, sessionId, academicYearId, year, search, batchId, page = 1, limit = 10 } = filters;
         if (getRequestAcademicYearId() == null && academicYearId == null) {
             return { result: [], totalCount: 0, page, limit, totalPages: 0 };
         }
 
+        const batchFilter = whereEqualOrIn(batchId);
         const where = {
-            batchId: { [Op.is]: null },
+            batchId: batchFilter !== undefined ? batchFilter : { [Op.is]: null },
             ...(courseId != null && { courseId }),
             ...(sessionId != null && { sessionId }),
         };

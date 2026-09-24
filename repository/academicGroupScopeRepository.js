@@ -317,23 +317,47 @@ export async function getSubjectOptionsRepository({ classSectionTermId, academic
     const term = cst.term;
     const courseId = cst.classSection?.courseId;
     const year = cst.classSection?.year || 1;
+    const batchId = cst.classSection?.batchId;
 
-    // Academic year title (e.g. '2026-2027') -> 2026
-    const ayTitle = cst.classSection?.classSession?.sessionAcedmic?.year_title;
-    const startYear = ayTitle ? parseInt(ayTitle.match(/\d{4}/)?.[0], 10) : new Date().getFullYear();
-    const batch = startYear - (year - 1);
+    let batchMapping = null;
+    if (batchId) {
+      batchMapping = await model.curriculumBatchMappingModel.findOne({
+        where: { batchId },
+        include: [{
+          model: model.curriculumModel,
+          as: 'curriculum',
+          where: { courseId },
+          required: true
+        }],
+        transaction: options.transaction
+      });
+    }
 
-    // Get curriculum mapped for this batch and program
-    const batchMapping = await model.curriculumBatchMappingModel.findOne({
-      where: { batch },
-      include: [{
-        model: model.curriculumModel,
-        as: 'curriculum',
-        where: { courseId },
-        required: true
-      }],
-      transaction: options.transaction
-    });
+    if (!batchMapping) {
+      // Academic year title (e.g. '2026-2027') -> 2026
+      const ayTitle = cst.classSection?.classSession?.sessionAcedmic?.year_title;
+      const startYear = ayTitle ? parseInt(ayTitle.match(/\d{4}/)?.[0], 10) : new Date().getFullYear();
+      const batchYear = startYear - (year - 1);
+
+      // Get curriculum mapped for this batch year and program
+      batchMapping = await model.curriculumBatchMappingModel.findOne({
+        include: [
+          {
+            model: model.batchModel,
+            as: 'batch',
+            where: { batch: batchYear },
+            required: true
+          },
+          {
+            model: model.curriculumModel,
+            as: 'curriculum',
+            where: { courseId },
+            required: true
+          }
+        ],
+        transaction: options.transaction
+      });
+    }
 
     if (batchMapping?.curriculumId) {
       const mappings = await model.curriculumSubjectTermMappingModel.findAll({
