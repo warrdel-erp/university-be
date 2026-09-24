@@ -437,6 +437,7 @@ export async function findTermsWithClassSectionsByBatchId(batchId, filters = {})
         attributes: [
           'classSectionsId',
           'section',
+          'expectedCapacity',
           'year',
           'activeYear',
           'batchId',
@@ -501,6 +502,7 @@ export async function getClassSectionsByCourseAndSession(courseId, sessionId, fi
       attributes: [
         'classSectionsId',
         'section',
+        'expectedCapacity',
         'year',
         'activeYear',
         'batchId',

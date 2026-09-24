@@ -55,7 +55,9 @@ export const getTermsWithClassSections = async (query) => {
   const session = batch.session;
   const course = session.course;
   if (!session || !course) {
-    const error = new Error(`Batch (ID: ${batchId}) is missing session or course`);
+    const error = new Error(
+      `Batch (ID: ${batchId}) is missing session or course`,
+    );
     error.statusCode = 400;
     throw error;
   }
@@ -93,7 +95,8 @@ export const getTermsWithClassSections = async (query) => {
     }
     const regulation = mapping.academicRegulation;
     academicRegulations.push({
-      academicRegulationCourseMappingId: mapping.academicRegulationCourseMappingId,
+      academicRegulationCourseMappingId:
+        mapping.academicRegulationCourseMappingId,
       academicRegulationId: mapping.academicRegulationId,
       regulationCode: regulation.regulationCode,
       regulationName: regulation.regulationName,
@@ -137,6 +140,7 @@ export const getTermsWithClassSections = async (query) => {
         classSectionsId: section.classSectionsId,
         section: section.section,
         year: Number(section.year),
+        expectedCapacity: section.expectedCapacity,
         activeYear: section.activeYear,
         batchId: section.batchId,
         studentCount:
@@ -266,6 +270,12 @@ export const getSubjectsByTeacherUserId = async (userId, searchKey) => {
   return courseRepository.getSubjectsByTeacherUserId(userId, searchKey);
 };
 
-export const getSubjectByTeacherUserIdAndSubjectId = async (userId, subjectId) => {
-  return courseRepository.getSubjectByTeacherUserIdAndSubjectId(userId, subjectId);
+export const getSubjectByTeacherUserIdAndSubjectId = async (
+  userId,
+  subjectId,
+) => {
+  return courseRepository.getSubjectByTeacherUserIdAndSubjectId(
+    userId,
+    subjectId,
+  );
 };
