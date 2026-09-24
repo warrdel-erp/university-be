@@ -192,7 +192,6 @@ export async function getBatchFullDetails(batchId) {
 
   if (curriculumMapping) {
     for (const termRow of curriculumMapping.termMappings || []) {
-      configuredTermSet.add(Number(termRow.term));
       curriculumBatchTermMappingIds.push(Number(termRow.curriculumBatchTermMappingId));
     }
   }
