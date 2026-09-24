@@ -1,6 +1,6 @@
 'use strict';
 
-/** Add expected_capacity to class_sections (required, non-zero). */
+/** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
     const desc = await queryInterface.describeTable('class_sections');

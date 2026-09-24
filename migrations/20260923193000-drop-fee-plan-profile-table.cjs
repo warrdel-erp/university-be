@@ -1,18 +1,8 @@
 'use strict';
 
-/** Drop fee_plan_profile linkage — fee plans are batch-direct via fee_plan_item.batch_id. */
+/** @type {import('sequelize-cli').Migration} */
 module.exports = {
-  async up(queryInterface, Sequelize) {
-    const itemDesc = await queryInterface.describeTable('fee_plan_item');
-    if (itemDesc.fee_plan_profile_id) {
-      await queryInterface.removeColumn('fee_plan_item', 'fee_plan_profile_id');
-    }
-
-    const studentDesc = await queryInterface.describeTable('students');
-    if (studentDesc.fee_plan_profile_id) {
-      await queryInterface.removeColumn('students', 'fee_plan_profile_id');
-    }
-
+  async up(queryInterface) {
     const tables = await queryInterface.showAllTables();
     const names = tables.map((t) => (typeof t === 'string' ? t : t.tableName || t.name));
     if (names.includes('fee_plan_profile')) {
@@ -44,18 +34,6 @@ module.exports = {
       campus_id: { type: Sequelize.INTEGER, allowNull: true },
       created_at: { type: Sequelize.DATE, allowNull: true },
       updated_at: { type: Sequelize.DATE, allowNull: true },
-    });
-
-    await queryInterface.addColumn('fee_plan_item', 'fee_plan_profile_id', {
-      type: Sequelize.INTEGER,
-      allowNull: true,
-      references: { model: 'fee_plan_profile', key: 'fee_plan_profile_id' },
-    });
-
-    await queryInterface.addColumn('students', 'fee_plan_profile_id', {
-      type: Sequelize.INTEGER,
-      allowNull: true,
-      references: { model: 'fee_plan_profile', key: 'fee_plan_profile_id' },
     });
   },
 };
