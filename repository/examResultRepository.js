@@ -320,7 +320,7 @@ export async function findExamScheduleContextsByExaminationSessionId(
           {
             model: model.curriculumBatchMappingModel,
             as: "batchMapping",
-            attributes: ["curriculumBatchMappingId", "curriculumId", "batch"],
+            attributes: ["curriculumBatchMappingId", "curriculumId", "batchId"],
             required: true,
           },
         ],

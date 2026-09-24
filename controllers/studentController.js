@@ -51,6 +51,7 @@ export const getAllStudents = async (req, res) => {
         year,
         term,
         academicYearId,
+        batchId,
     } = req.query;
 
     try {
@@ -64,6 +65,7 @@ export const getAllStudents = async (req, res) => {
             year,
             term,
             academicYearId,
+            batchId,
         });
         return res.status(200).send(result);
     } catch (error) {
@@ -157,12 +159,15 @@ export const deleteStudentDetail = async (req, res) => {
 };
 
 export const getEmptyEnrollNumber = async (req, res) => {
-    const { page, limit, search } = req.query;
+    const { page, limit, search, batchId, courseId, sessionId } = req.query;
     try {
         const result = await studentService.getEmptyEnrollNumber(getAcademicYearId(), {
             page,
             limit,
             search,
+            batchId,
+            courseId,
+            sessionId,
         });
         res.status(200).send(result);
     } catch (error) {
@@ -214,14 +219,14 @@ export const sectionStudentMapping = async (req, res) => {
 export const getSectionStudentMapping = async (req, res) => {
     const classSectionTermId = req.query.classSectionTermId ?? 0;
     const term = req.query.term != null ? Number(req.query.term) : undefined;
-    const { page, limit, search } = req.query;
+    const { page, limit, search, batchId } = req.query;
 
     try {
         const result = await studentService.getSectionStudentMapping(
             classSectionTermId,
             undefined,
             term,
-            { page, limit, search },
+            { page, limit, search, batchId },
         );
         return res.status(200).send(result);
     } catch (error) {
@@ -367,7 +372,7 @@ export const getStudentsByFeePlanList = async (req, res) => {
 };
 
 export const getEmptyFeeDetails = async (req, res) => {
-    const { courseId, sessionId, year, search, page, limit } = req.query;
+    const { courseId, sessionId, year, search, batchId, page, limit } = req.query;
     try {
         const result = await studentService.getEmptyFeeDetails({
             academicYearId: getAcademicYearId(),
@@ -375,6 +380,7 @@ export const getEmptyFeeDetails = async (req, res) => {
             sessionId,
             year,
             search,
+            batchId,
             page,
             limit,
         });

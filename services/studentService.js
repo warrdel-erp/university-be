@@ -1251,8 +1251,8 @@ export async function deleteStudentDetail(studentId) {
   }
 }
 
-export async function getEmptyEnrollNumber(academicYearId, { page = 1, limit = 10, search } = {}) {
-  return await studentRepository.getEmptyEnrollNumber(academicYearId, { page, limit, search });
+export async function getEmptyEnrollNumber(academicYearId, { page = 1, limit = 10, search, batchId, courseId, sessionId } = {}) {
+  return await studentRepository.getEmptyEnrollNumber(academicYearId, { page, limit, search, batchId, courseId, sessionId });
 }
 
 export async function studentCourseMapping(data) {
@@ -1309,12 +1309,12 @@ export async function sectionStudentMapping(data, createdBy) {
   }
 }
 
-export async function getSectionStudentMapping(classSectionTermId, academicYearId, term, { page = 1, limit = 10, search } = {}) {
+export async function getSectionStudentMapping(classSectionTermId, academicYearId, term, { page = 1, limit = 10, search, batchId } = {}) {
   const data = await studentRepository.getSectionStudentMapping(
     classSectionTermId,
     academicYearId,
     term,
-    { page, limit, search },
+    { page, limit, search, batchId },
   );
   return {
     ...data,
@@ -1627,6 +1627,7 @@ export async function getPromotionHistory(payload = {}) {
       limit,
       search: payload.search ?? payload.studentSearch,
       courseId: payload.courseId ?? payload.programCourseId,
+      batchId: payload.batchId,
       term:
         payload.term != null
           ? Number(payload.term)
@@ -1648,6 +1649,7 @@ export async function getPromotionStudentList(payload) {
     courseId: payload.courseId,
     search: payload.search,
     term: payload.term,
+    batchId: payload.batchId,
   });
   return {
     promotionStudents: result.data.students,

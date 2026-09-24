@@ -44,6 +44,16 @@ function buildCurrentTermsForYear(course, yearNumber) {
   return currentTerms;
 }
 
+function buildCurrentTermsLabel(currentTerms) {
+  if (!currentTerms || !currentTerms.length) {
+    return null;
+  }
+  if (currentTerms.length === 1) {
+    return currentTerms[0].termName;
+  }
+  return `${currentTerms[0].termName} - ${currentTerms[currentTerms.length - 1].termName}`;
+}
+
 function buildCurrentPositionLabel(currentTerms, yearNumber) {
   if (!currentTerms.length) {
     return `Year ${yearNumber}`;
@@ -78,6 +88,7 @@ export async function getAllBatches(filters = {}) {
       const currentYear = activeCalendarYear - batchYear + 1;
       const inRange = currentYear >= 1 && currentYear <= duration;
       const currentTerms = inRange ? buildCurrentTermsForYear(course, currentYear) : [];
+      const currentTermsLabel = inRange ? buildCurrentTermsLabel(currentTerms) : null;
 
       batches.push({
         batchId: batch.batchId,
@@ -90,6 +101,7 @@ export async function getAllBatches(filters = {}) {
         currentYear: inRange ? currentYear : null,
         currentYearLabel: inRange ? `Year ${currentYear}` : null,
         currentTerms,
+        currentTermsLabel,
         currentPositionLabel: inRange
           ? buildCurrentPositionLabel(currentTerms, currentYear)
           : null,

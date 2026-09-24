@@ -121,6 +121,15 @@ const studentModel = sequelize.define(
                 key: 'session_id'
             }
         },
+        batchId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'batch_id',
+            references: {
+                model: 'batch',
+                key: 'batch_id',
+            },
+        },
         classSectionTermId: {
             type: DataTypes.INTEGER,
             allowNull: true,

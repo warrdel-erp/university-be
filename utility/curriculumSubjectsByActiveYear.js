@@ -180,9 +180,16 @@ export async function findCurriculumSubjectsForActiveYear(
   const batchInclude = {
     model: model.curriculumBatchMappingModel,
     as: "batchMapping",
-    attributes: ["curriculumBatchMappingId", "curriculumId", "batch"],
+    attributes: ["curriculumBatchMappingId", "curriculumId", "batchId"],
     required: true,
     include: [
+      {
+        model: model.batchModel,
+        as: "batch",
+        attributes: ["batchId", "batch"],
+        where: Object.keys(batchWhere).length > 0 ? batchWhere : undefined,
+        required: Object.keys(batchWhere).length > 0,
+      },
       {
         model: model.curriculumModel,
         as: "curriculum",
@@ -231,9 +238,6 @@ export async function findCurriculumSubjectsForActiveYear(
       },
     ],
   };
-  if (Object.keys(batchWhere).length > 0) {
-    batchInclude.where = batchWhere;
-  }
 
   // year = calendar year of the academic year; term narrows to the batch
   // currently in that term (not every batch's same term number).
@@ -268,7 +272,7 @@ export async function findCurriculumSubjectsForActiveYear(
     const curriculum = batchMapping.curriculum;
     if (!curriculum) continue;
 
-    const batch = Number(batchMapping.batch);
+    const batch = Number(batchMapping.batch?.batch ?? batchMapping.batch);
     const expectedYearNumber = Number(activeBatchYear) - batch + 1;
     if (
       expectedYearNumber < 1 ||
@@ -286,7 +290,7 @@ export async function findCurriculumSubjectsForActiveYear(
       const subject = mapping.subject;
       if (!subject) continue;
 
-      const key = `${curriculum.courseId}:${mapping.subjectId}:${activeTerm}:${batchMapping.batch}`;
+      const key = `${curriculum.courseId}:${mapping.subjectId}:${activeTerm}:${batch}`;
       if (seen.has(key)) continue;
       seen.add(key);
 
@@ -296,7 +300,7 @@ export async function findCurriculumSubjectsForActiveYear(
         credit: mapping.credit,
         year: Number(plainTerm.year),
         yearNumber: Number(plainTerm.yearNumber),
-        batch: Number(batchMapping.batch),
+        batch,
         curriculumId: Number(curriculum.curriculumId),
         curriculumSubjectTermMappingId: Number(
           mapping.curriculumSubjectTermMappingId,
@@ -379,9 +383,15 @@ export async function findActiveYearBatchTermsByCourseIds(
       {
         model: model.curriculumBatchMappingModel,
         as: "batchMapping",
-        attributes: ["curriculumBatchMappingId", "curriculumId", "batch"],
+        attributes: ["curriculumBatchMappingId", "curriculumId", "batchId"],
         required: true,
         include: [
+          {
+            model: model.batchModel,
+            as: "batch",
+            attributes: ["batchId", "batch"],
+            required: false,
+          },
           {
             model: model.curriculumModel,
             as: "curriculum",
@@ -405,7 +415,7 @@ export async function findActiveYearBatchTermsByCourseIds(
     const batchMapping = plain.batchMapping;
     if (!batchMapping || !batchMapping.curriculum) continue;
 
-    const batch = Number(batchMapping.batch);
+    const batch = Number(batchMapping.batch?.batch ?? batchMapping.batch);
     const expectedYearNumber = Number(activeBatchYear) - batch + 1;
     if (
       expectedYearNumber < 1 ||

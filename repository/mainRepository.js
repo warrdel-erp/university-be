@@ -626,9 +626,15 @@ async function findActiveCurriculumTermSlots(academicYearId) {
             {
                 model: model.curriculumBatchMappingModel,
                 as: 'batchMapping',
-                attributes: ['curriculumBatchMappingId', 'curriculumId', 'batch'],
+                attributes: ['curriculumBatchMappingId', 'curriculumId', 'batchId'],
                 required: true,
                 include: [
+                    {
+                        model: model.batchModel,
+                        as: 'batch',
+                        attributes: ['batchId', 'batch'],
+                        required: false,
+                    },
                     {
                         model: model.curriculumModel,
                         as: 'curriculum',
@@ -646,10 +652,11 @@ async function findActiveCurriculumTermSlots(academicYearId) {
         const plain = row.get ? row.get({ plain: true }) : row;
         const batchMapping = plain.batchMapping;
         if (!batchMapping?.curriculumId) continue;
+        const batchYear = Number(batchMapping.batch?.batch ?? batchMapping.batch ?? 0);
         slots.push({
             curriculumId: Number(batchMapping.curriculumId),
             curriculumBatchMappingId: Number(batchMapping.curriculumBatchMappingId),
-            batch: Number(batchMapping.batch),
+            batch: batchYear,
             term: Number(plain.term),
             year: Number(plain.year),
             curriculum: batchMapping.curriculum || null,
@@ -921,8 +928,16 @@ export async function getSectionSubjectMapper(arg1, arg2) {
                                     {
                                         model: model.curriculumBatchMappingModel,
                                         as: 'batchMappings',
-                                        attributes: ['curriculumBatchMappingId', 'batch'],
+                                        attributes: ['curriculumBatchMappingId', 'batchId'],
                                         required: false,
+                                        include: [
+                                            {
+                                                model: model.batchModel,
+                                                as: 'batch',
+                                                attributes: ['batchId', 'batch'],
+                                                required: false,
+                                            },
+                                        ],
                                     },
                                 ],
                             },
@@ -953,13 +968,14 @@ export async function getSectionSubjectMapper(arg1, arg2) {
                         continue;
                     }
                     for (const batchMapping of batchMappings) {
+                        const batchYear = Number(batchMapping.batch?.batch ?? batchMapping.batch ?? 0);
                         mappings.push({
                             curriculumSubjectTermMappingId: mapping.curriculumSubjectTermMappingId,
                             curriculumId: Number(mapping.curriculumId),
                             curriculumName: mapping.curriculum?.name ?? null,
                             term: Number(mapping.term),
                             credit: mapping.credit,
-                            batch: Number(batchMapping.batch),
+                            batch: batchYear || null,
                             curriculumBatchMappingId: Number(batchMapping.curriculumBatchMappingId),
                         });
                     }

@@ -30,15 +30,22 @@ export async function getMyCourseOptions(req, res) {
         if (!validation.valid) {
             return ErrorResponse(res, validation.status, validation.message);
         }
+        const { courseLevelId } = req.query;
+
         if (!validation.employeeRecord) {
-            return SuccessResponse(res, 200, "Course options fetched successfully", []);
+            const result = await optionsServices.getCourseOptions(courseLevelId);
+            return SuccessResponse(res, 200, "Course options fetched successfully", result);
         }
 
-        const { courseLevelId } = req.query;
-        const result = await optionsServices.getMyCourseOptions(
+        let result = await optionsServices.getMyCourseOptions(
             courseLevelId,
             validation.userId,
         );
+
+        if (!result || result.length === 0) {
+            result = await optionsServices.getCourseOptions(courseLevelId);
+        }
+
         return SuccessResponse(res, 200, "Course options fetched successfully", result);
     } catch (error) {
         console.error("Error in getMyCourseOptions:", error);

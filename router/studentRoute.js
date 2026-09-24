@@ -289,6 +289,7 @@ const emptyFeeDetailsQuerySchema = z.object({
   courseId: positiveIntegerId.optional(),
   sessionId: positiveIntegerId.optional(),
   year: positiveIntegerId.optional(),
+  batchId: optionalPositiveIntegerIdList,
   search: z.string().trim().optional(),
   page: z.coerce
     .number()
@@ -348,6 +349,7 @@ const getAllStudentsQuerySchema = z.object({
   year: optionalPositiveIntegerIdList,
   term: optionalPositiveIntegerIdList,
   academicYearId: optionalPositiveIntegerIdList,
+  batchId: optionalPositiveIntegerIdList,
 });
 
 const mapStudentBody = (req, res, next) => {
@@ -471,6 +473,9 @@ const emptyEnrollNumberQuerySchema = z.object({
     .optional()
     .default(10),
   search: z.string().trim().optional(),
+  batchId: optionalPositiveIntegerIdList,
+  courseId: optionalPositiveIntegerIdList,
+  sessionId: optionalPositiveIntegerIdList,
 });
 
 router.get(
@@ -500,6 +505,7 @@ const promoteStudentBodySchema = z.union([
 const sectionStudentMappingQuerySchema = z.object({
   classSectionTermId: z.coerce.number().int().nonnegative().optional(),
   term: z.coerce.number().int().positive().optional(),
+  batchId: optionalPositiveIntegerIdList,
   page: z.coerce
     .number()
     .int("page must be an integer")
@@ -550,6 +556,7 @@ const promotionStudentListQuerySchema = z.object({
   programCourseId: positiveIntegerId,
   studentSearch: z.string().trim().optional(),
   promotionTerm: z.coerce.number().int().positive().optional(),
+  batchId: optionalPositiveIntegerIdList,
 });
 
 router.get(
@@ -568,6 +575,7 @@ const promotionHistoryQuerySchema = z
     limit: z.coerce.number().int().min(1).max(100).optional().default(20),
     studentSearch: z.string().trim().optional(),
     promotionTerm: z.coerce.number().int().positive().optional(),
+    batchId: optionalPositiveIntegerIdList,
   })
   .refine((data) => data.studentId != null || data.programCourseId != null, {
     message: "studentId or programCourseId is required",
