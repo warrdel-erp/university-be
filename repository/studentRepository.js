@@ -2189,6 +2189,7 @@ export async function getClassSectionRecord(courseId, classSectionId) {
                 'courseId',
                 'academicYearId',
                 'section',
+                'expectedCapacity',
                 'year',
             ],
             include: [classSectionTermsInclude()],

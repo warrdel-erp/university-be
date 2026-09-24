@@ -506,7 +506,7 @@ export async function getClassSectionSpecific(campusId, instituteId, academicYea
                                     model: model.classSectionModel,
                                     as: "courseSection",
                                     required: false,
-                                    attributes: ["classSectionsId", "sessionId", "section", "year"],
+                                    attributes: ["classSectionsId", "sessionId", "section", "expectedCapacity", "year"],
                                     where: {
                                         ...buildScope(model.classSectionModel),
                                         ...(sessionId && { sessionId }),
@@ -1086,7 +1086,7 @@ export async function getClassSectionsByFilter(sessionId, courseId, academicYear
                 where: { courseId },
             }),
             scoped(model.classSectionModel).findAll({
-                attributes: ['classSectionsId', 'section', 'year'],
+                attributes: ['classSectionsId', 'section', 'expectedCapacity', 'year'],
                 where: {
                     sessionId,
                     courseId,
