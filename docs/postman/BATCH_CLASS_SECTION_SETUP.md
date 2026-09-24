@@ -10,6 +10,7 @@ Base URL: `{{baseurl}}` (default `http://localhost:8080`)
 ## Workflow
 
 ```
+GET /session/batches                      (list + currentYear / currentTerms)
 Create / publish batch
         ↓
 GET /session/batches/:id/details          (setup status cards)
@@ -26,6 +27,33 @@ GET /session/batches/:batchId/students
 ---
 
 ## 1. Session — Batch setup
+
+### 1.0 List session batches
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Endpoint** | `/session/batches` |
+| **Auth** | Bearer token required |
+
+Each batch’s **current position** is derived from the tenant **active academic year**:
+
+`currentYear = activeCalendarYear − admissionBatch + 1`
+
+`currentTerms` are the programme terms for that year (`termsForYear` + course `termType`).
+
+**Batch fields added**
+
+| Field | Notes |
+|---|---|
+| currentYear | Programme year, or `null` if outside course duration |
+| currentYearLabel | `Year 3` |
+| currentTerms | `{ term, termName }[]` for the current year |
+| currentPositionLabel | e.g. `Semester 5 – Semester 6 · Year 3` |
+
+**Errors:** `400` (active academic year missing), `401`, `500`
+
+---
 
 ### 1.1 Get batch full details
 

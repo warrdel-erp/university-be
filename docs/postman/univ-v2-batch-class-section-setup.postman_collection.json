@@ -21,6 +21,22 @@
       "name": "1. Session — Batch setup",
       "item": [
         {
+          "name": "1.0 List session batches",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/session/batches",
+              "host": ["{{baseurl}}"],
+              "path": ["session", "batches"]
+            },
+            "description": "GET /session/batches\n\nLists sessions with their batches.\n\nEach batch includes current position from the tenant active academic year:\n- currentYear — programme year (activeCalendarYear - admissionBatch + 1)\n- currentYearLabel — e.g. Year 3\n- currentTerms[] — { term, termName } for that year (semester/trimester from course.termType)\n- currentPositionLabel — e.g. Semester 5 – Semester 6 · Year 3\n\nNull when the batch is outside course duration vs the active year."
+          }
+        },
+        {
           "name": "1.1 Get batch full details",
           "request": {
             "method": "GET",

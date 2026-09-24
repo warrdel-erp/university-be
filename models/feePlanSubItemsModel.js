@@ -60,6 +60,18 @@ const feePlanSubItemsModel = sequelize.define(
         key: "institute_id",
       },
     },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
+      field: "created_at",
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
+      field: "updated_at",
+    },
   },
   {
     tableName: "fee_plan_sub_items",
@@ -69,7 +81,6 @@ const feePlanSubItemsModel = sequelize.define(
     createdAt: "created_at",
     updatedAt: "updated_at",
     paranoid: false,
-    
   },
 );
 

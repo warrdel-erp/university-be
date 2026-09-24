@@ -33,22 +33,78 @@ function resolveCurrentTermSlotInYear({ startingDate, termType, perYear, referen
   return slot;
 }
 
+function buildCurrentTermsForYear(course, yearNumber) {
+  const currentTerms = [];
+  for (const term of termsForYear(yearNumber, course)) {
+    currentTerms.push({
+      term,
+      termName: buildTermName(course.termType, term),
+    });
+  }
+  return currentTerms;
+}
+
+function buildCurrentPositionLabel(currentTerms, yearNumber) {
+  if (!currentTerms.length) {
+    return `Year ${yearNumber}`;
+  }
+  if (currentTerms.length === 1) {
+    return `${currentTerms[0].termName} · Year ${yearNumber}`;
+  }
+  return `${currentTerms[0].termName} – ${currentTerms[currentTerms.length - 1].termName} · Year ${yearNumber}`;
+}
+
 /**
  * List all sessions with their batches, grouped by session.
- * Returns an array of session objects, each with a `batches` array.
+ * Each batch includes current programme year/terms from the tenant active academic year.
  */
 export async function getAllBatches(filters = {}) {
-  const rows = await repo.findAll(filters);
+  const [rows, academicCtx] = await Promise.all([
+    repo.findAll(filters),
+    resolveActiveAcademicYearContext(),
+  ]);
 
-  return rows.map((row) => {
+  const activeCalendarYear = Number(academicCtx.activeBatchYear);
+  const sessions = [];
+
+  for (const row of rows) {
     const plain = row.get ? row.get({ plain: true }) : row;
-    return {
+    const course = plain.course;
+    const duration = Number(course.courseDuration) || 0;
+    const batches = [];
+
+    for (const batch of plain.batches || []) {
+      const batchYear = Number(batch.batch);
+      const currentYear = activeCalendarYear - batchYear + 1;
+      const inRange = currentYear >= 1 && currentYear <= duration;
+      const currentTerms = inRange ? buildCurrentTermsForYear(course, currentYear) : [];
+
+      batches.push({
+        batchId: batch.batchId,
+        sessionId: batch.sessionId,
+        batch: batch.batch,
+        status: batch.status,
+        intakeCapacity: batch.intakeCapacity,
+        createdAt: batch.createdAt,
+        createdBy: batch.createdBy,
+        currentYear: inRange ? currentYear : null,
+        currentYearLabel: inRange ? `Year ${currentYear}` : null,
+        currentTerms,
+        currentPositionLabel: inRange
+          ? buildCurrentPositionLabel(currentTerms, currentYear)
+          : null,
+      });
+    }
+
+    sessions.push({
       sessionId: plain.sessionId,
       sessionName: plain.sessionName,
       course: plain.course,
-      batches: plain.batches || [],
-    };
-  });
+      batches,
+    });
+  }
+
+  return sessions;
 }
 
 /**
