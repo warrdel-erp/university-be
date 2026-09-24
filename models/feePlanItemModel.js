@@ -84,12 +84,26 @@ const feePlanItemModel = sequelize.define(
         key: "institute_id",
       },
     },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
+      field: "created_at",
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
+      field: "updated_at",
+    },
   },
   {
     tableName: "fee_plan_item",
     charset: "latin1",
     collate: "latin1_swedish_ci",
-    timestamps: false,
+    timestamps: true,
+    createdAt: "created_at",
+    updatedAt: "updated_at",
     paranoid: false,
   }
 );

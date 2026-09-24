@@ -109,6 +109,8 @@ function mapSubItem(sub) {
     ledgerType: sub.feeTypeCatalog ? sub.feeTypeCatalog.ledgerType : null,
     amount: toMoneyNumber(sub.amount),
     isMainSubItem: sub.isMainSubItem === true || sub.isMainSubItem === 1,
+    createdAt: sub.createdAt,
+    updatedAt: sub.updatedAt,
   };
 }
 
@@ -169,6 +171,8 @@ async function loadFeePlanItemDetail(feePlanItemId, transaction) {
     publishedAt: plain.publishedAt,
     publishedBy: plain.publishedBy,
     amount: sumSubItemsAmount(plain.feePlanSubItems),
+    createdAt: plain.createdAt,
+    updatedAt: plain.updatedAt,
     feePlanSubItems,
   };
 }
@@ -310,6 +314,7 @@ export async function getBatchFeePlanOverview(batchId) {
   let currentYearAmount = 0;
   let futurePlannedAmount = 0;
   let plannedYearsCount = 0;
+  let latestBatchUpdate = null;
 
   for (let year = 1; year <= duration; year++) {
     const yearItems = itemsByYear.get(year) || [];
@@ -317,6 +322,33 @@ export async function getBatchFeePlanOverview(batchId) {
     const status = resolveYearConfigStatus(yearItems);
     const academicCalendarYear = batchYear + (year - 1);
     const isCurrent = year === currentYear;
+
+    let latestYearUpdate = null;
+    for (const item of yearItems) {
+      const itemUpdate = item.updatedAt || item.createdAt;
+      if (itemUpdate) {
+        const itemDate = new Date(itemUpdate);
+        if (!latestYearUpdate || itemDate > new Date(latestYearUpdate)) {
+          latestYearUpdate = itemUpdate;
+        }
+      }
+      for (const sub of item.feePlanSubItems || []) {
+        const subUpdate = sub.updatedAt || sub.createdAt;
+        if (subUpdate) {
+          const subDate = new Date(subUpdate);
+          if (!latestYearUpdate || subDate > new Date(latestYearUpdate)) {
+            latestYearUpdate = subUpdate;
+          }
+        }
+      }
+    }
+
+    if (latestYearUpdate) {
+      const yearDate = new Date(latestYearUpdate);
+      if (!latestBatchUpdate || yearDate > new Date(latestBatchUpdate)) {
+        latestBatchUpdate = latestYearUpdate;
+      }
+    }
 
     let yearRole = 'Planned';
     if (currentYear >= 1 && currentYear <= duration) {
@@ -347,6 +379,9 @@ export async function getBatchFeePlanOverview(batchId) {
       feeReceiptCount: yearItems.length,
       componentCount: countComponents(yearItems),
       amount,
+      lastUpdate: latestYearUpdate,
+      lastUpdated: latestYearUpdate,
+      updatedAt: latestYearUpdate,
     });
   }
 
@@ -381,12 +416,18 @@ export async function getBatchFeePlanOverview(batchId) {
       ? `${academicPositionLabel(course, currentYear)} · Year ${currentYear}`
       : null,
     studentCount: studentCountMap.get(resolvedBatchId) || 0,
+    lastUpdate: latestBatchUpdate,
+    lastUpdated: latestBatchUpdate,
+    updatedAt: latestBatchUpdate,
     summary: {
       totalCurrentlyPlanned: plannedAmount,
       plannedYears: plannedYearsCount,
       totalYears: duration,
       currentYearAmount,
       futurePlannedAmount,
+      lastUpdate: latestBatchUpdate,
+      lastUpdated: latestBatchUpdate,
+      updatedAt: latestBatchUpdate,
     },
     feeYears,
   };
@@ -425,10 +466,25 @@ export async function getBatchFeePlanYear(batchId, year) {
   const academicCalendarYear = batchYear + (yearNum - 1);
   const items = batch.feePlanItems || [];
 
+  let latestYearUpdate = null;
   const feeReceipts = [];
   for (const item of items) {
+    const itemUpdate = item.updatedAt || item.createdAt;
+    if (itemUpdate) {
+      const itemDate = new Date(itemUpdate);
+      if (!latestYearUpdate || itemDate > new Date(latestYearUpdate)) {
+        latestYearUpdate = itemUpdate;
+      }
+    }
     const subItems = [];
     for (const sub of item.feePlanSubItems || []) {
+      const subUpdate = sub.updatedAt || sub.createdAt;
+      if (subUpdate) {
+        const subDate = new Date(subUpdate);
+        if (!latestYearUpdate || subDate > new Date(latestYearUpdate)) {
+          latestYearUpdate = subUpdate;
+        }
+      }
       subItems.push(mapSubItem(sub));
     }
 
@@ -442,6 +498,8 @@ export async function getBatchFeePlanYear(batchId, year) {
       publishStatus: item.publishStatus,
       publishedAt: item.publishedAt,
       amount: sumItemsAmount([item]),
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
       feePlanSubItems: subItems,
     });
   }
@@ -459,6 +517,9 @@ export async function getBatchFeePlanYear(batchId, year) {
     feeReceiptCount: feeReceipts.length,
     componentCount: countComponents(items),
     amount: sumItemsAmount(items),
+    lastUpdate: latestYearUpdate,
+    lastUpdated: latestYearUpdate,
+    updatedAt: latestYearUpdate,
     feeReceipts,
   };
 }

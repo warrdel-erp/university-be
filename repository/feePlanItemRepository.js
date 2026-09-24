@@ -24,6 +24,8 @@ const FEE_PLAN_ITEM_ATTRS = [
   'publishStatus',
   'publishedAt',
   'publishedBy',
+  'createdAt',
+  'updatedAt',
 ];
 
 const FEE_PLAN_SUB_ITEM_ATTRS = [
@@ -32,6 +34,8 @@ const FEE_PLAN_SUB_ITEM_ATTRS = [
   'isMainSubItem',
   'feeTypeId',
   'feePlanItemId',
+  'createdAt',
+  'updatedAt',
 ];
 
 function sessionCourseInclude(filters = {}) {
