@@ -25,9 +25,8 @@ export const getClassSectionBatches = async (req, res) => {
 
 export const renameClassSection = async (req, res) => {
   try {
-    const { classSectionId, section } = req.body;
-    const result = await classSectionServices.renameClassSection(classSectionId, section);
-    return SuccessResponse(res, 200, 'Class section renamed successfully', result);
+    const result = await classSectionServices.updateClassSection(req.body);
+    return SuccessResponse(res, 200, 'Class section updated successfully', result);
   } catch (error) {
     const statusCode = /not found/i.test(error.message) ? 404 : 400;
     return ErrorResponse(res, statusCode, error.message || 'Something went wrong');

@@ -101,27 +101,6 @@ export async function getTimeTableStructureOptions() {
     return await optionsRepository.getTimeTableStructureOptions();
 }
 
-export async function getFeePlanOptions(filters) {
-    const empty = { courseSessionId: null, profiles: [] };
-    const { courseId, sessionId } = filters;
-    if (!courseId || !sessionId) {
-        return empty;
-    }
-
-    const { courseSessionId, rows } = await optionsRepository.getFeePlanProfileOptions(
-        Number(courseId),
-        Number(sessionId),
-    );
-
-    return {
-        courseSessionId,
-        profiles: rows.map((row) => ({
-            feePlanProfileId: row.feePlanProfileId,
-            name: row.name,
-        })),
-    };
-}
-
 export async function getLectureWindowOptions(userId, employeeId, subjectId, academicYearId, date, sessionId) {
     const employee = await optionsRepository.getEmployeeOptionDetail({ userId, employeeId });
     if (!employee) {

@@ -12,7 +12,6 @@ import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 import users from "./userModel.js";
 import sessionModel from "./sessionModel.js";
 import classSectionTermModel from "./classSectionTermModel.js";
-import feePlanProfileModel from "./feePlanProfileModel.js";
 
 const studentModel = sequelize.define(
     'students',
@@ -130,15 +129,6 @@ const studentModel = sequelize.define(
                 model: classSectionTermModel,
                 key: 'class_section_term_id'
             }
-        },
-        feePlanProfileId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'fee_plan_profile_id',
-            references: {
-                model: feePlanProfileModel,
-                key: 'fee_plan_profile_id',
-            },
         },
         scholarNumber: {
             type: DataTypes.STRING(150),

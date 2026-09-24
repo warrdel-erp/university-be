@@ -1,5 +1,5 @@
 import sequelize from "../database/sequelizeConfig.js";
-import { DataTypes } from 'sequelize';
+import { DataTypes } from "sequelize";
 import universityModel from "./universityModel.js";
 import feeTypeCatalogModel from "./feeTypeCatalogModel.js";
 import feePlanItemModel from "./feePlanItemModel.js";
@@ -8,16 +8,16 @@ import instituteModel from "./instituteModel.js";
 const feePlanSubItemsModel = sequelize.define(
   "fee_plan_sub_items",
   {
-            universityId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'university_id',
-            references: {
-                model: universityModel,
-                key: 'university_id'
-            }
-        },
-        feePlanSubitemId: {
+    universityId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "university_id",
+      references: {
+        model: universityModel,
+        key: "university_id",
+      },
+    },
+    feePlanSubitemId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
@@ -60,6 +60,18 @@ const feePlanSubItemsModel = sequelize.define(
         key: "institute_id",
       },
     },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
+      field: "created_at",
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
+      field: "updated_at",
+    },
   },
   {
     tableName: "fee_plan_sub_items",
@@ -69,9 +81,13 @@ const feePlanSubItemsModel = sequelize.define(
     createdAt: "created_at",
     updatedAt: "updated_at",
     paranoid: false,
-  }
+  },
 );
 
-feePlanSubItemsModel.scopeConfig = { university: true, institute: true, academicYear: false };
+feePlanSubItemsModel.scopeConfig = {
+  university: true,
+  institute: true,
+  academicYear: false,
+};
 
 export default feePlanSubItemsModel;

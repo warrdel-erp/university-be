@@ -1,6 +1,5 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as repo from "../repository/studentFeeInvoiceRepository.js";
-import * as feePlanProfileRepo from "../repository/feePlanProfileRepository.js";
 import * as feeTypeCatalogRepo from "../repository/feeTypeCatalogRepository.js";
 import {
   decimalCompare,
@@ -50,23 +49,6 @@ function httpError(message, statusCode = 400) {
   const err = new Error(message);
   err.statusCode = statusCode;
   return err;
-}
-
-async function assertStudentFeePlanProfilePublished(feePlanProfileId, transaction) {
-  const profile = await feePlanProfileRepo.findFeePlanProfileByIdForInstitute(
-    feePlanProfileId,
-    { transaction }
-  );
-  if (!profile) {
-    throw httpError("Fee plan profile not found for this institute", 404);
-  }
-  const plain = toPlain(profile);
-  if (plain.publishStatus !== FEE_PLAN_PUBLISH_STATUS.PUBLISHED) {
-    throw httpError(
-      "Invoices can only be generated for students assigned to a published fee plan",
-      400
-    );
-  }
 }
 
 function invoiceItemsPlain(p) {
@@ -123,21 +105,8 @@ function formatStudentFeeInvoiceListStudent(student) {
 function buildFeePlanCascade(feePlanItem) {
   if (!feePlanItem) return null;
 
-  const { feePlanProfile, feePlanSubItems, ...item } = feePlanItem;
-  if (!feePlanProfile) {
-    return {
-      feePlanItem: {
-        ...item,
-        feePlanSubItems,
-      },
-    };
-  }
-
-  const { courseSessionMapping, ...profile } = feePlanProfile;
-
+  const { feePlanSubItems, ...item } = feePlanItem;
   return {
-    ...profile,
-    courseSessionMapping,
     feePlanItem: {
       ...item,
       feePlanSubItems,
@@ -221,17 +190,25 @@ export async function generateStudentFeeInvoice({ studentId, feePlanItemId }) {
     );
     if (!feePlanItem) throw httpError("Fee plan item not found", 404);
 
-    const student = toPlain(await repo.findStudentById(studentId, { transaction }));
+    if (feePlanItem.batchId == null) {
+      throw httpError("Fee plan item is not linked to a batch", 400);
+    }
+    if (feePlanItem.publishStatus !== FEE_PLAN_PUBLISH_STATUS.PUBLISHED) {
+      throw httpError("Invoices can only be generated for a published fee plan year", 400);
+    }
+
+    const student = toPlain(
+      await repo.findStudentById(studentId, {
+        attributes: ["studentId", "instituteId", "batchId"],
+        transaction,
+      })
+    );
     if (!student) throw httpError("Student not found", 404);
-    if (!student.feePlanProfileId) {
-      throw httpError("Student has no fee plan profile assigned", 400);
+
+    if (Number(student.batchId) !== Number(feePlanItem.batchId)) {
+      throw httpError("Student does not belong to this fee plan batch", 400);
     }
 
-    await assertStudentFeePlanProfilePublished(student.feePlanProfileId, transaction);
-
-    if (feePlanItem.feePlanProfileId !== student.feePlanProfileId) {
-      throw httpError("Fee plan item does not belong to the student's fee plan profile", 400);
-    }
     if (
       await repo.findStudentFeeInvoiceByStudentAndItem(studentId, feePlanItemId, { transaction })
     ) {

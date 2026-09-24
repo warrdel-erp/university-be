@@ -238,41 +238,6 @@ function studentSessionWithAcademicYearInclude(options = {}) {
     return include;
 }
 
-function studentSessionIncludeWithoutAcademicYear() {
-    const include = {
-        model: model.sessionModel,
-        as: 'studentSession',
-        attributes: studentSessionAttrs,
-        include: [
-            {
-                model: model.acedmicYearModel,
-                as: 'sessionAcedmic',
-                attributes: sessionYearAttrs,
-            },
-        ],
-    };
-
-    const scope = omitAcademicYearScope(buildScope(model.sessionModel));
-    if (scope.universityId != null) {
-        include.where = { universityId: scope.universityId };
-    }
-    if (scope.instituteId != null) {
-        if (!include.where) {
-            include.where = {};
-        }
-        include.where.instituteId = scope.instituteId;
-    }
-
-    return include;
-}
-
-function studentWithFeePlanInitiateWhere() {
-    return {
-        feePlanProfileId: { [Op.ne]: null },
-        ...omitAcademicYearScope(buildScope(model.studentModel)),
-    };
-}
-
 /** Scoped read: student must belong to the logged-in academic year (via session). */
 export async function assertStudentInRequestAcademicYear(studentId, options = {}) {
     const academicYearId = getRequestAcademicYearId();
@@ -447,12 +412,6 @@ export async function getAllStudents({
                         ],
                     },
                 ],
-            },
-            {
-                model: model.feePlanProfileModel,
-                as: "studentFeePlanProfile",
-                required: false,
-                attributes: ["feePlanProfileId", "name", "planType"],
             },
         ];
 
@@ -934,19 +893,6 @@ export async function getSingleStudentDetail(studentId) {
                         },
                     ],
                 },
-                {
-                    model: model.feePlanProfileModel,
-                    as: "studentFeePlanProfile",
-                    required: false,
-                    attributes: ["feePlanProfileId", "name", "planType", "courseSessionId", "instituteId"],
-                    include: [
-                        {
-                            model: model.sessionCouseMappingModel,
-                            as: "courseSessionMapping",
-                            attributes: ["sessionCourseMappingId", "courseId", "sessionId"],
-                        },
-                    ],
-                },
             ],
             where: {
                 studentId,
@@ -984,31 +930,13 @@ export async function findStudentByIdForInstitute(studentId, options = {}) {
         attributes: attributes ?? [
             "studentId",
             "instituteId",
-            "feePlanProfileId",
+            "batchId",
             "firstName",
             "lastName",
             "scholarNumber",
         ],
         transaction,
     });
-}
-
-export async function updateStudentFeePlanProfileId(
-    studentId,
-    feePlanProfileId,
-    options = {}
-) {
-    const { transaction } = options;
-    const existing = await assertScopedStudent(studentId, { transaction });
-    if (!existing) {
-        return 0;
-    }
-
-    const [affected] = await scoped(model.studentModel).update(
-        { feePlanProfileId },
-        { where: { studentId }, transaction }
-    );
-    return affected;
 }
 
 export async function updateStudentDetails(studentId, data, transaction) {
@@ -1926,116 +1854,6 @@ export async function updateStudentfeeStatus(studentId, data) {
     }
 };
 
-export async function countStudentsWithFeePlanForInitiate(options = {}) {
-    try {
-        const { transaction } = options;
-
-        return await model.studentModel.count({
-            where: studentWithFeePlanInitiateWhere(),
-            transaction,
-        });
-    } catch (error) {
-        console.error("Error in countStudentsWithFeePlanForInitiate:", error);
-        throw error;
-    }
-}
-
-export async function findStudentsWithFeePlanForInitiate(options = {}) {
-    try {
-        const { page = 1, limit = 20, transaction } = options;
-        const offset = (page - 1) * limit;
-
-        return await model.studentModel.findAll({
-            where: studentWithFeePlanInitiateWhere(),
-            attributes: [
-                "studentId",
-                "firstName",
-                "middleName",
-                "lastName",
-                "scholarNumber",
-                "enrollDate",
-                "admisssionDate",
-                "feePlanProfileId",
-            ],
-            include: [
-                studentSessionIncludeWithoutAcademicYear(),
-                {
-                    model: model.courseModel,
-                    as: "course",
-                    attributes: ["courseId", "courseName"],
-                },
-                studentClassSectionTermWithSectionInclude({
-                    sectionAttributes: ["classSectionsId", "year", "section"],
-                }),
-                {
-                    model: model.feePlanProfileModel,
-                    as: "studentFeePlanProfile",
-                    attributes: ["feePlanProfileId", "name", "planType", "courseSessionId"],
-                },
-            ],
-            order: [
-                ["scholarNumber", "ASC"],
-                ["studentId", "ASC"],
-            ],
-            limit,
-            offset,
-            transaction,
-        });
-    } catch (error) {
-        console.error("Error in findStudentsWithFeePlanForInitiate:", error);
-        throw error;
-    }
-}
-
-export async function findFeePlanItemsByProfileIds(profileIds, options = {}) {
-    try {
-        const { transaction } = options;
-        if (!profileIds?.length) return [];
-
-        return await scoped(model.feePlanItemModel).findAll({
-            where: {
-                feePlanProfileId: { [Op.in]: profileIds },
-            },
-            attributes: [
-                "feePlanItemId",
-                "feePlanProfileId",
-                "createDate",
-                "dueDate",
-            ],
-            include: [
-                {
-                    model: model.feePlanSubItemsModel,
-                    as: "feePlanSubItems",
-                    required: false,
-                    attributes: [
-                        "feePlanSubitemId",
-                        "feeTypeId",
-                        "amount",
-                        "isMainSubItem",
-                        "feePlanItemId",
-                    ],
-                    include: [
-                        {
-                            model: model.feeTypeCatalogModel,
-                            as: "feeTypeCatalog",
-                            attributes: ["feeTypeCatalogId", "name"],
-                        },
-                    ],
-                },
-            ],
-            order: [
-                ["feePlanProfileId", "ASC"],
-                ["createDate", "ASC"],
-                ["feePlanItemId", "ASC"],
-            ],
-            transaction,
-        });
-    } catch (error) {
-        console.error("Error in findFeePlanItemsByProfileIds:", error);
-        throw error;
-    }
-}
-
 export async function findInvoicesByStudentIds(studentIds, options = {}) {
     try {
         const { transaction } = options;
@@ -2061,188 +1879,16 @@ export async function findInvoicesByStudentIds(studentIds, options = {}) {
     }
 }
 
-export async function findStudentsByFeePlanProfileId(
-    feePlanProfileId,
-    options = {}
-) {
-    try {
-        const { academicYearId, transaction } = options;
-        const where = {
-            feePlanProfileId,
-        };
-
-        const sessionInclude =
-            academicYearId != null
-                ? studentSessionWithAcademicYearInclude({ academicYearId: academicYearId })
-                : {
-                    model: model.sessionModel,
-                    as: 'studentSession',
-                    attributes: studentSessionAttrs,
-                };
-
-        return await scoped(model.studentModel).findAll({
-            where,
-            attributes: [
-                "studentId",
-                "firstName",
-                "middleName",
-                "lastName",
-                "scholarNumber",
-                "enrollDate",
-                "admisssionDate",
-                "feePlanProfileId",
-            ],
-            include: [
-                {
-                    model: model.courseModel,
-                    as: "course",
-                    attributes: ["courseId", "courseName"],
-                },
-                sessionInclude,
-                studentClassSectionTermWithSectionInclude({
-                    sectionAttributes: ["classSectionsId", "year", "section"],
-                }),
-                {
-                    model: model.feePlanProfileModel,
-                    as: "studentFeePlanProfile",
-                    attributes: ["feePlanProfileId", "name", "planType", "courseSessionId"],
-                },
-            ],
-            order: [
-                ["scholarNumber", "ASC"],
-                ["studentId", "ASC"],
-            ],
-            transaction,
-        });
-    } catch (error) {
-        console.error(
-            `Error in findStudentsByFeePlanProfileId for profile ${feePlanProfileId}:`,
-            error
-        );
-        throw error;
-    }
-}
-
-export async function findFeePlanProfileByIdForInitiate(
-    feePlanProfileId,
-    options = {}
-) {
-    try {
-        const { transaction } = options;
-        return await scoped(model.feePlanProfileModel).findOne({
-            where: { feePlanProfileId },
-            attributes: [
-                "feePlanProfileId",
-                "name",
-                "planType",
-                "courseSessionId",
-                "instituteId",
-            ],
-            transaction,
-        });
-    } catch (error) {
-        console.error(
-            `Error in findFeePlanProfileByIdForInitiate for profile ${feePlanProfileId}:`,
-            error
-        );
-        throw error;
-    }
-}
-
-export async function findFeePlanItemsByProfileId(feePlanProfileId, options = {}) {
-    try {
-        const { transaction } = options;
-        return await scoped(model.feePlanItemModel).findAll({
-            where: { feePlanProfileId },
-            attributes: [
-                "feePlanItemId",
-                "feePlanProfileId",
-                "createDate",
-                "dueDate",
-            ],
-            include: [
-                {
-                    model: model.feePlanSubItemsModel,
-                    as: "feePlanSubItems",
-                    required: false,
-                    attributes: [
-                        "feePlanSubitemId",
-                        "feeTypeId",
-                        "amount",
-                        "isMainSubItem",
-                        "feePlanItemId",
-                    ],
-                },
-            ],
-            order: [
-                ["createDate", "ASC"],
-                ["feePlanItemId", "ASC"],
-            ],
-            transaction,
-        });
-    } catch (error) {
-        console.error(
-            `Error in findFeePlanItemsByProfileId for profile ${feePlanProfileId}:`,
-            error
-        );
-        throw error;
-    }
-}
-
-export async function findInvoicesByStudentIdsForProfile(
-    studentIds,
-    feePlanProfileId,
-    options = {}
-) {
-    try {
-        const { transaction } = options;
-        if (!studentIds.length) {
-            return [];
-        }
-
-        return await scoped(model.studentFeeInvoiceModel).findAll({
-            where: {
-                studentId: { [Op.in]: studentIds },
-            },
-            attributes: [
-                "studentFeeInvoiceId",
-                "studentId",
-                "feePlanItemId",
-                "paymentStatus",
-                "status",
-                "paidAmount",
-                "total",
-            ],
-            include: [
-                {
-                    model: model.feePlanItemModel,
-                    as: "feePlanItem",
-                    attributes: ["feePlanItemId", "feePlanProfileId"],
-                    where: { feePlanProfileId },
-                    required: true,
-                },
-            ],
-            transaction,
-        });
-    } catch (error) {
-        console.error(
-            `Error in findInvoicesByStudentIdsForProfile for profile ${feePlanProfileId}:`,
-            error
-        );
-        throw error;
-    }
-}
-
 // Build the WHERE and includes for the fee plan student list. All filters are optional.
 function buildFeePlanStudentListQuery(filters = {}) {
-    const { courseId, year, term, feePlanProfileId, academicYearId } = filters;
+    const { courseId, year, term, batchId, academicYearId } = filters;
 
     const where = {};
     if (courseId != null) {
         where.courseId = Number(courseId);
     }
-    if (feePlanProfileId != null) {
-        where.feePlanProfileId = Number(feePlanProfileId);
+    if (batchId != null) {
+        where.batchId = Number(batchId);
     }
 
     // Inner join the placement only when filtering by year/term.
@@ -2263,42 +1909,37 @@ function buildFeePlanStudentListQuery(filters = {}) {
             includeSectionTerms: false,
         }),
         studentSessionWithAcademicYearInclude({ academicYearId }),
-        {
-            model: model.feePlanProfileModel,
-            as: 'studentFeePlanProfile',
-            attributes: ['feePlanProfileId', 'name', 'planType'],
-        },
     ];
 
     return { where, include };
 }
 
-// Total course fee per plan, summed in SQL: feePlanProfileId -> totalFee.
-async function getTotalFeeByProfile(profileIds) {
-    if (!profileIds.length) {
+// Total course fee per batch, summed in SQL: batchId -> totalFee.
+async function getTotalFeeByBatch(batchIds) {
+    if (!batchIds.length) {
         return {};
     }
 
     const rows = await scoped(model.feePlanItemModel).findAll({
         attributes: [
-            'feePlanProfileId',
+            'batchId',
             [fn('SUM', col('feePlanSubItems.amount')), 'totalFee'],
         ],
-        where: { feePlanProfileId: { [Op.in]: profileIds } },
+        where: { batchId: { [Op.in]: batchIds } },
         include: [{
             model: model.feePlanSubItemsModel,
             as: 'feePlanSubItems',
             attributes: [],
         }],
-        group: ['feePlanProfileId'],
+        group: ['batchId'],
         raw: true,
     });
 
-    const totalFeeByProfile = {};
+    const totalFeeByBatch = {};
     for (const row of rows) {
-        totalFeeByProfile[row.feePlanProfileId] = toMoneyNumber(row.totalFee);
+        totalFeeByBatch[row.batchId] = toMoneyNumber(row.totalFee);
     }
-    return totalFeeByProfile;
+    return totalFeeByBatch;
 }
 
 // Invoice count, paid count and paid amount per student, aggregated in SQL: studentId -> summary.
@@ -2365,7 +2006,7 @@ export async function getStudentsByFeePlanList(filters = {}) {
                 'middleName',
                 'lastName',
                 'scholarNumber',
-                'feePlanProfileId',
+                'batchId',
                 'courseId',
             ],
             order: [['scholarNumber', 'ASC'], ['studentId', 'ASC']],
@@ -2376,17 +2017,17 @@ export async function getStudentsByFeePlanList(filters = {}) {
         });
 
         const studentIds = [];
-        const profileIds = [];
+        const batchIds = [];
         for (const row of rows) {
             studentIds.push(row.studentId);
-            if (row.feePlanProfileId != null && !profileIds.includes(row.feePlanProfileId)) {
-                profileIds.push(row.feePlanProfileId);
+            if (row.batchId != null && !batchIds.includes(row.batchId)) {
+                batchIds.push(row.batchId);
             }
         }
 
         // Fee and invoice totals are aggregated in SQL, then keyed for O(1) lookup.
-        const [totalFeeByProfile, invoiceSummaryByStudent] = await Promise.all([
-            getTotalFeeByProfile(profileIds),
+        const [totalFeeByBatch, invoiceSummaryByStudent] = await Promise.all([
+            getTotalFeeByBatch(batchIds),
             getInvoiceSummaryByStudent(studentIds),
         ]);
 
@@ -2394,7 +2035,7 @@ export async function getStudentsByFeePlanList(filters = {}) {
         for (const row of rows) {
             const student = row.get({ plain: true });
             const summary = invoiceSummaryByStudent[student.studentId] ?? { total: 0, paid: 0, paidAmount: 0 };
-            student.totalFee = totalFeeByProfile[student.feePlanProfileId] ?? 0;
+            student.totalFee = totalFeeByBatch[student.batchId] ?? 0;
             student.invoices = { total: summary.total, paid: summary.paid };
             student.paidAmount = summary.paidAmount;
             students.push(student);
@@ -2421,7 +2062,7 @@ export async function getEmptyFeeDetails(filters = {}) {
         }
 
         const where = {
-            feePlanProfileId: { [Op.is]: null },
+            batchId: { [Op.is]: null },
             ...(courseId != null && { courseId }),
             ...(sessionId != null && { sessionId }),
         };
@@ -2548,6 +2189,7 @@ export async function getClassSectionRecord(courseId, classSectionId) {
                 'courseId',
                 'academicYearId',
                 'section',
+                'expectedCapacity',
                 'year',
             ],
             include: [classSectionTermsInclude()],

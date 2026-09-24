@@ -10,6 +10,7 @@ Base URL: `{{baseurl}}` (default `http://localhost:8080`)
 ## Workflow
 
 ```
+GET /session/batches                      (list + currentYear / currentTerms)
 Create / publish batch
         ↓
 GET /session/batches/:id/details          (setup status cards)
@@ -26,6 +27,33 @@ GET /session/batches/:batchId/students
 ---
 
 ## 1. Session — Batch setup
+
+### 1.0 List session batches
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Endpoint** | `/session/batches` |
+| **Auth** | Bearer token required |
+
+Each batch’s **current position** is derived from the tenant **active academic year**:
+
+`currentYear = activeCalendarYear − admissionBatch + 1`
+
+`currentTerms` are the programme terms for that year (`termsForYear` + course `termType`).
+
+**Batch fields added**
+
+| Field | Notes |
+|---|---|
+| currentYear | Programme year, or `null` if outside course duration |
+| currentYearLabel | `Year 3` |
+| currentTerms | `{ term, termName }[]` for the current year |
+| currentPositionLabel | e.g. `Semester 5 – Semester 6 · Year 3` |
+
+**Errors:** `400` (active academic year missing), `401`, `500`
+
+---
 
 ### 1.1 Get batch full details
 
@@ -142,15 +170,16 @@ GET /session/batches/:batchId/students
 {
   "batchId": 1,
   "section": "1B",
-  "year": 1
+  "year": 1,
+  "expectedCapacity": 60
 }
 ```
 
 ```json
 [
-  { "batchId": 12, "section": "A", "year": 3 },
-  { "batchId": 12, "section": "B", "year": 3 },
-  { "batchId": 12, "section": "C", "year": 3 }
+  { "batchId": 12, "section": "A", "year": 3, "expectedCapacity": 40 },
+  { "batchId": 12, "section": "B", "year": 3, "expectedCapacity": 40 },
+  { "batchId": 12, "section": "C", "year": 3, "expectedCapacity": 40 }
 ]
 ```
 
@@ -159,15 +188,46 @@ GET /session/batches/:batchId/students
 | batchId | Integer | Yes | No | Batch entity ID |
 | section | String | Yes | No | Section name (trimmed, min 1) |
 | year | Integer | Yes | No | Programme year (1…courseDuration) |
+| expectedCapacity | Integer | Yes | No | Expected seats; must be **> 0** |
 
 **Business rules**
 
 - Body may be one object or a non-empty array of the same shape.
-- Bulk create runs in one transaction (all succeed or all roll back).
+- Bulk create runs in one transaction.
 - `courseId` / `sessionId` come from the batch (do not send them).
 - Creates `class_sections` + `class_section_term` rows for that year.
 - Duplicate section name for same batch/year (DB or within request) → `400`.
-- Single body → single object in `data`; array body → array in `data`.
+
+**Errors:** `400`, `401`, `403`, `404`, `500`
+
+---
+
+### 2.1 Update class section
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Endpoint** | `/main/classSections` |
+| **Auth** | Bearer token required |
+| **Permission** | `CLASS_SETUP_EDIT` |
+
+```json
+{
+  "classSectionId": 289,
+  "section": "1A",
+  "expectedCapacity": 55
+}
+```
+
+Also available as `PATCH /classSections/section` (same body shape).
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| classSectionId | Integer | Yes | `class_sections.class_sections_id` |
+| section | String | No* | New section name |
+| expectedCapacity | Integer | No* | Must be **> 0** when sent |
+
+\* At least one of `section` or `expectedCapacity` is required.
 
 **Errors:** `400`, `401`, `403`, `404`, `500`
 
@@ -201,31 +261,19 @@ GET /session/batches/:batchId/students
     - `currentYear`, `currentYearLabel` (`Year 3`)
     - `currentTerms[]`, `currentTermsLabel` (`Semester 5 - Semester 6`)
     - `classSectionCount`, `studentCount`
-    - `sections[]` — `classSectionsId`, `section`, `year`, `studentCount`
+    - `sections[]` — `classSectionsId`, `section`, `year`, `expectedCapacity`, `studentCount`
     - `sectionStatus` — `Configured` \| `Setup required` \| `Needs attention`
 
 ---
 
-### 3.1 Rename class section
+### 3.1 Update class section (alias)
 
 | | |
 |---|---|
 | **Method** | `PATCH` |
 | **Endpoint** | `/classSections/section` |
 
-**Body**
-
-```json
-{
-  "classSectionId": 289,
-  "section": "1BB"
-}
-```
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| classSectionId | Integer | Yes | Class section PK |
-| section | String | Yes | New section name |
+Same body as `PATCH /main/classSections` (`classSectionId` + optional `section` / `expectedCapacity`).
 
 **Errors:** `400`, `401`, `404`, `500`
 

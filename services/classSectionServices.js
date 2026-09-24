@@ -108,6 +108,7 @@ export async function getClassSectionBatches(filters = {}) {
         classSectionsId,
         section: section.section,
         year: yearNum,
+        expectedCapacity: section.expectedCapacity,
         activeYear: section.activeYear,
         batchId: section.batchId,
         studentCount: studentCountBySection.get(classSectionsId) || 0,
@@ -338,10 +339,15 @@ export async function getBatchAcademicProgression(batchId) {
   };
 }
 
-export async function renameClassSection(classSectionId, section) {
-  const sectionName = String(section).trim();
-  if (!sectionName) {
-    throw new Error('section is required');
+export async function updateClassSection(body) {
+  const classSectionId = Number(body.classSectionId);
+  const updates = {};
+
+  if (body.section !== undefined) {
+    updates.section = String(body.section).trim();
+  }
+  if (body.expectedCapacity !== undefined) {
+    updates.expectedCapacity = Number(body.expectedCapacity);
   }
 
   const classSectionRow = await classSectionTermRepository.findClassSectionInTenantScope(classSectionId);
@@ -351,47 +357,46 @@ export async function renameClassSection(classSectionId, section) {
 
   const plain = classSectionRow.get ? classSectionRow.get({ plain: true }) : classSectionRow;
 
-  if (plain.section === sectionName) {
-    return {
-      classSectionId: Number(classSectionId),
-      classSectionsId: plain.classSectionsId,
-      section: sectionName,
-      year: plain.year,
+  if (updates.section !== undefined && updates.section !== plain.section) {
+    const duplicate = await classSectionTermRepository.findClassSectionByCourseSessionYearSection({
       courseId: plain.courseId,
       sessionId: plain.sessionId,
-    };
+      year: plain.year,
+      section: updates.section,
+      batchId: plain.batchId,
+      excludeClassSectionsId: classSectionId,
+    });
+    if (duplicate) {
+      throw new Error(
+        'A class section with this name already exists for the same course, session, and year',
+      );
+    }
   }
 
-  const duplicate = await classSectionTermRepository.findClassSectionByCourseSessionYearSection({
-    courseId: plain.courseId,
-    sessionId: plain.sessionId,
-    year: plain.year,
-    section: sectionName,
-    batchId: plain.batchId,
-    excludeClassSectionsId: classSectionId,
-  });
-  if (duplicate) {
-    throw new Error(
-      'A class section with this name already exists for the same course, session, and year',
-    );
-  }
-
-  const updated = await classSectionTermRepository.updateClassSectionName(
+  const updated = await classSectionTermRepository.updateClassSectionFields(
     classSectionId,
-    sectionName,
+    updates,
   );
   if (!updated) {
     throw new Error('classSectionId not found');
   }
 
+  const refreshed = await classSectionTermRepository.findClassSectionInTenantScope(classSectionId);
+  const updatedPlain = refreshed.get ? refreshed.get({ plain: true }) : refreshed;
+
   return {
     classSectionId: Number(classSectionId),
-    classSectionsId: plain.classSectionsId,
-    section: sectionName,
-    year: plain.year,
-    courseId: plain.courseId,
-    sessionId: plain.sessionId,
+    classSectionsId: updatedPlain.classSectionsId,
+    section: updatedPlain.section,
+    expectedCapacity: updatedPlain.expectedCapacity,
+    year: updatedPlain.year,
+    courseId: updatedPlain.courseId,
+    sessionId: updatedPlain.sessionId,
   };
+}
+
+export async function renameClassSection(classSectionId, section) {
+  return updateClassSection({ classSectionId, section });
 }
 
 export async function deleteClassSectionTerm(classSectionId) {

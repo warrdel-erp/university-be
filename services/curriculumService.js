@@ -2,7 +2,7 @@ import { Op } from 'sequelize';
 import sequelize from '../database/sequelizeConfig.js';
 import * as curriculumRepository from '../repository/curriculumRepository.js';
 import * as models from '../models/index.js';
-import { scoped } from '../utility/scoped.js';
+import { scoped, buildScope } from '../utility/scoped.js';
 import { resolveTotalTerms } from '../utility/courseTerms.js';
 
 function httpError(message, statusCode) {
@@ -67,11 +67,13 @@ export async function getProgrammeOverview() {
         as: 'session',
         required: true,
         attributes: ['sessionId', 'sessionName'],
+        where: buildScope(models.sessionModel),
         include: [
           {
             model: models.courseModel,
             as: 'course',
             required: true,
+            where: buildScope(models.courseModel),
             attributes: [
               'courseId',
               'courseName',
@@ -583,7 +585,27 @@ export async function mapBatch(curriculumId, batchId, userId) {
   // Validate the target batch exists and is published
   const batch = await models.batchModel.findByPk(
     Number(batchId),
-    { attributes: ['batchId', 'batch', 'status'] },
+    {
+      attributes: ['batchId', 'batch', 'status'],
+      include: [
+        {
+          model: models.sessionModel,
+          as: 'session',
+          required: true,
+          where: buildScope(models.sessionModel),
+          attributes: ['sessionId', 'courseId'],
+          include: [
+            {
+              model: models.courseModel,
+              as: 'course',
+              required: true,
+              where: buildScope(models.courseModel),
+              attributes: ['courseId'],
+            },
+          ],
+        },
+      ],
+    },
   );
   if (!batch) {
     httpError(`Batch (ID ${batchId}) not found`, 404);

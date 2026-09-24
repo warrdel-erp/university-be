@@ -351,7 +351,6 @@ export async function addClassSections(data, createdBy) {
     const items = Array.isArray(data) ? data : [data];
     const isBulk = Array.isArray(data);
 
-    // Reject duplicate section names within the same request (batch + year + section).
     const seenKeys = new Set();
     for (const item of items) {
         const key = `${Number(item.batchId)}|${Number(item.year)}|${String(item.section).trim().toLowerCase()}`;
@@ -367,8 +366,7 @@ export async function addClassSections(data, createdBy) {
     try {
         const results = [];
         for (const item of items) {
-            const created = await createOneClassSection(item, createdBy, transaction);
-            results.push(created);
+            results.push(await createOneClassSection(item, createdBy, transaction));
         }
         await transaction.commit();
         return isBulk ? results : results[0];
@@ -380,10 +378,11 @@ export async function addClassSections(data, createdBy) {
 }
 
 async function createOneClassSection(data, createdBy, transaction) {
-    const { batchId, section, year } = data;
+    const { batchId, section, year, expectedCapacity } = data;
     const yearNum = Number(year);
     const sectionName = String(section).trim();
     const resolvedBatchId = Number(batchId);
+    const capacity = Number(expectedCapacity);
 
     const batchRow = await batchRepository.findById(resolvedBatchId, { transaction });
     if (!batchRow) {
@@ -445,6 +444,7 @@ async function createOneClassSection(data, createdBy, transaction) {
         year: yearNum,
         activeYear,
         section: sectionName,
+        expectedCapacity: capacity,
         instituteId: course.instituteId,
         createdBy,
     }, { transaction });
@@ -479,8 +479,59 @@ async function createOneClassSection(data, createdBy, transaction) {
         sessionId,
         courseId,
         year: yearNum,
+        expectedCapacity: capacity,
         terms,
         classSectionCreated: true,
+    };
+}
+
+export async function updateClassSection(body) {
+    const classSectionId = Number(body.classSectionId);
+    const updates = {};
+
+    if (body.section !== undefined) {
+        updates.section = String(body.section).trim();
+    }
+    if (body.expectedCapacity !== undefined) {
+        updates.expectedCapacity = Number(body.expectedCapacity);
+    }
+
+    const classSectionRow = await mainRepository.findClassSectionById(classSectionId);
+    if (!classSectionRow) {
+        throw new Error(`Class section (ID: ${classSectionId}) not found`);
+    }
+
+    const plain = classSectionRow.get({ plain: true });
+
+    if (updates.section !== undefined && updates.section !== plain.section) {
+        const duplicate = await mainRepository.findClassSectionForYear({
+            courseId: plain.courseId,
+            sessionId: plain.sessionId,
+            batchId: plain.batchId,
+            section: updates.section,
+            year: plain.year,
+        });
+        if (duplicate && Number(duplicate.classSectionsId) !== classSectionId) {
+            throw new Error(
+                `Section ${updates.section} already exists for Year ${plain.year}`,
+            );
+        }
+    }
+
+    await mainRepository.updateClassSectionById(classSectionId, updates);
+
+    const refreshed = await mainRepository.findClassSectionById(classSectionId);
+    const updatedPlain = refreshed.get({ plain: true });
+
+    return {
+        classSectionId: Number(updatedPlain.classSectionsId),
+        classSectionsId: updatedPlain.classSectionsId,
+        section: updatedPlain.section,
+        expectedCapacity: updatedPlain.expectedCapacity,
+        year: updatedPlain.year,
+        batchId: updatedPlain.batchId,
+        courseId: updatedPlain.courseId,
+        sessionId: updatedPlain.sessionId,
     };
 }
 

@@ -437,6 +437,7 @@ export async function findTermsWithClassSectionsByBatchId(batchId, filters = {})
         attributes: [
           'classSectionsId',
           'section',
+          'expectedCapacity',
           'year',
           'activeYear',
           'batchId',
@@ -501,6 +502,7 @@ export async function getClassSectionsByCourseAndSession(courseId, sessionId, fi
       attributes: [
         'classSectionsId',
         'section',
+        'expectedCapacity',
         'year',
         'activeYear',
         'batchId',
@@ -542,6 +544,15 @@ export async function getSessionBatchesMapping(sessionId) {
     const rows = await model.batchModel.findAll({
       where: { sessionId: Number(sessionId) },
       attributes: ['batchId', 'batch'],
+      include: [
+        {
+          model: model.sessionModel,
+          as: 'session',
+          attributes: [],
+          required: true,
+          where: buildScope(model.sessionModel),
+        },
+      ],
       order: [['batch', 'DESC']],
       raw: true,
     });

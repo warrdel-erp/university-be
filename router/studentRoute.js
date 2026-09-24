@@ -14,7 +14,6 @@ import {
   getPromotionAvailableSection,
   getPromotionStudentList,
   getStudentPromotionHistory,
-  getFeePlanInitiate,
   getEmptyFeeDetails,
   getStudentsByFeePlanList,
   getStudentSubject,
@@ -51,13 +50,6 @@ const positiveIntegerId = z.coerce
   .number({ invalid_type_error: "id must be a number" })
   .int({ message: "id must be an integer" })
   .positive({ message: "id must be positive" });
-
-const requiredFeePlanProfileId = z.coerce
-  .number({
-    required_error: "feePlanProfileId is required",
-    invalid_type_error: "feePlanProfileId must be a number",
-  })
-  .int({ message: "feePlanProfileId must be an integer" });
 
 const dateField = z.string().trim().min(1, "date is required");
 
@@ -180,6 +172,7 @@ const classSectionStudentsQuerySchema = z.object({
 
 const studentSharedOptionalFields = {
   specializationId: optionalPositiveIntegerId,
+  batchId: optionalPositiveIntegerId,
   term: optionalPositiveIntegerId,
   classSectionTermId: optionalPositiveIntegerId,
   scholarNumber: optionalNonEmptyString,
@@ -229,7 +222,6 @@ const studentSharedOptionalFields = {
 /** Same keys as create — all optional on PATCH */
 const studentUpdateBodyFields = {
   studentId: optionalPositiveIntegerId,
-  feePlanProfileId: z.preprocess(emptyToUndefined, requiredFeePlanProfileId.optional()),
   universityId: optionalPositiveIntegerId,
   campusId: optionalPositiveIntegerId,
   instituteId: optionalPositiveIntegerId,
@@ -261,7 +253,6 @@ const importStudentBodySchema = z.object({
 });
 
 const addStudentWithFeePlanProfileBodySchema = z.object({
-  feePlanProfileId: requiredFeePlanProfileId,
   universityId: positiveIntegerId,
   campusId: positiveIntegerId,
   instituteId: positiveIntegerId,
@@ -318,27 +309,11 @@ const studentIdQuerySchema = z.object({
   studentId: positiveIntegerId,
 });
 
-const feePlanProfilesAllQuerySchema = z.object({
-  page: z.coerce
-    .number()
-    .int("page must be an integer")
-    .min(1, "page must be at least 1")
-    .optional()
-    .default(1),
-  limit: z.coerce
-    .number()
-    .int("limit must be an integer")
-    .min(1, "limit must be at least 1")
-    .max(100, "limit must be at most 100")
-    .optional()
-    .default(20),
-});
-
 const feePlanStudentsQuerySchema = z.object({
   courseId: optionalPositiveIntegerId,
   year: optionalPositiveIntegerId,
   term: optionalPositiveIntegerId,
-  feePlanProfileId: optionalPositiveIntegerId,
+  batchId: optionalPositiveIntegerId,
   page: z.coerce
     .number()
     .int("page must be an integer")
@@ -638,13 +613,6 @@ router.get(
   checkAccess(PERMISSIONS.STUDENT_FEE_PLANS.value, null),
   validate({ query: feePlanStudentsQuerySchema }),
   getStudentsByFeePlanList,
-);
-router.get(
-  "/feePlanProfiles/all",
-  userAuth,
-  checkAccess(PERMISSIONS.STUDENT_LIST.value, null),
-  validate({ query: feePlanProfilesAllQuerySchema }),
-  getFeePlanInitiate
 );
 router.get(
   "/emptyfeeDetails",

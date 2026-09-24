@@ -61,7 +61,10 @@ export async function findPublishedBatchesForPreviousAcademic(filters = {}) {
     sessionWhere.sessionId = Number(filters.sessionId);
   }
 
-  const courseWhere = { isActive: true };
+  const courseWhere = {
+    isActive: true,
+    ...buildScope(models.courseModel),
+  };
   if (filters.courseId) {
     courseWhere.courseId = Number(filters.courseId);
   }

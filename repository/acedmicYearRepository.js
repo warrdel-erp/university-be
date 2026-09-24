@@ -135,10 +135,12 @@ export async function deleteacedmicYear(academicYearId) {
 export async function getActiveAcedmicYearByInstitute(instituteId, universityId) {
     try {
         const where = {
-            instituteId: Number(instituteId),
             isActive: true,
         };
-        if (universityId != null) {
+        if (instituteId != null && !isNaN(Number(instituteId))) {
+            where.instituteId = Number(instituteId);
+        }
+        if (universityId != null && !isNaN(Number(universityId))) {
             where.universityId = Number(universityId);
         }
         return await model.acedmicYearModel.findAll({

@@ -96,7 +96,7 @@ router.patch(
 router.delete('/courseSessionMapping', userAuth, checkAccess(PERMISSIONS.SESSION_SETUP_DELETE.value, 'sessionCourseMapping'), validate({ query: deleteCourseSessionMappingSchema }), deleteCouseSessionMapping);
 
 // ── Batch CRUD ────────────────────────────────────────────────────────────────
-// GET  /session/batches             — list all sessions with their batches
+// GET  /session/batches             — list sessions + batches with currentYear/currentTerms from active AY
 // POST /session/batches             — create a new batch (starts as draft)
 // GET  /session/batches/:id         — single batch detail
 // GET  /session/batches/:id/details — full batch setup (course/session/curriculum/regulations/APSMs)

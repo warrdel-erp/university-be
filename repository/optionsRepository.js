@@ -324,26 +324,6 @@ export async function findSessionCourseMappingByCourseAndSession(
     });
 }
 
-/** V2 fee plan profiles for course + session (via session_course_mapping). */
-export async function getFeePlanProfileOptions(courseId, sessionId) {
-    const mapping = await findSessionCourseMappingByCourseAndSession(
-        courseId,
-        sessionId,
-    );
-    if (!mapping) {
-        return { courseSessionId: null, rows: [] };
-    }
-
-    const courseSessionId = mapping.get("sessionCourseMappingId");
-    const rows = await scoped(model.feePlanProfileModel).findAll({
-        attributes: ["feePlanProfileId", "name"],
-        where: { courseSessionId, publishStatus: "published" },
-        order: [["feePlanProfileId", "ASC"]],
-    });
-
-    return { courseSessionId, rows };
-}
-
 const lectureWindowOptionAttributes = [
     'lectureWindowId',
     'name',

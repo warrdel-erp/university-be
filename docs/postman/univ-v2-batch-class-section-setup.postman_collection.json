@@ -21,6 +21,22 @@
       "name": "1. Session — Batch setup",
       "item": [
         {
+          "name": "1.0 List session batches",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/session/batches",
+              "host": ["{{baseurl}}"],
+              "path": ["session", "batches"]
+            },
+            "description": "GET /session/batches\n\nLists sessions with their batches.\n\nEach batch includes current position from the tenant active academic year:\n- currentYear — programme year (activeCalendarYear - admissionBatch + 1)\n- currentYearLabel — e.g. Year 3\n- currentTerms[] — { term, termName } for that year (semester/trimester from course.termType)\n- currentPositionLabel — e.g. Semester 5 – Semester 6 · Year 3\n\nNull when the batch is outside course duration vs the active year."
+          }
+        },
+        {
           "name": "1.1 Get batch full details",
           "request": {
             "method": "GET",
@@ -89,14 +105,35 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"batchId\": 1,\n  \"section\": \"1B\",\n  \"year\": 1\n}"
+              "raw": "{\n  \"batchId\": 1,\n  \"section\": \"1B\",\n  \"year\": 1,\n  \"expectedCapacity\": 60\n}"
             },
             "url": {
               "raw": "{{baseurl}}/main/classSections",
               "host": ["{{baseurl}}"],
               "path": ["main", "classSections"]
             },
-            "description": "POST /main/classSections\n\nCreates class section(s) for a batch year and auto-creates class_section_term rows for that programme year.\n\nBody: single object OR non-empty array of:\n- batchId (integer, required)\n- section (string, required)\n- year (positive integer programme year, required)\n\nExamples:\n{ \"batchId\": 1, \"section\": \"1B\", \"year\": 1 }\n[{ \"batchId\": 12, \"section\": \"A\", \"year\": 3 }, { \"batchId\": 12, \"section\": \"B\", \"year\": 3 }]\n\ncourseId / sessionId are resolved from the batch.\nBulk runs in one transaction. Duplicate section for same batch/year → 400."
+            "description": "POST /main/classSections\n\nCreates class section(s) for a batch year and auto-creates class_section_term rows.\n\nBody: single object OR non-empty array of:\n- batchId (integer, required)\n- section (string, required)\n- year (positive integer programme year, required)\n- expectedCapacity (positive integer > 0, required)\n\nExample:\n{ \"batchId\": 1, \"section\": \"1B\", \"year\": 1, \"expectedCapacity\": 60 }\n\nBulk: [{ \"batchId\": 12, \"section\": \"A\", \"year\": 3, \"expectedCapacity\": 40 }, ...]\n\ncourseId / sessionId from batch. One transaction for bulk."
+          }
+        },
+        {
+          "name": "2.2 Update class section",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"classSectionId\": {{classSectionId}},\n  \"section\": \"1A\",\n  \"expectedCapacity\": 55\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/main/classSections",
+              "host": ["{{baseurl}}"],
+              "path": ["main", "classSections"]
+            },
+            "description": "PATCH /main/classSections\n\nUpdates section name and/or expectedCapacity.\n\nBody:\n- classSectionId (required)\n- section (optional)\n- expectedCapacity (optional, > 0)\n\nAt least one of section or expectedCapacity required."
           }
         }
       ]
@@ -174,14 +211,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"classSectionId\": 289,\n  \"section\": \"1BB\"\n}"
+              "raw": "{\n  \"classSectionId\": 289,\n  \"section\": \"1BB\",\n  \"expectedCapacity\": 55\n}"
             },
             "url": {
               "raw": "{{baseurl}}/classSections/section",
               "host": ["{{baseurl}}"],
               "path": ["classSections", "section"]
             },
-            "description": "PATCH /classSections/section\n\nRenames a class section.\n\nBody:\n- classSectionId (integer, required)\n- section (string, required)"
+            "description": "PATCH /classSections/section\n\nUpdates a class section name and/or expectedCapacity.\n\nBody:\n- classSectionId (integer, required)\n- section (string, optional)\n- expectedCapacity (positive integer > 0, optional)\n\nAt least one of section or expectedCapacity is required.\nAlso available as PATCH /main/classSections"
           }
         },
         {

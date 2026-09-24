@@ -61,11 +61,6 @@ const teachersQuerySchema = z.object({
   subjectId: optionalPositiveIntegerId,
 });
 
-const feePlansQuerySchema = z.object({
-  courseId: optionalPositiveIntegerId,
-  sessionId: optionalPositiveIntegerId,
-});
-
 const topicsQuerySchema = z.object({
   lessonId: positiveIntegerId,
 });
@@ -206,13 +201,6 @@ router.get(
   "/structures",
   userAuth,
   optionsController.getTimeTableStructureOptions,
-);
-
-router.get(
-  "/feePlans",
-  userAuth,
-  validate({ query: feePlansQuerySchema }),
-  optionsController.getFeePlanOptions,
 );
 
 router.get(

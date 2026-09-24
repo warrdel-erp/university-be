@@ -153,7 +153,23 @@ export const addClassSections = async (req, res) => {
     } catch (error) {
         console.error("Error in add class sections:", error);
         const message = error.message || 'Internal Server Error';
-        const statusCode = /required|found|Active institute|already exists|must be between|No program terms/.test(message) ? 400 : 500;
+        const statusCode = /required|found|Active institute|already exists|must be between|No program terms|Duplicate section/.test(message) ? 400 : 500;
+        return ErrorResponse(res, statusCode, message);
+    }
+};
+
+export const updateClassSection = async (req, res) => {
+    try {
+        const result = await mainServices.updateClassSection(req.body);
+        return SuccessResponse(res, 200, 'Class section updated successfully', result);
+    } catch (error) {
+        console.error('Error in update class section:', error);
+        const message = error.message || 'Internal Server Error';
+        const statusCode = /not found/i.test(message)
+            ? 404
+            : /required|already exists|expectedCapacity/.test(message)
+              ? 400
+              : 500;
         return ErrorResponse(res, statusCode, message);
     }
 };
