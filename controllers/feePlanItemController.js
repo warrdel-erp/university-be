@@ -182,3 +182,25 @@ export const getFeePlanPublishHistoryById = async (req, res) => {
     );
   }
 };
+
+export const getSingleFeePlanItemDetails = async (req, res) => {
+  try {
+    const { feePlanItemId, page, limit } = req.query;
+    const data = await feePlanItemServices.getSingleFeePlanItemDetails(
+      feePlanItemId,
+      { page, limit },
+    );
+    return SuccessResponse(
+      res,
+      200,
+      'Single fee plan item details retrieved successfully',
+      data,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || 'Internal Server Error',
+    );
+  }
+};

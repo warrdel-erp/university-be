@@ -1,5 +1,5 @@
-import { Router } from 'express';
-import { z } from 'zod';
+import { Router } from "express";
+import { z } from "zod";
 import {
   getFeePlanBatches,
   getBatchFeePlanOverview,
@@ -14,31 +14,38 @@ import {
   unpublishBatchFeePlanYear,
   getFeePlanPublishHistory,
   getFeePlanPublishHistoryById,
-} from '../controllers/feePlanItemController.js';
-import userAuth from '../middleware/authUser.js';
-import { checkAccess } from '../middleware/checkAccess.js';
-import { PERMISSIONS } from '../const/permissions.js';
-import { validate } from '../utility/validation.js';
+  getSingleFeePlanItemDetails,
+} from "../controllers/feePlanItemController.js";
+import userAuth from "../middleware/authUser.js";
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
+import { validate } from "../utility/validation.js";
 
 const router = Router();
 
 const positiveIntegerId = z.coerce
   .number()
-  .int('id must be an integer')
-  .positive('id must be greater than 0');
+  .int("id must be an integer")
+  .positive("id must be greater than 0");
+
+const singleFeePlanItemQuerySchema = z.object({
+  feePlanItemId: positiveIntegerId,
+  page: positiveIntegerId.optional(),
+  limit: positiveIntegerId.optional(),
+});
 
 const dateOnly = z
   .string()
   .trim()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD');
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD");
 
 const amount = z.coerce.string().trim().min(1);
 
 const feePlanStatusEnum = z.enum([
-  'Published',
-  'In Review',
-  'Draft',
-  'Setup Required',
+  "Published",
+  "In Review",
+  "Draft",
+  "Setup Required",
 ]);
 
 const feePlanSubItemLine = z
@@ -62,8 +69,8 @@ const assertUniqueFeeTypeCatalogIds = (feePlanSubItems, ctx) => {
   if (new Set(ids).size !== ids.length) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: 'feePlanSubItems must not contain duplicate feeTypeCatalogId',
-      path: ['feePlanSubItems'],
+      message: "feePlanSubItems must not contain duplicate feeTypeCatalogId",
+      path: ["feePlanSubItems"],
     });
   }
 };
@@ -94,7 +101,9 @@ const createFeePlanItemBodySchema = z
     dueDate: dateOnly.optional().nullable(),
     feePlanSubItems: z.array(feePlanSubItemLine).min(1),
   })
-  .superRefine((body, ctx) => assertUniqueFeeTypeCatalogIds(body.feePlanSubItems, ctx));
+  .superRefine((body, ctx) =>
+    assertUniqueFeeTypeCatalogIds(body.feePlanSubItems, ctx),
+  );
 
 const updateFeePlanItemBodySchema = z
   .object({
@@ -118,7 +127,8 @@ const updateFeePlanItemBodySchema = z
     if (!hasUpdate) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'At least one field to update is required besides feePlanItemId',
+        message:
+          "At least one field to update is required besides feePlanItemId",
       });
     }
 
@@ -165,15 +175,14 @@ const publishHistorySingleQuerySchema = z.object({
 });
 
 router.get(
-  '/batches',
+  "/batches",
   userAuth,
-  checkAccess(PERMISSIONS.FEES_PLAN.value),
   validate({ query: feePlanBatchesQuerySchema }),
   getFeePlanBatches,
 );
 
 router.get(
-  '/batches/overview',
+  "/batches/overview",
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN.value),
   validate({ query: batchOverviewQuerySchema }),
@@ -181,23 +190,21 @@ router.get(
 );
 
 router.get(
-  '/batches/year',
+  "/batches/year",
   userAuth,
-  checkAccess(PERMISSIONS.FEES_PLAN.value),
   validate({ query: batchYearQuerySchema }),
   getBatchFeePlanYear,
 );
 
 router.get(
-  '/batches/billing',
+  "/batches/billing",
   userAuth,
-  checkAccess(PERMISSIONS.FEES_PLAN.value),
   validate({ query: batchYearQuerySchema }),
   getBatchBillingDetails,
 );
 
 router.post(
-  '/',
+  "/",
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN_ADD.value),
   validate({ body: createFeePlanItemBodySchema }),
@@ -205,7 +212,7 @@ router.post(
 );
 
 router.patch(
-  '/',
+  "/",
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN_EDIT.value),
   validate({ body: updateFeePlanItemBodySchema }),
@@ -213,7 +220,7 @@ router.patch(
 );
 
 router.delete(
-  '/',
+  "/",
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN_DELETE.value),
   validate({ query: deleteFeePlanItemQuerySchema }),
@@ -221,7 +228,7 @@ router.delete(
 );
 
 router.post(
-  '/subItem',
+  "/subItem",
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN_ADD.value),
   validate({ body: addFeePlanSubItemBodySchema }),
@@ -229,7 +236,7 @@ router.post(
 );
 
 router.delete(
-  '/subItem',
+  "/subItem",
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN_DELETE.value),
   validate({ query: deleteFeePlanSubItemQuerySchema }),
@@ -237,7 +244,7 @@ router.delete(
 );
 
 router.patch(
-  '/publish',
+  "/publish",
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN_PUBLISH.value),
   validate({ body: publishYearBodySchema }),
@@ -245,7 +252,7 @@ router.patch(
 );
 
 router.patch(
-  '/unpublish',
+  "/unpublish",
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN_PUBLISH.value),
   validate({ body: publishYearBodySchema }),
@@ -253,7 +260,7 @@ router.patch(
 );
 
 router.get(
-  '/publishHistory',
+  "/publishHistory",
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN.value),
   validate({ query: publishHistoryQuerySchema }),
@@ -261,11 +268,18 @@ router.get(
 );
 
 router.get(
-  '/publishHistory/single',
+  "/publishHistory/single",
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN.value),
   validate({ query: publishHistorySingleQuerySchema }),
   getFeePlanPublishHistoryById,
+);
+
+router.get(
+  "/single",
+  userAuth,
+  validate({ query: singleFeePlanItemQuerySchema }),
+  getSingleFeePlanItemDetails,
 );
 
 export default router;
