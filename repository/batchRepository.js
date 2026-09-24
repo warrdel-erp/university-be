@@ -32,11 +32,13 @@ function sessionInclude() {
     as: 'session',
     attributes: SESSION_ATTRS,
     required: true,
+    where: buildScope(model.sessionModel),
     include: [
       {
         model: model.courseModel,
         as: 'course',
         attributes: COURSE_ATTRS,
+        where: buildScope(model.courseModel),
         required: true,
       },
     ],
@@ -48,9 +50,11 @@ function sessionInclude() {
  * @param {object} filters - { sessionId?, status?, courseId? }
  */
 export async function findAll(filters = {}) {
-  const sessionWhere = {};
+  const sessionWhere = { ...buildScope(model.sessionModel) };
   if (filters.sessionId) sessionWhere.sessionId = Number(filters.sessionId);
   if (filters.courseId) sessionWhere.courseId = Number(filters.courseId);
+
+  const courseWhere = { ...buildScope(model.courseModel) };
 
   const batchWhere = {};
   if (filters.status) batchWhere.status = filters.status;
@@ -63,6 +67,7 @@ export async function findAll(filters = {}) {
         model: model.courseModel,
         as: 'course',
         attributes: COURSE_ATTRS,
+        where: courseWhere,
         required: true,
       },
       {
