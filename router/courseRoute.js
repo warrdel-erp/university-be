@@ -45,6 +45,11 @@ const getSingleCourseQuerySchema = z.object({
   ),
 });
 
+const getMappedSubjectsSchema = z.object({
+  userId: z.coerce.number().int().positive().optional(),
+  search: z.string().optional(),
+});
+
 // Routes
 router.get("/", userAuth, checkAccess(PERMISSIONS.COURSES.value), validate({ query: listCoursesSchema }), courseController.listCourses);
 
@@ -52,6 +57,7 @@ router.get("/single", userAuth, checkAccess(PERMISSIONS.COURSES.value), validate
 
 router.get("/withSubjects", userAuth, checkAccess(PERMISSIONS.COURSES.value), validate({ query: courseListWithSubjectsSchema }), courseController.getCourseWithSubjects);
 
+router.get("/subjects", userAuth, validate({ query: getMappedSubjectsSchema }), courseController.getMappedSubjects);
 router.get("/my/single", userAuth, courseController.getMyMappedSubjectById);
 router.get("/my/subjects", userAuth, courseController.getMyMappedSubjects);
 router.get(
