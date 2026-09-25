@@ -2646,8 +2646,6 @@ async function fetchTeacherRoutineContext(userId, courseId, sessionId) {
           attributes: [
             "sessionId",
             "sessionName",
-            "startingDate",
-            "endingDate",
             "academicYearId",
           ],
         })

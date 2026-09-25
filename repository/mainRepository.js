@@ -86,20 +86,11 @@ export async function getAllCourse() {
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
             include: [
                 {
-                    model: model.sessionCouseMappingModel,
-                    as: 'sessionCourseMappings',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
-                    where: buildScope(model.sessionCouseMappingModel),
+                    model: model.sessionModel,
+                    as: 'sessions',
+                    attributes: ["sessionId", "sessionName", "academicYearId", "courseId"],
+                    where: buildScope(model.sessionModel),
                     required: false,
-                    include: [
-                        {
-                            model: model.sessionModel,
-                            as: 'session',
-                            attributes: ["sessionName"],
-                            where: buildScope(model.sessionModel),
-                            required: false,
-                        }
-                    ]
                 },
                 {
                     model: model.instituteModel,
@@ -538,20 +529,11 @@ export async function getClassSectionSpecific(campusId, instituteId, academicYea
                                             attributes: ["employeeCodeMasterTypeId", "employeeCodeMasterId", "code",],
                                         },
                                         {
-                                            model: model.sessionCouseMappingModel,
-                                            as: "sessionCourseMappings",
+                                            model: model.sessionModel,
+                                            as: "sessions",
                                             required: false,
-                                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "updatedBy", "createdBy",], },
-                                            where: buildScope(model.sessionCouseMappingModel),
-                                            include: [
-                                                {
-                                                    model: model.sessionModel,
-                                                    as: "session",
-                                                    required: false,
-                                                    attributes: ["sessionName",],
-                                                    where: buildScope(model.sessionModel),
-                                                },
-                                            ],
+                                            attributes: ["sessionId", "sessionName", "academicYearId", "courseId"],
+                                            where: buildScope(model.sessionModel),
                                         },
                                     ]
                                     : [

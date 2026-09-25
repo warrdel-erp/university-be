@@ -4616,6 +4616,8 @@ import sequelize from "../database/sequelizeConfig.js";
 // Session Batch Mapping Associations
 sessionModel.hasMany(batchModel, { foreignKey: 'session_id', as: 'batches' });
 batchModel.belongsTo(sessionModel, { foreignKey: 'session_id', as: 'session' });
+sessionModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmic_year_id', as: 'acedmicYear' });
+acedmicYearModel.hasMany(sessionModel, { foreignKey: 'acedmic_year_id', as: 'sessions' });
 
 // Class Section to Session Batch Mapping
 classSectionModel.belongsTo(batchModel, { foreignKey: 'batch_id', as: 'batch' });
