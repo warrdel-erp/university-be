@@ -1,5 +1,5 @@
 import {
-  addStudentWithFeePlanProfile,
+  addStudent,
   getAllStudents,
   getSingleStudentDetail,
   importStudentData,
@@ -257,7 +257,7 @@ const importStudentBodySchema = z.object({
   roleId: z.union([z.literal(ROLES.STUDENT), positiveIntegerId]).optional(),
 });
 
-const addStudentWithFeePlanProfileBodySchema = z.object({
+const addStudentBodySchema = z.object({
   universityId: positiveIntegerId,
   campusId: positiveIntegerId,
   instituteId: positiveIntegerId,
@@ -718,9 +718,9 @@ router.post(
   "/",
   userAuth,
   checkAccess(PERMISSIONS.ADD_STUDENT.value, null),
-  validate({ body: addStudentWithFeePlanProfileBodySchema }),
+  validate({ body: addStudentBodySchema }),
   mapStudentBody,
-  addStudentWithFeePlanProfile,
+  addStudent,
 );
 
 router.post(
