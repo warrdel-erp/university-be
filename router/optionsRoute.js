@@ -28,9 +28,10 @@ const courseProgramQuerySchema = z.object({
 });
 
 const classSectionsQuerySchema = z.object({
-  courseId: positiveIntegerId,
+  courseId: optionalPositiveIntegerId,
   term: optionalPositiveIntegerId,
   sessionId: optionalPositiveIntegerId,
+  batchId: optionalPositiveIntegerId,
   year: optionalPositiveIntegerId,
 });
 

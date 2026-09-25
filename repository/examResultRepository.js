@@ -91,11 +91,16 @@ export async function findExaminationSession(examinationSessionId) {
 }
 
 export async function findSessionCourseMappingsByIds(mappingIds) {
-  return scoped(model.sessionCouseMappingModel).findAll({
-    where: { sessionCourseMappingId: { [Op.in]: mappingIds } },
-    attributes: ["sessionCourseMappingId", "courseId", "sessionId"],
+  const sessions = await scoped(model.sessionModel).findAll({
+    where: { sessionId: { [Op.in]: mappingIds } },
+    attributes: ["sessionId", "courseId"],
     raw: true,
   });
+  return sessions.map((s) => ({
+    sessionCourseMappingId: s.sessionId,
+    courseId: s.courseId,
+    sessionId: s.sessionId,
+  }));
 }
 
 /**

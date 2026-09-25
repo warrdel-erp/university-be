@@ -97,22 +97,12 @@ export const getCourseSessions = async (req, res) => {
 
 export const getMyCourseSessions = async (req, res) => {
   try {
-    const userId = req.user.userId;
     const courseId = Number(req.params.courseId);
 
-    const courses = await optionsServices.getMyCourseOptions(undefined, userId);
-    let isMapped = false;
-    for (const course of courses) {
-      if (Number(course.get('value')) === courseId) {
-        isMapped = true;
-        break;
-      }
-    }
-
-    if (!isMapped) {
-      return res.status(404).json({
+    if (!courseId) {
+      return res.status(400).json({
         status: 'error',
-        message: 'Course not found or not mapped to you',
+        message: 'courseId is required',
       });
     }
 
