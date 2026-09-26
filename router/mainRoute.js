@@ -127,6 +127,8 @@ const classSectionRecordQuerySchema = z.object({
     .int()
     .positive(),
   batchId: z.coerce.number().int().positive().optional(),
+  page: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().positive().optional(),
 });
 
 const positiveNonZeroInteger = z.coerce

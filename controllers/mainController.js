@@ -324,17 +324,20 @@ export const subjectExcel = async (req, res) => {
 
 export const getClassSectionRecord = async (req, res) => {
   try {
-    const { courseId, classSectionId, batchId } = req.query;
+    const { courseId, classSectionId, batchId, page, limit } = req.query;
     const result = await mainServices.getClassSectionRecord(
       courseId,
       classSectionId,
       batchId,
+      page,
+      limit,
     );
     return SuccessResponse(
       res,
       200,
       "Class section record fetched successfully",
-      result,
+      result.data || result,
+      result.paginationData,
     );
   } catch (error) {
     console.error("Error in getting class section record:", error);

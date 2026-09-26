@@ -599,8 +599,8 @@ export async function subjectExcel(excelData, courseId, academicYearId, speciali
     }
 }
 
-export async function getClassSectionRecord(courseId, classSectionId, batchId) {
-    const result = await studentRepository.getClassSectionRecord(courseId, classSectionId, batchId);
+export async function getClassSectionRecord(courseId, classSectionId, batchId, page, limit) {
+    const result = await studentRepository.getClassSectionRecord(courseId, classSectionId, batchId, { page, limit });
     const section = result.classSection ? (result.classSection.get ? result.classSection.get({ plain: true }) : result.classSection) : null;
     const resolvedCourseId = Number(courseId || section?.courseId);
     const course = resolvedCourseId ? await getCourseByCourseId(resolvedCourseId) : null;
@@ -615,7 +615,7 @@ export async function getClassSectionRecord(courseId, classSectionId, batchId) {
         };
     });
 
-    return {
+    const dataPayload = {
         classSection: section
             ? {
                 classSectionsId: section.classSectionsId,
@@ -660,6 +660,19 @@ export async function getClassSectionRecord(courseId, classSectionId, batchId) {
             })) || [],
         })),
     };
+
+    if (result.page && result.limit) {
+        return {
+            data: dataPayload,
+            paginationData: {
+                total: result.totalStudentCount,
+                page: result.page,
+                limit: result.limit,
+            },
+        };
+    }
+
+    return dataPayload;
 }
 
 export async function getMonthlyIncomeService() {
@@ -706,18 +719,7 @@ export async function getClassSectionRecordBatches(filters = {}) {
     const activeCalendarYear = Number(academicCtx.activeBatchYear);
 
     const allBatchIds = batchRows.map((r) => r.batchId).filter(Boolean);
-    const studentCountByBatchMap = new Map();
-    if (allBatchIds.length > 0) {
-        const counts = await scoped(model.studentModel).findAll({
-            where: { batchId: { [Op.in]: allBatchIds } },
-            attributes: ['batchId', [sequelize.fn('COUNT', sequelize.col('student_id')), 'total']],
-            group: ['batchId'],
-            raw: true,
-        });
-        for (const c of counts) {
-            studentCountByBatchMap.set(Number(c.batchId), Number(c.total || 0));
-        }
-    }
+    const studentCountByBatchMap = await studentRepository.countStudentCountsByBatches(allBatchIds);
 
     const groupMap = new Map();
 
@@ -761,19 +763,10 @@ export async function getClassSectionRecordBatches(filters = {}) {
             }
         }
 
-        const studentsInActiveYear = classSectionIdsInCurrentYear.length > 0
-            ? await scoped(model.studentModel).count({
-                where: { batchId: plain.batchId },
-                include: [
-                    {
-                        model: model.classSectionTermModel,
-                        as: 'studentClassSectionTerm',
-                        required: true,
-                        where: { classSectionsId: { [Op.in]: classSectionIdsInCurrentYear } },
-                    },
-                ],
-            })
-            : 0;
+        const studentsInActiveYear = await studentRepository.countStudentsInActiveYearClassSections(
+            plain.batchId,
+            classSectionIdsInCurrentYear,
+        );
 
         let status = 'Setup required';
         if (currentYearNumber >= 1 && currentYearNumber <= duration) {
