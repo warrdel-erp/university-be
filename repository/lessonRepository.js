@@ -1306,8 +1306,6 @@ export async function findTeacherPublishedWeekDateWiseHierarchy({
           attributes: [
             'sessionId',
             'sessionName',
-            'startingDate',
-            'endingDate',
             'academicYearId',
           ],
         })

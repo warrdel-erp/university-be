@@ -280,9 +280,6 @@ export async function getCourseWithSessionsData(courseId) {
               attributes: [
                 'sessionId',
                 'sessionName',
-                'startingDate',
-                'endingDate',
-                ,
                 'academicYearId',
               ],
               where: buildScope(model.sessionModel),

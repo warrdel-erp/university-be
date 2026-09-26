@@ -469,14 +469,14 @@ export async function getSessionYearSuffix(sessionId) {
 
     const session = await scoped(model.sessionModel).findOne({
         where: { sessionId: Number(sessionId) },
-        attributes: ['startingDate', 'sessionName'],
+        attributes: ['sessionName'],
     });
     if (!session) return null;
 
-    const { startingDate, sessionName } = session.get({ plain: true });
-    if (startingDate) {
-        const year = String(startingDate).slice(0, 4);
-        if (/^\d{4}$/.test(year)) return year.slice(-2);
+    const { sessionName } = session.get({ plain: true });
+    if (sessionName) {
+        const match = String(sessionName).match(/\d{4}/);
+        if (match) return match[0].slice(-2);
     }
 
     const match = String(sessionName ?? '').match(/\b(20)?(\d{2})\b/);

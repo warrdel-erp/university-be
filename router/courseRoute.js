@@ -61,7 +61,13 @@ router.get(
   courseController.getMyCourseSessions
 );
 
-router.get("/:courseId/sessions", userAuth, checkAccess(PERMISSIONS.COURSES.value), validate({ query: getCourseSessionsSchema }), courseController.getCourseSessions);
+router.get(
+  "/:courseId/sessions",
+  userAuth,
+  checkAccess(PERMISSIONS.COURSES.value),
+  validate({ params: courseIdParamSchema, query: getCourseSessionsSchema }),
+  courseController.getCourseSessions,
+);
 
 router.get(
   "/termsWithClassSections",
