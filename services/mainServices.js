@@ -1,9 +1,13 @@
+import { Op } from 'sequelize';
 import { getCourseByCourseId, updateCourseById, changeCourseStatuss, assertCourseIsActive } from '../repository/courseRepository.js';
 import * as mainRepository from '../repository/mainRepository.js';
 import * as instituteRepository from '../repository/instituteRepository.js';
 import { getSingleDepartmentDetails } from '../repository/departmentRepository.js';
 import * as batchRepository from '../repository/batchRepository.js';
 import sequelize from "../database/sequelizeConfig.js";
+import * as model from '../models/index.js';
+import { scoped } from '../utility/scoped.js';
+import { resolveActiveAcademicYearContext } from '../utility/curriculumSubjectsByActiveYear.js';
 import * as studentRepository from '../repository/studentRepository.js';
 import { resolveProgramTerm, resolveStudentSection } from '../utility/classSectionIncludes.js';
 import { buildTermName, termsForYear, resolveTotalTerms } from '../utility/courseTerms.js';
@@ -595,32 +599,28 @@ export async function subjectExcel(excelData, courseId, academicYearId, speciali
     }
 }
 
-export async function getClassSectionRecord(courseId, classSectionId) {
-    const result = await studentRepository.getClassSectionRecord(courseId, classSectionId);
-    const course = await getCourseByCourseId(courseId);
+export async function getClassSectionRecord(courseId, classSectionId, batchId) {
+    const result = await studentRepository.getClassSectionRecord(courseId, classSectionId, batchId);
+    const section = result.classSection ? (result.classSection.get ? result.classSection.get({ plain: true }) : result.classSection) : null;
+    const resolvedCourseId = Number(courseId || section?.courseId);
+    const course = resolvedCourseId ? await getCourseByCourseId(resolvedCourseId) : null;
     const termType = course?.termType ?? null;
 
-    const section = result.classSection
-        ? (result.classSection.get
-            ? result.classSection.get({ plain: true })
-            : result.classSection)
-        : null;
-
-    const terms = [];
-    for (const row of result.termRows ?? []) {
+    const terms = (result.termRows ?? []).map((row) => {
         const termNum = row.term != null ? Number(row.term) : null;
-        terms.push({
+        return {
             classSectionTermId: row.classSectionTermId,
             term: termNum,
             termName: termNum != null && termType ? buildTermName(termType, termNum) : null,
-        });
-    }
+        };
+    });
 
-    const response = {
+    return {
         classSection: section
             ? {
                 classSectionsId: section.classSectionsId,
-                courseId: section.courseId,
+                batchId: section.batchId ?? null,
+                batchYear: section.batch?.batch != null ? Number(section.batch.batch) : null,
                 academicYearId: section.academicYearId ?? null,
                 sectionName: section.section ?? null,
                 className: section.year != null ? String(section.year) : null,
@@ -629,7 +629,8 @@ export async function getClassSectionRecord(courseId, classSectionId) {
             : null,
         student: result.student.map((s) => {
             const plain = s.get ? s.get({ plain: true }) : s;
-            const term = plain.studentClassSectionTerm?.term ?? resolveProgramTerm(resolveStudentSection(plain)) ?? null;
+            const sec = resolveStudentSection(plain);
+            const term = plain.studentClassSectionTerm?.term ?? resolveProgramTerm(sec);
             const termNum = term != null ? Number(term) : null;
 
             return {
@@ -642,13 +643,10 @@ export async function getClassSectionRecord(courseId, classSectionId) {
                 classSectionTermId: plain.classSectionTermId ?? null,
                 term: termNum,
                 termName: termNum != null && termType ? buildTermName(termType, termNum) : null,
-                className: resolveStudentSection(plain)?.year != null
-                    ? String(resolveStudentSection(plain).year)
-                    : null,
-                sectionName: resolveStudentSection(plain)?.section || null,
+                className: sec?.year != null ? String(sec.year) : null,
+                sectionName: sec?.section ?? null,
             };
         }),
-
         teacher: result.teacher.map((t) => ({
             userId: t.employeeData?.userId,
             employeeName: t.employeeData?.employeeName,
@@ -662,8 +660,6 @@ export async function getClassSectionRecord(courseId, classSectionId) {
             })) || [],
         })),
     };
-
-    return response;
 }
 
 export async function getMonthlyIncomeService() {
@@ -699,4 +695,145 @@ export async function getMonthlyIncomeService() {
 
 export async function getClassSectionsByFilter(sessionId, courseId, academicYearId) {
     return await mainRepository.getClassSectionsByFilter(sessionId, courseId, academicYearId);
+}
+
+export async function getClassSectionRecordBatches(filters = {}) {
+    const [batchRows, academicCtx] = await Promise.all([
+        batchRepository.findClassSectionBatchesOverview(filters),
+        resolveActiveAcademicYearContext(),
+    ]);
+
+    const activeCalendarYear = Number(academicCtx.activeBatchYear);
+
+    const allBatchIds = batchRows.map((r) => r.batchId).filter(Boolean);
+    const studentCountByBatchMap = new Map();
+    if (allBatchIds.length > 0) {
+        const counts = await scoped(model.studentModel).findAll({
+            where: { batchId: { [Op.in]: allBatchIds } },
+            attributes: ['batchId', [sequelize.fn('COUNT', sequelize.col('student_id')), 'total']],
+            group: ['batchId'],
+            raw: true,
+        });
+        for (const c of counts) {
+            studentCountByBatchMap.set(Number(c.batchId), Number(c.total || 0));
+        }
+    }
+
+    const groupMap = new Map();
+
+    for (const row of batchRows) {
+        const plain = row.get ? row.get({ plain: true }) : row;
+        const session = plain.session;
+        const course = session?.course;
+        if (!course) continue;
+
+        const batchYear = Number(plain.batch);
+        const duration = Number(course.courseDuration) || 0;
+        const currentYearNumber = activeCalendarYear - batchYear + 1;
+        const endBatchYear = duration > 0 ? batchYear + duration : batchYear;
+
+        const expectedTermsInCurrentYear =
+            currentYearNumber >= 1 && currentYearNumber <= duration
+                ? termsForYear(currentYearNumber, course)
+                : [];
+
+        const currentTerms = [];
+        for (const termNumber of expectedTermsInCurrentYear) {
+            currentTerms.push({
+                term: termNumber,
+                termName: buildTermName(course.termType, termNumber),
+            });
+        }
+
+        let currentTermsLabel = null;
+        if (currentTerms.length === 1) {
+            currentTermsLabel = currentTerms[0].termName;
+        } else if (currentTerms.length > 1) {
+            currentTermsLabel = `${currentTerms[0].termName} - ${currentTerms[currentTerms.length - 1].termName}`;
+        }
+
+        const classSectionIdsInCurrentYear = [];
+        let currentYearSectionCount = 0;
+        for (const section of plain.classSections || []) {
+            if (Number(section.year) === currentYearNumber) {
+                currentYearSectionCount++;
+                classSectionIdsInCurrentYear.push(Number(section.classSectionsId));
+            }
+        }
+
+        const studentsInActiveYear = classSectionIdsInCurrentYear.length > 0
+            ? await scoped(model.studentModel).count({
+                where: { batchId: plain.batchId },
+                include: [
+                    {
+                        model: model.classSectionTermModel,
+                        as: 'studentClassSectionTerm',
+                        required: true,
+                        where: { classSectionsId: { [Op.in]: classSectionIdsInCurrentYear } },
+                    },
+                ],
+            })
+            : 0;
+
+        let status = 'Setup required';
+        if (currentYearNumber >= 1 && currentYearNumber <= duration) {
+            if (currentYearSectionCount > 0) {
+                status = 'Configured';
+            } else {
+                status = 'Setup required';
+            }
+        }
+
+        const courseCapacity = course.capacity != null ? Number(course.capacity) : null;
+
+        const groupKey = `${course.courseId}_${session.sessionId}`;
+        if (!groupMap.has(groupKey)) {
+            groupMap.set(groupKey, {
+                courseId: course.courseId,
+                courseName: course.courseName,
+                courseCode: course.courseCode,
+                courseCapacity,
+                sessionId: session.sessionId,
+                sessionName: session.sessionName,
+                termType: course.termType,
+                duration,
+                activeBatchCount: 0,
+                activeSectionCount: 0,
+                batches: [],
+            });
+        }
+
+        const totalStudentCount = studentCountByBatchMap.get(Number(plain.batchId)) || 0;
+
+        const group = groupMap.get(groupKey);
+        group.activeBatchCount += 1;
+        group.activeSectionCount += currentYearSectionCount;
+        group.batches.push({
+            batchId: Number(plain.batchId),
+            batch: batchYear,
+            status: plain.status,
+            courseCapacity,
+            totalStudentCount,
+            totalStudentCountInActiveYear: studentsInActiveYear,
+            academicYears: `${batchYear} - ${endBatchYear}`,
+            academicYearFrom: batchYear,
+            academicYearTo: endBatchYear,
+            currentYear: currentYearNumber > 0 && currentYearNumber <= duration ? currentYearNumber : null,
+            currentYearLabel:
+                currentYearNumber > 0 && currentYearNumber <= duration
+                    ? `Year ${currentYearNumber}`
+                    : null,
+            currentTerms,
+            currentTermsLabel,
+            classSectionCount: currentYearSectionCount,
+            studentCount: studentsInActiveYear,
+            sectionStatus: status,
+        });
+    }
+
+    const groups = [];
+    for (const group of groupMap.values()) {
+        groups.push(group);
+    }
+    return groups;
 }

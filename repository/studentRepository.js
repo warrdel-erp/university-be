@@ -8,7 +8,9 @@ import {
     resolveProgramYear,
     studentClassSectionTermWithSectionInclude,
 } from '../utility/classSectionIncludes.js';
-import { buildCourseTermOptions } from '../utility/courseTerms.js';
+import * as batchRepository from './batchRepository.js';
+import { resolveActiveAcademicYearContext } from '../utility/curriculumSubjectsByActiveYear.js';
+import { buildCourseTermOptions, buildTermName, termsForYear } from '../utility/courseTerms.js';
 import { toMoneyNumber } from '../utility/decimalMoney.js';
 
 function omitAcademicYearScope(scopeWhere = {}) {
@@ -2177,22 +2179,36 @@ export async function getStudentSubject(studentId) {
     }
 };
 
-export async function getClassSectionRecord(courseId, classSectionId) {
+export async function getClassSectionRecord(courseId, classSectionId, batchId) {
     try {
         const classSectionsId = Number(classSectionId);
-        const courseIdNum = Number(courseId);
+        const classSectionWhere = { classSectionsId };
+        if (courseId != null) {
+            classSectionWhere.courseId = Number(courseId);
+        }
+        if (batchId != null) {
+            classSectionWhere.batchId = Number(batchId);
+        }
 
         const classSection = await scoped(model.classSectionModel).findOne({
-            where: { classSectionsId, courseId: courseIdNum },
+            where: classSectionWhere,
             attributes: [
                 'classSectionsId',
                 'courseId',
                 'academicYearId',
+                'batchId',
                 'section',
                 'expectedCapacity',
                 'year',
             ],
-            include: [classSectionTermsInclude()],
+            include: [
+                classSectionTermsInclude(),
+                {
+                    model: model.batchModel,
+                    as: 'batch',
+                    attributes: ['batchId', 'batch'],
+                },
+            ],
         });
 
         if (!classSection) {
@@ -2202,6 +2218,7 @@ export async function getClassSectionRecord(courseId, classSectionId) {
         }
 
         const plainSection = classSection.get ? classSection.get({ plain: true }) : classSection;
+        const resolvedCourseId = Number(courseId || plainSection.courseId);
         const termRows = plainSection.classSectionTerms ?? [];
         const termIds = [];
 
@@ -2214,11 +2231,15 @@ export async function getClassSectionRecord(courseId, classSectionId) {
         let student = [];
 
         if (termIds.length) {
+            const studentWhere = {
+                classSectionTermId: { [Op.in]: termIds },
+            };
+            if (resolvedCourseId) {
+                studentWhere.courseId = resolvedCourseId;
+            }
+
             student = await scoped(model.studentModel).findAll({
-                where: {
-                    courseId: courseIdNum,
-                    classSectionTermId: { [Op.in]: termIds },
-                },
+                where: studentWhere,
                 attributes: [
                     'studentId',
                     'firstName',
@@ -2524,5 +2545,7 @@ export async function getStudentsWithAnswerSheetStatus(sessionId, courseId, term
         order: [["firstName", "ASC"], ["studentId", "ASC"]],
     });
 }
+
+
 
 

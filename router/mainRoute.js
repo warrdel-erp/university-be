@@ -1,75 +1,109 @@
-import { Router } from 'express';
-import { z } from 'zod';
-import { validate } from '../utility/validation.js';
-import { SUBJECT_TYPES, SUBJECT_CATEGORIES } from '../constant.js';
-import { getAllCollegesAndCourses, addCampus, addInstitute, addAffiliatedUniversity, addCourse, addSpecialization, addSubject, addClassSections, updateClassSection, getClassSections, addSectionSubjectMapper, getSectionSubjectMapper, subjectExcel, updateCourse, changeCourseStatus, getClassSectionSpecific, getClassSectionRecord, updateSubject, getMonthlyIncome } from '../controllers/mainController.js';
-import userAuth from '../middleware/authUser.js';
-import { checkAccess } from '../middleware/checkAccess.js';
-import { PERMISSIONS } from '../const/permissions.js';
+import { Router } from "express";
+import { z } from "zod";
+import { validate } from "../utility/validation.js";
+import { SUBJECT_TYPES, SUBJECT_CATEGORIES } from "../constant.js";
+import {
+  getAllCollegesAndCourses,
+  addCampus,
+  addInstitute,
+  addAffiliatedUniversity,
+  addCourse,
+  addSpecialization,
+  addSubject,
+  addClassSections,
+  updateClassSection,
+  getClassSections,
+  addSectionSubjectMapper,
+  getSectionSubjectMapper,
+  subjectExcel,
+  updateCourse,
+  changeCourseStatus,
+  getClassSectionSpecific,
+  getClassSectionRecord,
+  getClassSectionRecordBatches,
+  updateSubject,
+  getMonthlyIncome,
+} from "../controllers/mainController.js";
+import userAuth from "../middleware/authUser.js";
+import { checkAccess } from "../middleware/checkAccess.js";
+import { PERMISSIONS } from "../const/permissions.js";
 const positiveIntegerId = z.coerce
-    .number()
-    .int('id must be an integer')
-    .positive('id must be greater than 0');
+  .number()
+  .int("id must be an integer")
+  .positive("id must be greater than 0");
 
-const addCourseItemSchema = z.object({
-    courseName: z.string().min(1, 'courseName is required'),
-    courseCode: z.string().min(1, 'courseCode is required'),
+const addCourseItemSchema = z
+  .object({
+    courseName: z.string().min(1, "courseName is required"),
+    courseCode: z.string().min(1, "courseCode is required"),
     departmentId: z.union([positiveIntegerId, z.null()]).optional(),
     capacity: z.union([z.string(), z.number()]).optional(),
     courseDuration: z.coerce.number().positive().optional(),
     term: z.string().min(1).optional(),
-}).passthrough();
+  })
+  .passthrough();
 
-const addCourseSchema = z.object({
-    course_levelId: z.coerce.number().int().positive('course_levelId is required'),
+const addCourseSchema = z
+  .object({
+    course_levelId: z.coerce
+      .number()
+      .int()
+      .positive("course_levelId is required"),
     departmentId: z.union([positiveIntegerId, z.null()]).optional(),
     affiliatedUniversityId: z.coerce.number().int().positive().optional(),
     term: z.string().min(1).optional(),
-    courses: z.array(addCourseItemSchema).min(1, 'courses array is required'),
-}).passthrough();
+    courses: z.array(addCourseItemSchema).min(1, "courses array is required"),
+  })
+  .passthrough();
 
-const updateCourseSchema = z.object({
+const updateCourseSchema = z
+  .object({
     courseId: positiveIntegerId,
-    courseName: z.string().min(1, 'courseName cannot be empty').optional(),
-    courseCode: z.string().min(1, 'courseCode cannot be empty').optional(),
+    courseName: z.string().min(1, "courseName cannot be empty").optional(),
+    courseCode: z.string().min(1, "courseCode cannot be empty").optional(),
     departmentId: z.union([positiveIntegerId, z.null()]).optional(),
     affiliatedUniversityId: z.union([positiveIntegerId, z.null()]).optional(),
-}).refine(
+  })
+  .refine(
     (body) =>
-        body.courseName != null
-        || body.courseCode != null
-        || body.departmentId !== undefined
-        || body.affiliatedUniversityId !== undefined,
-    { message: 'At least one of courseName, courseCode, departmentId, or affiliatedUniversityId is required' },
-);
+      body.courseName != null ||
+      body.courseCode != null ||
+      body.departmentId !== undefined ||
+      body.affiliatedUniversityId !== undefined,
+    {
+      message:
+        "At least one of courseName, courseCode, departmentId, or affiliatedUniversityId is required",
+    },
+  );
 
 const changeCourseStatusSchema = z.object({
-    courseId: positiveIntegerId,
-    isActive: z.boolean({ required_error: 'isActive is required' }),
+  courseId: positiveIntegerId,
+  isActive: z.boolean({ required_error: "isActive is required" }),
 });
 
 const subjectTypeEnum = z.enum(SUBJECT_TYPES, {
-    invalid_type_error: `subjectType must be one of: ${SUBJECT_TYPES.join(', ')}`,
+  invalid_type_error: `subjectType must be one of: ${SUBJECT_TYPES.join(", ")}`,
 });
 
 const subjectCategoryEnum = z.enum(SUBJECT_CATEGORIES, {
-    invalid_type_error: `subjectCategory must be one of: ${SUBJECT_CATEGORIES.join(', ')}`,
+  invalid_type_error: `subjectCategory must be one of: ${SUBJECT_CATEGORIES.join(", ")}`,
 });
 
 const addSubjectSchema = z.object({
-    courseId: positiveIntegerId,
-    specializationId: positiveIntegerId.optional(),
-    subjectCode: z.string().min(1, 'subjectCode is required'),
-    subjectName: z.string().min(1, 'subjectName is required'),
-    subjectType: subjectTypeEnum,
-    subjectCategory: subjectCategoryEnum,
-    shortName: z.string().optional(),
-    description: z.string().optional(),
-    isActive: z.boolean().optional(),
-    term: z.coerce.number().int().positive().optional(),
+  courseId: positiveIntegerId,
+  specializationId: positiveIntegerId.optional(),
+  subjectCode: z.string().min(1, "subjectCode is required"),
+  subjectName: z.string().min(1, "subjectName is required"),
+  subjectType: subjectTypeEnum,
+  subjectCategory: subjectCategoryEnum,
+  shortName: z.string().optional(),
+  description: z.string().optional(),
+  isActive: z.boolean().optional(),
+  term: z.coerce.number().int().positive().optional(),
 });
 
-const updateSubjectSchema = z.object({
+const updateSubjectSchema = z
+  .object({
     subjectId: positiveIntegerId,
     courseId: positiveIntegerId.optional(),
     subjectCode: z.string().min(1).optional(),
@@ -81,81 +115,188 @@ const updateSubjectSchema = z.object({
     isActive: z.boolean().optional(),
     specializationId: positiveIntegerId.nullable().optional(),
     term: z.coerce.number().int().positive().nullable().optional(),
-}).refine(
-    (body) => Object.keys(body).some((key) => key !== 'subjectId'),
-    { message: 'At least one field to update is required' },
-);
+  })
+  .refine((body) => Object.keys(body).some((key) => key !== "subjectId"), {
+    message: "At least one field to update is required",
+  });
 
 const classSectionRecordQuerySchema = z.object({
-    courseId: z.coerce.number({ required_error: 'courseId is required' }).int().positive(),
-    classSectionId: z.coerce.number({ required_error: 'classSectionId is required' }).int().positive(),
+  courseId: z.coerce.number().int().positive().optional(),
+  classSectionId: z.coerce
+    .number({ required_error: "classSectionId is required" })
+    .int()
+    .positive(),
+  batchId: z.coerce.number().int().positive().optional(),
 });
 
 const positiveNonZeroInteger = z.coerce
-    .number()
-    .int('expectedCapacity must be an integer')
-    .positive('expectedCapacity must be greater than 0');
+  .number()
+  .int("expectedCapacity must be an integer")
+  .positive("expectedCapacity must be greater than 0");
 
-const addClassSectionItemSchema = z.object({
+const addClassSectionItemSchema = z
+  .object({
     batchId: positiveIntegerId,
-    section: z.string().trim().min(1, 'section is required'),
-    year: z.coerce.number().int().positive('year must be a positive integer'),
+    section: z.string().trim().min(1, "section is required"),
+    year: z.coerce.number().int().positive("year must be a positive integer"),
     expectedCapacity: positiveNonZeroInteger,
-}).strict();
+  })
+  .strict();
 
 const addClassSectionsSchema = z.union([
-    addClassSectionItemSchema,
-    z.array(addClassSectionItemSchema).min(1, 'At least one class section is required'),
+  addClassSectionItemSchema,
+  z
+    .array(addClassSectionItemSchema)
+    .min(1, "At least one class section is required"),
 ]);
 
 const updateClassSectionSchema = z
-    .object({
-        classSectionId: positiveIntegerId,
-        section: z.string().trim().min(1, 'section cannot be empty').optional(),
-        expectedCapacity: positiveNonZeroInteger.optional(),
-    })
-    .strict()
-    .refine(
-        (body) => body.section !== undefined || body.expectedCapacity !== undefined,
-        { message: 'At least one of section or expectedCapacity is required' },
-    );
+  .object({
+    classSectionId: positiveIntegerId,
+    section: z.string().trim().min(1, "section cannot be empty").optional(),
+    expectedCapacity: positiveNonZeroInteger.optional(),
+  })
+  .strict()
+  .refine(
+    (body) => body.section !== undefined || body.expectedCapacity !== undefined,
+    { message: "At least one of section or expectedCapacity is required" },
+  );
 
 const router = Router();
 
-router.get('/all', userAuth, getAllCollegesAndCourses);
+router.get("/all", userAuth, getAllCollegesAndCourses);
 
-router.post('/campus', userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_ADD.value, 'campus'), addCampus);
-
-router.post('/institute', userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_ADD.value, 'institute'), addInstitute);
-
-router.post('/affiliatedUniversity', userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_ADD.value, 'institute'), addAffiliatedUniversity);
-
-router.post('/course', userAuth, checkAccess(PERMISSIONS.COURSES_ADD.value), validate({ body: addCourseSchema }), addCourse);
-
-router.patch('/course', userAuth, checkAccess(PERMISSIONS.COURSES_EDIT.value), validate({ body: updateCourseSchema }), updateCourse);
-
-router.patch('/course/status', userAuth, checkAccess(PERMISSIONS.COURSES_CHANGE_STATUS.value), validate({ body: changeCourseStatusSchema }), changeCourseStatus);
-
-router.post('/specialization', userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_ADD.value, 'specialization'), addSpecialization);
-
-router.post('/subject', userAuth, checkAccess(PERMISSIONS.SUBJECTS_ADD.value, null), validate({ body: addSubjectSchema }), addSubject);
-router.patch('/subject/update', userAuth, checkAccess(PERMISSIONS.SUBJECTS_EDIT.value, null), validate({ body: updateSubjectSchema }), updateSubject);
-
-// Section master (class table removed)
-router.post('/classSections', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP_ADD.value, null), validate({ body: addClassSectionsSchema }), addClassSections);
-router.patch('/classSections', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP_EDIT.value, null), validate({ body: updateClassSectionSchema }), updateClassSection);
-router.get('/classSections', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP.value, null), getClassSections);
-router.get('/classSectionSpecific', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP.value, null), getClassSectionSpecific);
-router.post('/sectionSubjectMapper', userAuth, checkAccess(PERMISSIONS.SEMESTER_SUBJECT_MAPPING_ASSIGN.value, null), addSectionSubjectMapper);
-router.get('/sectionSubjectMapper', userAuth, checkAccess(PERMISSIONS.SEMESTER_SUBJECT_MAPPING.value, null), getSectionSubjectMapper);
-router.get(
-    '/classSectionRecord',
-    userAuth,
-    validate({ query: classSectionRecordQuerySchema }),
-    getClassSectionRecord,
+router.post(
+  "/campus",
+  userAuth,
+  checkAccess(PERMISSIONS.MASTER_SECTION_ADD.value, "campus"),
+  addCampus,
 );
 
-router.post('/subjectExcel', userAuth, checkAccess(PERMISSIONS.SUBJECTS_IMPORT.value, null), subjectExcel);
+router.post(
+  "/institute",
+  userAuth,
+  checkAccess(PERMISSIONS.MASTER_SECTION_ADD.value, "institute"),
+  addInstitute,
+);
+
+router.post(
+  "/affiliatedUniversity",
+  userAuth,
+  checkAccess(PERMISSIONS.MASTER_SECTION_ADD.value, "institute"),
+  addAffiliatedUniversity,
+);
+
+router.post(
+  "/course",
+  userAuth,
+  checkAccess(PERMISSIONS.COURSES_ADD.value),
+  validate({ body: addCourseSchema }),
+  addCourse,
+);
+
+router.patch(
+  "/course",
+  userAuth,
+  checkAccess(PERMISSIONS.COURSES_EDIT.value),
+  validate({ body: updateCourseSchema }),
+  updateCourse,
+);
+
+router.patch(
+  "/course/status",
+  userAuth,
+  checkAccess(PERMISSIONS.COURSES_CHANGE_STATUS.value),
+  validate({ body: changeCourseStatusSchema }),
+  changeCourseStatus,
+);
+
+router.post(
+  "/specialization",
+  userAuth,
+  checkAccess(PERMISSIONS.MASTER_SECTION_ADD.value, "specialization"),
+  addSpecialization,
+);
+
+router.post(
+  "/subject",
+  userAuth,
+  checkAccess(PERMISSIONS.SUBJECTS_ADD.value, null),
+  validate({ body: addSubjectSchema }),
+  addSubject,
+);
+router.patch(
+  "/subject/update",
+  userAuth,
+  checkAccess(PERMISSIONS.SUBJECTS_EDIT.value, null),
+  validate({ body: updateSubjectSchema }),
+  updateSubject,
+);
+
+// Section master (class table removed)
+router.post(
+  "/classSections",
+  userAuth,
+  checkAccess(PERMISSIONS.CLASS_SETUP_ADD.value, null),
+  validate({ body: addClassSectionsSchema }),
+  addClassSections,
+);
+router.patch(
+  "/classSections",
+  userAuth,
+  checkAccess(PERMISSIONS.CLASS_SETUP_EDIT.value, null),
+  validate({ body: updateClassSectionSchema }),
+  updateClassSection,
+);
+router.get(
+  "/classSections",
+  userAuth,
+  checkAccess(PERMISSIONS.CLASS_SETUP.value, null),
+  getClassSections,
+);
+
+router.get(
+  "/classSectionSpecific",
+  userAuth,
+  checkAccess(PERMISSIONS.CLASS_SETUP.value, null),
+  getClassSectionSpecific,
+);
+router.post(
+  "/sectionSubjectMapper",
+  userAuth,
+  checkAccess(PERMISSIONS.SEMESTER_SUBJECT_MAPPING_ASSIGN.value, null),
+  addSectionSubjectMapper,
+);
+router.get(
+  "/sectionSubjectMapper",
+  userAuth,
+  checkAccess(PERMISSIONS.SEMESTER_SUBJECT_MAPPING.value, null),
+  getSectionSubjectMapper,
+);
+const classSectionRecordBatchesQuerySchema = z.object({
+  courseId: z.coerce.number().int().positive().optional(),
+});
+
+router.get(
+  "/classSectionRecord",
+  userAuth,
+  validate({ query: classSectionRecordQuerySchema }),
+  getClassSectionRecord,
+);
+
+router.get(
+  "/classSectionRecord/batches",
+  userAuth,
+  validate({ query: classSectionRecordBatchesQuerySchema }),
+  getClassSectionRecordBatches,
+);
+
+router.post(
+  "/subjectExcel",
+  userAuth,
+  checkAccess(PERMISSIONS.SUBJECTS_IMPORT.value, null),
+  subjectExcel,
+);
 
 router.get("/monthly-income", getMonthlyIncome);
 
