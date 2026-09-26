@@ -4768,8 +4768,6 @@ export async function getRoutineByTeacherAndAcademicYear(
       ? {
           sessionId: session.sessionId,
           sessionName: session.sessionName,
-          startingDate: session.startingDate,
-          endingDate: session.endingDate,
           academicYearId: session.academicYearId,
         }
       : null,

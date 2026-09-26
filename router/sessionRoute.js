@@ -1,6 +1,6 @@
 import { Router } from 'express'
 const router = Router();
-import { addSession, getAllSession, getSingleSessionDetails, updateSession, deleteSession, couseSessionMapping, updateCouseSessionMapping, deleteCouseSessionMapping } from "../controllers/sessionController.js";
+import { addSession, getAllSession, getSingleSessionDetails, updateSession, deleteSession } from "../controllers/sessionController.js";
 import * as batchController from "../controllers/batchController.js";
 import { getBatchAcademicProgression } from "../controllers/classSectionController.js";
 import userAuth from "../middleware/authUser.js"
@@ -46,27 +46,6 @@ const updateSessionSchema = sessionSchema.omit({ courseId: true }).partial().ext
     courseId: z.any().optional().refine(val => val === undefined, { message: "Program of a session cannot be edited" }),
 });
 
-const deleteCourseSessionMappingSchema = z.object({
-    sessionCourseMappingId: z.coerce.number({
-        required_error: "sessionCourseMappingId is required",
-        invalid_type_error: "sessionCourseMappingId must be a number",
-    }),
-});
-
-const courseSessionMappingSchema = z.object({
-    sessionId: z.coerce.number().int().positive(),
-    courseId: z.union([
-        z.array(z.coerce.number().int().positive()).min(1),
-        z.coerce.number().int().positive(),
-    ]),
-});
-
-const updateCourseSessionMappingSchema = z.object({
-    sessionCourseMappingId: z.coerce.number().int().positive(),
-    sessionId: z.coerce.number().int().positive().optional(),
-    courseId: z.coerce.number().int().positive().optional(),
-});
-
 router.post('/', userAuth, checkAccess(PERMISSIONS.SESSION_SETUP_ADD.value), validate({ body: sessionSchema }), addSession);
 
 router.get('/', userAuth, checkAccess(PERMISSIONS.SESSION_SETUP.value), getAllSession);
@@ -76,24 +55,6 @@ router.get('/single', userAuth, checkAccess(PERMISSIONS.SESSION_SETUP.value), ge
 router.patch('/', userAuth, checkAccess(PERMISSIONS.SESSION_SETUP_EDIT.value), validate({ body: updateSessionSchema }), updateSession);
 
 router.delete('/', userAuth, checkAccess(PERMISSIONS.SESSION_SETUP_DELETE.value), deleteSession);
-
-router.post(
-    '/courseSessionMapping',
-    userAuth,
-    checkAccess(PERMISSIONS.SESSION_SETUP_ADD.value, 'sessionCourseMapping'),
-    validate({ body: courseSessionMappingSchema }),
-    couseSessionMapping
-);
-
-router.patch(
-    '/courseSessionMapping/update',
-    userAuth,
-    checkAccess(PERMISSIONS.SESSION_SETUP_EDIT.value, 'sessionCourseMapping'),
-    validate({ body: updateCourseSessionMappingSchema }),
-    updateCouseSessionMapping
-);
-
-router.delete('/courseSessionMapping', userAuth, checkAccess(PERMISSIONS.SESSION_SETUP_DELETE.value, 'sessionCourseMapping'), validate({ query: deleteCourseSessionMappingSchema }), deleteCouseSessionMapping);
 
 // ── Batch CRUD ────────────────────────────────────────────────────────────────
 // GET  /session/batches             — list sessions + batches with currentYear/currentTerms from active AY

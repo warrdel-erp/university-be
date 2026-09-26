@@ -97,22 +97,12 @@ export const getCourseSessions = async (req, res) => {
 
 export const getMyCourseSessions = async (req, res) => {
   try {
-    const userId = req.user.userId;
     const courseId = Number(req.params.courseId);
 
-    const courses = await optionsServices.getMyCourseOptions(undefined, userId);
-    let isMapped = false;
-    for (const course of courses) {
-      if (Number(course.get('value')) === courseId) {
-        isMapped = true;
-        break;
-      }
-    }
-
-    if (!isMapped) {
-      return res.status(404).json({
+    if (!courseId) {
+      return res.status(400).json({
         status: 'error',
-        message: 'Course not found or not mapped to you',
+        message: 'courseId is required',
       });
     }
 
@@ -204,6 +194,21 @@ export const deleteCourse = async (req, res) => {
       status: 'error',
       message: error.message || 'Internal Server Error',
     });
+  }
+};
+
+export const getMappedSubjects = async (req, res) => {
+  try {
+    const targetUserId = req.query.userId ? Number(req.query.userId) : req.user?.userId;
+    if (!targetUserId) {
+      return ErrorResponse(res, 400, "userId is required");
+    }
+    const { search } = req.query;
+    const result = await courseService.getSubjectsByTeacherUserId(targetUserId, search);
+    return SuccessResponse(res, 200, "Teacher subjects fetched successfully from timeTable", result);
+  } catch (error) {
+    console.error("Error in getMappedSubjects controller:", error);
+    return ErrorResponse(res, 500, "Internal Server Error", error.message);
   }
 };
 

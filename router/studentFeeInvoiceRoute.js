@@ -8,6 +8,7 @@ import {
   getStudentFeeInvoiceById,
   listStudentFeeInvoicesByStudent,
   listAllStudentFeeInvoices,
+  getBillingBatchesOverview,
 } from "../controllers/studentFeeInvoiceController.js";
 
 const router = Router();
@@ -22,8 +23,10 @@ const dateOnlyString = z
   .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "date must be YYYY-MM-DD" });
 
 const generateInvoiceBodySchema = z.object({
-  studentId: positiveIntegerId,
   feePlanItemId: positiveIntegerId,
+  studentId: positiveIntegerId.optional(),
+  studentIds: z.array(positiveIntegerId).min(1).optional(),
+  batchId: positiveIntegerId.optional(),
 });
 
 const adhocFeeTypeCatalogLineSchema = z
@@ -73,12 +76,26 @@ const studentIdQuerySchema = z.object({
 
 const listAllInvoicesQuerySchema = z
   .object({
+    feePlanItemId: positiveIntegerId.optional(),
     status: z.enum(["all", "pending", "completed"]).optional(),
     paymentTab: z.enum(["all", "pending", "completed"]).optional(),
+    page: positiveIntegerId.optional(),
+    limit: positiveIntegerId.optional(),
   })
   .transform((d) => ({
+    feePlanItemId: d.feePlanItemId,
     status: d.status ?? d.paymentTab ?? "all",
+    page: d.page,
+    limit: d.limit,
   }));
+
+const billingBatchesQuerySchema = z.object({
+  academicYearId: positiveIntegerId.optional(),
+  courseId: positiveIntegerId.optional(),
+  sessionId: positiveIntegerId.optional(),
+  search: z.string().trim().optional(),
+  status: z.string().trim().optional(),
+});
 
 router.post(
   "/",
@@ -92,6 +109,20 @@ router.post(
   userAuth,
   validate({ body: adhocInvoiceBodySchema }),
   generateAdhocStudentFeeInvoice
+);
+
+router.get(
+  "/batches",
+  userAuth,
+  validate({ query: billingBatchesQuerySchema }),
+  getBillingBatchesOverview
+);
+
+router.get(
+  "/billingOverview",
+  userAuth,
+  validate({ query: billingBatchesQuerySchema }),
+  getBillingBatchesOverview
 );
 
 router.get(

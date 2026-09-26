@@ -269,31 +269,19 @@ export async function getCourseWithSessionsData(courseId) {
       where: { courseId },
       include: [
         {
-          model: model.sessionCouseMappingModel,
-          as: 'sessionCourseMappings',
-          attributes: ['sessionCourseMappingId', 'courseId', 'sessionId'],
+          model: model.sessionModel,
+          as: 'sessions',
+          attributes: ['sessionId', 'sessionName', 'academicYearId', 'courseId'],
+          where: buildScope(model.sessionModel),
           required: false,
           include: [
             {
-              model: model.sessionModel,
-              as: 'session',
-              attributes: [
-                'sessionId',
-                'sessionName',
-                'academicYearId',
-              ],
-              where: buildScope(model.sessionModel),
-              required: true,
-              include: [
-                {
-                  model: model.classSectionModel,
-                  as: 'classSession',
-                  attributes: ['classSectionsId', 'section'],
-                  required: false,
-                  where: { courseId, ...classSectionScope },
-                  include: [classSectionTermsInclude()],
-                },
-              ],
+              model: model.classSectionModel,
+              as: 'classSession',
+              attributes: ['classSectionsId', 'section'],
+              required: false,
+              where: { courseId, ...classSectionScope },
+              include: [classSectionTermsInclude()],
             },
           ],
         },
@@ -302,24 +290,30 @@ export async function getCourseWithSessionsData(courseId) {
     if (!course) return null;
 
     const coursePayload = course.get({ plain: true });
-    const dedupedSessionIds = new Set();
-    coursePayload.sessionCourseMappings = (coursePayload.sessionCourseMappings || []).filter(
-      (sessionCourseMapping) => {
-        const sessionId = sessionCourseMapping.session?.sessionId;
-        if (sessionId == null) return false;
-        if (dedupedSessionIds.has(sessionId)) return false;
-        dedupedSessionIds.add(sessionId);
-        return true;
+
+    // Deduplicate sessions if any
+    const dedupedSessions = [];
+    const seenSessionIds = new Set();
+    for (const session of coursePayload.sessions || []) {
+      if (session.sessionId != null && !seenSessionIds.has(session.sessionId)) {
+        seenSessionIds.add(session.sessionId);
+        dedupedSessions.push(session);
       }
-    );
+    }
+    coursePayload.sessions = dedupedSessions;
+
+    // Synthesize sessionCourseMappings array for backwards compatibility with existing consumers
+    coursePayload.sessionCourseMappings = coursePayload.sessions.map((session) => ({
+      sessionCourseMappingId: session.sessionId,
+      courseId: coursePayload.courseId,
+      sessionId: session.sessionId,
+      session,
+    }));
 
     const totalTerms = coursePayload.totalTerms || 0;
     const termTypePrefix = `${coursePayload.termType ?? ''} `;
 
-    for (const sessionCourseMapping of coursePayload.sessionCourseMappings) {
-      const session = sessionCourseMapping.session;
-      if (!session) continue;
-
+    for (const session of coursePayload.sessions) {
       const termNumbersHavingClasses = new Set();
       for (const classSectionRow of session.classSession || []) {
         for (const termRow of classSectionRow.classSectionTerms || []) {
@@ -696,12 +690,12 @@ export async function deleteCourseById(courseId) {
       return null;
     }
 
-    const sessionMappingCount = await model.sessionCouseMappingModel.count({
+    const sessionCount = await model.sessionModel.count({
       where: { courseId: numericCourseId },
     });
 
-    if (sessionMappingCount > 0) {
-      throw new Error('Cannot delete course: it is mapped to one or more sessions');
+    if (sessionCount > 0) {
+      throw new Error('Cannot delete course: it has active session(s) associated with it');
     }
 
     await scoped(model.courseModel).destroy({

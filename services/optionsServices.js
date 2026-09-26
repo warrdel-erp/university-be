@@ -51,8 +51,8 @@ export async function getCourseProgramOptions(courseId) {
     return options;
 }
 
-export async function getClassSectionOptions(courseId, term, sessionId, year) {
-    return await optionsRepository.getClassSectionOptions(courseId, term, sessionId, year);
+export async function getClassSectionOptions(courseId, term, sessionId, year, batchId) {
+    return await optionsRepository.getClassSectionOptions(courseId, term, sessionId, year, batchId);
 }
 
 export async function getSpecializationOptions(courseId) {
