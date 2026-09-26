@@ -719,8 +719,10 @@ export async function deleteCourseById(courseId) {
   }
 }
 
-export async function getSubjectsByTeacherUserId(userId, searchKey) {
+export async function getSubjectsByTeacherUserId(userId, searchKey, options = {}) {
   try {
+    const { batchId, courseId, sessionId, year } = options;
+
     const searchFilter = searchKey
       ? {
           [Op.or]: [
@@ -730,41 +732,74 @@ export async function getSubjectsByTeacherUserId(userId, searchKey) {
         }
       : {};
 
+    const subjectWhere = {};
+    if (courseId != null) {
+      subjectWhere.courseId = Number(courseId);
+    }
+
+    const teacherSubjectWhere = { userId };
+    const teacherCellWhere = { userId };
+
+    const includes = [
+      {
+        model: model.teacherSubjectMappingModel,
+        as: "employeeSubject",
+        attributes: [],
+        required: false,
+        where: teacherSubjectWhere,
+      },
+      {
+        model: model.timeTableCellModel,
+        as: "timeTableCells",
+        attributes: [],
+        required: false,
+        include: [
+          {
+            model: model.timeTableCellTeachersModel,
+            as: "timeTableCellTeachers",
+            attributes: [],
+            required: false,
+            where: teacherCellWhere,
+          },
+        ],
+      },
+    ];
+
+    if (batchId != null) {
+      includes.push({
+        model: model.curriculumSubjectTermMappingModel,
+        as: "curriculumTermMappings",
+        attributes: [],
+        required: true,
+        include: [
+          {
+            model: model.curriculumModel,
+            as: "curriculum",
+            attributes: [],
+            required: true,
+            include: [
+              {
+                model: model.curriculumBatchMappingModel,
+                as: "batchMappings",
+                attributes: [],
+                required: true,
+                where: { batchId: Number(batchId) },
+              },
+            ],
+          },
+        ],
+      });
+    }
+
     const subjects = await scoped(model.subjectModel).findAll({
       attributes: [
         "subjectId",
         "subjectName",
         "subjectCode",
       ],
-      include: [
-        {
-          model: model.teacherSubjectMappingModel,
-          as: "employeeSubject",
-          attributes: [],
-          required: false,
-          where: {
-            userId,
-          },
-        },
-        {
-          model: model.timeTableCellModel,
-          as: "timeTableCells",
-          attributes: [],
-          required: false,
-          include: [
-            {
-              model: model.timeTableCellTeachersModel,
-              as: "timeTableCellTeachers",
-              attributes: [],
-              required: false,
-              where: {
-                userId,
-              },
-            },
-          ],
-        },
-      ],
+      include: includes,
       where: {
+        ...subjectWhere,
         [Op.and]: [
           {
             [Op.or]: [

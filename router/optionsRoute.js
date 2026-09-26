@@ -47,6 +47,8 @@ const subjectsQuerySchema = z.object({
   courseId: optionalPositiveIntegerId,
   term: optionalPositiveIntegerId,
   sessionId: optionalPositiveIntegerId,
+  batchId: optionalPositiveIntegerId,
+  year: optionalPositiveIntegerId,
   userId: optionalPositiveIntegerId,
   unmapped: z.coerce.boolean().optional(),
 });
@@ -55,6 +57,8 @@ const getMySubjectsQuerySchema = z.object({
   courseId: optionalPositiveIntegerId,
   term: optionalPositiveIntegerId,
   sessionId: optionalPositiveIntegerId,
+  batchId: optionalPositiveIntegerId,
+  year: optionalPositiveIntegerId,
 });
 
 const teachersQuerySchema = z.object({

@@ -10,6 +10,13 @@ const router = Router();
 
 const getCourseSessionsSchema = z.object({});
 
+const optionalPositiveIntegerId = z
+  .union([
+    z.string().regex(/^\d+$/).transform(Number),
+    z.number().int().positive().optional(),
+  ])
+  .optional();
+
 const listCoursesSchema = z.object({
   instituteId: z
     .string()
@@ -45,20 +52,58 @@ const getSingleCourseQuerySchema = z.object({
   ),
 });
 
+const getSubjectsByTeacherQuerySchema = z.object({
+  userId: z.coerce
+    .number()
+    .int()
+    .positive({ message: "userId must be a positive integer" })
+    .optional(),
+  search: z.string().optional(),
+  batchId: optionalPositiveIntegerId,
+  courseId: optionalPositiveIntegerId,
+  sessionId: optionalPositiveIntegerId,
+  year: optionalPositiveIntegerId,
+});
+
 // Routes
-router.get("/", userAuth, checkAccess(PERMISSIONS.COURSES.value), validate({ query: listCoursesSchema }), courseController.listCourses);
+router.get(
+  "/",
+  userAuth,
+  checkAccess(PERMISSIONS.COURSES.value),
+  validate({ query: listCoursesSchema }),
+  courseController.listCourses,
+);
 
-router.get("/single", userAuth, checkAccess(PERMISSIONS.COURSES.value), validate({ query: getSingleCourseQuerySchema }), courseController.getSingleCourse);
+router.get(
+  "/single",
+  userAuth,
+  checkAccess(PERMISSIONS.COURSES.value),
+  validate({ query: getSingleCourseQuerySchema }),
+  courseController.getSingleCourse,
+);
 
-router.get("/withSubjects", userAuth, checkAccess(PERMISSIONS.COURSES.value), validate({ query: courseListWithSubjectsSchema }), courseController.getCourseWithSubjects);
+router.get(
+  "/withSubjects",
+  userAuth,
+  checkAccess(PERMISSIONS.COURSES.value),
+  validate({ query: courseListWithSubjectsSchema }),
+  courseController.getCourseWithSubjects,
+);
 
+router.get(
+  "/subjects",
+  userAuth,
+  checkAccess(PERMISSIONS.COURSES.value, null),
+  validate({ query: getSubjectsByTeacherQuerySchema }),
+  courseController.getTeacherMappedSubjects,
+);
 router.get("/my/single", userAuth, courseController.getMyMappedSubjectById);
 router.get("/my/subjects", userAuth, courseController.getMyMappedSubjects);
 router.get(
   "/my/:courseId/sessions",
   userAuth,
   validate({ params: courseIdParamSchema, query: getCourseSessionsSchema }),
-  courseController.getMyCourseSessions
+  courseController.getMyCourseSessions,
 );
 
 router.get(

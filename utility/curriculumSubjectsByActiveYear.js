@@ -83,17 +83,14 @@ export async function findCurriculumSubjectsForActiveYear(
     subjectIds,
     terms,
     batches,
+    batchIds,
     activeBatchYear: activeBatchYearOverride,
     academicYearId,
   } = {},
   options = {},
 ) {
-  let activeBatchYear = activeBatchYearOverride
-    ? toIntegerNumber(activeBatchYearOverride)
-    : null;
-  let resolvedAcademicYearId = academicYearId
-    ? toIntegerNumber(academicYearId)
-    : null;
+  let activeBatchYear = activeBatchYearOverride ? Number(activeBatchYearOverride) : null;
+  let resolvedAcademicYearId = academicYearId ? Number(academicYearId) : null;
 
   if (!activeBatchYear && resolvedAcademicYearId) {
     const academicYear = await acedmicYearRepository.getSingleacedmicYearDetails(
@@ -101,88 +98,67 @@ export async function findCurriculumSubjectsForActiveYear(
       options,
     );
     if (academicYear?.startingDate) {
-      activeBatchYear = toIntegerNumber(
-        String(academicYear.startingDate).slice(0, 4),
-      );
+      activeBatchYear = Number(String(academicYear.startingDate).slice(0, 4));
     }
   }
 
   if (!activeBatchYear) {
     const ctx = await resolveActiveAcademicYearContext(options);
     activeBatchYear = ctx.activeBatchYear;
-    if (!resolvedAcademicYearId) {
-      resolvedAcademicYearId = ctx.academicYearId;
-    }
+    resolvedAcademicYearId = resolvedAcademicYearId || ctx.academicYearId;
   }
 
-  const courseIdList = [];
-  if (courseId != null) courseIdList.push(Number(courseId));
-  if (Array.isArray(courseIds)) {
-    for (const id of courseIds) {
-      if (id == null || id === "") continue;
-      courseIdList.push(Number(id));
-    }
-  }
+  const courseIdList = [
+    ...(courseId ? [Number(courseId)] : []),
+    ...(Array.isArray(courseIds) ? courseIds.map(Number).filter(Boolean) : []),
+  ];
 
-  const subjectIdList = [];
-  if (subjectId != null) subjectIdList.push(Number(subjectId));
-  if (Array.isArray(subjectIds)) {
-    for (const id of subjectIds) {
-      if (id == null || id === "") continue;
-      subjectIdList.push(Number(id));
-    }
-  }
+  const subjectIdList = [
+    ...(subjectId ? [Number(subjectId)] : []),
+    ...(Array.isArray(subjectIds) ? subjectIds.map(Number).filter(Boolean) : []),
+  ];
 
-  const termList = [];
-  if (Array.isArray(terms)) {
-    for (const term of terms) {
-      if (term == null || term === "") continue;
-      termList.push(Number(term));
-    }
-  }
-
-  const batchList = [];
-  if (Array.isArray(batches)) {
-    for (const batch of batches) {
-      if (batch == null || batch === "") continue;
-      batchList.push(Number(batch));
-    }
-  }
+  const termList = Array.isArray(terms) ? terms.map(Number).filter(Boolean) : [];
+  const batchList = Array.isArray(batches) ? batches.map(Number).filter(Boolean) : [];
+  const batchIdList = Array.isArray(batchIds) ? batchIds.map(Number).filter(Boolean) : [];
 
   const batchWhere = {};
-  if (batchList.length === 1) {
-    batchWhere.batch = batchList[0];
-  } else if (batchList.length > 1) {
-    batchWhere.batch = { [Op.in]: batchList };
+  if (batchIdList.length > 0) {
+    batchWhere.batchId = batchIdList.length === 1 ? batchIdList[0] : { [Op.in]: batchIdList };
   }
 
   const curriculumWhere = {
     ...buildScope(model.curriculumModel),
+    ...(courseIdList.length > 0 && {
+      courseId: courseIdList.length === 1 ? courseIdList[0] : { [Op.in]: courseIdList },
+    }),
   };
-  if (courseIdList.length === 1) {
-    curriculumWhere.courseId = courseIdList[0];
-  } else if (courseIdList.length > 1) {
-    curriculumWhere.courseId = { [Op.in]: courseIdList };
-  }
 
-  const subjectTermWhere = {};
-  if (termList.length === 1) {
-    subjectTermWhere.term = termList[0];
-  } else if (termList.length > 1) {
-    subjectTermWhere.term = { [Op.in]: termList };
-  }
-  if (subjectIdList.length === 1) {
-    subjectTermWhere.subjectId = subjectIdList[0];
-  } else if (subjectIdList.length > 1) {
-    subjectTermWhere.subjectId = { [Op.in]: subjectIdList };
-  }
+  const subjectTermWhere = {
+    ...(termList.length > 0 && {
+      term: termList.length === 1 ? termList[0] : { [Op.in]: termList },
+    }),
+    ...(subjectIdList.length > 0 && {
+      subjectId: subjectIdList.length === 1 ? subjectIdList[0] : { [Op.in]: subjectIdList },
+    }),
+  };
 
   const batchInclude = {
     model: model.curriculumBatchMappingModel,
     as: "batchMapping",
-    attributes: ["curriculumBatchMappingId", "curriculumId", "batch"],
+    attributes: ["curriculumBatchMappingId", "curriculumId", "batchId"],
     required: true,
+    ...(Object.keys(batchWhere).length > 0 && { where: batchWhere }),
     include: [
+      {
+        model: model.batchModel,
+        as: "batch",
+        attributes: ["batchId", "batch", "sessionId"],
+        required: true,
+        ...(batchList.length > 0 && {
+          where: batchList.length === 1 ? { batch: batchList[0] } : { batch: { [Op.in]: batchList } },
+        }),
+      },
       {
         model: model.curriculumModel,
         as: "curriculum",
@@ -200,10 +176,7 @@ export async function findCurriculumSubjectsForActiveYear(
               "credit",
             ],
             required: true,
-            where:
-              Object.keys(subjectTermWhere).length > 0
-                ? subjectTermWhere
-                : undefined,
+            ...(Object.keys(subjectTermWhere).length > 0 && { where: subjectTermWhere }),
             include: [
               {
                 model: model.subjectModel,
@@ -231,18 +204,13 @@ export async function findCurriculumSubjectsForActiveYear(
       },
     ],
   };
-  if (Object.keys(batchWhere).length > 0) {
-    batchInclude.where = batchWhere;
-  }
 
-  // year = calendar year of the academic year; term narrows to the batch
-  // currently in that term (not every batch's same term number).
-  const batchTermWhere = { year: activeBatchYear };
-  if (termList.length === 1) {
-    batchTermWhere.term = termList[0];
-  } else if (termList.length > 1) {
-    batchTermWhere.term = { [Op.in]: termList };
-  }
+  const batchTermWhere = {
+    year: activeBatchYear,
+    ...(termList.length > 0 && {
+      term: termList.length === 1 ? termList[0] : { [Op.in]: termList },
+    }),
+  };
 
   const termRows = await model.curriculumBatchTermMappingModel.findAll({
     attributes: [
@@ -263,30 +231,23 @@ export async function findCurriculumSubjectsForActiveYear(
   for (const termRow of termRows) {
     const plainTerm = termRow.get ? termRow.get({ plain: true }) : termRow;
     const batchMapping = plainTerm.batchMapping;
-    if (!batchMapping) continue;
+    if (!batchMapping?.curriculum) continue;
 
     const curriculum = batchMapping.curriculum;
-    if (!curriculum) continue;
+    const batchObj = batchMapping.batch;
+    const batch = batchObj?.batch != null ? Number(batchObj.batch) : null;
+    const expectedYearNumber = batch != null ? Number(activeBatchYear) - batch + 1 : Number(plainTerm.yearNumber);
 
-    const batch = Number(batchMapping.batch);
-    const expectedYearNumber = Number(activeBatchYear) - batch + 1;
-    if (
-      expectedYearNumber < 1 ||
-      Number(plainTerm.yearNumber) !== expectedYearNumber
-    ) {
+    if (expectedYearNumber < 1 || Number(plainTerm.yearNumber) !== expectedYearNumber) {
       continue;
     }
 
     const activeTerm = Number(plainTerm.term);
 
     for (const mapping of curriculum.subjectTermMappings || []) {
-      // Subject-term must match the batch-term row for this calendar year
-      if (Number(mapping.term) !== activeTerm) continue;
+      if (Number(mapping.term) !== activeTerm || !mapping.subject) continue;
 
-      const subject = mapping.subject;
-      if (!subject) continue;
-
-      const key = `${curriculum.courseId}:${mapping.subjectId}:${activeTerm}:${batchMapping.batch}`;
+      const key = `${curriculum.courseId}:${mapping.subjectId}:${activeTerm}:${batch}`;
       if (seen.has(key)) continue;
       seen.add(key);
 
@@ -296,20 +257,17 @@ export async function findCurriculumSubjectsForActiveYear(
         credit: mapping.credit,
         year: Number(plainTerm.year),
         yearNumber: Number(plainTerm.yearNumber),
-        batch: Number(batchMapping.batch),
+        batch,
+        batchId: Number(batchMapping.batchId),
         curriculumId: Number(curriculum.curriculumId),
-        curriculumSubjectTermMappingId: Number(
-          mapping.curriculumSubjectTermMappingId,
-        ),
+        curriculumSubjectTermMappingId: Number(mapping.curriculumSubjectTermMappingId),
         curriculumBatchMappingId: Number(batchMapping.curriculumBatchMappingId),
-        curriculumBatchTermMappingId: Number(
-          plainTerm.curriculumBatchTermMappingId,
-        ),
+        curriculumBatchTermMappingId: Number(plainTerm.curriculumBatchTermMappingId),
         curriculumName: curriculum.name,
         courseId: Number(curriculum.courseId),
         academicYearId: resolvedAcademicYearId,
         activeBatchYear,
-        subject,
+        subject: mapping.subject,
       });
     }
   }
@@ -379,9 +337,15 @@ export async function findActiveYearBatchTermsByCourseIds(
       {
         model: model.curriculumBatchMappingModel,
         as: "batchMapping",
-        attributes: ["curriculumBatchMappingId", "curriculumId", "batch"],
+        attributes: ["curriculumBatchMappingId", "curriculumId", "batchId"],
         required: true,
         include: [
+          {
+            model: model.batchModel,
+            as: "batch",
+            attributes: ["batchId", "batch", "sessionId"],
+            required: true,
+          },
           {
             model: model.curriculumModel,
             as: "curriculum",
@@ -405,8 +369,9 @@ export async function findActiveYearBatchTermsByCourseIds(
     const batchMapping = plain.batchMapping;
     if (!batchMapping || !batchMapping.curriculum) continue;
 
-    const batch = Number(batchMapping.batch);
-    const expectedYearNumber = Number(activeBatchYear) - batch + 1;
+    const batchObj = batchMapping.batch;
+    const batch = batchObj?.batch != null ? Number(batchObj.batch) : null;
+    const expectedYearNumber = batch != null ? Number(activeBatchYear) - batch + 1 : Number(plain.yearNumber);
     if (
       expectedYearNumber < 1 ||
       Number(plain.yearNumber) !== expectedYearNumber
@@ -424,6 +389,7 @@ export async function findActiveYearBatchTermsByCourseIds(
       courseId,
       term,
       batch,
+      batchId: Number(batchMapping.batchId),
       year: Number(plain.year),
       yearNumber: Number(plain.yearNumber),
       curriculumId: Number(batchMapping.curriculum.curriculumId),
