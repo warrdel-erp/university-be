@@ -92,7 +92,7 @@ export async function getCourseProgramData(courseId) {
     });
 }
 
-export async function getClassSectionOptions(courseId, term, sessionId, year) {
+export async function getClassSectionOptions(courseId, term, sessionId, year, batchId) {
     return await scoped(model.classSectionModel).findAll({
         attributes: [
             ['section', 'label'],
@@ -100,8 +100,9 @@ export async function getClassSectionOptions(courseId, term, sessionId, year) {
             'year',
         ],
         where: {
-            ...(courseId && { courseId }),
-            ...(sessionId && { sessionId }),
+            ...(courseId != null && { courseId: Number(courseId) }),
+            ...(sessionId != null && { sessionId: Number(sessionId) }),
+            ...(batchId != null && { batchId: Number(batchId) }),
             ...(year != null && { year: Number(year) }),
         },
         include: [classSectionTermsInclude({ term, required: term != null })],

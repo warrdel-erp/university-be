@@ -367,7 +367,7 @@ export const getRoutineByAcademicGroupId = async (req, res) => {
 };
 
 export const getRoutineByTeacherAndAcademicYear = async (req, res) => {
-  const { userId, courseId, sessionId, subjectId } = req.query;
+  const { userId, courseId, sessionId, batchId, subjectId } = req.query;
   try {
     const result =
       await timeTableCreateServices.getRoutineByTeacherAndAcademicYear(
@@ -375,6 +375,7 @@ export const getRoutineByTeacherAndAcademicYear = async (req, res) => {
         courseId,
         sessionId,
         subjectId,
+        { batchId },
       );
     return SuccessResponse(
       res,
@@ -398,13 +399,14 @@ export const getMyRoutineByTeacherAndAcademicYear = async (req, res) => {
       return ErrorResponse(res, validation.status, validation.message);
     }
     const { userId } = validation;
-    const { courseId, sessionId, subjectId } = req.query;
+    const { courseId, sessionId, batchId, subjectId } = req.query;
     const result =
       await timeTableCreateServices.getRoutineByTeacherAndAcademicYear(
         userId,
         courseId,
         sessionId,
         subjectId,
+        { batchId },
       );
     return SuccessResponse(
       res,

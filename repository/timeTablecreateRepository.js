@@ -2577,7 +2577,7 @@ const teacherRoutineStructureInclude = routineStructureInclude({
   structureWhere: buildScope(model.timeTableStructureModel),
 });
 
-const teacherClassSectionInclude = (courseId, sessionId) => {
+const teacherClassSectionInclude = (courseId, sessionId, options = {}) => {
   const sectionWhere = {
     ...buildScope(model.classSectionModel),
   };
@@ -2586,6 +2586,9 @@ const teacherClassSectionInclude = (courseId, sessionId) => {
   }
   if (sessionId != null) {
     sectionWhere.sessionId = sessionId;
+  }
+  if (options.batchId != null) {
+    sectionWhere.batchId = options.batchId;
   }
 
   return timeTableRoutineClassSectionInclude({
@@ -2598,6 +2601,7 @@ const teacherClassSectionInclude = (courseId, sessionId) => {
       "year",
       "sessionId",
       "courseId",
+      "batchId",
     ],
     sectionNestedIncludes: [
       {
@@ -2612,13 +2616,16 @@ const teacherClassSectionInclude = (courseId, sessionId) => {
   });
 };
 
-async function fetchTeacherRoutineContext(userId, courseId, sessionId) {
+async function fetchTeacherRoutineContext(userId, courseId, sessionId, options = {}) {
   const classSectionWhere = {};
   if (courseId != null) {
     classSectionWhere.courseId = courseId;
   }
   if (sessionId != null) {
     classSectionWhere.sessionId = sessionId;
+  }
+  if (options.batchId != null) {
+    classSectionWhere.batchId = options.batchId;
   }
 
   return Promise.all([
@@ -2652,7 +2659,7 @@ async function fetchTeacherRoutineContext(userId, courseId, sessionId) {
           ],
         })
       : Promise.resolve(null),
-    courseId != null && sessionId != null
+    (courseId != null || sessionId != null || options.batchId != null)
       ? scoped(model.classSectionModel).findAll({
           where: classSectionWhere,
           attributes: [
@@ -2661,6 +2668,7 @@ async function fetchTeacherRoutineContext(userId, courseId, sessionId) {
             "year",
             "courseId",
             "sessionId",
+            "batchId",
           ],
           include: [classSectionTermsInclude()],
           order: [
@@ -2718,7 +2726,7 @@ async function fetchNormalRoutinesForTeacher(
         cellSubjectWhere,
         required: true,
       }),
-      teacherClassSectionInclude(courseId, sessionId),
+      teacherClassSectionInclude(courseId, sessionId, options),
       {
         model: model.academicGroupModel,
         as: "academicGroup",
@@ -2895,7 +2903,7 @@ export async function getTeacherRoutineBundle(
 ) {
   const [[employee, course, session, classSections], normalRoutines] =
     await Promise.all([
-      fetchTeacherRoutineContext(userId, courseId, sessionId),
+      fetchTeacherRoutineContext(userId, courseId, sessionId, options),
       fetchNormalRoutinesForTeacher(userId, courseId, sessionId, subjectId, options),
     ]);
 

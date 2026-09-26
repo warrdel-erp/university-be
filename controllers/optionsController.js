@@ -71,8 +71,8 @@ export const getCourseProgramOptions = async (req, res) => {
 
 export const getClassSectionOptions = async (req, res) => {
     try {
-        const { courseId, term, sessionId, year } = req.query;
-        const result = await optionsServices.getClassSectionOptions(courseId, term, sessionId, year);
+        const { courseId, term, sessionId, batchId, year } = req.query;
+        const result = await optionsServices.getClassSectionOptions(courseId, term, sessionId, year, batchId);
         return SuccessResponse(res, 200, "Class section options fetched successfully", result);
     } catch (error) {
         console.error("Error in getClassSectionOptions:", error);

@@ -4723,6 +4723,7 @@ export async function getRoutineByTeacherAndAcademicYear(
 ) {
   const weekStart = options.weekStart || null;
   const weekEnd = options.weekEnd || null;
+  const batchId = options.batchId || null;
 
   const bundle = await timeTableCreateRepository.getTeacherRoutineBundle(
     userId,
@@ -4732,6 +4733,7 @@ export async function getRoutineByTeacherAndAcademicYear(
     {
       weekStart,
       weekEnd,
+      batchId,
       publishedOnly: options.publishedOnly === true,
     },
   );
@@ -4896,7 +4898,7 @@ export async function getRoutineByTeacherAndAcademicYear(
         resolveTimeTableRoutineSection(routine),
       );
 
-      if (routine.classSectionTermId != null && !classSection.classSectionsId) {
+      if (routine.classSectionTermId != null && !classSection?.classSectionsId) {
         continue;
       }
 
