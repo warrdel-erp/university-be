@@ -599,8 +599,8 @@ export async function subjectExcel(excelData, courseId, academicYearId, speciali
     }
 }
 
-export async function getClassSectionRecord(courseId, classSectionId, batchId, page, limit) {
-    const result = await studentRepository.getClassSectionRecord(courseId, classSectionId, batchId, { page, limit });
+export async function getClassSectionRecord(courseId, classSectionId, batchId, page, limit, options = {}) {
+    const result = await studentRepository.getClassSectionRecord(courseId, classSectionId, batchId, { page, limit, ...options });
     const section = result.classSection ? (result.classSection.get ? result.classSection.get({ plain: true }) : result.classSection) : null;
     const resolvedCourseId = Number(courseId || section?.courseId);
     const course = resolvedCourseId ? await getCourseByCourseId(resolvedCourseId) : null;

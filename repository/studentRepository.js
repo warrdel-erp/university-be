@@ -2189,6 +2189,9 @@ export async function getClassSectionRecord(courseId, classSectionId, batchId, o
         if (batchId != null) {
             classSectionWhere.batchId = Number(batchId);
         }
+        if (options.year != null) {
+            classSectionWhere.year = Number(options.year);
+        }
 
         const classSection = await scoped(model.classSectionModel).findOne({
             where: classSectionWhere,

@@ -324,13 +324,14 @@ export const subjectExcel = async (req, res) => {
 
 export const getClassSectionRecord = async (req, res) => {
   try {
-    const { courseId, classSectionId, batchId, page, limit } = req.query;
+    const { courseId, classSectionId, batchId, year, page, limit } = req.query;
     const result = await mainServices.getClassSectionRecord(
       courseId,
       classSectionId,
       batchId,
       page,
       limit,
+      { year },
     );
     return SuccessResponse(
       res,
