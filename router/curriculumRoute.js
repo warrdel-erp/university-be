@@ -82,6 +82,7 @@ router.get(
   validate({ params: idParamSchema }),
   controller.getBatches,
 );
+
 router.get(
   '/:id',
   useAuth,

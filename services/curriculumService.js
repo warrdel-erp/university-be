@@ -210,12 +210,12 @@ export async function getById(id) {
     for (const mapping of mappings) {
       if (mapping.term !== i) continue;
       courses.push({
-        id: mapping.subject?.subjectId || mapping.curriculumSubjectTermMappingId,
+        id: mapping.subject?.subjectId,
         curriculumSubjectTermMappingId: mapping.curriculumSubjectTermMappingId,
-        code: mapping.subject?.subjectCode || 'N/A',
-        name: mapping.subject?.subjectName || 'Unknown Subject',
-        type: mapping.subject?.subjectType || 'Theory',
-        category: mapping.subject?.subjectCategory || 'Core',
+        code: mapping.subject?.subjectCode,
+        name: mapping.subject?.subjectName,
+        type: mapping.subject?.subjectType,
+        category: mapping.subject?.subjectCategory,
         credit: mapping.credit,
         syllabus: 'Configured',
       });
