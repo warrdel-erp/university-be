@@ -64,6 +64,13 @@ function buildCurrentPositionLabel(currentTerms, yearNumber) {
   return `${currentTerms[0].termName} – ${currentTerms[currentTerms.length - 1].termName} · Year ${yearNumber}`;
 }
 
+function parseCapacity(val) {
+  if (val != null && !isNaN(Number(val))) {
+    return Number(val);
+  }
+  return val ?? null;
+}
+
 /**
  * List all sessions with their batches, grouped by session.
  * Each batch includes current programme year/terms from the tenant active academic year.
@@ -95,7 +102,8 @@ export async function getAllBatches(filters = {}) {
         sessionId: batch.sessionId,
         batch: batch.batch,
         status: batch.status,
-        intakeCapacity: batch.intakeCapacity,
+        intakeCapacity: parseCapacity(batch.intakeCapacity),
+        capacity: parseCapacity(course?.capacity),
         createdAt: batch.createdAt,
         createdBy: batch.createdBy,
         currentYear: inRange ? currentYear : null,
@@ -125,7 +133,13 @@ export async function getAllBatches(filters = {}) {
 export async function getBatch(id) {
   const batch = await repo.findById(id);
   if (!batch) httpError('Batch not found', 404);
-  return batch;
+  const plain = batch.get ? batch.get({ plain: true }) : batch;
+  const course = plain.session?.course;
+  return {
+    ...plain,
+    intakeCapacity: parseCapacity(plain.intakeCapacity),
+    capacity: parseCapacity(course?.capacity),
+  };
 }
 
 function resolveConfigStatus(configured, total) {
@@ -278,7 +292,8 @@ export async function getBatchFullDetails(batchId) {
       batch: batchYear,
       sessionId: Number(batch.sessionId),
       status: batch.status,
-      intakeCapacity: batch.intakeCapacity,
+      intakeCapacity: parseCapacity(batch.intakeCapacity),
+      capacity: parseCapacity(course?.capacity),
       admissionYear: formatAcademicYearLabel(batchYear),
     },
     session: {
@@ -291,6 +306,7 @@ export async function getBatchFullDetails(batchId) {
       courseId: course.courseId,
       courseName: course.courseName,
       courseCode: course.courseCode,
+      capacity: parseCapacity(course.capacity),
       courseDuration: course.courseDuration,
       duration,
       totalTerms,
@@ -578,7 +594,8 @@ export async function getBatchStudents(batchId, query = {}) {
         batchId: Number(batch.batchId),
         batch: batchYear,
         status: batch.status,
-        intakeCapacity: batch.intakeCapacity,
+        intakeCapacity: parseCapacity(batch.intakeCapacity),
+        capacity: parseCapacity(course?.capacity),
         admissionYear: formatAcademicYearLabel(batchYear),
       },
       session: {
@@ -590,6 +607,7 @@ export async function getBatchStudents(batchId, query = {}) {
         courseId: course.courseId,
         courseName: course.courseName,
         courseCode: course.courseCode,
+        capacity: parseCapacity(course.capacity),
         termType: course.termType,
         courseDuration: course.courseDuration,
       },
