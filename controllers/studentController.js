@@ -306,11 +306,9 @@ export const promoteStudent = async (req, res) => {
 
 export const getPromotionAvailableSection = async (req, res) => {
   try {
-    const { courseId, term, classSectionTermId } = req.query;
+    const { classSectionTermId } = req.query;
 
     const data = await studentService.getAvailablePromotionSections({
-      courseId,
-      term,
       classSectionTermId,
     });
 

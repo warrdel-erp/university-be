@@ -613,15 +613,6 @@ router.get(
 );
 
 const promotionAvailableClassSectionQuerySchema = z.object({
-  courseId: z.coerce
-    .number({ required_error: "courseId is required" })
-    .int()
-    .positive(),
-  /** Student's current program term or the next promotion term */
-  term: z.coerce
-    .number({ required_error: "term is required" })
-    .int()
-    .positive(),
   classSectionTermId: z.coerce
     .number({ required_error: "classSectionTermId is required" })
     .int()

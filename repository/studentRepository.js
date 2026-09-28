@@ -1837,16 +1837,16 @@ export async function getNextAcedmicYearAfter(currentacademicYearId) {
 
 export async function getPromotionClassSections({
     courseId,
-    academicYearId,
+    batchId,
     term,
     specializationId,
     instituteId,
 }) {
-    const sectionWhere = promotionClassSectionWhere({
-        courseId,
-        academicYearId,
-        ...(instituteId != null && { instituteId }),
-    });
+    const sectionWhere = {
+        courseId: Number(courseId),
+        ...(batchId != null && { batchId: Number(batchId) }),
+        ...(instituteId != null && { instituteId: Number(instituteId) }),
+    };
 
     if (specializationId != null) {
         sectionWhere[Op.or] = [{ specializationId }, { specializationId: null }];
@@ -1864,9 +1864,11 @@ export async function getPromotionClassSections({
                 'classSectionsId',
                 'section',
                 'sessionId',
+                'batchId',
                 'academicYearId',
                 'specializationId',
                 'year',
+                'activeYear',
                 'courseId',
                 'instituteId',
             ],
