@@ -514,8 +514,11 @@ export async function findTermMappingWithBatch(curriculumBatchTermMappingId) {
   );
 }
 
-export async function findStudentsByCourseBatch(courseId, batchYear, sessionId) {
-  const where = { courseId, batchYear };
+export async function findStudentsByCourseBatch(courseId, batchYear, sessionId, batchId = null) {
+  const where = { courseId };
+  if (batchId) {
+    where.batchId = Number(batchId);
+  }
   if (sessionId) {
     where.sessionId = sessionId;
   }
@@ -531,10 +534,22 @@ export async function findStudentsByCourseBatch(courseId, batchYear, sessionId) 
       'lastName',
       'enrollNumber',
       'scholarNumber',
-      'batchYear',
+      'batchId',
+      'classSectionTermId',
       'sessionId',
     ],
     include: [
+      {
+        model: models.batchModel,
+        as: 'batch',
+        required: false,
+        attributes: ['batchId', 'batch', 'sessionId'],
+      },
+      studentClassSectionTermWithSectionInclude({
+        includeSectionTerms: false,
+        termRequired: false,
+        sectionRequired: false,
+      }),
       {
         model: models.sessionModel,
         as: 'studentSession',

@@ -355,7 +355,6 @@ const getAllStudentsQuerySchema = z.object({
   year: optionalPositiveIntegerIdList,
   term: optionalPositiveIntegerIdList,
   academicYearId: optionalPositiveIntegerIdList,
-  batchId: optionalPositiveIntegerIdList,
 });
 
 const mapStudentBody = (req, res, next) => {

@@ -228,42 +228,51 @@ export async function getEmployeeCodesTypes(employeeCodeMasterId, key, search) {
       );
     }
 
-    // Find categories whose name matches search
-    const matchingCategoryIds = new Set();
+    // 1. Find categories whose codeMasterType matches search
+    const matchedCategoryIds = new Set();
     for (const cat of dedupedCategories) {
       const typeName = (cat.codeMasterType || '').toLowerCase();
       for (const term of searchTerms) {
         if (typeName.includes(term.toLowerCase())) {
-          matchingCategoryIds.add(cat.employeeCodeMasterId);
+          matchedCategoryIds.add(cat.employeeCodeMasterId);
           break;
         }
       }
     }
 
-    // Find code types matching search OR belonging to matching categories
-    const codeTypeWhere = {
-      employeeCodeMasterId: { [Op.in]: categoryIds },
-      [Op.or]: [
-        ...orConditions,
-        ...(matchingCategoryIds.size > 0
-          ? [{ employeeCodeMasterId: { [Op.in]: Array.from(matchingCategoryIds) } }]
-          : []),
-      ],
-    };
+    // 2. Also find categories that contain matching code types
+    const matchingCodeTypeRows = await scoped(model.employeeCodeMasterType).findAll({
+      attributes: ['employeeCodeMasterId'],
+      where: {
+        employeeCodeMasterId: { [Op.in]: categoryIds },
+        [Op.or]: orConditions,
+      },
+    });
+    for (const row of matchingCodeTypeRows) {
+      matchedCategoryIds.add(row.employeeCodeMasterId);
+    }
 
+    if (matchedCategoryIds.size === 0) {
+      return [];
+    }
+
+    const targetCategoryIds = Array.from(matchedCategoryIds);
+
+    // 3. Fetch ALL code types under the matched category IDs
     const codeTypes = await scoped(model.employeeCodeMasterType).findAll({
       attributes: { exclude: excludeTypeMeta },
-      where: codeTypeWhere,
+      where: {
+        employeeCodeMasterId: { [Op.in]: targetCategoryIds },
+      },
       order: [
         ["employeeCodeMasterId", "ASC"],
         ["code", "ASC"],
       ],
     });
 
-    // When searching, only return categories that matched by name or contain matching codes
-    const categoriesWithCodes = new Set(codeTypes.map((ct) => ct.employeeCodeMasterId));
-    const filteredCategories = dedupedCategories.filter(
-      (cat) => matchingCategoryIds.has(cat.employeeCodeMasterId) || categoriesWithCodes.has(cat.employeeCodeMasterId)
+    // 4. Return only the matched categories populated with all their code types
+    const filteredCategories = dedupedCategories.filter((cat) =>
+      matchedCategoryIds.has(cat.employeeCodeMasterId)
     );
 
     return groupScopedTypesByCategory(filteredCategories, codeTypes);

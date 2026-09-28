@@ -348,7 +348,6 @@ export async function findStudentsByBatchId(batchId, { page = 1, limit = 10, sea
       'enrollNumber',
       'scholarNumber',
       'batchId',
-      'batchYear',
       'classSectionTermId',
     ],
     include: [
