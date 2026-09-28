@@ -1367,8 +1367,20 @@ export async function buildClassStudentMapperCreatePayload(
         include: [{
             model: model.classSectionModel,
             as: 'classSection',
-            attributes: ['sessionId', 'academicYearId'],
+            attributes: ['classSectionsId', 'batchId', 'sessionId', 'academicYearId'],
             required: true,
+            include: [{
+                model: model.batchModel,
+                as: 'batch',
+                attributes: ['batchId', 'sessionId'],
+                required: false,
+                include: [{
+                    model: model.sessionModel,
+                    as: 'session',
+                    attributes: ['sessionId', 'courseId', 'academicYearId'],
+                    required: false,
+                }],
+            }],
         }],
         transaction,
     });
@@ -1378,8 +1390,14 @@ export async function buildClassStudentMapperCreatePayload(
         throw error;
     }
 
-    const { sessionId, academicYearId } = termRow.classSection;
-    if (!sessionId || !academicYearId) {
+    const classSec = termRow.classSection;
+    const batch = classSec?.batch;
+    const session = batch?.session;
+
+    const resolvedSessionId = classSec?.sessionId || batch?.sessionId || session?.sessionId;
+    const resolvedAcademicYearId = classSec?.academicYearId || session?.academicYearId || getAcademicYearId();
+
+    if (!resolvedSessionId || !resolvedAcademicYearId) {
         const error = new Error('class section sessionId and academicYearId are required');
         error.statusCode = 400;
         throw error;
@@ -1389,8 +1407,8 @@ export async function buildClassStudentMapperCreatePayload(
         studentId,
         classSectionTermId: Number(classSectionTermId),
         term: Number(termRow.term),
-        sessionId,
-        academicYearId,
+        sessionId: Number(resolvedSessionId),
+        academicYearId: Number(resolvedAcademicYearId),
         createdBy,
     };
 }

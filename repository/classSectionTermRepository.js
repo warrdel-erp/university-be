@@ -42,6 +42,20 @@ export async function findClassSectionTermById(classSectionTermId, options = {})
         model: model.classSectionModel,
         as: 'classSection',
         required: false,
+        include: [
+          {
+            model: model.batchModel,
+            as: 'batch',
+            required: false,
+            include: [
+              {
+                model: model.sessionModel,
+                as: 'session',
+                required: false,
+              },
+            ],
+          },
+        ],
       },
     ],
     transaction: options.transaction,
