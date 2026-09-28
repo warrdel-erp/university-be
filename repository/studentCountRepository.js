@@ -76,7 +76,7 @@ export async function findTermCohortStudents(group, options = {}) {
       "enrollNumber",
       "fatherName",
       "classSectionTermId",
-      "batchYear",
+      "batchId",
     ],
     where,
     include: [

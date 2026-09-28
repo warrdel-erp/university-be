@@ -105,4 +105,6 @@ batchModel.beforeUpdate(async (instance) => {
     }
 });
 
+batchModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
 export default batchModel;
