@@ -8,7 +8,9 @@ import {
     resolveProgramYear,
     studentClassSectionTermWithSectionInclude,
 } from '../utility/classSectionIncludes.js';
-import { buildCourseTermOptions } from '../utility/courseTerms.js';
+import * as batchRepository from './batchRepository.js';
+import { resolveActiveAcademicYearContext } from '../utility/curriculumSubjectsByActiveYear.js';
+import { buildCourseTermOptions, buildTermName, termsForYear } from '../utility/courseTerms.js';
 import { toMoneyNumber } from '../utility/decimalMoney.js';
 
 function omitAcademicYearScope(scopeWhere = {}) {
@@ -336,6 +338,7 @@ export async function getAllStudents({
     search,
     courseId,
     sessionId,
+    batchId,
     classSectionsId,
     year,
     term,
@@ -377,6 +380,11 @@ export async function getAllStudents({
             },
             studentClassSectionInclude,
             studentSessionWithAcademicYearInclude({ academicYearId: resolvedAcademicYearId }),
+            {
+                model: model.batchModel,
+                as: "batch",
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            },
             {
                 model: model.specializationModel,
                 as: "specialization",
@@ -1366,8 +1374,20 @@ export async function buildClassStudentMapperCreatePayload(
         include: [{
             model: model.classSectionModel,
             as: 'classSection',
-            attributes: ['sessionId', 'academicYearId'],
+            attributes: ['classSectionsId', 'batchId', 'sessionId', 'academicYearId'],
             required: true,
+            include: [{
+                model: model.batchModel,
+                as: 'batch',
+                attributes: ['batchId', 'sessionId'],
+                required: false,
+                include: [{
+                    model: model.sessionModel,
+                    as: 'session',
+                    attributes: ['sessionId', 'courseId', 'academicYearId'],
+                    required: false,
+                }],
+            }],
         }],
         transaction,
     });
@@ -1377,8 +1397,14 @@ export async function buildClassStudentMapperCreatePayload(
         throw error;
     }
 
-    const { sessionId, academicYearId } = termRow.classSection;
-    if (!sessionId || !academicYearId) {
+    const classSec = termRow.classSection;
+    const batch = classSec?.batch;
+    const session = batch?.session;
+
+    const resolvedSessionId = classSec?.sessionId || batch?.sessionId || session?.sessionId;
+    const resolvedAcademicYearId = classSec?.academicYearId || session?.academicYearId || getAcademicYearId();
+
+    if (!resolvedSessionId || !resolvedAcademicYearId) {
         const error = new Error('class section sessionId and academicYearId are required');
         error.statusCode = 400;
         throw error;
@@ -1388,8 +1414,8 @@ export async function buildClassStudentMapperCreatePayload(
         studentId,
         classSectionTermId: Number(classSectionTermId),
         term: Number(termRow.term),
-        sessionId,
-        academicYearId,
+        sessionId: Number(resolvedSessionId),
+        academicYearId: Number(resolvedAcademicYearId),
         createdBy,
     };
 }
@@ -2194,22 +2220,39 @@ export async function getStudentSubject(studentId) {
     }
 };
 
-export async function getClassSectionRecord(courseId, classSectionId) {
+export async function getClassSectionRecord(courseId, classSectionId, batchId, options = {}) {
     try {
         const classSectionsId = Number(classSectionId);
-        const courseIdNum = Number(courseId);
+        const classSectionWhere = { classSectionsId };
+        if (courseId != null) {
+            classSectionWhere.courseId = Number(courseId);
+        }
+        if (batchId != null) {
+            classSectionWhere.batchId = Number(batchId);
+        }
+        if (options.year != null) {
+            classSectionWhere.year = Number(options.year);
+        }
 
         const classSection = await scoped(model.classSectionModel).findOne({
-            where: { classSectionsId, courseId: courseIdNum },
+            where: classSectionWhere,
             attributes: [
                 'classSectionsId',
                 'courseId',
                 'academicYearId',
+                'batchId',
                 'section',
                 'expectedCapacity',
                 'year',
             ],
-            include: [classSectionTermsInclude()],
+            include: [
+                classSectionTermsInclude(),
+                {
+                    model: model.batchModel,
+                    as: 'batch',
+                    attributes: ['batchId', 'batch'],
+                },
+            ],
         });
 
         if (!classSection) {
@@ -2219,6 +2262,7 @@ export async function getClassSectionRecord(courseId, classSectionId) {
         }
 
         const plainSection = classSection.get ? classSection.get({ plain: true }) : classSection;
+        const resolvedCourseId = Number(courseId || plainSection.courseId);
         const termRows = plainSection.classSectionTerms ?? [];
         const termIds = [];
 
@@ -2229,13 +2273,21 @@ export async function getClassSectionRecord(courseId, classSectionId) {
         }
 
         let student = [];
+        let totalStudentCount = 0;
+
+        const pageNum = options.page ? Number(options.page) : null;
+        const limitNum = options.limit ? Number(options.limit) : null;
 
         if (termIds.length) {
-            student = await scoped(model.studentModel).findAll({
-                where: {
-                    courseId: courseIdNum,
-                    classSectionTermId: { [Op.in]: termIds },
-                },
+            const studentWhere = {
+                classSectionTermId: { [Op.in]: termIds },
+            };
+            if (resolvedCourseId) {
+                studentWhere.courseId = resolvedCourseId;
+            }
+
+            const queryOpts = {
+                where: studentWhere,
                 attributes: [
                     'studentId',
                     'firstName',
@@ -2257,7 +2309,22 @@ export async function getClassSectionRecord(courseId, classSectionId) {
                     }),
                 ],
                 order: [['studentId', 'ASC']],
-            });
+            };
+
+            if (pageNum && limitNum) {
+                totalStudentCount = await scoped(model.studentModel).count({
+                    where: studentWhere,
+                    include: queryOpts.include,
+                    distinct: true,
+                });
+                queryOpts.limit = limitNum;
+                queryOpts.offset = (pageNum - 1) * limitNum;
+            }
+
+            student = await scoped(model.studentModel).findAll(queryOpts);
+            if (!pageNum || !limitNum) {
+                totalStudentCount = student.length;
+            }
         }
 
         const teacher = await model.teacherSectionMappingModel.findAll({
@@ -2296,6 +2363,9 @@ export async function getClassSectionRecord(courseId, classSectionId) {
             student,
             teacher,
             termRows,
+            totalStudentCount,
+            page: pageNum,
+            limit: limitNum,
         };
     } catch (error) {
         console.error('Error in getting class record details:', error);
@@ -2541,5 +2611,37 @@ export async function getStudentsWithAnswerSheetStatus(sessionId, courseId, term
         order: [["firstName", "ASC"], ["studentId", "ASC"]],
     });
 }
+
+export async function countStudentCountsByBatches(allBatchIds) {
+    if (!allBatchIds || allBatchIds.length === 0) return new Map();
+    const counts = await scoped(model.studentModel).findAll({
+        where: { batchId: { [Op.in]: allBatchIds } },
+        attributes: ['batchId', [Sequelize.fn('COUNT', Sequelize.col('student_id')), 'total']],
+        group: ['batchId'],
+        raw: true,
+    });
+    const map = new Map();
+    for (const c of counts) {
+        map.set(Number(c.batchId), Number(c.total || 0));
+    }
+    return map;
+}
+
+export async function countStudentsInActiveYearClassSections(batchId, classSectionIdsInCurrentYear) {
+    if (!classSectionIdsInCurrentYear || classSectionIdsInCurrentYear.length === 0) return 0;
+    return await scoped(model.studentModel).count({
+        where: { batchId },
+        include: [
+            {
+                model: model.classSectionTermModel,
+                as: 'studentClassSectionTerm',
+                required: true,
+                where: { classSectionsId: { [Op.in]: classSectionIdsInCurrentYear } },
+            },
+        ],
+    });
+}
+
+
 
 

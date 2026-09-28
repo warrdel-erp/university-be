@@ -44,7 +44,7 @@ import {
 } from "../utility/attendancePlacement.js";
 
 function normalizeAffiliatedUniversityId(value) {
-  if (value == null || value === '') return null;
+  if (value == null || value === "") return null;
   const n = Number(value);
   return Number.isInteger(n) && n > 0 ? n : null;
 }
@@ -72,7 +72,10 @@ function buildStudentRowPayload(info) {
   return studentRow;
 }
 
-async function resolveAcademicYearIdForClassMapping({ academicYearId, sessionId }) {
+async function resolveAcademicYearIdForClassMapping({
+  academicYearId,
+  sessionId,
+}) {
   if (academicYearId != null) return academicYearId;
   if (!sessionId) return null;
   const session = await model.sessionModel.findByPk(sessionId, {
@@ -99,8 +102,14 @@ function toEntranceDetailRow(detail = {}) {
   };
 }
 
-async function resolveClassSectionPlacementFromTermId(classSectionTermId, options = {}) {
-  const termRow = await findClassSectionTermById(Number(classSectionTermId), options);
+async function resolveClassSectionPlacementFromTermId(
+  classSectionTermId,
+  options = {},
+) {
+  const termRow = await findClassSectionTermById(
+    Number(classSectionTermId),
+    options,
+  );
   if (!termRow) return null;
 
   const plain = termRow.get ? termRow.get({ plain: true }) : termRow;
@@ -117,7 +126,7 @@ async function resolveClassSectionPlacementFromTermId(classSectionTermId, option
 }
 
 async function resolveClassSectionTermIdForStudent(info, options = {}) {
-  if (info.classSectionTermId == null || info.classSectionTermId === '') {
+  if (info.classSectionTermId == null || info.classSectionTermId === "") {
     return null;
   }
 
@@ -126,7 +135,7 @@ async function resolveClassSectionTermIdForStudent(info, options = {}) {
     options,
   );
   if (!placement) {
-    throw new Error('classSectionTermId not found');
+    throw new Error("classSectionTermId not found");
   }
   return placement.classSectionTermId;
 }
@@ -172,6 +181,73 @@ export async function addStudent(
     }
 
     // Scholar number
+    const classSectionTermId = Number(info.classSectionTermId);
+    if (!classSectionTermId) {
+      throw new Error("classSectionTermId is required");
+    }
+    const termRow = await findClassSectionTermById(classSectionTermId, {
+      transaction,
+    });
+    if (!termRow) {
+      throw new Error("classSectionTermId not found");
+    }
+    info.classSectionTermId = classSectionTermId;
+
+    const termPlain = termRow.get ? termRow.get({ plain: true }) : termRow;
+    const classSection = termPlain.classSection;
+    const historyClassSectionsId =
+      termPlain.classSectionsId ?? classSection?.classSectionsId ?? null;
+
+    if (termPlain.term != null && info.term == null) {
+      info.term = Number(termPlain.term);
+    }
+    if (historyClassSectionsId != null) {
+      if (info.classSectionsId == null)
+        info.classSectionsId = historyClassSectionsId;
+      if (info.classSectionId == null)
+        info.classSectionId = historyClassSectionsId;
+    }
+
+    if (classSection) {
+      const batch = classSection.batch;
+      const session = batch?.session;
+
+      const resolvedBatchId = batch?.batchId;
+      const resolvedSessionId = batch?.sessionId;
+      const resolvedCourseId = session?.courseId;
+      const resolvedAcademicYearId = session?.academicYearId;
+
+      if (!info.batchId && resolvedBatchId) {
+        info.batchId = Number(resolvedBatchId);
+      }
+      if (!info.sessionId && resolvedSessionId) {
+        info.sessionId = Number(resolvedSessionId);
+      }
+      if (!info.courseId && resolvedCourseId) {
+        info.courseId = Number(resolvedCourseId);
+      }
+      if (!info.academicYearId && resolvedAcademicYearId) {
+        info.academicYearId = Number(resolvedAcademicYearId);
+      }
+    }
+
+    if (info.courseId && !info.courseLevelId) {
+      const courseRecord = await model.courseModel.findByPk(info.courseId, {
+        attributes: ["course_levelId"],
+        transaction,
+      });
+      if (courseRecord?.course_levelId) {
+        info.courseLevelId = Number(courseRecord.course_levelId);
+      }
+    }
+
+    if (!info.academicYearId && (sessionId || info.sessionId)) {
+      info.academicYearId = await resolveAcademicYearIdForClassMapping({
+        academicYearId,
+        sessionId: sessionId ?? info.sessionId,
+      });
+    }
+
     if (!info.scholarNumber) {
       info.scholarNumber = await generateScholarNumber(
         info.courseId,
@@ -182,28 +258,18 @@ export async function addStudent(
     }
     info.email = info.email.toLowerCase();
     info.createdBy = createdBy;
-    info.academicYearId = academicYearId ?? info.academicYearId;
 
-    const classSectionTermId = Number(info.classSectionTermId);
-    if (!classSectionTermId) {
-      throw new Error('classSectionTermId is required');
-    }
-    const termRow = await findClassSectionTermById(classSectionTermId, { transaction });
-    if (!termRow) {
-      throw new Error('classSectionTermId not found');
-    }
-    info.classSectionTermId = classSectionTermId;
-
-    const termPlain = termRow.get ? termRow.get({ plain: true }) : termRow;
-    const historyClassSectionsId =
-      termPlain.classSectionsId ?? termPlain.classSection?.classSectionsId ?? null;
-
-    info.affiliatedUniversityId = normalizeAffiliatedUniversityId(info.affiliatedUniversityId);
+    info.affiliatedUniversityId = normalizeAffiliatedUniversityId(
+      info.affiliatedUniversityId,
+    );
 
     const studentPayload = buildStudentRowPayload(info);
 
     // Save student information
-    const student = await studentRepository.addStudent(studentPayload, transaction);
+    const student = await studentRepository.addStudent(
+      studentPayload,
+      transaction,
+    );
     const studentId = student.dataValues.studentId;
 
     const { email, phoneNumber, mobileNumber, scholarNumber } =
@@ -220,14 +286,15 @@ export async function addStudent(
       roleId,
     };
 
-    const mapperPayload = await studentRepository.buildClassStudentMapperCreatePayload(
-      {
-        studentId,
-        createdBy,
-        classSectionTermId: studentPayload.classSectionTermId,
-      },
-      transaction,
-    );
+    const mapperPayload =
+      await studentRepository.buildClassStudentMapperCreatePayload(
+        {
+          studentId,
+          createdBy,
+          classSectionTermId: studentPayload.classSectionTermId,
+        },
+        transaction,
+      );
     const mapperAcademicYearId = mapperPayload.academicYearId;
     const result = await studentRepository.sectionStudentMapping(
       mapperPayload,
@@ -249,7 +316,10 @@ export async function addStudent(
     }
     //  entranceDetails — shape validated in route Zod schema
     let entranceDetails = [];
-    if (Array.isArray(info.entranceDetails) && info.entranceDetails.length > 0) {
+    if (
+      Array.isArray(info.entranceDetails) &&
+      info.entranceDetails.length > 0
+    ) {
       entranceDetails = info.entranceDetails.map((detail) => ({
         ...toEntranceDetailRow(detail),
         studentId,
@@ -316,7 +386,9 @@ export async function addStudent(
     await transaction.commit();
 
     const plainStudent =
-      typeof student.get === "function" ? student.get({ plain: true }) : student;
+      typeof student.get === "function"
+        ? student.get({ plain: true })
+        : student;
 
     return {
       studentId: plainStudent.studentId,
@@ -345,8 +417,6 @@ export async function addStudent(
     throw error;
   }
 }
-
-
 
 async function assertStudentEnrollNumberAvailable(enrollNumber) {
   if (!enrollNumber) return;
@@ -399,7 +469,12 @@ export async function addStudentWithFeePlanProfile({ info, files, createdBy }) {
   );
 }
 
-async function generateScholarNumber(courseId, instituteId, sessionId, admissionDate) {
+async function generateScholarNumber(
+  courseId,
+  instituteId,
+  sessionId,
+  admissionDate,
+) {
   const getCourseCodeDetail = await getCourseCode(courseId);
   const getInstitueCodeDetail = await getInstituteCode(instituteId);
   const courseCode = getCourseCodeDetail?.get("courseCode");
@@ -424,7 +499,8 @@ async function generateScholarNumber(courseId, instituteId, sessionId, admission
     }
   }
   if (!admissionYear && sessionId != null) {
-    const sessionYearSuffix = await sessionRepository.getSessionYearSuffix(sessionId);
+    const sessionYearSuffix =
+      await sessionRepository.getSessionYearSuffix(sessionId);
     if (sessionYearSuffix) {
       admissionYear = `20${sessionYearSuffix}`;
     }
@@ -656,14 +732,14 @@ export async function importStudentData(excelData, data) {
       //  Step 7: Insert student with scholar number
       const classSectionTermId = Number(convertedData.classSectionTermId);
       if (!classSectionTermId) {
-        throw new Error('classSectionTermId is required for import');
+        throw new Error("classSectionTermId is required for import");
       }
       const placement = await resolveClassSectionPlacementFromTermId(
         classSectionTermId,
         { transaction },
       );
       if (!placement) {
-        throw new Error('classSectionTermId not found');
+        throw new Error("classSectionTermId not found");
       }
       convertedData.classSectionTermId = placement.classSectionTermId;
 
@@ -1002,13 +1078,16 @@ function pickStudentUpdatePayload(info) {
   for (const key of STUDENT_SCALAR_UPDATE_FIELDS) {
     if (!(key in info)) continue;
     let value = info[key];
-    if (key === 'affiliatedUniversityId') {
+    if (key === "affiliatedUniversityId") {
       payload.affiliatedUniversityId = normalizeAffiliatedUniversityId(value);
       continue;
     }
     if (value === undefined) continue;
     if (typeof value === "string" && value.trim() === "") continue;
-    if (STUDENT_UPDATE_OPTIONAL_FK_KEYS.has(key) && (value === null || value === 0)) {
+    if (
+      STUDENT_UPDATE_OPTIONAL_FK_KEYS.has(key) &&
+      (value === null || value === 0)
+    ) {
       continue;
     }
     const shouldCoerceNumber =
@@ -1060,14 +1139,7 @@ async function applyStudentMetaDataUpdates(studentId, info, transaction) {
   }
 }
 
-
-
-export async function updateStudentDetails(
-  StudentId,
-  info,
-  files,
-  createdBy,
-) {
+export async function updateStudentDetails(StudentId, info, files, createdBy) {
   const transaction = await sequelize.transaction();
 
   try {
@@ -1083,13 +1155,11 @@ export async function updateStudentDetails(
     }
 
     if ("classSectionTermId" in info) {
-      if (info.classSectionTermId == null || info.classSectionTermId === '') {
+      if (info.classSectionTermId == null || info.classSectionTermId === "") {
         delete info.classSectionTermId;
       } else {
-        const resolvedClassSectionTermId = await resolveClassSectionTermIdForStudent(
-          info,
-          { transaction },
-        );
+        const resolvedClassSectionTermId =
+          await resolveClassSectionTermIdForStudent(info, { transaction });
         info.classSectionTermId = resolvedClassSectionTermId;
       }
     }
@@ -1251,8 +1321,15 @@ export async function deleteStudentDetail(studentId) {
   }
 }
 
-export async function getEmptyEnrollNumber(academicYearId, { page = 1, limit = 10, search, batchId, courseId, sessionId } = {}) {
-  return await studentRepository.getEmptyEnrollNumber(academicYearId, { page, limit, search, batchId, courseId, sessionId });
+export async function getEmptyEnrollNumber(
+  academicYearId,
+  { page = 1, limit = 10, search } = {},
+) {
+  return await studentRepository.getEmptyEnrollNumber(academicYearId, {
+    page,
+    limit,
+    search,
+  });
 }
 
 export async function studentCourseMapping(data) {
@@ -1273,13 +1350,12 @@ export async function sectionStudentMapping(data, createdBy) {
     const results = [];
 
     for (const id of studentIds) {
-      const entryData = await studentRepository.buildClassStudentMapperCreatePayload(
-        {
+      const entryData =
+        await studentRepository.buildClassStudentMapperCreatePayload({
           studentId: id,
           classSectionTermId,
           createdBy,
-        },
-      );
+        });
       const result = await studentRepository.sectionStudentMapping(entryData);
 
       const placement = await resolveClassSectionPlacementFromTermId(
@@ -1309,7 +1385,12 @@ export async function sectionStudentMapping(data, createdBy) {
   }
 }
 
-export async function getSectionStudentMapping(classSectionTermId, academicYearId, term, { page = 1, limit = 10, search, batchId } = {}) {
+export async function getSectionStudentMapping(
+  classSectionTermId,
+  academicYearId,
+  term,
+  { page = 1, limit = 10, search } = {},
+) {
   const data = await studentRepository.getSectionStudentMapping(
     classSectionTermId,
     academicYearId,
@@ -1332,14 +1413,24 @@ function asPlain(record) {
   return record.get ? record.get({ plain: true }) : record;
 }
 
-async function getNextPromotionContext({ course, currentTerm, sourceacademicYearId }) {
+async function getNextPromotionContext({
+  course,
+  currentTerm,
+  sourceacademicYearId,
+}) {
   const termsPerYear = resolveTermsPerYear(course);
   if (!termsPerYear) {
-    throw new Error(`Unsupported or missing term type: ${course.termType || "unknown"}`);
+    throw new Error(
+      `Unsupported or missing term type: ${course.termType || "unknown"}`,
+    );
   }
 
   const totalTerms = resolveTotalTerms(course);
-  const promotionStep = calculateNextPromotionTerm(currentTerm, termsPerYear, totalTerms);
+  const promotionStep = calculateNextPromotionTerm(
+    currentTerm,
+    termsPerYear,
+    totalTerms,
+  );
 
   if (!promotionStep) {
     return {
@@ -1353,7 +1444,8 @@ async function getNextPromotionContext({ course, currentTerm, sourceacademicYear
 
   let targetacademicYearId = sourceacademicYearId;
   if (promotionStep.crossYear) {
-    const nextYear = await studentRepository.getNextAcedmicYearAfter(sourceacademicYearId);
+    const nextYear =
+      await studentRepository.getNextAcedmicYearAfter(sourceacademicYearId);
     if (!nextYear) {
       throw new Error("Next academic year not found");
     }
@@ -1452,7 +1544,7 @@ async function mapPromotionClassSectionRow(row) {
 }
 
 function buildStudentName({ firstName, middleName, lastName }) {
-  return [firstName, middleName, lastName].filter(Boolean).join(' ').trim();
+  return [firstName, middleName, lastName].filter(Boolean).join(" ").trim();
 }
 
 function acedmicYearRef(academicYearId) {
@@ -1483,14 +1575,19 @@ function buildPromotionHistory(student) {
 
   for (const row of plain.sectionHistory ?? []) {
     const classSection = mapPromotionClassSection(row.classSection);
-    const termId = row.classSectionTermId ?? row.classSectionTerm?.classSectionTermId ?? null;
+    const termId =
+      row.classSectionTermId ??
+      row.classSectionTerm?.classSectionTermId ??
+      null;
     if (!classSection?.classSectionsId && !termId) {
       continue;
     }
-    const historyTerm = row.classSectionTerm?.term ?? classSection?.term ?? null;
-    const key = termId != null
-      ? `${termId}:${row.status}`
-      : `${classSection.classSectionsId}:${historyTerm}:${row.status}`;
+    const historyTerm =
+      row.classSectionTerm?.term ?? classSection?.term ?? null;
+    const key =
+      termId != null
+        ? `${termId}:${row.status}`
+        : `${classSection.classSectionsId}:${historyTerm}:${row.status}`;
     entries.set(key, {
       promotionHistoryId: row.id,
       status: row.status,
@@ -1501,17 +1598,22 @@ function buildPromotionHistory(student) {
   }
 
   const currentSection = mapPromotionClassSection(resolveStudentSection(plain));
-  const currentTermId = plain.classSectionTermId ?? plain.studentClassSectionTerm?.classSectionTermId ?? null;
+  const currentTermId =
+    plain.classSectionTermId ??
+    plain.studentClassSectionTerm?.classSectionTermId ??
+    null;
   if (currentSection?.classSectionsId || currentTermId) {
-    const key = currentTermId != null
-      ? `${currentTermId}:current`
-      : `${currentSection.classSectionsId}:${currentSection?.term ?? ''}:current`;
+    const key =
+      currentTermId != null
+        ? `${currentTermId}:current`
+        : `${currentSection.classSectionsId}:${currentSection?.term ?? ""}:current`;
     if (!entries.has(key)) {
       entries.set(key, {
         promotionHistoryId: null,
-        status: 'current',
+        status: "current",
         classSectionTermId: currentTermId,
-        term: plain.studentClassSectionTerm?.term ?? currentSection?.term ?? null,
+        term:
+          plain.studentClassSectionTerm?.term ?? currentSection?.term ?? null,
         classSection: currentSection,
       });
     }
@@ -1556,7 +1658,10 @@ function mapPromotionHistoryStudent(student) {
           classSectionTermId: plain.studentClassSectionTerm.classSectionTermId,
           term: plain.studentClassSectionTerm.term,
           termName: plain.course?.termType
-            ? buildTermName(plain.course.termType, plain.studentClassSectionTerm.term)
+            ? buildTermName(
+                plain.course.termType,
+                plain.studentClassSectionTerm.term,
+              )
             : null,
         }
       : null,
@@ -1610,9 +1715,10 @@ export async function getPromotionHistory(payload = {}) {
     payload.studentId != null ? Number(payload.studentId) : null;
 
   if (studentId) {
-    const student = await studentRepository.getPromotionStudentByStudentId(studentId);
+    const student =
+      await studentRepository.getPromotionStudentByStudentId(studentId);
     if (!student) {
-      const error = new Error('Student not found');
+      const error = new Error("Student not found");
       error.statusCode = 404;
       throw error;
     }
@@ -1717,7 +1823,11 @@ export async function getAvailablePromotionSections({
       };
     }
     sectionsTerm = promotionStep.nextTerm;
-  } else if (!finalTerm && promotionStep && requestedTerm === promotionStep.nextTerm) {
+  } else if (
+    !finalTerm &&
+    promotionStep &&
+    requestedTerm === promotionStep.nextTerm
+  ) {
     sectionsTerm = requestedTerm;
   } else {
     throw new Error(
@@ -1755,12 +1865,16 @@ export async function promoteStudent(data) {
 
   const targetClassSectionTermId = Number(data.classSectionTermId);
 
-  const studentDetail = await studentRepository.getStudentForPromate(data.studentId);
+  const studentDetail = await studentRepository.getStudentForPromate(
+    data.studentId,
+  );
   if (!studentDetail) {
     throw new Error("Student not found");
   }
 
-  const targetTermRow = await findClassSectionTermById(targetClassSectionTermId);
+  const targetTermRow = await findClassSectionTermById(
+    targetClassSectionTermId,
+  );
   if (!targetTermRow) {
     throw new Error("Target classSectionTermId not found");
   }
@@ -1777,7 +1891,8 @@ export async function promoteStudent(data) {
     throw new Error("Student current term could not be determined");
   }
   const currentTerm = Number(currentTermRow.term);
-  const currentSection = currentTermRow.classSection ?? resolveStudentSection(studentPlain);
+  const currentSection =
+    currentTermRow.classSection ?? resolveStudentSection(studentPlain);
 
   if (targetSection.instituteId !== studentPlain.instituteId) {
     throw new Error("Class section does not belong to the student's institute");
@@ -1798,11 +1913,12 @@ export async function promoteStudent(data) {
     throw new Error("Course not found");
   }
 
-  const { finalTerm, promotionStep, targetacademicYearId } = await getNextPromotionContext({
-    course,
-    currentTerm,
-    sourceacademicYearId: currentSection?.academicYearId,
-  });
+  const { finalTerm, promotionStep, targetacademicYearId } =
+    await getNextPromotionContext({
+      course,
+      currentTerm,
+      sourceacademicYearId: currentSection?.academicYearId,
+    });
 
   if (finalTerm) {
     throw new Error("Student has already reached the final term");
@@ -1815,7 +1931,9 @@ export async function promoteStudent(data) {
     );
   }
   if (Number(targetSection.academicYearId) !== Number(targetacademicYearId)) {
-    throw new Error("Target class section academic year is invalid for this promotion");
+    throw new Error(
+      "Target class section academic year is invalid for this promotion",
+    );
   }
 
   const currentClassSectionTermId = Number(studentPlain.classSectionTermId);
@@ -2110,7 +2228,9 @@ export async function getStudentSubject(studentId) {
 
 export async function getFeeDetailsByStudentId(studentId) {
   try {
-    if (!(await studentRepository.assertStudentInRequestAcademicYear(studentId))) {
+    if (
+      !(await studentRepository.assertStudentInRequestAcademicYear(studentId))
+    ) {
       return {
         studentInfo: {},
         personalInfo: {},
@@ -2150,7 +2270,10 @@ export async function getFeeDetailsByStudentId(studentId) {
       course: student.course?.courseName || "",
       scholarNumber: student.scholarNumber || "",
       classSection: resolveStudentSection(student)?.section || "",
-      term: student.studentClassSectionTerm?.term ?? resolveProgramTerm(resolveStudentSection(student)) ?? null,
+      term:
+        student.studentClassSectionTerm?.term ??
+        resolveProgramTerm(resolveStudentSection(student)) ??
+        null,
       academicYear: student.studentSession?.sessionAcedmic?.yearTitle || "",
     };
 
@@ -2359,8 +2482,10 @@ export async function getStudentTimeTable(studentId) {
 
   if (!student) return { formatted: [] };
 
-  const classSectionTermId = student.classSectionTermId
-    ?? (typeof student.get === "function" ? student.get({ plain: true }) : student).classSectionTermId;
+  const classSectionTermId =
+    student.classSectionTermId ??
+    (typeof student.get === "function" ? student.get({ plain: true }) : student)
+      .classSectionTermId;
 
   if (!classSectionTermId) {
     return { formatted: [] };
@@ -2405,8 +2530,8 @@ function formatStudentTimetable(allData) {
       } = period;
 
       const subjectData = isSameTeacher
-        ? (timeTableTeacherSubject?.employeeSubject?.subjects
-          ?? timeTableTeacherSubject?.employeeSubject)
+        ? (timeTableTeacherSubject?.employeeSubject?.subjects ??
+          timeTableTeacherSubject?.employeeSubject)
         : timeTableSubject;
 
       const teacherRow = timeTableCellTeachers?.[0];
@@ -2490,11 +2615,15 @@ function formatStudentTimetable(allData) {
 }
 
 function isGroupPeriodsEnabled(groupPeriods) {
-  return groupPeriods === true || groupPeriods === 'true' || groupPeriods === '1';
+  return (
+    groupPeriods === true || groupPeriods === "true" || groupPeriods === "1"
+  );
 }
 
 function buildProgramDetails(period, students = []) {
-  const studentWithCourse = students.find((s) => s.course && (s.course.courseName || s.course.courseId));
+  const studentWithCourse = students.find(
+    (s) => s.course && (s.course.courseName || s.course.courseId),
+  );
   const studentWithTerm = students.find((s) => s.studentClassSectionTerm);
 
   const termRow = studentWithTerm?.studentClassSectionTerm || {};
@@ -2502,15 +2631,16 @@ function buildProgramDetails(period, students = []) {
 
   const cell = period.timeTableCell || {};
   const routine = period.timeTableRoutine || cell.timeTableRoutine || {};
-  const academicGroupScope = period.academicGroup?.scope || routine.academicGroup?.scope || {};
+  const academicGroupScope =
+    period.academicGroup?.scope || routine.academicGroup?.scope || {};
 
   const course =
-    studentWithCourse?.course
-    || routine.timeTableCourse
-    || academicGroupScope.course
-    || period.timeTableCourse
-    || period.course
-    || {};
+    studentWithCourse?.course ||
+    routine.timeTableCourse ||
+    academicGroupScope.course ||
+    period.timeTableCourse ||
+    period.course ||
+    {};
 
   const subject = period.timeTableSubject || cell.timeTableSubject || {};
 
@@ -2521,17 +2651,33 @@ function buildProgramDetails(period, students = []) {
 
   return {
     classSectionsId:
-      period.classSectionsId
-      ?? termRow.classSectionsId
-      ?? section.classSectionsId
-      ?? scopeClassSectionTerm.classSectionsId
-      ?? scopeSection.classSectionsId
-      ?? routineTermRow.classSectionsId
-      ?? routineSection.classSectionsId
-      ?? null,
-    year: period.year ?? section.year ?? scopeSection.year ?? routineSection.year ?? null,
-    section: period.section ?? section.section ?? scopeSection.section ?? routineSection.section ?? null,
-    term: period.term ?? termRow.term ?? academicGroupScope.term ?? scopeClassSectionTerm.term ?? routineTermRow.term ?? null,
+      period.classSectionsId ??
+      termRow.classSectionsId ??
+      section.classSectionsId ??
+      scopeClassSectionTerm.classSectionsId ??
+      scopeSection.classSectionsId ??
+      routineTermRow.classSectionsId ??
+      routineSection.classSectionsId ??
+      null,
+    year:
+      period.year ??
+      section.year ??
+      scopeSection.year ??
+      routineSection.year ??
+      null,
+    section:
+      period.section ??
+      section.section ??
+      scopeSection.section ??
+      routineSection.section ??
+      null,
+    term:
+      period.term ??
+      termRow.term ??
+      academicGroupScope.term ??
+      scopeClassSectionTerm.term ??
+      routineTermRow.term ??
+      null,
     termType: course.termType ?? null,
     subjectId: subject.subjectId ?? null,
     subjectName: subject.subjectName ?? null,
@@ -2683,14 +2829,20 @@ export async function getStudentsByClassSection({
     }
 
     for (const period of resolvedPeriods) {
-      if (classSectionTermId && Number(period.classSectionTermId) !== Number(classSectionTermId)) {
+      if (
+        classSectionTermId &&
+        Number(period.classSectionTermId) !== Number(classSectionTermId)
+      ) {
         const error = new Error(
           "All timeTableCellDateWiseId values must belong to the same classSectionTermId when groupPeriods=true",
         );
         error.statusCode = 400;
         throw error;
       }
-      if (academicGroupId && Number(period.academicGroupId) !== Number(academicGroupId)) {
+      if (
+        academicGroupId &&
+        Number(period.academicGroupId) !== Number(academicGroupId)
+      ) {
         const error = new Error(
           "All timeTableCellDateWiseId values must belong to the same academicGroupId when groupPeriods=true",
         );
@@ -2719,7 +2871,9 @@ export async function getStudentsByClassSection({
     }
 
     return {
-      classSectionTermId: classSectionTermId ? Number(classSectionTermId) : null,
+      classSectionTermId: classSectionTermId
+        ? Number(classSectionTermId)
+        : null,
       academicGroupId: academicGroupId ? Number(academicGroupId) : null,
       academicGroup: resolvedPeriods[0].academicGroup ?? null,
       timeTableCellDateWiseId: dateWiseIds,
@@ -2742,9 +2896,10 @@ export async function getAllAnswerSheets(filters) {
 
   let schedule;
   try {
-    schedule = await studentRepository.getScopedExamScheduleForEvaluation(
-      examScheduleId,
-    );
+    schedule =
+      await studentRepository.getScopedExamScheduleForEvaluation(
+        examScheduleId,
+      );
   } catch (error) {
     const message = error.message || "Unable to load exam schedule";
     const scopedError = new Error(
@@ -2818,7 +2973,11 @@ export async function getStudentsByElectiveSubject({
           {
             model: model.electiveSubjectModel,
             as: "timeTableElective",
-            attributes: ["electiveSubjectId", "electiveSubjectName", "electiveSubjectCode"],
+            attributes: [
+              "electiveSubjectId",
+              "electiveSubjectName",
+              "electiveSubjectCode",
+            ],
           },
           {
             model: model.subjectModel,
@@ -2829,7 +2988,11 @@ export async function getStudentsByElectiveSubject({
             model: model.timeTableRoutineModel,
             as: "timeTableRoutine",
             include: [
-              { model: model.courseModel, as: "timeTableCourse", attributes: ["courseId", "courseName", "courseCode"] },
+              {
+                model: model.courseModel,
+                as: "timeTableCourse",
+                attributes: ["courseId", "courseName", "courseCode"],
+              },
             ],
           },
           {
@@ -2856,10 +3019,13 @@ export async function getStudentsByElectiveSubject({
   const firstRow = cellDateWiseRows[0];
   const plainFirst = firstRow.get({ plain: true });
   const cell = plainFirst.timeTableCell || {};
-  const electiveSubjectId = plainFirst.electiveSubjectId || cell.electiveSubjectId;
+  const electiveSubjectId =
+    plainFirst.electiveSubjectId || cell.electiveSubjectId;
 
   if (!electiveSubjectId) {
-    const error = new Error("This class schedule is not for an elective subject");
+    const error = new Error(
+      "This class schedule is not for an elective subject",
+    );
     error.statusCode = 400;
     throw error;
   }
@@ -2910,7 +3076,11 @@ export async function getStudentsByElectiveSubject({
               "timeTableCellId",
             ],
             where: attendanceWhere,
-            required: normalizedAttendanceStatus && normalizedAttendanceStatus.length > 0 ? true : false,
+            required:
+              normalizedAttendanceStatus &&
+              normalizedAttendanceStatus.length > 0
+                ? true
+                : false,
           },
         ],
       },
@@ -2921,7 +3091,8 @@ export async function getStudentsByElectiveSubject({
     .map((m) => (m.student ? m.student.get({ plain: true }) : null))
     .filter(Boolean);
 
-  const course = students[0]?.course || cell.timeTableRoutine?.timeTableCourse || {};
+  const course =
+    students[0]?.course || cell.timeTableRoutine?.timeTableCourse || {};
 
   return {
     classSectionTermId: null,
@@ -2929,7 +3100,10 @@ export async function getStudentsByElectiveSubject({
     timeTableCellDateWiseIds: dateWiseIds,
     date: plainFirst.date,
     day: cell.day,
-    period: cellDateWiseRows.map((r) => r.timeTableCell?.period).filter(Boolean).join(", "),
+    period: cellDateWiseRows
+      .map((r) => r.timeTableCell?.period)
+      .filter(Boolean)
+      .join(", "),
     groupPeriods: isGroupPeriodsEnabled(groupPeriods),
     isElective: true,
     subjectName: electiveSubject.electiveSubjectName || "Elective Subject",

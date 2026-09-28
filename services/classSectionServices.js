@@ -1,4 +1,7 @@
+import { Op } from 'sequelize';
 import sequelize from '../database/sequelizeConfig.js';
+import * as model from '../models/index.js';
+import { scoped } from '../utility/scoped.js';
 import * as classSectionTermRepository from '../repository/classSectionTermRepository.js';
 import * as batchRepository from '../repository/batchRepository.js';
 import * as courseRepository from '../repository/courseRepository.js';

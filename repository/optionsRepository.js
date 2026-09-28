@@ -3,8 +3,7 @@ import { Op, Sequelize } from 'sequelize';
 import { scoped, buildScope } from '../utility/scoped.js';
 import { ROLES } from '../const/roles.js';
 import { classSectionTermsInclude } from '../utility/classSectionIncludes.js';
-import { getAcademicYearId } from '../utility/requestContext.js';
-import * as acedmicYearRepository from './acedmicYearRepository.js';
+import { findCurriculumSubjectsForActiveYear } from '../utility/curriculumSubjectsByActiveYear.js';
 
 export async function getAffiliatedUniversityOptions() {
     return await scoped(model.affiliatedIniversityModel).findAll({
@@ -102,9 +101,9 @@ export async function getClassSectionOptions(courseId, term, sessionId, year, ba
             'year',
         ],
         where: {
-            ...(courseId && { courseId }),
-            ...(sessionId && { sessionId }),
-            ...(batchId && { batchId: Number(batchId) }),
+            ...(courseId != null && { courseId: Number(courseId) }),
+            ...(sessionId != null && { sessionId: Number(sessionId) }),
+            ...(batchId != null && { batchId: Number(batchId) }),
             ...(year != null && { year: Number(year) }),
         },
         include: [classSectionTermsInclude({ term, required: term != null })],
@@ -150,9 +149,18 @@ async function findSubjectIdsFromTeacherMapping(userId, courseId) {
     return subjectIds;
 }
 
-async function findSubjectIdsFromTimeTableCells(userId, courseId, term, sessionId) {
-    const sectionRequired = term != null || sessionId != null;
-    const classSectionRequired = sessionId != null;
+async function findSubjectIdsFromTimeTableCells(userId, courseId, term, sessionId, options = {}) {
+    const { batchId, year } = options;
+
+    const classSectionWhere = {
+        ...(sessionId != null && { sessionId: Number(sessionId) }),
+        ...(batchId != null && { batchId: Number(batchId) }),
+        ...(year != null && { year: Number(year) }),
+        ...(sessionId != null || batchId != null ? buildScope(model.classSectionModel) : {}),
+    };
+
+    const sectionRequired = term != null || sessionId != null || batchId != null || year != null;
+    const classSectionRequired = sessionId != null || batchId != null || year != null;
 
     const cellRows = await model.timeTableCellModel.findAll({
         attributes: ['timeTableCellId', 'subjectId'],
@@ -187,12 +195,9 @@ async function findSubjectIdsFromTimeTableCells(userId, courseId, term, sessionI
                     include: [{
                         model: model.classSectionModel,
                         as: 'classSection',
-                        attributes: ['classSectionsId', 'sessionId'],
+                        attributes: ['classSectionsId', 'sessionId', 'batchId', 'year'],
                         required: classSectionRequired,
-                        where: {
-                            ...(sessionId != null && { sessionId: Number(sessionId) }),
-                            ...(sessionId != null ? buildScope(model.classSectionModel) : {}),
-                        },
+                        where: classSectionWhere,
                     }],
                 }],
             },
@@ -213,38 +218,13 @@ async function findSubjectIdsFromTimeTableCells(userId, courseId, term, sessionI
     return subjectIds;
 }
 
-export async function getSubjectOptions(courseId, term, academicYearId, userId, sessionId = null, unmapped = false) {
-    let targetCurriculumIds = [];
-    let hasCurriculumFilter = false;
+export async function getSubjectOptions(courseId, term, academicYearId, userId, sessionId = null, unmapped = false, options = {}) {
+    const { batchId, year } = options;
 
-    let calendarYear = null;
-    let resolvedAcademicYearId = academicYearId || getAcademicYearId();
-
-    if (sessionId != null) {
-        const session = await scoped(model.sessionModel).findOne({
-            where: { sessionId: Number(sessionId) },
-            attributes: ['sessionId', 'academicYearId'],
-        });
-        if (session && session.academicYearId) {
-            resolvedAcademicYearId = session.academicYearId;
-        }
-    }
-
-    if (resolvedAcademicYearId) {
-        const ay = await acedmicYearRepository.getSingleacedmicYearDetails(resolvedAcademicYearId);
-        if (ay?.startingDate) {
-            calendarYear = Number(String(ay.startingDate).slice(0, 4));
-        }
-    }
-
-    let sessionBatchIds = null;
-    if (sessionId != null) {
-        const batches = await scoped(model.batchModel).findAll({
-            where: { sessionId: Number(sessionId) },
-            attributes: ['batchId'],
-        });
-        sessionBatchIds = batches.map((b) => b.batchId);
-    }
+    const subjectWhere = {
+        ...(courseId != null && { courseId: Number(courseId) }),
+        ...(term != null && { term: Number(term) }),
+    };
 
     const cbmWhere = {};
     if (sessionBatchIds != null) {
@@ -327,33 +307,75 @@ export async function getSubjectOptions(courseId, term, academicYearId, userId, 
     let allowedSubjectIds = subjectIdsFromCurriculum;
 
     if (userId != null) {
-        const mappedSubjectIds = await findSubjectIdsFromTeacherMapping(userId, courseId);
         const timetableSubjectIds = await findSubjectIdsFromTimeTableCells(
             userId,
             courseId,
             term,
             sessionId,
+            { batchId, year },
         );
 
-        const teacherSubjectIds = Array.from(new Set([...mappedSubjectIds, ...timetableSubjectIds]));
-
-        if (allowedSubjectIds != null) {
-            allowedSubjectIds = teacherSubjectIds.filter((id) => allowedSubjectIds.includes(id));
-        } else {
-            allowedSubjectIds = teacherSubjectIds;
+        if (timetableSubjectIds.length === 0) {
+            return [];
         }
     }
 
-    const whereClause = {
-        ...(courseId != null && { courseId: Number(courseId) }),
-        ...(unmapped && { term: null }),
-    };
-
-    if (allowedSubjectIds != null) {
-        if (allowedSubjectIds.length === 0) {
-            return [];
+        const queryIncludes = [];
+        if (batchId != null) {
+            queryIncludes.push({
+                model: model.curriculumSubjectTermMappingModel,
+                as: "curriculumTermMappings",
+                attributes: [],
+                required: true,
+                include: [
+                    {
+                        model: model.curriculumModel,
+                        as: "curriculum",
+                        attributes: [],
+                        required: true,
+                        include: [
+                            {
+                                model: model.curriculumBatchMappingModel,
+                                as: "batchMappings",
+                                attributes: [],
+                                required: true,
+                                where: { batchId: Number(batchId) },
+                            },
+                        ],
+                    },
+                ],
+            });
         }
-        whereClause.subjectId = { [Op.in]: allowedSubjectIds };
+
+        return scoped(model.subjectModel).findAll({
+            attributes: [['subject_name', 'label'], ['subject_id', 'value']],
+            include: queryIncludes,
+            where: {
+                subjectId: { [Op.in]: timetableSubjectIds },
+                ...subjectWhere,
+            },
+            group: ['subject.subject_id', 'subject.subject_name'],
+            order: [['subject_name', 'ASC']],
+        });
+    }
+
+    if (batchId != null || year != null || term != null || courseId != null) {
+        const { rows } = await findCurriculumSubjectsForActiveYear({
+            ...(courseId != null && { courseId: Number(courseId) }),
+            ...(term != null && { terms: [Number(term)] }),
+            ...(batchId != null && { batchIds: [Number(batchId)] }),
+            ...(academicYearId != null && { academicYearId: Number(academicYearId) }),
+        });
+
+        const seen = new Set();
+        return rows
+            .filter((r) => r.subject?.isActive !== false)
+            .map((r) => ({
+                label: r.subject.subjectName,
+                value: r.subject.subjectId,
+            }))
+            .filter((item) => !seen.has(item.value) && seen.add(item.value))
+            .sort((a, b) => a.label.localeCompare(b.label));
     }
 
     return scoped(model.subjectModel).findAll({

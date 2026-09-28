@@ -59,7 +59,7 @@ export async function getSpecializationOptions(courseId) {
     return await optionsRepository.getSpecializationOptions(courseId);
 }
 
-export async function getSubjectOptions(courseId, term, academicYearId, sessionId, userId, unmapped = false) {
+export async function getSubjectOptions(courseId, term, academicYearId, sessionId, userId, unmapped = false, options = {}) {
     let resolvedAcademicYearId = academicYearId;
 
     if (sessionId != null) {
@@ -71,16 +71,6 @@ export async function getSubjectOptions(courseId, term, academicYearId, sessionI
             throw new Error('Session not found');
         }
         resolvedAcademicYearId = session.academicYearId;
-
-        if (courseId != null) {
-            const mapping = await optionsRepository.findSessionCourseMappingByCourseAndSession(
-                Number(courseId),
-                Number(sessionId),
-            );
-            if (!mapping) {
-                throw new Error('Session is not mapped to this course');
-            }
-        }
     }
 
     return await optionsRepository.getSubjectOptions(
@@ -90,6 +80,7 @@ export async function getSubjectOptions(courseId, term, academicYearId, sessionI
         userId,
         sessionId,
         unmapped,
+        options,
     );
 }
 

@@ -24,6 +24,7 @@ const COURSE_ATTRS = [
   'universityId',
   'instituteId',
   'isActive',
+  'capacity',
 ];
 
 function sessionInclude() {
@@ -281,6 +282,7 @@ export async function findClassSectionBatchesOverview(filters = {}) {
               'courseDuration',
               'totalTerms',
               'termType',
+              'capacity',
             ],
             required: true,
             where: courseWhere,

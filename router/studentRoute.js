@@ -262,10 +262,10 @@ const addStudentBodySchema = z.object({
   campusId: positiveIntegerId,
   instituteId: positiveIntegerId,
   affiliatedUniversityId: nullableAffiliatedUniversityId.optional(),
-  courseLevelId: positiveIntegerId,
-  courseId: positiveIntegerId,
+  courseLevelId: optionalPositiveIntegerId,
+  courseId: optionalPositiveIntegerId,
   roleId: z.literal(ROLES.STUDENT).default(ROLES.STUDENT),
-  sessionId: positiveIntegerId,
+  sessionId: optionalPositiveIntegerId,
   email: z.string().trim().email(),
   firstName: z.string().trim().min(1),
   fatherName: z.string().trim().min(1),
@@ -279,7 +279,7 @@ const updateStudentDetailsParamsSchema = z.object({
   studentId: positiveIntegerId,
 });
 
-const updateStudentDetailsBodySchema = z.object(studentUpdateBodyFields);
+const updateStudentDetailsBodySchema = z.object({ ...studentSharedOptionalFields, ...studentUpdateBodyFields });
 
 const getAllAnswerSheetsQuerySchema = z.object({
   examScheduleId: z.coerce
@@ -350,6 +350,7 @@ const getAllStudentsQuerySchema = z.object({
   search: z.string().trim().optional(),
   courseId: optionalPositiveIntegerIdList,
   sessionId: optionalPositiveIntegerIdList,
+  batchId: optionalPositiveIntegerIdList,
   classSectionsId: optionalPositiveIntegerIdList,
   year: optionalPositiveIntegerIdList,
   term: optionalPositiveIntegerIdList,
