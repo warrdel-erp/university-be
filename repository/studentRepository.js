@@ -343,7 +343,6 @@ export async function getAllStudents({
     year,
     term,
     academicYearId,
-    batchId,
     excludeStudentIds,
     includeStudentIds,
 }) {
@@ -442,7 +441,6 @@ export async function getAllStudents({
         if (classSectionsId?.length) classSectionWhere.classSectionsId = { [Op.in]: classSectionsId.map(Number) };
         if (year?.length) classSectionWhere.year = { [Op.in]: year.map(Number) };
         if (academicYearId?.length) classSectionWhere.academicYearId = { [Op.in]: academicYearId.map(Number) };
-        if (batchId?.length) classSectionWhere.batchId = { [Op.in]: batchId.map(Number) };
 
         const hasTermFilter = Object.keys(classSectionTermWhere).length > 0;
         const hasSectionFilter = Object.keys(classSectionWhere).length > 0;
