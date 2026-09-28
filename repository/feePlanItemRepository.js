@@ -113,7 +113,7 @@ export async function findFeePlanBatchesOverview(filters = {}) {
     attributes: BATCH_ATTRS,
     include: [
       sessionCourseInclude(filters),
-      feePlanItemsInclude({ withSubItems: false }),
+      feePlanItemsInclude({ withSubItems: filters.withSubItems === true }),
     ],
     order: [
       [{ model: model.sessionModel, as: 'session' }, 'sessionName', 'ASC'],
@@ -340,6 +340,34 @@ export async function countRaisedInvoicesForFeePlanItemIds(feePlanItemIds, optio
   return scoped(model.studentFeeInvoiceModel).count({
     where: {
       feePlanItemId: { [Op.in]: feePlanItemIds },
+      status: 'generated',
+    },
+    transaction: options.transaction,
+  });
+}
+
+export async function findStudentsByBatchId(batchId, options = {}) {
+  return scoped(model.studentModel, { scopeConfig: { academicYear: false } }).findAll({
+    attributes: [
+      'studentId',
+      'firstName',
+      'middleName',
+      'lastName',
+      'scholarNumber',
+      'enrollNumber',
+      'batchId',
+    ],
+    where: { batchId: Number(batchId) },
+    order: [['firstName', 'ASC'], ['studentId', 'ASC']],
+    transaction: options.transaction,
+  });
+}
+
+export async function findRaisedInvoicesByFeePlanItemId(feePlanItemId, options = {}) {
+  return scoped(model.studentFeeInvoiceModel).findAll({
+    attributes: ['studentFeeInvoiceId', 'studentId', 'total', 'status'],
+    where: {
+      feePlanItemId: Number(feePlanItemId),
       status: 'generated',
     },
     transaction: options.transaction,

@@ -1,524 +1,269 @@
 {
   "info": {
-    "_postman_id": "fee-plan-item-batch-v1",
+    "_postman_id": "fee-plan-item-batch-billing-v2",
     "name": "univ-v2-fee-plan-item",
-    "description": "Fee types + batch-direct fee plans.\n\nMounts:\n- /feeTypeCategory\n- /feeTypeCatalog\n- /feePlanItem\n\nAuth: Bearer {{token}}\n\nDocs: docs/postman/FEE_PLAN_ITEM.md\n\nWorkflow:\n0) feeTypeCategory CRUD\n1) feeTypeCatalog CRUD\n2) GET /feePlanItem/batches\n3) GET /feePlanItem/batches/overview?batchId=\n4) GET /feePlanItem/batches/year?batchId=&year=\n5) GET /feePlanItem/batches/billing?batchId=&year=\n6) PATCH /feePlanItem/publish {batchId,year}\n7) POST/PATCH/DELETE /feePlanItem + subItem\n8) GET /feePlanItem/publishHistory",
+    "description": "Fee Plan Item & Student Fee Invoice Billing APIs.\n\nEndpoints:\n1) GET /studentFeeInvoice/batches — Billing batches overview grouped by course and session\n2) GET /feePlanItem/batches/billing — Detailed batch fee receipts billing breakdown by batchId & year\n3) GET /feePlanItem/single — Single fee plan item details with connected batch students & current term status\n4) GET /studentFeeInvoice/all — All student fee invoices list filtered by feePlanItemId, status & optional pagination\n5) POST /studentFeeInvoice — Generate fee invoice(s) for a single student, array of student IDs, or entire batch",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseurl", "value": "http://localhost:8080" },
-    { "key": "token", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlSWQiOjE1LCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInN0YXR1cyI6ImFjdGl2ZSIsInBob25lIjoiOTkyOTU1NTY0NCIsImVtYWlsIjoiYWFkaTI4eDZAZ21haWwuY29tIiwiaXNUZWFjaGVyIjpmYWxzZSwiY3JlYXRlZEF0IjoiMjAyNS0wOC0xM1QxNjo0ODo0Mi4wMDBaIiwidXBkYXRlZEF0IjoiMjAyNi0wOS0yMlQxMDo0NDoxNS4wMDBaIiwiZGVsZXRlZEF0IjpudWxsLCJkZWZhdWx0X3JvbGVfaWQiOjE1LCJpbnN0aXR1dGVOYW1lIjoiQWF5b2phbiBTY2hvb2wgb2YgQXJjaGl0ZWN0dXJlIiwiaWF0IjoxNzkwMDc3ODIwLCJleHAiOjE3OTI2Njk4MjB9.qe-ENzjK2YVd7Rp4Mg1RSuo7ylbykmzDiAknyzySPwA" },
-    { "key": "courseId", "value": "34" },
-    { "key": "sessionId", "value": "6" },
-    { "key": "search", "value": "" },
-    { "key": "status", "value": "" },
-    { "key": "batchId", "value": "1" },
-    { "key": "year", "value": "1" },
-    { "key": "feePlanItemId", "value": "1" },
-    { "key": "feePlanSubitemId", "value": "1" },
-    { "key": "feeTypeCategoryId", "value": "1" },
-    { "key": "feeTypeCatalogId", "value": "1" },
-    { "key": "feePlanPublishHistoryId", "value": "1" }
+    {
+      "key": "baseurl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlSWQiOjE1LCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInN0YXR1cyI6ImFjdGl2ZSIsInBob25lIjoiOTkyOTU1NTY0NCIsImVtYWlsIjoiYWFkaTI4eDZAZ21haWwuY29tIiwiaXNUZWFjaGVyIjpmYWxzZSwiY3JlYXRlZEF0IjoiMjAyNS0wOC0xM1QxNjo0ODo0Mi4wMDBaIiwidXBkYXRlZEF0IjoiMjAyNi0wOS0yMlQxMDo0NDoxNS4wMDBaIiwiZGVsZXRlZEF0IjpudWxsLCJkZWZhdWx0X3JvbGVfaWQiOjE1LCJpbnN0aXR1dGVOYW1lIjoiQWF5b2phbiBTY2hvb2wgb2YgQXJjaGl0ZWN0dXJlIiwiaWF0IjoxNzkwMDc3ODIwLCJleHAiOjE3OTI2Njk4MjB9.qe-ENzjK2YVd7Rp4Mg1RSuo7ylbykmzDiAknyzySPwA"
+    },
+    {
+      "key": "academicYearId",
+      "value": "59"
+    },
+    {
+      "key": "courseId",
+      "value": "34"
+    },
+    {
+      "key": "sessionId",
+      "value": "6"
+    },
+    {
+      "key": "batchId",
+      "value": "1"
+    },
+    {
+      "key": "year",
+      "value": "1"
+    },
+    {
+      "key": "feePlanItemId",
+      "value": "1"
+    },
+    {
+      "key": "studentId",
+      "value": "1"
+    },
+    {
+      "key": "page",
+      "value": "1"
+    },
+    {
+      "key": "limit",
+      "value": "10"
+    },
+    {
+      "key": "search",
+      "value": ""
+    },
+    {
+      "key": "status",
+      "value": "all"
+    }
   ],
   "item": [
     {
-      "name": "0. Fee type category",
-      "item": [
-        {
-          "name": "0.1 Create fee type category",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Miscellaneous\",\n  \"description\": \"Optional description\"\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/feeTypeCategory",
-              "host": ["{{baseurl}}"],
-              "path": ["feeTypeCategory"]
-            },
-            "description": "POST /feeTypeCategory\n\nCreates a fee type category.\n\nAuth: Bearer token\nPermission: FEES_TYPE_ADD\nHeaders: Authorization, Content-Type, Accept\n\nBody:\n- name (string, required)\n- description (string, optional, nullable)\n\nErrors: 400, 401, 403, 500"
+      "name": "1. Get Billing Batches Overview",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
           }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/studentFeeInvoice/batches?academicYearId={{academicYearId}}&courseId={{courseId}}&sessionId={{sessionId}}&search={{search}}&status={{status}}",
+          "host": ["{{baseurl}}"],
+          "path": ["studentFeeInvoice", "batches"],
+          "query": [
+            {
+              "key": "academicYearId",
+              "value": "{{academicYearId}}",
+              "description": "Optional Integer — Academic Year filter",
+              "disabled": true
+            },
+            {
+              "key": "courseId",
+              "value": "{{courseId}}",
+              "description": "Optional Integer — Course / Programme filter",
+              "disabled": true
+            },
+            {
+              "key": "sessionId",
+              "value": "{{sessionId}}",
+              "description": "Optional Integer — Session filter",
+              "disabled": true
+            },
+            {
+              "key": "search",
+              "value": "{{search}}",
+              "description": "Optional String — Course name / code / session / batch search",
+              "disabled": true
+            },
+            {
+              "key": "status",
+              "value": "{{status}}",
+              "description": "Optional Enum: Ready to Raise | Upcoming | Fully Billed | Not Configured",
+              "disabled": true
+            }
+          ]
         },
-        {
-          "name": "0.2 Get all fee type categories",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/feeTypeCategory",
-              "host": ["{{baseurl}}"],
-              "path": ["feeTypeCategory"]
-            },
-            "description": "GET /feeTypeCategory\n\nLists fee type categories for the institute.\n\nPermission: FEES_TYPE"
-          }
-        },
-        {
-          "name": "0.3 Get single fee type category",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/feeTypeCategory/single?feeTypeCategoryId={{feeTypeCategoryId}}",
-              "host": ["{{baseurl}}"],
-              "path": ["feeTypeCategory", "single"],
-              "query": [
-                { "key": "feeTypeCategoryId", "value": "{{feeTypeCategoryId}}", "description": "Required Integer" }
-              ]
-            },
-            "description": "GET /feeTypeCategory/single?feeTypeCategoryId=\n\nPermission: FEES_TYPE"
-          }
-        },
-        {
-          "name": "0.4 Update fee type category",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"feeTypeCategoryId\": {{feeTypeCategoryId}},\n  \"name\": \"Miscellaneous (updated)\",\n  \"description\": \"Updated description\"\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/feeTypeCategory",
-              "host": ["{{baseurl}}"],
-              "path": ["feeTypeCategory"]
-            },
-            "description": "PATCH /feeTypeCategory\n\nBody: feeTypeCategoryId (required) + at least one of name, description.\n\nPermission: FEES_TYPE_EDIT"
-          }
-        },
-        {
-          "name": "0.5 Delete fee type category",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/feeTypeCategory?feeTypeCategoryId={{feeTypeCategoryId}}",
-              "host": ["{{baseurl}}"],
-              "path": ["feeTypeCategory"],
-              "query": [
-                { "key": "feeTypeCategoryId", "value": "{{feeTypeCategoryId}}", "description": "Required Integer" }
-              ]
-            },
-            "description": "DELETE /feeTypeCategory?feeTypeCategoryId=\n\nPermission: FEES_TYPE_DELETE"
-          }
-        }
-      ]
+        "description": "GET /studentFeeInvoice/batches\n\nReturns billing batches overview grouped by course and session with student count, current year study status, next planned invoice, and fee receipts summary."
+      }
     },
     {
-      "name": "0b. Fee type catalog",
-      "item": [
-        {
-          "name": "0b.1 Create fee type catalog",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Tuition Fee\",\n  \"amount\": \"50000.00\",\n  \"feeTypeCategoryId\": {{feeTypeCategoryId}},\n  \"ledgerType\": \"Account Receivable\",\n  \"description\": null\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/feeTypeCatalog",
-              "host": ["{{baseurl}}"],
-              "path": ["feeTypeCatalog"]
-            },
-            "description": "POST /feeTypeCatalog\n\nCreates a catalog fee line used by fee_plan_sub_items.\n\nAuth: Bearer token\nPermission: FEES_TYPE_ADD\n\nBody:\n- name (string, required)\n- amount (string money, required e.g. \"50000.00\")\n- feeTypeCategoryId (integer, required)\n- ledgerType (enum, required): Account Receivable | Account Payable\n- description (string, optional, nullable)\n\nErrors: 400, 401, 403, 500"
+      "name": "2. Get Batch Billing Details",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
           }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/feePlanItem/batches/billing?batchId={{batchId}}&year={{year}}",
+          "host": ["{{baseurl}}"],
+          "path": ["feePlanItem", "batches", "billing"],
+          "query": [
+            {
+              "key": "batchId",
+              "value": "{{batchId}}",
+              "description": "Required Integer — Batch ID"
+            },
+            {
+              "key": "year",
+              "value": "{{year}}",
+              "description": "Required Integer — Fee plan year (1...courseDuration)"
+            }
+          ]
         },
-        {
-          "name": "0b.2 Get all fee type catalogs",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/feeTypeCatalog",
-              "host": ["{{baseurl}}"],
-              "path": ["feeTypeCatalog"]
-            },
-            "description": "GET /feeTypeCatalog\n\nLists fee type catalog lines for the institute.\n\nPermission: FEES_TYPE"
-          }
-        },
-        {
-          "name": "0b.3 Get single fee type catalog",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/feeTypeCatalog/single?feeTypeCatalogId={{feeTypeCatalogId}}",
-              "host": ["{{baseurl}}"],
-              "path": ["feeTypeCatalog", "single"],
-              "query": [
-                { "key": "feeTypeCatalogId", "value": "{{feeTypeCatalogId}}", "description": "Required Integer" }
-              ]
-            },
-            "description": "GET /feeTypeCatalog/single?feeTypeCatalogId=\n\nPermission: FEES_TYPE"
-          }
-        },
-        {
-          "name": "0b.4 Update fee type catalog",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"feeTypeCatalogId\": {{feeTypeCatalogId}},\n  \"amount\": \"55000.00\",\n  \"ledgerType\": \"Account Receivable\"\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/feeTypeCatalog",
-              "host": ["{{baseurl}}"],
-              "path": ["feeTypeCatalog"]
-            },
-            "description": "PATCH /feeTypeCatalog\n\nBody: feeTypeCatalogId (required) + at least one of name, description, amount, feeTypeCategoryId, ledgerType.\n\nledgerType enum: Account Receivable | Account Payable\n\nPermission: FEES_TYPE_EDIT"
-          }
-        },
-        {
-          "name": "0b.5 Delete fee type catalog",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/feeTypeCatalog?feeTypeCatalogId={{feeTypeCatalogId}}",
-              "host": ["{{baseurl}}"],
-              "path": ["feeTypeCatalog"],
-              "query": [
-                { "key": "feeTypeCatalogId", "value": "{{feeTypeCatalogId}}", "description": "Required Integer" }
-              ]
-            },
-            "description": "DELETE /feeTypeCatalog?feeTypeCatalogId=\n\nPermission: FEES_TYPE_DELETE"
-          }
-        }
-      ]
+        "description": "GET /feePlanItem/batches/billing?batchId=&year=\n\nReturns detailed fee receipts breakdown and student invoice status for a batch and study year."
+      }
     },
     {
-      "name": "1. Fee plan batches list",
-      "item": [
-        {
-          "name": "1.1 Get fee plan batches",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/feePlanItem/batches?courseId={{courseId}}&sessionId={{sessionId}}&search={{search}}&status={{status}}",
-              "host": ["{{baseurl}}"],
-              "path": ["feePlanItem", "batches"],
-              "query": [
-                { "key": "courseId", "value": "{{courseId}}", "description": "Optional Integer — programme filter", "disabled": true },
-                { "key": "sessionId", "value": "{{sessionId}}", "description": "Optional Integer — session filter", "disabled": true },
-                { "key": "search", "value": "{{search}}", "description": "Optional String — course / session / batch / plan name" },
-                { "key": "status", "value": "{{status}}", "description": "Optional Enum: Published | In Review | Draft | Setup Required", "disabled": true }
-              ]
-            },
-            "description": "GET /feePlanItem/batches — Fee Plans list UI grouped by programme+session.\n\nSee docs/postman/FEE_PLAN_ITEM.md"
+      "name": "3. Get Single Fee Plan Item Details",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
           }
-        }
-      ]
+        ],
+        "url": {
+          "raw": "{{baseurl}}/feePlanItem/single?feePlanItemId={{feePlanItemId}}&page={{page}}&limit={{limit}}",
+          "host": ["{{baseurl}}"],
+          "path": ["feePlanItem", "single"],
+          "query": [
+            {
+              "key": "feePlanItemId",
+              "value": "{{feePlanItemId}}",
+              "description": "Required Integer — Fee Plan Item ID"
+            },
+            {
+              "key": "page",
+              "value": "{{page}}",
+              "description": "Optional Integer — Page number",
+              "disabled": true
+            },
+            {
+              "key": "limit",
+              "value": "{{limit}}",
+              "description": "Optional Integer — Page size limit",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "GET /feePlanItem/single?feePlanItemId=&page=&limit=\n\nReturns basic details for a single fee plan item along with connected batch students, currentTerm, currentTermName, and optional pagination."
+      }
     },
     {
-      "name": "2. Batch overview",
-      "item": [
-        {
-          "name": "2.1 Get batch fee plan overview",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/feePlanItem/batches/overview?batchId={{batchId}}",
-              "host": ["{{baseurl}}"],
-              "path": ["feePlanItem", "batches", "overview"],
-              "query": [
-                { "key": "batchId", "value": "{{batchId}}", "description": "Required Integer — batch id" }
-              ]
-            },
-            "description": "GET /feePlanItem/batches/overview?batchId=\n\nHeader + programme fee summary + fee years table.\n\nSee docs/postman/FEE_PLAN_ITEM.md"
+      "name": "4. Generate Student Fee Invoice (Single / Bulk / Batch)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
           }
-        }
-      ]
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"feePlanItemId\": {{feePlanItemId}},\n  \"batchId\": {{batchId}}\n}"
+        },
+        "url": {
+          "raw": "{{baseurl}}/studentFeeInvoice",
+          "host": ["{{baseurl}}"],
+          "path": ["studentFeeInvoice"]
+        },
+        "description": "POST /studentFeeInvoice\n\nGenerates student fee invoices in status: generated and paymentStatus: unpaid.\n\nBody Examples:\n1) Batch-level Bulk: { \"feePlanItemId\": 1, \"batchId\": 12 }\n2) Student IDs Bulk: { \"feePlanItemId\": 1, \"studentIds\": [101, 102] }\n3) Single Student: { \"feePlanItemId\": 1, \"studentId\": 101 }"
+      }
     },
     {
-      "name": "3. Year fee receipts",
-      "item": [
-        {
-          "name": "3.1 Get batch fee plan by year",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/feePlanItem/batches/year?batchId={{batchId}}&year={{year}}",
-              "host": ["{{baseurl}}"],
-              "path": ["feePlanItem", "batches", "year"],
-              "query": [
-                { "key": "batchId", "value": "{{batchId}}", "description": "Required Integer — batch id" },
-                { "key": "year", "value": "{{year}}", "description": "Required Integer — programme year (1…courseDuration)" }
-              ]
-            },
-            "description": "GET /feePlanItem/batches/year?batchId=&year=\n\nPlanned fee receipts (fee_plan_item) for one year + sub-items.\n\nSee docs/postman/FEE_PLAN_ITEM.md"
+      "name": "4. Get All Student Fee Invoices",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
           }
-        }
-      ]
-    },
-    {
-      "name": "4. Billing",
-      "item": [
-        {
-          "name": "4.1 Get batch billing details",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/feePlanItem/batches/billing?batchId={{batchId}}&year={{year}}",
-              "host": ["{{baseurl}}"],
-              "path": ["feePlanItem", "batches", "billing"],
-              "query": [
-                { "key": "batchId", "value": "{{batchId}}", "description": "Required Integer — batch id" },
-                { "key": "year", "value": "{{year}}", "description": "Required Integer — fee year" }
-              ]
+        ],
+        "url": {
+          "raw": "{{baseurl}}/studentFeeInvoice/all?feePlanItemId={{feePlanItemId}}&status={{status}}&page={{page}}&limit={{limit}}",
+          "host": ["{{baseurl}}"],
+          "path": ["studentFeeInvoice", "all"],
+          "query": [
+            {
+              "key": "feePlanItemId",
+              "value": "{{feePlanItemId}}",
+              "description": "Optional Integer — Filter invoices by Fee Plan Item ID"
             },
-            "description": "GET /feePlanItem/batches/billing?batchId=&year=\n\nBilling UI: planned fee receipts with amount/student, expected students, and status.\n\nstatus enum: Ready to Raise | Upcoming | Due | Done\n\nSee docs/postman/FEE_PLAN_ITEM.md"
-          }
-        }
-      ]
-    },
-    {
-      "name": "5. Fee plan item CRUD",
-      "item": [
-        {
-          "name": "5.1 Create fee plan item + sub-items",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"batchId\": {{batchId}},\n  \"year\": {{year}},\n  \"name\": \"Admission / Semester I Fee\",\n  \"academicPeriod\": \"Semester I\",\n  \"createDate\": \"2026-07-01\",\n  \"dueDate\": \"2026-08-15\",\n  \"feePlanSubItems\": [\n    {\n      \"feeTypeCatalogId\": {{feeTypeCatalogId}},\n      \"amount\": \"50000.00\",\n      \"isMainSubItem\": true\n    }\n  ]\n}"
+            {
+              "key": "status",
+              "value": "{{status}}",
+              "description": "Optional Enum: all | pending | completed"
             },
-            "url": {
-              "raw": "{{baseurl}}/feePlanItem",
-              "host": ["{{baseurl}}"],
-              "path": ["feePlanItem"]
+            {
+              "key": "page",
+              "value": "{{page}}",
+              "description": "Optional Integer — Page number",
+              "disabled": true
             },
-            "description": "POST /feePlanItem\n\nCreates fee_plan_item + fee_plan_sub_items.\n\nPermission: FEES_PLAN_ADD\n\nSee docs/postman/FEE_PLAN_ITEM.md"
-          }
+            {
+              "key": "limit",
+              "value": "{{limit}}",
+              "description": "Optional Integer — Page size limit",
+              "disabled": true
+            }
+          ]
         },
-        {
-          "name": "5.2 Update fee plan item",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"feePlanItemId\": {{feePlanItemId}},\n  \"name\": \"Admission / Semester I Fee\",\n  \"academicPeriod\": \"Semester I\",\n  \"createDate\": \"2026-07-01\",\n  \"dueDate\": \"2026-08-15\",\n  \"year\": {{year}},\n  \"feePlanSubItems\": [\n    {\n      \"feeTypeCatalogId\": {{feeTypeCatalogId}},\n      \"amount\": \"55000.00\",\n      \"isMainSubItem\": true\n    }\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/feePlanItem",
-              "host": ["{{baseurl}}"],
-              "path": ["feePlanItem"]
-            },
-            "description": "PATCH /feePlanItem\n\nPermission: FEES_PLAN_EDIT\n\nSee docs/postman/FEE_PLAN_ITEM.md"
-          }
-        },
-        {
-          "name": "5.3 Delete fee plan item",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/feePlanItem?feePlanItemId={{feePlanItemId}}",
-              "host": ["{{baseurl}}"],
-              "path": ["feePlanItem"],
-              "query": [
-                { "key": "feePlanItemId", "value": "{{feePlanItemId}}", "description": "Required Integer" }
-              ]
-            },
-            "description": "DELETE /feePlanItem?feePlanItemId=\n\nPermission: FEES_PLAN_DELETE"
-          }
-        },
-        {
-          "name": "5.4 Add fee plan sub-item",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"feePlanItemId\": {{feePlanItemId}},\n  \"feeTypeCatalogId\": {{feeTypeCatalogId}},\n  \"amount\": \"5000.00\",\n  \"isMainSubItem\": false\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/feePlanItem/subItem",
-              "host": ["{{baseurl}}"],
-              "path": ["feePlanItem", "subItem"]
-            },
-            "description": "POST /feePlanItem/subItem\n\nPermission: FEES_PLAN_ADD"
-          }
-        },
-        {
-          "name": "5.5 Delete fee plan sub-item",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/feePlanItem/subItem?feePlanSubitemId={{feePlanSubitemId}}",
-              "host": ["{{baseurl}}"],
-              "path": ["feePlanItem", "subItem"],
-              "query": [
-                { "key": "feePlanSubitemId", "value": "{{feePlanSubitemId}}", "description": "Required Integer" }
-              ]
-            },
-            "description": "DELETE /feePlanItem/subItem?feePlanSubitemId=\n\nPermission: FEES_PLAN_DELETE"
-          }
-        }
-      ]
-    },
-    {
-      "name": "6. Publish",
-      "item": [
-        {
-          "name": "6.1 Publish fee plan year",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"batchId\": {{batchId}},\n  \"year\": {{year}}\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/feePlanItem/publish",
-              "host": ["{{baseurl}}"],
-              "path": ["feePlanItem", "publish"]
-            },
-            "description": "PATCH /feePlanItem/publish\n\nAPI Name: Publish Fee Plan Year\nMethod: PATCH\nEndpoint: /feePlanItem/publish\nAuth: Bearer token\nPermission: FEES_PLAN_PUBLISH\nHeaders: Authorization, Content-Type, Accept\n\nBody (required):\n- batchId (Integer)\n- year (Integer, 1…courseDuration)\n\nRules:\n- All fee_plan_item rows for batch+year must have ≥1 sub-item\n- Sets publish_status=published on those items\n- Appends fee_plan_publish_history row\n- Locks items from edit/delete until unpublished\n\nSuccess data: batchId, year, feePlanPublishHistoryId, publishStatus, publishedAt, publishedBy\n\nErrors: 400 (already published / missing components / year out of range), 401, 403, 404, 500\n\nSee docs/postman/FEE_PLAN_ITEM.md"
-
-          }
-        },
-        {
-          "name": "6.2 Unpublish fee plan year",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"batchId\": {{batchId}},\n  \"year\": {{year}}\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/feePlanItem/unpublish",
-              "host": ["{{baseurl}}"],
-              "path": ["feePlanItem", "unpublish"]
-            },
-            "description": "PATCH /feePlanItem/unpublish\n\nAPI Name: Unpublish Fee Plan Year\nMethod: PATCH\nEndpoint: /feePlanItem/unpublish\nAuth: Bearer token\nPermission: FEES_PLAN_PUBLISH\n\nBody: { batchId, year }\n\nBlocked if any student_fee_invoice (status=generated) exists for those items.\nSets publish_status=draft and appends history action=unpublish.\n\nErrors: 400 (not published / invoices exist), 401, 403, 404, 500\n\nSee docs/postman/FEE_PLAN_ITEM.md"
-
-          }
-        },
-        {
-          "name": "6.3 Get publish history",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/feePlanItem/publishHistory?batchId={{batchId}}&year={{year}}",
-              "host": ["{{baseurl}}"],
-              "path": ["feePlanItem", "publishHistory"],
-              "query": [
-                { "key": "batchId", "value": "{{batchId}}", "description": "Required" },
-                { "key": "year", "value": "{{year}}", "description": "Optional year filter" }
-              ]
-            },
-            "description": "GET /feePlanItem/publishHistory?batchId=&year=\n\nAPI Name: Get Fee Plan Publish History\nMethod: GET\nAuth: Bearer token\nPermission: FEES_PLAN\n\nQuery:\n- batchId (required Integer)\n- year (optional Integer)\n\nResponse data: { batchId, year, history[] }\nhistory[]: feePlanPublishHistoryId, batchId, year, action (publish|unpublish), publishedAt, publishedBy\n\nSee docs/postman/FEE_PLAN_ITEM.md"
-
-          }
-        },
-        {
-          "name": "6.4 Get publish history single",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/feePlanItem/publishHistory/single?feePlanPublishHistoryId={{feePlanPublishHistoryId}}",
-              "host": ["{{baseurl}}"],
-              "path": ["feePlanItem", "publishHistory", "single"],
-              "query": [
-                { "key": "feePlanPublishHistoryId", "value": "{{feePlanPublishHistoryId}}", "description": "History row id from publish response" }
-              ]
-            },
-            "description": "GET /feePlanItem/publishHistory/single?feePlanPublishHistoryId=\n\nAPI Name: Get Fee Plan Publish History Single\nMethod: GET\nAuth: Bearer token\nPermission: FEES_PLAN\n\nQuery: feePlanPublishHistoryId (required Integer)\n\nResponse: feePlanPublishHistoryId, batchId, year, action, publishedAt, publishedBy\n\nErrors: 400, 401, 403, 404, 500\n\nSee docs/postman/FEE_PLAN_ITEM.md"
-
-          }
-        }
-      ]
+        "description": "GET /studentFeeInvoice/all?feePlanItemId=&status=&page=&limit=\n\nReturns student fee invoices filtered by feePlanItemId and status with central header summary metrics (studentCount, invoicesCount, pendingInvoicesCount) and optional pagination."
+      }
     }
   ]
 }

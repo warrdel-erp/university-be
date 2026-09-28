@@ -717,9 +717,7 @@ export async function getInternalAssessmentById(internalAssessmentId) {
         attributes: [
           "sessionId",
           "sessionName",
-          "startingDate",
-          "endingDate",
-          ,
+          "academicYearId",
         ],
         required: false,
       },

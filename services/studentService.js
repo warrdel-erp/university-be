@@ -1395,7 +1395,7 @@ export async function getSectionStudentMapping(
     classSectionTermId,
     academicYearId,
     term,
-    { page, limit, search },
+    { page, limit, search, batchId },
   );
   return {
     ...data,
@@ -1733,6 +1733,7 @@ export async function getPromotionHistory(payload = {}) {
       limit,
       search: payload.search ?? payload.studentSearch,
       courseId: payload.courseId ?? payload.programCourseId,
+      batchId: payload.batchId,
       term:
         payload.term != null
           ? Number(payload.term)
@@ -1754,6 +1755,7 @@ export async function getPromotionStudentList(payload) {
     courseId: payload.courseId,
     search: payload.search,
     term: payload.term,
+    batchId: payload.batchId,
   });
   return {
     promotionStudents: result.data.students,

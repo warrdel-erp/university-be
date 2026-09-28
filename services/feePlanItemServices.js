@@ -1038,3 +1038,158 @@ export async function getFeePlanPublishHistoryById(feePlanPublishHistoryId) {
     publishedBy: plain.publishedBy,
   };
 }
+
+export async function getSingleFeePlanItemDetails(feePlanItemId, options = {}) {
+  const row = await repo.findFeePlanItemById(feePlanItemId, { withSubItems: true });
+  if (!row) {
+    httpError(`Fee plan item (ID: ${feePlanItemId}) not found`, 404);
+  }
+  const plainItem = row.get({ plain: true });
+
+  const [batchRow, academicCtx, studentRows, raisedInvoices] = await Promise.all([
+    repo.findBatchBasics(plainItem.batchId),
+    resolveActiveAcademicYearContext(),
+    repo.findStudentsByBatchId(plainItem.batchId),
+    repo.findRaisedInvoicesByFeePlanItemId(feePlanItemId),
+  ]);
+
+  if (!batchRow) {
+    httpError(`Batch (ID: ${plainItem.batchId}) not found for fee plan item`, 404);
+  }
+
+  const plainBatch = batchRow.get({ plain: true });
+  const { session } = plainBatch;
+  const course = session?.course || {};
+
+  const activeCalendarYear = Number(academicCtx.activeBatchYear);
+  const plainAcademicYear = academicCtx.academicYear?.get
+    ? academicCtx.academicYear.get({ plain: true })
+    : academicCtx.academicYear || {};
+
+  const academicYearLabel = `${activeCalendarYear}-${String(activeCalendarYear + 1).slice(-2)}`;
+  const academicYearTitle = plainAcademicYear.yearTitle || academicYearLabel;
+
+  const batchYear = Number(plainBatch.batch);
+  const courseDuration = Number(course.courseDuration) || 0;
+  const totalTerms = resolveTotalTerms(course);
+  const batchEndYear = batchYear + courseDuration;
+  const admissionBatchLabel = `${batchYear}-${String(batchEndYear).slice(-2)}`;
+  const batchAcademicYearsLabel = `${batchYear} - ${batchEndYear}`;
+
+  const currentStudyYear = activeCalendarYear - batchYear + 1;
+  const isYearWithinCourseDuration = currentStudyYear >= 1 && currentStudyYear <= courseDuration;
+  const currentTermsNumbers = isYearWithinCourseDuration ? termsForYear(currentStudyYear, course) : [];
+  const currentTerm = currentTermsNumbers[0] || null;
+  const currentTermName = currentTerm ? buildTermName(course.termType, currentTerm) : null;
+
+  const receiptAmount = sumSubItemsAmount(plainItem.feePlanSubItems);
+  const studentCount = studentRows.length;
+  const raisedInvoiceCount = raisedInvoices.length;
+
+  const todayDateStr = new Date().toISOString().slice(0, 10);
+  let status = "Not Configured";
+  if (studentCount > 0 && raisedInvoiceCount >= studentCount) {
+    status = "Raised";
+  } else if (!plainItem.createDate || plainItem.createDate <= todayDateStr) {
+    status = "Ready to Raise";
+  } else {
+    status = "Upcoming";
+  }
+
+  const raisedInvoiceMap = new Map();
+  for (const invoice of raisedInvoices) {
+    const plainInv = invoice.get ? invoice.get({ plain: true }) : invoice;
+    raisedInvoiceMap.set(Number(plainInv.studentId), plainInv);
+  }
+
+  const isPaginated = options.page != null || options.limit != null;
+  const totalRecords = studentRows.length;
+  let page = 1;
+  let limit = totalRecords;
+  let totalPages = 1;
+  let paginatedStudentRows = studentRows;
+
+  if (isPaginated) {
+    page = Math.max(1, Number(options.page) || 1);
+    limit = Math.max(1, Number(options.limit) || 10);
+    totalPages = Math.ceil(totalRecords / limit) || 1;
+    const offset = (page - 1) * limit;
+    paginatedStudentRows = studentRows.slice(offset, offset + limit);
+  }
+
+  const studentsList = paginatedStudentRows.map((st) => {
+    const plainSt = st.get ? st.get({ plain: true }) : st;
+    const fullName = [plainSt.firstName, plainSt.middleName, plainSt.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    const raisedInvoice = raisedInvoiceMap.get(Number(plainSt.studentId));
+
+    return {
+      studentId: plainSt.studentId,
+      firstName: plainSt.firstName,
+      middleName: plainSt.middleName || null,
+      lastName: plainSt.lastName || null,
+      fullName,
+      enrollNumber: plainSt.enrollNumber || null,
+      scholarNumber: plainSt.scholarNumber,
+      batchId: Number(plainSt.batchId),
+      batchYear,
+      currentStudyYear: isYearWithinCourseDuration ? currentStudyYear : null,
+      currentTerm,
+      currentTermName,
+      invoiceAmount: raisedInvoice ? toMoneyNumber(raisedInvoice.total) : receiptAmount,
+      isInvoiceRaised: !!raisedInvoice,
+      studentFeeInvoiceId: raisedInvoice ? raisedInvoice.studentFeeInvoiceId : null,
+      invoiceStatus: raisedInvoice ? "Raised" : "Pending",
+    };
+  });
+
+  const subItems = (plainItem.feePlanSubItems || []).map(mapSubItem);
+
+  return {
+    feePlanItemId: plainItem.feePlanItemId,
+    invoiceName: plainItem.name || plainItem.academicPeriod || "Fee Receipt",
+    academicPeriod: plainItem.academicPeriod,
+    createDate: plainItem.createDate,
+    dueDate: plainItem.dueDate,
+    year: plainItem.year,
+    publishStatus: plainItem.publishStatus,
+    amount: receiptAmount,
+    status,
+    studentCount,
+    raisedInvoiceCount,
+    course: {
+      courseId: course.courseId,
+      courseName: course.courseName,
+      courseCode: course.courseCode,
+      courseDuration,
+      totalTerms,
+      termType: course.termType,
+    },
+    session: {
+      sessionId: session?.sessionId,
+      sessionName: session?.sessionName,
+    },
+    batch: {
+      batchId: Number(plainBatch.batchId),
+      batchYear,
+      admissionBatch: admissionBatchLabel,
+      academicYears: batchAcademicYearsLabel,
+    },
+    activeAcademicYear: {
+      academicYearId: academicCtx.academicYearId,
+      academicYearLabel,
+      academicYearTitle,
+      activeCalendarYear,
+    },
+    subItems,
+    pagination: {
+      totalRecords,
+      totalPages,
+      currentPage: page,
+      pageSize: limit,
+    },
+    students: studentsList,
+  };
+}

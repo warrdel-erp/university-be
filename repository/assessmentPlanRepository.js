@@ -11,20 +11,6 @@ import {
   toIntegerNumber,
 } from "../utility/decimalMoney.js";
 
-function resolvePositiveInt(value, fallback) {
-  const parsed = toIntegerNumber(value);
-  return decimalGreaterThan(parsed, 0) ? parsed : fallback;
-}
-
-function decimalCeilDivide(numerator, denominator) {
-  const quotient = decimalDivide(numerator, denominator);
-  const floored = toIntegerNumber(quotient);
-  if (decimalGreaterThan(quotient, floored)) {
-    return decimalAdd(floored, 1);
-  }
-  return floored;
-}
-
 function resolveTermsForYearStatus(
   termMappings,
   activeBatchYear,
@@ -72,15 +58,6 @@ function intersectTermFilters(existingTerms, nextTerms) {
     }
   }
   return intersected;
-}
-
-function paginationMeta(count, pageNum, limitNum) {
-  return {
-    totalRecords: count,
-    totalPages: decimalCeilDivide(count, limitNum),
-    currentPage: pageNum,
-    pageSize: limitNum,
-  };
 }
 
 
@@ -195,7 +172,10 @@ export async function getAssessmentPlans({
   });
 
   return {
-    ...paginationMeta(count, pageNum, limitNum),
+    totalRecords: count,
+    totalPages: Math.ceil(count / limitNum),
+    currentPage: pageNum,
+    pageSize: limitNum,
     data: rows,
   };
 }
@@ -779,7 +759,10 @@ export async function findOverviewByCurriculumBatchMappingId({
   return {
     batchMapping: plainBatch,
     rows,
-    ...paginationMeta(count, pageNum, limitNum),
+    totalRecords: count,
+    totalPages: Math.ceil(count / limitNum),
+    currentPage: pageNum,
+    pageSize: limitNum,
   };
 }
 
@@ -824,7 +807,7 @@ export async function findSubjectForMapping(subjectId, courseId, options = {}) {
 }
 
 export async function findSessionCourseMapping(sessionId, courseId, options = {}) {
-  return await model.sessionCouseMappingModel.findOne({
+  return await model.sessionModel.findOne({
     where: {
       sessionId: Number(sessionId),
       courseId: Number(courseId),
@@ -1128,38 +1111,26 @@ export async function findCurriculumBatchCoursesWithSessions({
             required: true,
             include: [
               {
-                model: model.sessionCouseMappingModel,
-                as: "sessionCourseMappings",
+                model: model.sessionModel,
+                as: "sessions",
                 required: true,
-                attributes: ["sessionCourseMappingId", "sessionId", "courseId"],
+                attributes: ["sessionId", "sessionName", "academicYearId", "courseId"],
+                where: sessionWhere,
                 include: [
                   {
-                    model: model.sessionModel,
-                    as: "session",
+                    model: model.acedmicYearModel,
+                    as: "sessionAcedmic",
                     attributes: [
-                      "sessionId",
-                      "sessionName",
                       "academicYearId",
+                      "yearTitle",
+                      "startingDate",
+                      "endingDate",
+                      "isActive",
                     ],
                     required: true,
-                    where: sessionWhere,
-                    include: [
-                      {
-                        model: model.acedmicYearModel,
-                        as: "sessionAcedmic",
-                        attributes: [
-                          "academicYearId",
-                          "yearTitle",
-                          "startingDate",
-                          "endingDate",
-                          "isActive",
-                        ],
-                        required: true,
-                        where: academicYearId
-                          ? { academicYearId }
-                          : buildScope(model.acedmicYearModel),
-                      },
-                    ],
+                    where: academicYearId
+                      ? { academicYearId }
+                      : buildScope(model.acedmicYearModel),
                   },
                 ],
               },

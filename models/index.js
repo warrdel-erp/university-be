@@ -2788,6 +2788,15 @@ sessionCouseMappingModel.belongsTo(courseModel, {
   as: "courses",
 });
 
+courseModel.hasMany(sessionModel, {
+  foreignKey: "courseId",
+  as: "sessions",
+});
+sessionModel.belongsTo(courseModel, {
+  foreignKey: "courseId",
+  as: "course",
+});
+
 // feePlanTypeModel.belongsTo(feeTypeModel, { foreignKey: 'fee_type_id', as: 'feeType' });
 // feeTypeModel.hasMany(feePlanTypeModel, { foreignKey: 'fee_type_id', as: 'feeType' });
 
@@ -4607,10 +4616,8 @@ import sequelize from "../database/sequelizeConfig.js";
 // Session Batch Mapping Associations
 sessionModel.hasMany(batchModel, { foreignKey: 'session_id', as: 'batches' });
 batchModel.belongsTo(sessionModel, { foreignKey: 'session_id', as: 'session' });
-
-// Session Course Direct Association
-sessionModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'course' });
-courseModel.hasMany(sessionModel, { foreignKey: 'course_id', as: 'sessions' });
+sessionModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmic_year_id', as: 'acedmicYear' });
+acedmicYearModel.hasMany(sessionModel, { foreignKey: 'acedmic_year_id', as: 'sessions' });
 
 // Class Section to Session Batch Mapping
 classSectionModel.belongsTo(batchModel, { foreignKey: 'batch_id', as: 'batch' });
