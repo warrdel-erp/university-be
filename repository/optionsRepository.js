@@ -226,85 +226,9 @@ export async function getSubjectOptions(courseId, term, academicYearId, userId, 
         ...(term != null && { term: Number(term) }),
     };
 
-    const cbmWhere = {};
-    if (sessionBatchIds != null) {
-        if (sessionBatchIds.length === 0) {
-            return [];
-        }
-        cbmWhere.batchId = { [Op.in]: sessionBatchIds };
+    if (unmapped) {
+        subjectWhere.term = null;
     }
-
-    if (courseId != null) {
-        const curriculums = await scoped(model.curriculumModel).findAll({
-            where: { courseId: Number(courseId) },
-            attributes: ['curriculumId'],
-        });
-        const courseCurriculumIds = curriculums.map((c) => c.curriculumId);
-        if (courseCurriculumIds.length === 0) {
-            return [];
-        }
-        cbmWhere.curriculumId = { [Op.in]: courseCurriculumIds };
-    }
-
-    const batchMappings = await scoped(model.curriculumBatchMappingModel).findAll({
-        where: cbmWhere,
-        attributes: ['curriculumBatchMappingId', 'curriculumId', 'batchId'],
-    });
-
-    const cbmIds = batchMappings.map((m) => m.curriculumBatchMappingId);
-
-    if (cbmIds.length > 0) {
-        const termMappingWhere = {
-            curriculumBatchMappingId: { [Op.in]: cbmIds },
-        };
-        if (calendarYear) {
-            termMappingWhere.year = calendarYear;
-        }
-        if (term != null && !unmapped) {
-            termMappingWhere.term = Number(term);
-        }
-
-        const activeTermRows = await scoped(model.curriculumBatchTermMappingModel).findAll({
-            where: termMappingWhere,
-            attributes: ['curriculumBatchMappingId', 'term', 'year'],
-        });
-
-        if (activeTermRows.length > 0) {
-            const activeCbmIds = new Set(activeTermRows.map((r) => r.curriculumBatchMappingId));
-            const filteredMappings = batchMappings.filter((m) => activeCbmIds.has(m.curriculumBatchMappingId));
-            targetCurriculumIds = Array.from(new Set(filteredMappings.map((m) => m.curriculumId)));
-            hasCurriculumFilter = true;
-        } else {
-            targetCurriculumIds = Array.from(new Set(batchMappings.map((m) => m.curriculumId)));
-            hasCurriculumFilter = true;
-        }
-    } else if (courseId != null) {
-        const curriculums = await scoped(model.curriculumModel).findAll({
-            where: { courseId: Number(courseId) },
-            attributes: ['curriculumId'],
-        });
-        targetCurriculumIds = curriculums.map((c) => c.curriculumId);
-        hasCurriculumFilter = true;
-    }
-
-    let subjectIdsFromCurriculum = null;
-    if (hasCurriculumFilter || (term != null && !unmapped)) {
-        const termMappingWhere = {};
-        if (targetCurriculumIds.length > 0) {
-            termMappingWhere.curriculumId = { [Op.in]: targetCurriculumIds };
-        }
-        if (term != null && !unmapped) {
-            termMappingWhere.term = Number(term);
-        }
-
-        const termMappings = await scoped(model.curriculumSubjectTermMappingModel).findAll({
-            where: termMappingWhere,
-            attributes: ['subjectId'],
-        });
-        subjectIdsFromCurriculum = Array.from(new Set(termMappings.map((tm) => tm.subjectId)));
-    }
-
-    let allowedSubjectIds = subjectIdsFromCurriculum;
 
     if (userId != null) {
         const timetableSubjectIds = await findSubjectIdsFromTimeTableCells(
@@ -379,7 +303,7 @@ export async function getSubjectOptions(courseId, term, academicYearId, userId, 
 
     return scoped(model.subjectModel).findAll({
         attributes: [['subject_name', 'label'], ['subject_id', 'value']],
-        where: whereClause,
+        where: subjectWhere,
         order: [['subject_name', 'ASC']],
     });
 }

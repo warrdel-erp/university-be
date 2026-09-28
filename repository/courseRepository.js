@@ -276,25 +276,12 @@ export async function getCourseWithSessionsData(courseId) {
           required: false,
           include: [
             {
-              model: model.sessionModel,
-              as: 'session',
-              attributes: [
-                'sessionId',
-                'sessionName',
-                'academicYearId',
-              ],
-              where: buildScope(model.sessionModel),
-              required: true,
-              include: [
-                {
-                  model: model.classSectionModel,
-                  as: 'classSession',
-                  attributes: ['classSectionsId', 'section'],
-                  required: false,
-                  where: { courseId, ...classSectionScope },
-                  include: [classSectionTermsInclude()],
-                },
-              ],
+              model: model.classSectionModel,
+              as: 'classSession',
+              attributes: ['classSectionsId', 'section'],
+              required: false,
+              where: { courseId, ...classSectionScope },
+              include: [classSectionTermsInclude()],
             },
           ],
         },
