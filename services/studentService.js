@@ -422,10 +422,10 @@ async function assertStudentEnrollNumberAvailable(enrollNumber) {
   if (!enrollNumber) return;
   const existing =
     await studentRepository.findStudentByEnrollNumber(enrollNumber);
+  const existingVal = existing?.enrollNumber || existing?.dataValues?.enrollNumber;
   if (
-    existing &&
-    enrollNumber.toLowerCase() ===
-      existing.dataValues.enroll_number.toLowerCase()
+    existingVal &&
+    enrollNumber.toLowerCase() === existingVal.toLowerCase()
   ) {
     throw new Error("Enrollment number is already existing");
   }
@@ -1321,14 +1321,21 @@ export async function deleteStudentDetail(studentId) {
   }
 }
 
-export async function getEmptyEnrollNumber(
-  academicYearId,
-  { page = 1, limit = 10, search } = {},
-) {
-  return await studentRepository.getEmptyEnrollNumber(academicYearId, {
+export async function getEmptyEnrollNumber({
+  page = 1,
+  limit = 10,
+  search,
+  batchId,
+  courseId,
+  sessionId,
+} = {}) {
+  return await studentRepository.getEmptyEnrollNumber({
     page,
     limit,
     search,
+    batchId,
+    courseId,
+    sessionId,
   });
 }
 
