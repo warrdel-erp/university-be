@@ -318,7 +318,6 @@ export async function getSubjectOptions(courseId, term, academicYearId, userId, 
         if (timetableSubjectIds.length === 0) {
             return [];
         }
-    }
 
         const queryIncludes = [];
         if (batchId != null) {

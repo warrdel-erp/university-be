@@ -343,7 +343,6 @@ export async function getAllStudents({
     year,
     term,
     academicYearId,
-    batchId,
     excludeStudentIds,
     includeStudentIds,
 }) {
