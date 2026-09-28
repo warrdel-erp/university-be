@@ -653,11 +653,15 @@ export async function getClassSectionRecord(courseId, classSectionId, batchId, p
             employeeCode: t.employeeData?.employeeCode,
             departmentId: t.employeeData?.departmentId ?? null,
             dateOfBirth: t.employeeData?.dateOfBirth,
-            subjects: t.employeeData?.teacherEmployeeData?.map((sub) => ({
-                subjectName: sub.employeeSubject?.subjects?.subjectName,
-                subjectCode: sub.employeeSubject?.subjects?.subjectCode,
-                subjectType: sub.employeeSubject?.subjects?.subjectType,
-            })) || [],
+            subjects: (t.employeeData?.teacherEmployeeData ?? [])
+                .map((sub) => sub.employeeSubject)
+                .filter(Boolean)
+                .map((sub) => ({
+                    subjectId: sub.subjectId,
+                    subjectName: sub.subjectName,
+                    subjectCode: sub.subjectCode,
+                    subjectType: sub.subjectType,
+                })),
         })),
     };
 

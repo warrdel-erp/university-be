@@ -65,7 +65,7 @@ function whereEqualOrIn(value) {
     return { [Op.in]: ids };
 }
 
-function buildStudentListWhere(search, courseId, sessionId) {
+function buildStudentListWhere(search, courseId, sessionId, batchId) {
     const where = {};
 
     const courseFilter = whereEqualOrIn(courseId);
@@ -76,6 +76,11 @@ function buildStudentListWhere(search, courseId, sessionId) {
     const sessionFilter = whereEqualOrIn(sessionId);
     if (sessionFilter !== undefined) {
         where.sessionId = sessionFilter;
+    }
+
+    const batchFilter = whereEqualOrIn(batchId);
+    if (batchFilter !== undefined) {
+        where.batchId = batchFilter;
     }
 
     if (search) {
@@ -329,6 +334,7 @@ export async function getAllStudents({
     search,
     courseId,
     sessionId,
+    batchId,
     classSectionsId,
     year,
     term,
@@ -369,6 +375,11 @@ export async function getAllStudents({
             },
             studentClassSectionInclude,
             studentSessionWithAcademicYearInclude({ academicYearId: resolvedAcademicYearId }),
+            {
+                model: model.batchModel,
+                as: "batch",
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            },
             {
                 model: model.specializationModel,
                 as: "specialization",
@@ -417,7 +428,7 @@ export async function getAllStudents({
             },
         ];
 
-        const whereCondition = buildStudentListWhere(search, courseId, sessionId);
+        const whereCondition = buildStudentListWhere(search, courseId, sessionId, batchId);
 
         const classSectionTermWhere = {};
         if (term?.length) classSectionTermWhere.term = { [Op.in]: term.map(Number) };

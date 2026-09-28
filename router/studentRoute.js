@@ -274,7 +274,7 @@ const updateStudentDetailsParamsSchema = z.object({
   studentId: positiveIntegerId,
 });
 
-const updateStudentDetailsBodySchema = z.object(studentUpdateBodyFields);
+const updateStudentDetailsBodySchema = z.object({ ...studentSharedOptionalFields, ...studentUpdateBodyFields });
 
 const getAllAnswerSheetsQuerySchema = z.object({
   examScheduleId: z.coerce
@@ -344,6 +344,7 @@ const getAllStudentsQuerySchema = z.object({
   search: z.string().trim().optional(),
   courseId: optionalPositiveIntegerIdList,
   sessionId: optionalPositiveIntegerIdList,
+  batchId: optionalPositiveIntegerIdList,
   classSectionsId: optionalPositiveIntegerIdList,
   year: optionalPositiveIntegerIdList,
   term: optionalPositiveIntegerIdList,
