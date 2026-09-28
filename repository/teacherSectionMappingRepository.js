@@ -85,8 +85,6 @@ export async function getTeacherSectionMapping({
     limit = 20,
 } = {}) {
     try {
-        const universityId = getTenantStore().universityId;
-
         const classSectionWhere = {
             ...(sessionId && { sessionId: Number(sessionId) }),
             ...(batchId && { batchId: Number(batchId) }),
@@ -114,13 +112,6 @@ export async function getTeacherSectionMapping({
         }
 
         const include = [
-            {
-                model: model.userModel,
-                as: 'userTeacherSectionMapping',
-                attributes: ['universityId', 'userId'],
-                where: { universityId, ...buildScope(model.userModel) },
-                required: true,
-            },
             {
                 model: model.employeeModel,
                 as: 'employeeData',
@@ -172,7 +163,7 @@ export async function getTeacherSectionMapping({
         const offset = (page - 1) * limit;
         const queryOptions = {
             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-            ...(Object.keys(mappingWhere).length && { where: mappingWhere }),
+            where: mappingWhere,
             include,
             offset,
             limit,
@@ -190,7 +181,7 @@ export async function getTeacherSectionMapping({
             return plain;
         });
         const totalCount = await scoped(model.teacherSectionMappingModel).count({
-            ...(queryOptions.where && { where: queryOptions.where }),
+            where: mappingWhere,
             include,
             distinct: true,
             col: 'teacher_section_mapping_id',
