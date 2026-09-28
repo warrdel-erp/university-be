@@ -211,8 +211,8 @@ function getRequestAcademicYearId() {
 }
 
 function studentSessionWithAcademicYearInclude(options = {}) {
-    let academicYearId = options.academicYearId;
-    if (academicYearId == null) {
+    let academicYearId = options.filterAcademicYear === false ? null : options.academicYearId;
+    if (academicYearId === undefined) {
         academicYearId = getRequestAcademicYearId();
     }
 
@@ -1107,7 +1107,7 @@ export async function findStudentByEmail(email) {
 export async function findStudentByEnrollNumber(enrollNumber) {
     try {
         return await scoped(model.studentModel).findOne({
-            attributes: ["enroll_number"],
+            attributes: ["enrollNumber"],
             where: { enrollNumber },
         });
     } catch (error) {
@@ -1126,12 +1126,8 @@ export async function checkEnroll(enrollNumber) {
     return findStudentByEnrollNumber(enrollNumber);
 }
 
-export async function getEmptyEnrollNumber(academicYearId, { page = 1, limit = 10, search, batchId, courseId, sessionId } = {}) {
+export async function getEmptyEnrollNumber({ page = 1, limit = 10, search, batchId, courseId, sessionId } = {}) {
     try {
-        if (getRequestAcademicYearId() == null && academicYearId == null) {
-            return { result: [], totalCount: 0, page, limit, totalPages: 0 };
-        }
-
         const whereCondition = {
             enrollNumber: {
                 [Op.or]: [null, ''],
@@ -1139,15 +1135,29 @@ export async function getEmptyEnrollNumber(academicYearId, { page = 1, limit = 1
             ...buildStudentListWhere(search, courseId, sessionId, batchId),
         };
 
+        const sessionInclude = {
+            model: model.sessionModel,
+            as: 'studentSession',
+            attributes: studentSessionAttrs,
+            required: false,
+            include: [
+                {
+                    model: model.acedmicYearModel,
+                    as: 'sessionAcedmic',
+                    attributes: sessionYearAttrs,
+                    required: false,
+                },
+            ],
+        };
+
         const baseInclude = [
             studentClassSectionInclude,
-            studentSessionWithAcademicYearInclude({
-                academicYearId: academicYearId,
-            }),
+            sessionInclude,
             {
                 model: model.userModel,
                 as: "userStudent",
                 attributes: ["universityId", "userId"],
+                required: false,
             },
         ];
 
@@ -1827,16 +1837,16 @@ export async function getNextAcedmicYearAfter(currentacademicYearId) {
 
 export async function getPromotionClassSections({
     courseId,
-    academicYearId,
+    batchId,
     term,
     specializationId,
     instituteId,
 }) {
-    const sectionWhere = promotionClassSectionWhere({
-        courseId,
-        academicYearId,
-        ...(instituteId != null && { instituteId }),
-    });
+    const sectionWhere = {
+        courseId: Number(courseId),
+        ...(batchId != null && { batchId: Number(batchId) }),
+        ...(instituteId != null && { instituteId: Number(instituteId) }),
+    };
 
     if (specializationId != null) {
         sectionWhere[Op.or] = [{ specializationId }, { specializationId: null }];
@@ -1854,9 +1864,11 @@ export async function getPromotionClassSections({
                 'classSectionsId',
                 'section',
                 'sessionId',
+                'batchId',
                 'academicYearId',
                 'specializationId',
                 'year',
+                'activeYear',
                 'courseId',
                 'instituteId',
             ],

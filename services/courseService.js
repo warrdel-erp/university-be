@@ -165,6 +165,7 @@ export const getTermsWithClassSections = async (query) => {
       courseName: course.courseName,
       courseCode: course.courseCode,
       termType: course.termType,
+      capacity: course?.capacity != null && !isNaN(Number(course.capacity)) ? Number(course.capacity) : (course?.capacity ?? null),
       totalTerms,
       duration: course.courseDuration,
       courseDuration: course.courseDuration,
@@ -193,7 +194,8 @@ export const getTermsWithClassSections = async (query) => {
       batchId: Number(batch.batchId),
       batch: batchYear,
       status: batch.status,
-      intakeCapacity: batch.intakeCapacity,
+      intakeCapacity: batch.intakeCapacity != null ? Number(batch.intakeCapacity) : null,
+      capacity: course?.capacity != null && !isNaN(Number(course.capacity)) ? Number(course.capacity) : (course?.capacity ?? null),
       currentYear: currentYearNumber > 0 ? currentYearNumber : null,
       curriculum: curriculum
         ? {

@@ -25,6 +25,8 @@ const positiveIntegerId = z.coerce
 const getTeacherSectionQuerySchema = z.object({
     userId: positiveIntegerId.optional(),
     sessionId: positiveIntegerId.optional(),
+    batchId: positiveIntegerId.optional(),
+    academicYearId: positiveIntegerId.optional(),
     search: z.string().trim().optional(),
     page: z.coerce
         .number()
@@ -45,6 +47,8 @@ const getTeacherSubjectQuerySchema = z.object({
     userId: positiveIntegerId.optional(),
     subjectId: positiveIntegerId.optional(),
     sessionId: positiveIntegerId.optional(),
+    batchId: positiveIntegerId.optional(),
+    academicYearId: positiveIntegerId.optional(),
     search: z.string().trim().optional(),
     page: z.coerce
         .number()

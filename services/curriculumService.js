@@ -167,10 +167,14 @@ export async function getProgrammeOverview() {
       : 0;
     const structureStatus = resolveStructureStatus(configuredTerms, totalTerms);
 
-    sessionMap.get(sid).batches.push({
+    const sessionInfo = sessionMap.get(sid);
+    const courseCapacity = sessionInfo?.course?.capacity;
+
+    sessionInfo.batches.push({
       batchId: sbmId,
       batch: Number(plain.batch),
-      intakeCapacity: plain.intakeCapacity,
+      intakeCapacity: plain.intakeCapacity != null ? Number(plain.intakeCapacity) : null,
+      capacity: courseCapacity != null && !isNaN(Number(courseCapacity)) ? Number(courseCapacity) : (courseCapacity ?? null),
       students,
       isConfigured: Boolean(curriculum),
       curriculumBatchMappingId: curriculumMapping

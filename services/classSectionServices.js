@@ -170,7 +170,11 @@ export async function getClassSectionBatches(filters = {}) {
       batchId: Number(plain.batchId),
       batch: batchYear,
       status: plain.status,
-      intakeCapacity: plain.intakeCapacity,
+      intakeCapacity: plain.intakeCapacity != null ? Number(plain.intakeCapacity) : null,
+      capacity:
+        plain.session?.course?.capacity != null && !isNaN(Number(plain.session?.course?.capacity))
+          ? Number(plain.session?.course?.capacity)
+          : (plain.session?.course?.capacity ?? null),
       academicYears: `${batchYear} - ${endBatchYear}`,
       academicYearFrom: batchYear,
       academicYearTo: endBatchYear,
@@ -311,13 +315,15 @@ export async function getBatchAcademicProgression(batchId) {
       admissionBatch: `${batchYear}-${String(endBatchYear).slice(-2)}`,
       admissionYear: formatAcademicYearLabel(batchYear),
       status: batch.status,
-      intakeCapacity: batch.intakeCapacity,
+      intakeCapacity: batch.intakeCapacity != null ? Number(batch.intakeCapacity) : null,
+      capacity: course?.capacity != null && !isNaN(Number(course.capacity)) ? Number(course.capacity) : (course?.capacity ?? null),
       setupStatus: unverifiedHistoricalCount > 0 ? 'Needs Setup' : 'Configured',
     },
     course: {
       courseId: course.courseId,
       courseName: course.courseName,
       courseCode: course.courseCode,
+      capacity: course?.capacity != null && !isNaN(Number(course.capacity)) ? Number(course.capacity) : (course?.capacity ?? null),
       termType: course.termType,
       duration,
       totalTerms,

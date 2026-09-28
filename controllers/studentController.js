@@ -173,17 +173,14 @@ export const deleteStudentDetail = async (req, res) => {
 export const getEmptyEnrollNumber = async (req, res) => {
   const { page, limit, search, batchId, courseId, sessionId } = req.query;
   try {
-    const result = await studentService.getEmptyEnrollNumber(
-      getAcademicYearId(),
-      {
-        page,
-        limit,
-        search,
-        batchId,
-        courseId,
-        sessionId,
-      },
-    );
+    const result = await studentService.getEmptyEnrollNumber({
+      page,
+      limit,
+      search,
+      batchId,
+      courseId,
+      sessionId,
+    });
     res.status(200).send(result);
   } catch (error) {
     console.error(`Error in getting EMpty Enroll Number:`, error);
@@ -309,11 +306,9 @@ export const promoteStudent = async (req, res) => {
 
 export const getPromotionAvailableSection = async (req, res) => {
   try {
-    const { courseId, term, classSectionTermId } = req.query;
+    const { classSectionTermId } = req.query;
 
     const data = await studentService.getAvailablePromotionSections({
-      courseId,
-      term,
       classSectionTermId,
     });
 

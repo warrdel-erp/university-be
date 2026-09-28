@@ -422,10 +422,10 @@ async function assertStudentEnrollNumberAvailable(enrollNumber) {
   if (!enrollNumber) return;
   const existing =
     await studentRepository.findStudentByEnrollNumber(enrollNumber);
+  const existingVal = existing?.enrollNumber || existing?.dataValues?.enrollNumber;
   if (
-    existing &&
-    enrollNumber.toLowerCase() ===
-      existing.dataValues.enroll_number.toLowerCase()
+    existingVal &&
+    enrollNumber.toLowerCase() === existingVal.toLowerCase()
   ) {
     throw new Error("Enrollment number is already existing");
   }
@@ -1321,14 +1321,21 @@ export async function deleteStudentDetail(studentId) {
   }
 }
 
-export async function getEmptyEnrollNumber(
-  academicYearId,
-  { page = 1, limit = 10, search } = {},
-) {
-  return await studentRepository.getEmptyEnrollNumber(academicYearId, {
+export async function getEmptyEnrollNumber({
+  page = 1,
+  limit = 10,
+  search,
+  batchId,
+  courseId,
+  sessionId,
+} = {}) {
+  return await studentRepository.getEmptyEnrollNumber({
     page,
     limit,
     search,
+    batchId,
+    courseId,
+    sessionId,
   });
 }
 
@@ -1764,15 +1771,12 @@ export async function getPromotionStudentList(payload) {
 }
 
 export async function getAvailablePromotionSections({
-  courseId,
-  term,
   classSectionTermId,
 }) {
-  if (!courseId || term == null || classSectionTermId == null) {
-    throw new Error("courseId, term and classSectionTermId are required");
+  if (classSectionTermId == null) {
+    throw new Error("classSectionTermId is required");
   }
 
-  const requestedTerm = Number(term);
   const termRow = await findClassSectionTermById(Number(classSectionTermId));
   if (!termRow) {
     throw new Error("classSectionTermId not found");
@@ -1789,55 +1793,43 @@ export async function getAvailablePromotionSections({
     throw new Error("classSectionTermId has no term");
   }
 
-  if (section.courseId !== Number(courseId)) {
-    throw new Error("Class section does not belong to the given course");
+  const courseId = Number(section.courseId);
+  if (!courseId) {
+    throw new Error("Course ID not found on class section");
   }
 
-  const course = await getCourseByCourseId(Number(courseId));
+  const course = await getCourseByCourseId(courseId);
   if (!course) {
     throw new Error("Course not found");
   }
 
-  const {
-    finalTerm,
-    promotionStep,
-    targetacademicYearId,
+  const totalTerms = resolveTotalTerms(course);
+  const termsPerYear = resolveTermsPerYear(course);
+  const promotionStep = calculateNextPromotionTerm(
+    currentTerm,
     termsPerYear,
     totalTerms,
-  } = await getNextPromotionContext({
-    course,
-    currentTerm,
-    sourceacademicYearId: section.academicYearId,
-  });
+  );
 
-  let sectionsTerm;
-  if (requestedTerm === currentTerm) {
-    if (finalTerm) {
-      return {
-        finalTerm: true,
-        currentTerm,
-        promotedTerm: null,
-        academicYearId: section.academicYearId,
-        crossYear: false,
-        classSections: [],
-      };
-    }
-    sectionsTerm = promotionStep.nextTerm;
-  } else if (
-    !finalTerm &&
-    promotionStep &&
-    requestedTerm === promotionStep.nextTerm
-  ) {
-    sectionsTerm = requestedTerm;
-  } else {
-    throw new Error(
-      "term must be the student's current term or the next promotion term",
-    );
+  const finalTerm = !promotionStep || currentTerm >= totalTerms;
+
+  if (finalTerm) {
+    return {
+      finalTerm: true,
+      currentTerm,
+      promotedTerm: null,
+      batchId: section.batchId || null,
+      courseId,
+      crossYear: false,
+      classSections: [],
+    };
   }
 
+  const sectionsTerm = promotionStep.nextTerm;
+
   const rows = await studentRepository.getPromotionClassSections({
-    courseId: Number(courseId),
-    academicYearId: targetacademicYearId,
+    courseId,
+    batchId: section.batchId,
     term: sectionsTerm,
     specializationId: section.specializationId ?? null,
     instituteId: section.instituteId,
@@ -1847,8 +1839,9 @@ export async function getAvailablePromotionSections({
     finalTerm: false,
     currentTerm,
     promotedTerm: sectionsTerm,
-    academicYearId: targetacademicYearId,
-    crossYear: promotionStep.crossYear,
+    batchId: section.batchId || null,
+    courseId,
+    crossYear: promotionStep?.crossYear || false,
     termsPerYear,
     totalTerms,
     classSections: toPlainRows(rows),
@@ -1913,14 +1906,15 @@ export async function promoteStudent(data) {
     throw new Error("Course not found");
   }
 
-  const { finalTerm, promotionStep, targetacademicYearId } =
-    await getNextPromotionContext({
-      course,
-      currentTerm,
-      sourceacademicYearId: currentSection?.academicYearId,
-    });
+  const totalTerms = resolveTotalTerms(course);
+  const termsPerYear = resolveTermsPerYear(course);
+  const promotionStep = calculateNextPromotionTerm(
+    currentTerm,
+    termsPerYear,
+    totalTerms,
+  );
 
-  if (finalTerm) {
+  if (!promotionStep || currentTerm >= totalTerms) {
     throw new Error("Student has already reached the final term");
   }
 
@@ -1928,11 +1922,6 @@ export async function promoteStudent(data) {
   if (targetTerm !== promotionStep.nextTerm) {
     throw new Error(
       "Target classSectionTermId must be the next term after the student's current term",
-    );
-  }
-  if (Number(targetSection.academicYearId) !== Number(targetacademicYearId)) {
-    throw new Error(
-      "Target class section academic year is invalid for this promotion",
     );
   }
 
@@ -1990,18 +1979,19 @@ export async function promoteStudent(data) {
       result,
       promotion: {
         previous: {
-          academicYearId: currentAcademicYearId,
           classSectionTermId: currentClassSectionTermId,
           classSectionsId: oldClassSectionId,
           sessionId: studentPlain.sessionId,
+          batchId: studentPlain.batchId,
         },
         current: {
-          academicYearId: targetSection.academicYearId,
           classSectionTermId: targetClassSectionTermId,
           classSectionsId: targetClassSectionsId,
           sessionId: nextSessionId,
+          batchId: targetSection.batchId || studentPlain.batchId,
+          year: targetSection.year,
+          activeYear: targetSection.activeYear,
         },
-        crossYear: targetSection.academicYearId !== currentAcademicYearId,
       },
     };
   } catch (error) {
