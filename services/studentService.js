@@ -172,18 +172,6 @@ export async function addStudent(
     }
 
     // Scholar number
-    if (!info.scholarNumber) {
-      info.scholarNumber = await generateScholarNumber(
-        info.courseId,
-        info.instituteId,
-        sessionId ?? info.sessionId,
-        info.admisssionDate ?? info.admissionDate,
-      );
-    }
-    info.email = info.email.toLowerCase();
-    info.createdBy = createdBy;
-    info.academicYearId = academicYearId ?? info.academicYearId;
-
     const classSectionTermId = Number(info.classSectionTermId);
     if (!classSectionTermId) {
       throw new Error('classSectionTermId is required');
@@ -195,8 +183,60 @@ export async function addStudent(
     info.classSectionTermId = classSectionTermId;
 
     const termPlain = termRow.get ? termRow.get({ plain: true }) : termRow;
+    const classSection = termPlain.classSection;
     const historyClassSectionsId =
-      termPlain.classSectionsId ?? termPlain.classSection?.classSectionsId ?? null;
+      termPlain.classSectionsId ?? classSection?.classSectionsId ?? null;
+
+    if (termPlain.term != null && info.term == null) {
+      info.term = Number(termPlain.term);
+    }
+    if (historyClassSectionsId != null) {
+      if (info.classSectionsId == null) info.classSectionsId = historyClassSectionsId;
+      if (info.classSectionId == null) info.classSectionId = historyClassSectionsId;
+    }
+
+    if (classSection) {
+      if (!info.courseId && classSection.courseId) {
+        info.courseId = Number(classSection.courseId);
+      }
+      if (!info.sessionId && classSection.sessionId) {
+        info.sessionId = Number(classSection.sessionId);
+      }
+      if (!info.batchId && classSection.batchId) {
+        info.batchId = Number(classSection.batchId);
+      }
+      if (!info.academicYearId && classSection.academicYearId) {
+        info.academicYearId = Number(classSection.academicYearId);
+      }
+    }
+
+    if (info.courseId && !info.courseLevelId) {
+      const courseRecord = await model.courseModel.findByPk(info.courseId, {
+        attributes: ['course_levelId'],
+        transaction,
+      });
+      if (courseRecord?.course_levelId) {
+        info.courseLevelId = Number(courseRecord.course_levelId);
+      }
+    }
+
+    if (!info.academicYearId && (sessionId || info.sessionId)) {
+      info.academicYearId = await resolveAcademicYearIdForClassMapping({
+        academicYearId,
+        sessionId: sessionId ?? info.sessionId,
+      });
+    }
+
+    if (!info.scholarNumber) {
+      info.scholarNumber = await generateScholarNumber(
+        info.courseId,
+        info.instituteId,
+        sessionId ?? info.sessionId,
+        info.admisssionDate ?? info.admissionDate,
+      );
+    }
+    info.email = info.email.toLowerCase();
+    info.createdBy = createdBy;
 
     info.affiliatedUniversityId = normalizeAffiliatedUniversityId(info.affiliatedUniversityId);
 
