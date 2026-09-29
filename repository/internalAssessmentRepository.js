@@ -689,7 +689,11 @@ export async function getUserInternalAssessments(userId, options = {}) {
       courseAssessmentIds.length === 0 ? 0 : entry.studentCount;
 
     for (const internalAssessmentId of courseAssessmentIds) {
-      const progress = progressMap.get(internalAssessmentId);
+      const progress = progressMap.get(internalAssessmentId) || {
+        studentCount: 0,
+        checked: 0,
+        pendingForMarking: 0,
+      };
 
       if (
         progress.studentCount > 0 &&
