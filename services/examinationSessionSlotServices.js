@@ -232,16 +232,22 @@ async function buildUnscheduledSchedules(
 
   const unscheduled = [];
   for (const sub of subjectsList) {
+    const cstmId =
+      sub.curriculumSubjectTermMappingId ??
+      sub.curriculumBatchTermMappingId ??
+      null;
+    const batchId = sub.batchId ?? null;
+
     unscheduled.push({
       examScheduleId: null,
+      examinationSessionId: Number(examinationSessionId),
       subjectId: sub.subjectId,
-      batchId: sub.batchId || null,
-      curriculumSubjectTermMappingId:
-        sub.curriculumSubjectTermMappingId || null,
-      curriculumBatchTermMappingId:
-        sub.curriculumSubjectTermMappingId || null,
+      batchId,
+      curriculumSubjectTermMappingId: cstmId,
+      curriculumBatchTermMappingId: cstmId,
       term: sub.term,
       sessionId: sub.sessionId,
+      sessionName: sub.sessionName || null,
       examDate: null,
       examTime: null,
       type: null,

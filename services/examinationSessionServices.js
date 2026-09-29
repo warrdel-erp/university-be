@@ -1981,7 +1981,12 @@ export async function getMappedSubjectsBySessionAndTerm(
       const sessionId =
         plain.batch?.sessionId || plain.batch?.session?.sessionId;
       const term = cstm?.term != null ? Number(cstm.term) : null;
-      const batchId = plain.batchId != null ? Number(plain.batchId) : null;
+      const batchId =
+        plain.batchId != null
+          ? Number(plain.batchId)
+          : plain.batch?.batchId != null
+          ? Number(plain.batch.batchId)
+          : null;
       const batchYear =
         plain.batch?.batch != null ? Number(plain.batch.batch) : null;
       const subjectId =
@@ -1989,6 +1994,8 @@ export async function getMappedSubjectsBySessionAndTerm(
       const cstmId =
         plain.curriculumSubjectTermMappingId != null
           ? Number(plain.curriculumSubjectTermMappingId)
+          : cstm?.curriculumSubjectTermMappingId != null
+          ? Number(cstm.curriculumSubjectTermMappingId)
           : null;
 
       if (!courseId || !term || !subjectId) continue;
@@ -2241,8 +2248,15 @@ export async function getMappedSubjectsBySessionAndTerm(
 
       result.push({
         subjectId: subject.subjectId,
+        batchId: subject.batchId || null,
+        curriculumSubjectTermMappingId:
+          subject.curriculumSubjectTermMappingId ||
+          subject.curriculumBatchTermMappingId ||
+          null,
         curriculumBatchTermMappingId:
-          subject.curriculumBatchTermMappingId || null,
+          subject.curriculumSubjectTermMappingId ||
+          subject.curriculumBatchTermMappingId ||
+          null,
         subjectName: subject.subjectName,
         subjectCode: subject.subjectCode,
         term: subject.term,
@@ -2571,13 +2585,25 @@ export async function getMappedSubjectsBySessionAndTerm(
       if (!matchesFilter) continue;
     }
 
+    const resolvedBatchId = hasSchedule
+      ? schedInfo?.batchId || subject.batchId || null
+      : subject.batchId || null;
+
+    const resolvedCstmId = hasSchedule
+      ? schedInfo?.curriculumSubjectTermMappingId ||
+        schedInfo?.curriculumBatchTermMappingId ||
+        subject.curriculumSubjectTermMappingId ||
+        subject.curriculumBatchTermMappingId ||
+        null
+      : subject.curriculumSubjectTermMappingId ||
+        subject.curriculumBatchTermMappingId ||
+        null;
+
     finalResponse.push({
       subjectId: subject.subjectId,
-      curriculumBatchTermMappingId: hasSchedule
-        ? schedInfo?.curriculumBatchTermMappingId ||
-          subject.curriculumBatchTermMappingId ||
-          null
-        : subject.curriculumBatchTermMappingId || null,
+      batchId: resolvedBatchId,
+      curriculumSubjectTermMappingId: resolvedCstmId,
+      curriculumBatchTermMappingId: resolvedCstmId,
       subjectName: subject.subjectName,
       subjectCode: subject.subjectCode,
       term: subject.term,
