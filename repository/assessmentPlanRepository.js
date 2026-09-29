@@ -1024,8 +1024,6 @@ export async function getAssessmentPlanSubjectMappings({
   subjectId,
   batchId,
   curriculumSubjectTermMappingId,
-  courseId,
-  sessionId,
   page = 1,
   limit = 10,
 } = {}) {
@@ -1045,12 +1043,6 @@ export async function getAssessmentPlanSubjectMappings({
   }
   if (curriculumSubjectTermMappingId) {
     where.curriculumSubjectTermMappingId = Number(curriculumSubjectTermMappingId);
-  }
-  if (courseId) {
-    where.courseId = Number(courseId);
-  }
-  if (sessionId) {
-    where.sessionId = Number(sessionId);
   }
 
   const { count, rows } = await scoped(

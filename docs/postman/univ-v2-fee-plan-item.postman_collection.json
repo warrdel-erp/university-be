@@ -125,321 +125,7 @@
           "response": []
         },
         {
-          "name": "1.2 Create Assessment Plan",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"planName\": \"Assessment Plan 2026\",\n  \"planCode\": \"AP-2026-01\",\n  \"description\": \"Standard assessment plan with theoretical and practical components\",\n  \"courseId\": {{courseId}},\n  \"regulationId\": 1,\n  \"gradingId\": 1,\n  \"status\": \"Draft\",\n  \"isActive\": true,\n  \"components\": [\n    {\n      \"examSetupTypeId\": {{examSetupTypeId}},\n      \"weightagePercentage\": 60,\n      \"maxAssessments\": 1,\n      \"duration\": 180\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "1.3 Get Assessment Plans (List)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan?courseId={{courseId}}&page={{page}}&limit={{limit}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan"
-              ],
-              "query": [
-                {
-                  "key": "courseId",
-                  "value": "{{courseId}}"
-                },
-                {
-                  "key": "page",
-                  "value": "{{page}}"
-                },
-                {
-                  "key": "limit",
-                  "value": "{{limit}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "1.4 Get Assessment Plan Overview (by batchId & term)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan/overview?batchId={{batchId}}&term=1&page={{page}}&limit={{limit}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "batchId",
-                  "value": "{{batchId}}"
-                },
-                {
-                  "key": "term",
-                  "value": "1"
-                },
-                {
-                  "key": "page",
-                  "value": "{{page}}"
-                },
-                {
-                  "key": "limit",
-                  "value": "{{limit}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "1.5 Get Assessment Plan Stats",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan/stats",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "stats"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "1.6 Get Assessment Plan by ID",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan/{{assessmentPlanId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "{{assessmentPlanId}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "1.7 Update Assessment Plan",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"planName\": \"Updated Assessment Plan 2026\",\n  \"status\": \"Published\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan/{{assessmentPlanId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "{{assessmentPlanId}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "1.8 Delete Assessment Plan",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan/{{assessmentPlanId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "{{assessmentPlanId}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "1.9 Create Assessment Plan Component",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"assessmentPlanId\": {{assessmentPlanId}},\n  \"examSetupTypeId\": {{examSetupTypeId}},\n  \"weightagePercentage\": 40,\n  \"maxAssessments\": 1,\n  \"duration\": 120\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan/component",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "component"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "1.10 Update Assessment Plan Component",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"weightagePercentage\": 50,\n  \"duration\": 150\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan/component/{{assessmentPlanComponentId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "component",
-                "{{assessmentPlanComponentId}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "1.11 Delete Assessment Plan Component",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan/component/{{assessmentPlanComponentId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "component",
-                "{{assessmentPlanComponentId}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "1.12 Create Assessment Plan Subject Mapping",
+          "name": "1.2 Create Assessment Plan Subject Mapping",
           "request": {
             "method": "POST",
             "header": [
@@ -475,7 +161,7 @@
           "response": []
         },
         {
-          "name": "1.13 Get Assessment Plan Subject Mappings",
+          "name": "1.3 Get Assessment Plans (List)",
           "request": {
             "method": "GET",
             "header": [
@@ -485,22 +171,34 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/assessmentPlan/subjectMapping?batchId={{batchId}}&curriculumSubjectTermMappingId={{curriculumSubjectTermMappingId}}&page={{page}}&limit={{limit}}",
+              "raw": "{{baseurl}}/assessmentPlan?status=Published&courseId={{courseId}}&regulationId={{regulationId}}&gradingId={{gradingId}}&search=&page={{page}}&limit={{limit}}",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
-                "assessmentPlan",
-                "subjectMapping"
+                "assessmentPlan"
               ],
               "query": [
                 {
-                  "key": "batchId",
-                  "value": "{{batchId}}"
+                  "key": "status",
+                  "value": "Published",
+                  "description": "Draft | Published"
                 },
                 {
-                  "key": "curriculumSubjectTermMappingId",
-                  "value": "{{curriculumSubjectTermMappingId}}"
+                  "key": "courseId",
+                  "value": "{{courseId}}"
+                },
+                {
+                  "key": "regulationId",
+                  "value": "{{regulationId}}"
+                },
+                {
+                  "key": "gradingId",
+                  "value": "{{gradingId}}"
+                },
+                {
+                  "key": "search",
+                  "value": ""
                 },
                 {
                   "key": "page",
@@ -516,9 +214,9 @@
           "response": []
         },
         {
-          "name": "1.14 Delete Assessment Plan Subject Mapping",
+          "name": "1.4 Get Course Assessment Plan Overview",
           "request": {
-            "method": "DELETE",
+            "method": "GET",
             "header": [
               {
                 "key": "Authorization",
@@ -526,14 +224,106 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/assessmentPlan/subjectMapping/{{mappingId}}",
+              "raw": "{{baseurl}}/assessmentPlan/overview?batchId={{batchId}}&term=1&assignmentStatus=all&status=current&search=&assessmentPlanId={{assessmentPlanId}}&subjectId={{subjectId}}&academicRegulationId={{academicRegulationId}}&page={{page}}&limit={{limit}}&pageSize={{pageSize}}",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "assessmentPlan",
-                "subjectMapping",
-                "{{mappingId}}"
+                "overview"
+              ],
+              "query": [
+                {
+                  "key": "batchId",
+                  "value": "{{batchId}}",
+                  "description": "Positive integer batch ID"
+                },
+                {
+                  "key": "term",
+                  "value": "1",
+                  "description": "Term/Semester number (e.g. 1, 2, 3)"
+                },
+                {
+                  "key": "assignmentStatus",
+                  "value": "all",
+                  "description": "Enum: assigned | unassigned | all (default: all)"
+                },
+                {
+                  "key": "status",
+                  "value": "current",
+                  "description": "Enum: current | previous | upcoming"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search subject name / code"
+                },
+                {
+                  "key": "assessmentPlanId",
+                  "value": "{{assessmentPlanId}}",
+                  "description": "Filter by assessment plan ID"
+                },
+                {
+                  "key": "subjectId",
+                  "value": "{{subjectId}}",
+                  "description": "Filter by subject ID"
+                },
+                {
+                  "key": "academicRegulationId",
+                  "value": "{{academicRegulationId}}",
+                  "description": "Filter by regulation ID"
+                },
+                {
+                  "key": "page",
+                  "value": "{{page}}",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Page limit (default: 10)"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "{{pageSize}}",
+                  "description": "Page size alias"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.5 Update Assessment Plan",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planName\": \"Updated Assessment Plan 2026\",\n  \"planCode\": \"AP-2026-01\",\n  \"description\": \"Updated standard assessment plan with theoretical and practical components\",\n  \"courseId\": {{courseId}},\n  \"regulationId\": 1,\n  \"gradingId\": 1,\n  \"status\": \"Published\",\n  \"isActive\": true,\n  \"components\": [\n    {\n      \"examSetupTypeId\": {{examSetupTypeId}},\n      \"weightagePercentage\": 60,\n      \"maxAssessments\": 1,\n      \"duration\": 180\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/assessmentPlan/{{assessmentPlanId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "assessmentPlan",
+                "{{assessmentPlanId}}"
               ]
             }
           },
@@ -679,43 +469,7 @@
           "response": []
         },
         {
-          "name": "2.5 Get Examination Sessions (List)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession?status=all&page={{page}}&limit={{limit}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession"
-              ],
-              "query": [
-                {
-                  "key": "status",
-                  "value": "all"
-                },
-                {
-                  "key": "page",
-                  "value": "{{page}}"
-                },
-                {
-                  "key": "limit",
-                  "value": "{{limit}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "2.6 Get Single Examination Session",
+          "name": "2.5 Get Single Examination Session",
           "request": {
             "method": "GET",
             "header": [
@@ -744,212 +498,7 @@
           "response": []
         },
         {
-          "name": "2.7 Get Mapped Subjects By Session And Term",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession/subjects?examinationSessionId={{examinationSessionId}}&selections=%5B%7B%22batchId%22%3A{{batchId}}%2C%22terms%22%3A%5B1%2C2%5D%7D%5D&filterStatus=all",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "subjects"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                },
-                {
-                  "key": "selections",
-                  "value": "[{\"batchId\":{{batchId}},\"terms\":[1,2]}]"
-                },
-                {
-                  "key": "filterStatus",
-                  "value": "all"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "2.8 Publish Examination Session",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession/publish?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "publish"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "2.9 Create Examination Session Term",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examinationSessionId\": {{examinationSessionId}},\n  \"batchId\": {{batchId}},\n  \"term\": 1,\n  \"includeElectives\": true,\n  \"remarks\": \"Term 1 regular exams\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/examinationSession/term",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "term"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "2.10 Delete Examination Session Term",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession/term?examinationSessionId={{examinationSessionId}}&batchId={{batchId}}&term=1",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "term"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                },
-                {
-                  "key": "batchId",
-                  "value": "{{batchId}}"
-                },
-                {
-                  "key": "term",
-                  "value": "1"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "2.11 Get Question Paper Needs",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession/questionPaper?examinationSessionId={{examinationSessionId}}&selections=%5B%7B%22batchId%22%3A{{batchId}}%2C%22terms%22%3A%5B1%5D%7D%5D&filterStatus=all",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "questionPaper"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                },
-                {
-                  "key": "selections",
-                  "value": "[{\"batchId\":{{batchId}},\"terms\":[1]}]"
-                },
-                {
-                  "key": "filterStatus",
-                  "value": "all"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "2.12 Get Question Paper Summary",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession/questionPaperSummary?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "questionPaperSummary"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "2.13 Get Answer Sheets",
+          "name": "2.6 Get Answer Sheets",
           "request": {
             "method": "GET",
             "header": [
@@ -966,179 +515,6 @@
               "path": [
                 "examinationSession",
                 "answerSheets"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "2.14 Get SKU Stats",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession/skuStats?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "skuStats"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "2.15 Get Planning Overview",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession/planningOverview?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "planningOverview"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "2.16 Get Examination Timeline",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession/timeline?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "timeline"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "2.17 Get Progress Metrics",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession/progressMetrics?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "progressMetrics"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "2.18 Get Examination Session Overview",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession/overview?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "2.19 Delete Examination Session",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession"
               ],
               "query": [
                 {
