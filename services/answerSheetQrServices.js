@@ -111,7 +111,6 @@ async function resolveExamScheduleIdsFromSelections(
   const selectionOr = [];
   for (const comb of combinations) {
     const clause = {};
-    if (comb.sessionId != null) clause.sessionId = comb.sessionId;
     if (comb.batchId != null) clause.batchId = comb.batchId;
     if (comb.courseId != null) clause["$subjectSchedule.course_id$"] = comb.courseId;
     if (comb.terms && comb.terms.length > 0) {
