@@ -1151,8 +1151,6 @@ export async function getMarksTableBySubject(filters) {
             attributes: [
               "sessionId",
               "sessionName",
-              "startingDate",
-              "endingDate",
             ],
             required: false,
           },
