@@ -1,6 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as examRoomCapacityRepository from "../repository/examScheduleRoomCapacityRepository.js";
 import * as examScheduleServices from "./examScheduleServices.js";
+import * as examinationSessionServices from "./examinationSessionServices.js";
 import { countStudentsForExamGroup } from "./studentCountServices.js";
 import * as model from "../models/index.js";
 import { z } from "zod";
@@ -258,32 +259,6 @@ export async function addExamRoomCapacity(data, userId) {
             await examScheduleServices.allocateSeatsByStrategy(validatedData.examScheduleId, userId, "ascending", { transaction });
         } catch (seatErr) {
             console.error("Auto seat allocation skipped or failed:", seatErr.message);
-        }
-
-        // If examination session is Published, re-evaluate and mark this schedule as published: true if it is now Ready
-        try {
-            const currentSession = await examRoomCapacityRepository.assertScopedExamSchedule(validatedData.examScheduleId, {
-                attributes: ["examinationSessionId"],
-                transaction
-            });
-            if (currentSession?.examinationSessionId) {
-                const sessionRecord = await model.examinationSessionModel.findByPk(currentSession.examinationSessionId, { transaction });
-                if (sessionRecord?.status === "Published") {
-                    const mappedSubjects = await examScheduleServices.getMappedSubjectsBySessionAndTerm(
-                        { examinationSessionId: currentSession.examinationSessionId },
-                        { transaction }
-                    );
-                    const scheduleInfo = mappedSubjects.find(sub => sub.examScheduleId === Number(validatedData.examScheduleId));
-                    if (scheduleInfo?.ready === true) {
-                        await scoped(model.examScheduleModel).update(
-                            { published: true, updatedBy: userId },
-                            { where: { examScheduleId: validatedData.examScheduleId }, transaction }
-                        );
-                    }
-                }
-            }
-        } catch (publishErr) {
-            console.error("Auto publishing schedule after room assignment failed:", publishErr.message);
         }
 
         await transaction.commit();

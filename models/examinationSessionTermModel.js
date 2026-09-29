@@ -5,6 +5,7 @@ import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
 import courseModel from "./courseModel.js";
 import sessionModel from "./sessionModel.js";
+import batchModel from "./batchModel.js";
 
 const examinationSessionTermModel = sequelize.define(
   "examination_session_term",
@@ -40,6 +41,15 @@ const examinationSessionTermModel = sequelize.define(
       references: {
         model: sessionModel,
         key: "session_id",
+      },
+    },
+    batchId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "batch_id",
+      references: {
+        model: batchModel,
+        key: "batch_id",
       },
     },
     universityId: {
