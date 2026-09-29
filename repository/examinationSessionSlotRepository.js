@@ -2,8 +2,11 @@ import { Op, col, where } from "sequelize";
 import * as model from "../models/index.js";
 import { scoped } from "../utility/scoped.js";
 
-const scheduleInclude = (date, filterCombinations) => {
+const scheduleInclude = (date, filterCombinations, examinationSessionId) => {
   const scheduleWhere = {};
+  if (examinationSessionId) {
+    scheduleWhere.examinationSessionId = Number(examinationSessionId);
+  }
   if (date) {
     scheduleWhere.examDate = date;
   }
@@ -159,7 +162,7 @@ export async function findSlotsWithSchedules(
         "ASC",
       ],
     ],
-    include: [scheduleInclude(date, filterCombinations)],
+    include: [scheduleInclude(date, filterCombinations, examinationSessionId)],
     ...options,
   });
 }
