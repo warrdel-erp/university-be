@@ -544,8 +544,6 @@ export const getMyPastClassSchedules = async (req, res) => {
       req.query.page !== undefined || req.query.limit !== undefined;
     const page = hasPagination ? Number(req.query.page) || 1 : undefined;
     const limit = hasPagination ? Number(req.query.limit) || 10 : undefined;
-    );
-    }
 
     const formattedDate = formatQueryDate(date);
 
