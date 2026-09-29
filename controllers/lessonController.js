@@ -9,10 +9,6 @@ export async function addLesson(req, res) {
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        const academicYearId = getAcademicYearId();
-        if (!academicYearId) {
-            return res.status(400).send("academicYearId not found in user session");
-        }
         if (!(name && subjectId && sessionId && lectureWindowId)) {
             return res.status(400).send("name, subjectId, sessionId and lectureWindowId are required");
         }
@@ -97,7 +93,6 @@ export async function updateLesson(req, res) {
     try {
         const { lessonId } = req.params;
         const updatedBy = req.user.userId;
-        const academicYearId = getAcademicYearId();
         const lessonData = await lesson.updateLesson(
             Number(lessonId),
             { ...req.body, academicYearId },
@@ -259,11 +254,6 @@ export async function getSimpleLessonList(req, res) {
 
 export async function linkLessonsToWindow(req, res) {
     try {
-        const academicYearId = getAcademicYearId();
-        if (!academicYearId) {
-            return ErrorResponse(res, 400, "academicYearId not found in user session");
-        }
-
         const { lessonId } = req.query;
         const { lectureWindowId } = req.body;
         const updatedBy = req.user.userId;
@@ -439,10 +429,6 @@ export async function addMyLesson(req, res) {
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        const academicYearId = getAcademicYearId();
-        if (!academicYearId) {
-            return res.status(400).send("academicYearId not found in user session");
-        }
         const { name, subjectId, sessionId, lectureWindowId } = req.body;
         if (!(name && subjectId && sessionId && lectureWindowId)) {
             return res.status(400).send("name, subjectId, sessionId and lectureWindowId are required");
