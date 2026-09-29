@@ -2040,7 +2040,7 @@ export async function getMappedSubjectsBySessionAndTerm(
         if (!allowed) continue;
       }
 
-      const dedupeKey = `${cstmId || term}_${subjectId}_${sessionId || 0}`;
+      const dedupeKey = `${cstmId || term}_${subjectId}_${batchId || 0}_${sessionId || 0}`;
       if (seenMapped.has(dedupeKey)) continue;
       seenMapped.add(dedupeKey);
 
@@ -2201,8 +2201,7 @@ export async function getMappedSubjectsBySessionAndTerm(
     if (
       subjectSessionId == null ||
       subject.courseId == null ||
-      subject.term == null ||
-      subject.academicYearId == null
+      subject.term == null
     ) {
       continue;
     }
@@ -2210,14 +2209,18 @@ export async function getMappedSubjectsBySessionAndTerm(
     studentGroups.push({
       sessionId: Number(subjectSessionId),
       courseId: Number(subject.courseId),
-      academicYearId: Number(subject.academicYearId),
       term: Number(subject.term),
+      batchId: subject.batchId != null ? Number(subject.batchId) : null,
       batchYear: subject.batch != null ? Number(subject.batch) : null,
       yearNumber:
         subject.yearNumber != null ? Number(subject.yearNumber) : null,
       curriculumBatchTermMappingId:
         subject.curriculumBatchTermMappingId != null
           ? Number(subject.curriculumBatchTermMappingId)
+          : null,
+      curriculumSubjectTermMappingId:
+        subject.curriculumSubjectTermMappingId != null
+          ? Number(subject.curriculumSubjectTermMappingId)
           : null,
     });
   }
@@ -2248,11 +2251,12 @@ export async function getMappedSubjectsBySessionAndTerm(
       const studentCount = lookupStudentCount(countMap, {
         sessionId: subjectSessionId,
         courseId: subject.courseId,
-        academicYearId: subject.academicYearId,
         term: subject.term,
+        batchId: subject.batchId,
         batchYear: subject.batch,
         yearNumber: subject.yearNumber,
         curriculumBatchTermMappingId: subject.curriculumBatchTermMappingId,
+        curriculumSubjectTermMappingId: subject.curriculumSubjectTermMappingId,
       });
 
       result.push({
@@ -2411,11 +2415,12 @@ export async function getMappedSubjectsBySessionAndTerm(
     const subjectGroup = {
       sessionId: subjectSessionId,
       courseId: subject.courseId,
-      academicYearId: subject.academicYearId,
       term: subject.term,
+      batchId: subject.batchId,
       batchYear: subject.batch,
       yearNumber: subject.yearNumber,
       curriculumBatchTermMappingId: subject.curriculumBatchTermMappingId,
+      curriculumSubjectTermMappingId: subject.curriculumSubjectTermMappingId,
     };
 
     if (hasSchedule) {

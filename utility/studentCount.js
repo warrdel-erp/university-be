@@ -40,7 +40,12 @@ export function buildStudentGroupFromSchedule(schedule) {
     courseId: rawCourseId != null && !isNaN(Number(rawCourseId)) ? Number(rawCourseId) : null,
     academicYearId: plain.academicYearId && !isNaN(Number(plain.academicYearId)) ? Number(plain.academicYearId) : null,
     term: rawTerm != null && !isNaN(Number(rawTerm)) ? Number(rawTerm) : null,
-    batchId: plain.batchId && !isNaN(Number(plain.batchId)) ? Number(plain.batchId) : null,
+    batchId:
+      plain.batchId != null && !isNaN(Number(plain.batchId))
+        ? Number(plain.batchId)
+        : plain.batch?.batchId != null && !isNaN(Number(plain.batch.batchId))
+          ? Number(plain.batch.batchId)
+          : null,
     curriculumSubjectTermMappingId: plain.curriculumSubjectTermMappingId && !isNaN(Number(plain.curriculumSubjectTermMappingId))
       ? Number(plain.curriculumSubjectTermMappingId)
       : null,
