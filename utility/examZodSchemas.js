@@ -43,6 +43,8 @@ export const dateStringSchema = z
 
 export const selectionItemSchema = z.object({
   batchId: z.number().int().positive().optional(),
+  courseId: z.number().int().positive().optional(),
+  sessionId: z.number().int().positive().optional(),
   terms: z.array(z.number().int().positive()).optional(),
 });
 
