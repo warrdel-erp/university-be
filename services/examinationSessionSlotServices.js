@@ -51,8 +51,34 @@ function buildScheduleRow(item, studentCount) {
   });
   const { roomCapacities: _rooms, ...schedule } = item;
 
+  const batchId =
+    item.batchId ??
+    item.batch?.batchId ??
+    null;
+  const curriculumSubjectTermMappingId =
+    item.curriculumSubjectTermMappingId ??
+    item.curriculumSubjectTermMapping?.curriculumSubjectTermMappingId ??
+    null;
+  const term =
+    item.curriculumSubjectTermMapping?.term ??
+    item.term ??
+    null;
+  const sessionId =
+    item.batch?.sessionId ??
+    item.batch?.session?.sessionId ??
+    null;
+  const sessionName =
+    item.batch?.session?.sessionName ??
+    null;
+
   return {
     ...schedule,
+    batchId,
+    curriculumSubjectTermMappingId,
+    curriculumBatchTermMappingId: curriculumSubjectTermMappingId,
+    term,
+    sessionId,
+    sessionName,
     studentCount,
     courseName: item.subjectSchedule?.courseInfo?.courseName || null,
     termType: item.subjectSchedule?.courseInfo?.termType || null,
@@ -211,6 +237,8 @@ async function buildUnscheduledSchedules(
       subjectId: sub.subjectId,
       batchId: sub.batchId || null,
       curriculumSubjectTermMappingId:
+        sub.curriculumSubjectTermMappingId || null,
+      curriculumBatchTermMappingId:
         sub.curriculumSubjectTermMappingId || null,
       term: sub.term,
       sessionId: sub.sessionId,
