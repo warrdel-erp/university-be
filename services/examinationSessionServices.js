@@ -1862,11 +1862,20 @@ export async function getMappedSubjectsBySessionAndTerm(
       seenSubject.add(plain.subjectId);
 
       subjectSessionMap.set(plain.subjectId, plain.sessionId);
-      activeAcademicYearId = plain.academicYearId;
+      const cstmId =
+        plain.curriculumSubjectTermMappingId ||
+        plain.curriculumBatchTermMappingId ||
+        null;
+      const batchId =
+        plain.batchId ||
+        plain.batch?.batchId ||
+        null;
+
       mappedSubjects.push({
         subjectId: plain.subjectId,
-        curriculumBatchTermMappingId:
-          plain.curriculumBatchTermMappingId || null,
+        batchId,
+        curriculumSubjectTermMappingId: cstmId,
+        curriculumBatchTermMappingId: cstmId,
         subjectName: subject ? subject.subjectName : null,
         subjectCode: subject ? subject.subjectCode : null,
         subjectType: null,
@@ -2257,6 +2266,17 @@ export async function getMappedSubjectsBySessionAndTerm(
           subject.curriculumSubjectTermMappingId ||
           subject.curriculumBatchTermMappingId ||
           null,
+        curriculumSubjectTermMapping:
+          subject.curriculumSubjectTermMappingId ||
+          subject.curriculumBatchTermMappingId
+            ? {
+                curriculumSubjectTermMappingId:
+                  subject.curriculumSubjectTermMappingId ||
+                  subject.curriculumBatchTermMappingId,
+                term: subject.term,
+                subjectId: subject.subjectId,
+              }
+            : null,
         subjectName: subject.subjectName,
         subjectCode: subject.subjectCode,
         term: subject.term,
@@ -2604,6 +2624,13 @@ export async function getMappedSubjectsBySessionAndTerm(
       batchId: resolvedBatchId,
       curriculumSubjectTermMappingId: resolvedCstmId,
       curriculumBatchTermMappingId: resolvedCstmId,
+      curriculumSubjectTermMapping: resolvedCstmId
+        ? {
+            curriculumSubjectTermMappingId: resolvedCstmId,
+            term: subject.term,
+            subjectId: subject.subjectId,
+          }
+        : null,
       subjectName: subject.subjectName,
       subjectCode: subject.subjectCode,
       term: subject.term,
@@ -2626,8 +2653,17 @@ export async function getMappedSubjectsBySessionAndTerm(
       deadline: deadline ? deadline.toISOString() : null,
       examDetails: hasSchedule
         ? {
+            batchId: resolvedBatchId,
+            curriculumSubjectTermMappingId: resolvedCstmId,
             curriculumBatchTermMappingId:
-              schedInfo.curriculumBatchTermMappingId || null,
+              schedInfo.curriculumBatchTermMappingId || resolvedCstmId || null,
+            curriculumSubjectTermMapping: resolvedCstmId
+              ? {
+                  curriculumSubjectTermMappingId: resolvedCstmId,
+                  term: subject.term,
+                  subjectId: subject.subjectId,
+                }
+              : null,
             examDate: schedInfo.examDate,
             examTime: schedInfo.examTime,
             duration: schedInfo.duration,

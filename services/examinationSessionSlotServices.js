@@ -33,7 +33,50 @@ async function resolveSelectionFilters(selections, options = {}) {
   return await resolveSelectionCombinations(selections, options);
 }
 
-function buildScheduleRow(item, studentCount) {
+async function resolveMissingScheduleMappings(schedules, examinationSessionId, options = {}) {
+  const missingSubjectIds = [];
+  for (const s of schedules) {
+    if (!s.batchId || !s.curriculumSubjectTermMappingId) {
+      if (s.subjectId) missingSubjectIds.push(Number(s.subjectId));
+    }
+  }
+  if (!missingSubjectIds.length) return new Map();
+
+  const sessionTerms = await examinationSessionRepository.findExaminationSessionTerms(
+    Number(examinationSessionId),
+    options,
+  );
+  const sessionIds = sessionTerms.map((t) => t.sessionId).filter(Boolean);
+
+  const mappings = await examinationSessionRepository.findAssessmentPlanSubjectMappings(
+    {
+      subjectId: missingSubjectIds,
+      sessionId: sessionIds.length ? sessionIds : undefined,
+    },
+    options,
+  );
+
+  const fallbackMap = new Map();
+  for (const m of mappings) {
+    const plain = m.get ? m.get({ plain: true }) : m;
+    const sId = plain.subjectId || plain.curriculumSubjectTermMapping?.subjectId;
+    if (sId && !fallbackMap.has(Number(sId))) {
+      fallbackMap.set(Number(sId), {
+        batchId: plain.batchId || plain.batch?.batchId || null,
+        curriculumSubjectTermMappingId:
+          plain.curriculumSubjectTermMappingId ||
+          plain.curriculumSubjectTermMapping?.curriculumSubjectTermMappingId ||
+          null,
+        term: plain.curriculumSubjectTermMapping?.term || null,
+        sessionId: plain.batch?.sessionId || null,
+        sessionName: plain.batch?.session?.sessionName || null,
+      });
+    }
+  }
+  return fallbackMap;
+}
+
+function buildScheduleRow(item, studentCount, fallbackMap = new Map()) {
   const roomNumbers = [];
   let roomCapacity = 0;
   const roomCapacities = item.roomCapacities || [];
@@ -51,31 +94,48 @@ function buildScheduleRow(item, studentCount) {
   });
   const { roomCapacities: _rooms, ...schedule } = item;
 
+  const fallback = fallbackMap.get(Number(item.subjectId)) || {};
+
   const batchId =
     item.batchId ??
     item.batch?.batchId ??
+    fallback.batchId ??
     null;
   const curriculumSubjectTermMappingId =
     item.curriculumSubjectTermMappingId ??
     item.curriculumSubjectTermMapping?.curriculumSubjectTermMappingId ??
+    fallback.curriculumSubjectTermMappingId ??
     null;
   const term =
     item.curriculumSubjectTermMapping?.term ??
     item.term ??
+    fallback.term ??
     null;
   const sessionId =
     item.batch?.sessionId ??
     item.batch?.session?.sessionId ??
+    fallback.sessionId ??
     null;
   const sessionName =
     item.batch?.session?.sessionName ??
+    fallback.sessionName ??
     null;
+  const curriculumSubjectTermMapping =
+    item.curriculumSubjectTermMapping ||
+    (curriculumSubjectTermMappingId
+      ? {
+          curriculumSubjectTermMappingId,
+          term,
+          subjectId: item.subjectId,
+        }
+      : null);
 
   return {
     ...schedule,
     batchId,
     curriculumSubjectTermMappingId,
     curriculumBatchTermMappingId: curriculumSubjectTermMappingId,
+    curriculumSubjectTermMapping,
     term,
     sessionId,
     sessionName,
@@ -121,6 +181,7 @@ async function loadEnrichedSlotSchedules(
 
   const slots = [];
   const studentGroups = [];
+  const allSchedules = [];
 
   for (const slotRow of slotRows) {
     const slot = slotRow.get({ plain: true });
@@ -130,15 +191,16 @@ async function loadEnrichedSlotSchedules(
     slots.push(slot);
 
     for (const schedule of schedules) {
+      allSchedules.push(schedule);
       const group = buildStudentGroupFromSchedule(schedule);
       if (group) studentGroups.push(group);
     }
   }
 
-  const studentCountMap = await getStudentCountMapByGroups(
-    studentGroups,
-    options,
-  );
+  const [studentCountMap, fallbackMap] = await Promise.all([
+    getStudentCountMapByGroups(studentGroups, options),
+    resolveMissingScheduleMappings(allSchedules, examinationSessionId, options),
+  ]);
 
   for (const slot of slots) {
     const enriched = [];
@@ -147,7 +209,7 @@ async function loadEnrichedSlotSchedules(
         studentCountMap,
         buildStudentGroupFromSchedule(schedule),
       );
-      enriched.push(buildScheduleRow(schedule, studentCount));
+      enriched.push(buildScheduleRow(schedule, studentCount, fallbackMap));
     }
     slot.schedules = enriched;
   }
@@ -237,6 +299,15 @@ async function buildUnscheduledSchedules(
       sub.curriculumBatchTermMappingId ??
       null;
     const batchId = sub.batchId ?? null;
+    const curriculumSubjectTermMapping =
+      sub.curriculumSubjectTermMapping ||
+      (cstmId
+        ? {
+            curriculumSubjectTermMappingId: cstmId,
+            term: sub.term,
+            subjectId: sub.subjectId,
+          }
+        : null);
 
     unscheduled.push({
       examScheduleId: null,
@@ -245,6 +316,7 @@ async function buildUnscheduledSchedules(
       batchId,
       curriculumSubjectTermMappingId: cstmId,
       curriculumBatchTermMappingId: cstmId,
+      curriculumSubjectTermMapping,
       term: sub.term,
       sessionId: sub.sessionId,
       sessionName: sub.sessionName || null,
