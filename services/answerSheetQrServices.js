@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { Op, UniqueConstraintError } from "sequelize";
 import * as model from "../models/index.js";
+import { buildScope, scoped } from "../utility/scoped.js";
 import * as answerSheetQrRepository from "../repository/answerSheetQrRepository.js";
 import * as answerSheetAnnotationRepository from "../repository/answerSheetAnnotationRepository.js";
 import * as examinationSessionRepository from "../repository/examinationSessionRepository.js";
@@ -950,10 +951,189 @@ export async function bulkFinalSubmitObtainedMarks(items, assignedToUserId) {
       }
     }
 
+    await syncStudentResultItemsOnFinalSubmit(uniqueIds, transaction);
+
     await transaction.commit();
   } catch (error) {
     await transaction.rollback();
     throw error;
+  }
+}
+
+async function syncStudentResultItemsOnFinalSubmit(uniqueIds, transaction) {
+  if (!uniqueIds || !uniqueIds.length) return;
+
+  const sheets = await scoped(model.answerSheetQrModel).findAll({
+    where: { id: { [Op.in]: uniqueIds } },
+    attributes: [
+      "id",
+      "studentId",
+      "examScheduleId",
+      "obtainedMarks",
+      "universityId",
+      "instituteId",
+    ],
+    transaction,
+  });
+
+  const validSheets = sheets.filter(
+    (s) => s.studentId != null && s.examScheduleId != null,
+  );
+  if (!validSheets.length) return;
+
+  const scheduleIds = [
+    ...new Set(validSheets.map((s) => Number(s.examScheduleId))),
+  ];
+  const schedules = await scoped(model.examScheduleModel).findAll({
+    where: { examScheduleId: { [Op.in]: scheduleIds } },
+    attributes: [
+      "examScheduleId",
+      "curriculumSubjectTermMappingId",
+      "maximumMarks",
+      "examinationSessionId",
+      "batchId",
+      "subjectId",
+    ],
+    transaction,
+  });
+
+  const scheduleMap = new Map();
+  const sessionIds = new Set();
+  const cstmIds = new Set();
+  for (const sched of schedules) {
+    scheduleMap.set(Number(sched.examScheduleId), sched);
+    if (sched.examinationSessionId) sessionIds.add(Number(sched.examinationSessionId));
+    if (sched.curriculumSubjectTermMappingId) {
+      cstmIds.add(Number(sched.curriculumSubjectTermMappingId));
+    }
+  }
+
+  const sessions = await scoped(model.examinationSessionModel).findAll({
+    where: { examinationSessionId: { [Op.in]: [...sessionIds] } },
+    attributes: ["examinationSessionId", "assessmentTypeId"],
+    transaction,
+  });
+  const sessionMap = new Map();
+  const assessmentTypeIds = new Set();
+  for (const sess of sessions) {
+    sessionMap.set(Number(sess.examinationSessionId), sess);
+    if (sess.assessmentTypeId) assessmentTypeIds.add(Number(sess.assessmentTypeId));
+  }
+
+  const planMappings = await scoped(model.assessmentPlanSubjectMappingModel).findAll({
+    where: {
+      curriculumSubjectTermMappingId: { [Op.in]: [...cstmIds] },
+    },
+    attributes: [
+      "curriculumSubjectTermMappingId",
+      "assessmentPlanId",
+      "batchId",
+      "subjectId",
+    ],
+    transaction,
+  });
+  const planIdByCstm = new Map();
+  for (const pm of planMappings) {
+    if (pm.curriculumSubjectTermMappingId && pm.assessmentPlanId) {
+      planIdByCstm.set(
+        Number(pm.curriculumSubjectTermMappingId),
+        Number(pm.assessmentPlanId),
+      );
+    }
+  }
+
+  const componentWhere = {};
+  if (assessmentTypeIds.size > 0) {
+    componentWhere.examSetupTypeId = { [Op.in]: [...assessmentTypeIds] };
+  }
+  const components = await scoped(model.assessmentPlanComponentModel).findAll({
+    where: componentWhere,
+    attributes: ["assessmentPlanComponentId", "assessmentPlanId", "examSetupTypeId"],
+    transaction,
+  });
+  const componentMap = new Map();
+  for (const comp of components) {
+    if (comp.assessmentPlanId && comp.examSetupTypeId) {
+      componentMap.set(
+        `${Number(comp.assessmentPlanId)}_${Number(comp.examSetupTypeId)}`,
+        Number(comp.assessmentPlanComponentId),
+      );
+    }
+    if (comp.examSetupTypeId && !componentMap.has(`type_${Number(comp.examSetupTypeId)}`)) {
+      componentMap.set(`type_${Number(comp.examSetupTypeId)}`, Number(comp.assessmentPlanComponentId));
+    }
+  }
+
+  for (const sheet of validSheets) {
+    const schedule = scheduleMap.get(Number(sheet.examScheduleId));
+    if (!schedule || !schedule.curriculumSubjectTermMappingId) continue;
+
+    const session = sessionMap.get(Number(schedule.examinationSessionId));
+    const assessmentTypeId = session?.assessmentTypeId
+      ? Number(session.assessmentTypeId)
+      : null;
+    const planId = planIdByCstm.get(
+      Number(schedule.curriculumSubjectTermMappingId),
+    );
+
+    let assessmentPlanComponentId = null;
+    if (planId && assessmentTypeId) {
+      assessmentPlanComponentId = componentMap.get(
+        `${planId}_${assessmentTypeId}`,
+      );
+    }
+    if (!assessmentPlanComponentId && assessmentTypeId) {
+      assessmentPlanComponentId = componentMap.get(`type_${assessmentTypeId}`);
+    }
+
+    if (!assessmentPlanComponentId) continue;
+
+    const existing = await scoped(model.studentResultItemModel).findOne({
+      where: {
+        studentId: Number(sheet.studentId),
+        curriculumSubjectTermMappingId: Number(
+          schedule.curriculumSubjectTermMappingId,
+        ),
+        assessmentPlanComponentId: Number(assessmentPlanComponentId),
+      },
+      transaction,
+    });
+
+    const maxMarks =
+      schedule.maximumMarks != null ? Number(schedule.maximumMarks) : 100;
+    const obtMarks =
+      sheet.obtainedMarks != null ? Number(sheet.obtainedMarks) : 0;
+
+    if (existing) {
+      await scoped(model.studentResultItemModel).update(
+        {
+          maximumMarks: maxMarks,
+          obtainedMarks: obtMarks,
+          updatedAt: new Date(),
+        },
+        {
+          where: { studentResultItemId: existing.studentResultItemId },
+          transaction,
+        },
+      );
+    } else {
+      await scoped(model.studentResultItemModel).create(
+        {
+          studentId: Number(sheet.studentId),
+          curriculumSubjectTermMappingId: Number(
+            schedule.curriculumSubjectTermMappingId,
+          ),
+          assessmentPlanComponentId: Number(assessmentPlanComponentId),
+          maximumMarks: maxMarks,
+          obtainedMarks: obtMarks,
+          creditEarned: 0,
+          attempt: 1,
+          universityId: sheet.universityId,
+          instituteId: sheet.instituteId,
+        },
+        { transaction },
+      );
+    }
   }
 }
 
