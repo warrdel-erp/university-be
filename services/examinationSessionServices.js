@@ -470,20 +470,26 @@ async function initializeEligibilityRecords(
     );
   if (!session) return;
 
-  const academicYearId = Number(
+  let academicYearId = Number(
     defaultAcademicYearId != null
       ? defaultAcademicYearId
       : session.academicYearId,
   );
-  if (!academicYearId) return;
+  if (!academicYearId) {
+    const activeYear = await scoped(model.acedmicYearModel).findOne({
+      where: { isActive: true },
+      transaction,
+    });
+    academicYearId = activeYear ? Number(activeYear.academicYearId) : 1;
+  }
 
   const rawStudentsList =
     await studentHallTicketRepository.getStudentsByExaminationSessionId(
       examinationSessionId,
-      { purpose: HALL_TICKET_STUDENT_QUERY_PURPOSE.ELIGIBILITY_SYNC },
+      { purpose: HALL_TICKET_STUDENT_QUERY_PURPOSE.ELIGIBILITY_SYNC, academicYearId },
       transaction,
     );
-  if (!rawStudentsList.length) return;
+  if (!rawStudentsList || !rawStudentsList.length) return;
 
   const existingMap =
     await examinationSessionEligibilityRepo.getEligibilityStatusesMap(
@@ -496,8 +502,9 @@ async function initializeEligibilityRecords(
 
   for (const raw of rawStudentsList) {
     const student = raw.student;
+    if (!student) continue;
     const studentId = Number(student.studentId);
-    if (seenStudentIds.has(studentId) || existingMap.has(studentId)) continue;
+    if (!studentId || seenStudentIds.has(studentId) || existingMap.has(studentId)) continue;
     seenStudentIds.add(studentId);
 
     let initialStatus = ELIGIBILITY_STATUS.REVIEW;
@@ -523,8 +530,8 @@ async function initializeEligibilityRecords(
     }
 
     eligibilityRecords.push({
-      universityId: student.universityId,
-      instituteId: student.instituteId,
+      universityId: student.universityId || session.universityId,
+      instituteId: student.instituteId || session.instituteId,
       academicYearId,
       studentId,
       examinationSessionId: Number(examinationSessionId),
@@ -533,10 +540,12 @@ async function initializeEligibilityRecords(
     });
   }
 
-  await examinationSessionEligibilityRepo.bulkCreateRecords(
-    eligibilityRecords,
-    { transaction },
-  );
+  if (eligibilityRecords.length > 0) {
+    await examinationSessionEligibilityRepo.bulkCreateRecords(
+      eligibilityRecords,
+      { transaction },
+    );
+  }
 }
 
 export async function createExaminationSession(sessionData, options = {}) {

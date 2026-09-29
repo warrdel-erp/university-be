@@ -5,6 +5,7 @@ import { buildScope, scoped } from "../utility/scoped.js";
 import { studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
 import { expandClassSectionTermIdsByTerms } from "./studentCountRepository.js";
 import * as examinationSessionRepository from "./examinationSessionRepository.js";
+import * as acedmicYearRepository from "./acedmicYearRepository.js";
 import {
   ELIGIBILITY_STATUS,
   HALL_TICKET_STUDENT_QUERY_PURPOSE,
@@ -490,9 +491,18 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
     return isPaginated ? { rows: [], total: 0, page, limit, totalPages: 1 } : [];
   }
 
+  let academicYearId = filters.academicYearId || examSession.academicYearId;
+  if (!academicYearId) {
+    const activeYear = await scoped(model.acedmicYearModel).findOne({
+      where: { isActive: true },
+      transaction,
+    });
+    academicYearId = activeYear ? activeYear.academicYearId : null;
+  }
+
   const expansion = await expandClassSectionTermIdsByTerms(
     sessionTermNumbers,
-    examSession.academicYearId,
+    academicYearId,
     { transaction },
   );
   const termIds = expansion.classSectionTermIds;

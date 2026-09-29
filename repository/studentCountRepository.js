@@ -1,6 +1,6 @@
 import { Op } from "sequelize";
 import * as model from "../models/index.js";
-import { scoped } from "../utility/scoped.js";
+import { scoped, buildScope } from "../utility/scoped.js";
 
 function examEnrollmentInclude(sessionId, courseId, term, academicYearId) {
   const sectionWhere = {
@@ -147,6 +147,13 @@ export async function expandClassSectionTermIdsByTerms(
     return { classSectionTermIds: [], seedGroups: [], expandedGroups: [] };
   }
 
+  const sectionWhere = {
+    ...buildScope(model.classSectionModel),
+  };
+  if (academicYearId) {
+    sectionWhere.academicYearId = Number(academicYearId);
+  }
+
   const expanded = await model.classSectionTermModel.findAll({
     attributes: ["classSectionTermId", "term"],
     where: { term: { [Op.in]: termNumbers } },
@@ -156,7 +163,7 @@ export async function expandClassSectionTermIdsByTerms(
         as: "classSection",
         required: true,
         attributes: ["courseId", "sessionId", "academicYearId"],
-        where: { academicYearId: Number(academicYearId) },
+        where: sectionWhere,
       },
     ],
     transaction: options.transaction,
