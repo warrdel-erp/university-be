@@ -5,6 +5,7 @@ import { buildScope, scoped } from "../utility/scoped.js";
 import { studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
 import { expandClassSectionTermIdsByTerms } from "./studentCountRepository.js";
 import * as examinationSessionRepository from "./examinationSessionRepository.js";
+import * as acedmicYearRepository from "./acedmicYearRepository.js";
 import {
   ELIGIBILITY_STATUS,
   HALL_TICKET_STUDENT_QUERY_PURPOSE,
@@ -13,6 +14,7 @@ import {
   normalizeEligibilityStatuses,
   buildReviewReasonEligibilityClause,
 } from "../utility/hallTicketEligibility.js";
+import { resolveSelectionCombinations } from "../utility/examScheduleSelection.js";
 
 // -- Shared query helpers --
 
@@ -52,10 +54,32 @@ function getHallTicketIncludes() {
     {
       model: model.studentModel,
       as: "student",
-      attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "enrollNumber", "courseId", "sessionId"],
+      attributes: [
+        "studentId",
+        "firstName",
+        "middleName",
+        "lastName",
+        "scholarNumber",
+        "enrollNumber",
+        "courseId",
+        "sessionId",
+        "batchId",
+      ],
       where: buildScope(model.studentModel),
       required: false,
       include: [
+        {
+          model: model.batchModel,
+          as: "batch",
+          required: false,
+          attributes: ["batchId", "batch", "sessionId"],
+        },
+        {
+          model: model.sessionModel,
+          as: "studentSession",
+          required: false,
+          attributes: ["sessionId", "sessionName"],
+        },
         studentClassSectionTermWithSectionInclude({
           sectionAttributes: ["classSectionsId", "year", "section", "sessionId"],
           includeSectionTerms: false,
@@ -65,7 +89,7 @@ function getHallTicketIncludes() {
     {
       model: model.examinationSessionModel,
       as: "examinationSession",
-      attributes: ["examinationSessionId", "sessionName", "examStartDate", "examEndDate", "assessmentTypeId", "academicYearId"],
+      attributes: ["examinationSessionId", "sessionName", "examStartDate", "examEndDate", "assessmentTypeId"],
       where: buildScope(model.examinationSessionModel),
       required: false,
       include: [
@@ -73,11 +97,6 @@ function getHallTicketIncludes() {
           model: model.examSetupTypeModel,
           as: "assessmentType",
           attributes: ["examSetupTypeId", "examName", "examCode", "examCategory", "managedBy"],
-        },
-        {
-          model: model.acedmicYearModel,
-          as: "academicYear",
-          attributes: ["academicYearId", "yearTitle", "startingDate", "endingDate"],
         },
       ],
     },
@@ -89,9 +108,11 @@ const LIST_STUDENT_ATTRIBUTES = [
   "firstName",
   "middleName",
   "lastName",
+  "scholarNumber",
   "enrollNumber",
   "courseId",
   "sessionId",
+  "batchId",
   "classSectionTermId",
 ];
 
@@ -160,6 +181,12 @@ function buildStudentListIncludes(examinationSessionId, termIds, eligibilityWher
       as: "course",
       required: false,
       attributes: ["courseId", "courseName"],
+    },
+    {
+      model: model.batchModel,
+      as: "batch",
+      required: false,
+      attributes: ["batchId", "batch", "sessionId"],
     },
     {
       model: model.sessionModel,
@@ -299,7 +326,6 @@ export async function findExaminationSessionById(examinationSessionId, transacti
     attributes: [
       "examinationSessionId",
       "sessionName",
-      "academicYearId",
       "assessmentTypeId",
       "status",
     ],
@@ -312,14 +338,9 @@ export async function findExaminationSessionById(examinationSessionId, transacti
         required: false,
       },
       {
-        model: model.acedmicYearModel,
-        as: "academicYear",
-        attributes: ["academicYearId", "yearTitle", "startingDate", "endingDate"],
-      },
-      {
         model: model.examinationSessionTermModel,
         as: "examinationSessionTerms",
-        attributes: ["examinationSessionTermId", "term"],
+        attributes: ["examinationSessionTermId", "term", "courseId", "sessionId"],
       },
     ],
   });
@@ -336,16 +357,27 @@ export async function getSchedulesByExaminationSessionId(examinationSessionId, t
 }
 
 export async function getSchedulesWithSubjectsForExaminationSession(examinationSessionId, filters = {}, transaction = null) {
-  const { courseId, sessionId, term } = filters;
+  const { courseId, sessionId, term, batchId } = filters;
 
   return scoped(model.examScheduleModel).findAll({
     transaction,
     where: {
       examinationSessionId,
       ...(term != null && { term }),
-      ...(sessionId != null && { sessionId }),
+      ...(batchId != null && { batchId }),
     },
-    attributes: ["examScheduleId", "subjectId", "term", "examDate", "examTime", "duration", "type", "examinationSessionSlotId"],
+    attributes: [
+      "examScheduleId",
+      "subjectId",
+      "batchId",
+      "curriculumSubjectTermMappingId",
+      "term",
+      "examDate",
+      "examTime",
+      "duration",
+      "type",
+      "examinationSessionSlotId",
+    ],
     include: [
       {
         model: model.subjectModel,
@@ -358,6 +390,13 @@ export async function getSchedulesWithSubjectsForExaminationSession(examinationS
           "courseId",
         ],
         where: { ...buildScope(model.subjectModel), ...(courseId != null && { courseId }) },
+      },
+      {
+        model: model.batchModel,
+        as: "batch",
+        required: sessionId != null,
+        attributes: ["batchId", "batch", "sessionId"],
+        where: { ...(sessionId != null && { sessionId: Number(sessionId) }) },
       },
       {
         model: model.examinationSessionSlotModel,
@@ -376,24 +415,10 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
   const purpose = filters.purpose || HALL_TICKET_STUDENT_QUERY_PURPOSE.LIST;
   const isPaginated = filters.page != null || filters.limit != null;
 
-  const examSessionPromise = scoped(model.examinationSessionModel).findByPk(examinationSessionId, {
-    attributes: ["examinationSessionId", "sessionName", "academicYearId", "assessmentTypeId"],
+  const examSession = await scoped(model.examinationSessionModel).findByPk(examinationSessionId, {
+    attributes: ["examinationSessionId", "sessionName", "assessmentTypeId"],
     transaction,
   });
-
-  let filterCombinations = [];
-  let mappingsPromise = Promise.resolve([]);
-  if (filters.selections && filters.selections.length > 0) {
-    const mappingIds = [];
-    for (const sel of filters.selections) {
-      mappingIds.push(sel.courseSessionMappingId);
-    }
-    mappingsPromise = examinationSessionRepository.findSessionCourseMappingsByIds(mappingIds, {
-      transaction,
-    });
-  }
-
-  const [examSession, dbMappings] = await Promise.all([examSessionPromise, mappingsPromise]);
 
   if (!examSession) {
     return isPaginated
@@ -401,20 +426,9 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
       : [];
   }
 
+  let filterCombinations = [];
   if (filters.selections && filters.selections.length > 0) {
-    const dbMappingsMap = new Map();
-    for (const m of dbMappings) {
-      dbMappingsMap.set(m.sessionCourseMappingId, m);
-    }
-    for (const sel of filters.selections) {
-      const mapping = dbMappingsMap.get(sel.courseSessionMappingId);
-      if (!mapping) continue;
-      filterCombinations.push({
-        courseId: mapping.courseId,
-        sessionId: mapping.sessionId,
-        terms: sel.terms || [],
-      });
-    }
+    filterCombinations = await resolveSelectionCombinations(filters.selections, { transaction });
   }
 
   // Fetch terms for this session.
@@ -477,9 +491,18 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
     return isPaginated ? { rows: [], total: 0, page, limit, totalPages: 1 } : [];
   }
 
+  let academicYearId = filters.academicYearId || examSession.academicYearId;
+  if (!academicYearId) {
+    const activeYear = await scoped(model.acedmicYearModel).findOne({
+      where: { isActive: true },
+      transaction,
+    });
+    academicYearId = activeYear ? activeYear.academicYearId : null;
+  }
+
   const expansion = await expandClassSectionTermIdsByTerms(
     sessionTermNumbers,
-    examSession.academicYearId,
+    academicYearId,
     { transaction },
   );
   const termIds = expansion.classSectionTermIds;
@@ -545,16 +568,23 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
         }
       }
 
-      orClauses.push({
-        courseId: comb.courseId,
-        sessionId: comb.sessionId,
-        [Op.or]: [
+      const clause = {};
+      if (comb.courseId != null) clause.courseId = comb.courseId;
+      if (comb.sessionId != null) clause.sessionId = comb.sessionId;
+      if (comb.batchId != null) clause.batchId = comb.batchId;
+
+      if (termIdsForComb.length > 0 || historyIdsForComb.length > 0) {
+        clause[Op.or] = [
           { classSectionTermId: { [Op.in]: termIdsForComb } },
           { studentId: { [Op.in]: historyIdsForComb } },
-        ],
-      });
+        ];
+      }
+
+      orClauses.push(clause);
     }
-    combinedWhere[Op.and].push({ [Op.or]: orClauses });
+    if (orClauses.length > 0) {
+      combinedWhere[Op.and].push({ [Op.or]: orClauses });
+    }
   } else if (filters.sessionId) {
     const allowedSessions = Array.isArray(filters.sessionId)
       ? filters.sessionId.map(Number)

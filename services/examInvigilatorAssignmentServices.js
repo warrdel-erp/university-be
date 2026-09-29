@@ -377,8 +377,10 @@ export async function getAssignmentsByRoom(
     exams.push({
       examScheduleRoomCapacityId: rc.examScheduleRoomCapacityId,
       examScheduleId: rc.examScheduleId,
-      term: rc.examSchedule.term,
-      sessionId: rc.examSchedule.sessionId,
+      term:
+        rc.examSchedule.curriculumSubjectTermMapping?.term ??
+        rc.examSchedule.term,
+      sessionId: rc.examSchedule.batch?.sessionId || null,
       subjectId: subject ? subject.subjectId : null,
       subjectName: subject ? subject.subjectName : null,
       subjectCode: subject ? subject.subjectCode : null,

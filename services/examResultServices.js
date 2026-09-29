@@ -7,6 +7,7 @@ import {
   lookupStudentCount,
 } from "../utility/studentCount.js";
 import { getStudentCountMapByGroups } from "./studentCountServices.js";
+import { resolveSelectionCombinations } from "../utility/examScheduleSelection.js";
 import {
   decimalAdd,
   decimalDivide,
@@ -131,32 +132,20 @@ async function resolveContext(query) {
 
   let classSectionOr = null;
   if (query.selections?.length) {
-    const mappingIds = [];
-    for (const selection of query.selections) {
-      mappingIds.push(Number(selection.courseSessionMappingId));
-    }
-
-    const mappings =
-      await examResultRepository.findSessionCourseMappingsByIds(mappingIds);
-    const mappingById = new Map();
-    for (const mapping of mappings) {
-      mappingById.set(Number(mapping.sessionCourseMappingId), mapping);
-    }
-
+    const filterCombinations = await resolveSelectionCombinations(query.selections);
     classSectionOr = [];
     terms = [];
     const termSeen = new Set();
 
-    for (const selection of query.selections) {
-      const mapping = mappingById.get(Number(selection.courseSessionMappingId));
-      if (!mapping) continue;
+    for (const comb of filterCombinations) {
+      if (comb.courseId != null && comb.sessionId != null) {
+        classSectionOr.push({
+          courseId: Number(comb.courseId),
+          sessionId: Number(comb.sessionId),
+        });
+      }
 
-      classSectionOr.push({
-        courseId: Number(mapping.courseId),
-        sessionId: Number(mapping.sessionId),
-      });
-
-      for (const term of selection.terms) {
+      for (const term of comb.terms || []) {
         const termNumber = Number(term);
         if (termSeen.has(termNumber)) continue;
         termSeen.add(termNumber);

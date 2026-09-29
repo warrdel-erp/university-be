@@ -19,6 +19,24 @@ const assessmentPlanSubjectMappingModel = sequelize.define(
                 key: 'assessment_plan_id'
             }
         },
+        batchId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'batch_id',
+            references: {
+                model: 'batch',
+                key: 'batch_id'
+            }
+        },
+        curriculumSubjectTermMappingId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'curriculum_subject_term_mapping_id',
+            references: {
+                model: 'curriculum_subject_term_mapping',
+                key: 'curriculum_subject_term_mapping_id'
+            }
+        },
         subjectId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -26,33 +44,6 @@ const assessmentPlanSubjectMappingModel = sequelize.define(
             references: {
                 model: 'subject',
                 key: 'subject_id'
-            }
-        },
-        curriculumBatchTermMappingId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'curriculum_batch_term_mapping_id',
-            references: {
-                model: 'curriculum_batch_term_mapping',
-                key: 'curriculum_batch_term_mapping_id'
-            }
-        },
-        courseId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'course_id',
-            references: {
-                model: 'course',
-                key: 'course_id'
-            }
-        },
-        sessionId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'session_id',
-            references: {
-                model: 'session',
-                key: 'session_id'
             }
         },
         universityId: {
@@ -116,8 +107,8 @@ const assessmentPlanSubjectMappingModel = sequelize.define(
         indexes: [
             {
                 unique: true,
-                name: 'unique_subject_batch_term_plan',
-                fields: ['subject_id', 'curriculum_batch_term_mapping_id', 'course_id', 'session_id', 'assessment_plan_id']
+                name: 'unique_batch_cstm_plan',
+                fields: ['batch_id', 'curriculum_subject_term_mapping_id', 'assessment_plan_id']
             }
         ]
     }

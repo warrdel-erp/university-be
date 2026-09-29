@@ -3,7 +3,6 @@ import { DataTypes } from "sequelize";
 import examinationSessionModel from "./examinationSessionModel.js";
 import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
-import acedmicYearModel from "./acedmicYearModel.js";
 import courseModel from "./courseModel.js";
 import sessionModel from "./sessionModel.js";
 
@@ -61,15 +60,6 @@ const examinationSessionTermModel = sequelize.define(
         key: "institute_id",
       },
     },
-    academicYearId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      field: "acedmic_year_id",
-      references: {
-        model: acedmicYearModel,
-        key: "acedmic_year_id",
-      },
-    },
     /** Program term number (e.g. 1, 2, 4) — not a class_section_term FK. */
     term: {
       type: DataTypes.INTEGER,
@@ -117,7 +107,6 @@ const examinationSessionTermModel = sequelize.define(
 examinationSessionTermModel.scopeConfig = {
   university: true,
   institute: true,
-  academicYear: true,
 };
 
 export default examinationSessionTermModel;

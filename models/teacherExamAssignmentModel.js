@@ -35,7 +35,7 @@ const teacherExamAssignmentModel = sequelize.define(
     },
     academicYearId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       field: "acedmic_year_id",
       references: {
         model: "acedmic_year",
@@ -110,6 +110,6 @@ const teacherExamAssignmentModel = sequelize.define(
   },
 );
 
-teacherExamAssignmentModel.scopeConfig = { university: true, institute: true, academicYear: true };
+teacherExamAssignmentModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
 export default teacherExamAssignmentModel;

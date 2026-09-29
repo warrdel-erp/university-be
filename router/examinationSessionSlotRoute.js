@@ -26,7 +26,9 @@ const getSlotsSchema = {
   query: z.object({
     examinationSessionId: positiveIntegerQueryId,
     date: dateStringSchema.optional(),
-    selections: selectionsSchema,
+    selections: selectionsSchema.optional(),
+    batchId: positiveIntegerQueryId.optional(),
+    term: z.coerce.number().int().positive().optional(),
     filterStatus: z.enum(["all", "needsScheduling", "roomPending", "ready", "published"]).default("all"),
   }),
 };

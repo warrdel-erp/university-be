@@ -79,13 +79,10 @@ export async function deleteExamSchedule(req, res) {
 
 export async function addExamSchedule(req, res) {
   try {
-    const academicYearId = getAcademicYearId() || req.user?.academicYearId || req.body.academicYearId || null;
-
     const examSchedule = await examStructureScheduleServices.addExamSchedule(
       {
         ...req.body,
         examSetupTypeTermId: req.body.examSetupTypeTermId || null,
-        academicYearId,
       },
       req.user?.userId ,
       req.user?.userId ,

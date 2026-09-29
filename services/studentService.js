@@ -742,6 +742,15 @@ export async function importStudentData(excelData, data) {
         throw new Error("classSectionTermId not found");
       }
       convertedData.classSectionTermId = placement.classSectionTermId;
+      if (!convertedData.batchId) {
+        const resolvedBatchId =
+          placement.classSection?.batchId ??
+          placement.classSection?.batch?.batchId ??
+          null;
+        if (resolvedBatchId) {
+          convertedData.batchId = Number(resolvedBatchId);
+        }
+      }
 
       const studentPayload = buildStudentRowPayload({
         ...convertedData,

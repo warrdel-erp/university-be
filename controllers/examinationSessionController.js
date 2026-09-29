@@ -95,8 +95,11 @@ export const createExaminationSessionTerm = async (req, res) => {
 
 export const deleteExaminationSessionTerm = async (req, res) => {
   try {
-    const examinationSessionTermId = req.query.examinationSessionTermId || req.params.examinationSessionTermId;
-    const result = await examinationSessionServices.deleteExaminationSessionTerm(examinationSessionTermId);
+    const { examinationSessionTermId, examinationSessionId, batchId, term, courseId, sessionId } = req.query;
+    const target = examinationSessionTermId
+      ? Number(examinationSessionTermId)
+      : { examinationSessionId, batchId, term, courseId, sessionId };
+    const result = await examinationSessionServices.deleteExaminationSessionTerm(target);
     if (!result) {
       return ErrorResponse(res, 404, "Examination session term mapping not found");
     }

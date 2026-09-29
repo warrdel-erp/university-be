@@ -4,11 +4,6 @@ import { validateEmployeeUser } from "../utility/employeeValidation.js";
 import { getAcademicYearId } from "../utility/requestContext.js";
 
 function requireActiveAcademicYearId(res) {
-    const academicYearId = getAcademicYearId();
-    if (!academicYearId) {
-        ErrorResponse(res, 400, "academicYearId not found in user session");
-        return null;
-    }
     return Number(academicYearId);
 }
 

@@ -134,6 +134,6 @@ const examScheduleRoomCapacityModel = sequelize.define(
     }
 );
 
-examScheduleRoomCapacityModel.scopeConfig = { university: true, institute: true, academicYear: true };
+examScheduleRoomCapacityModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
 export default examScheduleRoomCapacityModel;

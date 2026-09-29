@@ -17,7 +17,16 @@ export const createExaminationSessionSlot = async (req, res) => {
 
 export const getExaminationSessionSlotsCount = async (req, res) => {
   try {
-    const { examinationSessionId, date, selections } = req.query;
+    const { examinationSessionId, date, batchId, term } = req.query;
+    let { selections } = req.query;
+
+    if (batchId || term) {
+      selections = selections || [];
+      selections.push({
+        batchId: batchId ? Number(batchId) : undefined,
+        terms: term ? [Number(term)] : undefined,
+      });
+    }
 
     const result = await examinationSessionSlotServices.getExaminationSessionSlotsCount({
       examinationSessionId,
@@ -34,7 +43,16 @@ export const getExaminationSessionSlotsCount = async (req, res) => {
 
 export const getExaminationSessionSlots = async (req, res) => {
   try {
-    const { examinationSessionId, date, selections, filterStatus } = req.query;
+    const { examinationSessionId, date, filterStatus, batchId, term } = req.query;
+    let { selections } = req.query;
+
+    if (batchId || term) {
+      selections = selections || [];
+      selections.push({
+        batchId: batchId ? Number(batchId) : undefined,
+        terms: term ? [Number(term)] : undefined,
+      });
+    }
 
     const result = await examinationSessionSlotServices.getExaminationSessionSlots({
       examinationSessionId,

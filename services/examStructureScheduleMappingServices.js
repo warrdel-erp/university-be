@@ -103,60 +103,84 @@ async function resolveDurationFromAssessmentPlan(examDetail) {
   }
 }
 
-async function resolveSessionId(examDetail) {
-  const mappedCourseId = Number(examDetail.courseId);
-
-  const mappingWhere = {
-    subjectId: Number(examDetail.subjectId),
-    courseId: mappedCourseId,
-    curriculumBatchTermMappingId: Number(examDetail.curriculumBatchTermMappingId),
-  };
-  if (examDetail.sessionId) {
-    mappingWhere.sessionId = Number(examDetail.sessionId);
-  }
-
-  const mapping = await scoped(model.assessmentPlanSubjectMappingModel).findOne({
-    where: mappingWhere,
-    attributes: ["sessionId", "courseId"],
-    raw: true,
-  });
-
-  let mappedSessionId = mapping?.sessionId ? Number(mapping.sessionId) : null;
-  let mappedAcademicYearId = null;
-
-  const candidateSessionId = examDetail.sessionId
-    ? Number(examDetail.sessionId)
-    : mappedSessionId;
-
-  if (candidateSessionId) {
-    const validSession = await scoped(model.sessionModel).findOne({
-      where: { sessionId: candidateSessionId },
-      attributes: ["sessionId", "academicYearId"],
-      raw: true,
+async function resolveBatchAndCurriculumSubjectTerm(examDetail, options = {}) {
+  // 1. If curriculumSubjectTermMappingId provided, resolve CSTM details
+  if (examDetail.curriculumSubjectTermMappingId) {
+    const cstm = await scoped(model.curriculumSubjectTermMappingModel).findOne({
+      where: { curriculumSubjectTermMappingId: Number(examDetail.curriculumSubjectTermMappingId) },
+      include: [
+        {
+          model: model.curriculumModel,
+          as: "curriculum",
+          attributes: ["curriculumId", "courseId"],
+        },
+      ],
+      transaction: options.transaction,
     });
-    if (validSession) {
-      examDetail.sessionId = validSession.sessionId;
-      if (!examDetail.academicYearId && validSession.academicYearId) {
-        examDetail.academicYearId = validSession.academicYearId;
-      }
-    } else {
-      examDetail.sessionId = mappedSessionId;
+
+    if (!cstm) {
+      const err = new Error(
+        `Curriculum Subject Term Mapping (ID: ${Number(examDetail.curriculumSubjectTermMappingId)}) does not exist`,
+      );
+      err.statusCode = 404;
+      throw err;
+    }
+
+    examDetail.term = cstm.term;
+    examDetail.subjectId = examDetail.subjectId || cstm.subjectId;
+    if (cstm.curriculum?.courseId) {
+      examDetail.courseId = cstm.curriculum.courseId;
     }
   }
 
-  if (mappedAcademicYearId && !examDetail.academicYearId) {
-    examDetail.academicYearId = mappedAcademicYearId;
-  }
-}
+  // 2. If batchId provided, resolve Batch details
+  if (examDetail.batchId) {
+    const batch = await scoped(model.batchModel).findOne({
+      where: { batchId: Number(examDetail.batchId) },
+      include: [
+        {
+          model: model.sessionModel,
+          as: "session",
+          attributes: ["sessionId", "courseId"],
+        },
+      ],
+      transaction: options.transaction,
+    });
 
-async function resolveAcademicYearId(examDetail) {
-  if (!examDetail.academicYearId && examDetail.subjectId) {
-    const academicYearId =
-      await examStructureScheduleRepository.findSubjectacademicYearId(
-        examDetail.subjectId,
-      );
-    if (academicYearId) {
-      examDetail.academicYearId = academicYearId;
+    if (!batch) {
+      const err = new Error(`Batch (ID: ${Number(examDetail.batchId)}) does not exist`);
+      err.statusCode = 404;
+      throw err;
+    }
+
+    examDetail.sessionId = batch.sessionId;
+    if (!examDetail.courseId && batch.session?.courseId) {
+      examDetail.courseId = batch.session.courseId;
+    }
+  }
+
+  // 3. Fallback if legacy curriculumBatchTermMappingId is provided
+  if (
+    examDetail.curriculumBatchTermMappingId &&
+    (!examDetail.batchId || !examDetail.curriculumSubjectTermMappingId)
+  ) {
+    const context = await applyCurriculumBatchTermToExamDetail(examDetail, options);
+    if (!examDetail.batchId && context.batchId) {
+      examDetail.batchId = context.batchId;
+    }
+    if (!examDetail.curriculumSubjectTermMappingId && context.curriculumId && examDetail.subjectId) {
+      const cstm = await scoped(model.curriculumSubjectTermMappingModel).findOne({
+        where: {
+          curriculumId: context.curriculumId,
+          term: context.term,
+          subjectId: Number(examDetail.subjectId),
+        },
+        attributes: ["curriculumSubjectTermMappingId"],
+        transaction: options.transaction,
+      });
+      if (cstm) {
+        examDetail.curriculumSubjectTermMappingId = cstm.curriculumSubjectTermMappingId;
+      }
     }
   }
 }
@@ -284,9 +308,8 @@ export async function getExamStructureSchedule(examSetupTypeId) {
           "examScheduleId",
           "subjectId",
           "term",
-          "sessionId",
-          "academicYearId",
-          "curriculumBatchTermMappingId",
+          "batchId",
+          "curriculumSubjectTermMappingId",
           "examDate",
           "examTime",
           "duration",
@@ -300,27 +323,29 @@ export async function getExamStructureSchedule(examSetupTypeId) {
             required: true,
           },
           {
-            model: model.curriculumBatchTermMappingModel,
-            as: "curriculumBatchTermMapping",
-            attributes: [
-              "curriculumBatchTermMappingId",
-              "term",
-              "yearNumber",
-              "year",
-            ],
+            model: model.batchModel,
+            as: "batch",
+            attributes: ["batchId", "batch", "sessionId", "status"],
             required: false,
             include: [
               {
-                model: model.curriculumBatchMappingModel,
-                as: "batchMapping",
-                attributes: [
-                  "curriculumBatchMappingId",
-                  "curriculumId",
-                  "batch",
-                ],
-                required: true,
+                model: model.sessionModel,
+                as: "session",
+                attributes: ["sessionId", "sessionName"],
+                required: false,
               },
             ],
+          },
+          {
+            model: model.curriculumSubjectTermMappingModel,
+            as: "curriculumSubjectTermMapping",
+            attributes: [
+              "curriculumSubjectTermMappingId",
+              "curriculumId",
+              "term",
+              "subjectId",
+            ],
+            required: false,
           },
         ],
       })
@@ -447,7 +472,7 @@ async function assertNoStudentExamTimeConflict(
       startMinutes,
       endMinutes,
       sessionId: examDetail.sessionId,
-      academicYearId: examDetail.academicYearId,
+      batchId: examDetail.batchId,
       courseId,
       term,
       excludeExamScheduleId,
@@ -455,7 +480,7 @@ async function assertNoStudentExamTimeConflict(
 
   if (conflict) {
     throw new Error(
-      `Cannot schedule exam: ${conflict.subjectSchedule.subjectName} is already scheduled at the same time for the same students`,
+      `Cannot schedule exam: ${conflict.subjectSchedule?.subjectName || "Another subject"} is already scheduled at the same time for the same students`,
     );
   }
 }
@@ -482,6 +507,7 @@ async function assertUniqueExamScheduleMapping(
     });
     if (examinationSession) {
       examinationSessionId = examinationSession.examinationSessionId;
+      examDetail.examinationSessionId = examinationSession.examinationSessionId;
     }
   }
 
@@ -490,9 +516,12 @@ async function assertUniqueExamScheduleMapping(
       where: {
         examinationSessionId: Number(examinationSessionId),
         subjectId: Number(examDetail.subjectId),
-        curriculumBatchTermMappingId: Number(
-          examDetail.curriculumBatchTermMappingId,
-        ),
+        ...(examDetail.batchId && { batchId: Number(examDetail.batchId) }),
+        ...(examDetail.curriculumSubjectTermMappingId && {
+          curriculumSubjectTermMappingId: Number(
+            examDetail.curriculumSubjectTermMappingId,
+          ),
+        }),
         ...(excludeExamScheduleId && {
           examScheduleId: { [Op.ne]: excludeExamScheduleId },
         }),
@@ -505,55 +534,6 @@ async function assertUniqueExamScheduleMapping(
         "An exam schedule is already scheduled for this subject.",
       );
     }
-  }
-
-  const whereClause = {
-    sessionId: examDetail.sessionId,
-    examinationSessionId: examinationSessionId,
-    subjectId: examDetail.subjectId,
-    curriculumBatchTermMappingId: Number(
-      examDetail.curriculumBatchTermMappingId,
-    ),
-  };
-
-  if (excludeExamScheduleId) {
-    whereClause.examScheduleId = { [Op.ne]: excludeExamScheduleId };
-  }
-
-  const conflict = await scoped(model.examScheduleModel).findOne({
-    where: whereClause,
-    include: [
-      {
-        model: model.subjectModel,
-        as: "subjectSchedule",
-        where: { courseId: examDetail.courseId },
-        required: true,
-      },
-    ],
-    raw: true,
-  });
-
-  if (conflict) {
-    throw new Error(
-      "A schedule with the same Course, Session, Examination Session, and Subject ",
-    );
-  }
-
-  const conflictBySubject = await scoped(model.examScheduleModel).findOne({
-    where: whereClause,
-    include: [
-      {
-        model: model.subjectModel,
-        as: "subjectSchedule",
-        where: { courseId: examDetail.courseId },
-        required: true,
-      },
-    ],
-    raw: true,
-  });
-
-  if (conflictBySubject) {
-    throw new Error("Cannot add duplicate exam schedule.");
   }
 }
 
@@ -568,14 +548,10 @@ export async function addExamSchedule(examDetail, createdBy, updatedBy) {
     // Set examSetupTypeTermId to null explicitly
     examDetail.examSetupTypeTermId = null;
 
-    // subjectId + curriculumBatchTermMappingId are canonical; term always from CBTM
-    await applyCurriculumBatchTermToExamDetail(examDetail, { transaction });
-
+    await resolveBatchAndCurriculumSubjectTerm(examDetail, { transaction });
     await resolveSlotDetails(examDetail);
-    await resolveSessionId(examDetail);
-    await resolveAcademicYearId(examDetail);
 
-    // Resolve duration and assessmentPlanComponentId from assessmentPlanComponent
+    // Resolve duration and maximumMarks from assessment plan
     await resolveDurationFromAssessmentPlan(examDetail);
 
     delete examDetail.semesterId;
@@ -583,7 +559,29 @@ export async function addExamSchedule(examDetail, createdBy, updatedBy) {
     await assertNoStudentExamTimeConflict(examDetail);
     await assertUniqueExamScheduleMapping(examDetail);
 
-    return await examStructureScheduleRepository.addExamSchedule(examDetail, {
+    const payload = {
+      subjectId: Number(examDetail.subjectId),
+      batchId: examDetail.batchId ? Number(examDetail.batchId) : null,
+      curriculumSubjectTermMappingId: examDetail.curriculumSubjectTermMappingId
+        ? Number(examDetail.curriculumSubjectTermMappingId)
+        : null,
+      term: examDetail.term != null ? Number(examDetail.term) : null,
+      examDate: examDetail.examDate,
+      examTime: examDetail.examTime,
+      type: examDetail.type,
+      duration: examDetail.duration,
+      maximumMarks: examDetail.maximumMarks || null,
+      examinationSessionSlotId: examDetail.examinationSessionSlotId
+        ? Number(examDetail.examinationSessionSlotId)
+        : null,
+      examinationSessionId: examDetail.examinationSessionId
+        ? Number(examDetail.examinationSessionId)
+        : null,
+      createdBy: examDetail.createdBy,
+      updatedBy: examDetail.updatedBy,
+    };
+
+    return await examStructureScheduleRepository.addExamSchedule(payload, {
       transaction,
     });
   });
@@ -649,18 +647,56 @@ export async function updateExamSchedule(
 
     examDetail.updatedBy = updatedBy;
 
-    await applyCurriculumBatchTermToExamDetail(examDetail, { transaction });
+    if (!examDetail.batchId && existing.batchId) {
+      examDetail.batchId = existing.batchId;
+    }
+    if (!examDetail.curriculumSubjectTermMappingId && existing.curriculumSubjectTermMappingId) {
+      examDetail.curriculumSubjectTermMappingId = existing.curriculumSubjectTermMappingId;
+    }
+    if (!examDetail.examinationSessionId && existing.examinationSessionId) {
+      examDetail.examinationSessionId = existing.examinationSessionId;
+    }
 
+    await resolveBatchAndCurriculumSubjectTerm(examDetail, { transaction });
     await resolveSlotDetails(examDetail);
-    await resolveSessionId(examDetail);
-    await resolveAcademicYearId(examDetail);
 
     delete examDetail.semesterId;
 
     await assertNoStudentExamTimeConflict(examDetail, id);
     await assertUniqueExamScheduleMapping(examDetail, id);
 
-    await examStructureScheduleRepository.updateExamSchedule(id, examDetail, {
+    const updatePayload = {
+      ...(examDetail.subjectId && { subjectId: Number(examDetail.subjectId) }),
+      ...(examDetail.batchId !== undefined && {
+        batchId: examDetail.batchId ? Number(examDetail.batchId) : null,
+      }),
+      ...(examDetail.curriculumSubjectTermMappingId !== undefined && {
+        curriculumSubjectTermMappingId: examDetail.curriculumSubjectTermMappingId
+          ? Number(examDetail.curriculumSubjectTermMappingId)
+          : null,
+      }),
+      ...(examDetail.term !== undefined && {
+        term: examDetail.term != null ? Number(examDetail.term) : null,
+      }),
+      ...(examDetail.examDate && { examDate: examDetail.examDate }),
+      ...(examDetail.examTime !== undefined && { examTime: examDetail.examTime }),
+      ...(examDetail.type && { type: examDetail.type }),
+      ...(examDetail.duration !== undefined && { duration: examDetail.duration }),
+      ...(examDetail.maximumMarks !== undefined && { maximumMarks: examDetail.maximumMarks }),
+      ...(examDetail.examinationSessionSlotId !== undefined && {
+        examinationSessionSlotId: examDetail.examinationSessionSlotId
+          ? Number(examDetail.examinationSessionSlotId)
+          : null,
+      }),
+      ...(examDetail.examinationSessionId !== undefined && {
+        examinationSessionId: examDetail.examinationSessionId
+          ? Number(examDetail.examinationSessionId)
+          : null,
+      }),
+      updatedBy: examDetail.updatedBy,
+    };
+
+    await examStructureScheduleRepository.updateExamSchedule(id, updatePayload, {
       transaction,
     });
   });

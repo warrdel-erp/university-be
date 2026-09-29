@@ -101,7 +101,6 @@ export const getSpecializationOptions = async (req, res) => {
 export async function getSubjectOptions(req, res) {
     try {
         const { courseId, term, sessionId, batchId, year, userId, unmapped } = req.query;
-        const academicYearId = getAcademicYearId();
         const isUnmapped = unmapped === true || unmapped === 'true';
         const result = await optionsServices.getSubjectOptions(
             courseId,
@@ -128,7 +127,6 @@ export async function getMySubjectOptions(req, res) {
         }
         const { userId } = validation;
         const { courseId, term, sessionId, batchId, year } = req.query;
-        const academicYearId = getAcademicYearId();
         const result = await optionsServices.getSubjectOptions(
             courseId,
             term,
@@ -170,11 +168,6 @@ export const getTimeTableStructureOptions = async (req, res) => {
 export const getLectureWindowOptions = async (req, res) => {
     try {
         const { userId, employeeId, subjectId, date, sessionId } = req.query;
-        const academicYearId = getAcademicYearId();
-        if (!academicYearId) {
-            return ErrorResponse(res, 400, "academicYearId not found in user session");
-        }
-
         const result = await optionsServices.getLectureWindowOptions(
             userId != null ? Number(userId) : undefined,
             employeeId != null ? Number(employeeId) : undefined,
@@ -197,11 +190,6 @@ export const getMyLectureWindowOptions = async (req, res) => {
     try {
         const userId = req.user.userId;
         const { subjectId, date, sessionId } = req.query;
-        const academicYearId = getAcademicYearId();
-        if (!academicYearId) {
-            return ErrorResponse(res, 400, "academicYearId not found in user session");
-        }
-
         const result = await optionsServices.getLectureWindowOptions(
             Number(userId),
             undefined,
@@ -223,11 +211,6 @@ export const getMyLectureWindowOptions = async (req, res) => {
 export const getLessonOptions = async (req, res) => {
     try {
         const { lectureWindowId } = req.query;
-        const academicYearId = getAcademicYearId();
-        if (!academicYearId) {
-            return ErrorResponse(res, 400, "academicYearId not found in user session");
-        }
-
         const result = await optionsServices.getLessonOptions(
             Number(lectureWindowId),
             Number(academicYearId),
@@ -248,11 +231,6 @@ export const getMyLessonOptions = async (req, res) => {
         }
 
         const { lectureWindowId } = req.query;
-        const academicYearId = getAcademicYearId();
-        if (!academicYearId) {
-            return ErrorResponse(res, 400, "academicYearId not found in user session");
-        }
-
         const result = await optionsServices.getLessonOptions(
             Number(lectureWindowId),
             Number(academicYearId),
@@ -269,11 +247,6 @@ export const getMyLessonOptions = async (req, res) => {
 export const getTopicOptions = async (req, res) => {
     try {
         const { lessonId } = req.query;
-        const academicYearId = getAcademicYearId();
-        if (!academicYearId) {
-            return ErrorResponse(res, 400, "academicYearId not found in user session");
-        }
-
         const result = await optionsServices.getTopicOptions(
             Number(lessonId),
             Number(academicYearId),
@@ -294,11 +267,6 @@ export const getMyTopicOptions = async (req, res) => {
         }
 
         const { lessonId } = req.query;
-        const academicYearId = getAcademicYearId();
-        if (!academicYearId) {
-            return ErrorResponse(res, 400, "academicYearId not found in user session");
-        }
-
         const result = await optionsServices.getTopicOptions(
             Number(lessonId),
             Number(academicYearId),

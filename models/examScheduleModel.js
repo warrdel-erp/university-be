@@ -42,37 +42,28 @@ const examScheduleModel = sequelize.define(
                 key: 'subject_id'
             }
         },
-        curriculumBatchTermMappingId: {
+        batchId: {
             type: DataTypes.INTEGER,
             allowNull: true,
-            field: 'curriculum_batch_term_mapping_id',
+            field: 'batch_id',
             references: {
-                model: 'curriculum_batch_term_mapping',
-                key: 'curriculum_batch_term_mapping_id'
+                model: 'batch',
+                key: 'batch_id'
+            }
+        },
+        curriculumSubjectTermMappingId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'curriculum_subject_term_mapping_id',
+            references: {
+                model: 'curriculum_subject_term_mapping',
+                key: 'curriculum_subject_term_mapping_id'
             }
         },
         term: {
             type: DataTypes.INTEGER,
             allowNull: true,
             comment: 'Program term number',
-        },
-        academicYearId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'acedmic_year_id',
-            references: {
-                model: 'acedmic_year',
-                key: 'acedmic_year_id'
-            }
-        },
-        sessionId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'session_id',
-            references: {
-                model: 'session',
-                key: 'session_id'
-            }
         },
         examDate: {
             type: DataTypes.DATEONLY,
@@ -164,6 +155,6 @@ const examScheduleModel = sequelize.define(
     }
 );
 
-examScheduleModel.scopeConfig = { university: true, institute: true, academicYear: true };
+examScheduleModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
 export default examScheduleModel;

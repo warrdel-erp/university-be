@@ -265,8 +265,10 @@ export async function getBundleByRoomDetails(
       subjectName: subject ? subject.subjectName : null,
       subjectCode: subject ? subject.subjectCode : null,
       courseId: subject ? subject.courseId : null,
-      sessionId: plainRc.examSchedule.sessionId,
-      term: plainRc.examSchedule.term,
+      sessionId: plainRc.examSchedule.batch?.sessionId || null,
+      term:
+        plainRc.examSchedule.curriculumSubjectTermMapping?.term ??
+        plainRc.examSchedule.term,
       capacity: plainRc.capacity,
       studentCount: count,
       isRoomAllocationDone: count > 0,

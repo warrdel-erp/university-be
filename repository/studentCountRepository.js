@@ -1,13 +1,12 @@
 import { Op } from "sequelize";
 import * as model from "../models/index.js";
-import { scoped } from "../utility/scoped.js";
+import { scoped, buildScope } from "../utility/scoped.js";
 
 function examEnrollmentInclude(sessionId, courseId, term, academicYearId) {
-  const sectionWhere = {
-    sessionId: Number(sessionId),
-    courseId: Number(courseId),
-    academicYearId: Number(academicYearId),
-  };
+  const sectionWhere = {};
+  if (sessionId != null && !isNaN(Number(sessionId))) sectionWhere.sessionId = Number(sessionId);
+  if (courseId != null && !isNaN(Number(courseId))) sectionWhere.courseId = Number(courseId);
+  if (academicYearId != null && !isNaN(Number(academicYearId))) sectionWhere.academicYearId = Number(academicYearId);
 
   return {
     model: model.classSectionTermModel,
@@ -28,10 +27,25 @@ function examEnrollmentInclude(sessionId, courseId, term, academicYearId) {
 }
 
 export async function countTermCohortStudents(group, options = {}) {
+  if (
+    !group ||
+    group.sessionId == null ||
+    group.courseId == null ||
+    group.term == null ||
+    isNaN(Number(group.sessionId)) ||
+    isNaN(Number(group.courseId)) ||
+    isNaN(Number(group.term))
+  ) {
+    return 0;
+  }
+
   const where = {
     sessionId: Number(group.sessionId),
     courseId: Number(group.courseId),
   };
+  if (group.batchId != null && !isNaN(Number(group.batchId))) {
+    where.batchId = Number(group.batchId);
+  }
 
   return scoped(model.studentModel).count({
     where,
@@ -54,6 +68,9 @@ export async function findTermCohortStudents(group, options = {}) {
     sessionId: Number(group.sessionId),
     courseId: Number(group.courseId),
   };
+  if (group.batchId != null && !isNaN(Number(group.batchId))) {
+    where.batchId = Number(group.batchId);
+  }
   if (options.search) {
     const like = `%${options.search}%`;
     where[Op.or] = [
@@ -147,6 +164,13 @@ export async function expandClassSectionTermIdsByTerms(
     return { classSectionTermIds: [], seedGroups: [], expandedGroups: [] };
   }
 
+  const sectionWhere = {
+    ...buildScope(model.classSectionModel),
+  };
+  if (academicYearId) {
+    sectionWhere.academicYearId = Number(academicYearId);
+  }
+
   const expanded = await model.classSectionTermModel.findAll({
     attributes: ["classSectionTermId", "term"],
     where: { term: { [Op.in]: termNumbers } },
@@ -156,7 +180,7 @@ export async function expandClassSectionTermIdsByTerms(
         as: "classSection",
         required: true,
         attributes: ["courseId", "sessionId", "academicYearId"],
-        where: { academicYearId: Number(academicYearId) },
+        where: sectionWhere,
       },
     ],
     transaction: options.transaction,
