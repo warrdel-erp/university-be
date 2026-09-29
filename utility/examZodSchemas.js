@@ -42,10 +42,11 @@ export const dateStringSchema = z
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format");
 
 export const selectionItemSchema = z.object({
-  batchId: z.number().int().positive().optional(),
-  courseId: z.number().int().positive().optional(),
-  sessionId: z.number().int().positive().optional(),
-  terms: z.array(z.number().int().positive()).optional(),
+  batchId: z.coerce.number().int().positive().optional(),
+  courseId: z.coerce.number().int().positive().optional(),
+  sessionId: z.coerce.number().int().positive().optional(),
+  terms: z.array(z.coerce.number().int().positive()).optional(),
+  term: z.coerce.number().int().positive().optional(),
 });
 
 /**

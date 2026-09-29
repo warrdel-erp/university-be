@@ -244,15 +244,18 @@ export async function findCurriculumSubjectsForActiveYear(
 
     const activeTerm = Number(plainTerm.term);
 
+    const sessionId = batchObj?.sessionId != null ? Number(batchObj.sessionId) : null;
+
     for (const mapping of curriculum.subjectTermMappings || []) {
       if (Number(mapping.term) !== activeTerm || !mapping.subject) continue;
 
-      const key = `${curriculum.courseId}:${mapping.subjectId}:${activeTerm}:${batch}`;
+      const key = `${curriculum.courseId}:${sessionId}:${mapping.subjectId}:${activeTerm}:${batch}`;
       if (seen.has(key)) continue;
       seen.add(key);
 
       rows.push({
         subjectId: Number(mapping.subjectId),
+        sessionId,
         term: activeTerm,
         credit: mapping.credit,
         year: Number(plainTerm.year),
@@ -371,6 +374,7 @@ export async function findActiveYearBatchTermsByCourseIds(
 
     const batchObj = batchMapping.batch;
     const batch = batchObj?.batch != null ? Number(batchObj.batch) : null;
+    const sessionId = batchObj?.sessionId != null ? Number(batchObj.sessionId) : null;
     const expectedYearNumber = batch != null ? Number(activeBatchYear) - batch + 1 : Number(plain.yearNumber);
     if (
       expectedYearNumber < 1 ||
@@ -381,12 +385,13 @@ export async function findActiveYearBatchTermsByCourseIds(
 
     const courseId = Number(batchMapping.curriculum.courseId);
     const term = Number(plain.term);
-    const key = `${courseId}_${batch}_${term}`;
+    const key = `${courseId}_${sessionId}_${batch}_${term}`;
     if (seen.has(key)) continue;
     seen.add(key);
 
     rows.push({
       courseId,
+      sessionId,
       term,
       batch,
       batchId: Number(batchMapping.batchId),

@@ -223,13 +223,13 @@ export async function getExamScheduleSlot(examScheduleId) {
       {
         model: model.batchModel,
         as: "batch",
-        attributes: ["batchId", "batch", "sessionId", "courseId"],
+        attributes: ["batchId", "batch", "sessionId"],
         required: false,
         include: [
           {
             model: model.sessionModel,
             as: "session",
-            attributes: ["sessionId", "sessionName"],
+            attributes: ["sessionId", "sessionName", "courseId"],
             required: false,
           },
         ],

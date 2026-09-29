@@ -8,9 +8,10 @@ import {
   getExamAttendanceDetailsByRoom,
   getExamOperationsSummary,
 } from "../controllers/examAttendanceController.js";
+import { z } from "zod";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
-import { z } from "zod";
+import { selectionsSchema } from "../utility/examZodSchemas.js";
 
 const querySchema = z.object({
   examinationSessionId: z.coerce.number().int().positive(),
@@ -19,22 +20,7 @@ const querySchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, must be YYYY-MM-DD")
     .optional(),
   search: z.string().optional(),
-  selections: z.preprocess(
-    (val) => {
-      if (!val || val === "") return undefined;
-      try {
-        return typeof val === "string" ? JSON.parse(val) : val;
-      } catch {
-        return undefined;
-      }
-    },
-    z.array(
-      z.object({
-        courseSessionMappingId: z.number().int().positive(),
-        terms: z.array(z.number().int().positive()),
-      })
-    ).optional()
-  ),
+  selections: selectionsSchema,
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().optional().default(10),
 });

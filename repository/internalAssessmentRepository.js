@@ -128,25 +128,52 @@ async function getAssessmentPlanWeightage(
   sessionId,
   options = {},
 ) {
-  const { transaction } = options;
-  const mappingWhere = {
-    subjectId,
-    courseId,
-    [Op.or]: [{ sessionId }, { sessionId: null }],
-  };
+  const { transaction, batchId, curriculumSubjectTermMappingId } = options;
 
-  const mapping = await scoped(
-    model.assessmentPlanSubjectMappingModel,
-  ).findOne({
-    where: mappingWhere,
-    attributes: [
-      "assessmentPlanSubjectMappingId",
-      "assessmentPlanId",
-      "sessionId",
-    ],
-    order: [["sessionId", "DESC"]],
-    transaction,
-  });
+  let mapping = null;
+  const orClauses = [];
+  if (batchId) {
+    orClauses.push({ batchId });
+  }
+  if (curriculumSubjectTermMappingId) {
+    orClauses.push({ curriculumSubjectTermMappingId });
+  }
+
+  if (orClauses.length > 0) {
+    mapping = await scoped(
+      model.assessmentPlanSubjectMappingModel,
+    ).findOne({
+      where: {
+        subjectId,
+        [Op.or]: orClauses,
+      },
+      attributes: [
+        "assessmentPlanSubjectMappingId",
+        "assessmentPlanId",
+        "batchId",
+        "curriculumSubjectTermMappingId",
+        "subjectId",
+      ],
+      transaction,
+    });
+  }
+
+  if (!mapping) {
+    mapping = await scoped(
+      model.assessmentPlanSubjectMappingModel,
+    ).findOne({
+      where: { subjectId },
+      attributes: [
+        "assessmentPlanSubjectMappingId",
+        "assessmentPlanId",
+        "batchId",
+        "curriculumSubjectTermMappingId",
+        "subjectId",
+      ],
+      order: [["assessmentPlanSubjectMappingId", "DESC"]],
+      transaction,
+    });
+  }
 
   if (!mapping) {
     return null;
@@ -206,11 +233,46 @@ async function getContinuousAssessmentPlanMap() {
             attributes: [
               "assessmentPlanSubjectMappingId",
               "subjectId",
-              "courseId",
-              "sessionId",
+              "batchId",
+              "curriculumSubjectTermMappingId",
             ],
             required: true,
             where: buildScope(model.assessmentPlanSubjectMappingModel),
+            include: [
+              {
+                model: model.batchModel,
+                as: "batch",
+                attributes: ["batchId", "batch", "sessionId"],
+                required: false,
+                include: [
+                  {
+                    model: model.sessionModel,
+                    as: "session",
+                    attributes: ["sessionId", "sessionName", "courseId"],
+                    required: false,
+                  },
+                ],
+              },
+              {
+                model: model.curriculumSubjectTermMappingModel,
+                as: "curriculumSubjectTermMapping",
+                attributes: [
+                  "curriculumSubjectTermMappingId",
+                  "curriculumId",
+                  "term",
+                  "subjectId",
+                ],
+                required: false,
+                include: [
+                  {
+                    model: model.curriculumModel,
+                    as: "curriculum",
+                    attributes: ["curriculumId", "courseId"],
+                    required: false,
+                  },
+                ],
+              },
+            ],
           },
         ],
       },
@@ -239,14 +301,61 @@ async function getContinuousAssessmentPlanMap() {
     );
 
     for (const mapping of component.assessmentPlan.subjectMappings) {
+      const batchId = mapping.batchId || null;
+      const cstmId = mapping.curriculumSubjectTermMappingId || null;
+      const term = mapping.curriculumSubjectTermMapping?.term ?? null;
+      const courseId =
+        mapping.curriculumSubjectTermMapping?.curriculum?.courseId ||
+        mapping.batch?.session?.courseId ||
+        null;
+      const sessionId = mapping.batch?.sessionId || null;
+
+      if (batchId) {
+        const batchKey = `batch:${mapping.subjectId}:${batchId}`;
+        if (!planMap.has(batchKey)) {
+          planMap.set(batchKey, {
+            fetchedWeightage,
+            assessmentPlanComponent: plainComponent,
+          });
+        }
+      }
+
+      if (cstmId) {
+        const cstmKey = `cstm:${cstmId}`;
+        if (!planMap.has(cstmKey)) {
+          planMap.set(cstmKey, {
+            fetchedWeightage,
+            assessmentPlanComponent: plainComponent,
+          });
+        }
+      }
+
+      if (term != null) {
+        const termKey = `term:${mapping.subjectId}:${term}`;
+        if (!planMap.has(termKey)) {
+          planMap.set(termKey, {
+            fetchedWeightage,
+            assessmentPlanComponent: plainComponent,
+          });
+        }
+      }
+
       const sessionKey =
-        mapping.sessionId === null || mapping.sessionId === undefined
-          ? "null"
-          : mapping.sessionId;
-      const key = `${mapping.subjectId}:${mapping.courseId}:${sessionKey}`;
+        sessionId === null || sessionId === undefined ? "null" : sessionId;
+      const courseKey =
+        courseId === null || courseId === undefined ? "null" : courseId;
+      const key = `${mapping.subjectId}:${courseKey}:${sessionKey}`;
 
       if (!planMap.has(key)) {
         planMap.set(key, {
+          fetchedWeightage,
+          assessmentPlanComponent: plainComponent,
+        });
+      }
+
+      const subjectKey = `subject:${mapping.subjectId}`;
+      if (!planMap.has(subjectKey)) {
+        planMap.set(subjectKey, {
           fetchedWeightage,
           assessmentPlanComponent: plainComponent,
         });
@@ -257,13 +366,41 @@ async function getContinuousAssessmentPlanMap() {
   return planMap;
 }
 
-function resolveContinuousPlan(planMap, subjectId, courseId, sessionId) {
+function resolveContinuousPlan(
+  planMap,
+  subjectId,
+  courseId,
+  sessionId,
+  options = {},
+) {
+  const { batchId, curriculumSubjectTermMappingId, term } = options;
+
+  if (
+    curriculumSubjectTermMappingId &&
+    planMap.has(`cstm:${curriculumSubjectTermMappingId}`)
+  ) {
+    return planMap.get(`cstm:${curriculumSubjectTermMappingId}`);
+  }
+
+  if (batchId && planMap.has(`batch:${subjectId}:${batchId}`)) {
+    return planMap.get(`batch:${subjectId}:${batchId}`);
+  }
+
+  if (term != null && planMap.has(`term:${subjectId}:${term}`)) {
+    return planMap.get(`term:${subjectId}:${term}`);
+  }
+
   const exact = planMap.get(`${subjectId}:${courseId}:${sessionId}`);
   if (exact) {
     return exact;
   }
 
-  return planMap.get(`${subjectId}:${courseId}:null`) || null;
+  const courseFallback = planMap.get(`${subjectId}:${courseId}:null`);
+  if (courseFallback) {
+    return courseFallback;
+  }
+
+  return planMap.get(`subject:${subjectId}`) || null;
 }
 
 async function getStudentCountByTermAndSession(termSessionPairs) {
@@ -383,7 +520,7 @@ export async function getUserInternalAssessments(userId, options = {}) {
                     {
                       model: model.classSectionModel,
                       as: "classSection",
-                      attributes: ["classSectionsId", "sessionId"],
+                      attributes: ["classSectionsId", "sessionId", "batchId"],
                       required: true,
                     },
                   ],
@@ -406,6 +543,8 @@ export async function getUserInternalAssessments(userId, options = {}) {
     const courseId = routine.courseId;
     const classSectionTermId = routine.classSectionTermId;
     const sessionId = classSectionTerm.classSection.sessionId;
+    const batchId = classSectionTerm.classSection.batchId;
+    const term = classSectionTerm.term;
 
     if (!subjectId || !courseId || !classSectionTermId || !sessionId) {
       continue;
@@ -416,6 +555,7 @@ export async function getUserInternalAssessments(userId, options = {}) {
       subjectId,
       courseId,
       sessionId,
+      { batchId, term },
     );
 
     const key = `${subjectId}-${classSectionTermId}`;

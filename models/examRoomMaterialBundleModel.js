@@ -125,7 +125,7 @@ const examRoomMaterialBundleModel = sequelize.define(
     },
     academicYearId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       field: "academic_year_id",
       references: {
         model: acedmicYearModel,
@@ -189,7 +189,7 @@ const examRoomMaterialBundleModel = sequelize.define(
 examRoomMaterialBundleModel.scopeConfig = {
   university: true,
   institute: true,
-  academicYear: true,
+  academicYear: false,
 };
 
 export default examRoomMaterialBundleModel;

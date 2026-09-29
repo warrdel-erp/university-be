@@ -27,7 +27,6 @@ export async function getBlueprints(filters = {}) {
                     model: model.subjectModel,
                     as: "subject",
                     attributes: ["subjectId", "subjectName", "subjectCode"],
-                    where: buildScope(model.subjectModel),
                     required: false,
                     include: [
                         {

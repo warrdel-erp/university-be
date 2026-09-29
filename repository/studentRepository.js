@@ -2496,7 +2496,7 @@ export async function getStudentsByPlacement(placement, timeTableCellDateWiseId,
 export async function getScopedExamScheduleForEvaluation(examScheduleId) {
     return scoped(model.examScheduleModel).findOne({
         where: { examScheduleId },
-        attributes: ["examScheduleId", "sessionId", "term"],
+        attributes: ["examScheduleId", "term", "batchId", "curriculumSubjectTermMappingId"],
         include: [
             {
                 model: model.examSetupTypeTermModel,

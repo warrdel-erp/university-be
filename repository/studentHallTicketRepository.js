@@ -568,16 +568,23 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
         }
       }
 
-      orClauses.push({
-        courseId: comb.courseId,
-        sessionId: comb.sessionId,
-        [Op.or]: [
+      const clause = {};
+      if (comb.courseId != null) clause.courseId = comb.courseId;
+      if (comb.sessionId != null) clause.sessionId = comb.sessionId;
+      if (comb.batchId != null) clause.batchId = comb.batchId;
+
+      if (termIdsForComb.length > 0 || historyIdsForComb.length > 0) {
+        clause[Op.or] = [
           { classSectionTermId: { [Op.in]: termIdsForComb } },
           { studentId: { [Op.in]: historyIdsForComb } },
-        ],
-      });
+        ];
+      }
+
+      orClauses.push(clause);
     }
-    combinedWhere[Op.and].push({ [Op.or]: orClauses });
+    if (orClauses.length > 0) {
+      combinedWhere[Op.and].push({ [Op.or]: orClauses });
+    }
   } else if (filters.sessionId) {
     const allowedSessions = Array.isArray(filters.sessionId)
       ? filters.sessionId.map(Number)

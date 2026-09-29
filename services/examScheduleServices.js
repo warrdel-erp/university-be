@@ -193,6 +193,9 @@ export async function allocateSeatsDescending(examScheduleId, userId) {
     return allocateSeatsByStrategy(examScheduleId, userId, "descending");
 }
 
+import * as model from "../models/index.js";
+import { resolveActiveAcademicYearContext } from "../utility/curriculumSubjectsByActiveYear.js";
+
 export async function getExamScheduleStudents(filters) {
     const {
         page = 1,
@@ -208,32 +211,56 @@ export async function getExamScheduleStudents(filters) {
     } = filters;
 
     let resolvedExamScheduleId = firstId(examScheduleId);
-    if (!resolvedExamScheduleId && subjectId) {
-        resolvedExamScheduleId = await examScheduleRepository.getExamScheduleIdBySubject(
-            firstId(subjectId),
-            firstId(sessionId),
-            firstId(batchId),
-        );
-    }
-
     let resolvedCourseId = firstId(courseId);
     let resolvedSessionId = firstId(sessionId);
     let resolvedTerm = firstId(term);
+    let resolvedBatchId = firstId(batchId);
     let resolvedAcademicYearId = null;
     let batchYear = null;
     let yearNumber = null;
-    let curriculumBatchTermMappingId = null;
+    let curriculumBatchTermMappingIdResolved = firstId(curriculumSubjectTermMappingId);
+
+    if (!resolvedExamScheduleId && subjectId) {
+        resolvedExamScheduleId = await examScheduleRepository.getExamScheduleIdBySubject(
+            firstId(subjectId),
+            resolvedSessionId,
+            resolvedBatchId,
+        );
+    }
 
     if (resolvedExamScheduleId) {
         const schedule = await examScheduleRepository.getExamScheduleById(resolvedExamScheduleId);
-        const cohort = buildStudentGroupFromSchedule(schedule);
-        resolvedCourseId = resolvedCourseId || cohort.courseId;
-        resolvedSessionId = resolvedSessionId || cohort.sessionId;
-        resolvedTerm = resolvedTerm || cohort.term;
-        resolvedAcademicYearId = cohort.academicYearId;
-        batchYear = cohort.batchYear;
-        yearNumber = cohort.yearNumber;
-        curriculumBatchTermMappingId = cohort.curriculumBatchTermMappingId;
+        if (schedule) {
+            const cohort = buildStudentGroupFromSchedule(schedule);
+            resolvedCourseId = resolvedCourseId || cohort.courseId;
+            resolvedSessionId = resolvedSessionId || cohort.sessionId;
+            resolvedTerm = resolvedTerm || cohort.term;
+            resolvedAcademicYearId = cohort.academicYearId;
+            batchYear = cohort.batchYear;
+            yearNumber = cohort.yearNumber;
+            curriculumBatchTermMappingIdResolved = cohort.curriculumBatchTermMappingId;
+        }
+    }
+
+    if (resolvedBatchId) {
+        const batchRecord = await model.batchModel.findByPk(resolvedBatchId);
+        if (batchRecord) {
+            resolvedSessionId = resolvedSessionId || batchRecord.sessionId;
+            batchYear = batchYear || batchRecord.batch;
+        }
+    }
+
+    if (resolvedSessionId && !resolvedCourseId) {
+        const sessionRecord = await model.sessionModel.findByPk(resolvedSessionId);
+        if (sessionRecord) {
+            resolvedCourseId = sessionRecord.courseId;
+            resolvedAcademicYearId = resolvedAcademicYearId || sessionRecord.academicYearId;
+        }
+    }
+
+    if (!resolvedAcademicYearId) {
+        const activeCtx = await resolveActiveAcademicYearContext();
+        resolvedAcademicYearId = activeCtx?.activeAcademicYearId || null;
     }
 
     if (
@@ -256,7 +283,15 @@ export async function getExamScheduleStudents(filters) {
         resolvedCourseId,
         resolvedTerm,
         resolvedAcademicYearId,
-        { page, limit, search, batchYear, yearNumber, curriculumBatchTermMappingId },
+        {
+            page,
+            limit,
+            search,
+            batchId: resolvedBatchId,
+            batchYear,
+            yearNumber,
+            curriculumBatchTermMappingId: curriculumBatchTermMappingIdResolved,
+        },
     );
     const result = {
         result: rows,

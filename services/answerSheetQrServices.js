@@ -7,6 +7,7 @@ import * as examinationSessionRepository from "../repository/examinationSessionR
 import sequelize from "../database/sequelizeConfig.js";
 import { buildTermName } from "../utility/courseTerms.js";
 import * as s3Helper from "../utility/s3Helper.js";
+import { resolveSelectionCombinations } from "../utility/examScheduleSelection.js";
 
 const MAX_UNUSED_QR_PER_INSTITUTE = 5000;
 
@@ -102,31 +103,19 @@ async function resolveExamScheduleIdsFromSelections(
   examinationSessionId,
   selections,
 ) {
-  const mappingIds = [];
-  for (const selection of selections) {
-    mappingIds.push(selection.courseSessionMappingId);
-  }
-
-  const mappings =
-    await examinationSessionRepository.findSessionCourseMappingsByIds(mappingIds);
-  const mappingById = new Map();
-  for (const mapping of mappings) {
-    mappingById.set(mapping.sessionCourseMappingId, mapping);
+  const combinations = await resolveSelectionCombinations(selections);
+  if (!combinations.length) {
+    return [];
   }
 
   const selectionOr = [];
-  for (const selection of selections) {
-    const mapping = mappingById.get(selection.courseSessionMappingId);
-    if (!mapping) {
-      continue;
-    }
-
-    const clause = {
-      sessionId: mapping.sessionId,
-      "$subjectSchedule.course_id$": mapping.courseId,
-    };
-    if (selection.terms.length > 0) {
-      clause.term = { [Op.in]: selection.terms };
+  for (const comb of combinations) {
+    const clause = {};
+    if (comb.sessionId != null) clause.sessionId = comb.sessionId;
+    if (comb.batchId != null) clause.batchId = comb.batchId;
+    if (comb.courseId != null) clause["$subjectSchedule.course_id$"] = comb.courseId;
+    if (comb.terms && comb.terms.length > 0) {
+      clause.term = { [Op.in]: comb.terms };
     }
     selectionOr.push(clause);
   }

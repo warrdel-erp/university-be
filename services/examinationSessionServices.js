@@ -384,17 +384,16 @@ async function buildSessionSummary(sessionRecord, options = {}) {
   const sessionPlain = toPlain(sessionRecord);
   let totalStudents = 0;
   const termsList = sessionPlain.examinationSessionTerms || [];
-  const academicYearId = Number(sessionPlain.academicYearId);
   const assessmentTypeId = Number(sessionPlain.assessmentTypeId);
 
   const courseCount = await countMappedCoursesForSessionTerms(
     termsList,
     assessmentTypeId,
-    academicYearId,
+    null,
     options,
   );
 
-  if (termsList.length && academicYearId) {
+  if (termsList.length) {
     const studentGroups = [];
     const seen = new Set();
 
@@ -406,12 +405,9 @@ async function buildSessionSummary(sessionRecord, options = {}) {
         sessionId: Number(row.sessionId),
         courseId: Number(row.courseId),
         term: Number(row.term),
-        academicYearId:
-          row.academicYearId != null
-            ? Number(row.academicYearId)
-            : academicYearId,
+        batchId: row.batchId != null ? Number(row.batchId) : null,
       };
-      const key = `${group.sessionId}_${group.courseId}_${group.term}_${group.academicYearId}`;
+      const key = `${group.sessionId}_${group.courseId}_${group.term}_${group.batchId || 0}`;
       if (seen.has(key)) continue;
       seen.add(key);
       studentGroups.push(group);
@@ -1047,11 +1043,12 @@ export async function getClassSectionTermsBySetupType(
     }
   }
 
-  // courseId → curriculumBatchTermMappingId → term bucket
-  const termsByCourse = new Map();
+  // groupKey → curriculumBatchTermMappingId → term bucket
+  const termsByGroup = new Map();
 
   function ensureTermBucket(
     courseId,
+    sessionId,
     term,
     batch,
     yearNumber,
@@ -1059,6 +1056,8 @@ export async function getClassSectionTermsBySetupType(
     batchId,
   ) {
     const cid = Number(courseId);
+    const sid = sessionId != null ? Number(sessionId) : null;
+    const gKey = groupKeyOf(cid, sid);
     const cbtmId = Number(curriculumBatchTermMappingId);
     const t = toIntegerNumber(term);
     const b = toIntegerNumber(batch);
@@ -1066,8 +1065,8 @@ export async function getClassSectionTermsBySetupType(
       return null;
     }
 
-    if (!termsByCourse.has(cid)) termsByCourse.set(cid, new Map());
-    const termMap = termsByCourse.get(cid);
+    if (!termsByGroup.has(gKey)) termsByGroup.set(gKey, new Map());
+    const termMap = termsByGroup.get(gKey);
     if (!termMap.has(cbtmId)) {
       termMap.set(cbtmId, {
         term: t,
@@ -1086,6 +1085,7 @@ export async function getClassSectionTermsBySetupType(
   for (const row of batchTermRows) {
     ensureTermBucket(
       row.courseId,
+      row.sessionId,
       row.term,
       row.batch,
       row.yearNumber,
@@ -1097,6 +1097,7 @@ export async function getClassSectionTermsBySetupType(
   for (const row of subjectRows) {
     const bucket = ensureTermBucket(
       row.courseId,
+      row.sessionId,
       row.term,
       row.batch,
       row.yearNumber,
@@ -1115,6 +1116,11 @@ export async function getClassSectionTermsBySetupType(
       plain.assessmentPlan?.courseId ||
       plain.batch?.session?.courseId ||
       plain.curriculumSubjectTermMapping?.curriculum?.courseId;
+    const sessionId =
+      plain.sessionId ||
+      plain.batch?.sessionId ||
+      plain.batch?.session?.sessionId ||
+      null;
     const batchYear = plain.batch?.batch != null ? Number(plain.batch.batch) : null;
     const term =
       plain.curriculumSubjectTermMapping?.term != null
@@ -1122,7 +1128,8 @@ export async function getClassSectionTermsBySetupType(
         : null;
 
     if (!courseId || batchYear == null || term == null) continue;
-    const termMap = termsByCourse.get(Number(courseId));
+    const gKey = groupKeyOf(courseId, sessionId);
+    const termMap = termsByGroup.get(gKey);
     if (termMap) {
       for (const bucket of termMap.values()) {
         if (bucket.batch === batchYear && bucket.term === term) {
@@ -1188,14 +1195,16 @@ export async function getClassSectionTermsBySetupType(
     const course = courseMap.get(group.courseId);
     if (!course) continue;
 
-    const termMap = termsByCourse.get(group.courseId);
+    const groupKey = groupKeyOf(group.courseId, group.sessionId);
+    const termMap = termsByGroup.get(groupKey);
     const terms = termMap ? [...termMap.values()] : [];
+    if (!terms.length) continue;
+
     terms.sort((a, b) => {
       const byBatch = decimalCompare(a.batch, b.batch);
       return byBatch !== 0 ? byBatch : decimalCompare(a.term, b.term);
     });
 
-    const groupKey = groupKeyOf(group.courseId, group.sessionId);
     const mappedBatchTermForGroup = mappedByGroupBatchTerm.get(groupKey);
 
     const termDetails = [];
@@ -2124,31 +2133,48 @@ export async function getMappedSubjectsBySessionAndTerm(
   const examScheduleIds = [];
   const studentGroups = [];
 
-  function subjectCbtmKey(subjectId, curriculumBatchTermMappingId) {
+  function extractMappingId(obj) {
+    if (!obj) return 0;
+    return (
+      obj.curriculumSubjectTermMappingId ||
+      obj.curriculumBatchTermMappingId ||
+      0
+    );
+  }
+
+  function subjectCbtmKey(subjectId, mappingId) {
     return `${Number(subjectId)}_${
-      curriculumBatchTermMappingId != null
-        ? Number(curriculumBatchTermMappingId)
+      mappingId != null
+        ? Number(mappingId)
         : 0
     }`;
   }
 
   for (const sched of allSchedules) {
     const plain = toPlain(sched);
+    const mId = extractMappingId(plain);
     const key = subjectCbtmKey(
       plain.subjectId,
-      plain.curriculumBatchTermMappingId,
+      mId,
     );
-    if (scheduleBySubjectCbtm.has(key)) continue;
-    scheduleBySubjectCbtm.set(key, plain);
+    if (!scheduleBySubjectCbtm.has(key)) {
+      scheduleBySubjectCbtm.set(key, plain);
+    }
+    if (!scheduleBySubjectCbtm.has(`${Number(plain.subjectId)}_0`)) {
+      scheduleBySubjectCbtm.set(`${Number(plain.subjectId)}_0`, plain);
+    }
     examScheduleIds.push(plain.examScheduleId);
   }
 
   for (const subject of mappedSubjects) {
+    const mId = extractMappingId(subject);
     const key = subjectCbtmKey(
       subject.subjectId,
-      subject.curriculumBatchTermMappingId,
+      mId,
     );
-    const plainSched = scheduleBySubjectCbtm.get(key);
+    const plainSched =
+      scheduleBySubjectCbtm.get(key) ||
+      scheduleBySubjectCbtm.get(`${Number(subject.subjectId)}_0`);
     if (plainSched) {
       const group = buildStudentGroupFromSchedule(plainSched);
       if (group) studentGroups.push(group);
@@ -2186,11 +2212,17 @@ export async function getMappedSubjectsBySessionAndTerm(
       : new Map();
     const result = [];
     for (const subject of mappedSubjects) {
+      const mId = extractMappingId(subject);
       const key = subjectCbtmKey(
         subject.subjectId,
-        subject.curriculumBatchTermMappingId,
+        mId,
       );
-      if (scheduleBySubjectCbtm.has(key)) continue;
+      if (
+        scheduleBySubjectCbtm.has(key) ||
+        scheduleBySubjectCbtm.has(`${Number(subject.subjectId)}_0`)
+      ) {
+        continue;
+      }
 
       const subjectSessionId = subjectSessionMap.get(subject.subjectId) || null;
       const mappingInfo = subjectSessionId
@@ -2290,43 +2322,52 @@ export async function getMappedSubjectsBySessionAndTerm(
     }
 
     for (const qp of questionPapers) {
-      const list = questionPapersByScheduleId.get(qp.examScheduleId) || [];
-      list.push(qp);
-      questionPapersByScheduleId.set(qp.examScheduleId, list);
+      const plainQp = toPlain(qp);
+      const schedId = Number(plainQp.examScheduleId || plainQp.exam_schedule_id);
+      if (!schedId) continue;
+      const list = questionPapersByScheduleId.get(schedId) || [];
+      list.push(plainQp);
+      questionPapersByScheduleId.set(schedId, list);
     }
 
     for (const ta of teacherAssignments) {
-      const list = teacherAssignmentByScheduleId.get(ta.examScheduleId) || [];
+      const plainTa = toPlain(ta);
+      const schedId = Number(plainTa.examScheduleId || plainTa.exam_schedule_id);
+      const list = teacherAssignmentByScheduleId.get(schedId) || [];
       list.push({
-        teacherExamAssignmentId: ta.teacherExamAssignmentId,
+        teacherExamAssignmentId: plainTa.teacherExamAssignmentId,
         userId:
-          ta.userId ||
-          (ta.teacherEmployee ? ta.teacherEmployee.userId : null),
-        assignedAt: ta.createdAt,
-        deadline: ta.deadline,
+          plainTa.userId ||
+          (plainTa.teacherEmployee ? plainTa.teacherEmployee.userId : null),
+        assignedAt: plainTa.createdAt,
+        deadline: plainTa.deadline,
         user:
-          ta.teacherEmployee && ta.teacherEmployee.user
+          plainTa.teacherEmployee && plainTa.teacherEmployee.user
             ? {
-                userId: ta.teacherEmployee.user.userId,
-                userName: ta.teacherEmployee.user.userName,
-                email: ta.teacherEmployee.user.email,
-                phone: ta.teacherEmployee.user.phone,
-                employeeCode: ta.teacherEmployee.employeeCode,
+                userId: plainTa.teacherEmployee.user.userId,
+                userName: plainTa.teacherEmployee.user.userName,
+                email: plainTa.teacherEmployee.user.email,
+                phone: plainTa.teacherEmployee.user.phone,
+                employeeCode: plainTa.teacherEmployee.employeeCode,
               }
             : null,
       });
-      teacherAssignmentByScheduleId.set(ta.examScheduleId, list);
+      teacherAssignmentByScheduleId.set(schedId, list);
     }
   }
 
   const finalResponse = [];
 
   for (const subject of mappedSubjects) {
+    const mId = extractMappingId(subject);
     const subjectKey = subjectCbtmKey(
       subject.subjectId,
-      subject.curriculumBatchTermMappingId,
+      mId,
     );
-    const hasSchedule = scheduleBySubjectCbtm.has(subjectKey);
+    const plainSched =
+      scheduleBySubjectCbtm.get(subjectKey) ||
+      scheduleBySubjectCbtm.get(`${Number(subject.subjectId)}_0`);
+    const hasSchedule = !!plainSched;
 
     if (isExamScheduled === true && !hasSchedule) continue;
     if (isExamScheduled === false && hasSchedule) continue;
@@ -2344,9 +2385,8 @@ export async function getMappedSubjectsBySessionAndTerm(
     };
 
     if (hasSchedule) {
-      const plainSched = scheduleBySubjectCbtm.get(subjectKey);
       let teacherAssignment =
-        teacherAssignmentByScheduleId.get(plainSched.examScheduleId) || [];
+        teacherAssignmentByScheduleId.get(Number(plainSched.examScheduleId)) || [];
 
       const roomCapacity =
         roomCapacityByScheduleId.get(Number(plainSched.examScheduleId)) || 0;
@@ -2364,25 +2404,33 @@ export async function getMappedSubjectsBySessionAndTerm(
       let moderationActive = false;
       let isApproved = false;
       const questionPapers =
-        questionPapersByScheduleId.get(plainSched.examScheduleId) || [];
+        questionPapersByScheduleId.get(Number(plainSched.examScheduleId)) || [];
 
       if (!skipTeacherAndPaper && teacherAssignment.length > 0) {
         const enrichedTeachers = [];
         for (const ta of teacherAssignment) {
           let matchingQP = null;
+          const taUserId = Number(ta.userId || ta.user?.userId);
           for (const qp of questionPapers) {
-            if (qp.createdBy === ta.userId) {
+            const qpCreatedBy = Number(qp.createdBy || qp.created_by);
+            if (qpCreatedBy === taUserId) {
               matchingQP = qp;
               break;
             }
           }
           if (matchingQP) {
             moderationActive = true;
-            if (matchingQP.status === QUESTION_STATUS.APPROVED) {
+            if (
+              matchingQP.status === QUESTION_STATUS.APPROVED ||
+              matchingQP.status === "Approved" ||
+              matchingQP.finalApproval === QUESTION_STATUS.APPROVED ||
+              matchingQP.finalApproval === "Approved"
+            ) {
               isApproved = true;
             }
             const qpPayload = {
               id: matchingQP.id,
+              name: matchingQP.name,
               status: matchingQP.status,
               finalApproval: matchingQP.finalApproval,
               createdBy: matchingQP.createdBy,
@@ -2469,14 +2517,19 @@ export async function getMappedSubjectsBySessionAndTerm(
       deadline = nearestDeadline;
 
       // Paper workflow:
-      // - approved: finalApproval = Approved
-      // - moderationActive: paper exists but not finally approved (Pending / awaiting final)
+      // - approved: status = Approved or finalApproval = Approved
+      // - moderationActive: paper exists but not approved
       // - assigned: teachers assigned, no paper yet
       // - notAssigned: no teachers
       let hasFullyApprovedPaper = false;
       let hasModerationActivePaper = false;
       for (const qp of qpList) {
-        if (qp.finalApproval === QUESTION_STATUS.APPROVED) {
+        if (
+          qp.status === QUESTION_STATUS.APPROVED ||
+          qp.status === "Approved" ||
+          qp.finalApproval === QUESTION_STATUS.APPROVED ||
+          qp.finalApproval === "Approved"
+        ) {
           hasFullyApprovedPaper = true;
         } else {
           hasModerationActivePaper = true;
@@ -2678,16 +2731,31 @@ export async function getQuestionPaperSummary(
     }
 
     const isFinalApproved = papers.some(
-      (p) => p.finalApproval === QUESTION_STATUS.APPROVED,
-    );
-    const isRejected = papers.some(
       (p) =>
-        p.finalApproval === QUESTION_STATUS.REJECTED ||
-        p.status === QUESTION_STATUS.REJECTED,
+        p.status === QUESTION_STATUS.APPROVED ||
+        p.status === "Approved" ||
+        p.finalApproval === QUESTION_STATUS.APPROVED ||
+        p.finalApproval === "Approved",
     );
-    const isWithModerator = papers.some(
-      (p) => p.finalApproval !== QUESTION_STATUS.APPROVED,
-    );
+    const isRejected =
+      !isFinalApproved &&
+      papers.some(
+        (p) =>
+          p.finalApproval === QUESTION_STATUS.REJECTED ||
+          p.finalApproval === "Rejected" ||
+          p.status === QUESTION_STATUS.REJECTED ||
+          p.status === "Rejected",
+      );
+    const isWithModerator =
+      !isFinalApproved &&
+      !isRejected &&
+      papers.some(
+        (p) =>
+          p.status !== QUESTION_STATUS.APPROVED &&
+          p.status !== "Approved" &&
+          p.finalApproval !== QUESTION_STATUS.APPROVED &&
+          p.finalApproval !== "Approved",
+      );
 
     if (isFinalApproved) {
       approved++;
@@ -2814,7 +2882,7 @@ export async function getSessionSkuStats(examinationSessionId, options = {}) {
   const scheduleSessionIds = [];
   const seenSessionIds = new Set();
   for (const schedule of schedules) {
-    const sessionId = Number(schedule.sessionId);
+    const sessionId = Number(schedule.sessionId || schedule.batch?.sessionId);
     if (!sessionId || seenSessionIds.has(sessionId)) {
       continue;
     }

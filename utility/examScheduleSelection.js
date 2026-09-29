@@ -4,31 +4,15 @@ import { buildScope, scoped } from "./scoped.js";
 import * as examinationSessionRepository from "../repository/examinationSessionRepository.js";
 
 /**
- * Resolve selections (batchId, courseId, sessionId, or legacy courseSessionMappingId) → { batchId, courseId, sessionId, terms }[].
+ * Resolve selections (batchId, courseId, sessionId, terms) → { batchId, courseId, sessionId, terms }[].
  */
 export async function resolveSelectionCombinations(selections, options = {}) {
   if (!selections || !selections.length) return [];
 
-  const legacyMappingIds = [];
   const batchIds = [];
   for (const sel of selections) {
-    if (sel.courseSessionMappingId != null) {
-      legacyMappingIds.push(Number(sel.courseSessionMappingId));
-    }
     if (sel.batchId != null) {
       batchIds.push(Number(sel.batchId));
-    }
-  }
-
-  const dbMappingsMap = new Map();
-  if (legacyMappingIds.length > 0) {
-    const dbMappings =
-      await examinationSessionRepository.findSessionCourseMappingsByIds(
-        legacyMappingIds,
-        options,
-      );
-    for (const mapping of dbMappings) {
-      dbMappingsMap.set(Number(mapping.sessionCourseMappingId), mapping);
     }
   }
 
@@ -64,14 +48,6 @@ export async function resolveSelectionCombinations(selections, options = {}) {
         courseId =
           courseId ?? (b.session?.courseId ? Number(b.session.courseId) : null);
         batchYear = b.batch != null ? Number(b.batch) : null;
-      }
-    }
-
-    if (sel.courseSessionMappingId != null && (!courseId || !sessionId)) {
-      const mapping = dbMappingsMap.get(Number(sel.courseSessionMappingId));
-      if (mapping) {
-        courseId = courseId ?? Number(mapping.courseId);
-        sessionId = sessionId ?? Number(mapping.sessionId);
       }
     }
 
@@ -121,30 +97,36 @@ export async function findExamScheduleIdsBySelections(
   for (const comb of combinations) {
     const where = {
       examinationSessionId: Number(examinationSessionId),
-      sessionId: comb.sessionId,
-      term: { [Op.in]: comb.terms },
       ...buildScope(model.examScheduleModel),
     };
+    if (comb.sessionId != null) where.sessionId = comb.sessionId;
+    if (comb.batchId != null) where.batchId = comb.batchId;
+    if (comb.terms && comb.terms.length > 0) {
+      where.term = { [Op.in]: comb.terms };
+    }
     if (examDate) where.examDate = examDate;
     if (examinationSessionSlotId != null) {
       where.examinationSessionSlotId = Number(examinationSessionSlotId);
     }
 
+    const include = [];
+    if (comb.courseId != null) {
+      include.push({
+        model: model.subjectModel,
+        as: "subjectSchedule",
+        required: true,
+        attributes: [],
+        where: {
+          courseId: comb.courseId,
+          ...buildScope(model.subjectModel),
+        },
+      });
+    }
+
     const rows = await scoped(model.examScheduleModel).findAll({
       where,
       attributes: ["examScheduleId"],
-      include: [
-        {
-          model: model.subjectModel,
-          as: "subjectSchedule",
-          required: true,
-          attributes: [],
-          where: {
-            courseId: comb.courseId,
-            ...buildScope(model.subjectModel),
-          },
-        },
-      ],
+      include,
       raw: true,
       transaction: options.transaction,
     });

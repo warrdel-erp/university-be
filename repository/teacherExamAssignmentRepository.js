@@ -1,10 +1,12 @@
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
+import { getAcademicYearId } from "../utility/requestContext.js";
+import { resolveActiveAcademicYearContext } from "../utility/curriculumSubjectsByActiveYear.js";
 
 async function assertScopedExamSchedule(examScheduleId, transaction) {
     return scoped(model.examScheduleModel).findOne({
         where: { examScheduleId },
-        attributes: ['examScheduleId', 'academicYearId'],
+        attributes: ['examScheduleId'],
         transaction,
     });
 }
@@ -33,7 +35,12 @@ export async function assignExam(data) {
         if (!schedule) {
             throw new Error('Exam schedule not found');
         }
-        data.academicYearId = schedule.academicYearId;
+        let academicYearId = getAcademicYearId();
+        if (!academicYearId) {
+            const activeCtx = await resolveActiveAcademicYearContext();
+            academicYearId = activeCtx?.activeAcademicYearId || null;
+        }
+        data.academicYearId = academicYearId;
         const result = await scoped(model.teacherExamAssignmentModel).create(data);
         return result;
     } catch (error) {
@@ -64,6 +71,12 @@ export async function getAssignments(whereClause) {
                                     as: "courseInfo",
                                 },
                             ],
+                        },
+                        {
+                            model: model.curriculumSubjectTermMappingModel,
+                            as: "curriculumSubjectTermMapping",
+                            required: false,
+                            attributes: ["curriculumSubjectTermMappingId", "term", "curriculumId"],
                         },
                     ],
                 },

@@ -188,7 +188,7 @@ export async function addExamRoomCapacity(data, userId) {
     const transaction = await sequelize.transaction();
 
     try {
-        const resolvedSessionId = examSchedule.batch?.sessionId || examSchedule.batch?.session?.sessionId || examSchedule.sessionId;
+        const resolvedSessionId = examSchedule.batch?.sessionId || examSchedule.batch?.session?.sessionId || null;
         const resolvedCourseId = examSchedule.batch?.courseId || examSchedule.subjectSchedule?.courseId || examSchedule.curriculumSubjectTermMapping?.curriculum?.courseId;
         const resolvedTerm = examSchedule.curriculumSubjectTermMapping?.term || examSchedule.term;
         const resolvedAcademicYearId = examSchedule.academicYearId || null;

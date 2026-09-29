@@ -24,6 +24,18 @@ function examScheduleInclude(scheduleWhere, subjectWhere) {
           ...buildScope(model.subjectModel),
         },
       },
+      {
+        model: model.batchModel,
+        as: "batch",
+        attributes: [],
+        required: false,
+      },
+      {
+        model: model.curriculumSubjectTermMappingModel,
+        as: "curriculumSubjectTermMapping",
+        attributes: [],
+        required: false,
+      },
     ],
   };
 }
@@ -121,7 +133,8 @@ export async function findRoomCapacitiesForRooms(
           "examScheduleId",
           "examDate",
           "term",
-          "sessionId",
+          "batchId",
+          "curriculumSubjectTermMappingId",
           "examinationSessionSlotId",
           "subjectId",
         ],
@@ -144,6 +157,18 @@ export async function findRoomCapacitiesForRooms(
               ...subjectWhere,
               ...buildScope(model.subjectModel),
             },
+          },
+          {
+            model: model.batchModel,
+            as: "batch",
+            required: false,
+            attributes: ["batchId", "batch", "sessionId"],
+          },
+          {
+            model: model.curriculumSubjectTermMappingModel,
+            as: "curriculumSubjectTermMapping",
+            required: false,
+            attributes: ["curriculumSubjectTermMappingId", "term"],
           },
           {
             model: model.examinationSessionSlotModel,

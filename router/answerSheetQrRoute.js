@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
+import { selectionsSchema } from "../utility/examZodSchemas.js";
 import {
   generateAnswerSheetQrBulk,
   getAnswerSheetQrById,
@@ -209,24 +210,7 @@ const numberList = z.preprocess(
   z.array(z.coerce.number().int().positive()).optional(),
 );
 
-const mappedSelectionsSchema = z.preprocess(
-  (val) => {
-    if (!val || val === "") return undefined;
-    try {
-      return typeof val === "string" ? JSON.parse(val) : val;
-    } catch {
-      return undefined;
-    }
-  },
-  z
-    .array(
-      z.object({
-        courseSessionMappingId: z.coerce.number().int().positive(),
-        terms: z.array(z.coerce.number().int().positive()),
-      }),
-    )
-    .optional(),
-);
+const mappedSelectionsSchema = selectionsSchema;
 
 const listMappedAnswerSheetsSchema = z.object({
   examinationSessionId: positiveIntegerId,
