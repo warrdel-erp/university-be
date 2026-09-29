@@ -41,20 +41,16 @@ const addScheduleSchema = {
     examTime: z.string().optional().nullable(),
     duration: z.string().optional().nullable(),
     maximumMarks: z.coerce.number().optional().nullable(),
-    curriculumBatchTermMappingId: z.coerce
-      .number()
-      .int()
-      .positive()
-      .optional()
-      .nullable(),
-    examSetupTypeId: z.coerce.number().int().positive().optional().nullable(),
   }),
 };
 
 const updateScheduleSchema = {
   body: z.object({
-    examScheduleId: z.coerce.number().int().positive({ message: "examScheduleId is required" }),
-    subjectId: z.coerce.number().int().positive("subjectId is required"),
+    examScheduleId: z.coerce
+      .number()
+      .int()
+      .positive({ message: "examScheduleId is required" }),
+    subjectId: z.coerce.number().int().positive().optional(),
     batchId: z.coerce.number().int().positive().optional().nullable(),
     curriculumSubjectTermMappingId: z.coerce
       .number()
@@ -63,14 +59,23 @@ const updateScheduleSchema = {
       .optional()
       .nullable(),
     term: z.coerce.number().int().positive().optional().nullable(),
-    examSetupTypeId: z.coerce.number().int().positive().optional().nullable(),
-    examSetupTypeTermId: z.coerce.number().int().positive().optional().nullable(),
-    examinationSessionSlotId: z.coerce.number().int().positive().optional().nullable(),
-    examinationSessionId: z.coerce.number().int().positive().optional().nullable(),
+    examinationSessionSlotId: z.coerce
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .nullable(),
+    examinationSessionId: z.coerce
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .nullable(),
     examDate: z.string().optional(),
     examTime: z.string().optional().nullable(),
     type: z.string().optional(),
     duration: z.string().optional().nullable(),
+    maximumMarks: z.coerce.number().optional().nullable(),
   }),
 };
 
