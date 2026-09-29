@@ -218,7 +218,7 @@ async function findSubjectIdsFromTimeTableCells(userId, courseId, term, sessionI
     return subjectIds;
 }
 
-export async function getSubjectOptions(courseId, term, academicYearId, userId, sessionId = null, unmapped = false, options = {}) {
+export async function getSubjectOptions(courseId, term, userId, sessionId = null, unmapped = false, options = {}) {
     const { batchId, year } = options;
 
     const subjectWhere = {
@@ -287,7 +287,6 @@ export async function getSubjectOptions(courseId, term, academicYearId, userId, 
             ...(courseId != null && { courseId: Number(courseId) }),
             ...(term != null && { terms: [Number(term)] }),
             ...(batchId != null && { batchIds: [Number(batchId)] }),
-            ...(academicYearId != null && { academicYearId: Number(academicYearId) }),
         });
 
         const seen = new Set();
@@ -434,7 +433,6 @@ export async function getSubjectOptionDetail(subjectId) {
 
 export async function getLectureWindowOptionRows(filters) {
     const where = {
-        academicYearId: Number(filters.academicYearId),
         userId: Number(filters.userId),
         subjectId: Number(filters.subjectId),
         startDate: { [Op.lte]: filters.date },
@@ -454,10 +452,9 @@ export async function getLectureWindowOptionRows(filters) {
     });
 }
 
-export async function getLectureWindowOptionDetail(lectureWindowId, academicYearId, userId) {
+export async function getLectureWindowOptionDetail(lectureWindowId, userId) {
     const where = {
         lectureWindowId: Number(lectureWindowId),
-        academicYearId: Number(academicYearId),
     };
     if (userId != null) {
         where.userId = Number(userId);
@@ -491,7 +488,6 @@ export async function getLectureWindowOptionDetail(lectureWindowId, academicYear
 export async function getLessonOptionRows(filters) {
     const where = {
         lectureWindowId: Number(filters.lectureWindowId),
-        academicYearId: Number(filters.academicYearId),
     };
     if (filters.userId != null) {
         where.userId = Number(filters.userId);
@@ -506,10 +502,9 @@ export async function getLessonOptionRows(filters) {
     });
 }
 
-export async function getLessonOptionDetail(lessonId, academicYearId, userId) {
+export async function getLessonOptionDetail(lessonId, userId) {
     const where = {
         lessonId: Number(lessonId),
-        academicYearId: Number(academicYearId),
     };
     if (userId != null) {
         where.userId = Number(userId);

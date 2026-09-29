@@ -139,7 +139,7 @@ const timeTableStructureCourseModel = sequelize.define(
 timeTableStructureCourseModel.scopeConfig = {
   university: true,
   institute: true,
-  academicYear: true,
+  academicYear: false,
 };
 
 export default timeTableStructureCourseModel;

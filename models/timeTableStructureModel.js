@@ -135,6 +135,6 @@ const timeTableStructureModel = sequelize.define(
     },
 );
 
-timeTableStructureModel.scopeConfig = { university: true, institute: true, academicYear: true };
+timeTableStructureModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
 export default timeTableStructureModel;

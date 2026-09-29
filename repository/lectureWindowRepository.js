@@ -51,10 +51,11 @@ export async function addLectureWindow(data, transaction) {
 }
 
 export async function getLectureWindows(filters = {}) {
-  const where = {
-    academicYearId: Number(filters.academicYearId),
-  };
+  const where = {};
 
+  if (filters.academicYearId != null) {
+    where.academicYearId = Number(filters.academicYearId);
+  }
   if (filters.subjectId != null) {
     where.subjectId = Number(filters.subjectId);
   }
@@ -80,8 +81,10 @@ export async function getLectureWindows(filters = {}) {
 export async function getLectureWindowById(lectureWindowId, academicYearId, userId) {
   const where = {
     lectureWindowId: Number(lectureWindowId),
-    academicYearId: Number(academicYearId),
   };
+  if (academicYearId != null) {
+    where.academicYearId = Number(academicYearId);
+  }
   if (userId != null) {
     where.userId = Number(userId);
   }
@@ -96,8 +99,10 @@ export async function getLectureWindowById(lectureWindowId, academicYearId, user
 export async function updateLectureWindow(lectureWindowId, data, academicYearId, userId) {
   const where = {
     lectureWindowId: Number(lectureWindowId),
-    academicYearId: Number(academicYearId),
   };
+  if (academicYearId != null) {
+    where.academicYearId = Number(academicYearId);
+  }
   if (userId != null) {
     where.userId = Number(userId);
   }
@@ -120,8 +125,10 @@ export async function updateLectureWindow(lectureWindowId, data, academicYearId,
 export async function deleteLectureWindow(lectureWindowId, academicYearId, userId, transaction) {
   const where = {
     lectureWindowId: Number(lectureWindowId),
-    academicYearId: Number(academicYearId),
   };
+  if (academicYearId != null) {
+    where.academicYearId = Number(academicYearId);
+  }
   if (userId != null) {
     where.userId = Number(userId);
   }

@@ -160,6 +160,6 @@ const timeTableRoutineModel = sequelize.define(
     }
 );
 
-timeTableRoutineModel.scopeConfig = { university: true, institute: true, academicYear: true };
+timeTableRoutineModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
 export default timeTableRoutineModel;

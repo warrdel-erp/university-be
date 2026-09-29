@@ -2193,7 +2193,6 @@ async function applyGroupAttendanceStatus(groups) {
  */
 export async function getPastClassSchedules(
   userId,
-  academicYearId,
   currentDateString,
   groupPeriods = false,
   sessionId,
@@ -2207,7 +2206,6 @@ export async function getPastClassSchedules(
     const { rows: rawSchedules, total } =
       await employeeScheduleRepository.getPastClassSchedulesForEmployee(
         userId,
-        academicYearId,
         currentDateString,
         sessionId,
         { page, limit },
@@ -2235,7 +2233,6 @@ export async function getPastClassSchedules(
     const { rows } =
       await employeeScheduleRepository.getPastClassSchedulesForEmployee(
         userId,
-        academicYearId,
         currentDateString,
         sessionId,
         batchPagination,
@@ -2296,7 +2293,6 @@ export async function getPastClassSchedules(
 
 export async function getUpcomingClassSchedules(
   userId,
-  academicYearId,
   currentDateString,
   groupPeriods = false,
   pagination = {},
@@ -2309,7 +2305,6 @@ export async function getUpcomingClassSchedules(
   const { rows: upcomingClasses } =
     await employeeScheduleRepository.getUpcomingClassSchedulesForEmployee(
       userId,
-      academicYearId,
       currentDateString,
       {},
     );
@@ -2673,11 +2668,10 @@ function getEmployeeDetails(schedules) {
   };
 }
 
-export async function getUniqueClassSectionSubjects(userId, academicYearId) {
+export async function getUniqueClassSectionSubjects(userId) {
   const schedules =
     await employeeScheduleRepository.getUniqueClassSectionSubjectsForEmployee(
       userId,
-      academicYearId,
     );
 
   const employeeDetails = getEmployeeDetails(schedules);
@@ -2691,19 +2685,16 @@ export async function getUniqueClassSectionSubjects(userId, academicYearId) {
 
 export async function getSectionCounts(
   userId,
-  academicYearId,
   currentDateString,
 ) {
   const { pastCount, upcomingCount } =
     await employeeScheduleRepository.countEmployeeDateWiseSchedules(
       userId,
-      academicYearId,
       currentDateString,
     );
   const allSchedules =
     await employeeScheduleRepository.getUniqueClassSectionSubjectsForEmployee(
       userId,
-      academicYearId,
     );
 
   const combinations = processScheduleCombinations(allSchedules);

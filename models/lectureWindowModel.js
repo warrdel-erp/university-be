@@ -54,7 +54,7 @@ const lectureWindowModel = sequelize.define(
         },
         academicYearId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'acedmic_year_id',
             references: {
                 model: acedmicYearModel,
@@ -126,6 +126,6 @@ const lectureWindowModel = sequelize.define(
     }
 );
 
-lectureWindowModel.scopeConfig = { university: true, institute: true, academicYear: true };
+lectureWindowModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
 export default lectureWindowModel;

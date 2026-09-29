@@ -151,6 +151,6 @@ const lessonModel = sequelize.define(
     }
 );
 
-lessonModel.scopeConfig = { university: true, institute: true, academicYear: true };
+lessonModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
 export default lessonModel;

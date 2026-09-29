@@ -3,27 +3,14 @@ import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 import { validateEmployeeUser } from "../utility/employeeValidation.js";
 import { getAcademicYearId } from "../utility/requestContext.js";
 
-function requireActiveAcademicYearId(res) {
-    const academicYearId = getAcademicYearId();
-    if (!academicYearId) {
-        ErrorResponse(res, 400, "academicYearId not found in user session");
-        return null;
-    }
-    return Number(academicYearId);
-}
-
 export async function addLectureWindow(req, res) {
     try {
-        const academicYearId = requireActiveAcademicYearId(res);
-        if (!academicYearId) {
-            return;
-        }
-
+        const academicYearId = getAcademicYearId() || req.body?.academicYearId || null;
         const createdBy = req.user.userId;
         const result = await lectureWindow.addLectureWindow(
             {
                 ...req.body,
-                academicYearId,
+                academicYearId: academicYearId ? Number(academicYearId) : null,
             },
             createdBy,
             createdBy,
@@ -38,14 +25,10 @@ export async function addLectureWindow(req, res) {
 
 export async function getLectureWindows(req, res) {
     try {
-        const academicYearId = requireActiveAcademicYearId(res);
-        if (!academicYearId) {
-            return;
-        }
-
+        const academicYearId = getAcademicYearId() || req.query.academicYearId || null;
         const { subjectId, userId, sessionId, lessonId } = req.query;
         const result = await lectureWindow.getLectureWindows({
-            academicYearId,
+            academicYearId: academicYearId ? Number(academicYearId) : undefined,
             subjectId,
             userId,
             sessionId,
@@ -67,14 +50,10 @@ export async function getMyLectureWindows(req, res) {
         }
         const { userId } = validation;
 
-        const academicYearId = requireActiveAcademicYearId(res);
-        if (!academicYearId) {
-            return;
-        }
-
+        const academicYearId = getAcademicYearId() || req.query.academicYearId || null;
         const { subjectId, sessionId, lessonId } = req.query;
         const result = await lectureWindow.getLectureWindows({
-            academicYearId,
+            academicYearId: academicYearId ? Number(academicYearId) : undefined,
             subjectId,
             userId,
             sessionId,
@@ -90,13 +69,9 @@ export async function getMyLectureWindows(req, res) {
 
 export async function getLectureWindowById(req, res) {
     try {
-        const academicYearId = requireActiveAcademicYearId(res);
-        if (!academicYearId) {
-            return;
-        }
-
+        const academicYearId = getAcademicYearId() || req.query.academicYearId || null;
         const { lectureWindowId } = req.params;
-        const result = await lectureWindow.getLectureWindowById(lectureWindowId, academicYearId);
+        const result = await lectureWindow.getLectureWindowById(lectureWindowId, academicYearId ? Number(academicYearId) : undefined);
 
         if (!result) {
             return ErrorResponse(res, 404, "Lecture window not found");
@@ -111,11 +86,7 @@ export async function getLectureWindowById(req, res) {
 
 export async function updateLectureWindow(req, res) {
     try {
-        const academicYearId = requireActiveAcademicYearId(res);
-        if (!academicYearId) {
-            return;
-        }
-
+        const academicYearId = getAcademicYearId() || req.body?.academicYearId || null;
         const { lectureWindowId } = req.params;
         const updatedBy = req.user.userId;
 
@@ -125,7 +96,7 @@ export async function updateLectureWindow(req, res) {
             }
         }
 
-        const result = await lectureWindow.updateLectureWindow(lectureWindowId, req.body, updatedBy, academicYearId);
+        const result = await lectureWindow.updateLectureWindow(lectureWindowId, req.body, updatedBy, academicYearId ? Number(academicYearId) : undefined);
         if (!result) {
             return ErrorResponse(res, 404, "Lecture window not found");
         }
@@ -139,13 +110,9 @@ export async function updateLectureWindow(req, res) {
 
 export async function deleteLectureWindow(req, res) {
     try {
-        const academicYearId = requireActiveAcademicYearId(res);
-        if (!academicYearId) {
-            return;
-        }
-
+        const academicYearId = getAcademicYearId() || req.query.academicYearId || null;
         const { lectureWindowId } = req.params;
-        const deleted = await lectureWindow.deleteLectureWindow(lectureWindowId, academicYearId);
+        const deleted = await lectureWindow.deleteLectureWindow(lectureWindowId, academicYearId ? Number(academicYearId) : undefined);
 
         if (!deleted) {
             return ErrorResponse(res, 404, "Lecture window not found");
@@ -167,16 +134,12 @@ export async function addMyLectureWindow(req, res) {
         }
         const { userId } = validation;
 
-        const academicYearId = requireActiveAcademicYearId(res);
-        if (!academicYearId) {
-            return;
-        }
-
+        const academicYearId = getAcademicYearId() || req.body?.academicYearId || null;
         const result = await lectureWindow.addLectureWindow(
             {
                 ...req.body,
                 userId,
-                academicYearId,
+                academicYearId: academicYearId ? Number(academicYearId) : null,
             },
             userId,
             userId,
@@ -197,13 +160,9 @@ export async function getMyLectureWindowById(req, res) {
         }
         const { userId } = validation;
 
-        const academicYearId = requireActiveAcademicYearId(res);
-        if (!academicYearId) {
-            return;
-        }
-
+        const academicYearId = getAcademicYearId() || req.query.academicYearId || null;
         const { lectureWindowId } = req.params;
-        const result = await lectureWindow.getLectureWindowById(lectureWindowId, academicYearId, userId);
+        const result = await lectureWindow.getLectureWindowById(lectureWindowId, academicYearId ? Number(academicYearId) : undefined, userId);
 
         if (!result) {
             return ErrorResponse(res, 404, "Lecture window not found");
@@ -224,11 +183,7 @@ export async function updateMyLectureWindow(req, res) {
         }
         const { userId } = validation;
 
-        const academicYearId = requireActiveAcademicYearId(res);
-        if (!academicYearId) {
-            return;
-        }
-
+        const academicYearId = getAcademicYearId() || req.body?.academicYearId || null;
         const { lectureWindowId } = req.params;
 
         if (req.body.startDate && req.body.endDate) {
@@ -237,7 +192,7 @@ export async function updateMyLectureWindow(req, res) {
             }
         }
 
-        const result = await lectureWindow.updateLectureWindow(lectureWindowId, req.body, userId, academicYearId, userId);
+        const result = await lectureWindow.updateLectureWindow(lectureWindowId, req.body, userId, academicYearId ? Number(academicYearId) : undefined, userId);
         if (!result) {
             return ErrorResponse(res, 404, "Lecture window not found or unauthorized");
         }
@@ -257,13 +212,9 @@ export async function deleteMyLectureWindow(req, res) {
         }
         const { userId } = validation;
 
-        const academicYearId = requireActiveAcademicYearId(res);
-        if (!academicYearId) {
-            return;
-        }
-
+        const academicYearId = getAcademicYearId() || req.query.academicYearId || null;
         const { lectureWindowId } = req.params;
-        const deleted = await lectureWindow.deleteLectureWindow(lectureWindowId, academicYearId, userId);
+        const deleted = await lectureWindow.deleteLectureWindow(lectureWindowId, academicYearId ? Number(academicYearId) : undefined, userId);
 
         if (!deleted) {
             return ErrorResponse(res, 404, "Lecture window not found or unauthorized");

@@ -163,7 +163,7 @@ const internalAssessmentModel = sequelize.define(
 internalAssessmentModel.scopeConfig = {
   university: true,
   institute: true,
-  academicYear: true,
+  academicYear: false,
 };
 
 export default internalAssessmentModel;
