@@ -22,14 +22,14 @@ async function assertScopedRoomCapacity(examScheduleRoomCapacityId, transaction)
 
 export async function getExamSchedules(filters = {}) {
     try {
-        const { subjectId, examSetupTypeTermId, courseId, term, sessionId } = filters;
+        const { subjectId, examSetupTypeTermId, courseId, term, sessionId, batchId } = filters;
 
         const result = await scoped(model.examScheduleModel).findAll({
             where: {
                 ...(subjectId && { subjectId }),
                 ...(term && { term: Number(term) }),
                 ...(examSetupTypeTermId && { examSetupTypeTermId }),
-                ...(sessionId && { sessionId }),
+                ...(batchId && { batchId: Number(batchId) }),
             },
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             include: [
@@ -63,11 +63,27 @@ export async function getExamSchedules(filters = {}) {
                     },
                     required: !!courseId,
                 },
-                curriculumBatchTermScheduleInclude(),
                 {
-                    model: model.acedmicYearModel,
-                    as: "acedmicYearSchedule",
-                    attributes: ["academicYearId", "yearTitle", "startingDate", "endingDate"],
+                    model: model.batchModel,
+                    as: "batch",
+                    attributes: ["batchId", "batch", "sessionId", "status"],
+                    where: {
+                        ...(sessionId && { sessionId: Number(sessionId) }),
+                    },
+                    required: !!sessionId,
+                    include: [
+                        {
+                            model: model.sessionModel,
+                            as: "session",
+                            attributes: ["sessionId", "sessionName"],
+                            required: false,
+                        },
+                    ],
+                },
+                {
+                    model: model.curriculumSubjectTermMappingModel,
+                    as: "curriculumSubjectTermMapping",
+                    attributes: ["curriculumSubjectTermMappingId", "curriculumId", "term", "subjectId"],
                 },
                 {
                     model: model.examinationSessionModel,
@@ -80,11 +96,6 @@ export async function getExamSchedules(filters = {}) {
                             attributes: ["examSetupTypeId", "examType", "examName"],
                         }
                     ]
-                },
-                {
-                    model: model.sessionModel,
-                    as: "sessionSchedule",
-                    attributes: ["sessionId", "sessionName"],
                 },
             ],
         });
@@ -137,42 +148,23 @@ export async function getExamScheduleById(examScheduleId, options = {}) {
                     attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
                 },
                 {
-                    model: model.curriculumBatchTermMappingModel,
-                    as: "curriculumBatchTermMapping",
-                    attributes: [
-                        "curriculumBatchTermMappingId",
-                        "term",
-                        "yearNumber",
-                        "year",
-                    ],
-                    required: false,
+                    model: model.batchModel,
+                    as: "batch",
+                    attributes: ["batchId", "batch", "sessionId", "status"],
                     include: [
                         {
-                            model: model.curriculumBatchMappingModel,
-                            as: "batchMapping",
-                            attributes: ["curriculumBatchMappingId", "curriculumId", "batch"],
+                            model: model.sessionModel,
+                            as: "session",
+                            attributes: ["sessionId", "sessionName"],
                             required: false,
-                            include: [
-                                {
-                                    model: model.curriculumModel,
-                                    as: "curriculum",
-                                    attributes: ["curriculumId", "courseId"],
-                                    required: false,
-                                },
-                            ],
                         },
                     ],
                 },
                 {
-                    model: model.acedmicYearModel,
-                    as: "acedmicYearSchedule",
-                    attributes: ["academicYearId", "yearTitle", "startingDate", "endingDate"],
+                    model: model.curriculumSubjectTermMappingModel,
+                    as: "curriculumSubjectTermMapping",
+                    attributes: ["curriculumSubjectTermMappingId", "curriculumId", "term", "subjectId"],
                 },
-                {
-                    model: model.sessionModel,
-                    as: "sessionSchedule",
-                    attributes: ["sessionId", "sessionName"],
-                }
             ],
         });
 
@@ -349,12 +341,21 @@ export async function clearExistingAllocations(examScheduleRoomCapacityIds, tran
     }
 }
 
-export async function getExamScheduleIdBySubject(subjectId, sessionId) {
+export async function getExamScheduleIdBySubject(subjectId, sessionId, batchId) {
     const schedule = await scoped(model.examScheduleModel).findOne({
         where: {
             subjectId,
-            ...(sessionId && { sessionId }),
+            ...(batchId && { batchId }),
         },
+        include: sessionId ? [
+            {
+                model: model.batchModel,
+                as: "batch",
+                where: { sessionId: Number(sessionId) },
+                required: true,
+                attributes: [],
+            }
+        ] : [],
         attributes: ["examScheduleId"],
         raw: true,
     });

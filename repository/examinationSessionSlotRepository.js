@@ -10,15 +10,23 @@ const scheduleInclude = (date, filterCombinations) => {
   if (filterCombinations && filterCombinations.length > 0) {
     const orSchedules = [];
     for (const comb of filterCombinations) {
-      orSchedules.push({
-        [Op.and]: [
-          { sessionId: comb.sessionId },
-          { term: { [Op.in]: comb.terms } },
-          where(col("examSchedules->subjectSchedule.course_id"), comb.courseId),
-        ],
-      });
+      const andClauses = [];
+      if (comb.batchId) {
+        andClauses.push({ batchId: comb.batchId });
+      }
+      if (comb.terms && comb.terms.length > 0) {
+        andClauses.push({ term: { [Op.in]: comb.terms } });
+      }
+      if (comb.courseId) {
+        andClauses.push(where(col("examSchedules->subjectSchedule.course_id"), comb.courseId));
+      }
+      if (andClauses.length > 0) {
+        orSchedules.push({ [Op.and]: andClauses });
+      }
     }
-    scheduleWhere[Op.or] = orSchedules;
+    if (orSchedules.length > 0) {
+      scheduleWhere[Op.or] = orSchedules;
+    }
   }
 
   return {
@@ -34,10 +42,9 @@ const scheduleInclude = (date, filterCombinations) => {
       "examScheduleId",
       "examinationSessionSlotId",
       "subjectId",
-      "sessionId",  
-      "academicYearId",
+      "batchId",
+      "curriculumSubjectTermMappingId",
       "term",
-      "curriculumBatchTermMappingId",
       "examDate",
       "examTime",
       "type",
@@ -71,23 +78,29 @@ const scheduleInclude = (date, filterCombinations) => {
         ],
       },
       {
-        model: model.curriculumBatchTermMappingModel,
-        as: "curriculumBatchTermMapping",
-        attributes: [
-          "curriculumBatchTermMappingId",
-          "term",
-          "yearNumber",
-          "year",
-        ],
+        model: model.batchModel,
+        as: "batch",
+        attributes: ["batchId", "batch", "sessionId", "status"],
         required: false,
         include: [
           {
-            model: model.curriculumBatchMappingModel,
-            as: "batchMapping",
-            attributes: ["curriculumBatchMappingId", "curriculumId", "batch"],
-            required: true,
+            model: model.sessionModel,
+            as: "session",
+            attributes: ["sessionId", "sessionName"],
+            required: false,
           },
         ],
+      },
+      {
+        model: model.curriculumSubjectTermMappingModel,
+        as: "curriculumSubjectTermMapping",
+        attributes: [
+          "curriculumSubjectTermMappingId",
+          "curriculumId",
+          "term",
+          "subjectId",
+        ],
+        required: false,
       },
       {
         model: model.examScheduleRoomCapacityModel,
@@ -163,7 +176,6 @@ export async function findSlotsWithoutSchedules(
       "examinationSessionId",
       "universityId",
       "instituteId",
-      "academicYearId",
       "slotNumber",
       "startTime",
       "endTime",
@@ -183,7 +195,6 @@ const slotAttributes = [
   "examinationSessionId",
   "universityId",
   "instituteId",
-  "academicYearId",
   "slotNumber",
   "startTime",
   "endTime",
@@ -266,5 +277,18 @@ export async function deleteExaminationSessionSlot(
     error.statusCode = 404;
     throw error;
   }
+
+  const assignedScheduleCount = await scoped(model.examScheduleModel).count({
+    where: { examinationSessionSlotId: Number(examinationSessionSlotId) },
+    transaction: options.transaction,
+  });
+  if (assignedScheduleCount > 0) {
+    const error = new Error(
+      "Cannot delete examination session slot because exam schedules are assigned to it.",
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
   return slot.destroy({ transaction: options.transaction });
 }

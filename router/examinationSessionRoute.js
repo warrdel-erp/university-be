@@ -37,11 +37,8 @@ const sessionBodyObject = z.object({
     .array(
       z.object({
         term: z.number().int().positive(),
-        courseId: z.number().int().positive({
-          message: "courseId is required for each term",
-        }),
-        sessionId: z.number().int().positive({
-          message: "sessionId is required for each term",
+        batchId: z.number().int().positive({
+          message: "batchId must be a positive number",
         }),
         includeElectives: z.boolean().optional(),
         remarks: z.string().optional(),
@@ -88,8 +85,6 @@ const createSessionSchema = {
     },
   ),
 };
-
-
 
 const updateSessionSchema = {
   query: z.object({
@@ -143,22 +138,30 @@ const createTermSchema = {
     examinationSessionId: z.number({
       required_error: "examinationSessionId is required",
     }),
-    term: z.number({
-      required_error: "term is required",
-    }).int().positive(),
-    courseId: z.number().int().positive({
-      message: "courseId must be a positive number",
-    }),
-    sessionId: z.number().int().positive({
-      message: "sessionId must be a positive number",
-    }),
+    term: z
+      .number({
+        required_error: "term is required",
+      })
+      .int()
+      .positive(),
+    batchId: z
+      .number({
+        required_error: "batchId is required",
+      })
+      .int()
+      .positive({
+        message: "batchId must be a positive number",
+      }),
     includeElectives: z.boolean().optional(),
     remarks: z.string().optional(),
   }),
 };
 const deleteTermSchema = {
   query: z.object({
-    examinationSessionTermId: positiveIntegerQueryId,
+    examinationSessionTermId: positiveIntegerQueryId.optional(),
+    examinationSessionId: positiveIntegerQueryId.optional(),
+    batchId: positiveIntegerQueryId.optional(),
+    term: z.coerce.number().int().positive().optional(),
   }),
 };
 
@@ -171,7 +174,7 @@ const getClassSectionTermsBySetupTypeSchema = {
 
 const getStructureSchema = {
   query: z.object({
-    examinationSessionId: positiveIntegerQueryId,
+    examinationSessionId: positiveIntegerQueryId.optional(),
   }),
 };
 

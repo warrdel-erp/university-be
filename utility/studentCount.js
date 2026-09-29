@@ -27,15 +27,15 @@ export function normalizeTermCohortGroup(group) {
  */
 export function buildStudentGroupFromSchedule(schedule) {
   const plain = schedule.get ? schedule.get({ plain: true }) : schedule;
-  const cbtm = plain.curriculumBatchTermMapping;
 
   return {
-    sessionId: Number(plain.sessionId),
+    sessionId: Number(plain.batch?.sessionId || plain.sessionId),
     courseId: Number(plain.subjectSchedule?.courseId || plain.courseId),
-    academicYearId: Number(plain.academicYearId),
-    term: Number(cbtm ? cbtm.term : plain.term),
-    curriculumBatchTermMappingId: plain.curriculumBatchTermMappingId
-      ? Number(plain.curriculumBatchTermMappingId)
+    academicYearId: plain.academicYearId ? Number(plain.academicYearId) : null,
+    term: Number(plain.curriculumSubjectTermMapping?.term || plain.term),
+    batchId: plain.batchId ? Number(plain.batchId) : null,
+    curriculumSubjectTermMappingId: plain.curriculumSubjectTermMappingId
+      ? Number(plain.curriculumSubjectTermMappingId)
       : null,
   };
 }

@@ -4,42 +4,93 @@ import { buildScope, scoped } from "./scoped.js";
 import * as examinationSessionRepository from "../repository/examinationSessionRepository.js";
 
 /**
- * Resolve courseSessionMapping selections → { courseId, sessionId, terms }[].
+ * Resolve selections (batchId, courseId, sessionId, or legacy courseSessionMappingId) → { batchId, courseId, sessionId, terms }[].
  */
 export async function resolveSelectionCombinations(selections, options = {}) {
   if (!selections || !selections.length) return [];
 
-  const mappingIds = [];
+  const legacyMappingIds = [];
+  const batchIds = [];
   for (const sel of selections) {
-    mappingIds.push(Number(sel.courseSessionMappingId));
+    if (sel.courseSessionMappingId != null) {
+      legacyMappingIds.push(Number(sel.courseSessionMappingId));
+    }
+    if (sel.batchId != null) {
+      batchIds.push(Number(sel.batchId));
+    }
   }
 
-  const dbMappings =
-    await examinationSessionRepository.findSessionCourseMappingsByIds(
-      mappingIds,
-      options,
-    );
   const dbMappingsMap = new Map();
-  for (const mapping of dbMappings) {
-    dbMappingsMap.set(Number(mapping.sessionCourseMappingId), mapping);
+  if (legacyMappingIds.length > 0) {
+    const dbMappings =
+      await examinationSessionRepository.findSessionCourseMappingsByIds(
+        legacyMappingIds,
+        options,
+      );
+    for (const mapping of dbMappings) {
+      dbMappingsMap.set(Number(mapping.sessionCourseMappingId), mapping);
+    }
+  }
+
+  const batchMap = new Map();
+  if (batchIds.length > 0) {
+    const batches = await scoped(model.batchModel).findAll({
+      where: { batchId: { [Op.in]: batchIds } },
+      include: [
+        {
+          model: model.sessionModel,
+          as: "session",
+          attributes: ["sessionId", "courseId"],
+        },
+      ],
+      transaction: options.transaction,
+    });
+    for (const b of batches) {
+      const plain = b.get ? b.get({ plain: true }) : b;
+      batchMap.set(Number(plain.batchId), plain);
+    }
   }
 
   const combinations = [];
   for (const sel of selections) {
-    const mapping = dbMappingsMap.get(Number(sel.courseSessionMappingId));
-    if (!mapping) continue;
+    let courseId = sel.courseId != null ? Number(sel.courseId) : null;
+    let sessionId = sel.sessionId != null ? Number(sel.sessionId) : null;
+    let batchYear = null;
+
+    if (sel.batchId != null) {
+      const b = batchMap.get(Number(sel.batchId));
+      if (b) {
+        sessionId = sessionId ?? (b.sessionId ? Number(b.sessionId) : null);
+        courseId =
+          courseId ?? (b.session?.courseId ? Number(b.session.courseId) : null);
+        batchYear = b.batch != null ? Number(b.batch) : null;
+      }
+    }
+
+    if (sel.courseSessionMappingId != null && (!courseId || !sessionId)) {
+      const mapping = dbMappingsMap.get(Number(sel.courseSessionMappingId));
+      if (mapping) {
+        courseId = courseId ?? Number(mapping.courseId);
+        sessionId = sessionId ?? Number(mapping.sessionId);
+      }
+    }
 
     const terms = [];
-    for (const term of sel.terms || []) {
-      terms.push(Number(term));
+    if (Array.isArray(sel.terms)) {
+      for (const t of sel.terms) terms.push(Number(t));
+    } else if (sel.term != null) {
+      terms.push(Number(sel.term));
     }
-    if (!terms.length) continue;
 
-    combinations.push({
-      courseId: Number(mapping.courseId),
-      sessionId: Number(mapping.sessionId),
-      terms,
-    });
+    if (courseId != null || sessionId != null || sel.batchId != null) {
+      combinations.push({
+        batchId: sel.batchId != null ? Number(sel.batchId) : null,
+        batchYear,
+        courseId,
+        sessionId,
+        terms,
+      });
+    }
   }
 
   return combinations;

@@ -1,6 +1,5 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import acedmicYearModel from "./acedmicYearModel.js";
 import university from './universityModel.js';
 import campus from './campusModel.js';
 import institute from './instituteModel.js';
@@ -16,15 +15,6 @@ import classSectionTermModel from "./classSectionTermModel.js";
 const studentModel = sequelize.define(
     'students',
     {
-                academicYearId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'acedmic_year_id',
-            references: {
-                model: acedmicYearModel,
-                key: 'acedmic_year_id'
-            }
-        },
         studentId: {
             type: DataTypes.INTEGER,
             primaryKey: true,

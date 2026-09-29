@@ -250,8 +250,6 @@ const importStudentBodySchema = z.object({
   courseLevelId: positiveIntegerId,
   courseId: positiveIntegerId,
   classSectionTermId: positiveIntegerId,
-  academicYearId: optionalPositiveIntegerId,
-  acedmicYearId: optionalPositiveIntegerId,
   affiliatedUniversityId: nullableAffiliatedUniversityId.optional(),
   universityId: optionalPositiveIntegerId,
   roleId: z.union([z.literal(ROLES.STUDENT), positiveIntegerId]).optional(),
@@ -400,10 +398,8 @@ const mapStudentImportBody = (req, res, next) => {
   try {
     const body = { ...req.body };
 
-    if (body.acedmicYearId != null && body.academicYearId == null) {
-      body.academicYearId = body.acedmicYearId;
-    }
     delete body.acedmicYearId;
+    delete body.academicYearId;
 
     const hasLegacySemester = body.semesterId != null && body.semesterId !== "";
     const hasLegacySection =

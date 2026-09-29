@@ -199,6 +199,8 @@ export async function getExamScheduleStudents(filters) {
         limit = 10,
         search,
         courseId,
+        batchId,
+        curriculumSubjectTermMappingId,
         sessionId,
         term,
         subjectId,
@@ -210,6 +212,7 @@ export async function getExamScheduleStudents(filters) {
         resolvedExamScheduleId = await examScheduleRepository.getExamScheduleIdBySubject(
             firstId(subjectId),
             firstId(sessionId),
+            firstId(batchId),
         );
     }
 

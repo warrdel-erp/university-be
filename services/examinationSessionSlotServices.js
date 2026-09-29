@@ -9,6 +9,7 @@ import {
 import { getStudentCountMapByGroups } from "./studentCountServices.js";
 import { deriveScheduleRoomFlags } from "../utility/roomCapacity.js";
 import { EXAM_SCHEDULE_FILTER_STATUS } from "../constant.js";
+import { resolveSelectionCombinations } from "../utility/examScheduleSelection.js";
 
 function addMinutesToTime(timeStr, minutes) {
   if (!timeStr) return null;
@@ -26,37 +27,10 @@ function addMinutesToTime(timeStr, minutes) {
 }
 
 async function resolveSelectionFilters(selections, options = {}) {
-  const filterCombinations = [];
   if (!selections || selections.length === 0) {
-    return filterCombinations;
+    return [];
   }
-
-  const mappingIds = [];
-  for (const sel of selections) {
-    mappingIds.push(sel.courseSessionMappingId);
-  }
-
-  const dbMappings =
-    await examinationSessionRepository.findSessionCourseMappingsByIds(
-      mappingIds,
-      options,
-    );
-  const dbMappingsMap = new Map();
-  for (const mapping of dbMappings) {
-    dbMappingsMap.set(mapping.sessionCourseMappingId, mapping);
-  }
-
-  for (const sel of selections) {
-    const mapping = dbMappingsMap.get(sel.courseSessionMappingId);
-    if (!mapping) continue;
-    filterCombinations.push({
-      courseId: mapping.courseId,
-      sessionId: mapping.sessionId,
-      terms: sel.terms || [],
-    });
-  }
-
-  return filterCombinations;
+  return await resolveSelectionCombinations(selections, options);
 }
 
 function buildScheduleRow(item, studentCount) {
@@ -235,10 +209,10 @@ async function buildUnscheduledSchedules(
     unscheduled.push({
       examScheduleId: null,
       subjectId: sub.subjectId,
-      curriculumBatchTermMappingId:
-        sub.curriculumBatchTermMappingId || null,
+      batchId: sub.batchId || null,
+      curriculumSubjectTermMappingId:
+        sub.curriculumSubjectTermMappingId || null,
       term: sub.term,
-      academicYearId: sub.academicYearId || null,
       sessionId: sub.sessionId,
       examDate: null,
       examTime: null,

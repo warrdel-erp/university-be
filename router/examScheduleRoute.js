@@ -97,6 +97,8 @@ const getExamScheduleStudentsSchema = z.object({
     .default(10),
   search: z.string().trim().optional(),
   courseId: optionalPositiveIntegerIdList,
+  batchId: optionalPositiveIntegerIdList,
+  curriculumSubjectTermMappingId: optionalPositiveIntegerIdList,
   sessionId: optionalPositiveIntegerIdList,
   term: optionalPositiveIntegerIdList,
   subjectId: optionalPositiveIntegerIdList,

@@ -206,10 +206,10 @@ export async function getExamScheduleSlot(examScheduleId) {
       "examTime",
       "duration",
       "examinationSessionSlotId",
-      "sessionId",
+      "batchId",
+      "curriculumSubjectTermMappingId",
+      "subjectId",
       "term",
-      "academicYearId",
-      "curriculumBatchTermMappingId",
       "published",
     ],
     include: [
@@ -221,9 +221,37 @@ export async function getExamScheduleSlot(examScheduleId) {
         paranoid: true,
       },
       {
+        model: model.batchModel,
+        as: "batch",
+        attributes: ["batchId", "batch", "sessionId", "courseId"],
+        required: false,
+        include: [
+          {
+            model: model.sessionModel,
+            as: "session",
+            attributes: ["sessionId", "sessionName"],
+            required: false,
+          },
+        ],
+      },
+      {
+        model: model.curriculumSubjectTermMappingModel,
+        as: "curriculumSubjectTermMapping",
+        attributes: ["curriculumSubjectTermMappingId", "curriculumId", "term", "subjectId"],
+        required: false,
+        include: [
+          {
+            model: model.curriculumModel,
+            as: "curriculum",
+            attributes: ["curriculumId", "courseId"],
+            required: false,
+          },
+        ],
+      },
+      {
         model: model.subjectModel,
         as: "subjectSchedule",
-        attributes: ["courseId"],
+        attributes: ["subjectId", "courseId", "subjectName", "subjectCode"],
         required: false,
       }
     ],

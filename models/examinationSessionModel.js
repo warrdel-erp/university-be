@@ -2,7 +2,6 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
-import acedmicYearModel from "./acedmicYearModel.js";
 import examSetupTypeModel from "./examSetupTypeModel.js";
 import userModel from "./userModel.js";
 
@@ -31,15 +30,6 @@ const examinationSessionModel = sequelize.define(
             references: {
                 model: instituteModel,
                 key: 'institute_id'
-            }
-        },
-        academicYearId: {
-            type: DataTypes.BIGINT,
-            allowNull: false,
-            field: 'acedmic_year_id',
-            references: {
-                model: acedmicYearModel,
-                key: 'acedmic_year_id'
             }
         },
         assessmentTypeId: {
@@ -198,6 +188,6 @@ const examinationSessionModel = sequelize.define(
     }
 );
 
-examinationSessionModel.scopeConfig = { university: true, institute: true, academicYear: true };
+examinationSessionModel.scopeConfig = { university: true, institute: true };
 
 export default examinationSessionModel;
