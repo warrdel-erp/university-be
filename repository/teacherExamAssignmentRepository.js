@@ -61,6 +61,13 @@ export async function getAssignments(whereClause) {
                     where: buildScope(model.examScheduleModel),
                     include: [
                         {
+                            model: model.examinationSessionModel,
+                            as: 'examinationSession',
+                            required: true,
+                            where: buildScope(model.examinationSessionModel),
+                            attributes: ['examinationSessionId', 'sessionName', 'status', 'examStartDate', 'examEndDate'],
+                        },
+                        {
                             model: model.subjectModel,
                             as: 'subjectSchedule',
                             where: buildScope(model.subjectModel),

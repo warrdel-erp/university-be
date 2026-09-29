@@ -615,6 +615,15 @@ export async function getAssignmentsByUserId(
           ],
           where: slotWhere,
           required: true,
+          include: [
+            {
+              model: model.examinationSessionModel,
+              as: "examinationSession",
+              required: true,
+              where: buildScope(model.examinationSessionModel),
+              attributes: ["examinationSessionId", "sessionName", "status"],
+            },
+          ],
         },
         {
           model: model.classRoomModel,
