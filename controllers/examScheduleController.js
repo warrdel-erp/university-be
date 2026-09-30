@@ -1,109 +1,157 @@
-import * as examScheduleServices from '../services/examScheduleServices.js';
-import * as teacherExamAssignmentServices from '../services/teacherExamAssignmentServices.js';
-import { SuccessResponse, ErrorResponse } from '../utility/response.js';
+import * as examScheduleServices from "../services/examScheduleServices.js";
+import * as teacherExamAssignmentServices from "../services/teacherExamAssignmentServices.js";
+import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
 export const getExamSchedules = async (req, res) => {
-    try {
-        const { subjectId, examSetupTypeTermId, courseId, term, sessionId } = req.query;
+  try {
+    const { subjectId, examSetupTypeTermId, courseId, term, sessionId } =
+      req.query;
 
-        const filters = {
-            ...(subjectId && { subjectId: parseInt(subjectId, 10) }),
-            ...(examSetupTypeTermId && { examSetupTypeTermId: parseInt(examSetupTypeTermId, 10) }),
-            ...(courseId && { courseId: parseInt(courseId, 10) }),
-            ...(term && { term: parseInt(term, 10) }),
-            ...(sessionId && { sessionId: parseInt(sessionId, 10) }),
-        };
+    const filters = {
+      ...(subjectId && { subjectId: parseInt(subjectId, 10) }),
+      ...(examSetupTypeTermId && {
+        examSetupTypeTermId: parseInt(examSetupTypeTermId, 10),
+      }),
+      ...(courseId && { courseId: parseInt(courseId, 10) }),
+      ...(term && { term: parseInt(term, 10) }),
+      ...(sessionId && { sessionId: parseInt(sessionId, 10) }),
+    };
 
-        const result = await examScheduleServices.getExamSchedules(filters);
-        return SuccessResponse(res, 200, "Exam schedules fetched successfully", result);
-    } catch (error) {
-        console.error("Error in getExamSchedules controller:", error);
-        return ErrorResponse(res, 500, "Internal Server Error", error.message);
-    }
+    const result = await examScheduleServices.getExamSchedules(filters);
+    return SuccessResponse(
+      res,
+      200,
+      "Exam schedules fetched successfully",
+      result,
+    );
+  } catch (error) {
+    console.error("Error in getExamSchedules controller:", error);
+    return ErrorResponse(res, 500, "Internal Server Error", error.message);
+  }
 };
 
 export const getExamScheduleById = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const result = await examScheduleServices.getExamScheduleById(id);
+  try {
+    const { id } = req.params;
+    const result = await examScheduleServices.getExamScheduleById(id);
 
-        if (!result) {
-            return ErrorResponse(res, 404, "Exam schedule not found");
-        }
-
-        return SuccessResponse(res, 200, "Exam schedule fetched successfully", result);
-    } catch (error) {
-        console.error("Error in getExamScheduleById controller:", error);
-        return ErrorResponse(res, 500, "Internal Server Error", error.message);
+    if (!result) {
+      return ErrorResponse(res, 404, "Exam schedule not found");
     }
+
+    return SuccessResponse(
+      res,
+      200,
+      "Exam schedule fetched successfully",
+      result,
+    );
+  } catch (error) {
+    console.error("Error in getExamScheduleById controller:", error);
+    return ErrorResponse(res, 500, "Internal Server Error", error.message);
+  }
 };
 
 export const getMyExamScheduleById = async (req, res) => {
-    try {
-        const userId = req.user.userId;
-        const { id } = req.params;
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
 
-        const assignments = await teacherExamAssignmentServices.getAssignments({
-            examScheduleId: Number(id),
-            userId,
-        });
+    const assignments = await teacherExamAssignmentServices.getAssignments({
+      examScheduleId: Number(id),
+      userId,
+    });
 
-        if (!assignments.length) {
-            return ErrorResponse(res, 404, "Exam schedule not found or not assigned to you");
-        }
-
-        const result = await examScheduleServices.getExamScheduleById(id);
-
-        if (!result) {
-            return ErrorResponse(res, 404, "Exam schedule not found");
-        }
-
-        return SuccessResponse(res, 200, "Exam schedule fetched successfully", result);
-    } catch (error) {
-        console.error("Error in getMyExamScheduleById controller:", error);
-        return ErrorResponse(res, 500, "Internal Server Error", error.message);
+    if (!assignments.length) {
+      return ErrorResponse(
+        res,
+        404,
+        "Exam schedule not found or not assigned to you",
+      );
     }
+
+    const result = await examScheduleServices.getExamScheduleById(id);
+
+    if (!result) {
+      return ErrorResponse(res, 404, "Exam schedule not found");
+    }
+
+    return SuccessResponse(
+      res,
+      200,
+      "Exam schedule fetched successfully",
+      result,
+    );
+  } catch (error) {
+    console.error("Error in getMyExamScheduleById controller:", error);
+    return ErrorResponse(res, 500, "Internal Server Error", error.message);
+  }
 };
 
 export const allocateSeats = async (req, res) => {
-    try {
-        const { examScheduleId } = req.body;
-        const result = await examScheduleServices.allocateSeatsRandomly(examScheduleId, req.user.userId);
-        return SuccessResponse(res, 200, "Students allocated to seats successfully", result);
-    } catch (error) {
-        console.error("Error in allocateSeats controller:", error);
-        return ErrorResponse(res, 500, error.message || "Internal Server Error");
-    }
+  try {
+    const { examScheduleId } = req.body;
+    const result = await examScheduleServices.allocateSeatsRandomly(
+      examScheduleId,
+      req.user.userId,
+    );
+    return SuccessResponse(
+      res,
+      200,
+      "Students allocated to seats successfully",
+      result,
+    );
+  } catch (error) {
+    console.error("Error in allocateSeats controller:", error);
+    return ErrorResponse(res, 500, error.message || "Internal Server Error");
+  }
 };
 
 export const allocateSeatsAscending = async (req, res) => {
-    try {
-        const { examScheduleId } = req.body;
-        const result = await examScheduleServices.allocateSeatsAscending(examScheduleId, req.user.userId);
-        return SuccessResponse(res, 200, "Students allocated to seats successfully", result);
-    } catch (error) {
-        console.error("Error in allocateSeatsAscending controller:", error);
-        return ErrorResponse(res, 500, error.message || "Internal Server Error");
-    }
+  try {
+    const { examScheduleId } = req.body;
+    const result = await examScheduleServices.allocateSeatsAscending(
+      examScheduleId,
+      req.user.userId,
+    );
+    return SuccessResponse(
+      res,
+      200,
+      "Students allocated to seats successfully",
+      result,
+    );
+  } catch (error) {
+    console.error("Error in allocateSeatsAscending controller:", error);
+    return ErrorResponse(res, 500, error.message || "Internal Server Error");
+  }
 };
 
 export const allocateSeatsDescending = async (req, res) => {
-    try {
-        const { examScheduleId } = req.body;
-        const result = await examScheduleServices.allocateSeatsDescending(examScheduleId, req.user.userId);
-        return SuccessResponse(res, 200, "Students allocated to seats successfully", result);
-    } catch (error) {
-        console.error("Error in allocateSeatsDescending controller:", error);
-        return ErrorResponse(res, 500, error.message || "Internal Server Error");
-    }
+  try {
+    const { examScheduleId } = req.body;
+    const result = await examScheduleServices.allocateSeatsDescending(
+      examScheduleId,
+      req.user.userId,
+    );
+    return SuccessResponse(
+      res,
+      200,
+      "Students allocated to seats successfully",
+      result,
+    );
+  } catch (error) {
+    console.error("Error in allocateSeatsDescending controller:", error);
+    return ErrorResponse(res, 500, error.message || "Internal Server Error");
+  }
 };
 
 export const getExamScheduleStudents = async (req, res) => {
-    try {
-        const result = await examScheduleServices.getExamScheduleStudents(req.query);
-        return SuccessResponse(res, 200, "Students fetched successfully", result);
-    } catch (error) {
-        console.error("Error in getExamScheduleStudents controller:", error);
-        return ErrorResponse(res, 500, error.message || "Internal Server Error");
-    }
+  try {
+    const result = await examScheduleServices.getExamScheduleStudents(
+      req.query,
+    );
+    return SuccessResponse(res, 200, "Students fetched successfully", result);
+  } catch (error) {
+    console.error("Error in getExamScheduleStudents controller:", error);
+    return ErrorResponse(res, 500, error.message || "Internal Server Error");
+  }
 };
