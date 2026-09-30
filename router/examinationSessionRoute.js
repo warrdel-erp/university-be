@@ -169,6 +169,7 @@ const getClassSectionTermsBySetupTypeSchema = {
   query: z.object({
     examSetupTypeId: positiveIntegerQueryId.optional(),
     examinationSessionId: positiveIntegerQueryId.optional(),
+    academicYearId: positiveIntegerQueryId.optional(),
   }),
 };
 

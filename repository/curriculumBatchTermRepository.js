@@ -141,6 +141,61 @@ export async function findClassSectionTermIdsByBatchTerm(context, filters = {}, 
   return classSectionTermIds;
 }
 
+export async function findClassSectionsByBatchTerm(context, filters = {}, options = {}) {
+  const sectionWhere = {
+    courseId: Number(context.courseId),
+    year: Number(context.yearNumber),
+    ...buildScope(model.classSectionModel),
+  };
+  const batchId = filters.batchId ?? context.batchId;
+  if (batchId != null) {
+    sectionWhere.batchId = Number(batchId);
+  } else if (filters.academicYearId != null) {
+    sectionWhere.academicYearId = Number(filters.academicYearId);
+  }
+  if (filters.sessionId != null) {
+    sectionWhere.sessionId = Number(filters.sessionId);
+  }
+
+  const rows = await model.classSectionTermModel.findAll({
+    attributes: ["classSectionTermId", "classSectionsId", "term"],
+    where: { term: Number(context.term) },
+    include: [
+      {
+        model: model.classSectionModel,
+        as: "classSection",
+        attributes: [
+          "classSectionsId",
+          "section",
+          "batchId",
+          "year",
+          "sessionId",
+          "courseId",
+          "academicYearId",
+        ],
+        required: true,
+        where: sectionWhere,
+      },
+    ],
+    transaction: options.transaction,
+  });
+
+  return rows.map((row) => {
+    const plain = row.get ? row.get({ plain: true }) : row;
+    const cs = plain.classSection || {};
+    return {
+      classSectionTermId: Number(plain.classSectionTermId),
+      classSectionsId: Number(plain.classSectionsId),
+      section: cs.section || null,
+      batchId: cs.batchId != null ? Number(cs.batchId) : (batchId != null ? Number(batchId) : null),
+      year: cs.year != null ? Number(cs.year) : Number(context.yearNumber),
+      term: Number(plain.term),
+      sessionId: cs.sessionId != null ? Number(cs.sessionId) : null,
+      courseId: cs.courseId != null ? Number(cs.courseId) : Number(context.courseId),
+    };
+  });
+}
+
 export async function findEnrichmentByIds(curriculumBatchTermMappingIds, options = {}) {
   const ids = [...new Set(curriculumBatchTermMappingIds.map(Number))];
   if (!ids.length) return [];

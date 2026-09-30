@@ -2,7 +2,7 @@ import { Op } from "sequelize";
 import * as model from "../models/index.js";
 import * as acedmicYearRepository from "../repository/acedmicYearRepository.js";
 import { getAcademicYearId, getTenantStore } from "./requestContext.js";
-import { buildScope } from "./scoped.js";
+import { buildScope, scoped } from "./scoped.js";
 import {
   decimalGreaterThan,
   toIntegerNumber,
@@ -16,22 +16,58 @@ export async function resolveActiveAcademicYearContext(options = {}) {
   const store = getTenantStore();
   let academicYear = null;
 
-  if (store?.instituteId) {
+  // 1. Check if an explicit academicYearId is provided via options or request context
+  const explicitYearId = options.academicYearId || getAcademicYearId();
+  if (explicitYearId) {
+    academicYear = await acedmicYearRepository.getSingleacedmicYearDetails(
+      explicitYearId,
+      options,
+    );
+  }
+
+  // 2. If not found or not provided, check the active academic years for the institute
+  if (!academicYear && store?.instituteId) {
     const activeYears =
       await acedmicYearRepository.getActiveAcedmicYearByInstitute(
         store.instituteId,
         store.universityId,
       );
-    academicYear = activeYears?.[0] || null;
+    if (activeYears?.length > 0) {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      // Pick the active year that covers today's date
+      const currentYear = activeYears.find((y) => {
+        if (!y.startingDate) return false;
+        const start = String(y.startingDate).slice(0, 10);
+        const end = y.endingDate ? String(y.endingDate).slice(0, 10) : "9999-12-31";
+        return todayStr >= start && todayStr <= end;
+      });
+      // Fallback: pick the latest startingDate <= today, or the first active year
+      academicYear =
+        currentYear ||
+        activeYears.find((y) => String(y.startingDate).slice(0, 10) <= todayStr) ||
+        activeYears[0];
+    }
   }
 
+  // 3. Fallback to lookup across all active years (matching current date)
   if (!academicYear) {
-    const academicYearId = getAcademicYearId();
-    if (academicYearId) {
-      academicYear = await acedmicYearRepository.getSingleacedmicYearDetails(
-        academicYearId,
-        options,
-      );
+    const allActive = await scoped(model.acedmicYearModel).findAll({
+      where: { isActive: true },
+      order: [["startingDate", "ASC"]],
+      transaction: options.transaction,
+    });
+    if (allActive?.length > 0) {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const currentYear = allActive.find((y) => {
+        if (!y.startingDate) return false;
+        const start = String(y.startingDate).slice(0, 10);
+        const end = y.endingDate ? String(y.endingDate).slice(0, 10) : "9999-12-31";
+        return todayStr >= start && todayStr <= end;
+      });
+      academicYear =
+        currentYear ||
+        allActive.find((y) => String(y.startingDate).slice(0, 10) <= todayStr) ||
+        allActive[0];
     }
   }
 

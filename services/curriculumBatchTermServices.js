@@ -58,6 +58,18 @@ export async function resolveClassSectionTermIdsFromBatchTerm(
   );
 }
 
+export async function resolveClassSectionsFromBatchTerm(
+  context,
+  filters = {},
+  options = {},
+) {
+  return curriculumBatchTermRepository.findClassSectionsByBatchTerm(
+    context,
+    filters,
+    options,
+  );
+}
+
 /**
  * Apply CBTM as source of truth onto exam schedule payload.
  * Zod already requires subjectId + curriculumBatchTermMappingId.
