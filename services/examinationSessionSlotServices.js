@@ -181,20 +181,34 @@ async function loadEnrichedSlotSchedules(
   });
 
   const allSchedules = slots.flatMap((s) => s.schedules);
+  const fallbackMap = await resolveMissingScheduleMappings(
+    allSchedules,
+    examinationSessionId,
+    options,
+  );
+
   const studentGroups = allSchedules
-    .map((schedule) => buildStudentGroupFromSchedule(schedule))
+    .map((schedule) =>
+      buildStudentGroupFromSchedule(
+        schedule,
+        fallbackMap.get(Number(schedule.subjectId)),
+      ),
+    )
     .filter(Boolean);
 
-  const [studentCountMap, fallbackMap] = await Promise.all([
-    getStudentCountMapByGroups(studentGroups, options),
-    resolveMissingScheduleMappings(allSchedules, examinationSessionId, options),
-  ]);
+  const studentCountMap = await getStudentCountMapByGroups(
+    studentGroups,
+    options,
+  );
 
   for (const slot of slots) {
     slot.schedules = slot.schedules.map((schedule) => {
       const studentCount = lookupStudentCount(
         studentCountMap,
-        buildStudentGroupFromSchedule(schedule),
+        buildStudentGroupFromSchedule(
+          schedule,
+          fallbackMap.get(Number(schedule.subjectId)),
+        ),
       );
       return buildScheduleRow(schedule, studentCount, fallbackMap);
     });

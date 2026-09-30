@@ -109,11 +109,14 @@ export async function findClassSectionTermIdsByBatchTerm(context, filters = {}, 
     year: Number(context.yearNumber),
     ...buildScope(model.classSectionModel),
   };
+  const batchId = filters.batchId ?? context.batchId;
+  if (batchId != null) {
+    sectionWhere.batchId = Number(batchId);
+  } else if (filters.academicYearId != null) {
+    sectionWhere.academicYearId = Number(filters.academicYearId);
+  }
   if (filters.sessionId != null) {
     sectionWhere.sessionId = Number(filters.sessionId);
-  }
-  if (filters.academicYearId != null) {
-    sectionWhere.academicYearId = Number(filters.academicYearId);
   }
 
   const rows = await model.classSectionTermModel.findAll({

@@ -162,10 +162,6 @@ export const getTeacherSubject = async (req, res) => {
     const result = await employee.getTeacherSubject(userId, {
       sessionId,
       term,
-      academicYearId:
-        academicYearId != null && academicYearId !== ""
-          ? Number(academicYearId)
-          : undefined,
     });
 
     res.status(200).send(result);

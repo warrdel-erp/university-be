@@ -206,41 +206,35 @@ export async function findFullDetailsById(batchId) {
 
 /**
  * Distinct subject + plan counts for assessment plan subject mappings
- * linked to this batch's term mappings, or same course + session.
+ * linked to this batch (scoped to curriculum subjects when present).
  */
 export async function countAssessmentPlanSubjectMappingsByBatchContext({
-  courseId,
-  sessionId,
-  curriculumBatchTermMappingIds,
+  batchId,
+  subjectIds = [],
 }) {
-  const orConditions = [];
+  const where = {
+    batchId: Number(batchId),
+  };
 
-  if (curriculumBatchTermMappingIds.length > 0) {
-    orConditions.push({
-      curriculumBatchTermMappingId: { [Op.in]: curriculumBatchTermMappingIds },
-    });
+  if (subjectIds.length > 0) {
+    where.subjectId = { [Op.in]: subjectIds };
   }
 
-  orConditions.push({
-    courseId: Number(courseId),
-    sessionId: Number(sessionId),
-  });
-
   const rows = await scoped(model.assessmentPlanSubjectMappingModel).findAll({
-    where: { [Op.or]: orConditions },
+    where,
     attributes: ['subjectId', 'assessmentPlanId'],
   });
 
-  const subjectIds = new Set();
+  const mappedSubjectIds = new Set();
   const planIds = new Set();
   for (const row of rows) {
     const plain = row.get({ plain: true });
-    subjectIds.add(Number(plain.subjectId));
+    mappedSubjectIds.add(Number(plain.subjectId));
     planIds.add(Number(plain.assessmentPlanId));
   }
 
   return {
-    mappedSubjectCount: subjectIds.size,
+    mappedSubjectCount: mappedSubjectIds.size,
     mappedPlanCount: planIds.size,
   };
 }

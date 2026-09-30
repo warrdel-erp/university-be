@@ -59,24 +59,20 @@ export async function getSpecializationOptions(courseId) {
     return await optionsRepository.getSpecializationOptions(courseId);
 }
 
-export async function getSubjectOptions(courseId, term, academicYearId, sessionId, userId, unmapped = false, options = {}) {
-    let resolvedAcademicYearId = academicYearId;
-
+export async function getSubjectOptions(courseId, term, sessionId, userId, unmapped = false, options = {}) {
     if (sessionId != null) {
         const session = await scoped(model.sessionModel).findOne({
             where: { sessionId: Number(sessionId) },
-            attributes: ['sessionId', 'academicYearId'],
+            attributes: ['sessionId'],
         });
         if (!session) {
             throw new Error('Session not found');
         }
-        resolvedAcademicYearId = session.academicYearId;
     }
 
     return await optionsRepository.getSubjectOptions(
         courseId,
         term,
-        resolvedAcademicYearId,
         userId,
         sessionId,
         unmapped,
@@ -92,7 +88,7 @@ export async function getTimeTableStructureOptions() {
     return await optionsRepository.getTimeTableStructureOptions();
 }
 
-export async function getLectureWindowOptions(userId, employeeId, subjectId, academicYearId, date, sessionId) {
+export async function getLectureWindowOptions(userId, employeeId, subjectId, date, sessionId) {
     const employee = await optionsRepository.getEmployeeOptionDetail({ userId, employeeId });
     if (!employee) {
         return {
@@ -109,7 +105,6 @@ export async function getLectureWindowOptions(userId, employeeId, subjectId, aca
         optionsRepository.getLectureWindowOptionRows({
             userId: employee.userId,
             subjectId,
-            academicYearId,
             date,
             sessionId,
         }),
@@ -125,10 +120,10 @@ export async function getLectureWindowOptions(userId, employeeId, subjectId, aca
     };
 }
 
-export async function getLessonOptions(lectureWindowId, academicYearId, userId) {
+export async function getLessonOptions(lectureWindowId, userId) {
     const [lectureWindow, options] = await Promise.all([
-        optionsRepository.getLectureWindowOptionDetail(lectureWindowId, academicYearId, userId),
-        optionsRepository.getLessonOptionRows({ lectureWindowId, academicYearId, userId }),
+        optionsRepository.getLectureWindowOptionDetail(lectureWindowId, userId),
+        optionsRepository.getLessonOptionRows({ lectureWindowId, userId }),
     ]);
 
     if (!lectureWindow) {
@@ -141,9 +136,9 @@ export async function getLessonOptions(lectureWindowId, academicYearId, userId) 
     };
 }
 
-export async function getTopicOptions(lessonId, academicYearId, userId) {
+export async function getTopicOptions(lessonId, userId) {
     const [lesson, options] = await Promise.all([
-        optionsRepository.getLessonOptionDetail(lessonId, academicYearId, userId),
+        optionsRepository.getLessonOptionDetail(lessonId, userId),
         optionsRepository.getTopicOptionRows(lessonId),
     ]);
 

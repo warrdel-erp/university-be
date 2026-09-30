@@ -1,7 +1,6 @@
 import * as optionsServices from '../services/optionsServices.js';
 import { SuccessResponse, ErrorResponse } from '../utility/response.js';
 import { validateEmployeeUser } from '../utility/employeeValidation.js';
-import { getAcademicYearId } from '../utility/requestContext.js';
 
 export const getAffiliatedUniversityOptions = async (req, res) => {
     try {
@@ -100,16 +99,33 @@ export const getSpecializationOptions = async (req, res) => {
 
 export async function getSubjectOptions(req, res) {
     try {
-        const { courseId, term, sessionId, batchId, year, userId, unmapped } = req.query;
+        const {
+            courseId,
+            term,
+            sessionId,
+            batchId,
+            classSectionsId,
+            classSectionId,
+            classSectionTermId,
+            curriculumId,
+            year,
+            userId,
+            unmapped,
+        } = req.query;
         const isUnmapped = unmapped === true || unmapped === 'true';
         const result = await optionsServices.getSubjectOptions(
             courseId,
             term,
-            academicYearId,
             sessionId,
             userId,
             isUnmapped,
-            { batchId, year },
+            {
+                batchId,
+                year,
+                classSectionsId: classSectionsId ?? classSectionId,
+                classSectionTermId,
+                curriculumId,
+            },
         );
         return SuccessResponse(res, 200, "Subject options fetched successfully", result);
     } catch (error) {
@@ -126,15 +142,30 @@ export async function getMySubjectOptions(req, res) {
             return ErrorResponse(res, validation.status, validation.message);
         }
         const { userId } = validation;
-        const { courseId, term, sessionId, batchId, year } = req.query;
+        const {
+            courseId,
+            term,
+            sessionId,
+            batchId,
+            classSectionsId,
+            classSectionId,
+            classSectionTermId,
+            curriculumId,
+            year,
+        } = req.query;
         const result = await optionsServices.getSubjectOptions(
             courseId,
             term,
-            academicYearId,
             sessionId,
             userId,
             false,
-            { batchId, year },
+            {
+                batchId,
+                year,
+                classSectionsId: classSectionsId ?? classSectionId,
+                classSectionTermId,
+                curriculumId,
+            },
         );
         return SuccessResponse(res, 200, "Subject options fetched successfully", result);
     } catch (error) {
@@ -172,7 +203,6 @@ export const getLectureWindowOptions = async (req, res) => {
             userId != null ? Number(userId) : undefined,
             employeeId != null ? Number(employeeId) : undefined,
             Number(subjectId),
-            Number(academicYearId),
             date,
             sessionId != null ? Number(sessionId) : undefined,
         );
@@ -194,7 +224,6 @@ export const getMyLectureWindowOptions = async (req, res) => {
             Number(userId),
             undefined,
             Number(subjectId),
-            Number(academicYearId),
             date,
             sessionId != null ? Number(sessionId) : undefined,
         );
@@ -213,7 +242,6 @@ export const getLessonOptions = async (req, res) => {
         const { lectureWindowId } = req.query;
         const result = await optionsServices.getLessonOptions(
             Number(lectureWindowId),
-            Number(academicYearId),
         );
         return SuccessResponse(res, 200, "Lesson options fetched successfully", result);
     } catch (error) {
@@ -233,7 +261,6 @@ export const getMyLessonOptions = async (req, res) => {
         const { lectureWindowId } = req.query;
         const result = await optionsServices.getLessonOptions(
             Number(lectureWindowId),
-            Number(academicYearId),
             validation.userId,
         );
         return SuccessResponse(res, 200, "Lesson options fetched successfully", result);
@@ -249,7 +276,6 @@ export const getTopicOptions = async (req, res) => {
         const { lessonId } = req.query;
         const result = await optionsServices.getTopicOptions(
             Number(lessonId),
-            Number(academicYearId),
         );
         return SuccessResponse(res, 200, "Topic options fetched successfully", result);
     } catch (error) {
@@ -269,7 +295,6 @@ export const getMyTopicOptions = async (req, res) => {
         const { lessonId } = req.query;
         const result = await optionsServices.getTopicOptions(
             Number(lessonId),
-            Number(academicYearId),
             validation.userId,
         );
         return SuccessResponse(res, 200, "Topic options fetched successfully", result);
