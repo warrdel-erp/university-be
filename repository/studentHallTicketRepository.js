@@ -253,7 +253,7 @@ function buildStudentListIncludes(examinationSessionId, termIds, eligibilityWher
         model: model.assessmentPlanModel,
         as: "assessmentPlans",
         required: false,
-        attributes: ["assessmentPlanId", "courseId", "regulationId", "isActive"],
+        attributes: ["assessmentPlanId", "batchId", "regulationId", "isActive"],
         include: [
           {
             model: model.academicRegulationModel,

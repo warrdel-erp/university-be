@@ -25,13 +25,13 @@ const assessmentPlanModel = sequelize.define(
             allowNull: true,
             field: 'description'
         },
-        courseId: {
+        batchId: {
             type: DataTypes.INTEGER,
             allowNull: true,
-            field: 'course_id',
+            field: 'batch_id',
             references: {
-                model: 'course',
-                key: 'course_id'
+                model: 'batch',
+                key: 'batch_id'
             }
         },
         regulationId: {

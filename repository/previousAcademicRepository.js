@@ -302,19 +302,25 @@ export async function getAcademicRegulationCourseMappings(courseIds, batchIds = 
 }
 
 export async function getAssessmentPlanSubjectMappings(batchTermMappingIds, courseIds, sessionId = null) {
-  const planWhere = {};
+  const subjectWhere = {};
   if (Array.isArray(courseIds) && courseIds.length > 0) {
-    planWhere.courseId = { [Op.in]: courseIds.map(Number) };
+    subjectWhere.courseId = { [Op.in]: courseIds.map(Number) };
   }
 
   const rows = await scoped(models.assessmentPlanSubjectMappingModel).findAll({
     include: [
       {
+        model: models.subjectModel,
+        as: 'subject',
+        required: Object.keys(subjectWhere).length > 0,
+        where: Object.keys(subjectWhere).length > 0 ? subjectWhere : undefined,
+        attributes: ['subjectId', 'courseId'],
+      },
+      {
         model: models.assessmentPlanModel,
         as: 'assessmentPlan',
         required: true,
-        attributes: ['assessmentPlanId', 'courseId'],
-        where: Object.keys(planWhere).length > 0 ? planWhere : undefined,
+        attributes: ['assessmentPlanId', 'batchId'],
       },
     ],
     attributes: [
@@ -334,7 +340,8 @@ export async function getAssessmentPlanSubjectMappings(batchTermMappingIds, cour
       subjectId: plain.subjectId,
       batchId: plain.batchId,
       curriculumSubjectTermMappingId: plain.curriculumSubjectTermMappingId,
-      courseId: plain.assessmentPlan?.courseId || null,
+      batchId: plain.assessmentPlan?.batchId || plain.batchId || null,
+      courseId: null,
       sessionId: sessionId ? Number(sessionId) : null,
       curriculumBatchTermMappingId: null,
     };
@@ -772,11 +779,6 @@ export async function findAssessmentPlanSubjectsForTerm(
   sessionId,
   courseId = null,
 ) {
-  const planWhere = {};
-  if (courseId) {
-    planWhere.courseId = Number(courseId);
-  }
-
   const rows = await scoped(models.assessmentPlanSubjectMappingModel).findAll({
     attributes: [
       'assessmentPlanSubjectMappingId',
@@ -790,18 +792,18 @@ export async function findAssessmentPlanSubjectsForTerm(
         model: models.subjectModel,
         as: 'subject',
         required: true,
-        attributes: ['subjectId', 'subjectCode', 'subjectName'],
+        attributes: ['subjectId', 'subjectCode', 'subjectName', 'courseId'],
+        where: courseId ? { courseId: Number(courseId) } : undefined,
       },
       {
         model: models.assessmentPlanModel,
         as: 'assessmentPlan',
         required: true,
-        attributes: ['assessmentPlanId', 'planName', 'planCode', 'gradingId', 'regulationId', 'courseId'],
+        attributes: ['assessmentPlanId', 'planName', 'planCode', 'gradingId', 'regulationId', 'batchId'],
         where: {
           ...buildScope(models.assessmentPlanModel, {
             scopeConfig: { academicYear: false },
           }),
-          ...(Object.keys(planWhere).length > 0 ? planWhere : {}),
         },
         include: [
           gradingSchemeInclude(),

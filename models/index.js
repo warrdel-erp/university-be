@@ -4175,8 +4175,8 @@ studentModel.hasMany(attendanceModel, {
   as: "attendances",
 });
 studentModel.hasMany(assessmentPlanModel, {
-  foreignKey: "courseId",
-  sourceKey: "courseId",
+  foreignKey: "batchId",
+  sourceKey: "batchId",
   as: "assessmentPlans",
 });
 
@@ -4265,12 +4265,12 @@ subjectModel.belongsTo(courseModel, { foreignKey: "courseId", as: "course" });
 courseModel.hasMany(subjectModel, { foreignKey: "courseId", as: "subjects" });
 
 // Assessment Plan Associations
-assessmentPlanModel.belongsTo(courseModel, {
-  foreignKey: "courseId",
-  as: "course",
+assessmentPlanModel.belongsTo(batchModel, {
+  foreignKey: "batchId",
+  as: "batch",
 });
-courseModel.hasMany(assessmentPlanModel, {
-  foreignKey: "courseId",
+batchModel.hasMany(assessmentPlanModel, {
+  foreignKey: "batchId",
   as: "assessmentPlans",
 });
 

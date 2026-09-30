@@ -408,7 +408,7 @@ export async function findAssessmentPlanSubjectMappings(where = {}, options = {}
       {
         model: model.assessmentPlanModel,
         as: "assessmentPlan",
-        attributes: ["assessmentPlanId", "planName", "planCode", "courseId"],
+        attributes: ["assessmentPlanId", "planName", "planCode", "batchId"],
         required: false,
       },
     ],
@@ -422,7 +422,7 @@ export async function findAssessmentPlansByIds(planIds, options = {}) {
     where: { assessmentPlanId: { [Op.in]: planIds } },
     attributes: [
       "assessmentPlanId",
-      "courseId",
+      "batchId",
       "planName",
       "planCode",
     ],

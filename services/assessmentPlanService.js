@@ -107,7 +107,7 @@ function mapAssessmentPlanMapping(mapping) {
           planName: plan.planName,
           planCode: plan.planCode,
           description: plan.description,
-          courseId: plan.courseId,
+          batchId: plan.batchId,
           regulationId: plan.regulationId,
           gradingId: plan.gradingId,
           status: plan.status,
@@ -348,7 +348,6 @@ function nestBatchCoursesWithSessions(sessions, assignedRows, activeBatchYear) {
 
       const regMapping = batch.regulationBatchMappings?.[0] || null;
       const reg = regMapping?.academicRegulation || null;
-      const curriculumName = curriculumData?.name || null;
 
       nest.batches.push({
         batchId: batch.batchId,
@@ -360,7 +359,6 @@ function nestBatchCoursesWithSessions(sessions, assignedRows, activeBatchYear) {
         classSections: batch.classSections || [],
         curriculumBatchMappingId,
         curriculumId,
-        curriculumName,
         curriculum: curriculumData,
         academicRegulationId: reg?.academicRegulationId || null,
         academicRegulation: reg
@@ -400,7 +398,7 @@ export async function createAssessmentPlan({ payload, user }) {
 
     const planData = {
       ...payload,
-      courseId: payload.courseId ? Number(payload.courseId) : null,
+      batchId: payload.batchId ? Number(payload.batchId) : null,
       regulationId: payload.regulationId ? Number(payload.regulationId) : null,
       academicYearId,
       universityId: user?.universityId ? Number(user.universityId) : null,
@@ -455,8 +453,8 @@ export async function updateAssessmentPlan({
       updatedBy: user?.userId || null,
     };
 
-    if (payload.courseId !== undefined)
-      updateData.courseId = payload.courseId ? Number(payload.courseId) : null;
+    if (payload.batchId !== undefined)
+      updateData.batchId = payload.batchId ? Number(payload.batchId) : null;
     if (payload.regulationId !== undefined)
       updateData.regulationId = payload.regulationId
         ? Number(payload.regulationId)
@@ -760,12 +758,12 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
     const sessionId = batchRecord.sessionId || null;
 
     if (
-      plan.courseId &&
-      courseId &&
-      Number(plan.courseId) !== Number(courseId)
+      plan.batchId &&
+      payload.batchId &&
+      Number(plan.batchId) !== Number(payload.batchId)
     ) {
       const error = new Error(
-        `Assessment Plan (ID: ${payload.assessmentPlanId}) is created for Course (ID: ${plan.courseId}), which does not match Batch/Curriculum Course (ID: ${courseId})`,
+        `Assessment Plan (ID: ${payload.assessmentPlanId}) is created for Batch (ID: ${plan.batchId}), which does not match Mapping Batch (ID: ${payload.batchId})`,
       );
       error.statusCode = 400;
       throw error;
