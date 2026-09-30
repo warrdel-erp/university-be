@@ -351,9 +351,6 @@ export async function findTermsWithClassSectionsByBatchId(batchId, filters = {})
   const classSectionWhere = {
     ...buildScope(model.classSectionModel),
   };
-  if (filters.year != null) {
-    classSectionWhere.year = Number(filters.year);
-  }
 
   const termInclude = classSectionTermsInclude({
     term: filters.term,
@@ -413,7 +410,6 @@ export async function findTermsWithClassSectionsByBatchId(batchId, filters = {})
               'effectiveFrom',
               'effectiveUntil',
               'gradingSchemeId',
-              'batchId',
               'status',
               'isActive',
             ],

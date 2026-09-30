@@ -70,7 +70,12 @@ export const getTermsWithClassSections = async (query) => {
     ? academicCtx.academicYear.get({ plain: true })
     : academicCtx.academicYear;
   const currentYearNumber = activeCalendarYear - batchYear + 1;
-  const maxYear = duration > 0 ? duration : 1;
+  const maxYear =
+    duration > 0
+      ? duration
+      : totalTerms > 0
+        ? Math.ceil(totalTerms / 2)
+        : 1;
 
   const classSectionsIds = [];
   const sectionsByYear = new Map();
@@ -119,11 +124,8 @@ export const getTermsWithClassSections = async (query) => {
 
   const years = [];
   for (let year = 1; year <= maxYear; year++) {
-    if (yearFilter != null && year !== yearFilter) {
-      continue;
-    }
-
-    const sections = sectionsByYear.get(year) || [];
+    const shouldIncludeSections = yearFilter == null || year === yearFilter;
+    const sections = shouldIncludeSections ? (sectionsByYear.get(year) || []) : [];
     const classSections = [];
     for (const section of sections) {
       const terms = [];
@@ -147,11 +149,13 @@ export const getTermsWithClassSections = async (query) => {
       });
     }
 
+    const hasSectionsConfigured = (sectionsByYear.get(year) || []).length > 0;
+
     years.push({
       year,
       activeYear: batchYear + (year - 1),
       isCurrentYear: year === currentYearNumber,
-      configured: classSections.length > 0,
+      configured: hasSectionsConfigured,
       expectedTerms: termsForYear(year, course),
       classSections,
     });
@@ -228,6 +232,7 @@ export const getTermsWithClassSections = async (query) => {
           },
       years,
     },
+    years,
   };
 };
 
