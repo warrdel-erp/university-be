@@ -1253,6 +1253,28 @@ export async function findCurriculumBatchCoursesWithSessions({
               },
             ],
           },
+          {
+            model: model.academicRegulationCourseMappingModel,
+            as: "regulationBatchMappings",
+            attributes: [
+              "academicRegulationCourseMappingId",
+              "academicRegulationId",
+              "batchId",
+            ],
+            required: false,
+            include: [
+              {
+                model: model.academicRegulationModel,
+                as: "academicRegulation",
+                attributes: [
+                  "academicRegulationId",
+                  "regulationCode",
+                  "regulationName",
+                ],
+                required: false,
+              },
+            ],
+          },
         ],
       },
     ],
