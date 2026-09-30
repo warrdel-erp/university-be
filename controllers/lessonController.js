@@ -12,6 +12,7 @@ export async function addLesson(req, res) {
         if (!(name && subjectId && sessionId && lectureWindowId)) {
             return res.status(400).send("name, subjectId, sessionId and lectureWindowId are required");
         }
+        const academicYearId = getAcademicYearId();
         const lessonData = await lesson.addLesson(
             { ...req.body, academicYearId: Number(academicYearId) },
             createdBy,
@@ -93,6 +94,7 @@ export async function updateLesson(req, res) {
     try {
         const { lessonId } = req.params;
         const updatedBy = req.user.userId;
+        const academicYearId = getAcademicYearId();
         const lessonData = await lesson.updateLesson(
             Number(lessonId),
             { ...req.body, academicYearId },
@@ -257,6 +259,7 @@ export async function linkLessonsToWindow(req, res) {
         const { lessonId } = req.query;
         const { lectureWindowId } = req.body;
         const updatedBy = req.user.userId;
+        const academicYearId = getAcademicYearId();
 
         const linkedCount = await lesson.linkLessonsToWindow(
             lectureWindowId,
@@ -433,6 +436,7 @@ export async function addMyLesson(req, res) {
         if (!(name && subjectId && sessionId && lectureWindowId)) {
             return res.status(400).send("name, subjectId, sessionId and lectureWindowId are required");
         }
+        const academicYearId = getAcademicYearId();
         const lessonData = await lesson.addLesson(
             { ...req.body, userId: createdBy, academicYearId: Number(academicYearId) },
             createdBy,

@@ -4,6 +4,11 @@ import { validateEmployeeUser } from "../utility/employeeValidation.js";
 import { getAcademicYearId } from "../utility/requestContext.js";
 
 function requireActiveAcademicYearId(res) {
+    const academicYearId = getAcademicYearId();
+    if (!academicYearId) {
+        ErrorResponse(res, 400, "Active academicYearId is required");
+        return null;
+    }
     return Number(academicYearId);
 }
 

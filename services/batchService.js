@@ -214,13 +214,7 @@ export async function getBatchFullDetails(batchId) {
 
   const configuredTermSet = new Set();
   const curriculumSubjectSet = new Set();
-  const curriculumBatchTermMappingIds = [];
 
-  if (curriculumMapping) {
-    for (const termRow of curriculumMapping.termMappings || []) {
-      curriculumBatchTermMappingIds.push(Number(termRow.curriculumBatchTermMappingId));
-    }
-  }
   if (curriculumRow) {
     for (const subjectTerm of curriculumRow.subjectTermMappings || []) {
       configuredTermSet.add(Number(subjectTerm.term));
@@ -233,9 +227,8 @@ export async function getBatchFullDetails(batchId) {
   const totalSubjects = curriculumSubjectSet.size;
 
   const assessmentCounts = await repo.countAssessmentPlanSubjectMappingsByBatchContext({
-    courseId: course.courseId,
-    sessionId: session.sessionId,
-    curriculumBatchTermMappingIds,
+    batchId: resolvedBatchId,
+    subjectIds: [...curriculumSubjectSet],
   });
 
   const configuredAssessmentSubjects = assessmentCounts.mappedSubjectCount;
