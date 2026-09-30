@@ -432,10 +432,13 @@ export async function findBlockingExamScheduleForSubjectMapping(
   }
 
   const scheduleWhere = { subjectId };
-  if (mapping.curriculumBatchTermMappingId != null) {
-    scheduleWhere.curriculumBatchTermMappingId = Number(
-      mapping.curriculumBatchTermMappingId,
+  if (mapping.curriculumSubjectTermMappingId != null) {
+    scheduleWhere.curriculumSubjectTermMappingId = Number(
+      mapping.curriculumSubjectTermMappingId,
     );
+  }
+  if (mapping.batchId != null) {
+    scheduleWhere.batchId = Number(mapping.batchId);
   }
 
   return scoped(model.examScheduleModel).findOne({
@@ -443,7 +446,8 @@ export async function findBlockingExamScheduleForSubjectMapping(
     attributes: [
       "examScheduleId",
       "subjectId",
-      "curriculumBatchTermMappingId",
+      "curriculumSubjectTermMappingId",
+      "batchId",
       "examinationSessionId",
     ],
     include: [
