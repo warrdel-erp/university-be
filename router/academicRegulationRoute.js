@@ -32,14 +32,12 @@ const classificationItemSchema = z.object({
 
 export const getCourseMappingsQuerySchema = z.object({
   academicRegulationId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
-  courseId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
-  sessionId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
+  batchId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
 });
 
 export const createCourseMappingBody = z.object({
   academicRegulationId: z.coerce.number().int().positive(),
-  courseId: z.coerce.number().int().positive(),
-  sessionId: z.coerce.number().int().positive(),
+  batchId: z.coerce.number().int().positive(),
 });
 
 export const createAcademicRegulationBody = z.object({
@@ -54,7 +52,7 @@ export const createAcademicRegulationBody = z.object({
   effectiveFrom: z.string().optional().nullable(),
   effectiveUntil: z.string().optional().nullable(),
   gradingSchemeId: z.coerce.number().int().positive().optional().nullable(),
-  academicYearId: z.coerce.number().int().positive().optional().nullable(),
+  batchId: z.coerce.number().int().positive().optional().nullable(),
 
   // ==========================================
   // STEP 2: EVALUATION PATTERN & WEIGHTAGE
@@ -178,10 +176,18 @@ export const createAcademicRegulationBody = z.object({
   // ==========================================
   // COURSE MAPPINGS
   // ==========================================
-  courseMappings: z.array(z.object({
-    courseId: z.coerce.number().int().positive(),
-    sessionId: z.coerce.number().int().positive(),
-  })).optional(),
+  courseMappings: z.array(z.union([
+    z.coerce.number().int().positive(),
+    z.object({
+      batchId: z.coerce.number().int().positive(),
+    }),
+  ])).optional(),
+  batchMappings: z.array(z.union([
+    z.coerce.number().int().positive(),
+    z.object({
+      batchId: z.coerce.number().int().positive(),
+    }),
+  ])).optional(),
 
   // STATUS & AUDIT
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional().default("DRAFT"),
@@ -200,7 +206,7 @@ export const updateAcademicRegulationBody = z.object({
   effectiveFrom: z.string().optional().nullable(),
   effectiveUntil: z.string().optional().nullable(),
   gradingSchemeId: z.coerce.number().int().positive().optional().nullable(),
-  academicYearId: z.coerce.number().int().positive().optional().nullable(),
+  batchId: z.coerce.number().int().positive().optional().nullable(),
 
   // ==========================================
   // STEP 2: EVALUATION PATTERN & WEIGHTAGE
@@ -321,7 +327,18 @@ export const updateAcademicRegulationBody = z.object({
   degreePrefix: z.string().max(50).optional().nullable(),
   isAutoNumberingEnabled: z.boolean().optional(),
 
-  // STATUS & AUDIT
+  courseMappings: z.array(z.union([
+    z.coerce.number().int().positive(),
+    z.object({
+      batchId: z.coerce.number().int().positive(),
+    }),
+  ])).optional(),
+  batchMappings: z.array(z.union([
+    z.coerce.number().int().positive(),
+    z.object({
+      batchId: z.coerce.number().int().positive(),
+    }),
+  ])).optional(),
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
   isActive: z.boolean().optional(),
 });
@@ -329,8 +346,8 @@ export const updateAcademicRegulationBody = z.object({
 export const listAcademicRegulationQuery = z.object({
   search: z.string().optional(),
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
+  batchId: z.union([z.string(), z.number()]).optional(),
   courseId: z.union([z.string(), z.number()]).optional(),
-  academicYearId: z.union([z.string(), z.number()]).optional(),
   academicYearRange: z.string().optional(),
   page: z.union([z.string(), z.number()]).optional(),
   limit: z.union([z.string(), z.number()]).optional(),

@@ -72,12 +72,14 @@ export async function deleteAcademicRegulation(req, res) {
 
 export async function createCourseMapping(req, res) {
   try {
-    const { academicRegulationId, courseId, sessionId } = req.body;
-    const result = await academicRegulationService.createCourseMapping({
-      academicRegulationId,
-      courseId,
-      sessionId,
-    });
+    const { academicRegulationId, batchId } = req.body;
+    const result = await academicRegulationService.createCourseMapping(
+      {
+        academicRegulationId,
+        batchId,
+      },
+      req.user
+    );
     return SuccessResponse(res, 201, "Course mapping created successfully", result);
   } catch (error) {
     console.error("Error in createCourseMapping:", error.message);

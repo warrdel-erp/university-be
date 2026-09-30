@@ -188,10 +188,17 @@ export async function getPreviousAcademicBatches(filters = {}) {
   const regulationMappings =
     await previousAcademicRepository.getAcademicRegulationCourseMappings(
       Array.from(regulationCourseIds),
+      batchIds,
     );
   const regulationMap = new Map();
   for (const regulationMapping of regulationMappings) {
-    regulationMap.set(Number(regulationMapping.courseId), regulationMapping.academicRegulation);
+    const courseId = regulationMapping.batch?.session?.courseId;
+    if (courseId) {
+      regulationMap.set(Number(courseId), regulationMapping.academicRegulation);
+    }
+    if (regulationMapping.batchId) {
+      regulationMap.set(Number(regulationMapping.batchId), regulationMapping.academicRegulation);
+    }
   }
 
   const studentCountMap =
@@ -1631,8 +1638,11 @@ export async function getTermStudentMarks(
   for (const mapping of regulationMappings) {
     const regulationRecord = mapping.academicRegulation;
     const rules = mapRegulationRules(regulationRecord);
-    regulationBySessionId.set(Number(mapping.sessionId), rules);
-    regulationRecordBySessionId.set(Number(mapping.sessionId), regulationRecord);
+    const resolvedSessionId = mapping.batch?.sessionId || sessionId;
+    if (resolvedSessionId) {
+      regulationBySessionId.set(Number(resolvedSessionId), rules);
+      regulationRecordBySessionId.set(Number(resolvedSessionId), regulationRecord);
+    }
     if (defaultRegulation == null) {
       defaultRegulation = rules;
       defaultRegulationRecord = regulationRecord;

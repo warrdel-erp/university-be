@@ -89,15 +89,14 @@ export const getTermsWithClassSections = async (query) => {
     await courseRepository.countStudentsByClassSectionIds(classSectionsIds);
 
   const academicRegulations = [];
-  for (const mapping of session.regulationCourseMappings || []) {
-    if (Number(mapping.courseId) !== Number(course.courseId)) {
-      continue;
-    }
+  for (const mapping of batch.regulationBatchMappings || []) {
     const regulation = mapping.academicRegulation;
+    if (!regulation) continue;
     academicRegulations.push({
       academicRegulationCourseMappingId:
         mapping.academicRegulationCourseMappingId,
       academicRegulationId: mapping.academicRegulationId,
+      batchId: mapping.batchId,
       regulationCode: regulation.regulationCode,
       regulationName: regulation.regulationName,
       description: regulation.description,
@@ -106,7 +105,6 @@ export const getTermsWithClassSections = async (query) => {
       effectiveFrom: regulation.effectiveFrom,
       effectiveUntil: regulation.effectiveUntil,
       gradingSchemeId: regulation.gradingSchemeId,
-      academicYearId: regulation.academicYearId,
       status: regulation.status,
       isActive: regulation.isActive,
     });

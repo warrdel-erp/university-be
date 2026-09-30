@@ -249,15 +249,53 @@ export async function getStudentCountsByBatchIds(batchIds) {
   return countMap;
 }
 
-export async function getAcademicRegulationCourseMappings(courseIds) {
+export async function getAcademicRegulationCourseMappings(courseIds, batchIds = []) {
+  const batchWhere = {};
+  if (Array.isArray(batchIds) && batchIds.length > 0) {
+    batchWhere.batchId = { [Op.in]: batchIds.map(Number) };
+  }
+
+  const sessionInclude = {
+    model: models.sessionModel,
+    as: 'session',
+    required: true,
+  };
+  if (Array.isArray(courseIds) && courseIds.length > 0) {
+    sessionInclude.where = { courseId: { [Op.in]: courseIds.map(Number) } };
+  }
+
+  const matchingBatches = await scoped(models.batchModel).findAll({
+    where: batchWhere,
+    attributes: ['batchId', 'sessionId'],
+    include: [sessionInclude],
+    raw: true,
+  });
+
+  const resolvedBatchIds = matchingBatches.map(b => b.batchId);
+  if (resolvedBatchIds.length === 0) {
+    return [];
+  }
+
   return scoped(models.academicRegulationCourseMappingModel).findAll({
-    where: { courseId: { [Op.in]: courseIds } },
-    attributes: ['academicRegulationCourseMappingId', 'courseId', 'academicRegulationId'],
+    where: { batchId: { [Op.in]: resolvedBatchIds } },
+    attributes: ['academicRegulationCourseMappingId', 'batchId', 'academicRegulationId'],
     include: [
       {
         model: models.academicRegulationModel,
         as: 'academicRegulation',
         attributes: ['academicRegulationId', 'regulationName'],
+      },
+      {
+        model: models.batchModel,
+        as: 'batch',
+        attributes: ['batchId', 'sessionId'],
+        include: [
+          {
+            model: models.sessionModel,
+            as: 'session',
+            attributes: ['sessionId', 'courseId'],
+          },
+        ],
       },
     ],
   });
@@ -902,20 +940,50 @@ function academicRegulationInclude(required, batchYear = null) {
 }
 
 export async function findAcademicRegulationForCourse(courseId, sessionId, batchYear = null) {
-  const where = { courseId };
+  const batchWhere = {};
   if (sessionId) {
-    where.sessionId = sessionId;
+    batchWhere.sessionId = Number(sessionId);
+  }
+  if (batchYear != null) {
+    batchWhere.batch = Number(batchYear);
+  }
+
+  const sessionInclude = {
+    model: models.sessionModel,
+    as: 'session',
+    required: true,
+  };
+  if (courseId) {
+    sessionInclude.where = { courseId: Number(courseId) };
+  }
+
+  const matchingBatches = await scoped(models.batchModel).findAll({
+    where: batchWhere,
+    attributes: ['batchId', 'sessionId', 'batch'],
+    include: [sessionInclude],
+    raw: true,
+  });
+
+  const batchIds = matchingBatches.map(b => b.batchId);
+  if (batchIds.length === 0) {
+    return [];
   }
 
   return scoped(models.academicRegulationCourseMappingModel).findAll({
-    where,
+    where: { batchId: { [Op.in]: batchIds } },
     attributes: [
       'academicRegulationCourseMappingId',
-      'courseId',
-      'sessionId',
+      'batchId',
       'academicRegulationId',
     ],
-    include: [academicRegulationInclude(true, batchYear)],
+    include: [
+      academicRegulationInclude(true, batchYear),
+      {
+        model: models.batchModel,
+        as: 'batch',
+        attributes: ['batchId', 'sessionId', 'batch'],
+      },
+    ],
   });
 }
 
