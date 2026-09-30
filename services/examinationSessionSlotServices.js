@@ -26,14 +26,50 @@ function addMinutesToTime(timeStr, minutes) {
   return `${pad(newHours)}:${pad(newMins)}:${pad(secs)}`;
 }
 
-async function resolveSelectionFilters(selections, options = {}) {
-  if (!selections || selections.length === 0) {
-    return [];
+async function resolveMissingScheduleMappings(schedules, examinationSessionId, options = {}) {
+  const missingSubjectIds = [];
+  for (const s of schedules) {
+    if (!s.batchId || !s.curriculumSubjectTermMappingId) {
+      if (s.subjectId) missingSubjectIds.push(Number(s.subjectId));
+    }
   }
-  return await resolveSelectionCombinations(selections, options);
+  if (!missingSubjectIds.length) return new Map();
+
+  const sessionTerms = await examinationSessionRepository.findExaminationSessionTerms(
+    Number(examinationSessionId),
+    options,
+  );
+  const sessionIds = sessionTerms.map((t) => t.sessionId).filter(Boolean);
+
+  const mappings = await examinationSessionRepository.findAssessmentPlanSubjectMappings(
+    {
+      subjectId: missingSubjectIds,
+      sessionId: sessionIds.length ? sessionIds : undefined,
+    },
+    options,
+  );
+
+  const fallbackMap = new Map();
+  for (const m of mappings) {
+    const plain = m.get ? m.get({ plain: true }) : m;
+    const sId = plain.subjectId || plain.curriculumSubjectTermMapping?.subjectId;
+    if (sId && !fallbackMap.has(Number(sId))) {
+      fallbackMap.set(Number(sId), {
+        batchId: plain.batchId || plain.batch?.batchId || null,
+        curriculumSubjectTermMappingId:
+          plain.curriculumSubjectTermMappingId ||
+          plain.curriculumSubjectTermMapping?.curriculumSubjectTermMappingId ||
+          null,
+        term: plain.curriculumSubjectTermMapping?.term || null,
+        sessionId: plain.batch?.sessionId || null,
+        sessionName: plain.batch?.session?.sessionName || null,
+      });
+    }
+  }
+  return fallbackMap;
 }
 
-function buildScheduleRow(item, studentCount) {
+function buildScheduleRow(item, studentCount, fallbackMap = new Map()) {
   const roomNumbers = [];
   let roomCapacity = 0;
   const roomCapacities = item.roomCapacities || [];
@@ -51,31 +87,48 @@ function buildScheduleRow(item, studentCount) {
   });
   const { roomCapacities: _rooms, ...schedule } = item;
 
+  const fallback = fallbackMap.get(Number(item.subjectId)) || {};
+
   const batchId =
     item.batchId ??
     item.batch?.batchId ??
+    fallback.batchId ??
     null;
   const curriculumSubjectTermMappingId =
     item.curriculumSubjectTermMappingId ??
     item.curriculumSubjectTermMapping?.curriculumSubjectTermMappingId ??
+    fallback.curriculumSubjectTermMappingId ??
     null;
   const term =
     item.curriculumSubjectTermMapping?.term ??
     item.term ??
+    fallback.term ??
     null;
   const sessionId =
     item.batch?.sessionId ??
     item.batch?.session?.sessionId ??
+    fallback.sessionId ??
     null;
   const sessionName =
     item.batch?.session?.sessionName ??
+    fallback.sessionName ??
     null;
+  const curriculumSubjectTermMapping =
+    item.curriculumSubjectTermMapping ||
+    (curriculumSubjectTermMappingId
+      ? {
+          curriculumSubjectTermMappingId,
+          term,
+          subjectId: item.subjectId,
+        }
+      : null);
 
   return {
     ...schedule,
     batchId,
     curriculumSubjectTermMappingId,
     curriculumBatchTermMappingId: curriculumSubjectTermMappingId,
+    curriculumSubjectTermMapping,
     term,
     sessionId,
     sessionName,
@@ -100,7 +153,6 @@ function matchesFilterStatus(schedule, filterStatus) {
 
 function resolveSlotPublished(schedules) {
   if (!schedules.length) return false;
-
   for (const schedule of schedules) {
     if (!schedule.published) return false;
   }
@@ -111,45 +163,41 @@ async function loadEnrichedSlotSchedules(
   { examinationSessionId, date, selections },
   options = {},
 ) {
-  const filterCombinations = await resolveSelectionFilters(selections, options);
+  const filterCombinations = selections?.length
+    ? await resolveSelectionCombinations(selections, options)
+    : [];
 
-  const slotRows =
-    await examinationSessionSlotRepository.findSlotsWithSchedules(
-      { examinationSessionId, date, filterCombinations },
-      options,
-    );
-
-  const slots = [];
-  const studentGroups = [];
-
-  for (const slotRow of slotRows) {
-    const slot = slotRow.get({ plain: true });
-    const schedules = slot.examSchedules || [];
-    slot.examSchedules = undefined;
-    slot.schedules = schedules;
-    slots.push(slot);
-
-    for (const schedule of schedules) {
-      const group = buildStudentGroupFromSchedule(schedule);
-      if (group) studentGroups.push(group);
-    }
-  }
-
-  const studentCountMap = await getStudentCountMapByGroups(
-    studentGroups,
+  const slotRows = await examinationSessionSlotRepository.findSlotsWithSchedules(
+    { examinationSessionId, date, filterCombinations },
     options,
   );
 
+  const slots = slotRows.map((slotRow) => {
+    const slot = slotRow.get ? slotRow.get({ plain: true }) : slotRow;
+    const schedules = slot.examSchedules || [];
+    delete slot.examSchedules;
+    slot.schedules = schedules;
+    return slot;
+  });
+
+  const allSchedules = slots.flatMap((s) => s.schedules);
+  const studentGroups = allSchedules
+    .map((schedule) => buildStudentGroupFromSchedule(schedule))
+    .filter(Boolean);
+
+  const [studentCountMap, fallbackMap] = await Promise.all([
+    getStudentCountMapByGroups(studentGroups, options),
+    resolveMissingScheduleMappings(allSchedules, examinationSessionId, options),
+  ]);
+
   for (const slot of slots) {
-    const enriched = [];
-    for (const schedule of slot.schedules) {
+    slot.schedules = slot.schedules.map((schedule) => {
       const studentCount = lookupStudentCount(
         studentCountMap,
         buildStudentGroupFromSchedule(schedule),
       );
-      enriched.push(buildScheduleRow(schedule, studentCount));
-    }
-    slot.schedules = enriched;
+      return buildScheduleRow(schedule, studentCount, fallbackMap);
+    });
   }
 
   return { slots, filterCombinations };
@@ -237,6 +285,15 @@ async function buildUnscheduledSchedules(
       sub.curriculumBatchTermMappingId ??
       null;
     const batchId = sub.batchId ?? null;
+    const curriculumSubjectTermMapping =
+      sub.curriculumSubjectTermMapping ||
+      (cstmId
+        ? {
+            curriculumSubjectTermMappingId: cstmId,
+            term: sub.term,
+            subjectId: sub.subjectId,
+          }
+        : null);
 
     unscheduled.push({
       examScheduleId: null,
@@ -245,6 +302,7 @@ async function buildUnscheduledSchedules(
       batchId,
       curriculumSubjectTermMappingId: cstmId,
       curriculumBatchTermMappingId: cstmId,
+      curriculumSubjectTermMapping,
       term: sub.term,
       sessionId: sub.sessionId,
       sessionName: sub.sessionName || null,
@@ -283,68 +341,41 @@ export async function getExaminationSessionSlots(
   { examinationSessionId, date, selections, filterStatus },
   options = {},
 ) {
-  // Unscheduled-only list does not need room/student enrichment on existing schedules.
   if (filterStatus === EXAM_SCHEDULE_FILTER_STATUS.NEEDS_SCHEDULING) {
-    const slotRows =
-      await examinationSessionSlotRepository.findSlotsWithoutSchedules(
-        { examinationSessionId },
-        options,
-      );
+    const [slotRows, unscheduled] = await Promise.all([
+      examinationSessionSlotRepository.findSlotsWithoutSchedules({ examinationSessionId }, options),
+      buildUnscheduledSchedules({ examinationSessionId, selections }, options),
+    ]);
 
-    const unscheduled = await buildUnscheduledSchedules(
-      { examinationSessionId, selections },
-      options,
-    );
-
-    const result = [];
-    for (const slotRow of slotRows) {
+    return slotRows.map((slotRow) => {
       const slot = slotRow.get ? slotRow.get({ plain: true }) : slotRow;
-      result.push({
+      return {
         ...slot,
         published: false,
         schedules: [...unscheduled],
-      });
-    }
-    return result;
-  }
-
-  const { slots } = await loadEnrichedSlotSchedules(
-    { examinationSessionId, date, selections },
-    options,
-  );
-
-  // filterStatus=all also includes subjects that still need scheduling.
-  // Count them once (same as /count) — do not duplicate under every slot.
-  const includeUnscheduled =
-    !filterStatus || filterStatus === EXAM_SCHEDULE_FILTER_STATUS.ALL;
-  const unscheduled = includeUnscheduled
-    ? await buildUnscheduledSchedules(
-        { examinationSessionId, selections },
-        options,
-      )
-    : [];
-
-  const result = [];
-  for (let i = 0; i < slots.length; i++) {
-    const slot = slots[i];
-    const published = resolveSlotPublished(slot.schedules);
-    const schedules = [];
-    for (const schedule of slot.schedules) {
-      if (matchesFilterStatus(schedule, filterStatus)) {
-        schedules.push(schedule);
-      }
-    }
-    if (includeUnscheduled && i === 0) {
-      for (const subject of unscheduled) {
-        schedules.push(subject);
-      }
-    }
-    result.push({
-      ...slot,
-      published,
-      schedules,
+      };
     });
   }
+
+  const includeUnscheduled = !filterStatus || filterStatus === EXAM_SCHEDULE_FILTER_STATUS.ALL;
+  const [{ slots }, unscheduled] = await Promise.all([
+    loadEnrichedSlotSchedules({ examinationSessionId, date, selections }, options),
+    includeUnscheduled
+      ? buildUnscheduledSchedules({ examinationSessionId, selections }, options)
+      : Promise.resolve([]),
+  ]);
+
+  const result = slots.map((slot, index) => {
+    const schedules = slot.schedules.filter((sch) => matchesFilterStatus(sch, filterStatus));
+    if (includeUnscheduled && index === 0) {
+      schedules.push(...unscheduled);
+    }
+    return {
+      ...slot,
+      published: resolveSlotPublished(slot.schedules),
+      schedules,
+    };
+  });
 
   if (includeUnscheduled && slots.length === 0 && unscheduled.length > 0) {
     result.push({
@@ -362,34 +393,27 @@ export async function getExaminationSessionSlotsCount(
   { examinationSessionId, date, selections },
   options = {},
 ) {
-  const { slots } = await loadEnrichedSlotSchedules(
-    { examinationSessionId, date, selections },
-    options,
-  );
+  const [{ slots }, unscheduled] = await Promise.all([
+    loadEnrichedSlotSchedules({ examinationSessionId, date, selections }, options),
+    buildUnscheduledSchedules({ examinationSessionId, selections }, options),
+  ]);
 
-  let allCount = 0;
   let roomPendingCount = 0;
   let readyCount = 0;
   let publishedCount = 0;
 
-  for (const slot of slots) {
-    for (const schedule of slot.schedules) {
-      allCount++;
-      if (schedule.published) {
-        publishedCount++;
-        continue;
-      }
+  const scheduledList = slots.flatMap((s) => s.schedules);
+  for (const schedule of scheduledList) {
+    if (schedule.published) {
+      publishedCount++;
+    } else {
       if (schedule.roomPending) roomPendingCount++;
       if (schedule.ready) readyCount++;
     }
   }
 
-  const unscheduled = await buildUnscheduledSchedules(
-    { examinationSessionId, selections },
-    options,
-  );
   const needsSchedulingCount = unscheduled.length;
-  allCount += needsSchedulingCount;
+  const allCount = scheduledList.length + needsSchedulingCount;
 
   return {
     all: allCount,

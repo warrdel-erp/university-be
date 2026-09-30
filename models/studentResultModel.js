@@ -168,7 +168,7 @@ const studentResultModel = sequelize.define(
 studentResultModel.scopeConfig = {
   university: true,
   institute: true,
-  academicYear: true,
+  academicYear: false,
 };
 
 export default studentResultModel;

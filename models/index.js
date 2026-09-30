@@ -382,6 +382,15 @@ sessionModel.hasMany(examinationSessionTermModel, {
   as: "examinationSessionTerms",
 });
 
+examinationSessionTermModel.belongsTo(batchModel, {
+  foreignKey: "batch_id",
+  as: "batch",
+});
+batchModel.hasMany(examinationSessionTermModel, {
+  foreignKey: "batch_id",
+  as: "examinationSessionTerms",
+});
+
 // Exam Invigilator Assignment Associations
 examInvigilatorAssignmentModel.belongsTo(universityModel, {
   foreignKey: "university_id",

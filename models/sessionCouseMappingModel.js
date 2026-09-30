@@ -105,6 +105,6 @@ const sessionCouseMappingModel = sequelize.define(
     }
 );
 
-sessionCouseMappingModel.scopeConfig = { university: true, institute: true, academicYear: true };
+sessionCouseMappingModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
 export default sessionCouseMappingModel;

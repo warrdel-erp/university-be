@@ -72,7 +72,9 @@ export async function getQuestionPapers(filters = {}, pagination = {}) {
                         {
                             model: model.examinationSessionModel,
                             as: "examinationSession",
-                            attributes: ["sessionName"],
+                            required: true,
+                            where: buildScope(model.examinationSessionModel),
+                            attributes: ["examinationSessionId", "sessionName", "status"],
                         }
                     ]
                 },
@@ -116,7 +118,9 @@ export async function getSingleQuestionPaper(id, ownerId = null) {
                         {
                             model: model.examinationSessionModel,
                             as: "examinationSession",
-                            attributes: ["sessionName"],
+                            required: true,
+                            where: buildScope(model.examinationSessionModel),
+                            attributes: ["examinationSessionId", "sessionName", "status"],
                         }
                     ]
                 },

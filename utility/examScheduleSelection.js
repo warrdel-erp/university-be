@@ -99,7 +99,6 @@ export async function findExamScheduleIdsBySelections(
       examinationSessionId: Number(examinationSessionId),
       ...buildScope(model.examScheduleModel),
     };
-    if (comb.sessionId != null) where.sessionId = comb.sessionId;
     if (comb.batchId != null) where.batchId = comb.batchId;
     if (comb.terms && comb.terms.length > 0) {
       where.term = { [Op.in]: comb.terms };
