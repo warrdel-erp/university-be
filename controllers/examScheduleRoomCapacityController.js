@@ -1,10 +1,11 @@
 import * as examRoomCapacityServices from "../services/examScheduleRoomCapacityServices.js";
+import * as examScheduleServices from "../services/examScheduleServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 import { ZodError } from "zod";
 
 export async function addExamRoomCapacity(req, res) {
   try {
-    const result = await examRoomCapacityServices.addExamRoomCapacity(req.body, req.user.userId);
+    const result = await examScheduleServices.addExamRoomCapacity(req.body, req.user.userId);
     return SuccessResponse(res, 201, "Exam room assignment added successfully", result);
   } catch (error) {
     if (error instanceof ZodError) {

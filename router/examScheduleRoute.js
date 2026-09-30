@@ -38,7 +38,9 @@ const addExamRoomCapacitySchema = z.object({
 });
 
 const updateExamRoomCapacitySchema = z.object({
-  examScheduleRoomCapacityId: z.number({ required_error: "examScheduleRoomCapacityId is required" }),
+  examScheduleRoomCapacityId: z.number({
+    required_error: "examScheduleRoomCapacityId is required",
+  }),
   capacity: z.number(),
   columns: z.number(),
 });
@@ -63,8 +65,6 @@ const positiveIntegerId = z.coerce
   .number({ invalid_type_error: "id must be a number" })
   .int({ message: "id must be an integer" })
   .positive({ message: "id must be positive" });
-
-
 
 const optionalPositiveIntegerIdList = z.preprocess((val) => {
   if (val === undefined || val === null || val === "" || val === "undefined") {

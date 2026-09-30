@@ -36,7 +36,10 @@ import {
   findActiveYearBatchTermsByCourseIds,
   resolveActiveAcademicYearContext,
 } from "../utility/curriculumSubjectsByActiveYear.js";
-import { resolveClassSectionTermIdsFromBatchTerm } from "./curriculumBatchTermServices.js";
+import {
+  resolveClassSectionTermIdsFromBatchTerm,
+  resolveClassSectionsFromBatchTerm,
+} from "./curriculumBatchTermServices.js";
 import * as curriculumBatchTermRepository from "../repository/curriculumBatchTermRepository.js";
 import * as acedmicYearRepository from "../repository/acedmicYearRepository.js";
 import { resolveSelectionCombinations } from "../utility/examScheduleSelection.js";
@@ -1287,12 +1290,19 @@ export async function getClassSectionTermsBySetupType(
   if (!courseIds.length) return [];
 
   // examSetupTypeId → plans/mappings → all course terms, grouped by courseId + sessionId.
+  const activeYearOptions = {
+    ...options,
+    academicYearId: options.academicYearId || undefined,
+  };
   const [
     { academicYearId, rows: batchTermRows },
     { rows: subjectRows },
   ] = await Promise.all([
-    findActiveYearBatchTermsByCourseIds(courseIds, options),
-    findCurriculumSubjectsForActiveYear({ courseIds }, options),
+    findActiveYearBatchTermsByCourseIds(courseIds, activeYearOptions),
+    findCurriculumSubjectsForActiveYear(
+      { courseIds, academicYearId: options.academicYearId },
+      activeYearOptions,
+    ),
   ]);
 
   const groupKeys = new Map();
@@ -1563,13 +1573,19 @@ export async function getClassSectionTermsBySetupType(
         term: bucket.term,
         yearNumber: bucket.yearNumber,
         batch: bucket.batch,
+        batchId: resolvedBatchId,
       };
-      const classSectionTermIds = await resolveClassSectionTermIdsFromBatchTerm(
+      const classSections = await resolveClassSectionsFromBatchTerm(
         cohortContext,
         {
           sessionId: group.sessionId,
+          batchId: resolvedBatchId,
+          academicYearId: group.academicYearId || options.academicYearId,
         },
         options,
+      );
+      const classSectionTermIds = classSections.map(
+        (cs) => cs.classSectionTermId,
       );
 
       const studentCount = await countStudentsForExamGroup(
@@ -1592,10 +1608,36 @@ export async function getClassSectionTermsBySetupType(
         yearNumber: bucket.yearNumber,
         curriculumBatchTermMappingId: bucket.curriculumBatchTermMappingId,
         classSectionTermIds,
+        classSections,
         mappedSubjectCount,
         totalSubjects: toIntegerNumber(bucket.subjectIds.size),
         studentCount,
       });
+    }
+
+    const yearsMap = new Map();
+    for (const td of termDetails) {
+      const yr = td.yearNumber || 1;
+      if (!yearsMap.has(yr)) {
+        yearsMap.set(yr, {
+          yearNumber: yr,
+          batch: td.batch,
+          batchId: td.batchId,
+          terms: [],
+          classSections: [],
+        });
+      }
+      const yObj = yearsMap.get(yr);
+      yObj.terms.push(td);
+      for (const cs of td.classSections || []) {
+        if (
+          !yObj.classSections.some(
+            (x) => x.classSectionTermId === cs.classSectionTermId,
+          )
+        ) {
+          yObj.classSections.push(cs);
+        }
+      }
     }
 
     const firstTermBatchId =
@@ -1612,6 +1654,7 @@ export async function getClassSectionTermsBySetupType(
       batchId: firstTermBatchId,
       academicYearId: group.academicYearId,
       terms: termDetails,
+      years: [...yearsMap.values()],
     });
   }
 
